@@ -5,6 +5,7 @@ import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import type { SidebarPostItem } from "@/shared/domain/sidebar/queries";
 import type { PostListLayout } from "@/shared/lib/validations/sidebar";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface SidebarPostListProps {
   label: string;
@@ -30,7 +31,7 @@ export function SidebarPostList({
         {posts.map((post, index) => (
           <li key={post.id}>
             <Link
-              href={post.url}
+              href={toAppRoute(post.url)}
               className={cn(
                 "group transition-colors hover:text-foreground",
                 isStacked

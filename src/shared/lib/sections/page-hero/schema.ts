@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { isRecord } from "@/shared/lib/serialize";
-import { createSafeUrlSchema } from "@/shared/lib/validations/cta-and-url";
+import { createInternalAppRouteSchema } from "@/shared/lib/validations/cta-and-url";
 
 /** parsePageHero 緩和用（defaults.ts との循環 import を避ける） */
 const EDITORIAL_FALLBACK_IMAGES = [
@@ -32,7 +32,7 @@ const heroImageSchema = z.object({
   alt: z.string().min(1, { error: "alt は必須です" }),
 });
 
-const buttonUrlSchema = createSafeUrlSchema(500);
+const buttonUrlSchema = createInternalAppRouteSchema(500);
 
 const pageHeroEditorialSplitSchema = z
   .object({

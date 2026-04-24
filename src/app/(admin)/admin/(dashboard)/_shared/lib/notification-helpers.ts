@@ -1,4 +1,5 @@
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import { toAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
 
 /**
  * 管理者通知のリンク先 URL を解決する。
@@ -10,7 +11,7 @@ export function getNotificationResourceHref(
   type: string,
   resourceType: string | null,
   resourceId: string | null,
-): string | null {
+): AppRoute | null {
   // サマリー通知は resourceId を持たず type 単独でルーティング
   // FAQ は master-detail 構造のため、カテゴリ一覧に誘導する
   if (type === NOTIFICATION_TYPE.FAQ_STALE) {
@@ -24,5 +25,6 @@ export function getNotificationResourceHref(
     review: `/admin/spaces?tab=reviews`,
     event: `/admin/events/${resourceId}/edit`,
   };
-  return routes[resourceType] ?? null;
+  const href = routes[resourceType];
+  return href ? toAppRoute(href) : null;
 }

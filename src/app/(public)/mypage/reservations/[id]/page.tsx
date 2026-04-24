@@ -28,6 +28,7 @@ import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
 import { ReviewForm } from "./_components/review-form";
 import { ReviewDisplay } from "./_components/review-display";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -129,7 +130,7 @@ export default async function ReservationDetailPage({
           {canEdit && (
             <Button
               size="sm"
-              href={`/mypage/reservations/${reservation.id}/edit`}
+              href={toAppRoute(`/mypage/reservations/${reservation.id}/edit`)}
             >
               予約を変更する
             </Button>

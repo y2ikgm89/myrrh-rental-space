@@ -25,4 +25,13 @@ describe("page-hero schema", () => {
     };
     expect(parsePageHero(data)?.variant).toBe("minimal");
   });
+
+  test("editorial-split の buttonUrl は内部 application route のみ許可する", () => {
+    const data = {
+      ...defaultPageHeroHome,
+      buttonUrl: "https://example.com/reservation",
+    };
+    const parsed = pageHeroSchema.safeParse(data);
+    expect(parsed.success).toBe(false);
+  });
 });

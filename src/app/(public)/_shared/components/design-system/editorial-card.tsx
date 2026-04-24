@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 type EditorialCardVariant = "default" | "featured";
 
@@ -30,7 +31,7 @@ export function EditorialCard({
   if (variant === "featured") {
     return (
       <Link
-        href={href}
+        href={toAppRoute(href)}
         className={cn(
           "group grid grid-cols-1 gap-6 md:grid-cols-[5fr_4fr] md:gap-10",
           className,
@@ -68,7 +69,7 @@ export function EditorialCard({
 
   return (
     <Link
-      href={href}
+      href={toAppRoute(href)}
       className={cn(
         "group flex flex-col overflow-hidden border border-border transition-colors duration-200",
         className,

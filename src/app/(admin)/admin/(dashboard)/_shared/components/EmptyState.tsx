@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { Button } from "./ui/button";
 
 type EmptyStateAction =
@@ -39,7 +40,7 @@ export function EmptyState({ message, description, action }: EmptyStateProps) {
       {action &&
         (action.href !== undefined ? (
           <Button asChild className="mt-4">
-            <Link href={action.href}>{action.label}</Link>
+            <Link href={toAppRoute(action.href)}>{action.label}</Link>
           </Button>
         ) : (
           <Button type="button" className="mt-4" onClick={action.onClick}>

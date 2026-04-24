@@ -24,6 +24,7 @@ import {
   HeaderBackgroundMode,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { Button } from "@/public/components/design-system/button";
 import { LogoutButton } from "@/public/components/ui/logout-button";
 import { SiteBrand } from "./site-brand";
@@ -126,7 +127,7 @@ function NavItemLink({
     </a>
   ) : (
     <Link
-      href={item.url}
+      href={toAppRoute(item.url)}
       aria-current={isActive ? "page" : undefined}
       className={className}
       {...(onNavigate && { onClick: onNavigate })}
@@ -390,7 +391,7 @@ export function Header({
           {authSlot?.variant === "authenticated" && (
             <div className="flex items-center gap-5">
               <Link
-                href={authSlot.mypageHref}
+                href={toAppRoute(authSlot.mypageHref)}
                 className={DESKTOP_NAV_LINK_CLASS}
               >
                 {authSlot.mypageLabel}
@@ -399,7 +400,10 @@ export function Header({
             </div>
           )}
           {authSlot?.variant === "guest" && (
-            <Link href={authSlot.loginHref} className={DESKTOP_NAV_LINK_CLASS}>
+            <Link
+              href={toAppRoute(authSlot.loginHref)}
+              className={DESKTOP_NAV_LINK_CLASS}
+            >
               {authSlot.loginLabel}
             </Link>
           )}
@@ -467,7 +471,7 @@ export function Header({
                 {authSlot?.variant === "authenticated" && (
                   <>
                     <Link
-                      href={authSlot.mypageHref}
+                      href={toAppRoute(authSlot.mypageHref)}
                       onClick={closeMenu}
                       className={MOBILE_PARENT_CLASS}
                     >
@@ -481,7 +485,7 @@ export function Header({
                 )}
                 {authSlot?.variant === "guest" && (
                   <Link
-                    href={authSlot.loginHref}
+                    href={toAppRoute(authSlot.loginHref)}
                     onClick={closeMenu}
                     className={MOBILE_PARENT_CLASS}
                   >

@@ -7,7 +7,6 @@
  */
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -218,7 +217,7 @@ export function CommentTable({ comments }: Props) {
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <Link
+                  <a
                     href={comment.postUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -228,7 +227,7 @@ export function CommentTable({ comments }: Props) {
                       {comment.postTitle}
                     </span>
                     <IconExternalLink className="w-3 h-3 flex-shrink-0" />
-                  </Link>
+                  </a>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <span className="text-sm text-muted-foreground">

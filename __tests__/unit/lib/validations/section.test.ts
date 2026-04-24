@@ -97,6 +97,22 @@ describe("heroConfigSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  test("CTA ボタン URL は内部 application route のみ許可する", () => {
+    const data = {
+      buttons: [
+        {
+          text: "外部リンク",
+          url: "https://example.com/reservation",
+          variant: "primary",
+          size: "lg",
+          openInNewTab: false,
+        },
+      ],
+    };
+    const result = heroConfigSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
   test("デフォルト値の適用", () => {
     const result = heroConfigSchema.safeParse({});
     expect(result.success).toBe(true);
@@ -258,6 +274,12 @@ describe("newsListConfigSchema", () => {
 
   test("無効なlayoutでエラー", () => {
     const data = { layout: "invalid" };
+    const result = newsListConfigSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  test("viewAllUrl は内部 application route のみ許可する", () => {
+    const data = { viewAllUrl: "https://example.com/news" };
     const result = newsListConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
@@ -466,6 +488,18 @@ describe("ctaConfigSchema", () => {
     if (result.success) {
       expect(result.data.buttons).toHaveLength(1);
     }
+  });
+
+  test("レガシー CTA URL も内部 application route のみ許可する", () => {
+    const data = {
+      title: "CTA",
+      ctaSecondary: {
+        text: "外部リンク",
+        url: "https://example.com/contact",
+      },
+    };
+    const result = ctaConfigSchema.safeParse(data);
+    expect(result.success).toBe(false);
   });
 });
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { IconHome } from "@tabler/icons-react";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface BreadcrumbItem {
   readonly label: string;
@@ -51,7 +52,7 @@ export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
               </span>
               {item.href && i < items.length - 1 ? (
                 <Link
-                  href={item.href}
+                  href={toAppRoute(item.href)}
                   className={cn(
                     "hover:text-foreground",
                     isSmall ? "py-0" : "px-1 py-1",

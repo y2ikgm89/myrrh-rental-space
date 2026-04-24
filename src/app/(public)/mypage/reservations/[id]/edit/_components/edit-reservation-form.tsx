@@ -18,6 +18,7 @@ import {
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -184,7 +185,7 @@ export function EditReservationForm({
 
         <Button
           variant="secondary"
-          href={`/mypage/reservations/${reservationId}`}
+          href={toAppRoute(`/mypage/reservations/${reservationId}`)}
         >
           キャンセル
         </Button>

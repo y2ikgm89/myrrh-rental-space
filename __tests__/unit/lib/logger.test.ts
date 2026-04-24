@@ -5,6 +5,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
+import { setNodeEnv } from "../../helpers/env";
 import { logger } from "@/shared/lib/logger";
 
 const originalConsoleLog = console.log;
@@ -25,7 +26,7 @@ afterEach(() => {
   console.info = originalConsoleInfo;
   console.warn = originalConsoleWarn;
   console.error = originalConsoleError;
-  process.env["NODE_ENV"] = originalNodeEnv;
+  setNodeEnv(originalNodeEnv);
 });
 
 // =============================================================================
@@ -34,38 +35,38 @@ afterEach(() => {
 
 describe("logger（開発環境）", () => {
   test("debug: console.logで[DEBUG]プレフィックス付き出力", () => {
-    process.env["NODE_ENV"] = "development";
+    setNodeEnv("development");
     logger.debug("デバッグメッセージ");
     expect(console.log).toHaveBeenCalledWith("[DEBUG]", "デバッグメッセージ");
   });
 
   test("info: console.infoで[INFO]プレフィックス付き出力", () => {
-    process.env["NODE_ENV"] = "development";
+    setNodeEnv("development");
     logger.info("情報メッセージ");
     expect(console.info).toHaveBeenCalledWith("[INFO]", "情報メッセージ");
   });
 
   test("warn: console.warnで[WARN]プレフィックス付き出力", () => {
-    process.env["NODE_ENV"] = "development";
+    setNodeEnv("development");
     logger.warn("警告メッセージ");
     expect(console.warn).toHaveBeenCalledWith("[WARN]", "警告メッセージ");
   });
 
   test("error: console.errorで[ERROR]プレフィックス付き出力", () => {
-    process.env["NODE_ENV"] = "development";
+    setNodeEnv("development");
     logger.error("エラーメッセージ");
     expect(console.error).toHaveBeenCalledWith("[ERROR]", "エラーメッセージ");
   });
 
   test("コンテキスト付きで出力される", () => {
-    process.env["NODE_ENV"] = "development";
+    setNodeEnv("development");
     const ctx = { userId: "u-1", action: "login" };
     logger.info("ログイン", ctx);
     expect(console.info).toHaveBeenCalledWith("[INFO]", "ログイン", ctx);
   });
 
   test("コンテキストなしでも出力される", () => {
-    process.env["NODE_ENV"] = "development";
+    setNodeEnv("development");
     logger.warn("シンプル");
     const mockFn = console.warn as ReturnType<typeof mock>;
     expect(mockFn.mock.calls[0].length).toBe(2);
@@ -78,7 +79,7 @@ describe("logger（開発環境）", () => {
 
 describe("logger（本番環境）", () => {
   test("info: GCP構造化JSONでconsole.logに出力される", () => {
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     logger.info("本番情報");
     const mockFn = console.log as ReturnType<typeof mock>;
     expect(mockFn).toHaveBeenCalledTimes(1);
@@ -90,7 +91,7 @@ describe("logger（本番環境）", () => {
   });
 
   test("warn: severity WARNINGで出力される", () => {
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     logger.warn("本番警告");
     const mockFn = console.warn as ReturnType<typeof mock>;
     const parsed = JSON.parse(mockFn.mock.calls[0][0]);
@@ -99,7 +100,7 @@ describe("logger（本番環境）", () => {
   });
 
   test("error: severity ERRORで出力される", () => {
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     logger.error("本番エラー");
     const mockFn = console.error as ReturnType<typeof mock>;
     const parsed = JSON.parse(mockFn.mock.calls[0][0]);
@@ -108,7 +109,7 @@ describe("logger（本番環境）", () => {
   });
 
   test("debug: 本番では出力されない", () => {
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     logger.debug("本番デバッグ");
     expect(console.log).not.toHaveBeenCalled();
     expect(console.info).not.toHaveBeenCalled();
@@ -117,7 +118,7 @@ describe("logger（本番環境）", () => {
   });
 
   test("コンテキスト付きでJSONに含まれる", () => {
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     logger.error("失敗", { userId: "u-1", detail: "timeout" });
     const mockFn = console.error as ReturnType<typeof mock>;
     const parsed = JSON.parse(mockFn.mock.calls[0][0]);
@@ -125,7 +126,7 @@ describe("logger（本番環境）", () => {
   });
 
   test("timestampがISO 8601形式", () => {
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     logger.info("時刻テスト");
     const mockFn = console.log as ReturnType<typeof mock>;
     const parsed = JSON.parse(mockFn.mock.calls[0][0]);

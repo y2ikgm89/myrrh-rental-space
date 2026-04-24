@@ -19,6 +19,30 @@ describe("proxy admin gate", () => {
     expect(response.status).toBe(404);
   });
 
+  test("署名トークン形式の /admin/login は token consume route に redirect する", async () => {
+    const response = await proxy(
+      new NextRequest(
+        "https://example.com/admin/login?token=payload.signature",
+      ),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://example.com/admin/login/consume?token=payload.signature",
+    );
+  });
+
+  test("/admin/login/consume は session cookie なしでも route handler に通す", async () => {
+    const response = await proxy(
+      new NextRequest(
+        "https://example.com/admin/login/consume?token=payload.signature",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-pathname")).toBe("/admin/login/consume");
+  });
+
   test("session cookie がなくても /admin/setup/[token] は通す", async () => {
     const response = await proxy(
       new NextRequest("https://example.com/admin/setup/invitation-token"),

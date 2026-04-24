@@ -8,7 +8,8 @@
 
 import { z } from "zod";
 import {
-  createSafeUrlSchema,
+  createInternalAppRouteSchema,
+  createOptionalInternalAppRouteSchema,
   createCtaSchemas,
   createCtaButtonItemSchema,
   transformLegacyCtaToButtons,
@@ -114,10 +115,15 @@ export type { TextAlign } from "./section-options";
 // 共通スキーマ
 // =============================================================================
 
-const safeUrlSchema = createSafeUrlSchema(500);
-const { ctaButtonSchema, optionalCtaButtonSchema } =
-  createCtaSchemas(safeUrlSchema);
-const ctaButtonItemSchema = createCtaButtonItemSchema(safeUrlSchema);
+const internalAppRouteSchema = createInternalAppRouteSchema(500);
+const optionalInternalAppRouteSchema =
+  createOptionalInternalAppRouteSchema(500);
+const viewAllUrlSchema = createInternalAppRouteSchema(200);
+const { ctaButtonSchema, optionalCtaButtonSchema } = createCtaSchemas(
+  internalAppRouteSchema,
+  optionalInternalAppRouteSchema,
+);
+const ctaButtonItemSchema = createCtaButtonItemSchema(internalAppRouteSchema);
 // ボタンの URL は React key の stable ID として使われるため、一意性を保証する
 const ctaButtonsArraySchema = z
   .array(ctaButtonItemSchema)
@@ -264,10 +270,7 @@ export const spaceListConfigSchema = z.object({
     .string()
     .max(50, { error: "テキストは50文字以内です" })
     .default("全てのスペースを見る"),
-  viewAllUrl: z
-    .string()
-    .max(200, { error: "URLは200文字以内です" })
-    .default("/spaces"),
+  viewAllUrl: viewAllUrlSchema.default("/spaces"),
   layout: z.enum(spaceLayoutValues).default("grid"),
   columns: z.number().int().min(1).max(4).default(3),
   cardStyle: z.enum(cardStyleValues).default("bordered"),
@@ -307,10 +310,7 @@ export const newsListConfigSchema = z.object({
     .string()
     .max(50, { error: "テキストは50文字以内です" })
     .default("全てのお知らせ"),
-  viewAllUrl: z
-    .string()
-    .max(200, { error: "URLは200文字以内です" })
-    .default("/news"),
+  viewAllUrl: viewAllUrlSchema.default("/news"),
   layout: z.enum(newsLayoutValues).default("list"),
   columns: z.number().int().min(2).max(4).default(2),
 });
@@ -331,10 +331,7 @@ export const postListConfigSchema = z.object({
     .string()
     .max(50, { error: "テキストは50文字以内です" })
     .default("全ての記事"),
-  viewAllUrl: z
-    .string()
-    .max(200, { error: "URLは200文字以内です" })
-    .default("/posts"),
+  viewAllUrl: viewAllUrlSchema.default("/posts"),
   categoryId: z.string().uuid().optional(),
   layout: z.enum(postLayoutValues).default("grid"),
   columns: z.number().int().min(1).max(4).default(3),
@@ -358,10 +355,7 @@ export const faqListConfigSchema = z.object({
     .string()
     .max(50, { error: "テキストは50文字以内です" })
     .default("全てのFAQ"),
-  viewAllUrl: z
-    .string()
-    .max(200, { error: "URLは200文字以内です" })
-    .default("/faq"),
+  viewAllUrl: viewAllUrlSchema.default("/faq"),
   items: z
     .array(
       z.object({

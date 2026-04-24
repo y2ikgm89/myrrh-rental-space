@@ -14,6 +14,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/admin/components/ui/card";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export interface SettingsCardProps {
   title: string;
@@ -31,7 +32,7 @@ export function SettingsCard({
   items,
 }: SettingsCardProps) {
   return (
-    <Link href={href} className="block group">
+    <Link href={toAppRoute(href)} className="block group">
       <Card className="h-full transition-colors hover:bg-muted/50">
         <CardHeader>
           <div className="flex items-start justify-between">

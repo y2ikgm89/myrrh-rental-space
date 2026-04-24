@@ -7,13 +7,14 @@ import {
   DEFAULT_SECTION_STYLE,
   type SectionStylePayload,
 } from "@/shared/domain/section-styles/types";
+import type { AppRoute } from "@/shared/lib/typed-routes";
 
 export interface CtaSectionProps {
   readonly label: string;
   readonly title: string;
   readonly description: string;
   readonly buttonText: string;
-  readonly buttonUrl: string;
+  readonly buttonUrl: AppRoute;
   /** Resolved style from 4-tier cascade (settings → page → section → override) */
   readonly resolvedStyle?: SectionStylePayload;
 }

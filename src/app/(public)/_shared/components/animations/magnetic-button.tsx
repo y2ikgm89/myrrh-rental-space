@@ -8,16 +8,18 @@
  */
 
 import { useRef, type ReactElement, type ReactNode } from "react";
+import Link from "next/link";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
+import type { AppRoute } from "@/shared/lib/typed-routes";
 
 interface MagneticButtonProps {
   readonly children: ReactNode;
   readonly className?: string;
   readonly strength?: number;
   readonly onClick?: () => void;
-  readonly href?: string;
+  readonly href?: AppRoute;
 }
 
 export function MagneticButton({
@@ -27,8 +29,11 @@ export function MagneticButton({
   onClick,
   href,
 }: MagneticButtonProps): ReactElement {
-  const ref = useRef<HTMLButtonElement & HTMLAnchorElement>(null);
+  const ref = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
   const motionOk = useMotionPreference();
+  const setRef = (element: HTMLAnchorElement | HTMLButtonElement | null) => {
+    ref.current = element;
+  };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!motionOk.current) return;
@@ -63,21 +68,21 @@ export function MagneticButton({
 
   if (href) {
     return (
-      <a
-        ref={ref}
+      <Link
+        ref={setRef}
         href={href}
         className={baseClassName}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {children}
-      </a>
+      </Link>
     );
   }
 
   return (
     <button
-      ref={ref}
+      ref={setRef}
       type="button"
       className={baseClassName}
       onClick={onClick}

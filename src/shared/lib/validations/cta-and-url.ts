@@ -8,6 +8,11 @@
  */
 
 import { z } from "zod";
+import {
+  isAppRoute,
+  toAppRoute,
+  type AppRoute,
+} from "@/shared/lib/typed-routes";
 
 // =============================================================================
 // URL / CTAボタン共通スキーマ
@@ -31,9 +36,43 @@ export function createSafeUrlSchema(maxLength = 500) {
 }
 
 /**
+ * 内部 application route 専用 URL スキーマ。
+ *
+ * 公開セクション CTA / 一覧導線は Next.js typedRoutes 前提で
+ * `next/link` に渡すため、外部 URL と protocol-relative URL は保存時に拒否する。
+ */
+export function createInternalAppRouteSchema(maxLength = 500) {
+  return z
+    .string()
+    .trim()
+    .max(maxLength, { error: `URLは${maxLength}文字以内です` })
+    .refine(isAppRoute, {
+      error: "内部パス（/で始まり // ではないパス）を入力してください",
+    })
+    .transform((url) => toAppRoute(url));
+}
+
+export function createOptionalInternalAppRouteSchema(maxLength = 500) {
+  return z
+    .string()
+    .trim()
+    .max(maxLength, { error: `URLは${maxLength}文字以内です` })
+    .refine((url) => url === "" || isAppRoute(url), {
+      error: "内部パス（/で始まり // ではないパス）を入力してください",
+    })
+    .transform((url) => (url === "" ? "" : toAppRoute(url)));
+}
+
+/**
  * CTAボタン設定（レガシー: ctaPrimary/ctaSecondary 用）
  */
-export function createCtaSchemas(urlSchema: z.ZodType<string>) {
+export function createCtaSchemas<
+  TRequiredUrl extends string,
+  TOptionalUrl extends string,
+>(
+  urlSchema: z.ZodType<TRequiredUrl>,
+  optionalUrlSchema: z.ZodType<TOptionalUrl>,
+) {
   const ctaButtonSchema = z.object({
     text: z
       .string()
@@ -48,7 +87,7 @@ export function createCtaSchemas(urlSchema: z.ZodType<string>) {
         .string()
         .max(50, { error: "ボタンテキストは50文字以内です" })
         .optional(),
-      url: urlSchema.optional(),
+      url: optionalUrlSchema.optional(),
     })
     .optional();
 
@@ -101,7 +140,9 @@ export type CTAButtonSize = (typeof ctaButtonSizes)[number];
 /**
  * CTAボタン配列アイテムスキーマファクトリ
  */
-export function createCtaButtonItemSchema(urlSchema: z.ZodType<string>) {
+export function createCtaButtonItemSchema<TUrl extends string>(
+  urlSchema: z.ZodType<TUrl>,
+) {
   return z.object({
     text: z
       .string()
@@ -121,7 +162,7 @@ export function createCtaButtonItemSchema(urlSchema: z.ZodType<string>) {
  */
 export type CTAButtonItem = {
   text: string;
-  url: string;
+  url: AppRoute;
   variant: CTAButtonVariant;
   size: CTAButtonSize;
   openInNewTab: boolean;
@@ -133,9 +174,9 @@ export type CTAButtonItem = {
  * レガシーCTAフィールド（ctaPrimary/ctaSecondary）→ buttons[] に変換
  */
 export function transformLegacyCtaToButtons(
-  ctaPrimary?: { text: string; url: string } | undefined,
+  ctaPrimary?: { text: string; url: AppRoute } | undefined,
   ctaSecondary?:
-    | { text?: string | undefined; url?: string | undefined }
+    | { text?: string | undefined; url?: AppRoute | "" | undefined }
     | undefined,
 ): CTAButtonItem[] {
   const buttons: CTAButtonItem[] = [];
@@ -168,9 +209,9 @@ export function transformLegacyCtaToButtons(
  */
 export function transformCtaFields<
   T extends {
-    ctaPrimary?: { text: string; url: string } | undefined;
+    ctaPrimary?: { text: string; url: AppRoute } | undefined;
     ctaSecondary?:
-      | { text?: string | undefined; url?: string | undefined }
+      | { text?: string | undefined; url?: AppRoute | "" | undefined }
       | undefined;
     buttons?: CTAButtonItem[] | undefined;
   },

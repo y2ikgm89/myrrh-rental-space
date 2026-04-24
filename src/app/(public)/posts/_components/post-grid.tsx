@@ -7,6 +7,7 @@ import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal"
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface PostCardData {
   id: string;
@@ -41,7 +42,7 @@ export function PostGrid({ posts }: PostGridProps): ReactElement {
         {posts.map((post) => (
           <Link
             key={post.id}
-            href={post.url}
+            href={toAppRoute(post.url)}
             className="group block overflow-hidden border border-border transition-colors duration-200"
           >
             <div className="relative aspect-[4/3] overflow-hidden">

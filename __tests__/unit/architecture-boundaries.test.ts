@@ -19,6 +19,7 @@ const API_WEBHOOK_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "webhooks");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
 const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
 const PACKAGE_JSON_FILE = join(ROOT, "package.json");
+const NEXT_CONFIG_FILE = join(ROOT, "next.config.ts");
 const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
 const README_FILE = join(ROOT, "README.md");
 const DOCS_README_FILE = join(ROOT, "docs", "README.md");
@@ -65,6 +66,21 @@ const GOOGLE_SERVICE_ACCOUNT_BOUNDARY_FILES = [
   join(SRC_ROOT, "shared", "domain", "settings", "commands.ts"),
   join(SRC_ROOT, "shared", "lib", "analytics", "ga-data-api.ts"),
   join(SRC_ROOT, "shared", "lib", "google-calendar", "service-account.ts"),
+];
+const REACT_COMPILER_MEMO_EXEMPT_FILES = [
+  join(
+    SRC_ROOT,
+    "app",
+    "(admin)",
+    "admin",
+    "(dashboard)",
+    "_shared",
+    "components",
+    "editor",
+    "lexical",
+    "plugins",
+    "lexical-draggable-block-plugin.ts",
+  ),
 ];
 const THIN_ADMIN_ACTION_FILES = [
   join(
@@ -629,12 +645,87 @@ function collectNonCommentOffenders(
 }
 
 describe("architecture boundaries", () => {
-  test("proxy.ts は Prisma を直接 import しない", () => {
+  test("proxy.ts は DB-backed module を import しない", () => {
     const source = readFileSync(join(SRC_ROOT, "proxy.ts"), "utf8");
 
     expect(source).not.toContain("@/shared/db/prisma");
     expect(source).not.toContain("@/shared/lib/prisma");
     expect(source).not.toContain("@generated/prisma");
+    expect(source).not.toContain("admin-login-tokens/commands");
+    expect(source).not.toContain("consumeAdminLoginToken");
+  });
+
+  test("next.config.ts は stable typedRoutes を有効にする", () => {
+    const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
+
+    expect(source).toContain("typedRoutes: true");
+    expect(source).not.toContain("experimental: { typedRoutes");
+  });
+
+  test("cacheComponents 有効時は route segment config export を残さない", () => {
+    const nextConfigSource = readFileSync(NEXT_CONFIG_FILE, "utf8");
+    expect(nextConfigSource).toContain("cacheComponents: true");
+
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(APP_ROUTE_ROOT),
+      /export\s+const\s+(?:dynamic|dynamicParams|revalidate|fetchCache|runtime|preferredRegion|maxDuration)\b/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("next.config.ts の Cache-Control catch-all は先に定義し、個別 no-store を後勝ちにする", () => {
+    const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
+    const catchAllIndex = source.indexOf('source: "/:path*"');
+
+    expect(catchAllIndex).toBeGreaterThanOrEqual(0);
+    for (const specificSource of [
+      'source: "/admin/:path*"',
+      'source: "/reservation/:path*"',
+      'source: "/api/:path*"',
+    ]) {
+      const specificIndex = source.indexOf(specificSource);
+      expect(specificIndex).toBeGreaterThanOrEqual(0);
+      expect(catchAllIndex).toBeLessThan(specificIndex);
+    }
+  });
+
+  test("media.example.com placeholder を runtime 設定に残さない", () => {
+    const offenders = collectNonCommentOffenders(
+      [NEXT_CONFIG_FILE, join(SRC_ROOT, "proxy.ts")],
+      /media\.example\.com/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("本番 source は next/font/google の build-time fetch に依存しない", () => {
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(APP_ROUTE_ROOT),
+      /from\s+["']next\/font\/google["']/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("source theme は配信していない Web font 名を参照しない", () => {
+    const offenders = collectNonCommentOffenders(
+      collectStyleSourceFiles(SRC_ROOT),
+      /(?:Noto Sans JP|Cormorant Garamond)/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("React Compiler 対象コードは useMemo / useCallback import を残さない", () => {
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(SRC_ROOT).filter(
+        (file) => !REACT_COMPILER_MEMO_EXEMPT_FILES.includes(file),
+      ),
+      /import\s+\{[^}]*\buse(?:Memo|Callback)\b/u,
+    );
+
+    expect(offenders).toEqual([]);
   });
 
   test("generated Prisma import は shared/db の外に残さない", () => {

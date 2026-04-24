@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
+import type { AppRoute } from "@/shared/lib/typed-routes";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
 type ButtonSize = "sm" | "md" | "lg";
@@ -41,7 +42,7 @@ interface ButtonAsButton extends ButtonBaseProps {
 }
 
 interface ButtonAsLink extends ButtonBaseProps {
-  readonly href: string;
+  readonly href: AppRoute;
   readonly onClick?: () => void;
 }
 

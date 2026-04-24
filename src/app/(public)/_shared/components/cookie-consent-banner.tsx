@@ -13,6 +13,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { isAppRoute } from "@/shared/lib/typed-routes";
 
 // デフォルト値
 const DEFAULT_MESSAGE =
@@ -115,6 +116,8 @@ export function CookieConsentBanner({
     return null;
   }
 
+  const effectivePolicyUrl = policyUrl || DEFAULT_POLICY_URL;
+
   return (
     <div
       role="dialog"
@@ -133,12 +136,23 @@ export function CookieConsentBanner({
               className="text-sm text-muted-foreground"
             >
               {message || DEFAULT_MESSAGE}{" "}
-              <Link
-                href={policyUrl || DEFAULT_POLICY_URL}
-                className="text-accent underline underline-offset-4 hover:text-foreground"
-              >
-                詳細
-              </Link>
+              {isAppRoute(effectivePolicyUrl) ? (
+                <Link
+                  href={effectivePolicyUrl}
+                  className="text-accent underline underline-offset-4 hover:text-foreground"
+                >
+                  詳細
+                </Link>
+              ) : (
+                <a
+                  href={effectivePolicyUrl}
+                  className="text-accent underline underline-offset-4 hover:text-foreground"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  詳細
+                </a>
+              )}
             </p>
           </div>
           <div className="flex flex-shrink-0 gap-2">

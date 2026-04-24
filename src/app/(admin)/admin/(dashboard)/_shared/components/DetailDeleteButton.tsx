@@ -10,6 +10,7 @@ import {
   isMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 type DetailDeleteButtonProps = {
   itemName?: string;
@@ -33,7 +34,7 @@ export function DetailDeleteButton({
       const result = await onDelete();
       if (!isMutationError(result)) {
         if (successMessage) toast.success(successMessage);
-        router.push(redirectTo);
+        router.push(toAppRoute(redirectTo));
       } else {
         setOpen(false);
         toast.error(result.error);

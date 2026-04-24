@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
+import { isAppRoute } from "@/shared/lib/typed-routes";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import { useCarousel } from "./use-carousel";
 import { useDismissedBars, dismissBar } from "./use-dismissed-bars";
@@ -142,25 +143,37 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           onAnimationEnd={onAnimationEnd}
         >
           <span className="text-center">{currentBar.message}</span>
-          {currentBar.linkUrl && currentBar.linkText && (
-            <Link
-              href={currentBar.linkUrl}
-              className={cn(
-                "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
-                linkHoverClass,
-              )}
-              target={
-                currentBar.linkUrl.startsWith("http") ? "_blank" : undefined
-              }
-              rel={
-                currentBar.linkUrl.startsWith("http")
-                  ? "noopener noreferrer"
-                  : undefined
-              }
-            >
-              {currentBar.linkText}
-            </Link>
-          )}
+          {currentBar.linkUrl &&
+            currentBar.linkText &&
+            (isAppRoute(currentBar.linkUrl) ? (
+              <Link
+                href={currentBar.linkUrl}
+                className={cn(
+                  "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
+                  linkHoverClass,
+                )}
+              >
+                {currentBar.linkText}
+              </Link>
+            ) : (
+              <a
+                href={currentBar.linkUrl}
+                className={cn(
+                  "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
+                  linkHoverClass,
+                )}
+                target={
+                  currentBar.linkUrl.startsWith("http") ? "_blank" : undefined
+                }
+                rel={
+                  currentBar.linkUrl.startsWith("http")
+                    ? "noopener noreferrer"
+                    : undefined
+                }
+              >
+                {currentBar.linkText}
+              </a>
+            ))}
         </div>
       </div>
 

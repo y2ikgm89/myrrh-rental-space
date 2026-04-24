@@ -31,7 +31,13 @@ export async function POST(request: Request) {
     return jsonError(auth.error.error, 401);
   }
 
-  const rawBody: unknown = await request.json().catch(() => null);
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return jsonError("Invalid JSON body", 400);
+  }
+
   const parsed = requestSchema.safeParse(rawBody);
   if (!parsed.success) {
     return jsonValidationError(parsed.error, "入力内容が不正です");

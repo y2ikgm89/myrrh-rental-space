@@ -30,7 +30,7 @@ interface SiteBrandProps {
  * Editorial Magazine ベースの表示サイズ。
  *
  * ロゴ画像: mobile 24px / desktop 32px — 控えめで余白を活かす雑誌的トーン。
- * テキスト: `font-heading` (Cormorant Garamond) italic + tracking。
+ * テキスト: `font-heading` italic + tracking。
  */
 const LOGO_HEIGHT_CLASS = "h-6 md:h-8";
 

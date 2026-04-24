@@ -31,6 +31,7 @@ import {
 import { parsePostImageAspect } from "@/shared/lib/validations/section-parsers";
 import type { PostListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export interface PostData {
   readonly id: string;
@@ -121,7 +122,7 @@ export function PostListSection({
         {posts.map((post) => (
           <Link
             key={post.id}
-            href={post.url}
+            href={toAppRoute(post.url)}
             data-post-card=""
             className={cn(
               "group overflow-hidden border border-border transition-colors duration-200",
@@ -173,7 +174,7 @@ export function PostListSection({
         <ScrollReveal delay={0.2}>
           <div className="mt-10 text-center">
             <Link
-              href={config.viewAllUrl}
+              href={toAppRoute(config.viewAllUrl)}
               className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               {config.viewAllText} &rarr;

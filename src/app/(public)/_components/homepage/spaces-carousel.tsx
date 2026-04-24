@@ -13,6 +13,7 @@ import {
 import { cn } from "@/shared/lib/cn";
 import { useAriaLiveOptional } from "@/shared/contexts";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import type { ShowcaseSpace } from "./spaces-section";
 
 // Breakpoints matching Tailwind sm/lg
@@ -491,7 +492,7 @@ export function SpacesCarousel({
             <div className="mt-5">
               <Button
                 variant="editorial"
-                href={`/spaces/${activeSpace.slug}`}
+                href={toAppRoute(`/spaces/${activeSpace.slug}`)}
                 className="text-xs uppercase tracking-[0.18em]"
               >
                 View Details

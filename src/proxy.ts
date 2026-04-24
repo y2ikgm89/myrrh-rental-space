@@ -9,9 +9,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   ADMIN_GATE_COOKIE_NAME,
-  getAdminGateCookieOptions,
   isSignedAdminGateToken,
-  verifyAdminGateToken,
 } from "@/shared/lib/admin-login-gate";
 import { serverEnv } from "@/shared/lib/env/server";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
@@ -51,13 +49,25 @@ function resolveFrameAncestors(pathname: string): string {
   return "'none'";
 }
 
+function getConfiguredMediaSource(): string | null {
+  const publicUrl = serverEnv.R2_PUBLIC_URL;
+  if (!publicUrl) return null;
+
+  try {
+    return new URL(publicUrl).origin;
+  } catch {
+    return null;
+  }
+}
+
 function buildCsp(nonce: string, pathname: string): string {
   const isDev = serverEnv.NODE_ENV === "development";
+  const mediaSource = getConfiguredMediaSource();
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`};
-    img-src 'self' data: blob: https://media.example.com https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net;
+    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://unpkg.com https://www.google-analytics.com https://analytics.google.com${isDev ? " ws://localhost:*" : ""};
     frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com https://www.google.com;
@@ -99,17 +109,17 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
 //
 // 以下のいずれかを満たす場合のみログインページを表示:
 // 1. admin-gate cookie が設定済み（過去にトークン検証済み）
-// 2. ?token= パラメータで有効なトークンを提示（初回アクセス）
+// 2. ?token= パラメータ付きの初回アクセスは Node.js Route Handler へ委譲
 //
 // セッション cookie の存在だけでは通過させない。公開サイトのソーシャル
 // ログイン（CUSTOMER ロール）でもセッション cookie は発行されるため、
 // gate cookie なしではログインフォームを表示しない。
 // ---------------------------------------------------------------------------
 
-async function handleAdminLoginGate(
+function handleAdminLoginGate(
   req: NextRequest,
   pathname: string,
-): Promise<NextResponse> {
+): NextResponse {
   const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
 
   // gate cookie がある → 通過
@@ -117,26 +127,12 @@ async function handleAdminLoginGate(
     return createResponse(req, pathname);
   }
 
-  // ?token= パラメータでトークン検証
+  // DB-backed 検証と消費は Node.js Route Handler に委譲する
   const token = req.nextUrl.searchParams.get("token");
   if (token && isSignedAdminGateToken(token)) {
-    if (await verifyAdminGateToken(token)) {
-      // トークン有効 → DB 消費は dynamic import（proxy.ts は Edge 互換を維持）
-      const { consumeAdminLoginToken } =
-        await import("@/shared/domain/admin-login-tokens/commands");
-      const consumed = await consumeAdminLoginToken(token);
-      if (consumed) {
-        // cookie 設定 + token パラメータを除去してリダイレクト
-        const cleanUrl = new URL("/admin/login", req.url);
-        const response = NextResponse.redirect(cleanUrl);
-        response.cookies.set(
-          ADMIN_GATE_COOKIE_NAME,
-          "1",
-          getAdminGateCookieOptions(),
-        );
-        return response;
-      }
-    }
+    const consumeUrl = new URL("/admin/login/consume", req.url);
+    consumeUrl.searchParams.set("token", token);
+    return NextResponse.redirect(consumeUrl);
   }
 
   // いずれの条件も満たさない → 404
@@ -209,6 +205,10 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     // Admin Gate: ログインページの隠蔽
     if (pathname === "/admin/login") {
       return handleAdminLoginGate(req, pathname);
+    }
+
+    if (pathname === "/admin/login/consume") {
+      return createResponse(req, pathname);
     }
 
     // セットアップページは認証不要

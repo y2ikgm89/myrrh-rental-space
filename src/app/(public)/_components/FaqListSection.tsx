@@ -30,6 +30,7 @@ import {
 } from "@/shared/lib/validations/section-parsers";
 import type { FaqListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export interface FaqData {
   readonly id: string;
@@ -177,7 +178,7 @@ export function FaqListSection({
             <ScrollReveal delay={0.2}>
               <div className="mt-8 text-center">
                 <Link
-                  href={config.viewAllUrl}
+                  href={toAppRoute(config.viewAllUrl)}
                   className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {config.viewAllText} &rarr;

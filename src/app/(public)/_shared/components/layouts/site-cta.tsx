@@ -4,13 +4,14 @@ import { Section } from "../design-system/section";
 import { Stack } from "../design-system/stack";
 import { Button } from "../design-system/button";
 import { ScrollReveal } from "../animations/scroll-reveal";
+import type { AppRoute } from "@/shared/lib/typed-routes";
 
 interface SiteCTAProps {
   readonly label?: string;
   readonly title?: string;
   readonly description?: string;
   readonly buttonText?: string;
-  readonly buttonHref?: string;
+  readonly buttonHref?: AppRoute;
   readonly background?: "default" | "surface";
   readonly border?: "none" | "top";
 }

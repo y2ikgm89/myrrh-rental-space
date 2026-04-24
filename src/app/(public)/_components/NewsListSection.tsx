@@ -26,6 +26,7 @@ import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
 import type { NewsListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export interface NewsData {
   readonly id: string;
@@ -124,7 +125,7 @@ export function NewsListSection({
           isCard ? (
             <Link
               key={item.id}
-              href={item.url}
+              href={toAppRoute(item.url)}
               data-news-item=""
               className="group border border-border p-5 transition-colors duration-200"
             >
@@ -141,7 +142,7 @@ export function NewsListSection({
           ) : (
             <Link
               key={item.id}
-              href={item.url}
+              href={toAppRoute(item.url)}
               data-news-item=""
               className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
             >
@@ -163,7 +164,7 @@ export function NewsListSection({
         <ScrollReveal delay={0.2}>
           <div className="mt-8 text-center">
             <Link
-              href={config.viewAllUrl}
+              href={toAppRoute(config.viewAllUrl)}
               className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               {config.viewAllText} &rarr;

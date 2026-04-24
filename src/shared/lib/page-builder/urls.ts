@@ -1,5 +1,6 @@
 import type { IframeHTMLAttributes } from "react";
 import { z } from "zod";
+import { isAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
 import { createSafeUrlSchema } from "@/shared/lib/validations/cta-and-url";
 import {
   extractInstagramShortcode,
@@ -140,8 +141,8 @@ export function resolvePageBuilderHref(value: string): string | null {
   return parsed.success ? parsed.data : null;
 }
 
-export function isPageBuilderInternalHref(href: string): boolean {
-  return href.startsWith("/");
+export function isPageBuilderInternalHref(href: string): href is AppRoute {
+  return isAppRoute(href);
 }
 
 export function normalizePageBuilderEmbedUrl(

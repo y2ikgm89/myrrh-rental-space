@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
 
 const NAV_ITEMS = [
   { href: "/mypage", label: "予約一覧" },
   { href: "/mypage/events", label: "イベント" },
   { href: "/mypage/inquiries", label: "お問い合わせ" },
   { href: "/mypage/settings", label: "設定" },
-];
+] satisfies readonly { href: AppRoute; label: string }[];
 
 function getActiveItem(pathname: string) {
   return (
@@ -32,7 +33,7 @@ export function MypageNav() {
       <div className="md:hidden">
         <select
           value={activeItem?.href ?? "/mypage"}
-          onChange={(e) => router.push(e.target.value)}
+          onChange={(e) => router.push(toAppRoute(e.target.value))}
           aria-label="マイページメニュー"
           className="w-full border-b border-border bg-transparent py-3 text-base tracking-[0.12em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

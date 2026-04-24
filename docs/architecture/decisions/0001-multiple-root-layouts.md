@@ -37,7 +37,7 @@ Next.js 16 の [Multiple Root Layouts](https://nextjs.org/docs/app/building-your
 
 **良い点**:
 
-- `public.css`（Editorial Magazine / Cormorant Garamond / Bronze accent）と `admin.css`（Swiss Industrial / Trust Blue）が完全分離
+- `public.css`（Editorial Magazine / system serif / Bronze accent）と `admin.css`（Swiss Industrial / Trust Blue）が完全分離
 - LenisProvider / GSAP / Lexical が管理側に含まれず、公開側の First Load JS を最小化
 - `adminAuth` と `customerAuth` の cookie prefix 分離が自然に実現
 - Better Auth の dual instance pattern が layout レベルで明示される

@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/admin/components/ui";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 // =============================================================================
 // Types
@@ -73,7 +74,7 @@ export function ActionDropdownItem({
   if (href) {
     return (
       <DropdownMenuItem asChild disabled={disabled} className={className}>
-        <Link href={href}>{children}</Link>
+        <Link href={toAppRoute(href)}>{children}</Link>
       </DropdownMenuItem>
     );
   }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import type { ReactElement } from "react";
 
 type BreadcrumbItem = {
@@ -39,7 +40,7 @@ export function Breadcrumb({
                 </span>
               ) : (
                 <Link
-                  href={item.href}
+                  href={toAppRoute(item.href)}
                   className="hover:text-foreground transition-colors"
                 >
                   {item.label}

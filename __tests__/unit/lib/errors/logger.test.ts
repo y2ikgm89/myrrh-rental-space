@@ -13,6 +13,7 @@ import {
   afterAll,
   beforeEach,
 } from "bun:test";
+import { setNodeEnv } from "../../../helpers/env";
 import { logError, createErrorLogger } from "@/shared/lib/errors/logger-core";
 import {
   normalizeError,
@@ -191,15 +192,15 @@ describe("logError", () => {
     const originalNodeEnv = process.env["NODE_ENV"];
 
     beforeAll(() => {
-      process.env["NODE_ENV"] = "production";
+      setNodeEnv("production");
     });
 
     afterAll(() => {
-      process.env["NODE_ENV"] = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     });
 
     beforeEach(() => {
-      process.env["NODE_ENV"] = "production";
+      setNodeEnv("production");
     });
 
     test("GCP構造化JSON形式で出力される", () => {
@@ -267,11 +268,11 @@ describe("logError", () => {
     const originalNodeEnv = process.env["NODE_ENV"];
 
     beforeAll(() => {
-      process.env["NODE_ENV"] = "development";
+      setNodeEnv("development");
     });
 
     afterAll(() => {
-      process.env["NODE_ENV"] = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     });
 
     test("オブジェクト形式で出力される", () => {
@@ -289,15 +290,15 @@ describe("logError", () => {
     const originalNodeEnv = process.env["NODE_ENV"];
 
     beforeAll(() => {
-      process.env["NODE_ENV"] = "production";
+      setNodeEnv("production");
     });
 
     afterAll(() => {
-      process.env["NODE_ENV"] = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     });
 
     beforeEach(() => {
-      process.env["NODE_ENV"] = "production";
+      setNodeEnv("production");
     });
 
     test("Errorオブジェクトからmessageを抽出する", () => {
@@ -372,7 +373,7 @@ describe("createErrorLogger", () => {
 
   test("追加コンテキストを上書きできる", () => {
     const originalNodeEnv = process.env["NODE_ENV"];
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     try {
       using spy = spyOn(console, "error").mockImplementation(() => {});
       const logger = createErrorLogger({
@@ -393,13 +394,13 @@ describe("createErrorLogger", () => {
         expect.stringContaining('"detail":"extra"'),
       );
     } finally {
-      process.env["NODE_ENV"] = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
   test("デフォルトコンテキストがマージされる", () => {
     const originalNodeEnv = process.env["NODE_ENV"];
-    process.env["NODE_ENV"] = "production";
+    setNodeEnv("production");
     try {
       using spy = spyOn(console, "error").mockImplementation(() => {});
       const logger = createErrorLogger({
@@ -421,7 +422,7 @@ describe("createErrorLogger", () => {
         expect.stringContaining('"userId":"default-user"'),
       );
     } finally {
-      process.env["NODE_ENV"] = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 });

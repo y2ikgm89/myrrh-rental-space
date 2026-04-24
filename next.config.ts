@@ -1,5 +1,29 @@
 import type { NextConfig } from "next";
 
+type RemotePattern = NonNullable<
+  NonNullable<NextConfig["images"]>["remotePatterns"]
+>[number];
+
+function getR2PublicUrlPattern(): RemotePattern | null {
+  const publicUrl = process.env["R2_PUBLIC_URL"];
+  if (!publicUrl) return null;
+
+  try {
+    const url = new URL(publicUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+
+    return {
+      protocol: url.protocol === "https:" ? "https" : "http",
+      hostname: url.hostname,
+      pathname: "/**",
+    };
+  } catch {
+    return null;
+  }
+}
+
+const r2PublicUrlPattern = getR2PublicUrlPattern();
+
 const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
   reactCompiler: true,
@@ -23,15 +47,9 @@ const nextConfig: NextConfig = {
   // Image optimization
   images: {
     remotePatterns: [
+      ...(r2PublicUrlPattern ? [r2PublicUrlPattern] : []),
       {
         protocol: "https",
-        // R2 カスタムドメイン（R2_PUBLIC_URL のホスト名と一致させること）
-        // env 値をここで参照しない（next.config.ts はビルド時評価）
-        hostname: "media.example.com",
-      },
-      {
-        protocol: "https",
-        // R2 dev 用サブドメイン（カスタムドメイン未設定時）
         hostname: "*.r2.dev",
       },
       {
@@ -60,6 +78,7 @@ const nextConfig: NextConfig = {
   // Production optimizations
   reactStrictMode: true,
   poweredByHeader: false,
+  typedRoutes: true,
 
   // Partial Prerendering (PPR) - 静的シェル + 動的コンテンツのハイブリッドレンダリング
   // use cache ディレクティブによる明示的キャッシュ制御を有効化
@@ -125,6 +144,16 @@ const nextConfig: NextConfig = {
   // Cache-Control（セキュリティヘッダーは proxy.ts に集約）
   async headers() {
     return [
+      // 公開ページ（積極的キャッシュ - Cloudflare CDN連携）
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=3600, stale-while-revalidate=3600",
+          },
+        ],
+      },
       // 管理画面（キャッシュ禁止）
       {
         source: "/admin/:path*",
@@ -152,16 +181,6 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "private, no-cache",
-          },
-        ],
-      },
-      // 公開ページ（積極的キャッシュ - Cloudflare CDN連携）
-      {
-        source: "/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, s-maxage=3600, stale-while-revalidate=3600",
           },
         ],
       },

@@ -157,7 +157,7 @@ export const VARIANTS: readonly VariantMeta[] = [
     pros: [
       "日本語コピーが first view の主役になる",
       "SWELL / JIN:R 系日本サイト訪問者に既視感",
-      "Cormorant の英語 sub と Noto Sans JP 本文の対比が映える",
+      "OS 標準 serif の英語 sub と system-ui 本文の対比が映える",
       "scroll indicator で下への誘導が明示",
     ],
     cons: [

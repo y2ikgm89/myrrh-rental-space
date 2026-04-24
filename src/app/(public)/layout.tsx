@@ -19,7 +19,6 @@ import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
-import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
 import {
   Header,
   type HeaderAuthSlot,
@@ -57,20 +56,7 @@ import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
-import { cn } from "@/shared/lib/cn";
 import "./_styles/public.css";
-
-const notoSansJP = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-});
-
-const cormorantGaramond = Cormorant_Garamond({
-  variable: "--font-cormorant-garamond",
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
@@ -238,13 +224,7 @@ export default async function PublicRootLayout({
   if (maintenanceSettings.maintenanceMode) {
     return (
       <html lang="ja">
-        <body
-          className={cn(
-            notoSansJP.variable,
-            cormorantGaramond.variable,
-            "font-sans antialiased",
-          )}
-        >
+        <body className="font-sans antialiased">
           <MaintenancePage message={maintenanceSettings.maintenanceMessage} />
         </body>
       </html>
@@ -270,13 +250,7 @@ export default async function PublicRootLayout({
           <HeadContent />
         </Suspense>
       </head>
-      <body
-        className={cn(
-          notoSansJP.variable,
-          cormorantGaramond.variable,
-          "font-sans antialiased",
-        )}
-      >
+      <body className="font-sans antialiased">
         {/* 全公開ページ共通の構造化データ */}
         <Suspense fallback={null}>
           <StructuredDataContent />

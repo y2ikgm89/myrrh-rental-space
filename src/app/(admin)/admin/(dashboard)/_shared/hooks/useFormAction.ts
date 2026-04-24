@@ -26,6 +26,7 @@ import {
   type MutationResult,
   type MutationError,
 } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 // =============================================================================
 // Types
@@ -164,7 +165,7 @@ export function useFormAction<TInput extends FieldValues, TOutput = null>(
 
       // リダイレクト or リフレッシュ
       if (options?.redirectTo) {
-        router.push(options.redirectTo);
+        router.push(toAppRoute(options.redirectTo));
       } else if (options?.refresh) {
         router.refresh();
       }

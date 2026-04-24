@@ -32,6 +32,7 @@ import {
 import { parseSpaceImageAspect } from "@/shared/lib/validations/section-parsers";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 export interface SpaceListData {
   readonly id: string;
@@ -122,7 +123,7 @@ export function SpaceListSection({
         {spaces.map((space) => (
           <Link
             key={space.id}
-            href={`/spaces/${space.slug}`}
+            href={toAppRoute(`/spaces/${space.slug}`)}
             data-space-list-card=""
             className={cn(
               "group overflow-hidden border border-border transition-colors duration-200",
@@ -186,7 +187,7 @@ export function SpaceListSection({
         <ScrollReveal delay={0.2}>
           <div className="mt-10 text-center">
             <Link
-              href={config.viewAllUrl}
+              href={toAppRoute(config.viewAllUrl)}
               className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               {config.viewAllText} &rarr;

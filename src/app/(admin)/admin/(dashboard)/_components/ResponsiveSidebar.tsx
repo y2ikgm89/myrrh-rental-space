@@ -14,6 +14,7 @@ import { tv } from "tailwind-variants";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
@@ -190,7 +191,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    href={toAppRoute(item.href)}
                     className={cn(
                       classes.navItem(),
                       isActive && classes.navItemActive(),

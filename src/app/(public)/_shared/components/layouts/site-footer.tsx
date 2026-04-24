@@ -16,6 +16,7 @@ import { getFooterTerms } from "@/shared/domain/terms/public-queries";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { CopyrightYear } from "./copyright-year";
 import { SiteBrand } from "./site-brand";
 import { SocialLinks } from "./social-links";
@@ -210,7 +211,10 @@ export async function Footer(): Promise<ReactElement> {
                         <span className="sr-only"> (新しいタブで開く)</span>
                       </a>
                     ) : (
-                      <Link href={item.url} className={NAV_LINK_CLASS}>
+                      <Link
+                        href={toAppRoute(item.url)}
+                        className={NAV_LINK_CLASS}
+                      >
                         {item.label}
                       </Link>
                     )}
@@ -352,7 +356,7 @@ export async function Footer(): Promise<ReactElement> {
               {footerTerms.map((terms) => (
                 <Link
                   key={terms.slug}
-                  href={`/terms/${terms.slug}`}
+                  href={toAppRoute(`/terms/${terms.slug}`)}
                   className="transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
                 >
                   {terms.title}

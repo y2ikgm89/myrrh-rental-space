@@ -32,6 +32,7 @@ import {
 } from "@/public/lib/animations";
 import type { HeroConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -59,7 +60,7 @@ function HeroButtons({
       )}
       {secondary && (
         <Link
-          href={secondary.url}
+          href={toAppRoute(secondary.url)}
           className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
         >
           {secondary.text}

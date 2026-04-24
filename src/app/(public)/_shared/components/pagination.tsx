@@ -7,6 +7,7 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 function buildPageHref(
   basePath: string,
@@ -66,7 +67,7 @@ export function Pagination({
     >
       {currentPage > 1 && (
         <Link
-          href={getHref(currentPage - 1)}
+          href={toAppRoute(getHref(currentPage - 1))}
           className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           前へ
@@ -76,7 +77,7 @@ export function Pagination({
       {start > 1 && (
         <>
           <Link
-            href={getHref(1)}
+            href={toAppRoute(getHref(1))}
             className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             1
@@ -92,7 +93,7 @@ export function Pagination({
       {pages.map((page) => (
         <Link
           key={page}
-          href={getHref(page)}
+          href={toAppRoute(getHref(page))}
           className={cn(
             "border px-3 py-2 text-sm transition-colors",
             page === currentPage
@@ -113,7 +114,7 @@ export function Pagination({
             </span>
           )}
           <Link
-            href={getHref(totalPages)}
+            href={toAppRoute(getHref(totalPages))}
             className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             {totalPages}
@@ -123,7 +124,7 @@ export function Pagination({
 
       {currentPage < totalPages && (
         <Link
-          href={getHref(currentPage + 1)}
+          href={toAppRoute(getHref(currentPage + 1))}
           className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           次へ

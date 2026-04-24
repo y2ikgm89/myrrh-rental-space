@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface NewsItemData {
   id: string;
@@ -32,7 +33,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
       {items.map((item) => (
         <Link
           key={item.id}
-          href={item.url}
+          href={toAppRoute(item.url)}
           className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/30 md:gap-6 md:py-6"
         >
           <time

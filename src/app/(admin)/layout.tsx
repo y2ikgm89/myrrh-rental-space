@@ -9,23 +9,8 @@
 
 import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
-import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
-import { cn } from "@/shared/lib/cn";
 import { getAppUrl } from "@/shared/lib/constants";
 import "./_styles/admin.css";
-
-const notoSansJP = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
-
-const cormorantGaramond = Cormorant_Garamond({
-  variable: "--font-cormorant-garamond",
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(getAppUrl()),
@@ -57,15 +42,7 @@ export default async function AdminRootLayout({
 }>): Promise<ReactElement> {
   return (
     <html lang="ja">
-      <body
-        className={cn(
-          notoSansJP.variable,
-          cormorantGaramond.variable,
-          "font-sans antialiased",
-        )}
-      >
-        {children}
-      </body>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }

@@ -21,6 +21,7 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import type { CtaConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface CTASectionProps {
   readonly config: CtaConfig;
@@ -57,7 +58,7 @@ function CTAButtons({
         )}
         {secondaryButton && (
           <Link
-            href={secondaryButton.url}
+            href={toAppRoute(secondaryButton.url)}
             className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
           >
             {secondaryButton.text}

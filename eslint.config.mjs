@@ -8,6 +8,45 @@ import tseslint from "typescript-eslint";
 import globals from "globals";
 import prettier from "eslint-config-prettier/flat";
 
+const reactCompilerRestrictedImports = [
+  {
+    name: "react",
+    importNames: ["forwardRef"],
+    message:
+      "React 19 では forwardRef を使わず、ref prop を通常の props として渡してください。",
+  },
+  {
+    name: "react",
+    importNames: ["useMemo", "useCallback"],
+    message:
+      "React Compiler 前提のコードベースです。外部ライブラリ要件がない限り useMemo / useCallback は使わないでください。",
+  },
+];
+
+const legacyPrismaRestrictedImport = {
+  name: "@/shared/lib/prisma",
+  message:
+    "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
+};
+
+const publicDbRestrictedImports = [
+  {
+    name: "@/shared/db",
+    message:
+      "public app layer は shared/db ではなく shared/domain を経由してください。",
+  },
+  {
+    name: "@/shared/db/prisma",
+    message:
+      "public app layer は Prisma facade を直接参照せず shared/domain を経由してください。",
+  },
+  {
+    name: "@/shared/lib/prisma",
+    message:
+      "legacy prisma shim は使用禁止です。shared/domain を経由してください。",
+  },
+];
+
 const eslintConfig = defineConfig([
   // @eslint-react: ESLint 10 ネイティブ React ルール（TypeScript 最適化プリセット）
   // プリセットが plugins / rules / settings をセットで定義するため単体エントリとして展開
@@ -53,20 +92,7 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          paths: [
-            {
-              name: "react",
-              importNames: ["forwardRef"],
-              message:
-                "React 19 では forwardRef を使わず、ref prop を通常の props として渡してください。",
-            },
-            {
-              name: "react",
-              importNames: ["useMemo", "useCallback"],
-              message:
-                "React Compiler 前提のコードベースです。外部ライブラリ要件がない限り useMemo / useCallback は使わないでください。",
-            },
-          ],
+          paths: reactCompilerRestrictedImports,
         },
       ],
 
@@ -111,11 +137,8 @@ const eslintConfig = defineConfig([
         "error",
         {
           paths: [
-            {
-              name: "@/shared/lib/prisma",
-              message:
-                "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
-            },
+            ...reactCompilerRestrictedImports,
+            legacyPrismaRestrictedImport,
           ],
         },
       ],
@@ -129,21 +152,8 @@ const eslintConfig = defineConfig([
         "error",
         {
           paths: [
-            {
-              name: "@/shared/db",
-              message:
-                "public app layer は shared/db ではなく shared/domain を経由してください。",
-            },
-            {
-              name: "@/shared/db/prisma",
-              message:
-                "public app layer は Prisma facade を直接参照せず shared/domain を経由してください。",
-            },
-            {
-              name: "@/shared/lib/prisma",
-              message:
-                "legacy prisma shim は使用禁止です。shared/domain を経由してください。",
-            },
+            ...reactCompilerRestrictedImports,
+            ...publicDbRestrictedImports,
           ],
         },
       ],
@@ -205,6 +215,7 @@ const eslintConfig = defineConfig([
       "react-hooks/refs": "off",
       "@eslint-react/use-state": "off",
       "@eslint-react/web-api-no-leaked-event-listener": "off",
+      "no-restricted-imports": "off",
     },
   },
 

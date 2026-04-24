@@ -18,21 +18,7 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
-import { cn } from "@/shared/lib/cn";
 import "./(public)/_styles/public.css";
-
-const notoSansJP = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-});
-
-const cormorantGaramond = Cormorant_Garamond({
-  variable: "--font-cormorant-garamond",
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-});
 
 export const metadata: Metadata = {
   title: "ページが見つかりません",
@@ -46,13 +32,7 @@ export const metadata: Metadata = {
 export default function NotFound(): ReactElement {
   return (
     <html lang="ja">
-      <body
-        className={cn(
-          notoSansJP.variable,
-          cormorantGaramond.variable,
-          "font-sans antialiased",
-        )}
-      >
+      <body className="font-sans antialiased">
         <div className="flex min-h-screen flex-col items-center justify-center px-5 md:px-8">
           <div className="w-full max-w-md text-center">
             <div className="mb-8">

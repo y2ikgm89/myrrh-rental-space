@@ -27,6 +27,7 @@ import {
   ctaDefaultProps,
   type CtaSectionProps,
 } from "../../../_components/homepage/cta-section";
+import { isAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
 
 type HomepageRenderableSection = {
   readonly id: string;
@@ -51,6 +52,11 @@ function str(config: unknown, key: string, fallback: string): string {
   if (!isRecord(config)) return fallback;
   const value = config[key];
   return typeof value === "string" ? value : fallback;
+}
+
+function appRoute(config: unknown, key: string, fallback: AppRoute): AppRoute {
+  const value = str(config, key, fallback);
+  return isAppRoute(value) ? value : fallback;
 }
 
 function num(config: unknown, key: string, fallback: number): number {
@@ -121,7 +127,7 @@ function mapCtaConfig(config: unknown): CtaSectionProps {
     title: str(config, "title", ctaDefaultProps.title),
     description: str(config, "description", ctaDefaultProps.description),
     buttonText: str(config, "buttonText", ctaDefaultProps.buttonText),
-    buttonUrl: str(config, "buttonUrl", ctaDefaultProps.buttonUrl),
+    buttonUrl: appRoute(config, "buttonUrl", ctaDefaultProps.buttonUrl),
   };
 }
 

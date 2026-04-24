@@ -15,6 +15,7 @@ import type {
   FieldPathByValue,
 } from "react-hook-form";
 import { useConfirm } from "@/admin/contexts/confirm-context";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { useCommentPanel } from "../../hooks";
 import type { EditorCoreConfig, EditorCoreReturn } from "./types";
 
@@ -60,7 +61,7 @@ export function useEditorCore<TFormData extends FieldValues>({
       });
       if (!confirmed) return;
     }
-    router.push(listPath);
+    router.push(toAppRoute(listPath));
   };
 
   // startTransitionを非同期対応でラップ
