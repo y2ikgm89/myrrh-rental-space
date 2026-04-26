@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Image from "next/image";
+import * as Dialog from "@radix-ui/react-dialog";
 import { IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
-import { ImageFrame } from "../design-system/image-frame";
 import type { KeyboardEvent } from "react";
+import { ImageFrame } from "../design-system/image-frame";
 
 interface ImageGalleryProps {
   readonly images: readonly string[];
@@ -13,6 +14,7 @@ interface ImageGalleryProps {
 
 export function ImageGallery({ images, alt }: ImageGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const isOpen = lightboxIndex !== null;
 
   if (images.length === 0) return null;
 
@@ -36,22 +38,23 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     setLightboxIndex((lightboxIndex - 1 + images.length) % images.length);
   }
 
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape") closeLightbox();
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === "ArrowRight") goNext();
     if (e.key === "ArrowLeft") goPrev();
   }
 
   const currentImage =
     lightboxIndex !== null ? images[lightboxIndex] : undefined;
+  const hasMultiple = images.length > 1;
 
   return (
     <div>
-      {/* Main image — ImageFrame Primitive */}
+      {/* Main image */}
       <button
         type="button"
         onClick={() => openLightbox(0)}
         className="block w-full"
+        aria-label={`${alt} 1 を拡大表示`}
       >
         <ImageFrame
           src={images[0] ?? ""}
@@ -72,6 +75,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
               type="button"
               onClick={() => openLightbox(i + 1)}
               className="block shrink-0"
+              aria-label={`${alt} ${String(i + 2)} を拡大表示`}
             >
               <ImageFrame
                 src={src}
@@ -85,134 +89,64 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
         </div>
       ) : null}
 
-      {/* Lightbox */}
-      {lightboxIndex !== null && currentImage ? (
-        <LightboxOverlay
-          currentImage={currentImage}
-          alt={`${alt} ${String(lightboxIndex + 1)}`}
-          hasMultiple={images.length > 1}
-          onClose={closeLightbox}
-          onPrev={goPrev}
-          onNext={goNext}
-          onKeyDown={handleKeyDown}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function LightboxOverlay({
-  currentImage,
-  alt,
-  hasMultiple,
-  onClose,
-  onPrev,
-  onNext,
-  onKeyDown,
-}: {
-  readonly currentImage: string;
-  readonly alt: string;
-  readonly hasMultiple: boolean;
-  readonly onClose: () => void;
-  readonly onPrev: () => void;
-  readonly onNext: () => void;
-  readonly onKeyDown: (e: KeyboardEvent) => void;
-}) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleFocusTrap(e: globalThis.KeyboardEvent) {
-      if (e.key !== "Tab") return;
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-      const focusable = dialog.querySelectorAll<HTMLElement>(
-        'button, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!first || !last) return;
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleFocusTrap);
-    return () => document.removeEventListener("keydown", handleFocusTrap);
-  }, []);
-
-  return (
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-label="画像ギャラリー"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
-      onClick={onClose}
-      onKeyDown={onKeyDown}
-      tabIndex={-1}
-    >
-      <div
-        className="relative max-h-[var(--lightbox-max-height)] max-w-[var(--lightbox-max-width)]"
-        onClick={(e) => e.stopPropagation()}
+      {/* Lightbox — Radix Dialog: focus trap + Escape + focus 復帰 自動 */}
+      <Dialog.Root
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) closeLightbox();
+        }}
       >
-        <Image
-          src={currentImage}
-          alt={alt}
-          width={1200}
-          height={800}
-          className="max-h-[var(--lightbox-max-height)] w-auto object-contain"
-        />
-      </div>
-      <button
-        ref={closeButtonRef}
-        type="button"
-        onClick={onClose}
-        className="absolute right-4 top-4 rounded-full bg-background/80 p-2 text-foreground"
-        aria-label="閉じる"
-      >
-        <IconX className="h-6 w-6" />
-      </button>
-      {hasMultiple ? (
-        <>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPrev();
-            }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground"
-            aria-label="前の画像"
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-overlay data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content
+            onKeyDown={handleKeyDown}
+            className="fixed inset-0 z-50 flex items-center justify-center"
           >
-            <IconChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground"
-            aria-label="次の画像"
-          >
-            <IconChevronRight className="h-6 w-6" />
-          </button>
-        </>
-      ) : null}
+            <Dialog.Title className="sr-only">画像ギャラリー</Dialog.Title>
+            <Dialog.Description className="sr-only">
+              {alt}（{(lightboxIndex ?? 0) + 1} / {images.length}）。
+              矢印キーで前後移動、Escape で閉じる。
+            </Dialog.Description>
+            {currentImage ? (
+              <div className="relative max-h-[var(--lightbox-max-height)] max-w-[var(--lightbox-max-width)]">
+                <Image
+                  src={currentImage}
+                  alt={`${alt} ${String((lightboxIndex ?? 0) + 1)}`}
+                  width={1200}
+                  height={800}
+                  className="max-h-[var(--lightbox-max-height)] w-auto object-contain"
+                />
+              </div>
+            ) : null}
+            <Dialog.Close
+              className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label="閉じる"
+            >
+              <IconX className="h-6 w-6" aria-hidden="true" />
+            </Dialog.Close>
+            {hasMultiple ? (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label="前の画像"
+                >
+                  <IconChevronLeft className="h-6 w-6" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label="次の画像"
+                >
+                  <IconChevronRight className="h-6 w-6" aria-hidden="true" />
+                </button>
+              </>
+            ) : null}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
