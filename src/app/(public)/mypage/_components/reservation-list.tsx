@@ -34,11 +34,16 @@ interface ReservationListProps {
 export function ReservationList({ items }: ReservationListProps) {
   if (items.length === 0) {
     return (
-      <div className="py-16 md:py-24 text-center space-y-4">
+      <div className="space-y-4 py-16 text-center md:py-24">
         <p className="text-muted-foreground">予約がありません</p>
-        <Button variant="editorial" size="sm" href="/spaces">
-          スペースを探す
-        </Button>
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Button variant="editorial" size="sm" href="/spaces">
+            スペースを探す
+          </Button>
+          <Button variant="editorial" size="sm" href="/faq">
+            よくある質問を見る
+          </Button>
+        </div>
       </div>
     );
   }
