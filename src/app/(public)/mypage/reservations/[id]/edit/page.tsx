@@ -56,7 +56,7 @@ export default async function ReservationEditPage({
 
   // ステータスチェック
   if (!EDITABLE_STATUSES.has(reservation.status)) {
-    redirect(`/mypage/reservations/${id}`);
+    redirect(`/mypage/reservations/${id}?reason=status`);
   }
 
   // 変更期限チェック
@@ -67,7 +67,7 @@ export default async function ReservationEditPage({
       reservationDeadlineNow(),
     )
   ) {
-    redirect(`/mypage/reservations/${id}`);
+    redirect(`/mypage/reservations/${id}?reason=deadline`);
   }
 
   // 手動割引チェック
@@ -80,7 +80,7 @@ export default async function ReservationEditPage({
       reservation.spaceDiscountAmount > 0);
 
   if (hasManualDiscount) {
-    redirect(`/mypage/reservations/${id}`);
+    redirect(`/mypage/reservations/${id}?reason=discount`);
   }
 
   // 同じロケーションのスペース一覧を取得

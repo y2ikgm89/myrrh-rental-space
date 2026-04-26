@@ -5,7 +5,9 @@
  */
 
 import type { ReactElement } from "react";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
@@ -36,18 +38,31 @@ import { toAppRoute } from "@/shared/lib/typed-routes";
 
 const CANCELLABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
 
+const REDIRECT_REASONS = ["status", "deadline", "discount"] as const;
+type RedirectReason = (typeof REDIRECT_REASONS)[number];
+const REDIRECT_REASON_SET = new Set<string>(REDIRECT_REASONS);
+function isRedirectReason(value: string): value is RedirectReason {
+  return REDIRECT_REASON_SET.has(value);
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
+  readonly searchParams: Promise<SearchParams>;
 }
 
 export default async function ReservationDetailPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
   const { id } = await params;
+  const sp = await searchParams;
+  const reasonRaw = typeof sp["reason"] === "string" ? sp["reason"] : null;
+  const reason: RedirectReason | null =
+    reasonRaw && isRedirectReason(reasonRaw) ? reasonRaw : null;
 
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
@@ -119,6 +134,33 @@ export default async function ReservationDetailPage({
   return (
     <Stack gap="lg" className="max-w-2xl">
       <Heading level={1}>予約詳細</Heading>
+
+      {reason && (
+        <div
+          role="alert"
+          className="border border-warning/30 bg-warning/5 p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            予約変更ページから戻りました
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            {reason === "status" && "この予約は変更できないステータスです。"}
+            {reason === "deadline" && "予約変更の受付期限を過ぎています。"}
+            {reason === "discount" && (
+              <>
+                割引が適用されているため、オンラインでは変更できません。
+                <Link
+                  href={toAppRoute("/contact")}
+                  className="ml-1 underline underline-offset-4 hover:text-foreground"
+                >
+                  お問い合わせください
+                </Link>
+                。
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       <ReservationDetail
         reservation={serializedReservation}
