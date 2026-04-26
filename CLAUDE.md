@@ -108,6 +108,17 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **画像 overlay text は 12px 以上（WCAG a11y）** — label/caption に `text-[0.55rem]` (8.8px) 禁止。editorial でも mobile 最小 `text-[0.75rem]` (12px)、photo credit のみ `text-[0.625rem]` (10px) まで許容。画像上テキストは 3 層防御（scrim + paint-order stroke + text-shadow）必須（→ `frontend/accessibility.md` §画像上テキストの 3 層可読性保証）
 - **画像に text overlay する responsive hero は grid cell overlap パターン** — モバイル `col-start-1 row-start-1` + z-index で overlay、desktop で `md:col-start-2` に分離。単一 h1 / DOM 重複なしで SEO 整合（→ `tailwind-patterns.md` §同 Grid cell overlap）
 - **Tailwind v4 responsive reset が必要な値は inline style 不可** — `style={{ WebkitTextStroke: "..." }}` は specificity で `md:[-webkit-text-stroke:0]` を上書きする silent bug。arbitrary class `[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]` + `md:[-webkit-text-stroke:0px_transparent]` を使う（→ `tailwind-patterns.md` §インラインスタイル vs Tailwind arbitrary properties）
+- **mypage の「お名前未登録」警告は `IncompleteProfileNotice` 経由必須** — page 個別実装禁止、layout 集約 SSoT（`mypage/_components/incomplete-profile-notice.tsx`）
+- **mypage の `loading.tsx` は `MypageSkeleton` (variant: list/detail/form) 必須** — 単一 spinner placeholder 禁止（layout shift + dead UX 解消、`aria-busy` + `aria-live="polite"` 内蔵）
+- **`PublishSwitch` 呼び出しに `resourceLabel: string` 必須** — Switch まで `aria-label` forwarding（SR で resource context 通知、視覚 label span は `aria-hidden`）
+- **mypage edit page の `redirect()` は `?reason=` 付与必須** — `status|deadline|discount` 等で detail page に理由バナー表示（dead-end 防止、`reservations/[id]/edit/page.tsx` 参照実装）
+- **公開フォーム送信成功画面に next-step CTA 必須** — 「他を見る」「ホームに戻る」等で dead-end 解消（contact / event registration / reservation form 全成功画面、`role="status" aria-live="polite"` 併設）
+- **公開ページ `text-[10px]` 禁止** — `text-xs` (12px) 以上、画像 overlay photo credit のみ `[0.625rem]` (10px) 例外（WCAG a11y、→ `frontend/accessibility.md` §フォントサイズ最小値）
+- **公開 uppercase ラベル tracking は `[0.18em]` 標準** — `[0.1em]/[0.14em]/[0.4em]` 等の中間値禁止、heading 微調整 `[0.01em]/[0.02em]` のみ例外（→ `frontend/accessibility.md` §Uppercase ラベル tracking 標準値）
+- **HERO 高さの arbitrary svh 禁止** — `min-h-[var(--hero-min-height-sm|--hero-min-height|--hero-min-height-lg)]` token 参照必須（`HERO_PARALLAX_HEIGHT_MAP` / `StandardHeroSection.HEIGHT_MAP` / `CompactHero` 全て移行済）
+- **admin table の `<input type="checkbox">` 直書き禁止** — `CheckboxCell` (`@/admin/components/table`) 経由で 44px ヒットエリア確保（ADR 0022）。行 checkbox の `aria-label` は entity の意味ある識別子（タイトル / 日時+スペース名）を使用、`id.slice(0, 8)` 等の技術的識別子禁止
+- **自前 LightboxOverlay 復活禁止** — `ImageGallery` / `GallerySection` の lightbox は Radix Dialog (`Dialog.Root` + `Dialog.Title` + `Dialog.Close`) 採用、focus trap / Escape / focus 復帰 / body scroll lock を Radix 標準に委譲。手動 `useEffect` body lock + `useRef` Tab handling 復活禁止
+- **`*_GRID_COLS_MAP` は全て Container Queries variants** — `GRID_COLS_MAP` / `CARD_GRID_COLS_MAP` / `GALLERY_GRID_COLS_MAP` は `@md:`/`@3xl:` で統一済、viewport breakpoint (`md:`/`lg:`) 復活禁止。consumer は親に `@container` 必須
 
 ---
 

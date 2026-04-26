@@ -363,6 +363,74 @@ const sm = "px-3 py-2 text-sm min-h-11";
 </label>
 ```
 
+### 管理画面 table の checkbox は CheckboxCell 必須（ADR 0022）
+
+```tsx
+// NG: 直書き（16px、WCAG 2.5.5 違反）
+<input type="checkbox" checked={isSelected} onChange={handleChange} />;
+
+// OK: CheckboxCell 経由（44px ヒットエリア確保 + aria-label 必須）
+import { CheckboxCell } from "@/admin/components/table";
+
+<CheckboxCell
+  checked={isSelected}
+  onChange={handleChange}
+  aria-label={`${entity.name} を選択`}
+/>;
+```
+
+行 checkbox の `aria-label` は **意味ある識別子**（タイトル / 日時+スペース名 等）を渡し、`id.slice(0, 8)` 等の技術的識別子は禁止（SR ユーザーが対象判別不能）。
+
+---
+
+## フォントサイズ最小値（WCAG a11y）
+
+公開ページの interactive / informative テキストは **`text-xs` (12px) 以上**。
+
+- **`text-[10px]` 禁止** — WCAG a11y 一般推奨で 12px 未満は読みにくい
+- **画像 overlay の photo credit のみ `text-[0.625rem]` (10px) まで例外** — 装飾的かつ scrim + paint-order stroke 併用で可読性担保
+- **画像 overlay text は 12px 以上必須**（label/caption に `text-[0.55rem]` (8.8px) 禁止、editorial でも mobile 最小 `text-[0.75rem]` (12px)）→ 上記「画像上テキストの 3 層可読性保証」と整合
+
+```tsx
+// NG: 公開ページの informative text
+<span className="text-[10px] uppercase tracking-[0.18em]">Scroll</span>
+
+// OK: text-xs (12px) 以上
+<span className="text-xs uppercase tracking-[0.18em]">Scroll</span>
+```
+
+検出 grep:
+
+```bash
+grep -rnE 'text-\[10px\]' src/app/\(public\)/ --include="*.tsx"
+```
+
+---
+
+## Uppercase ラベル tracking 標準値
+
+公開 uppercase ラベル / nav link / button text の tracking 標準値:
+
+| 値                  | 用途                                                                             |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `tracking-[0.18em]` | **canonical** — 公開ページ全 uppercase ラベル / nav link / editorial button text |
+| `tracking-[0.12em]` | 日本語タブ / 中サイズラベル                                                      |
+| `tracking-[0.08em]` | ブランド serif italic（ロゴ / ヘッダーブランド）                                 |
+
+**禁止** — 中間値 `[0.1em]` / `[0.14em]` / `[0.15em]` / `[0.4em]` 等。新規実装時は上記 3 値のいずれかを選ぶ。
+
+**editorial 例外**:
+
+- heading 微調整 `[0.01em]` / `[0.02em]` — Cormorant Garamond の serif 用
+- photo credit / image overlay caption — editorial intent あれば個別判断
+
+検出 grep:
+
+```bash
+grep -rnE 'tracking-\[0\.[0-9]+em\]' src/app/\(public\)/ --include="*.tsx" \
+  | grep -vE '(0\.08em|0\.12em|0\.18em|0\.01em|0\.02em|hero-demo|spaces-design-demo)'
+```
+
 ---
 
 ## prefers-reduced-motion
