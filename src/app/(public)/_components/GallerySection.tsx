@@ -213,20 +213,28 @@ export function GallerySection({
               <button
                 type="button"
                 onClick={closeLightbox}
-                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
+                className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="閉じる"
               >
-                <IconX className="h-5 w-5" strokeWidth={1.5} />
+                <IconX
+                  className="h-5 w-5"
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
               </button>
 
               <div className="relative flex max-h-[80svh] max-w-[90vw] items-center">
                 <button
                   type="button"
                   onClick={() => navigateLightbox(-1)}
-                  className="absolute -left-14 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
+                  className="absolute -left-14 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="前の画像"
                 >
-                  <IconChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+                  <IconChevronLeft
+                    className="h-5 w-5"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
                 </button>
 
                 <Image
@@ -240,10 +248,14 @@ export function GallerySection({
                 <button
                   type="button"
                   onClick={() => navigateLightbox(1)}
-                  className="absolute -right-14 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
+                  className="absolute -right-14 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="次の画像"
                 >
-                  <IconChevronRight className="h-5 w-5" strokeWidth={1.5} />
+                  <IconChevronRight
+                    className="h-5 w-5"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
 
