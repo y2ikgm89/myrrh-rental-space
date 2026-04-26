@@ -10,7 +10,6 @@ import {
 } from "@/shared/lib/errors/server";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 import { toPlainObject } from "@/shared/lib/serialize";
-import type { PublicSectionStyle } from "@/shared/domain/sections/queries";
 
 export interface PageSeoData {
   title: string;
@@ -22,16 +21,12 @@ export interface PageSeoData {
   ogpImageUrl: string | null;
 }
 
-/**
- * 公開ページ基本情報 + pageStyle（Phase B.C5 cascade 解決用）
- */
 export type PublicPage = {
   readonly id: string;
   readonly slug: string;
   readonly title: string;
   readonly description: string | null;
   readonly isSystemPage: boolean;
-  readonly pageStyle: PublicSectionStyle | null;
 };
 
 export async function getPublicPage(slug: string): Promise<PublicPage | null> {
@@ -55,16 +50,6 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
           title: true,
           description: true,
           isSystemPage: true,
-          pageStyle: {
-            select: {
-              spacing: true,
-              background: true,
-              container: true,
-              typography: true,
-              animation: true,
-              customClass: true,
-            },
-          },
         },
       }),
     fallback: null,

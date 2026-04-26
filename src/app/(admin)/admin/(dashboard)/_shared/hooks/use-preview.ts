@@ -5,6 +5,7 @@
  */
 
 import { logger } from "@/shared/lib/logger";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { getContentPreviewHref } from "@/shared/lib/preview-routes";
 import {
   type PostPreviewData,
@@ -72,7 +73,7 @@ export function openPreview(
   basePath: string,
 ): void {
   const url = getContentPreviewHref(basePath, identifier);
-  window.open(url, "_blank");
+  openExternalTab(url);
 }
 
 /**

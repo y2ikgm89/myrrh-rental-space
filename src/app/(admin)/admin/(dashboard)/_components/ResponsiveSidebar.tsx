@@ -18,8 +18,8 @@ import { toAppRoute } from "@/shared/lib/typed-routes";
 import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
-import { SIDEBAR_ITEMS } from "./sidebar-items";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import type { SidebarItem } from "@/admin/types/admin-layout";
 
 const styles = tv({
   slots: {
@@ -100,10 +100,11 @@ function isSidebarItemActive(
 }
 
 type ResponsiveSidebarProps = {
+  items: SidebarItem[];
   userInfo: ReactNode;
 };
 
-export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
+export function ResponsiveSidebar({ items, userInfo }: ResponsiveSidebarProps) {
   const { sidebarState, closeSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
   const pathname = usePathname();
@@ -182,7 +183,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
         {/* ナビゲーション */}
         <nav className={classes.nav()}>
           <ul className="space-y-1">
-            {SIDEBAR_ITEMS.map((item) => {
+            {items.map((item) => {
               const isActive = isSidebarItemActive(
                 item.href,
                 pathname,

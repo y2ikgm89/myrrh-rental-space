@@ -74,15 +74,6 @@ describe("Homepage Settings Admin Action Integration", () => {
         }
       });
 
-      test("styleId / styleOverride はオプション（既定で未指定）", () => {
-        const result = createSectionSchema.safeParse(VALID_CREATE_INPUT);
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.styleId).toBeUndefined();
-          expect(result.data.styleOverride).toBeUndefined();
-        }
-      });
-
       test("isActive のデフォルトは true", () => {
         const result = createSectionSchema.safeParse({
           type: SectionType.HERO,

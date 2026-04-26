@@ -31,7 +31,6 @@ export const newsSettingsPanel: SidePanelDefinition<
   description:
     "タイトル・スラッグ・SEO・公開日など。本文中のブロック設定はエディタ右のパネルです。",
   tabStorageKey: "myrrh-inline-editor-sidepanel:news",
-  width: "default",
   tabs: [
     {
       id: "basic",

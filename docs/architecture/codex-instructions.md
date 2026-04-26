@@ -1,6 +1,6 @@
 # Codex Instruction Architecture
 
-最終更新: 2026-04-24
+最終更新: 2026-04-25
 
 ## 目的
 
@@ -40,7 +40,6 @@ OpenAI Codex 公式ドキュメントに合わせ、Codex 向け instruction ass
 | `admin-clean-break`             | 管理画面、Server Actions、mutation 変更 |
 | `admin-ui-review`               | 管理画面 UI、共有 chrome、z-index、導線 |
 | `auth-rbac-change`              | Better Auth、RBAC、admin gate、監査     |
-| `freeform-page-builder`         | custom page freeform builder            |
 | `lexical-editor`                | 管理画面 Lexical editor                 |
 | `media-storage-change`          | media domain、R2/S3、media picker       |
 | `prisma-data-change`            | Prisma schema、migration、seed、DB 境界 |
@@ -50,13 +49,12 @@ OpenAI Codex 公式ドキュメントに合わせ、Codex 向け instruction ass
 
 ## Custom Agents
 
-| Agent                   | 用途                                                        | Sandbox         |
-| ----------------------- | ----------------------------------------------------------- | --------------- |
-| `codebase_explorer`     | 実装前の read-only コードパス調査                           | read-only       |
-| `admin_ui_reviewer`     | 管理画面 UI、共有 chrome、レイヤー、アクセシビリティ確認    | read-only       |
-| `docs_researcher`       | OpenAI / Next.js / React / Prisma など一次情報の確認        | read-only       |
-| `page_builder_reviewer` | freeform builder 変更の設計 / UX / renderer purity レビュー | read-only       |
-| `test_verifier`         | 対象テストや validate の実行と結果要約                      | workspace-write |
+| Agent               | 用途                                                     | Sandbox         |
+| ------------------- | -------------------------------------------------------- | --------------- |
+| `codebase_explorer` | 実装前の read-only コードパス調査                        | read-only       |
+| `admin_ui_reviewer` | 管理画面 UI、共有 chrome、レイヤー、アクセシビリティ確認 | read-only       |
+| `docs_researcher`   | OpenAI / Next.js / React / Prisma など一次情報の確認     | read-only       |
+| `test_verifier`     | 対象テストや validate の実行と結果要約                   | workspace-write |
 
 Codex は subagent を明示依頼なしに spawn しない。通常作業ではメイン agent が実装し、ユーザーが「subagent を使って」「並列で調査して」などと依頼した場合だけ使う。
 
@@ -74,6 +72,7 @@ Codex は subagent を明示依頼なしに spawn しない。通常作業では
 - 新しい recurring workflow は `.agents/skills/<name>/SKILL.md` に追加する。
 - 1 skill は 1 workflow に限定する。
 - SKILL.md の frontmatter は `name` と `description` のみ。
+- コードレビューから得た再発防止チェックは、`AGENTS.md` へ長文化せず、担当 surface の skill / subagent に追加する。
 - 新しい custom agent は「明示依頼で使う価値がある狭い職能」に限定する。
 - `.codex/rules` に coding rule を置かない。
 - hooks を使いたい場合は、現在の OpenAI Codex hooks ドキュメントで Windows support と対象 event の対応状況を確認してから再設計する。

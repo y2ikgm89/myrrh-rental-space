@@ -16,12 +16,57 @@ export type DefaultSectionDef = {
   isActive: boolean;
 };
 
+export function createDefaultCustomPageSections(
+  pageTitle: string,
+  description?: string | null,
+): DefaultSectionDef[] {
+  return [
+    {
+      type: "hero",
+      title: null,
+      config: {
+        title: pageTitle,
+        subtitle: description ?? "",
+        variant: "minimal",
+      },
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+    {
+      type: "custom",
+      title: "本文",
+      config: {
+        sectionLabel: "Contents",
+        maxWidth: "lg",
+        containerClass: "",
+        backgroundColor: "",
+        padding: "md",
+      },
+      content: null,
+      order: 1,
+      isActive: true,
+    },
+    {
+      type: "cta",
+      title: null,
+      config: {
+        title: "ご予約・お問い合わせ",
+        description: "空き状況の確認やご相談はこちらから承ります。",
+        ctaPrimary: { text: "予約する", url: "/reservation" },
+        ctaSecondary: { text: "お問い合わせ", url: "/contact" },
+      },
+      content: null,
+      order: 2,
+      isActive: true,
+    },
+  ];
+}
+
 /**
  * システムページごとのデフォルトセクション定義
  *
- * 旧 `design` JSON フィールドは廃止。Section レベルのスタイルは
- * 4-tier cascade（Settings.globalSectionStyle → Page.pageStyle → Section.style →
- * Section.styleOverride）経由で解決する。
+ * Section レベルの visual style はコード所有の固定定義で解決する。
  */
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [

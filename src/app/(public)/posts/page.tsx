@@ -17,11 +17,7 @@ import {
   getPublishedPostsList,
   getPostCategories,
 } from "@/shared/domain/posts/queries";
-import {
-  getPageShowSidebar,
-  getPublicPage,
-} from "@/shared/domain/pages/queries";
-import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
+import { getPageShowSidebar } from "@/shared/domain/pages/queries";
 import { Container } from "@/public/components/design-system/container";
 import { Pagination } from "@/public/components/pagination";
 import { postsSearchParams } from "@/public/lib/search-params";
@@ -63,17 +59,12 @@ export default async function PostsPage({
   const { page, q, category } = await postsSearchParams.parse(searchParams);
   const currentPage = Math.max(1, page);
 
-  const [sections, postsResult, categories, showSidebar, pageRecord, settings] =
-    await Promise.all([
-      getPageSectionsWithFallback("posts"),
-      getPublishedPostsList(currentPage, POSTS_PER_PAGE, q, category),
-      getPostCategories(),
-      getPageShowSidebar("posts"),
-      getPublicPage("posts"),
-      getPublicSettingsForStyle(),
-    ]);
-
-  const pageCtx = { pageStyle: pageRecord?.pageStyle ?? null };
+  const [sections, postsResult, categories, showSidebar] = await Promise.all([
+    getPageSectionsWithFallback("posts"),
+    getPublishedPostsList(currentPage, POSTS_PER_PAGE, q, category),
+    getPostCategories(),
+    getPageShowSidebar("posts"),
+  ]);
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -96,15 +87,7 @@ export default async function PostsPage({
   return (
     <PageLayout
       variant="content"
-      hero={
-        heroSection ? (
-          <SectionRenderer
-            section={heroSection}
-            page={pageCtx}
-            settings={settings}
-          />
-        ) : undefined
-      }
+      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
       cta={<SiteCTA />}
     >
       <BreadcrumbJsonLd
@@ -139,12 +122,7 @@ export default async function PostsPage({
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          page={pageCtx}
-          settings={settings}
-        />
+        <SectionRenderer key={section.id} section={section} />
       ))}
     </PageLayout>
   );

@@ -19,7 +19,7 @@ export interface FeaturesSectionProps {
   readonly label: string;
   readonly title: string;
   readonly items: readonly FeatureItem[];
-  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  /** Code-owned visual style for this section. */
   readonly resolvedStyle?: SectionStylePayload;
 }
 

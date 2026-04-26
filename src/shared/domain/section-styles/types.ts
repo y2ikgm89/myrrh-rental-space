@@ -1,15 +1,13 @@
 /**
- * Section Style Cascade — Types & Defaults (Phase B.P2 stub)
+ * Section render style types and code-owned defaults.
  *
- * 詳細設計: `docs/superpowers/specs/section-style-cascade-design.md`
- * ADR 0017: `docs/architecture/decisions/0017-section-style-cascade.md`
- *
- * Phase B.P3 で resolver / merger / applicable-types ヘルパーを追加する。
+ * Page content editing is fixed-template + typed content forms. Visual spacing,
+ * container width, and typography are owned by React components and section
+ * definitions, not by admin-editable database records.
  */
 
 // ---------------------------------------------------------------------------
-// Payload schema — domain-side mirror of the Zod schema (single source of truth
-// lives in `src/shared/lib/validations/section-style.ts`, added in P3).
+// Payload schema for code-owned public section rendering styles.
 // ---------------------------------------------------------------------------
 
 export type SectionStyleSpacingStep = "none" | "sm" | "md" | "lg" | "xl";
@@ -74,26 +72,6 @@ export interface SectionStylePayload {
   readonly customClass?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Cascade layer helper — each layer contributes a partial payload (per-group
-// partial is enough; sub-field merges happen inside `mergeStyleLayers` in P3).
-// ---------------------------------------------------------------------------
-
-export type SectionStyleLayer = {
-  readonly spacing?: Partial<SectionStyleSpacing>;
-  readonly background?: Partial<SectionStyleBackground>;
-  readonly container?: Partial<SectionStyleContainer>;
-  readonly typography?: Partial<SectionStyleTypography>;
-  readonly animation?: Partial<SectionStyleAnimation>;
-  readonly customClass?: string;
-};
-
-// ---------------------------------------------------------------------------
-// Hardcoded fallback — specificity layer #1 in the 4-tier cascade.
-// Mirrors Phase A's SectionWrapper default (paddingTop/Bottom = "md",
-// maxWidth = "xl", background = "default", textAlign = "left").
-// ---------------------------------------------------------------------------
-
 export const DEFAULT_SECTION_STYLE: SectionStylePayload = Object.freeze({
   spacing: { paddingTop: "md", paddingBottom: "md" },
   background: { type: "default", overlayOpacity: 0 },
@@ -102,17 +80,59 @@ export const DEFAULT_SECTION_STYLE: SectionStylePayload = Object.freeze({
   animation: { preset: "fade" },
 } satisfies SectionStylePayload);
 
-// ---------------------------------------------------------------------------
-// Seed preset identifiers — consumed by `seed-section-styles.ts`, the admin
-// Style Library dropdowns (P5), and migrate-section-design-to-style (P3).
-// ---------------------------------------------------------------------------
+const COMPACT_CENTER_STYLE: SectionStylePayload = Object.freeze({
+  spacing: { paddingTop: "md", paddingBottom: "md" },
+  background: { type: "default", overlayOpacity: 0 },
+  container: { maxWidth: "xl" },
+  typography: { titleSize: "md", textAlign: "center" },
+  animation: { preset: "fade" },
+} satisfies SectionStylePayload);
 
-export const SECTION_STYLE_PRESETS = {
-  editorialStandard: "Editorial - Standard",
-  editorialCompact: "Editorial - Compact",
-  editorialCta: "Editorial - CTA",
-  editorialHeroAdjacent: "Editorial - Hero Adjacent",
-  editorialFullBleed: "Editorial - Full Bleed",
-} as const;
+const CTA_SECTION_STYLE: SectionStylePayload = Object.freeze({
+  spacing: { paddingTop: "md", paddingBottom: "md" },
+  background: { type: "surface", overlayOpacity: 0 },
+  container: { maxWidth: "lg" },
+  typography: { titleSize: "xl", textAlign: "center" },
+  animation: { preset: "fade" },
+} satisfies SectionStylePayload);
 
-export type SectionStylePresetKey = keyof typeof SECTION_STYLE_PRESETS;
+const HERO_ADJACENT_STYLE: SectionStylePayload = Object.freeze({
+  spacing: { paddingTop: "sm", paddingBottom: "lg" },
+  background: { type: "default", overlayOpacity: 0 },
+  container: { maxWidth: "xl" },
+  typography: { titleSize: "lg", textAlign: "left" },
+  animation: { preset: "fade" },
+} satisfies SectionStylePayload);
+
+const FULL_BLEED_STYLE: SectionStylePayload = Object.freeze({
+  spacing: { paddingTop: "none", paddingBottom: "none" },
+  background: { type: "default", overlayOpacity: 0 },
+  container: { maxWidth: "full" },
+  typography: { titleSize: "lg", textAlign: "center" },
+  animation: { preset: "none" },
+} satisfies SectionStylePayload);
+
+const SECTION_TYPE_STYLES: Readonly<Record<string, SectionStylePayload>> =
+  Object.freeze({
+    cta: CTA_SECTION_STYLE,
+    "contact-form": HERO_ADJACENT_STYLE,
+    "event-calendar": HERO_ADJACENT_STYLE,
+    "faq-list": HERO_ADJACENT_STYLE,
+    gallery: FULL_BLEED_STYLE,
+    "homepage-cta": CTA_SECTION_STYLE,
+    "homepage-features": DEFAULT_SECTION_STYLE,
+    "homepage-how-it-works": COMPACT_CENTER_STYLE,
+    "homepage-spaces": FULL_BLEED_STYLE,
+    instagram: FULL_BLEED_STYLE,
+    map: HERO_ADJACENT_STYLE,
+    "news-list": HERO_ADJACENT_STYLE,
+    "post-list": HERO_ADJACENT_STYLE,
+    "space-list": HERO_ADJACENT_STYLE,
+    "space-showcase": HERO_ADJACENT_STYLE,
+  });
+
+export function getDefaultSectionStyle(
+  sectionType: string,
+): SectionStylePayload {
+  return SECTION_TYPE_STYLES[sectionType] ?? DEFAULT_SECTION_STYLE;
+}

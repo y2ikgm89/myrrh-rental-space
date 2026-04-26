@@ -42,10 +42,11 @@ NNNN-kebab-case-title.md
 | [0014](./0014-test-script-consolidation.md)                                | Test script の整理とテスト実行ポリシーの明文化                                                       | Accepted   | 2026-04-22 |
 | [0015](./0015-clean-break-refactor-and-parallel-implementer-discipline.md) | Clean-break refactor 原則と parallel implementer の git 副作用規律                                   | Accepted   | 2026-04-22 |
 | [0016](./0016-page-hero-first-class-field.md)                              | ホームヒーローを `Page.pageHero` へ移行し `homepage-hero` Section を廃止                             | Accepted   | 2026-04-22 |
-| [0017](./0017-section-style-cascade.md)                                    | SectionStyle を独立 entity 化し 4 段 cascade で解決する                                              | Accepted   | 2026-04-22 |
+| [0017](./0017-section-style-cascade.md)                                    | SectionStyle を独立 entity 化し 4 段 cascade で解決する                                              | Superseded | 2026-04-22 |
 | [0018](./0018-field-registry-and-group-hierarchy.md)                       | Zod 4 `.meta()` + `z.registry<FieldMeta>()` でフィールドメタデータを管理し group を 3 段階固定にする | Accepted   | 2026-04-23 |
 | [0019](./0019-execute-admin-mutation-result-ordering.md)                   | executeAdminMutationResult の実行順序契約（監査ログは fire-and-forget）                              | Accepted   | 2026-04-23 |
 | [0020](./0020-page-preview-reuses-public-renderer.md)                      | 固定ページプレビューは公開レンダラを再利用する                                                       | Accepted   | 2026-04-23 |
+| [0021](./0021-remove-section-style-library.md)                             | SectionStyle library を削除しページデザインをコード所有に戻す                                        | Accepted   | 2026-04-26 |
 
 ## 参考
 

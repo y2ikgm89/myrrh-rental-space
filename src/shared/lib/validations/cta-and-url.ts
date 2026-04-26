@@ -2,7 +2,7 @@
  * URL / CTA ボタン / HEXカラー バリデーションヘルパー
  *
  * section-design.ts から切り出した共通ユーティリティ。
- * section-style.ts および section.ts 両方から利用される。
+ * typed section config validation から利用される。
  *
  * Phase B.C1 で新規作成（旧 section-design.ts の対応シンボルと同一実装）。
  */

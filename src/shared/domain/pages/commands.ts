@@ -16,8 +16,7 @@ import {
   type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
 import type { PageHero } from "@/shared/lib/sections/page-hero/schema";
-import { createDefaultPageBuilderDocument } from "@/shared/lib/page-builder/default-document";
-import { clonePrismaInputJson } from "@/shared/db/prisma-input-json";
+import { createDefaultCustomPageSections } from "@/shared/lib/constants/default-page-sections";
 
 function normalizeNullableString(
   value: string | null | undefined,
@@ -147,30 +146,11 @@ export async function createPageCommand(
 ): Promise<{ slug: string }> {
   await ensurePageSlugAvailable(input.slug);
 
-  const initialDocument = createDefaultPageBuilderDocument(input.title);
   const publishedAt = input.isPublished ? new Date() : null;
-  const freeformStateData = input.isPublished
-    ? {
-        draftDocument: clonePrismaInputJson(
-          initialDocument,
-          "初期ページビルダードキュメントが不正です",
-        ),
-        draftVersion: 1,
-        publishedDocument: clonePrismaInputJson(
-          initialDocument,
-          "初期ページビルダードキュメントが不正です",
-        ),
-        publishedVersion: 1,
-        lastPublishedAt: publishedAt,
-      }
-    : {
-        draftDocument: clonePrismaInputJson(
-          initialDocument,
-          "初期ページビルダードキュメントが不正です",
-        ),
-        draftVersion: 1,
-        lastPublishedAt: publishedAt,
-      };
+  const sections = createDefaultCustomPageSections(
+    input.title,
+    input.description,
+  );
   const page = await prisma.page.create({
     data: {
       slug: input.slug,
@@ -179,8 +159,15 @@ export async function createPageCommand(
       isPublished: input.isPublished,
       publishedAt,
       isActive: true,
-      freeformState: {
-        create: freeformStateData,
+      sections: {
+        create: sections.map((section) => ({
+          type: section.type,
+          title: section.title,
+          config: section.config,
+          contentHtml: section.content,
+          order: section.order,
+          isActive: section.isActive,
+        })),
       },
     },
     select: { slug: true },
@@ -316,21 +303,6 @@ export async function updatePageHeroCommand(
   await prisma.page.update({
     where: { slug },
     data: { pageHero: hero },
-  });
-}
-
-/**
- * Page.pageStyleId を更新（4-tier cascade の page layer）。
- * null は relation disconnect（継承値に戻す）。
- */
-export async function updatePageStyleCommand(
-  slug: string,
-  pageStyleId: string | null,
-): Promise<void> {
-  await ensurePageExists(slug);
-  await prisma.page.update({
-    where: { slug },
-    data: { pageStyleId },
   });
 }
 

@@ -41,7 +41,9 @@ export function PageListTable({
   currentPage,
   perPage,
 }: PageListTableProps) {
-  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
+  const [selectedSlugCandidates, setSelectedSlugCandidates] = useState<
+    string[]
+  >([]);
   const [createOpen, setCreateOpen] = useState(false);
 
   // 空状態（フィルタで絞り込んだ結果が 0 件の場合も含む）
@@ -68,6 +70,10 @@ export function PageListTable({
   const selectableSlugs = pages
     .filter((p) => !p.isSystemPage)
     .map((p) => p.slug);
+  const selectableSlugSet = new Set(selectableSlugs);
+  const selectedSlugs = selectedSlugCandidates.filter((slug) =>
+    selectableSlugSet.has(slug),
+  );
 
   const allSelected =
     selectableSlugs.length > 0 &&
@@ -75,16 +81,19 @@ export function PageListTable({
 
   const toggleAll = () => {
     if (allSelected) {
-      setSelectedSlugs([]);
+      setSelectedSlugCandidates([]);
     } else {
-      setSelectedSlugs(selectableSlugs);
+      setSelectedSlugCandidates(selectableSlugs);
     }
   };
 
   const toggleOne = (slug: string) => {
-    setSelectedSlugs((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
-    );
+    setSelectedSlugCandidates((prev) => {
+      const visibleSelection = prev.filter((s) => selectableSlugSet.has(s));
+      return visibleSelection.includes(slug)
+        ? visibleSelection.filter((s) => s !== slug)
+        : [...visibleSelection, slug];
+    });
   };
 
   const totalPages = Math.ceil(total / perPage);
@@ -133,9 +142,7 @@ export function PageListTable({
                       {isHomepage ? "/" : `/${page.slug}`}
                     </TableCell>
                     <TableCell className="hidden text-right text-muted-foreground md:table-cell">
-                      {page.isSystemPage
-                        ? `${page.sectionCount ?? 0}`
-                        : "Freeform"}
+                      {page.sectionCount ?? 0}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {formatDateTimeShort(page.updatedAt)}
@@ -166,7 +173,7 @@ export function PageListTable({
 
       <BulkActions
         selectedSlugs={selectedSlugs}
-        onClear={() => setSelectedSlugs([])}
+        onClear={() => setSelectedSlugCandidates([])}
       />
     </>
   );

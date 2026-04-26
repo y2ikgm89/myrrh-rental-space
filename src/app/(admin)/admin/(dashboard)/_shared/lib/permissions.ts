@@ -149,11 +149,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "notification:read",
     "notification:update",
     "notification:delete",
-    "sectionStyle:create",
-    "sectionStyle:read",
-    "sectionStyle:update",
-    "sectionStyle:delete",
-    "sectionStyle:manage",
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -254,11 +249,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "notification:read",
     "notification:update",
     "notification:delete",
-    "sectionStyle:create",
-    "sectionStyle:read",
-    "sectionStyle:update",
-    "sectionStyle:delete",
-    "sectionStyle:manage",
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
@@ -280,7 +270,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "event:update",
     "notification:read",
     "notification:update",
-    "sectionStyle:read",
   ],
   VIEWER: [
     // 閲覧のみ
@@ -302,7 +291,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "review:read",
     "event:read",
     "notification:read",
-    "sectionStyle:read",
   ],
   USER: [],
   CUSTOMER: [],

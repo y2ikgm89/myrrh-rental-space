@@ -21,7 +21,6 @@ export type {
   PageSectionData,
   PageWithSections,
   PageForEdit,
-  PageSectionStyle,
 } from "@/admin/actions/page-section-types";
 
 export async function getPageSections(

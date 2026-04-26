@@ -4,9 +4,7 @@
  * Server Component。PublicSection を受け取り、section.type に応じて
  * v3 コンポーネントを出し分ける。全ページ共通で使用。
  *
- * Phase B.C3: resolveSectionStyle を呼び出して SectionStylePayload を生成。
- * page / settings は Phase B.C5 で実際のデータが渡される。
- * それまでは null stub を使用し DEFAULT_SECTION_STYLE に fallback する。
+ * セクションごとの表示 style はコード側の固定定義から取得する。
  */
 
 import type { ReactElement } from "react";
@@ -34,14 +32,12 @@ import {
   getPublishedFaqItems,
   getShowcaseSpaces,
   type PublicSection,
-  type PublicPageForStyle,
-  type PublicSettingsForStyle,
 } from "@/shared/domain/sections/queries";
 import { getPublishedNews } from "@/shared/domain/news/queries";
 import { getPublishedPosts } from "@/shared/domain/posts/queries";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
-import { resolveSectionStyle } from "@/shared/domain/section-styles/style-resolver";
+import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
 
 // v3 components
 import { HeroSection } from "../../../_components/HeroSection";
@@ -69,33 +65,14 @@ import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
 import type { FaqData } from "../../../_components/FaqListSection";
 
-// Phase B.C5: null stubs — replaced with real data when pages/queries include pageStyle/globalSectionStyle
-const NULL_PAGE_STYLE: PublicPageForStyle = { pageStyle: null };
-const NULL_SETTINGS_STYLE: PublicSettingsForStyle = {
-  globalSectionStyle: null,
-};
-
 interface SectionRendererProps {
   readonly section: PublicSection;
-  /**
-   * Page-level style context.
-   * Phase B.C5 で実データが渡される。それまで null stub を使用。
-   */
-  readonly page?: PublicPageForStyle;
-  /**
-   * Settings-level global style context.
-   * Phase B.C5 で実データが渡される。それまで null stub を使用。
-   */
-  readonly settings?: PublicSettingsForStyle;
 }
 
 export async function SectionRenderer({
   section,
-  page = NULL_PAGE_STYLE,
-  settings = NULL_SETTINGS_STYLE,
 }: SectionRendererProps): Promise<ReactElement | null> {
-  // C3: resolveSectionStyle でカスケード解決（Line 28-49 の resolveSectionStyle を参照）
-  const resolved = resolveSectionStyle(section, page, settings);
+  const resolved = getDefaultSectionStyle(section.type);
 
   switch (section.type) {
     // =========================================================================

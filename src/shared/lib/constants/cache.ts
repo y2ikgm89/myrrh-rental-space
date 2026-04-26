@@ -116,8 +116,6 @@ export const CACHE_TAGS = {
   HOMEPAGE_SECTIONS: "homepage-sections",
   /** ページセクション */
   PAGE_SECTIONS: "page-sections",
-  /** セクションスタイル（Style Library） */
-  SECTION_STYLES: "section-styles",
   /** 利用規約 */
   TERMS: "terms",
   /** スタッフ */
@@ -144,8 +142,6 @@ export const CACHE_TAGS = {
   SOCIAL_LINKS: "social-links",
   /** ページSEO */
   PAGE_SEO: "page-seo",
-  /** Freeform page builder */
-  PAGE_BUILDERS: "page-builders",
   /** サイドバーデータ */
   SIDEBAR_DATA: "sidebar-data",
   /** サイドバー設定 */
@@ -199,9 +195,6 @@ export const getCacheTag = {
     list: () => CACHE_TAGS.PAGES,
     detail: (slug: string) => `${CACHE_TAGS.PAGES}-${slug}`,
   },
-  pageBuilders: {
-    detail: (slug: string) => `${CACHE_TAGS.PAGE_BUILDERS}-${slug}`,
-  },
   faq: {
     list: () => CACHE_TAGS.FAQ,
     detail: (id: string) => `${CACHE_TAGS.FAQ}-${id}`,
@@ -251,10 +244,6 @@ export const getCacheTag = {
   },
   eventRegistrations: {
     list: (eventId: string) => `${CACHE_TAGS.EVENT_REGISTRATIONS}-${eventId}`,
-  },
-  sectionStyles: {
-    list: () => CACHE_TAGS.SECTION_STYLES,
-    detail: (id: string) => `${CACHE_TAGS.SECTION_STYLES}-${id}`,
   },
 } as const;
 

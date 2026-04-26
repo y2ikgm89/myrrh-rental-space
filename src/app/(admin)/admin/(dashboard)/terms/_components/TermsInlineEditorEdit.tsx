@@ -13,6 +13,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import {
   EditorHeader,
   InlineEditorShell,
@@ -460,7 +461,7 @@ export function TermsInlineEditorEdit({
     if (isDirty || hasEditorChanges) {
       toast.info("プレビューには保存済みのコンテンツが表示されます");
     }
-    window.open(`/terms/${terms.slug}`, "_blank");
+    openExternalTab(`/terms/${terms.slug}`);
   };
 
   const handleBack = async () => {

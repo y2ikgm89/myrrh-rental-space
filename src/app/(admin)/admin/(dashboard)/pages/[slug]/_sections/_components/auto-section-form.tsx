@@ -71,10 +71,16 @@ export function AutoSectionForm({
   onSave,
   isPending,
   onDirtyChange,
+  contentOnly = false,
 }: ConfigFormProps) {
   const definition = getSectionDefinition(section.type);
   const isCustomType = section.type === "custom";
-  const [editorContentJson, setEditorContentJson] = useState("");
+  const initialEditorContentJson = section.contentJson
+    ? JSON.stringify(section.contentJson)
+    : EMPTY_LEXICAL_EDITOR_STATE_JSON;
+  const [editorContentJson, setEditorContentJson] = useState(
+    initialEditorContentJson,
+  );
 
   // デフォルト config を取得（スキーマ .parse({}) でデフォルト値を生成）
   const defaultConfig = definition
@@ -115,6 +121,9 @@ export function AutoSectionForm({
       : {}),
     defaultValues: defaultConfig,
   });
+  const isEditorDirty =
+    isCustomType && editorContentJson !== initialEditorContentJson;
+  const isFormDirty = isDirty || isEditorDirty;
 
   const handleFormSubmit = (data: Record<string, unknown>) => {
     if (isCustomType) {
@@ -134,8 +143,12 @@ export function AutoSectionForm({
 
   // Group 別にフィールドを分離（ADR 0018: content / design / advanced の 3 段階固定）
   const contentFields = fields.filter((f) => f.meta.group === "content");
-  const designFields = fields.filter((f) => f.meta.group === "design");
-  const advancedFields = fields.filter((f) => f.meta.group === "advanced");
+  const designFields = contentOnly
+    ? []
+    : fields.filter((f) => f.meta.group === "design");
+  const advancedFields = contentOnly
+    ? []
+    : fields.filter((f) => f.meta.group === "advanced");
   const hasAccordionContent =
     designFields.length > 0 || advancedFields.length > 0;
 
@@ -161,11 +174,7 @@ export function AutoSectionForm({
           <div className="space-y-2">
             <Label>コンテンツ</Label>
             <LexicalEditor
-              contentJson={
-                section.contentJson
-                  ? JSON.stringify(section.contentJson)
-                  : EMPTY_LEXICAL_EDITOR_STATE_JSON
-              }
+              contentJson={editorContentJson}
               onChange={setEditorContentJson}
               placeholder="セクションのコンテンツを入力..."
               className={EDITOR_PROSE_CLASSES}
@@ -204,7 +213,7 @@ export function AutoSectionForm({
       )}
 
       <FormActions
-        isDirty={isDirty}
+        isDirty={isFormDirty}
         isPending={isPending}
         onDirtyChange={onDirtyChange}
       />

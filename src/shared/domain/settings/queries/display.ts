@@ -18,7 +18,6 @@ import {
   isValidHeaderBackgroundMode,
   isValidHeaderScrollBehavior,
 } from "@/shared/lib/validations/enums/guards";
-import type { PublicSectionStyle } from "@/shared/domain/sections/queries";
 
 /**
  * ブランド表示用の共有型。
@@ -157,48 +156,4 @@ export async function getPermalinkSettings() {
 export async function getPostUrlPrefix(): Promise<string> {
   const settings = await getPermalinkSettings();
   return (settings?.postUrlPrefixEnabled ?? true) ? "/posts" : "";
-}
-
-/**
- * Phase B.C5: Settings.globalSectionStyle — SectionRenderer の 4-tier cascade
- * 最下位レイヤー（Settings → Page → Section → Override の順で specificity 上昇）。
- *
- * 公開バンドルを最小化するため globalSectionStyle 関連フィールドだけを取得する。
- * 未設定（singleton 不在 / relation null）時は { globalSectionStyle: null } を返し、
- * resolver が DEFAULT_SECTION_STYLE fallback に委ねる。
- */
-export type PublicSettingsForStyleData = {
-  readonly globalSectionStyle: PublicSectionStyle | null;
-};
-
-export async function getPublicSettingsForStyle(): Promise<PublicSettingsForStyleData> {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          globalSectionStyle: {
-            select: {
-              spacing: true,
-              background: true,
-              container: true,
-              typography: true,
-              animation: true,
-              customClass: true,
-            },
-          },
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getPublicSettingsForStyle",
-  });
-
-  const plain = toPlainObject(result);
-  return { globalSectionStyle: plain?.globalSectionStyle ?? null };
 }

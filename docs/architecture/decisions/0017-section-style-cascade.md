@@ -1,6 +1,6 @@
 # 0017. SectionStyle を独立 entity 化し 4 段 cascade で解決する
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR 0021](./0021-remove-section-style-library.md)
 - **Date**: 2026-04-22
 - **Deciders**: y2ikgm89
 - **Related**:

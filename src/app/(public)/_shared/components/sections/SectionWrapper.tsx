@@ -1,7 +1,7 @@
 /**
  * SectionWrapper — SectionStylePayload の共通フィールドを CSS クラス/style に変換
  *
- * props として SectionStylePayload（4-tier cascade で解決済み）を受け取り、
+ * props としてコード側で決定した SectionStylePayload を受け取り、
  * spacing.paddingTop/Bottom, background.type/imageUrl/overlayOpacity,
  * container.maxWidth, typography.textAlign, customClass を処理する。
  */

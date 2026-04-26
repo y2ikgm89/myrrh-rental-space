@@ -3,13 +3,10 @@ import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPageBySlug } from "@/admin/queries/page";
-import { getPageBuilderForEdit } from "@/admin/queries/page-builder";
 import { getPageForEdit } from "@/admin/queries/page-section";
 import { HomepageSections } from "@/public/components/homepage/HomepageSections";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
-import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
-import { FreeformPageRenderer } from "@/shared/page-builder/renderer/FreeformPageRenderer";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -32,28 +29,7 @@ export default async function ManagedPagePreviewPage({
     notFound();
   }
 
-  if (!pageMeta.isSystemPage) {
-    const page = await getPageBuilderForEdit(slug);
-    if (!page) {
-      notFound();
-    }
-
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <PreviewBanner />
-        <FreeformPageRenderer
-          document={page.draftDocument}
-          media={page.media}
-          formMode="preview"
-        />
-      </div>
-    );
-  }
-
-  const [page, settings] = await Promise.all([
-    getPageForEdit(slug),
-    getPublicSettingsForStyle(),
-  ]);
+  const page = await getPageForEdit(slug);
 
   if (!page) {
     notFound();
@@ -70,15 +46,9 @@ export default async function ManagedPagePreviewPage({
           sections={activeSections.filter(
             (section) => section.type !== "homepage-hero",
           )}
-          pageStyle={page.pageStyle}
-          settings={settings}
         />
       ) : (
-        <ManagedPageSections
-          sections={activeSections}
-          pageStyle={page.pageStyle}
-          settings={settings}
-        />
+        <ManagedPageSections sections={activeSections} />
       )}
     </div>
   );

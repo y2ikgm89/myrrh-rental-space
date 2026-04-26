@@ -122,8 +122,6 @@ export type SidePanelDefinition<
   title: string;
   description?: string;
   tabStorageKey?: string;
-  /** ダイアログ採用後は未使用だが、既存の content-types 設定との互換のため保持 */
-  width: "default" | "narrow";
   tabs: readonly SidePanelTabDefinition<TForm, TExtra>[];
 };
 

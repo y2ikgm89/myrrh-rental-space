@@ -14,7 +14,6 @@ import {
   createCtaButtonItemSchema,
   transformLegacyCtaToButtons,
 } from "./cta-and-url";
-import { sectionStyleOverrideSchema } from "./section-style";
 import {
   imageAspectValues,
   cardStyleValues,
@@ -619,21 +618,21 @@ export const createSectionSchema = z.object({
     .optional(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
-  styleId: z.string().min(1).nullable().optional(),
-  styleOverride: sectionStyleOverrideSchema.nullable().optional(),
 });
 
-/** セクション更新スキーマ */
-export const updateSectionSchema = z.object({
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
+/** セクション本文更新スキーマ */
+export const updateSectionContentSchema = z.strictObject({
   config: z.record(z.string(), z.unknown()).optional(),
   contentJson: z
     .string()
     .max(500000, { error: "コンテンツは500,000文字以内です" })
     .optional(),
+});
+
+/** セクション更新スキーマ */
+export const updateSectionSchema = updateSectionContentSchema.extend({
+  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   isActive: z.boolean().optional(),
-  styleId: z.string().min(1).nullable().optional(),
-  styleOverride: sectionStyleOverrideSchema.nullable().optional(),
 });
 
 /** セクション順序更新スキーマ */
@@ -714,6 +713,9 @@ export type SectionConfig =
   | InstagramConfig;
 
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
+export type UpdateSectionContentInput = z.infer<
+  typeof updateSectionContentSchema
+>;
 export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;
 export type UpdateSectionOrderInput = z.infer<typeof updateSectionOrderSchema>;
 

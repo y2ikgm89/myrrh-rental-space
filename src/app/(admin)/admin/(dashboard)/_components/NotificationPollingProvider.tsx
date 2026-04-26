@@ -28,10 +28,10 @@ const NotificationPollingContext = createContext<
 const POLLING_INTERVAL_MS = 30_000;
 
 export function NotificationPollingProvider({
-  initialCount,
+  initialCount = 0,
   children,
 }: {
-  initialCount: number;
+  initialCount?: number;
   children: ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(initialCount);
@@ -46,6 +46,12 @@ export function NotificationPollingProvider({
 
   // Polling
   useEffect(() => {
+    void readUnreadCount()
+      .then(setUnreadCount)
+      .catch(() => {
+        // Keep the last known count when polling fails.
+      });
+
     const intervalId = setInterval(() => {
       void readUnreadCount()
         .then(setUnreadCount)

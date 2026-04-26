@@ -12,7 +12,7 @@ repo 全体の構造、境界、データ取得方針、キャッシュ戦略の
 | [CACHING.md](./CACHING.md)                                                         | `use cache` / tag 運用                          |
 | [TECH_STACK.md](./TECH_STACK.md)                                                   | 採用技術とバージョン前提                        |
 | [page-sections-design-guide.md](./page-sections-design-guide.md)                   | ページセクション設計                            |
-| [freeform-page-builder-design.md](./freeform-page-builder-design.md)               | WIX / STUDIO 系自由配置エディタの設計           |
+| [content-managed-pages.md](./content-managed-pages.md)                             | 固定デザイン + 型付きコンテンツ編集の方針       |
 | [agent-instructions.md](./agent-instructions.md)                                   | AI 指示の配置（Codex ネイティブ正本）           |
 | [codex-instructions.md](./codex-instructions.md)                                   | Codex 資産の配置方針                            |
 | [typescript-version-policy.md](./typescript-version-policy.md)                     | TypeScript 6.x RC / 安定版移行方針              |
@@ -35,4 +35,4 @@ Codex 作業では `AGENTS.md` と `.agents/skills` を正本にする。`.claud
 - auth は `/api/auth/[...all]` と `src/shared/lib/auth.ts` の静的 `auth` export を正本にする
 - `proxy.ts` は coarse gate と共通セキュリティヘッダーに限定し、本認可の正本にはしない
 
-最終更新: 2026-03-21
+最終更新: 2026-04-25

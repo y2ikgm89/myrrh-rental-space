@@ -177,20 +177,6 @@ export async function updateBasicInfo(data: BasicInfoInput): Promise<void> {
   });
 }
 
-/**
- * Settings.globalSectionStyleId を更新（4-tier cascade の global layer）。
- * null は relation disconnect（デフォルト値に戻す）。
- */
-export async function updateGlobalSectionStyle(
-  globalSectionStyleId: string | null,
-): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", globalSectionStyleId },
-    update: { globalSectionStyleId },
-  });
-}
-
 export async function updateLayoutSettings(
   data: LayoutSettingsInput,
 ): Promise<void> {

@@ -12,8 +12,6 @@ import { WebSiteJsonLd } from "@/public/components/seo/json-ld";
 import { getWebSiteJsonLdData } from "@/public/lib/seo";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getHomepagePublicData } from "@/shared/domain/sections/queries";
-import { getPublicPage } from "@/shared/domain/pages/queries";
-import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { HomepageSections } from "@/public/components/homepage/HomepageSections";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,11 +23,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage(): Promise<ReactElement> {
   await connection();
 
-  const [webSiteData, homepage, page, settings] = await Promise.all([
+  const [webSiteData, homepage] = await Promise.all([
     getWebSiteJsonLdData(),
     getHomepagePublicData(),
-    getPublicPage("home"),
-    getPublicSettingsForStyle(),
   ]);
 
   return (
@@ -42,8 +38,6 @@ export default async function HomePage(): Promise<ReactElement> {
       <HomepageSections
         pageHero={homepage.pageHero}
         sections={homepage.sections}
-        pageStyle={page?.pageStyle ?? null}
-        settings={settings}
       />
     </>
   );

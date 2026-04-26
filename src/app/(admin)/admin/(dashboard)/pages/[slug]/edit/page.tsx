@@ -1,14 +1,11 @@
 /**
- * ページ編集画面（マスターディテール レイアウト）
- *
- * 左: セクション一覧（DnD） + SEOリンク
- * 右: コンテンツ/デザイン設定パネル
+ * ページ編集画面（固定デザイン + コンテンツ編集）
  *
  * システムページ（about, faq, contact等）の場合、
  * Pageモデルが存在しなければ自動作成します。
  */
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { IconExternalLink } from "@tabler/icons-react";
 import {
   getPageForEdit,
@@ -16,7 +13,7 @@ import {
 } from "@/admin/queries/page-section";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { SectionMasterDetail } from "./_components/SectionMasterDetail";
+import { ContentOnlyPageEditor } from "./_components/ContentOnlyPageEditor";
 import { PublishToggle } from "./_components/PublishToggle";
 import { getPagePreviewHref } from "@/shared/lib/preview-routes";
 import type { Metadata } from "next";
@@ -50,10 +47,6 @@ export default async function EditPagePage({
     notFound();
   }
 
-  if (!page.isSystem) {
-    redirect(`/admin/pages/${slug}/builder`);
-  }
-
   return (
     <AdminDetailLayout
       backHref="/admin/pages"
@@ -80,7 +73,7 @@ export default async function EditPagePage({
         </>
       }
     >
-      <SectionMasterDetail key={page.id} page={page} />
+      <ContentOnlyPageEditor key={page.id} page={page} />
     </AdminDetailLayout>
   );
 }

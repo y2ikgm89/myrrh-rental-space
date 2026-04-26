@@ -11,8 +11,6 @@ import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { getPublicPage } from "@/shared/domain/pages/queries";
-import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { getPublishedEvents } from "@/shared/domain/events/public-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
@@ -41,14 +39,10 @@ export default async function EventsPage({
 
   const { view } = await eventsSearchParams.parse(searchParams);
 
-  const [sections, rawEvents, page, settings] = await Promise.all([
+  const [sections, rawEvents] = await Promise.all([
     getPageSectionsWithFallback("events"),
     getPublishedEvents(),
-    getPublicPage("events"),
-    getPublicSettingsForStyle(),
   ]);
-
-  const pageCtx = { pageStyle: page?.pageStyle ?? null };
 
   const events: EventCardData[] = rawEvents.map((e) => ({
     id: e.id,
@@ -82,15 +76,7 @@ export default async function EventsPage({
   return (
     <PageLayout
       variant="content"
-      hero={
-        heroSection ? (
-          <SectionRenderer
-            section={heroSection}
-            page={pageCtx}
-            settings={settings}
-          />
-        ) : undefined
-      }
+      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
       cta={<SiteCTA />}
     >
       <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
@@ -104,12 +90,7 @@ export default async function EventsPage({
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          page={pageCtx}
-          settings={settings}
-        />
+        <SectionRenderer key={section.id} section={section} />
       ))}
     </PageLayout>
   );

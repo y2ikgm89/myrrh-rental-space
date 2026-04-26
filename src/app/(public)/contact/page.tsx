@@ -13,8 +13,6 @@ import { Suspense } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { getPublicPage } from "@/shared/domain/pages/queries";
-import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Container } from "@/public/components/design-system/container";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
@@ -40,14 +38,10 @@ export default async function ContactPage({
       ? params["subject"].slice(0, 200)
       : undefined;
 
-  const [sections, turnstileSiteKey, page, settings] = await Promise.all([
+  const [sections, turnstileSiteKey] = await Promise.all([
     getPageSectionsWithFallback("contact"),
     getTurnstileSiteKey(),
-    getPublicPage("contact"),
-    getPublicSettingsForStyle(),
   ]);
-
-  const pageCtx = { pageStyle: page?.pageStyle ?? null };
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -62,13 +56,7 @@ export default async function ContactPage({
 
   return (
     <>
-      {heroSection ? (
-        <SectionRenderer
-          section={heroSection}
-          page={pageCtx}
-          settings={settings}
-        />
-      ) : null}
+      {heroSection ? <SectionRenderer section={heroSection} /> : null}
 
       <section className="py-[var(--spacing-block)]">
         <Container>
@@ -90,12 +78,7 @@ export default async function ContactPage({
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          page={pageCtx}
-          settings={settings}
-        />
+        <SectionRenderer key={section.id} section={section} />
       ))}
     </>
   );

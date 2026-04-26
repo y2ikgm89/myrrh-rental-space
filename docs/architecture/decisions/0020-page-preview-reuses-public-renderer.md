@@ -7,7 +7,7 @@
 - **Supersedes**: (なし)
 - **Related**:
   - [0016 PageHero first-class field](./0016-page-hero-first-class-field.md)
-  - [0017 SectionStyle cascade](./0017-section-style-cascade.md)
+  - [0021 Remove SectionStyle library](./0021-remove-section-style-library.md)
 
 ## Context and Problem Statement
 
@@ -94,7 +94,7 @@ admin 側の React コンポーネントでセクション JSON を直接レン�
 
 - preview と production の見た目差分が原理的に起きにくい
 - 初心者でも「保存したら右で確認」が成立する
-- `Page.pageStyle` / `Section.style` / `styleOverride` を含む cascade の確認が即座にできる
+- コード所有の固定 section style を含む公開レンダリング結果を即座に確認できる
 - 公開本番レイアウトを汚さずに preview 専用 UX を追加できる
 
 ### Negative / Trade-offs

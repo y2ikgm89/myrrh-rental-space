@@ -23,6 +23,7 @@ import {
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deletePage, togglePagePublished } from "@/admin/actions/page";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getPagePreviewHref } from "@/shared/lib/preview-routes";
 
@@ -79,7 +80,7 @@ export function PageActions({
   };
 
   const handlePreview = () => {
-    window.open(getPagePreviewHref(slug), "_blank");
+    openExternalTab(getPagePreviewHref(slug));
   };
 
   return (

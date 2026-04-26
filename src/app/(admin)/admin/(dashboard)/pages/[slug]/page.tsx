@@ -15,9 +15,5 @@ export default async function PageSlugPage({
     notFound();
   }
 
-  redirect(
-    page.isSystemPage
-      ? `/admin/pages/${slug}/edit`
-      : `/admin/pages/${slug}/builder`,
-  );
+  redirect(`/admin/pages/${slug}/edit`);
 }

@@ -27,7 +27,7 @@ export interface SpacesSectionProps {
   readonly title: string;
   readonly count: number;
   readonly autoPlayInterval: number;
-  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  /** Code-owned visual style for this section. */
   readonly resolvedStyle?: SectionStylePayload;
 }
 

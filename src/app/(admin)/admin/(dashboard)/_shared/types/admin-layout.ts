@@ -3,6 +3,7 @@
  */
 
 import type { ReactNode } from "react";
+import type { Action, Resource } from "@/admin/lib/admin-resources";
 
 /** サイドバー状態 */
 export type SidebarState = "expanded" | "collapsed" | "hidden";
@@ -35,8 +36,14 @@ export type AdminLayoutContextValue = {
 };
 
 /** サイドバーアイテム */
+export type SidebarItemPermission = {
+  resource: Resource;
+  action: Action;
+};
+
 export type SidebarItem = {
   label: string;
   href: string;
   icon: ReactNode;
+  requiredPermission?: SidebarItemPermission;
 };

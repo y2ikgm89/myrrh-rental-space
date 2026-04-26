@@ -130,7 +130,6 @@ export {
   updateHeaderSettings,
   updateFooterSettings,
   updateReviewsGlobalSettings,
-  updateGlobalSectionStyle,
 } from "./other";
 
 // =============================================================================

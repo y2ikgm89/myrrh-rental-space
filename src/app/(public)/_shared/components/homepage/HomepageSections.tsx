@@ -1,12 +1,10 @@
 import type { ReactElement } from "react";
 import { PageHero } from "@/public/components/page-hero/PageHero";
 import { getShowcaseSpaces } from "@/shared/domain/sections/queries";
-import { resolveSectionStyle } from "@/shared/domain/section-styles/style-resolver";
-import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
-import type {
-  PublicSectionStyle,
-  PublicSettingsForStyle,
-} from "@/shared/domain/sections/queries";
+import {
+  getDefaultSectionStyle,
+  type SectionStylePayload,
+} from "@/shared/domain/section-styles/types";
 import {
   HowItWorksSection,
   howItWorksDefaultProps,
@@ -33,15 +31,11 @@ type HomepageRenderableSection = {
   readonly id: string;
   readonly type: string;
   readonly config: unknown;
-  readonly style: PublicSectionStyle | null;
-  readonly styleOverride: unknown | null;
 };
 
 interface HomepageSectionsProps {
   readonly pageHero: unknown;
   readonly sections: readonly HomepageRenderableSection[];
-  readonly pageStyle: PublicSectionStyle | null;
-  readonly settings: PublicSettingsForStyle;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -182,8 +176,6 @@ function renderHomepageSection(
 export async function HomepageSections({
   pageHero,
   sections,
-  pageStyle,
-  settings,
 }: HomepageSectionsProps): Promise<ReactElement> {
   const rawSpaces = await getShowcaseSpaces(6, true);
   const spaces: ShowcaseSpace[] = rawSpaces.map((space) => ({
@@ -203,7 +195,6 @@ export async function HomepageSections({
     section.type.startsWith("homepage-"),
   );
   const useDefaults = homepageSections.length === 0;
-  const page = { pageStyle };
 
   return (
     <>
@@ -226,7 +217,7 @@ export async function HomepageSections({
           renderHomepageSection(
             section,
             spaces,
-            resolveSectionStyle(section, page, settings),
+            getDefaultSectionStyle(section.type),
           ),
         )
       )}

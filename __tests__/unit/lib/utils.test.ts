@@ -4,8 +4,8 @@ import {
   getFormStringOrNull,
   getFormNumber,
   getFormBoolean,
-  generateSlug,
-} from "@/shared/lib/utils";
+} from "@/shared/lib/form-data";
+import { generateSlug } from "@/shared/lib/slug";
 
 // =============================================================================
 // FormData ヘルパー

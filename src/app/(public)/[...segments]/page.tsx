@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import {
   PostDetailPageContent,
   buildPostMetadata,
@@ -11,14 +10,9 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
 import { getPublicPage } from "@/shared/domain/pages/queries";
-import { getPublishedPageBuilderBySlugQuery } from "@/shared/domain/page-builder/queries";
 import { getPageSections } from "@/shared/domain/sections/queries";
-import {
-  getPermalinkSettings,
-  getPublicSettingsForStyle,
-} from "@/shared/domain/settings/queries/display";
+import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
-import { FreeformPageRenderer } from "@/shared/page-builder/renderer/FreeformPageRenderer";
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
@@ -62,36 +56,7 @@ export default async function DynamicPage({ params }: PageProps) {
     const page = await getPublicPage(slug);
 
     if (page) {
-      if (!page.isSystemPage) {
-        const [builderPage, turnstileSiteKey] = await Promise.all([
-          getPublishedPageBuilderBySlugQuery(slug),
-          getTurnstileSiteKey(),
-        ]);
-        if (!builderPage) {
-          notFound();
-        }
-
-        return (
-          <>
-            <BreadcrumbJsonLd
-              items={[
-                { name: "ホーム", url: "/" },
-                { name: page.title, url: `/${slug}` },
-              ]}
-            />
-            <FreeformPageRenderer
-              document={builderPage.document}
-              media={builderPage.media}
-              turnstileSiteKey={turnstileSiteKey}
-            />
-          </>
-        );
-      }
-
-      const [sections, settings] = await Promise.all([
-        getPageSections(page.id),
-        getPublicSettingsForStyle(),
-      ]);
+      const sections = await getPageSections(page.id);
 
       return (
         <>
@@ -101,11 +66,7 @@ export default async function DynamicPage({ params }: PageProps) {
               { name: page.title, url: `/${slug}` },
             ]}
           />
-          <ManagedPageSections
-            sections={sections}
-            pageStyle={page.pageStyle}
-            settings={settings}
-          />
+          <ManagedPageSections sections={sections} />
         </>
       );
     }

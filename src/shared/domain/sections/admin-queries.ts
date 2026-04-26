@@ -21,22 +21,6 @@ const ADMIN_SECTION_SELECT = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
-  styleId: true,
-  styleOverride: true,
-  style: {
-    select: {
-      id: true,
-      name: true,
-      scope: true,
-      applicableTypes: true,
-      spacing: true,
-      background: true,
-      container: true,
-      typography: true,
-      animation: true,
-      customClass: true,
-    },
-  },
 } as const;
 
 function parseSectionConfig(type: string, config: unknown): SectionConfig {
@@ -66,27 +50,10 @@ function toSectionData(section: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  styleId?: string | null;
-  styleOverride?: unknown;
-  style?: {
-    id: string;
-    name: string;
-    scope: string;
-    applicableTypes: string[];
-    spacing: unknown;
-    background: unknown;
-    container: unknown;
-    typography: unknown;
-    animation: unknown;
-    customClass: string | null;
-  } | null;
 }) {
   return {
     ...section,
     config: parseSectionConfig(section.type, section.config),
-    styleId: section.styleId ?? null,
-    styleOverride: section.styleOverride ?? null,
-    style: section.style ?? null,
   };
 }
 
@@ -227,17 +194,6 @@ export async function getPageForEditQuery(slug: string) {
       ogpTitle: true,
       ogpDescription: true,
       ogpImageUrl: true,
-      pageStyleId: true,
-      pageStyle: {
-        select: {
-          spacing: true,
-          background: true,
-          container: true,
-          typography: true,
-          animation: true,
-          customClass: true,
-        },
-      },
       sections: {
         select: ADMIN_SECTION_SELECT,
         orderBy: { order: "asc" },
@@ -261,8 +217,6 @@ export async function getPageForEditQuery(slug: string) {
     ogpTitle: page.ogpTitle,
     ogpDescription: page.ogpDescription,
     ogpImageUrl: page.ogpImageUrl,
-    pageStyleId: page.pageStyleId,
-    pageStyle: page.pageStyle,
     sections: page.sections.map((section) => ({
       ...toSectionData(section),
       pageId: section.pageId ?? "",

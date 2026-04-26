@@ -18,6 +18,8 @@
 
   /* Background: 温かみのあるオフホワイト */
   --color-background: oklch(0.98 0.005 250);
+  /* Shared renderer / public component utility generation */
+  --color-surface: oklch(0.94 0.012 60);
   /* Foreground: 深い墨色（純黒を避ける） */
   --color-foreground: oklch(0.2 0.02 260);
 
@@ -51,6 +53,7 @@
    * Accent: プライマリの薄いバリエーション
    * -------------------------------------------------------------------------- */
   --color-accent: oklch(0.95 0.05 260);
+  --color-accent-light: oklch(0.68 0.06 60);
   --color-accent-foreground: oklch(0.45 0.15 260);
 
   /* --------------------------------------------------------------------------

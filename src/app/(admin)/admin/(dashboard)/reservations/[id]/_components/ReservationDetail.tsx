@@ -21,6 +21,7 @@ import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import {
   updateReservationStatus,
   updateReservationNotes,
@@ -117,7 +118,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       }
 
       if (result.sessionUrl) {
-        window.open(result.sessionUrl, "_blank", "noopener,noreferrer");
+        openExternalTab(result.sessionUrl);
         toast.success("決済リンクを作成しました");
       } else {
         toast.error("決済URLの取得に失敗しました");

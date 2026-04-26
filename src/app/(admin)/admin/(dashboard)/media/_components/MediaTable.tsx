@@ -15,6 +15,7 @@ import type { MediaData } from "@/admin/types/media-picker";
 import { MediaDetailDialog } from "./MediaDetailDialog";
 import { formatDate } from "@/shared/lib/date-format";
 import { formatBytes } from "@/admin/lib/utils";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { USAGE_LABELS } from "./constants";
 import { createCopyUrlHandler, useDeleteMedia } from "./hooks";
 import { isValidMediaUsage } from "@/admin/lib/validations/media";
@@ -123,9 +124,7 @@ export function MediaTable({ items }: Props) {
                         URLをコピー
                       </ActionDropdownItem>
                       <ActionDropdownItem
-                        onClick={() =>
-                          window.open(item.url, "_blank", "noopener,noreferrer")
-                        }
+                        onClick={() => openExternalTab(item.url)}
                       >
                         新しいタブで開く
                       </ActionDropdownItem>

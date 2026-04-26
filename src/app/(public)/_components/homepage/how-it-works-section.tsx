@@ -33,7 +33,7 @@ export interface HowItWorksSectionProps {
   readonly title: string;
   readonly steps: readonly HowItWorksStep[];
   readonly valueProps: readonly ValueProp[];
-  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  /** Code-owned visual style for this section. */
   readonly resolvedStyle?: SectionStylePayload;
 }
 

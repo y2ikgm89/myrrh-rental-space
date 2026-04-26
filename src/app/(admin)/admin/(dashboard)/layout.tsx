@@ -12,7 +12,6 @@
  */
 
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AdminLayoutProvider } from "@/admin/contexts/admin-layout-context";
 import { ConfirmProvider } from "@/admin/contexts/confirm-context";
@@ -21,36 +20,41 @@ import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
 import { MainContent } from "./_components/MainContent";
 import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
-import { getAdminBrandingSettings } from "@/shared/domain/settings/queries/organization";
 import type { ReactElement, ReactNode } from "react";
 import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import {
-  getUnreadNotificationCount,
-  getRecentNotifications,
-} from "@/admin/queries/notification";
+  filterSidebarItemsByPermission,
+  SIDEBAR_ITEMS,
+} from "./_components/sidebar-items";
+import { hasPermission } from "@/admin/lib/permissions";
+import {
+  NotificationBellFallback,
+  NotificationBellSlot,
+  TopBarBrandingFallback,
+  TopBarBrandingSlot,
+} from "./_components/TopBarSlots";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }): Promise<ReactElement> {
-  await headers();
-  await requireAdminDashboardAccess();
-  const [brandingSettings, unreadCount, recentNotifications] =
-    await Promise.all([
-      getAdminBrandingSettings(),
-      getUnreadNotificationCount(),
-      getRecentNotifications(),
-    ]);
+  const user = await requireAdminDashboardAccess();
+  const sidebarItems = filterSidebarItemsByPermission(
+    SIDEBAR_ITEMS,
+    (permission) =>
+      hasPermission(user.role, permission.resource, permission.action),
+  );
 
   return (
     <AdminLayoutProvider>
-      <NotificationPollingProvider initialCount={unreadCount}>
+      <NotificationPollingProvider>
         <ConfirmProvider>
           <NuqsAdapter>
             <div className="min-h-screen bg-background">
               {/* レスポンシブサイドバー */}
               <ResponsiveSidebar
+                items={sidebarItems}
                 userInfo={
                   <Suspense fallback={<UserInfoSkeleton />}>
                     <UserInfo />
@@ -62,13 +66,16 @@ export default async function DashboardLayout({
               <MainContent
                 topBar={
                   <TopBar
-                    siteName={brandingSettings.siteName}
-                    headerLogoUrl={brandingSettings.headerLogoUrl}
-                    useHeaderLogo={brandingSettings.useHeaderLogo}
-                    recentNotifications={recentNotifications.map((n) => ({
-                      ...n,
-                      createdAt: n.createdAt.toISOString(),
-                    }))}
+                    branding={
+                      <Suspense fallback={<TopBarBrandingFallback />}>
+                        <TopBarBrandingSlot />
+                      </Suspense>
+                    }
+                    notifications={
+                      <Suspense fallback={<NotificationBellFallback />}>
+                        <NotificationBellSlot />
+                      </Suspense>
+                    }
                   />
                 }
               >

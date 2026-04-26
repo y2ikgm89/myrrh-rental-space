@@ -7,37 +7,12 @@
 
 import type { SectionConfig } from "@/shared/lib/validations/section";
 
-export type PageSectionStyle = {
-  id: string;
-  name: string;
-  scope: string;
-  applicableTypes: string[];
-  spacing: unknown;
-  background: unknown;
-  container: unknown;
-  typography: unknown;
-  animation: unknown;
-  customClass: string | null;
-};
-
-export type PageStyleData = {
-  spacing: unknown;
-  background: unknown;
-  container: unknown;
-  typography: unknown;
-  animation: unknown;
-  customClass: string | null;
-};
-
 export type PageSectionData = {
   id: string;
   pageId: string;
   type: string;
   title: string | null;
   config: SectionConfig;
-  styleId: string | null;
-  styleOverride: unknown;
-  style: PageSectionStyle | null;
   contentHtml: string | null;
   contentJson: unknown;
   order: number;
@@ -64,8 +39,6 @@ export type PageForEdit = {
   ogpTitle: string | null;
   ogpDescription: string | null;
   ogpImageUrl: string | null;
-  pageStyleId: string | null;
-  pageStyle: PageStyleData | null;
   pageHero: unknown;
   sections: PageSectionData[];
 };

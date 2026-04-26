@@ -20,9 +20,13 @@ import {
   AnnouncementBarDesignStyle,
   PostPermalinkStructure,
 } from "@generated/prisma/enums";
+import {
+  DEFAULT_SIDEBAR_WIDGETS,
+  sidebarSettingsSchema,
+} from "@/shared/lib/validations/sidebar";
 
 // =============================================================================
-// スキーマ再現（schemas.ts / sidebar.ts から）
+// スキーマ再現（schemas.ts から）
 // =============================================================================
 
 const maintenanceSettingsSchema = z.object({
@@ -75,22 +79,6 @@ const announcementBarCarouselSettingsSchema = z.object({
 const permalinkSettingsSchema = z.object({
   postPermalinkStructure: z.enum(PostPermalinkStructure),
   postUrlPrefixEnabled: z.boolean(),
-});
-
-const sidebarWidgetsSchema = z.object({
-  search: z.boolean().default(true),
-  recent: z.boolean().default(true),
-  popular: z.boolean().default(true),
-  categories: z.boolean().default(true),
-  tags: z.boolean().default(true),
-});
-
-const sidebarSettingsSchema = z.object({
-  sidebarEnabled: z.boolean(),
-  sidebarWidgets: sidebarWidgetsSchema,
-  sidebarRecentCount: z.number().int().min(1).max(20),
-  sidebarPopularCount: z.number().int().min(1).max(20),
-  sidebarTocEnabled: z.boolean(),
 });
 
 const robotsTxtSettingsSchema = z.object({
@@ -150,13 +138,7 @@ const VALID_PERMALINK_INPUT = {
 
 const VALID_SIDEBAR_INPUT = {
   sidebarEnabled: true,
-  sidebarWidgets: {
-    search: true,
-    recent: true,
-    popular: true,
-    categories: true,
-    tags: true,
-  },
+  sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS,
   sidebarRecentCount: 5,
   sidebarPopularCount: 5,
   sidebarTocEnabled: true,
@@ -695,13 +677,10 @@ describe("Settings Other Admin Action Integration", () => {
       test("全ウィジェットfalseでもOK", () => {
         const result = sidebarSettingsSchema.safeParse({
           ...VALID_SIDEBAR_INPUT,
-          sidebarWidgets: {
-            search: false,
-            recent: false,
-            popular: false,
-            categories: false,
-            tags: false,
-          },
+          sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS.map((widget) => ({
+            ...widget,
+            enabled: false,
+          })),
         });
         expect(result.success).toBe(true);
       });
@@ -755,10 +734,10 @@ describe("Settings Other Admin Action Integration", () => {
       test("文字列はエラー", () => {
         const result = sidebarSettingsSchema.safeParse({
           ...VALID_SIDEBAR_INPUT,
-          sidebarWidgets: {
-            ...VALID_SIDEBAR_INPUT.sidebarWidgets,
-            search: "true",
-          },
+          sidebarWidgets: [
+            { type: "search", enabled: "true" },
+            ...DEFAULT_SIDEBAR_WIDGETS.slice(1),
+          ],
         });
         expect(result.success).toBe(false);
       });

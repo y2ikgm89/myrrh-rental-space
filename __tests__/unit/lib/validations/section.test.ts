@@ -643,10 +643,6 @@ describe("createSectionSchema", () => {
     if (result.success) {
       expect(result.data.config).toEqual({});
       expect(result.data.isActive).toBe(true);
-      // Phase B.5-3: 旧 design フィールドは廃止、styleId / styleOverride
-      // はオプション（既定で未指定）
-      expect(result.data.styleId).toBeUndefined();
-      expect(result.data.styleOverride).toBeUndefined();
     }
   });
 

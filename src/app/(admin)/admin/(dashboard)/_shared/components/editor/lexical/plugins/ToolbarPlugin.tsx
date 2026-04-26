@@ -44,6 +44,7 @@ import { $generateHtmlFromNodes } from "@lexical/html";
 import { IconLink } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { FontSizePlugin } from "./FontSizePlugin";
 import { HighlightPlugin } from "./HighlightPlugin";
 import { TextColorPlugin } from "./TextColorPlugin";
@@ -294,7 +295,7 @@ export function ToolbarPlugin({
         `@media print{body{margin:0}}</style></head><body>${html}</body></html>`;
       const blob = new Blob([fullHtml], { type: "text/html" });
       const url = URL.createObjectURL(blob);
-      const printWindow = window.open(url, "_blank", "noopener,noreferrer");
+      const printWindow = openExternalTab(url);
       if (printWindow) {
         printWindow.addEventListener("load", () => URL.revokeObjectURL(url));
       } else {

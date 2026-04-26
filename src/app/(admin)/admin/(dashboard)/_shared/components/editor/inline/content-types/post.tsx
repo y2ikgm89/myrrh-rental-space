@@ -35,7 +35,6 @@ export const postSettingsPanel: SidePanelDefinition<
   description:
     "タイトル・スラッグ・分類・画像・SEO・公開日など。本文中のブロック設定はエディタ右のパネルです。",
   tabStorageKey: "myrrh-inline-editor-sidepanel:post",
-  width: "default",
   tabs: [
     {
       id: "basic",

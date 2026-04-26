@@ -163,8 +163,6 @@ export type SettingsData = {
   eventImportEnabled: boolean;
   reviewsEnabledGlobal: boolean;
   themeColor: string;
-  /** Section Style 4-tier cascade の global layer（ハードコード default の次に低い優先度） */
-  globalSectionStyleId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

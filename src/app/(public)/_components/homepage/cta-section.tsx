@@ -15,7 +15,7 @@ export interface CtaSectionProps {
   readonly description: string;
   readonly buttonText: string;
   readonly buttonUrl: AppRoute;
-  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  /** Code-owned visual style for this section. */
   readonly resolvedStyle?: SectionStylePayload;
 }
 

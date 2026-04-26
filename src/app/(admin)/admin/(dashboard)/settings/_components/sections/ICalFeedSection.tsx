@@ -9,6 +9,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { toast } from "sonner";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import {
   Button,
   Card,
@@ -339,7 +340,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => window.open(createdTokenUrl, "_blank")}
+                          onClick={() => openExternalTab(createdTokenUrl)}
                         >
                           <IconExternalLink className="mr-2 h-4 w-4" />
                           開く
@@ -498,7 +499,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          window.open(getTokenUrl(token.token), "_blank")
+                          openExternalTab(getTokenUrl(token.token))
                         }
                       >
                         <IconExternalLink className="h-4 w-4" />

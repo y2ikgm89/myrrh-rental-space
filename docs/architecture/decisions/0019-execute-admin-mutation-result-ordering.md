@@ -31,7 +31,7 @@ ADR 0012 で採択した `executeAdminMutationResult` は、書き込み系 Serv
 
 ## Decision Drivers
 
-- **cache invalidation の保証**: ADR 0017 で採択した SectionStyle cascade 含め、全ての mutation は `afterSuccess` での `updateTag` に整合性を依存する。afterSuccess のスキップは公開側のキャッシュ破綻を引き起こす
+- **cache invalidation の保証**: page / section / settings など公開表示に影響する mutation は `afterSuccess` での `updateTag` に整合性を依存する。afterSuccess のスキップは公開側のキャッシュ破綻を引き起こす
 - **監査ログの可用性設計**: 監査 write は非クリティカル副作用。失敗時は observability（`logError` で Cloud Error Reporting）で検出できればよく、ユーザー mutation をブロックすべきでない（業界標準: SOX / GDPR の監査要件も「記録の試行」が主眼で「記録の強整合性」ではない）
 - **応答時間**: `prisma.auditLog.create` の p99 遅延を mutation 応答に加算しない（特に list page redirect 後の Route Handler 実行）
 - **silent bug の再発防止**: 契約を ADR で明文化 + rules で grep 可能にし、将来の別 AI / 別 session 介入で (A)/(B) に戻る余地を塞ぐ
@@ -100,7 +100,7 @@ try {
 ### Positive
 
 - mutation 応答時間が監査 DB 劣化の影響を受けない
-- `afterSuccess` の `updateTag` が常に完走 → ADR 0017 SectionStyle cascade 等の cache invalidation 契約が維持される
+- `afterSuccess` の `updateTag` が常に完走 → 公開側 cache invalidation 契約が維持される
 - 監査失敗は `logError` で Cloud Error Reporting に集約され、別 AI / 別 session の regression を検出可能
 - `CLAUDE.md` ハードルール + `.claude/rules/server-actions.md` + 本 ADR で 3 層明文化
 

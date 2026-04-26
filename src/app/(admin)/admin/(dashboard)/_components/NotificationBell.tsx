@@ -53,7 +53,7 @@ export function NotificationBell({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-96 p-0">
+      <PopoverContent align="end" className="w-[calc(100vw-2rem)] max-w-96 p-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold text-foreground">通知</h3>

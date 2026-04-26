@@ -27,8 +27,7 @@ export type Resource =
   | "blockTemplate"
   | "review"
   | "event"
-  | "notification"
-  | "sectionStyle";
+  | "notification";
 
 export type Action =
   | "create"
@@ -61,5 +60,4 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   review: "レビュー",
   event: "イベント",
   notification: "通知",
-  sectionStyle: "Style Library",
 };
