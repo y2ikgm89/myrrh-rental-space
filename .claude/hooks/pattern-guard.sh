@@ -147,4 +147,18 @@ if grep -nE '^export type [A-Z]\w+ = [A-Z]\w+;$' "$FILE_PATH" >/dev/null 2>&1; t
   WARNINGS+=("- ゼロ値型エイリアス検出: $(basename "$FILE_PATH") — 元の型を直接使用してください。")
 fi
 
+# =============================================================================
+# 8. "use server" export contract（async 関数のみ export 可、Turbopack silent bug 防止）
+# =============================================================================
+if head -1 "$FILE_PATH" 2>/dev/null | grep -qE '^"use server"|^'"'"'use server'"'"; then
+  # 型 / interface / class / let / var の export
+  if grep -nE '^export (type |interface |class |let |var )' "$FILE_PATH" >/dev/null 2>&1; then
+    WARNINGS+=("- \"use server\" ファイルから type/interface/class/let/var を export 検出 — Turbopack silent bug。型は <file>-types.ts に退避してください（参照: server-actions.md §export 契約）。")
+  fi
+  # 非 async const export（async ... で始まらないもの）
+  if grep -nE '^export const [A-Za-z_]+\s*=' "$FILE_PATH" 2>/dev/null | grep -vE '=\s*async ' >/dev/null 2>&1; then
+    WARNINGS+=("- \"use server\" ファイルに非-async const export 検出 — async 関数のみ export 可。定数・helper は別 module（import \"server-only\"）に分離してください。")
+  fi
+fi
+
 emit_context
