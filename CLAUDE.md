@@ -151,6 +151,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **一括修正後**: Grep で違反パターン残存ゼロ確認してから完了報告
 - **精査系 subagent の「使用なし」「欠落」報告は実装 Read + grep で二段検証必須** — grep ベース調査は seed 関数内の間接使用を見落として false positive を出す
 - **Explore / 監査 subagent の数値・採用範囲リストは grep で再検証必須** — `breakpoint 使用箇所数` / `@container 採用ファイル数` / `arbitrary 値の件数` 等は rule docs の記述を根拠に hallucinate することあり（このセッションで `xl:` 22→実際 18、`@container` 採用 5→実際 3 の drift を検出）。修正計画に組み込む前に `grep -rE "\bxl:" src/ --include="*.tsx" -c | awk -F: '{s+=$2} END{print s}'` 等で ground truth を取る
+- **Plan 作成時の rule docs 構造仮定は事前 grep 必須** — 「`gotchas.md` の noindex テーブル」「`<rule>.md` の §X セクション」等の構造を仮定して plan の Task に書く前に、`grep -nE '^##|^\|' .claude/rules/<file>.md` でテーブル形式 / paragraph 形式 / セクション存在を実体確認。仮定が外れると implementer DEVIATION → controller 補完 commit という余計な commit が発生する（実例: P15 Task 6.2 で gotchas.md は paragraph 形式だったがテーブル前提で書いたため追加 commit `a9e28ad8` が発生）
 - **レビューエージェント指摘**: `gotchas.md` と照合して誤報除外（`revalidateTag` 第2引数、JSX IIFE 算術式偽陽性、`select.tsx` required 等）。`bun run lint` exit 状態 + Read を ground truth とする
 - **監査エージェント指摘**: 該当 rule ファイル（`react-patterns.md` / `lexical-patterns.md` / `type-safety.md` 等）の「例外」節とクロスリファレンス
 - **SSoT 重複検出の grep**: symbol 名だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep
@@ -193,6 +194,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **review agent の「欠落」「型不整合」報告は Read + Glob で実在確認** — project-reviewer は `Serialized<T>` 型システムを未把握で Date→string を warning 化、route-structure-reviewer は Glob Windows パス変換で実在 loading.tsx を「欠落」扱いする false positive 傾向あり。report ベースで修正着手せず、対象ファイルを直接 Read して現状確認
 - **reviewer は MINGW64 `()` 含みパス Glob で誤検出する** — cache-strategy-reviewer 等が `src/shared/lib/constants/` 実在を「不在」と報告し「キャッシュ実装なし」と結論する false positive。受領後は `ls src/shared/lib/constants/` + `grep -rln "updateTag\|revalidateTag\|'use cache'" src/` で独立検証してから判断
 - **密結合タスクは 1 implementer にバンドル**
+- **Sequential-commit plan も 1 implementer に bundle 推奨** — 「N Task それぞれが独立 commit を要求する」plan は 1 dispatch + 「各 Task で commit + commit message は plan 指定文字列をそのまま使用」指示で context 効率最大化。Task 間 setup overhead 排除 + 中間 type-check broken でも plan 範囲が短いため許容できる。controller は完了後 `git log --oneline -N` + `git show --stat` で commit SHA / 行数を独立検証（実例: P15 admin auth route relocation で 7 commit を 1 dispatch 完了）
 - **implementer dispatch の git 禁止は `add`/`commit`/`push` だけでなく `reset`/`checkout`/`restore`/`stash` も全面禁止明記必須** — 並列 implementer で一方の `git reset` / `git restore` が他方の成果や controller の直前編集を silent revert する事故が実発生（2026-04-22 セッションで 4 agent 並列中に controller quick fixes 5 件 + 他 agent の main file 変更が HEAD@{0} `reset: moving to HEAD` で消失）。prompt に 🚫 `git add / commit / push / reset / checkout / restore / stash` を明記。staging は controller 側で実行し implementer は編集のみ
 - **parallel implementer 完了後は 3 段検証** — ① `git status --short`（modifications + untracked 列挙、`[post-subagent] git snapshot` hook の出力は truncate されうるため authoritative でなく `git status` 直接実行が ground truth）② `wc -l` で対象ファイルの行数 delta 確認（agent 報告の行数と照合）③ `grep` で期待 symbol 存在 + 削除 symbol 不在を確認。`system-reminder` の「X was modified by linter」も edit 時点 snapshot が表示されるケースがあり stale しうるため、現状は必ず `grep` / `Read` で直接確認
 - **dispatch プロンプトに「plan 記載 identifier と実装が乖離していれば justified deviation として保持し報告」を明記** — plan に合わせた強制 rename 禁止
@@ -214,7 +216,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 - **セッション継続時**: `docs/plans/README.md` 確認
-- **セッション跨ぎ大規模 plan は handoff memory 必須** — `~/.claude/projects/<slug>/memory/project_<phase>-handoff.md`（type=project）に ①plan 場所 ②worktree 場所 ③commit SHA ④残 chunk 分割 ⑤次セッション起動コマンドの 5 点セット + `MEMORY.md` に一行 index。context 枯渇で中断判断した phase（例: Section Architecture Phase B.4）で canonical
+- **セッション跨ぎ大規模 plan は handoff memory 必須** — `~/.claude/projects/<slug>/memory/project_<phase>-handoff.md`（type=project）に ①plan 場所 ②worktree 場所 ③commit SHA ④残 chunk 分割 ⑤次セッション起動コマンドの 5 点セット + `MEMORY.md` に一行 index。context 枯渇で中断判断した phase（例: Section Architecture Phase B.4）で canonical。**複数 plan を順次実行する場合**は plan 毎に「スコープ + 着手前の前提 + 起動コマンド例」を分けて記載（実例: `project_p17-19-sequential-handoff.md`）— plan が独立 context（rule auto-load 範囲が異なる）のため 1 セッション 1 plan の規律を自動付与できる
 
 ---
 
