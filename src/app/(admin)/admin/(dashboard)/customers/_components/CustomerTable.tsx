@@ -4,7 +4,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableRow,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -12,6 +11,7 @@ import {
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { CustomerStatusBadge } from "@/admin/components/status-badges";
+import { ClickableTableRow, stopRowClick } from "@/admin/components/table";
 import type { CustomerData } from "@/shared/domain/customers/types";
 import { formatDateShort } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
@@ -55,7 +55,11 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   `${customer.lastName} ${customer.firstName}`.trim();
 
               return (
-                <TableRow key={customer.id}>
+                <ClickableTableRow
+                  key={customer.id}
+                  href={`/admin/customers/${customer.id}`}
+                  aria-label={`${customer.lastName} ${customer.firstName} の顧客情報を表示`}
+                >
                   <TableCell className="whitespace-nowrap">
                     <CustomerStatusBadge status={customer.status} />
                   </TableCell>
@@ -91,7 +95,10 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                       {CUSTOMER_TYPE_LABELS[customer.customerType]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell
+                    className="hidden lg:table-cell"
+                    onClick={stopRowClick}
+                  >
                     <a
                       href={`mailto:${customer.email}`}
                       className="text-primary hover:underline"
@@ -116,10 +123,10 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
                     {formatDateShort(customer.createdAt)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={stopRowClick}>
                     <CustomerActionCell customerId={customer.id} />
                   </TableCell>
-                </TableRow>
+                </ClickableTableRow>
               );
             })}
           </TableBody>
