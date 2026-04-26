@@ -1,6 +1,6 @@
 ---
 name: public-site-change
-description: Use when changing public routes, public layout, public components, SEO metadata, public forms, customer-facing visual design, animations, or public content rendering. Do not use for admin dashboard, freeform builder internals, or database-only changes.
+description: Use when changing public routes, public layout, public components, SEO metadata, public forms, customer-facing visual design, animations, or public content rendering. Do not use for admin dashboard, content-editor internals, or database-only changes.
 ---
 
 # Public Site Change

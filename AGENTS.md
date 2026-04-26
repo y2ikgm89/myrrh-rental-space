@@ -13,13 +13,14 @@
 - `.codex/hooks.json` は空設定にする。hooks は公式上 experimental かつ Windows support が一時無効なので、検証強制は `lefthook` / CI / このファイルの delivery checklist で担保する。
 - `.claude/*` は残置された Claude Code 用資産として扱う。Codex 作業では参照・同期・正本扱いしない。
 - ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/architecture/*`、`docs/guides/*` の Codex 向け導線から読む。
+- Codex 資産（`AGENTS.md` / `.agents/skills` / `.codex/agents` / `.codex/rules` / `.codex/hooks.json`）を変更する場合は `codex-instruction-maintenance` と `project-validation` の手順を使い、AGENTS.md には恒久的な全体制約だけを置く。
 
 ## Project Overview
 
 レンタルスペースの予約・運営管理システム。公開サイトと管理画面を Next.js 16 の Multiple Root Layouts で分離する。
 
 - 公開系: `src/app/(public)/...`（デザイン重視、スクロール演出あり）
-- 管理系: `src/app/(admin)/admin/(dashboard)/...`（実務向け UI、Lexical / freeform page builder）
+- 管理系: `src/app/(admin)/admin/(dashboard)/...`（実務向け UI、Lexical / 型付きコンテンツフォーム）
 - 共通: `src/shared/...`（CSS 依存を持たない共通ロジック）
 
 ### Tech Stack
@@ -101,16 +102,15 @@ bun run e2e
 - Bun Test を使う。テストは `bun:test` から import する。
 - 命名: コンポーネント `PascalCase.tsx`、ユーティリティ `kebab-case.ts`。
 
-## Freeform Page Builder Rules
+## Content Managed Page Rules
 
-- custom page は freeform builder 一本にする。旧 Section editor との runtime 互換分岐を追加しない。
-- system page は既存専用管理面を維持し、freeform builder の対象外にする。
-- freeform document は `schemaVersion: 4` のみを runtime で受け付ける。旧 schema migration は本番 runtime に残さない。
-- preview / public / admin canvas は同じ renderer を使う。selection frame、grid、handles、guide は admin overlay に閉じる。
-- renderer は不要な wrapper、padding、editor decoration を持たない。見た目の余白は document style か editor shell で表現する。
-- image node は fixed wrapper + `next/image fill` の responsive pattern を守る。
-- 任意 HTML / 任意 script / custom CSS textarea は v1 で追加しない。embed は許可済み provider のみ。
-- builder 変更時は `docs/architecture/freeform-page-builder-design.md` と `docs/plans/2026-04-23-freeform-page-builder-v1.md` の方針と矛盾しないか確認する。
+- custom page は自由配置 editor ではなく、固定テンプレート `Section` + 型付き content form を正本にする。
+- 公開デザイン、余白、レスポンシブ挙動、Section 構成の基本形はコードで固定し、管理画面では content group の文言・画像・リンク・長文だけを編集対象にする。
+- custom page 作成時は hero / body / CTA の固定 Section を自動作成する。
+- preview / public は同じ `ManagedPageSections` renderer を使う。
+- freeform document、builder canvas、drag / resize / layer tree、breakpoint override、runtime 互換分岐を追加しない。
+- 任意 HTML / 任意 script / custom CSS textarea を追加しない。
+- ページ編集方針を変える場合は `docs/architecture/content-managed-pages.md` と矛盾しないか確認する。
 
 ## Architecture Boundaries
 
@@ -146,7 +146,6 @@ bun run e2e
 | `admin-clean-break`             | 管理画面、Server Actions、mutation 変更     |
 | `admin-ui-review`               | 管理画面 UI、共有 chrome、z-index、導線確認 |
 | `auth-rbac-change`              | Better Auth、RBAC、admin gate、監査         |
-| `freeform-page-builder`         | custom page freeform builder                |
 | `lexical-editor`                | 管理画面 Lexical editor                     |
 | `media-storage-change`          | media domain、R2/S3、media picker           |
 | `prisma-data-change`            | Prisma schema、migration、seed、DB 境界     |
@@ -156,13 +155,12 @@ bun run e2e
 
 ### Custom Agents
 
-| Agent                   | 用途                                   |
-| ----------------------- | -------------------------------------- |
-| `codebase_explorer`     | read-only コードパス調査               |
-| `admin_ui_reviewer`     | 管理画面 UI / レイヤー / 導線レビュー  |
-| `docs_researcher`       | OpenAI / framework 一次情報確認        |
-| `page_builder_reviewer` | freeform builder 専門レビュー          |
-| `test_verifier`         | 対象テスト / validate の実行と結果要約 |
+| Agent               | 用途                                   |
+| ------------------- | -------------------------------------- |
+| `codebase_explorer` | read-only コードパス調査               |
+| `admin_ui_reviewer` | 管理画面 UI / レイヤー / 導線レビュー  |
+| `docs_researcher`   | OpenAI / framework 一次情報確認        |
+| `test_verifier`     | 対象テスト / validate の実行と結果要約 |
 
 ## Delivery Checklist
 
@@ -177,5 +175,4 @@ bun run e2e
 
 - `docs/architecture/codex-instructions.md`: Codex 公式構成への対応方針
 - `docs/architecture/agent-instructions.md`: AI エージェント指示の配置
-- `docs/architecture/freeform-page-builder-design.md`: freeform page builder 設計
-- `docs/plans/2026-04-23-freeform-page-builder-v1.md`: freeform page builder 実装履歴と残タスク
+- `docs/architecture/content-managed-pages.md`: 固定デザイン + 型付きコンテンツ編集の方針

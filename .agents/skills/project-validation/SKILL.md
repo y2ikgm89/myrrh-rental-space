@@ -1,13 +1,13 @@
 ---
 name: project-validation
-description: Use before claiming repository work is complete, before PR or release readiness, or when deciding which Bun, Next.js, Playwright, Prisma, or page-builder validation commands to run. Do not use for purely conceptual answers with no repository changes.
+description: Use before claiming repository work is complete, before PR or release readiness, or when deciding which Bun, Next.js, Playwright, Prisma, or validation commands to run. Do not use for purely conceptual answers with no repository changes.
 ---
 
 # Project Validation
 
 ## Workflow
 
-1. Identify the changed surface: shared logic, admin UI, public route, Prisma schema, page builder, docs-only, or E2E flow.
+1. Identify the changed surface: shared logic, admin UI, public route, Prisma schema, content-managed pages, docs-only, or E2E flow.
 2. Run the smallest meaningful targeted test first.
 3. Run `bun run validate` before reporting completion.
 4. Run `bun run validate && bun run build` before PR, release, or commit readiness.
@@ -15,12 +15,13 @@ description: Use before claiming repository work is complete, before PR or relea
 
 ## Common Commands
 
-- Page builder unit: `bun test __tests__/unit/lib/page-builder`
 - Architecture boundary: `bun test __tests__/unit/architecture-boundaries.test.ts`
-- Admin page builder E2E: `bun run e2e -- e2e/authenticated/admin/page-builder.spec.ts`
+- Codex assets: `bun test __tests__/unit/architecture-boundaries.test.ts`
+- Admin shell/UI regressions: `bun test __tests__/unit/components/admin __tests__/unit/admin-sidebar-items.test.tsx __tests__/unit/admin-dashboard-shell.test.ts`
+- Section/domain unit: `bun test __tests__/unit/domain/sections`
+- Page/domain unit: `bun test __tests__/unit/domain/pages`
 - Full minimum gate: `bun run validate`
 - Release gate: `bun run validate && bun run build`
-- Freeform data audit: `bun run audit:freeform-pages`
 
 ## Notes
 

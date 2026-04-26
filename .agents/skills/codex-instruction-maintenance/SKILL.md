@@ -13,7 +13,8 @@ description: Use when changing Codex project instructions, AGENTS.md, repository
 4. Put custom subagents in `.codex/agents/*.toml`; each file must define `name`, `description`, and `developer_instructions`.
 5. Treat `.codex/rules/*.rules` as command approval policy only. Do not write coding standards there.
 6. Keep `.codex/hooks.json` empty unless the repository has a concrete hook use case and the current OpenAI docs confirm the needed event is supported.
-7. Document structural changes in `docs/architecture/codex-instructions.md` or `docs/architecture/agent-instructions.md`.
+7. When adding lessons from a code review, put concrete repeatable checks in the narrow skill or subagent that owns that surface instead of expanding `AGENTS.md`.
+8. Document structural changes in `docs/architecture/codex-instructions.md` or `docs/architecture/agent-instructions.md`.
 
 ## Boundaries
 
@@ -21,9 +22,11 @@ description: Use when changing Codex project instructions, AGENTS.md, repository
 - Do not duplicate long rules into skills. Skills should describe workflows, not every project rule.
 - Do not create broad subagents. Prefer narrow, evidence-oriented agents that either explore, review, verify, or research docs.
 - Do not use hooks to enforce validation until the target hook event is stable enough for this repository; use `lefthook`, CI, and explicit validation commands instead.
+- Do not add command allow rules for destructive or broad filesystem operations; keep those prompt-only or forbidden.
 
 ## Validation
 
 - Check skill frontmatter manually: `name` and `description` only.
 - Check TOML syntax for `.codex/agents/*.toml`.
+- For Codex asset changes, run `bun test __tests__/unit/architecture-boundaries.test.ts` before the repository-wide validation gate.
 - Run `bun run validate` before completion.

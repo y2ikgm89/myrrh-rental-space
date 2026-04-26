@@ -40,8 +40,13 @@ prefix_rule(
     decision = "allow",
     justification = "Targeted Bun tests are safe and expected during development.",
     match = [
-        "bun test __tests__/unit/lib/page-builder",
+        "bun test __tests__/unit/domain/pages",
+        "bun test __tests__/unit/domain/sections",
         "bun test __tests__/unit/architecture-boundaries.test.ts",
+        "bun test __tests__/unit/components/admin",
+        "bun test __tests__/unit/admin-sidebar-items.test.tsx",
+        "bun test __tests__/unit/admin-dashboard-shell.test.ts",
+        "bun test __tests__/integration/actions/admin/page-section.test.ts",
     ],
 )
 
@@ -72,7 +77,6 @@ prefix_rule(
     justification = "E2E may use browsers, local servers, and test artifacts; confirm before running outside the sandbox.",
     match = [
         "bun run e2e",
-        "bun run e2e -- e2e/authenticated/admin/page-builder.spec.ts",
     ],
 )
 
@@ -118,7 +122,6 @@ prefix_rule(
     justification = "Prisma migrate dev can create migration files and change the development database.",
     match = [
         "bunx --bun prisma migrate dev",
-        "bunx --bun prisma migrate dev --name add_freeform_page_builder",
     ],
 )
 

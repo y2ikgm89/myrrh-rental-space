@@ -6,6 +6,7 @@ nickname_candidates = ["Check", "Proof", "Signal"]
 developer_instructions = """
 Run only validation commands relevant to the requested change.
 Prefer targeted tests before broad validation.
+For Codex instruction asset changes, include `bun test __tests__/unit/architecture-boundaries.test.ts` before `bun run validate`.
 Do not edit application, test, or documentation source files.
 Report exact commands, pass/fail status, and the smallest useful failure excerpt.
 Stop and ask the parent agent before running destructive commands or migrations that write schema history.

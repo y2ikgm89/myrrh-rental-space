@@ -1,6 +1,6 @@
 ---
 name: lexical-editor
-description: Use when changing this repository's admin Lexical editor, custom nodes, plugins, toolbar behavior, serialization, or Lexical tests. Do not use for freeform page builder work, public-only pages, or unrelated admin CRUD screens.
+description: Use when changing this repository's admin Lexical editor, custom nodes, plugins, toolbar behavior, serialization, or Lexical tests. Do not use for public-only pages or unrelated admin CRUD screens.
 ---
 
 # Lexical Editor

@@ -13,11 +13,13 @@ description: Use when changing Better Auth configuration, admin login, sessions,
 4. Use `checkPermission()` directly only in API Routes or established boundary code.
 5. Preserve audit coverage with `logAction()` for permission-sensitive operations.
 6. Validate all form and external inputs with Zod before auth or RBAC decisions use them.
-7. Add focused tests for the guard, permission, action, or proxy behavior being changed.
+7. For admin chrome/navigation visibility, derive items from the same resource/action permission source of truth and filter on the server before passing data to Client Components.
+8. Add focused tests for the guard, permission, action, proxy behavior, or permission-filtered navigation being changed.
 
 ## Guardrails
 
 - Do not bypass RBAC with ad-hoc role checks in feature code.
+- Do not implement permission-sensitive UI visibility as client-only filtering or hardcoded role allowlists.
 - Do not leak auth errors that reveal account existence or permission internals.
 - Do not change session cookie, OAuth, or redirect behavior without testing login and admin access.
 - Do not add compatibility paths for retired permission names unless the user explicitly asks for a migration period.
