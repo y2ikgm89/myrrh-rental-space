@@ -13,10 +13,8 @@ import { getCustomerReservations } from "@/shared/domain/reservations/customer-q
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { buildReservationListItems } from "./_lib/build-reservation-list-items";
 import { toPlainArray } from "@/shared/lib/serialize";
-import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
-import { isCustomerProfileComplete } from "@/shared/domain/customers/profile-check";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { ReservationTabs } from "./_components/reservation-tabs";
 
@@ -57,8 +55,6 @@ export default async function MypagePage({
     })),
   );
 
-  const isNameIncomplete = !isCustomerProfileComplete(customer);
-
   const activeItems = reservationListItems.filter((item) =>
     ACTIVE_STATUS_SET.has(item.reservation.status),
   );
@@ -79,15 +75,6 @@ export default async function MypagePage({
           <p className="mt-1 text-muted-foreground">
             キャンセル完了の確認メールをお送りしました。
           </p>
-        </div>
-      )}
-      {isNameIncomplete && (
-        <div className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
-          お名前が未登録です。
-          <Link href="/mypage/settings" className="ml-1 underline text-accent">
-            アカウント設定
-          </Link>
-          から姓名を入力してください。
         </div>
       )}
       <ReservationTabs activeItems={activeItems} pastItems={pastItems} />

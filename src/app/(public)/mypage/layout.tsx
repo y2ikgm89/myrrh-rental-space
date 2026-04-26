@@ -14,6 +14,7 @@ import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
+import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
 
 export const metadata: Metadata = {
   title: "マイページ",
@@ -45,6 +46,7 @@ export default async function MypageLayout({
   return (
     <PageLayout variant="dashboard">
       <MypageNav />
+      <IncompleteProfileNotice customer={customer} />
       {children}
     </PageLayout>
   );
