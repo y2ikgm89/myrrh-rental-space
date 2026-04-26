@@ -7,19 +7,17 @@
  */
 
 import { useState } from "react";
-import {
-  Badge,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/admin/components/ui";
+import { Badge, Table, TableBody, TableCell } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { PostStatusBadge } from "@/admin/components/status-badges";
 import { PostActionCell } from "./PostActionCell";
 import { PostTableHeader } from "./PostTableHeader";
 import { PostBulkActions } from "./PostBulkActions";
-import { CheckboxCell } from "@/admin/components/table";
+import {
+  CheckboxCell,
+  ClickableTableRow,
+  stopRowClick,
+} from "@/admin/components/table";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PostListData } from "@/shared/domain/posts/types";
 
@@ -76,8 +74,12 @@ export function PostTable({ posts }: PostTableProps) {
             />
             <TableBody>
               {posts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell>
+                <ClickableTableRow
+                  key={post.id}
+                  href={`/admin/posts/${post.id}/edit`}
+                  aria-label={`${post.title} の投稿を編集`}
+                >
+                  <TableCell onClick={stopRowClick}>
                     <CheckboxCell
                       checked={selectedIds.includes(post.id)}
                       onChange={() => toggleOne(post.id)}
@@ -111,10 +113,10 @@ export function PostTable({ posts }: PostTableProps) {
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {formatDateTimeShort(post.createdAt)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={stopRowClick}>
                     <PostActionCell postId={post.id} status={post.status} />
                   </TableCell>
-                </TableRow>
+                </ClickableTableRow>
               ))}
             </TableBody>
           </Table>
