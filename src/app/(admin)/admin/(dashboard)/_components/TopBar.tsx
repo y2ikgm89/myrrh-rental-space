@@ -19,9 +19,10 @@ import type { ReactNode } from "react";
 type TopBarProps = {
   branding: ReactNode;
   notifications: ReactNode;
+  userBadge: ReactNode;
 };
 
-export function TopBar({ branding, notifications }: TopBarProps) {
+export function TopBar({ branding, notifications, userBadge }: TopBarProps) {
   const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
 
@@ -57,6 +58,7 @@ export function TopBar({ branding, notifications }: TopBarProps) {
 
       {/* 右: アクション */}
       <div className="flex items-center gap-4">
+        {userBadge}
         {notifications}
         <Link
           href="/"

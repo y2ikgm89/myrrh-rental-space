@@ -33,6 +33,10 @@ import {
   TopBarBrandingFallback,
   TopBarBrandingSlot,
 } from "./_components/TopBarSlots";
+import {
+  TopBarUserBadge,
+  TopBarUserBadgeFallback,
+} from "./_components/TopBarUserBadge";
 
 export default async function DashboardLayout({
   children,
@@ -74,6 +78,11 @@ export default async function DashboardLayout({
                     notifications={
                       <Suspense fallback={<NotificationBellFallback />}>
                         <NotificationBellSlot />
+                      </Suspense>
+                    }
+                    userBadge={
+                      <Suspense fallback={<TopBarUserBadgeFallback />}>
+                        <TopBarUserBadge />
                       </Suspense>
                     }
                   />
