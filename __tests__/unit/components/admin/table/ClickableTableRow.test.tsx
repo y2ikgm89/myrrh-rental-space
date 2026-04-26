@@ -128,6 +128,7 @@ describe("ClickableTableRow", () => {
     });
 
     expect(pushMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith("/admin/items/abc");
   });
 
   test("Space キーでは router.push が呼ばれない（link 慣習）", async () => {
