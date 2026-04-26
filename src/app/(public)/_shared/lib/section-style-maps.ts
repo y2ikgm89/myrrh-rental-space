@@ -152,19 +152,22 @@ export const GALLERY_GAP_MAP: Record<GalleryGap, string> = {
   lg: "gap-6",
 };
 
-/** ギャラリー グリッド列数 → Tailwind クラス (1〜6列, sm: ブレークポイント) */
+/**
+ * ギャラリー グリッド列数 → Tailwind クラス (1〜6列、container queries variants)
+ * コンシューマ側で grid 自身または親要素に `@container` を付与する必要がある。
+ */
 export const GALLERY_GRID_COLS_MAP: Record<number, string> = {
   1: "grid-cols-1",
-  2: "grid-cols-1 sm:grid-cols-2",
-  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  4: "grid-cols-2 lg:grid-cols-4",
-  5: "grid-cols-2 md:grid-cols-3 lg:grid-cols-5",
-  6: "grid-cols-2 md:grid-cols-3 lg:grid-cols-6",
+  2: "grid-cols-1 @md:grid-cols-2",
+  3: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3",
+  4: "grid-cols-2 @3xl:grid-cols-4",
+  5: "grid-cols-2 @md:grid-cols-3 @3xl:grid-cols-5",
+  6: "grid-cols-2 @md:grid-cols-3 @3xl:grid-cols-6",
 };
 
 /** デフォルトのギャラリーグリッド列クラス */
 export const DEFAULT_GALLERY_GRID_COLS =
-  "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3";
 
 /**
  * ギャラリーグリッド列数からTailwindクラスを取得

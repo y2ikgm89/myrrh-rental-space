@@ -119,7 +119,7 @@ export function GallerySection({
     ? "flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
     : isMasonry
       ? cn(getMasonryColsClass(colKey), gapClass)
-      : cn("grid", getGalleryGridColsClass(colKey), gapClass);
+      : cn("@container grid", getGalleryGridColsClass(colKey), gapClass);
 
   const lightboxImage =
     lightboxIndex >= 0 && lightboxIndex < config.images.length
