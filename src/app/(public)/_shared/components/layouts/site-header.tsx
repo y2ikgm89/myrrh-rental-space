@@ -420,7 +420,7 @@ export function Header({
         {/* Mobile — Radix Dialog (focus trap + body scroll lock + Esc) */}
         <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
-            className="flex h-10 w-10 items-center justify-center justify-self-end text-foreground md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground md:hidden"
             aria-label="メニューを開く"
           >
             <IconMenu2
@@ -446,7 +446,7 @@ export function Header({
                   onNavigate={closeMenu}
                 />
                 <Dialog.Close
-                  className="flex h-10 w-10 items-center justify-center text-foreground"
+                  className="inline-flex h-11 w-11 items-center justify-center text-foreground"
                   aria-label="メニューを閉じる"
                 >
                   <IconX

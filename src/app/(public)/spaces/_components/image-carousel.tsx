@@ -118,7 +118,7 @@ export function ImageCarousel({
             onClick={handlePrev}
             className={cn(
               "absolute left-2 top-1/2 z-10 -translate-y-1/2",
-              "hidden h-8 w-8 items-center justify-center md:flex",
+              "hidden h-11 w-11 items-center justify-center md:flex",
               "bg-background/80 backdrop-blur-sm",
               "border border-border/50",
               "opacity-0 transition-opacity duration-200",
@@ -138,7 +138,7 @@ export function ImageCarousel({
             onClick={handleNext}
             className={cn(
               "absolute right-2 top-1/2 z-10 -translate-y-1/2",
-              "hidden h-8 w-8 items-center justify-center md:flex",
+              "hidden h-11 w-11 items-center justify-center md:flex",
               "bg-background/80 backdrop-blur-sm",
               "border border-border/50",
               "opacity-0 transition-opacity duration-200",
@@ -159,24 +159,27 @@ export function ImageCarousel({
       {count > 1 && (
         <div
           className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5"
-          role="tablist"
           aria-label="画像選択"
         >
           {images.map((src, i) => (
             <button
               key={src}
               type="button"
-              role="tab"
-              aria-selected={i === activeIndex}
-              aria-label={`画像 ${i + 1}`}
+              aria-label={`画像 ${i + 1} 枚目を表示`}
+              aria-current={i === activeIndex ? "true" : undefined}
               onClick={(e) => handleDotClick(e, i)}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                i === activeIndex
-                  ? "w-4 bg-background"
-                  : "w-1.5 bg-background/60 hover:bg-background/80",
-              )}
-            />
+              className="inline-flex min-h-11 min-w-11 items-center justify-center"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "block h-1.5 rounded-full transition-all duration-300",
+                  i === activeIndex
+                    ? "w-4 bg-background"
+                    : "w-1.5 bg-background/60 hover:bg-background/80",
+                )}
+              />
+            </button>
           ))}
         </div>
       )}

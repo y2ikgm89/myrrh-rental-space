@@ -74,7 +74,7 @@ function serverShareSnapshot(): boolean {
 }
 
 const BUTTON_CLASSES =
-  "inline-flex min-h-10 items-center gap-2 whitespace-nowrap border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors duration-200 hover:border-accent hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
+  "inline-flex min-h-11 items-center gap-2 whitespace-nowrap border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors duration-200 hover:border-accent hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
 
 export function ShareButtons({ url, title }: ShareButtonsProps) {
   const { announce } = useAriaLive();

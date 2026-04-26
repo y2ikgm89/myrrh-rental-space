@@ -14,7 +14,7 @@ interface CalendarMonthNavProps {
 }
 
 const CHEVRON_BUTTON_CLASS =
-  "flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function CalendarMonthNav({
   year,
@@ -30,7 +30,7 @@ export function CalendarMonthNav({
         <button
           type="button"
           onClick={onToday}
-          className="h-10 border border-border px-4 text-xs tracking-[0.18em] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-11 items-center border border-border px-4 text-xs tracking-[0.18em] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           今月
         </button>

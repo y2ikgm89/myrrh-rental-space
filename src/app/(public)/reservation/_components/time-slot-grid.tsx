@@ -24,7 +24,7 @@ export function TimeSlotGrid({
         aria-busy="true"
       >
         {Array.from({ length: 12 }, (_, i) => (
-          <div key={i} className="min-h-10 animate-pulse bg-border/30" />
+          <div key={i} className="min-h-11 animate-pulse bg-border/30" />
         ))}
       </div>
     );
@@ -58,7 +58,7 @@ export function TimeSlotGrid({
             disabled={isUnavailable}
             onClick={() => onSelect(slot.time)}
             className={cn(
-              "min-h-10 border text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              "min-h-11 border text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               isSelected
                 ? "border-accent bg-accent text-accent-foreground"
                 : isUnavailable

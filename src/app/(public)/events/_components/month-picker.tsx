@@ -117,7 +117,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
             <button
               type="button"
               onClick={() => setPickerYear((y) => y - 1)}
-              className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
               aria-label="前の年"
             >
               <IconChevronLeft className="h-4 w-4" />
@@ -156,7 +156,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
             <button
               type="button"
               onClick={() => setPickerYear((y) => y + 1)}
-              className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
               aria-label="次の年"
             >
               <IconChevronRight className="h-4 w-4" />
