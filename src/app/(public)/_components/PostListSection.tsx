@@ -152,7 +152,7 @@ export function PostListSection({
             </div>
             <div className={cn("p-4 md:p-5", isList && "flex-1")}>
               {post.categoryName && (
-                <span className="text-[10px] uppercase tracking-[0.18em] text-accent">
+                <span className="text-xs uppercase tracking-[0.18em] text-accent">
                   {post.categoryName}
                 </span>
               )}
