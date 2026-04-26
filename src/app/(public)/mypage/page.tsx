@@ -16,7 +16,10 @@ import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { isCustomerProfileComplete } from "@/shared/domain/customers/profile-check";
-import { ReservationList } from "./_components/reservation-list";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { ReservationTabs } from "./_components/reservation-tabs";
+
+const ACTIVE_STATUS_SET = new Set<string>(ACTIVE_RESERVATION_STATUSES);
 
 export default async function MypagePage(): Promise<ReactElement> {
   const { user } = await verifyCustomerSession();
@@ -46,6 +49,13 @@ export default async function MypagePage(): Promise<ReactElement> {
 
   const isNameIncomplete = !isCustomerProfileComplete(customer);
 
+  const activeItems = reservationListItems.filter((item) =>
+    ACTIVE_STATUS_SET.has(item.reservation.status),
+  );
+  const pastItems = reservationListItems.filter(
+    (item) => !ACTIVE_STATUS_SET.has(item.reservation.status),
+  );
+
   return (
     <Stack gap="lg">
       <Heading level={1}>予約一覧</Heading>
@@ -58,7 +68,7 @@ export default async function MypagePage(): Promise<ReactElement> {
           から姓名を入力してください。
         </div>
       )}
-      <ReservationList items={reservationListItems} />
+      <ReservationTabs activeItems={activeItems} pastItems={pastItems} />
     </Stack>
   );
 }
