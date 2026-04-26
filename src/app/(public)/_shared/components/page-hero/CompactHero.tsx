@@ -20,11 +20,11 @@ export function CompactHero({
   return (
     <section
       data-hero=""
-      className="grid grid-cols-1 md:grid-cols-2 md:min-h-[40svh]"
+      className="grid grid-cols-1 md:grid-cols-2 md:min-h-[var(--hero-min-height-sm)]"
     >
       <div
         className={cn(
-          "relative min-h-[40svh] w-full overflow-hidden bg-card",
+          "relative min-h-[var(--hero-min-height-sm)] w-full overflow-hidden bg-card",
           "md:min-h-0",
         )}
       >
