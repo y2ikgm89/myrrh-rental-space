@@ -42,7 +42,11 @@ export async function DashboardNotificationsSection() {
       </CardHeader>
       <CardContent>
         {notifications.length === 0 ? (
-          <EmptyState message="通知はありません" />
+          <EmptyState
+            message="通知はありません"
+            description="予約・お問い合わせ・レビューなどのアクティビティが発生するとここに表示されます。"
+            action={{ label: "通知履歴を見る", href: "/admin/notifications" }}
+          />
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => {
