@@ -201,3 +201,37 @@ export async function getCustomApiKeyValue(id: string): Promise<string | null> {
 
   return safeDecrypt(keysMap[id].keyValue);
 }
+
+/**
+ * 主要外部統合の接続状態サマリー（dashboard ヘルスチェック用）。
+ * 各キーが復号可能な値を持つかを `boolean` で返す。
+ */
+export async function getIntegrationHealthSummary(): Promise<{
+  readonly resend: boolean;
+  readonly stripe: boolean;
+  readonly googleCalendar: boolean;
+  readonly turnstile: boolean;
+}> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      resendApiKey: true,
+      stripeSecretKey: true,
+      googleCalendarOAuthEnabled: true,
+      turnstileSecretKey: true,
+    },
+  });
+
+  return {
+    resend: Boolean(
+      settings?.resendApiKey && safeDecrypt(settings.resendApiKey),
+    ),
+    stripe: Boolean(
+      settings?.stripeSecretKey && safeDecrypt(settings.stripeSecretKey),
+    ),
+    googleCalendar: settings?.googleCalendarOAuthEnabled ?? false,
+    turnstile: Boolean(
+      settings?.turnstileSecretKey && safeDecrypt(settings.turnstileSecretKey),
+    ),
+  };
+}
