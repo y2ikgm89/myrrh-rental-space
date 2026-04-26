@@ -68,7 +68,7 @@ export function InstagramSection({
         <ScrollReveal>
           <div
             className={cn(
-              "grid grid-cols-2",
+              "@container grid",
               getGridColsClass(config.columns),
               GAP_MAP[parseGapSize(config.gap)],
             )}

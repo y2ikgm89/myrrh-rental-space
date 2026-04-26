@@ -117,7 +117,7 @@ export function NewsListSection({
         ref={listRef}
         className={
           isCard
-            ? cn("grid gap-6", getGridColsClass(config.columns))
+            ? cn("@container grid gap-6", getGridColsClass(config.columns))
             : "divide-y divide-border"
         }
       >
