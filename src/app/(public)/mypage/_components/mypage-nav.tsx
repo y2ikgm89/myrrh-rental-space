@@ -34,7 +34,7 @@ export function MypageNav() {
         <select
           value={activeItem?.href ?? "/mypage"}
           onChange={(e) => router.push(toAppRoute(e.target.value))}
-          aria-label="マイページメニュー"
+          aria-label={`マイページメニュー（現在: ${activeItem?.label ?? "予約一覧"}）`}
           className="w-full border-b border-border bg-transparent py-3 text-base tracking-[0.12em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {NAV_ITEMS.map((item) => (
