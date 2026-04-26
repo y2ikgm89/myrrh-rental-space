@@ -14,6 +14,7 @@ import {
   type ReactElement,
 } from "react";
 import { IconEye, IconEyeOff } from "@tabler/icons-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/shared/lib/admin-auth-client";
 import { credentialsSchema } from "@/admin/lib/validations/auth";
@@ -182,20 +183,29 @@ export function LoginForm(): ReactElement {
         </div>
       </div>
 
-      <div className="flex items-center">
-        <input
-          id="remember-me"
-          type="checkbox"
-          checked={rememberMe}
-          onChange={(e) => setRememberMe(e.target.checked)}
-          className="h-4 w-4 rounded border-input text-primary focus:ring-primary/50 cursor-pointer transition-colors duration-200"
-        />
-        <label
-          htmlFor="remember-me"
-          className="ml-2 block text-sm text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors duration-200"
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <input
+            id="remember-me"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-input text-primary focus:ring-primary/50 cursor-pointer transition-colors duration-200"
+          />
+          <label
+            htmlFor="remember-me"
+            className="ml-2 block text-sm text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors duration-200"
+          >
+            メールアドレスを保存する
+          </label>
+        </div>
+
+        <Link
+          href="/admin/forgot-password"
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          メールアドレスを保存する
-        </label>
+          パスワードを忘れた方
+        </Link>
       </div>
 
       <SubmitButton

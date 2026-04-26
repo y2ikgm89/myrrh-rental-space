@@ -9,8 +9,6 @@ Disallow: /api/
 Disallow: /reservation/
 Disallow: /mypage/
 Disallow: /login/
-Disallow: /forgot-password/
-Disallow: /reset-password/
 Disallow: /_next/
 Disallow: /static/
 
