@@ -70,7 +70,11 @@ export function FaqBulkActions({
         aria-label="一括操作"
         className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-4 py-3 shadow-lg"
       >
-        <span className="text-sm text-muted-foreground">
+        <span
+          className="text-sm text-muted-foreground"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {selectedIds.length} 件選択中
         </span>
         <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
