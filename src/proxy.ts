@@ -216,6 +216,15 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       return createResponse(req, pathname);
     }
 
+    // パスワードリセット系ページは認証不要（ログインできないユーザーがアクセスする）
+    // Turnstile + Better Auth の TURNSTILE_PROTECTED_ENDPOINTS で別途レート制限・bot 対策済み
+    if (
+      pathname === "/admin/forgot-password" ||
+      pathname === "/admin/reset-password"
+    ) {
+      return createResponse(req, pathname);
+    }
+
     // その他の管理画面: セッション必須
     const sessionCookie = getSessionCookie(req, {
       cookiePrefix: "admin-auth",
