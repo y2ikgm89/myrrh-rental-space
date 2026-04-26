@@ -83,11 +83,11 @@ export const OVERLAY_STYLE_MAP: Record<OverlayStyle, string> = {
   none: "",
 };
 
-/** HeroParallax 高さ → Tailwind/CSS クラス（min-height + svh ベース） */
+/** HeroParallax 高さ → Tailwind/CSS クラス（@theme トークン参照） */
 export const HERO_PARALLAX_HEIGHT_MAP: Record<string, string> = {
-  sm: "min-h-[40svh]",
-  md: "min-h-[60svh]",
-  lg: "min-h-[80svh]",
+  sm: "min-h-[var(--hero-min-height-sm)]",
+  md: "min-h-[var(--hero-min-height)]",
+  lg: "min-h-[var(--hero-min-height-lg)]",
   full: "min-h-svh",
 };
 
