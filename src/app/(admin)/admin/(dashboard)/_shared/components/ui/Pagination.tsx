@@ -105,7 +105,7 @@ export function Pagination({
               /* eslint-disable-next-line @eslint-react/no-array-index-key */
               key={`ellipsis-${i}`}
               aria-hidden
-              className="flex h-8 w-8 items-center justify-center text-sm text-muted-foreground"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm text-muted-foreground"
             >
               ...
             </span>
@@ -114,7 +114,7 @@ export function Pagination({
               key={page}
               variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="h-8 w-8 p-0"
+              className="min-w-11 px-0"
               onClick={() => goToPage(page)}
               disabled={isPending}
               aria-current={page === currentPage ? "page" : undefined}
