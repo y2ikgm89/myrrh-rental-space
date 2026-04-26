@@ -26,23 +26,37 @@ export function SortableColumnHeader<T extends string>({
   className,
 }: SortableColumnHeaderProps<T>) {
   const isActive = currentSortBy === column;
+  const ariaSort: "ascending" | "descending" | "none" = isActive
+    ? currentSortOrder === "asc"
+      ? "ascending"
+      : "descending"
+    : "none";
+  const directionLabel = isActive
+    ? currentSortOrder === "asc"
+      ? "昇順"
+      : "降順"
+    : "未ソート";
 
   return (
-    <TableHead className={className}>
+    <TableHead className={className} aria-sort={ariaSort}>
       <button
         type="button"
-        className="flex items-center gap-1 hover:text-foreground transition-colors"
+        className="inline-flex min-h-11 items-center gap-1 hover:text-foreground transition-colors"
         onClick={() => onSort(column)}
       >
         {children}
+        <span className="sr-only">（{directionLabel}）</span>
         {isActive ? (
           currentSortOrder === "asc" ? (
-            <IconArrowUp className="h-3.5 w-3.5" />
+            <IconArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
           ) : (
-            <IconArrowDown className="h-3.5 w-3.5" />
+            <IconArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
           )
         ) : (
-          <IconArrowsSort className="h-3.5 w-3.5 text-muted-foreground/50" />
+          <IconArrowsSort
+            className="h-3.5 w-3.5 text-muted-foreground/50"
+            aria-hidden="true"
+          />
         )}
       </button>
     </TableHead>
