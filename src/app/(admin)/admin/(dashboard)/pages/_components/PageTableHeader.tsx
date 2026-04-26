@@ -12,7 +12,7 @@ import {
   adminPageSearchParamsParsers,
   type AdminPageSortBy,
 } from "@/shared/lib/nuqs";
-import { SortableColumnHeader } from "@/admin/components/table";
+import { SortableColumnHeader, CheckboxCell } from "@/admin/components/table";
 import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
 type PageTableHeaderProps = {
@@ -42,12 +42,10 @@ export function PageTableHeader({
     <TableHeader>
       <TableRow>
         <TableHead className="w-10">
-          <input
-            type="checkbox"
+          <CheckboxCell
             checked={allSelected}
-            onChange={onToggleAll}
-            className="rounded border-border"
-            aria-label="全選択"
+            onChange={() => onToggleAll()}
+            aria-label="すべての行を選択"
           />
         </TableHead>
         <TableHead>ステータス</TableHead>

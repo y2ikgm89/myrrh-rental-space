@@ -19,6 +19,7 @@ import { ReservationBulkActions } from "./ReservationBulkActions";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { EmptyState } from "@/admin/components/EmptyState";
+import { CheckboxCell } from "@/admin/components/table";
 import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
@@ -109,13 +110,11 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                       : {})}
                   >
                     <TableCell>
-                      <input
-                        type="checkbox"
+                      <CheckboxCell
                         checked={selectedIds.includes(reservation.id)}
                         onChange={() => toggleOne(reservation.id)}
                         disabled={!selectable}
-                        className="rounded border-border disabled:opacity-30"
-                        aria-label={`予約 ${reservation.id.slice(0, 8)} を選択`}
+                        aria-label={`${formatDate(reservation.startTime)} ${reservation.space.name} の予約を選択`}
                       />
                     </TableCell>
                     <TableCell>

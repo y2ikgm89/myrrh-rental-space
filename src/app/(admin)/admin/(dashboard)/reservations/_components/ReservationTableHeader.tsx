@@ -2,7 +2,7 @@
 
 import { useQueryStates } from "nuqs";
 import { adminReservationSearchParamsParsers } from "@/shared/lib/nuqs";
-import { SortableColumnHeader } from "@/admin/components/table";
+import { SortableColumnHeader, CheckboxCell } from "@/admin/components/table";
 import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
 type ReservationSortBy = "startTime" | "createdAt";
@@ -37,12 +37,10 @@ export function ReservationTableHeader({
     <TableHeader>
       <TableRow>
         <TableHead className="w-10">
-          <input
-            type="checkbox"
+          <CheckboxCell
             checked={allSelected}
-            onChange={onToggleAll}
-            className="rounded border-border"
-            aria-label="全選択"
+            onChange={() => onToggleAll()}
+            aria-label="すべての行を選択"
           />
         </TableHead>
         <SortableColumnHeader

@@ -25,6 +25,7 @@ import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PageData } from "@/shared/domain/pages/types";
 import { PageActions } from "./PageActions";
 import { BulkActions } from "./BulkActions";
+import { CheckboxCell } from "@/admin/components/table";
 import { CreatePageDialog } from "./CreatePageDialog";
 import { PageTableHeader } from "./PageTableHeader";
 
@@ -118,12 +119,10 @@ export function PageListTable({
                   >
                     <TableCell>
                       {!page.isSystemPage && (
-                        <input
-                          type="checkbox"
+                        <CheckboxCell
                           checked={selectedSlugs.includes(page.slug)}
                           onChange={() => toggleOne(page.slug)}
-                          className="rounded border-border"
-                          aria-label={`${page.title}を選択`}
+                          aria-label={`${page.title} を選択`}
                         />
                       )}
                     </TableCell>
