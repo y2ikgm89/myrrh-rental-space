@@ -123,8 +123,13 @@ export function PublicInquiryFormCard({
     return (
       <div
         className={cn("border border-border px-8 py-16 text-center", className)}
+        role="status"
+        aria-live="polite"
       >
-        <IconCircleCheck className="mx-auto h-10 w-10 text-accent" />
+        <IconCircleCheck
+          className="mx-auto h-10 w-10 text-accent"
+          aria-hidden="true"
+        />
         <p className="mt-6 text-xs font-medium uppercase tracking-[0.18em] text-accent">
           Sent
         </p>
@@ -136,6 +141,14 @@ export function PublicInquiryFormCard({
           <br />
           通常1営業日以内に担当者よりご連絡いたします。
         </p>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Button variant="editorial" size="sm" href="/spaces">
+            スペースを見る
+          </Button>
+          <Button variant="editorial" size="sm" href="/">
+            ホームに戻る
+          </Button>
+        </div>
       </div>
     );
   }
