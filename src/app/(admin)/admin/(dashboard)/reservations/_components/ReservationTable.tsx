@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Table, TableBody, TableCell, TableRow } from "@/admin/components/ui";
+import { Table, TableBody, TableCell } from "@/admin/components/ui";
 import { ReservationTableHeader } from "./ReservationTableHeader";
 import {
   PaymentStatusBadge,
@@ -19,7 +19,11 @@ import { ReservationBulkActions } from "./ReservationBulkActions";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { CheckboxCell } from "@/admin/components/table";
+import {
+  CheckboxCell,
+  ClickableTableRow,
+  stopRowClick,
+} from "@/admin/components/table";
 import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
@@ -103,13 +107,15 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
               {reservations.map((reservation) => {
                 const selectable = isSelectable(reservation);
                 return (
-                  <TableRow
+                  <ClickableTableRow
                     key={reservation.id}
+                    href={`/admin/reservations/${reservation.id}`}
+                    aria-label={`${formatDate(reservation.startTime)} ${reservation.space.name} の予約を表示`}
                     {...(reservation.deletedAt
                       ? { className: "opacity-50" }
                       : {})}
                   >
-                    <TableCell>
+                    <TableCell onClick={stopRowClick}>
                       <CheckboxCell
                         checked={selectedIds.includes(reservation.id)}
                         onChange={() => toggleOne(reservation.id)}
@@ -158,7 +164,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                     <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
                       {formatDate(reservation.createdAt)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={stopRowClick}>
                       <div className="flex items-center justify-end gap-2">
                         <div className="hidden sm:block">
                           <ReservationStatusSelect
@@ -172,7 +178,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                         />
                       </div>
                     </TableCell>
-                  </TableRow>
+                  </ClickableTableRow>
                 );
               })}
             </TableBody>

@@ -10,8 +10,8 @@ type ClickableTableRowProps = Omit<
   ComponentPropsWithRef<typeof TableRow>,
   "onClick" | "onKeyDown" | "tabIndex" | "role"
 > & {
-  /** 遷移先 URL（`router.push()` に渡される）。Next.js の型付きルートに準拠 */
-  readonly href: Route<string>;
+  /** 遷移先 URL（`router.push()` に渡される）。内部で Route<string> にキャストして使用 */
+  readonly href: string;
   /** スクリーンリーダー向けの行ラベル */
   readonly "aria-label": string;
 };
@@ -37,13 +37,15 @@ export function ClickableTableRow({
   const router = useRouter();
 
   const handleClick = () => {
-    router.push(href);
+    // Next.js typedRoutes 境界: 外部から受け取った string を Route<string> として扱う
+    // （DOM event target での as 使用と同等の library boundary cast）
+    router.push(href as Route<string>);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTableRowElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      router.push(href);
+      router.push(href as Route<string>);
     }
   };
 
