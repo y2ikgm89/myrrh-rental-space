@@ -168,7 +168,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Terms / News / Post / Section / Space の seed は Lexical JSON 同時保存必須** — `contentHtml` 単独禁止。`buildParagraphEditorStateJson()` + `buildParagraphHtml()`（`@/shared/lib/lexical/description-defaults.ts`）
 - **公開一覧ページ新設の 10 点セット**: ① `page.tsx` + `loading.tsx` + `error.tsx` ② `generatePageMetadata(slug)` + `BreadcrumbJsonLd` ③ `getPageSectionsWithFallback(slug)` ④ trailing sections から同種 + `cta` 除外 ⑤ `default-page-sections.ts` + `SYSTEM_PAGES` ⑥ seed Page レコード ⑦ sitemap.ts ⑧ NavigationItem seed ⑨ E2E fixtures urls ⑩ layout.tsx `alternates`（該当時）
 - **「推奨で」「クリーン実装」指示時の変換セット** — ① nuqs `parseAsString.withDefault` → `parseAsStringLiteral(values)` + `isValid*` 型ガード ② 複合 `sort` → `sortBy` + `sortOrder` + `SortableColumnHeader` ③ 手動 debounce → `useDebouncedCallback`（`@/admin/hooks`）④ Select `onValueChange` `as` → `isValid*` narrow ⑤ 同系統テーブルと Grep 比較
-- **Reader 関数を `"use server"` で export しない — Route Handler `route.ts` が公式推奨**（Next.js 16 [backend-for-frontend](https://github.com/vercel/next.js/blob/canary/docs/01-app/02-guides/backend-for-frontend.mdx) ガイド）。canonical: `checkAdminAuth` (401) / `checkPermission` (403, `request.headers` を第 3 引数で渡す) + `NextResponse.json` + `AbortSignal.timeout` + zod `safeParse` + `jsonError` / `jsonValidationError`。参照実装: `src/app/(admin)/admin/api/{ogp,section-styles,notifications/unread-count}/route.ts`（ADR 0019）
+- **Reader 関数を `"use server"` で export しない — Route Handler `route.ts` が公式推奨**（Next.js 16 [backend-for-frontend](https://github.com/vercel/next.js/blob/canary/docs/01-app/02-guides/backend-for-frontend.mdx) ガイド）。canonical: `checkAdminAuth` (401) / `checkPermission` (403, `request.headers` を第 3 引数で渡す) + `NextResponse.json` + `AbortSignal.timeout` + zod `safeParse` + `jsonError` / `jsonValidationError`。参照実装: `src/app/(admin)/admin/api/{ogp,notifications/unread-count}/route.ts`（ADR 0019）
 - **UX スケール判断は seed 件数ではなく CMS 運用上限で** — Location / Category / Tag 等運用者が追加できるリソースは production 想定値（数十〜100）で設計。フィルタ UI 閾値目安: pill 2〜5 / scroll 6〜15 / dropdown 16+
 - **Feature toggle 粒度** — 単一 tenant は per-entity 単一層、multi-tenant template は `Settings.xxxEnabledGlobal` + `Entity.xxxEnabled` の 2 層（precedence 一方向: Global OFF → 常に非表示 / Global ON → per-entity 効く）。参照: `Settings.reviewsEnabledGlobal` ↔ `Space.reviewsEnabled`
 - **Lexical 新規ノードで作成時バリアント選択 UI が必要な場合** — dialog-upfront 3 コマンド体制（`OPEN_XXX_DIALOG_COMMAND` / `INSERT_XXX_COMMAND` / `UNGROUP|TRANSFORM_XXX_COMMAND`）。全 UI 経路（Insert / FT / ⋮⋮ / keyboard）は dispatch 前に `$getSelectionBlockNodes()` のキーをスナップショットして payload に積む（ダイアログフォーカスで editor 選択が失われるため必須）。hardcoded default 値の silent 挿入禁止。参照実装: `GroupPlugin`（→ `frontend/lexical-patterns.md` §グループ化）
@@ -218,7 +218,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 | `*_STATUS_LABELS` / `PUBLISH_LABELS`              | `enums/helpers`                                   | 全ステータス enum + publish ラベル、UI ハードコード禁止                                                                                                                                                             |
 | レスポンシブ @theme tokens                        | `(public\|admin)/_styles/*.css`                   | `--breakpoint-3xl` / `--header-height` / `--hero-min-height` 等。arbitrary 値 3 回以上で token 昇格                                                                                                                 |
 
-**全 27 件の完全な一覧は `.claude/rules/ssot-singletons.md`**（src/prisma 編集時に自動ロード）。auth / DB / キャッシュ / 外部連携（Calendar/Storage）/ ドメイン / Lexical / 公開 UI / @theme token のカテゴリ別に整理。
+**完全な一覧は `.claude/rules/ssot-singletons.md`**（src/prisma 編集時に自動ロード）。auth / DB / キャッシュ / 外部連携（Calendar/Storage）/ ドメイン / Lexical / 公開 UI / @theme token のカテゴリ別に整理。
 
 ---
 
@@ -229,7 +229,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Subagents**: `.claude/agents/<name>.md` — frontmatter `name` / `description` / `tools:`（最小権限）/ `model: sonnet` / `memory: project`
 - **Memory**: `~/.claude/projects/<slug>/memory/MEMORY.md` がセッション開始時に自動ロード
 - **Serena memories**: `.serena/memories/**/*.md` が Serena MCP セッション開始時に自動ロード — 大規模マイグレーション・機能削除後は現状参照系（`project_overview.md` / `architecture-analysis.md` / `architecture/*.md`）を同期更新必須。stale 情報は次セッションで誤情報として注入される silent bug（実例: Supabase→R2 移行後に `project_overview.md` の `PostgreSQL (Supabase)` が残存）
-- **research/analysis タイプの memory は冒頭に `> **Snapshot: YYYY-MM-DD**` を入れる** — `/memory-staleness-audit` skill で自動履歴扱いされ、既知の drift を stale 検出から除外できる（filename に `YYYY-MM-DD` を含む場合も同等）
+- **research/analysis または完了済み project handoff の memory は冒頭に `> **Snapshot: YYYY-MM-DD**` を入れる** — `/memory-staleness-audit` skill で自動履歴扱いされる。clean-break refactor 完了 memory（「廃止済みパターン」「削除済みファイル」等の意図的履歴参照を含む）も対象。ADR で supersede された場合は併せて `> **Superseded: YYYY-MM-DD** — ADR XXXX で置換` を追記。filename に `YYYY-MM-DD` を含む場合も同等
 
 包括的監査が必要な場合は、該当 subagent を並列起動（Agent ツール経由で description 参照）。
 
