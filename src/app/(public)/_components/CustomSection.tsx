@@ -30,9 +30,9 @@ const MAX_WIDTH_MAP = {
 
 const PADDING_MAP = {
   none: "",
-  sm: "py-8 md:py-12",
-  md: "py-16 md:py-24",
-  lg: "py-24 md:py-32",
+  sm: "py-[var(--space-sm)]",
+  md: "py-[var(--space-md)] md:py-[var(--space-lg)]",
+  lg: "py-[var(--space-lg)] md:py-[var(--space-xl)]",
 } as const;
 
 interface CustomSectionProps {
