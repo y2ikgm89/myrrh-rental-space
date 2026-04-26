@@ -6,6 +6,7 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
+import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservations } from "@/shared/domain/reservations/customer-queries";
@@ -21,7 +22,16 @@ import { ReservationTabs } from "./_components/reservation-tabs";
 
 const ACTIVE_STATUS_SET = new Set<string>(ACTIVE_RESERVATION_STATUSES);
 
-export default async function MypagePage(): Promise<ReactElement> {
+interface MypagePageProps {
+  readonly searchParams: Promise<SearchParams>;
+}
+
+export default async function MypagePage({
+  searchParams,
+}: MypagePageProps): Promise<ReactElement> {
+  const sp = await searchParams;
+  const justCancelled = sp["cancelled"] === "ok";
+
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
 
@@ -59,6 +69,18 @@ export default async function MypagePage(): Promise<ReactElement> {
   return (
     <Stack gap="lg">
       <Heading level={1}>予約一覧</Heading>
+      {justCancelled && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="border border-success/30 bg-success/5 p-4 text-sm text-foreground"
+        >
+          <p className="font-medium">予約をキャンセルしました</p>
+          <p className="mt-1 text-muted-foreground">
+            キャンセル完了の確認メールをお送りしました。
+          </p>
+        </div>
+      )}
       {isNameIncomplete && (
         <div className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
           お名前が未登録です。

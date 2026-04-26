@@ -51,7 +51,7 @@ export function CancelButton({
         return;
       }
       setOpen(false);
-      router.push("/mypage");
+      router.push("/mypage?cancelled=ok");
     });
   };
 
