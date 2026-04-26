@@ -10,25 +10,20 @@ import {
 } from "@/shared/lib/mutation-result";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
-// =============================================================================
-// Types
-// =============================================================================
-
 type PublishSwitchProps<TData = unknown> = {
   id: string;
   isPublished: boolean;
   onToggle: (id: string, checked: boolean) => Promise<MutationResult<TData>>;
+  /** 操作対象を識別する SR ラベル（例: 「{title} の公開状態」）— 必須 */
+  resourceLabel: string;
   label?: { published: string; unpublished: string };
 };
-
-// =============================================================================
-// PublishSwitch Component
-// =============================================================================
 
 export function PublishSwitch<TData = unknown>({
   id,
   isPublished,
   onToggle,
+  resourceLabel,
   label = {
     published: PUBLISH_LABELS.published,
     unpublished: PUBLISH_LABELS.unpublished,
@@ -54,8 +49,9 @@ export function PublishSwitch<TData = unknown>({
         checked={isPublished}
         onCheckedChange={handleChange}
         disabled={isPending}
+        aria-label={`${resourceLabel}（現在: ${isPublished ? label.published : label.unpublished}）`}
       />
-      <span className="text-xs text-muted-foreground">
+      <span className="text-xs text-muted-foreground" aria-hidden="true">
         {isPublished ? label.published : label.unpublished}
       </span>
     </div>

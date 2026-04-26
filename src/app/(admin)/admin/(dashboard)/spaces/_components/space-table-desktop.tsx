@@ -116,6 +116,7 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
                     id={space.id}
                     isPublished={space.isPublished}
                     onToggle={updateSpacePublish}
+                    resourceLabel={`${space.name} の公開状態`}
                   />
                 </TableCell>
                 <TableCell

@@ -88,6 +88,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                     id={location.id}
                     isPublished={location.isPublished}
                     onToggle={toggleLocationPublish}
+                    resourceLabel={`${location.name} の公開状態`}
                   />
                 </TableCell>
                 <TableCell className="text-right">

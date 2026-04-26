@@ -92,6 +92,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                     id={space.id}
                     isPublished={space.isPublished}
                     onToggle={updateSpacePublish}
+                    resourceLabel={`${space.name} の公開状態`}
                   />
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/admin/spaces/${space.id}`}>詳細</Link>
