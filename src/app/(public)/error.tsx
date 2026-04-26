@@ -9,7 +9,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useEffect } from "react";
-import Link from "next/link";
+import { Button } from "@/public/components/design-system/button";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { logger } from "@/shared/lib/logger";
 
 export default function PublicError({ error, unstable_retry }: ErrorInfo) {
@@ -21,6 +22,10 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
       digest,
     });
   }, [error, digest]);
+
+  const contactHref = digest
+    ? `/contact?subject=${encodeURIComponent("システムエラー")}&body=${encodeURIComponent(`Error ID: ${digest}\n\n（エラー発生時の操作内容をご記入ください）`)}`
+    : "/contact?subject=" + encodeURIComponent("システムエラー");
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 md:px-8">
@@ -49,7 +54,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
         <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
           申し訳ございません。ページの表示中にエラーが発生しました。
           <br />
-          再度お試しいただくか、ホームページにお戻りください。
+          再度お試しいただくか、サポートまでお問い合わせください。
         </p>
 
         {digest && (
@@ -71,19 +76,19 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            type="button"
+          <Button
+            variant="editorial"
+            size="sm"
             onClick={() => unstable_retry()}
-            className="border border-accent bg-transparent px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             再試行
-          </button>
-          <Link
-            href="/"
-            className="border border-border px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
+          </Button>
+          <Button variant="editorial" size="sm" href="/">
             ホームに戻る
-          </Link>
+          </Button>
+          <Button variant="editorial" size="sm" href={toAppRoute(contactHref)}>
+            お問い合わせ
+          </Button>
         </div>
       </div>
     </div>
