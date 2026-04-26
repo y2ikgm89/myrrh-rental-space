@@ -55,18 +55,21 @@ export const GAP_MAP: Record<GapSize, string> = {
   lg: "gap-6",
 };
 
-/** グリッド列数 → Tailwind クラス (1〜6列) */
+/**
+ * グリッド列数 → Tailwind クラス (1〜6列、container queries variants)
+ * コンシューマ側で grid 自身または親要素に `@container` を付与する必要がある。
+ */
 export const GRID_COLS_MAP: Record<number, string> = {
-  1: "",
-  2: "md:grid-cols-2",
-  3: "md:grid-cols-2 lg:grid-cols-3",
-  4: "md:grid-cols-2 lg:grid-cols-4",
-  5: "md:grid-cols-3 lg:grid-cols-5",
-  6: "md:grid-cols-3 lg:grid-cols-6",
+  1: "grid-cols-1",
+  2: "grid-cols-1 @md:grid-cols-2",
+  3: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3",
+  4: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-4",
+  5: "grid-cols-2 @md:grid-cols-3 @3xl:grid-cols-5",
+  6: "grid-cols-2 @md:grid-cols-3 @3xl:grid-cols-6",
 };
 
 /** デフォルトのグリッド列クラス（マップにない値用） */
-export const DEFAULT_GRID_COLS = "md:grid-cols-3";
+export const DEFAULT_GRID_COLS = "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3";
 
 /** コンテンツ配置 → Tailwind flex クラス */
 export const CONTENT_POSITION_MAP: Record<ContentPosition, string> = {
