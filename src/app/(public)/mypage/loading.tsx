@@ -1,7 +1,5 @@
+import { MypageSkeleton } from "./_components/mypage-skeleton";
+
 export default function MypageLoading() {
-  return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-    </div>
-  );
+  return <MypageSkeleton variant="list" />;
 }
