@@ -11,7 +11,7 @@
  * プレビューサイドシートは廃止（edit Dialog が直接開くため不要）。
  */
 
-import { useState, useTransition, type MouseEvent } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -39,7 +39,7 @@ import {
 } from "@/admin/components/ui";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { SortableColumnHeader } from "@/admin/components/table";
+import { SortableColumnHeader, stopRowClick } from "@/admin/components/table";
 import { reorderFaqItems } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
@@ -60,11 +60,6 @@ type FaqCategoryItemsTableProps = {
   readonly currentSortBy: AdminFaqItemSortBy;
   readonly onEditItem: (item: FaqItemWithCategory) => void;
   readonly onAddItem: () => void;
-};
-
-/** インタラクティブ要素クリック時に行クリックを遮断 */
-const stopRowClick = (e: MouseEvent) => {
-  e.stopPropagation();
 };
 
 type SortableRowProps = {
