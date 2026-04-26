@@ -8,6 +8,7 @@ import {
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { NewsStatusBadge } from "@/admin/components/status-badges";
+import { ClickableTableRow, stopRowClick } from "@/admin/components/table";
 import { NewsActionCell } from "./NewsActionCell";
 import type { NewsListItem } from "@/shared/domain/news/types";
 
@@ -48,7 +49,11 @@ export function NewsTable({ news }: NewsTableProps) {
           </TableHeader>
           <TableBody>
             {news.map((item) => (
-              <TableRow key={item.id}>
+              <ClickableTableRow
+                key={item.id}
+                href={`/admin/news/${item.id}`}
+                aria-label={`${item.title} のお知らせを編集`}
+              >
                 <TableCell className="whitespace-nowrap">
                   <NewsStatusBadge isPublished={item.isPublished} />
                 </TableCell>
@@ -63,13 +68,13 @@ export function NewsTable({ news }: NewsTableProps) {
                 <TableCell className="hidden text-muted-foreground lg:table-cell">
                   {item.createdAtLabel}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={stopRowClick}>
                   <NewsActionCell
                     newsId={item.id}
                     isPublished={item.isPublished}
                   />
                 </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>
