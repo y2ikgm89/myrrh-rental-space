@@ -108,7 +108,10 @@ export default async function PostsPage({
             <Suspense fallback={null}>
               <PostCategoryFilter categories={categories} />
             </Suspense>
-            <PostGrid posts={postsResult.posts} />
+            <PostGrid
+              posts={postsResult.posts}
+              hasFilters={Boolean(q || category)}
+            />
             <Pagination
               currentPage={currentPage}
               totalPages={postsResult.totalPages}

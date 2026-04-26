@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
+import { Button } from "@/public/components/design-system/button";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
@@ -25,13 +26,23 @@ interface PostCardData {
 
 interface PostGridProps {
   posts: readonly PostCardData[];
+  hasFilters: boolean;
 }
 
-export function PostGrid({ posts }: PostGridProps): ReactElement {
+export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
   if (posts.length === 0) {
     return (
-      <div className="py-[var(--space-lg)] text-center">
-        <p className="text-muted-foreground">記事がまだありません。</p>
+      <div className="space-y-6 py-[var(--space-lg)] text-center" role="status">
+        <p className="text-muted-foreground">
+          {hasFilters
+            ? "条件に一致する記事が見つかりませんでした"
+            : "記事がまだありません。"}
+        </p>
+        {hasFilters && (
+          <Button variant="editorial" size="sm" href="/posts">
+            フィルタを解除
+          </Button>
+        )}
       </div>
     );
   }

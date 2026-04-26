@@ -1,4 +1,5 @@
 import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
+import { Button } from "@/public/components/design-system/button";
 import { SpaceCard } from "./space-card";
 
 interface Space {
@@ -23,14 +24,24 @@ interface ReviewStats {
 interface SpaceGridProps {
   readonly spaces: readonly Space[];
   readonly reviewStats?: Readonly<Record<string, ReviewStats>>;
+  readonly hasFilters: boolean;
 }
 
-export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
+export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
   if (spaces.length === 0) {
     return (
-      <p className="py-16 text-center text-muted-foreground">
-        現在公開中のスペースはありません
-      </p>
+      <div className="space-y-6 py-16 text-center" role="status">
+        <p className="text-muted-foreground">
+          {hasFilters
+            ? "条件に一致するスペースが見つかりませんでした"
+            : "現在公開中のスペースはありません"}
+        </p>
+        {hasFilters && (
+          <Button variant="editorial" size="sm" href="/spaces">
+            フィルタを解除
+          </Button>
+        )}
+      </div>
     );
   }
 

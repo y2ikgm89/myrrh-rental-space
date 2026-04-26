@@ -98,7 +98,11 @@ export default async function SpacesPage({
 
           {/* Catalog grid — Kinfolk staggered 2-col, all cards equal */}
           <Suspense fallback={null}>
-            <SpaceGrid spaces={items} reviewStats={reviewStats} />
+            <SpaceGrid
+              spaces={items}
+              reviewStats={reviewStats}
+              hasFilters={Boolean(categoryId || locationId)}
+            />
           </Suspense>
 
           {/* Pagination */}
