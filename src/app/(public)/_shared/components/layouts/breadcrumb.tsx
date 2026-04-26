@@ -30,7 +30,7 @@ export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
       />
       <nav
         aria-label="パンくずリスト"
-        className="text-xs uppercase tracking-[0.1em] text-muted-foreground"
+        className="text-xs uppercase tracking-[0.18em] text-muted-foreground"
       >
         <ol className="flex items-center gap-1.5">
           <li>

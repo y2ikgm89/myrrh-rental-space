@@ -364,7 +364,7 @@ export async function Footer(): Promise<ReactElement> {
               ))}
             </nav>
           )}
-          <p className="text-center text-[0.6rem] tracking-[0.1em] text-muted-foreground">
+          <p className="text-center text-[0.6rem] tracking-[0.18em] text-muted-foreground">
             &copy; <CopyrightYear /> {info.name}. All rights reserved.
           </p>
         </div>
