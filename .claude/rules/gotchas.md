@@ -437,7 +437,7 @@ paths:
 - **アイコンライブラリは `@tabler/icons-react`** — lucide-react から完全移行済み。全アイコンは `Icon` プレフィックス + PascalCase（例: `IconPlus`, `IconBrandGoogle`）。型は `TablerIcon`（旧 `LucideIcon`）。ブランドアイコン（LINE, Google, Stripe 等）も Tabler に統合済み
 - **RHF 7.72 で `Control<T>` が invariant** — 異なるフォーム型で共有するコンポーネントの公式パターンは存在しない。Pure Component（RHF 非依存の値+callback props）+ Connected ラッパー（`as Path<T>` で型ブリッジ）が最善。`as Control<any>` / `as never` 禁止。参照実装: `LayoutFields.tsx` + `LayoutFieldsConnected`
 - **`exactOptionalPropertyTypes` で optional prop に `T | undefined` を渡せない** — `prop?: string` に `string | undefined` を渡すとエラー。コンポーネント props では `prop: string | undefined`（required + union）で宣言する。`prop?: string` は「省略可能だが渡すなら `string`」の意味
-- **認証・プライベートページには `robots: { index: false, follow: false }` 必須** — `/login`, `/forgot-password`, `/reset-password`, `/mypage/*` 等。layout.tsx に設定すれば全サブページに継承。未設定だとクロールバジェット浪費＋低品質ページ評価リスク
+- **認証・プライベートページには `robots: { index: false, follow: false }` 必須** — `/login`, `/admin/login`, `/admin/forgot-password`, `/admin/reset-password`, `/mypage/*` 等。layout.tsx に設定すれば全サブページに継承。未設定だとクロールバジェット浪費＋低品質ページ評価リスク
 
 ## セキュリティ
 
