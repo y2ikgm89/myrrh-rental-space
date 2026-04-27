@@ -9,7 +9,7 @@ paths:
 
 # Prisma パターンルール
 
-> Prisma 7.7 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
+> Prisma 7.8 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
 
 ## Better Auth との境界
 

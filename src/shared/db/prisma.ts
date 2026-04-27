@@ -1,5 +1,5 @@
 /**
- * Prisma Client Singleton（Prisma 7.7 / adapter-pg / Next.js 16 公式推奨パターン）
+ * Prisma Client Singleton（Prisma 7.8 / adapter-pg / Next.js 16 公式推奨パターン）
  *
  * - `globalThis` を使った singleton（hot reload 時のコネクションリーク防止）
  * - `adapter-pg` には外部 `Pool` を渡して `externalPool` 経路に入れる（毎接続での新 Pool 生成を防止）

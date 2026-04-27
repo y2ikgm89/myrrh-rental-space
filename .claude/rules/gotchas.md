@@ -238,7 +238,7 @@ paths:
 
 - **`prisma.$transaction([...])` 配列形式は pg deprecation を誘発するため禁止** — `@prisma/adapter-pg` 7.7.0 + `pg` 8.20.0 の組み合わせで、pinned PoolClient 上に `BEGIN + N queries + COMMIT` が積まれる瞬間に `pg/lib/client.js:690` の `_queryQueue.length > 0` チェックが発火し `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` を emit する。独立クエリは `Promise.all`、原子性必須は interactive transaction `prisma.$transaction(async (tx) => { ... })` を使う。ESLint `no-restricted-syntax` で error 検出。例外: `prisma/seed.ts` の一括 `deleteMany`（実行回数限定・原子性必須）
 - **`PrismaPg` は explicit `Pool` インスタンスを渡す** — `new PrismaPg({ connectionString, max, ... })` のように config 渡しだと `PrismaPgAdapterFactory.connect()` の内部で `new pg2.Pool(config)` が呼ばれるたびに新しい Pool を作る（`node_modules/@prisma/adapter-pg/dist/index.mjs:752`）。`new Pool(...)` を渡すと `externalPool` 経路で 1 Pool が再利用される。`src/shared/db/prisma.ts` が dev global singleton で保持
-- **Prisma 7.7 の `pg Pool` v7 デフォルト（idle 10s / connect 0s）は Cloud Run で早期切断** — コールドスタート直後に接続が切れる。公式の v6 互換推奨値 `connectionTimeoutMillis: 5_000` / `idleTimeoutMillis: 300_000` を明示指定する（`src/shared/db/prisma.ts` 参照実装）
+- **Prisma 7.8 の `pg Pool` v7 デフォルト（idle 10s / connect 0s）は Cloud Run で早期切断** — コールドスタート直後に接続が切れる。公式の v6 互換推奨値 `connectionTimeoutMillis: 5_000` / `idleTimeoutMillis: 300_000` を明示指定する（`src/shared/db/prisma.ts` 参照実装）
 - **Prisma Client singleton は `globalThis as unknown as { prisma? }` パターン** — `declare global { var prisma }` 形式は Prisma 7 公式推奨から外れている（Next.js 公式ドキュメント準拠）。`globalStore` キャスト経由で `pgPool` も同居させる
 - **Prisma `log` 設定は本番 `["error"]` / dev `["warn", "error"]`** — `"query"` は dev でもノイズが大きく、`info` 以上で serialize 可能な値が少ないため除外。本番は必ず `error` のみ
 - **`@types/pg` のネスト衝突**: `@prisma/adapter-pg` が内部で `@types/pg@8.11.x` を依存に持ち、project の `@types/pg@8.20.x` と `Client.connect()` 戻り値型が非互換。`package.json` の `overrides: { "@types/pg": "^8.20.0" }` で強制統一
@@ -248,11 +248,11 @@ paths:
 
 ## Prisma Migrate
 
-- **Prisma 7.7 で CLI フラグが削除/改名** — (1) `migrate diff --to-schema-datamodel` は廃止 → `--to-schema` を使う、(2) `migrate diff --shadow-database-url` は廃止（`prisma.config.ts` の datasource が自動参照）、(3) `db execute --schema` は廃止（同上）。非対話環境での destructive migration は「schema.prisma 編集 → `mkdir prisma/migrations/<ts>_<name>` → `migration.sql` を手書き（data-preserving な `UPDATE` → `ALTER TABLE DROP COLUMN`）→ `bunx --bun prisma db execute --file <path>` → `bunx --bun prisma migrate resolve --applied <name>`」の順で適用する
+- **Prisma 7.8 で CLI フラグが削除/改名** — (1) `migrate diff --to-schema-datamodel` は廃止 → `--to-schema` を使う、(2) `migrate diff --shadow-database-url` は廃止（`prisma.config.ts` の datasource が自動参照）、(3) `db execute --schema` は廃止（同上）。非対話環境での destructive migration は「schema.prisma 編集 → `mkdir prisma/migrations/<ts>_<name>` → `migration.sql` を手書き（data-preserving な `UPDATE` → `ALTER TABLE DROP COLUMN`）→ `bunx --bun prisma db execute --file <path>` → `bunx --bun prisma migrate resolve --applied <name>`」の順で適用する
 - **`prisma db execute --stdin` は SELECT 結果を表示しない** — DDL/DML 専用。ad-hoc クエリには `bun -e` + PrismaClient を使用: `bun -e "const { PrismaClient } = require('./generated/prisma/client'); const { PrismaPg } = require('@prisma/adapter-pg'); const pg = new PrismaPg({ connectionString: process.env.DATABASE_URL }); const p = new PrismaClient({ adapter: pg }); p.xxx.findMany({...}).then(r => { console.log(JSON.stringify(r, null, 2)); p.$disconnect(); })"`
 - **`prisma migrate reset` は AI エージェント保護が発動** — `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="<ユーザーの同意メッセージ>"` 環境変数が必要。ユーザーに確認し、明示的な同意を得てから実行する
 - **DB ドリフト時**: `migrate reset --force`（同意環境変数付き） → seed 再実行が標準フロー
-- **`prisma migrate reset --skip-seed` は Prisma 7.7 で非サポート** — `--force` のみ使用する。reset 後は `bun prisma/seed.ts` を明示実行（`prisma.config.ts` に seed が登録されていないため自動実行されない）
+- **`prisma migrate reset --skip-seed` は Prisma 7.8 で非サポート** — `--force` のみ使用する。reset 後は `bun prisma/seed.ts` を明示実行（`prisma.config.ts` に seed が登録されていないため自動実行されない）
 - **マイグレーションに余分な ALTER TABLE が混入** — Prisma の内部差分検出に起因。`@default(cuid())` 等の表現変更で全テーブルの `ALTER COLUMN DROP DEFAULT` が生成されることがある。機能的に問題なし
 - **`cuid()` の VarChar 長は 30 以上** — `@default(cuid())` は 24-30 文字を生成。`@db.VarChar(21)` では切り詰めエラー。新規モデルは `@db.VarChar(30)` を使用。既存モデル（Reservation 等）は `@db.Uuid` のため影響なし
 - **`prisma migrate diff` の `--from-schema-datasource` は Prisma 7 で削除済み** — `--from-config-datasource` を使用。非対話環境でのマイグレーション手順: `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > migration.sql` → `prisma db execute --file migration.sql` → `prisma migrate resolve --applied <name>`

@@ -41,7 +41,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 | Next.js 16.2    | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。Suspense 内 async SC は `await connection()`                                               |
 | React 19.2      | Compiler 1.0 自動メモ化。`useCallback`/`useMemo`/`memo` 禁止（例外→`react-patterns.md`）                                                                            |
 | TypeScript 6.0  | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                                                           |
-| Prisma 7.7      | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`。CLI flag 変更（`migrate diff --to-schema` / `--shadow-database-url` 削除）               |
+| Prisma 7.8      | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`。CLI flag 変更（`migrate diff --to-schema` / `--shadow-database-url` 削除）               |
 | Tailwind 4.2    | CSS-first `@theme`、セマンティックトークン必須、default bp + `--breakpoint-3xl: 120rem`、カードグリッドは Container Queries（named `@container/main` 対応）         |
 | Better Auth 1.6 | `adminAuth`/`customerAuth` 分離、独自 `ROLE_PERMISSIONS` SSoT、`generateId: "uuid"` 必須                                                                            |
 | Zod 4.3         | `.merge()` deprecated（→ `.extend(shape)`）、`.refine()` 後の `.omit()` 不可、`error:` 必須、`z.registry<T>().register(schema, meta)` がメタデータ SSoT（ADR 0018） |
@@ -165,7 +165,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ### Git / Migration
 
 - **Worktree 作成前**: `git status --short | wc -l` + `ls prisma/migrations/ | tail -1` で未コミット migration 確認、ドリフトあれば先に WIP commit（→ `gotchas.md`）
-- **Prisma 7.7 CLI フラグ変更**: `migrate diff --to-schema-datamodel` → `--to-schema`、`--shadow-database-url` 削除、`db execute --schema` 削除。非対話 destructive migration は「schema 編集 → `mkdir prisma/migrations/<ts>_<name>` → `migration.sql` 手書き → `db execute --file` → `migrate resolve --applied`」順（→ `gotchas.md`）
+- **Prisma 7.8 CLI フラグ変更**: `migrate diff --to-schema-datamodel` → `--to-schema`、`--shadow-database-url` 削除、`db execute --schema` 削除。非対話 destructive migration は「schema 編集 → `mkdir prisma/migrations/<ts>_<name>` → `migration.sql` 手書き → `db execute --file` → `migrate resolve --applied`」順（→ `gotchas.md`）
 - **schema.prisma commit 後は `prisma/migrations/` 側も同時 commit 必須** — schema のみ commit は `prisma migrate deploy` が CI/prod で fail する silent drift
 - **destructive migration 適用後は dev server を該当 worktree から再起動必須** — 共有 dev DB のため、他の worktree / main から起動中の dev server は古い code + 新 schema で `PrismaClientKnownRequestError: The column ... does not exist` → 公開ページ白画面の silent bug（→ `gotchas.md` §Worktree §共有 dev DB + 異 worktree dev server）
 - **テストファイルは top-level `__tests__/` のみ** — `src/**/__tests__/` 配置禁止（`tsconfig.test.json` include 範囲外）（→ `test-quality.md`）
