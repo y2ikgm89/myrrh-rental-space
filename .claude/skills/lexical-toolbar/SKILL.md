@@ -1,6 +1,6 @@
 ---
 name: lexical-toolbar
-description: 管理画面の Lexical toolbar に新しい操作を足すときに使う。button 配置、command 接続、dialog 連携、active state を一緒に揃える。既存 toolbar の監査やモダナイズが主目的なら lexical-audit を使う。
+description: 管理画面の Lexical toolbar に新しい操作を足すときに使う。button 配置、command 接続、dialog 連携、active state を一緒に揃える。既存 toolbar の監査やモダナイズが主目的なら audit-lexical を使う。
 paths:
   - src/**/lexical/plugins/toolbar/**
 ---
@@ -14,7 +14,7 @@ paths:
 | 新しい node 型を追加（TextNode / DecoratorNode 等） | `lexical-node`    |
 | 新しい plugin を追加（dialog / command / listener） | `lexical-plugin`  |
 | 新しい toolbar 操作を追加（button / command 接続）  | `lexical-toolbar` |
-| 既存実装を監査 / deprecated API / モダナイズ        | `lexical-audit`   |
+| 既存実装を監査 / deprecated API / モダナイズ        | `audit-lexical`   |
 
 `src/app/(admin)/**/lexical/**` の toolbar を拡張するときに使う。
 plugin や node を伴う場合でも、主目的が toolbar 操作の追加ならこの skill を起点にする。

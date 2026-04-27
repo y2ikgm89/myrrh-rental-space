@@ -1,6 +1,7 @@
 ---
-name: cache-audit
+name: audit-cache
 description: Server Action のキャッシュ無効化の網羅性をチェックする。updateTag/revalidateTag の漏れ、不整合、3点セット欠落を検出。Server Action ファイルを編集した後に使用。
+when_to_use: Server Action ファイル（actions.ts / mutations.ts）を編集した後、または定期メンテ時に使用。
 paths:
   - src/**/actions.ts
   - src/**/mutations.ts

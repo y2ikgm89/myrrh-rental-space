@@ -1,6 +1,7 @@
 ---
-name: ssot-audit
+name: audit-ssot
 description: プロジェクト全体のSSoT違反（ゼロ値型エイリアス、値エイリアス re-export、同一定数の複数定義）を検出する。定期メンテ時に使用。
+when_to_use: 大規模リファクタ後、または月次定期メンテ時。SSoT 違反の横断チェックが必要なとき。
 ---
 
 # SSOT 監査

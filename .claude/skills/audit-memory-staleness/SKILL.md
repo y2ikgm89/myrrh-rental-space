@@ -1,6 +1,7 @@
 ---
-name: memory-staleness-audit
+name: audit-memory-staleness
 description: Claude Code memory（`~/.claude/projects/<slug>/memory/*.md`）と Serena memory（`.serena/memories/**/*.md`）の stale な path 参照を検出する。大規模リファクタ・ファイル移動・機能削除の直後、もしくは「メモリが古い」と感じたときに使用。検出した stale 参照の memory file を更新または削除する判断材料を提供する。
+when_to_use: 大規模リファクタ・ファイル移動・機能削除の直後、または「メモリが古い情報を参照している」と感じたとき。
 ---
 
 # Memory Staleness 監査

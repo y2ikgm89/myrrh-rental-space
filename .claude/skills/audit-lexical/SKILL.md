@@ -1,11 +1,12 @@
 ---
-name: lexical-audit
+name: audit-lexical
 description: 管理画面の Lexical 実装を監査またはモダナイズするときに使う。deprecated API、private API、listener waterfall、NodeState 逸脱、HTML import、table API を点検し、現行の公式推奨へ寄せる。新しい node/plugin/toolbar を追加する作業には使わない。
+when_to_use: Lexical の既存実装を監査・モダナイズするとき。deprecated API 除去や大規模リファクタ時に使用。新規追加なら lexical-node / lexical-plugin / lexical-toolbar を使う。
 paths:
   - src/**/lexical/**
 ---
 
-# lexical-audit
+# audit-lexical
 
 ## lexical skill 使い分け
 
@@ -14,7 +15,7 @@ paths:
 | 新しい node 型を追加（TextNode / DecoratorNode 等） | `lexical-node`    |
 | 新しい plugin を追加（dialog / command / listener） | `lexical-plugin`  |
 | 新しい toolbar 操作を追加（button / command 接続）  | `lexical-toolbar` |
-| 既存実装を監査 / deprecated API / モダナイズ        | `lexical-audit`   |
+| 既存実装を監査 / deprecated API / モダナイズ        | `audit-lexical`   |
 
 `src/app/(admin)/**/lexical/**` の既存実装を見直すときに使う。
 新機能追加が主目的なら `lexical-node`、`lexical-plugin`、`lexical-toolbar` を使う。

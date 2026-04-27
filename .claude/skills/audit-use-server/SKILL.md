@@ -1,6 +1,7 @@
 ---
-name: use-server-audit
+name: audit-use-server
 description: `"use server"` ファイルが Next.js 16 公式の export 契約（async 関数のみ export 可）に準拠しているかを横断スキャンする。型・interface・class・非 async const・default 非関数 export を検出し、Turbopack silent bug（`ReferenceError: X is not defined`）の事前防止に使う。Server Action ファイル編集後・大規模 refactor 後に実行。
+when_to_use: Server Action ファイル追加・編集後、または大規模 refactor 後。Turbopack silent bug 防止の事前チェックとして実行。
 paths:
   - src/**/actions.ts
   - src/**/mutations.ts

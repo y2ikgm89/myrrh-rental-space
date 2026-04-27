@@ -51,6 +51,7 @@ NNNN-kebab-case-title.md
 | [0023](./0023-multi-location-seo-foundation.md)                            | Multi-location LocalBusiness JSON-LD を per-location 出力に移行                                      | Accepted   | 2026-04-27 |
 | [0024](./0024-admin-command-palette.md)                                    | Admin Command Palette with Hybrid Server-Action Search                                               | Accepted   | 2026-04-27 |
 | [0025](./0025-subagent-dispatch-template-ssot.md)                          | Subagent dispatch template SSoT を skill 化                                                          | Accepted   | 2026-04-27 |
+| [0026](./0026-skill-naming-convention.md)                                  | Skill naming convention (add-_ / create-_ / audit-_ / debug-_)                                       | Accepted   | 2026-04-28 |
 
 ## 参考
 

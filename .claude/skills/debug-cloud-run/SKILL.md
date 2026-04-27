@@ -1,10 +1,12 @@
 ---
-name: cloud-run-debug
+name: debug-cloud-run
 description: >
   Google Cloud Run デプロイ・起動・環境変数の診断スキル。Cloud Build 失敗、
   container startup probe 失敗、Secret Manager 読み込み失敗、環境変数不一致、
   revision 切替失敗、Artifact Registry キャッシュ汚染を切り分ける。
   「デプロイしたのに古いまま」「起動しない」「500 が返る」場面で使用する。
+when_to_use: Cloud Run デプロイ・起動に問題が発生したとき。開発者が状況を確認して手動で起動する。AI による自動起動は不可。
+disable-model-invocation: true
 ---
 
 # Cloud Run デバッグ
