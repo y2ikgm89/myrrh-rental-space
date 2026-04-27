@@ -161,6 +161,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **ESLint `no-restricted-syntax` selector は静的+動的両対応** — `> ArrayExpression` は literal `[a, b]` のみ、`items.map(...)` 等の動的配列を見逃す。禁止パターン追加時は `CallExpression[callee.property.name='map']` 経路も `selector` に含める（`$transaction` rule が実例）
 - **Plan `完了` ステータスでも実装存在とは限らない** — 大規模リデザイン・命名規約変更で機能が削除／置換されることあり。plan 参照時は `Glob` で実在確認 + `Grep` で代表 symbol + `git log --oneline -- <path>`
 - **bundle「未使用チャンク」報告は `react-loadable-manifest.json` で lazy-load 確認必須** — `.next/server/app/*.html` 埋め込み scan だけでは `next/dynamic` 経由の lazy chunk を「未使用」と誤認する false positive。Lexical / Recharts / Radix 等の 200KB+ チャンクは大抵 lazy-load 正当化済みのため、削除判定前に manifest で参照元ルート数を確認
+- **`<library> X.Y` 形式の version 表記は `package.json` (SSoT) と drift しやすい** — `bun update` で minor/major bump が起きた後は `grep -rn '<lib> [0-9]\+\.[0-9]\+' .claude/ CLAUDE.md src/` で参照箇所を一括更新。本プロジェクトでは `Prisma 7.7` が 6 箇所散在し commit `ef87f8ac` で 7.8 に統一。doc 内の minor version は世代固有の注意点（API/CLI 変更）を表すが、CLAUDE.md 冒頭注釈どおり実バージョンは `package.json` + `bun.lock` が正
 
 ### Git / Migration
 
