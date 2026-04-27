@@ -15,16 +15,17 @@ paths:
 
 ### JSON-LD（`application/ld+json`）
 
-**@graph パターン**（現在の実装）: `LocalBusiness` + `WebSite` を1つの `<script>` タグにまとめ、`@id` で相互参照:
+**@graph パターン**（現在の実装）: `Organization + WebSite` を1つの `<script>` タグにまとめ、`@id` で相互参照。`LocalBusiness` は per-location ページに委譲する（ADR 0023）:
 
-| 型               | @id                        | 配置場所                  | 備考                                 |
-| ---------------- | -------------------------- | ------------------------- | ------------------------------------ |
-| `LocalBusiness`  | `{BASE_URL}/#organization` | `(public)/layout.tsx`     | 全公開ページ共通                     |
-| `WebSite`        | `{BASE_URL}/#website`      | `(public)/layout.tsx`     | `publisher` で `/#organization` 参照 |
-| `BreadcrumbList` | —                          | 各ページの `page.tsx`     | ページ固有                           |
-| `Product`        | —                          | `/spaces/[slug]/page.tsx` | AggregateRating + Offer 付き         |
-| `Article`        | —                          | `/posts/[slug]/page.tsx`  | ブログ記事詳細                       |
-| `NewsArticle`    | —                          | `/news/[slug]/page.tsx`   | ニュース詳細                         |
+| 型               | @id                                      | 配置場所                                               | 備考                                    |
+| ---------------- | ---------------------------------------- | ------------------------------------------------------ | --------------------------------------- |
+| `Organization`   | `{BASE_URL}/#organization`               | `(public)/layout.tsx`                                  | 全公開ページ共通（サイト代表情報）      |
+| `WebSite`        | `{BASE_URL}/#website`                    | `(public)/layout.tsx`                                  | `publisher` で `/#organization` 参照    |
+| `LocalBusiness`  | `{BASE_URL}/access/{slug}#localbusiness` | `/access/page.tsx` / `/access/[locationSlug]/page.tsx` | 拠点ごとに出力（`branchOf` で組織参照） |
+| `BreadcrumbList` | —                                        | 各ページの `page.tsx`                                  | ページ固有                              |
+| `Product`        | —                                        | `/spaces/[slug]/page.tsx`                              | AggregateRating + Offer 付き            |
+| `Article`        | —                                        | `/posts/[slug]/page.tsx`                               | ブログ記事詳細                          |
+| `NewsArticle`    | —                                        | `/news/[slug]/page.tsx`                                | ニュース詳細                            |
 
 ```typescript
 // layout.tsx — @graph パターン（実際の実装）
@@ -41,7 +42,8 @@ async function StructuredDataContent(): Promise<ReactElement> {
 
 ### 原則
 
-- **@graph で LocalBusiness + WebSite を layout.tsx に1つだけ配置**。個別ページに重複しない
+- **@graph で Organization + WebSite を layout.tsx に1つだけ配置**。`LocalBusiness` は layout.tsx に含めない（ADR 0023）
+- **LocalBusiness は per-location 出力**。`/access` および `/access/[locationSlug]` ページで拠点ごとに出力する
 - JSON-LDコンポーネントは `@/public/components/seo/JsonLd.tsx` に集約
 - XSS対策: JSON文字列は Unicodeエスケープ（`<`, `>`, `&`, U+2028, U+2029）
 - `@id` 相互参照でGoogleのナレッジグラフ理解を向上
@@ -93,23 +95,25 @@ async function StructuredDataContent(): Promise<ReactElement> {
 
 ## データソース
 
-| データ                           | 取得関数                       | キャッシュタグ                                          | 公開/内部 |
-| -------------------------------- | ------------------------------ | ------------------------------------------------------- | --------- |
-| ビジネス情報（コンポーネント用） | `getBusinessInfo()`            | `CACHE_TAGS.BUSINESS_SETTINGS`                          | 公開      |
-| ビジネス設定（生データ）         | `getPublicBusinessSettings()`  | `CACHE_TAGS.BUSINESS_SETTINGS`                          | 公開      |
-| @graph 統合データ                | `getGraphJsonLdData()`         | `ORGANIZATION_SETTINGS`, `SOCIAL_LINKS`（サブ関数経由） | 公開      |
-| LocalBusiness データ             | `getLocalBusinessJsonLdData()` | `CACHE_TAGS.ORGANIZATION_SETTINGS`                      | 公開      |
-| Organization データ（MEOなし）   | `getOrganizationJsonLdData()`  | `CACHE_TAGS.ORGANIZATION_SETTINGS`                      | 公開      |
-| WebSite データ                   | `getWebSiteJsonLdData()`       | `CACHE_TAGS.ORGANIZATION_SETTINGS`                      | 公開      |
-| SEO設定                          | `getSeoSettings()`             | `CACHE_TAGS.SEO_SETTINGS`                               | 公開      |
-| ページSEO                        | `getPageSeo(slug)`             | `CACHE_TAGS.PAGE_SEO`                                   | 公開      |
+| データ                                      | 取得関数                               | キャッシュタグ                                          | 公開/内部 |
+| ------------------------------------------- | -------------------------------------- | ------------------------------------------------------- | --------- |
+| ビジネス情報（コンポーネント用）            | `getBusinessInfo()`                    | `CACHE_TAGS.BUSINESS_SETTINGS`                          | 公開      |
+| ビジネス設定（生データ）                    | `getPublicBusinessSettings()`          | `CACHE_TAGS.BUSINESS_SETTINGS`                          | 公開      |
+| @graph 統合データ（Organization + WebSite） | `getGraphJsonLdData()`                 | `ORGANIZATION_SETTINGS`, `SOCIAL_LINKS`（サブ関数経由） | 公開      |
+| Organization データ                         | `getOrganizationJsonLdData()`          | `CACHE_TAGS.ORGANIZATION_SETTINGS`                      | 公開      |
+| WebSite データ                              | `getWebSiteJsonLdData()`               | `CACHE_TAGS.ORGANIZATION_SETTINGS`                      | 公開      |
+| 全拠点 LocalBusiness データ（/access 用）   | `getAllPublishedLocationsJsonLdData()` | `CACHE_TAGS.LOCATIONS`                                  | 公開      |
+| 拠点単体 LocalBusiness データ               | `getLocationJsonLdDataBySlug(slug)`    | `CACHE_TAGS.LOCATIONS`                                  | 公開      |
+| SEO設定                                     | `getSeoSettings()`                     | `CACHE_TAGS.SEO_SETTINGS`                               | 公開      |
+| ページSEO                                   | `getPageSeo(slug)`                     | `CACHE_TAGS.PAGE_SEO`                                   | 公開      |
 
 **注意**: `getOrganizationSettings()` と `getSocialLinkUrls()` は `json-ld-config.ts` 内部のプライベート関数。直接インポート不可。
 
-**`getLocalBusinessJsonLdData()` vs `getOrganizationJsonLdData()` の違い**:
+**`getOrganizationJsonLdData()` の用途**:
 
-- `getLocalBusinessJsonLdData()`: MEOプロパティ（`telephone`, `address`, `openingHoursSpecification`, `geo` 等）を含むフル仕様の `LocalBusiness` データを返す。`@graph` 経由で layout.tsx に配置。
-- `getOrganizationJsonLdData()`: MEOプロパティを除いた `Organization` 型データを返す。サイト名・URL・ロゴのみ必要な場合に使用。
+- `getGraphJsonLdData()` の内部から呼ばれる。サイト名・URL・ロゴのみを含む `Organization` データを返す。LocalBusiness 型は含まない（ADR 0023 以前は `LocalBusiness` を返していたが現在は廃止）。
+
+**`getLocalBusinessJsonLdData()` は廃止**（ADR 0023）。`getAllPublishedLocationsJsonLdData()` / `getLocationJsonLdDataBySlug()` を使用する。
 
 ### BusinessInfo データレイヤー
 
@@ -128,28 +132,29 @@ async function StructuredDataContent(): Promise<ReactElement> {
 
 ## MEO（ローカル検索最適化）
 
-### LocalBusiness プロパティ一覧
+### LocalBusiness プロパティ一覧（per-location — ADR 0023）
 
-| プロパティ                         | ソース                                    | 備考                                        |
-| ---------------------------------- | ----------------------------------------- | ------------------------------------------- |
-| `name`                             | `businessName` / `siteName`               |                                             |
-| `description`                      | `businessDescription` / `siteDescription` |                                             |
-| `url`                              | `BASE_URL`                                |                                             |
-| `logo` / `image`                   | `headerLogoUrl`                           | 配列形式                                    |
-| `telephone`                        | `phoneNumber`                             |                                             |
-| `email`                            | `email`                                   |                                             |
-| `address`                          | postal/prefecture/city/street/building    | PostalAddress 型                            |
-| `openingHoursSpecification`        | `businessHours` JSON                      | 曜日グループ化                              |
-| `specialOpeningHoursSpecification` | `specialHolidays` JSON                    | 休業日 `opens/closes: "00:00"`              |
-| `priceRange`                       | `priceRange`                              |                                             |
-| `geo`                              | `latitude` + `longitude`                  | 両方設定時のみ。`GeoCoordinates` 型         |
-| `hasMap`                           | lat/lng から生成                          | `https://www.google.com/maps?q={lat},{lng}` |
-| `currenciesAccepted`               | 固定 `"JPY"`                              |                                             |
-| `paymentAccepted`                  | `paymentAccepted`                         |                                             |
-| `foundingDate`                     | `establishedDate`                         | ISO 8601 (`YYYY-MM-DD`)                     |
-| `additionalType`                   | 固定 Wikipedia URL                        | `https://en.wikipedia.org/wiki/Coworking`   |
-| `sameAs`                           | `SocialLink` テーブル                     | アクティブなもののみ                        |
-| `amenityFeature`                   | `businessAttributes` JSON                 | `LocationFeatureSpecification` 型           |
+各プロパティのソースは `Location` モデルのフィールド。`buildLocationLocalBusinessJsonLdData()` で生成:
+
+| プロパティ                         | ソース（Location モデル）                                     | 備考                                                          |
+| ---------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
+| `@id`                              | `{BASE_URL}/access/{slug}#localbusiness`                      | slug ベースの安定 URI                                         |
+| `name`                             | `location.name`                                               |                                                               |
+| `description`                      | `location.description`                                        |                                                               |
+| `url`                              | `{BASE_URL}/access/{slug}`                                    |                                                               |
+| `image`                            | `location.imageUrl`                                           | 配列形式                                                      |
+| `telephone`                        | `location.phoneNumber`                                        |                                                               |
+| `email`                            | `location.email`                                              |                                                               |
+| `address`                          | postalCode / prefecture / city / streetAddress + buildingName | PostalAddress 型・addressCountry: JP                          |
+| `openingHoursSpecification`        | `location.businessHours` JSON                                 | 曜日グループ化                                                |
+| `specialOpeningHoursSpecification` | `location.specialHolidays` JSON                               | 休業日 `opens/closes: "00:00"`                                |
+| `priceRange`                       | `location.priceRange`                                         |                                                               |
+| `geo`                              | `location.latitude` + `longitude`                             | 両方設定時のみ。`GeoCoordinates` 型                           |
+| `hasMap`                           | lat/lng から生成                                              | `https://www.google.com/maps?q={lat},{lng}`                   |
+| `currenciesAccepted`               | 固定 `"JPY"`                                                  |                                                               |
+| `paymentAccepted`                  | `location.paymentAccepted`                                    |                                                               |
+| `amenityFeature`                   | `location.amenities` JSON                                     | `LocationFeatureSpecification` 型（ATTR_LABELS でラベル変換） |
+| `branchOf`                         | `{BASE_URL}/#organization`                                    | 複数拠点時のみ。`includeBranchOf` フラグで制御                |
 
 **注意**: `hasMap`（JSON-LD 内、緯度経度から生成）と `googleMapsUrl`（コンポーネント表示用、Place ID から生成）は別物。
 
@@ -420,21 +425,26 @@ const info = await getBusinessInfo()
 <address>{info.address}</address>
 ```
 
-2. **LocalBusiness JSON-LD の重複配置禁止**
-   - layout.tsx の `@graph` のみ。個別ページに追加しない
+2. **site-wide layout.tsx に LocalBusiness を配置禁止**（ADR 0023）
+   - layout.tsx の `@graph` は `Organization + WebSite` のみ。`LocalBusiness` は `/access` および `/access/[slug]` ページに委譲する
+   - `getLocalBusinessJsonLdData()` は廃止済み。`getAllPublishedLocationsJsonLdData()` / `getLocationJsonLdDataBySlug()` を使用
 
 ```tsx
-// NG: 個別ページで LocalBusiness を独自追加
-// app/(public)/about/page.tsx
-<script type="application/ld+json">
-  {JSON.stringify({ "@type": "LocalBusiness", "name": "..." })}
-</script>
-
-// OK: layout.tsx の @graph に統合（一箇所のみ）
+// NG: layout.tsx で LocalBusiness を出力（ADR 0023 で廃止）
 // app/(public)/layout.tsx
-<Suspense fallback={null}>
-  <StructuredDataContent />  {/* GraphJsonLd が @graph で出力 */}
-</Suspense>
+async function StructuredDataContent() {
+  const graphData = await getGraphJsonLdData(); // 旧実装: LocalBusiness を含む
+  return <GraphJsonLd {...graphData} />;
+}
+
+// OK: layout.tsx は Organization + WebSite のみ（LocalBusiness を含まない）
+// /access/page.tsx で per-location LocalBusiness を出力
+const locationsJsonLd = await getAllPublishedLocationsJsonLdData();
+<LocalBusinessJsonLd items={locationsJsonLd} />;
+
+// OK: /access/[locationSlug]/page.tsx で単一拠点の LocalBusiness を出力
+const locationJsonLd = await getLocationJsonLdDataBySlug(slug);
+<LocalBusinessJsonLd items={locationJsonLd ? [locationJsonLd] : []} />;
 ```
 
 3. **JSON-LD内のエスケープ漏れ禁止**
@@ -497,12 +507,13 @@ export async function generateMetadata({ params }: Props) {
 
 ## ファイル配置
 
-| パス                                   | 内容                                                                                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@/public/components/seo/JsonLd.tsx`   | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等                                                        |
-| `@/public/lib/seo/json-ld-config.ts`   | `getGraphJsonLdData()`, `getLocalBusinessJsonLdData()`, `getOrganizationJsonLdData()`, `getWebSiteJsonLdData()`, 共有定数（`DAY_MAP`, `DAY_LABELS`, `ATTR_LABELS`） |
-| `@/public/lib/seo/metadata-factory.ts` | `getSeoSettings()`, `generateArticleMetadata()`                                                                                                                     |
-| `@/public/lib/seo/index.ts`            | SEOライブラリ barrel export                                                                                                                                         |
-| `@/public/lib/page-metadata.ts`        | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)`                                                                                         |
-| `@/public/data/business.ts`            | `getBusinessInfo()` — コンポーネント向けビジネス情報                                                                                                                |
-| `@/shared/lib/settings/public.ts`      | `getPublicBusinessSettings()` — 公開設定取得（NAP含む）                                                                                                             |
+| パス                                   | 内容                                                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@/public/components/seo/JsonLd.tsx`   | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等                                                                               |
+| `@/public/lib/seo/json-ld-config.ts`   | `getGraphJsonLdData()`, `getOrganizationJsonLdData()`, `getWebSiteJsonLdData()`, 共有定数（`DAY_MAP`, `DAY_LABELS`, `ATTR_LABELS`）。`getLocalBusinessJsonLdData()` は廃止済み（ADR 0023） |
+| `@/public/lib/seo/location-json-ld.ts` | `buildLocationLocalBusinessJsonLdData()`, `getAllPublishedLocationsJsonLdData()`, `getLocationJsonLdDataBySlug()` — per-location LocalBusiness JSON-LD（ADR 0023）                         |
+| `@/public/lib/seo/metadata-factory.ts` | `getSeoSettings()`, `generateArticleMetadata()`                                                                                                                                            |
+| `@/public/lib/seo/index.ts`            | SEOライブラリ barrel export                                                                                                                                                                |
+| `@/public/lib/page-metadata.ts`        | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)`                                                                                                                |
+| `@/public/data/business.ts`            | `getBusinessInfo()` — コンポーネント向けビジネス情報                                                                                                                                       |
+| `@/shared/lib/settings/public.ts`      | `getPublicBusinessSettings()` — 公開設定取得（NAP含む）                                                                                                                                    |

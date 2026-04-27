@@ -16,6 +16,7 @@ paths:
 
 ## ドメイン・予約
 
+- **Location 編集時のキャッシュ無効化** — `updateLocation` / `createLocation` の `afterSuccess` で `updateTag(CACHE_TAGS.LOCATIONS)` + `updateTag(getCacheTag.locations.detail(data.slug))` 必須。MEO フィールド更新時も同じタグで無効化（粒度を分けない）。LocalBusiness JSON-LD は `CACHE_TAGS.LOCATIONS` でタグ付けされているため、slug タグ + ベースタグの両方を無効化しないと `/access` 一覧ページのキャッシュが残る silent bug になる
 - **`fireAndForget` は `@/shared/lib/async-utils`** — `@/shared/lib/errors/server` からは export されない。Server Actions の `afterSuccess` 内でメール送信・通知生成・カレンダー同期等の非クリティカル副作用に使用。第2引数は `{ operation, category }` で logError 用コンテキスト
 - **公開フォーム成功時の管理通知必須** — 予約・お問い合わせ・レビュー・イベント申込の成功パスに `fireAndForget(createNotificationCommand({ type: NOTIFICATION_TYPE.*, ... }))` + `updateTag(CACHE_TAGS.NOTIFICATIONS)` が必要。顧客セルフキャンセル（マイページ）も含む
 - **`exactOptionalPropertyTypes` で Prisma create の optional フィールドに `input.field` を直接渡せない** — `field?: string` に `string | undefined` は非互換。条件スプレッド `...(input.field !== undefined && { field: input.field })` を使用。`notifications/commands.ts` パターン参照
