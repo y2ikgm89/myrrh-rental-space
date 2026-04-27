@@ -5,11 +5,7 @@ description: >
   Use proactively when working on public-facing UI, choosing colors, typography,
   animations, layout patterns, or any visual design decisions. Consults and
   updates persistent design knowledge for brand consistency.
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
+tools: Read, Grep, Glob, Write
 skills:
   - frontend-design
 model: sonnet

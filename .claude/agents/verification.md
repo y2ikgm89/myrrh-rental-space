@@ -6,11 +6,7 @@ description: >
   WARNING: May auto-fix code via lint --fix or similar; use Bash directly for read-only
   checks. Isolates verbose build output from the main conversation. Remembers common
   error patterns and their fixes across sessions.
-tools:
-  - Bash
-  - Read
-  - Grep
-  - Glob
+tools: Bash, Read, Grep, Glob
 model: sonnet
 memory: project
 ---

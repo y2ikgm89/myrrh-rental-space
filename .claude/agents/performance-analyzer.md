@@ -4,10 +4,7 @@ description: >
   Next.js 16 バンドルサイズ・パフォーマンス解析エージェント。
   新しいページ・コンポーネント追加後、ビルドサイズ増大が懸念される場合に使用。
   First Load JS サイズ・静的/動的判定・ルート別サイズを分析してレポートを出力する。
-tools:
-  - Bash
-  - Read
-  - Glob
+tools: Bash, Read, Glob
 model: sonnet
 memory: project
 ---

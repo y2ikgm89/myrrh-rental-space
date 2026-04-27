@@ -4,13 +4,7 @@ description: >
   Playwright E2E テスト生成専門エージェント。新しい管理画面ページ・公開ページ・認証フローを
   実装した後に使用。既存 e2e/ テストパターンに従い、ユーザー操作シナリオを網羅した
   Playwright テストファイルを生成する。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
 ---
 

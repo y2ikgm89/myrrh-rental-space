@@ -5,13 +5,7 @@ description: >
   admin-auth / customer-auth / ensureCustomerLinked / API route (auth)
   を編集後に使用。cookie prefix 分離・generateId 設定・databaseHooks 不使用原則・
   RBAC・social auth callback・session 漏洩パターンを検出し、修正案を提示する。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__query-docs
+tools: Read, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 memory: project
 ---

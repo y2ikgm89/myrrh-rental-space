@@ -6,9 +6,7 @@ description: >
   Client Component ファイル（責務別分割対象）の両方をスキャン。
   「大きなファイルを調べて」「肥大化した component を確認して」「分割対象を探して」
   「split-action-file の対象を調べて」場面で使用。
-tools:
-  - Glob
-  - Bash
+tools: Glob, Bash
 model: sonnet
 ---
 

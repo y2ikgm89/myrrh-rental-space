@@ -4,10 +4,7 @@ description: >
   レート制限の整合性レビュー。rate-limit.ts, proxy.ts, api/auth 配下を編集した後に使用。
   読み取りエンドポイントが mutation 用リミッターに含まれていないか、
   新しい API パスが checkRateLimit() の分岐に含まれているかを検証する。
-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 model: sonnet
 ---
 

@@ -4,10 +4,7 @@ description: >
   予約フロー整合性チェッカー。reservation/ 配下のコンポーネント編集後に使用。
   useReducer アクション ↔ RHF setValue 同期 ↔ Zod スキーマ ↔ Server Action バリデーションの
   整合性を検証し、フロー全体の一貫性を確認する。
-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 model: sonnet
 ---
 

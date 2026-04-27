@@ -5,13 +5,7 @@ description: >
   `src/**/lexical/` 配下を編集した後に呼び出す。
   NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・
   未使用型を検出し、高信頼度の問題のみ報告する。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - LS
-  - mcp__context7__resolve-library-id
-  - mcp__context7__query-docs
+tools: Read, Grep, Glob, LS, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 memory: project
 ---

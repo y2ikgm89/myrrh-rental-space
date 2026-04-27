@@ -5,11 +5,7 @@ description: >
   Use when a test fails and you need root cause analysis: runs the failing test in isolation,
   reads the test and implementation source, and pinpoints the fix.
   More targeted than the verification agent (which covers type-check/lint/build).
-tools:
-  - Bash
-  - Read
-  - Grep
-  - Glob
+tools: Bash, Read, Grep, Glob
 model: sonnet
 memory: project
 ---

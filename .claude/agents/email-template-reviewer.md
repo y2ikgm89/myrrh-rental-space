@@ -6,11 +6,7 @@ description: >
   メール送信コードを編集した後に使用。sendEmail() SSoT 経由・idempotency key 公式形式・
   server-only マーカー・inline CSS 必須・retry 対象分類・fireAndForget パターン・
   ICS 添付同時送信の整合性を検出。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - mcp__context7__query-docs
+tools: Read, Grep, Glob, mcp__context7__query-docs
 model: sonnet
 ---
 

@@ -6,11 +6,7 @@ description: >
   semantic color tokens (no hardcoded colors), React Compiler compatibility,
   eslint-react v4 patterns (no IIFE in JSX, no component-in-hook), Server Actions patterns,
   Zod 4 validation, and applicable `.claude/rules/**/*.md` (path-scoped where frontmatter says so). Catches violations before they reach CI.
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
+tools: Read, Grep, Glob, Bash
 model: sonnet
 memory: project
 ---

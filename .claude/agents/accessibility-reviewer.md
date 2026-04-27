@@ -5,10 +5,7 @@ description: >
   管理画面フォーム・ダイアログ・テーブル・ナビゲーションを編集した後に使用。
   キーボード操作・スクリーンリーダー対応・タッチターゲット 44px・カラーコントラスト・
   フォームラベル・ARIA属性の問題を検出し、修正案を提示する。
-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 model: sonnet
 ---
 

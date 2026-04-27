@@ -6,11 +6,7 @@ description: >
   存在しないファイルパスを検出する。subagent-driven-development / executing-plans
   完了直後に使用する。プラン記載の identifier 名と実装の identifier 名が乖離した
   場合（例: rename 後にプランが古い名前のまま残る）を高信頼度で検出する。
-tools:
-  - Bash
-  - Read
-  - Grep
-  - Glob
+tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 

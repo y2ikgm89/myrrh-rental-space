@@ -5,10 +5,7 @@ description: >
   Use proactively when modifying auth flows, Stripe webhooks, Google/Instagram
   OAuth, encryption logic, API routes, or any code handling secrets/credentials.
   Reports only high-confidence issues with file:line references and fix suggestions.
-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 model: sonnet
 memory: project
 ---

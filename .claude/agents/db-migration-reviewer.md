@@ -5,11 +5,7 @@ description: >
   before applying with `bunx --bun prisma migrate dev`. Checks for DROP COLUMN,
   non-nullable without DEFAULT, type narrowing, renamed tables/columns without
   data migration steps, and seed compatibility. Returns SAFE / REVIEW NEEDED / BREAKING.
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
+tools: Read, Grep, Glob, Bash
 model: sonnet
 memory: project
 ---

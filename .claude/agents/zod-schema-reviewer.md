@@ -5,13 +5,7 @@ description: >
   Server Action / API route の Zod スキーマ変更後に使用。error パラメータ、
   配列 uniqueness の .refine()、cross-field top-level refine、safeParse 強制、
   UI 層の Set dedup 禁止、型アサーション禁止を検出し、修正案を提示する。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__query-docs
+tools: Read, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 memory: project
 ---

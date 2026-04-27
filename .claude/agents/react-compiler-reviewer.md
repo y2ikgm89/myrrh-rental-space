@@ -4,13 +4,7 @@ description: >
   React Compiler 1.0 互換性レビュー専門エージェント。GSAP / Lenis / Lexical を
   含むコンポーネント編集後に使用。Rules of React 違反・手動メモ化・ref 不正アクセス・
   ライブラリ非互換パターンを検出し、修正案を提示する。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__query-docs
+tools: Read, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 memory: project
 ---

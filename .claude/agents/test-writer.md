@@ -4,13 +4,7 @@ description: >
   bun:test テスト生成専門エージェント。新しい lib 関数・Server Action・バリデーションスキーマを
   実装した後に使用。既存テストパターンに従い、正常系・異常系・エッジケースを網羅した
   bun:test ファイルを生成する。Vitest との混同に注意（このプロジェクトは Bun Test を使用）。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
-  - Bash
+tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
 memory: project
 ---

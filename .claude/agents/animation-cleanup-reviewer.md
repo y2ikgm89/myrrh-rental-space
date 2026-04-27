@@ -5,11 +5,7 @@ description: >
   アニメーションライブラリを含むコンポーネント編集後に使用。
   useGSAP/useEffect クリーンアップ関数の欠落、RAF ループの停止漏れ、
   ScrollTrigger 未 kill を検出し、修正案を提示する。
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash
+tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 

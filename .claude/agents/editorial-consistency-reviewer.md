@@ -4,10 +4,7 @@ description: >
   Editorial Magazine デザイントークンの一貫性チェック専門エージェント。
   公開ページのコンポーネント編集後に使用。hover パターン・tracking 値・
   font-weight・Button スタイル・ブランドロゴスタイルの不統一を検出し、修正案を提示する。
-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 model: sonnet
 ---
 
