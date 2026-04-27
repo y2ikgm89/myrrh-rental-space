@@ -174,6 +174,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **destructive migration 適用後は dev server を該当 worktree から再起動必須** — 共有 dev DB のため、他の worktree / main から起動中の dev server は古い code + 新 schema で `PrismaClientKnownRequestError: The column ... does not exist` → 公開ページ白画面の silent bug（→ `gotchas/deployment.md` §Worktree §共有 dev DB + 異 worktree dev server）
 - **テストファイルは top-level `__tests__/` のみ** — `src/**/__tests__/` 配置禁止（`tsconfig.test.json` include 範囲外）（→ `test-quality.md`）
 - **ADR 新規作成前に `ls docs/architecture/decisions/ | grep "^00"` で既存番号確認** — 連番重複採番を防ぐ。本セッションで 0011 衝突が発生（`0011-dual-better-auth-instance.md` 既存を見落として重複作成 → 0014 に変更）
+- **handoff memo の「commit `<SHA>` で完了」記述は新セッション開始時に `git show <SHA>` で実在検証必須** — 前セッションの commit 漏れで該当 SHA が main に存在しないことあり (実例: C3 handoff に「commit `36e805b4` で codify 済み」と記載されていたが git log に該当なし、CLAUDE.md uncommitted 差分として残存)。不在を検出したら uncommitted 差分の救出 commit を新セッションの最初の作業として行い、handoff memo の SHA も新 commit で更新する
 - **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/guides/**` / `bunfig.toml` / `.vscode/launch.json` に旧 script 名が残らないか確認（ADR 0014 で実例化）
 - **ADR 制約と設定ファイルの整合を grep で周期検証** — `bunfig.toml` / `playwright.config.ts` / `.gitignore` 等が ADR 制約と乖離した dead code になっていないか（本セッション: `coverageThreshold` が ADR 0010 採択後も残存していた → ADR 0014 で撤去）
 - **`bun.lock` 単独コミット禁止** — `scripts/check-protected-files.sh` が拒否（依存更新は `package.json` と同時 stage 必須）。大きな改修バンドル内に誤混入した lockfile 差分は `git restore --staged --worktree bun.lock` で HEAD に戻して分離
@@ -214,6 +215,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **implementer dispatch prompt に「JSDoc / コメントに "Phase X.Y" / "refactor from Y" / "後継 UI" 等のタスク・フロー参照を含めない」を明示** — デフォルトで混入しがち。CLAUDE.md の general rule「Don't reference the current task, fix, or callers」と衝突し commit 前の grep + cleanup が発生する（2026-04-22 Phase B.5-2 で 4 ファイル × 7 箇所の cleanup 事例）
 - **subagent frontmatter `memory: project` は実利用がある場合のみ付ける** — 公式仕様で Read/Write/Edit ツールが暗黙有効化 + MEMORY.md (200行/25KB) が system prompt に注入される。本文で MEMORY 参照を持つ設計か `.claude/agent-memory/<name>/` に dir があるかで判定。未使用で付けると context 浪費 + 最小権限原則違反（2026-04-23 監査で 10 agent 削除）
 - **小規模 Bundle（1-4 task / 4-5 commit）は combined reviewer（spec + quality 1 dispatch）を推奨** — Bundle A/B/C 全てに spec / quality 個別 reviewer を厳格適用すると 1 plan で 6+ reviewer dispatch になり context 圧迫。P18 で 2 Bundle / 1 combined review に絞り P17（3 Bundle / 3 spec + 3 quality review）より context 残量を 30%+ 確保した実績。combined prompt は spec compliance check と code quality check の両 section を 1 prompt 内に同居させ、JSON で `spec_compliance.verdict` / `code_quality.verdict` / `overall_verdict` の 3 値を返させる
+- **frontmatter のみ / config 変更等の trivial Bundle (logic 変更ゼロ・test 不要・1-5 commit) は executing-plans + controller inline 実行が最適** — subagent dispatch + reviewer の context overhead に見合わない。Plan は記録目的で書きつつ実装は controller が直接 Edit + git commit で完結。実例: C3b で 11 SKILL.md frontmatter `paths:` 追加を 4 Bundle commit に分割し全て inline 実行 (subagent ゼロ、commit 6 本完成)
 
 ---
 
@@ -250,7 +252,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ## 自動ロード
 
 - **Rules**: `.claude/rules/**/*.md` — `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`
-- **Skills**: `.claude/skills/<name>/SKILL.md` に frontmatter（`description` 必須、1,536 char 上限超過は truncate）+ 手順本体（500 行未満推奨）。詳細は `reference/*.md` / `data/*` に分割。公式新フィールド `paths:` (path-scoped autoload で context 圧迫低減) / `when_to_use:` / `argument-hint:` / `arguments:` / `disable-model-invocation:` を活用
+- **Skills**: `.claude/skills/<name>/SKILL.md` に frontmatter（`description` 必須、1,536 char 上限超過は truncate）+ 手順本体（500 行未満推奨）。詳細は `reference/*.md` / `data/*` に分割。公式新フィールド `paths:` (path-scoped autoload で context 圧迫低減、edit 後 Live change detection が 1 秒未満で反映、MINGW64 `()` 含むパスでも activation 判定 OK、`paths:` 設定後も `/skill` user invocation は継続可能) / `when_to_use:` / `argument-hint:` / `arguments:` / `disable-model-invocation:` を活用
 - **Subagents**: `.claude/agents/<name>.md` — frontmatter `name` / `description` (use trigger phrase: "Use proactively when..." or 日本語 "～した後に使用") / `tools: A, B, C`（comma-separated 単行が公式 canonical、YAML list 形式禁止）/ `model: sonnet` / `memory: project`（backing dir `.claude/agent-memory/<name>/` または body Memory management 節のいずれか必須、両方欠落なら付けない）
 - **Memory**: `~/.claude/projects/<slug>/memory/MEMORY.md` がセッション開始時に自動ロード
 - **Serena memories**: `.serena/memories/**/*.md` が Serena MCP セッション開始時に自動ロード — 大規模マイグレーション・機能削除後は現状参照系（`project_overview.md` / `architecture-analysis.md` / `architecture/*.md`）を同期更新必須。stale 情報は次セッションで誤情報として注入される silent bug（実例: Supabase→R2 移行後に `project_overview.md` の `PostgreSQL (Supabase)` が残存）
