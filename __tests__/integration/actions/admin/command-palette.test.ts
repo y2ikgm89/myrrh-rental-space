@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
-const mockCheckAuth = mock(async () => ({
-  success: true as const,
-  user: { id: "user-1", role: "SUPER_ADMIN" as const },
+type AuthResult =
+  | { success: true; user: { id: string; role: string } }
+  | { success: false; error: { error: string } };
+
+const mockCheckAuth = mock<() => Promise<AuthResult>>(async () => ({
+  success: true,
+  user: { id: "user-1", role: "SUPER_ADMIN" },
 }));
 const mockCheckRate = mock(async () => ({ success: true as const }));
 const mockSearchByResource = mock(async (resource: string, _q: string) => ({

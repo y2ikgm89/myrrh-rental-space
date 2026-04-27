@@ -40,11 +40,9 @@ import {
 } from "./_components/TopBarUserBadge";
 import { CommandPaletteProvider } from "./_shared/components/command-palette/CommandPaletteProvider";
 import { CommandPalette } from "./_shared/components/command-palette/CommandPalette";
-import type {
-  NavItem,
-  QuickAction,
-  RecentItem,
-} from "./_shared/components/command-palette/types";
+import type { RecentItem } from "./_shared/components/command-palette/types";
+import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
+import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions";
 
 export default async function DashboardLayout({
   children,
@@ -58,9 +56,8 @@ export default async function DashboardLayout({
       hasPermission(user.role, permission.resource, permission.action),
   );
 
-  // Bundle B 完了後に置換: getNavItemsForRole(user.role) 等を呼ぶ
-  const navItems: NavItem[] = [];
-  const quickActions: QuickAction[] = [];
+  const navItems = getNavItemsForRole(user.role);
+  const quickActions = getQuickActionsForRole(user.role);
   const recents: RecentItem[] = [];
 
   return (

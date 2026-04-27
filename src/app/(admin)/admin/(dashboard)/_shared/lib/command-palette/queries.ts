@@ -16,7 +16,6 @@ function ci(query: string) {
 async function searchSpaces(query: string): Promise<SearchResultItem[]> {
   const rows = await prisma.space.findMany({
     where: {
-      deletedAt: null,
       OR: [{ name: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, name: true, slug: true },
