@@ -159,6 +159,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **監査エージェント指摘**: 該当 rule ファイル（`react-patterns.md` / `lexical-patterns.md` / `type-safety.md` 等）の「例外」節とクロスリファレンス
 - **SSoT 重複検出の grep**: symbol 名だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep
 - **ESLint `no-restricted-syntax` selector は静的+動的両対応** — `> ArrayExpression` は literal `[a, b]` のみ、`items.map(...)` 等の動的配列を見逃す。禁止パターン追加時は `CallExpression[callee.property.name='map']` 経路も `selector` に含める（`$transaction` rule が実例）
+- **`grep '^<field>: ' .claude/{agents,skills}/**/\*.md`の frontmatter audit は body 内コード例の偽陽性に注意** —`zod-schema-reviewer.md`の Zod schema コード例`name: z.string()`等が frontmatter`name:` と誤カウントされる（C3 Phase 4 で実発生、grep 結果が想定 N 件+α になったら body 内 code block を Read で除外確認）
 - **Plan `完了` ステータスでも実装存在とは限らない** — 大規模リデザイン・命名規約変更で機能が削除／置換されることあり。plan 参照時は `Glob` で実在確認 + `Grep` で代表 symbol + `git log --oneline -- <path>`
 - **bundle「未使用チャンク」報告は `react-loadable-manifest.json` で lazy-load 確認必須** — `.next/server/app/*.html` 埋め込み scan だけでは `next/dynamic` 経由の lazy chunk を「未使用」と誤認する false positive。Lexical / Recharts / Radix 等の 200KB+ チャンクは大抵 lazy-load 正当化済みのため、削除判定前に manifest で参照元ルート数を確認
 - **`<library> X.Y` 形式の version 表記は `package.json` (SSoT) と drift しやすい** — `bun update` で minor/major bump が起きた後は `grep -rn '<lib> [0-9]\+\.[0-9]\+' .claude/ CLAUDE.md src/` で参照箇所を一括更新。本プロジェクトでは `Prisma 7.7` が 6 箇所散在し commit `ef87f8ac` で 7.8 に統一。doc 内の minor version は世代固有の注意点（API/CLI 変更）を表すが、CLAUDE.md 冒頭注釈どおり実バージョンは `package.json` + `bun.lock` が正
@@ -249,8 +250,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ## 自動ロード
 
 - **Rules**: `.claude/rules/**/*.md` — `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`
-- **Skills**: `.claude/skills/<name>/SKILL.md` に frontmatter（`description` 必須）+ 手順本体（500 行未満推奨）。詳細は `reference/*.md` / `data/*` に分割
-- **Subagents**: `.claude/agents/<name>.md` — frontmatter `name` / `description` / `tools:`（最小権限）/ `model: sonnet` / `memory: project`
+- **Skills**: `.claude/skills/<name>/SKILL.md` に frontmatter（`description` 必須、1,536 char 上限超過は truncate）+ 手順本体（500 行未満推奨）。詳細は `reference/*.md` / `data/*` に分割。公式新フィールド `paths:` (path-scoped autoload で context 圧迫低減) / `when_to_use:` / `argument-hint:` / `arguments:` / `disable-model-invocation:` を活用
+- **Subagents**: `.claude/agents/<name>.md` — frontmatter `name` / `description` (use trigger phrase: "Use proactively when..." or 日本語 "～した後に使用") / `tools: A, B, C`（comma-separated 単行が公式 canonical、YAML list 形式禁止）/ `model: sonnet` / `memory: project`（backing dir `.claude/agent-memory/<name>/` または body Memory management 節のいずれか必須、両方欠落なら付けない）
 - **Memory**: `~/.claude/projects/<slug>/memory/MEMORY.md` がセッション開始時に自動ロード
 - **Serena memories**: `.serena/memories/**/*.md` が Serena MCP セッション開始時に自動ロード — 大規模マイグレーション・機能削除後は現状参照系（`project_overview.md` / `architecture-analysis.md` / `architecture/*.md`）を同期更新必須。stale 情報は次セッションで誤情報として注入される silent bug（実例: Supabase→R2 移行後に `project_overview.md` の `PostgreSQL (Supabase)` が残存）
 - **research/analysis または完了済み project handoff の memory は冒頭に `> **Snapshot: YYYY-MM-DD**` を入れる** — `/memory-staleness-audit` skill で自動履歴扱いされる。clean-break refactor 完了 memory（「廃止済みパターン」「削除済みファイル」等の意図的履歴参照を含む）も対象。ADR で supersede された場合は併せて `> **Superseded: YYYY-MM-DD** — ADR XXXX で置換` を追記。filename に `YYYY-MM-DD` を含む場合も同等
@@ -267,3 +268,4 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 4. `@theme` / SSoT / ルール docs の整合を**同一コミット**で保つ（rule 更新と実装変更を同期して drift を防止）
 5. 破壊的変更が発生する改修は phase 単位で 1 commit 完結（ロールバック容易化）、`docs/superpowers/plans/YYYY-MM-DD-<name>.md` に記録
 6. **Claude Code hooks は公式仕様（`code.claude.com/docs/en/hooks`）に準拠** — `PostToolUse` / `SubagentStop` の stdout は Claude context に届かないため `hookSpecificOutput.additionalContext` JSON 必須。`Stop` + `asyncRewake: true` は `stop_hook_active` guard 必須（無限ループ防止）。`async` / `asyncRewake` / `if` フィールド採用。詳細・手動テスト手順は `.claude/rules/ops/hooks-patterns.md`（path-scoped autoload）
+7. **事前監査で全 PASS と判明した「クリーン実装」指示は no-op plan で valid 完了** — 強引な改修コミットを作らず、監査結果を canonical 記録する plan ファイル + handoff memory 更新で完了扱い。実例: C3 (`docs/superpowers/plans/2026-04-27-skills-cleanup.md`) は description 必須 / 500 行未満 / reference 分割の 3 軸全 32 件 PASS で改修コミットゼロ。clean-break 対象が確定的にないことを確認した上で記録に残す
