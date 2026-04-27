@@ -40,9 +40,9 @@ import {
 } from "./_components/TopBarUserBadge";
 import { CommandPaletteProvider } from "./_shared/components/command-palette/CommandPaletteProvider";
 import { CommandPalette } from "./_shared/components/command-palette/CommandPalette";
-import type { RecentItem } from "./_shared/components/command-palette/types";
 import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
 import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions";
+import { getRecentAuditedResources } from "@/shared/domain/audit/recents-queries";
 
 export default async function DashboardLayout({
   children,
@@ -58,7 +58,7 @@ export default async function DashboardLayout({
 
   const navItems = getNavItemsForRole(user.role);
   const quickActions = getQuickActionsForRole(user.role);
-  const recents: RecentItem[] = [];
+  const recents = await getRecentAuditedResources(user.id, user.role, 8);
 
   return (
     <AdminLayoutProvider>
