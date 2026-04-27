@@ -5,7 +5,7 @@
 - **Deciders**: y2ikgm89
 - **Related**:
   - Phase B 実装 commit `25ce3ff7`〜`a03a739c`（プランは clean-break 原則で削除済、`git log --all --diff-filter=D -- docs/superpowers/plans/` で復元可）
-  - [Section Style Cascade Design Spec](../../superpowers/specs/section-style-cascade-design.md)
+  - Section Style Cascade Design Spec（clean-break で削除済み、`git log --all --diff-filter=D -- docs/superpowers/specs/section-style-cascade-design.md` で復元可）
   - [ADR 0016 PageHero first-class field](./0016-page-hero-first-class-field.md)（Phase A で採択）
 
 ## Context

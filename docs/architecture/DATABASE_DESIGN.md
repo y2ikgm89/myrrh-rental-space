@@ -597,7 +597,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 ### クエリ最適化
 
-詳細は [`BEST_PRACTICES.md`](./BEST_PRACTICES.md) の「Prisma 7 ベストプラクティス」セクションを参照してください。
+詳細は [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization) を参照してください。
 
 #### selectで必要なフィールドのみ取得
 
@@ -777,7 +777,6 @@ try {
 ### プロジェクトドキュメント
 
 - [`AGENTS.md`](../../AGENTS.md) - Codex 向けプロジェクト指示
-- [`API.md`](./API.md) - API仕様
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 
 ### 外部リソース
@@ -790,4 +789,4 @@ try {
 
 ### ベストプラクティス
 
-Prisma 7の詳細なベストプラクティスについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md) の「Prisma 7 ベストプラクティス」セクションを参照してください。
+Prisma 7の詳細なベストプラクティスについては、[Prisma 公式ドキュメント](https://www.prisma.io/docs/guides/performance-and-optimization) を参照してください。
