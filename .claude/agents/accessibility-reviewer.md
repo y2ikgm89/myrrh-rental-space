@@ -167,7 +167,7 @@ const sm = "px-3 py-2 text-sm min-h-11";
 - User Agent Control: native `<select>` dropdown 項目等
 - Essential: カラースウォッチ・タイムライン点等
 
-→ 詳細: `.claude/rules/frontend/accessibility.md` §タッチターゲット（WCAG 2.5.5 Enhanced）
+→ 詳細: `.claude/rules/frontend/accessibility/touch-text.md` §タッチターゲット（WCAG 2.5.5 Enhanced）
 
 ### 9. カラーコントラスト（セマンティックトークン）
 

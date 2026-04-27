@@ -123,5 +123,5 @@ Agent({
 
 ## 関連
 
-- `.claude/rules/gotchas.md` §Claude Code 設定 — plan の schema 前提検証ルール
+- `.claude/rules/gotchas/claude-code.md` §Claude Code 設定 — plan の schema 前提検証ルール
 - `.claude/skills/verify-subagent-report/SKILL.md` — 個別 subagent の実装検証（本 agent はプラン全体の integrity チェック）

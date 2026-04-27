@@ -90,7 +90,7 @@ grep -rnE "<button[^>]*aria-label=[^>]*>\s*<Icon" src/app/'(public)'/
 
 **ルール:** 全 interactive 要素は **44×44 CSS px（WCAG 2.5.5 Enhanced）** 以上。Button 全 size で `min-h-11` 以上。icon-only button は `h-11 w-11`。native checkbox/radio は `<label className="flex min-h-11 ...">` でヒットエリア確保。
 
-→ 詳細: `.claude/rules/frontend/accessibility.md` §タッチターゲット
+→ 詳細: `.claude/rules/frontend/accessibility/touch-text.md` §タッチターゲット
 
 ### 8. Container Queries（カードグリッド）
 
