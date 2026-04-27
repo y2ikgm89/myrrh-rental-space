@@ -15,7 +15,6 @@ import {
   getDiscountSettings,
   getTaxSettings,
 } from "@/admin/queries/settings";
-import { getSocialLinks } from "@/admin/queries/navigation";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -24,7 +23,6 @@ import {
   ReservationSection,
   DiscountSection,
   TaxSection,
-  MeoSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
@@ -33,19 +31,17 @@ import type { ReactElement } from "react";
  */
 async function BusinessSettingsContent(): Promise<ReactElement> {
   await connection();
-  const [settings, discountSettings, taxSettings, socialLinks] =
-    await Promise.all([
-      getSettings(),
-      getDiscountSettings(),
-      getTaxSettings(),
-      getSocialLinks({ activeOnly: true }),
-    ]);
+  const [settings, discountSettings, taxSettings] = await Promise.all([
+    getSettings(),
+    getDiscountSettings(),
+    getTaxSettings(),
+  ]);
 
   if (!settings) {
     return (
       <SettingsLayout
         title="ビジネス設定"
-        description="事業者情報・営業時間・予約・割引・消費税・MEO設定"
+        description="事業者情報・営業時間・予約・割引・消費税の設定"
       >
         <div className="text-center py-8 text-muted-foreground">
           設定を読み込めませんでした
@@ -80,19 +76,12 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
       label: "消費税",
       content: <TaxSection settings={taxSettings} />,
     },
-    {
-      value: "meo",
-      label: "MEO対策",
-      content: (
-        <MeoSection settings={settings} socialLinkCount={socialLinks.length} />
-      ),
-    },
   ];
 
   return (
     <SettingsLayout
       title="ビジネス設定"
-      description="事業者情報・営業時間・予約・割引・消費税・MEO設定"
+      description="事業者情報・営業時間・予約・割引・消費税の設定"
     >
       <SettingsTabs tabs={tabs} defaultTab="info" />
     </SettingsLayout>

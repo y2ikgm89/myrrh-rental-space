@@ -1,5 +1,5 @@
 /**
- * 事業者情報・連絡先・営業時間・MEO設定 Server Action統合テスト
+ * 事業者情報・連絡先・営業時間 Server Action統合テスト
  *
  * src/app/(admin)/admin/(dashboard)/_shared/actions/settings/business.ts のテスト
  *
@@ -7,7 +7,6 @@
  * - businessInfoSchema（事業者情報）
  * - contactInfoSchema（連絡先情報）
  * - businessHoursSettingsSchema（営業時間設定）
- * - meoSettingsSchema（MEO設定）
  */
 
 import { describe, test, expect } from "bun:test";
@@ -91,39 +90,6 @@ const businessHoursSettingsSchema = z.object({
     .transform((v) => v || null),
 });
 
-const meoSettingsSchema = z.object({
-  latitude: z
-    .number()
-    .min(-90, { error: "緯度は-90~90の範囲で入力してください" })
-    .max(90, { error: "緯度は-90~90の範囲で入力してください" })
-    .nullable(),
-  longitude: z
-    .number()
-    .min(-180, { error: "経度は-180~180の範囲で入力してください" })
-    .max(180, { error: "経度は-180~180の範囲で入力してください" })
-    .nullable(),
-  priceRange: z
-    .string()
-    .max(100, { error: "価格帯は100文字以内で入力してください" })
-    .nullable(),
-  googleBusinessPlaceId: z
-    .string()
-    .max(200, { error: "Place IDは200文字以内で入力してください" })
-    .nullable(),
-  googleReviewUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .max(500, { error: "URLは500文字以内で入力してください" })
-    .nullable()
-    .or(z.literal("")),
-  businessAttributes: z.record(z.string(), z.boolean()).nullable(),
-  paymentAccepted: z
-    .string()
-    .max(500, { error: "決済方法は500文字以内で入力してください" })
-    .nullable()
-    .or(z.literal("")),
-});
-
 // =============================================================================
 // テストデータ
 // =============================================================================
@@ -171,16 +137,6 @@ const VALID_BUSINESS_HOURS_SETTINGS_INPUT = {
   regularHolidays: ["sunday"],
   specialHolidays: ["2026-01-01", "2026-01-02"],
   holidayNotice: "年末年始は休業いたします。",
-};
-
-const VALID_MEO_SETTINGS_INPUT = {
-  latitude: 35.6762,
-  longitude: 139.6503,
-  priceRange: "1000-5000",
-  googleBusinessPlaceId: "ChIJN1t_tDeuEmsRUsoyG83frY4",
-  googleReviewUrl: "https://g.page/r/example/review",
-  businessAttributes: { wifi: true, parking: false, elevator: true },
-  paymentAccepted: "クレジットカード, 現金, QRコード決済",
 };
 
 // =============================================================================
@@ -620,222 +576,6 @@ describe("Settings Business Admin Action Integration", () => {
   });
 
   // ===========================================================================
-  // meoSettingsSchema
-  // ===========================================================================
-
-  describe("meoSettingsSchema バリデーション", () => {
-    describe("正常系", () => {
-      test("有効なデータはバリデーション通過", () => {
-        const result = meoSettingsSchema.safeParse(VALID_MEO_SETTINGS_INPUT);
-        expect(result.success).toBe(true);
-      });
-
-      test("全フィールドnullでもバリデーション通過", () => {
-        const result = meoSettingsSchema.safeParse({
-          latitude: null,
-          longitude: null,
-          priceRange: null,
-          googleBusinessPlaceId: null,
-          googleReviewUrl: null,
-          businessAttributes: null,
-          paymentAccepted: null,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("googleReviewUrlは空文字列を許可", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          googleReviewUrl: "",
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("paymentAcceptedは空文字列を許可", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          paymentAccepted: "",
-        });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("latitude", () => {
-      test("-90（最小値）はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          latitude: -90,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("90（最大値）はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          latitude: 90,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("-90.1はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          latitude: -90.1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("90.1はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          latitude: 90.1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("0はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          latitude: 0,
-        });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("longitude", () => {
-      test("-180（最小値）はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          longitude: -180,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("180（最大値）はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          longitude: 180,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("-180.1はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          longitude: -180.1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("180.1はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          longitude: 180.1,
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("priceRange", () => {
-      test("100文字はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          priceRange: "a".repeat(100),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("101文字はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          priceRange: "a".repeat(101),
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("googleBusinessPlaceId", () => {
-      test("200文字はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          googleBusinessPlaceId: "a".repeat(200),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("201文字はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          googleBusinessPlaceId: "a".repeat(201),
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("googleReviewUrl", () => {
-      test("有効なURLはOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          googleReviewUrl: "https://g.page/r/example/review",
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("無効なURLはエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          googleReviewUrl: "not-a-url",
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("businessAttributes", () => {
-      test("Record<string, boolean>はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          businessAttributes: { wifi: true, parking: false },
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("空オブジェクトはOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          businessAttributes: {},
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("boolean以外の値はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          businessAttributes: { wifi: "yes" },
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("paymentAccepted", () => {
-      test("500文字はOK", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          paymentAccepted: "a".repeat(500),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("501文字はエラー", () => {
-        const result = meoSettingsSchema.safeParse({
-          ...VALID_MEO_SETTINGS_INPUT,
-          paymentAccepted: "a".repeat(501),
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  // ===========================================================================
   // 型エラーテスト
   // ===========================================================================
 
@@ -852,14 +592,6 @@ describe("Settings Business Admin Action Integration", () => {
       const result = contactInfoSchema.safeParse({
         ...VALID_CONTACT_INFO_INPUT,
         email: true,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("meoSettingsSchema: latitude に文字列はエラー", () => {
-      const result = meoSettingsSchema.safeParse({
-        ...VALID_MEO_SETTINGS_INPUT,
-        latitude: "35.6762",
       });
       expect(result.success).toBe(false);
     });

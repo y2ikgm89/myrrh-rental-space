@@ -32,9 +32,6 @@ export { TwoWaySyncSection } from "./TwoWaySyncSection";
 export { CustomApiKeysSection } from "./CustomApiKeysSection";
 export { InstagramSection } from "./InstagramSection";
 
-// MEO Settings
-export { MeoSection } from "./MeoSection";
-
 // 既存コンポーネント（親ディレクトリから再エクスポート）
 export { BusinessInfoSection } from "../BusinessInfoSection";
 export { BusinessHoursSection } from "../BusinessHoursSection";

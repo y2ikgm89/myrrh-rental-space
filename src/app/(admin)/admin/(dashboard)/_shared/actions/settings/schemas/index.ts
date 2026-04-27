@@ -38,8 +38,6 @@ export {
   reviewsGlobalSettingsSchema,
   type ReviewsGlobalSettingsInput,
   sidebarSettingsSchema,
-  meoSettingsSchema,
-  type MeoSettingsInput,
   robotsTxtSettingsSchema,
   type RobotsTxtSettingsInput,
   checkRobotsTxtWarnings,

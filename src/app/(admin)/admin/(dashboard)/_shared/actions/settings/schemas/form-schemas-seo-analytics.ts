@@ -59,25 +59,3 @@ export const searchVerificationFormSchema = z.object({
 export type SearchVerificationFormInput = z.infer<
   typeof searchVerificationFormSchema
 >;
-
-// =============================================================================
-// Site > SEO > MEO対策設定
-// =============================================================================
-
-export const meoFormSchema = z.object({
-  latitude: z.string(),
-  longitude: z.string(),
-  priceRange: z.string().max(100, { error: "100文字以内で入力してください" }),
-  googleBusinessPlaceId: z
-    .string()
-    .max(200, { error: "200文字以内で入力してください" }),
-  googleReviewUrl: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  businessAttributes: z.record(z.string(), z.boolean()),
-  paymentAccepted: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-});
-
-export type MeoFormInput = z.infer<typeof meoFormSchema>;
