@@ -1,6 +1,7 @@
 export type DomainErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
+  | "DUPLICATE"
   | "VALIDATION"
   | "UNAUTHORIZED"
   | "FORBIDDEN"

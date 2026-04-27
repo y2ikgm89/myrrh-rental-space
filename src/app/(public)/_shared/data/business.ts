@@ -3,10 +3,12 @@
  *
  * getPublicBusinessSettings() をラップし、コンポーネント向けの形状にマッピング。
  * 新たな DB クエリは発行せず、既存キャッシュ済み関数を再利用。
+ *
+ * MEO 情報（latitude / longitude / googleReviewUrl 等）は Location モデルに移管済み。
+ * 拠点別の MEO 情報は Location domain の public-queries を使用。
  */
 
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
-import { parseBusinessAttributes } from "@/shared/lib/json-validators";
 
 export interface BusinessInfo {
   readonly name: string;
@@ -22,9 +24,6 @@ export interface BusinessInfo {
   readonly holidayNotice: string | null;
   readonly accessInfo: string | null;
   readonly parkingInfo: string | null;
-  readonly googleReviewUrl: string | null;
-  readonly googleMapsUrl: string | null;
-  readonly businessAttributes: Record<string, boolean> | null;
 }
 
 /**
@@ -44,8 +43,6 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     settings?.buildingName,
   ].filter(Boolean);
 
-  const parsedAttrs = parseBusinessAttributes(settings?.businessAttributes);
-
   return {
     name: settings?.businessName ?? "Myrrh Rental Space",
     address: addressParts.length > 0 ? addressParts.join("") : null,
@@ -60,10 +57,5 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     holidayNotice: settings?.holidayNotice ?? null,
     accessInfo: settings?.accessInfo ?? null,
     parkingInfo: settings?.parkingInfo ?? null,
-    googleReviewUrl: settings?.googleReviewUrl ?? null,
-    googleMapsUrl: settings?.googleBusinessPlaceId
-      ? `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${settings.googleBusinessPlaceId}`
-      : null,
-    businessAttributes: parsedAttrs,
   };
 }

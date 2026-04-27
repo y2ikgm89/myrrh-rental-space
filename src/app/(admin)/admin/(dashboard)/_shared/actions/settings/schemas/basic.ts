@@ -339,45 +339,6 @@ export type ReviewsGlobalSettingsInput = z.infer<
 // Re-export from validations for sidebar
 export { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
 
-// =============================================================================
-// MEO Schemas (ローカル検索最適化)
-// =============================================================================
-
-export const meoSettingsSchema = z.object({
-  latitude: z
-    .number()
-    .min(-90, { error: "緯度は-90〜90の範囲で入力してください" })
-    .max(90, { error: "緯度は-90〜90の範囲で入力してください" })
-    .nullable(),
-  longitude: z
-    .number()
-    .min(-180, { error: "経度は-180〜180の範囲で入力してください" })
-    .max(180, { error: "経度は-180〜180の範囲で入力してください" })
-    .nullable(),
-  priceRange: z
-    .string()
-    .max(100, { error: "価格帯は100文字以内で入力してください" })
-    .nullable(),
-  googleBusinessPlaceId: z
-    .string()
-    .max(200, { error: "Place IDは200文字以内で入力してください" })
-    .nullable(),
-  googleReviewUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .max(500, { error: "URLは500文字以内で入力してください" })
-    .nullable()
-    .or(z.literal("")),
-  businessAttributes: z.record(z.string(), z.boolean()).nullable(),
-  paymentAccepted: z
-    .string()
-    .max(500, { error: "決済方法は500文字以内で入力してください" })
-    .nullable()
-    .or(z.literal("")),
-});
-
-export type MeoSettingsInput = z.infer<typeof meoSettingsSchema>;
-
 // robots.txt
 
 export const robotsTxtSettingsSchema = z.object({

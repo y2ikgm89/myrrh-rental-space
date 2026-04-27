@@ -87,16 +87,6 @@ export type BusinessHoursSettingsInput = {
   holidayNotice: string | null;
 };
 
-export type MeoSettingsInput = {
-  latitude: number | null;
-  longitude: number | null;
-  priceRange: string | null;
-  googleBusinessPlaceId: string | null;
-  googleReviewUrl: string | null;
-  businessAttributes: Record<string, boolean> | null;
-  paymentAccepted: string | null;
-};
-
 export type EmailSettingsInput = {
   senderEmail: string | null;
   senderName: string | null;
@@ -277,24 +267,6 @@ export async function updateBusinessHoursSettings(
     regularHolidays: data.regularHolidays ?? Prisma.JsonNull,
     specialHolidays: data.specialHolidays ?? Prisma.JsonNull,
     holidayNotice: data.holidayNotice,
-  };
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
-}
-
-export async function updateMeoSettings(data: MeoSettingsInput): Promise<void> {
-  const updateData = {
-    latitude: data.latitude,
-    longitude: data.longitude,
-    priceRange: data.priceRange,
-    googleBusinessPlaceId: data.googleBusinessPlaceId,
-    googleReviewUrl: normalizeNullableString(data.googleReviewUrl),
-    businessAttributes: data.businessAttributes ?? Prisma.JsonNull,
-    paymentAccepted: normalizeNullableString(data.paymentAccepted),
   };
 
   await prisma.settings.upsert({

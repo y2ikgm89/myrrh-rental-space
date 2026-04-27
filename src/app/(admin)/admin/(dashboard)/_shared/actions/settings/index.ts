@@ -37,7 +37,6 @@ export type {
   BusinessInfoInput,
   ContactInfoInput,
   BusinessHoursSettingsInput,
-  MeoSettingsInput,
   MetaSettingsInput,
   AnalyticsSettingsInput,
   SearchVerificationInput,
@@ -78,7 +77,6 @@ export {
   updateBusinessInfo,
   updateContactInfo,
   updateBusinessHoursSettings,
-  updateMeoSettings,
 } from "./business";
 
 // =============================================================================

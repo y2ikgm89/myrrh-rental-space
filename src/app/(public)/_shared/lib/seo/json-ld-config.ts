@@ -24,6 +24,7 @@ export interface WebSiteJsonLdData {
 }
 
 export interface OrganizationJsonLdData {
+  "@id"?: string;
   name: string;
   description?: string;
   url: string;
@@ -37,6 +38,9 @@ export interface OrganizationJsonLdData {
     postalCode?: string;
     addressCountry?: string;
   };
+  sameAs?: string[];
+  foundingDate?: string;
+  additionalType?: string;
 }
 
 interface OpeningHoursSpec {
@@ -46,54 +50,9 @@ interface OpeningHoursSpec {
   closes: string;
 }
 
-interface SpecialOpeningHoursSpec {
-  "@type": "OpeningHoursSpecification";
-  validFrom: string;
-  validThrough: string;
-  opens: string;
-  closes: string;
-}
-
-interface AmenityFeatureSpec {
-  "@type": "LocationFeatureSpecification";
-  name: string;
-  value: boolean;
-}
-
-export interface LocalBusinessJsonLdData {
-  name: string;
-  description?: string;
-  url: string;
-  logo?: string;
-  telephone?: string;
-  email?: string;
-  address?: {
-    streetAddress?: string;
-    addressLocality?: string;
-    addressRegion?: string;
-    postalCode?: string;
-    addressCountry?: string;
-  };
-  openingHoursSpecification?: OpeningHoursSpec[];
-  specialOpeningHoursSpecification?: SpecialOpeningHoursSpec[];
-  priceRange?: string;
-  geo?: {
-    latitude: number;
-    longitude: number;
-  };
-  hasMap?: string;
-  currenciesAccepted?: string;
-  paymentAccepted?: string;
-  foundingDate?: string;
-  additionalType?: string;
-  image?: string | string[];
-  sameAs?: string[];
-  amenityFeature?: AmenityFeatureSpec[];
-}
-
 /** @graph パターン用の統合データ */
 export interface GraphJsonLdData {
-  localBusiness: LocalBusinessJsonLdData;
+  organization: OrganizationJsonLdData;
   webSite: WebSiteJsonLdData;
 }
 
@@ -118,14 +77,24 @@ export async function getWebSiteJsonLdData(): Promise<WebSiteJsonLdData> {
  * Organization JSON-LD用データを取得
  */
 export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdData> {
-  const settings = await getOrganizationSettings();
+  const [settings, sameAs] = await Promise.all([
+    getOrganizationSettings(),
+    getSocialLinkUrls(),
+  ]);
 
   // 住所の構築
   const streetAddress = [settings?.streetAddress, settings?.buildingName]
     .filter(Boolean)
     .join(" ");
 
+  // foundingDate: ISO 8601形式
+  const foundingDate = settings?.establishedDate
+    ? (new Date(settings.establishedDate).toISOString().split("T")[0] ??
+      undefined)
+    : undefined;
+
   return omitUndefined({
+    "@id": `${BASE_URL}/#organization`,
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
     description:
       settings?.businessDescription || settings?.siteDescription || undefined,
@@ -143,6 +112,9 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
             addressCountry: "JP",
           })
         : undefined,
+    sameAs: sameAs.length > 0 ? sameAs : undefined,
+    foundingDate,
+    additionalType: "https://en.wikipedia.org/wiki/Coworking",
   });
 }
 
@@ -234,34 +206,6 @@ export function convertToOpeningHoursSpecification(
   return specs.length > 0 ? specs : undefined;
 }
 
-/**
- * specialHolidays JSON → specialOpeningHoursSpecification 変換
- * 休業日は opens/closes を "00:00" に設定（schema.org 公式パターン）
- */
-function convertToSpecialOpeningHours(
-  specialHolidays: unknown,
-): SpecialOpeningHoursSpec[] | undefined {
-  if (!Array.isArray(specialHolidays)) return undefined;
-
-  const specs: SpecialOpeningHoursSpec[] = [];
-
-  for (const dateStr of specialHolidays) {
-    if (typeof dateStr !== "string") continue;
-    // ISO 8601 日付形式チェック: YYYY-MM-DD
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
-
-    specs.push({
-      "@type": "OpeningHoursSpecification",
-      validFrom: dateStr,
-      validThrough: dateStr,
-      opens: "00:00",
-      closes: "00:00",
-    });
-  }
-
-  return specs.length > 0 ? specs : undefined;
-}
-
 /** 施設属性ラベルマッピング（フロントエンド表示でも再利用） */
 export const ATTR_LABELS: Record<string, string> = {
   wifi: "Wi-Fi",
@@ -275,110 +219,14 @@ export const ATTR_LABELS: Record<string, string> = {
 };
 
 /**
- * businessAttributes → amenityFeature 変換
- * value: true のもののみ出力
- */
-function convertToAmenityFeatures(
-  attrs: unknown,
-): AmenityFeatureSpec[] | undefined {
-  if (!isRecord(attrs)) {
-    return undefined;
-  }
-
-  const record = attrs;
-  const features: AmenityFeatureSpec[] = [];
-
-  for (const [key, value] of Object.entries(record)) {
-    if (value === true) {
-      features.push({
-        "@type": "LocationFeatureSpecification",
-        name: ATTR_LABELS[key] || key,
-        value: true,
-      });
-    }
-  }
-
-  return features.length > 0 ? features : undefined;
-}
-
-/**
- * LocalBusiness JSON-LD用データを取得
- */
-export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdData> {
-  const [settings, sameAs] = await Promise.all([
-    getOrganizationSettings(),
-    getSocialLinkUrls(),
-  ]);
-
-  // 住所の構築
-  const streetAddress = [settings?.streetAddress, settings?.buildingName]
-    .filter(Boolean)
-    .join(" ");
-
-  const lat = settings?.latitude ?? null;
-  const lng = settings?.longitude ?? null;
-
-  // geo + hasMap: 緯度経度が両方設定されている場合のみ
-  const geo =
-    lat !== null && lng !== null
-      ? { latitude: lat, longitude: lng }
-      : undefined;
-  const hasMap = geo
-    ? `https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`
-    : undefined;
-
-  // foundingDate: ISO 8601形式
-  const foundingDate = settings?.establishedDate
-    ? (new Date(settings.establishedDate).toISOString().split("T")[0] ??
-      undefined)
-    : undefined;
-
-  return omitUndefined({
-    name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
-    description:
-      settings?.businessDescription || settings?.siteDescription || undefined,
-    url: BASE_URL,
-    logo: settings?.headerLogoUrl || undefined,
-    telephone: settings?.phoneNumber || undefined,
-    email: settings?.email || undefined,
-    address:
-      settings?.postalCode || settings?.prefecture
-        ? omitUndefined({
-            postalCode: settings?.postalCode || undefined,
-            addressRegion: settings?.prefecture || undefined,
-            addressLocality: settings?.city || undefined,
-            streetAddress: streetAddress || undefined,
-            addressCountry: "JP",
-          })
-        : undefined,
-    openingHoursSpecification: convertToOpeningHoursSpecification(
-      settings?.businessHours,
-    ),
-    specialOpeningHoursSpecification: convertToSpecialOpeningHours(
-      settings?.specialHolidays,
-    ),
-    priceRange: settings?.priceRange || undefined,
-    geo,
-    hasMap,
-    currenciesAccepted: "JPY",
-    paymentAccepted: settings?.paymentAccepted || undefined,
-    foundingDate,
-    additionalType: "https://en.wikipedia.org/wiki/Coworking",
-    image: settings?.headerLogoUrl ? [settings.headerLogoUrl] : undefined,
-    sameAs: sameAs.length > 0 ? sameAs : undefined,
-    amenityFeature: convertToAmenityFeatures(settings?.businessAttributes),
-  });
-}
-
-/**
  * @graph パターン用の統合データを取得
- * LocalBusiness + WebSite を1つの JSON-LD で出力
+ * Organization + WebSite を1つの JSON-LD で出力
  */
 export async function getGraphJsonLdData(): Promise<GraphJsonLdData> {
-  const [localBusiness, webSite] = await Promise.all([
-    getLocalBusinessJsonLdData(),
+  const [organization, webSite] = await Promise.all([
+    getOrganizationJsonLdData(),
     getWebSiteJsonLdData(),
   ]);
 
-  return { localBusiness, webSite };
+  return { organization, webSite };
 }

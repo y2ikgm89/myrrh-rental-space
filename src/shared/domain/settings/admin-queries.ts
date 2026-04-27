@@ -22,7 +22,6 @@ import type {
 import { safeDecrypt } from "@/shared/lib/crypto";
 import { extractServiceAccountEmail } from "@/shared/lib/google-calendar/service-account";
 import {
-  parseBusinessAttributes,
   parseBusinessHours,
   parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
@@ -81,7 +80,6 @@ function toSettingsData(
     ...settings,
     businessHours: parseBusinessHours(settings.businessHours),
     regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
-    specialHolidays: parseStringArrayOrNull(settings.specialHolidays),
     stripeSecretKeyMasked: options.stripeSecretKeyMasked,
     stripeWebhookSecretMasked: options.stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked:
@@ -101,13 +99,6 @@ function toSettingsData(
     sidebarRecentCount: settings.sidebarRecentCount,
     sidebarPopularCount: settings.sidebarPopularCount,
     sidebarTocEnabled: settings.sidebarTocEnabled,
-    latitude: settings.latitude,
-    longitude: settings.longitude,
-    priceRange: settings.priceRange,
-    googleBusinessPlaceId: settings.googleBusinessPlaceId,
-    googleReviewUrl: settings.googleReviewUrl,
-    businessAttributes: parseBusinessAttributes(settings.businessAttributes),
-    paymentAccepted: settings.paymentAccepted,
     taxStandardRate: settings.taxStandardRate,
     taxReducedRate: settings.taxReducedRate,
     taxDisplayModeAdmin: settings.taxDisplayModeAdmin,

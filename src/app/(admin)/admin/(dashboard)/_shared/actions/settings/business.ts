@@ -15,18 +15,15 @@ import {
   updateBusinessHoursSettings as updateBusinessHoursSettingsCommand,
   updateBusinessInfo as updateBusinessInfoCommand,
   updateContactInfo as updateContactInfoCommand,
-  updateMeoSettings as updateMeoSettingsCommand,
 } from "@/shared/domain/settings/commands";
 
 import {
   businessInfoSchema,
   contactInfoSchema,
   businessHoursSettingsSchema,
-  meoSettingsSchema,
   type BusinessInfoInput,
   type ContactInfoInput,
   type BusinessHoursSettingsInput,
-  type MeoSettingsInput,
 } from "./schemas";
 
 export async function updateBusinessInfo(
@@ -90,27 +87,6 @@ export async function updateBusinessHoursSettings(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
       updateTag(CACHE_TAGS.RESERVATIONS);
-    },
-  });
-}
-
-export async function updateMeoSettings(
-  data: MeoSettingsInput,
-): Promise<MutationResult> {
-  const parsed = meoSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateMeoSettingsCommand(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
     },
   });
 }

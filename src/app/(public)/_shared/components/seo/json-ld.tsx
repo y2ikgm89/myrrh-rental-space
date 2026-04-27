@@ -11,67 +11,14 @@
 /* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
 import type { ReactElement } from "react";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import type { OrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
+import type { LocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-json-ld";
 
 const BASE_URL = getBaseUrl();
 
 // =============================================================================
 // Types
 // =============================================================================
-
-interface OrganizationData {
-  name: string;
-  description?: string;
-  url?: string;
-  logo?: string;
-  telephone?: string;
-  email?: string;
-  address?: {
-    streetAddress?: string;
-    addressLocality?: string;
-    addressRegion?: string;
-    postalCode?: string;
-    addressCountry?: string;
-  };
-  sameAs?: string[];
-}
-
-interface OpeningHoursSpecification {
-  "@type": "OpeningHoursSpecification";
-  dayOfWeek: string | string[];
-  opens: string;
-  closes: string;
-}
-
-interface AmenityFeature {
-  "@type": "LocationFeatureSpecification";
-  name: string;
-  value: boolean;
-}
-
-interface SpecialOpeningHoursSpecification {
-  "@type": "OpeningHoursSpecification";
-  validFrom: string;
-  validThrough: string;
-  opens: string;
-  closes: string;
-}
-
-interface LocalBusinessData extends OrganizationData {
-  openingHoursSpecification?: OpeningHoursSpecification[];
-  specialOpeningHoursSpecification?: SpecialOpeningHoursSpecification[];
-  priceRange?: string;
-  geo?: {
-    latitude: number;
-    longitude: number;
-  };
-  hasMap?: string;
-  currenciesAccepted?: string;
-  paymentAccepted?: string;
-  foundingDate?: string;
-  additionalType?: string;
-  image?: string | string[];
-  amenityFeature?: AmenityFeature[];
-}
 
 interface ProductData {
   name: string;
@@ -195,145 +142,63 @@ function JsonLd({ data }: JsonLdProps): ReactElement {
 // =============================================================================
 
 /**
+ * Organization 構造化データオブジェクトを構築（@graph 内で使用）
+ */
+function buildOrganizationData(
+  org: OrganizationJsonLdData & { id?: string },
+): Record<string, unknown> {
+  return {
+    "@type": "Organization",
+    "@id": org.id ?? org["@id"] ?? `${org.url}/#organization`,
+    name: org.name,
+    ...(org.description && { description: org.description }),
+    url: org.url,
+    ...(org.logo && { logo: org.logo }),
+    ...(org.telephone && { telephone: org.telephone }),
+    ...(org.email && { email: org.email }),
+    ...(org.address && {
+      address: {
+        "@type": "PostalAddress",
+        ...org.address,
+        addressCountry: org.address.addressCountry ?? "JP",
+      },
+    }),
+    ...(org.sameAs && org.sameAs.length > 0 && { sameAs: org.sameAs }),
+    ...(org.foundingDate && { foundingDate: org.foundingDate }),
+    ...(org.additionalType && { additionalType: org.additionalType }),
+  };
+}
+
+/**
  * Organization構造化データ
  */
-export function OrganizationJsonLd({
-  name,
-  description,
-  url = BASE_URL,
-  logo,
-  telephone,
-  email,
-  address,
-  sameAs,
-}: OrganizationData): ReactElement {
+export function OrganizationJsonLd(org: OrganizationJsonLdData): ReactElement {
   const data = {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    name,
-    ...(description && { description }),
-    url,
-    ...(logo && { logo }),
-    ...(telephone && { telephone }),
-    ...(email && { email }),
-    ...(address && {
-      address: {
-        "@type": "PostalAddress",
-        ...address,
-        addressCountry: address.addressCountry || "JP",
-      },
-    }),
-    ...(sameAs && sameAs.length > 0 && { sameAs }),
+    ...buildOrganizationData(org),
   };
 
   return <JsonLd data={data} />;
 }
 
 /**
- * LocalBusiness構造化データ（レンタルスペース事業者向け）
- */
-/**
- * LocalBusiness JSON-LD オブジェクトを構築（コンポーネント版と @graph 版で共有）
- */
-function buildLocalBusinessData(
-  props: LocalBusinessData & { id?: string },
-): Record<string, unknown> {
-  const {
-    name,
-    description,
-    url = BASE_URL,
-    logo,
-    telephone,
-    email,
-    address,
-    openingHoursSpecification,
-    specialOpeningHoursSpecification,
-    priceRange,
-    geo,
-    hasMap,
-    currenciesAccepted,
-    paymentAccepted,
-    foundingDate,
-    additionalType,
-    image,
-    amenityFeature,
-    sameAs,
-    id,
-  } = props;
-
-  return {
-    "@type": "LocalBusiness",
-    "@id": id || `${url}/#organization`,
-    name,
-    ...(description && { description }),
-    url,
-    ...(logo && { logo }),
-    ...(image ? { image } : logo ? { image: logo } : {}),
-    ...(telephone && { telephone }),
-    ...(email && { email }),
-    ...(address && {
-      address: {
-        "@type": "PostalAddress",
-        ...address,
-        addressCountry: address.addressCountry || "JP",
-      },
-    }),
-    ...(openingHoursSpecification &&
-      openingHoursSpecification.length > 0 && {
-        openingHoursSpecification,
-      }),
-    ...(specialOpeningHoursSpecification &&
-      specialOpeningHoursSpecification.length > 0 && {
-        specialOpeningHoursSpecification,
-      }),
-    ...(priceRange && { priceRange }),
-    ...(geo && {
-      geo: {
-        "@type": "GeoCoordinates",
-        latitude: geo.latitude,
-        longitude: geo.longitude,
-      },
-    }),
-    ...(hasMap && { hasMap }),
-    ...(currenciesAccepted && { currenciesAccepted }),
-    ...(paymentAccepted && { paymentAccepted }),
-    ...(foundingDate && { foundingDate }),
-    ...(additionalType && { additionalType }),
-    ...(amenityFeature && amenityFeature.length > 0 && { amenityFeature }),
-    ...(sameAs && sameAs.length > 0 && { sameAs }),
-  };
-}
-
-/**
- * LocalBusiness構造化データ（レンタルスペース事業者向け）
- */
-export function LocalBusinessJsonLd(props: LocalBusinessData): ReactElement {
-  const data = {
-    "@context": "https://schema.org",
-    ...buildLocalBusinessData(props),
-  };
-
-  return <JsonLd data={data} />;
-}
-
-/**
- * @graph パターン: LocalBusiness + WebSite を1つの JSON-LD で出力
+ * @graph パターン: Organization + WebSite を1つの JSON-LD で出力
  * エンティティ間の @id 相互参照でナレッジグラフ理解を向上
  */
 export function GraphJsonLd({
-  localBusiness,
+  organization,
   webSite,
 }: {
-  localBusiness: LocalBusinessData;
+  organization: OrganizationJsonLdData;
   webSite: { name: string; description?: string; url?: string };
 }): ReactElement {
-  const orgId = `${localBusiness.url || BASE_URL}/#organization`;
+  const orgId = `${organization.url}/#organization`;
   const websiteId = `${webSite.url || BASE_URL}/#website`;
 
   const data = {
     "@context": "https://schema.org",
     "@graph": [
-      buildLocalBusinessData({ ...localBusiness, id: orgId }),
+      buildOrganizationData({ ...organization, id: orgId }),
       {
         "@type": "WebSite",
         "@id": websiteId,
@@ -353,6 +218,56 @@ export function GraphJsonLd({
     ],
   };
 
+  return <JsonLd data={data} />;
+}
+
+/**
+ * 単一拠点詳細ページ用 LocalBusiness JSON-LD
+ */
+export function LocationLocalBusinessJsonLd(
+  props: LocationLocalBusinessJsonLdData,
+): ReactElement {
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    ...props,
+  };
+  if (props.geo) {
+    data["geo"] = {
+      "@type": "GeoCoordinates",
+      latitude: props.geo.latitude,
+      longitude: props.geo.longitude,
+    };
+  }
+  return <JsonLd data={data} />;
+}
+
+/**
+ * /access 一覧ページ用 LocalBusiness JSON-LD（複数拠点を 1 script にまとめる）
+ */
+export function LocationsLocalBusinessJsonLd({
+  locations,
+}: {
+  locations: LocationLocalBusinessJsonLdData[];
+}): ReactElement | null {
+  if (locations.length === 0) return null;
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": locations.map((loc) => {
+      const item: Record<string, unknown> = {
+        "@type": "LocalBusiness",
+        ...loc,
+      };
+      if (loc.geo) {
+        item["geo"] = {
+          "@type": "GeoCoordinates",
+          latitude: loc.geo.latitude,
+          longitude: loc.geo.longitude,
+        };
+      }
+      return item;
+    }),
+  };
   return <JsonLd data={data} />;
 }
 

@@ -7,7 +7,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { IconExternalLink } from "@tabler/icons-react";
+
 import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
 import { getFooterSettings } from "@/shared/domain/settings/queries/display";
@@ -136,9 +136,6 @@ const NAV_LINK_CLASS =
 
 const CONTACT_LINK_CLASS =
   "text-foreground transition-colors hover:underline hover:underline-offset-4 focus-visible:underline focus-visible:underline-offset-4 focus-visible:outline-none";
-
-const GOOGLE_LINK_CLASS =
-  "inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
 
 const HEADING_CLASS =
   "text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground";
@@ -306,41 +303,6 @@ export async function Footer(): Promise<ReactElement> {
                       </div>
                     ))}
                   </div>
-                </li>
-              )}
-
-              {(info.googleMapsUrl || info.googleReviewUrl) && (
-                <li className="flex flex-col gap-2 pt-1">
-                  {info.googleMapsUrl && (
-                    <a
-                      href={info.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={GOOGLE_LINK_CLASS}
-                    >
-                      Google Maps で見る
-                      <IconExternalLink
-                        className="h-3.5 w-3.5"
-                        aria-hidden="true"
-                      />
-                      <span className="sr-only"> (新しいタブで開く)</span>
-                    </a>
-                  )}
-                  {info.googleReviewUrl && (
-                    <a
-                      href={info.googleReviewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={GOOGLE_LINK_CLASS}
-                    >
-                      Google で口コミを書く
-                      <IconExternalLink
-                        className="h-3.5 w-3.5"
-                        aria-hidden="true"
-                      />
-                      <span className="sr-only"> (新しいタブで開く)</span>
-                    </a>
-                  )}
                 </li>
               )}
             </ul>

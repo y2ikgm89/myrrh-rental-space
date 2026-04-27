@@ -393,8 +393,14 @@ async function seedLocations() {
   const locations = [
     {
       name: "本館",
+      slug: "honkan",
       description: "表参道駅から徒歩5分の好立地。全フロアにWi-Fi完備。",
       address: "東京都渋谷区神宮前1-1-1 サンプルビル",
+      postalCode: "150-0001",
+      prefecture: "東京都",
+      city: "渋谷区",
+      streetAddress: "神宮前1-1-1",
+      buildingName: "サンプルビル",
       access:
         "東京メトロ「表参道駅」A1出口より徒歩5分\nJR「原宿駅」表参道口より徒歩8分",
       parkingInfo:
@@ -409,11 +415,26 @@ async function seedLocations() {
       imageUrl: "/images/seed/location-main.svg",
       sortOrder: 0,
       isPublished: true,
+      latitude: 35.6651,
+      longitude: 139.7119,
+      phoneNumber: "03-1234-5678",
+      email: "honkan@example.com",
+      googleBusinessPlaceId: null,
+      googleReviewUrl: null,
+      priceRange: "¥1,000〜¥5,000/時間",
+      paymentAccepted: "現金, クレジットカード, 電子マネー",
+      specialHolidays: Prisma.JsonNull,
     },
     {
       name: "別館",
+      slug: "bekkan",
       description: "落ち着いた雰囲気の別館。少人数のミーティングに最適。",
       address: "東京都渋谷区神宮前1-2-3 別館ビル",
+      postalCode: "150-0001",
+      prefecture: "東京都",
+      city: "渋谷区",
+      streetAddress: "神宮前1-2-3",
+      buildingName: "別館ビル",
       access: "本館より徒歩2分\n表参道駅A1出口より徒歩7分",
       parkingInfo: "専用駐車場はございません。本館駐車場をご利用ください。",
       amenities: {
@@ -425,11 +446,26 @@ async function seedLocations() {
       imageUrl: "/images/seed/location-annex.svg",
       sortOrder: 1,
       isPublished: true,
+      latitude: 35.6653,
+      longitude: 139.7121,
+      phoneNumber: "03-1234-5679",
+      email: "bekkan@example.com",
+      googleBusinessPlaceId: null,
+      googleReviewUrl: null,
+      priceRange: "¥800〜¥3,000/時間",
+      paymentAccepted: "現金, クレジットカード",
+      specialHolidays: Prisma.JsonNull,
     },
     {
       name: "新宿支店",
+      slug: "shinjuku-ten",
       description: "新宿駅直結でアクセス抜群。大人数のセミナーにも対応。",
       address: "東京都新宿区西新宿1-1-1 新宿タワー",
+      postalCode: "160-0023",
+      prefecture: "東京都",
+      city: "新宿区",
+      streetAddress: "西新宿1-1-1",
+      buildingName: "新宿タワー",
       access: "JR「新宿駅」西口直結\n都営大江戸線「新宿西口駅」D5出口直結",
       parkingInfo: "新宿タワー地下駐車場（有料・先着順）",
       amenities: {
@@ -445,12 +481,19 @@ async function seedLocations() {
       imageUrl: "/images/seed/location-shinjuku.svg",
       sortOrder: 2,
       isPublished: false,
+      latitude: 35.6896,
+      longitude: 139.6917,
+      phoneNumber: "03-9876-5432",
+      email: "shinjuku@example.com",
+      googleBusinessPlaceId: null,
+      googleReviewUrl: null,
+      priceRange: "¥1,500〜¥8,000/時間",
+      paymentAccepted: "現金, クレジットカード, 電子マネー, QRコード決済",
+      specialHolidays: Prisma.JsonNull,
     },
   ];
 
   // upsert で idempotent 化（name @unique が SSoT キー）
-  // createMany({ skipDuplicates: true }) は name に unique がないと UUID 衝突のみで
-  // skip 判定されるため、再実行ごとに同名レコードが量産される
   for (const loc of locations) {
     await prisma.location.upsert({
       where: { name: loc.name },

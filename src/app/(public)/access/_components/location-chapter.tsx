@@ -10,6 +10,8 @@
  */
 
 import type { ReactElement } from "react";
+import Link from "next/link";
+import type { Route } from "next";
 import {
   IconExternalLink,
   IconMapPin,
@@ -194,6 +196,16 @@ export function LocationChapter({
           <p className="mx-auto max-w-2xl pt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
             {location.description}
           </p>
+        )}
+        {location.slug !== "main-location" && (
+          <div className="pt-1">
+            <Link
+              href={`/access/${location.slug}` as Route<string>}
+              className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              詳細を見る
+            </Link>
+          </div>
         )}
       </header>
 

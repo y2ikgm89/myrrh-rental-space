@@ -69,7 +69,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
 
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
   const initialRegularHolidays = settings.regularHolidays ?? [];
-  const initialSpecialHolidays = settings.specialHolidays ?? [];
+  const initialSpecialHolidays: string[] = [];
 
   /**
    * 定休日設定を営業時間に反映

@@ -384,21 +384,39 @@ model StaffInvitation {
 // ==============================================
 
 model Location {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String   @unique // 例: 本館、渋谷店（seed idempotency 保証）
-  description   String?  @db.Text
-  address       String // 住所
-  access        String?  @db.Text // アクセス情報
-  parkingInfo   String?  @db.Text // 駐車場案内（拠点ごと）
-  amenities     Json     @default("{}") // 設備属性 {"wifi": true, ...}（拠点ごと）
-  imageUrl      String // 建物画像（必須）
-  imageUrls     Json     @default("[]") // 追加画像
-  businessHours Json? // 営業時間
-  sortOrder     Int      @default(0)
-  isPublished   Boolean  @default(false)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(uuid()) @db.Uuid
+  slug            String   @unique @db.VarChar(255)
+  name            String   @unique
+  description     String?  @db.Text
+  address         String
+  postalCode      String?
+  prefecture      String?
+  city            String?
+  streetAddress   String?
+  buildingName    String?
+  access          String?  @db.Text
+  parkingInfo     String?  @db.Text
+  amenities       Json     @default("{}")
+  imageUrl        String
+  imageUrls       Json     @default("[]")
+  businessHours   Json?
+  specialHolidays Json?
+
+  // MEO（Local SEO）— Settings から移管
+  latitude              Float?
+  longitude             Float?
+  googleBusinessPlaceId String?
+  googleReviewUrl       String?
+  priceRange            String?  @db.VarChar(100)
+  paymentAccepted       String?
+  phoneNumber           String?
+  email                 String?
+
+  sortOrder       Int      @default(0)
+  isPublished     Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   spaces Space[]
@@ -1118,21 +1136,11 @@ model Settings {
   // Business Hours (営業時間)
   businessHours   Json? // 曜日ごとの営業時間
   regularHolidays Json? // 定休日（曜日）
-  specialHolidays Json? // 特別休業日（日付リスト）
   holidayNotice   String? @db.Text // 休業日のお知らせ
 
   // Access Info (アクセス情報)
   accessInfo  String? @db.Text // 交通案内（最寄り駅・路線・徒歩分数等）
   parkingInfo String? @db.Text // 駐車場案内（台数・近隣パーキング等）
-
-  // MEO Settings (ローカル検索最適化)
-  latitude              Float?   // 緯度（例: 35.6812）
-  longitude             Float?   // 経度（例: 139.7671）
-  priceRange            String?  // 価格帯（例: "¥1,000〜¥5,000/時間"）
-  googleBusinessPlaceId String?  // Google Business Profile Place ID
-  googleReviewUrl       String?  // Google口コミ投稿URL
-  businessAttributes    Json?    // 施設属性 {"wifi": true, "parking": true, ...}
-  paymentAccepted       String?  // 決済方法（例: "現金, クレジットカード, 電子マネー"）
 
   // Email Settings
   senderEmail                       String?

@@ -43,15 +43,33 @@ function businessHoursToJson(
 
 function toLocationData(data: LocationFormData) {
   return {
+    slug: data.slug,
     name: data.name,
     description: data.description || null,
     address: data.address,
+    postalCode: data.postalCode || null,
+    prefecture: data.prefecture || null,
+    city: data.city || null,
+    streetAddress: data.streetAddress || null,
+    buildingName: data.buildingName || null,
     access: data.access || null,
     parkingInfo: data.parkingInfo || null,
     amenities: data.amenities as Prisma.InputJsonValue,
     imageUrl: data.imageUrl,
     imageUrls: data.imageUrls.map((image) => image.url),
     businessHours: businessHoursToJson(data.businessHours ?? null),
+    specialHolidays:
+      data.specialHolidays && data.specialHolidays.length > 0
+        ? (data.specialHolidays as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
+    latitude: data.latitude ?? null,
+    longitude: data.longitude ?? null,
+    googleBusinessPlaceId: data.googleBusinessPlaceId || null,
+    googleReviewUrl: data.googleReviewUrl || null,
+    priceRange: data.priceRange || null,
+    paymentAccepted: data.paymentAccepted || null,
+    phoneNumber: data.phoneNumber || null,
+    email: data.email || null,
     sortOrder: data.sortOrder,
     isPublished: data.isPublished,
   };
@@ -82,26 +100,48 @@ async function ensureLocationExists(id: string): Promise<{
 
 export async function createLocation(
   data: LocationFormData,
-): Promise<{ id: string }> {
+): Promise<{ id: string; slug: string }> {
+  const existing = await prisma.location.findUnique({
+    where: { slug: data.slug },
+    select: { id: true },
+  });
+  if (existing) {
+    throw new DomainError(
+      `スラッグ "${data.slug}" は既に使用されています`,
+      "DUPLICATE",
+    );
+  }
+
   const location = await prisma.location.create({
     data: toLocationData(data),
   });
 
-  return { id: location.id };
+  return { id: location.id, slug: location.slug };
 }
 
 export async function updateLocation(
   id: string,
   data: LocationFormData,
-): Promise<{ id: string }> {
+): Promise<{ id: string; slug: string }> {
   await ensureLocationExists(id);
+
+  const slugConflict = await prisma.location.findUnique({
+    where: { slug: data.slug },
+    select: { id: true },
+  });
+  if (slugConflict && slugConflict.id !== id) {
+    throw new DomainError(
+      `スラッグ "${data.slug}" は既に使用されています`,
+      "DUPLICATE",
+    );
+  }
 
   await prisma.location.update({
     where: { id },
     data: toLocationData(data),
   });
 
-  return { id };
+  return { id, slug: data.slug };
 }
 
 export async function toggleLocationPublish(

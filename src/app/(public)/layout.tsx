@@ -140,12 +140,17 @@ async function HeadContent(): Promise<ReactElement> {
 }
 
 /**
- * 構造化データ: @graph パターン（LocalBusiness + WebSite）
+ * 構造化データ: @graph パターン（Organization + WebSite）
  * エンティティ間の @id 相互参照でナレッジグラフ理解を向上
  */
 async function StructuredDataContent(): Promise<ReactElement> {
   const graphData = await getGraphJsonLdData();
-  return <GraphJsonLd {...graphData} />;
+  return (
+    <GraphJsonLd
+      organization={graphData.organization}
+      webSite={graphData.webSite}
+    />
+  );
 }
 
 /**
