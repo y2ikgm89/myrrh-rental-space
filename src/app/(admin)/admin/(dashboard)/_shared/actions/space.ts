@@ -16,6 +16,7 @@ import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import {
   createSpaceCommand,
   deleteSpaceCommand,
+  duplicateSpaceCommand,
   toggleSpacePublishedCommand,
   updateSpaceCommand,
   updateSpacePublishCommand,
@@ -167,5 +168,22 @@ export async function toggleSpacePublished(
     afterSuccess: () => {
       revalidateSpaces(parsed.data);
     },
+  });
+}
+
+export async function duplicateSpace(
+  id: string,
+): Promise<MutationResult<{ id: string; slug: string }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
+  return executeAdminMutationResult({
+    resource: "space",
+    action: "create",
+    execute: async () => duplicateSpaceCommand(validated.data),
+    afterSuccess: (data) => {
+      revalidateSpaces(data.id);
+    },
+    resolveAuditResourceId: (data) => data.id,
   });
 }
