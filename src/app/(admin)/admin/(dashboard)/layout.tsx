@@ -30,6 +30,7 @@ import { hasPermission } from "@/admin/lib/permissions";
 import {
   NotificationBellFallback,
   NotificationBellSlot,
+  SearchTriggerSlot,
   TopBarBrandingFallback,
   TopBarBrandingSlot,
 } from "./_components/TopBarSlots";
@@ -37,6 +38,11 @@ import {
   TopBarUserBadge,
   TopBarUserBadgeFallback,
 } from "./_components/TopBarUserBadge";
+import { CommandPaletteProvider } from "./_shared/components/command-palette/CommandPaletteProvider";
+import { CommandPalette } from "./_shared/components/command-palette/CommandPalette";
+import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
+import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions";
+import { getRecentAuditedResources } from "@/shared/domain/audit/recents-queries";
 
 export default async function DashboardLayout({
   children,
@@ -50,47 +56,59 @@ export default async function DashboardLayout({
       hasPermission(user.role, permission.resource, permission.action),
   );
 
+  const navItems = getNavItemsForRole(user.role);
+  const quickActions = getQuickActionsForRole(user.role);
+  const recents = await getRecentAuditedResources(user.id, user.role, 8);
+
   return (
     <AdminLayoutProvider>
       <NotificationPollingProvider>
         <ConfirmProvider>
           <NuqsAdapter>
-            <div className="min-h-screen bg-background">
-              {/* レスポンシブサイドバー */}
-              <ResponsiveSidebar
-                items={sidebarItems}
-                userInfo={
-                  <Suspense fallback={<UserInfoSkeleton />}>
-                    <UserInfo />
-                  </Suspense>
-                }
-              />
+            <CommandPaletteProvider
+              navItems={navItems}
+              quickActions={quickActions}
+              recents={recents}
+            >
+              <div className="min-h-screen bg-background">
+                {/* レスポンシブサイドバー */}
+                <ResponsiveSidebar
+                  items={sidebarItems}
+                  userInfo={
+                    <Suspense fallback={<UserInfoSkeleton />}>
+                      <UserInfo />
+                    </Suspense>
+                  }
+                />
 
-              {/* メインコンテンツエリア */}
-              <MainContent
-                topBar={
-                  <TopBar
-                    branding={
-                      <Suspense fallback={<TopBarBrandingFallback />}>
-                        <TopBarBrandingSlot />
-                      </Suspense>
-                    }
-                    notifications={
-                      <Suspense fallback={<NotificationBellFallback />}>
-                        <NotificationBellSlot />
-                      </Suspense>
-                    }
-                    userBadge={
-                      <Suspense fallback={<TopBarUserBadgeFallback />}>
-                        <TopBarUserBadge />
-                      </Suspense>
-                    }
-                  />
-                }
-              >
-                {children}
-              </MainContent>
-            </div>
+                {/* メインコンテンツエリア */}
+                <MainContent
+                  topBar={
+                    <TopBar
+                      branding={
+                        <Suspense fallback={<TopBarBrandingFallback />}>
+                          <TopBarBrandingSlot />
+                        </Suspense>
+                      }
+                      notifications={
+                        <Suspense fallback={<NotificationBellFallback />}>
+                          <NotificationBellSlot />
+                        </Suspense>
+                      }
+                      userBadge={
+                        <Suspense fallback={<TopBarUserBadgeFallback />}>
+                          <TopBarUserBadge />
+                        </Suspense>
+                      }
+                      searchTrigger={<SearchTriggerSlot />}
+                    />
+                  }
+                >
+                  {children}
+                </MainContent>
+                <CommandPalette />
+              </div>
+            </CommandPaletteProvider>
           </NuqsAdapter>
         </ConfirmProvider>
       </NotificationPollingProvider>

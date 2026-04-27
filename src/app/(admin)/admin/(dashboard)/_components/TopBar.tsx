@@ -20,9 +20,15 @@ type TopBarProps = {
   branding: ReactNode;
   notifications: ReactNode;
   userBadge: ReactNode;
+  searchTrigger?: ReactNode;
 };
 
-export function TopBar({ branding, notifications, userBadge }: TopBarProps) {
+export function TopBar({
+  branding,
+  notifications,
+  userBadge,
+  searchTrigger,
+}: TopBarProps) {
   const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
 
@@ -54,6 +60,7 @@ export function TopBar({ branding, notifications, userBadge }: TopBarProps) {
         <Link href="/admin" className="flex items-center">
           {branding}
         </Link>
+        {searchTrigger}
       </div>
 
       {/* 右: アクション */}

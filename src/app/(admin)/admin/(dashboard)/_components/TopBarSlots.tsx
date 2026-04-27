@@ -3,6 +3,7 @@ import { getAdminBrandingSettings } from "@/shared/domain/settings/queries/organ
 import { getRecentNotifications } from "@/admin/queries/notification";
 import { NotificationBell } from "./NotificationBell";
 import { TopBarBranding } from "./TopBarBranding";
+import { SearchTriggerButton } from "../_shared/components/command-palette/SearchTriggerButton";
 import type { ReactElement } from "react";
 
 export function TopBarBrandingFallback(): ReactElement {
@@ -45,4 +46,8 @@ export async function NotificationBellSlot(): Promise<ReactElement> {
       }))}
     />
   );
+}
+
+export function SearchTriggerSlot(): ReactElement {
+  return <SearchTriggerButton />;
 }
