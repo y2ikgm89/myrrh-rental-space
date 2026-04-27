@@ -1,10 +1,17 @@
 "use client";
 
-import { Table, TableBody, TableCell, TableRow } from "@/admin/components/ui";
+import { useState } from "react";
+import { Table, TableBody, TableCell } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { EventStatusBadge } from "@/admin/components/status-badges";
+import {
+  CheckboxCell,
+  ClickableTableRow,
+  stopRowClick,
+} from "@/admin/components/table";
 import { EventActionCell } from "./EventActionCell";
 import { EventTableHeader } from "./EventTableHeader";
+import { EventBulkActions } from "./EventBulkActions";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { getEvents } from "@/shared/domain/events/admin-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
@@ -16,6 +23,26 @@ type EventTableProps = {
 };
 
 export function EventTable({ events }: EventTableProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const allIds = events.map((e) => e.id);
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allIds);
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
+
   if (events.length === 0) {
     return (
       <EmptyState
@@ -26,47 +53,68 @@ export function EventTable({ events }: EventTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="overflow-x-auto">
-        <Table>
-          <EventTableHeader />
-          <TableBody>
-            {events.map((event) => (
-              <TableRow key={event.id}>
-                <TableCell className="whitespace-nowrap">
-                  <EventStatusBadge status={event.status} />
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="max-w-xs truncate font-medium">
-                      {event.title}
+    <>
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          <Table>
+            <EventTableHeader
+              allSelected={allSelected}
+              onToggleAll={toggleAll}
+            />
+            <TableBody>
+              {events.map((event) => (
+                <ClickableTableRow
+                  key={event.id}
+                  href={`/admin/events/${event.id}`}
+                  aria-label={`${event.title} のイベントを編集`}
+                >
+                  <TableCell onClick={stopRowClick}>
+                    <CheckboxCell
+                      checked={selectedIds.includes(event.id)}
+                      onChange={() => toggleOne(event.id)}
+                      aria-label={`${event.title} を選択`}
+                    />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <EventStatusBadge status={event.status} />
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="max-w-xs truncate font-medium">
+                        {event.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        /{event.slug}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      /{event.slug}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {formatDateTimeShort(event.startTime)}
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {formatDateTimeShort(event.endTime)}
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground lg:table-cell">
-                  {formatEventVenue({
-                    location: event.location,
-                    space: event.space,
-                    addressDetail: event.addressDetail,
-                  }) ?? "-"}
-                </TableCell>
-                <TableCell>
-                  <EventActionCell eventId={event.id} status={event.status} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {formatDateTimeShort(event.startTime)}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {formatDateTimeShort(event.endTime)}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground lg:table-cell">
+                    {formatEventVenue({
+                      location: event.location,
+                      space: event.space,
+                      addressDetail: event.addressDetail,
+                    }) ?? "-"}
+                  </TableCell>
+                  <TableCell onClick={stopRowClick}>
+                    <EventActionCell eventId={event.id} status={event.status} />
+                  </TableCell>
+                </ClickableTableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+
+      <EventBulkActions
+        selectedIds={selectedIds}
+        onClear={() => setSelectedIds([])}
+      />
+    </>
   );
 }

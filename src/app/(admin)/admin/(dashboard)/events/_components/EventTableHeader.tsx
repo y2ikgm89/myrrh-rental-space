@@ -2,12 +2,20 @@
 
 import { useQueryStates } from "nuqs";
 import { adminEventSearchParamsParsers } from "@/shared/lib/nuqs";
-import { SortableColumnHeader } from "@/admin/components/table";
+import { CheckboxCell, SortableColumnHeader } from "@/admin/components/table";
 import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
 type EventSortBy = "startTime" | "createdAt" | "title";
 
-export function EventTableHeader() {
+type EventTableHeaderProps = {
+  allSelected: boolean;
+  onToggleAll: () => void;
+};
+
+export function EventTableHeader({
+  allSelected,
+  onToggleAll,
+}: EventTableHeaderProps) {
   const [params, setParams] = useQueryStates(adminEventSearchParamsParsers, {
     history: "push",
     shallow: false,
@@ -25,6 +33,13 @@ export function EventTableHeader() {
   return (
     <TableHeader>
       <TableRow>
+        <TableHead className="w-10">
+          <CheckboxCell
+            checked={allSelected}
+            onChange={() => onToggleAll()}
+            aria-label="すべての行を選択"
+          />
+        </TableHead>
         <TableHead>ステータス</TableHead>
         <SortableColumnHeader
           column="title"
