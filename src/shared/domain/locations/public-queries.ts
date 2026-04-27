@@ -145,14 +145,16 @@ export async function getPublishedLocationsForAccess(): Promise<
 }
 
 /**
- * JSON-LD / SEO 用: 公開済み Location を軽量取得
+ * JSON-LD / SEO 用: 公開済み Location を取得
  *
- * LocalBusiness JSON-LD 生成に必要な最小限フィールドを提供。
+ * LocalBusiness JSON-LD 生成に必要なフィールドを提供。
+ * openingHoursSpecification / amenityFeature 等のリッチ要素も含む。
  */
 export type LocationForSeo = {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
+  readonly description: string | null;
   readonly address: string;
   readonly postalCode: string | null;
   readonly prefecture: string | null;
@@ -168,6 +170,9 @@ export type LocationForSeo = {
   readonly priceRange: string | null;
   readonly paymentAccepted: string | null;
   readonly imageUrl: string;
+  readonly businessHours: unknown;
+  readonly specialHolidays: unknown;
+  readonly amenities: unknown;
 };
 
 export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
@@ -184,6 +189,7 @@ export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
           id: true,
           slug: true,
           name: true,
+          description: true,
           address: true,
           postalCode: true,
           prefecture: true,
@@ -199,6 +205,9 @@ export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
           priceRange: true,
           paymentAccepted: true,
           imageUrl: true,
+          businessHours: true,
+          specialHolidays: true,
+          amenities: true,
         },
       }),
     fallback: [],
@@ -225,6 +234,7 @@ export async function getPublishedLocationForSeoBySlug(
           id: true,
           slug: true,
           name: true,
+          description: true,
           address: true,
           postalCode: true,
           prefecture: true,
@@ -240,6 +250,9 @@ export async function getPublishedLocationForSeoBySlug(
           priceRange: true,
           paymentAccepted: true,
           imageUrl: true,
+          businessHours: true,
+          specialHolidays: true,
+          amenities: true,
         },
       }),
     fallback: null,

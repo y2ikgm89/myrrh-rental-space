@@ -17,6 +17,14 @@ import {
   type LocationForSeo,
 } from "@/shared/domain/locations/public-queries";
 import { omitUndefined } from "@/shared/lib/serialize";
+import {
+  parseBusinessAttributes,
+  parseStringArray,
+} from "@/shared/lib/json-validators";
+import {
+  convertToOpeningHoursSpecification,
+  ATTR_LABELS,
+} from "@/public/lib/seo/json-ld-config";
 
 const BASE_URL = getBaseUrl();
 
@@ -24,6 +32,7 @@ export interface LocationLocalBusinessJsonLdData {
   "@id"?: string;
   name: string;
   url: string;
+  description?: string;
   image?: string | string[];
   telephone?: string;
   email?: string;
@@ -39,6 +48,24 @@ export interface LocationLocalBusinessJsonLdData {
   hasMap?: string;
   currenciesAccepted?: string;
   paymentAccepted?: string;
+  openingHoursSpecification?: Array<{
+    "@type": "OpeningHoursSpecification";
+    dayOfWeek: string | string[];
+    opens: string;
+    closes: string;
+  }>;
+  specialOpeningHoursSpecification?: Array<{
+    "@type": "OpeningHoursSpecification";
+    validFrom: string;
+    validThrough: string;
+    opens: string;
+    closes: string;
+  }>;
+  amenityFeature?: Array<{
+    "@type": "LocationFeatureSpecification";
+    name: string;
+    value: boolean;
+  }>;
   branchOf?: { "@id": string };
 }
 
@@ -65,10 +92,35 @@ export function buildLocationLocalBusinessJsonLdData(
     ? `https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`
     : undefined;
 
+  const openingHoursSpecification =
+    convertToOpeningHoursSpecification(location.businessHours) ?? undefined;
+
+  const specialHolidayDates = parseStringArray(location.specialHolidays);
+  const specialOpeningHoursSpecification =
+    specialHolidayDates.length > 0
+      ? specialHolidayDates.map((date) => ({
+          "@type": "OpeningHoursSpecification" as const,
+          validFrom: date,
+          validThrough: date,
+          opens: "00:00",
+          closes: "00:00",
+        }))
+      : undefined;
+
+  const parsedAttributes = parseBusinessAttributes(location.amenities);
+  const amenityFeature = parsedAttributes
+    ? Object.entries(parsedAttributes).map(([key, value]) => ({
+        "@type": "LocationFeatureSpecification" as const,
+        name: ATTR_LABELS[key] ?? key,
+        value,
+      }))
+    : undefined;
+
   return omitUndefined({
     "@id": `${BASE_URL}/access/${location.slug}#localbusiness`,
     name: location.name,
     url: `${BASE_URL}/access/${location.slug}`,
+    description: location.description ?? undefined,
     image: location.imageUrl ? [location.imageUrl] : undefined,
     telephone: location.phoneNumber ?? undefined,
     email: location.email ?? undefined,
@@ -87,6 +139,10 @@ export function buildLocationLocalBusinessJsonLdData(
     hasMap,
     currenciesAccepted: "JPY",
     paymentAccepted: location.paymentAccepted ?? undefined,
+    openingHoursSpecification,
+    specialOpeningHoursSpecification,
+    amenityFeature:
+      amenityFeature && amenityFeature.length > 0 ? amenityFeature : undefined,
     branchOf: options.includeBranchOf
       ? { "@id": `${BASE_URL}/#organization` }
       : undefined,
