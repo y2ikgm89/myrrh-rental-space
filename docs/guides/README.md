@@ -1,64 +1,17 @@
 # 開発ガイド
 
-開発者向けの補助ガイドです。Codex 向け実装ルールの正本は `AGENTS.md` と `.agents/skills/*` を参照してください。
+このディレクトリは dual-AI 体制（Codex + Claude Code）の **dev 補助 docs 入口** として機能する。実装ルールの正本は AI 別に分離されている:
 
-## ガイド一覧
+- **Codex**: [`AGENTS.md`](../../AGENTS.md) と [`.agents/skills/`](../../.agents/skills/) — Codex 起動時に階層的に読み込まれる正本
+- **Claude Code**: [`CLAUDE.md`](../../CLAUDE.md) と [`.claude/rules/**`](../../.claude/rules/) — `paths:` frontmatter による条件付き auto-load
+- **両 AI 共通の詳細リファレンス**: [`docs/reference/claude-rules/**`](../reference/claude-rules/) — `.claude/rules/{bun-patterns, react/hooks, frontend/gsap+ui-ux+anti-ai}` から active 引用される詳細セクション
 
-| ガイド                                    | 説明                              |
-| ----------------------------------------- | --------------------------------- |
-| [コーディング規約](./coding-standards.md) | コード品質・命名規則              |
-| [型安全性](./type-safety.md)              | TypeScript・Zodベストプラクティス |
-| [テスト](./testing.md)                    | テスト戦略・実行方法              |
-| [nuqs](./nuqs.md)                         | URL状態管理                       |
-| [Prisma](./prisma.md)                     | Prisma 7使用ガイド                |
-| [Turbopack](./turbopack.md)               | Next.js 16バンドラー              |
+過去ここに存在した個別ガイド（`coding-standards.md` / `type-safety.md` / `testing.md` / `nuqs.md` / `prisma.md` / `turbopack.md`）はいずれも実コンテンツを持たない redirect stub だったため clean-break で削除（[ADR 0015](../architecture/decisions/0015-clean-break-refactor-and-parallel-implementer-discipline.md)）。実装ルールは AI 別の正本（上記）から直接参照する。
 
-## クイックリファレンス
+## 関連
 
-### 型安全性の原則
-
-```typescript
-// Zodスキーマから型を導出
-const schema = z.object({ name: z.string() });
-type Input = z.infer<typeof schema>;
-
-// app 層では generated Prisma 型を直接使わない
-import type { SpaceSummary } from "@/shared/domain/spaces/types";
-```
-
-### Server Actions パターン
-
-```typescript
-"use server";
-
-import { z } from "zod";
-import { updateTag } from "next/cache";
-import { hasPermission } from "@/admin/lib/permissions";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
-import { CACHE_TAGS } from "@/shared/lib/constants/cache";
-
-const schema = z.object({
-  id: z.string().uuid(),
-});
-
-export async function updateItem(input: unknown) {
-  const user = await verifyAdminSession();
-  if (!hasPermission(user.role, "settings", "update")) {
-    return { error: "権限がありません" };
-  }
-
-  const result = schema.safeParse(input);
-  if (!result.success) {
-    return { error: "入力が不正です" };
-  }
-
-  updateTag(CACHE_TAGS.SETTINGS);
-  return { success: true };
-}
-```
-
-## 関連ドキュメント
-
-- [アーキテクチャ](../architecture/README.md)
-- [セキュリティ](../security/README.md)
-- [Codex Instruction Architecture](../architecture/codex-instructions.md)
+- [アーキテクチャ](../architecture/README.md) — 設計判断・ADR・データフロー
+- [運用](../operations/README.md) — デプロイ・インフラ・cron
+- [セキュリティ](../security/README.md) — 認証・保護対策
+- [Codex Instruction Architecture](../architecture/codex-instructions.md) — Codex 配置仕様の詳細
+- [AI Agent Instructions Layout](../architecture/agent-instructions.md) — `.claude/*` / `AGENTS.md` の配置原則

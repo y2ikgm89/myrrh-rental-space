@@ -129,9 +129,9 @@ grep -rnE "0011-test-script" \
 
 #### ADR 0014 — 廃止 script 残存
 
-**場所**: `docs/guides/testing.md:88`
+**場所**: `AGENTS.md` / `.claude/agents/*.md` 等の test 実行手順を記述する doc
 **制約**: `bun run test` は廃止、`test:unit` / `test:all` を使う
-**現実**: `bun run test` への言及 5 件
+**現実**: `bun run test` への言及が残存していないか定期確認
 **修正**: 参照を `bun run test:unit` に置換
 
 ### ✅ Clean ADR
@@ -146,7 +146,7 @@ grep -rnE "0011-test-script" \
 ## 既知の false positive
 
 - ADR 本文自身が「旧識別子を廃止した」記述のため旧名を含む → ADR ファイルは grep 結果から除外して判断
-- `git log` 参照を勧める redirect 化 doc（`docs/guides/testing.md` 等）は旧識別子の歴史的記述を含む場合あり
+- `git log` 参照を勧める redirect 化 doc（過去 `docs/guides/testing.md` 等。clean-break で削除済みだが類似 stub が再導入された場合）は旧識別子の歴史的記述を含む場合あり
 
 ## 参照
 
