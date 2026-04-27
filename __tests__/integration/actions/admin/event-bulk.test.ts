@@ -76,15 +76,83 @@ const mockBulkSoftDeleteEventsCommand = mock<
   }),
 );
 
+import { EventStatus } from "@generated/prisma/enums";
+
 mock.module("@/shared/domain/events/bulk-commands", () => ({
   bulkPublishEventsCommand: mockBulkPublishEventsCommand,
   bulkSoftDeleteEventsCommand: mockBulkSoftDeleteEventsCommand,
+}));
+
+const mockBulkSetStatusEventsCommand = mock<
+  (
+    ids: string[],
+    newStatus: EventStatus,
+  ) => Promise<{
+    count: number;
+    newStatus: EventStatus;
+    affectedIds: string[];
+    rejectedIds: string[];
+  }>
+>(() =>
+  Promise.resolve({
+    count: 0,
+    newStatus: EventStatus.CANCELLED,
+    affectedIds: [],
+    rejectedIds: [],
+  }),
+);
+
+mock.module("@/shared/domain/events/bulk-status-commands", () => ({
+  bulkSetStatusEventsCommand: mockBulkSetStatusEventsCommand,
+}));
+
+const mockSendEventCancelledToAllParticipants = mock<
+  (eventId: string) => Promise<void>
+>(() => Promise.resolve());
+
+mock.module("@/shared/lib/email/event-emails", () => ({
+  sendEventRegistrationConfirmation: mock(() =>
+    Promise.resolve({ success: true }),
+  ),
+  sendEventRegistrationCancelled: mock(() =>
+    Promise.resolve({ success: true }),
+  ),
+  sendEventAdminNotification: mock(() => Promise.resolve({ success: true })),
+  sendEventCancelledToAllParticipants: mockSendEventCancelledToAllParticipants,
+  sendEventUpdatedToAllParticipants: mock(() =>
+    Promise.resolve({ success: true }),
+  ),
+}));
+
+// fireAndForget は同期的に呼び出すだけのスタブ
+const mockFireAndForget = mock<(p: Promise<unknown>) => void>(() => {
+  // intentionally no-op (do not await)
+});
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: mockFireAndForget,
 }));
 
 const mockInvalidateEventCaches = mock(() => undefined);
 
 mock.module("@/shared/lib/cache/event-cache", () => ({
   invalidateEventCaches: mockInvalidateEventCaches,
+}));
+
+// cloudflare module: 全 export をスタブ化してバッチ実行時の他テスト汚染を防ぐ
+const noopPurge = (): Promise<{ success: boolean }> =>
+  Promise.resolve({ success: true });
+mock.module("@/shared/lib/cloudflare", () => ({
+  purgeCloudflareCache: mock(noopPurge),
+  purgeCloudflareCacheByPrefix: mock(noopPurge),
+  purgeAllCloudflareCache: mock(noopPurge),
+  purgeCloudflareByPaths: mock(noopPurge),
+  purgeSpaceCache: mock(noopPurge),
+  purgePostCache: mock(noopPurge),
+  purgeNewsCache: mock(noopPurge),
+  purgePageCache: mock(noopPurge),
+  purgeHomeCache: mock(noopPurge),
+  purgeFaqCache: mock(noopPurge),
+  purgeTermsCache: mock(noopPurge),
 }));
 
 // =============================================================================
@@ -351,6 +419,151 @@ describe("bulkSoftDeleteEvents", () => {
       expect(result).toHaveProperty("error");
       const errorResult = result as { error: string };
       expect(errorResult.error).toBe("削除できません");
+    });
+  });
+});
+
+// =============================================================================
+// bulkSetStatusEvents
+// =============================================================================
+
+describe("bulkSetStatusEvents", () => {
+  beforeEach(() => {
+    mockBulkSetStatusEventsCommand.mockClear();
+    mockInvalidateEventCaches.mockClear();
+    mockFireAndForget.mockClear();
+    mockSendEventCancelledToAllParticipants.mockClear();
+  });
+
+  describe("バリデーション", () => {
+    test("空配列は validation error", async () => {
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      const result = await bulkSetStatusEvents([], EventStatus.CANCELLED);
+
+      expect(result).toHaveProperty("error");
+    });
+
+    test("非 UUID の ID は validation error", async () => {
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      const result = await bulkSetStatusEvents(
+        ["not-a-uuid"],
+        EventStatus.CANCELLED,
+      );
+
+      expect(result).toHaveProperty("error");
+    });
+
+    test("100件超は validation error", async () => {
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      const ids = Array.from({ length: 101 }, (_, i) => {
+        const hex = (i + 1).toString(16).padStart(12, "0");
+        return `00000000-0000-4000-8000-${hex}`;
+      });
+
+      const result = await bulkSetStatusEvents(ids, EventStatus.CANCELLED);
+
+      expect(result).toHaveProperty("error");
+    });
+  });
+
+  describe("正常系", () => {
+    test("CANCELLED への遷移で domain command が呼ばれる", async () => {
+      mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
+        count: 2,
+        newStatus: EventStatus.CANCELLED,
+        affectedIds: [VALID_UUID_1, VALID_UUID_2],
+        rejectedIds: [],
+      });
+
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      const result = await bulkSetStatusEvents(
+        [VALID_UUID_1, VALID_UUID_2],
+        EventStatus.CANCELLED,
+      );
+
+      expect(result).not.toHaveProperty("error");
+      expect(mockBulkSetStatusEventsCommand).toHaveBeenCalledWith(
+        [VALID_UUID_1, VALID_UUID_2],
+        EventStatus.CANCELLED,
+      );
+    });
+
+    test("CANCELLED 遷移時に fireAndForget でメール通知が呼ばれる", async () => {
+      mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
+        count: 2,
+        newStatus: EventStatus.CANCELLED,
+        affectedIds: [VALID_UUID_1, VALID_UUID_2],
+        rejectedIds: [],
+      });
+
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      await bulkSetStatusEvents(
+        [VALID_UUID_1, VALID_UUID_2],
+        EventStatus.CANCELLED,
+      );
+
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+    });
+
+    test("ARCHIVED 遷移時はメール通知が呼ばれない", async () => {
+      mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
+        count: 1,
+        newStatus: EventStatus.ARCHIVED,
+        affectedIds: [VALID_UUID_1],
+        rejectedIds: [],
+      });
+
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      await bulkSetStatusEvents([VALID_UUID_1], EventStatus.ARCHIVED);
+
+      expect(mockFireAndForget).not.toHaveBeenCalled();
+    });
+
+    test("affectedIds が空の場合はメール通知が呼ばれない", async () => {
+      mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
+        count: 0,
+        newStatus: EventStatus.CANCELLED,
+        affectedIds: [],
+        rejectedIds: [VALID_UUID_1],
+      });
+
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      await bulkSetStatusEvents([VALID_UUID_1], EventStatus.CANCELLED);
+
+      expect(mockFireAndForget).not.toHaveBeenCalled();
+    });
+
+    test("afterSuccess で affectedIds ごとに invalidateEventCaches が呼ばれる", async () => {
+      mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
+        count: 2,
+        newStatus: EventStatus.CANCELLED,
+        affectedIds: [VALID_UUID_1, VALID_UUID_2],
+        rejectedIds: [],
+      });
+
+      const { bulkSetStatusEvents } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
+
+      await bulkSetStatusEvents(
+        [VALID_UUID_1, VALID_UUID_2],
+        EventStatus.CANCELLED,
+      );
+
+      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(2);
     });
   });
 });
