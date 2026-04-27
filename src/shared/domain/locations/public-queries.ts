@@ -144,6 +144,53 @@ export async function getPublishedLocationsForAccess(): Promise<
   return toPlainArray(locations);
 }
 
+export async function getPublishedLocationForAccessBySlug(
+  slug: string,
+): Promise<LocationForAccess | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.LOCATIONS);
+
+  const location = await safeFetch({
+    fetch: () =>
+      prisma.location.findUnique({
+        where: { slug, isPublished: true, isActive: true },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          address: true,
+          postalCode: true,
+          prefecture: true,
+          city: true,
+          streetAddress: true,
+          buildingName: true,
+          access: true,
+          parkingInfo: true,
+          amenities: true,
+          imageUrl: true,
+          businessHours: true,
+          specialHolidays: true,
+          phoneNumber: true,
+          email: true,
+          latitude: true,
+          longitude: true,
+          googleReviewUrl: true,
+          googleBusinessPlaceId: true,
+          priceRange: true,
+          paymentAccepted: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedLocationForAccessBySlug",
+  });
+
+  return location;
+}
+
 /**
  * JSON-LD / SEO 用: 公開済み Location を取得
  *
