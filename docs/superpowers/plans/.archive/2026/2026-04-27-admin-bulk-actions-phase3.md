@@ -1,3 +1,5 @@
+> **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
+
 # P19 Phase 3 — Admin Bulk Actions (status 一括変更 + メール通知) 実装計画
 
 > **Spec**: `docs/superpowers/specs/2026-04-27-admin-bulk-actions-phase3-design.md`

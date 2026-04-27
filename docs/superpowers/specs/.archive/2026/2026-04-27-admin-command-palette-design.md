@@ -1,3 +1,5 @@
+> **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
+
 # Admin Command Palette — Design Spec
 
 > 2026-04-27 / P16 / 想定 ADR 番号: 0024

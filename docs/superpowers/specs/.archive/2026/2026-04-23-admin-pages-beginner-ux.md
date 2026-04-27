@@ -1,3 +1,5 @@
+> **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
+
 # Admin Pages Beginner-Friendly Editor — Design Spec
 
 **日付**: 2026-04-23

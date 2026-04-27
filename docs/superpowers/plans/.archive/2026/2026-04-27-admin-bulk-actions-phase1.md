@@ -1,3 +1,5 @@
+> **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
+
 # P19 Phase 1 — Admin Bulk Actions 実装計画
 
 > **Spec**: `docs/superpowers/specs/2026-04-27-admin-bulk-actions-phase1-design.md`

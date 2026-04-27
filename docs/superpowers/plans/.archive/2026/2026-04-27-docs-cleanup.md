@@ -1,3 +1,5 @@
+> **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
+
 # C4 — docs/\*\* Clean-Break Refactor Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline execution recommended for trivial Bundle: deletion + frontmatter / index updates, logic-zero, test-zero). Steps use checkbox (`- [ ]`) syntax for tracking.
