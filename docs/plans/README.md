@@ -28,7 +28,10 @@ ls docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null \
 | 実行（別）   | `superpowers:executing-plans`                                                  | —                                                       |
 | 完了後       | **プランファイルを削除** — 恒久決定は [ADR](../architecture/decisions/) に昇格 | git log: `git log --all --diff-filter=D -- docs/plans/` |
 
-Codex 作業では [`AGENTS.md`](../../AGENTS.md) と `.agents/skills` を入口にする。`docs/plans/CLAUDE.md` は Claude Code 用 legacy reference として残置するが、Codex 作業では参照しない。
+本リポジトリは dual-AI 体制（Codex + Claude Code）。プラン作成 / 実行のスキルチェーンは両 AI 共通だが、入口は AI 別:
+
+- **Codex**: [`AGENTS.md`](../../AGENTS.md) と [`.agents/skills/`](../../.agents/skills/)
+- **Claude Code**: [`CLAUDE.md`](../../CLAUDE.md) と [`.claude/rules/**`](../../.claude/rules/) + [`docs/plans/CLAUDE.md`](./CLAUDE.md)（本ディレクトリ専用の補助 instruction）
 
 ---
 
