@@ -24,6 +24,7 @@ export interface WebSiteJsonLdData {
 }
 
 export interface OrganizationJsonLdData {
+  "@id"?: string;
   name: string;
   description?: string;
   url: string;
@@ -37,6 +38,9 @@ export interface OrganizationJsonLdData {
     postalCode?: string;
     addressCountry?: string;
   };
+  sameAs?: string[];
+  foundingDate?: string;
+  additionalType?: string;
 }
 
 interface OpeningHoursSpec {
@@ -46,54 +50,9 @@ interface OpeningHoursSpec {
   closes: string;
 }
 
-interface SpecialOpeningHoursSpec {
-  "@type": "OpeningHoursSpecification";
-  validFrom: string;
-  validThrough: string;
-  opens: string;
-  closes: string;
-}
-
-interface AmenityFeatureSpec {
-  "@type": "LocationFeatureSpecification";
-  name: string;
-  value: boolean;
-}
-
-export interface LocalBusinessJsonLdData {
-  name: string;
-  description?: string;
-  url: string;
-  logo?: string;
-  telephone?: string;
-  email?: string;
-  address?: {
-    streetAddress?: string;
-    addressLocality?: string;
-    addressRegion?: string;
-    postalCode?: string;
-    addressCountry?: string;
-  };
-  openingHoursSpecification?: OpeningHoursSpec[];
-  specialOpeningHoursSpecification?: SpecialOpeningHoursSpec[];
-  priceRange?: string;
-  geo?: {
-    latitude: number;
-    longitude: number;
-  };
-  hasMap?: string;
-  currenciesAccepted?: string;
-  paymentAccepted?: string;
-  foundingDate?: string;
-  additionalType?: string;
-  image?: string | string[];
-  sameAs?: string[];
-  amenityFeature?: AmenityFeatureSpec[];
-}
-
 /** @graph パターン用の統合データ */
 export interface GraphJsonLdData {
-  localBusiness: LocalBusinessJsonLdData;
+  organization: OrganizationJsonLdData;
   webSite: WebSiteJsonLdData;
 }
 
@@ -118,14 +77,24 @@ export async function getWebSiteJsonLdData(): Promise<WebSiteJsonLdData> {
  * Organization JSON-LD用データを取得
  */
 export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdData> {
-  const settings = await getOrganizationSettings();
+  const [settings, sameAs] = await Promise.all([
+    getOrganizationSettings(),
+    getSocialLinkUrls(),
+  ]);
 
   // 住所の構築
   const streetAddress = [settings?.streetAddress, settings?.buildingName]
     .filter(Boolean)
     .join(" ");
 
+  // foundingDate: ISO 8601形式
+  const foundingDate = settings?.establishedDate
+    ? (new Date(settings.establishedDate).toISOString().split("T")[0] ??
+      undefined)
+    : undefined;
+
   return omitUndefined({
+    "@id": `${BASE_URL}/#organization`,
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
     description:
       settings?.businessDescription || settings?.siteDescription || undefined,
@@ -143,6 +112,9 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
             addressCountry: "JP",
           })
         : undefined,
+    sameAs: sameAs.length > 0 ? sameAs : undefined,
+    foundingDate,
+    additionalType: "https://en.wikipedia.org/wiki/Coworking",
   });
 }
 
@@ -247,63 +219,14 @@ export const ATTR_LABELS: Record<string, string> = {
 };
 
 /**
- * LocalBusiness JSON-LD用データを取得
- */
-export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdData> {
-  const [settings, sameAs] = await Promise.all([
-    getOrganizationSettings(),
-    getSocialLinkUrls(),
-  ]);
-
-  // 住所の構築
-  const streetAddress = [settings?.streetAddress, settings?.buildingName]
-    .filter(Boolean)
-    .join(" ");
-
-  // foundingDate: ISO 8601形式
-  const foundingDate = settings?.establishedDate
-    ? (new Date(settings.establishedDate).toISOString().split("T")[0] ??
-      undefined)
-    : undefined;
-
-  return omitUndefined({
-    name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
-    description:
-      settings?.businessDescription || settings?.siteDescription || undefined,
-    url: BASE_URL,
-    logo: settings?.headerLogoUrl || undefined,
-    telephone: settings?.phoneNumber || undefined,
-    email: settings?.email || undefined,
-    address:
-      settings?.postalCode || settings?.prefecture
-        ? omitUndefined({
-            postalCode: settings?.postalCode || undefined,
-            addressRegion: settings?.prefecture || undefined,
-            addressLocality: settings?.city || undefined,
-            streetAddress: streetAddress || undefined,
-            addressCountry: "JP",
-          })
-        : undefined,
-    openingHoursSpecification: convertToOpeningHoursSpecification(
-      settings?.businessHours,
-    ),
-    currenciesAccepted: "JPY",
-    foundingDate,
-    additionalType: "https://en.wikipedia.org/wiki/Coworking",
-    image: settings?.headerLogoUrl ? [settings.headerLogoUrl] : undefined,
-    sameAs: sameAs.length > 0 ? sameAs : undefined,
-  });
-}
-
-/**
  * @graph パターン用の統合データを取得
- * LocalBusiness + WebSite を1つの JSON-LD で出力
+ * Organization + WebSite を1つの JSON-LD で出力
  */
 export async function getGraphJsonLdData(): Promise<GraphJsonLdData> {
-  const [localBusiness, webSite] = await Promise.all([
-    getLocalBusinessJsonLdData(),
+  const [organization, webSite] = await Promise.all([
+    getOrganizationJsonLdData(),
     getWebSiteJsonLdData(),
   ]);
 
-  return { localBusiness, webSite };
+  return { organization, webSite };
 }

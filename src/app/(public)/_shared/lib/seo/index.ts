@@ -16,10 +16,16 @@ export {
 export {
   getWebSiteJsonLdData,
   getOrganizationJsonLdData,
-  getLocalBusinessJsonLdData,
   getGraphJsonLdData,
   type WebSiteJsonLdData,
   type OrganizationJsonLdData,
-  type LocalBusinessJsonLdData,
   type GraphJsonLdData,
 } from "./json-ld-config";
+
+// per-location JSON-LD
+export {
+  getAllPublishedLocationsJsonLdData,
+  getLocationJsonLdDataBySlug,
+  buildLocationLocalBusinessJsonLdData,
+  type LocationLocalBusinessJsonLdData,
+} from "./location-json-ld";
