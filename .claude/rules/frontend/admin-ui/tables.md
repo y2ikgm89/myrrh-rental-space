@@ -435,12 +435,12 @@ import {
 
 参照実装と destination マトリクス:
 
-| Table              | destination                 | 理由                      |
-| ------------------ | --------------------------- | ------------------------- |
-| `ReservationTable` | `/admin/reservations/${id}` | 詳細ページあり            |
-| `CustomerTable`    | `/admin/customers/${id}`    | 詳細ページあり            |
-| `PostTable`        | `/admin/posts/${id}/edit`   | `[id]/page.tsx` は editor |
-| `NewsTable`        | `/admin/news/${id}`         | `[id]/page.tsx` は editor |
+| Table              | destination                 | 理由                                 |
+| ------------------ | --------------------------- | ------------------------------------ |
+| `ReservationTable` | `/admin/reservations/${id}` | 詳細ページあり                       |
+| `CustomerTable`    | `/admin/customers/${id}`    | 詳細ページあり                       |
+| `PostTable`        | `/admin/posts/${id}`        | `[id]/page.tsx` が直接 editor を表示 |
+| `NewsTable`        | `/admin/news/${id}`         | `[id]/page.tsx` が直接 editor を表示 |
 
 ### 禁止パターン
 

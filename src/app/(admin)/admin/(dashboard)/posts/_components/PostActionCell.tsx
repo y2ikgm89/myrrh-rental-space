@@ -47,7 +47,7 @@ export function PostActionCell({ postId, status }: PostActionCellProps) {
 
   return (
     <ActionDropdown disabled={isPending}>
-      <ActionDropdownItem href={`/admin/posts/${postId}/edit`}>
+      <ActionDropdownItem href={`/admin/posts/${postId}`}>
         編集
       </ActionDropdownItem>
       <ActionDropdownSeparator />

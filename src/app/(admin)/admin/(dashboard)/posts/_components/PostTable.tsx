@@ -76,7 +76,7 @@ export function PostTable({ posts }: PostTableProps) {
               {posts.map((post) => (
                 <ClickableTableRow
                   key={post.id}
-                  href={`/admin/posts/${post.id}/edit`}
+                  href={`/admin/posts/${post.id}`}
                   aria-label={`${post.title} の投稿を編集`}
                 >
                   <TableCell onClick={stopRowClick}>
