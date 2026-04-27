@@ -50,6 +50,7 @@ NNNN-kebab-case-title.md
 | [0022](./0022-checkbox-cell-44px-wrapper.md)                               | 管理画面 table の checkbox は CheckboxCell ラッパーで 44px ヒットエリア化                            | Accepted   | 2026-04-26 |
 | [0023](./0023-multi-location-seo-foundation.md)                            | Multi-location LocalBusiness JSON-LD を per-location 出力に移行                                      | Accepted   | 2026-04-27 |
 | [0024](./0024-admin-command-palette.md)                                    | Admin Command Palette with Hybrid Server-Action Search                                               | Accepted   | 2026-04-27 |
+| [0025](./0025-subagent-dispatch-template-ssot.md)                          | Subagent dispatch template SSoT を skill 化                                                          | Accepted   | 2026-04-27 |
 
 ## 参考
 

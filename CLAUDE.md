@@ -223,6 +223,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ### Subagent 規律
 
+- **Implementer dispatch prompt の SSoT** — `.claude/skills/subagent-dispatch-template/SKILL.md` 参照。git 全面禁止 / import alias 3 系統 / plan deviation policy / 完了報告フォーマットを skill 1 箇所で管理 (ADR 0025)
 - **implementer は sonnet 以上**（haiku 禁止、report 捏造リスク）
 - **完了報告後は独立検証**: `git log --oneline` + `git show --stat HEAD`
 - **SSoT ヘルパー（`executeAdminMutationResult` / `fireAndForget` / `safeFetch` / `sendEmail` 等）の改修は ADR / rule ファイルで実行順序・契約を事前確認必須** — 別 AI / implementer が「クリーンに直す」指示で契約を壊す事故あり（例: `await logAction` 化 → cache invalidation スキップ regression、ADR 0019）。これらヘルパーを編集する dispatch prompt には「該当 ADR / rule を Read してから変更」「契約破りを疑ったら justified deviation として報告」を明記
