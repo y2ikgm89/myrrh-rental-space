@@ -193,7 +193,7 @@ ALTER TABLE "Settings"
   DROP COLUMN "specialHolidays";
 ```
 
-> **注**: Prisma 7.8 CLI の `migrate diff --to-schema` で生成 → `db execute --file` + `migrate resolve --applied` の手順（`gotchas.md` §Prisma Migrate）。`prisma/migrations/*.sql` は PreToolUse 保護のため Python で書き出し。
+> **注**: Prisma 7.8 CLI の `migrate diff --to-schema` で生成 → `db execute --file` + `migrate resolve --applied` の手順（`gotchas/prisma.md` §Prisma Migrate）。`prisma/migrations/*.sql` は PreToolUse 保護のため Python で書き出し。
 
 ### 2.3 JSON-LD 出力アーキテクチャ
 
@@ -513,4 +513,4 @@ export async function getGraphJsonLdData(): Promise<{
 - [Google Search Central — Local Business structured data](https://developers.google.com/search/docs/appearance/structured-data/local-business)
 - [schema.org/LocalBusiness](https://schema.org/LocalBusiness)
 - [Google ポリシー: aggregateRating in LocalBusiness](https://developers.google.com/search/docs/appearance/structured-data/review-snippet#guidelines)（2019/09 〜 自社レビュー禁止）
-- 内部ルール: `.claude/rules/frontend/seo-patterns.md`、`.claude/rules/prisma-patterns.md` §JSON フィールド、`.claude/rules/server-actions.md` §キャッシュ無効化パターン
+- 内部ルール: `.claude/rules/frontend/seo-patterns.md`、`.claude/rules/prisma-patterns.md` §JSON フィールド、`.claude/rules/server-actions/use-cache.md` §キャッシュ無効化パターン

@@ -66,7 +66,7 @@ robocopy ../../generated generated /E /XF nul
 bun install
 ```
 
-> **注**: `prisma/migrations/*.sql` は PreToolUse 保護のため Python 経由で書き出し（`gotchas.md` §Prisma Migrate）。
+> **注**: `prisma/migrations/*.sql` は PreToolUse 保護のため Python 経由で書き出し（`gotchas/prisma.md` §Prisma Migrate）。
 
 ### Subagent dispatch prompt template
 
@@ -338,7 +338,7 @@ bun prisma/seed.ts
 bun prisma/seed.ts  # 2回目で count が変化しないことを確認
 ```
 
-検証用 ad-hoc query（`gotchas.md` §`prisma db execute --stdin`）:
+検証用 ad-hoc query（`gotchas/prisma.md` §`prisma db execute --stdin`）:
 
 ```bash
 bun -e "
@@ -2174,7 +2174,7 @@ EOF
 
 - Create: `docs/architecture/decisions/0023-multi-location-seo-foundation.md`
 - Modify: `.claude/rules/frontend/seo-patterns.md`（per-location パターンに書き換え）
-- Modify: `.claude/rules/gotchas.md`（MeoSection 関連 gotcha cleanup + per-location cache invalidation 追加）
+- Modify: `.claude/rules/gotchas/domain.md` および `.claude/rules/gotchas/ui.md`（MeoSection 関連 gotcha cleanup + per-location cache invalidation 追加。barrel-index 分割後は sub-file に振り分け: cache invalidation は domain.md、UI gotchas は ui.md）
 - Modify: `.claude/rules/ssot-singletons.md`（MEO の SSoT を Location に変更）
 - Create: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_meo-multi-location-handoff.md`
 - Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md`
@@ -2249,9 +2249,9 @@ EOF
 - §禁止事項 4 — `@graph` 外の WebSite/LocalBusiness 個別出力禁止 → "site-wide layout で LocalBusiness を出力しない（per-location ページのみ）"
 - §ファイル配置 — `location-json-ld.ts` を追加、`getLocalBusinessJsonLdData` を削除
 
-### Step 9.3: gotchas.md の更新
+### Step 9.3: gotchas sub-files の更新
 
-`.claude/rules/gotchas.md` で以下を変更:
+`.claude/rules/gotchas/domain.md` および `.claude/rules/gotchas/ui.md` で以下を変更:
 
 **追加**: per-location cache invalidation の項
 

@@ -134,7 +134,7 @@ grep -rnE "await logAction\(" src/app/\(admin\)/admin/\(dashboard\)/_shared/lib/
 
 - ADR 0012: executeAdminMutationResult 採択
 - `src/app/(admin)/admin/(dashboard)/_shared/lib/admin-action.ts`: 実装正本
-- `.claude/rules/server-actions.md` §executeAdminMutationResult 実行順序契約
+- `.claude/rules/server-actions/implementation.md` §executeAdminMutationResult 実行順序契約
 - `.claude/rules/auth-patterns.md` §監査ログ
 - `CLAUDE.md` ハードルール §Validation / Domain
 - `src/shared/lib/async-utils.ts`: `fireAndForget` ヘルパー定義

@@ -239,7 +239,7 @@ const items = await prisma.post.findMany({ ... })
 return toPlainArray(items)
 ```
 
-**注意**: `safeFetch` + `'use cache'` で取得した公開データは同様に `toPlainObject()` でラップする（`server-actions.md` §公開データ取得パターン 参照）。
+**注意**: `safeFetch` + `'use cache'` で取得した公開データは同様に `toPlainObject()` でラップする（`server-actions/implementation.md` §公開データ取得パターン 参照）。
 
 ### Date フィールドの Server→Client 境界シリアライゼーション
 
@@ -692,7 +692,7 @@ bun run db:generate
 8. **`'use cache'` 関数で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
    - `return safeFetch({...})` → `const result = await safeFetch({...}); return toPlainObject(result)`
    - Prisma モデルの narrow `select` でも Symbol プロパティは残る → `toPlainObject` 必須
-   - 詳細と例 → `server-actions.md` §公開データ取得パターン
+   - 詳細と例 → `server-actions/implementation.md` §公開データ取得パターン
 
 ---
 

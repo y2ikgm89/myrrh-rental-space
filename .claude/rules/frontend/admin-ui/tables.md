@@ -304,7 +304,7 @@ export function CategoryActionCell({ id, name }: { id: string; name: string }) {
    sortBy: parseAsStringLiteral(["createdAt", "fieldA", "fieldB"] as const).withDefault("createdAt"),
    sortOrder: parseAsSortOrder,
    ```
-2. クエリ関数に `buildXxxOrderBy(sortBy, sortOrder)` helper を追加。nullable 列は `{ [col]: { sort, nulls: "last" } }` + tie-breaker（`updatedAt: "desc"`）で stabilize（→ `gotchas.md` §Nullable 列のソート）。non-nullable 列は `{ [col]: sortOrder }` 単独で OK
+2. クエリ関数に `buildXxxOrderBy(sortBy, sortOrder)` helper を追加。nullable 列は `{ [col]: { sort, nulls: "last" } }` + tie-breaker（`updatedAt: "desc"`）で stabilize（→ `gotchas/ui.md` §Nullable 列のソート）。non-nullable 列は `{ [col]: sortOrder }` 単独で OK
 3. `*TableHeader.tsx`（Client Component）を作成:
    - `useQueryStates(parsers)` で sortBy/sortOrder を読み書き
    - `SortableColumnHeader` でソート可能カラムを定義
@@ -371,7 +371,7 @@ export function CustomerFilters() {
 
 `/admin/*` 一覧テーブルで行をクリックすると詳細・編集ページに遷移する UX を実装する場合、共通コンポーネント `ClickableTableRow`（`@/admin/components/table`）を使う。
 
-### 設計判断（gotchas.md §button ネスト禁止 第二推奨採用）
+### 設計判断（gotchas/ui.md §button ネスト禁止 第二推奨採用）
 
 `<tr>` を Card Overlay パターン（第一推奨）で実装することは以下の制約で不可能:
 
