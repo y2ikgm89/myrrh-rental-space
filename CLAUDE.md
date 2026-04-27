@@ -162,6 +162,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Plan `完了` ステータスでも実装存在とは限らない** — 大規模リデザイン・命名規約変更で機能が削除／置換されることあり。plan 参照時は `Glob` で実在確認 + `Grep` で代表 symbol + `git log --oneline -- <path>`
 - **bundle「未使用チャンク」報告は `react-loadable-manifest.json` で lazy-load 確認必須** — `.next/server/app/*.html` 埋め込み scan だけでは `next/dynamic` 経由の lazy chunk を「未使用」と誤認する false positive。Lexical / Recharts / Radix 等の 200KB+ チャンクは大抵 lazy-load 正当化済みのため、削除判定前に manifest で参照元ルート数を確認
 - **`<library> X.Y` 形式の version 表記は `package.json` (SSoT) と drift しやすい** — `bun update` で minor/major bump が起きた後は `grep -rn '<lib> [0-9]\+\.[0-9]\+' .claude/ CLAUDE.md src/` で参照箇所を一括更新。本プロジェクトでは `Prisma 7.7` が 6 箇所散在し commit `ef87f8ac` で 7.8 に統一。doc 内の minor version は世代固有の注意点（API/CLI 変更）を表すが、CLAUDE.md 冒頭注釈どおり実バージョンは `package.json` + `bun.lock` が正
+- **Edit tool は old_string / new_string 内の `\u00XX` literal escape を実 Unicode 文字に normalize する** — JSON parsing 段階で `\u00A5` → `¥` 等に変換されるため、両方を含む edit は「No changes to make」エラーになる。literal escape sequence を保持したまま書き出す必要がある場合は Python script (`chr(92) + 'u00A5'`) で迂回する（実例: C1 Phase 7 で `gotchas/deployment.md` の Turbopack ¥ JSX gotcha 復元時）
+- **大規模 rule docs (>500 行) は barrel-index pattern で分割** — barrel `<topic>.md` が `paths:` frontmatter + sub-file links のみ持ち、実体は `<topic>/<subtopic>.md` に配置。autoload chain で sub-file も連鎖ロード。適用済み: `react-patterns.md` / `frontend/gsap-patterns.md` / `frontend/lexical-patterns.md` / `frontend/admin-ui-patterns.md` (hybrid) / `server-actions.md` / `frontend/accessibility.md` / `gotchas.md`。新規 rule docs が 500 行を超えそうなら sub-file 設計を先行検討
 
 ### Git / Migration
 
@@ -175,6 +177,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **ADR 制約と設定ファイルの整合を grep で周期検証** — `bunfig.toml` / `playwright.config.ts` / `.gitignore` 等が ADR 制約と乖離した dead code になっていないか（本セッション: `coverageThreshold` が ADR 0010 採択後も残存していた → ADR 0014 で撤去）
 - **`bun.lock` 単独コミット禁止** — `scripts/check-protected-files.sh` が拒否（依存更新は `package.json` と同時 stage 必須）。大きな改修バンドル内に誤混入した lockfile 差分は `git restore --staged --worktree bun.lock` で HEAD に戻して分離
 - **単一 worktree に複数改修が混入したら Conventional Commits type で分離** — `feat:` / `refactor:` / `fix:` / `docs:` を個別 commit に。lefthook `commit-msg` hook が type を強制するため、scope 汚染のまま 1 commit で push すると review / revert 粒度が崩れる。`git add <subset>` → commit の反復で分離
+- **`.serena/memories/` は部分 tracked / 部分 ignored 状態** — `.gitignore` 全体無視ルールに対し、過去 commit 済みファイル（`suggested_commands.md` / `test-quality-analysis.md` 等）は tracked のまま残存。これらを update 後の `git add` は `paths are ignored` エラーで失敗するため `git add -f <path>` 必須。新規 memory file は ignore されるので commit したい場合のみ `-f` を使う（実例: C1 Phase 3 で ADR drift 解消 commit 時に発生）
 
 ### 実装パターン
 
