@@ -40,7 +40,7 @@ ADR 0010 採択後も `bunfig.toml` に `coverageThreshold` が残存してい�
 | 0010 | per-directory test batch             | `package.json` `test:unit` / `test:integration` が `&&` チェーン / `bunfig.toml` に `coverage` 設定 **不在**                                                              |
 | 0011 | Dual Better Auth instance            | `admin-auth.ts` / `customer-auth.ts` で cookiePrefix 分離                                                                                                                 |
 | 0012 | executeAdminMutationResult           | 管理 Server Actions で `executeAdminMutationResult` 呼び出し（`src/app/(admin)/**/*.ts` grep）                                                                            |
-| 0013 | Policy docs sync                     | `scripts/verify-policy-docs.mjs` 存在・`.github/workflows/ci.yml` の policy-docs-sync job                                                                                 |
+| 0013 | Policy docs sync (Superseded)        | **Superseded** (2026-04-24, ADR 0013): Codex 正本 clean-break で `docs/reference/codex-rules/`・policy sync scripts・CI job は廃止。drift audit 対象外                    |
 | 0014 | Test script consolidation            | `package.json` に `test` / `test:watch` / `test:coverage` / `test:coverage:check` **不在** / `bunfig.toml` coverage 設定 **不在** / `scripts/check-coverage.mjs` **不在** |
 | 0015 | Clean-break refactor discipline      | `docs/architecture/decisions/0015-*.md` の parallel implementer 禁止記述と `.claude/agents/*.md` / CLAUDE.md §Subagent 規律 の整合                                        |
 | 0016 | Page hero first-class field          | `prisma/schema.prisma` の `Page.pageHero Json?` 存在 + `homepage-hero` Section type 不在（`src/shared/lib/sections/registry.ts` で廃止確認）+ `pageHeroSchema` 実装       |

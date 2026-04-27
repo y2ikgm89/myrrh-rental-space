@@ -9,7 +9,7 @@ paths:
 
 # Lexical エディタ実装パターン — コアアーキテクチャ
 
-> **本文正本**（Codex / Claude Code 共通）。`docs/reference/codex-rules/lexical-patterns.md` と `.claude/rules/frontend/lexical-patterns.md` は **同一バイト列**（検証: `bun run docs:verify-policy-sync` → `scripts/verify-policy-docs.mjs`）。運用: `docs/reference/codex-rules/instruction-topology.md`。Next.js 16 / React 19 / Turbopack / React Compiler 対応
+> **本文正本**（Claude Code）。Codex は `AGENTS.md` + `.codex/rules/**` を独立 SSoT として参照（ADR 0013 Superseded で同期廃止済み、2026-04-24）。Next.js 16 / React 19 / Turbopack / React Compiler 対応
 
 ## 概要
 
