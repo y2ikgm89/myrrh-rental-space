@@ -1,4 +1,4 @@
-# 0023. Admin Command Palette with Hybrid Server-Action Search
+# 0024. Admin Command Palette with Hybrid Server-Action Search
 
 - Status: Accepted
 - Date: 2026-04-27

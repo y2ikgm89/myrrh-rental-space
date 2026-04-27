@@ -48,7 +48,7 @@ NNNN-kebab-case-title.md
 | [0020](./0020-page-preview-reuses-public-renderer.md)                      | 固定ページプレビューは公開レンダラを再利用する                                                       | Accepted   | 2026-04-23 |
 | [0021](./0021-remove-section-style-library.md)                             | SectionStyle library を削除しページデザインをコード所有に戻す                                        | Accepted   | 2026-04-26 |
 | [0022](./0022-checkbox-cell-44px-wrapper.md)                               | 管理画面 table の checkbox は CheckboxCell ラッパーで 44px ヒットエリア化                            | Accepted   | 2026-04-26 |
-| [0023](./0023-admin-command-palette.md)                                    | Admin Command Palette with Hybrid Server-Action Search                                               | Accepted   | 2026-04-27 |
+| [0024](./0024-admin-command-palette.md)                                    | Admin Command Palette with Hybrid Server-Action Search                                               | Accepted   | 2026-04-27 |
 
 ## 参考
 
