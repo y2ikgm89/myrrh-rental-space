@@ -137,6 +137,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Coverage は参考値のみ** — `bunfig.toml` の coverage 設定は撤去済（ADR 0014）。必要時は `bun test --coverage <single-file>` で単発実行し参考値として扱う。CI には coverage ゲートを置かない
 - **大規模監査の前提** — `bun run validate` が exit 0 なら compiler/linter 基準ではクリーン。監査で大量違反報告時はまず validate を ground truth に
 - **Pre-existing test failure の切り分け** — `git stash -u && bun test <file> && git stash pop` で HEAD 時点の fail 数と比較
+- **Bun test `mock<() => ...>` は引数を捨てる silent bug** — 引数なし `mock<() => Promise<T>>` 型は `toHaveBeenCalledWith({ ... })` 検証で常に空配列マッチして false-positive pass する（型推論で記録される args 型が `[]`）。**実 args を検証する場合は `mock<(args: T) => Promise<...>>` 型必須**。Plan の test スタブを書く際にこれを優先（実例: P18 Bundle A で reviewer が指摘 → mockCreate 型を `(args) =>` 化して args 検証が機能、`bun-patterns.md` への追記候補）
 
 ### 調査・監査
 
@@ -152,6 +153,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **精査系 subagent の「使用なし」「欠落」報告は実装 Read + grep で二段検証必須** — grep ベース調査は seed 関数内の間接使用を見落として false positive を出す
 - **Explore / 監査 subagent の数値・採用範囲リストは grep で再検証必須** — `breakpoint 使用箇所数` / `@container 採用ファイル数` / `arbitrary 値の件数` 等は rule docs の記述を根拠に hallucinate することあり（このセッションで `xl:` 22→実際 18、`@container` 採用 5→実際 3 の drift を検出）。修正計画に組み込む前に `grep -rE "\bxl:" src/ --include="*.tsx" -c | awk -F: '{s+=$2} END{print s}'` 等で ground truth を取る
 - **Plan 作成時の rule docs 構造仮定は事前 grep 必須** — 「`gotchas.md` の noindex テーブル」「`<rule>.md` の §X セクション」等の構造を仮定して plan の Task に書く前に、`grep -nE '^##|^\|' .claude/rules/<file>.md` でテーブル形式 / paragraph 形式 / セクション存在を実体確認。仮定が外れると implementer DEVIATION → controller 補完 commit という余計な commit が発生する（実例: P15 Task 6.2 で gotchas.md は paragraph 形式だったがテーブル前提で書いたため追加 commit `a9e28ad8` が発生）
+- **Plan 記載の destination URL / API path / route は `ls` で物理実在確認必須** — 既存 ActionCell の href 文字列を grep で抽出して plan に書いた destination URL が、実は対応する route file（`<resource>/[id]/edit/page.tsx` 等）を持たず 404 になる pre-existing バグ事例あり（P18 plan 検証中に Bundle C reviewer が PostTable `/admin/posts/[id]/edit` で発見、commit `d638b45f` で 3 ファイル一括 fix）。grep で href 文字列が見つかった = route が動作している、ではない。Plan 段階で `ls 'src/app/(admin)/admin/(dashboard)/<resource>/[id]/'` で sub-route 実在を直接確認する
+- **新機能の表記・命名は類似既存機能と grep で揃えてから plan に書く** — P18 で「複製名 `(コピー)`（半角）」を plan に書いたが、Event 既存実装は `（コピー）`（全角）。reviewer 指摘 → fix commit `d2dc2e7e` が発生。新規 plan のコード例（命名規則 / 表記 / 接尾辞）は `grep -rn "<related-keyword>" src/shared/domain/<sibling>/` で類似実装と比較してから書く
 - **レビューエージェント指摘**: `gotchas.md` と照合して誤報除外（`revalidateTag` 第2引数、JSX IIFE 算術式偽陽性、`select.tsx` required 等）。`bun run lint` exit 状態 + Read を ground truth とする
 - **監査エージェント指摘**: 該当 rule ファイル（`react-patterns.md` / `lexical-patterns.md` / `type-safety.md` 等）の「例外」節とクロスリファレンス
 - **SSoT 重複検出の grep**: symbol 名だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep
@@ -185,6 +188,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Feature toggle 粒度** — 単一 tenant は per-entity 単一層、multi-tenant template は `Settings.xxxEnabledGlobal` + `Entity.xxxEnabled` の 2 層（precedence 一方向: Global OFF → 常に非表示 / Global ON → per-entity 効く）。参照: `Settings.reviewsEnabledGlobal` ↔ `Space.reviewsEnabled`
 - **Lexical 新規ノードで作成時バリアント選択 UI が必要な場合** — dialog-upfront 3 コマンド体制（`OPEN_XXX_DIALOG_COMMAND` / `INSERT_XXX_COMMAND` / `UNGROUP|TRANSFORM_XXX_COMMAND`）。全 UI 経路（Insert / FT / ⋮⋮ / keyboard）は dispatch 前に `$getSelectionBlockNodes()` のキーをスナップショットして payload に積む（ダイアログフォーカスで editor 選択が失われるため必須）。hardcoded default 値の silent 挿入禁止。参照実装: `GroupPlugin`（→ `frontend/lexical-patterns.md` §グループ化）
 - **UI デザイン探索は `src/app/(public)/<feature>-demo/` で複数バリアント比較** — `hero-demo/` / `spaces-design-demo/` が参照実装。上部 sticky nav で variant 切替 + `max-w-[420px]` wrapper で desktop でも mobile preview 可能。`shared.ts` に variant metadata（name / tagline / description / pros / cons）を SSoT 化。決定後も reference として保持（削除しない）
+- **管理画面 table 行クリック遷移は `ClickableTableRow`（`@/admin/components/table`）+ `stopRowClick` 経由必須** — `<tr>` への `position: relative` は CSS 仕様 undefined behavior、複数 `<td>` を単一 `<a>` で包むのが HTML 仕様禁止のため Card Overlay 第一推奨は table row に適用不可。第二推奨（`tabIndex={0}` + `onKeyDown(Enter)` + `aria-label`）を `ClickableTableRow` に集約済。internal interactive 要素（CheckboxCell / StatusSelect / ActionDropdown / mailto link）を含む `<TableCell>` には `onClick={stopRowClick}` 付与（→ `frontend/admin-ui/tables.md` §テーブル行クリック遷移パターン）
+- **Next.js 16 typedRoutes + `router.push(template literal)` の library boundary cast** — `typedRoutes: true` 環境では `${string}` template literal を `Route<string>` 型に narrow できない（公式制約）。helper component（`ClickableTableRow` 等）で href を受ける場合は **公開 API は `string`、内部の `router.push` 呼び出しで `as Route<string>` cast を 1 箇所に閉じ込める**。consumer 側では cast 不要。`type-safety.md` の `as` 例外条項（DOM event target / Prisma JSON 等）と同等の library boundary 扱い
 
 ### Subagent 規律
 
@@ -203,6 +208,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **long-running general-purpose agent（tool_uses 40+ / duration 300s+）の最終報告が途切れたら git で独立検証** — SendMessage で再取得を待つより `git status --short` + `git diff --stat HEAD` + 対象ファイル個別 diff の方が速く正確。subagent の「実装完了」報告が HEAD と収束して staged diff ゼロのケースも検出できる
 - **implementer dispatch prompt に「JSDoc / コメントに "Phase X.Y" / "refactor from Y" / "後継 UI" 等のタスク・フロー参照を含めない」を明示** — デフォルトで混入しがち。CLAUDE.md の general rule「Don't reference the current task, fix, or callers」と衝突し commit 前の grep + cleanup が発生する（2026-04-22 Phase B.5-2 で 4 ファイル × 7 箇所の cleanup 事例）
 - **subagent frontmatter `memory: project` は実利用がある場合のみ付ける** — 公式仕様で Read/Write/Edit ツールが暗黙有効化 + MEMORY.md (200行/25KB) が system prompt に注入される。本文で MEMORY 参照を持つ設計か `.claude/agent-memory/<name>/` に dir があるかで判定。未使用で付けると context 浪費 + 最小権限原則違反（2026-04-23 監査で 10 agent 削除）
+- **小規模 Bundle（1-4 task / 4-5 commit）は combined reviewer（spec + quality 1 dispatch）を推奨** — Bundle A/B/C 全てに spec / quality 個別 reviewer を厳格適用すると 1 plan で 6+ reviewer dispatch になり context 圧迫。P18 で 2 Bundle / 1 combined review に絞り P17（3 Bundle / 3 spec + 3 quality review）より context 残量を 30%+ 確保した実績。combined prompt は spec compliance check と code quality check の両 section を 1 prompt 内に同居させ、JSON で `spec_compliance.verdict` / `code_quality.verdict` / `overall_verdict` の 3 値を返させる
 
 ---
 
