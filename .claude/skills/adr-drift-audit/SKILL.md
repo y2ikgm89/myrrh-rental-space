@@ -1,6 +1,15 @@
 ---
 name: adr-drift-audit
 description: ADR (docs/architecture/decisions/) の制約と設定ファイル（bunfig.toml / playwright.config.ts / .gitignore / package.json / .github/workflows/*.yml / cloudbuild.yaml / lefthook.yml）の乖離を検出する。ADR 新規採択後や定期メンテで使用。設定が ADR 制約と矛盾した dead code 化していないか確認する。
+paths:
+  - docs/architecture/decisions/**
+  - bunfig.toml
+  - playwright.config.ts
+  - .gitignore
+  - package.json
+  - cloudbuild.yaml
+  - lefthook.yml
+  - .github/workflows/**
 ---
 
 # ADR Drift 監査
