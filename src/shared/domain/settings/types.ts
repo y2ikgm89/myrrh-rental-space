@@ -54,7 +54,6 @@ export type SettingsData = {
   buildingName: string | null;
   businessHours: BusinessHours | null;
   regularHolidays: string[] | null;
-  specialHolidays: string[] | null;
   holidayNotice: string | null;
   accessInfo: string | null;
   parkingInfo: string | null;
@@ -144,13 +143,6 @@ export type SettingsData = {
   sidebarRecentCount: number;
   sidebarPopularCount: number;
   sidebarTocEnabled: boolean;
-  latitude: number | null;
-  longitude: number | null;
-  priceRange: string | null;
-  googleBusinessPlaceId: string | null;
-  googleReviewUrl: string | null;
-  businessAttributes: Record<string, boolean> | null;
-  paymentAccepted: string | null;
   postPermalinkStructure: PostPermalinkStructure | null;
   postUrlPrefixEnabled: boolean;
   headerScrollBehavior: HeaderScrollBehavior;

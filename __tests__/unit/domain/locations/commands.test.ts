@@ -77,6 +77,7 @@ const VALID_BUSINESS_HOURS = {
 };
 
 const VALID_FORM_DATA = {
+  slug: "shibuya-space",
   name: "渋谷スペース",
   description: "渋谷駅近くのレンタルスペース",
   address: "東京都渋谷区1-1-1",
@@ -89,8 +90,18 @@ const VALID_FORM_DATA = {
     { url: "https://example.com/image2.jpg" },
   ],
   businessHours: VALID_BUSINESS_HOURS,
+  specialHolidays: null,
+  latitude: null,
+  longitude: null,
+  googleBusinessPlaceId: null,
+  googleReviewUrl: null,
+  priceRange: null,
+  paymentAccepted: null,
+  phoneNumber: null,
+  email: null,
   sortOrder: 1,
   isPublished: true,
+  isActive: true,
 };
 
 const EXISTING_LOCATION = {

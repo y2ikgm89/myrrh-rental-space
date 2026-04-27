@@ -7,15 +7,6 @@
 
 import type { ReactElement } from "react";
 import {
-  IconExternalLink,
-  IconWifi,
-  IconCar,
-  IconAccessible,
-  IconArrowUp,
-  IconSmoking,
-  IconToolsKitchen2,
-  IconAperture,
-  IconMusic,
   IconMapPin,
   IconPhone,
   IconMail,
@@ -23,7 +14,7 @@ import {
   IconCalendarOff,
 } from "@tabler/icons-react";
 import { getBusinessInfo } from "@/public/data/business";
-import { DAY_LABELS, ATTR_LABELS } from "@/public/lib/seo/json-ld-config";
+import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 
 // =============================================================================
@@ -39,17 +30,6 @@ const DAY_ORDER = [
   "saturday",
   "sunday",
 ] as const;
-
-const ATTR_ICONS: Record<string, typeof IconWifi> = {
-  wifi: IconWifi,
-  parking: IconCar,
-  barrier_free: IconAccessible,
-  elevator: IconArrowUp,
-  smoking_area: IconSmoking,
-  food_allowed: IconToolsKitchen2,
-  photography_allowed: IconAperture,
-  music_allowed: IconMusic,
-};
 
 const DAY_ABBREV: Record<string, string> = {
   monday: "Mo",
@@ -264,60 +244,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
         )}
       </dl>
 
-      {/* 施設属性 */}
-      {info.businessAttributes &&
-        Object.values(info.businessAttributes).some(Boolean) && (
-          <div className="mt-5 border-t border-border pt-5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              設備・サービス
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {Object.entries(info.businessAttributes)
-                .filter(([, value]) => value)
-                .map(([key]) => {
-                  const Icon = ATTR_ICONS[key];
-                  const label = ATTR_LABELS[key] ?? key;
-                  return (
-                    <span
-                      key={key}
-                      className="inline-flex items-center gap-1.5 border border-border px-2.5 py-0.5 text-xs tracking-[0.18em] text-muted-foreground"
-                    >
-                      {Icon && <Icon className="h-3 w-3" />}
-                      {label}
-                    </span>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-      {/* Google リンク */}
-      {(info.googleMapsUrl || info.googleReviewUrl) && (
-        <div className="mt-5 flex flex-col gap-2 border-t border-border pt-5 text-sm">
-          {info.googleMapsUrl && (
-            <a
-              href={info.googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-foreground"
-            >
-              Google Maps で見る
-              <IconExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
-          {info.googleReviewUrl && (
-            <a
-              href={info.googleReviewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-foreground"
-            >
-              Google で口コミを書く
-              <IconExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
-        </div>
-      )}
+      {/* 施設属性・Google リンクは Location モデルの MEO フィールドへ移管 */}
     </div>
   );
 }

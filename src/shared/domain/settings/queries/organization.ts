@@ -25,12 +25,6 @@ export interface OrganizationSettings {
   streetAddress: string | null;
   buildingName: string | null;
   businessHours: unknown;
-  specialHolidays: unknown;
-  latitude: number | null;
-  longitude: number | null;
-  priceRange: string | null;
-  businessAttributes: unknown;
-  paymentAccepted: string | null;
   establishedDate: Date | null;
 }
 
@@ -66,10 +60,6 @@ export async function getPublicBusinessSettings() {
           holidayNotice: true,
           accessInfo: true,
           parkingInfo: true,
-          googleReviewUrl: true,
-          googleBusinessPlaceId: true,
-          businessAttributes: true,
-          paymentAccepted: true,
         },
       }),
     fallback: null,
@@ -135,12 +125,6 @@ export async function getOrganizationSettings(): Promise<Serialized<Organization
           streetAddress: true,
           buildingName: true,
           businessHours: true,
-          specialHolidays: true,
-          latitude: true,
-          longitude: true,
-          priceRange: true,
-          businessAttributes: true,
-          paymentAccepted: true,
           establishedDate: true,
         },
       }),

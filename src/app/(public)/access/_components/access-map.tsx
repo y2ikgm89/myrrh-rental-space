@@ -46,13 +46,11 @@ export async function AccessMap({
 
   // props 未指定なら Settings にフォールバック（後方互換）
   let resolvedAddress = address ?? null;
-  let resolvedLat = latitude ?? null;
-  let resolvedLng = longitude ?? null;
+  const resolvedLat = latitude ?? null;
+  const resolvedLng = longitude ?? null;
 
   if (!resolvedAddress && resolvedLat == null && resolvedLng == null) {
     const settings = await getOrganizationSettings();
-    resolvedLat = settings?.latitude ?? null;
-    resolvedLng = settings?.longitude ?? null;
     resolvedAddress =
       [
         settings?.prefecture,

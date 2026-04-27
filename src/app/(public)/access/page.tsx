@@ -45,14 +45,29 @@ async function buildFallbackLocation(): Promise<LocationForAccess | null> {
 
   return {
     id: "fallback",
+    slug: "fallback",
     name: info.name || "本拠点",
     description: null,
     address: info.address,
+    postalCode: info.postalCode ?? null,
+    prefecture: info.prefecture ?? null,
+    city: info.city ?? null,
+    streetAddress: info.streetAddress ?? null,
+    buildingName: info.buildingName ?? null,
     access: info.accessInfo ?? null,
     parkingInfo: info.parkingInfo ?? null,
-    amenities: info.businessAttributes ?? {},
+    amenities: {},
     imageUrl: "", // フォールバック時は画像なし（LocationChapter で条件レンダリング）
     businessHours: info.businessHours,
+    specialHolidays: null,
+    phoneNumber: info.phone ?? null,
+    email: info.email ?? null,
+    latitude: null,
+    longitude: null,
+    googleReviewUrl: null,
+    googleBusinessPlaceId: null,
+    priceRange: null,
+    paymentAccepted: null,
   };
 }
 
@@ -138,10 +153,7 @@ async function AccessChapters({
 export default async function AccessPage(): Promise<ReactElement> {
   await connection();
 
-  const [sections, businessInfo] = await Promise.all([
-    getPageSectionsWithFallback("access"),
-    getBusinessInfo(),
-  ]);
+  const sections = await getPageSectionsWithFallback("access");
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -193,7 +205,7 @@ export default async function AccessPage(): Promise<ReactElement> {
       <section className="pt-20 pb-[var(--space-lg)] md:pt-28">
         <Container>
           <Suspense fallback={null}>
-            <AccessChapters googleMapsUrl={businessInfo.googleMapsUrl} />
+            <AccessChapters googleMapsUrl={null} />
           </Suspense>
         </Container>
       </section>

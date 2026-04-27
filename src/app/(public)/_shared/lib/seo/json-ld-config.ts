@@ -234,34 +234,6 @@ export function convertToOpeningHoursSpecification(
   return specs.length > 0 ? specs : undefined;
 }
 
-/**
- * specialHolidays JSON → specialOpeningHoursSpecification 変換
- * 休業日は opens/closes を "00:00" に設定（schema.org 公式パターン）
- */
-function convertToSpecialOpeningHours(
-  specialHolidays: unknown,
-): SpecialOpeningHoursSpec[] | undefined {
-  if (!Array.isArray(specialHolidays)) return undefined;
-
-  const specs: SpecialOpeningHoursSpec[] = [];
-
-  for (const dateStr of specialHolidays) {
-    if (typeof dateStr !== "string") continue;
-    // ISO 8601 日付形式チェック: YYYY-MM-DD
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
-
-    specs.push({
-      "@type": "OpeningHoursSpecification",
-      validFrom: dateStr,
-      validThrough: dateStr,
-      opens: "00:00",
-      closes: "00:00",
-    });
-  }
-
-  return specs.length > 0 ? specs : undefined;
-}
-
 /** 施設属性ラベルマッピング（フロントエンド表示でも再利用） */
 export const ATTR_LABELS: Record<string, string> = {
   wifi: "Wi-Fi",
@@ -273,33 +245,6 @@ export const ATTR_LABELS: Record<string, string> = {
   photography_allowed: "撮影可",
   music_allowed: "楽器演奏可",
 };
-
-/**
- * businessAttributes → amenityFeature 変換
- * value: true のもののみ出力
- */
-function convertToAmenityFeatures(
-  attrs: unknown,
-): AmenityFeatureSpec[] | undefined {
-  if (!isRecord(attrs)) {
-    return undefined;
-  }
-
-  const record = attrs;
-  const features: AmenityFeatureSpec[] = [];
-
-  for (const [key, value] of Object.entries(record)) {
-    if (value === true) {
-      features.push({
-        "@type": "LocationFeatureSpecification",
-        name: ATTR_LABELS[key] || key,
-        value: true,
-      });
-    }
-  }
-
-  return features.length > 0 ? features : undefined;
-}
 
 /**
  * LocalBusiness JSON-LD用データを取得
@@ -314,18 +259,6 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
   const streetAddress = [settings?.streetAddress, settings?.buildingName]
     .filter(Boolean)
     .join(" ");
-
-  const lat = settings?.latitude ?? null;
-  const lng = settings?.longitude ?? null;
-
-  // geo + hasMap: 緯度経度が両方設定されている場合のみ
-  const geo =
-    lat !== null && lng !== null
-      ? { latitude: lat, longitude: lng }
-      : undefined;
-  const hasMap = geo
-    ? `https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`
-    : undefined;
 
   // foundingDate: ISO 8601形式
   const foundingDate = settings?.establishedDate
@@ -354,19 +287,11 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
     openingHoursSpecification: convertToOpeningHoursSpecification(
       settings?.businessHours,
     ),
-    specialOpeningHoursSpecification: convertToSpecialOpeningHours(
-      settings?.specialHolidays,
-    ),
-    priceRange: settings?.priceRange || undefined,
-    geo,
-    hasMap,
     currenciesAccepted: "JPY",
-    paymentAccepted: settings?.paymentAccepted || undefined,
     foundingDate,
     additionalType: "https://en.wikipedia.org/wiki/Coworking",
     image: settings?.headerLogoUrl ? [settings.headerLogoUrl] : undefined,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
-    amenityFeature: convertToAmenityFeatures(settings?.businessAttributes),
   });
 }
 

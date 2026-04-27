@@ -175,18 +175,36 @@ export function LocationForm({ location, mode }: LocationFormProps) {
     {
       defaultValues: location
         ? {
+            slug: location.slug,
             name: location.name,
             description: location.description ?? "",
             address: location.address,
+            postalCode: location.postalCode ?? "",
+            prefecture: location.prefecture ?? "",
+            city: location.city ?? "",
+            streetAddress: location.streetAddress ?? "",
+            buildingName: location.buildingName ?? "",
             access: location.access ?? "",
             parkingInfo: location.parkingInfo ?? "",
-            amenities: location.amenities,
+            amenities: location.amenities as Record<string, boolean>,
             imageUrl: location.imageUrl,
             // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
-            imageUrls: location.imageUrls.map((url) => ({ url })),
-            businessHours: location.businessHours,
+            imageUrls: (location.imageUrls as string[]).map((url) => ({ url })),
+            businessHours:
+              location.businessHours as LocationFormInput["businessHours"],
+            specialHolidays:
+              (location.specialHolidays as string[] | null) ?? null,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            googleBusinessPlaceId: location.googleBusinessPlaceId ?? "",
+            googleReviewUrl: location.googleReviewUrl ?? "",
+            priceRange: location.priceRange ?? "",
+            paymentAccepted: location.paymentAccepted ?? "",
+            phoneNumber: location.phoneNumber ?? "",
+            email: location.email ?? "",
             sortOrder: location.sortOrder,
             isPublished: location.isPublished,
+            isActive: location.isActive,
           }
         : defaultLocationFormValues,
       onSuccess: (data) => {
@@ -291,6 +309,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                   <FormControl>
                     <Textarea
                       {...field}
+                      value={field.value ?? ""}
                       placeholder="建物・施設の説明を入力..."
                       rows={4}
                       disabled={isPending}
@@ -330,6 +349,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                   <FormControl>
                     <Textarea
                       {...field}
+                      value={field.value ?? ""}
                       placeholder={`例: 渋谷駅から徒歩5分\n地下鉄A出口すぐ`}
                       rows={3}
                       disabled={isPending}
@@ -349,6 +369,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                   <FormControl>
                     <Textarea
                       {...field}
+                      value={field.value ?? ""}
                       placeholder={`例: 専用駐車場 3台\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）`}
                       rows={3}
                       disabled={isPending}

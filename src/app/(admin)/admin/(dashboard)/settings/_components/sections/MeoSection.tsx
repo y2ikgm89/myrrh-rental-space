@@ -29,7 +29,7 @@ import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateMeoSettings } from "@/admin/actions/settings";
 import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
 import { meoFormSchema } from "@/admin/actions/settings/schemas/form-schemas-seo-analytics";
-import { parseBusinessAttributes } from "@/shared/lib/json-validators";
+
 import { BUSINESS_ATTRIBUTE_OPTIONS } from "@/shared/lib/business-attributes";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -135,15 +135,13 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
     },
     {
       defaultValues: {
-        latitude: settings.latitude !== null ? String(settings.latitude) : "",
-        longitude:
-          settings.longitude !== null ? String(settings.longitude) : "",
-        priceRange: settings.priceRange || "",
-        googleBusinessPlaceId: settings.googleBusinessPlaceId || "",
-        googleReviewUrl: settings.googleReviewUrl || "",
-        businessAttributes:
-          parseBusinessAttributes(settings.businessAttributes) ?? {},
-        paymentAccepted: settings.paymentAccepted || "",
+        latitude: "",
+        longitude: "",
+        priceRange: "",
+        googleBusinessPlaceId: "",
+        googleReviewUrl: "",
+        businessAttributes: {},
+        paymentAccepted: "",
       },
       refresh: true,
       successMessage: "MEO設定を保存しました",

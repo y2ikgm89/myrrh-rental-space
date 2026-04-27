@@ -13,16 +13,15 @@
  */
 
 import type { ReactElement } from "react";
-import { IconExternalLink } from "@tabler/icons-react";
+
 import { getBusinessInfo } from "@/public/data/business";
 
 export async function AccessGlobalInfo(): Promise<ReactElement> {
   const info = await getBusinessInfo();
 
   const hasContact = Boolean(info.phone || info.email);
-  const hasReview = Boolean(info.googleReviewUrl);
 
-  if (!hasContact && !hasReview) return <></>;
+  if (!hasContact) return <></>;
 
   return (
     <div
@@ -79,26 +78,6 @@ export async function AccessGlobalInfo(): Promise<ReactElement> {
             </div>
           )}
         </dl>
-      )}
-
-      {/* Google review — editorial text link */}
-      {hasReview && (
-        <div className="text-center">
-          <a
-            href={info.googleReviewUrl ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-foreground"
-          >
-            <span className="border-b border-foreground pb-0.5 transition-opacity group-hover:opacity-60">
-              Google で口コミを書く
-            </span>
-            <IconExternalLink
-              aria-hidden="true"
-              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-            />
-          </a>
-        </div>
       )}
     </div>
   );
