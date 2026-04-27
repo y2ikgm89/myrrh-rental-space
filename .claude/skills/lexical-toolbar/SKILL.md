@@ -1,6 +1,8 @@
 ---
 name: lexical-toolbar
 description: 管理画面の Lexical toolbar に新しい操作を足すときに使う。button 配置、command 接続、dialog 連携、active state を一緒に揃える。既存 toolbar の監査やモダナイズが主目的なら lexical-audit を使う。
+paths:
+  - src/**/lexical/plugins/toolbar/**
 ---
 
 # lexical-toolbar
