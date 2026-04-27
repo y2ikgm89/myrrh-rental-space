@@ -75,12 +75,24 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
 }));
 
-// purgeNewsCache は呼び出されるが副作用なし
+// cloudflare module: 全 export をスタブ化してバッチ実行時の他テスト汚染を防ぐ
 const mockPurgeNewsCache = mock<() => Promise<{ success: boolean }>>(() =>
   Promise.resolve({ success: true }),
 );
+const noopPurge = (): Promise<{ success: boolean }> =>
+  Promise.resolve({ success: true });
 mock.module("@/shared/lib/cloudflare", () => ({
+  purgeCloudflareCache: mock(noopPurge),
+  purgeCloudflareCacheByPrefix: mock(noopPurge),
+  purgeAllCloudflareCache: mock(noopPurge),
+  purgeCloudflareByPaths: mock(noopPurge),
+  purgeSpaceCache: mock(noopPurge),
+  purgePostCache: mock(noopPurge),
   purgeNewsCache: mockPurgeNewsCache,
+  purgePageCache: mock(noopPurge),
+  purgeHomeCache: mock(noopPurge),
+  purgeFaqCache: mock(noopPurge),
+  purgeTermsCache: mock(noopPurge),
 }));
 
 // =============================================================================
