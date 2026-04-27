@@ -2,8 +2,6 @@
 paths:
   - __tests__/**
   - e2e/**
-  - src/**/*.test.ts
-  - src/**/*.spec.ts
 ---
 
 # Bun パターンルール

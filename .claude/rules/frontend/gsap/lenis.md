@@ -3,8 +3,7 @@ description: GSAP Lenis スムーススクロール・Tailwind CSS 4 と GSAP �
 paths:
   - "src/app/(public*)/_shared/lib/gsap*"
   - "src/app/(public*)/_shared/lib/animations*"
-  - "src/app/(public*)/_shared/components/effects/**"
-  - "src/app/(public*)/_shared/components/providers/SmoothScrollProvider*"
+  - "src/app/(public*)/_shared/components/providers/lenis-provider*"
   - "src/app/(public*)/_shared/lib/a11y/motion*"
   - "src/app/(public*)/_components/**/*.tsx"
   - "src/app/(public*)/_shared/components/animations/**"

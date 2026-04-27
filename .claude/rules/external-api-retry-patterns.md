@@ -3,10 +3,11 @@ paths:
   - src/shared/lib/email/**
   - src/shared/lib/google-calendar/**
   - src/shared/lib/calendar-sync/**
-  - src/shared/lib/stripe*
   - src/shared/lib/cloudflare*
   - src/shared/lib/instagram*
   - src/shared/lib/turnstile*
+  - src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe*
+  - src/app/(admin)/admin/(dashboard)/_shared/lib/stripe*
   - src/app/api/webhooks/**
   - src/app/**/api-keys/**
 ---
