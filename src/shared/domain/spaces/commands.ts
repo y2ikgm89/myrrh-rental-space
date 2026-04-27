@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import {
   DiscountType,
@@ -250,4 +250,137 @@ export async function toggleSpacePublishedCommand(
   });
 
   return { isPublished };
+}
+
+/**
+ * 既存スペースを複製して新規 DRAFT スペースを作成する。
+ *
+ * - 本文・サムネイル・容量・料金・割引・税率・SEO/OGP は全てコピー
+ * - `isPublished` は強制 `false`（DRAFT 化）、`publishedAt` は `null`
+ * - `reviewsEnabled` も元レコードを継承
+ * - 関連する予約・レビュー・イベント・iCal トークンは複製しない
+ * - slug は `${original.slug}-copy` をベースに `ensureUniqueSlug` で衝突回避
+ * - name は `${original.name}(コピー)` の慣例に従う
+ * - 画像 URL（mainImageUrl / imageUrls）は元レコードの URL を参照共有
+ *   （R2 オブジェクト複製は行わない。差し替えは管理者の編集操作）
+ *
+ * 同一実装が `events/commands.ts` の `duplicateEventCommand` にもある（YAGNI のため
+ * 共通化していない。3 リソース目で `@/shared/lib/slug-validation` への抽出を検討）。
+ */
+export async function duplicateSpaceCommand(
+  id: string,
+): Promise<{ id: string; slug: string }> {
+  const source = await prisma.space.findUnique({
+    where: { id },
+    select: {
+      slug: true,
+      name: true,
+      descriptionJson: true,
+      descriptionHtml: true,
+      descriptionPlainText: true,
+      addressDetail: true,
+      access: true,
+      capacity: true,
+      area: true,
+      hourlyPrice: true,
+      dailyPrice: true,
+      mainImageUrl: true,
+      imageUrls: true,
+      facilities: true,
+      businessHours: true,
+      reviewsEnabled: true,
+      metaDescription: true,
+      metaKeywords: true,
+      ogpTitle: true,
+      ogpDescription: true,
+      ogpImageUrl: true,
+      termsId: true,
+      discountType: true,
+      discountValue: true,
+      durationDiscountOverride: true,
+      taxRateType: true,
+      locationId: true,
+      categoryId: true,
+    },
+  });
+  if (!source) {
+    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
+  }
+
+  const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+
+  const created = await prisma.space.create({
+    data: {
+      slug,
+      name: `${source.name}(コピー)`,
+      descriptionJson: source.descriptionJson as Prisma.InputJsonValue,
+      descriptionHtml: source.descriptionHtml,
+      descriptionPlainText: source.descriptionPlainText,
+      addressDetail: source.addressDetail,
+      access: source.access,
+      capacity: source.capacity,
+      area: source.area,
+      hourlyPrice: source.hourlyPrice,
+      dailyPrice: source.dailyPrice,
+      mainImageUrl: source.mainImageUrl,
+      imageUrls: source.imageUrls as Prisma.InputJsonValue,
+      facilities: source.facilities as Prisma.InputJsonValue,
+      businessHours:
+        source.businessHours === null
+          ? Prisma.JsonNull
+          : (source.businessHours as Prisma.InputJsonValue),
+      reviewsEnabled: source.reviewsEnabled,
+      metaDescription: source.metaDescription,
+      metaKeywords: source.metaKeywords,
+      ogpTitle: source.ogpTitle,
+      ogpDescription: source.ogpDescription,
+      ogpImageUrl: source.ogpImageUrl,
+      termsId: source.termsId,
+      discountType: source.discountType,
+      discountValue: source.discountValue,
+      durationDiscountOverride: source.durationDiscountOverride,
+      taxRateType: source.taxRateType,
+      locationId: source.locationId,
+      categoryId: source.categoryId,
+      isPublished: false,
+      publishedAt: null,
+    },
+    select: { id: true, slug: true },
+  });
+
+  return created;
+}
+
+/**
+ * `slug` が空いていればそのまま返し、衝突したら `${slug}-2`, `${slug}-3` ...
+ * の最小未使用番号を返す（WordPress / Ghost / Notion 互換のインクリメンタル方式）。
+ *
+ * deterministic な番号付けにより、複製スペースの URL が「-copy」「-copy-2」
+ * のように人間に予測可能な並びになる。
+ *
+ * 同一ロジックが `events/commands.ts` にもある（YAGNI のため共通化していない）。
+ */
+async function ensureUniqueSlug(slug: string): Promise<string> {
+  const existing = await prisma.space.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (!existing) return slug;
+
+  const siblings = await prisma.space.findMany({
+    where: { slug: { startsWith: `${slug}-` } },
+    select: { slug: true },
+  });
+
+  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^${escaped}-(\\d+)$`);
+  const used = new Set<number>();
+  for (const s of siblings) {
+    const match = s.slug.match(pattern);
+    if (match?.[1]) used.add(Number(match[1]));
+  }
+
+  let n = 2;
+  while (used.has(n)) n++;
+  return `${slug}-${n}`;
 }
