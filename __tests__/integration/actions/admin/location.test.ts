@@ -556,6 +556,108 @@ describe("Location Admin Action Integration", () => {
     });
   });
 
+  describe("MEO フィールドバリデーション", () => {
+    describe("latitude / longitude", () => {
+      test("有効な緯度・経度は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          latitude: 35.6595,
+          longitude: 139.7004,
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("null の緯度・経度は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          latitude: null,
+          longitude: null,
+        });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    describe("googleBusinessPlaceId", () => {
+      test("有効な Place ID は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          googleBusinessPlaceId: "ChIJN1t_tDeuEmsRUsoyG83frY4",
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("空文字の Place ID は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          googleBusinessPlaceId: "",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    describe("priceRange", () => {
+      test("有効な priceRange は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          priceRange: "¥1,000〜¥5,000/時間",
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("空文字の priceRange は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          priceRange: "",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    describe("postalCode / prefecture / city / streetAddress / buildingName", () => {
+      test("全 NAP 住所フィールドを設定できる", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          postalCode: "150-0001",
+          prefecture: "東京都",
+          city: "渋谷区",
+          streetAddress: "渋谷1-2-3",
+          buildingName: "渋谷ビル 3F",
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("空文字の住所サブフィールドは許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          postalCode: "",
+          prefecture: "",
+          city: "",
+          streetAddress: "",
+          buildingName: "",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    describe("phoneNumber / email（per-location MEO）", () => {
+      test("有効な電話番号は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          phoneNumber: "03-1234-5678",
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("空文字の電話番号は許可", () => {
+        const result = locationFormSchema.safeParse({
+          ...VALID_LOCATION_INPUT,
+          phoneNumber: "",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
+  });
+
   describe("境界値テスト", () => {
     test("名前 100文字（境界）", () => {
       const result = locationFormSchema.safeParse({
