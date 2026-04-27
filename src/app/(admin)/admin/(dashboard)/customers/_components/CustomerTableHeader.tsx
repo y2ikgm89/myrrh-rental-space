@@ -1,14 +1,22 @@
 "use client";
 
 import { useQueryStates } from "nuqs";
-import { SortableColumnHeader } from "@/admin/components/table";
+import { CheckboxCell, SortableColumnHeader } from "@/admin/components/table";
 import { TableHead, TableHeader, TableRow } from "@/admin/components/ui";
 import {
   adminCustomerSearchParamsParsers,
   type AdminCustomerSortBy,
 } from "@/shared/lib/nuqs";
 
-export function CustomerTableHeader() {
+type CustomerTableHeaderProps = {
+  allSelected?: boolean;
+  onToggleAll?: () => void;
+};
+
+export function CustomerTableHeader({
+  allSelected = false,
+  onToggleAll,
+}: CustomerTableHeaderProps = {}) {
   const [params, setParams] = useQueryStates(adminCustomerSearchParamsParsers, {
     history: "push",
     shallow: false,
@@ -26,6 +34,15 @@ export function CustomerTableHeader() {
   return (
     <TableHeader>
       <TableRow>
+        {onToggleAll ? (
+          <TableHead className="w-11">
+            <CheckboxCell
+              checked={allSelected}
+              onChange={onToggleAll}
+              aria-label="すべての顧客を選択"
+            />
+          </TableHead>
+        ) : null}
         <TableHead>ステータス</TableHead>
         <TableHead>お名前</TableHead>
         <TableHead className="hidden md:table-cell">種別</TableHead>
