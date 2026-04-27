@@ -145,7 +145,12 @@ async function HeadContent(): Promise<ReactElement> {
  */
 async function StructuredDataContent(): Promise<ReactElement> {
   const graphData = await getGraphJsonLdData();
-  return <GraphJsonLd {...graphData} />;
+  return (
+    <GraphJsonLd
+      organization={graphData.organization}
+      webSite={graphData.webSite}
+    />
+  );
 }
 
 /**

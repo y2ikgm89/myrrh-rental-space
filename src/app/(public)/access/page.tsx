@@ -24,7 +24,8 @@ import {
   type LocationForAccess,
 } from "@/shared/domain/locations/public-queries";
 import { getBusinessInfo } from "@/public/data/business";
-import { generateUniqueSlug } from "@/shared/lib/slug";
+import { getAllPublishedLocationsJsonLdData } from "@/public/lib/seo";
+import { LocationsLocalBusinessJsonLd } from "@/public/components/seo/json-ld";
 import { LocationChapter } from "./_components/location-chapter";
 import { LocationsOverview } from "./_components/locations-overview";
 import { AccessGlobalInfo } from "./_components/access-global-info";
@@ -91,12 +92,11 @@ async function resolveLocations(): Promise<
       : [];
   }
 
-  const usedSlugs = new Set<string>();
-  return locations.map((loc, i) => {
-    const anchorId = generateUniqueSlug(loc.name, usedSlugs, "location");
-    usedSlugs.add(anchorId);
-    return { anchorId, index: i + 1, location: loc };
-  });
+  return locations.map((loc, i) => ({
+    anchorId: loc.slug,
+    index: i + 1,
+    location: loc,
+  }));
 }
 
 async function AccessOverview(): Promise<ReactElement> {
@@ -148,6 +148,11 @@ async function AccessChapters({
       ))}
     </div>
   );
+}
+
+async function AccessChaptersJsonLd(): Promise<ReactElement | null> {
+  const locations = await getAllPublishedLocationsJsonLdData();
+  return <LocationsLocalBusinessJsonLd locations={locations} />;
 }
 
 export default async function AccessPage(): Promise<ReactElement> {
@@ -213,6 +218,11 @@ export default async function AccessPage(): Promise<ReactElement> {
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
+
+      {/* per-location LocalBusiness JSON-LD（Google 公式 "repeated markup per location" パターン） */}
+      <Suspense fallback={null}>
+        <AccessChaptersJsonLd />
+      </Suspense>
     </PageLayout>
   );
 }
