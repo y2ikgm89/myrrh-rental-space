@@ -2,7 +2,8 @@
 
 ## Development
 - `bun dev` - 開発サーバー起動
-- `bun run test` - テスト実行
+- `bun test <path/to/file.test.ts>` - 単一ファイルテスト（ADR 0010 / 0014 — `bun run test` script は廃止）
+- `bun run test:unit` / `bun run test:integration` / `bun run test:all` - per-directory バッチ実行
 
 ## Verification (必須)
 - `bun run type-check` - TypeScript型チェック

@@ -54,29 +54,45 @@ Next.js 16 公式 [backend-for-frontend ガイド](https://github.com/vercel/nex
 ### canonical Route Handler（管理画面 reader 用）
 
 ```typescript
-// src/app/(admin)/admin/api/section-styles/route.ts
-import { NextResponse } from "next/server";
+// src/app/(admin)/admin/api/block-templates/route.ts
+import type { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
-import { listSectionStyles } from "@/shared/domain/section-styles/queries";
-import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
-import { omitUndefined } from "@/shared/lib/serialize";
-import { sectionStyleListFiltersSchema } from "@/shared/lib/validations/section-style";
+import { getBlockTemplates } from "@/shared/domain/block-template/queries";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonSuccess,
+} from "@/shared/lib/route-responses";
 
-export async function GET(request: Request) {
-  const auth = await checkPermission("sectionStyle", "read", request.headers);
-  if (!auth.success) return jsonError(auth.error.error, 403);
+export async function GET(request: Request): Promise<NextResponse> {
+  try {
+    const auth = await checkPermission(
+      "blockTemplate",
+      "read",
+      request.headers,
+    );
+    if (!auth.success) {
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
+    }
 
-  const url = new URL(request.url);
-  const parsed = sectionStyleListFiltersSchema.safeParse({
-    scope: url.searchParams.get("scope") ?? undefined,
-    applicableType: url.searchParams.get("applicableType") || undefined,
-    search: url.searchParams.get("search") || undefined,
-  });
-  if (!parsed.success)
-    return jsonValidationError(parsed.error, "クエリが不正です");
+    return jsonSuccess(await getBlockTemplates());
+  } catch (error: unknown) {
+    unstable_rethrow(error);
+    logError(normalizeError(error), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "adminBlockTemplatesGet" },
+    });
 
-  const styles = await listSectionStyles(omitUndefined(parsed.data));
-  return NextResponse.json(styles);
+    return jsonError("Internal server error", 500);
+  }
 }
 ```
 
@@ -95,7 +111,7 @@ export async function GET(request: Request) {
 ### 参照実装（3 経路）
 
 - `src/app/(admin)/admin/api/ogp/route.ts` — POST + SSRF guard + external fetch + timeout
-- `src/app/(admin)/admin/api/section-styles/route.ts` — GET + filter query + zod safeParse
+- `src/app/(admin)/admin/api/block-templates/route.ts` — GET + permission + try/catch + unstable_rethrow
 - `src/app/(admin)/admin/api/notifications/unread-count/route.ts` — GET + 軽量 count
 
 ### 禁止パターン
@@ -124,7 +140,7 @@ export async function fetchOgpPreview(url: string) {
 
 ### 移行メモ（ADR 0019）
 
-`fetch-ogp.ts` / `notification-polling.ts` / `section-styles/queries.ts` の 3 経路を `"use server"` から Route Handler に移行済み。新規 reader は最初から Route Handler で書く。
+`fetch-ogp.ts` / `notification-polling.ts` の reader 経路を `"use server"` から Route Handler に移行済み（旧 `section-styles/queries.ts` は ADR 0021 で Style Library 廃止と共に削除）。新規 reader は最初から Route Handler で書く。
 
 ---
 

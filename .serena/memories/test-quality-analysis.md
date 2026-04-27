@@ -334,14 +334,14 @@
 # 全テスト実行
 bun run test:all
 
-# Unit のみ
-bun run test __tests__/unit
+# Unit のみ（per-directory バッチ、ADR 0010 / 0014）
+bun run test:unit
 
 # Integration のみ
-bun run test __tests__/integration
+bun run test:integration
 
-# 特定ファイル
-bun run test __tests__/unit/lib/pricing.test.ts
+# 特定ファイル（ADR 0014 で `bun run test` script は廃止 — `bun test <path>` を使う）
+bun test __tests__/unit/lib/pricing.test.ts
 
 # E2E（UIモード）
 bun run e2e:ui
