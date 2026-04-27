@@ -100,7 +100,7 @@ async function ensureLocationExists(id: string): Promise<{
 
 export async function createLocation(
   data: LocationFormData,
-): Promise<{ id: string }> {
+): Promise<{ id: string; slug: string }> {
   const existing = await prisma.location.findUnique({
     where: { slug: data.slug },
     select: { id: true },
@@ -116,13 +116,13 @@ export async function createLocation(
     data: toLocationData(data),
   });
 
-  return { id: location.id };
+  return { id: location.id, slug: location.slug };
 }
 
 export async function updateLocation(
   id: string,
   data: LocationFormData,
-): Promise<{ id: string }> {
+): Promise<{ id: string; slug: string }> {
   await ensureLocationExists(id);
 
   const slugConflict = await prisma.location.findUnique({
@@ -141,7 +141,7 @@ export async function updateLocation(
     data: toLocationData(data),
   });
 
-  return { id };
+  return { id, slug: data.slug };
 }
 
 export async function toggleLocationPublish(

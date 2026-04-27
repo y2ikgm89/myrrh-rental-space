@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
 import { getLocationById } from "@/admin/queries/location";
+import {
+  getOrganizationSettings,
+  getSocialLinkUrls,
+} from "@/shared/domain/settings/queries/organization";
 import { LocationForm } from "../../_components/LocationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -29,11 +33,21 @@ export async function generateMetadata({
 
 export default async function EditLocationPage({ params }: PageProps) {
   const { id } = await params;
-  const location = await getLocationById(id);
+  const [location, settings, socialLinks] = await Promise.all([
+    getLocationById(id),
+    getOrganizationSettings(),
+    getSocialLinkUrls(),
+  ]);
 
   if (!location) {
     notFound();
   }
+
+  const globals = {
+    businessName: !!settings?.businessName,
+    establishedDate: !!settings?.establishedDate,
+    socialLinks: socialLinks.length > 0,
+  };
 
   return (
     <AdminDetailLayout
@@ -42,7 +56,12 @@ export default async function EditLocationPage({ params }: PageProps) {
       title="拠点情報を編集"
       subtitle={location.name}
     >
-      <LocationForm key={location.id} location={location} mode="edit" />
+      <LocationForm
+        key={location.id}
+        location={location}
+        mode="edit"
+        globals={globals}
+      />
     </AdminDetailLayout>
   );
 }

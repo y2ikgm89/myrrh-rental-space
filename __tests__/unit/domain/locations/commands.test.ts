@@ -6,7 +6,7 @@ const mockLocationFindUnique = mock<
 >(() => Promise.resolve(null));
 
 const mockLocationCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "location-1" }),
+  Promise.resolve({ id: "location-1", slug: "shibuya-space" }),
 );
 
 const mockLocationUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
@@ -116,14 +116,17 @@ const EXISTING_LOCATION = {
 describe("createLocation", () => {
   beforeEach(() => {
     mockLocationCreate.mockReset();
-    mockLocationCreate.mockResolvedValue({ id: LOCATION_ID });
+    mockLocationCreate.mockResolvedValue({
+      id: LOCATION_ID,
+      slug: "shibuya-space",
+    });
   });
 
   describe("正常系", () => {
     test("有効なフォームデータで場所を作成できる", async () => {
       const result = await createLocation(VALID_FORM_DATA);
 
-      expect(result).toEqual({ id: LOCATION_ID });
+      expect(result).toEqual({ id: LOCATION_ID, slug: "shibuya-space" });
       expect(mockLocationCreate).toHaveBeenCalledTimes(1);
     });
 
@@ -259,7 +262,7 @@ describe("updateLocation", () => {
 
       const result = await updateLocation(LOCATION_ID, VALID_FORM_DATA);
 
-      expect(result).toEqual({ id: LOCATION_ID });
+      expect(result).toEqual({ id: LOCATION_ID, slug: "shibuya-space" });
       expect(mockLocationUpdate).toHaveBeenCalledTimes(1);
     });
 

@@ -16,7 +16,7 @@ import {
   updateLocationOrder as updateLocationOrderCommand,
 } from "@/shared/domain/locations/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "場所IDが不正です" });
@@ -37,7 +37,7 @@ const locationOrderSchema = z
 
 export async function createLocation(
   input: LocationFormInput,
-): Promise<MutationResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string; slug: string }>> {
   const parsed = locationFormSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -47,8 +47,9 @@ export async function createLocation(
     resource: "location",
     action: "create",
     execute: async () => createLocationCommand(parsed.data),
-    afterSuccess: () => {
+    afterSuccess: (data) => {
       updateTag(CACHE_TAGS.LOCATIONS);
+      updateTag(getCacheTag.locations.detail(data.slug));
     },
     resolveAuditResourceId: (result) => result.id,
   });
@@ -57,7 +58,7 @@ export async function createLocation(
 export async function updateLocation(
   id: string,
   input: LocationFormInput,
-): Promise<MutationResult<{ id: string }>> {
+): Promise<MutationResult<{ id: string; slug: string }>> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
     return createValidationMutationError(validatedId.error);
@@ -73,8 +74,9 @@ export async function updateLocation(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => updateLocationCommand(validatedId.data, parsed.data),
-    afterSuccess: () => {
+    afterSuccess: (data) => {
       updateTag(CACHE_TAGS.LOCATIONS);
+      updateTag(getCacheTag.locations.detail(data.slug));
     },
     resolveAuditResourceId: (result) => result.id,
   });
