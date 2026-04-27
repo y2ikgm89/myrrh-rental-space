@@ -9,14 +9,24 @@ import {
   IconTrash,
   IconX,
   IconLoader2,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/admin/components/ui";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import {
   bulkToggleActiveCustomers,
   bulkDeleteCustomers,
+  bulkSetStatusCustomers,
 } from "@/admin/actions/customer/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { CUSTOMER_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { CustomerStatus } from "@generated/prisma/enums";
 
 interface CustomerBulkActionsProps {
   selectedIds: string[];
@@ -46,6 +56,26 @@ export function CustomerBulkActions({
           ? `${result.count}件の顧客を有効化しました`
           : `${result.count}件の顧客を無効化しました`,
       );
+      onClear();
+      router.refresh();
+    });
+  };
+
+  const handleBulkSetStatus = (newStatus: CustomerStatus) => {
+    startTransition(async () => {
+      const result = await bulkSetStatusCustomers(selectedIds, newStatus);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      const label = CUSTOMER_STATUS_LABELS[newStatus];
+      const baseMessage = `${result.count}件のステータスを「${label}」に変更しました`;
+      const message =
+        result.rejectedIds.length > 0
+          ? `${baseMessage}（${result.rejectedIds.length}件は遷移不可のためスキップ）`
+          : baseMessage;
+      toast.success(message);
       onClear();
       router.refresh();
     });
@@ -108,6 +138,27 @@ export function CustomerBulkActions({
             )}
             一括無効化
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isPending}>
+                ステータス変更
+                <IconChevronDown className="ml-1 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {(Object.keys(CUSTOMER_STATUS_LABELS) as CustomerStatus[]).map(
+                (status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onClick={() => handleBulkSetStatus(status)}
+                  >
+                    {CUSTOMER_STATUS_LABELS[status]}
+                  </DropdownMenuItem>
+                ),
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             variant="outline"

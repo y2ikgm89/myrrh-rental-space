@@ -389,6 +389,81 @@ export function getReservationStatusFilterOrAll(
 }
 
 // =============================================================================
+// Status Transition Maps
+// =============================================================================
+
+/**
+ * Customer ステータス遷移ルール（任意遷移、internal CRM）
+ * 5 状態すべて自由遷移を許可。同一状態への変更は呼び出し側で no-op 化。
+ */
+export const CUSTOMER_STATUS_TRANSITIONS: Readonly<
+  Record<CustomerStatus, readonly CustomerStatus[]>
+> = {
+  [CustomerStatus.NEW]: [
+    CustomerStatus.REGULAR,
+    CustomerStatus.VIP,
+    CustomerStatus.INACTIVE,
+    CustomerStatus.BLACKLIST,
+  ],
+  [CustomerStatus.REGULAR]: [
+    CustomerStatus.NEW,
+    CustomerStatus.VIP,
+    CustomerStatus.INACTIVE,
+    CustomerStatus.BLACKLIST,
+  ],
+  [CustomerStatus.VIP]: [
+    CustomerStatus.NEW,
+    CustomerStatus.REGULAR,
+    CustomerStatus.INACTIVE,
+    CustomerStatus.BLACKLIST,
+  ],
+  [CustomerStatus.INACTIVE]: [
+    CustomerStatus.NEW,
+    CustomerStatus.REGULAR,
+    CustomerStatus.VIP,
+    CustomerStatus.BLACKLIST,
+  ],
+  [CustomerStatus.BLACKLIST]: [
+    CustomerStatus.NEW,
+    CustomerStatus.REGULAR,
+    CustomerStatus.VIP,
+    CustomerStatus.INACTIVE,
+  ],
+};
+
+/**
+ * Inquiry ステータス遷移ルール（forward only）
+ */
+export const INQUIRY_STATUS_TRANSITIONS: Readonly<
+  Record<InquiryStatus, readonly InquiryStatus[]>
+> = {
+  [InquiryStatus.NEW]: [
+    InquiryStatus.IN_PROGRESS,
+    InquiryStatus.RESOLVED,
+    InquiryStatus.CLOSED,
+  ],
+  [InquiryStatus.IN_PROGRESS]: [InquiryStatus.RESOLVED, InquiryStatus.CLOSED],
+  [InquiryStatus.RESOLVED]: [InquiryStatus.CLOSED],
+  [InquiryStatus.CLOSED]: [],
+};
+
+/**
+ * Event ステータス遷移ルール
+ */
+export const EVENT_STATUS_TRANSITIONS: Readonly<
+  Record<EventStatus, readonly EventStatus[]>
+> = {
+  [EventStatus.DRAFT]: [
+    EventStatus.PUBLISHED,
+    EventStatus.CANCELLED,
+    EventStatus.ARCHIVED,
+  ],
+  [EventStatus.PUBLISHED]: [EventStatus.CANCELLED, EventStatus.ARCHIVED],
+  [EventStatus.CANCELLED]: [EventStatus.ARCHIVED],
+  [EventStatus.ARCHIVED]: [],
+};
+
+// =============================================================================
 // CustomerType Labels
 // =============================================================================
 

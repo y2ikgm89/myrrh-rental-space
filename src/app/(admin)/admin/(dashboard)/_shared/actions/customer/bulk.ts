@@ -12,6 +12,11 @@ import {
   type BulkToggleActiveCustomersResult,
   type BulkDeleteCustomersResult,
 } from "@/shared/domain/customers/bulk-commands";
+import { CustomerStatus } from "@generated/prisma/enums";
+import {
+  bulkSetStatusCustomersCommand,
+  type BulkSetStatusCustomersResult,
+} from "@/shared/domain/customers/bulk-status-commands";
 
 const bulkInputSchema = z.object({
   ids: z
@@ -55,6 +60,32 @@ export async function bulkDeleteCustomers(
     resource: "customer",
     action: "delete",
     execute: async () => bulkDeleteCustomersCommand(parsed.data.ids),
+    afterSuccess: (data) => {
+      invalidateCustomerCachesForIds(data.affectedIds);
+    },
+  });
+}
+
+const bulkStatusInputSchema = z.object({
+  ids: z
+    .array(z.string().uuid({ error: "顧客IDが不正です" }))
+    .min(1, { error: "1件以上選択してください" })
+    .max(100, { error: "一度に処理できるのは100件までです" }),
+  newStatus: z.enum(CustomerStatus),
+});
+
+export async function bulkSetStatusCustomers(
+  ids: string[],
+  newStatus: CustomerStatus,
+): Promise<MutationResult<BulkSetStatusCustomersResult>> {
+  const parsed = bulkStatusInputSchema.safeParse({ ids, newStatus });
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "update",
+    execute: async () =>
+      bulkSetStatusCustomersCommand(parsed.data.ids, parsed.data.newStatus),
     afterSuccess: (data) => {
       invalidateCustomerCachesForIds(data.affectedIds);
     },

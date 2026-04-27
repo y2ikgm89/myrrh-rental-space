@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { CustomerStatus } from "@generated/prisma/enums";
 
 // =============================================================================
 // Mocks (must be defined before importing target module)
@@ -33,9 +34,32 @@ const mockBulkDeleteCustomersCommand = mock<
   }),
 );
 
+const mockBulkSetStatusCustomersCommand = mock<
+  (
+    ids: string[],
+    newStatus: CustomerStatus,
+  ) => Promise<{
+    count: number;
+    newStatus: CustomerStatus;
+    affectedIds: string[];
+    rejectedIds: string[];
+  }>
+>(() =>
+  Promise.resolve({
+    count: 0,
+    newStatus: CustomerStatus.NEW,
+    affectedIds: [],
+    rejectedIds: [],
+  }),
+);
+
 mock.module("@/shared/domain/customers/bulk-commands", () => ({
   bulkToggleActiveCustomersCommand: mockBulkToggleActiveCustomersCommand,
   bulkDeleteCustomersCommand: mockBulkDeleteCustomersCommand,
+}));
+
+mock.module("@/shared/domain/customers/bulk-status-commands", () => ({
+  bulkSetStatusCustomersCommand: mockBulkSetStatusCustomersCommand,
 }));
 
 type ExecuteOpts<T> = {
@@ -97,8 +121,11 @@ mock.module("@/shared/lib/cloudflare", () => ({
 // Import target after mocks
 // =============================================================================
 
-const { bulkToggleActiveCustomers, bulkDeleteCustomers } =
-  await import("@/admin/actions/customer/bulk");
+const {
+  bulkToggleActiveCustomers,
+  bulkDeleteCustomers,
+  bulkSetStatusCustomers,
+} = await import("@/admin/actions/customer/bulk");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 // =============================================================================
@@ -299,6 +326,119 @@ describe("bulkDeleteCustomers", () => {
 
       // ベースタグ 1 + detail tags 2 = 3 calls
       expect(mockUpdateTag).toHaveBeenCalledTimes(3);
+    });
+  });
+});
+
+// =============================================================================
+// bulkSetStatusCustomers
+// =============================================================================
+
+describe("bulkSetStatusCustomers", () => {
+  beforeEach(() => {
+    mockExecuteAdminMutationResult.mockClear();
+    mockBulkSetStatusCustomersCommand.mockClear();
+    mockUpdateTag.mockClear();
+  });
+
+  describe("バリデーション", () => {
+    test("空配列は validation error（min 1）", async () => {
+      const result = await bulkSetStatusCustomers([], CustomerStatus.REGULAR);
+
+      expect(isMutationError(result)).toBe(true);
+      if (isMutationError(result)) {
+        expect(result.error).toBe("入力内容に誤りがあります");
+        expect(result.fieldErrors?.["ids"]).toBeDefined();
+      }
+      expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    });
+
+    test("非 UUID の ID は validation error", async () => {
+      const result = await bulkSetStatusCustomers(
+        ["not-a-uuid"],
+        CustomerStatus.VIP,
+      );
+
+      expect(isMutationError(result)).toBe(true);
+      if (isMutationError(result)) {
+        expect(result.fieldErrors?.["ids"]).toBeDefined();
+      }
+      expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    });
+
+    test("100件超は validation error", async () => {
+      const ids = Array.from({ length: 101 }, (_, i) => {
+        const hex = (i + 1).toString(16).padStart(12, "0");
+        return `00000000-0000-4000-8000-${hex}`;
+      });
+
+      const result = await bulkSetStatusCustomers(ids, CustomerStatus.REGULAR);
+
+      expect(isMutationError(result)).toBe(true);
+      expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("正常系", () => {
+    test("executeAdminMutationResult が resource: customer, action: update で呼ばれる", async () => {
+      mockBulkSetStatusCustomersCommand.mockResolvedValueOnce({
+        count: 2,
+        newStatus: CustomerStatus.VIP,
+        affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        rejectedIds: [],
+      });
+
+      const result = await bulkSetStatusCustomers(
+        [VALID_UUID_A, VALID_UUID_B],
+        CustomerStatus.VIP,
+      );
+
+      expect(mockExecuteAdminMutationResult).toHaveBeenCalledTimes(1);
+      expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resource: "customer",
+          action: "update",
+        }),
+      );
+      expect(mockBulkSetStatusCustomersCommand).toHaveBeenCalledWith(
+        [VALID_UUID_A, VALID_UUID_B],
+        CustomerStatus.VIP,
+      );
+      expect(result).toMatchObject({ count: 2, newStatus: CustomerStatus.VIP });
+    });
+
+    test("afterSuccess で updateTag が affectedIds 分 + ベースタグで呼ばれる", async () => {
+      mockBulkSetStatusCustomersCommand.mockResolvedValueOnce({
+        count: 2,
+        newStatus: CustomerStatus.INACTIVE,
+        affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        rejectedIds: [],
+      });
+
+      await bulkSetStatusCustomers(
+        [VALID_UUID_A, VALID_UUID_B],
+        CustomerStatus.INACTIVE,
+      );
+
+      // ベースタグ 1 + detail tags 2 = 3 calls
+      expect(mockUpdateTag).toHaveBeenCalledTimes(3);
+    });
+
+    test("rejectedIds がある場合でも正常に完了する", async () => {
+      mockBulkSetStatusCustomersCommand.mockResolvedValueOnce({
+        count: 1,
+        newStatus: CustomerStatus.BLACKLIST,
+        affectedIds: [VALID_UUID_A],
+        rejectedIds: [VALID_UUID_B],
+      });
+
+      const result = await bulkSetStatusCustomers(
+        [VALID_UUID_A, VALID_UUID_B],
+        CustomerStatus.BLACKLIST,
+      );
+
+      expect(isMutationError(result)).toBe(false);
+      expect(result).toMatchObject({ count: 1 });
     });
   });
 });
