@@ -1,11 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge, Button, PublishSwitch } from "@/admin/components/ui";
+import { CheckboxCell } from "@/admin/components/table";
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { SpaceTableDesktop } from "./space-table-desktop";
+import { SpaceBulkActions } from "./SpaceBulkActions";
 
 // =============================================================================
 // Types
@@ -16,10 +21,30 @@ type SpaceTableProps = {
 };
 
 // =============================================================================
-// SpaceTable Component (Server Component)
+// SpaceTable Component
 // =============================================================================
 
 export function SpaceTable({ spaces }: SpaceTableProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const allIds = spaces.map((s) => s.id);
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allIds);
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
+
   if (spaces.length === 0) {
     return (
       <EmptyState
@@ -38,6 +63,13 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
             className="rounded-lg border border-border bg-card p-4 shadow-sm"
           >
             <div className="flex gap-3">
+              <div className="shrink-0 self-start">
+                <CheckboxCell
+                  checked={selectedIds.includes(space.id)}
+                  onChange={() => toggleOne(space.id)}
+                  aria-label={`${space.name} を選択`}
+                />
+              </div>
               {space.mainImageUrl ? (
                 <Image
                   src={space.mainImageUrl}
@@ -107,7 +139,18 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
         ))}
       </ul>
 
-      <SpaceTableDesktop spaces={spaces} />
+      <SpaceTableDesktop
+        spaces={spaces}
+        selectedIds={selectedIds}
+        allSelected={allSelected}
+        onToggleAll={toggleAll}
+        onToggleOne={toggleOne}
+      />
+
+      <SpaceBulkActions
+        selectedIds={selectedIds}
+        onClear={() => setSelectedIds([])}
+      />
     </>
   );
 }

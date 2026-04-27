@@ -13,6 +13,7 @@ import {
   TableRow,
   PublishSwitch,
 } from "@/admin/components/ui";
+import { CheckboxCell, stopRowClick } from "@/admin/components/table";
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/pricing/format";
@@ -20,12 +21,22 @@ import { SpaceActionCell } from "./SpaceActionCell";
 
 type SpaceTableDesktopProps = {
   spaces: SpaceWithStats[];
+  selectedIds: string[];
+  allSelected: boolean;
+  onToggleAll: () => void;
+  onToggleOne: (id: string) => void;
 };
 
 /**
  * スペース一覧テーブル（md 以上）。行クリックで詳細、名前リンクで編集。インタラクティブセルは行ナビを阻害しない。
  */
-export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
+export function SpaceTableDesktop({
+  spaces,
+  selectedIds,
+  allSelected,
+  onToggleAll,
+  onToggleOne,
+}: SpaceTableDesktopProps) {
   const router = useRouter();
 
   return (
@@ -34,6 +45,13 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>
+                <CheckboxCell
+                  checked={allSelected}
+                  onChange={onToggleAll}
+                  aria-label="全てのスペースを選択"
+                />
+              </TableHead>
               <TableHead>スペース名</TableHead>
               <TableHead className="hidden xl:table-cell">カテゴリ</TableHead>
               <TableHead className="hidden lg:table-cell">所在地</TableHead>
@@ -59,6 +77,13 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
                   router.push(`/admin/spaces/${space.id}`);
                 }}
               >
+                <TableCell onClick={stopRowClick}>
+                  <CheckboxCell
+                    checked={selectedIds.includes(space.id)}
+                    onChange={() => onToggleOne(space.id)}
+                    aria-label={`${space.name} を選択`}
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     {space.mainImageUrl && (
