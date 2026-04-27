@@ -52,7 +52,7 @@ CLAUDE.md learning「path-scoped auto-load の累積消費を予算管理」「c
 
 - Skills 32 件 / Subagents 25 件
 - Rules barrel-index 候補: tailwind 569 行 / zod 746 行（type-safety 452 行は対象外）
-- ADR 25 件（最新 `0024-multi-tenant-multi-location-foundation.md`）
+- ADR 25 件（最新 `0024-admin-command-palette.md`、直前 `0023-multi-location-seo-foundation.md`）
 - Plans 10 件 / Specs 6 件
 
 ## 3. Per-phase Deliverables
@@ -88,7 +88,7 @@ CLAUDE.md learning「path-scoped auto-load の累積消費を予算管理」「c
 | `memory: project` 整合性確認            | backing dir `.claude/agent-memory/<name>/` または body Memory management 節必須、無いなら frontmatter から削除（2026-04-23 既実施分の続き）                                                                   |
 | `subagent-dispatch-template` skill 新設 | `.claude/skills/subagent-dispatch-template/SKILL.md` を作成。CLAUDE.md「Subagent 規律」節の dispatch prompt template（git 全面禁止 + import alias + plan deviation policy + 完了報告フォーマット）を skill 化 |
 | 利用実績なし agent 削除（L3）           | `grep -rn "subagent_type=\"<name>\"" .claude/ docs/ CLAUDE.md` で参照ゼロな agent を削除、CLAUDE.md「自動ロード」節 + reviewer dispatch 例も同 commit で更新                                                  |
-| **ADR 0026** 採番                       | `docs/architecture/decisions/0026-subagent-dispatch-template-ssot.md` で dispatch template SSoT 移管を ADR として記録                                                                                         |
+| **ADR 0025** 採番                       | `docs/architecture/decisions/0025-subagent-dispatch-template-ssot.md` で dispatch template SSoT 移管を ADR として記録                                                                                         |
 
 **破壊的変更**:
 
@@ -107,9 +107,9 @@ CLAUDE.md learning「path-scoped auto-load の累積消費を予算管理」「c
 | `when_to_use:` 戦略的適用        | description だけでは triggering precision 不足の skill に追加                                                                                                                                                                                                                                                                                                   |
 | `argument-hint:` 適用            | 引数を取る skill (`/ralph-loop:cancel-ralph` / `/loop` / `/schedule` 等) に hint 表示                                                                                                                                                                                                                                                                           |
 | `disable-model-invocation:` 適用 | 人間 trigger 限定の skill (`/cloud-run-debug` / `/instagram-debug` / `/stripe-debug` / `/google-calendar-debug` / `/turbopack-hmr` 等) に `true` 設定し autoload precision 改善                                                                                                                                                                                 |
-| 責務重複解消 (L3+L4)             | ① `add-prisma-enum` + `add-settings-field` の共通 scaffolding 部分を skill body or reference 化 ② `lexical-node` / `lexical-plugin` / `lexical-toolbar` 統合可否を investigate-then-decide（merge / 階層化 / 現状維持の 3 択を plan で展開、結論は ADR 0027 に記録） ③ `*-debug` skill 群の naming 統一 (`debug-*` プレフィックスへ rename)、`audit-*` 群も同様 |
+| 責務重複解消 (L3+L4)             | ① `add-prisma-enum` + `add-settings-field` の共通 scaffolding 部分を skill body or reference 化 ② `lexical-node` / `lexical-plugin` / `lexical-toolbar` 統合可否を investigate-then-decide（merge / 階層化 / 現状維持の 3 択を plan で展開、結論は ADR 0026 に記録） ③ `*-debug` skill 群の naming 統一 (`debug-*` プレフィックスへ rename)、`audit-*` 群も同様 |
 | Skill rename / merge 参照修正    | CLAUDE.md / docs / 他 skill / agents からの skill 名参照を grep して同 commit で更新                                                                                                                                                                                                                                                                            |
-| **ADR 0027** 採番                | `docs/architecture/decisions/0027-skill-naming-convention.md` で `debug-*` / `audit-*` / `add-*` / `create-*` のプレフィックス規則を formalize                                                                                                                                                                                                                  |
+| **ADR 0026** 採番                | `docs/architecture/decisions/0026-skill-naming-convention.md` で `debug-*` / `audit-*` / `add-*` / `create-*` のプレフィックス規則を formalize                                                                                                                                                                                                                  |
 
 **破壊的変更**:
 
@@ -144,8 +144,8 @@ CLAUDE.md learning「path-scoped auto-load の累積消費を予算管理」「c
 | Phase   | PASS 判定                                                                                                                                                                                                                                                                                     |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **C5b** | ① `bun run validate` 成功 ② `node scripts/verify-policy-docs.mjs` byte-identical 成功 ③ tailwind/zod barrel-index 配下 sub-file の Live change detection 動作確認 ④ stale rule の helper 名が実装に grep で存在ゼロ                                                                           |
-| **C5c** | ① 全 agent (rename/削除分除く) frontmatter が `name`/`description`/`tools (comma-separated)`/`model`/(optional `memory`) を満たす ② dispatch-template skill が SKILL.md spec 準拠 ③ 削除した agent の参照（CLAUDE.md / 他 agent / docs）ゼロを grep ④ `bun run validate` 成功 ⑤ ADR 0026 採番 |
-| **C5a** | ① 全 skill (rename/merge 分除く) frontmatter が `name` (1,536 char 上限) / `description` 必須 ② 新フィールド適用済み skill が公式仕様遵守 ③ rename/merge 後の skill 名参照が CLAUDE.md / docs で更新済み ④ Live activation テスト 1 件（`/<renamed-skill>` 起動確認） ⑤ ADR 0027 採番         |
+| **C5c** | ① 全 agent (rename/削除分除く) frontmatter が `name`/`description`/`tools (comma-separated)`/`model`/(optional `memory`) を満たす ② dispatch-template skill が SKILL.md spec 準拠 ③ 削除した agent の参照（CLAUDE.md / 他 agent / docs）ゼロを grep ④ `bun run validate` 成功 ⑤ ADR 0025 採番 |
+| **C5a** | ① 全 skill (rename/merge 分除く) frontmatter が `name` (1,536 char 上限) / `description` 必須 ② 新フィールド適用済み skill が公式仕様遵守 ③ rename/merge 後の skill 名参照が CLAUDE.md / docs で更新済み ④ Live activation テスト 1 件（`/<renamed-skill>` 起動確認） ⑤ ADR 0026 採番         |
 | **C5d** | ① ADR README index 件数 = `ls 00*.md` 件数 ② `docs/architecture/**/*.md` 内 link が `Glob` で実在確認済 ③ archive 後 plan / spec README 更新済み ④ `package.json` version と docs version 表記が grep で一致 ⑤ 廃止済み機能記述ゼロ                                                           |
 
 ### 4.2 全体完了判定
@@ -163,15 +163,15 @@ CLAUDE.md learning「path-scoped auto-load の累積消費を予算管理」「c
 | Context 圧迫で plan 完遂不可             | 14-23 commit / 4 phase は単一セッション限界                                 | 各 phase 完了時に「残予算 vs 残 phase」評価、不足なら handoff memory 作成して中断（C5 完遂は次セッション）                        |
 | ADR 採番衝突                             | 並走 worktree なし前提だが複数 ADR 採番が同時発生する可能性                 | `git worktree list` で並走確認 + 各 ADR 作成時に `ls 00*.md \| tail -1` で最新確認                                                |
 | Stale rule 削除で実装サイレント壊れ      | rule docs に書かれた契約に依存する code が型チェックでなく runtime で壊れる | 削除前に `grep -rn "<helper-name>" src/` で参照ゼロ確認、削除後 `bun run validate && bun run build` フル実行                      |
-| Skill rename で既存 user invocation 壊れ | `/<old-skill-name>` が機能しなくなる                                        | CLAUDE.md「自動ロード」節の skill list 更新 + handoff memory に rename mapping 記録 + ADR 0027 で命名規則明記                     |
+| Skill rename で既存 user invocation 壊れ | `/<old-skill-name>` が機能しなくなる                                        | CLAUDE.md「自動ロード」節の skill list 更新 + handoff memory に rename mapping 記録 + ADR 0026 で命名規則明記                     |
 
 ## 6. ADR 戦略
 
 | 改修                                      | ADR 必要性                                       | 採番 |
 | ----------------------------------------- | ------------------------------------------------ | ---- |
 | Rule barrel-index 拡張                    | 不要（既存パターン適用）                         | —    |
-| Subagent dispatch template skill 抽出     | **必要** — 規律の SSoT 移管 = アーキテクチャ判断 | 0026 |
-| Skill rename / merge naming 規則 (L4)     | **必要** — プロジェクト命名規則の formalize      | 0027 |
+| Subagent dispatch template skill 抽出     | **必要** — 規律の SSoT 移管 = アーキテクチャ判断 | 0025 |
+| Skill rename / merge naming 規則 (L4)     | **必要** — プロジェクト命名規則の formalize      | 0026 |
 | Skill `disable-model-invocation` 採用方針 | 不要（公式機能の活用）                           | —    |
 | ADR README 同期 / archive 移動            | 不要（housekeeping）                             | —    |
 
