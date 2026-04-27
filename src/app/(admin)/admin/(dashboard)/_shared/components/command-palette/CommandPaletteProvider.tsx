@@ -47,7 +47,7 @@ export function CommandPaletteProvider({
   recents,
   children,
 }: ProviderProps) {
-  const [open, setOpenState] = useState(false);
+  const [openState, setOpenState] = useState(false);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultGroup[]>([]);
   const [isSearching, startTransition] = useTransition();
@@ -93,7 +93,7 @@ export function CommandPaletteProvider({
   return (
     <CommandPaletteContext
       value={{
-        open,
+        open: openState,
         setOpen,
         navItems,
         quickActions,
