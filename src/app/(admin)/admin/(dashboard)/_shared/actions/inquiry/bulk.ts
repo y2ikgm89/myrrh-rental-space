@@ -10,6 +10,14 @@ import {
   bulkDeleteInquiriesCommand,
   type BulkDeleteInquiriesResult,
 } from "@/shared/domain/inquiries/bulk-commands";
+import { InquiryStatus } from "@generated/prisma/enums";
+import {
+  bulkSetStatusInquiriesCommand,
+  type BulkSetStatusInquiriesResult,
+} from "@/shared/domain/inquiries/bulk-status-commands";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { sendInquiryStatusNotificationToAll } from "@/shared/lib/email/inquiry-emails";
+import { ErrorCategory } from "@/shared/lib/errors";
 
 const bulkInputSchema = z.object({
   ids: z
@@ -37,6 +45,45 @@ export async function bulkDeleteInquiries(
     execute: async () => bulkDeleteInquiriesCommand(parsed.data.ids),
     afterSuccess: (data) => {
       invalidateInquiryCachesForIds(data.affectedIds);
+    },
+  });
+}
+
+const bulkStatusInputSchema = z.object({
+  ids: z
+    .array(z.string().uuid({ error: "お問い合わせIDが不正です" }))
+    .min(1, { error: "1件以上選択してください" })
+    .max(100, { error: "一度に処理できるのは100件までです" }),
+  newStatus: z.enum(InquiryStatus),
+});
+
+export async function bulkSetStatusInquiries(
+  ids: string[],
+  newStatus: InquiryStatus,
+): Promise<MutationResult<BulkSetStatusInquiriesResult>> {
+  const parsed = bulkStatusInputSchema.safeParse({ ids, newStatus });
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "inquiry",
+    action: "update",
+    execute: async () =>
+      bulkSetStatusInquiriesCommand(parsed.data.ids, parsed.data.newStatus),
+    afterSuccess: (data) => {
+      invalidateInquiryCachesForIds(data.affectedIds);
+      if (
+        data.affectedIds.length > 0 &&
+        (data.newStatus === InquiryStatus.RESOLVED ||
+          data.newStatus === InquiryStatus.CLOSED)
+      ) {
+        fireAndForget(
+          sendInquiryStatusNotificationToAll(data.affectedIds, data.newStatus),
+          {
+            operation: "bulkSetStatusInquiries.notify",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
+      }
     },
   });
 }
