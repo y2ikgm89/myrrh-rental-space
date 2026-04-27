@@ -224,6 +224,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 - **セッション継続時**: `docs/plans/README.md` 確認
 - **セッション跨ぎ大規模 plan は handoff memory 必須** — `~/.claude/projects/<slug>/memory/project_<phase>-handoff.md`（type=project）に ①plan 場所 ②worktree 場所 ③commit SHA ④残 chunk 分割 ⑤次セッション起動コマンドの 5 点セット + `MEMORY.md` に一行 index。context 枯渇で中断判断した phase（例: Section Architecture Phase B.4）で canonical。**複数 plan を順次実行する場合**は plan 毎に「スコープ + 着手前の前提 + 起動コマンド例」を分けて記載（実例: `project_p17-19-sequential-handoff.md`）— plan が独立 context（rule auto-load 範囲が異なる）のため 1 セッション 1 plan の規律を自動付与できる
+- **大規模 plan / handoff memory 作成前は `~/.claude/projects/<slug>/memory/MEMORY.md` を `Read` で再読込必須** — session-start に system prompt 経由で読み込まれる MEMORY.md は他の並列セッションが追記すると stale 化する（実例: 本セッション中に originSessionId `ab327602` が `project_clean-break-refactor-handoff.md` を追加 → 私が同スコープの bundled plan を新規作成 → duplicate detected → commit `29a541c9` で撤回）。新規 handoff を書く前に `Read MEMORY.md` で同スコープの既存 handoff の有無を確認し、あれば既存 handoff の規律（C1-C4 separate plans / 1-plan-per-session 等）を尊重して plan 構造を設計する
 
 ---
 
