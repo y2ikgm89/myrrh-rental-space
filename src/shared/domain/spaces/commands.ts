@@ -260,7 +260,7 @@ export async function toggleSpacePublishedCommand(
  * - `reviewsEnabled` も元レコードを継承
  * - 関連する予約・レビュー・イベント・iCal トークンは複製しない
  * - slug は `${original.slug}-copy` をベースに `ensureUniqueSlug` で衝突回避
- * - name は `${original.name}(コピー)` の慣例に従う
+ * - name は `${original.name}（コピー）` の慣例に従う（Event 複製と全角括弧で統一）
  * - 画像 URL（mainImageUrl / imageUrls）は元レコードの URL を参照共有
  *   （R2 オブジェクト複製は行わない。差し替えは管理者の編集操作）
  *
@@ -312,7 +312,7 @@ export async function duplicateSpaceCommand(
   const created = await prisma.space.create({
     data: {
       slug,
-      name: `${source.name}(コピー)`,
+      name: `${source.name}（コピー）`,
       descriptionJson: source.descriptionJson as Prisma.InputJsonValue,
       descriptionHtml: source.descriptionHtml,
       descriptionPlainText: source.descriptionPlainText,

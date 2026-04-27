@@ -107,7 +107,7 @@ describe("duplicateSpaceCommand", () => {
     mockCreate.mockResolvedValue({ id: "new-space-id", slug: "test-copy" });
   });
 
-  test("複製先は isPublished=false / publishedAt=null / name に (コピー) 付与", async () => {
+  test("複製先は isPublished=false / publishedAt=null / name に （コピー） 付与", async () => {
     mockFindUnique.mockResolvedValueOnce(SOURCE_SPACE);
 
     const result = await duplicateSpaceCommand(
@@ -120,7 +120,7 @@ describe("duplicateSpaceCommand", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           slug: "test-copy",
-          name: "テストスペース(コピー)",
+          name: "テストスペース（コピー）",
           isPublished: false,
           publishedAt: null,
           reviewsEnabled: true,
