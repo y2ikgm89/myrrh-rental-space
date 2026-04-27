@@ -4,6 +4,10 @@ description: >
   大きな Server Action ファイル（500行超）を queries.ts + mutations.ts + index.ts（barrel）に分割する。
   get* 系は queries.ts、create*/update*/delete*/publish*/toggle*/restore*/archive* 系は mutations.ts に振り分ける。
   barrel の index.ts で既存 import パスを変えずに透過する。
+paths:
+  - src/**/actions.ts
+  - src/**/mutations.ts
+  - src/**/queries.ts
 argument-hint: <action-file-path>
 ---
 
