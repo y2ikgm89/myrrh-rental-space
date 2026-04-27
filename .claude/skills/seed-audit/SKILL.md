@@ -1,6 +1,9 @@
 ---
 name: seed-audit
 description: prisma/seed.ts の網羅性を検証する。Prisma enum 全値が seed で使われているか、全モデルに seed 関数が存在するか、seedAll / seedDemo に登録されているか、upsert で idempotent 化されているかを検出する。新規モデル追加後・enum 値追加後・定期メンテで使用。
+paths:
+  - prisma/seed.ts
+  - prisma/schema.prisma
 ---
 
 # Seed 網羅性監査
