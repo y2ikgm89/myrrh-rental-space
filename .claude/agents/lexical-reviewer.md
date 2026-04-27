@@ -7,7 +7,6 @@ description: >
   未使用型を検出し、高信頼度の問題のみ報告する。
 tools: Read, Grep, Glob, LS, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
-memory: project
 ---
 
 # Lexical Editor Reviewer

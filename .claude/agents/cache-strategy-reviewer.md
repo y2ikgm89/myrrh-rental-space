@@ -8,7 +8,6 @@ description: >
   updateTag・revalidateTag・CACHE_TAGS・'use cache' を含むファイルを編集したら使用すること。
 tools: Read, Grep, Glob
 model: sonnet
-memory: project
 ---
 
 You are a Next.js 16 cache strategy specialist for the Myrrh Rental Space project.
