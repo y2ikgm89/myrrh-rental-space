@@ -59,7 +59,6 @@ new AxeBuilder({ page })
   .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
   .exclude('[contenteditable="true"]') // Lexical
   .exclude('[class*="recharts" i]')
-  .exclude('[class*="fc-" i]') // FullCalendar
   .exclude('[data-testid="lexical-editor"]');
 ```
 

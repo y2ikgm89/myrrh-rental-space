@@ -1,5 +1,7 @@
 # Myrrh Rental Space - Architecture Analysis Report
 
+> **Snapshot: 2026-02-11** — 初期アーキテクチャ分析。Three.js / PixiJS / FullCalendar は 2026-03〜04 月に削除済み。現状とは乖離あり。
+
 **Generated**: 2026-02-11
 **Analysis Scope**: Full codebase analysis for architecture comprehension
 

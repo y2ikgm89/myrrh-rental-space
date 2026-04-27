@@ -1,5 +1,7 @@
 # Effects Infrastructure - Complete Analysis
 
+> **Snapshot: 2026-03** — Three.js / R3F / PixiJS を使用していた頃の分析。2026-03-18 の Public Pages Redesign で 29 ファイル (~2,158 行) が削除済み。現状とは乖離あり。
+
 ## Overview
 
 The effects infrastructure is a tiered visual enhancement system for the public pages with:

@@ -31,7 +31,7 @@
 | Prisma                 | ✅   | BunのNode.js互換性により完全動作                 |
 | Prismaマイグレーション | ✅   | `bunx --bun prisma migrate`で実行可能            |
 | Prisma Studio          | ✅   | `bunx --bun prisma studio`で実行可能             |
-| Next.js                | ✅   | Next.js 16.1.1がBunで完全動作                    |
+| Next.js                | ✅   | Next.js 16.2がBunで完全動作                      |
 | Better Auth            | ✅   | Bunで完全動作                                    |
 | Turbopack              | ✅   | Next.js 16のデフォルトバンドラー（Bunと統合）    |
 
@@ -132,7 +132,7 @@ Cloud RunはDockerコンテナを実行できるため、Bunイメージを使�
 BunはNode.js互換性があるため、以下のライブラリが動作します：
 
 - **Prisma**: Node.js互換性により完全動作
-- **Next.js**: Bunで完全動作（Next.js 16.1.1対応）
+- **Next.js**: Bunで完全動作（Next.js 16.2対応）
 - **Better Auth**: Bunで完全動作
 - **その他のNode.jsパッケージ**: ほとんどのパッケージが動作
 
@@ -183,7 +183,7 @@ bunx --bun prisma migrate deploy
 
 ### Next.jsとBun
 
-Next.js 16.1.1はBunで完全に動作します：
+Next.js 16.2はBunで完全に動作します：
 
 - **開発サーバー**: `bun run dev`でTurbopackを使用
 - **本番ビルド**: `bun run build`でTurbopackを使用

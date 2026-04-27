@@ -1,5 +1,7 @@
 # Type Safety Audit Report
 
+> **Snapshot: 2026-02-11** — PixiJS 使用当時の型安全性監査。PixiJS は 2026-03-18 に削除済み。PixiJS 関連の型 workaround は全て不要になっている。
+
 Generated: 2026-02-11
 
 ## Executive Summary

@@ -8,7 +8,7 @@ Better Auth による認証システム。セッション管理 + ロールベ�
 
 | コンポーネント | 技術                   |
 | -------------- | ---------------------- |
-| 認証ライブラリ | Better Auth 1.4.13     |
+| 認証ライブラリ | Better Auth 1.6        |
 | セッション     | Cookie-based (scrypt)  |
 | データベース   | Prisma Adapter         |
 | プロバイダー   | Email/Password, Google |
