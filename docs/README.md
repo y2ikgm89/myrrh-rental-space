@@ -7,7 +7,6 @@
 ```
 docs/
 ├── architecture/    # アーキテクチャ・設計（ADR・DB 設計・キャッシュ戦略）
-├── requirements/    # 機能要件
 ├── guides/          # 開発ガイド
 ├── security/        # セキュリティ
 ├── operations/      # 運用・デプロイ
@@ -22,7 +21,6 @@ docs/
 | カテゴリ                         | 説明                                       | 主要ファイル                          |
 | -------------------------------- | ------------------------------------------ | ------------------------------------- |
 | [architecture/](./architecture/) | システム設計・データベース・ADR            | [README.md](./architecture/README.md) |
-| [requirements/](./requirements/) | 機能別要件定義                             | [README.md](./requirements/README.md) |
 | [guides/](./guides/)             | 開発規約・ベストプラクティス               | [README.md](./guides/README.md)       |
 | [security/](./security/)         | 認証・保護対策                             | [README.md](./security/README.md)     |
 | [operations/](./operations/)     | デプロイ・インフラ                         | [README.md](./operations/README.md)   |
