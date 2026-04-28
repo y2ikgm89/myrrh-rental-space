@@ -1,10 +1,14 @@
 ---
 description: Git ワークフロー / Migration / Worktree プロセスルール
+paths:
+  - "prisma/migrations/**"
+  - "prisma/schema.prisma"
+  - ".github/workflows/**"
+  - "docs/architecture/decisions/**"
+  - ".serena/memories/**"
 ---
 
 # Git / Migration / Worktree プロセス
-
-> CLAUDE.md からの分離（公式 200 行ガイド準拠）。本ファイルは `paths:` なし＝常時ロード。
 
 ## Migration / Prisma
 
