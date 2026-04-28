@@ -8,6 +8,44 @@ paths:
 
 # Claude Code Patterns — Import Alias / shadcn / Route Handler / Harness
 
+## Claude Code 公式準拠の原則（最重要）
+
+`.claude/` 配下は Claude Code 公式仕様 (`code.claude.com/docs/en/{memory,sub-agents,skills,settings,hooks}`) のみで構成する。**独自機能の新設は禁止**。
+
+### 公式が定義する 5 層
+
+| 層                      | 公式パス                                                             | 公式 frontmatter                                                       |
+| ----------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Memory**              | `CLAUDE.md` / `~/.claude/projects/<slug>/memory/MEMORY.md`           | なし（plain markdown）                                                 |
+| **Rules (path-scoped)** | `.claude/rules/**/*.md`                                              | `description` (任意) + **`paths:` (必須)**                             |
+| **Subagents**           | `.claude/agents/<name>.md`                                           | `name`, `description` (必須) + `tools` / `model` / `memory` 等（任意） |
+| **Skills**              | `.claude/skills/<name>/SKILL.md`                                     | `description` (recommended) + `paths` / `allowed-tools` 等（任意）     |
+| **Hooks**               | `.claude/settings.json` の `hooks` フィールド + `.claude/hooks/*.sh` | n/a (settings.json 設定)                                               |
+
+### 撤回済み独自パターン（再導入禁止）
+
+| パターン                                                                   | 撤回理由                                                       | 公式代替                                                                                          |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **barrel index** (`react-patterns.md` / `gotchas.md` 等の「TOC のみ」rule) | `paths:` なし常時注入で context 浪費                           | sub-file が path-scoped で個別 auto-load                                                          |
+| **process barrel** (`process/*.md` 4 ファイル常時ロード)                   | 公式は「常時ロードは最小限」                                   | path-scoped rule + skill 統合                                                                     |
+| **gotchas/ メタ分類** (落とし穴の独立カテゴリ)                             | ドメイン rule と重複・直交分類で検索コスト増                   | ドメイン rule (`prisma-patterns.md` / `auth-patterns.md` 等) 末尾の `## Gotchas` セクションに統合 |
+| **ADR system** (`docs/architecture/decisions/`)                            | 公式機能ではない、`.claude/rules/**` + plan + git log で代替可 | 設計判断は path-scoped rule 本文で説明、履歴は git log                                            |
+| **`docs/plans/` 二重構造** (lightweight vs detailed)                       | 運用上区別困難                                                 | `docs/superpowers/plans/` 単一 canonical                                                          |
+
+### 新規 rule / skill / agent 作成時のチェックリスト
+
+- [ ] **rule**: `paths:` frontmatter あり（常時ロード禁止）
+- [ ] **skill**: SKILL.md 500 行未満、description 1,536 文字以下、reference は `reference/*.md` に分割
+- [ ] **agent**: frontmatter は `name`/`description`/`tools`/`model`/`memory` 等公式フィールドのみ
+- [ ] **新カテゴリ作成時**: ドメイン分類（Prisma / React / Tailwind / Auth / Server Actions 等）に統合できないか先検討。メタ分類（gotchas / patterns / etc.）の新ディレクトリ作成は禁止
+- [ ] **常時ロード rule 追加禁止** — 全 rule は `paths:` 必須
+
+### 例外申請
+
+公式仕様で表現できない明確な必要性がある場合のみ、本ファイル内に「例外」セクションを追加して正当化を明記する（現状: 例外なし）。
+
+---
+
 ## Import Alias
 
 - **内部モジュールの `import { X as Y }` 禁止** — 名前衝突は namespace import（`import * as settingsCommands from "..."`）で解決。`settingsCommands.updateTaxSettings()` のように呼び出す

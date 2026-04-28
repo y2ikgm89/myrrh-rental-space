@@ -124,3 +124,14 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 主要 SSoT singleton 一覧は `.claude/rules/ssot-singletons.md`（src/prisma 編集時に path-scoped auto-load）。
 監査例外（誤検出回避）は `.claude/rules/audit-exceptions.md`（agents/skills 編集時に auto-load）。
+
+---
+
+## Claude Code 公式準拠の原則
+
+`.claude/` 配下は Claude Code 公式仕様 (`code.claude.com/docs/en/{memory,sub-agents,skills,settings,hooks}`) に厳守準拠する:
+
+- **path-scoped rule + skill + memory + agent + hook の 5 層構造のみ**を使用
+- **独自分類の新設禁止** — barrel index / process barrel / gotchas メタ分類 / ADR system 等は撤回済み（再導入禁止）
+- **常時ロード rule（`paths:` なし）はゼロ維持** — 全 rule docs は path-scoped frontmatter 必須
+- 詳細・撤回済みパターン・正しい構造化方針は `.claude/rules/claude-code-patterns.md`（`.claude/**` 編集時に auto-load）
