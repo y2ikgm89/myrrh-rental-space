@@ -139,7 +139,7 @@ export async function createPost(data: CreatePostInput) {
   updateTag(CACHE_TAGS.POSTS);
   updateTag(getCacheTag.posts.detail(post.slug));
 
-  return createSuccess("投稿を作成しました", { id: post.id });
+  return { id: post.id };
 }
 
 export async function deletePost(id: string) {
@@ -150,7 +150,7 @@ export async function deletePost(id: string) {
   updateTag(CACHE_TAGS.POSTS);
   updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
 
-  return createSuccess("投稿を削除しました");
+  return null;
 }
 ```
 

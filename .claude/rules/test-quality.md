@@ -250,32 +250,35 @@ const result = await executeAdminMutationResult({
   resource: "space",
   action: "create",
   execute: async () => {
-    return createSuccess({ name }); // 型が推論されない場合あり
+    return { name }; // 型が推論されない場合あり
   },
 });
 
-// OK: 型引数を明示
+// OK: 型引数を明示 (execute callback の戻り値 T が MutationResult<T> の success path)
 const result = await executeAdminMutationResult<{ name: string }>({
   resource: "space",
   action: "create",
   execute: async () => {
-    return createSuccess({ name });
+    return { name }; // execute callback は T を直接返す (ラッパー不要)
   },
 });
 ```
 
-### 6. 条件型を含む型ガードの型引数
+### 6. `MutationResult<T>` の型判定
 
-`ActionSuccess<T>` のような条件型では、TypeScript がジェネリック `T` を `unknown` に推論することがある。型ガード関数に明示的な型引数を渡す。
+`MutationResult<T> = T | MutationError` では `isMutationError()` で failure path を判定する。明示的な型引数が必要な場合は `isMutationError` を使用する。
 
 ```typescript
-// NG: T = unknown と推論され、data プロパティの型が合わない
-const success = createSuccess(); // ActionSuccess<void>
-expect(isActionSuccess(success)).toBe(true); // TS2345
+// NG: MutationResult に success プロパティは存在しない
+const result = await action();
+expect(result.success).toBe(false); // TS18046 / プロパティなし
 
-// OK: 明示的な型引数
-expect(isActionSuccess<void>(success)).toBe(true);
-expect(isActionFailure<void>(failure)).toBe(true);
+// OK: isMutationError で failure path 判定
+const result = await action();
+expect(isMutationError(result)).toBe(true);
+
+// OK: void success path: MutationResult<null> = null | MutationError
+return null; // null が success sentinel
 ```
 
 ### 7. `unknown` な戻り値の検証には `toMatchObject`
@@ -301,13 +304,13 @@ expect(result).toMatchObject({
 
 ```typescript
 // OK: 型のみのインポートはモックと共存可能
-import type { ActionResult } from "@/shared/types/server-actions";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 mock.module("@/shared/lib/admin-auth", () => ({
   getAdminSession: mockGetSession,
 }));
 
 // 型注釈に使用
-const result: ActionResult<void> = await createPost(data);
+const result: MutationResult<void> = await createPost(data);
 ```
 
 ## Playwrightテスト（E2E）

@@ -202,14 +202,6 @@ if (result.success) {
 }
 ```
 
-**4. TypeScript 6.0 条件型（`as unknown as T`）**
-
-```typescript
-// OK: 条件型を含む型への代入（TS 6.0 で厳格化）
-// ActionSuccess<T> は条件型のため直接 as では不可、二段階キャストが必要
-return result as unknown as ActionSuccess<T>;
-```
-
 **5. `keysOf` / `entriesOf` / `omitUndefined`（`@/shared/lib/serialize.ts` の実装内部のみ）**
 
 `Object.keys` / `Object.entries` / `Object.fromEntries` の標準戻り型が広すぎる、または `exactOptionalPropertyTypes` 向けに `undefined` プロパティを除去した型 `OmitUndefined<T>` へ寄せる必要があるため、**当該ファイルの実装内**でのみ `as` を許可する。呼び出し側で `Object.keys(x) as Foo[]` や `fromEntries(...) as T` と書くことは禁止し、ヘルパーを使う。新規の類似「境界ヘルパー」を増やさないこと。

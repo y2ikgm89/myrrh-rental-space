@@ -181,26 +181,26 @@ type PermissionKey = `${Resource}:${Action}`;
 
 ```typescript
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { createSuccess } from "@/admin/types/server-actions";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 
 export const createSpace = async (input: SpaceFormData) => {
   const parsed = spaceFormSchema.safeParse(input);
-  if (!parsed.success) return createValidationError(parsed.error);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
   return executeAdminMutationResult({
     resource: "space",
     action: "create",
     execute: async () => createSpaceCommand(parsed.data),
-    success: (result) => createSuccess("作成しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SPACES);
     },
     resolveAuditResourceId: (data) => data.id,
   });
 };
+// 戻り型: MutationResult<{ id: string }> = { id: string } | MutationError
 ```
 
-**`executeAdminMutationResult`** — `ActionResult` ではなく `MutationResult<T>` を返す変種（API Route 呼び出し等）:
+**`executeAdminMutationResult`** — `MutationResult<TData>` を返す（`execute` の戻り値 `TData` が success path）:
 
 ```typescript
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -226,7 +226,6 @@ return executeAdminMutationResult({
   resourceId: id,
   checkResourceAccess: true, // ← EDITOR の userPageAssignment チェックを有効化
   execute: async (user) => updatePageCommand(id, parsed.data),
-  success: (result) => createSuccess("更新しました", result),
 });
 ```
 
@@ -278,14 +277,14 @@ if (!auth.success) return jsonError(auth.error.error, 401);
 // NG: 認証チェックなし
 export async function deleteSpace(id: string) {
   await prisma.space.delete({ where: { id } });
-  return createSuccess("削除しました");
+  return { id }; // executeAdminMutationResult なしに直接返すのは NG
 }
 
 // NG: 権限ハードコード
 export async function deleteSpace(id: string) {
   const session = await getSession();
   if (session?.user.role !== "SUPER_ADMIN")
-    return createFailure("権限がありません");
+    return createMutationError("権限がありません");
 }
 
 // NG: Server Actions で checkPermission 直接呼び出し（executeAdminMutationResult を使う）
@@ -320,13 +319,13 @@ Server Actions は複数リクエストにまたがるため `cache()` を使用
 
 ```typescript
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
-import { createFailure } from "@/shared/types/server-actions";
+import { createMutationError } from "@/shared/lib/mutation-result";
 
 export async function myAction() {
   const session = await getAdminSession();
   const user = getAdminSessionUser(session);
   if (!user) {
-    return createFailure("ログインが必要です");
+    return createMutationError("ログインが必要です");
   }
   // アクション実行（通常は checkAdminAuth/checkPermission を使用）
 }
@@ -350,14 +349,14 @@ export default async function Page() {
 
 **管理者用（`@/shared/lib/admin-auth`）:**
 
-| 関数                           | キャッシュ     | 未認証時               | 用途                                                 |
-| ------------------------------ | -------------- | ---------------------- | ---------------------------------------------------- |
-| `verifyAdminSession()`         | `cache()` あり | `/` redirect           | Server Components（DASHBOARD_ROLES 必須）            |
-| `getCurrentAdminUser()`        | `cache()` あり | `undefined` を返す     | Server Components（オプショナル）                    |
-| `getAdminSession()`            | なし           | `null` を返す          | Server Actions（直接使用は稀）                       |
-| `getAdminSessionUser()`        | なし           | `null` を返す          | Server Actions（セッションから型安全にユーザー取得） |
-| `executeAdminMutationResult()` | なし           | `MutationError` を返す | Server Actions（書き込み系 — **標準パターン**）      |
-| `checkPermission()`            | なし           | `ActionFailure` を返す | API Route（`request.headers` を第3引数に渡す）       |
+| 関数                           | キャッシュ     | 未認証時                               | 用途                                                 |
+| ------------------------------ | -------------- | -------------------------------------- | ---------------------------------------------------- |
+| `verifyAdminSession()`         | `cache()` あり | `/` redirect                           | Server Components（DASHBOARD_ROLES 必須）            |
+| `getCurrentAdminUser()`        | `cache()` あり | `undefined` を返す                     | Server Components（オプショナル）                    |
+| `getAdminSession()`            | なし           | `null` を返す                          | Server Actions（直接使用は稀）                       |
+| `getAdminSessionUser()`        | なし           | `null` を返す                          | Server Actions（セッションから型安全にユーザー取得） |
+| `executeAdminMutationResult()` | なし           | `MutationError` を返す                 | Server Actions（書き込み系 — **標準パターン**）      |
+| `checkPermission()`            | なし           | `PermissionResult`（`!success`）を返す | API Route（`request.headers` を第3引数に渡す）       |
 
 **顧客用（`@/shared/lib/customer-auth`）:**
 
@@ -420,7 +419,6 @@ return executeAdminMutationResult({
   resource: "space",
   action: "create",
   execute: async () => createSpaceCommand(parsed.data),
-  success: (result) => createSuccess("作成しました", result),
   // create 操作では execute 後に ID が確定するため resolveAuditResourceId で解決
   resolveAuditResourceId: (data) => data.id,
 });

@@ -123,26 +123,6 @@ const [activeTab, setActiveTab] = useQueryState(
 
 ---
 
-## Server Actions の型インポート
-
-管理画面内の**全ファイル**（Server Actions・`'use client'` コンポーネント・hooks・型定義ファイルを問わず）は `@/admin/types/server-actions` から import する:
-
-```typescript
-// OK: 管理画面専用（Server Actions・'use client' コンポーネント・hooks すべて共通）
-import {
-  createSuccess,
-  createFailure,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-
-// NG: 共有型を直接 import（管理画面内では禁止）
-import { createSuccess, createFailure } from "@/shared/types/server-actions";
-```
-
-`@/admin/types/server-actions` は `@/shared/types/server-actions` の re-export に加え、`AuditUser` 型も提供する。
-
----
-
 ## フォーム送信ボタン（SubmitButton）
 
 フォームの送信ボタンは `SubmitButton` コンポーネントに統一する。インラインの `isPending ? "X中..." : "X"` パターンは禁止:
@@ -181,22 +161,21 @@ import { SubmitButton } from "@/admin/components/ui";
 2. **ハードコードカラー禁止** — `bg-black/60` → `bg-overlay`、`hover:bg-white/5` → `hover:bg-sidebar-nav-hover`
 3. **bare div ページネーション禁止** — `<nav aria-label="...">` を使用
 4. **setPage/setParams の void なし呼び出し禁止** — `void setPage(n)`
-5. **`@/shared/types/server-actions` を管理画面で直接使用禁止** — `@/admin/types/server-actions` 経由
-6. **テーブル操作列インライン Button+Link 禁止** — `ActionDropdown` の `*ActionCell` コンポーネントを使用（`@/admin/components/ActionDropdown`）
-7. **削除ボタンをページ最下部カードに配置禁止** — `DetailDeleteButton` をヘッダー `actions` の編集ボタン左に配置
-8. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
-9. **Suspense 内 async Server Component の `connection()` 省略禁止** — `new Date()` や uncached データを使う Suspense 内コンポーネントは先頭に `await connection()` を配置。page.tsx 本体には不要
-10. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）
-11. **`backLabel` にエンティティ名を含めること禁止** — `"クーポン一覧に戻る"` NG → `"一覧に戻る"`（デフォルト）/ `"詳細に戻る"` のみ使用
-12. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ
-13. **タブコンテンツ内にタブ名を繰り返す見出し禁止** — `<TabsContent>` 内で同名の `h2`/`h3` は冗長。タブ自体がコンテキストを持つ
-14. **タブリスト右端ボタンの dialog state をタブ内コンポーネントに持つこと禁止** — `showXxxDialog` state は `*EditTabs` 親で管理し、`onShowXxxDialogChange` prop として渡す
-15. **テーブルカラム非表示をヘッダーのみ・データ行のみに適用禁止** — ヘッダー・仮想行（ホームページ行等）・全データ行に対称的に `hidden md:table-cell` を適用する
-16. **テーブルに `overflow-x-auto` なしで `overflow-hidden` のみ使用禁止** — モバイルでテーブルがクリップされスクロール不可になる。必ず2層ラッパーを使う
-17. **管理画面のサブページディレクトリにルーティング対象名を使用禁止** — `[slug]/sections/` や `[slug]/seo/` 等のサブページコンポーネントディレクトリは Next.js がルートとして解釈する可能性がある。`_` プレフィックスでプライベートフォルダにする（`[slug]/_sections/`、`[slug]/_seo/`）
-18. **新規作成フォームに `disabled={!isDirty}` 禁止** — 新規作成は初期状態で全フィールドが空のため isDirty は常に false。isDirty 無効化は**編集モードのみ**。create/edit 共用コンポーネントでは `{...(isEdit && { disabled: !form.formState.isDirty })}` 条件スプレッド
-19. **設定セクションの SubmitButton を CardContent 内に直置き禁止** — `<div className="flex justify-end pt-2">` でラップして右寄せ。CRUD フォームの `flex justify-end gap-4` と統一
-20. **`<Input type="date" placeholder="...">` 禁止** — `type="date"` input は placeholder 属性を無視するため dead code。`aria-label` で説明する
+5. **テーブル操作列インライン Button+Link 禁止** — `ActionDropdown` の `*ActionCell` コンポーネントを使用（`@/admin/components/ActionDropdown`）
+6. **削除ボタンをページ最下部カードに配置禁止** — `DetailDeleteButton` をヘッダー `actions` の編集ボタン左に配置
+7. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
+8. **Suspense 内 async Server Component の `connection()` 省略禁止** — `new Date()` や uncached データを使う Suspense 内コンポーネントは先頭に `await connection()` を配置。page.tsx 本体には不要
+9. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）
+10. **`backLabel` にエンティティ名を含めること禁止** — `"クーポン一覧に戻る"` NG → `"一覧に戻る"`（デフォルト）/ `"詳細に戻る"` のみ使用
+11. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ
+12. **タブコンテンツ内にタブ名を繰り返す見出し禁止** — `<TabsContent>` 内で同名の `h2`/`h3` は冗長。タブ自体がコンテキストを持つ
+13. **タブリスト右端ボタンの dialog state をタブ内コンポーネントに持つこと禁止** — `showXxxDialog` state は `*EditTabs` 親で管理し、`onShowXxxDialogChange` prop として渡す
+14. **テーブルカラム非表示をヘッダーのみ・データ行のみに適用禁止** — ヘッダー・仮想行（ホームページ行等）・全データ行に対称的に `hidden md:table-cell` を適用する
+15. **テーブルに `overflow-x-auto` なしで `overflow-hidden` のみ使用禁止** — モバイルでテーブルがクリップされスクロール不可になる。必ず2層ラッパーを使う
+16. **管理画面のサブページディレクトリにルーティング対象名を使用禁止** — `[slug]/sections/` や `[slug]/seo/` 等のサブページコンポーネントディレクトリは Next.js がルートとして解釈する可能性がある。`_` プレフィックスでプライベートフォルダにする（`[slug]/_sections/`、`[slug]/_seo/`）
+17. **新規作成フォームに `disabled={!isDirty}` 禁止** — 新規作成は初期状態で全フィールドが空のため isDirty は常に false。isDirty 無効化は**編集モードのみ**。create/edit 共用コンポーネントでは `{...(isEdit && { disabled: !form.formState.isDirty })}` 条件スプレッド
+18. **設定セクションの SubmitButton を CardContent 内に直置き禁止** — `<div className="flex justify-end pt-2">` でラップして右寄せ。CRUD フォームの `flex justify-end gap-4` と統一
+19. **`<Input type="date" placeholder="...">` 禁止** — `type="date"` input は placeholder 属性を無視するため dead code。`aria-label` で説明する
 
 ---
 

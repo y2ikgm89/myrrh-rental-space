@@ -74,7 +74,7 @@ updateTag(CACHE_TAGS.POSTS);
    // NG: 認証なしで直接 DB 操作
    export async function deletePost(id: string) {
      await prisma.post.delete({ where: { id } });
-     return createSuccess("削除しました");
+     return null; // executeAdminMutationResult なしに直接返すのは NG
    }
    // OK: executeAdminMutationResult で認証・権限チェック・監査ログを一括処理
    export async function deletePost(id: string): Promise<MutationResult<null>> {

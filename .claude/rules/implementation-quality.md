@@ -33,17 +33,18 @@ export async function deleteItem(id: string) {
   return executeAdminMutationResult({
     resource: "item",
     action: "delete",
+    resourceId: id,
     execute: async () => {
       const item = await prisma.item.findUnique({
         where: { id },
         select: { id: true },
       });
-      if (!item) return createFailure("アイテムが見つかりません");
+      if (!item) throw new DomainError("アイテムが見つかりません", "NOT_FOUND");
 
       await prisma.item.delete({ where: { id } });
-      updateTag(CACHE_TAGS.ITEMS);
-      return createSuccess("削除しました");
+      return { id };
     },
+    afterSuccess: () => updateTag(CACHE_TAGS.ITEMS),
   });
 }
 ```
@@ -158,8 +159,13 @@ try {
   console.log(e);
 }
 
-// OK: logError で構造化ログ + createFailure で返す
-import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+// OK: logError で構造化ログ + createMutationError で返す
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import { createMutationError } from "@/shared/lib/mutation-result";
 
 try {
   await action();
@@ -169,7 +175,7 @@ try {
     severity: ErrorSeverity.MEDIUM,
     context: { operation: "deleteItem" },
   });
-  return createFailure("操作に失敗しました");
+  return createMutationError("操作に失敗しました");
 }
 ```
 

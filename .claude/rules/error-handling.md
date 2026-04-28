@@ -11,61 +11,62 @@ paths:
 
 > Next.js 16.2 Server Actions / safeFetch / criticalFetch / logger 対応
 
-## ActionResult 型
+## MutationResult<T> 型
 
-### createSuccess / createFailure
+### createMutationError / isMutationError
 
-`@/shared/types/server-actions` のヘルパーを必ず使用する。直接オブジェクトリテラルを返却しない:
+`@/shared/lib/mutation-result` のヘルパーを必ず使用する。直接オブジェクトリテラルを返却しない:
 
 ```typescript
 import {
-  createSuccess,
-  createFailure,
-  type ActionResult,
-} from "@/shared/types/server-actions";
+  createMutationError,
+  isMutationError,
+  type MutationResult,
+  type MutationError,
+} from "@/shared/lib/mutation-result";
 
 // NG: オブジェクトリテラル直接返却
-return { success: true, message: "保存しました" };
-return { success: false, error: "エラー" };
+return { error: "エラー" };
+return { error: "...", fieldErrors: { ... } };
 
-// OK: ヘルパー使用
-return createSuccess("保存しました");
-return createSuccess("作成しました", { id: post.id }); // データあり
-return createFailure("エラーが発生しました");
-return createFailure("入力内容に誤りがあります", { email: ["無効なメール"] }); // fieldErrors付き
+// OK: ヘルパー使用 (failure path)
+return createMutationError("エラーが発生しました");
+return createMutationError("入力内容に誤りがあります", { email: ["無効なメール"] }); // fieldErrors付き
+
+// OK: success path は T を直接返す (ラッパー不要)
+return { id: post.id };
 ```
 
 型定義:
 
 ```typescript
-// 成功
-type ActionSuccess<TData = void> = {
-  readonly success: true;
-  readonly message: string;
-} & (TData extends void ? {} : { readonly data: TData });
-
 // 失敗
-type ActionFailure = {
-  readonly success: false;
+type MutationError = {
   readonly error: string;
+  readonly code?: string;
   readonly fieldErrors?: Record<string, string[]>;
 };
 
-// 統合
-type ActionResult<TData = void> = ActionSuccess<TData> | ActionFailure;
+// 統合 (success: T | failure: MutationError)
+type MutationResult<T = null> = T | MutationError;
+
+// 判定
+function isMutationError(result: unknown): result is MutationError;
 ```
+
+`executeAdminMutationResult` は `MutationResult<TData>` を返す。`execute` の戻り値 `TData` が success path（ラッパーなし）、`DomainError` throw が `MutationError` に自動変換される（failure path）。
 
 ### バリデーションエラー（Zod）
 
-`@/shared/lib/action-helpers` の `createValidationError` を使用:
+`@/shared/lib/action-helpers` の `createValidationMutationError` を使用:
 
 ```typescript
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 
 const parsed = postSchema.safeParse(data);
 if (!parsed.success) {
-  return createValidationError(parsed.error);
-  // => { success: false, error: '入力内容に誤りがあります', fieldErrors: { title: ['...'] } }
+  return createValidationMutationError(parsed.error);
+  // => { error: '入力内容に誤りがあります', code: 'VALIDATION', fieldErrors: { title: ['...'] } }
 }
 ```
 
@@ -81,18 +82,16 @@ if (!parsed.success) {
 "use server";
 
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { createSuccess } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 
 export const createPost = async (input: CreatePostInput) => {
   const parsed = createPostSchema.safeParse(input);
-  if (!parsed.success) return createValidationError(parsed.error);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
     execute: async () => createPostCommand(parsed.data),
-    success: (result) => createSuccess("投稿を作成しました", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.POSTS);
     },
@@ -105,7 +104,7 @@ export const createPost = async (input: CreatePostInput) => {
 
 - 認証チェック（`checkPermission` / `checkResourceAccess`）
 - 権限チェック（resource + action ベース）
-- DomainError のキャッチ → `createFailure(error.message)` 変換
+- DomainError のキャッチ → `MutationError ({ error: error.message, code: error.code })` に自動変換
 - 監査ログ記録（`fireAndForget(logAction)` で非ブロッキング、ADR 0019）
 
 関数の種類:
@@ -145,7 +144,7 @@ export async function DELETE(req: Request) {
 
 ### データベースエラー
 
-`executeAdminMutationResult` は DomainError を自動キャッチするが、それ以外の例外（DB エラー等）は再スローされる。ドメインコマンド層で try/catch + `logError` + `createFailure` を行う:
+`executeAdminMutationResult` は DomainError を自動キャッチするが、それ以外の例外（DB エラー等）は再スローされる。ドメインコマンド層で try/catch + `logError` を行い、Server Action 側で `createMutationError` を返す:
 
 ```typescript
 import {
@@ -157,14 +156,13 @@ import {
 // Server Action（executeAdminMutationResult がDomainErrorを自動処理）
 export const updateSpace = async (id: string, input: SpaceInput) => {
   const parsed = spaceFormSchema.safeParse(input);
-  if (!parsed.success) return createValidationError(parsed.error);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
   return executeAdminMutationResult({
     resource: "space",
     action: "update",
     resourceId: id,
     execute: async () => updateSpaceCommand(id, parsed.data),
-    success: () => createSuccess("スペースを更新しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SPACES);
     },
@@ -195,7 +193,6 @@ export const publishPost = async (id: string) => {
     action: "publish",
     resourceId: id,
     execute: async () => publishPostCommand(id),
-    success: () => createSuccess("公開しました"),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.POSTS);
     },
@@ -326,7 +323,9 @@ try {
   /* ignore */
 }
 
-// OK: 構造化ログ + createFailure
+// OK: 構造化ログ + createMutationError
+import { createMutationError } from "@/shared/lib/mutation-result";
+
 try {
   await action();
 } catch (error) {
@@ -335,7 +334,7 @@ try {
     severity: ErrorSeverity.HIGH, // 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
     context: { operation: "createReservation", userId: user.id },
   });
-  return createFailure("予約の作成に失敗しました");
+  return createMutationError("予約の作成に失敗しました");
 }
 ```
 
@@ -412,13 +411,13 @@ try {
   });
 } catch (error) {
   if (isReservationOverlapError(error)) {
-    return createFailure(error.message); // '選択された時間帯は既に予約されています'
+    return createMutationError(error.message); // '選択された時間帯は既に予約されています'
   }
   logError(error, {
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.HIGH,
   });
-  return createFailure("予約の作成に失敗しました");
+  return createMutationError("予約の作成に失敗しました");
 }
 ```
 
@@ -454,14 +453,15 @@ try {
 
    ```typescript
    // NG: DB エラー詳細をユーザーに返す
-   return createFailure(error.message); // 'column "xxx" does not exist'
+   return createMutationError(error.message); // 'column "xxx" does not exist'
 
    // OK: ユーザー向けメッセージ
-   return createFailure("操作に失敗しました");
+   return createMutationError("操作に失敗しました");
    ```
 
-4. **直接オブジェクトリテラルによる ActionResult 返却禁止**
-   - `createSuccess()` / `createFailure()` を使用
+4. **直接オブジェクトリテラルによる MutationResult 返却禁止**
+   - failure path: `createMutationError()` を使用
+   - success path: domain command の戻り値 `T` を直接 return（ラッパー不要）
 
 5. **認証チェック漏れ禁止**
    - 管理画面 Server Actions は必ず `executeAdminMutationResult` を使用。`checkPermission` の直接使用は API Routes のみ
