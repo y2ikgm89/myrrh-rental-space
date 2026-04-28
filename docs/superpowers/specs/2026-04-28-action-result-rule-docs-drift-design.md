@@ -28,9 +28,10 @@ Clean-Break Refactor C5 Phase 4 完了時 (2026-04-28、commit `da3e2ede`) に�
 
 ### In Scope
 
-- 7 rule docs ファイルの helper / 型 / import 表記を実装 (`MutationResult<T>` / `createMutationError` / `executeAdminMutationResult`) と一致化
-- 5 置換パターン (Pattern A-E、後述) を適用
+- 8 rule docs ファイルの helper / 型 / import 表記を実装 (`MutationResult<T>` / `createMutationError` / `executeAdminMutationResult`) と一致化
+- 6 置換パターン (Pattern A-F、後述) を適用
 - `error-handling.md` の型定義節 (`ActionSuccess` / `ActionFailure` / `ActionResult`) を `MutationResult<T>` / `MutationError` に置換
+- `type-safety.md` の架空型を使った `as unknown as` 例外節 (§4) を削除
 
 ### Out of Scope
 
@@ -53,19 +54,20 @@ Clean-Break Refactor C5 Phase 4 完了時 (2026-04-28、commit `da3e2ede`) に�
 - Approach 2: 中間 commit に意味のある checkpoint なし (helper と型は不可分)
 - Approach 3: 構造変更が大きすぎて Finding 2 のスコープを超え、別 plan ("rule docs SSoT 集約") に切り出すべき
 
-1 commit で全 7 ファイル一括修正。中間 drift 状態を作らない。
+1 commit で全 8 ファイル一括修正。中間 drift 状態を作らない。
 
-## Modification Targets (7 files)
+## Modification Targets (8 files)
 
-| File                                           | 主な修正                                                                                                                                                 |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.claude/rules/error-handling.md`              | `ActionResult` 型定義節を削除し `MutationResult<T>` 節に置換。例コード書き換え (`createSuccess` / `createFailure` → 直接 return / `createMutationError`) |
-| `.claude/rules/auth-patterns.md`               | 例コード書き換え (`success:` callback 削除、`createSuccess` / `createFailure` 削除、import パス修正)                                                     |
-| `.claude/rules/frontend/admin-ui-patterns.md`  | "Server Actions の型インポート" 節を全削除 (`@/admin/types/server-actions` パス不在のため節そのものが dead doc)                                          |
-| `.claude/rules/implementation-quality.md`      | 例コード書き換え (`createSuccess` / `createFailure` 置換)                                                                                                |
-| `.claude/rules/test-quality.md`                | 例コード書き換え (`createSuccess` 推論サンプルを `MutationResult<T>` に変更)                                                                             |
-| `.claude/rules/server-actions/prohibitions.md` | 例コード 1 箇所書き換え                                                                                                                                  |
-| `.claude/rules/server-actions/use-cache.md`    | 例コード 2 箇所書き換え                                                                                                                                  |
+| File                                           | 主な修正                                                                                                                                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.claude/rules/error-handling.md`              | `ActionResult` 型定義節を削除し `MutationResult<T>` 節に置換。例コード書き換え (`createSuccess` / `createFailure` → 直接 return / `createMutationError`)                                                                    |
+| `.claude/rules/auth-patterns.md`               | 例コード書き換え (`success:` callback 削除、`createSuccess` / `createFailure` 削除、import パス修正)                                                                                                                        |
+| `.claude/rules/frontend/admin-ui-patterns.md`  | "Server Actions の型インポート" 節を全削除 (`@/admin/types/server-actions` パス不在のため節そのものが dead doc)                                                                                                             |
+| `.claude/rules/implementation-quality.md`      | 例コード書き換え (`createSuccess` / `createFailure` 置換)                                                                                                                                                                   |
+| `.claude/rules/test-quality.md`                | 例コード書き換え (`createSuccess` 推論サンプルを `MutationResult<T>` に変更)                                                                                                                                                |
+| `.claude/rules/server-actions/prohibitions.md` | 例コード 1 箇所書き換え                                                                                                                                                                                                     |
+| `.claude/rules/server-actions/use-cache.md`    | 例コード 2 箇所書き換え                                                                                                                                                                                                     |
+| `.claude/rules/type-safety.md`                 | §4「TypeScript 6.0 条件型 (`as unknown as T`)」例外節を削除 (架空型 `ActionSuccess<T>` を例に使用、実装に条件型 cast の実例なし。`as unknown as` の許可例外は §5 keysOf / §6 standardSchemaResolver で実例ベースに網羅済み) |
 
 ## Replacement Patterns
 
@@ -163,6 +165,25 @@ function createMutationError(
 
 function isMutationError(result: unknown): result is MutationError;
 ```
+
+### Pattern F — 架空型を使った例外節の削除 (`type-safety.md` のみ)
+
+`type-safety.md` §4「TypeScript 6.0 条件型 (`as unknown as T`)」は実装にない `ActionSuccess<T>` を例に使った架空節。実装で `as unknown as` が必要なケースは別の理由 (invariance / unrelated types) で発生し、それらは §5 (`keysOf` / `entriesOf` / `omitUndefined`) と §6 (`standardSchemaResolver` 境界変換) で実例ベースに網羅されている。§4 は重複かつ架空のため節全体を削除する。
+
+````typescript
+// 削除対象 (type-safety.md §4 例外節全体)
+// **4. TypeScript 6.0 条件型（`as unknown as T`）**
+//
+// ```typescript
+// // OK: 条件型を含む型への代入（TS 6.0 で厳格化）
+// // ActionSuccess<T> は条件型のため直接 as では不可、二段階キャストが必要
+// return result as unknown as ActionSuccess<T>;
+// ```
+//
+// ↓ 節全体を削除し、後続節 §5 / §6 の番号は据え置き (歴史的 §番号維持で grep 互換)
+````
+
+将来、条件型 cast が必要な実例が発生した場合に限り、新たな §4 として実例ベースで追加する。
 
 ## Canonical API Reference (実装 SSoT)
 
