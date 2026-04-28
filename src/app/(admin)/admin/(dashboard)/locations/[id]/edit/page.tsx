@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getLocationById } from "@/admin/queries/location";
+import { getSettings } from "@/admin/queries/settings";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
@@ -33,10 +34,11 @@ export async function generateMetadata({
 
 export default async function EditLocationPage({ params }: PageProps) {
   const { id } = await params;
-  const [location, settings, socialLinks] = await Promise.all([
+  const [location, settings, socialLinks, fullSettings] = await Promise.all([
     getLocationById(id),
     getOrganizationSettings(),
     getSocialLinkUrls(),
+    getSettings(),
   ]);
 
   if (!location) {
@@ -61,6 +63,7 @@ export default async function EditLocationPage({ params }: PageProps) {
         location={location}
         mode="edit"
         globals={globals}
+        gbpEnabledGlobally={fullSettings?.googleBusinessProfileEnabled ?? false}
       />
     </AdminDetailLayout>
   );

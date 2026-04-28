@@ -56,6 +56,7 @@ import {
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 import { LocationMeoScoreCard } from "./LocationMeoScoreCard";
+import { LocationGbpSyncCard } from "./LocationGbpSyncCard";
 
 type GlobalsMeoFlags = {
   businessName: boolean;
@@ -67,6 +68,8 @@ type LocationFormProps = {
   location?: LocationWithStats;
   mode: "create" | "edit";
   globals?: GlobalsMeoFlags;
+  /** GBP 同期機能のグローバル ON/OFF（Settings.googleBusinessProfileEnabled） */
+  gbpEnabledGlobally?: boolean;
 };
 
 // =============================================================================
@@ -182,6 +185,7 @@ export function LocationForm({
   location,
   mode,
   globals = DEFAULT_GLOBALS,
+  gbpEnabledGlobally = false,
 }: LocationFormProps) {
   const router = useRouter();
   // DndContext の id は SSR hydration mismatch 防止に必要
@@ -766,6 +770,17 @@ export function LocationForm({
             className="mt-6 space-y-6 data-[state=inactive]:hidden"
           >
             <LocationMeoScoreCard control={form.control} globals={globals} />
+
+            {location ? (
+              <LocationGbpSyncCard
+                locationId={location.id}
+                googleBusinessPlaceId={location.googleBusinessPlaceId}
+                gbpSyncEnabled={location.gbpSyncEnabled}
+                gbpSyncedAt={location.gbpSyncedAt}
+                gbpSyncError={location.gbpSyncError}
+                gbpEnabledGlobally={gbpEnabledGlobally}
+              />
+            ) : null}
 
             <Card>
               <CardHeader>
