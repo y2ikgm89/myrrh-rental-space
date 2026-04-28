@@ -1,5 +1,8 @@
 # `.claude/` Configuration Optimization — 公式準拠クリーン実装
 
+> **Snapshot: 2026-04-28** — Implementation completed (4 commits on main: `98c24de2` / `1e155a4d` / `dff56828` / `1781d63b`)
+> **Completed: 2026-04-28**
+>
 > **Date**: 2026-04-28
 > **Type**: Breaking refactor (公式 `code.claude.com/docs/en/{memory,sub-agents,skills}` 準拠 + 後方互換なし)
 > **Branch**: main（worktree 不使用、5 commit 連続）
