@@ -332,7 +332,7 @@ function LexicalInvalidContentJsonNotice() {
           </code>{" "}
           を渡してください。DB に古い形式が残る場合は{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-foreground">
-            docs/operations/lexical-editor-state-json.md
+            docs/how-to/fix-legacy-lexical-rows.md
           </code>{" "}
           を参照してください。
         </p>

@@ -45,4 +45,4 @@ interface Example {
 
 ## 参考資料
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [architecture.md](../explanation/architecture.md)

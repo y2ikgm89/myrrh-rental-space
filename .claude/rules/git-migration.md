@@ -18,7 +18,7 @@ paths:
 
 ## Cleanup
 
-- **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/guides/**` / `bunfig.toml` / `.vscode/launch.json`
+- **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/how-to/**` / `bunfig.toml` / `.vscode/launch.json`
 - **ファイル削除時の dangling ref 検出範囲は `docs/` 全域 + `.claude/` + `AGENTS.md` + `CLAUDE.md` 必須** — 検出時は「削除 + dangling ref 修正」を同一 commit に統合
 
 ## テスト配置

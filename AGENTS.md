@@ -12,7 +12,7 @@
 - `.codex/rules/*.rules` はサンドボックス外コマンドの承認ルール専用。公式上 experimental なので、`prefix_rule` の `pattern` / `decision` / `justification` / `match` / `not_match` だけでコマンド方針を表し、コーディング規約は置かない。
 - `.codex/hooks.json` は空設定にする。hooks は公式上 experimental かつ Windows support が一時無効なので、検証強制は `lefthook` / CI / このファイルの delivery checklist で担保する。
 - `.claude/*` は残置された Claude Code 用資産として扱う。Codex 作業では参照・同期・正本扱いしない。
-- ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/architecture/*`、`docs/guides/*` の Codex 向け導線から読む。
+- ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/explanation/*`、`docs/how-to/*`、`docs/reference/*` の Codex 向け導線から読む。
 - Codex 資産（`AGENTS.md` / `.agents/skills` / `.codex/agents` / `.codex/rules` / `.codex/hooks.json`）を変更する場合は `codex-instruction-maintenance` と `project-validation` の手順を使い、AGENTS.md には恒久的な全体制約だけを置く。
 
 ## Project Overview
@@ -110,7 +110,7 @@ bun run e2e
 - preview / public は同じ `ManagedPageSections` renderer を使う。
 - freeform document、builder canvas、drag / resize / layer tree、breakpoint override、runtime 互換分岐を追加しない。
 - 任意 HTML / 任意 script / custom CSS textarea を追加しない。
-- ページ編集方針を変える場合は `docs/architecture/content-managed-pages.md` と矛盾しないか確認する。
+- ページ編集方針を変える場合は `docs/explanation/content-managed-pages.md` と矛盾しないか確認する。
 
 ## Architecture Boundaries
 
@@ -169,10 +169,10 @@ bun run e2e
 3. 変更範囲に対応する unit / integration / E2E を必要に応じて実行している。
 4. 最低 `bun run validate` を通している。
 5. PR / release / commit 前は `bun run validate && bun run build` を通している。
-6. アーキテクチャ変更時は `docs/architecture/` を更新している。
+6. アーキテクチャ変更時は `docs/explanation/` を更新している。
 
 ## Additional Documentation
 
-- `docs/architecture/codex-instructions.md`: Codex 公式構成への対応方針
-- `docs/architecture/agent-instructions.md`: AI エージェント指示の配置
-- `docs/architecture/content-managed-pages.md`: 固定デザイン + 型付きコンテンツ編集の方針
+- `docs/explanation/ai-instructions.md`: Codex / Claude Code の正本配置
+- `docs/explanation/content-managed-pages.md`: 固定デザイン + 型付きコンテンツ編集の方針
+- `docs/README.md`: ドキュメント全体構造（Diátaxis: explanation / how-to / reference）

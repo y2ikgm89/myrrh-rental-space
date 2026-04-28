@@ -4,7 +4,10 @@ paths:
   - cloudbuild.yaml
   - .dockerignore
   - .gcloudignore
-  - docs/operations/**
+  - docs/how-to/deploy.md
+  - docs/how-to/docker.md
+  - docs/how-to/cloudflare.md
+  - docs/how-to/cron-schedule.md
   - src/**
   - .github/workflows/**
 ---
@@ -226,7 +229,7 @@ schema commit と migration 適用の drift を防ぐため、deploy 前に migr
   args: [run, jobs, execute, ${_MIGRATE_JOB_NAME}, --region=${_REGION}, --wait]
 ```
 
-**初回のみ**: Job の作成は手動で行う（`gcloud run jobs create prisma-migrate --command bunx --args --bun,prisma,migrate,deploy ...`）。手順は `docs/operations/deployment.md` §6。
+**初回のみ**: Job の作成は手動で行う（`gcloud run jobs create prisma-migrate --command bunx --args --bun,prisma,migrate,deploy ...`）。手順は `docs/how-to/deploy.md` §6。
 
 ### シークレットバージョン固定
 
@@ -313,7 +316,7 @@ Prisma マイグレーションは cloudbuild.yaml 内の `prisma-migrate` Cloud
 gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 ```
 
-初回の Job 作成は `docs/operations/deployment.md` §6 を参照。
+初回の Job 作成は `docs/how-to/deploy.md` §6 を参照。
 
 ## 禁止事項
 
@@ -397,15 +400,15 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 
 ## ファイル配置
 
-| パス                            | 内容                                                  |
-| ------------------------------- | ----------------------------------------------------- |
-| `Dockerfile`                    | multi-stage（deps / builder-base / builder / runner） |
-| `cloudbuild.yaml`               | Cloud Build + Cloud Run deploy                        |
-| `.dockerignore`                 | Docker ビルドコンテキスト除外                         |
-| `.gcloudignore`                 | Cloud Build ソースアップロード除外                    |
-| `docs/operations/deployment.md` | デプロイ手順・IAM・シークレット管理                   |
-| `src/shared/lib/env/server.ts`  | サーバー環境変数定義                                  |
-| `src/shared/lib/env/client.ts`  | クライアント環境変数定義（NEXT*PUBLIC*\*）            |
+| パス                           | 内容                                                  |
+| ------------------------------ | ----------------------------------------------------- |
+| `Dockerfile`                   | multi-stage（deps / builder-base / builder / runner） |
+| `cloudbuild.yaml`              | Cloud Build + Cloud Run deploy                        |
+| `.dockerignore`                | Docker ビルドコンテキスト除外                         |
+| `.gcloudignore`                | Cloud Build ソースアップロード除外                    |
+| `docs/how-to/deploy.md`        | デプロイ手順・IAM・シークレット管理                   |
+| `src/shared/lib/env/server.ts` | サーバー環境変数定義                                  |
+| `src/shared/lib/env/client.ts` | クライアント環境変数定義（NEXT*PUBLIC*\*）            |
 
 ## 参考
 

@@ -170,7 +170,7 @@ const date = useWatch({ control: form.control, name: "date" });
 
 ---
 
-> **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`
+> **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/react-api.md`
 
 ---
 

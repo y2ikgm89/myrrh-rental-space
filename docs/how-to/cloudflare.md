@@ -318,8 +318,8 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 ### プロジェクトドキュメント
 
 - [`AGENTS.md`](../../AGENTS.md) - Codex 向けプロジェクト概要
-- [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
-- [`docs/architecture/`](../architecture/) - システムアーキテクチャ
+- [`deploy.md`](./deploy.md) - デプロイメント手順
+- [`../explanation/`](../explanation/) - システムアーキテクチャ
 
 ### 外部リソース
 
