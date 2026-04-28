@@ -58,6 +58,9 @@ function formatLocation(location: {
   paymentAccepted: string | null;
   phoneNumber: string | null;
   email: string | null;
+  gbpSyncEnabled: boolean;
+  gbpSyncedAt: Date | null;
+  gbpSyncError: string | null;
   sortOrder: number;
   isPublished: boolean;
   isActive: boolean;
@@ -93,6 +96,11 @@ function formatLocation(location: {
     paymentAccepted: location.paymentAccepted,
     phoneNumber: location.phoneNumber,
     email: location.email,
+    gbpSyncEnabled: location.gbpSyncEnabled,
+    gbpSyncedAt: location.gbpSyncedAt
+      ? location.gbpSyncedAt.toISOString()
+      : null,
+    gbpSyncError: location.gbpSyncError,
     sortOrder: location.sortOrder,
     isPublished: location.isPublished,
     isActive: location.isActive,
@@ -128,6 +136,9 @@ const LOCATION_FULL_SELECT = {
   paymentAccepted: true,
   phoneNumber: true,
   email: true,
+  gbpSyncEnabled: true,
+  gbpSyncedAt: true,
+  gbpSyncError: true,
   sortOrder: true,
   isPublished: true,
   isActive: true,
@@ -234,6 +245,9 @@ export async function getLocationBySlug(
           paymentAccepted: true,
           phoneNumber: true,
           email: true,
+          gbpSyncEnabled: true,
+          gbpSyncedAt: true,
+          gbpSyncError: true,
           sortOrder: true,
           isPublished: true,
           isActive: true,
@@ -255,6 +269,9 @@ export async function getLocationBySlug(
     imageUrls: parseStringArray(location.imageUrls),
     businessHours: parseBusinessHours(location.businessHours),
     specialHolidays: parseStringArrayOrNull(location.specialHolidays),
+    gbpSyncedAt: location.gbpSyncedAt
+      ? location.gbpSyncedAt.toISOString()
+      : null,
     createdAt: location.createdAt.toISOString(),
     updatedAt: location.updatedAt.toISOString(),
   });

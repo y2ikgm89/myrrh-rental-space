@@ -27,6 +27,9 @@ type LocationRecord = {
   paymentAccepted: string | null;
   phoneNumber: string | null;
   email: string | null;
+  gbpSyncEnabled: boolean;
+  gbpSyncedAt: Date | null;
+  gbpSyncError: string | null;
   sortOrder: number;
   isPublished: boolean;
   isActive: boolean;
@@ -83,6 +86,9 @@ export type LocationData = {
   readonly paymentAccepted: string | null;
   readonly phoneNumber: string | null;
   readonly email: string | null;
+  readonly gbpSyncEnabled: boolean;
+  readonly gbpSyncedAt: string | null;
+  readonly gbpSyncError: string | null;
   readonly sortOrder: number;
   readonly isPublished: boolean;
   readonly isActive: boolean;
