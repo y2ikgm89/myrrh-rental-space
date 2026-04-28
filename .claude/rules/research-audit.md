@@ -35,7 +35,7 @@ paths:
 - **Explore / 監査 subagent の数値・採用範囲リストは grep で再検証必須** — `breakpoint 使用箇所数` / `@container 採用ファイル数` / `arbitrary 値の件数` 等は rule docs の記述を根拠に hallucinate しやすい
 - **bundle「未使用チャンク」報告は `react-loadable-manifest.json` で lazy-load 確認必須** — `.next/server/app/*.html` 埋め込み scan だけでは `next/dynamic` 経由の lazy chunk を「未使用」と誤認
 - **review agent の「欠落」「型不整合」報告は Read + Glob で実在確認** — project-reviewer は `Serialized<T>` 型を未把握で Date→string を warning 化、route-structure-reviewer は MINGW64 `()` 含みパス Glob で実在 `loading.tsx` を「欠落」扱いする傾向あり
-- **レビューエージェント指摘**: `gotchas/claude-code.md` と照合して誤報除外。`bun run lint` exit 状態 + Read を ground truth とする
+- **レビューエージェント指摘**: `claude-code-patterns.md` と照合して誤報除外。`bun run lint` exit 状態 + Read を ground truth とする
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン。違反大量報告時はまず validate を ground truth に
 
 ## Plan 作成時の事前検証

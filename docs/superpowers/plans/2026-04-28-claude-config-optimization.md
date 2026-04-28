@@ -30,7 +30,7 @@
 
 ## Phase 順序（CLAUDE.md キャッシュ破壊を最後に集約）
 
-公式 gotcha: `gotchas/claude-code.md` 「revise-claude-md はセッション終了直前に呼ぶ」「CLAUDE.md はプロジェクトレベルのプロンプトキャッシュ層」 → CLAUDE.md 変更を最終 phase に。
+公式 gotcha: `claude-code-patterns.md` 「revise-claude-md はセッション終了直前に呼ぶ」「CLAUDE.md はプロジェクトレベルのプロンプトキャッシュ層」 → CLAUDE.md 変更を最終 phase に。
 
 1. **Phase 1**: barrel index 削除 + 参照置換
 2. **Phase 3**: agent 共通除外 SSoT 化
@@ -60,11 +60,11 @@
 | Old                                      | New                                                                                                                           |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `react-patterns.md` (general)            | `react/compiler.md` (Compiler) / `react/hooks.md` (Outer/Inner) / `react/forms-ssr.md` (Form/PPR) / `react/gotchas.md` (禁止) |
-| `gotchas.md` (Worktree/DB)               | `gotchas/deployment.md`                                                                                                       |
-| `gotchas.md` (Claude Code)               | `gotchas/claude-code.md`                                                                                                      |
-| `gotchas.md` (Seed/Section)              | `gotchas/domain.md`                                                                                                           |
-| `gotchas.md` (UI/Form)                   | `gotchas/ui.md`                                                                                                               |
-| `gotchas.md` (Prisma)                    | `gotchas/prisma.md`                                                                                                           |
+| `gotchas.md` (Worktree/DB)               | `ops/deployment-patterns.md`                                                                                                  |
+| `gotchas.md` (Claude Code)               | `claude-code-patterns.md`                                                                                                     |
+| `gotchas.md` (Seed/Section)              | `implementation-patterns.md`                                                                                                  |
+| `gotchas.md` (UI/Form)                   | `frontend/project-design-config.md`                                                                                           |
+| `gotchas.md` (Prisma)                    | `prisma-patterns.md`                                                                                                          |
 | `server-actions.md` (cache)              | `server-actions/use-cache.md`                                                                                                 |
 | `server-actions.md` (impl)               | `server-actions/implementation.md`                                                                                            |
 | `tailwind-patterns.md` (color/theme)     | `tailwind-patterns/theme-tokens.md`                                                                                           |
@@ -78,7 +78,7 @@
 - `.claude/skills/{parallax-section,lexical-toolbar,lexical-node,lexical-plugin}/reference/*.md`
 - `.claude/agents/{design-memory,project-reviewer,react-compiler-reviewer,zod-schema-reviewer}.md`
 - `.claude/rules/frontend/accessibility/forms-prohibitions.md`
-- `.claude/rules/gotchas/deployment.md`
+- `.claude/rules/ops/deployment-patterns.md`
 
 CLAUDE.md と `process/*.md` 内の barrel 参照は Phase 2 で一括処理。
 
@@ -108,7 +108,7 @@ paths:
 3 行 SSoT:
 
 - `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
-- `select.tsx` の `required` — `gotchas/ui.md` で Radix 制約として除外
+- `select.tsx` の `required` — `frontend/project-design-config.md` で Radix 制約として除外
 - `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
 
 ### Modify (7 agents — 該当セクション削除)

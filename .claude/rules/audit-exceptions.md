@@ -13,7 +13,7 @@ paths:
 
 - `LayoutFields.tsx` の `any` — `frontend/admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
 - `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
-- `select.tsx` の `required` — `gotchas/ui.md` で Radix 制約として除外
+- `select.tsx` の `required` — `frontend/project-design-config.md` で Radix 制約として除外
 - `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
 
 ## 使い方

@@ -5,7 +5,7 @@ date: 2026-04-28
 type: design-spec
 related:
   - memory: project_clean-break-c5-handoff.md (Finding 2)
-  - rule: gotchas/deployment.md (`MutationResult<T>` は ラッパーでない 既存 learning)
+  - rule: ops/deployment-patterns.md (`MutationResult<T>` は ラッパーでない 既存 learning)
 ---
 
 # ActionResult / createSuccess / createFailure rule docs drift 解消
@@ -20,7 +20,7 @@ related:
 
 Clean-Break Refactor C5 Phase 4 完了時 (2026-04-28、commit `da3e2ede`) に発見された rule docs 側 drift。C5 のスコープ (skills / rules / subagents / docs の公式ベストプラクティス準拠 audit) 内で発覚したが、`auth-patterns.md` / `error-handling.md` / `admin-ui-patterns.md` 等を跨ぐ helper / 型レベルの整合化作業のため、別 plan に持ち越された (`project_clean-break-c5-handoff.md` § Finding 2)。
 
-実装側は `executeAdminMutationResult` (admin-action.ts) と `MutationResult<T>` (mutation-result.ts) で完結しており、`createSuccess` / `createFailure` / `ActionResult` / `@/admin/types/server-actions` / `@/shared/types/server-actions` のいずれも実在しない。`gotchas/deployment.md` の既存 learning「`MutationResult<T>` は `T | MutationError` で `{ data: T }` ラッパーではない」と整合する canonical 実装が、rule docs 側にだけ反映されていない。
+実装側は `executeAdminMutationResult` (admin-action.ts) と `MutationResult<T>` (mutation-result.ts) で完結しており、`createSuccess` / `createFailure` / `ActionResult` / `@/admin/types/server-actions` / `@/shared/types/server-actions` のいずれも実在しない。`ops/deployment-patterns.md` の既存 learning「`MutationResult<T>` は `T | MutationError` で `{ data: T }` ラッパーではない」と整合する canonical 実装が、rule docs 側にだけ反映されていない。
 
 **ADR 不要**: 実装は変更しないため public API breaking なし。rule docs 内部 drift の解消は ADR 対象外 (CLAUDE.md §公式 API 準拠の原則 #4「`@theme` / SSoT / ルール docs の整合を同一コミットで保つ」と整合)。
 
@@ -38,7 +38,7 @@ Clean-Break Refactor C5 Phase 4 完了時 (2026-04-28、commit `da3e2ede`) に�
 | 項目                                                                                       | 理由                                                           |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | `src/` の実装変更                                                                          | 実装が canonical、drift 解消は rule docs 側のみで完結          |
-| `usePublicForm` / `executeAdminAction` 等の hook 側パターン                                | 既存 learning (`gotchas/deployment.md`) と整合済               |
+| `usePublicForm` / `executeAdminAction` 等の hook 側パターン                                | 既存 learning (`ops/deployment-patterns.md`) と整合済          |
 | `MutationResult<T = null>` の `T = null` ジェネリクス設計議論                              | 実装の設計判断、Finding 2 の対象外                             |
 | 例コードに散在する `executeAdminMutationResult` 戻り型注釈の網羅追加                       | 必要箇所のみ最小限。例コード簡潔性優先                         |
 | ADR 0019 (`fireAndForget` 監査ログ実行順序契約) の見直し                                   | 既存 ADR は実装と整合済み、Finding 2 とは独立                  |
@@ -257,7 +257,7 @@ drift は不可分のため中間状態を作らない。
 ## Related
 
 - C5 handoff: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-c5-handoff.md` § Finding 2
-- 既存 learning: `.claude/rules/gotchas/deployment.md` § `MutationResult<T>` は `T | MutationError` で `{ data: T }` ラッパーではない
+- 既存 learning: `.claude/rules/ops/deployment-patterns.md` § `MutationResult<T>` は `T | MutationError` で `{ data: T }` ラッパーではない
 - 関連 ADR: なし (内部 drift 解消は ADR 対象外)
 - 実装ファイル:
   - `src/shared/lib/mutation-result.ts` (`MutationResult<T>` / `MutationError` / `createMutationError` / `isMutationError`)

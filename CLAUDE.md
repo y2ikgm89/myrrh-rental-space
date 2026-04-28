@@ -65,11 +65,11 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **GCal outbound sync は attendees 空 + description マーカー + fireAndForget**（→ `ical-patterns.md`）— description 1 行目に `予約ID:` / `イベントID:` マーカーで inbound ループ防止
 - **Turnstile 配置基準** — 未認証公開フォーム必須、認証済みでも予約・決済等の高リスク操作は許容、参照系は不要
 
-詳細（datetime-local / Mutually exclusive boolean / 配列 uniqueness 等）: `zod-patterns/validation-schemas.md` / `gotchas/domain.md`
+詳細（datetime-local / Mutually exclusive boolean / 配列 uniqueness 等）: `zod-patterns/validation-schemas.md` / `implementation-patterns.md`
 
 ### UI / UX（プロジェクト全体に適用される最重要のみ）
 
-> 個別パターンは path-scoped rule で自動ロード — `frontend/accessibility/*` / `tailwind-patterns/*` / `frontend/admin-ui/*` / `gotchas/ui.md`
+> 個別パターンは path-scoped rule で自動ロード — `frontend/accessibility/*` / `tailwind-patterns/*` / `frontend/admin-ui/*` / `frontend/project-design-config.md`
 
 - **全 interactive 要素は WCAG 2.5.5 Enhanced (AAA) 準拠 44×44 CSS px 必須** — Button 全 size で `min-h-11` 以上、checkbox/radio は wrapper で 44px ヒットエリア確保
 - **カードグリッドは Container Queries、マクロレイアウトは viewport breakpoint** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。管理 dashboard は named container `@container/main`

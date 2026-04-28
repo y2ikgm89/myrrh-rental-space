@@ -1,12 +1,12 @@
 ---
-description: Gotchas — Import Alias / shadcn/ui / Route Handler (PPR) / Claude Code 設定
+description: Claude Code harness 固有パターン — Import Alias / shadcn/ui / Route Handler (PPR) / Claude Code 設定
 paths:
   - src/**
   - .claude/**
   - tsconfig.json
 ---
 
-# Gotchas — Claude Code / Import Alias / shadcn / Route Handler
+# Claude Code Patterns — Import Alias / shadcn / Route Handler / Harness
 
 ## Import Alias
 

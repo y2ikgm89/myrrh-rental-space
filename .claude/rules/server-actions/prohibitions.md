@@ -60,7 +60,7 @@ updateTag(CACHE_TAGS.POSTS);
    - `updateTag('layout-settings')` → `updateTag(CACHE_TAGS.LAYOUT_SETTINGS)`
    - `revalidateTag('posts', 'hours')` → `revalidateTag(CACHE_TAGS.POSTS, CACHE_LIFE.PUBLIC_CONTENT)`
    - `cacheLife('hours')` → `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`
-   - `CACHE_TAGS.SETTINGS` は廃止済み — 粒度別タグを使用（`gotchas/domain.md` 参照）
+   - `CACHE_TAGS.SETTINGS` は廃止済み — 粒度別タグを使用（`implementation-patterns.md` 参照）
 
 2. **`getCacheTag.*.list()` と `CACHE_TAGS.*` の二重呼び出し禁止**
    - `getCacheTag.reservations.list()` は `CACHE_TAGS.RESERVATIONS` と同一値。ベースタグのみ使用し `.list()` は呼ばない
