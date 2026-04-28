@@ -1,40 +1,26 @@
-# 保護対策
+# 保護対策の設定
 
-DDoS対策・レート制限・Bot保護の統合ガイド。
+最終更新: 2026-04-29
 
-## 多層防御アーキテクチャ
+DDoS / レート制限 / Bot 保護を実装・運用する手順。設計の「なぜ」は [`../explanation/security-model.md`](../explanation/security-model.md) を参照。
 
-```
-[攻撃者]
-    ↓
-[Cloudflare] ─── L3/L4 DDoS保護（自動）
-    ↓
-[Cloud Run] ─── タイムアウト（60秒）、スケーリング制限
-    ↓
-[Middleware] ─── グローバルレート制限
-    ↓
-[Server Action] ─── エンドポイント別レート制限 + Turnstile
-    ↓
-[データベース]
-```
+## 1. Cloudflare DDoS 保護
 
-## 1. Cloudflare DDoS保護
+### 設定（無料プランで可）
 
-### 無料プランで利用可能
+1. ドメインを Cloudflare に追加
+2. DNS 設定でプロキシ有効化（オレンジ雲）
+3. SSL/TLS: **Full (Strict)**
 
-- L3/L4 DDoS自動保護
-- HTTP Flood対策
-- Slowloris攻撃対策
+### 提供される保護
+
+- L3/L4 DDoS 自動保護
+- HTTP Flood 対策
+- Slowloris 攻撃対策
+
+## 2. レート制限（@upstash/ratelimit）
 
 ### 設定
-
-1. ドメインをCloudflareに追加
-2. DNS設定でプロキシ有効化（オレンジ雲）
-3. SSL/TLS: Full (Strict)
-
-## 2. レート制限
-
-### @upstash/ratelimit
 
 ```typescript
 import { Ratelimit } from "@upstash/ratelimit";
@@ -47,14 +33,14 @@ const ratelimit = new Ratelimit({
 });
 ```
 
-### エンドポイント別設定
+### エンドポイント別の制限値
 
-| エンドポイント | 制限      |
-| -------------- | --------- |
-| ログイン       | 10回/10秒 |
-| 予約フォーム   | 5回/分    |
-| お問い合わせ   | 3回/分    |
-| API一般        | 100回/分  |
+| エンドポイント | 制限        |
+| -------------- | ----------- |
+| ログイン       | 10 回/10 秒 |
+| 予約フォーム   | 5 回/分     |
+| お問い合わせ   | 3 回/分     |
+| API 一般       | 100 回/分   |
 
 ### 実装例
 
@@ -63,8 +49,7 @@ export async function createReservation(data: Input) {
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
 
-  const { success, remaining } = await ratelimit.limit(ip);
-
+  const { success } = await ratelimit.limit(ip);
   if (!success) {
     return createFailure("リクエストが多すぎます。しばらくお待ちください。");
   }
@@ -73,11 +58,11 @@ export async function createReservation(data: Input) {
 }
 ```
 
-## 3. Cloudflare Turnstile
+### Cloud Run probe endpoint の除外
 
-### 概要
+`/api/live` / `/api/health` は **`proxy.ts` で rate-limit から除外する**。probe IP が `unknown` で合算され 429 → コンテナ kill 連鎖の silent bug を防ぐ。
 
-Cloudflare の無料 Bot 保護サービス。reCAPTCHA の代替。
+## 3. Cloudflare Turnstile（Bot 保護）
 
 ### キー管理
 
@@ -91,30 +76,29 @@ Site Key / Secret Key は **DB の `Settings` テーブル**に暗号化保存�
 - **`action` binding**: フォーム種別ごとの識別子をトークンに埋め込み、サーバーで検証
 - **timeout 10 秒**: 公式推奨値
 
-→ 参照: [Cloudflare 公式 siteverify](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
+→ [Cloudflare 公式 siteverify ドキュメント](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
 
 ### Action 識別子 SSoT
 
-`@/shared/lib/turnstile-actions` の `TURNSTILE_ACTIONS` が全アクションを一元管理。
-Widget の `data-action` とサーバー側 `expectedAction` 検証で同一値を参照。
+`@/shared/lib/turnstile-actions` の `TURNSTILE_ACTIONS` が全アクションを一元管理。Widget の `data-action` とサーバー側 `expectedAction` 検証で同一値を参照。
 
 制約: alphanumeric + `_` + `-` のみ、**最大 32 文字**。
 
-### クライアント
+### クライアント実装
 
 ```tsx
 "use client";
 import { TurnstileWidget } from "@/public/components/ui/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
-// デフォルト: appearance="always" — Cloudflare 公式デフォルト、Bot 保護の UI を明示
+// デフォルト: appearance="always" — Cloudflare 公式デフォルト
 <TurnstileWidget
   siteKey={turnstileSiteKey}
   action={TURNSTILE_ACTIONS.inquiry}
   onVerify={(token) => setTurnstileToken(token)}
 />;
 
-// 「見せない」モード（ボット判定時のみ widget を表示、最もクリーンな UX）
+// 「見せない」モード（ボット判定時のみ表示、最もクリーンな UX）
 <TurnstileWidget
   siteKey={turnstileSiteKey}
   action={TURNSTILE_ACTIONS.inquiry}
@@ -125,9 +109,9 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 `appearance` は以下 3 値のみ（`TurnstileAppearance` で型限定）:
 
-- `"always"`（デフォルト・公式標準） — ページロード時から常時表示。Bot 保護の UI を明示し、ユーザーに「検証中」のフィードバックを提供
-- `"interaction-only"` — ボット判定で interaction が必要な時のみ表示。ほぼ全ての人間ユーザーには widget が見えない最もクリーンな UX
-- `"execute"` — プログラム的に `turnstile.execute()` を呼んだ後に表示（高度ユースケース）
+- `"always"`（デフォルト・公式標準）— ページロード時から常時表示
+- `"interaction-only"` — ボット判定で interaction が必要な時のみ表示
+- `"execute"` — プログラム的に `turnstile.execute()` を呼んだ後に表示
 
 ### サーバー検証（Server Action）
 
@@ -142,15 +126,13 @@ export async function submitInquiry(input: InquiryInput) {
   });
   if (!turnstile.success) return createMutationError(turnstile.error);
 
-  // 処理続行（remoteip は validateTurnstile が getClientIpFromHeaders() で自動取得）
+  // remoteip は validateTurnstile が getClientIpFromHeaders() で自動取得
 }
 ```
 
 ### Better Auth 統合
 
-`/request-password-reset` と `/reset-password` は `admin-auth.ts` の before hook で Turnstile
-保護。クライアントは `x-captcha-response` ヘッダーでトークンを送信（Better Auth 公式
-`captcha` プラグインと同一契約）。
+`/request-password-reset` と `/reset-password` は `admin-auth.ts` の before hook で Turnstile 保護。クライアントは `x-captcha-response` ヘッダーでトークンを送信（Better Auth 公式 `captcha` プラグインと同一契約）。
 
 ```tsx
 await adminAuthClient.resetPassword({
@@ -162,13 +144,19 @@ await adminAuthClient.resetPassword({
 });
 ```
 
+### 配置基準
+
+- **未認証公開フォーム**: 必須
+- **認証済みでも予約・決済等の高リスク操作**: 許容
+- **参照系**: 不要
+
 ## 4. 荒らし対策
 
-### IPブロック
+### IP ブロック
 
 ```typescript
 const BLOCKED_IPS = new Set([
-  // 悪意のあるIPを追加
+  // 悪意のある IP を追加
 ]);
 
 export function isBlocked(ip: string): boolean {
@@ -180,9 +168,9 @@ export function isBlocked(ip: string): boolean {
 
 - 同一内容の連続投稿検出
 - 禁止ワードフィルタ
-- URL過多検出
+- URL 過多検出
 
-## 5. Cloud Run設定
+## 5. Cloud Run 設定
 
 ### タイムアウト
 
@@ -213,7 +201,7 @@ resources:
 ### 監視項目
 
 - レート制限違反数
-- Turnstile失敗率
+- Turnstile 失敗率
 - 異常なトラフィックパターン
 - エラー率
 
@@ -221,14 +209,24 @@ resources:
 
 - エラー率 > 5%: 警告
 - レート制限違反 > 100/分: 警告
-- DDoS検出: Cloudflareダッシュボード
+- DDoS 検出: Cloudflare ダッシュボード
 
-## インシデント対応
+## インシデント対応（運用手順）
 
-1. **検出**: Cloudflare Analytics / Cloud Run監視
-2. **確認**: ログで攻撃パターン特定
+設計レベルの流れは [`../explanation/security-model.md`](../explanation/security-model.md#インシデント対応の流れ) を参照。
+
+実運用での具体的アクション:
+
+1. **検出**: Cloudflare Analytics / Cloud Run 監視で異常検知
+2. **確認**: Cloud Logging で攻撃パターン特定
 3. **対応**:
-   - Cloudflare: Under Attack Mode有効化
-   - アプリ: IPブロック追加
+   - Cloudflare: **Under Attack Mode** 有効化
+   - アプリ: `BLOCKED_IPS` に追加 → デプロイ
 4. **収束確認**: トラフィック正常化を確認
-5. **記録**: インシデントレポート作成
+5. **記録**: インシデントレポート作成、再発防止策を path-scoped rule に追記
+
+## 関連
+
+- [`../explanation/security-model.md`](../explanation/security-model.md) — セキュリティ設計の「なぜ」
+- [`./deploy.md`](./deploy.md) — Cloud Run / Secret Manager / IAM 構成
+- [`./cloudflare.md`](./cloudflare.md) — Cloudflare 詳細設定
