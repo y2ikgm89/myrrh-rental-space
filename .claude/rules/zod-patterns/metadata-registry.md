@@ -8,11 +8,11 @@ paths:
 
 # Zod メタデータと Registry
 
-> Zod 4.3 対応 / ADR 0018
+> Zod 4.3 対応
 
 ## メタデータと registry（Zod 4 公式パターン）
 
-Zod 4 は `.meta()` / `z.registry<T>()` でスキーマに型安全メタデータを登録する公式 API を提供する。本プロジェクトは ADR 0018（field-registry）でこの API を採用し、フィールドメタデータ（ラベル・プレースホルダー・フィールド種別・グループ等）の SSoT として運用している。
+Zod 4 は `.meta()` / `z.registry<T>()` でスキーマに型安全メタデータを登録する公式 API を提供する。本プロジェクトはこの API を `field-registry` で採用し、フィールドメタデータ（ラベル・プレースホルダー・フィールド種別・グループ等）の SSoT として運用している。
 
 ### `.meta()` shorthand（z.globalRegistry）
 
@@ -43,7 +43,7 @@ const meta = z.globalRegistry.get(userSchema);
 ドメイン固有のメタデータを型安全に管理したい場合は `z.registry<T>()` でカスタム registry を作成する:
 
 ```typescript
-// src/shared/lib/sections/field-registry.ts（ADR 0018 参照実装）
+// src/shared/lib/sections/field-registry.ts（実装）
 import { z } from "zod";
 
 export type FieldMeta = {
@@ -91,8 +91,8 @@ const schema = z.string().meta({
 
 **本プロジェクトの採用方針**:
 
-- **フィールドメタデータ**（セクション編集 UI 用）: `z.registry<FieldMeta>()` でカスタム registry（`fieldRegistry`、ADR 0018）
+- **フィールドメタデータ**（セクション編集 UI 用）: `z.registry<FieldMeta>()` でカスタム registry（`fieldRegistry`）
 - **汎用メタデータ**（title / description 等）: `.meta()` shorthand（`z.globalRegistry`）
 - `.describe(JSON.stringify(...))` + parse パターンは廃止（dead code）
 
-参照実装: `@/shared/lib/sections/field-registry` の `field.text()` / `field.select()` ヘルパーが `fieldRegistry` 経由でメタデータを自動登録する（→ ADR 0018・SSOT 一覧の「管理画面 セクション編集」節）。
+参照実装: `@/shared/lib/sections/field-registry` の `field.text()` / `field.select()` ヘルパーが `fieldRegistry` 経由でメタデータを自動登録する（・SSOT 一覧の「管理画面 セクション編集」節）。

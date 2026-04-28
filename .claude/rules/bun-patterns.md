@@ -377,7 +377,7 @@ describe("createPost", () => {
 ## コマンド
 
 ```bash
-# 単一ファイル実行（日常の開発はこれで十分、ADR 0014）
+# 単一ファイル実行（日常の開発はこれで十分）
 bun test __tests__/unit/lib/crypto.test.ts
 bun test --watch __tests__/unit/lib/crypto.test.ts   # TDD watch（単一ファイル指定必須）
 bun test --bail=1 <file>                             # 最初の失敗で停止
@@ -389,13 +389,13 @@ bun run test:integration   # 全 integration
 bun run test:all           # unit + integration（sequential。mock.module 干渉防止で並列化禁止）
 ```
 
-- **禁止**: `bun run test` / `bun run test:watch` / `bun run test:coverage` は ADR 0014 で廃止
-- **禁止**: `bun test __tests__/unit`（親ディレクトリ指定）/ `bun test --watch`（パス未指定）は再帰実行で `mock.module` 干渉を誘発（ADR 0010）
+- **禁止**: `bun run test` / `bun run test:watch` / `bun run test:coverage` は廃止
+- **禁止**: `bun test __tests__/unit`（親ディレクトリ指定）/ `bun test --watch`（パス未指定）は再帰実行で `mock.module` 干渉を誘発
 - **テスト実行ポリシー**: 毎回全走させる必要なし。lefthook pre-push + CI が担保（`CLAUDE.md` §検証）
 
 ## カバレッジ
 
-Coverage は per-directory batch と非互換（ADR 0010: 複数プロセス間で lcov が上書き / `mock.module` で計測値が歪む）。CI ゲートは置かない。`bunfig.toml` の coverage 関連設定は撤去済み（ADR 0014）。
+Coverage は per-directory batch と非互換（複数プロセス間で lcov が上書き / `mock.module` で計測値が歪む）。CI ゲートは置かない。`bunfig.toml` の coverage 関連設定は撤去済み。
 
 必要時のみ単発で参考値を取得:
 

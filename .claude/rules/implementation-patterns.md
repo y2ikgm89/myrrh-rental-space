@@ -55,7 +55,7 @@ paths:
 
 ## Reader 関数 / Route Handler
 
-- **Reader 関数を `"use server"` で export しない — Route Handler `route.ts` が公式推奨**（Next.js 16 backend-for-frontend ガイド、ADR 0019）。canonical: `checkAdminAuth` (401) / `checkPermission` (403, `request.headers` を第 3 引数で渡す) + `NextResponse.json` + `AbortSignal.timeout` + zod `safeParse` + `jsonError` / `jsonValidationError`。参照実装: `src/app/(admin)/admin/api/{ogp,notifications/unread-count}/route.ts`
+- **Reader 関数を `"use server"` で export しない — Route Handler `route.ts` が公式推奨**（Next.js 16 backend-for-frontend ガイド）。canonical: `checkAdminAuth` (401) / `checkPermission` (403, `request.headers` を第 3 引数で渡す) + `NextResponse.json` + `AbortSignal.timeout` + zod `safeParse` + `jsonError` / `jsonValidationError`。参照実装: `src/app/(admin)/admin/api/{ogp,notifications/unread-count}/route.ts`
 
 ## UX スケール判断
 

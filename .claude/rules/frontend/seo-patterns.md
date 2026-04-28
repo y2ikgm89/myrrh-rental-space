@@ -15,7 +15,7 @@ paths:
 
 ### JSON-LD（`application/ld+json`）
 
-**@graph パターン**（現在の実装）: `Organization + WebSite` を1つの `<script>` タグにまとめ、`@id` で相互参照。`LocalBusiness` は per-location ページに委譲する（ADR 0023）:
+**@graph パターン**（現在の実装）: `Organization + WebSite` を1つの `<script>` タグにまとめ、`@id` で相互参照。`LocalBusiness` は per-location ページに委譲する:
 
 | 型               | @id                                      | 配置場所                                               | 備考                                    |
 | ---------------- | ---------------------------------------- | ------------------------------------------------------ | --------------------------------------- |
@@ -42,7 +42,7 @@ async function StructuredDataContent(): Promise<ReactElement> {
 
 ### 原則
 
-- **@graph で Organization + WebSite を layout.tsx に1つだけ配置**。`LocalBusiness` は layout.tsx に含めない（ADR 0023）
+- **@graph で Organization + WebSite を layout.tsx に1つだけ配置**。`LocalBusiness` は layout.tsx に含めない
 - **LocalBusiness は per-location 出力**。`/access` および `/access/[locationSlug]` ページで拠点ごとに出力する
 - JSON-LDコンポーネントは `@/public/components/seo/JsonLd.tsx` に集約
 - XSS対策: JSON文字列は Unicodeエスケープ（`<`, `>`, `&`, U+2028, U+2029）
@@ -111,9 +111,9 @@ async function StructuredDataContent(): Promise<ReactElement> {
 
 **`getOrganizationJsonLdData()` の用途**:
 
-- `getGraphJsonLdData()` の内部から呼ばれる。サイト名・URL・ロゴのみを含む `Organization` データを返す。LocalBusiness 型は含まない（ADR 0023 以前は `LocalBusiness` を返していたが現在は廃止）。
+- `getGraphJsonLdData()` の内部から呼ばれる。サイト名・URL・ロゴのみを含む `Organization` データを返す。LocalBusiness 型は含まない（過去は `LocalBusiness` を返していたが multi-location 対応で per-location 化のため廃止）。
 
-**`getLocalBusinessJsonLdData()` は廃止**（ADR 0023）。`getAllPublishedLocationsJsonLdData()` / `getLocationJsonLdDataBySlug()` を使用する。
+**`getLocalBusinessJsonLdData()` は廃止**。`getAllPublishedLocationsJsonLdData()` / `getLocationJsonLdDataBySlug()` を使用する。
 
 ### BusinessInfo データレイヤー
 
@@ -132,7 +132,7 @@ async function StructuredDataContent(): Promise<ReactElement> {
 
 ## MEO（ローカル検索最適化）
 
-### LocalBusiness プロパティ一覧（per-location — ADR 0023）
+### LocalBusiness プロパティ一覧（per-location）
 
 各プロパティのソースは `Location` モデルのフィールド。`buildLocationLocalBusinessJsonLdData()` で生成:
 
@@ -425,12 +425,12 @@ const info = await getBusinessInfo()
 <address>{info.address}</address>
 ```
 
-2. **site-wide layout.tsx に LocalBusiness を配置禁止**（ADR 0023）
+2. **site-wide layout.tsx に LocalBusiness を配置禁止**
    - layout.tsx の `@graph` は `Organization + WebSite` のみ。`LocalBusiness` は `/access` および `/access/[slug]` ページに委譲する
    - `getLocalBusinessJsonLdData()` は廃止済み。`getAllPublishedLocationsJsonLdData()` / `getLocationJsonLdDataBySlug()` を使用
 
 ```tsx
-// NG: layout.tsx で LocalBusiness を出力（ADR 0023 で廃止）
+// NG: layout.tsx で LocalBusiness を出力（per-location に移行済み）
 // app/(public)/layout.tsx
 async function StructuredDataContent() {
   const graphData = await getGraphJsonLdData(); // 旧実装: LocalBusiness を含む
@@ -507,13 +507,13 @@ export async function generateMetadata({ params }: Props) {
 
 ## ファイル配置
 
-| パス                                   | 内容                                                                                                                                                                                       |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@/public/components/seo/JsonLd.tsx`   | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等                                                                               |
-| `@/public/lib/seo/json-ld-config.ts`   | `getGraphJsonLdData()`, `getOrganizationJsonLdData()`, `getWebSiteJsonLdData()`, 共有定数（`DAY_MAP`, `DAY_LABELS`, `ATTR_LABELS`）。`getLocalBusinessJsonLdData()` は廃止済み（ADR 0023） |
-| `@/public/lib/seo/location-json-ld.ts` | `buildLocationLocalBusinessJsonLdData()`, `getAllPublishedLocationsJsonLdData()`, `getLocationJsonLdDataBySlug()` — per-location LocalBusiness JSON-LD（ADR 0023）                         |
-| `@/public/lib/seo/metadata-factory.ts` | `getSeoSettings()`, `generateArticleMetadata()`                                                                                                                                            |
-| `@/public/lib/seo/index.ts`            | SEOライブラリ barrel export                                                                                                                                                                |
-| `@/public/lib/page-metadata.ts`        | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)`                                                                                                                |
-| `@/public/data/business.ts`            | `getBusinessInfo()` — コンポーネント向けビジネス情報                                                                                                                                       |
-| `@/shared/lib/settings/public.ts`      | `getPublicBusinessSettings()` — 公開設定取得（NAP含む）                                                                                                                                    |
+| パス                                   | 内容                                                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@/public/components/seo/JsonLd.tsx`   | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等                                                                   |
+| `@/public/lib/seo/json-ld-config.ts`   | `getGraphJsonLdData()`, `getOrganizationJsonLdData()`, `getWebSiteJsonLdData()`, 共有定数（`DAY_MAP`, `DAY_LABELS`, `ATTR_LABELS`）。`getLocalBusinessJsonLdData()` は廃止済み |
+| `@/public/lib/seo/location-json-ld.ts` | `buildLocationLocalBusinessJsonLdData()`, `getAllPublishedLocationsJsonLdData()`, `getLocationJsonLdDataBySlug()` — per-location LocalBusiness JSON-LD                         |
+| `@/public/lib/seo/metadata-factory.ts` | `getSeoSettings()`, `generateArticleMetadata()`                                                                                                                                |
+| `@/public/lib/seo/index.ts`            | SEOライブラリ barrel export                                                                                                                                                    |
+| `@/public/lib/page-metadata.ts`        | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)`                                                                                                    |
+| `@/public/data/business.ts`            | `getBusinessInfo()` — コンポーネント向けビジネス情報                                                                                                                           |
+| `@/shared/lib/settings/public.ts`      | `getPublicBusinessSettings()` — 公開設定取得（NAP含む）                                                                                                                        |

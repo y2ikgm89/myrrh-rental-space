@@ -194,7 +194,7 @@ paths:
 | `subagent-discipline.md`     | `.claude/skills/subagent-dispatch-template/SKILL.md` 本体に統合                                                                                  |
 | `research-audit.md`          | `.claude/rules/research-audit.md`（`paths: [".claude/agents/**", ".claude/skills/audit-*/**", ".claude/skills/verify-subagent-report/**"]`）     |
 | `implementation-patterns.md` | `.claude/rules/implementation-patterns.md`（`paths: ["src/shared/domain/**", "src/app/(admin)/**/_shared/actions/**", "prisma/schema.prisma"]`） |
-| `git-migration.md`           | `.claude/rules/git-migration.md`（`paths: ["prisma/migrations/**", ".github/workflows/**", "docs/architecture/decisions/**"]`）                  |
+| `git-migration.md`           | `.claude/rules/git-migration.md`（`paths: ["prisma/migrations/**", ".github/workflows/**"]`）                                                    |
 
 ### CLAUDE.md スリム化 (198 → ~120 行)
 
@@ -213,15 +213,7 @@ Phase 1 でスキップした CLAUDE.md / process/\*.md（→ Phase 2 で削除�
 
 ---
 
-## ADR 0028
-
-新規作成: `docs/architecture/decisions/0028-claude-config-path-scoped-rules-only.md`
-
-- Title: `.claude/rules` を path-scoped rules のみに統一（barrel index + process/\*.md 廃止）
-- Status: Accepted
-- Context: 公式 `code.claude.com/docs/en/memory` の path-scoped rules パターンに完全準拠。barrel index と「process barrel」（常時ロード）を廃止。
-- Decision: 常時ロード rules を 12 → 0 ファイル化、すべて `paths:` 付きで scope を限定。
-- Consequences: 毎ターン context 注入 -71%。CLAUDE.md / agents 内 barrel 参照は sub-file 直接 path に書き換え。
+> **Note (2026-04-28)**: ADR 機能全体を後続 commit で廃止したため、当初本 plan で作成した ADR 0028 は削除済み。判断ロジックは本 plan が canonical 記録。
 
 ---
 
@@ -252,5 +244,4 @@ ls .claude/rules/process/ 2>&1 | grep "No such"
 - [ ] `bun run validate` exit 0
 - [ ] 常時ロード rule = 0 ファイル
 - [ ] CLAUDE.md ≤ 130 行
-- [ ] ADR 0028 Accepted
 - [ ] `MEMORY.md` 更新（本 plan を完了マーカー付きで記録）

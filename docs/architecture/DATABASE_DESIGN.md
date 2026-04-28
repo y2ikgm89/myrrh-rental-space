@@ -593,7 +593,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 **注意**:
 
 - Prisma 7 では、カスタム出力パス（`output`）の指定が必須です（schema.prisma の `generator client { output = "../generated/prisma/client" }` を参照）。
-- Prisma 7 では、データベース接続にドライバーアダプターが必要です。PostgreSQL の場合は `@prisma/adapter-pg` を使用します（実装は `src/shared/db/prisma/factory.ts`、enum gateway は ADR 0002 を参照）。
+- Prisma 7 では、データベース接続にドライバーアダプターが必要です。PostgreSQL の場合は `@prisma/adapter-pg` を使用します（実装は `src/shared/db/prisma/factory.ts`、enum gateway は `src/shared/lib/validations/enums/prisma-types.ts`）。
 
 ### クエリ最適化
 

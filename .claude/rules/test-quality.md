@@ -496,8 +496,8 @@ bunx playwright test e2e/<file>                    # 単一ファイル
 bunx playwright test --grep "<test title>"         # 名前フィルター
 ```
 
-- **ADR 0010**: `bun test __tests__/unit`（親ディレクトリ指定）は `mock.module` 干渉のため禁止。必ず単一ファイル指定 or `test:unit` / `test:integration` script を使う
-- **ADR 0014**: `bun run test` / `bun run test:watch` / `bun run test:coverage` は廃止（冗長・coverage は per-directory batch と非互換）
+- **`bun test __tests__/unit`（親ディレクトリ指定）は `mock.module` 干渉のため禁止** — 必ず単一ファイル指定 or `test:unit` / `test:integration` script を使う
+- **`bun run test` / `bun run test:watch` / `bun run test:coverage` は廃止** — 冗長・coverage は per-directory batch と非互換
 
 ## ファイル配置
 

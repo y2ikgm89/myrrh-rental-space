@@ -49,7 +49,7 @@ mock.restore(); // NOT vi.restoreAllMocks()
 2. **同種の既存テストを読む** — 1〜2ファイル参照してプロジェクトパターンを把握
 3. **テストケースを設計** — 正常系・異常系・エッジケースをリストアップ
 4. **テストを生成** — 既存パターンに従い、日本語で `describe`/`test` 名を記述
-5. **テストを実行** — 生成した**単一ファイル**を `bun test __tests__/<dir>/<file>.test.ts` で実行して通過を確認（ADR 0010: 親ディレクトリ指定禁止 / 全走は `bun run test:unit` を利用）
+5. **テストを実行** — 生成した**単一ファイル**を `bun test __tests__/<dir>/<file>.test.ts` で実行して通過を確認（親ディレクトリ指定禁止 / 全走は `bun run test:unit` を利用）
 6. **失敗修正** — エラーを読み、インポート・モックパターンを修正
 
 ## Integration Action Test パターン

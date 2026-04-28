@@ -66,7 +66,7 @@ const sm = "px-3 py-2 text-sm min-h-11";
 </label>
 ```
 
-### 管理画面 table の checkbox は CheckboxCell 必須（ADR 0022）
+### 管理画面 table の checkbox は CheckboxCell 必須
 
 ```tsx
 // NG: 直書き(16px、WCAG 2.5.5 違反)

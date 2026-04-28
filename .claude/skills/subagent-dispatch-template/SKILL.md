@@ -113,7 +113,7 @@ grep -n "<deleted-symbol>" <file>  # 出力ゼロを確認
 ⚠️ SSoT ヘルパー改修: 該当 ADR / rule を Read してから変更。実行順序契約（execute → await afterSuccess → fireAndForget(logAction)）を破る変更は DEVIATION として escalate。
 ```
 
-別 AI / implementer が「クリーンに直す」指示で契約を壊す事故あり（例: `await logAction` 化 → cache invalidation スキップ regression、ADR 0019）。
+別 AI / implementer が「クリーンに直す」指示で契約を壊す事故あり（例: `await logAction` 化 → cache invalidation スキップ regression）。
 
 ---
 

@@ -140,6 +140,6 @@ export async function fetchOgpPreview(url: string) {
 
 読み取り操作で「server-side state（DB / cookie / headers）を読むだけ」なら Route Handler。
 
-### 移行メモ（ADR 0019）
+### 移行メモ
 
-`fetch-ogp.ts` / `notification-polling.ts` の reader 経路を `"use server"` から Route Handler に移行済み（旧 `section-styles/queries.ts` は ADR 0021 で Style Library 廃止と共に削除）。新規 reader は最初から Route Handler で書く。
+`fetch-ogp.ts` / `notification-polling.ts` の reader 経路を `"use server"` から Route Handler に移行済み（旧 `section-styles/queries.ts` は Style Library 廃止と共に削除）。新規 reader は最初から Route Handler で書く。

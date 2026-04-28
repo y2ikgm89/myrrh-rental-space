@@ -16,7 +16,7 @@ You run failing tests in isolation, read the source to understand intent, and ex
 ## Test commands
 
 ```bash
-# Bun – unit (single file only; ADR 0010 forbids parent-dir runs due to mock.module interference)
+# Bun – unit (single file only; parent-dir runs forbidden due to mock.module interference)
 bun test __tests__/unit/<file>                       # single file
 bun test --test-name-pattern "<describe/test name>"  # filter by name
 bun test --bail=1 <file>                             # fail fast
@@ -37,7 +37,7 @@ bunx playwright test --grep "<test title>"         # filter by name
 bunx playwright test --debug                       # headed/debug mode
 ```
 
-Note: `bun run test` は ADR 0014 で廃止。フル実行は `test:all` を使う。
+Note: `bun run test` は廃止。フル実行は `test:all` を使う。
 
 ## Workflow
 

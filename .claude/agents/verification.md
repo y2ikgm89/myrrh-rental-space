@@ -29,13 +29,13 @@ bun run type-check          # TypeScript compiler check
 bun run lint                # ESLint
 bun run validate            # type-check + lint in parallel (preferred for quick checks)
 bun run build               # Full production build
-bun run test:unit           # Unit tests (per-directory batch, ADR 0010)
+bun run test:unit           # Unit tests (per-directory batch)
 bun run test:integration    # Integration tests (per-directory batch)
 bun run test:all            # Unit + integration (full manual run)
 bun run validate && bun run build  # Pre-PR full check
 ```
 
-Note: `bun run test` は廃止（ADR 0014）。フル実行が必要な場合は `test:all` を使う。
+Note: `bun run test` は廃止。フル実行が必要な場合は `test:all` を使う。
 
 ## Output format
 

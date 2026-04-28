@@ -2,7 +2,7 @@
 
 > 本ファイルは Claude Code 用の `docs/plans/` 専用補助 instruction（dual-AI 体制下で active 利用中）。Codex 作業では代わりに [`AGENTS.md`](../../AGENTS.md) と [`.agents/skills/`](../../.agents/skills/) を入口にする。
 
-実装計画ドキュメント置き場（**WIP 専用**、clean-break 原則: [ADR-0015](../architecture/decisions/0015-clean-break-refactor-and-parallel-implementer-discipline.md)）。
+実装計画ドキュメント置き場（**WIP 専用**、clean-break 原則）。
 
 ## セッション継続時
 
@@ -55,7 +55,7 @@ ls -t docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null \
 
 `設計中` → `設計承認済み` → `実装中` → **削除**
 
-完了・破棄いずれも **ファイル削除** する。長期的に保持すべき意思決定は [ADR](../architecture/decisions/) に昇格する。git log が SSoT のため、コミットメッセージにプランファイル名を含めると後続セッションが辿りやすい（例: `feat(foo): implement plan docs/plans/YYYY-MM-DD-foo.md (phase 2)`）。
+完了・破棄いずれも **ファイル削除** する。長期的に保持すべき意思決定は **`.claude/rules/**`** に統合する。git log が SSoT のため、コミットメッセージにプランファイル名を含めると後続セッションが辿りやすい（例: `feat(foo): implement plan docs/plans/YYYY-MM-DD-foo.md (phase 2)`）。
 
 ## 実行
 

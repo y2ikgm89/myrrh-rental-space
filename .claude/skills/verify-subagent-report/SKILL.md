@@ -88,7 +88,7 @@ echo "EXIT:$?"
 
 ## 6. Parallel dispatch cross-revert 検証（N 並列 implementer 用）
 
-N 並列 implementer（2 件以上同時）を dispatch した場合、一方の `git reset` / `git restore` / `git stash` が他方の成果や controller の直前編集を silent revert する事故が実際に発生しうる（ADR-0015 §リスク B）。全員の完了報告受領後、controller は必ず以下の 3 段検証を実行する。
+N 並列 implementer（2 件以上同時）を dispatch した場合、一方の `git reset` / `git restore` / `git stash` が他方の成果や controller の直前編集を silent revert する事故が実際に発生しうる。全員の完了報告受領後、controller は必ず以下の 3 段検証を実行する。
 
 ### 6.1. `git status --short` で全 modifications + untracked を列挙
 
@@ -148,5 +148,4 @@ implementer prompt に以下を明記済みか確認（未明記なら追記し�
 - `.claude/rules/gotchas/claude-code.md` — subagent 検証規律・haiku ban
 - `.claude/hooks/post-subagent-git-snapshot.sh` — Task tool 実行後の自動 git state スナップショット
 - `CLAUDE.md` §Subagent 規律 — implementer dispatch の git 全面禁止 + 3 段検証
-- `docs/architecture/decisions/0015-clean-break-refactor-and-parallel-implementer-discipline.md` — ADR 本文
 - `superpowers:subagent-driven-development` — implementer + spec reviewer + quality reviewer の 3 段ループ

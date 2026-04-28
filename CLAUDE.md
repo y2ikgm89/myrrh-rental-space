@@ -53,7 +53,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **server-only 定数を Client Component から import 禁止** — client-safe ファイルに分離（`admin-roles.ts` / `admin-resources.ts`）
 - **server-only / Node-only SDK 統合は `import "server-only"` 必須** — `ical-generator` / `resend` / `googleapis` / `stripe` 等（→ `server-only-patterns.md`）
 - **Cloud Run probe endpoint (`/api/live` / `/api/health`) は `proxy.ts` rate-limit 除外必須** — probe IP `unknown` 合算で 429 → コンテナ kill 連鎖の silent bug（→ `ops/deployment-patterns.md`）
-- **管理画面向け preview は第 3 root layout `(preview)/`**（ADR 0020）— `HomepageSections` / `ManagedPageSections` を `_shared/components/{homepage,pages}/` に抽出。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
+- **管理画面向け preview は第 3 root layout `(preview)/`**— `HomepageSections` / `ManagedPageSections` を `_shared/components/{homepage,pages}/` に抽出。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
 
 ### Validation / Domain
 
@@ -89,20 +89,20 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 > - 調査・監査・公式準拠 verification → `.claude/rules/research-audit.md`（agents/skills 編集時）
 > - 実装パターン → `.claude/rules/implementation-patterns.md`（domain/actions/prisma 編集時）
 > - Git / Migration → `.claude/rules/git-migration.md`（migrations/workflows 編集時）
-> - Subagent dispatch → `.claude/skills/subagent-dispatch-template/SKILL.md`（ADR 0025）
+> - Subagent dispatch → `.claude/skills/subagent-dispatch-template/SKILL.md`
 
 ### 検証
 
 - **作業中**: `bun run type-check` / **完了前**: `bun run validate` / **コミット前**: `bun run validate && bun run build`
 - **依存パッチ/マイナー更新後は validate 必須** — eslint-plugin-react-hooks 等のパッチで新ルール追加 = 実質破壊的変更
-- **テスト実行ポリシー（ADR 0014）** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。CI で `test:unit` + `test:integration` + E2E をフル実行。`test:unit` / `test:integration` は per-directory バッチ（`bun test __tests__/unit` 簡略化は `mock.module` 干渉で偽陽性、ADR 0010）
+- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。CI で `test:unit` + `test:integration` + E2E をフル実行。`test:unit` / `test:integration` は per-directory バッチ（`bun test __tests__/unit` 簡略化は `mock.module` 干渉で偽陽性）
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン
 
 詳細: `.claude/rules/test-quality.md` / `.claude/rules/bun-patterns.md`
 
 ### Subagent 規律（要点）
 
-- **Implementer dispatch は `subagent-dispatch-template` SKILL 経由**（ADR 0025）— git 全面禁止 / import alias 3 系統 / plan deviation policy / 完了報告フォーマット
+- **Implementer dispatch は `subagent-dispatch-template` SKILL 経由**— git 全面禁止 / import alias 3 系統 / plan deviation policy / 完了報告フォーマット
 - **implementer は sonnet 以上**（haiku 禁止、report 捏造リスク）
 - **完了報告後は独立検証**: `git log --oneline` + `git show --stat HEAD`
 - **密結合タスクは 1 implementer にバンドル**

@@ -91,4 +91,4 @@ Terms のように `content-types` 拡張を使わない単一 RHF フォーム�
 
 ## 履歴計画書について
 
-旧 `docs/plans/059-unified-editor-sidepanel.md` / `071-unified-content-editor.md` は設計変遷の記録として存在していたが、clean-break 原則（ADR-0015）により削除済み。過去の設計経緯は `git log --all --diff-filter=D -- docs/plans/059-* docs/plans/071-*` で辿る。現行の型名・ファイル名は **本ファイルとソース** を正とする。
+旧 `docs/plans/059-unified-editor-sidepanel.md` / `071-unified-content-editor.md` は設計変遷の記録として存在していたが、clean-break 原則により削除済み。過去の設計経緯は `git log --all --diff-filter=D -- docs/plans/059-* docs/plans/071-*` で辿る。現行の型名・ファイル名は **本ファイルとソース** を正とする。
