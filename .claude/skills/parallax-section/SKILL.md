@@ -63,7 +63,7 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "scroll animation perform
 - Three.js / PixiJS / WebGL は未使用（削除済み）。再導入しない
 - **nuqs 以外**の URL 同期用 Context / Provider を public root に足さない。既存の **`NuqsAdapter`** は維持前提（二重ラップも禁止）。詳細は `.claude/rules/nuqs-patterns.md`
 - z-index、effect level、WebGL context 管理を local rule から逸脱させない
-- 履歴資料の `docs/plans/*` を実装ルールとして扱わない
+- 履歴資料の `docs/superpowers/plans/.archive/*` を実装ルールとして扱わない
 
 ## Done
 

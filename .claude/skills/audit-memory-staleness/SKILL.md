@@ -87,7 +87,7 @@ scan_dir ".serena/memories" 3
 - `削除済み: ...` / `移動: ... → ...`
 - コードブロック内の Before/After 対比
 - マイグレーション履歴（`Supabase→R2 移行で...` 等）
-- 完了済み plan（`docs/plans/` archive）の原文
+- 完了済み plan（`docs/superpowers/plans/.archive/` 配下）の原文
 
 memory file を読んで **自然文として stale ref を残す意図** が見えたら skip する。
 
