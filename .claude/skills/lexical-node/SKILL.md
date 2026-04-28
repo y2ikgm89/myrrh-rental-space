@@ -28,7 +28,7 @@ paths:
 
 ## 先に読む
 
-1. `docs/reference/codex-rules/lexical-patterns.md`
+1. `.claude/rules/frontend/lexical/nodes.md`（NodeState API・新規ノード登録チェックリスト）
 2. `.claude/rules/type-safety.md`
 3. `.claude/rules/react-patterns.md`
 4. 既存実装:

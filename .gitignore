@@ -81,7 +81,6 @@ docs/api/
 .claude/logs/
 .claude/state/
 .claude/memory/
-.claude/agent-memory-local/
 .claude/agent-memory/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock

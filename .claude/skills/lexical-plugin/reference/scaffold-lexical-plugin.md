@@ -1,6 +1,6 @@
 # 拡張ひな形（lexical-plugin）
 
-オプションの長文テンプレート。ワークフローの正は **`../SKILL.md`** と **`docs/reference/codex-rules/lexical-patterns.md`**。Claude Code では **`.claude/skills/lexical-plugin/SKILL.md`**（スタブ）からここへ辿る。
+オプションの長文テンプレート。ワークフローの正は **`../SKILL.md`** と **`.claude/rules/frontend/lexical/plugins.md`**。**`.claude/skills/lexical-plugin/SKILL.md`**（スタブ）からここへ辿る。
 
 Lexical エディタ用のカスタムプラグインを作成する際のコピペ用資料（旧 `.claude/skills` 本文の移設）。
 
@@ -251,7 +251,7 @@ const {
 
 ## 重要なルール
 
-詳細は `docs/reference/codex-rules/lexical-patterns.md` を参照（Claude Code では `.claude/rules/frontend/lexical-patterns.md` が同等）。
+詳細は `.claude/rules/frontend/lexical/plugins.md` を参照。
 
 - **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
 - **updateListener内でのeditor.update()禁止**: Node Transforms使用

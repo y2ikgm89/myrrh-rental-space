@@ -1,11 +1,10 @@
 ---
 description: Gotchas — プロジェクト固有の落とし穴と対処法（barrel index）
-paths:
-  - src/**
-  - prisma/**
 ---
 
 # Gotchas（barrel index）
+
+> **注**: このファイルは TOC のみ。実体は sub-file が `paths:` で auto-load する。手動参照用。
 
 プロジェクト固有の落とし穴と対処法。各トピックは以下 sub-file で管理:
 

@@ -1,18 +1,12 @@
 ---
 description: Accessibility パターン — WCAG 2.2 AA / 2.5.5 Enhanced (AAA) 準拠（詳細は sub-file 参照）
-paths:
-  - "src/app/(public*)/**/*.tsx"
-  - "src/app/(admin)/**/*.tsx"
-  - "src/shared/contexts/**"
-  - "src/public/components/a11y/**"
-  - "src/public/lib/a11y/**"
 ---
 
 # Accessibility パターン（barrel index）
 
 > WCAG 2.2 AA + 2.5.5 Enhanced (AAA) 準拠 / React 19 / GSAP prefers-reduced-motion 対応
-
-このファイルは barrel index。各トピックは以下 sub-file で管理:
+>
+> **注**: このファイルは TOC のみ。実体は sub-file が `paths:` で auto-load する。手動参照用。
 
 - [accessibility/semantics.md](./accessibility/semantics.md) — セマンティック HTML / aria-\* 属性
 - [accessibility/focus-keyboard.md](./accessibility/focus-keyboard.md) — フォーカス管理 / キーボードナビゲーション

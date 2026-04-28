@@ -1,7 +1,6 @@
 ---
 paths:
   - src/**/*.tsx
-  - src/**/*.ts
   - src/**/*.css
 ---
 

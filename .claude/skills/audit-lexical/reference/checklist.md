@@ -1,20 +1,6 @@
----
-name: lexical-reviewer
-description: >
-  Lexical 0.43 / NodeState API のコード変更後に使用。
-  `src/**/lexical/` 配下を編集した後に呼び出す。
-  NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・
-  未使用型を検出し、高信頼度の問題のみ報告する。
-tools: Read, Grep, Glob, LS, mcp__context7__resolve-library-id, mcp__context7__query-docs
-model: sonnet
----
+# Lexical 詳細チェックリスト（reference）
 
-# Lexical Editor Reviewer
-
-Lexical 0.43 / NodeState API の規約準拠を検証する専門レビュアー。
-**高信頼度の問題のみ報告**（確実に違反しているもの）。
-
-**実装ワークフローとの関係**: 新規 node / plugin / toolbar の手順は **`.claude/skills/lexical-{node,plugin,toolbar}/SKILL.md`**。長いコピペ用ひな形は **`.claude/skills/lexical-{node,plugin,toolbar}/reference/scaffold-*.md`**。
+> SKILL.md の補足。audit-lexical 実行時に必要に応じて Read。
 
 ## チェックリスト
 
@@ -119,7 +105,7 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
 | transform 型  | `transform: (editor) => …` ではなく **`applyInUpdate`**（$ API のみ）か                                                              |
 | ツールバー    | 挿入クリックは **`executeInsertItem`**（dialog は同期 `openDialog`）か                                                               |
 
-詳細は `docs/reference/codex-rules/lexical-patterns.md` の「挿入メニュー」。
+詳細は `.claude/rules/frontend/lexical/toolbar-layout.md` の「挿入メニュー」。
 
 ### 7. `exportDOM` / `importDOM` ペア確認
 

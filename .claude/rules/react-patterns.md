@@ -1,13 +1,10 @@
 ---
 description: React 19 / React Compiler 1.0 パターンルール — 詳細は sub-file を参照
-paths:
-  - "src/**/*.tsx"
-  - "src/**/*.ts"
 ---
 
 # React パターン（barrel index）
 
-このファイルは barrel index。各トピックは以下 sub-file で管理:
+> **注**: このファイルは TOC のみ。実体は sub-file が `paths:` で auto-load する。手動参照用。
 
 - [react/compiler.md](./react/compiler.md) — React 19 破壊的変更・Context API（use()）・React Compiler 1.0・useEffectEvent・watch 禁止・useFieldArray
 - [react/hooks.md](./react/hooks.md) — Outer/Inner Component Split・useReducer・startTransition・useSyncExternalStore・headless UI

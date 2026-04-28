@@ -1,6 +1,6 @@
 # 拡張ひな形（lexical-toolbar）
 
-オプションの長文テンプレート。ワークフローの正は **`../SKILL.md`** と **`docs/reference/codex-rules/lexical-patterns.md`**。Claude Code では **`.claude/skills/lexical-toolbar/SKILL.md`**（スタブ）からここへ辿る。
+オプションの長文テンプレート。ワークフローの正は **`../SKILL.md`** と **`.claude/rules/frontend/lexical/toolbar-layout.md`**。**`.claude/skills/lexical-toolbar/SKILL.md`**（スタブ）からここへ辿る。
 
 Lexical ツールバー拡張のコピペ用資料（旧 `.claude/skills` 本文の移設）。
 
@@ -214,7 +214,7 @@ const updateToolbar = () => {
 
 ## 重要なルール
 
-詳細は `docs/reference/codex-rules/lexical-patterns.md` を参照（Claude Code では `.claude/rules/frontend/lexical-patterns.md` が同等）。
+詳細は `.claude/rules/frontend/lexical/toolbar-layout.md` を参照。
 
 - **type="button"必須**: フォーム内での意図しない送信防止
 - **アイコンサイズ**: `h-4 w-4` で統一

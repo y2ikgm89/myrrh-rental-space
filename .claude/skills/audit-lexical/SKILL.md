@@ -28,10 +28,11 @@ paths:
 
 ## 先に読む
 
-1. `docs/reference/codex-rules/lexical-patterns.md`（**「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」** 節、および **「HTML → Lexical JSON」** 節 — シェル・フォーク・`tryConvertHtmlStringToLexicalJsonString` 等の正本）
+1. `.claude/rules/frontend/lexical/toolbar-layout.md`（LexicalEditor シェル・DraggableBlock・プレースホルダー）+ `.claude/rules/frontend/lexical/nodes.md`（HTML → Lexical JSON / `tryConvertHtmlStringToLexicalJsonString` の正本）
 2. `.claude/rules/react-patterns.md`
 3. `.claude/rules/type-safety.md`
-4. 必要なら `package.json` の Lexical バージョン
+4. 詳細な 12 項目チェックリスト: [`reference/checklist.md`](./reference/checklist.md)
+5. 必要なら `package.json` の Lexical バージョン
 
 ## ワークフロー
 
@@ -58,7 +59,7 @@ root.select(
 4. 誤検知を除き、deprecated / private / duplicate pattern をまとめて置換する
 5. 互換レイヤーを足さず、現行の canonical pattern に寄せる
 6. **`@lexical/react` を上げた場合**: `node_modules/.../LexicalDraggableBlockPlugin` と `plugins/lexical-draggable-block-plugin.ts` を差分比較し、upstream のバグ修正・座標ロジックをフォークへマージする（直接パッケージ import に戻さない）
-7. ローカルの `codex-rules`（および条件付きで `.claude/rules/frontend/lexical-patterns.md`）や関連 skill が古ければ **同じ変更で同期**する
+7. `.claude/rules/frontend/lexical/*.md` や関連 skill が古ければ **同じ変更で同期**する
 8. `bun run validate` を実行する
 9. 変更が広い場合は `bun run build` まで確認する
 
@@ -69,7 +70,7 @@ root.select(
 - `DecoratorNode` の React props へ private field を直接渡さない
 - deprecated API を別名で包んで延命しない
 - **メインエディタの DraggableBlock** は `@lexical/react` のみに置き換えず、`editor-layout-constants` とフォークを前提に監査する
-- ルール更新が必要な場合は `AGENTS.md` ではなく `docs/reference/codex-rules/`（＋ Codex と二重管理のトピックは `.claude/rules` も同期）か skill 側に寄せる
+- ルール更新が必要な場合は `.claude/rules/frontend/lexical/*.md` か skill 側に寄せる
 
 ## Done
 

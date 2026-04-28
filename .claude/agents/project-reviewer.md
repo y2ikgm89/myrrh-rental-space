@@ -129,7 +129,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **`src/app/(admin)/**/editor/inline/**`**, **`PostEditor.tsx`**, **`NewsEditor.tsx`**:
 
-- Read `.claude/rules/frontend/admin-inline-editor-patterns.md` (synced with `docs/reference/codex-rules/admin-inline-editor-patterns.md`)
+- Read `.claude/rules/frontend/admin-inline-editor-patterns.md`
 - Side panel: **`SidePanelDefinition` + `render(ctx)`**; **`extraProps` and `getValues` required** on `UnifiedSidePanel`
 - Do not reintroduce **`component` + `props` + `ComponentType<any>`** section registry for the metadata panel
 - Only **`LayoutFields`** may use the documented **`any` + eslint-disable** escape (RHF generic invariance); do not expand `any` elsewhere in `side-panel/`

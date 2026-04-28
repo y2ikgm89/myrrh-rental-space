@@ -7,8 +7,6 @@ paths:
 
 # 管理画面インラインコンテンツエディタ（Post / News）
 
-> **本文正本**（Codex / Claude Code 共通）。`.claude/rules/frontend/admin-inline-editor-patterns.md` は CI で同一内容を強制。`instruction-topology.md` の方針乖離禁止。
->
 > 対象: メタデータ用 **UnifiedSidePanel** と **`content-types/*`**（本文編集は別系統の [Lexical エディタ](./lexical-patterns.md)）。
 
 ## 公式準拠の前提

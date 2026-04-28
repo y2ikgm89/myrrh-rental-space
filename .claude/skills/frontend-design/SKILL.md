@@ -13,8 +13,8 @@ description: 公開ページの新規 UI や大幅なリデザイン前に使う
 1. `.claude/rules/frontend/project-design-config.md`
 2. `.claude/rules/frontend/anti-ai-design.md`
 3. `.claude/rules/frontend/design-system-memory.md`
-4. 必要に応じて `.claude/rules/frontend/ui-ux-patterns.md`
-5. モーションが主役なら `.claude/rules/frontend/gsap-patterns.md`
+4. デザイン方向性収集には `ui-ux-pro-max` skill
+5. モーションが主役なら `.claude/rules/frontend/gsap/*.md`
 6. パターン例が必要なら `reference/anti-ai-patterns.md`
 
 ## 入力

@@ -1,6 +1,6 @@
 # 拡張ひな形（lexical-node）
 
-オプションの長文テンプレート。ワークフローの正は **`../SKILL.md`** と **`docs/reference/codex-rules/lexical-patterns.md`**。Claude Code では **`.claude/skills/lexical-node/SKILL.md`**（スタブ）からここへ辿る。
+オプションの長文テンプレート。ワークフローの正は **`../SKILL.md`** と **`.claude/rules/frontend/lexical/nodes.md`**。**`.claude/skills/lexical-node/SKILL.md`**（スタブ）からここへ辿る。
 
 Lexical エディタ用のカスタムノードを作成する際のコピペ用資料（旧 `.claude/skills` 本文の移設）。
 
@@ -390,7 +390,7 @@ if (change) {
 
 ## 重要なルール
 
-詳細は `docs/reference/codex-rules/lexical-patterns.md` を参照（Claude Code では `.claude/rules/frontend/lexical-patterns.md` が同等）。
+詳細は `.claude/rules/frontend/lexical/nodes.md` を参照。
 
 - **NodeState API必須**: `$config` + `createState` + `$getState`/`$setState`
 - **プロパティ**: JSON serializableのみ（Function, Symbol, Map, Set禁止）

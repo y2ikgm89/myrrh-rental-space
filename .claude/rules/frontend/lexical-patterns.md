@@ -1,15 +1,10 @@
 ---
 description: Lexical 0.43 エディタパターン — 詳細は sub-file を参照
-paths:
-  - "src/shared/lib/lexical/**"
-  - "src/**/editor/**"
-  - "src/**/*lexical*"
-  - "src/app/(admin)/**/lexical/**"
 ---
 
 # Lexical パターン（barrel index）
 
-このファイルは barrel index。各トピックは以下 sub-file で管理:
+> **注**: このファイルは TOC のみ。実体は sub-file が `paths:` で auto-load する。手動参照用。
 
 - [core.md](./lexical/core.md) — 概要・技術スタック・Compiler 対応・アーキテクチャ・Inspector・非制御設計・公式プラグイン一覧
 - [nodes.md](./lexical/nodes.md) — NodeState API・単一レベル vs コンポジット・コンポジットアーキテクチャ・新規ノード登録チェックリスト

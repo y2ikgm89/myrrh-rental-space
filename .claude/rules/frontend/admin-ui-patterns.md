@@ -1,6 +1,6 @@
 ---
 paths:
-  - src/app/(admin)/**
+  - src/app/(admin)/**/*.tsx
 ---
 
 # 管理画面 UI パターンルール

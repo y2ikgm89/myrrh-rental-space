@@ -1,13 +1,10 @@
 ---
-paths:
-  - src/**/*.tsx
-  - src/**/*.ts
-  - src/**/*.css
+description: Tailwind 4 パターンルール — 詳細は sub-file を参照
 ---
 
-# Tailwind 4 パターン
+# Tailwind 4 パターン（barrel index）
 
-> **Barrel-index:** 各 subtopic は path-scoped autoload で連鎖ロードされる。
+> **注**: このファイルは TOC のみ。実体は sub-file が `paths:` で auto-load する。手動参照用。
 
 - [テーマトークン・セマンティックカラー](tailwind-patterns/theme-tokens.md) — CSS アーキテクチャ / @theme / OKLCH / セマンティックカラートークン / @layer / Border Radius / 禁止事項
 - [レスポンシブ breakpoints](tailwind-patterns/responsive-breakpoints.md) — breakpoint policy / マクロ vs マイクロレイアウト / 禁止事項
