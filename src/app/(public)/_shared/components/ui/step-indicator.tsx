@@ -51,7 +51,7 @@ export function StepIndicator({
               </div>
               <span
                 className={cn(
-                  "text-[11px] uppercase tracking-[0.18em] transition-colors duration-200",
+                  "text-eyebrow uppercase transition-colors duration-200",
                   isActive ? "text-foreground" : "text-muted-foreground",
                 )}
               >

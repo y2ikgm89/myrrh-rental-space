@@ -1,5 +1,7 @@
 # ActionResult / createSuccess / createFailure rule docs drift 解消 Implementation Plan
 
+> **In Progress: 2026-04-29** — `.claude/rules/` 配下 8 ファイルの helper / 型 / import 表記の差分解消 1 commit 待機中。`src/` 実装変更ゼロ、ADR 不要。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `.claude/rules/` 配下 8 ファイルの helper / 型 / import 表記を実装 (`executeAdminMutationResult` + `MutationResult<T>`) に追従させ、`createSuccess` / `createFailure` / `ActionResult` 等の架空シンボル参照を完全に解消する。

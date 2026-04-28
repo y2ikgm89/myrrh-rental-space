@@ -146,7 +146,7 @@ export function TermsTypeSelectDialog() {
                   {meta.description}
                 </span>
                 {hasTemplate && (
-                  <Badge variant="secondary" className="text-[10px]">
+                  <Badge variant="secondary" className="text-xs">
                     テンプレートあり
                   </Badge>
                 )}

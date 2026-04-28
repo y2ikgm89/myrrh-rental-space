@@ -140,7 +140,7 @@ function InfoSection({
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <dt className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        <dt className="text-eyebrow uppercase text-muted-foreground">
           {label}
         </dt>
         <dd className="mt-1 text-sm text-foreground">{children}</dd>

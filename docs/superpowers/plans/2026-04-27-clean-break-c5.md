@@ -1,5 +1,7 @@
 # Clean-Break Refactor C5 Implementation Plan
 
+> **In Progress: 2026-04-29** — Phase C5b/C5c/C5a/C5d の dispatch スケジュール待機中。各 phase は 1 implementer dispatch で完了する設計。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** skills / rules / subagents / docs を公式ベストプラクティス準拠で L3+L4 (積極的削除 + 階層構造再考) clean-break refactor する。

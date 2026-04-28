@@ -353,7 +353,7 @@ export function SpaceEditForm({
               >
                 {SPACE_EDIT_TAB_LABELS[tab]}
                 {errorCount > 0 && (
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-medium text-destructive-foreground">
                     {errorCount}
                   </span>
                 )}

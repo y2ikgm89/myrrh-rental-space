@@ -130,7 +130,7 @@ export function NewsListSection({
               className="group border border-border p-5 transition-colors duration-200"
             >
               <time
-                className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
+                className="text-eyebrow uppercase text-muted-foreground"
                 style={getTextStyle(style)}
               >
                 {formatDate(item.publishedAt)}
@@ -147,7 +147,7 @@ export function NewsListSection({
               className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
             >
               <time
-                className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.18em] text-muted-foreground"
+                className="shrink-0 text-eyebrow tabular-nums uppercase text-muted-foreground"
                 style={getTextStyle(style)}
               >
                 {formatDate(item.publishedAt)}

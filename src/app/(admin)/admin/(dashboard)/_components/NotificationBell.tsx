@@ -53,7 +53,7 @@ export function NotificationBell({
           {unreadCount > 0 && (
             <span
               aria-hidden="true"
-              className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
+              className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-xs font-medium text-destructive-foreground"
             >
               {unreadCount > 99 ? "99+" : String(unreadCount)}
             </span>

@@ -372,13 +372,13 @@ function CalendarGrid({
                   {eventTitles.slice(0, 2).map((title) => (
                     <div
                       key={title}
-                      className="truncate rounded-sm bg-accent/10 px-1 py-0.5 text-[11px] leading-tight text-accent sm:text-xs"
+                      className="truncate rounded-sm bg-accent/10 px-1 py-0.5 text-xs leading-tight text-accent"
                     >
                       {title}
                     </div>
                   ))}
                   {eventTitles.length > 2 ? (
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       +{eventTitles.length - 2}
                     </span>
                   ) : null}

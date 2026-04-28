@@ -146,7 +146,7 @@ function TypeBadge({ type }: { type: string }) {
   return (
     <span
       className={cn(
-        "absolute bottom-2 right-2 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground rounded",
+        "absolute bottom-2 right-2 px-1.5 py-0.5 text-xs font-medium text-primary-foreground rounded",
         config.color,
       )}
     >

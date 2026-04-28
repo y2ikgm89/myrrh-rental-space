@@ -30,12 +30,12 @@ export function EventCell({ event, onClick }: EventCellProps) {
       onClick={() => onClick(event)}
     >
       <div className="truncate font-medium">{event.title}</div>
-      <div className="truncate text-[10px] opacity-75">
+      <div className="truncate text-xs opacity-75">
         {format(new Date(event.startTime), "HH:mm")} -{" "}
         {format(new Date(event.endTime), "HH:mm")}
       </div>
       {position.height >= 50 && (
-        <div className="truncate text-[10px] opacity-75">{event.spaceName}</div>
+        <div className="truncate text-xs opacity-75">{event.spaceName}</div>
       )}
     </button>
   );
@@ -51,7 +51,7 @@ export function EventBadge({ event, onClick }: EventBadgeProps) {
     <button
       type="button"
       className={cn(
-        "mb-0.5 w-full truncate rounded px-1 py-0.5 text-left text-[10px] transition-shadow hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-primary",
+        "mb-0.5 w-full truncate rounded px-1 py-0.5 text-left text-xs transition-shadow hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-primary",
         getStatusColorClass(event.status),
       )}
       onClick={() => onClick(event)}

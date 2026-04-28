@@ -8,6 +8,7 @@
  */
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import { getOrganizationSettings } from "@/shared/domain/settings/queries/organization";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
 
@@ -69,7 +70,10 @@ export async function AccessMap({
   if (!embedUrl) {
     return (
       <div
-        className={`flex items-center justify-center bg-surface ${heightClass}`}
+        className={cn(
+          "flex items-center justify-center bg-surface",
+          heightClass,
+        )}
       >
         <p className="text-sm text-muted-foreground">
           地図を表示するには、管理画面で Google Maps API
@@ -82,7 +86,7 @@ export async function AccessMap({
   return (
     <iframe
       src={embedUrl}
-      className={`border-0 ${heightClass}`}
+      className={cn("border-0", heightClass)}
       allowFullScreen
       loading="lazy"
       referrerPolicy="no-referrer-when-downgrade"

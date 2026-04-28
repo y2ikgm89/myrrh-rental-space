@@ -62,9 +62,7 @@ function SummaryRow({
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-eyebrow uppercase text-muted-foreground">{label}</p>
         <p className="text-sm text-foreground">{value}</p>
       </div>
     </div>

@@ -39,7 +39,7 @@ function ContactForm({
   readonly showLabels?: boolean;
 }): ReactElement {
   const labelClass = showLabels
-    ? "mb-2 block text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
+    ? "mb-2 block text-eyebrow uppercase text-muted-foreground"
     : "sr-only";
 
   return (

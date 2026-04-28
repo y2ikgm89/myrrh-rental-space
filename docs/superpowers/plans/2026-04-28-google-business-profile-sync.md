@@ -1,5 +1,7 @@
 # Google Business Profile Sync Implementation Plan (MEO Phase 2)
 
+> **In Progress: 2026-04-29** — worktree `feature/google-business-profile-sync` で 15 commit 実装完了。validate + build 全成功。次は smoke test (`GBP_STUB_MODE=true`) + main `--no-ff` merge + Google Cloud Console 申請。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Phase 1 で確立した `Location` MEO フィールドを Google Business Profile (GBP) に外向き同期する。OAuth 連携 + Settings SSoT + fireAndForget on save + manual button + stub mode の構成。

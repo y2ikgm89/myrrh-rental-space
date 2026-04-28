@@ -178,7 +178,10 @@ export function LocationChapter({
   return (
     <article
       id={anchorId}
-      className={`scroll-mt-[calc(var(--header-height)+2rem)] space-y-12 ${showSectionDivider ? "border-t border-border pt-20 md:pt-24" : ""}`}
+      className={cn(
+        "scroll-mt-[calc(var(--header-height)+2rem)] space-y-12",
+        showSectionDivider && "border-t border-border pt-20 md:pt-24",
+      )}
       itemScope
       itemType="https://schema.org/Place"
     >
@@ -237,7 +240,7 @@ export function LocationChapter({
           itemType="https://schema.org/PostalAddress"
         >
           <div className="border-b border-border pb-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-eyebrow uppercase text-muted-foreground">
               Address / 住所
             </p>
           </div>
@@ -268,7 +271,7 @@ export function LocationChapter({
         {transitLines.length > 0 && (
           <div className="space-y-6">
             <div className="border-b border-border pb-3">
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-eyebrow uppercase text-muted-foreground">
                 Routes / アクセス
               </p>
             </div>
@@ -298,7 +301,7 @@ export function LocationChapter({
       {hoursDisplay.length > 0 && (
         <div className="mx-auto max-w-2xl space-y-6">
           <div className="border-b border-border pb-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-eyebrow uppercase text-muted-foreground">
               Hours / 営業時間
             </p>
           </div>
@@ -308,7 +311,7 @@ export function LocationChapter({
                 key={h.microdataContent}
                 className="grid grid-cols-[5rem_1fr] items-baseline gap-4 py-3"
               >
-                <dt className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                <dt className="text-eyebrow uppercase text-muted-foreground">
                   {h.label}
                 </dt>
                 <dd className="font-heading text-base italic text-foreground md:text-lg">
@@ -333,7 +336,7 @@ export function LocationChapter({
           {location.parkingInfo && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-eyebrow uppercase text-muted-foreground">
                   Parking / 駐車場
                 </p>
               </div>
@@ -346,7 +349,7 @@ export function LocationChapter({
           {amenityKeys.length > 0 && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-eyebrow uppercase text-muted-foreground">
                   Amenities / 設備
                 </p>
               </div>
@@ -379,7 +382,7 @@ export function LocationChapter({
           Cotton Club Tokyo の調査済み pattern + NN/g lazy-load best practice */}
       <div className="space-y-4">
         <div className="border-b border-border pb-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-eyebrow uppercase text-muted-foreground">
             Map / マップ
           </p>
         </div>

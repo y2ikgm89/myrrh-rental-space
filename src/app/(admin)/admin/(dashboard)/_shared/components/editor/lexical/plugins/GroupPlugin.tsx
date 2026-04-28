@@ -224,11 +224,11 @@ function StyleOption({
         data-group="true"
         data-group-style={style}
         {...(color !== "default" ? { "data-color": color } : {})}
-        className="flex min-h-12 items-center justify-center px-2 py-1.5 text-[11px] leading-tight text-foreground"
+        className="flex min-h-12 items-center justify-center px-2 py-1.5 text-xs leading-tight text-foreground"
       >
         Aa
       </div>
-      <span className="text-[10px] text-muted-foreground">
+      <span className="text-xs text-muted-foreground">
         {GROUP_STYLE_LABELS[style]}
       </span>
     </button>
@@ -270,7 +270,7 @@ function GroupDialog({
             <div className="mt-2 space-y-3">
               {CATEGORY_ORDER.map((category) => (
                 <div key={category}>
-                  <div className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <div className="mb-1.5 text-xs uppercase tracking-wider text-muted-foreground">
                     {CATEGORY_HEADINGS[category]}
                   </div>
                   <div className="grid grid-cols-5 gap-1.5">

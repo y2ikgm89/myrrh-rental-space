@@ -33,7 +33,7 @@ export async function AccessGlobalInfo(): Promise<ReactElement> {
 
       {/* Section header */}
       <div className="text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-eyebrow uppercase text-muted-foreground">
           Get in Touch
         </p>
         <h2 className="mt-3 font-heading text-[clamp(1.75rem,3.5vw,2.25rem)] font-light italic leading-tight text-foreground">
@@ -46,7 +46,7 @@ export async function AccessGlobalInfo(): Promise<ReactElement> {
         <dl className="mx-auto grid max-w-3xl gap-8 sm:grid-cols-2 sm:gap-12">
           {info.phone && (
             <div className="text-center">
-              <dt className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <dt className="text-eyebrow uppercase text-muted-foreground">
                 電話
               </dt>
               <dd className="mt-3">
@@ -63,7 +63,7 @@ export async function AccessGlobalInfo(): Promise<ReactElement> {
 
           {info.email && (
             <div className="text-center">
-              <dt className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <dt className="text-eyebrow uppercase text-muted-foreground">
                 メール
               </dt>
               <dd className="mt-3 text-sm">

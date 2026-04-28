@@ -89,7 +89,7 @@ export function GroupInspectorPanel({
                   title={GROUP_STYLE_LABELS[style]}
                   onClick={() => handleStyleChange(style)}
                   className={cn(
-                    "h-8 rounded border text-[10px] leading-tight transition-shadow",
+                    "h-8 rounded border text-xs leading-tight transition-shadow",
                     currentStyle === style
                       ? "ring-2 ring-ring ring-offset-1"
                       : "hover:ring-1 hover:ring-border",

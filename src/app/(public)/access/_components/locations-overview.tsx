@@ -29,7 +29,7 @@ export function LocationsOverview({
 
   return (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="text-eyebrow uppercase text-muted-foreground">
         Our Locations / 拠点一覧
       </p>
       <h1 className="mt-4 font-heading text-[clamp(2rem,4.5vw,3rem)] font-light italic leading-tight text-foreground">
