@@ -53,6 +53,9 @@ export const serverEnv = createEnv({
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
 
+    // Google Business Profile
+    GBP_STUB_MODE: z.string().optional(),
+
     // Google OAuth / Google Calendar OAuth
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -117,6 +120,7 @@ export const serverEnv = createEnv({
     EMAIL_FROM: process.env["EMAIL_FROM"],
     EMAIL_FROM_NAME: process.env["EMAIL_FROM_NAME"],
     STRIPE_SECRET_KEY: process.env["STRIPE_SECRET_KEY"],
+    GBP_STUB_MODE: process.env["GBP_STUB_MODE"],
     GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"],
     GOOGLE_CLIENT_SECRET: process.env["GOOGLE_CLIENT_SECRET"],
     LINE_CLIENT_ID: process.env["LINE_CLIENT_ID"],
