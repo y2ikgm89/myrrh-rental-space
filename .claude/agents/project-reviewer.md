@@ -34,7 +34,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **`noUncheckedIndexedAccess` is enabled**: Array/Record index access returns `T | undefined`. Direct `.property` access without a guard (`if (!item) return`, `?.`, `?? default`) is a compile error.
 - **`keysOf(obj)`** instead of `Object.keys(obj) as T[]`
 
-**React patterns** (`.claude/rules/react-patterns.md`):
+**React patterns** (`.claude/rules/react/`):
 
 - **No `forwardRef`** (React 19 — `ref` is a regular prop now)
 - **No `useContext`** — use `use(Context)` instead (React 19 stable; can be called after conditionals)
@@ -51,15 +51,15 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` は React Compiler 非互換。JSX 前に変数抽出する
 - **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` は禁止。`ReactNode` を返すかモジュールレベルに抽出（`use-media-picker.tsx` が実装例）
 - **eslint-disable コメントのルール名が最新か確認** — v4 でプレフィックスフラット化（`@eslint-react/dom/no-xxx` → `@eslint-react/dom-no-xxx`）。旧 `hooks-extra/*` / `dom/*` / `web-api/*` 形式が残っていないか検証
-- **URL 由来 initial props の `key` 必須** — Server Component が `searchParams` / 動的セグメントから派生した値を Client Component の `useState` / `useForm defaultValues` / `useReducer` 初期値に渡す場合、親側に `key={urlValue}` が無ければ stale state バグ。`<Form entity={entity} />` を検出したら `<Form key={entity.id} entity={entity} />` の形になっているか確認（→ `react-patterns.md` §Resetting state with key）
+- **URL 由来 initial props の `key` 必須** — Server Component が `searchParams` / 動的セグメントから派生した値を Client Component の `useState` / `useForm defaultValues` / `useReducer` 初期値に渡す場合、親側に `key={urlValue}` が無ければ stale state バグ。`<Form entity={entity} />` を検出したら `<Form key={entity.id} entity={entity} />` の形になっているか確認（→ `react/forms-ssr.md` §Resetting state with key）
 
-**Zod 4** (`.claude/rules/zod-patterns.md`):
+**Zod 4** (`.claude/rules/zod-patterns/`):
 
 - **`{ error: 'msg' }` format** — not `{ message: 'msg' }` or bare string
 - **`z.enum(PrismaEnum)`** not `z.nativeEnum()` (deprecated in Zod 4)
 - **Enum defaults use constants** — `.default(DiscountType.none)` not `.default('none')`
 
-**Server Actions / Cache** (`.claude/rules/server-actions.md`):
+**Server Actions / Cache** (`.claude/rules/server-actions/`):
 
 - **Auth check required** — write 系は `executeAdminMutationResult`（認証・権限・監査ログ一括処理）、API Route のみ `checkPermission()` 直接使用
 - **`executeAdminMutationResult` の実行順序契約（ADR 0019）** — 正しい順序は `execute → await afterSuccess → fireAndForget(logAction)`。以下の grep で hit したら silent bug として報告（cache invalidation がスキップされ公開ページが stale になる）:
@@ -85,7 +85,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
   - `.sort((a, b) => a.dateField.getTime() - b.dateField.getTime())` → `localeCompare()` への置き換えが必要（ISO 8601 文字列はアルファベット順 = 時系列順）
   - Server Action で `toPlainArray(items)` / `toPlainObject(item)` に依存して `string` 型フィールドへ代入している（明示的な `.toISOString()` が必要）
 
-**Tailwind / colors** (`.claude/rules/tailwind-patterns.md`):
+**Tailwind / colors** (`.claude/rules/tailwind-patterns/`):
 
 - **No hardcoded color classes** (`gray-*`, `blue-*`, `red-*` etc.) — use semantic tokens (`text-foreground`, `bg-muted`, `border-border`, etc.)
 - OKLCH format only in CSS (`@theme` blocks)
@@ -187,9 +187,9 @@ Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
 該当パターンが例外節に記載されていれば **Critical / High 扱いで報告しない**。参考 false positive 事例:
 
 - `LayoutFields.tsx` の `any` — `admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
-- `global-error.tsx` のハードコードカラー — `tailwind-patterns.md` で client-side fallback として除外
-- `select.tsx` の `required` — `gotchas.md` で Radix 制約として除外
-- `revalidateTag` の第 2 引数 — `gotchas.md` / `server-actions.md` で Next.js 16 API として記載
+- `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
+- `select.tsx` の `required` — `gotchas/ui.md` で Radix 制約として除外
+- `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
 
 疑わしい場合は現物を `Read` で確認して例外可否を判断する。
 

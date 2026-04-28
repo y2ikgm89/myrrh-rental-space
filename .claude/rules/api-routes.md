@@ -135,7 +135,7 @@ export async function GET(request: Request) {
 - **`NEXT_PUBLIC_*` はサーバーコードでも `clientEnv` 経由で参照** — `process.env["NEXT_PUBLIC_APP_URL"]` 等の直接参照は型バリデーションを迂回する。`clientEnv.NEXT_PUBLIC_APP_URL` を使用すること（`@/shared/lib/env/client` から import）
 - **R2 環境変数は全てオプション** — `env/server.ts` で `.optional()` 設定済み。`R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_URL` は未設定でも起動可能（設定なしの場合はファイルアップロード機能が無効化）
 
-## Gotchas（gotchas.md より移動）
+## Gotchas
 
 ### Stripe 決済
 

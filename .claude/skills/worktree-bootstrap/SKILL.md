@@ -48,6 +48,6 @@ bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh review-reply
 
 ## 関連
 
-- `.claude/rules/gotchas.md` §Worktree — DB drift 対処法・env コピー手法の詳細
-- `.claude/rules/gotchas.md` §Claude Code 設定 — subagent-driven-development 実行時の worktree 前提条件
+- `.claude/rules/gotchas/deployment.md` §Worktree — DB drift 対処法・env コピー手法の詳細
+- `.claude/rules/gotchas/claude-code.md` — subagent-driven-development 実行時の worktree 前提条件
 - `superpowers:using-git-worktrees` — worktree 運用の一般論（本スキルはプロジェクト固有の自動化）

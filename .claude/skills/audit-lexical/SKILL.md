@@ -29,7 +29,7 @@ paths:
 ## 先に読む
 
 1. `.claude/rules/frontend/lexical/toolbar-layout.md`（LexicalEditor シェル・DraggableBlock・プレースホルダー）+ `.claude/rules/frontend/lexical/nodes.md`（HTML → Lexical JSON / `tryConvertHtmlStringToLexicalJsonString` の正本）
-2. `.claude/rules/react-patterns.md`
+2. `.claude/rules/react/compiler.md`
 3. `.claude/rules/type-safety.md`
 4. 詳細な 12 項目チェックリスト: [`reference/checklist.md`](./reference/checklist.md)
 5. 必要なら `package.json` の Lexical バージョン

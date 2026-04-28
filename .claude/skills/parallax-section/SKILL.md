@@ -18,7 +18,7 @@ description: 公開ページのスクロール演出セクションを追加す�
 ## 先に読む
 
 1. `.claude/rules/frontend/project-design-config.md`
-2. `.claude/rules/frontend/gsap-patterns.md`
+2. `.claude/rules/frontend/gsap/matchmedia.md` + `.claude/rules/frontend/gsap/scroll-trigger.md`
 3. `reference/mood-variants.md`
 4. `reference/section-templates.md`
 

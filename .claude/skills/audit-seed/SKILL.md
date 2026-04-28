@@ -181,7 +181,7 @@ grep -oE "^  [A-Z_]+\s*$" prisma/schema.prisma | \
 
 - `add-prisma-enum` — enum 新規追加時の 8 箇所同時更新スキャフォールド
 - `create-admin-page` — モデル 3 点セット（schema + seed + admin-ui）
-- `.claude/rules/gotchas.md` — 「Seed 関数は upsert で idempotent 化 + seedAll / seedDemo 両方に登録」
+- `.claude/rules/gotchas/domain.md` — 「Seed 関数は upsert で idempotent 化 + seedAll / seedDemo 両方に登録」
 - `CLAUDE.md` §実装パターン — Prisma enum 追加の 8 箇所同時更新
 
 ## 参照実装

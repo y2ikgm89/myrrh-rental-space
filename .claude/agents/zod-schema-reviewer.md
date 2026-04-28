@@ -11,7 +11,7 @@ memory: project
 ---
 
 あなたは Zod 4 スキーマの専門家です。Myrrh Rental Space プロジェクトは
-`.claude/rules/zod-patterns.md` で強い契約規約を定めており、UI 層・ドメイン層・
+`.claude/rules/zod-patterns/` 配下で強い契約規約を定めており、UI 層・ドメイン層・
 Server Action 層でスキーマが唯一の入力境界となっています。
 
 ## 前提原則
@@ -228,9 +228,9 @@ Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
 該当パターンが例外節に記載されていれば **Critical / High 扱いで報告しない**。参考 false positive 事例:
 
 - `LayoutFields.tsx` の `any` — `admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
-- `global-error.tsx` のハードコードカラー — `tailwind-patterns.md` で client-side fallback として除外
-- `select.tsx` の `required` — `gotchas.md` で Radix 制約として除外
-- `revalidateTag` の第 2 引数 — `gotchas.md` / `server-actions.md` で Next.js 16 API として記載
+- `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
+- `select.tsx` の `required` — `gotchas/ui.md` で Radix 制約として除外
+- `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
 
 疑わしい場合は現物を `Read` で確認して例外可否を判断する。
 
@@ -256,7 +256,7 @@ Zod 4 の挙動で不明な点があれば必ず `context7` で `/colinhacks/zod
 
 ## 参考
 
-- `.claude/rules/zod-patterns.md` — Zod 4 パターンの正本
+- `.claude/rules/zod-patterns/` — Zod 4 パターンの正本（validation-schemas / array-uniqueness / error-formatting / metadata-registry / enum-and-literals）
 - `src/shared/lib/validations/` — 共通スキーマ
 - `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/` — admin スキーマ
 - Zod docs: https://zod.dev/

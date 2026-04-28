@@ -108,4 +108,4 @@ function FormField({ id, label, error }: Props) {
 
 - [WCAG 2.2 (W3C)](https://www.w3.org/TR/WCAG22/)
 - [GSAP Accessibility Guide](https://gsap.com/resources/a11y)
-- `.claude/rules/frontend/gsap-patterns.md` §reduced-motion 対応（パターン A/B/C）
+- `.claude/rules/frontend/gsap/matchmedia.md` §reduced-motion 対応（パターン A/B/C）

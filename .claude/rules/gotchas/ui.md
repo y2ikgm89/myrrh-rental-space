@@ -22,7 +22,7 @@ paths:
 ## 公開ページ レスポンシブ標準
 
 - **公開ページ見出しの `text-wrap` / `word-break` は `@layer base` が SSoT** — `public.css` の `@layer base` が `h1`–`h6` に `text-wrap: balance` + `word-break: auto-phrase`（日本語フレーズ折返し, Chrome 119+）を自動適用する。個別コンポーネントで `text-wrap-*` / `break-*` ユーティリティを重ねない。`whitespace-nowrap` が必要な特殊ケース（バッジ等）は例外
-- **公開ページ見出しの font-weight / letter-spacing / line-height も `@theme --text-*--*` が SSoT** — `text-h1` 等の utility を使う箇所で `font-light` / `leading-*` / `tracking-*` を重ねない（→ `tailwind-patterns.md` §Typography SSoT）。意図的 override は editorial-card featured variant のみ
+- **公開ページ見出しの font-weight / letter-spacing / line-height も `@theme --text-*--*` が SSoT** — `text-h1` 等の utility を使う箇所で `font-light` / `leading-*` / `tracking-*` を重ねない（→ `tailwind-patterns/theme-tokens.md` §Typography SSoT）。意図的 override は editorial-card featured variant のみ
 - **公開カレンダーの曜日色は日=`text-destructive`、土=`text-info`** — 日本標準のカレンダー配色。日曜始まり。今日マーカーは `bg-accent text-accent-foreground rounded-full`。曜日ヘッダーは `bg-surface` + 枠線
 - **日本語ラベルのタブ/ナビに `uppercase` 禁止** — `uppercase` は Latin 専用。日本語タブは Journal タブパターン（`text-sm tracking-[0.18em]`、uppercase なし）に合わせる。ヘッダーナビ（`text-[0.75rem] uppercase`）は英語ラベル向け
 - **空状態の CTA は `Button variant="editorial" size="sm"` を使用** — テキストリンクは余白の中で埋もれる。メッセージテキストは `text-muted-foreground`（base サイズ）、ボタンは `space-y-4` で配置
@@ -140,11 +140,11 @@ paths:
 - **Zod `z.union` の discriminated union narrowing は `switch` の `case` で効く** — `SidebarWidget = SimpleBuiltinWidget | RecentWidget | PopularWidget | CustomWidget` の `switch (widget.type) { case "popular": /* widget.layout / widget.showRanking に narrow アクセス */ }` で固有フィールドが型安全に読める。`as CustomWidget` 等の型アサーションは不要（プロジェクト禁止ルール）
 - **Post リスト widget（recent/popular）は `SidebarPostList` 1 コンポーネントに統一** — `label` / `layout: "compact" | "stacked"` / `showRanking` prop で切替。Compact: 横並び（96×64 サムネ + CATEGORY · DATE + 2 行 clamp）、Stacked: 縦積み（aspect-[3/2] フル幅サムネ）。ランキングはサムネ左上に bronze 半透明オーバーレイ（NYT 方式）。旧 `SidebarRecentPosts` / `SidebarPopularPosts` は削除済み
 - **サイドバーサムネ画像の `sizes` prop 戦略** — compact: `sizes="96px"`（固定 px）/ stacked: `sizes="(min-width: 1024px) 320px, 100vw"`（レスポンシブ）/ ランキング縮小版: `sizes="64px"`。next/image CDN 最適化のため小サイドバーサムネは固定 px を明示する（レスポンシブ値だと過剰サイズの optimized 画像が要求される）
-- **recent/popular widget schema は discriminated union + `.default()` で拡張** — DB JSON カラムの既存 `{ type: "recent", enabled: true }` は safeParse 時に `layout: "compact"` / `showRanking: true` が補完されるため schema 拡張時も migration 不要（→ `zod-patterns.md` §Discriminated union + `.default()`）
+- **recent/popular widget schema は discriminated union + `.default()` で拡張** — DB JSON カラムの既存 `{ type: "recent", enabled: true }` は safeParse 時に `layout: "compact"` / `showRanking: true` が補完されるため schema 拡張時も migration 不要（→ `zod-patterns/validation-schemas.md` §Discriminated union + `.default()`）
 - **`Post.thumbnailUrl` は `String` 非 nullable（空文字列あり得る）** — サイドバー・カード・ギャラリー等の表示コンポーネントは `post.thumbnailUrl ? <Image .../> : <div className="aspect-[3/2] bg-surface" />` でフォールバック必須。`thumbnailUrl == null` はスキーマ上存在しないため `post.thumbnailUrl ?? fallback` パターンは機能しない
 
 - **公開ページのアクションボタンに `rounded-full` 禁止** — Editorial Magazine はシャープエッジが基本。`Button` Primitive の primary/secondary/ghost/editorial は全てシャープ。`rounded-full` はバッジ・タグ・アイコンボタン（シェア・ギャラリーナビ）・スピナー・カルーセルドットのみ許容
 
-- **リスト `.map` 内の個別 `<ScrollReveal delay={i*0.08}>` wrap は anti-pattern** — 縦並びで大きなカード（event-list 等）は 2 個目以降が viewport 外で `opacity:0` のまま待機、スクロールしないと見えない silent bug。`ScrollRevealGroup`（1 ScrollTrigger + stagger、`@/public/components/animations/scroll-reveal`）に集約。event-list-view / post-grid / space-grid / news-list / features-section / how-it-works-section / SpaceShowcaseSection で統一済み。詳細は `frontend/gsap-patterns.md` §パターン D
+- **リスト `.map` 内の個別 `<ScrollReveal delay={i*0.08}>` wrap は anti-pattern** — 縦並びで大きなカード（event-list 等）は 2 個目以降が viewport 外で `opacity:0` のまま待機、スクロールしないと見えない silent bug。`ScrollRevealGroup`（1 ScrollTrigger + stagger、`@/public/components/animations/scroll-reveal`）に集約。event-list-view / post-grid / space-grid / news-list / features-section / how-it-works-section / SpaceShowcaseSection で統一済み。詳細は `frontend/gsap/matchmedia.md` §パターン D
 - **Structured list の canonical border/divider pattern** — `divide-y border-y border-border divide-border` をコンテナに適用（上下 + 各アイテム間の線）。per-item `cn("border-b", i === 0 && "border-t")` 分岐ロジックは廃止。features-section / event-list-view / news-list が参照実装
 - **news archive は `<ul>/<li>` ではなく `<div className="divide-y border-y ...">`** — event-list と同形で統一。Editorial Magazine（Kinfolk / Cereal / The Gentlewoman）は news archive を `<ul>` でマークアップしない業界標準

@@ -145,7 +145,7 @@ implementer prompt に以下を明記済みか確認（未明記なら追記し�
 
 ## 関連
 
-- `.claude/rules/gotchas.md` §Claude Code 設定 — subagent 検証規律・haiku ban
+- `.claude/rules/gotchas/claude-code.md` — subagent 検証規律・haiku ban
 - `.claude/hooks/post-subagent-git-snapshot.sh` — Task tool 実行後の自動 git state スナップショット
 - `CLAUDE.md` §Subagent 規律 — implementer dispatch の git 全面禁止 + 3 段検証
 - `docs/architecture/decisions/0015-clean-break-refactor-and-parallel-implementer-discipline.md` — ADR 本文

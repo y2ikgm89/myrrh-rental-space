@@ -7,11 +7,11 @@ paths:
 
 # 管理画面インラインコンテンツエディタ（Post / News）
 
-> 対象: メタデータ用 **UnifiedSidePanel** と **`content-types/*`**（本文編集は別系統の [Lexical エディタ](./lexical-patterns.md)）。
+> 対象: メタデータ用 **UnifiedSidePanel** と **`content-types/*`**（本文編集は別系統の [Lexical エディタ](./lexical/core.md)）。
 
 ## 公式準拠の前提
 
-- [React Hook Form](https://react-hook-form.com/) — 値の購読はコンポーネント内では **`useWatch`** を優先（`watch()` 禁止は `react-patterns.md`）
+- [React Hook Form](https://react-hook-form.com/) — 値の購読はコンポーネント内では **`useWatch`** を優先（`watch()` 禁止は `react/compiler.md`）
 - [React 19](https://react.dev/) / React Compiler — 手動メモ化の追加は外部ライブラリ要件がある場合のみ
 - 型は **フォームデータ型**（`FieldValues` を拡張した Zod `infer`）と一致させ、`exactOptionalPropertyTypes` 下で `disabled: undefined` を余計に渡さない
 
@@ -83,11 +83,11 @@ Terms のように `content-types` 拡張を使わない単一 RHF フォーム�
 
 ## 関連ドキュメント
 
-| 内容                   | 参照                   |
-| ---------------------- | ---------------------- |
-| Lexical 本文・ブロック | `lexical-patterns.md`  |
-| 管理 UI 全般           | `admin-ui-patterns.md` |
-| Server Actions         | `server-actions.md`    |
+| 内容                   | 参照                          |
+| ---------------------- | ----------------------------- |
+| Lexical 本文・ブロック | `lexical/core.md`             |
+| 管理 UI 全般           | `admin-ui-patterns.md`        |
+| Server Actions         | `server-actions/use-cache.md` |
 
 ## 履歴計画書について
 

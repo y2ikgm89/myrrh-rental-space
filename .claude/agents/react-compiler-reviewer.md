@@ -44,7 +44,7 @@ function Comp({ data }) { ... }
 
 **例外**: `useSyncExternalStore` の subscribe 関数、外部ライブラリが参照同一性を明示的に要求する場合。
 
-**`useSyncExternalStore` の `getServerSnapshot`**: 戻り値が配列・オブジェクトのときは**呼び出し間で同一参照**を返すこと（例: モジュール定数の空配列）。`return []` や毎回の `return {}` はランタイム警告・無限ループの原因。プリミティブ（`null`, `false` 等）は問題なし。参照: `.claude/rules/react-patterns.md` の useSyncExternalStore 節。
+**`useSyncExternalStore` の `getServerSnapshot`**: 戻り値が配列・オブジェクトのときは**呼び出し間で同一参照**を返すこと（例: モジュール定数の空配列）。`return []` や毎回の `return {}` はランタイム警告・無限ループの原因。プリミティブ（`null`, `false` 等）は問題なし。参照: `.claude/rules/react/hooks.md` の useSyncExternalStore 節。
 
 ### B. ref.current の render 中アクセス（禁止）
 
@@ -208,9 +208,9 @@ Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
 該当パターンが例外節に記載されていれば **Critical / High 扱いで報告しない**。参考 false positive 事例:
 
 - `LayoutFields.tsx` の `any` — `admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
-- `global-error.tsx` のハードコードカラー — `tailwind-patterns.md` で client-side fallback として除外
-- `select.tsx` の `required` — `gotchas.md` で Radix 制約として除外
-- `revalidateTag` の第 2 引数 — `gotchas.md` / `server-actions.md` で Next.js 16 API として記載
+- `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
+- `select.tsx` の `required` — `gotchas/ui.md` で Radix 制約として除外
+- `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
 
 疑わしい場合は現物を `Read` で確認して例外可否を判断する。
 
@@ -235,5 +235,5 @@ Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
 
 ## 参考ルール
 
-- `.claude/rules/react-patterns.md` — React Compiler パターン詳細
-- `.claude/rules/frontend/gsap-patterns.md` — GSAP 固有パターン
+- `.claude/rules/react/compiler.md` — React Compiler パターン詳細
+- `.claude/rules/frontend/gsap/core.md` — GSAP 固有パターン

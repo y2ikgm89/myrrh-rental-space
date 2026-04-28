@@ -153,7 +153,7 @@ fi
 if head -1 "$FILE_PATH" 2>/dev/null | grep -qE '^"use server"|^'"'"'use server'"'"; then
   # 型 / interface / class / let / var の export
   if grep -nE '^export (type |interface |class |let |var )' "$FILE_PATH" >/dev/null 2>&1; then
-    WARNINGS+=("- \"use server\" ファイルから type/interface/class/let/var を export 検出 — Turbopack silent bug。型は <file>-types.ts に退避してください（参照: server-actions.md §export 契約）。")
+    WARNINGS+=("- \"use server\" ファイルから type/interface/class/let/var を export 検出 — Turbopack silent bug。型は <file>-types.ts に退避してください（参照: server-actions/export-contract.md）。")
   fi
   # 非 async const export（async ... で始まらないもの）
   if grep -nE '^export const [A-Za-z_]+\s*=' "$FILE_PATH" 2>/dev/null | grep -vE '=\s*async ' >/dev/null 2>&1; then

@@ -118,9 +118,9 @@ editor.update(() => {
 - Lexical のクリップボードは **`exportDOM` の HTML を使用**（`createDOM` の DOM はクリップボードに使われない）
 - 内部コピペは JSON パス（`exportJSON`/`importJSON`）→ `importDOM` は `exportDOM` 出力タグに合わせる
 
-## Gotchas（gotchas.md より移動）
+## Gotchas
 
-- **Lexical フルスクリーンには 2 種の実装** — ① `InlineEditorShell` (Posts/News/Terms): `useFullscreenMode()` で admin-layout-context の `enterFullscreen`/`exitFullscreen` を呼びサイドバー/ヘッダーを非表示にする（local overlay 不要） ② `LexicalEditor` 内部 `isFullscreen` state (Events/Spaces/Pages 等の tab/dialog 内): `fixed inset-0` + inline `style={{ zIndex: Z_INDEX.editorFullscreen }}` overlay。どちらも z-index は **inline style 必須** — ``className={`z-[${VAR}]`}`` は Tailwind JIT が scan しないため CSS 未生成の silent bug（→ `tailwind-patterns.md` §禁止事項 3.0.5）。InlineEditorShell なしで editor を使う tab/dialog では後者のみ動作するため、新規 editor 配置時は fullscreen が overlay z-index に依存することを意識する
+- **Lexical フルスクリーンには 2 種の実装** — ① `InlineEditorShell` (Posts/News/Terms): `useFullscreenMode()` で admin-layout-context の `enterFullscreen`/`exitFullscreen` を呼びサイドバー/ヘッダーを非表示にする（local overlay 不要） ② `LexicalEditor` 内部 `isFullscreen` state (Events/Spaces/Pages 等の tab/dialog 内): `fixed inset-0` + inline `style={{ zIndex: Z_INDEX.editorFullscreen }}` overlay。どちらも z-index は **inline style 必須** — ``className={`z-[${VAR}]`}`` は Tailwind JIT が scan しないため CSS 未生成の silent bug（→ `tailwind-patterns/inline-style-vs-arbitrary.md`）。InlineEditorShell なしで editor を使う tab/dialog では後者のみ動作するため、新規 editor 配置時は fullscreen が overlay z-index に依存することを意識する
 - **Lexical は既に dynamic import 済み** — `LazyLexicalEditor.tsx` が `next/dynamic` + `ssr: false` でコード分割。管理 layout には Lexical の直接 import なし。パフォーマンスレビューで「Lexical がバンドル肥大化」と指摘された場合は `LazyLexicalEditor` の存在を確認してから対応判断
 - **admin.css の `--font-serif` は Lexical WYSIWYG 用** — エディタ内の h1/h2 を公開ページと同じ Cormorant Garamond で表示するため。admin layout.tsx で Cormorant Garamond をロード、`theme.ts` の h1/h2 に `font-heading` 適用。管理 UI（サイドバー、フォーム等）は `--font-sans` のまま
 - **Lexical エディタのコンテンツ領域は `bg-card`（白）** — `bg-background`（`oklch(0.98 ...)` 微グレー）ではなく `bg-card`（`oklch(1 0 0)` 白）を使用。文書編集エリアは紙のメタファーで白背景が適切。`LexicalEditor.tsx` の外枠 div で設定

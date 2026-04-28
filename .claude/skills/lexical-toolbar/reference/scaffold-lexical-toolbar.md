@@ -25,7 +25,7 @@ Lexical ツールバー拡張のコピペ用資料（旧 `.claude/skills` 本文
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ToolbarPlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx`
 
-**補足**: `ToolbarPlugin` は `InspectorSidebarProvider` 内でマウントされる。右ブロック設定パネルの開閉と連動させる場合は **`useInspectorSidebar()`**（`inspector/inspector-sidebar-context.tsx`）を使う。既存のパネルトグル（`PanelRightOpen` / `PanelRightClose`・**Ctrl+Shift+0**）と役割が被るボタンを足さないこと。詳細は `.claude/rules/frontend/lexical-patterns.md` の「ブロック設定パネル」。
+**補足**: `ToolbarPlugin` は `InspectorSidebarProvider` 内でマウントされる。右ブロック設定パネルの開閉と連動させる場合は **`useInspectorSidebar()`**（`inspector/inspector-sidebar-context.tsx`）を使う。既存のパネルトグル（`PanelRightOpen` / `PanelRightClose`・**Ctrl+Shift+0**）と役割が被るボタンを足さないこと。詳細は `.claude/rules/frontend/lexical/toolbar-layout.md` の「ブロック設定パネル」。
 
 ### 3. ボタンタイプ別実装
 
@@ -220,7 +220,7 @@ const updateToolbar = () => {
 - **アイコンサイズ**: `h-4 w-4` で統一
 - **ボタンサイズ**: `h-8 w-8`（アイコンのみ）または `h-8`（テキスト付き）
 - **title属性必須**: ツールチップ設定
-- **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
+- **React Compiler互換**: `.claude/rules/react/compiler.md` 準拠
 - **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
 
 ## Definition of Done

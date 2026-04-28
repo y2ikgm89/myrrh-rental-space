@@ -65,8 +65,8 @@ design rules manually: `.claude/rules/frontend/anti-ai-design.md`, `.claude/rule
 
 ## Design rules to enforce
 
-- **OKLCH color format only** (no HSL, no Hex) — see `.claude/rules/tailwind-patterns.md`
-- **Semantic tokens** (no hardcoded Tailwind colors) — see `.claude/rules/tailwind-patterns.md`
+- **OKLCH color format only** (no HSL, no Hex) — see `.claude/rules/tailwind-patterns/theme-tokens.md`
+- **Semantic tokens** (no hardcoded Tailwind colors) — see `.claude/rules/tailwind-patterns/theme-tokens.md`
 - **Anti-AI design**: Avoid generic AI aesthetics (gradients everywhere, floating blobs, glass cards) — see `.claude/rules/frontend/anti-ai-design.md`
 - **Visual effects**: L1 CSS-only + L2 GSAP/ScrollTrigger のみ使用（Three.js/PixiJS は削除済み）
 - **Reduced-motion**: Always provide `prefers-reduced-motion` fallbacks for L2 effects

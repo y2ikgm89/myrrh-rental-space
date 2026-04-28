@@ -95,6 +95,6 @@ done
 ## 参考
 
 - CLAUDE.md §「`"use server"` ファイルの export 契約」
-- `.claude/rules/server-actions.md` §検出 grep
+- `.claude/rules/server-actions/export-contract.md` §検出 grep
 - 参照実装: `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts`（型分離パターン）
 - 公式: [Next.js 16 use-server directive](https://nextjs.org/docs/app/api-reference/directives/use-server)

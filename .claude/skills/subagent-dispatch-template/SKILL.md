@@ -66,7 +66,7 @@ spec compliance + code quality を 1 dispatch で兼用する combined reviewer:
 
 ## Code quality check
 - `.claude/rules/**/*.md` の関連 rule ファイルを path で確認
-- type-safety.md / react-patterns.md / tailwind-patterns.md / zod-patterns.md 等の該当箇所
+- `type-safety.md` / `react/*.md` / `tailwind-patterns/*.md` / `zod-patterns/*.md` 等の該当箇所
 - `bun run lint` exit 0 前提（CI が通っているものは lint 違反 PASS）
 
 ## 返却フォーマット

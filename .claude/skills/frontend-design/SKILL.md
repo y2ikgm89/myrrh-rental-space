@@ -75,11 +75,11 @@ Design Brief 作成時にレスポンシブ挙動を決める場合、**Containe
 
 - **3xl breakpoint**（1920px, ultra wide / 2K-4K）は default 採用。`2xl:` 以上のワイドスクリーン対応は `@3xl:` or `3xl:` を使う
 - breakpoint tokens / container tokens / touch-target token は `public.css` / `admin.css` の `@theme` を参照（→ `project-design-config.md` §レスポンシブ設計）
-- タッチターゲットは WCAG 2.5.5 Enhanced (AAA) 44×44 CSS px — Button 全 size で `min-h-11` 以上を保証（→ `frontend/accessibility.md` §タッチターゲット）
+- タッチターゲットは WCAG 2.5.5 Enhanced (AAA) 44×44 CSS px — Button 全 size で `min-h-11` 以上を保証（→ `frontend/accessibility/touch-text.md`）
 
 ## ガードレール
 
-- クライアントで `useSyncExternalStore`（ストレージ同期など）を足すときは `react-patterns.md`: **`getServerSnapshot` で `return []` / `return {}` 禁止**（モジュール定数で参照を固定）。空配列の実装例は `announcement-bar/use-dismissed-bars.ts`
+- クライアントで `useSyncExternalStore`（ストレージ同期など）を足すときは `react/hooks.md`: **`getServerSnapshot` で `return []` / `return {}` 禁止**（モジュール定数で参照を固定）。空配列の実装例は `announcement-bar/use-dismissed-bars.ts`
 - ハードコードカラーや場当たりのフォントスタックを足さない
 - Generic hero、均一カードグリッド、過剰な gradient をデフォルトにしない
 - モーションの定数は共有実装を使い、マジックナンバーを増やさない

@@ -158,7 +158,7 @@ grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
 
 例外節に記載されていれば Critical / High で報告しない。例:
 
-- `revalidateTag` の第 2 引数 — `gotchas.md` / `server-actions/use-cache.md` で Next.js 16 API として明示
+- `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として明示
 
 ## 検出コマンド
 

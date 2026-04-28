@@ -396,7 +396,7 @@ if (change) {
 - **プロパティ**: JSON serializableのみ（Function, Symbol, Map, Set禁止）
 - **exportDOM/importDOM**: 公開ページ表示に必須。data-attributes のみ、CSS クラス不使用
 - **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
-- **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
+- **React Compiler互換**: `.claude/rules/react/compiler.md` 準拠
 - **コンポジットノード**: Container に isShadowRoot + canBeEmpty + collapseAtStart、Child に isShadowRoot のみ
 - **子ノードの collapseAtStart 禁止**: isShadowRoot が境界保護を担当
 - **updateDOM**: `$getStateChange` + `dom.setAttribute()` で差分更新、`return false`

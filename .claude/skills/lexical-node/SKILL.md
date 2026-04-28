@@ -30,7 +30,7 @@ paths:
 
 1. `.claude/rules/frontend/lexical/nodes.md`（NodeState API・新規ノード登録チェックリスト）
 2. `.claude/rules/type-safety.md`
-3. `.claude/rules/react-patterns.md`
+3. `.claude/rules/react/compiler.md`
 4. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ImageNode.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/YouTubeNode.tsx`

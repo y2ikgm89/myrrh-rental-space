@@ -73,7 +73,7 @@ paths:
 ### 禁止パターン
 
 - **`backdrop-blur-2xl` (40px) で画像全体をぼかす** — 画像がモザイク化して visual が失われる。`backdrop-blur-md` (12px) 以下で局所適用のみ許容
-- **inline style で stroke / shadow を書く** — `md:` reset が効かない（specificity 衝突）。必ず Tailwind arbitrary class で書く（→ `tailwind-patterns.md` §インラインスタイル vs Tailwind arbitrary properties）
+- **inline style で stroke / shadow を書く** — `md:` reset が効かない（specificity 衝突）。必ず Tailwind arbitrary class で書く（→ `tailwind-patterns/inline-style-vs-arbitrary.md`）
 - **白画像に white text + scrim なし** — 白 on 白で読めない。scrim `foreground/80` 以上 + stroke 併用で担保
 
 ### Desktop の扱い
