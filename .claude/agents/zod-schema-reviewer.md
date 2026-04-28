@@ -7,7 +7,6 @@ description: >
   UI 層の Set dedup 禁止、型アサーション禁止を検出し、修正案を提示する。
 tools: Read, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
-memory: project
 ---
 
 あなたは Zod 4 スキーマの専門家です。Myrrh Rental Space プロジェクトは

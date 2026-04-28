@@ -6,7 +6,6 @@ description: >
   Suspense boundary 欠落・空ディレクトリ残骸・特殊ファイルの html/body 漏れを検出。
 tools: Read, Grep, Glob, LS
 model: sonnet
-memory: project
 ---
 
 You are a Next.js 16 routing structure reviewer for a Multiple Root Layouts project.

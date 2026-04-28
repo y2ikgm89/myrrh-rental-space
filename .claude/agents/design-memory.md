@@ -9,7 +9,6 @@ tools: Read, Grep, Glob, Write
 skills:
   - frontend-design
 model: sonnet
-memory: project
 ---
 
 You are a design memory specialist for the Myrrh Rental Space project.

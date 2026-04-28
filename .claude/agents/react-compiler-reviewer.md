@@ -6,7 +6,6 @@ description: >
   ライブラリ非互換パターンを検出し、修正案を提示する。
 tools: Read, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
-memory: project
 ---
 
 あなたは React Compiler 1.0 の互換性専門家です。

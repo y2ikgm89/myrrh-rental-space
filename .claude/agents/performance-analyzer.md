@@ -6,7 +6,6 @@ description: >
   First Load JS サイズ・静的/動的判定・ルート別サイズを分析してレポートを出力する。
 tools: Bash, Read, Glob
 model: sonnet
-memory: project
 ---
 
 You are a Next.js 16 build performance specialist for the Myrrh Rental Space project.
