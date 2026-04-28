@@ -111,13 +111,13 @@ fi
 
 matcher で分離する方法もあるが、単一スクリプト内で分岐した方が保守しやすい。
 
-## SubagentStop の代替: PostToolUse matcher `Task`
+## SubagentStop の代替: PostToolUse matcher `Agent`
 
-`SubagentStop` は stdout が context に届かない。subagent 完了後に git snapshot 等を注入したい場合は **`PostToolUse` の `matcher: "Task"`** に移設する。`Task` tool は subagent dispatch に使われるため、完了タイミングと一致する。
+`SubagentStop` は stdout が context に届かない。subagent 完了後に git snapshot 等を注入したい場合は **`PostToolUse` の `matcher: "Agent"`** に移設する。`Agent` tool（Claude Code v2.1.63 で `Task` から rename。alias は残るが新規記述は `Agent` に統一）は subagent dispatch に使われるため、完了タイミングと一致する。
 
 ```json
 {
-  "matcher": "Task",
+  "matcher": "Agent",
   "hooks": [
     { "type": "command", "command": "...post-subagent-git-snapshot.sh" }
   ]
