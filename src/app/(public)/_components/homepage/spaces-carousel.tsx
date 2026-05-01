@@ -440,7 +440,7 @@ export function SpacesCarousel({
           type="button"
           aria-label="前のスペース"
           onClick={() => navigate(-1)}
-          className="absolute left-4 top-1/2 z-40 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:left-8"
+          className="absolute left-4 top-1/2 z-30 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:left-8"
         >
           <IconChevronLeft
             className="h-5 w-5 text-foreground"
@@ -451,7 +451,7 @@ export function SpacesCarousel({
           type="button"
           aria-label="次のスペース"
           onClick={() => navigate(1)}
-          className="absolute right-4 top-1/2 z-40 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:right-8"
+          className="absolute right-4 top-1/2 z-30 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:right-8"
         >
           <IconChevronRight
             className="h-5 w-5 text-foreground"
