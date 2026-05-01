@@ -1,20 +1,23 @@
 import type { ReactElement } from "react";
-import { parsePageHero } from "@/shared/lib/sections/page-hero/schema";
-import { defaultPageHeroHome } from "@/shared/lib/sections/page-hero/defaults";
+import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero";
 import { EditorialSplitHero } from "./EditorialSplitHero";
 import { CompactHero } from "./CompactHero";
 import { MinimalHero } from "./MinimalHero";
 
 interface PageHeroProps {
-  readonly data: unknown;
+  readonly config: unknown;
 }
 
 /**
- * Page.pageHero JSON のサーバー側ディスパッチャ（variant 別に Client / RSC を切替）
+ * page-hero セクション config（unknown）の Server 側ディスパッチャ。
+ * - `pageHeroConfigSchema.safeParse` で variant 別 discriminated union に正規化
+ * - 無効な config は `null` を return（hero スキップ）
  */
-export function PageHero({ data }: PageHeroProps): ReactElement | null {
-  const hero = parsePageHero(data) ?? defaultPageHeroHome;
+export function PageHero({ config }: PageHeroProps): ReactElement | null {
+  const result = pageHeroConfigSchema.safeParse(config);
+  if (!result.success) return null;
 
+  const hero = result.data;
   switch (hero.variant) {
     case "editorial-split": {
       const { variant: _v, ...rest } = hero;

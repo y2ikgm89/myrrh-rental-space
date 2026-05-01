@@ -1,7 +1,7 @@
 /**
  * Homepage — Editorial Magazine layout (DB-driven)
  *
- * PageHero は Page.pageHero（first-class JSON）。本文セクションは homepage-* Section 行。
+ * PageHero は page-hero Section（order=-1）。本文セクションは homepage-* Section 行。
  */
 
 import type { Metadata } from "next";
@@ -35,10 +35,7 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      <HomepageSections
-        pageHero={homepage.pageHero}
-        sections={homepage.sections}
-      />
+      <HomepageSections sections={homepage.sections} />
     </>
   );
 }

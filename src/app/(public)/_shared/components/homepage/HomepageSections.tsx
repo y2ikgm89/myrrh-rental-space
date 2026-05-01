@@ -34,7 +34,6 @@ type HomepageRenderableSection = {
 };
 
 interface HomepageSectionsProps {
-  readonly pageHero: unknown;
   readonly sections: readonly HomepageRenderableSection[];
 }
 
@@ -174,7 +173,6 @@ function renderHomepageSection(
 }
 
 export async function HomepageSections({
-  pageHero,
   sections,
 }: HomepageSectionsProps): Promise<ReactElement> {
   const rawSpaces = await getShowcaseSpaces(6, true);
@@ -191,6 +189,9 @@ export async function HomepageSections({
     categoryName: space.category?.name ?? null,
   }));
 
+  const pageHeroSection = sections.find(
+    (section) => section.type === "page-hero",
+  );
   const homepageSections = sections.filter((section) =>
     section.type.startsWith("homepage-"),
   );
@@ -198,7 +199,7 @@ export async function HomepageSections({
 
   return (
     <>
-      <PageHero data={pageHero} />
+      {pageHeroSection ? <PageHero config={pageHeroSection.config} /> : null}
       {useDefaults ? (
         <>
           <HowItWorksSection />

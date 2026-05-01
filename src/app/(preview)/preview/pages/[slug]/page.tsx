@@ -42,7 +42,6 @@ export default async function ManagedPagePreviewPage({
       <PreviewBanner />
       {page.slug === "home" ? (
         <HomepageSections
-          pageHero={page.pageHero}
           sections={activeSections.filter(
             (section) => section.type !== "homepage-hero",
           )}
