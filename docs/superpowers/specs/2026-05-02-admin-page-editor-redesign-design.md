@@ -1,308 +1,527 @@
-# Admin Page Editor Redesign — Design Spec
+# Admin Page Editor Redesign — Design Spec (Clean Break)
 
-> 対象: `/admin/pages/[slug]/edit` の大規模 refactor
+> 対象: `/admin/pages/[slug]/edit` の clean-break refactor
 > 作成: 2026-05-02
-> ステータス: Draft（ユーザーレビュー待ち）
+> 改訂: 2026-05-02（clean-break 方針に変更、Phase 1+2+4 統合）
+> ステータス: Draft（ユーザー承認待ち）
 
 ## 背景・動機
 
-現在の編集画面は、SectionEditor カードが縦に積まれる単純構造で、以下の課題がある:
+現在の編集画面の課題:
 
 **【主】編集しづらい (UI/UX 構造)**
 
 - セクションカードが縦に積まれ、どのセクションを編集中か把握しづらい
-- ホームページのように 5〜6 セクションあると下までスクロール必須
-- 1 カード内で「テキスト/画像/ボタン/色/レイアウト」が雑多に並び、何を編集しているか直感に乏しい
-- 「デザイン」「詳細設定」Accordion は中身が見えないと存在に気づかない
-- `PageHero` だけ別フォームで、できることが他セクションと違う
+- 1 カード内で「テキスト/画像/ボタン/色/レイアウト」が雑多に並ぶ
+- `PageHero` だけ別フォームで、できることが他セクションと違う（**SSoT 二重化**）
 
 **【副】編集できない (機能 gap)**
 
-- セクションの**並び替え・追加・削除・複製・有効/無効切替**が UI 化されていない（DB に `order Int` / `isActive` あるが Server Action 未実装）
+- セクションの並び替え・追加・削除・複製・有効/無効切替の Server Action 未実装（DB に `order` / `isActive` あるが UI 化されていない）
 - `post-list.categoryId` 等、field-registry 外で定義されたフィールドが自動生成に乗らない
-- ボタンの色・variant 等、装飾系の細かいフィールドが一部未整備
 
-## ゴール（全体）
+## 方針: Clean Break（後方互換なし）
 
-「**ページの構成を素早く把握し、各セクションのテキスト・画像・ボタンを直感的に編集できる**」管理体験。
+**ユーザー指示**: 破壊的変更可・公式ベストプラクティス準拠・後方互換性なし・推奨実装でクリーンに。
 
-## スコープ分割（Phase 1 → 3）
+これに従い、以下を **同一 PR で一括実施**:
 
-3 Phase に分割。**各 Phase は独立した spec/plan/実装サイクル**を持ち、Phase 1 完了後に Phase 2 spec を別途作成する。
+1. **PageHero を Section レジストリに統合**（destructive migration、`Page.pageHero` 列 DROP）
+2. **master-detail UI** への全面刷新
+3. **意味別 subGroup** によるフィールド分類
+4. **Section CRUD + 並び替え** Server Action 群追加
+5. **registry 外フィールドの正規化**（post-list.categoryId 等）
+6. **旧コード一式削除**（shim・互換 helper・deprecated alias 置かず）
 
-| Phase | テーマ                                    | DB変更      | 主要成果物                                       |
-| ----- | ----------------------------------------- | ----------- | ------------------------------------------------ |
-| **1** | UI 整理（master-detail + 意味別グループ） | なし        | 編集レイアウト全面刷新                           |
-| **2** | セクション CRUD・並び替え                 | なし        | + / 削除 / 複製 / トグル / DnD                   |
-| **3** | フィールド追加・gap 解消                  | type による | ボタン装飾・post-list categoryId・キャプション等 |
+## ゴール
 
-**本 spec は Phase 1 のみを対象**とする。Phase 2/3 はロードマップとして末尾に記載。
+「**ページの構成を素早く把握し、各セクションのテキスト・画像・ボタンを直感的に編集でき、構成も柔軟に組み替えられる**」管理体験。
 
 ---
 
-## Phase 1 設計
+## 設計詳細
 
-### Phase 1 のゴール
+### 1. データモデル変更（destructive）
 
-1. **master-detail レイアウト**: 左にセクション一覧（俯瞰）、右に選択中セクションの編集パネル
-2. **編集パネル内のフィールド意味別グループ化**: 「テキスト」「画像」「ボタン・リンク」「デザイン」「詳細設定」など、現在の `content / design / advanced` より直感的な分類
-3. **PageHero を section と同じ視覚的扱い**: 左一覧の先頭に「ヒーロー」を出し、選択時に右パネルで編集（内部的には現状の `Page.pageHero` Json 列維持。Phase 4 候補で完全統合）
+#### 1.1 `Page.pageHero Json?` 列 DROP
 
-### Out of Scope（Phase 1）
+```prisma
+// 変更前
+model Page {
+  // ...
+  pageHero Json?
+}
 
-- ❌ Server Actions の追加（CRUD・reorder） → Phase 2
-- ❌ DB schema 変更 → Phase 4 候補
-- ❌ Field registry への新フィールド追加（既存 schema のまま） → Phase 3
-- ❌ Live preview iframe 連動（現状の別タブで OK と確認済み）
-- ❌ autosave / unsaved warning / スケジュール公開 → 別議論
-
-### UI 構成（テキスト mockup）
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ AdminDetailLayout: ← 戻る  /  「ホームページ を編集」  /  /home          │
-│                                          [Badge] [Publish] [プレビュー]  │
-├──────────────────────────────────────────────────────────────────────────┤
-│ Tabs: [コンテンツ] [SEO・OGP]                                           │
-├──────────────────────────────────────────────────────────────────────────┤
-│ ┌────────────────────────┬───────────────────────────────────────────┐  │
-│ │ セクション一覧          │ ヒーロー (editorial-split)                 │  │
-│ │ (左サイド · sticky top) │                                            │  │
-│ │                         │ ┌────────────────────────────────────────┐ │  │
-│ │ ▸ ヒーロー [active]     │ │ ▼ テキスト                             │ │  │
-│ │   ─────────────────     │ │   ラベル / タイトル / 説明              │ │  │
-│ │ ▸ お知らせ              │ ├────────────────────────────────────────┤ │  │
-│ │ ▸ スペース紹介          │ │ ▼ 画像                                  │ │  │
-│ │ ▸ コンセプト            │ │   ヒーロー画像 (8枚スライド可)          │ │  │
-│ │ ▸ 利用の流れ            │ ├────────────────────────────────────────┤ │  │
-│ │ ▸ お問合せ CTA          │ │ ▼ ボタン・リンク                        │ │  │
-│ │                         │ │   ボタン文言 / URL                      │ │  │
-│ │ (Phase 2 でここに       │ ├────────────────────────────────────────┤ │  │
-│ │  + 追加ボタン / kebab)  │ │ ▷ デザイン (折りたたみ)                  │ │  │
-│ │                         │ ├────────────────────────────────────────┤ │  │
-│ │                         │ │ ▷ 詳細設定 (折りたたみ)                  │ │  │
-│ │                         │ └────────────────────────────────────────┘ │  │
-│ │                         │                              [保存]        │  │
-│ └────────────────────────┴───────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────┘
+// 変更後
+model Page {
+  // ...
+  // pageHero 列削除
+}
 ```
 
-### モバイル対応
+#### 1.2 `Section` に `type = "page-hero"` を許可
 
-- `lg:` 以上で master-detail 2カラム
-- それ以下では **左一覧を上**、選択時に **下に編集パネル展開** の縦積み（`@container/main` で named container 適応）
-- もしくは Drawer で選択時に編集パネルをスライドイン（実装簡易な縦積みを優先候補）
+`Section` モデル自体に変更なし（`type String @db.VarChar(64)` のまま）。registry に `page-hero` type を追加することで対応。
 
-### レスポンシブ breakpoint
+#### 1.3 Migration
 
-`admin-ui/forms.md` 「左1枚 + 右複数カード」と整合する `lg:grid-cols-[280px_1fr]`。`@container/main` 名前空間で `@5xl/main:` 適応。
+`prisma/migrations/<timestamp>_drop_page_hero_to_section/migration.sql`:
 
-### コンポーネント変更
+```sql
+-- 1) ホームページの pageHero JSON を Section に挿入
+INSERT INTO sections (id, "pageId", "type", "config", "order", "isActive", "createdAt", "updatedAt")
+SELECT
+  gen_random_uuid(),
+  p.id,
+  'page-hero',
+  COALESCE(p."pageHero", '{}'::jsonb),
+  -1,                             -- 先頭固定（他セクション order >= 0）
+  TRUE,
+  now(),
+  now()
+FROM pages p
+WHERE p."pageHero" IS NOT NULL;
 
-#### 新規作成
-
-| ファイル                                               | 役割                                                                      |
-| ------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `pages/[slug]/edit/_components/SectionListSidebar.tsx` | 左サイドのセクション一覧（PageHero + sections 統合表示・active 状態管理） |
-| `pages/[slug]/edit/_components/SectionListItem.tsx`    | 一覧の 1 行（type icon + ラベル + active 状態）                           |
-| `pages/[slug]/edit/_components/SectionEditPanel.tsx`   | 右の編集パネル（PageHero or Section 編集を統一エントリ）                  |
-| `pages/[slug]/edit/_components/section-edit-state.ts`  | active section ID の nuqs query state SSoT                                |
-
-#### 変更
-
-| ファイル                                                   | 変更内容                                                                            |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `pages/[slug]/edit/_components/PageEditor.tsx`             | 縦積み → master-detail へ書き換え                                                   |
-| `pages/[slug]/edit/_components/SectionEditor.tsx`          | カード見出し+保存だけのラッパー → 削除（SectionEditPanel に吸収）                   |
-| `pages/[slug]/edit/_components/PageHeroEditor.tsx`         | variant 別の手書きフォーム → AutoSectionForm 互換のフィールドメタ駆動に書き換え     |
-| `pages/[slug]/_sections/_components/auto-section-form.tsx` | content グループ内をさらに「テキスト/画像/ボタン・リンク」サブグループ化            |
-| `shared/lib/sections/field-registry.ts`                    | `FieldMeta.subGroup` を追加（`"text" \| "image" \| "button" \| "other"`、optional） |
-
-#### 削除候補
-
-なし（Phase 1 では既存ファイルは保持、書き換えのみ）。
-
-### データフロー
-
-```
-URL: /admin/pages/home/edit?tab=content&section=hero
-              │
-              ▼
-       PageEditor (Tabs)
-              │
-              ├── tab=content
-              │   ▼
-              │   PageEditor 本体
-              │   ┌─────────────┬──────────────────────┐
-              │   │             │                       │
-              │   ▼             ▼                       │
-              │  SectionListSidebar    SectionEditPanel │
-              │   - PageHero 行       (active section)  │
-              │   - sections.map     ┌─ "hero"          │
-              │   - 選択 → URL 更新    │   PageHeroEditor│
-              │                       └─ section.id      │
-              │                           AutoSectionForm│
-              │                                          │
-              └── tab=seo
-                  ▼
-                  PageSeoForm (現状維持)
+-- 2) Page.pageHero 列削除
+ALTER TABLE pages DROP COLUMN "pageHero";
 ```
 
-### URL state
+`prisma migrate dev` がローカル dev DB の drift で失敗する場合は、`prisma migrate diff --script` + `db execute` + `migrate resolve --applied` の手順（`git-migration.md` 参照）を使う。
+
+**データ損失リスク**: ホームページの pageHero JSON がそのまま `Section.config` に入る。`PageHero` schema と `Section.config` schema を同形にすることで損失なし。
+
+### 2. PageHero を registry に登録
+
+#### 2.1 新規 type 定義
+
+`src/shared/lib/sections/definitions/page-hero/`:
+
+```
+definitions/page-hero/
+  schema.ts        # discriminated union (editorial-split | compact | minimal)
+  defaults.ts      # default for each variant
+  index.ts         # SectionDefinition export
+```
+
+`schema.ts`:
 
 ```typescript
-// page-edit-tabs.ts に統合
-export const PAGE_EDIT_TAB_VALUES = ["content", "seo"] as const;
+import { z } from "zod";
+import { field } from "@/shared/lib/sections/field-registry";
 
-// section-edit-state.ts (新規)
-// content タブ内で active section を URL に保持
-// 値: "hero" | <section.id (uuid)>
-//   - "hero" は PageHero 専用 sentinel
-//   - sections の id に該当しなければ「最初の active section or hero」にフォールバック
+const editorialSplitSchema = z.object({
+  variant: z.literal("editorial-split"),
+  label: field.text("ラベル", { subGroup: "text" }),
+  title: field.text("タイトル", { subGroup: "text" }),
+  description: field.textarea("説明", { subGroup: "text" }),
+  images: field.array("ヒーロー画像", {
+    subGroup: "image",
+    fields: {
+      url: field.image("画像 URL"),
+      alt: field.text("代替テキスト"),
+    },
+  }),
+  transition: field.select("トランジション", {
+    subGroup: "image",
+    options: [
+      { value: "crossfade", label: "クロスフェード" },
+      { value: "ken-burns", label: "ケン・バーンズ" },
+      { value: "clip-reveal", label: "クリップリビール" },
+      { value: "scale-fade", label: "スケールフェード" },
+    ],
+    default: "crossfade",
+  }),
+  buttonText: field.text("ボタン文言", { subGroup: "button" }),
+  buttonUrl: field.url("ボタン URL", { subGroup: "button" }),
+});
+
+const compactSchema = z.object({
+  variant: z.literal("compact"),
+  image: z.object({
+    url: field.image("画像 URL"),
+    alt: field.text("代替テキスト"),
+  }),
+  label: field.text("ラベル", { subGroup: "text" }),
+  title: field.text("タイトル", { subGroup: "text" }),
+  description: field.textarea("説明", { subGroup: "text" }),
+});
+
+const minimalSchema = z.object({
+  variant: z.literal("minimal"),
+  eyebrow: field.text("アイブロー", { subGroup: "text" }).optional(),
+  title: field.text("タイトル", { subGroup: "text" }),
+  description: field.textarea("説明", { subGroup: "text" }),
+});
+
+export const pageHeroConfigSchema = z.discriminatedUnion("variant", [
+  editorialSplitSchema,
+  compactSchema,
+  minimalSchema,
+]);
 ```
 
-`nuqs` の `parseAsString.withDefault("hero")` + `withOptions({ history: "push", shallow: true })`。
+#### 2.2 削除対象（旧 PageHero コード）
 
-### フィールド意味別グループ化
+- `src/shared/lib/sections/page-hero/schema.ts` → 削除
+- `src/shared/lib/sections/page-hero/defaults.ts` → 削除
+- `src/shared/lib/sections/page-hero/index.ts` → 削除（ディレクトリごと）
+- `parsePageHero` / `pageHeroSchema` の参照を全部 `validateSectionConfig("page-hero", ...)` に置換
+- `PageHeroEditor.tsx` → 削除
+- `updatePageHero` Server Action → 削除（`updatePageSection` で代替）
 
-`FieldMeta` に optional な `subGroup` を追加:
+#### 2.3 公開側 renderer
+
+`HomepageSections` / `PageHero` Server Component:
 
 ```typescript
+// 変更前
+<HomepageSections pageHero={page.pageHero} sections={...} />
+
+// 変更後
+const pageHeroSection = sections.find((s) => s.type === "page-hero");
+const otherSections = sections.filter((s) => s.type !== "page-hero");
+<HomepageSections pageHeroSection={pageHeroSection} sections={otherSections} />
+```
+
+`PageHero` コンポーネントは props に `Section` の `config` を受け取る形に変更。
+
+### 3. field-registry に subGroup を追加
+
+```typescript
+// src/shared/lib/sections/field-registry.ts
 type FieldSubGroup = "text" | "image" | "button" | "other";
 
 interface FieldMeta {
   label: string;
   group: "content" | "design" | "advanced";
-  subGroup?: FieldSubGroup; // 新規（content グループのみ意味あり）
-  // ...
+  subGroup?: FieldSubGroup; // content グループのみ意味あり
+  // ... 既存
 }
 ```
 
-`field.text(label, opts?)` の opts に `subGroup` を追加し、各 section schema で適切に分類:
+各 `field.*` ヘルパー opts に `subGroup?: FieldSubGroup` を追加。
+
+22 (+ page-hero = 23) section schema を一括 grep で対応:
+
+- `field.text`/`textarea` → 主に `subGroup: "text"`
+- `field.image` → `subGroup: "image"`
+- `field.url` （ボタン URL） → `subGroup: "button"`
+- ボタン用 array → `subGroup: "button"`
+- それ以外 → 未指定（→ "other" にフォールバック）
+
+### 4. Section CRUD + 並び替え Server Actions
+
+新規実装（`src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts` に追加）:
+
+| Action                    | Signature                                                                               |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `createPageSection`       | `(pageId: string, type: SectionType, order?: number) => MutationResult<{ id: string }>` |
+| `deletePageSection`       | `(id: string) => MutationResult<{ id: string }>`                                        |
+| `duplicatePageSection`    | `(id: string) => MutationResult<{ id: string }>`                                        |
+| `togglePageSectionActive` | `(id: string) => MutationResult<{ isActive: boolean }>`                                 |
+| `reorderPageSections`     | `(pageId: string, orderedIds: string[]) => MutationResult<{ count: number }>`           |
+
+すべて `executeAdminMutationResult` パターン（`auth-patterns.md` 準拠）、`afterSuccess` で:
 
 ```typescript
-// 例: cta/schema.ts
-sectionLabel: field.text("ラベル", { subGroup: "text" }),
-title: field.text("タイトル", { subGroup: "text" }),
-description: field.textarea("説明", { subGroup: "text" }),
-buttons: field.array("ボタン", { subGroup: "button", fields: { ... } }),
+updateTag(CACHE_TAGS.SECTIONS);
+updateTag(CACHE_TAGS.PAGE_SECTIONS);
+updateTag(CACHE_TAGS.PAGES);
+updateTag(getCacheTag.pages.detail(pageId));
 ```
 
-`subGroup` 未指定は `"other"` 扱い。AutoSectionForm 側で:
+`reorderPageSections` は `prisma.$transaction` で `order` 列を一括更新。
+
+`createPageSection` は registry の defaults から `config` を生成。`page-hero` type は **1 ページに 1 つ** 制約（既存があれば error）。
+
+### 5. master-detail UI
+
+#### 5.1 レイアウト
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ AdminDetailLayout: ← / 「ホームページ を編集」 / [Badge][Pub][Preview] │
+├─────────────────────────────────────────────────────────────────┤
+│ Tabs: [コンテンツ] [SEO・OGP]                                     │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌──────────────────┬────────────────────────────────────────┐  │
+│ │ セクション一覧     │ 選択中セクションの編集パネル          │  │
+│ │ (lg:280px sticky) │                                         │  │
+│ │                   │ ─ 種別 [page-hero ▼] (variant 切替)    │  │
+│ │ [+ セクション追加] │                                         │  │
+│ │                   │ ▼ テキスト                             │  │
+│ │ ⠿ ヒーロー [✓]   │   ラベル / タイトル / 説明              │  │
+│ │ ⠿ お知らせ [✓]   │ ▼ 画像                                  │  │
+│ │ ⠿ スペース紹介[✓]│   ヒーロー画像 (array)                  │  │
+│ │ ⠿ コンセプト [✓] │ ▼ ボタン・リンク                        │  │
+│ │ ⠿ 利用の流れ [✓] │   ボタン文言 / URL                      │  │
+│ │ ⠿ お問合せ [✓]   │ ▷ デザイン (折)                         │  │
+│ │                   │ ▷ 詳細設定 (折)                         │  │
+│ │ ⠿ = drag handle   │                                         │  │
+│ │ [✓] = isActive    │                              [保存]     │  │
+│ │ kebab: 複製/削除   │                                         │  │
+│ └──────────────────┴────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+`lg:` 以上で 2 カラム、それ以下で縦積み。
+
+#### 5.2 新規コンポーネント
+
+| ファイル                                               | 役割                                                                     |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `pages/[slug]/edit/_components/SectionListSidebar.tsx` | 左サイド：セクション一覧 (dnd-kit Sortable)、+ ボタン                    |
+| `pages/[slug]/edit/_components/SectionListItem.tsx`    | 1 行：drag handle / icon / label / kebab メニュー / active toggle        |
+| `pages/[slug]/edit/_components/SectionEditPanel.tsx`   | 右パネル：選択中 section の編集（discriminated union variant 対応）      |
+| `pages/[slug]/edit/_components/AddSectionDialog.tsx`   | + ボタン → type picker dialog（filter: page-hero は 1 ページ 1 つ）      |
+| `pages/[slug]/edit/_components/section-edit-state.ts`  | nuqs query state SSoT for `?section=<id>`                                |
+| `pages/[slug]/edit/_components/SectionTypePicker.tsx`  | type 選択 UI（icon + label + description）。homepage-\* は homepage のみ |
+
+#### 5.3 削除対象
+
+- `pages/[slug]/edit/_components/SectionEditor.tsx` → SectionEditPanel に吸収、削除
+- `pages/[slug]/edit/_components/PageHeroEditor.tsx` → 削除（SectionEditPanel が page-hero も扱う）
+
+#### 5.4 変更対象
+
+- `pages/[slug]/edit/_components/PageEditor.tsx` → master-detail へ書き換え
+- `pages/[slug]/_sections/_components/auto-section-form.tsx` → content グループ内を subGroup でセクション分割描画
+
+### 6. URL state
+
+```typescript
+// section-edit-state.ts
+import { parseAsString } from "nuqs";
+
+export const sectionEditQueryParser = parseAsString
+  .withDefault("")
+  .withOptions({ history: "push", shallow: true });
+
+// PageEditor で
+const [activeSectionId, setActiveSectionId] = useQueryState(
+  "section",
+  sectionEditQueryParser,
+);
+
+// 空文字 → sections[0]?.id にフォールバック (render 中 derive)
+const resolvedActiveId = activeSectionId || (sections[0]?.id ?? "");
+```
+
+`shallow: true` のため SC 再フェッチなし、Client 内で section 切替のみ。
+
+### 7. AutoSectionForm の subGroup 対応
 
 ```tsx
-{/* content グループを subGroup でさらに分類して描画 */}
-<FieldGroupSection title="テキスト" icon={IconTypography}>
-  {textFields.map(renderField)}
-</FieldGroupSection>
-<FieldGroupSection title="画像" icon={IconPhoto}>
-  {imageFields.map(renderField)}
-</FieldGroupSection>
-<FieldGroupSection title="ボタン・リンク" icon={IconLink}>
-  {buttonFields.map(renderField)}
-</FieldGroupSection>
-{otherFields.length > 0 && <div>{otherFields.map(renderField)}</div>}
+// content フィールドを subGroup で分類
+const textFields = contentFields.filter((f) => f.meta.subGroup === "text");
+const imageFields = contentFields.filter((f) => f.meta.subGroup === "image");
+const buttonFields = contentFields.filter((f) => f.meta.subGroup === "button");
+const otherFields = contentFields.filter(
+  (f) => !f.meta.subGroup || f.meta.subGroup === "other",
+);
+
+return (
+  <form>
+    {textFields.length > 0 && (
+      <FieldGroupSection title="テキスト" icon={IconTypography}>
+        {textFields.map(renderField)}
+      </FieldGroupSection>
+    )}
+    {imageFields.length > 0 && (
+      <FieldGroupSection title="画像" icon={IconPhoto}>
+        {imageFields.map(renderField)}
+      </FieldGroupSection>
+    )}
+    {buttonFields.length > 0 && (
+      <FieldGroupSection title="ボタン・リンク" icon={IconLink}>
+        {buttonFields.map(renderField)}
+      </FieldGroupSection>
+    )}
+    {otherFields.length > 0 && (
+      <div className="space-y-4">{otherFields.map(renderField)}</div>
+    )}
+    {/* design / advanced は既存 Accordion */}
+  </form>
+);
 ```
 
-`FieldGroupSection` は意味別の見出し付きラッパー（折りたたみなし、常時展開で視覚的整理のみ）。
+`FieldGroupSection` は border-top + 見出しアイコン + ラベル のシンプルなラッパー（折りたたみなし）。
 
-### PageHero の AutoSectionForm 移行
-
-`page-hero/schema.ts` の variant 別 schema は既に Zod。これに `field.text()` 等を再注入すれば AutoSectionForm で描画可能:
+### 8. seed.ts 更新
 
 ```typescript
-// page-hero/schema.ts (改修案)
-const editorialSplitFields = {
-  variant: z.literal("editorial-split"),
-  label: field.text("ラベル", { subGroup: "text" }),
-  title: field.text("タイトル", { subGroup: "text" }),
-  description: field.textarea("説明", { subGroup: "text" }),
-  images: field.array("ヒーロー画像", { subGroup: "image", fields: { ... } }),
-  transition: field.select("トランジション", { subGroup: "image", options: [...], default: "crossfade" }),
-  buttonText: field.text("ボタン文言", { subGroup: "button" }),
-  buttonUrl: field.url("ボタン URL", { subGroup: "button" }),
-};
+// 変更前: page.pageHero に直接書き込み
+await prisma.page.upsert({
+  where: { slug: "home" },
+  create: { ..., pageHero: defaultPageHeroHome as Prisma.InputJsonValue },
+  update: { pageHero: ... },
+});
+
+// 変更後: page-hero section を upsert
+const homePage = await prisma.page.upsert({
+  where: { slug: "home" },
+  create: { ..., slug: "home", title: "ホーム" },
+  update: {},
+});
+
+await prisma.section.upsert({
+  where: { /* unique constraint or findFirst + create/update */ },
+  create: {
+    pageId: homePage.id,
+    type: "page-hero",
+    config: defaultPageHeroHome,
+    order: -1,
+    isActive: true,
+  },
+  update: { /* idempotent */ },
+});
 ```
 
-variant 切替は AutoSectionForm の上に簡易 Select を別配置（discriminated union のため variant 自身は registry に乗らない）。
+`Section` に `pageId + type` の partial unique index を追加するか、`findFirst({ pageId, type: "page-hero" })` ベースで upsert するかは plan で決定。
 
-`updatePageHero` action はそのまま使う（slug === "home" 制約は Phase 1 維持）。
+### 9. registry 外フィールドの正規化
 
-### 既存契約・互換性
+#### 9.1 `post-list.categoryId`
 
-- `Section.config Json` のスキーマは変えない → 全既存データそのまま動作
-- `Page.pageHero Json` も変えない
-- `field-registry` への `subGroup` 追加は optional のため、既存 22 section type に影響なし（subGroup 未指定 → "other" にフォールバック → 既存と同じ縦並び）
+```typescript
+// 変更前 (definitions/post-list/schema.ts)
+categoryId: z.string().uuid().optional(),
 
-### テスト方針
+// 変更後
+categoryId: field
+  .select("カテゴリで絞り込み", {
+    subGroup: "other",
+    options: [], // 動的に PostCategory list を fetch して注入する仕組みが必要
+    default: "",
+  })
+  .optional(),
+```
 
-- **Unit**: `field-registry` の `subGroup` メタ取得テスト追加
-- **Unit**: `extractSchemaFields` が subGroup を返すことを確認
-- **Integration**: 既存 `architecture-boundaries.test.ts` への影響確認
-- **E2E (任意)**: `/admin/pages/home/edit` で master-detail が描画されることを確認、section 切替で URL 更新を確認
-- 既存 section 22 種すべてが新 UI で描画できることをローカル目視で確認（manual smoke test）
+注入 mechanics: `SectionEditPanel` で section type を見て、`post-list` なら `getPostCategories()` を SC で fetch して props で渡す（または Client で `useQuery`）。実装は plan で決定。
 
-### リスク
+**簡易対応の代替案**: `categoryId` は registry に乗せず、`post-list` 専用カスタムフィールドとして `SectionEditPanel` 内で別 UI レンダリング（`AutoSectionForm` の後に追加）。スコープを抑えるならこちら。
 
-| リスク                                                     | 影響                                  | 対策                                                                                                     |
-| ---------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| nuqs `tab=content&section=xxx` の depth 1 keys 制限        | URL state 競合                        | 既存 `tab` と直交キーで定義、`shallow: true` で SC 再フェッチを抑制                                      |
-| AutoSectionForm の form state を section 切替で reset 必要 | 切替時に編集中値が他 section に漏れる | `<SectionEditPanel key={activeId}>` で remount 強制（既存 `key={section.id}` パターンに整合）            |
-| PageHero の variant 切替時 form reset                      | variant 切替で別フィールドが必要      | `variant` Select を AutoSectionForm 外に置き、value 変更で AutoSectionForm を `key={variant}` で remount |
-| field-registry の `subGroup` propagation 漏れ              | 一部フィールドが「その他」に落ちる    | 22 section schema を一括 grep で確認、必要箇所に subGroup 注入する commit を分割                         |
-| @lg breakpoint 以下のレイアウト崩れ                        | モバイルで操作不能                    | 縦積み fallback 実装＋ Playwright で 390px 幅を smoke test                                               |
+→ **plan で簡易対応（カスタム UI）を採用予定**。registry の動的 options 対応は Phase 3 へ。
 
-### 計画される commit 分割（writing-plans で詳細化）
+### 10. テスト方針
 
-1. `feat(field-registry): add optional subGroup meta to FieldMeta` (no behavioral change)
-2. `feat(sections): annotate 22 section schemas with subGroup`
-3. `feat(page-edit): introduce SectionListSidebar / SectionEditPanel skeleton`
-4. `feat(page-edit): wire master-detail layout in PageEditor`
-5. `feat(page-edit): URL state for active section (nuqs)`
-6. `refactor(page-hero): convert PageHeroEditor to AutoSectionForm-driven`
-7. `feat(auto-section-form): render content fields by subGroup with section headings`
-8. `chore(page-edit): drop SectionEditor wrapper card`
-9. `test(field-registry): subGroup tests + manual smoke test checklist`
+#### 10.1 Migration テスト
 
-最終 commit 数は plan で確定。
+- `__tests__/integration/page-hero-migration.test.ts`
+  - migration 適用前に Page.pageHero に JSON 配置 → migration 適用後 → Section テーブルに type=page-hero が存在 + 同じ JSON が config にある + Page テーブルから pageHero 列削除済
+  - `getRealDatabaseUrl()` helper で `.env.local` 経由（migration 系 integration test 標準パターン）
+
+#### 10.2 Server Action テスト
+
+- `createPageSection` / `deletePageSection` / `duplicatePageSection` / `togglePageSectionActive` / `reorderPageSections` 各 mock-based unit test
+- page-hero 重複エラー
+- `executeAdminMutationResult` 経由の権限・監査ログ動作確認
+
+#### 10.3 field-registry テスト
+
+- `subGroup` メタ取得テスト
+- 全 23 section schema で subGroup propagation 確認
+
+#### 10.4 Manual smoke test
+
+- `/admin/pages/home/edit` で master-detail が描画
+- セクション選択 → URL 更新 → 編集パネル切替
+- - 追加 → type picker → 新規セクション
+- kebab 複製 → 新規 section が一覧に追加
+- kebab 削除 → 確認ダイアログ → 削除
+- DnD で並び替え → DB の order 更新確認
+- isActive toggle → プレビューで非表示確認
+- public `/` (home) でも page-hero section が正しく表示
+- 全 23 section type が新 UI で描画可能
+
+### 11. 公式準拠事項
+
+| 項目                         | 公式準拠先                                                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Prisma destructive migration | [Prisma Migrate](https://www.prisma.io/docs/orm/prisma-migrate) — `migrate dev --create-only` でレビュー後 apply |
+| Server Action 認証           | `auth-patterns.md` §executeAdminMutationResult                                                                   |
+| Zod 4 discriminated union    | [Zod 4 docs](https://zod.dev/?id=discriminated-unions)                                                           |
+| nuqs URL state               | [nuqs docs](https://nuqs.dev) — `parseAsString.withDefault().withOptions({ shallow: true })`                     |
+| dnd-kit Sortable             | [dnd-kit Sortable](https://docs.dndkit.com/presets/sortable) — RHF + useFieldArray と同パターン                  |
+| 監査ログ                     | `executeAdminMutationResult` 経由（fire-and-forget）                                                             |
+| Cache invalidation           | `updateTag` + `getCacheTag.pages.detail(pageId)`                                                                 |
+
+### 12. リスク・mitigation
+
+| リスク                                                       | 影響                     | 対策                                                                                                                 |
+| ------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| destructive migration が production の pageHero データを失う | データ損失               | migration の INSERT INTO sections SELECT ... を data migration として明示。`COALESCE` で null も拾う                 |
+| dev DB drift で `prisma migrate dev` が reset 要求           | 開発停止                 | `prisma migrate diff --script` + `db execute` + `migrate resolve --applied` の手動パターン適用（`git-migration.md`） |
+| Section.config の page-hero schema mismatch                  | Zod parse 失敗で UI 空白 | migration 前に既存 Page.pageHero JSON を `pageHeroConfigSchema.safeParse()` で検証（migration script 内）            |
+| 公開側 renderer 切替漏れ                                     | 本番でホームページ崩壊   | grep で `page.pageHero` 全参照を列挙、修正、検証で確実に除去                                                         |
+| seed の page-hero 二重作成                                   | seed 二度実行で エラー   | `findFirst` + `create or update` で idempotent 化                                                                    |
+| 23 section schema 全部に subGroup 注入の手間                 | implementer 工数         | grep で field.\* 呼び出しを列挙、systematic 注入                                                                     |
+| Phase 1 commit 数が多すぎて context 枯渇                     | implementation 中断      | subagent 分割 + 必要なら session handoff（`handoff memory`）                                                         |
+
+### 13. 計画される commit 分割（writing-plans で詳細化）
+
+#### A. データ層 destructive migration（先頭）
+
+1. `feat(prisma): migrate Page.pageHero to Section type=page-hero, drop column`
+
+#### B. Section レジストリへの page-hero 登録 + 旧 PageHero 削除
+
+2. `feat(sections): register page-hero type with discriminated union variants`
+3. `chore(sections): drop deprecated page-hero/{schema,defaults,index}.ts`
+4. `refactor(public): HomepageSections reads page-hero section instead of page.pageHero`
+5. `chore(seed): convert seedPages to insert page-hero section`
+6. `refactor(actions): drop updatePageHero, fold into updatePageSection`
+
+#### C. field-registry subGroup
+
+7. `feat(field-registry): add optional subGroup to FieldMeta`
+8. `feat(sections): annotate 23 section schemas with subGroup`
+
+#### D. Section CRUD + 並び替え Server Actions
+
+9. `feat(actions): createPageSection / deletePageSection / duplicatePageSection`
+10. `feat(actions): togglePageSectionActive / reorderPageSections`
+
+#### E. master-detail UI
+
+11. `feat(page-edit): SectionListSidebar + SectionListItem (no DnD yet)`
+12. `feat(page-edit): SectionEditPanel + variant Select for page-hero`
+13. `feat(page-edit): AddSectionDialog + SectionTypePicker`
+14. `feat(page-edit): URL state for active section (nuqs)`
+15. `feat(page-edit): wire master-detail layout in PageEditor, drop SectionEditor`
+16. `feat(page-edit): drag-and-drop reorder with dnd-kit`
+17. `feat(auto-section-form): render content fields by subGroup with section headings`
+18. `chore(page-edit): drop PageHeroEditor`
+
+#### F. テスト
+
+19. `test(integration): page-hero migration data preservation`
+20. `test(actions): section CRUD + reorder unit tests`
+
+合計 20 commits（plan で粒度再調整可、最大 22 程度に収める）。
+
+### 14. ロールバック戦略
+
+destructive migration のため rollback には以下が必要:
+
+1. Section テーブルから `type = "page-hero"` の行を `Page.pageHero` に書き戻す逆 migration
+2. `Page.pageHero` 列を再追加
+
+production で migration 後 24h 以内なら逆 migration を準備（plan に script 草案）。それ以降は `Section` を SSoT として運用継続。
 
 ---
 
-## Phase 2 ロードマップ（参考）
+## Out of Scope（次回 spec へ）
 
-Phase 1 完了後に別 spec を作成。
+- ❌ Live preview iframe 連動（現状の別タブで OK と確認済み）
+- ❌ autosave / unsaved warning / スケジュール公開 / 履歴管理
+- ❌ ボタンの色・variant 等装飾系フィールドの追加（実利用後にデータドリブンで）
+- ❌ 画像キャプション・alt の構造化
+- ❌ post-list 動的 categoryId options（registry の動的 options 対応）
+- ❌ EDITOR ロール用のセクション単位アクセス制御変更
 
-- `createPageSection(pageId, type)` Server Action
-- `deletePageSection(id)` Server Action
-- `duplicatePageSection(id)` Server Action
-- `togglePageSectionActive(id)` Server Action
-- `reorderPageSections(pageId, orderedIds[])` Server Action
-- 左サイドバーに **「+ セクション追加」ボタン**（type picker dialog）
-- 各 SectionListItem に **kebab メニュー**（複製・削除・有効/無効切替）
-- 左サイドバーで **dnd-kit による drag-and-drop 並び替え**
-- システムページの場合 `isSystemPage` で操作制限（既存セクションの並び替え・toggle は許可、削除は不可）
+## ロードマップ（参考）
 
-## Phase 3 ロードマップ（参考）
-
-- `post-list.categoryId` を field-registry 経由で `field.select` 化（PostCategory list を Server Component で fetch して options 注入）
-- `cta.buttons[].variant` 等装飾系フィールドの拡張
-- 画像フィールドに `caption` / `alt` 追加（必要なら）
-- ユーザーフィードバックで gap が見えてから個別対応
-
-## Phase 4 ロードマップ（参考、destructive migration 必要）
-
-- `Page.pageHero Json` → `Section` テーブルに `type = "page-hero"` で統合
-- destructive migration（data migration + DROP COLUMN）
-- `updatePageHero` 削除、`updatePageSection` に統合
-- seed.ts の `seedPages()` 修正
-
-## Open Questions（ユーザー確認用）
-
-1. **subGroup の分類粒度**: `text / image / button / other` の 4 値で十分か？
-   候補: 加えて `"layout"`（columns / spacing 等を「その他」と区別）など
-2. **モバイル fallback**: 縦積み と Drawer のどちらを優先？
-   推奨: **縦積み**（実装簡易・親指操作に優しい）
-3. **PageHero variant 切替の場所**: 編集パネル先頭の Select か、左サイドの「ヒーロー」項目右に icon ボタンか
-   推奨: **編集パネル先頭の Select**（他セクションと UI 整合）
-4. **Phase 1 commit 数**: 9 commits 分割で OK か、もっと粒度を粗く（1 PR で squash）にするか
-   推奨: **9 commits を保ちつつ 1 PR でまとめる**（git log の追跡性）
+- **Phase 2 (next spec)**: フィールド追加・装飾系拡張・post-list categoryId 動的 options
+- **Phase 3 (next spec)**: autosave・スケジュール公開・履歴管理
+- **Phase 4 (next spec)**: live preview / split view / WYSIWYG
