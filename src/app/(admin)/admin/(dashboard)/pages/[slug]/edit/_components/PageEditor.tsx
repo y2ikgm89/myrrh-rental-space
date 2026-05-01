@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import {
@@ -13,8 +14,11 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import type { PageForEdit } from "@/admin/queries/page-section";
-import { PageHeroEditor } from "./PageHeroEditor";
-import { SectionEditor } from "./SectionEditor";
+import { getAllSectionDefinitions } from "@/shared/lib/sections/registry";
+import { AddSectionDialog } from "./AddSectionDialog";
+import { SectionEditPanel } from "./SectionEditPanel";
+import { SectionListSidebar } from "./SectionListSidebar";
+import { sectionEditQueryParser } from "./section-edit-state";
 import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
 import {
   PAGE_EDIT_TAB_LABELS,
@@ -26,9 +30,16 @@ interface PageEditorProps {
   readonly page: PageForEdit;
 }
 
+const HOMEPAGE_ONLY_TYPES = new Set<string>([
+  "homepage-how-it-works",
+  "homepage-spaces",
+  "homepage-features",
+  "homepage-cta",
+]);
+
 export function PageEditor({ page }: PageEditorProps) {
   const router = useRouter();
-  const handleSaved = () => router.refresh();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
@@ -36,6 +47,32 @@ export function PageEditor({ page }: PageEditorProps) {
       .withDefault("content")
       .withOptions({ history: "push", shallow: true }),
   );
+
+  const [activeSectionIdRaw, setActiveSectionId] = useQueryState(
+    "section",
+    sectionEditQueryParser,
+  );
+
+  // section URL state を sections[0]?.id にフォールバック（render 中 derive）
+  const activeSectionId =
+    activeSectionIdRaw && page.sections.some((s) => s.id === activeSectionIdRaw)
+      ? activeSectionIdRaw
+      : (page.sections[0]?.id ?? "");
+
+  const activeSection =
+    page.sections.find((s) => s.id === activeSectionId) ?? null;
+
+  // 利用可能な section type を計算（page-hero は既存にあれば除外、
+  // homepage-* は home ページのみ許可）
+  const isHome = page.slug === "home";
+  const hasPageHero = page.sections.some((s) => s.type === "page-hero");
+  const availableTypes = getAllSectionDefinitions()
+    .map((def) => def.type)
+    .filter((type) => {
+      if (type === "page-hero" && hasPageHero) return false;
+      if (HOMEPAGE_ONLY_TYPES.has(type) && !isHome) return false;
+      return true;
+    });
 
   return (
     <Tabs
@@ -59,43 +96,62 @@ export function PageEditor({ page }: PageEditorProps) {
         forceMount
         className="space-y-5 outline-none data-[state=inactive]:hidden"
       >
-        {page.slug === "home" ? (
+        {page.sections.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">ホームヒーロー</CardTitle>
+              <CardTitle className="text-base">セクション未作成</CardTitle>
             </CardHeader>
-            <CardContent>
-              <PageHeroEditor
-                pageSlug={page.slug}
-                initial={page.pageHero}
-                onSaved={handleSaved}
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                このページには編集可能なセクションがまだありません。「追加」ボタンから最初のセクションを作成してください。
+              </p>
+              <SectionListSidebar
+                sections={page.sections}
+                activeSectionId=""
+                onSelect={(id) => void setActiveSectionId(id)}
+                onAddClick={() => setAddDialogOpen(true)}
               />
             </CardContent>
           </Card>
-        ) : null}
-
-        {page.sections.length > 0 ? (
-          page.sections.map((section) => (
-            <SectionEditor
-              key={section.id}
-              section={section}
-              onSectionUpdated={handleSaved}
-            />
-          ))
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                本文テンプレート未作成
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                このページには編集可能な本文セクションがありません。新規ページには固定テンプレートが自動作成されます。
-              </p>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+            <SectionListSidebar
+              sections={page.sections}
+              activeSectionId={activeSectionId}
+              onSelect={(id) => void setActiveSectionId(id)}
+              onAddClick={() => setAddDialogOpen(true)}
+            />
+            {activeSection ? (
+              <SectionEditPanel
+                section={activeSection}
+                onUpdated={() => router.refresh()}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    セクションが選択されていません
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    左の一覧からセクションを選択してください。
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
+
+        <AddSectionDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          pageId={page.id}
+          availableTypes={availableTypes}
+          onCreated={(sectionId) => {
+            void setActiveSectionId(sectionId);
+          }}
+        />
       </TabsContent>
 
       <TabsContent
