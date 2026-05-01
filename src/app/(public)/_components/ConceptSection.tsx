@@ -41,7 +41,8 @@ export function ConceptSection({
 }: ConceptSectionProps): ReactElement {
   const heading = config.heading;
   const body = config.body;
-  const imageUrl = config.imageUrl;
+  const imageUrl = config.image.url;
+  const imageAlt = config.image.alt || (config.heading ?? "コンセプト");
   const imagePosition = config.imagePosition;
   const alignClass = TEXT_ALIGN_CLASS[config.textAlign];
   const layout = parseConceptLayout(config.layout);
@@ -93,7 +94,7 @@ export function ConceptSection({
               <ScrollReveal delay={0.1}>
                 <ParallaxImage
                   src={imageUrl}
-                  alt={config.heading ?? "コンセプト"}
+                  alt={imageAlt}
                   className="relative"
                 />
               </ScrollReveal>
@@ -119,7 +120,7 @@ export function ConceptSection({
             <ScrollReveal delay={0.1}>
               <ParallaxImage
                 src={imageUrl}
-                alt={config.heading ?? "コンセプト"}
+                alt={imageAlt}
                 className="relative h-full min-h-[50svh] md:min-h-[70svh]"
               />
             </ScrollReveal>

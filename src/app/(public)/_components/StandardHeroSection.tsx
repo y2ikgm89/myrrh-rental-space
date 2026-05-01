@@ -115,7 +115,7 @@ export function StandardHeroSection({
 
   const variant = config.variant;
   const hasBackground = !!(
-    config.backgroundImageUrl ||
+    config.backgroundImage.url ||
     (variant === "video" && config.videoUrl)
   );
 
@@ -289,12 +289,12 @@ export function StandardHeroSection({
               </ScrollReveal>
             )}
           </div>
-          {config.backgroundImageUrl && (
+          {config.backgroundImage.url && (
             <div className="relative flex-1">
               <div className="relative aspect-[4/5] w-full overflow-hidden">
                 <Image
-                  src={config.backgroundImageUrl}
-                  alt=""
+                  src={config.backgroundImage.url}
+                  alt={config.backgroundImage.alt}
                   fill
                   sizes="50vw"
                   className="object-cover"
@@ -334,12 +334,12 @@ export function StandardHeroSection({
         >
           <source src={config.videoUrl} />
         </video>
-      ) : config.backgroundImageUrl ? (
+      ) : config.backgroundImage.url ? (
         <div className="absolute inset-0">
           <div ref={imageRef} className="relative h-full w-full">
             <Image
-              src={config.backgroundImageUrl}
-              alt=""
+              src={config.backgroundImage.url}
+              alt={config.backgroundImage.alt}
               fill
               sizes="100vw"
               className="object-cover"

@@ -217,10 +217,10 @@ export function TestimonialSection({
                           "border-t border-border/50 pt-4",
                   )}
                 >
-                  {item.authorImageUrl && (
+                  {item.authorImage.url && (
                     <Image
-                      src={item.authorImageUrl}
-                      alt={item.authorName}
+                      src={item.authorImage.url}
+                      alt={item.authorImage.alt || item.authorName}
                       width={48}
                       height={48}
                       className="h-12 w-12 rounded-full object-cover"
