@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { createCompactImageGroupSchema } from "../_shared/image";
 
 const layouts = ["grid", "carousel", "list"] as const;
 const variants = ["default", "card", "minimal"] as const;
@@ -22,7 +23,7 @@ export const testimonialConfigSchema = z.object({
       content: field.textarea("レビュー内容"),
       authorName: field.text("お客様の名前"),
       authorTitle: field.text("肩書き"),
-      authorImageUrl: field.image("アバター画像"),
+      authorImage: createCompactImageGroupSchema("プロフィール画像"),
       rating: field.number("評価", {
         min: 1,
         max: 5,

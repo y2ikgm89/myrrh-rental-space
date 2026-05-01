@@ -136,11 +136,13 @@ export const heroConfigSchema = z.object({
     .string()
     .max(300, { error: "サブタイトルは300文字以内です" })
     .optional(),
-  backgroundImageUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .optional()
-    .or(z.literal("")),
+  backgroundImage: z
+    .object({
+      url: z.string().default(""),
+      alt: z.string().max(200).default(""),
+      caption: z.string().max(300).default(""),
+    })
+    .default({ url: "", alt: "", caption: "" }),
   buttons: ctaButtonsArraySchema.default([]),
   height: z.enum(heroHeightValues).default("md"),
   heightCustom: z.number().min(20).max(100).default(60).optional(),
@@ -165,11 +167,13 @@ export const heroParallaxConfigSchema = z.object({
     .string()
     .max(300, { error: "サブタイトルは300文字以内です" })
     .default("厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。"),
-  backgroundImageUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .optional()
-    .or(z.literal("")),
+  backgroundImage: z
+    .object({
+      url: z.string().default(""),
+      alt: z.string().max(200).default(""),
+      caption: z.string().max(300).default(""),
+    })
+    .default({ url: "", alt: "", caption: "" }),
   buttons: ctaButtonsArraySchema.default([
     {
       text: "Reserve Now",
@@ -219,11 +223,13 @@ export const conceptConfigSchema = z.object({
     .default(
       "洗練されたデザインと上質な設備が調和する空間。\nビジネスミーティングからプライベートパーティーまで、\nあらゆるシーンに最適な環境をご用意しています。",
     ),
-  imageUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .optional()
-    .or(z.literal("")),
+  image: z
+    .object({
+      url: z.string().default(""),
+      alt: z.string().max(200).default(""),
+      caption: z.string().max(300).default(""),
+    })
+    .default({ url: "", alt: "", caption: "" }),
   imagePosition: z.enum(imagePositionValues).default("right"),
   textAlign: z.enum(textAlignValues).default("left"),
   layout: z.enum(conceptLayoutValues).default("side-by-side"),
@@ -407,7 +413,12 @@ export const testimonialConfigSchema = z.object({
           .min(1, { error: "名前は必須です" })
           .max(50, { error: "名前は50文字以内です" }),
         authorTitle: z.string().max(100).optional(),
-        authorImageUrl: z.string().url().optional().or(z.literal("")),
+        authorImage: z
+          .object({
+            url: z.string().default(""),
+            alt: z.string().max(200).default(""),
+          })
+          .default({ url: "", alt: "" }),
         rating: z.number().int().min(1).max(5).optional(),
       }),
     )

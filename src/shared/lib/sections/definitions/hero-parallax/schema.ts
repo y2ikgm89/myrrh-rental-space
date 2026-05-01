@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
+import { createImageGroupSchema } from "../_shared/image";
 
 const contentPositions = ["center", "left", "bottom-left"] as const;
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
@@ -24,7 +25,7 @@ export const heroParallaxConfigSchema = z.object({
     maxLength: 300,
     subGroup: "text",
   }),
-  backgroundImageUrl: field.image("背景画像", { subGroup: "image" }),
+  backgroundImage: createImageGroupSchema("背景画像"),
   buttons: createButtonsArraySchema("ボタン"),
   parallaxSpeed: field.number("パララックス速度", {
     min: 0,

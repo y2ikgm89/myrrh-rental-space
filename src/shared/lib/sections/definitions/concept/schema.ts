@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { createImageGroupSchema } from "../_shared/image";
 
 const imagePositions = ["left", "right"] as const;
 const textAligns = ["left", "center", "right"] as const;
@@ -24,7 +25,7 @@ export const conceptConfigSchema = z.object({
     maxLength: 1000,
     subGroup: "text",
   }),
-  imageUrl: field.image("メイン画像", { subGroup: "image" }),
+  image: createImageGroupSchema("メイン画像"),
   imagePosition: field.select("画像の位置", {
     options: imagePositions,
     default: "right",
