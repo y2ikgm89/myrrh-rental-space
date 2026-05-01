@@ -180,7 +180,7 @@ export async function SectionRenderer({
       const config = getPostListConfig(section.config);
       const rawPosts = await getPublishedPosts(
         config.maxItems,
-        config.categoryId,
+        config.categoryId || undefined,
       );
       const posts: PostData[] = rawPosts.map((p) => ({
         id: p.id,
@@ -206,13 +206,16 @@ export async function SectionRenderer({
             question: item.question,
             answer: item.answer,
           }))
-        : (await getPublishedFaqItems(config.maxItems, config.categoryId)).map(
-            (f) => ({
-              id: f.id,
-              question: f.question,
-              answer: f.answer,
-            }),
-          );
+        : (
+            await getPublishedFaqItems(
+              config.maxItems,
+              config.categoryId || undefined,
+            )
+          ).map((f) => ({
+            id: f.id,
+            question: f.question,
+            answer: f.answer,
+          }));
       return <FaqListSection config={config} items={items} style={resolved} />;
     }
 

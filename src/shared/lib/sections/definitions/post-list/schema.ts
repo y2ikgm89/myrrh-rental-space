@@ -36,10 +36,11 @@ export const postListConfigSchema = z.object({
     maxLength: 200,
     subGroup: "button",
   }),
-  categoryId: z
-    .string()
-    .uuid({ error: "有効なUUIDを入力してください" })
-    .optional(),
+  categoryId: field.dynamicSelect("カテゴリで絞り込み", {
+    source: "postCategories",
+    subGroup: "other",
+    helpText: "未指定の場合、全カテゴリの記事を表示",
+  }),
   layout: field.select("レイアウト", {
     options: layouts,
     default: "grid",

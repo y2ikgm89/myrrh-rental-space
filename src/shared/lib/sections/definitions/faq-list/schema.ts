@@ -17,10 +17,11 @@ export const faqListConfigSchema = z.object({
     maxLength: 100,
     subGroup: "text",
   }),
-  categoryId: z
-    .string()
-    .uuid({ error: "有効なUUIDを入力してください" })
-    .optional(),
+  categoryId: field.dynamicSelect("カテゴリで絞り込み", {
+    source: "faqCategories",
+    subGroup: "other",
+    helpText: "未指定の場合、全カテゴリのFAQを表示",
+  }),
   maxItems: field.number("最大表示件数", {
     min: 1,
     max: 50,

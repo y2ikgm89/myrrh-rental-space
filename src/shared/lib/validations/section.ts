@@ -317,7 +317,7 @@ export const postListConfigSchema = z.object({
     .max(50, { error: "テキストは50文字以内です" })
     .default("全ての記事"),
   viewAllUrl: viewAllUrlSchema.default("/posts"),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().or(z.literal("")).default(""),
   layout: z.enum(postLayoutValues).default("grid"),
   columns: z.number().int().min(1).max(4).default(3),
   imageAspect: z.enum(postImageAspectValues).default("16:9"),
@@ -333,7 +333,7 @@ export const faqListConfigSchema = z.object({
     .string()
     .max(100, { error: "タイトルは100文字以内です" })
     .default("よくあるご質問"),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().or(z.literal("")).default(""),
   maxItems: z.number().int().min(1).max(50).default(10),
   showViewAllLink: z.boolean().default(true),
   viewAllText: z
