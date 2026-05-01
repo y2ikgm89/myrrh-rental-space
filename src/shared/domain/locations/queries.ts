@@ -43,7 +43,7 @@ function formatLocation(location: {
   city: string | null;
   streetAddress: string | null;
   buildingName: string | null;
-  access: string | null;
+  accessLines: Prisma.JsonValue;
   parkingInfo: string | null;
   amenities: Prisma.JsonValue;
   imageUrl: string;
@@ -78,7 +78,7 @@ function formatLocation(location: {
     city: location.city,
     streetAddress: location.streetAddress,
     buildingName: location.buildingName,
-    access: location.access,
+    accessLines: parseStringArray(location.accessLines),
     parkingInfo: location.parkingInfo,
     amenities: parseAmenities(location.amenities),
     imageUrl: location.imageUrl,
@@ -113,7 +113,7 @@ const LOCATION_FULL_SELECT = {
   city: true,
   streetAddress: true,
   buildingName: true,
-  access: true,
+  accessLines: true,
   parkingInfo: true,
   amenities: true,
   imageUrl: true,
@@ -219,7 +219,7 @@ export async function getLocationBySlug(
           city: true,
           streetAddress: true,
           buildingName: true,
-          access: true,
+          accessLines: true,
           parkingInfo: true,
           amenities: true,
           imageUrl: true,
@@ -251,6 +251,7 @@ export async function getLocationBySlug(
 
   return toPlainObject({
     ...location,
+    accessLines: parseStringArray(location.accessLines),
     amenities: parseAmenities(location.amenities),
     imageUrls: parseStringArray(location.imageUrls),
     businessHours: parseBusinessHours(location.businessHours),

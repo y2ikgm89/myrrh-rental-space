@@ -51,8 +51,14 @@ function toCustomerData(data: CustomerFormData) {
     customerType: data.customerType ?? CustomerType.PERSONAL,
     email: data.email,
     phoneNumber: data.phoneNumber || null,
-    address: data.address || null,
+    postalCode: data.postalCode || null,
+    prefecture: data.prefecture || null,
+    city: data.city || null,
+    streetAddress: data.streetAddress || null,
+    building: data.building || null,
     notes: data.notes || null,
+    marketingOptIn: data.marketingOptIn,
+    phoneContactOptIn: data.phoneContactOptIn,
   };
 }
 

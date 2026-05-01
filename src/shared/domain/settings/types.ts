@@ -46,7 +46,6 @@ export type SettingsData = {
   phoneNumber: string | null;
   faxNumber: string | null;
   email: string | null;
-  address: string | null;
   postalCode: string | null;
   prefecture: string | null;
   city: string | null;
@@ -55,8 +54,6 @@ export type SettingsData = {
   businessHours: BusinessHours | null;
   regularHolidays: string[] | null;
   holidayNotice: string | null;
-  accessInfo: string | null;
-  parkingInfo: string | null;
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;

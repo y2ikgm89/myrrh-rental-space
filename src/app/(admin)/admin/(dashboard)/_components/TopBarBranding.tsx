@@ -31,7 +31,8 @@ export function TopBarBranding({
       alt={displayName}
       width={120}
       height={32}
-      className="h-8 w-auto object-contain"
+      className="object-contain"
+      style={{ width: "auto", height: "2rem" }}
       onError={() => setLogoError(true)}
       priority
     />

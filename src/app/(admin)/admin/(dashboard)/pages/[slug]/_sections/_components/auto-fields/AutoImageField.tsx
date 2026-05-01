@@ -98,7 +98,8 @@ export function AutoImageField({
           isDragOver
             ? "border-primary bg-primary/5"
             : hasImage
-              ? "border-border bg-background"
+              ? // bg-checker: 透過 PNG / SVG の透過部分を市松模様で可視化
+                "border-border bg-checker"
               : "border-border bg-muted hover:border-primary/50",
           (disabled || isBusy) && "opacity-60",
         )}

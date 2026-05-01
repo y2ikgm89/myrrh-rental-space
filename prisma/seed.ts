@@ -347,16 +347,12 @@ async function seedSettings() {
     registrationNumber: "1234567890123",
     phoneNumber: "03-1234-5678",
     email: "info@example.com",
-    address: "東京都渋谷区神宮前1-1-1 サンプルビル",
     postalCode: "150-0001",
     prefecture: "東京都",
     city: "渋谷区",
     streetAddress: "神宮前1-1-1",
     buildingName: "サンプルビル",
-    accessInfo:
-      "JR山手線 原宿駅 表参道口 徒歩3分\n東京メトロ千代田線・副都心線 明治神宮前駅 5番出口 徒歩5分\n東京メトロ銀座線・半蔵門線 表参道駅 A2出口 徒歩8分",
-    parkingInfo:
-      "専用駐車場はございません\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）",
+    // 交通案内・駐車場案内は Location 単位（Location.accessLines / Location.parkingInfo）
     footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
     cancellationDeadlineHours: 24,
     modificationDeadlineHours: 24,
@@ -401,8 +397,10 @@ async function seedLocations() {
       city: "渋谷区",
       streetAddress: "神宮前1-1-1",
       buildingName: "サンプルビル",
-      access:
-        "東京メトロ「表参道駅」A1出口より徒歩5分\nJR「原宿駅」表参道口より徒歩8分",
+      accessLines: [
+        "東京メトロ「表参道駅」A1出口より徒歩5分",
+        "JR「原宿駅」表参道口より徒歩8分",
+      ],
       parkingInfo:
         "専用駐車場 3台（要事前予約）\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）",
       amenities: {
@@ -435,7 +433,7 @@ async function seedLocations() {
       city: "渋谷区",
       streetAddress: "神宮前1-2-3",
       buildingName: "別館ビル",
-      access: "本館より徒歩2分\n表参道駅A1出口より徒歩7分",
+      accessLines: ["本館より徒歩2分", "表参道駅A1出口より徒歩7分"],
       parkingInfo: "専用駐車場はございません。本館駐車場をご利用ください。",
       amenities: {
         wifi: true,
@@ -466,7 +464,10 @@ async function seedLocations() {
       city: "新宿区",
       streetAddress: "西新宿1-1-1",
       buildingName: "新宿タワー",
-      access: "JR「新宿駅」西口直結\n都営大江戸線「新宿西口駅」D5出口直結",
+      accessLines: [
+        "JR「新宿駅」西口直結",
+        "都営大江戸線「新宿西口駅」D5出口直結",
+      ],
       parkingInfo: "新宿タワー地下駐車場（有料・先着順）",
       amenities: {
         wifi: true,

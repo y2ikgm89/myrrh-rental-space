@@ -169,6 +169,151 @@ function SortableImageItem({
 }
 
 // =============================================================================
+// Sortable Access Line Item
+// =============================================================================
+
+type SortableAccessLineItemProps = {
+  id: string;
+  index: number;
+  disabled?: boolean;
+  onRemove: (index: number) => void;
+};
+
+function SortableAccessLineItem({
+  id,
+  index,
+  disabled,
+  onRemove,
+}: SortableAccessLineItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
+
+  const style = {
+    transform: toTranslate3d(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 rounded border p-2",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
+      )}
+    >
+      <div {...attributes} {...listeners}>
+        <DragHandle />
+      </div>
+      <FormField
+        name={`accessLines.${index}.value`}
+        render={({ field }) => (
+          <FormItem className="flex-1">
+            <FormControl>
+              <Input
+                {...field}
+                placeholder="例: 東京メトロ「表参道駅」A1出口より徒歩5分"
+                disabled={disabled}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onRemove(index)}
+        disabled={disabled}
+        aria-label={`経路 ${index + 1} を削除`}
+      >
+        削除
+      </Button>
+    </div>
+  );
+}
+
+// =============================================================================
+// Access Lines Field (useFieldArray + dnd-kit)
+// =============================================================================
+
+function AccessLinesField({ disabled }: { disabled: boolean }) {
+  const dndContextId = useId();
+  const { fields, append, remove, move } = useFieldArray<
+    LocationFormInput,
+    "accessLines"
+  >({ name: "accessLines" });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = fields.findIndex((f) => f.id === String(active.id));
+    const newIndex = fields.findIndex((f) => f.id === String(over.id));
+    if (oldIndex !== -1 && newIndex !== -1) move(oldIndex, newIndex);
+  };
+
+  return (
+    <FormItem>
+      <FormLabel>アクセス</FormLabel>
+      <FormDescription>
+        最寄り駅・路線・徒歩分数等を 1 経路ずつ入力します。並べ替え可。
+      </FormDescription>
+      <div className="space-y-2">
+        <DndContext
+          id={dndContextId}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={fields.map((f) => f.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {fields.map((field, index) => (
+              <SortableAccessLineItem
+                key={field.id}
+                id={field.id}
+                index={index}
+                disabled={disabled}
+                onRemove={remove}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => append({ value: "" })}
+          disabled={disabled || fields.length >= 20}
+        >
+          + 経路を追加
+        </Button>
+        {fields.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            まだ経路がありません。「+ 経路を追加」で 1 行目を追加してください。
+          </p>
+        )}
+      </div>
+    </FormItem>
+  );
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -206,7 +351,7 @@ export function LocationForm({
             city: location.city ?? "",
             streetAddress: location.streetAddress ?? "",
             buildingName: location.buildingName ?? "",
-            access: location.access ?? "",
+            accessLines: location.accessLines.map((value) => ({ value })),
             parkingInfo: location.parkingInfo ?? "",
             amenities: location.amenities as Record<string, boolean>,
             imageUrl: location.imageUrl,
@@ -506,25 +651,7 @@ export function LocationForm({
                   </p>
                 </fieldset>
 
-                <FormField
-                  control={form.control}
-                  name="access"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>アクセス</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder={`例: 渋谷駅から徒歩5分\n地下鉄A出口すぐ`}
-                          rows={3}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <AccessLinesField disabled={isPending} />
 
                 <FormField
                   control={form.control}

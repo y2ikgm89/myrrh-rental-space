@@ -22,8 +22,6 @@ export interface BusinessInfo {
   readonly email: string | null;
   readonly businessHours: unknown;
   readonly holidayNotice: string | null;
-  readonly accessInfo: string | null;
-  readonly parkingInfo: string | null;
 }
 
 /**
@@ -55,7 +53,5 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     email: settings?.email ?? null,
     businessHours: settings?.businessHours ?? null,
     holidayNotice: settings?.holidayNotice ?? null,
-    accessInfo: settings?.accessInfo ?? null,
-    parkingInfo: settings?.parkingInfo ?? null,
   };
 }

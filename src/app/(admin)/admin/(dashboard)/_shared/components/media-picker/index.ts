@@ -7,6 +7,8 @@
 export { MediaPickerDialog } from "./MediaPickerDialog";
 export type { MediaPickerDialogProps } from "./MediaPickerDialog";
 
+export { MediaPickerField } from "./MediaPickerField";
+
 // Tabs
 export { LibraryTab, UrlTab, UploadTab } from "./tabs";
 

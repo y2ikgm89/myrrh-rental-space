@@ -13,7 +13,7 @@ import {
 } from "@/admin/queries/page-section";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { ContentOnlyPageEditor } from "./_components/ContentOnlyPageEditor";
+import { PageEditor } from "./_components/PageEditor";
 import { PublishToggle } from "./_components/PublishToggle";
 import { getPagePreviewHref } from "@/shared/lib/preview-routes";
 import type { Metadata } from "next";
@@ -73,7 +73,7 @@ export default async function EditPagePage({
         </>
       }
     >
-      <ContentOnlyPageEditor key={page.id} page={page} />
+      <PageEditor key={page.id} page={page} />
     </AdminDetailLayout>
   );
 }

@@ -120,7 +120,7 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
                       {href && (
                         <Link
                           href={href}
-                          className="mt-1 inline-block text-xs text-primary hover:underline"
+                          className="mt-1 inline-block whitespace-nowrap text-xs text-primary hover:underline"
                           {...(!notification.isRead && {
                             onClick: () => handleMarkAsRead(notification.id),
                           })}

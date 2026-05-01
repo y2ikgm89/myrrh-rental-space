@@ -3,8 +3,8 @@
 /**
  * ページSEO編集フォーム
  *
- * システムページのSEO/OGP設定を編集するフォーム。
- * CharCount / SerpPreview / SNSシェアプレビューを統合。
+ * 業界標準の「フォーム左 / ライブプレビュー右」レイアウト
+ * （Sanity Studio / Mailchimp / Stripe Dashboard / Webflow CMS 準拠）。
  */
 
 import Image from "next/image";
@@ -72,7 +72,6 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
     formState: { errors, isDirty },
   } = form;
 
-  // リアルタイム監視（CharCount / SerpPreview 用）
   const watchedTitle = useWatch({ control, name: "title" }) || "";
   const watchedMetaDescription =
     useWatch({ control, name: "metaDescription" }) || "";
@@ -91,7 +90,6 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
     },
   });
 
-  // beforeunload protection for unsaved changes
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -103,14 +101,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      {/* SERP プレビュー */}
-      <SerpPreview
-        title={watchedTitle}
-        description={watchedMetaDescription}
-        slug={page.slug}
-      />
-
-      {/* 基本情報 */}
+      {/* 基本SEO設定 — フォーム左 / SERP プレビュー右 */}
       <Card>
         <CardHeader>
           <CardTitle>基本SEO設定</CardTitle>
@@ -118,146 +109,154 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
             検索エンジンに表示されるタイトルと説明文
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="title">ページタイトル *</Label>
-              <CharCount current={watchedTitle.length} max={60} />
-            </div>
-            <Input
-              id="title"
-              {...register("title")}
-              placeholder="ページタイトル"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              検索結果やブラウザタブに表示されるタイトル（推奨:
-              30-60文字、上限200文字）
-            </p>
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
-            )}
-          </div>
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="title">ページタイトル *</Label>
+                  <CharCount current={watchedTitle.length} max={60} />
+                </div>
+                <Input
+                  id="title"
+                  {...register("title")}
+                  placeholder="ページタイトル"
+                  disabled={isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  検索結果やブラウザタブに表示されるタイトル（推奨:
+                  30-60文字、上限200文字）
+                </p>
+                {errors.title && (
+                  <p className="text-sm text-destructive">
+                    {errors.title.message}
+                  </p>
+                )}
+              </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="metaDescription">メタディスクリプション</Label>
-              <CharCount current={watchedMetaDescription.length} max={160} />
-            </div>
-            <Textarea
-              id="metaDescription"
-              {...register("metaDescription")}
-              placeholder="ページの説明文を入力..."
-              rows={3}
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              検索結果に表示される説明文（推奨: 120-160文字）
-            </p>
-            {errors.metaDescription && (
-              <p className="text-sm text-destructive">
-                {errors.metaDescription.message}
-              </p>
-            )}
-          </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="metaDescription">
+                    メタディスクリプション
+                  </Label>
+                  <CharCount
+                    current={watchedMetaDescription.length}
+                    max={160}
+                  />
+                </div>
+                <Textarea
+                  id="metaDescription"
+                  {...register("metaDescription")}
+                  placeholder="ページの説明文を入力..."
+                  rows={3}
+                  disabled={isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  検索結果に表示される説明文（推奨: 120-160文字）
+                </p>
+                {errors.metaDescription && (
+                  <p className="text-sm text-destructive">
+                    {errors.metaDescription.message}
+                  </p>
+                )}
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="metaKeywords">メタキーワード</Label>
-            <Input
-              id="metaKeywords"
-              {...register("metaKeywords")}
-              placeholder="キーワード1, キーワード2, キーワード3"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              カンマ区切りでキーワードを入力（SEO効果は限定的）
-            </p>
-            {errors.metaKeywords && (
-              <p className="text-sm text-destructive">
-                {errors.metaKeywords.message}
+              <div className="space-y-2">
+                <Label htmlFor="metaKeywords">メタキーワード</Label>
+                <Input
+                  id="metaKeywords"
+                  {...register("metaKeywords")}
+                  placeholder="キーワード1, キーワード2, キーワード3"
+                  disabled={isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  カンマ区切りでキーワードを入力（SEO効果は限定的）
+                </p>
+                {errors.metaKeywords && (
+                  <p className="text-sm text-destructive">
+                    {errors.metaKeywords.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                検索結果プレビュー
               </p>
-            )}
+              <div className="lg:sticky lg:top-6">
+                <SerpPreview
+                  title={watchedTitle}
+                  description={watchedMetaDescription}
+                  slug={page.slug}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* OGP設定 */}
+      {/* OGP設定 — フォーム左 / SNS プレビュー右 */}
       <Card>
         <CardHeader>
           <CardTitle>OGP設定</CardTitle>
           <CardDescription>SNSでシェアされた際に表示される情報</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="ogpTitle">OGPタイトル</Label>
-              <CharCount current={watchedOgpTitle.length} max={100} />
-            </div>
-            <Input
-              id="ogpTitle"
-              {...register("ogpTitle")}
-              placeholder="SNSシェア用タイトル（空欄時はページタイトルを使用）"
-              disabled={isPending}
-            />
-            {errors.ogpTitle && (
-              <p className="text-sm text-destructive">
-                {errors.ogpTitle.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="ogpDescription">OGP説明文</Label>
-              <CharCount current={watchedOgpDescription.length} max={200} />
-            </div>
-            <Textarea
-              id="ogpDescription"
-              {...register("ogpDescription")}
-              placeholder="SNSシェア用説明文（空欄時はメタディスクリプションを使用）"
-              rows={2}
-              disabled={isPending}
-            />
-            {errors.ogpDescription && (
-              <p className="text-sm text-destructive">
-                {errors.ogpDescription.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ogpImageUrl">OGP画像</Label>
-            <div className="flex items-start gap-3">
-              {ogpImageUrl ? (
-                <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-lg border">
-                  <Image
-                    src={ogpImageUrl}
-                    alt="OGP画像"
-                    fill
-                    className="object-cover"
-                  />
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ogpTitle">OGPタイトル</Label>
+                  <CharCount current={watchedOgpTitle.length} max={100} />
                 </div>
-              ) : (
-                <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-                  <IconPhotoPlus className="h-6 w-6 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => ogpPicker.openPicker()}
+                <Input
+                  id="ogpTitle"
+                  {...register("ogpTitle")}
+                  placeholder="SNSシェア用タイトル（空欄時はページタイトルを使用）"
                   disabled={isPending}
-                >
-                  <IconPhotoPlus className="mr-1 h-3 w-3" />
-                  画像を選択
-                </Button>
-                {ogpImageUrl && (
-                  <>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {ogpImageUrl}
-                    </p>
+                />
+                {errors.ogpTitle && (
+                  <p className="text-sm text-destructive">
+                    {errors.ogpTitle.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ogpDescription">OGP説明文</Label>
+                  <CharCount current={watchedOgpDescription.length} max={200} />
+                </div>
+                <Textarea
+                  id="ogpDescription"
+                  {...register("ogpDescription")}
+                  placeholder="SNSシェア用説明文（空欄時はメタディスクリプションを使用）"
+                  rows={2}
+                  disabled={isPending}
+                />
+                {errors.ogpDescription && (
+                  <p className="text-sm text-destructive">
+                    {errors.ogpDescription.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ogpImageUrl">OGP画像</Label>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    id="ogpImageUrl"
+                    onClick={() => ogpPicker.openPicker()}
+                    disabled={isPending}
+                  >
+                    <IconPhotoPlus className="mr-1 h-3 w-3" />
+                    画像を選択
+                  </Button>
+                  {ogpImageUrl && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -267,51 +266,55 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
                     >
                       削除
                     </Button>
-                  </>
+                  )}
+                </div>
+                {ogpImageUrl && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {ogpImageUrl}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  推奨サイズ: 1200x630px
+                </p>
+                {errors.ogpImageUrl && (
+                  <p className="text-sm text-destructive">
+                    {errors.ogpImageUrl.message}
+                  </p>
                 )}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              推奨サイズ: 1200x630px
-            </p>
-            {errors.ogpImageUrl && (
-              <p className="text-sm text-destructive">
-                {errors.ogpImageUrl.message}
-              </p>
-            )}
-          </div>
 
-          {/* SNS シェアプレビュー */}
-          <div className="mt-4 max-w-lg rounded-lg border border-border bg-muted/30 p-4">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
-              SNSシェアプレビュー
-            </p>
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              {/* OGP 画像 */}
-              <div className="relative aspect-[1200/630] w-full bg-muted">
-                {ogpImageUrl ? (
-                  <Image
-                    src={ogpImageUrl}
-                    alt="OGP プレビュー"
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <IconPhotoPlus className="h-8 w-8 text-muted-foreground" />
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                SNSシェアプレビュー
+              </p>
+              <div className="lg:sticky lg:top-6">
+                <div className="overflow-hidden rounded-lg border border-border bg-card">
+                  <div className="relative aspect-[1200/630] w-full bg-muted">
+                    {ogpImageUrl ? (
+                      <Image
+                        src={ogpImageUrl}
+                        alt="OGP プレビュー"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <IconPhotoPlus className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              {/* テキスト部分 */}
-              <div className="space-y-1 p-3">
-                <p className="truncate text-sm font-medium">
-                  {watchedOgpTitle || watchedTitle || "OGPタイトル"}
-                </p>
-                <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {watchedOgpDescription ||
-                    watchedMetaDescription ||
-                    "OGP説明文"}
-                </p>
+                  <div className="space-y-1 p-3">
+                    <p className="truncate text-sm font-medium">
+                      {watchedOgpTitle || watchedTitle || "OGPタイトル"}
+                    </p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {watchedOgpDescription ||
+                        watchedMetaDescription ||
+                        "OGP説明文"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -321,7 +324,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
       {/* 送信ボタン */}
       <div className="flex items-center justify-end gap-4">
         {isDirty && (
-          <span className="text-sm text-warning font-medium">
+          <span className="text-sm font-medium text-warning">
             未保存の変更があります
           </span>
         )}
@@ -340,13 +343,12 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
           pendingLabel="保存中..."
         >
           <>
-            <IconDeviceFloppy className="h-4 w-4 mr-2" />
+            <IconDeviceFloppy className="mr-2 h-4 w-4" />
             保存
           </>
         </SubmitButton>
       </div>
 
-      {/* メディアピッカーダイアログ */}
       {ogpPicker.mediaPickerDialog}
     </form>
   );

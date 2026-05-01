@@ -104,11 +104,18 @@ export const locationFormBaseSchema = z.object({
     .max(100, { error: "建物名は100文字以内で入力してください" })
     .nullable()
     .optional(),
-  access: z
-    .string()
-    .max(2000, { error: "アクセス情報は2000文字以内で入力してください" })
-    .nullable()
-    .optional(),
+  // useFieldArray 用に object 配列。各 entry は 1 経路（最寄り駅 + 出口 + 徒歩分数 等）
+  accessLines: z
+    .array(
+      z.object({
+        value: z
+          .string()
+          .min(1, { error: "経路を入力してください" })
+          .max(200, { error: "1 行 200 文字以内で入力してください" }),
+      }),
+    )
+    .max(20, { error: "経路は 20 件以内で入力してください" })
+    .default([]),
   parkingInfo: z
     .string()
     .max(1000, { error: "駐車場案内は1000文字以内で入力してください" })
@@ -203,7 +210,7 @@ export const defaultLocationFormValues: LocationFormInput = {
   city: "",
   streetAddress: "",
   buildingName: "",
-  access: "",
+  accessLines: [],
   parkingInfo: "",
   amenities: {},
   imageUrl: "",

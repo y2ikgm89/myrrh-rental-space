@@ -394,7 +394,9 @@ model Location {
   city            String?
   streetAddress   String?
   buildingName    String?
-  access          String?  @db.Text
+  /// 交通案内（最寄り駅・路線・徒歩分数等）。1 行 = 1 経路の構造化配列。
+  /// 旧 access String 列（改行区切り）を 2026-05-01 に Json 配列化（破壊的変更）。
+  accessLines     Json     @default("[]")
   parkingInfo     String?  @db.Text
   amenities       Json     @default("{}")
   imageUrl        String
@@ -611,7 +613,11 @@ model Customer {
   customerType       CustomerType   @default(PERSONAL)
   email              String         @unique
   phoneNumber        String?
-  address            String?        @db.Text
+  postalCode         String?        @db.VarChar(8)   // 郵便番号 "123-4567" 等
+  prefecture         String?        @db.VarChar(10)  // 都道府県（PREFECTURES SSoT）
+  city               String?        @db.VarChar(100) // 市区町村
+  streetAddress      String?        @db.VarChar(200) // 町名・番地
+  building           String?        @db.VarChar(200) // 建物名・部屋番号
   status             CustomerStatus @default(NEW)
   notes              String?        @db.Text
   totalReservations  Int            @default(0)
@@ -619,6 +625,8 @@ model Customer {
   lastReservationAt  DateTime?
   firstReservationAt DateTime?
   isActive           Boolean        @default(true)
+  marketingOptIn     Boolean        @default(false)  // メルマガ・キャンペーン受信可否
+  phoneContactOptIn  Boolean        @default(true)   // 電話連絡可否
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -1123,10 +1131,10 @@ model Settings {
   businessDescription String?   @db.Text // 事業概要
 
   // Contact Info
+  // 表示用住所は postalCode + prefecture + city + streetAddress + buildingName から派生（SSoT）
   phoneNumber   String?
   faxNumber     String?
   email         String?
-  address       String? @db.Text
   postalCode    String? // 郵便番号
   prefecture    String? // 都道府県
   city          String? // 市区町村
@@ -1139,8 +1147,8 @@ model Settings {
   holidayNotice   String? @db.Text // 休業日のお知らせ
 
   // Access Info (アクセス情報)
-  accessInfo  String? @db.Text // 交通案内（最寄り駅・路線・徒歩分数等）
-  parkingInfo String? @db.Text // 駐車場案内（台数・近隣パーキング等）
+  // 交通案内・駐車場案内は Location 単位（multi-location）が SSoT。
+  // Settings 側の旧 accessInfo / parkingInfo は 2026-05-01 に廃止。
 
   // Email Settings
   senderEmail                       String?

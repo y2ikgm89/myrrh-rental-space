@@ -17,7 +17,8 @@ import { AdminLayoutProvider } from "@/admin/contexts/admin-layout-context";
 import { ConfirmProvider } from "@/admin/contexts/confirm-context";
 import { NotificationPollingProvider } from "./_components/NotificationPollingProvider";
 import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
-import { MainContent } from "./_components/MainContent";
+import { DashboardShell } from "./_components/DashboardShell";
+import { DashboardMain } from "./_components/DashboardMain";
 import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
 import type { ReactElement, ReactNode } from "react";
@@ -34,10 +35,6 @@ import {
   TopBarBrandingFallback,
   TopBarBrandingSlot,
 } from "./_components/TopBarSlots";
-import {
-  TopBarUserBadge,
-  TopBarUserBadgeFallback,
-} from "./_components/TopBarUserBadge";
 import { CommandPaletteProvider } from "./_shared/components/command-palette/CommandPaletteProvider";
 import { CommandPalette } from "./_shared/components/command-palette/CommandPalette";
 import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
@@ -81,31 +78,23 @@ export default async function DashboardLayout({
                   }
                 />
 
-                {/* メインコンテンツエリア */}
-                <MainContent
-                  topBar={
-                    <TopBar
-                      branding={
-                        <Suspense fallback={<TopBarBrandingFallback />}>
-                          <TopBarBrandingSlot />
-                        </Suspense>
-                      }
-                      notifications={
-                        <Suspense fallback={<NotificationBellFallback />}>
-                          <NotificationBellSlot />
-                        </Suspense>
-                      }
-                      userBadge={
-                        <Suspense fallback={<TopBarUserBadgeFallback />}>
-                          <TopBarUserBadge />
-                        </Suspense>
-                      }
-                      searchTrigger={<SearchTriggerSlot />}
-                    />
-                  }
-                >
-                  {children}
-                </MainContent>
+                {/* メインコンテンツエリア（composition: TopBar + Main） */}
+                <DashboardShell>
+                  <TopBar
+                    branding={
+                      <Suspense fallback={<TopBarBrandingFallback />}>
+                        <TopBarBrandingSlot />
+                      </Suspense>
+                    }
+                    notifications={
+                      <Suspense fallback={<NotificationBellFallback />}>
+                        <NotificationBellSlot />
+                      </Suspense>
+                    }
+                    searchTrigger={<SearchTriggerSlot />}
+                  />
+                  <DashboardMain>{children}</DashboardMain>
+                </DashboardShell>
                 <CommandPalette />
               </div>
             </CommandPaletteProvider>

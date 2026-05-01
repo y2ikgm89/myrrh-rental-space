@@ -11,7 +11,13 @@ import { ReservationChart } from "./charts";
 
 export async function DashboardChartSection() {
   await connection();
-  const chartData = await getReservationChartData();
+  const result = await getReservationChartData();
 
-  return <ReservationChart data={chartData} />;
+  return (
+    <ReservationChart
+      data={result.data}
+      summary={result.summary}
+      windowDays={result.windowDays}
+    />
+  );
 }

@@ -55,8 +55,8 @@ async function buildFallbackLocation(): Promise<LocationForAccess | null> {
     city: info.city ?? null,
     streetAddress: info.streetAddress ?? null,
     buildingName: info.buildingName ?? null,
-    access: info.accessInfo ?? null,
-    parkingInfo: info.parkingInfo ?? null,
+    accessLines: [],
+    parkingInfo: null,
     amenities: {},
     imageUrl: "", // フォールバック時は画像なし（LocationChapter で条件レンダリング）
     businessHours: info.businessHours,

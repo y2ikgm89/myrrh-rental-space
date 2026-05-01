@@ -7,7 +7,7 @@ import {
 import { CustomerStatus } from "@generated/prisma/enums";
 
 describe("customerFormSchema", () => {
-  test("有効なデータでバリデーションに成功する", () => {
+  test("有効なデータでバリデーションに成功する（構造化住所 + 連絡可否）", () => {
     const validData = {
       lastName: "山田",
       firstName: "太郎",
@@ -15,8 +15,14 @@ describe("customerFormSchema", () => {
       firstNameKana: "タロウ",
       email: "yamada@example.com",
       phoneNumber: "090-1234-5678",
-      address: "東京都渋谷区1-2-3",
+      postalCode: "150-0001",
+      prefecture: "東京都",
+      city: "渋谷区",
+      streetAddress: "神宮前1-1-1",
+      building: "サンプルビル 2F",
       notes: "VIP顧客",
+      marketingOptIn: true,
+      phoneContactOptIn: false,
     };
 
     const result = customerFormSchema.safeParse(validData);
@@ -123,18 +129,73 @@ describe("customerFormSchema", () => {
     }
   });
 
-  test("住所の最大長を超える場合にエラー", () => {
+  test("町名・番地の最大長（200文字）を超える場合にエラー", () => {
     const invalidData = {
       lastName: "山田",
       firstName: "太郎",
       email: "test@example.com",
-      address: "あ".repeat(501),
+      streetAddress: "あ".repeat(201),
     };
 
     const result = customerFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain("500文字以内");
+      expect(result.error.issues[0].message).toContain("200文字以内");
+    }
+  });
+
+  test("無効な郵便番号でエラー", () => {
+    const invalidData = {
+      lastName: "山田",
+      firstName: "太郎",
+      email: "test@example.com",
+      postalCode: "abc-defg",
+    };
+
+    const result = customerFormSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+  });
+
+  test("郵便番号は ハイフン有無どちらも許可", () => {
+    const withHyphen = customerFormSchema.safeParse({
+      lastName: "山田",
+      firstName: "太郎",
+      email: "test@example.com",
+      postalCode: "150-0001",
+    });
+    expect(withHyphen.success).toBe(true);
+
+    const withoutHyphen = customerFormSchema.safeParse({
+      lastName: "山田",
+      firstName: "太郎",
+      email: "test@example.com",
+      postalCode: "1500001",
+    });
+    expect(withoutHyphen.success).toBe(true);
+  });
+
+  test("無効な電話番号でエラー", () => {
+    const invalidData = {
+      lastName: "山田",
+      firstName: "太郎",
+      email: "test@example.com",
+      phoneNumber: "abc-1234",
+    };
+
+    const result = customerFormSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+  });
+
+  test("連絡可否のデフォルト値は marketingOptIn=false / phoneContactOptIn=true", () => {
+    const result = customerFormSchema.safeParse({
+      lastName: "山田",
+      firstName: "太郎",
+      email: "test@example.com",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.marketingOptIn).toBe(false);
+      expect(result.data.phoneContactOptIn).toBe(true);
     }
   });
 
@@ -185,7 +246,11 @@ describe("customerFormSchema", () => {
       companyName: "",
       email: "test@example.com",
       phoneNumber: "",
-      address: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      streetAddress: "",
+      building: "",
       notes: "",
     };
 

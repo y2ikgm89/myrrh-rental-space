@@ -19,6 +19,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { Switch } from "@/admin/components/ui/switch";
 import {
@@ -433,12 +434,12 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                         >
                           キャンセル
                         </Button>
-                        <Button
+                        <SubmitButton
+                          isPending={isPending}
+                          label="作成"
+                          pendingLabel="作成中..."
                           onClick={handleCreateToken}
-                          disabled={isPending}
-                        >
-                          作成
-                        </Button>
+                        />
                       </>
                     )}
                   </DialogFooter>

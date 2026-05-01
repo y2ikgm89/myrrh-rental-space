@@ -21,6 +21,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
   Switch,
 } from "@/admin/components/ui";
 import {
@@ -403,13 +404,12 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
 
         {/* 保存ボタン */}
         <div className="flex justify-end pt-2">
-          <Button
-            type="button"
+          <SubmitButton
+            isPending={isPending}
+            label="サイドバー設定を保存"
             onClick={handleSave}
-            disabled={isPending || !isDirty}
-          >
-            {isPending ? "保存中..." : "サイドバー設定を保存"}
-          </Button>
+            disabled={!isDirty}
+          />
         </div>
 
         {/* ヒント */}

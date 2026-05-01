@@ -93,11 +93,15 @@ export function LocationDetail({ location }: LocationDetailProps) {
             value={location.address}
             className="sm:col-span-2"
           />
-          {location.access && (
+          {location.accessLines.length > 0 && (
             <DetailField
               label="アクセス"
               value={
-                <span className="whitespace-pre-wrap">{location.access}</span>
+                <ul className="list-disc space-y-1 pl-5">
+                  {location.accessLines.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
               }
               className="sm:col-span-2"
             />

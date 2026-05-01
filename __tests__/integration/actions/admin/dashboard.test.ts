@@ -107,18 +107,18 @@ describe("Dashboard Admin Action Integration", () => {
   });
 
   describe("ChartDataPoint 型構造", () => {
-    test("有効なチャートデータポイント（date は MM-DD 形式）", () => {
+    test("有効なチャートデータポイント（date は ISO YYYY-MM-DD 形式）", () => {
       type ChartDataPoint = {
         date: string;
         reservations: number;
         revenue: number;
       };
       const point: ChartDataPoint = {
-        date: "03-05",
+        date: "2026-03-05",
         reservations: 5,
         revenue: 25000,
       };
-      expect(point.date).toMatch(/^\d{2}-\d{2}$/);
+      expect(point.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(point.reservations).toBeGreaterThanOrEqual(0);
     });
 
@@ -131,11 +131,11 @@ describe("Dashboard Admin Action Integration", () => {
       const now = new Date();
       for (let i = 29; i >= 0; i--) {
         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const dateStr = date.toISOString().slice(5, 10); // MM-DD
+        const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
         data.push({ date: dateStr, reservations: 0, revenue: 0 });
       }
       expect(data).toHaveLength(30);
-      expect(data[0]?.date).toMatch(/^\d{2}-\d{2}$/);
+      expect(data[0]?.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
   });
 

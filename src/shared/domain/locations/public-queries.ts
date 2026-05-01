@@ -8,7 +8,8 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { toPlainArray } from "@/shared/lib/serialize";
+import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import { parseStringArray } from "@/shared/lib/json-validators";
 
 export type SpaceOption = {
   id: string;
@@ -80,7 +81,7 @@ export type LocationForAccess = {
   readonly city: string | null;
   readonly streetAddress: string | null;
   readonly buildingName: string | null;
-  readonly access: string | null;
+  readonly accessLines: string[];
   readonly parkingInfo: string | null;
   readonly amenities: unknown;
   readonly imageUrl: string;
@@ -119,7 +120,7 @@ export async function getPublishedLocationsForAccess(): Promise<
           city: true,
           streetAddress: true,
           buildingName: true,
-          access: true,
+          accessLines: true,
           parkingInfo: true,
           amenities: true,
           imageUrl: true,
@@ -141,7 +142,12 @@ export async function getPublishedLocationsForAccess(): Promise<
     operationName: "getPublishedLocationsForAccess",
   });
 
-  return toPlainArray(locations);
+  return toPlainArray(
+    locations.map((loc) => ({
+      ...loc,
+      accessLines: parseStringArray(loc.accessLines),
+    })),
+  );
 }
 
 export async function getPublishedLocationForAccessBySlug(
@@ -166,7 +172,7 @@ export async function getPublishedLocationForAccessBySlug(
           city: true,
           streetAddress: true,
           buildingName: true,
-          access: true,
+          accessLines: true,
           parkingInfo: true,
           amenities: true,
           imageUrl: true,
@@ -188,7 +194,11 @@ export async function getPublishedLocationForAccessBySlug(
     operationName: "getPublishedLocationForAccessBySlug",
   });
 
-  return location;
+  if (!location) return null;
+  return toPlainObject({
+    ...location,
+    accessLines: parseStringArray(location.accessLines),
+  });
 }
 
 /**

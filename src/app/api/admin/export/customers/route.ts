@@ -28,10 +28,22 @@ export async function GET(request: Request): Promise<Response> {
       { header: "会社名", accessor: (c) => c.companyName },
       { header: "メール", accessor: (c) => c.email },
       { header: "電話番号", accessor: (c) => c.phoneNumber },
-      { header: "住所", accessor: (c) => c.address },
+      { header: "郵便番号", accessor: (c) => c.postalCode },
+      { header: "都道府県", accessor: (c) => c.prefecture },
+      { header: "市区町村", accessor: (c) => c.city },
+      { header: "町名・番地", accessor: (c) => c.streetAddress },
+      { header: "建物名", accessor: (c) => c.building },
       { header: "ステータス", accessor: (c) => c.status },
       { header: "予約回数", accessor: (c) => c.totalReservations },
       { header: "利用総額", accessor: (c) => c.totalSpent },
+      {
+        header: "メルマガ受信",
+        accessor: (c) => (c.marketingOptIn ? "可" : "不可"),
+      },
+      {
+        header: "電話連絡",
+        accessor: (c) => (c.phoneContactOptIn ? "可" : "不可"),
+      },
       {
         header: "最終予約日",
         accessor: (c) =>
