@@ -23,6 +23,12 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import dynamic from "next/dynamic";
 import { z } from "zod";
 import {
+  IconArticle,
+  IconLink,
+  IconPhoto,
+  IconTypography,
+} from "@tabler/icons-react";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -35,6 +41,7 @@ import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
+import { FieldGroupSection } from "./FieldGroupSection";
 import { extractSchemaFields } from "./zod-introspection";
 import type { FieldInfo } from "./zod-introspection";
 import type { FieldType } from "@/shared/lib/sections/types";
@@ -165,14 +172,23 @@ export function AutoSectionForm({
     />
   );
 
+  // subGroup 別に content フィールドを分類（design / advanced は Accordion 内のため未分類）
+  const textFields = contentFields.filter((f) => f.meta.subGroup === "text");
+  const imageFields = contentFields.filter((f) => f.meta.subGroup === "image");
+  const buttonFields = contentFields.filter(
+    (f) => f.meta.subGroup === "button",
+  );
+  const otherFields = contentFields.filter(
+    (f) => f.meta.subGroup === undefined || f.meta.subGroup === "other",
+  );
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Content: 常時展開（Accordion 外） */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Custom セクションのみ: Lexical エディタを表示 */}
         {isCustomType && (
-          <div className="space-y-2">
-            <Label>コンテンツ</Label>
+          <FieldGroupSection title="本文" icon={IconArticle}>
             <LexicalEditor
               contentJson={editorContentJson}
               onChange={setEditorContentJson}
@@ -180,10 +196,30 @@ export function AutoSectionForm({
               className={EDITOR_PROSE_CLASSES}
               height="400px"
             />
-          </div>
+          </FieldGroupSection>
         )}
 
-        {contentFields.map(renderField)}
+        {textFields.length > 0 && (
+          <FieldGroupSection title="テキスト" icon={IconTypography}>
+            {textFields.map(renderField)}
+          </FieldGroupSection>
+        )}
+
+        {imageFields.length > 0 && (
+          <FieldGroupSection title="画像" icon={IconPhoto}>
+            {imageFields.map(renderField)}
+          </FieldGroupSection>
+        )}
+
+        {buttonFields.length > 0 && (
+          <FieldGroupSection title="ボタン・リンク" icon={IconLink}>
+            {buttonFields.map(renderField)}
+          </FieldGroupSection>
+        )}
+
+        {otherFields.length > 0 && (
+          <div className="space-y-4">{otherFields.map(renderField)}</div>
+        )}
       </div>
 
       {/* Design + Advanced: Radix Accordion（type="multiple"、既定閉じ） */}
