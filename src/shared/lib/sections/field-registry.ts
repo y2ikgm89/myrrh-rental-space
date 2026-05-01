@@ -19,6 +19,12 @@ import type { FieldType } from "./types";
  */
 export type FieldSubGroup = "text" | "image" | "button" | "other";
 
+/**
+ * 動的 select の取得元ソース識別子。
+ * AutoSectionForm が `dynamicOptions[source]` から options を取得する。
+ */
+export type DynamicSelectSource = "postCategories" | "faqCategories";
+
 export interface FieldMeta {
   readonly fieldType: FieldType;
   readonly label: string;
@@ -27,6 +33,7 @@ export interface FieldMeta {
   readonly suffix?: string;
   readonly group: "content" | "design" | "advanced";
   readonly subGroup?: FieldSubGroup;
+  readonly dynamicSelectSource?: DynamicSelectSource;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -108,6 +115,13 @@ interface ArrayOpts<TItem extends ArrayItem> extends CommonFieldOpts {
 }
 
 interface GroupOpts extends CommonFieldOpts {
+  readonly helpText?: string;
+}
+
+interface DynamicSelectOpts {
+  readonly source: DynamicSelectSource;
+  readonly group?: FieldMeta["group"];
+  readonly subGroup?: FieldSubGroup;
   readonly helpText?: string;
 }
 
@@ -307,5 +321,27 @@ export const field = {
       ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
       ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
     });
+  },
+
+  /**
+   * 動的 select（DB 由来 options）
+   *
+   * AutoSectionForm が `dynamicOptions[source]` から options を取得して描画する。
+   * UUID 文字列または空文字列（指定なし）を許容、default は空文字列。
+   */
+  dynamicSelect(label: string, opts: DynamicSelectOpts) {
+    return z
+      .string()
+      .uuid()
+      .or(z.literal(""))
+      .default("")
+      .register(fieldRegistry, {
+        fieldType: "select",
+        label,
+        group: opts.group ?? "content",
+        dynamicSelectSource: opts.source,
+        ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
+        ...(opts.helpText !== undefined && { helpText: opts.helpText }),
+      });
   },
 } as const;
