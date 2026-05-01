@@ -3,6 +3,7 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
 import { createImageGroupSchema } from "../_shared/image";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const contentPositions = ["center", "left", "bottom-left"] as const;
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
@@ -65,6 +66,7 @@ export const heroParallaxConfigSchema = z.object({
     default: "gradient",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type HeroParallaxConfig = z.infer<typeof heroParallaxConfigSchema>;

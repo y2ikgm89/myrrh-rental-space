@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const variants = ["default", "minimal", "split"] as const;
 
@@ -33,6 +34,7 @@ export const contactFormConfigSchema = z.object({
     default: "default",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type ContactFormConfig = z.infer<typeof contactFormConfigSchema>;

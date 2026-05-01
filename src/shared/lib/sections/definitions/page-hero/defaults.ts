@@ -29,4 +29,11 @@ export const DEFAULT_PAGE_HERO: PageHeroConfig = {
   transition: "crossfade",
   buttonText: "Reserve a space",
   buttonUrl: "/reservation",
+  layout: {
+    padding: "md",
+    containerWidth: "lg",
+    hideOnMobile: false,
+    hideOnDesktop: false,
+    animateOnScroll: "fade-up",
+  },
 };

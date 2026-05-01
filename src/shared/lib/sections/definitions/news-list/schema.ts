@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["list", "card"] as const;
 
@@ -35,10 +36,11 @@ export const newsListConfigSchema = z.object({
     maxLength: 200,
     subGroup: "button",
   }),
-  layout: field.select("レイアウト", {
+  displayLayout: field.select("表示レイアウト", {
     options: layouts,
     default: "list",
     group: "design",
+    helpText: "お知らせの並び方",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 2,
@@ -47,6 +49,7 @@ export const newsListConfigSchema = z.object({
     suffix: "列",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type NewsListConfig = z.infer<typeof newsListConfigSchema>;

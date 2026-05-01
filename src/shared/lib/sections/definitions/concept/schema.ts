@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { createImageGroupSchema } from "../_shared/image";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const imagePositions = ["left", "right"] as const;
 const textAligns = ["left", "center", "right"] as const;
@@ -36,16 +37,18 @@ export const conceptConfigSchema = z.object({
     default: "left",
     group: "design",
   }),
-  layout: field.select("レイアウト", {
+  contentLayout: field.select("コンテンツレイアウト", {
     options: layouts,
     default: "side-by-side",
     group: "design",
+    helpText: "テキストと画像の並び方",
   }),
   imageAspect: field.select("画像のアスペクト比", {
     options: imageAspects,
     default: "original",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type ConceptConfig = z.infer<typeof conceptConfigSchema>;

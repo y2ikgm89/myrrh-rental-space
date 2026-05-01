@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const gaps = ["sm", "md", "lg"] as const;
 
@@ -34,6 +35,7 @@ export const instagramConfigSchema = z.object({
     default: "md",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type InstagramConfig = z.infer<typeof instagramConfigSchema>;

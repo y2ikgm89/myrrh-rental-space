@@ -3,6 +3,7 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
 import { createImageGroupSchema } from "../_shared/image";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 
@@ -54,6 +55,7 @@ export const heroConfigSchema = z.object({
     group: "design",
   }),
   videoUrl: field.url("動画 URL", { subGroup: "image" }),
+  layout: sectionLayoutSchema,
 });
 
 export type HeroConfig = z.infer<typeof heroConfigSchema>;

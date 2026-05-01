@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 export const homepageHowItWorksConfigSchema = z.object({
   label: field.text("ラベル", { default: "How to Reserve", subGroup: "text" }),
@@ -17,6 +18,7 @@ export const homepageHowItWorksConfigSchema = z.object({
       title: field.text("テキスト"),
     },
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type HomepageHowItWorksConfig = z.infer<

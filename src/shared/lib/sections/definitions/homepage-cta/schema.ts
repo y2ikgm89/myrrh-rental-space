@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 export const homepageCtaConfigSchema = z.object({
   label: field.text("ラベル", { default: "Reservation", subGroup: "text" }),
@@ -14,6 +15,7 @@ export const homepageCtaConfigSchema = z.object({
     subGroup: "text",
   }),
   buttons: createButtonsArraySchema("ボタン"),
+  layout: sectionLayoutSchema,
 });
 
 export type HomepageCtaConfig = z.infer<typeof homepageCtaConfigSchema>;

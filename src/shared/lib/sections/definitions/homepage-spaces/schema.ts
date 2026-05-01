@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 export const homepageSpacesConfigSchema = z.object({
   label: field.text("ラベル", {
@@ -22,6 +23,7 @@ export const homepageSpacesConfigSchema = z.object({
     helpText: "0 にすると自動切替を無効化します",
     group: "advanced",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type HomepageSpacesConfig = z.infer<typeof homepageSpacesConfigSchema>;

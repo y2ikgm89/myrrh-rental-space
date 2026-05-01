@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["grid", "list"] as const;
 const imageAspects = ["16:9", "4:3", "1:1"] as const;
@@ -41,10 +42,11 @@ export const postListConfigSchema = z.object({
     subGroup: "other",
     helpText: "未指定の場合、全カテゴリの記事を表示",
   }),
-  layout: field.select("レイアウト", {
+  displayLayout: field.select("表示レイアウト", {
     options: layouts,
     default: "grid",
     group: "design",
+    helpText: "記事一覧の並び方",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 1,
@@ -58,6 +60,7 @@ export const postListConfigSchema = z.object({
     default: "16:9",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type PostListConfig = z.infer<typeof postListConfigSchema>;

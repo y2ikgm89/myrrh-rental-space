@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["hero-first", "equal-grid", "icon-left"] as const;
 
@@ -30,11 +31,13 @@ export const featuresConfigSchema = z.object({
     suffix: "列",
     group: "design",
   }),
-  layout: field.select("レイアウト", {
+  itemLayout: field.select("アイテムレイアウト", {
     options: layouts,
     default: "hero-first",
     group: "design",
+    helpText: "特徴項目の並び方",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type FeaturesConfig = z.infer<typeof featuresConfigSchema>;

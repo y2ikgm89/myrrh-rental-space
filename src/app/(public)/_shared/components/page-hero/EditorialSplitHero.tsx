@@ -52,6 +52,13 @@ export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
   transition: "crossfade",
   buttonText: "Reserve a space",
   buttonUrl: "/reservation",
+  layout: {
+    padding: "md",
+    containerWidth: "lg",
+    hideOnMobile: false,
+    hideOnDesktop: false,
+    animateOnScroll: "fade-up",
+  },
 };
 
 const AUTO_ADVANCE_MS = 6000;

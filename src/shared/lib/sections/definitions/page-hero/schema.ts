@@ -8,6 +8,7 @@
 import { z } from "zod";
 
 import { field, fieldRegistry } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 import { createInternalAppRouteSchema } from "@/shared/lib/validations/cta-and-url";
 
 const HERO_TRANSITIONS = [
@@ -62,6 +63,7 @@ const editorialSplitSchema = z.object({
     maxLength: 100,
   }),
   buttonUrl: buttonUrlSchema,
+  layout: sectionLayoutSchema,
 });
 
 const compactSchema = z.object({
@@ -77,6 +79,7 @@ const compactSchema = z.object({
     },
     { subGroup: "image" },
   ),
+  layout: sectionLayoutSchema,
 });
 
 const minimalSchema = z.object({
@@ -84,6 +87,7 @@ const minimalSchema = z.object({
   eyebrow: field.text("アイブロー", { subGroup: "text", maxLength: 200 }),
   title: field.text("タイトル", { subGroup: "text", maxLength: 200 }),
   description: field.textarea("説明", { subGroup: "text", maxLength: 4000 }),
+  layout: sectionLayoutSchema,
 });
 
 export const pageHeroConfigSchema = z.discriminatedUnion("variant", [

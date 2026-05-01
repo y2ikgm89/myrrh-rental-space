@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const maxWidthOptions = ["sm", "md", "lg", "xl", "full"] as const;
 const paddingOptions = ["none", "sm", "md", "lg"] as const;
@@ -23,6 +24,7 @@ export const customConfigSchema = z.object({
     default: "md",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type CustomConfig = z.infer<typeof customConfigSchema>;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const heights = ["sm", "md", "lg"] as const;
 const borderRadii = ["none", "sm", "lg"] as const;
@@ -35,6 +36,7 @@ export const mapConfigSchema = z.object({
     default: "sm",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type MapConfig = z.infer<typeof mapConfigSchema>;

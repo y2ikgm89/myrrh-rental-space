@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const variants = ["default", "centered", "split"] as const;
 
@@ -20,6 +21,7 @@ export const ctaConfigSchema = z.object({
     default: "default",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type CtaConfig = z.infer<typeof ctaConfigSchema>;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const aspectRatios = ["16:9", "4:3", "1:1", "auto"] as const;
 const maxWidths = ["sm", "md", "lg", "xl", "full"] as const;
@@ -30,6 +31,7 @@ export const embedConfigSchema = z.object({
     default: "sm",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type EmbedConfig = z.infer<typeof embedConfigSchema>;

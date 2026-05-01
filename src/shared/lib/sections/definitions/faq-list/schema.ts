@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const variants = ["default", "bordered", "minimal"] as const;
 const containerWidths = ["sm", "md", "lg", "full"] as const;
@@ -66,6 +67,7 @@ export const faqListConfigSchema = z.object({
     default: "first",
     group: "advanced",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type FaqListConfig = z.infer<typeof faqListConfigSchema>;

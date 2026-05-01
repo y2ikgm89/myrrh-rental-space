@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9", "1:1"] as const;
@@ -44,6 +45,7 @@ export const spaceShowcaseConfigSchema = z.object({
     default: "4:3",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type SpaceShowcaseConfig = z.infer<typeof spaceShowcaseConfigSchema>;

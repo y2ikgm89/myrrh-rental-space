@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { createCompactImageGroupSchema } from "../_shared/image";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["grid", "carousel", "list"] as const;
 const variants = ["default", "card", "minimal"] as const;
@@ -32,10 +33,11 @@ export const testimonialConfigSchema = z.object({
       }),
     },
   }),
-  layout: field.select("レイアウト", {
+  displayLayout: field.select("表示レイアウト", {
     options: layouts,
     default: "carousel",
     group: "design",
+    helpText: "レビューの並び方",
   }),
   showRating: field.boolean("星評価を表示する", { default: true }),
   variant: field.select("レイアウトの種類", {
@@ -43,6 +45,7 @@ export const testimonialConfigSchema = z.object({
     default: "default",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type TestimonialConfig = z.infer<typeof testimonialConfigSchema>;

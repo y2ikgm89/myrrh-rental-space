@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["grid", "list", "carousel"] as const;
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
@@ -41,10 +42,11 @@ export const spaceListConfigSchema = z.object({
     maxLength: 200,
     subGroup: "button",
   }),
-  layout: field.select("レイアウト", {
+  displayLayout: field.select("表示レイアウト", {
     options: layouts,
     default: "grid",
     group: "design",
+    helpText: "スペース一覧の並び方",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 1,
@@ -63,6 +65,7 @@ export const spaceListConfigSchema = z.object({
     default: "4:3",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type SpaceListConfig = z.infer<typeof spaceListConfigSchema>;
