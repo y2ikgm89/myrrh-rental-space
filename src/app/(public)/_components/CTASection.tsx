@@ -52,7 +52,21 @@ function CTAButtons({
         )}
       >
         {primaryButton && (
-          <MagneticButton href={primaryButton.url} strength={0.35}>
+          <MagneticButton
+            href={primaryButton.url}
+            strength={0.35}
+            size={primaryButton.size}
+            {...(primaryButton.iconName && {
+              iconName: primaryButton.iconName,
+            })}
+            {...(primaryButton.backgroundColor && {
+              customBackgroundColor: primaryButton.backgroundColor,
+            })}
+            {...(primaryButton.textColor && {
+              customTextColor: primaryButton.textColor,
+            })}
+            openInNewTab={primaryButton.openInNewTab}
+          >
             {primaryButton.text}
           </MagneticButton>
         )}
@@ -60,6 +74,21 @@ function CTAButtons({
           <Link
             href={toAppRoute(secondaryButton.url)}
             className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+            {...(secondaryButton.openInNewTab && {
+              target: "_blank",
+              rel: "noopener noreferrer",
+            })}
+            {...((secondaryButton.backgroundColor ||
+              secondaryButton.textColor) && {
+              style: {
+                ...(secondaryButton.backgroundColor && {
+                  backgroundColor: secondaryButton.backgroundColor,
+                }),
+                ...(secondaryButton.textColor && {
+                  color: secondaryButton.textColor,
+                }),
+              },
+            })}
           >
             {secondaryButton.text}
             <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />

@@ -197,6 +197,7 @@ export const heroParallaxConfigSchema = z.object({
       url: "/reservation",
       variant: "primary",
       size: "lg",
+      iconName: "",
       openInNewTab: false,
     },
   ]),

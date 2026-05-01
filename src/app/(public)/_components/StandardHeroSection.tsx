@@ -54,7 +54,17 @@ function HeroButtons({
   return (
     <div className={className}>
       {primary && (
-        <MagneticButton href={primary.url} strength={0.35}>
+        <MagneticButton
+          href={primary.url}
+          strength={0.35}
+          size={primary.size}
+          {...(primary.iconName && { iconName: primary.iconName })}
+          {...(primary.backgroundColor && {
+            customBackgroundColor: primary.backgroundColor,
+          })}
+          {...(primary.textColor && { customTextColor: primary.textColor })}
+          openInNewTab={primary.openInNewTab}
+        >
           {primary.text}
         </MagneticButton>
       )}
@@ -62,6 +72,18 @@ function HeroButtons({
         <Link
           href={toAppRoute(secondary.url)}
           className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+          {...(secondary.openInNewTab && {
+            target: "_blank",
+            rel: "noopener noreferrer",
+          })}
+          {...((secondary.backgroundColor || secondary.textColor) && {
+            style: {
+              ...(secondary.backgroundColor && {
+                backgroundColor: secondary.backgroundColor,
+              }),
+              ...(secondary.textColor && { color: secondary.textColor }),
+            },
+          })}
         >
           {secondary.text}
           <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />

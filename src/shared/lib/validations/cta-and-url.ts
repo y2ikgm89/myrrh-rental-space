@@ -139,6 +139,10 @@ export type CTAButtonSize = (typeof ctaButtonSizes)[number];
 
 /**
  * CTAボタン配列アイテムスキーマファクトリ
+ *
+ * Phase 2A 拡張: iconName を追加（Tabler Icons 名）。
+ * createButtonsArraySchema と同 shape を維持し、section.ts の旧 schema 経由
+ * caller も新フィールドを参照可能にする。
  */
 export function createCtaButtonItemSchema<TUrl extends string>(
   urlSchema: z.ZodType<TUrl>,
@@ -151,6 +155,7 @@ export function createCtaButtonItemSchema<TUrl extends string>(
     url: urlSchema,
     variant: z.enum(ctaButtonVariants).default("primary"),
     size: z.enum(ctaButtonSizes).default("lg"),
+    iconName: z.string().max(50).default(""),
     openInNewTab: z.boolean().default(false),
     backgroundColor: optionalHexColorSchema,
     textColor: optionalHexColorSchema,
@@ -165,6 +170,7 @@ export type CTAButtonItem = {
   url: AppRoute;
   variant: CTAButtonVariant;
   size: CTAButtonSize;
+  iconName: string;
   openInNewTab: boolean;
   backgroundColor?: string | undefined;
   textColor?: string | undefined;
@@ -186,6 +192,7 @@ export function transformLegacyCtaToButtons(
       url: ctaPrimary.url,
       variant: "primary",
       size: "lg",
+      iconName: "",
       openInNewTab: false,
     });
   }
@@ -195,6 +202,7 @@ export function transformLegacyCtaToButtons(
       url: ctaSecondary.url,
       variant: "secondary",
       size: "lg",
+      iconName: "",
       openInNewTab: false,
     });
   }
