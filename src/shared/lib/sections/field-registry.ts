@@ -13,6 +13,12 @@ import type { FieldType } from "./types";
 // FieldMeta インターフェース
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * AutoSectionForm の content グループ内でフィールドを意味別に分類するためのサブグループ。
+ * design / advanced グループでは無視される（content グループ内のみ意味を持つ）。
+ */
+export type FieldSubGroup = "text" | "image" | "button" | "other";
+
 export interface FieldMeta {
   readonly fieldType: FieldType;
   readonly label: string;
@@ -20,6 +26,7 @@ export interface FieldMeta {
   readonly helpText?: string;
   readonly suffix?: string;
   readonly group: "content" | "design" | "advanced";
+  readonly subGroup?: FieldSubGroup;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -37,48 +44,47 @@ interface StringConstraints {
   readonly maxLength?: number;
 }
 
-interface TextOpts extends StringConstraints {
+interface CommonFieldOpts {
+  readonly group?: FieldMeta["group"];
+  readonly subGroup?: FieldSubGroup;
+}
+
+interface TextOpts extends StringConstraints, CommonFieldOpts {
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
-  readonly group?: FieldMeta["group"];
 }
 
-interface TextareaOpts extends StringConstraints {
+interface TextareaOpts extends StringConstraints, CommonFieldOpts {
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
-  readonly group?: FieldMeta["group"];
 }
 
-interface NumberOpts {
+interface NumberOpts extends CommonFieldOpts {
   readonly min?: number;
   readonly max?: number;
   readonly suffix?: string;
   readonly helpText?: string;
   readonly default?: number;
-  readonly group?: FieldMeta["group"];
 }
 
-interface BooleanOpts {
+interface BooleanOpts extends CommonFieldOpts {
   readonly helpText?: string;
   readonly default?: boolean;
-  readonly group?: FieldMeta["group"];
 }
 
-interface SelectOpts<T extends string> {
+interface SelectOpts<T extends string> extends CommonFieldOpts {
   readonly options: readonly T[];
   readonly default: NoInfer<T>;
   readonly helpText?: string;
   readonly placeholder?: string;
-  readonly group?: FieldMeta["group"];
 }
 
-interface StringFieldOpts extends StringConstraints {
+interface StringFieldOpts extends StringConstraints, CommonFieldOpts {
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
-  readonly group?: FieldMeta["group"];
 }
 
 /** string 制約を z.string() に適用する境界ヘルパー */
@@ -96,10 +102,13 @@ interface ArrayItem {
   readonly [key: string]: z.ZodType;
 }
 
-interface ArrayOpts<TItem extends ArrayItem> {
+interface ArrayOpts<TItem extends ArrayItem> extends CommonFieldOpts {
   readonly fields: TItem;
   readonly helpText?: string;
-  readonly group?: FieldMeta["group"];
+}
+
+interface GroupOpts extends CommonFieldOpts {
+  readonly helpText?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -115,6 +124,7 @@ export const field = {
         fieldType: "text",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -130,6 +140,7 @@ export const field = {
         fieldType: "textarea",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -150,6 +161,7 @@ export const field = {
       fieldType: "number",
       label,
       group: opts?.group ?? "content",
+      ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
       ...(opts?.suffix !== undefined && { suffix: opts.suffix }),
       ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
     });
@@ -164,6 +176,7 @@ export const field = {
         fieldType: "boolean",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
       });
   },
@@ -180,6 +193,7 @@ export const field = {
         fieldType: "select",
         label,
         group: opts.group ?? "content",
+        ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -195,6 +209,7 @@ export const field = {
         fieldType: "color",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -210,6 +225,7 @@ export const field = {
         fieldType: "image",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -230,6 +246,7 @@ export const field = {
         fieldType: "url",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -245,6 +262,7 @@ export const field = {
         fieldType: "icon",
         label,
         group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts?.placeholder !== undefined && {
           placeholder: opts.placeholder,
         }),
@@ -267,6 +285,7 @@ export const field = {
         fieldType: "array",
         label,
         group: opts.group ?? "content",
+        ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts.helpText !== undefined && { helpText: opts.helpText }),
       });
   },
@@ -279,12 +298,13 @@ export const field = {
   group<TFields extends { readonly [key: string]: z.ZodType }>(
     label: string,
     fields: TFields,
-    opts?: { readonly helpText?: string; readonly group?: FieldMeta["group"] },
+    opts?: GroupOpts,
   ) {
     return z.object(fields).register(fieldRegistry, {
       fieldType: "group",
       label,
       group: opts?.group ?? "content",
+      ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
       ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
     });
   },
