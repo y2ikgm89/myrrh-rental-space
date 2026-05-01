@@ -32,7 +32,7 @@ export function createButtonsArraySchema(label = "ボタン") {
     .array(label, {
       subGroup: "button",
       fields: {
-        text: field.text("ボタンの文字", { maxLength: 50 }),
+        text: field.text("ボタンの文字", { minLength: 1, maxLength: 50 }),
         url: createInternalAppRouteSchema(500).register(fieldRegistry, {
           fieldType: "url",
           label: "リンク先 URL",
