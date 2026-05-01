@@ -9,10 +9,7 @@
 import { z } from "zod";
 import {
   createInternalAppRouteSchema,
-  createOptionalInternalAppRouteSchema,
-  createCtaSchemas,
   createCtaButtonItemSchema,
-  transformLegacyCtaToButtons,
 } from "./cta-and-url";
 import {
   imageAspectValues,
@@ -115,13 +112,7 @@ export type { TextAlign } from "./section-options";
 // =============================================================================
 
 const internalAppRouteSchema = createInternalAppRouteSchema(500);
-const optionalInternalAppRouteSchema =
-  createOptionalInternalAppRouteSchema(500);
 const viewAllUrlSchema = createInternalAppRouteSchema(200);
-const { ctaButtonSchema, optionalCtaButtonSchema } = createCtaSchemas(
-  internalAppRouteSchema,
-  optionalInternalAppRouteSchema,
-);
 const ctaButtonItemSchema = createCtaButtonItemSchema(internalAppRouteSchema);
 // ボタンの URL は React key の stable ID として使われるため、一意性を保証する
 const ctaButtonsArraySchema = z
@@ -138,8 +129,8 @@ const maxWidthSchema = z.enum(maxWidthValues).default("lg");
 
 // --- Hero variants ---
 
-/** Hero セクション設定（入力） */
-const heroConfigRawSchema = z.object({
+/** Hero セクション設定 */
+export const heroConfigSchema = z.object({
   title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   subtitle: z
     .string()
@@ -150,9 +141,7 @@ const heroConfigRawSchema = z.object({
     .url({ error: "有効なURLを入力してください" })
     .optional()
     .or(z.literal("")),
-  buttons: ctaButtonsArraySchema.optional(),
-  ctaPrimary: ctaButtonSchema.optional(),
-  ctaSecondary: optionalCtaButtonSchema,
+  buttons: ctaButtonsArraySchema.default([]),
   height: z.enum(heroHeightValues).default("md"),
   heightCustom: z.number().min(20).max(100).default(60).optional(),
   overlay: z.boolean().default(true),
@@ -161,16 +150,6 @@ const heroConfigRawSchema = z.object({
   videoUrl: z.string().url().optional().or(z.literal("")),
   parallaxSpeed: z.number().min(0).max(1).default(0.5),
 });
-/** Hero セクション設定（出力: レガシーCTA → buttons[] 統一） */
-export const heroConfigSchema = heroConfigRawSchema.transform(
-  ({ ctaPrimary, ctaSecondary, buttons, ...rest }) => ({
-    ...rest,
-    buttons:
-      buttons && buttons.length > 0
-        ? buttons
-        : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
-  }),
-);
 
 /** Hero Parallax セクション設定（v3） */
 export const heroParallaxConfigSchema = z.object({
@@ -464,8 +443,8 @@ export const galleryConfigSchema = z.object({
 
 // --- Functional ---
 
-/** CTA セクション設定（入力） */
-const ctaConfigRawSchema = z.object({
+/** CTA セクション設定 */
+export const ctaConfigSchema = z.object({
   sectionLabel: z
     .string()
     .max(50, { error: "ラベルは50文字以内です" })
@@ -478,22 +457,10 @@ const ctaConfigRawSchema = z.object({
     .string()
     .max(500, { error: "説明は500文字以内です" })
     .optional(),
-  buttons: ctaButtonsArraySchema.optional(),
-  ctaPrimary: ctaButtonSchema.optional(),
-  ctaSecondary: optionalCtaButtonSchema,
+  buttons: ctaButtonsArraySchema.default([]),
   backgroundColor: z.string().max(50).optional(),
   variant: z.enum(ctaVariantValues).default("default"),
 });
-/** CTA セクション設定（出力: レガシーCTA → buttons[] 統一） */
-export const ctaConfigSchema = ctaConfigRawSchema.transform(
-  ({ ctaPrimary, ctaSecondary, buttons, ...rest }) => ({
-    ...rest,
-    buttons:
-      buttons && buttons.length > 0
-        ? buttons
-        : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
-  }),
-);
 
 /** ContactForm セクション設定 */
 export const contactFormConfigSchema = z.object({
