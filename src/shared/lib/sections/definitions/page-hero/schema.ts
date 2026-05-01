@@ -7,7 +7,8 @@
 
 import { z } from "zod";
 
-import { field } from "../../field-registry";
+import { field, fieldRegistry } from "../../field-registry";
+import { createInternalAppRouteSchema } from "@/shared/lib/validations/cta-and-url";
 
 const HERO_TRANSITIONS = [
   "crossfade",
@@ -15,6 +16,20 @@ const HERO_TRANSITIONS = [
   "clip-reveal",
   "scale-fade",
 ] as const;
+
+/**
+ * 内部 app route 専用 buttonUrl スキーマ。
+ * `next/link` に渡すため外部 URL は禁止。`field.url()` は full URL only のため使えない。
+ * fieldRegistry.add で URL field として subGroup="button" メタを登録する。
+ */
+const buttonUrlSchema = createInternalAppRouteSchema(500)
+  .default("/")
+  .register(fieldRegistry, {
+    fieldType: "url",
+    label: "ボタン URL",
+    group: "content",
+    subGroup: "button",
+  });
 
 const editorialSplitSchema = z.object({
   variant: z.literal("editorial-split"),
@@ -46,7 +61,7 @@ const editorialSplitSchema = z.object({
     subGroup: "button",
     maxLength: 100,
   }),
-  buttonUrl: field.url("ボタン URL", { subGroup: "button" }),
+  buttonUrl: buttonUrlSchema,
 });
 
 const compactSchema = z.object({
