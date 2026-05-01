@@ -10,10 +10,12 @@ export const spaceListConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Spaces",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "スペース一覧",
     maxLength: 100,
+    subGroup: "text",
   }),
   maxItems: field.number("最大表示件数", {
     min: 1,
@@ -32,10 +34,12 @@ export const spaceListConfigSchema = z.object({
   viewAllText: field.text("「すべて見る」リンクの文字", {
     default: "全てのスペースを見る",
     maxLength: 50,
+    subGroup: "button",
   }),
   viewAllUrl: field.text("「すべて見る」リンク先 URL", {
     default: "/spaces",
     maxLength: 200,
+    subGroup: "button",
   }),
   layout: field.select("レイアウト", {
     options: layouts,

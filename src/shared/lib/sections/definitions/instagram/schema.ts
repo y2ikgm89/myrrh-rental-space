@@ -8,10 +8,12 @@ export const instagramConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Follow Us",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "Instagram",
     maxLength: 100,
+    subGroup: "text",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 3,

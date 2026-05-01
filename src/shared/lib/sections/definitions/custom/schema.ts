@@ -9,6 +9,7 @@ export const customConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Contents",
     maxLength: 50,
+    subGroup: "text",
   }),
   maxWidth: field.select("最大幅", {
     options: maxWidthOptions,

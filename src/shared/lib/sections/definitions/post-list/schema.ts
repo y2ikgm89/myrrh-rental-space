@@ -9,10 +9,12 @@ export const postListConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Blog",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "最新の記事",
     maxLength: 100,
+    subGroup: "text",
   }),
   maxItems: field.number("最大表示件数", {
     min: 1,
@@ -27,10 +29,12 @@ export const postListConfigSchema = z.object({
   viewAllText: field.text("「すべて見る」リンクの文字", {
     default: "全ての記事",
     maxLength: 50,
+    subGroup: "button",
   }),
   viewAllUrl: field.text("「すべて見る」リンク先 URL", {
     default: "/posts",
     maxLength: 200,
+    subGroup: "button",
   }),
   categoryId: z
     .string()

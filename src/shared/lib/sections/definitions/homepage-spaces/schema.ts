@@ -2,8 +2,11 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 
 export const homepageSpacesConfigSchema = z.object({
-  label: field.text("ラベル", { default: "Selected Spaces" }),
-  title: field.text("見出し", { default: "厳選スペース" }),
+  label: field.text("ラベル", {
+    default: "Selected Spaces",
+    subGroup: "text",
+  }),
+  title: field.text("見出し", { default: "厳選スペース", subGroup: "text" }),
   count: field.number("表示件数", {
     min: 1,
     max: 12,

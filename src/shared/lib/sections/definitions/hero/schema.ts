@@ -16,10 +16,14 @@ const variantOptions = [
 
 export const heroConfigSchema = z
   .object({
-    title: field.text("見出し", { maxLength: 100 }),
-    subtitle: field.textarea("サブ見出し", { maxLength: 300 }),
-    backgroundImageUrl: field.image("背景画像"),
+    title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
+    subtitle: field.textarea("サブ見出し", {
+      maxLength: 300,
+      subGroup: "text",
+    }),
+    backgroundImageUrl: field.image("背景画像", { subGroup: "image" }),
     buttons: field.array("ボタン", {
+      subGroup: "button",
       fields: {
         text: field.text("ボタンの文字"),
         url: field.url("リンク先 URL"),
@@ -61,7 +65,7 @@ export const heroConfigSchema = z
       helpText: "0% は透明、100% は完全に黒",
       group: "design",
     }),
-    videoUrl: field.url("動画 URL"),
+    videoUrl: field.url("動画 URL", { subGroup: "image" }),
   })
   .refine(
     (data) =>

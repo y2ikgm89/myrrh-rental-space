@@ -9,10 +9,12 @@ export const spaceShowcaseConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Spaces",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "Our Spaces",
     maxLength: 100,
+    subGroup: "text",
   }),
   maxItems: field.number("最大表示件数", {
     min: 1,

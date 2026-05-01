@@ -11,17 +11,20 @@ export const conceptConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Our Philosophy",
     maxLength: 50,
+    subGroup: "text",
   }),
   heading: field.text("見出し", {
     default: "空間が、体験を変える",
     maxLength: 100,
+    subGroup: "text",
   }),
   body: field.textarea("本文", {
     default:
       "洗練されたデザインと機能性を兼ね備えた空間。\nビジネスミーティングからプライベートパーティーまで。\nあらゆるシーンに対応する上質な空間をご提供します。",
     maxLength: 1000,
+    subGroup: "text",
   }),
-  imageUrl: field.image("メイン画像"),
+  imageUrl: field.image("メイン画像", { subGroup: "image" }),
   imagePosition: field.select("画像の位置", {
     options: imagePositions,
     default: "right",

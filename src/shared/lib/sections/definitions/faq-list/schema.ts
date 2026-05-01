@@ -10,10 +10,12 @@ export const faqListConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "FAQ",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "よくあるご質問",
     maxLength: 100,
+    subGroup: "text",
   }),
   categoryId: z
     .string()
@@ -32,13 +34,16 @@ export const faqListConfigSchema = z.object({
   viewAllText: field.text("「すべて見る」リンクの文字", {
     default: "全てのFAQ",
     maxLength: 50,
+    subGroup: "button",
   }),
   viewAllUrl: field.text("「すべて見る」リンク先 URL", {
     default: "/faq",
     maxLength: 200,
+    subGroup: "button",
   }),
   items: field
     .array("カスタム項目", {
+      subGroup: "text",
       fields: {
         question: field.text("質問"),
         answer: field.textarea("回答"),

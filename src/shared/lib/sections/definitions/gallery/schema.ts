@@ -12,9 +12,11 @@ export const galleryConfigSchema = z
     sectionLabel: field.text("セクションラベル", {
       default: "Gallery",
       maxLength: 50,
+      subGroup: "text",
     }),
-    title: field.text("見出し", { maxLength: 100 }),
+    title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
     images: field.array("画像", {
+      subGroup: "image",
       fields: {
         url: field.image("画像"),
         alt: field.text("代替テキスト"),

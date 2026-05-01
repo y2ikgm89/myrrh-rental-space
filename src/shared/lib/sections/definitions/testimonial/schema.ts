@@ -9,12 +9,15 @@ export const testimonialConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Testimonials",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "お客様の声",
     maxLength: 100,
+    subGroup: "text",
   }),
   items: field.array("レビュー", {
+    subGroup: "text",
     fields: {
       content: field.textarea("レビュー内容"),
       authorName: field.text("お客様の名前"),

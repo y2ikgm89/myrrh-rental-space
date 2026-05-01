@@ -8,10 +8,12 @@ export const newsListConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "News",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "お知らせ",
     maxLength: 100,
+    subGroup: "text",
   }),
   maxItems: field.number("最大表示件数", {
     min: 1,
@@ -26,10 +28,12 @@ export const newsListConfigSchema = z.object({
   viewAllText: field.text("「すべて見る」リンクの文字", {
     default: "全てのお知らせ",
     maxLength: 50,
+    subGroup: "button",
   }),
   viewAllUrl: field.text("「すべて見る」リンク先 URL", {
     default: "/news",
     maxLength: 200,
+    subGroup: "button",
   }),
   layout: field.select("レイアウト", {
     options: layouts,

@@ -13,18 +13,22 @@ export const heroParallaxConfigSchema = z
     tagline: field.text("タグライン", {
       default: "Luxury Rental Space",
       maxLength: 50,
+      subGroup: "text",
     }),
     title: field.text("見出し", {
       default: "洗練された空間で 特別なひとときを",
       maxLength: 100,
+      subGroup: "text",
     }),
     subtitle: field.textarea("サブ見出し", {
       default:
         "厳選されたレンタルスペースで、ビジネスからプライベートまで、あらゆるシーンに対応する上質な空間をご提供します。",
       maxLength: 300,
+      subGroup: "text",
     }),
-    backgroundImageUrl: field.image("背景画像"),
+    backgroundImageUrl: field.image("背景画像", { subGroup: "image" }),
     buttons: field.array("ボタン", {
+      subGroup: "button",
       fields: {
         text: field.text("ボタンの文字"),
         url: field.url("リンク先 URL"),
