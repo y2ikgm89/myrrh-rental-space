@@ -296,55 +296,6 @@ export const NEWS_PUBLISH_FIELDS = {
 };
 
 /**
- * スペース編集用フォームデータ
- */
-export type SpaceEditorFormData = {
-  name: string;
-  description: string;
-  addressDetail?: string;
-  access?: string;
-  capacity: number;
-  area?: number;
-  hourlyPrice: number;
-  dailyPrice?: number;
-  mainImageUrl: string;
-  imageUrls: string[];
-  facilities: string[];
-  categoryId?: string;
-  locationId: string;
-  termsId?: string;
-  contentWidth?: string;
-  contentWidthCustom?: string;
-} & SEOFormFields &
-  OGPFormFields &
-  PublishFormFields;
-
-/** SpaceEditorFormData用のSEOフィールド名 */
-export const SPACE_SEO_FIELDS = {
-  metaDescription: "metaDescription",
-  metaKeywords: "metaKeywords",
-} as const satisfies {
-  [K in keyof SEOFormFields]-?: Path<SpaceEditorFormData>;
-};
-
-/** SpaceEditorFormData用のOGPフィールド名 */
-export const SPACE_OGP_FIELDS = {
-  ogpTitle: "ogpTitle",
-  ogpDescription: "ogpDescription",
-  ogpImageUrl: "ogpImageUrl",
-} as const satisfies {
-  [K in keyof OGPFormFields]-?: Path<SpaceEditorFormData>;
-};
-
-/** SpaceEditorFormData用の公開設定フィールド名 */
-export const SPACE_PUBLISH_FIELDS = {
-  isPublished: "isPublished",
-  publishedAt: "publishedAt",
-} as const satisfies {
-  [K in keyof PublishFormFields]-?: Path<SpaceEditorFormData>;
-};
-
-/**
  * カテゴリオプション（汎用）
  */
 export type CategoryOption = {

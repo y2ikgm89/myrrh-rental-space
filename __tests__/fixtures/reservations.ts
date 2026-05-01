@@ -10,7 +10,6 @@ export interface TestSpace {
   description: string;
   addressDetail: string | null;
   locationId: string;
-  access: string;
   capacity: number;
   area: number;
   hourlyPrice: number;
@@ -69,7 +68,6 @@ export const TEST_SPACE: TestSpace = {
   description: "テスト用のスペース",
   addressDetail: "3F",
   locationId: "33333333-3333-4333-8333-333333333333",
-  access: "渋谷駅徒歩5分",
   capacity: 10,
   area: 50.0,
   hourlyPrice: 1000,

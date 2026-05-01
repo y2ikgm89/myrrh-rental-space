@@ -21,7 +21,6 @@ function formatSpaceToPlain(s: {
   descriptionHtml: string;
   descriptionPlainText: string;
   addressDetail: string | null;
-  access: string | null;
   capacity: number;
   area: number | null;
   hourlyPrice: number;
@@ -61,7 +60,6 @@ function formatSpaceToPlain(s: {
     descriptionPlainText: s.descriptionPlainText,
     addressDetail: s.addressDetail,
     displayAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
-    access: s.access,
     capacity: s.capacity,
     area: s.area,
     hourlyPrice: s.hourlyPrice,

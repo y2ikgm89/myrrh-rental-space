@@ -22,7 +22,6 @@ function minimalValidSpaceFormPayload() {
     name: "デモスペース",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     addressDetail: "",
-    access: "",
     capacity: 10,
     area: null,
     hourlyPrice: 1000,

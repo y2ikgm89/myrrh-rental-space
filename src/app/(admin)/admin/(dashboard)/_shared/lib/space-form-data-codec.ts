@@ -96,7 +96,6 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     name: getTrimmedString(formData, "name"),
     descriptionJson: getTrimmedString(formData, "descriptionJson"),
     addressDetail: getTrimmedString(formData, "addressDetail"),
-    access: getTrimmedString(formData, "access"),
     capacity: getRequiredInt(formData, "capacity"),
     area: getOptionalNullableNumber(formData, "area"),
     hourlyPrice: getRequiredFiniteNumber(formData, "hourlyPrice"),
@@ -150,7 +149,6 @@ export function spaceFormDataToFormData(
   fd.set("name", payload.name);
   fd.set("descriptionJson", payload.descriptionJson);
   fd.set("addressDetail", payload.addressDetail ?? "");
-  fd.set("access", payload.access ?? "");
   fd.set("capacity", String(payload.capacity));
   fd.set("hourlyPrice", String(payload.hourlyPrice));
   fd.set("mainImageUrl", payload.mainImageUrl);

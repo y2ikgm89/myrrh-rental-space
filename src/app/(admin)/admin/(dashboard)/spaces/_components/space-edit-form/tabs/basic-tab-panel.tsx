@@ -156,18 +156,6 @@ export function SpaceEditBasicTabPanel({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="access">アクセス（スペース固有の補足）</Label>
-              <Input
-                id="access"
-                {...register("access")}
-                placeholder="例: エレベーター降りて右手（任意）"
-                disabled={isPending}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="capacity">定員（人数）*</Label>
               <Input

@@ -6,6 +6,7 @@ import {
   IconMapPin,
   IconFileText,
   IconWalk,
+  IconCar,
 } from "@tabler/icons-react";
 
 import { Heading } from "../../../_shared/components/design-system/heading";
@@ -22,10 +23,17 @@ interface SpaceInfoProps {
     readonly area: number | null;
     /** 拠点住所 + 所在地補足の1行 */
     readonly lineAddress: string;
-    readonly access: string | null;
     readonly facilities: JsonValue;
     readonly category: { readonly name: string } | null;
-    readonly location: { readonly name: string } | null;
+    /**
+     * 親 Location（accessLines / parkingInfo は Booking.com Room → Property の
+     * 業界標準パターンに沿って Space 詳細から表示する）。
+     */
+    readonly location: {
+      readonly name: string;
+      readonly accessLines: readonly string[];
+      readonly parkingInfo: string | null;
+    } | null;
     readonly terms: {
       readonly title: string;
       readonly slug: string;
@@ -99,18 +107,40 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
         </div>
       ) : null}
 
-      {/* Access */}
-      {space.access ? (
+      {/* Access — 親 Location から継承表示（Booking.com Room → Property 標準）。
+          スペース固有の補足は addressDetail / lineAddress（メタ行）に集約。 */}
+      {space.location &&
+      (space.location.accessLines.length > 0 || space.location.parkingInfo) ? (
         <div>
           <Heading level={2} className="mb-4">
             アクセス
           </Heading>
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-            <IconWalk className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <Prose>
-              <p>{space.access}</p>
-            </Prose>
-          </div>
+          <Stack gap="md">
+            {space.location.accessLines.length > 0 ? (
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <IconWalk
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
+                <ol className="space-y-1">
+                  {space.location.accessLines.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+            {space.location.parkingInfo ? (
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <IconCar
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  aria-hidden="true"
+                />
+                <p className="whitespace-pre-line">
+                  {space.location.parkingInfo}
+                </p>
+              </div>
+            ) : null}
+          </Stack>
         </div>
       ) : null}
 

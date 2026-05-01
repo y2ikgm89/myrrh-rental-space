@@ -21,7 +21,6 @@ type SpaceCommandInput = {
   descriptionHtml: string;
   descriptionPlainText: string;
   addressDetail?: string | null | undefined;
-  access?: string | null | undefined;
   capacity: number;
   area?: number | null | undefined;
   hourlyPrice: number;
@@ -63,7 +62,6 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     descriptionHtml: input.descriptionHtml,
     descriptionPlainText: input.descriptionPlainText,
     addressDetail: normalizeNullableString(input.addressDetail),
-    access: normalizeNullableString(input.access),
     capacity: input.capacity,
     area: input.area ?? null,
     hourlyPrice: input.hourlyPrice,
@@ -279,7 +277,6 @@ export async function duplicateSpaceCommand(
       descriptionHtml: true,
       descriptionPlainText: true,
       addressDetail: true,
-      access: true,
       capacity: true,
       area: true,
       hourlyPrice: true,
@@ -317,7 +314,6 @@ export async function duplicateSpaceCommand(
       descriptionHtml: source.descriptionHtml,
       descriptionPlainText: source.descriptionPlainText,
       addressDetail: source.addressDetail,
-      access: source.access,
       capacity: source.capacity,
       area: source.area,
       hourlyPrice: source.hourlyPrice,

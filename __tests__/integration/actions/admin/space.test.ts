@@ -23,7 +23,6 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   name: "テストスペース",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "3F",
-  access: "渋谷駅から徒歩5分",
   capacity: 10,
   area: 50,
   hourlyPrice: 5000,
@@ -305,35 +304,6 @@ describe("Space Admin Action Integration", () => {
         expect(result.success).toBe(false);
         if (!result.success) {
           expect(result.error.issues[0].message).toContain("拠点");
-        }
-      });
-    });
-
-    describe("access", () => {
-      test("空のアクセス情報はOK（オプション）", () => {
-        const result = spaceFormSchema.safeParse({
-          ...VALID_SPACE_INPUT,
-          access: "",
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("500文字のアクセス情報はOK", () => {
-        const result = spaceFormSchema.safeParse({
-          ...VALID_SPACE_INPUT,
-          access: "x".repeat(500),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("501文字のアクセス情報はエラー", () => {
-        const result = spaceFormSchema.safeParse({
-          ...VALID_SPACE_INPUT,
-          access: "x".repeat(501),
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("500文字以内");
         }
       });
     });

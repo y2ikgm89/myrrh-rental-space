@@ -19,7 +19,6 @@ const VALID_SPACE_INPUT = {
   name: "テストスペース",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "3F 会議室A",
-  access: "渋谷駅から徒歩5分",
   capacity: 10,
   area: 50.5,
   hourlyPrice: 1000,
@@ -153,33 +152,6 @@ describe("spaceFormSchema", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
         addressDetail: "あ".repeat(501),
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
-      }
-    });
-  });
-
-  describe("access", () => {
-    test("オプショナル（undefined）は許可", () => {
-      const { access, ...withoutAccess } = VALID_SPACE_INPUT;
-      const result = spaceFormSchema.safeParse(withoutAccess);
-      expect(result.success).toBe(true);
-    });
-
-    test("空文字は許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        access: "",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("500文字超過はエラー", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        access: "あ".repeat(501),
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -496,7 +468,6 @@ describe("defaultSpaceFormValues", () => {
       name: "",
       descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       addressDetail: "",
-      access: "",
       capacity: 10,
       area: null,
       hourlyPrice: 0,

@@ -85,11 +85,6 @@ export const spaceFormBaseSchema = z
       .max(500, { error: "所在地補足は500文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
-    access: z
-      .string()
-      .max(500, { error: "アクセス情報は500文字以内で入力してください" })
-      .optional()
-      .or(z.literal("")),
     capacity: z
       .number()
       .int({ error: "整数を入力してください" })
@@ -180,7 +175,6 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   name: "",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "",
-  access: "",
   capacity: 10,
   area: null,
   hourlyPrice: 0,
@@ -234,7 +228,6 @@ export type SpaceWithStats = {
   addressDetail: string | null;
   /** 拠点住所 + addressDetail を結合した表示用1行 */
   displayAddress: string;
-  access: string | null;
   capacity: number;
   area: number | null;
   hourlyPrice: number;

@@ -458,8 +458,8 @@ model Space {
   /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
   descriptionPlainText String   @db.Text
   /// 号室・フロア等。建物の住所は必ず `Location.address` を正本とする。
+  /// 主要交通案内・駐車場情報は親 Location（accessLines / parkingInfo）が SSoT。
   addressDetail String?   @db.Text
-  access        String?   @db.Text
   capacity      Int
   area          Decimal?  @db.Decimal(10, 2)
   hourlyPrice   Decimal   @db.Decimal(10, 2)

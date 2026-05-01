@@ -12,7 +12,6 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       descriptionPlainText: "desc",
       addressDetail: null,
       displayAddress: "東京都渋谷区",
-      access: null,
       capacity: 10,
       area: null,
       hourlyPrice: 1000,

@@ -137,9 +137,6 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           {space.category ? (
             <DetailField label="カテゴリ" value={space.category.name} />
           ) : null}
-          {space.access && (
-            <DetailField label="アクセス" value={space.access} />
-          )}
           <DetailField label="定員" value={`${space.capacity}名`} />
           {space.area && <DetailField label="面積" value={`${space.area}m²`} />}
         </div>
