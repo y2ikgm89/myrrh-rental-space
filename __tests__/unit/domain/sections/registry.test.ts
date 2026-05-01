@@ -46,7 +46,7 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("22 件のセクション定義を返す（homepage-hero は Page.pageHero へ移行済み）", () => {
+  test("22 件のセクション定義を返す（homepage-hero は page-hero section へ移行済み）", () => {
     const defs = getAllSectionDefinitions();
     expect(defs).toHaveLength(22);
   });

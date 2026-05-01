@@ -13,24 +13,17 @@ import {
 } from "@/shared/lib/validations/section";
 import { getDefaultConfig } from "@/shared/lib/sections/registry";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
-import { defaultPageHeroHome } from "@/shared/lib/sections/page-hero/defaults";
-import { pageHeroSchema } from "@/shared/lib/sections/page-hero/schema";
 
 // =============================================================================
 // SectionType Tests
 // =============================================================================
 
 describe("Homepage Public Action Integration", () => {
-  describe("PageHero / home defaults (Phase A)", () => {
+  describe("home defaults (Phase A)", () => {
     test("DEFAULT_PAGE_SECTIONS.home に homepage-hero が含まれない", () => {
       const home = DEFAULT_PAGE_SECTIONS["home"];
       expect(home).toBeDefined();
       expect(home?.some((s) => s.type === "homepage-hero")).toBe(false);
-    });
-
-    test("defaultPageHeroHome は pageHeroSchema を満たす", () => {
-      const parsed = pageHeroSchema.safeParse(defaultPageHeroHome);
-      expect(parsed.success).toBe(true);
     });
 
     test("home デフォルトセクションは order が重複しない非負整数", () => {

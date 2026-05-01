@@ -23,7 +23,7 @@ describe("admin clean-break dead code boundaries", () => {
     expect(testSource).not.toContain("const sidebarSettingsSchema = z.object");
   });
 
-  test("content managed page editor does not keep builder inserter or dirty relay shims", () => {
+  test("content managed page editor does not keep builder inserter, legacy section editor, or page-hero editor", () => {
     expect(
       existsSync(
         filePath(
@@ -31,26 +31,20 @@ describe("admin clean-break dead code boundaries", () => {
         ),
       ),
     ).toBe(false);
-
-    const sectionEditor = read(
-      "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditor.tsx",
-    );
-
-    expect(sectionEditor).not.toContain("onDirtyChange?:");
-    expect(sectionEditor).not.toContain("useEffect");
-    expect(sectionEditor).not.toContain("useState");
-  });
-
-  test("home hero editor exposes only content fields in the admin page editor", () => {
-    const pageHeroEditor = read(
-      "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageHeroEditor.tsx",
-    );
-
-    expect(pageHeroEditor).not.toContain("contentOnly");
-    expect(pageHeroEditor).not.toContain("onDirtyChange");
-    expect(pageHeroEditor).not.toContain("VARIANT_OPTIONS");
-    expect(pageHeroEditor).not.toContain("applyVariant");
-    expect(pageHeroEditor).not.toContain("useFieldArray");
+    expect(
+      existsSync(
+        filePath(
+          "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditor.tsx",
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        filePath(
+          "src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageHeroEditor.tsx",
+        ),
+      ),
+    ).toBe(false);
   });
 
   test("settings dialog definitions do not keep unused width contracts", () => {
