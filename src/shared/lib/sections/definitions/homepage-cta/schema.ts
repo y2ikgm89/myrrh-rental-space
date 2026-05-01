@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { field } from "../../field-registry";
+import { createButtonsArraySchema } from "../_shared/buttons";
 
 export const homepageCtaConfigSchema = z.object({
   label: field.text("ラベル", { default: "Reservation", subGroup: "text" }),
@@ -12,14 +13,7 @@ export const homepageCtaConfigSchema = z.object({
       "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
     subGroup: "text",
   }),
-  buttonText: field.text("ボタンの文字", {
-    default: "View All Spaces",
-    subGroup: "button",
-  }),
-  buttonUrl: field.url("ボタンのリンク先 URL", {
-    default: "/spaces",
-    subGroup: "button",
-  }),
+  buttons: createButtonsArraySchema("ボタン"),
 });
 
 export type HomepageCtaConfig = z.infer<typeof homepageCtaConfigSchema>;
