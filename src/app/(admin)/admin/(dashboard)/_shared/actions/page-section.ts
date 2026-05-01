@@ -7,13 +7,35 @@ import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { updatePageSectionCommand } from "@/shared/domain/sections/commands";
+import {
+  createPageSectionCommand,
+  deletePageSectionCommand,
+  duplicatePageSectionCommand,
+  reorderPageSectionsCommand,
+  togglePageSectionActiveCommand,
+  updatePageSectionCommand,
+} from "@/shared/domain/sections/commands";
 import {
   updateSectionContentSchema,
   type UpdateSectionContentInput,
 } from "@/shared/lib/validations/section";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
+
+const createPageSectionSchema = z.object({
+  pageId: z.string().uuid({ error: "ページIDが不正です" }),
+  type: z.string().min(1, { error: "セクションタイプは必須です" }),
+});
+
+const reorderPageSectionsSchema = z.object({
+  pageId: z.string().uuid({ error: "ページIDが不正です" }),
+  orderedIds: z
+    .array(z.string().uuid())
+    .min(1, { error: "最低1つのセクションIDを指定してください" })
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: "重複するセクションIDが含まれます",
+    }),
+});
 
 function revalidatePages(pageId?: string) {
   updateTag(CACHE_TAGS.SECTIONS);
@@ -23,6 +45,10 @@ function revalidatePages(pageId?: string) {
     updateTag(getCacheTag.pages.detail(pageId));
   }
 }
+
+// =============================================================================
+// updatePageSection（既存）
+// =============================================================================
 
 export async function updatePageSection(
   id: string,
@@ -60,6 +86,135 @@ export async function updatePageSection(
     },
     afterSuccess: () => {
       revalidatePages(pageId);
+    },
+  });
+}
+
+// =============================================================================
+// createPageSection
+// =============================================================================
+
+export async function createPageSection(
+  input: unknown,
+): Promise<MutationResult<{ id: string; pageId: string }>> {
+  const parsed = createPageSectionSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: parsed.data.pageId,
+    execute: async () => {
+      const result = await createPageSectionCommand(parsed.data);
+      return { id: result.id, pageId: result.pageId };
+    },
+    afterSuccess: (data) => {
+      revalidatePages(data.pageId);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+}
+
+// =============================================================================
+// deletePageSection
+// =============================================================================
+
+export async function deletePageSection(
+  id: string,
+): Promise<MutationResult<{ id: string; pageId: string }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () => {
+      const result = await deletePageSectionCommand(parsedId.data);
+      return { id: result.id, pageId: result.pageId };
+    },
+    afterSuccess: (data) => {
+      revalidatePages(data.pageId);
+    },
+  });
+}
+
+// =============================================================================
+// duplicatePageSection
+// =============================================================================
+
+export async function duplicatePageSection(
+  id: string,
+): Promise<MutationResult<{ id: string; pageId: string }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () => {
+      const result = await duplicatePageSectionCommand(parsedId.data);
+      return { id: result.id, pageId: result.pageId };
+    },
+    afterSuccess: (data) => {
+      revalidatePages(data.pageId);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+}
+
+// =============================================================================
+// togglePageSectionActive
+// =============================================================================
+
+export async function togglePageSectionActive(
+  id: string,
+): Promise<MutationResult<{ id: string; pageId: string; isActive: boolean }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () => {
+      const result = await togglePageSectionActiveCommand(parsedId.data);
+      return {
+        id: result.id,
+        pageId: result.pageId,
+        isActive: result.isActive,
+      };
+    },
+    afterSuccess: (data) => {
+      revalidatePages(data.pageId);
+    },
+  });
+}
+
+// =============================================================================
+// reorderPageSections
+// =============================================================================
+
+export async function reorderPageSections(
+  input: unknown,
+): Promise<MutationResult<{ count: number; pageId: string }>> {
+  const parsed = reorderPageSectionsSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: parsed.data.pageId,
+    execute: async () => {
+      const result = await reorderPageSectionsCommand({
+        pageId: parsed.data.pageId,
+        orderedIds: parsed.data.orderedIds,
+      });
+      return { count: result.count, pageId: result.pageId };
+    },
+    afterSuccess: (data) => {
+      revalidatePages(data.pageId);
     },
   });
 }
