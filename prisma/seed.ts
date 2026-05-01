@@ -32,7 +32,7 @@ import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
-import { defaultPageHeroHome } from "../src/shared/lib/sections/page-hero/defaults";
+import { DEFAULT_PAGE_HERO } from "../src/shared/lib/sections/definitions/page-hero";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -2082,6 +2082,30 @@ async function seedPages() {
   await bootstrapSystemPagesCommand(prisma);
   console.log("✅ System pages ensured");
 
+  // ホームページに page-hero セクション（order=-1）を idempotent に挿入
+  const homePage = await prisma.page.findUnique({
+    where: { slug: "home" },
+    select: { id: true },
+  });
+  if (homePage) {
+    const existingHero = await prisma.section.findFirst({
+      where: { pageId: homePage.id, type: "page-hero" },
+      select: { id: true },
+    });
+    if (!existingHero) {
+      await prisma.section.create({
+        data: {
+          pageId: homePage.id,
+          type: "page-hero",
+          config: DEFAULT_PAGE_HERO,
+          order: -1,
+          isActive: true,
+        },
+      });
+      console.log("✅ Inserted page-hero section for home page");
+    }
+  }
+
   // privacy ページは Terms システムに移行済み（/terms/privacy-policy）
 }
 
@@ -2970,20 +2994,6 @@ async function seedSystemPageSections() {
     console.log(`✅ Created sections for ${createdCount} system pages`);
   } else {
     console.log("⏭️ System page sections already exist or no pages found");
-  }
-
-  const homeForHero = await prisma.page.findUnique({
-    where: { slug: "home" },
-    select: { id: true },
-  });
-  if (homeForHero) {
-    const heroUpdated = await prisma.page.updateMany({
-      where: { id: homeForHero.id, pageHero: { equals: Prisma.DbNull } },
-      data: { pageHero: defaultPageHeroHome },
-    });
-    if (heroUpdated.count > 0) {
-      console.log("✅ Set default pageHero on home page");
-    }
   }
 }
 
