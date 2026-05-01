@@ -29,6 +29,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { isRecord } from "@/shared/lib/serialize";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
+import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 import { AutoSectionForm } from "../../_sections/_components/auto-section-form";
 import type { ConfigFormSavePayload } from "../../_sections/_components/config-forms/shared";
@@ -51,11 +52,13 @@ function isPageHeroVariant(value: string): value is PageHeroVariant {
 
 interface SectionEditPanelProps {
   readonly section: PageSectionData;
+  readonly dynamicOptions: DynamicSectionOptions;
   readonly onUpdated?: () => void;
 }
 
 export function SectionEditPanel({
   section,
+  dynamicOptions,
   onUpdated,
 }: SectionEditPanelProps) {
   const router = useRouter();
@@ -151,6 +154,7 @@ export function SectionEditPanel({
         <AutoSectionForm
           key={`${section.id}-${currentVariant}-${section.updatedAt.toISOString()}`}
           section={section}
+          dynamicOptions={dynamicOptions}
           onSave={handleSave}
           isPending={isPending}
           contentOnly

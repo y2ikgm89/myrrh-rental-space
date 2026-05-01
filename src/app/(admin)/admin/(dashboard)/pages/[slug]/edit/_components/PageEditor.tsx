@@ -14,6 +14,7 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import type { PageForEdit } from "@/admin/queries/page-section";
+import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
 import { getAllSectionDefinitions } from "@/shared/lib/sections/registry";
 import { AddSectionDialog } from "./AddSectionDialog";
 import { SectionEditPanel } from "./SectionEditPanel";
@@ -28,6 +29,7 @@ import {
 
 interface PageEditorProps {
   readonly page: PageForEdit;
+  readonly dynamicOptions: DynamicSectionOptions;
 }
 
 const HOMEPAGE_ONLY_TYPES = new Set<string>([
@@ -37,7 +39,7 @@ const HOMEPAGE_ONLY_TYPES = new Set<string>([
   "homepage-cta",
 ]);
 
-export function PageEditor({ page }: PageEditorProps) {
+export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
   const router = useRouter();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -124,6 +126,7 @@ export function PageEditor({ page }: PageEditorProps) {
             {activeSection ? (
               <SectionEditPanel
                 section={activeSection}
+                dynamicOptions={dynamicOptions}
                 onUpdated={() => router.refresh()}
               />
             ) : (

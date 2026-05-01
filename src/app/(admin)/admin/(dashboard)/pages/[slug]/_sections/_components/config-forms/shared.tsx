@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { IconDeviceFloppy } from "@tabler/icons-react";
 import { SubmitButton } from "@/admin/components/ui";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
+import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
 
 export interface ConfigFormSavePayload {
   config: Record<string, unknown>;
@@ -20,6 +21,7 @@ export interface ConfigFormProps {
   isPending: boolean;
   onDirtyChange?: ((dirty: boolean) => void) | undefined;
   contentOnly?: boolean;
+  dynamicOptions?: DynamicSectionOptions;
 }
 
 export function FormActions({

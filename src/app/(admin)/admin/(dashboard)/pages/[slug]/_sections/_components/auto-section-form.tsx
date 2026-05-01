@@ -37,6 +37,7 @@ import {
   Label,
   Textarea,
 } from "@/admin/components/ui";
+import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
@@ -45,6 +46,10 @@ import { FieldGroupSection } from "./FieldGroupSection";
 import { extractSchemaFields } from "./zod-introspection";
 import type { FieldInfo } from "./zod-introspection";
 import type { FieldType } from "@/shared/lib/sections/types";
+import type {
+  DynamicCategoryOption,
+  DynamicSectionOptions,
+} from "@/admin/queries/section-dynamic-options";
 import { AutoBooleanField } from "./auto-fields/AutoBooleanField";
 import { AutoSelectField } from "./auto-fields/AutoSelectField";
 import { AutoArrayField } from "./auto-fields/AutoArrayField";
@@ -79,6 +84,7 @@ export function AutoSectionForm({
   isPending,
   onDirtyChange,
   contentOnly = false,
+  dynamicOptions,
 }: ConfigFormProps) {
   const definition = getSectionDefinition(section.type);
   const isCustomType = section.type === "custom";
@@ -169,6 +175,7 @@ export function AutoSectionForm({
       isPending={isPending}
       defaultValue={defaultConfig[fieldInfo.key]}
       errors={errors}
+      dynamicOptions={dynamicOptions}
     />
   );
 
@@ -269,6 +276,7 @@ interface AutoFieldProps {
   readonly isPending: boolean;
   readonly defaultValue: unknown;
   readonly errors: FieldErrors<FieldValues>;
+  readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
 function AutoField({
@@ -279,6 +287,7 @@ function AutoField({
   isPending,
   defaultValue,
   errors,
+  dynamicOptions,
 }: AutoFieldProps) {
   const { key, meta } = fieldInfo;
   const fieldId = `auto-${key}`;
@@ -301,6 +310,7 @@ function AutoField({
       defaultValue={defaultValue}
       error={typeof errorMessage === "string" ? errorMessage : undefined}
       errors={errors}
+      dynamicOptions={dynamicOptions}
     />
   );
 }
@@ -321,6 +331,7 @@ interface AutoFieldByTypeProps {
   readonly defaultValue: unknown;
   readonly error: string | undefined;
   readonly errors: FieldErrors<FieldValues>;
+  readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
 function AutoFieldByType(props: AutoFieldByTypeProps) {
@@ -340,6 +351,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     defaultValue,
     error,
     errors,
+    dynamicOptions,
   } = props;
 
   switch (fieldType) {
@@ -428,7 +440,15 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
-    case "select":
+    case "select": {
+      const meta = fieldRegistry.get(schema);
+      const dynamicSource = meta?.dynamicSelectSource;
+      const dynamicCategoryOptions:
+        | ReadonlyArray<DynamicCategoryOption>
+        | undefined =
+        dynamicSource && dynamicOptions
+          ? dynamicOptions[dynamicSource]
+          : undefined;
       return (
         <AutoSelectField
           fieldKey={fieldKey}
@@ -440,8 +460,12 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           control={control}
           isPending={isPending}
           error={error}
+          {...(dynamicCategoryOptions !== undefined && {
+            dynamicOptions: dynamicCategoryOptions,
+          })}
         />
       );
+    }
 
     case "color":
       return (
@@ -553,6 +577,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
                   typeof nestedError === "string" ? nestedError : undefined
                 }
                 errors={errors}
+                dynamicOptions={dynamicOptions}
               />
             );
           }}

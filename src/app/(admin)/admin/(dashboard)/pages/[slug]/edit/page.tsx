@@ -11,6 +11,7 @@ import {
   getPageForEdit,
   getPageWithSections,
 } from "@/admin/queries/page-section";
+import { getSectionDynamicOptions } from "@/admin/queries/section-dynamic-options";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { PageEditor } from "./_components/PageEditor";
@@ -47,6 +48,8 @@ export default async function EditPagePage({
     notFound();
   }
 
+  const dynamicOptions = await getSectionDynamicOptions();
+
   return (
     <AdminDetailLayout
       backHref="/admin/pages"
@@ -73,7 +76,7 @@ export default async function EditPagePage({
         </>
       }
     >
-      <PageEditor key={page.id} page={page} />
+      <PageEditor key={page.id} page={page} dynamicOptions={dynamicOptions} />
     </AdminDetailLayout>
   );
 }
