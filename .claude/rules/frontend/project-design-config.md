@@ -185,6 +185,17 @@ public.css / admin.css 両方で **Tailwind default bp 維持 + `--breakpoint-3x
 
 `interactiveWidget: "resizes-visual"` により仮想キーボード表示時に visual viewport が縮小される（入力中に送信ボタンが可視維持）。
 
+### 公開ページ z-index 階層（SSoT）
+
+| 層                     | クラス      | 用途                                                            |
+| ---------------------- | ----------- | --------------------------------------------------------------- |
+| Modal / Dialog overlay | `z-50`      | mobile menu Dialog, image lightbox                              |
+| Sticky header          | `z-40`      | `site-header.tsx`（**他要素で使用禁止**）                       |
+| Active content / nav   | `z-30`      | Carousel active card, carousel nav arrows, sticky bottom bar 等 |
+| Side content           | `z-20` 以下 | Carousel side cards (distance 1+) 等                            |
+
+**規律**: `absolute` / `fixed` 配置の interactive UI を `z-40` 以上にしない。スクロール時に sticky header（z-40）と stacking 衝突し、**DOM 順で後勝ちすると要素がヘッダーの上に貼り付く silent bug** を起こす。実例: `spaces-carousel.tsx` の nav arrows が当初 `z-40` でヘッダーと衝突 → `z-30` に修正（2026-05-01）。新規 `z-*` クラス追加時は本表を必ず参照。Lexical fullscreen 等で動的 z-index を inline style で扱うパターンは `tailwind-patterns/inline-style-vs-arbitrary.md` 参照。
+
 ## UX 定数
 
 | 定数                     | 値           | 根拠                                                                                            |
