@@ -110,7 +110,7 @@ export function FaqListSection({
 
   const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default;
   const containerWidth =
-    CONTAINER_WIDTH_MAP[parseContainerWidth(config.containerWidth)];
+    CONTAINER_WIDTH_MAP[parseContainerWidth(config.layout.containerWidth)];
   const initialOpen = parseFaqInitialOpen(config.initialOpen);
 
   return (

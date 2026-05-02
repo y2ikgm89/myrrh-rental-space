@@ -107,8 +107,8 @@ export function GallerySection({
   const gapClass = GALLERY_GAP_MAP[config.gap] ?? GALLERY_GAP_MAP.md;
   const colKey = Math.min(Math.max(config.columns, 1), 6);
 
-  const isMasonry = config.layout === "masonry";
-  const isCarousel = config.layout === "carousel";
+  const isMasonry = config.gridLayout === "masonry";
+  const isCarousel = config.gridLayout === "carousel";
 
   const imageAspect = parseGalleryImageAspect(config.imageAspect);
   const aspectClass = IMAGE_ASPECT_MAP[imageAspect];

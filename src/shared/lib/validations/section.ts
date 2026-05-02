@@ -11,6 +11,7 @@ import {
   createInternalAppRouteSchema,
   createCtaButtonItemSchema,
 } from "./cta-and-url";
+import { sectionLayoutSchema } from "@/shared/lib/sections/definitions/_shared/layout";
 import {
   imageAspectValues,
   cardStyleValues,
@@ -151,6 +152,7 @@ export const heroConfigSchema = z.object({
   variant: z.enum(heroVariantValues).default("default"),
   videoUrl: z.string().url().optional().or(z.literal("")),
   parallaxSpeed: z.number().min(0).max(1).default(0.5),
+  layout: sectionLayoutSchema,
 });
 
 /** Hero Parallax セクション設定（v3） */
@@ -191,6 +193,7 @@ export const heroParallaxConfigSchema = z.object({
   height: z.enum(heroParallaxHeightValues).default("lg"),
   heightCustom: z.number().min(20).max(100).default(80).optional(),
   overlayStyle: z.enum(overlayStyleValues).default("gradient"),
+  layout: sectionLayoutSchema,
 });
 
 // --- Content ---
@@ -201,10 +204,9 @@ export const customConfigSchema = z.object({
     .string()
     .max(50, { error: "ラベルは50文字以内です" })
     .default("Contents"),
-  maxWidth: maxWidthSchema,
   containerClass: z.string().max(200).optional(),
   backgroundColor: z.string().max(50).optional(),
-  padding: z.enum(paddingValues).default("md"),
+  layout: sectionLayoutSchema,
 });
 
 /** Concept セクション設定（v3） */
@@ -232,8 +234,9 @@ export const conceptConfigSchema = z.object({
     .default({ url: "", alt: "", caption: "" }),
   imagePosition: z.enum(imagePositionValues).default("right"),
   textAlign: z.enum(textAlignValues).default("left"),
-  layout: z.enum(conceptLayoutValues).default("side-by-side"),
+  contentLayout: z.enum(conceptLayoutValues).default("side-by-side"),
   imageAspect: z.enum(imageAspectValues).default("original"),
+  layout: sectionLayoutSchema,
 });
 
 // --- Lists ---
@@ -256,10 +259,11 @@ export const spaceListConfigSchema = z.object({
     .max(50, { error: "テキストは50文字以内です" })
     .default("全てのスペースを見る"),
   viewAllUrl: viewAllUrlSchema.default("/spaces"),
-  layout: z.enum(spaceLayoutValues).default("grid"),
+  displayLayout: z.enum(spaceLayoutValues).default("grid"),
   columns: z.number().int().min(1).max(4).default(3),
   cardStyle: z.enum(cardStyleValues).default("bordered"),
   imageAspect: z.enum(spaceImageAspectValues).default("4:3"),
+  layout: sectionLayoutSchema,
 });
 
 /** SpaceShowcase セクション設定（v3） */
@@ -277,6 +281,7 @@ export const spaceShowcaseConfigSchema = z.object({
   columns: z.number().int().min(2).max(4).default(3),
   cardStyle: z.enum(cardStyleValues).default("bordered"),
   imageAspect: z.enum(showcaseImageAspectValues).default("4:3"),
+  layout: sectionLayoutSchema,
 });
 
 /** NewsList セクション設定 */
@@ -296,8 +301,9 @@ export const newsListConfigSchema = z.object({
     .max(50, { error: "テキストは50文字以内です" })
     .default("全てのお知らせ"),
   viewAllUrl: viewAllUrlSchema.default("/news"),
-  layout: z.enum(newsLayoutValues).default("list"),
+  displayLayout: z.enum(newsLayoutValues).default("list"),
   columns: z.number().int().min(2).max(4).default(2),
+  layout: sectionLayoutSchema,
 });
 
 /** PostList セクション設定 */
@@ -318,9 +324,10 @@ export const postListConfigSchema = z.object({
     .default("全ての記事"),
   viewAllUrl: viewAllUrlSchema.default("/posts"),
   categoryId: z.string().uuid().or(z.literal("")).default(""),
-  layout: z.enum(postLayoutValues).default("grid"),
+  displayLayout: z.enum(postLayoutValues).default("grid"),
   columns: z.number().int().min(1).max(4).default(3),
   imageAspect: z.enum(postImageAspectValues).default("16:9"),
+  layout: sectionLayoutSchema,
 });
 
 /** FaqList セクション設定 */
@@ -356,8 +363,8 @@ export const faqListConfigSchema = z.object({
     )
     .optional(),
   variant: z.enum(faqVariantValues).default("default"),
-  containerWidth: z.enum(containerWidthValues).default("md"),
   initialOpen: z.enum(faqInitialOpenValues).default(faqInitialOpenValues[1]),
+  layout: sectionLayoutSchema,
 });
 
 // --- Features ---
@@ -388,7 +395,8 @@ export const featuresConfigSchema = z.object({
     )
     .default([]),
   columns: z.number().int().min(1).max(4).default(3),
-  layout: z.enum(featuresLayoutValues).default("hero-first"),
+  itemLayout: z.enum(featuresLayoutValues).default("hero-first"),
+  layout: sectionLayoutSchema,
 });
 
 /** Testimonial セクション設定 */
@@ -423,9 +431,10 @@ export const testimonialConfigSchema = z.object({
       }),
     )
     .default([]),
-  layout: z.enum(testimonialLayoutValues).default("carousel"),
+  displayLayout: z.enum(testimonialLayoutValues).default("carousel"),
   showRating: z.boolean().default(true),
   variant: z.enum(testimonialVariantValues).default("default"),
+  layout: sectionLayoutSchema,
 });
 
 /** Gallery セクション設定 */
@@ -444,12 +453,13 @@ export const galleryConfigSchema = z.object({
       }),
     )
     .default([]),
-  layout: z.enum(galleryLayoutValues).default("grid"),
+  gridLayout: z.enum(galleryLayoutValues).default("grid"),
   columns: z.number().int().min(1).max(6).default(3),
   gap: z.enum(galleryGapValues).default("md"),
   enableLightbox: z.boolean().default(true),
   imageAspect: z.enum(galleryImageAspectValues).default("original"),
   hoverEffect: z.enum(galleryHoverEffectValues).default("zoom"),
+  layout: sectionLayoutSchema,
 });
 
 // --- Functional ---
@@ -471,6 +481,7 @@ export const ctaConfigSchema = z.object({
   buttons: ctaButtonsArraySchema.default([]),
   backgroundColor: z.string().max(50).optional(),
   variant: z.enum(ctaVariantValues).default("default"),
+  layout: sectionLayoutSchema,
 });
 
 /** ContactForm セクション設定 */
@@ -492,6 +503,7 @@ export const contactFormConfigSchema = z.object({
   showSubjectField: z.boolean().default(true),
   submitButtonText: z.string().max(30).default("送信する"),
   variant: z.enum(contactFormVariantValues).default("default"),
+  layout: sectionLayoutSchema,
 });
 
 /** Map セクション設定 */
@@ -508,6 +520,7 @@ export const mapConfigSchema = z.object({
   height: z.enum(mapHeightValues).default("md"),
   showAddressBelow: z.boolean().default(true),
   borderRadius: z.enum(borderRadiusValues).default("sm"),
+  layout: sectionLayoutSchema,
 });
 
 /** Embed セクション設定 */
@@ -524,8 +537,8 @@ export const embedConfigSchema = z.object({
     .or(z.literal("")),
   embedCode: z.string().max(10000).optional(),
   aspectRatio: z.enum(embedAspectRatioValues).default("16:9"),
-  maxWidth: maxWidthSchema,
   borderRadius: z.enum(borderRadiusValues).default("sm"),
+  layout: sectionLayoutSchema,
 });
 
 /** Instagram セクション設定 */
@@ -541,6 +554,7 @@ export const instagramConfigSchema = z.object({
   columns: z.number().int().min(3).max(6).default(6),
   count: z.number().int().min(6).max(12).default(6),
   gap: z.enum(gapSizeValues).default("md"),
+  layout: sectionLayoutSchema,
 });
 
 // =============================================================================

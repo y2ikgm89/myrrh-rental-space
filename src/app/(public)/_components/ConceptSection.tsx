@@ -45,7 +45,7 @@ export function ConceptSection({
   const imageAlt = config.image.alt || (config.heading ?? "コンセプト");
   const imagePosition = config.imagePosition;
   const alignClass = TEXT_ALIGN_CLASS[config.textAlign];
-  const layout = parseConceptLayout(config.layout);
+  const layout = parseConceptLayout(config.contentLayout);
   const isStacked = layout === "stacked";
 
   const textBlock = (

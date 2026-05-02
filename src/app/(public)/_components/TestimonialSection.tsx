@@ -127,13 +127,16 @@ export function TestimonialSection({
         </div>
       </div>
 
-      <div ref={gridRef} className={LAYOUT_CLASS[config.layout]}>
+      <div ref={gridRef} className={LAYOUT_CLASS[config.displayLayout]}>
         <div
-          className={config.layout === "grid" ? GRID_INNER_CLASS : undefined}
+          className={
+            config.displayLayout === "grid" ? GRID_INNER_CLASS : undefined
+          }
         >
           {config.items.map((item, index) => {
             const variant = config.variant;
-            const isFeatured = index === 0 && config.layout !== "carousel";
+            const isFeatured =
+              index === 0 && config.displayLayout !== "carousel";
 
             // variant-specific card styles
             const cardClasses = isFeatured
@@ -151,9 +154,9 @@ export function TestimonialSection({
                 data-testimonial-card=""
                 className={cn(
                   cardClasses,
-                  CARD_CLASS[config.layout],
+                  CARD_CLASS[config.displayLayout],
                   isFeatured &&
-                    config.layout === "grid" &&
+                    config.displayLayout === "grid" &&
                     "@3xl:col-span-full",
                 )}
               >

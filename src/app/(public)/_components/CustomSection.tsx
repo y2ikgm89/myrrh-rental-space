@@ -33,6 +33,7 @@ const PADDING_MAP = {
   sm: "py-[var(--space-sm)]",
   md: "py-[var(--space-md)] md:py-[var(--space-lg)]",
   lg: "py-[var(--space-lg)] md:py-[var(--space-xl)]",
+  xl: "py-[var(--space-xl)] md:py-[var(--space-2xl)]",
 } as const;
 
 interface CustomSectionProps {
@@ -48,8 +49,9 @@ export function CustomSection({
   title,
   style,
 }: CustomSectionProps): ReactElement {
-  const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg;
-  const paddingClass = PADDING_MAP[config.padding] ?? PADDING_MAP.md;
+  const maxWidthClass =
+    MAX_WIDTH_MAP[config.layout.containerWidth] ?? MAX_WIDTH_MAP.lg;
+  const paddingClass = PADDING_MAP[config.layout.padding] ?? PADDING_MAP.md;
 
   return (
     <SectionWrapper style={style} skipPadding skipContainer>

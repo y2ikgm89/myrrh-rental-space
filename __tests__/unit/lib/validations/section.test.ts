@@ -166,8 +166,6 @@ describe("customConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
       sectionLabel: "Custom Section",
-      maxWidth: "lg",
-      padding: "md",
       containerClass: "custom-class",
     };
     const result = customConfigSchema.safeParse(data);
@@ -179,15 +177,9 @@ describe("customConfigSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.sectionLabel).toBe("Contents");
-      expect(result.data.maxWidth).toBe("lg");
-      expect(result.data.padding).toBe("md");
+      expect(result.data.layout.padding).toBe("md");
+      expect(result.data.layout.containerWidth).toBe("lg");
     }
-  });
-
-  test("無効なmaxWidthでエラー", () => {
-    const data = { maxWidth: "invalid" };
-    const result = customConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
   });
 });
 

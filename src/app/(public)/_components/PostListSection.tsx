@@ -90,7 +90,7 @@ export function PostListSection({
 
   if (posts.length === 0) return <></>;
 
-  const isList = config.layout === "list";
+  const isList = config.displayLayout === "list";
   const colKey = Math.min(Math.max(config.columns, 1), 4);
 
   return (

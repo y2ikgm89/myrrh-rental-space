@@ -91,8 +91,8 @@ export function SpaceListSection({
   );
 
   const colKey = Math.min(Math.max(config.columns, 1), 4);
-  const isCarousel = config.layout === "carousel";
-  const isList = config.layout === "list";
+  const isCarousel = config.displayLayout === "carousel";
+  const isList = config.displayLayout === "list";
 
   // grid layout は @container + container query variants を使用（Tailwind v4 推奨）
   const layoutClass = isCarousel

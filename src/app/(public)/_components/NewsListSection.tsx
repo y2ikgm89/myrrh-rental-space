@@ -93,7 +93,7 @@ export function NewsListSection({
 
   if (news.length === 0) return <></>;
 
-  const isCard = config.layout === "card";
+  const isCard = config.displayLayout === "card";
 
   return (
     <SectionWrapper style={style}>

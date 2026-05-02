@@ -4,7 +4,6 @@ import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
 const variants = ["default", "bordered", "minimal"] as const;
-const containerWidths = ["sm", "md", "lg", "full"] as const;
 const initialOpenOptions = ["first", "none", "all"] as const;
 
 export const faqListConfigSchema = z.object({
@@ -55,11 +54,6 @@ export const faqListConfigSchema = z.object({
   variant: field.select("レイアウトの種類", {
     options: variants,
     default: "default",
-    group: "design",
-  }),
-  containerWidth: field.select("コンテナ幅", {
-    options: containerWidths,
-    default: "md",
     group: "design",
   }),
   initialOpen: field.select("初期展開状態", {

@@ -4,7 +4,6 @@ import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
 const aspectRatios = ["16:9", "4:3", "1:1", "auto"] as const;
-const maxWidths = ["sm", "md", "lg", "xl", "full"] as const;
 const borderRadii = ["none", "sm", "lg"] as const;
 
 export const embedConfigSchema = z.object({
@@ -19,11 +18,6 @@ export const embedConfigSchema = z.object({
   aspectRatio: field.select("アスペクト比", {
     options: aspectRatios,
     default: "16:9",
-    group: "design",
-  }),
-  maxWidth: field.select("最大幅", {
-    options: maxWidths,
-    default: "lg",
     group: "design",
   }),
   borderRadius: field.select("角丸", {
