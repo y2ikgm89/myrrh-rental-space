@@ -28,7 +28,6 @@ const publicTermsSelect = {
       id: true,
       version: true,
       contentHtml: true,
-      contentJson: true,
       publishedAt: true,
     },
   },
@@ -43,8 +42,6 @@ export type PublicTermsData = {
     id: string;
     version: number;
     contentHtml: string;
-    /** Lexical EditorState JSON — 管理画面エディタ復元用（公開側の目次は contentHtml 駆動） */
-    contentJson: unknown;
     publishedAt: Date | null;
   } | null;
 };
@@ -89,7 +86,6 @@ export async function getPublicTermsBySlug(
           id: currentVersion.id,
           version: currentVersion.version,
           contentHtml: currentVersion.contentHtml,
-          contentJson: currentVersion.contentJson,
           publishedAt: currentVersion.publishedAt,
         }
       : null,
