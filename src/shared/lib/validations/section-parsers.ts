@@ -23,7 +23,6 @@ import {
   conceptLayoutValues,
   heroHeightValues,
   heroVariantValues,
-  paddingValues,
   imagePositionValues,
   textAlignValues,
   spaceLayoutValues,
@@ -43,7 +42,6 @@ import {
   showcaseImageAspectValues,
   postImageAspectValues,
   galleryImageAspectValues,
-  maxWidthValues,
   type ImageAspect,
   type CardStyle,
   type BorderRadius,
@@ -58,7 +56,6 @@ import {
   type ConceptLayout,
   type HeroHeight,
   type HeroVariant,
-  type Padding,
   type ImagePosition,
   type TextAlign,
   type SpaceLayout,
@@ -77,7 +74,6 @@ import {
   type ShowcaseImageAspect,
   type PostImageAspect,
   type GalleryImageAspect,
-  type MaxWidth,
 } from "./section-options";
 
 // =============================================================================
@@ -103,16 +99,6 @@ function createParser<T extends string>(
 
 export const parseHeroHeight: (value: string) => HeroHeight = createParser(
   heroHeightValues,
-  "md",
-);
-
-export const parseMaxWidth: (value: string) => MaxWidth = createParser(
-  maxWidthValues,
-  "lg",
-);
-
-export const parsePadding: (value: string) => Padding = createParser(
-  paddingValues,
   "md",
 );
 

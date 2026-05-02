@@ -16,7 +16,6 @@ import {
   imageAspectValues,
   cardStyleValues,
   borderRadiusValues,
-  containerWidthValues,
   gapSizeValues,
   contentPositionValues,
   overlayStyleValues,
@@ -27,7 +26,6 @@ import {
   conceptLayoutValues,
   heroHeightValues,
   heroVariantValues,
-  paddingValues,
   imagePositionValues,
   textAlignValues,
   spaceLayoutValues,
@@ -46,7 +44,6 @@ import {
   showcaseImageAspectValues,
   postImageAspectValues,
   galleryImageAspectValues,
-  maxWidthValues,
 } from "./section-options";
 
 // =============================================================================
@@ -122,7 +119,6 @@ const ctaButtonsArraySchema = z
     (buttons) => new Set(buttons.map((b) => b.url)).size === buttons.length,
     { error: "同じURLのボタンを複数登録することはできません" },
   );
-const maxWidthSchema = z.enum(maxWidthValues).default("lg");
 
 // =============================================================================
 // セクションタイプ別 config スキーマ
@@ -747,8 +743,6 @@ export const isInstagramConfig = createConfigGuard(instagramConfigSchema);
 
 export {
   parseHeroHeight,
-  parseMaxWidth,
-  parsePadding,
   parseSpaceLayout,
   parseNewsLayout,
   parsePostLayout,

@@ -88,10 +88,6 @@ export const heroVariantValues = [
 ] as const;
 export type HeroVariant = (typeof heroVariantValues)[number];
 
-/** カスタムパディング */
-export const paddingValues = ["none", "sm", "md", "lg"] as const;
-export type Padding = (typeof paddingValues)[number];
-
 /** 画像位置 */
 export const imagePositionValues = ["left", "right"] as const;
 export type ImagePosition = (typeof imagePositionValues)[number];
@@ -172,10 +168,6 @@ export const galleryImageAspectValues = [
   "16:9",
 ] as const;
 export type GalleryImageAspect = (typeof galleryImageAspectValues)[number];
-
-/** 最大幅 */
-export const maxWidthValues = ["sm", "md", "lg", "xl", "full"] as const;
-export type MaxWidth = (typeof maxWidthValues)[number];
 
 // =============================================================================
 // 管理画面 Select 用ラベル
@@ -339,13 +331,6 @@ export const embedAspectRatioLabels: Record<EmbedAspectRatio, string> = {
   auto: "自動",
 };
 
-export const paddingLabels: Record<Padding, string> = {
-  none: "なし",
-  sm: "小",
-  md: "中",
-  lg: "大",
-};
-
 export const imagePositionLabels: Record<ImagePosition, string> = {
   left: "左",
   right: "右",
@@ -388,12 +373,4 @@ export const galleryImageAspectLabels: Record<GalleryImageAspect, string> = {
   "4:3": "4:3（スタンダード）",
   "1:1": "1:1（正方形）",
   "16:9": "16:9（ワイド）",
-};
-
-export const maxWidthLabels: Record<MaxWidth, string> = {
-  sm: "S（max-w-2xl）",
-  md: "M（max-w-3xl）",
-  lg: "L（max-w-4xl）",
-  xl: "XL（max-w-6xl）",
-  full: "全幅",
 };

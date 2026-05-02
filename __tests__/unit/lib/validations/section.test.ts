@@ -29,8 +29,6 @@ import {
   isCtaConfig,
   // Helpers
   parseHeroHeight,
-  parseMaxWidth,
-  parsePadding,
   parseSpaceLayout,
   parseNewsLayout,
   parsePostLayout,
@@ -763,16 +761,6 @@ describe("パーサー関数", () => {
   test("parseHeroHeight", () => {
     expect(parseHeroHeight("lg")).toBe("lg");
     expect(parseHeroHeight("invalid")).toBe("md"); // デフォルト
-  });
-
-  test("parseMaxWidth", () => {
-    expect(parseMaxWidth("xl")).toBe("xl");
-    expect(parseMaxWidth("invalid")).toBe("lg"); // デフォルト
-  });
-
-  test("parsePadding", () => {
-    expect(parsePadding("sm")).toBe("sm");
-    expect(parsePadding("invalid")).toBe("md"); // デフォルト
   });
 
   test("parseSpaceLayout", () => {
