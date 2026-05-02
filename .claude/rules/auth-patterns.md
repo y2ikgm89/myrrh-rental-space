@@ -652,6 +652,7 @@ await signIn.email({
 - **`'use cache'` 関数に Zod スキーマを引数で渡すと `Cannot access safeParse on the server` エラー** — `'use cache'` の引数は React シリアライゼーションを通るため、Zod スキーマ等の関数を含むオブジェクトは渡せない。DB フェッチのみをキャッシュし、バリデーションはキャッシュ境界外で行う
 - **`verifyAdminSession()`（`@/shared/lib/admin-auth`）/ `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
+- **resource permission の上にロール制限を加える場合は `execute` callback 内で `user.role` チェック** — 新 resource enum を増やさず特権操作（restore / force-close / impersonate 等）を表現する canonical パターン。`execute: async (user) => { if (user.role !== Role.SUPER_ADMIN) throw new DomainError("...", "FORBIDDEN"); ... }`。`executeAdminMutationResult` が `DomainError("FORBIDDEN")` を `MutationError` に自動変換するため UI 側で 403 として扱える。参照実装: `restoreReservationStatus` (`reservation/mutations.ts`)
 - **Webhook トークン比較に `!==` 禁止** — `crypto.timingSafeEqual` を使用。`receivedToken !== settings.token` はタイミング攻撃に脆弱。Google Calendar webhook の `timingSafeTokenEqual()` が実装例
 - **Better Auth クライアントの `forgetPassword` は `InferClientAPI` で型推論されない** — `emailAndPassword` のコア機能だが、クライアント型に含まれない。`adminAuthClient.$fetch("/request-password-reset", { method: "POST", body: { email, redirectTo } })` で直接呼び出す（管理者用）。`resetPassword` は型推論される
 
