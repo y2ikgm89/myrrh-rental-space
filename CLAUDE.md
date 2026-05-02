@@ -79,6 +79,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Multiple Root Layouts で `app/not-found.tsx` 禁止** — `app/global-not-found.tsx` + `experimental.globalNotFound: true`
 - **公開サインインは Better Auth Client API `signIn.email({ callbackURL })`** — Server Action 経由は Router Cache 未更新の silent bug
 - **`*_GRID_COLS_MAP` は全て Container Queries variants** — viewport breakpoint (`md:`/`lg:`) 復活禁止
+- **Section schema 拡張は shared factory 経由必須** — buttons / image / layout 系は `_shared/{buttons,image,layout}.ts` の factory（`createButtonsArraySchema` / `createImageGroupSchema` / `sectionLayoutSchema`）を再利用、独自 inline schema は SSoT 違反（→ `ssot-singletons.md` §管理画面 セクション編集）
 
 ---
 
