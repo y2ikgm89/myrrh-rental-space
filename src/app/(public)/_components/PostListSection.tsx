@@ -94,7 +94,7 @@ export function PostListSection({
   const colKey = Math.min(Math.max(config.columns, 1), 4);
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (

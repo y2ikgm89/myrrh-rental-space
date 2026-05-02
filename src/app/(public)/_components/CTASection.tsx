@@ -112,6 +112,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
     return (
       <SectionWrapper
         style={style}
+        layout={config.layout}
         {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
       >
         <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
@@ -156,6 +157,7 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
   return (
     <SectionWrapper
       style={style}
+      layout={config.layout}
       {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
     >
       <div className="text-center">

@@ -72,7 +72,7 @@ export function FeaturesSection({
   if (items.length === 0) return <></>;
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       {/* Section heading */}
       <div className="mb-16 max-w-2xl md:mb-24">
         <ScrollReveal>

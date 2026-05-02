@@ -54,7 +54,7 @@ export function MapSection({
   const embedUrl = apiKey ? buildMapEmbedUrl(config, apiKey) : null;
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       {config.title && (
         <div className="mb-8 text-center md:mb-12">
           <ScrollReveal>

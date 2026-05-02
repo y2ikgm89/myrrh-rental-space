@@ -52,7 +52,7 @@ export function EmbedSection({
   const radiusClass = BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)];
 
   return (
-    <SectionWrapper style={style} skipContainer>
+    <SectionWrapper style={style} layout={config.layout} skipContainer>
       <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
         {config.title && (
           <div className="mb-8 text-center md:mb-12">

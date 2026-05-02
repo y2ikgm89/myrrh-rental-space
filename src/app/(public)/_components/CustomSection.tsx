@@ -54,7 +54,12 @@ export function CustomSection({
   const paddingClass = PADDING_MAP[config.layout.padding] ?? PADDING_MAP.md;
 
   return (
-    <SectionWrapper style={style} skipPadding skipContainer>
+    <SectionWrapper
+      style={style}
+      layout={config.layout}
+      skipPadding
+      skipContainer
+    >
       <div className={paddingClass}>
         <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
           {title && (

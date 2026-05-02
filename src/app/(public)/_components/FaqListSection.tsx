@@ -115,7 +115,7 @@ export function FaqListSection({
 
   return (
     <>
-      <SectionWrapper style={style}>
+      <SectionWrapper style={style} layout={config.layout}>
         <div className={cn("mx-auto", containerWidth)}>
           <div className="mb-10 text-center md:mb-14">
             <ScrollReveal>

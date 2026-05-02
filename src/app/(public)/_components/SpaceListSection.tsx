@@ -102,7 +102,7 @@ export function SpaceListSection({
       : cn("@container grid gap-6", getCardGridColsClass(colKey));
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (

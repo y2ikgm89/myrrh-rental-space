@@ -110,7 +110,7 @@ export function TestimonialSection({
   if (config.items.length === 0) return <></>;
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (

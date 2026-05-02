@@ -87,7 +87,7 @@ export function ConceptSection({
 
   if (isStacked) {
     return (
-      <SectionWrapper style={style}>
+      <SectionWrapper style={style} layout={config.layout}>
         <div className="mx-auto max-w-3xl text-center">
           {imageUrl && (
             <div className="mb-12">
@@ -107,7 +107,7 @@ export function ConceptSection({
   }
 
   return (
-    <SectionWrapper style={style} skipContainer>
+    <SectionWrapper style={style} layout={config.layout} skipContainer>
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Image — full bleed, no container padding */}
         <div

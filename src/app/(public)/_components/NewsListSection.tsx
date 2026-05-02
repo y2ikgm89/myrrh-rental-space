@@ -96,7 +96,7 @@ export function NewsListSection({
   const isCard = config.displayLayout === "card";
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-10 text-center md:mb-14">
         <ScrollReveal>
           {config.sectionLabel && (

@@ -127,7 +127,7 @@ export function GallerySection({
       : undefined;
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       {config.title && (
         <div className="mb-10 text-center md:mb-14">
           <ScrollReveal>
