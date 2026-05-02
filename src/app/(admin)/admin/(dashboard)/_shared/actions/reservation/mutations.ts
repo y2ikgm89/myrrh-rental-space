@@ -14,9 +14,11 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import {
   deleteReservationCommand,
   restoreReservationCommand,
+  restoreReservationStatusCommand,
   updateReservationNotesCommand,
   updateReservationStatusCommand,
 } from "@/shared/domain/reservations/lifecycle-commands";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
 import { getReservationGuestData } from "@/shared/domain/reservations/admin-queries";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -48,6 +50,11 @@ const updateStatusSchema = z.object({
 const updateNotesSchema = z.object({
   id: z.string().uuid({ error: "IDが不正です" }),
   notes: z.string().max(1000).nullable(),
+});
+
+const restoreStatusSchema = z.object({
+  id: z.string().uuid({ error: "IDが不正です" }),
+  targetStatus: z.enum(ReservationStatus),
 });
 
 export const updateReservationStatus = async (
@@ -205,6 +212,108 @@ export const updateReservationStatus = async (
       invalidateReservationCaches(id, result.customerId, {
         coupons: isCancellation && result.couponId !== null,
         notifications: isCancellation,
+      });
+    },
+  });
+};
+
+/**
+ * 終端ステータス（COMPLETED / CANCELLED / NO_SHOW）から非終端ステータスへの復元。
+ * SUPER_ADMIN のみ実行可能（誤操作からの巻き戻し用途）。
+ *
+ * - CANCELLED → CONFIRMED の場合は時間帯コンフリクトを検証（domain command 内）
+ * - CONFIRMED へ復元する場合は GCal 再同期 + 顧客通知メール
+ * - 監査ログには `update` action として記録（restore は意味ある変更）
+ */
+export const restoreReservationStatus = async (
+  id: string,
+  targetStatus: ReservationStatus,
+) => {
+  const parsed = restoreStatusSchema.safeParse({ id, targetStatus });
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  let result:
+    | Awaited<ReturnType<typeof restoreReservationStatusCommand>>
+    | undefined;
+
+  return executeAdminMutationResult({
+    resource: "reservation",
+    action: "update",
+    resourceId: id,
+    execute: async (user) => {
+      if (user.role !== Role.SUPER_ADMIN) {
+        throw new DomainError(
+          "ステータスの復元は SUPER_ADMIN のみ実行できます",
+          "FORBIDDEN",
+        );
+      }
+      result = await restoreReservationStatusCommand(
+        id,
+        parsed.data.targetStatus,
+      );
+      return null;
+    },
+    afterSuccess: () => {
+      if (!result) return;
+
+      const payloadData = omitUndefined(result.payload);
+      const calendarData: ReservationSyncData = payloadData;
+
+      if (result.targetStatus === ReservationStatus.CONFIRMED) {
+        if (result.googleCalendarEventId) {
+          fireAndForget(
+            updateCalendarSync(calendarData, result.googleCalendarEventId),
+            {
+              operation: "restoreCalendarSync",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.LOW,
+              context: { reservationId: id },
+            },
+          );
+        } else {
+          fireAndForget(syncReservationToCalendar(calendarData), {
+            operation: "restoreSyncReservationToCalendar",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: id },
+          });
+        }
+      }
+
+      const oldLabel =
+        RESERVATION_STATUS_LABELS[result.previousStatus] ??
+        result.previousStatus;
+      const newLabel =
+        RESERVATION_STATUS_LABELS[result.targetStatus] ?? result.targetStatus;
+
+      fireAndForget(
+        sendReservationStatusChangedEmail({
+          reservationId: payloadData.reservationId,
+          customerEmail: payloadData.customerEmail,
+          customerName: payloadData.customerName,
+          spaceName: payloadData.spaceName,
+          startTime: payloadData.startTime,
+          endTime: payloadData.endTime,
+          totalPrice: payloadData.totalPrice,
+          oldStatus: oldLabel,
+          newStatus: newLabel,
+          icsSequence: payloadData.icsSequence,
+          ...(payloadData.location != null
+            ? { location: payloadData.location }
+            : {}),
+        }),
+        {
+          operation: "restoreSendStatusChangedEmail",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: { reservationId: id },
+        },
+      );
+
+      invalidateReservationCaches(id, result.customerId, {
+        notifications: true,
       });
     },
   });
