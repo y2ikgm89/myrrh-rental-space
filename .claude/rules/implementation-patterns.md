@@ -17,6 +17,7 @@ paths:
 - **新規 Prisma モデル追加は `schema + seed + admin-ui` の 3 点セット同時作成必須** — seed 漏れは EmptyState で実装検証不可。enum フィールドは**全値を seed に網羅**
 - **Seed 関数は `upsert` で idempotent 化 + `seedAll` / `seedDemo` 両方に登録** — `deleteMany + create` は `--demo` で既存破壊（`seedEmailTemplates` 参照）
 - **Terms / News / Post / Section / Space の seed は Lexical JSON 同時保存必須** — `contentHtml` 単独禁止。`buildParagraphEditorStateJson()` + `buildParagraphHtml()`（`@/shared/lib/lexical/description-defaults.ts`）
+- **seed の `contentJson` は paragraph-only 近似である** — `buildParagraphEditorStateJson(stripTags(html))` パターンで生成するため、テンプレ HTML に h2/h3/list/etc が含まれていても **`contentJson` は段落のみのフラット構造**（HeadingNode が 0 個）になる。`contentJson` の AST 構造に依存する派生機能（TOC 生成・heading 抽出・search index・RSS 等）は seed データで silent に動作しなくなる。**公開ページの content 派生は `contentHtml` を canonical SSoT** とする業界標準（GitHub / Notion / WordPress / Stripe Docs / rehype-slug）パターンに従う（`@/shared/lib/html/extract-headings` の `extractHeadingsFromHtml` + `injectHeadingAnchors` が参照実装、SSR/Client 同一結果を純粋関数で保証）
 
 ## 公開一覧ページの 10 点セット
 
