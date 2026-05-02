@@ -43,7 +43,7 @@ export type PublicTermsData = {
     id: string;
     version: number;
     contentHtml: string;
-    /** Lexical EditorState JSON — extractHeadings で目次抽出に使用 */
+    /** Lexical EditorState JSON — 管理画面エディタ復元用（公開側の目次は contentHtml 駆動） */
     contentJson: unknown;
     publishedAt: Date | null;
   } | null;

@@ -18,7 +18,7 @@ import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
 import { Prose } from "@/public/components/design-system/prose";
-import { extractHeadings } from "@/shared/lib/lexical/extract-headings";
+import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 import { LayoutWidth } from "@/shared/types/prisma";
 
 /** 目次を表示するための最低 h2 数。これ未満なら TOC を非表示にする。 */
@@ -71,7 +71,7 @@ export default async function TermsDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const headings = extractHeadings(terms.currentVersion.contentJson);
+  const headings = extractHeadingsFromHtml(terms.currentVersion.contentHtml);
   const h2Count = headings.filter((h) => h.level === 2).length;
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 

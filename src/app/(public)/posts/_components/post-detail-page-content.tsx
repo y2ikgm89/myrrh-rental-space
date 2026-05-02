@@ -16,7 +16,7 @@ import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { getPostLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { toISOString } from "@/shared/lib/serialize";
-import { extractHeadings } from "@/shared/lib/lexical/extract-headings";
+import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 
 /** 目次を表示するための最低 h2 数。これ未満なら TOC を非表示にする。 */
 const TOC_MIN_H2 = 2;
@@ -64,7 +64,7 @@ export async function PostDetailPageContent({
   const articleUrl = `${baseUrl}${post.url}`;
   const datePublished = toISOString(post.publishedAt) ?? "";
 
-  const headings = extractHeadings(post.contentJson);
+  const headings = extractHeadingsFromHtml(post.contentHtml);
   const h2Count = headings.filter((h) => h.level === 2).length;
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 

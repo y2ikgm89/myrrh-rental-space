@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { HeadingEntry } from "@/shared/lib/lexical/extract-headings";
+import type { HeadingEntry } from "@/shared/lib/html/extract-headings";
 import { cn } from "@/shared/lib/cn";
 import { ArticleTableOfContentsScrollSpy } from "./article-table-of-contents-scroll-spy";
 
