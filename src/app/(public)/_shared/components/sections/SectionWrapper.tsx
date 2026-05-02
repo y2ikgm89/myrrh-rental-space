@@ -1,17 +1,54 @@
 /**
- * SectionWrapper — SectionStylePayload の共通フィールドを CSS クラス/style に変換
+ * SectionWrapper — セクション横断の layout / visibility / animation を統一適用
  *
- * props としてコード側で決定した SectionStylePayload を受け取り、
- * spacing.paddingTop/Bottom, background.type/imageUrl/overlayOpacity,
- * container.maxWidth, typography.textAlign, customClass を処理する。
+ * Phase 3 Bundle 2 で `layout: SectionLayoutConfig`（外側 padding / containerWidth /
+ * モバイル/デスクトップ非表示 / 入場アニメ）の統一適用を導入。
+ * 既存の `style: SectionStylePayload`（背景・タイポグラフィ・テキストカラー）も
+ * 後方互換のため保持する。両方指定された場合:
+ *   - padding / containerWidth は `layout` 優先
+ *   - background / textAlign / customClass は `style` から
+ *   - hideOnMobile / hideOnDesktop / animateOnScroll は `layout` のみ
+ *
+ * 既存呼び出し（`<SectionWrapper style={style}>`）は引き続き動作する。
  */
 
-import type { ReactElement, ReactNode } from "react";
+"use client";
+
+import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import type {
+  LayoutPadding,
+  LayoutContainerWidth,
+  LayoutAnimate,
+  SectionLayoutConfig,
+} from "@/shared/lib/sections/definitions/_shared/layout";
 
 // =============================================================================
-// Mapping tables
+// Mapping tables — Layout (Phase 3 Bundle 2)
+// =============================================================================
+
+/** layout.padding → 上下 py-* クラス（@theme --space-* token 参照） */
+const LAYOUT_PADDING_CLASSES: Record<LayoutPadding, string> = {
+  none: "py-0",
+  sm: "py-[var(--space-sm)]",
+  md: "py-[var(--space-md)]",
+  lg: "py-[var(--space-lg)]",
+  xl: "py-[var(--space-xl)]",
+};
+
+/** layout.containerWidth → max-w-* クラス */
+const LAYOUT_CONTAINER_WIDTH_CLASSES: Record<LayoutContainerWidth, string> = {
+  sm: "max-w-[var(--prose-narrow)]",
+  md: "max-w-[var(--prose-medium)]",
+  lg: "max-w-[var(--container-max)]",
+  xl: "max-w-[var(--container-editorial)]",
+  full: "max-w-none",
+};
+
+// =============================================================================
+// Mapping tables — Legacy SectionStylePayload (後方互換)
 // =============================================================================
 
 const paddingTopMap: Record<
@@ -42,7 +79,6 @@ const backgroundMap: Record<
 > = {
   default: "",
   surface: "bg-surface",
-  // TODO: Phase B.C2 — muted/gradient は暫定で surface/accent 相当に仮置き
   muted: "bg-muted",
   gradient: "bg-accent/5",
   image: "bg-cover bg-center bg-no-repeat",
@@ -77,6 +113,8 @@ interface SectionWrapperProps {
   readonly style: SectionStylePayload;
   readonly children: ReactNode;
   readonly className?: string;
+  /** Phase 3 Bundle 2: 共通 layout / visibility / animation 設定 */
+  readonly layout?: SectionLayoutConfig;
   /** 追加の inline style（config.backgroundColor 等） */
   readonly styleProp?: React.CSSProperties;
   /** セクション固有のデフォルト padding を上書きしたくない場合に true */
@@ -89,18 +127,28 @@ export function SectionWrapper({
   style,
   children,
   className,
+  layout,
   styleProp,
   skipPadding,
   skipContainer,
-}: SectionWrapperProps): ReactElement {
+}: SectionWrapperProps) {
+  // ---- padding ----
   const paddingClass = skipPadding
     ? ""
-    : cn(
-        paddingTopMap[style.spacing.paddingTop],
-        paddingBottomMap[style.spacing.paddingBottom],
-      );
+    : layout
+      ? LAYOUT_PADDING_CLASSES[layout.padding]
+      : cn(
+          paddingTopMap[style.spacing.paddingTop],
+          paddingBottomMap[style.spacing.paddingBottom],
+        );
+
+  // ---- containerWidth ----
+  const maxWidthClass = layout
+    ? LAYOUT_CONTAINER_WIDTH_CLASSES[layout.containerWidth]
+    : maxWidthMap[style.container.maxWidth];
+
+  // ---- background / textAlign / customClass (legacy style 由来、layout は触らない) ----
   const bgClass = backgroundMap[style.background.type];
-  const maxWidthClass = maxWidthMap[style.container.maxWidth];
   const alignClass =
     style.typography.textAlign !== "left"
       ? textAlignMap[style.typography.textAlign]
@@ -116,18 +164,47 @@ export function SectionWrapper({
 
   const showOverlay = hasBgImage && style.background.overlayOpacity > 0;
 
+  // ---- visibility (layout のみ) ----
+  const visibilityClass = layout
+    ? cn(
+        layout.hideOnMobile && "max-md:hidden",
+        layout.hideOnDesktop && "md:hidden",
+      )
+    : "";
+
+  const inner = skipContainer ? (
+    children
+  ) : (
+    <div
+      className={cn(
+        "mx-auto ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
+        maxWidthClass,
+      )}
+    >
+      {children}
+    </div>
+  );
+
+  // ---- animation (layout のみ) ----
+  const animate: LayoutAnimate = layout?.animateOnScroll ?? "none";
+  const wrapped =
+    animate === "none" ? (
+      inner
+    ) : (
+      <ScrollReveal variant={animate}>{inner}</ScrollReveal>
+    );
+
   return (
     <section
-      className={[
+      className={cn(
         "relative",
         paddingClass,
         bgClass,
         alignClass,
+        visibilityClass,
         style.customClass,
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
       style={mergedStyle}
     >
       {showOverlay && (
@@ -136,18 +213,7 @@ export function SectionWrapper({
           style={{ opacity: style.background.overlayOpacity / 100 }}
         />
       )}
-      {skipContainer ? (
-        children
-      ) : (
-        <div
-          className={cn(
-            "mx-auto ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
-            maxWidthClass,
-          )}
-        >
-          {children}
-        </div>
-      )}
+      {wrapped}
     </section>
   );
 }
