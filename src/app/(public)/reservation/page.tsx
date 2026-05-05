@@ -38,6 +38,7 @@ export default async function ReservationPage({
           key={section.id}
           section={section}
           searchParams={searchParams}
+          pageSlug="reservation"
         />
       ))}
     </PageLayout>

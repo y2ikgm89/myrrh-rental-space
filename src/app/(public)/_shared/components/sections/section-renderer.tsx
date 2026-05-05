@@ -114,11 +114,18 @@ interface SectionRendererProps {
    * server-side filtering / pagination が必要な section が parse する。
    */
   readonly searchParams?: Promise<SearchParams>;
+  /**
+   * 任意 — 親ページの slug（PAGE_TEMPLATES のキー / Page.slug と一致）。
+   * post-list archive variant の sidebar 表示判定（`getPageShowSidebar(slug)`）など、
+   * page-context が必要な section が参照する。未指定時は section 側で fallback。
+   */
+  readonly pageSlug?: string;
 }
 
 export async function SectionRenderer({
   section,
   searchParams,
+  pageSlug,
 }: SectionRendererProps): Promise<ReactElement | null> {
   const resolved = getDefaultSectionStyle(section.type);
 
@@ -318,7 +325,8 @@ export async function SectionRenderer({
             sp.category,
           ),
           getPostCategories(),
-          getPageShowSidebar("posts"),
+          // pageSlug 未指定時は "posts"（旧ハードコード相当）にフォールバック
+          getPageShowSidebar(pageSlug ?? "posts"),
         ]);
         return (
           <PostListSection

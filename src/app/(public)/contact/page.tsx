@@ -25,7 +25,11 @@ export default async function ContactPage(): Promise<ReactElement> {
   return (
     <>
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer
+          key={section.id}
+          section={section}
+          pageSlug="contact"
+        />
       ))}
     </>
   );

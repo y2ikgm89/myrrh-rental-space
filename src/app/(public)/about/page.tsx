@@ -28,7 +28,7 @@ export default async function AboutPage(): Promise<ReactElement> {
   return (
     <PageLayout variant="content" cta={<SiteCTA />}>
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} pageSlug="about" />
       ))}
     </PageLayout>
   );

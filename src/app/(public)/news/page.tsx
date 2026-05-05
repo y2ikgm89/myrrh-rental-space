@@ -58,6 +58,7 @@ export default async function NewsPage({
           key={section.id}
           section={section}
           searchParams={searchParams}
+          pageSlug="news"
         />
       ))}
     </PageLayout>

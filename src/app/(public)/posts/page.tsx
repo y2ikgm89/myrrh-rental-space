@@ -59,6 +59,7 @@ export default async function PostsPage({
           key={section.id}
           section={section}
           searchParams={searchParams}
+          pageSlug="posts"
         />
       ))}
     </PageLayout>

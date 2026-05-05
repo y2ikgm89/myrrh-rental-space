@@ -66,7 +66,7 @@ export default async function DynamicPage({ params }: PageProps) {
               { name: page.title, url: `/${slug}` },
             ]}
           />
-          <ManagedPageSections sections={sections} />
+          <ManagedPageSections sections={sections} pageSlug={slug} />
         </>
       );
     }

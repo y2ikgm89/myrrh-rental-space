@@ -38,7 +38,7 @@ export default async function HomePage(): Promise<ReactElement> {
         url={webSiteData.url}
       />
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} pageSlug="home" />
       ))}
     </>
   );

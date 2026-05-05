@@ -26,7 +26,7 @@ export default async function EventsPage(): Promise<ReactElement> {
   return (
     <>
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} pageSlug="events" />
       ))}
     </>
   );

@@ -35,7 +35,7 @@ export default async function AccessPage(): Promise<ReactElement> {
   return (
     <PageLayout variant="content">
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} pageSlug="access" />
       ))}
 
       <Suspense fallback={null}>

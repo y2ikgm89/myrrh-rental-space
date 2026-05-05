@@ -39,7 +39,7 @@ export default async function ManagedPagePreviewPage({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PreviewBanner />
-      <ManagedPageSections sections={activeSections} />
+      <ManagedPageSections sections={activeSections} pageSlug={page.slug} />
     </div>
   );
 }
