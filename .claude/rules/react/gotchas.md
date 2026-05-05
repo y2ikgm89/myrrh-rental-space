@@ -73,6 +73,7 @@ import { Activity } from 'react'
 - **`@eslint-react/eslint-plugin` v4 でルール名プレフィックスフラット化** — `@eslint-react/dom/no-xxx` → `@eslint-react/dom-no-xxx`、`@eslint-react/web-api/no-xxx` → `@eslint-react/web-api-no-xxx`。eslint-disable コメントと `eslint.config.mjs` のルール名を一括置換。v4 で `@eslint-react/purity` の `new Date()` false positive が大幅改善（大半の disable コメントを削除可能）
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` パターンは React Compiler が最適化できないため error。JSX 前に変数抽出する
 - **`useSyncExternalStore` の `getServerSnapshot` で配列・オブジェクトを毎回新規生成しない** — `return []` / `return {}` は NG。モジュール定数や固定参照を返す。プリミティブ（`null`, `false` 等）は OK
+- **`// eslint-disable-next-line` は multi-line JSX element の別 line の prop に効かない** — JSON-LD 用 `<script>` 等で element 開始 line（`<script` の前）に disable comment を置いても、`@eslint-react/dom-no-dangerously-set-innerhtml` rule は別 line の prop で trigger するため抑制されない（disable は element 開始 line のみに作用）。canonical: file 先頭 / module 先頭に block-level `/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped, safe for structured data */` を置く（`@/public/components/seo/json-ld.tsx` が参照実装）
 
 ## 参考
 
