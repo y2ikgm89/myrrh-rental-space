@@ -3,21 +3,33 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
-const layouts = ["list", "calendar"] as const;
+const layouts = ["list", "calendar", "calendar-list-toggle"] as const;
 
 export const eventCalendarConfigSchema = z.object({
+  sectionLabel: field.text("セクションラベル", {
+    default: "Events",
+    maxLength: 50,
+    subGroup: "text",
+  }),
+  title: field.text("見出し", {
+    default: "イベント",
+    maxLength: 100,
+    subGroup: "text",
+  }),
+  description: field.textarea("説明文", { maxLength: 500, subGroup: "text" }),
   maxEvents: field.number("最大表示件数", {
     min: 1,
     max: 50,
-    default: 6,
+    default: 50,
     suffix: "件",
     group: "advanced",
   }),
   displayLayout: field.select("表示形式", {
     options: layouts,
-    default: "list",
+    default: "calendar-list-toggle",
     group: "design",
-    helpText: "イベントの表示形式",
+    helpText:
+      "list: 一覧のみ / calendar: カレンダーのみ / calendar-list-toggle: タブ切替",
   }),
   showPastEvents: field.boolean("過去のイベントも表示する", {
     default: false,

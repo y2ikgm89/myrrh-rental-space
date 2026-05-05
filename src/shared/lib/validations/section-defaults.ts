@@ -28,6 +28,8 @@ import type {
 import { validateSectionConfig } from "./section";
 import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
 import { locationListConfigSchema } from "@/shared/lib/sections/definitions/location-list/schema";
+import type { EventCalendarConfig } from "@/shared/lib/sections/definitions/event-calendar/schema";
+import { eventCalendarConfigSchema } from "@/shared/lib/sections/definitions/event-calendar/schema";
 
 // =============================================================================
 // デフォルト設定取得（レジストリ委譲）
@@ -113,6 +115,10 @@ export const getTestimonialConfig = createTypedConfigGetterFromSchema(
 export const getGalleryConfig =
   createTypedConfigGetterFromSchema(galleryConfigSchema);
 export const getCtaConfig = createTypedConfigGetterFromSchema(ctaConfigSchema);
+
+export const getEventCalendarConfig = createTypedConfigGetterFromSchema(
+  eventCalendarConfigSchema,
+);
 export const getContactFormConfig = createTypedConfigGetterFromSchema(
   contactFormConfigSchema,
 );
@@ -178,6 +184,10 @@ export function getSafeConfig(
   type: "location-list",
   config: unknown,
 ): LocationListConfig;
+export function getSafeConfig(
+  type: "event-calendar",
+  config: unknown,
+): EventCalendarConfig;
 export function getSafeConfig(type: string, config: unknown): SectionConfig {
   // config をパース試行
   const result = validateSectionConfig(type, config);

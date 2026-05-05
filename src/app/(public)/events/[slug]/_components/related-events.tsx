@@ -7,7 +7,10 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { getUpcomingEventsExcluding } from "@/shared/domain/events/public-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
-import { EventCard, type EventCardData } from "../../_components/event-card";
+import {
+  EventCard,
+  type EventCardData,
+} from "../../../_components/event-calendar/event-card";
 
 interface RelatedEventsProps {
   readonly excludeEventId: string;

@@ -19,19 +19,17 @@ const VIEW_TABS: readonly {
 ];
 
 interface EventsViewSwitcherProps {
-  readonly activeView: EventView;
   readonly listView: ReactNode;
   readonly calendarView: ReactNode;
 }
 
 export function EventsViewSwitcher({
-  activeView,
   listView,
   calendarView,
 }: EventsViewSwitcherProps) {
-  const [, setParams] = useQueryStates(eventsSearchParamsParsers, {
+  const [{ view }, setParams] = useQueryStates(eventsSearchParamsParsers, {
     history: "push",
-    shallow: false,
+    shallow: true,
   });
 
   function handleValueChange(value: string) {
@@ -41,7 +39,7 @@ export function EventsViewSwitcher({
 
   return (
     <Tabs.Root
-      value={activeView}
+      value={view}
       onValueChange={handleValueChange}
       activationMode="automatic"
     >

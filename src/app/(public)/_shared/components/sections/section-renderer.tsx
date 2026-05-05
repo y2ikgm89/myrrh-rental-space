@@ -28,6 +28,7 @@ import {
   getEmbedConfig,
   getInstagramConfig,
   getLocationListConfig,
+  getEventCalendarConfig,
 } from "@/shared/lib/validations/section-defaults";
 import {
   getPublishedFaqCategoriesWithItems,
@@ -37,6 +38,8 @@ import {
 } from "@/shared/domain/sections/queries";
 import { getPublishedNews } from "@/shared/domain/news/queries";
 import { getPublishedPosts } from "@/shared/domain/posts/queries";
+import { getPublishedEvents } from "@/shared/domain/events/public-queries";
+import { formatEventVenue } from "@/shared/domain/events/venue";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
 import { getPublishedLocationsForAccess } from "@/shared/domain/locations/public-queries";
@@ -65,6 +68,8 @@ import { NewsListSection } from "../../../_components/NewsListSection";
 import { PostListSection } from "../../../_components/PostListSection";
 import { FaqListSection } from "../../../_components/FaqListSection";
 import { ContactFormSection } from "../../../_components/ContactFormSection";
+import { EventCalendarSection } from "../../../_components/EventCalendarSection";
+import type { EventCardData } from "../../../_components/event-calendar/event-card";
 import { InstagramSection } from "../../../_components/InstagramSection";
 import { LocationListSection } from "../../../_components/LocationListSection";
 import type { SpaceListData } from "../../../_components/SpaceListSection";
@@ -304,9 +309,32 @@ export async function SectionRenderer({
     }
 
     case SectionType.EVENT_CALENDAR: {
-      // event-calendar は /events ページで FullCalendar として直接実装済み
-      // SectionRenderer 経由では null を返す（style 統合対象外）
-      return null;
+      const config = getEventCalendarConfig(section.config);
+      const rawEvents = await getPublishedEvents();
+      const events: EventCardData[] = rawEvents.map((e) => ({
+        id: e.id,
+        title: e.title,
+        slug: e.slug,
+        descriptionPlainText: e.descriptionPlainText,
+        location: formatEventVenue({
+          location: e.location,
+          space: e.space,
+          addressDetail: e.addressDetail,
+        }),
+        startTime: e.startTime,
+        endTime: e.endTime,
+        price: e.price,
+        registrationOpen: e.registrationOpen,
+        spaceName: e.space?.name ?? null,
+        thumbnailUrl: e.thumbnailUrl ?? null,
+      }));
+      return (
+        <EventCalendarSection
+          config={config}
+          style={resolved}
+          events={events}
+        />
+      );
     }
 
     case SectionType.LOCATION_LIST: {
