@@ -236,6 +236,14 @@
     word-break: auto-phrase;
   }
 
+  /* Anchor jump offset for article headings (TOC click + hash navigation).
+     Uses native scroll-margin-top so browser-level hash navigation respects
+     the sticky header height. JS-based scroll (TOC click) uses scroll.ts which
+     reads --header-height as well, so both paths land at the same position. */
+  article :is(h2, h3) {
+    scroll-margin-top: calc(var(--header-height) + 1.5rem);
+  }
+
   /* transparent モードのみ: 非Hero最初の要素にmargin-top補正
      Hero sections extend behind the transparent header via main's negative margin.
      Non-hero first visible elements cancel the overlap to start below the header.
