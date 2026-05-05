@@ -40,3 +40,7 @@ paths:
 - **diverged worktree branch の merge は `--no-ff` 推奨**（FF 不可時） — `git rev-list --count main..feature/X` が N、逆が M（>0）で diverged の場合、rebase より `--no-ff` merge + conflict 解決の方が history が明示的（merge commit が「並行開発の境界」を示す）。Linear history の `--ff-only` は **diverge していない場合**の規律
 - **並行 worktree merge の典型 conflict 箇所** — `src/shared/lib/constants/cache.ts` の `getCacheTag` は両方の追加を残す
 - **Windows `.worktrees/` ディレクトリの強制削除失敗は harmless** — `git worktree remove --force` がファイル名長エラーで disk 上の dir 削除に失敗しても、`git worktree prune` + `git branch -d feature/X` で git references はクリーンアップ済み。`git worktree list` から消えていれば後続作業に影響なし
+
+## Push gate
+
+- **lefthook `pre-push` hook に `architecture-boundaries` test gate あり** — `__tests__/unit/architecture-boundaries.test.ts` の検出ルール（`@/shared/db/prisma` 直 import が `shared/` 外で禁止 / `docs/explanation/` index 参照 / 旧 `executeAdminMutation`/`createSuccess`/`type ActionResult` 残存禁止）に違反があると push が exit 1 で拒否される（2026-05-05 セッションで 4 件違反による push 拒否を実観測）。`--no-verify` での bypass はユーザー明示確認なしには禁止（CLAUDE.md Git Safety Protocol）。push 前に `bun test __tests__/unit/architecture-boundaries.test.ts` で local 確認推奨
