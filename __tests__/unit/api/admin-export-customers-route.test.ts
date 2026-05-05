@@ -77,7 +77,7 @@ describe("GET /api/admin/export/customers", () => {
       );
     });
 
-    test("generateCsv が顧客データと 16 列のカラム定義を受け取る", async () => {
+    test("generateCsv が顧客データと 22 列のカラム定義を受け取る", async () => {
       const testCustomer = {
         id: "abc12345-0000-0000-0000-000000000000",
         lastName: "田中",
@@ -87,10 +87,17 @@ describe("GET /api/admin/export/customers", () => {
         companyName: "株式会社テスト",
         email: "tanaka@example.com",
         phoneNumber: "090-1234-5678",
-        address: "東京都渋谷区",
+        // 住所は構造化フィールド SSoT に移行済（旧 `address` カラムは廃止）
+        postalCode: "150-0001",
+        prefecture: "東京都",
+        city: "渋谷区",
+        streetAddress: "神宮前1-2-3",
+        building: "テストビル 5F",
         status: "REGULAR",
         totalReservations: 5,
         totalSpent: 50000,
+        marketingOptIn: true,
+        phoneContactOptIn: false,
         lastReservationAt: new Date("2024-01-15T12:00:00Z"),
         firstReservationAt: new Date("2023-06-01T12:00:00Z"),
         isActive: true,
@@ -114,7 +121,7 @@ describe("GET /api/admin/export/customers", () => {
       ];
 
       expect(rows).toEqual([testCustomer]);
-      expect(columns).toHaveLength(16);
+      expect(columns).toHaveLength(22);
 
       const headers = columns.map((c) => c.header);
       expect(headers).toEqual([
@@ -126,10 +133,16 @@ describe("GET /api/admin/export/customers", () => {
         "会社名",
         "メール",
         "電話番号",
-        "住所",
+        "郵便番号",
+        "都道府県",
+        "市区町村",
+        "町名・番地",
+        "建物名",
         "ステータス",
         "予約回数",
         "利用総額",
+        "メルマガ受信",
+        "電話連絡",
         "最終予約日",
         "初回予約日",
         "有効",
