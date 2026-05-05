@@ -120,22 +120,21 @@ grep -c "buildParagraphEditorStateJson\|buildParagraphHtml" prisma/seed.ts
 
 ### 6. enum 依存テンプレート / Meta の網羅性
 
-CLAUDE.md:「enum がテンプレート/UI Meta を持つ場合は +3 箇所」— 例: `TermsType` は `TERMS_TYPES` 配列 + `TERMS_TYPE_META` + `TERMS_TEMPLATES` Record。
+CLAUDE.md:「enum がテンプレート/UI Meta を持つ場合は +3 箇所」— 例: `SectionType` は section type tuple + `SECTION_METADATA`（label / icon / category）+ `SECTION_DEFAULT_CONFIGS` Record。
 
 手動チェック対象:
 
-- `TermsType` — `src/shared/lib/terms-templates.ts` の `TERMS_TEMPLATES` に各値のエントリ
-- `SectionType` — `src/shared/lib/validations/section-defaults.ts` / `section-metadata.ts`
-- enum 追加時に `add-prisma-enum` skill で 8 箇所更新 + テンプレ/Meta 3 箇所
+- `SectionType` — `src/shared/lib/validations/section-defaults.ts` / `section-metadata.ts` の各値エントリ
+- 旧 `TermsType` enum は 2026-05-02 の rebuild で **VARCHAR(64) + 文字列定数 (`terms-templates.ts`)** に置換済み（enum-based の templates 連動は廃止）
+- enum 追加時は `add-prisma-enum` skill で 8 箇所更新 + テンプレ/Meta 3 箇所
 
 ```bash
-# TermsType 値とテンプレート対応
-grep -oE "^  [A-Z_]+\s*$" prisma/schema.prisma | \
-  awk '/enum TermsType/,/^}/' prisma/schema.prisma | \
-  grep -oE "^  [A-Z_]+" | tr -d ' ' | \
+# SectionType 値とメタデータ対応
+awk '/SECTION_TYPE_VALUES\s*=\s*\[/,/\]/' src/shared/lib/sections/registry.ts | \
+  grep -oE '"[a-z-]+"' | tr -d '"' | \
   while read val; do
-    grep -q "\[TermsType\.$val\]\|'$val':" src/shared/lib/terms-templates.ts || \
-      echo "❌ TERMS_TEMPLATES に TermsType.$val のエントリ不在"
+    grep -q "\"$val\"" src/shared/lib/validations/section-defaults.ts || \
+      echo "❌ SECTION_DEFAULT_CONFIGS に '$val' のエントリ不在"
   done
 ```
 
@@ -159,7 +158,7 @@ grep -oE "^  [A-Z_]+\s*$" prisma/schema.prisma | \
 
 #### ❌ Enum 値未使用
 
-- `TermsType.COOKIE_POLICY` — seedTerms 内で使用なし。全 enum 値を seed に網羅（ハードルール）
+- `ReservationStatus.NO_SHOW` — seedReservations 内で使用なし。全 enum 値を seed に網羅（ハードルール）
 - `ReservationStatus.REFUNDED` — seedReservations 内で使用なし
 
 #### ⚠️ Idempotent 化未対応
@@ -173,8 +172,8 @@ grep -oE "^  [A-Z_]+\s*$" prisma/schema.prisma | \
 
 ### 手動確認が必要
 
-- `TermsType` の `TERMS_TEMPLATES` / `TERMS_TYPE_META` 追従（コード抽出困難）
 - Lexical JSON 同時保存: terms/news/post/space seed 内で `buildParagraphEditorStateJson()` が使われているか
+- 規約 (terms) は VARCHAR(64) + 文字列定数 (`PRIVACY_POLICY_TEMPLATE` / `TERMS_OF_SERVICE_TEMPLATE` 等) ベースのため、enum-based の網羅性チェックは不要（seed が標準 type を全て insert しているか手動確認）
 ```
 
 ## 関連 skill / rule

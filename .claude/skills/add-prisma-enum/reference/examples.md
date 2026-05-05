@@ -115,16 +115,16 @@ tuple 型にならないため、狭い tuple が欲しい場合は `enums/helpe
 
 ## テンプレート付き enum（+3 箇所）
 
-`TermsType` のように UI Meta + テンプレートが必要な場合は追加 3 箇所:
+UI Meta + テンプレートが必要な enum は追加 3 箇所が必要になる典型例:
 
-1. `TERMS_TYPES` 配列（`validations/terms.ts`）— `parseAsStringLiteral` 用
-2. `TERMS_TYPE_META` Record（管理 Dialog のアイコン）
-3. `TERMS_TEMPLATES` Record（`terms-templates.ts`）
+1. 値配列（`validations/<domain>.ts` などの `parseAsStringLiteral` 用 const tuple）
+2. Meta Record（管理画面のアイコン / 説明 / バリアント）
+3. Template Record（プレースホルダー文字列を `applyBusinessInfo()` 等で置換するテンプレート集）
 
-参照実装: `prisma/migrations/20260421022747_add_review_guidelines_and_cookie_policy_terms_types/`
+旧 `TermsType` は 2026-05-02 の rebuild で **VARCHAR(64) + 文字列定数 (`terms-templates.ts`)** に置換済みのため、今後 enum + テンプレートの新規組み合わせを追加する場合の参照例は `SectionType` + `SECTION_METADATA` + `SECTION_DEFAULT_CONFIGS` を見ること（厳密には enum ではなく string union だが、+3 箇所更新パターンは同じ）。
 
 ## 参照実装（既存 enum）
 
 - `ReservationStatus` — ステータス enum の標準実装
 - `EventStatus` — Mutually exclusive boolean（`registrationOpen`）との組み合わせ事例
-- `TermsType` — テンプレート付き enum の +3 箇所実装事例
+- `Role` — 階層制御（`getInvitableRoles()` / `canInviteRole()`）と Meta Record (`ROLE_LABELS` / `ROLE_DESCRIPTIONS`) の組み合わせ事例
