@@ -30,6 +30,7 @@ import {
   getInstagramConfig,
   getLocationListConfig,
   getEventCalendarConfig,
+  getReservationFormConfig,
 } from "@/shared/lib/validations/section-defaults";
 import {
   getPublishedFaqCategoriesWithItems,
@@ -63,6 +64,7 @@ import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-quer
 import {
   newsSearchParams,
   postsSearchParams,
+  reservationSearchParams,
   spaceSearchParams,
 } from "@/public/lib/search-params";
 import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
@@ -90,6 +92,7 @@ import { NewsListSection } from "../../../_components/NewsListSection";
 import { PostListSection } from "../../../_components/PostListSection";
 import { FaqListSection } from "../../../_components/FaqListSection";
 import { ContactFormSection } from "../../../_components/ContactFormSection";
+import { ReservationFormSection } from "../../../_components/ReservationFormSection";
 import { EventCalendarSection } from "../../../_components/EventCalendarSection";
 import type { EventCardData } from "../../../_components/event-calendar/event-card";
 import { InstagramSection } from "../../../_components/InstagramSection";
@@ -436,6 +439,20 @@ export async function SectionRenderer({
           style={resolved}
           turnstileSiteKey={turnstileSiteKey}
           requiredTerms={requiredTerms}
+        />
+      );
+    }
+
+    case SectionType.RESERVATION_FORM: {
+      const config = getReservationFormConfig(section.config);
+      const sp = searchParams
+        ? await reservationSearchParams.parse(searchParams)
+        : { spaceId: null };
+      return (
+        <ReservationFormSection
+          config={config}
+          style={resolved}
+          searchParamSpaceId={sp.spaceId ?? undefined}
         />
       );
     }

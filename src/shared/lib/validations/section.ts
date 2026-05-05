@@ -13,6 +13,7 @@ import {
 } from "./cta-and-url";
 import { sectionLayoutSchema } from "@/shared/lib/sections/definitions/_shared/layout";
 import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
+import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import {
   imageAspectValues,
   cardStyleValues,
@@ -72,6 +73,7 @@ export const SectionType = {
   GALLERY: "gallery",
   CTA: "cta",
   CONTACT_FORM: "contact-form",
+  RESERVATION_FORM: "reservation-form",
   MAP: "map",
   EMBED: "embed",
   INSTAGRAM: "instagram",
@@ -97,6 +99,7 @@ const SECTION_TYPE_VALUES = [
   SectionType.GALLERY,
   SectionType.CTA,
   SectionType.CONTACT_FORM,
+  SectionType.RESERVATION_FORM,
   SectionType.MAP,
   SectionType.EMBED,
   SectionType.INSTAGRAM,
@@ -703,7 +706,8 @@ export type SectionConfig =
   | MapConfig
   | EmbedConfig
   | InstagramConfig
-  | LocationListConfig;
+  | LocationListConfig
+  | ReservationFormConfig;
 
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type UpdateSectionContentInput = z.infer<

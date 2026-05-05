@@ -1,6 +1,6 @@
 // src/shared/lib/sections/registry.ts
 //
-// セクションレジストリ — 全 20 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
+// セクションレジストリ — 全 21 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
 import { isRecord } from "@/shared/lib/serialize";
@@ -35,6 +35,8 @@ import { newsListConfigSchema } from "./definitions/news-list/schema";
 import { newsListMetadata } from "./definitions/news-list/metadata";
 import { postListConfigSchema } from "./definitions/post-list/schema";
 import { postListMetadata } from "./definitions/post-list/metadata";
+import { reservationFormConfigSchema } from "./definitions/reservation-form/schema";
+import { reservationFormMetadata } from "./definitions/reservation-form/metadata";
 import { spaceListConfigSchema } from "./definitions/space-list/schema";
 import { spaceListMetadata } from "./definitions/space-list/metadata";
 import { spaceShowcaseConfigSchema } from "./definitions/space-showcase/schema";
@@ -52,7 +54,7 @@ import {
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 20 セクション定義（page-hero 含む） */
+/** 全 21 セクション定義（page-hero 含む） */
 const definitions: Record<string, SectionDefinition> = {
   "page-hero": {
     type: "page-hero",
@@ -128,6 +130,11 @@ const definitions: Record<string, SectionDefinition> = {
     type: "contact-form",
     configSchema: contactFormConfigSchema,
     metadata: contactFormMetadata,
+  },
+  "reservation-form": {
+    type: "reservation-form",
+    configSchema: reservationFormConfigSchema,
+    metadata: reservationFormMetadata,
   },
   map: {
     type: "map",

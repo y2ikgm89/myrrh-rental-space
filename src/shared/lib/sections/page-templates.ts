@@ -128,7 +128,6 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
     id: "reservation",
     label: "予約",
     description: "予約フォーム",
-    // reservation-form type は Phase 5 で追加予定。
     allowedSectionTypes: [
       "page-hero",
       "hero",

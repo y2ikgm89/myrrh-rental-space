@@ -71,3 +71,11 @@ export const eventsSearchParamsParsers = {
 export const eventsSearchParams = createSearchParamsCache(
   eventsSearchParamsParsers,
 );
+
+export const reservationSearchParamsParsers = {
+  spaceId: parseAsString,
+};
+
+export const reservationSearchParams = createSearchParamsCache(
+  reservationSearchParamsParsers,
+);

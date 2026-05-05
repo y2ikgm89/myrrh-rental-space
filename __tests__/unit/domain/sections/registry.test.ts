@@ -46,9 +46,9 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("20 件のセクション定義を返す（page-hero + 既存 19 タイプ）", () => {
+  test("21 件のセクション定義を返す（page-hero + 既存 20 タイプ）", () => {
     const defs = getAllSectionDefinitions();
-    expect(defs).toHaveLength(20);
+    expect(defs).toHaveLength(21);
   });
 
   test("各定義は type / configSchema / metadata を持つ", () => {
@@ -62,7 +62,7 @@ describe("getAllSectionDefinitions", () => {
     }
   });
 
-  test("page-hero + 既存 19 標準タイプが含まれる", () => {
+  test("page-hero + 既存 20 標準タイプが含まれる", () => {
     const defs = getAllSectionDefinitions();
     const types = defs.map((d) => d.type);
 
@@ -82,6 +82,7 @@ describe("getAllSectionDefinitions", () => {
       "gallery",
       "cta",
       "contact-form",
+      "reservation-form",
       "map",
       "embed",
       "instagram",
@@ -132,12 +133,13 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(listTypes).toContain("location-list");
   });
 
-  test("カテゴリ 'functional' に cta / contact-form が含まれる", () => {
+  test("カテゴリ 'functional' に cta / contact-form / reservation-form が含まれる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const functionalTypes = grouped["functional"].map((d) => d.type);
 
     expect(functionalTypes).toContain("cta");
     expect(functionalTypes).toContain("contact-form");
+    expect(functionalTypes).toContain("reservation-form");
   });
 
   test("カテゴリ 'media' に testimonial / gallery / map / embed / instagram が含まれる", () => {
@@ -151,7 +153,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(mediaTypes).toContain("instagram");
   });
 
-  test("全カテゴリの合計件数が 24 件になる", () => {
+  test("全カテゴリの合計件数が 21 件になる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const total =
       grouped["hero"].length +
@@ -160,7 +162,7 @@ describe("getSectionDefinitionsByCategory", () => {
       grouped["functional"].length +
       grouped["media"].length;
 
-    expect(total).toBe(20);
+    expect(total).toBe(21);
   });
 });
 

@@ -389,11 +389,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: "space-list",
-      title: "予約可能なスペース",
+      type: "reservation-form",
+      title: null,
       config: {
-        maxItems: 12,
-        showOnlyPublished: true,
+        sectionLabel: "",
+        title: "",
       },
       content: null,
       order: 1,

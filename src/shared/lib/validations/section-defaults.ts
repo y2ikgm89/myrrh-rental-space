@@ -30,6 +30,8 @@ import type { LocationListConfig } from "@/shared/lib/sections/definitions/locat
 import { locationListConfigSchema } from "@/shared/lib/sections/definitions/location-list/schema";
 import type { EventCalendarConfig } from "@/shared/lib/sections/definitions/event-calendar/schema";
 import { eventCalendarConfigSchema } from "@/shared/lib/sections/definitions/event-calendar/schema";
+import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
+import { reservationFormConfigSchema } from "@/shared/lib/sections/definitions/reservation-form/schema";
 
 // =============================================================================
 // デフォルト設定取得（レジストリ委譲）
@@ -132,6 +134,10 @@ export const getLocationListConfig = createTypedConfigGetterFromSchema(
   locationListConfigSchema,
 );
 
+export const getReservationFormConfig = createTypedConfigGetterFromSchema(
+  reservationFormConfigSchema,
+);
+
 // =============================================================================
 // getSafeConfig — 汎用: セクションタイプに応じた config 取得（レジストリ委譲）
 // =============================================================================
@@ -188,6 +194,10 @@ export function getSafeConfig(
   type: "event-calendar",
   config: unknown,
 ): EventCalendarConfig;
+export function getSafeConfig(
+  type: "reservation-form",
+  config: unknown,
+): ReservationFormConfig;
 export function getSafeConfig(type: string, config: unknown): SectionConfig {
   // config をパース試行
   const result = validateSectionConfig(type, config);
