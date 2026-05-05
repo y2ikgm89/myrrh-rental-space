@@ -4,9 +4,6 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 const mockSettingsUpsert = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "singleton" }),
 );
-const mockTermsFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
-  () => Promise.resolve(null),
-);
 
 mock.module("server-only", () => ({}));
 
@@ -15,9 +12,6 @@ mock.module("@/shared/db/prisma", () => ({
     settings: {
       upsert: mockSettingsUpsert,
     },
-    terms: {
-      findFirst: mockTermsFindFirst,
-    },
   },
   Prisma: {
     JsonNull: null,
@@ -25,14 +19,6 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 mock.module("@generated/prisma/enums", () => ({
-  TermsStatus: {
-    PUBLISHED: "PUBLISHED",
-    DRAFT: "DRAFT",
-  },
-  TermsType: {
-    CANCELLATION: "CANCELLATION",
-    TERMS_OF_SERVICE: "TERMS_OF_SERVICE",
-  },
   HeaderScrollBehavior: {
     auto_hide: "auto_hide",
     always_visible: "always_visible",

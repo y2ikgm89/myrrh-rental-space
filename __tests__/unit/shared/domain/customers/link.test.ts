@@ -160,7 +160,7 @@ describe("ensureCustomerLinked", () => {
 
     const result = await ensureCustomerLinked(USER);
 
-    expect(result).toEqual(LINKED_CUSTOMER);
+    expect(result).toEqual({ customer: LINKED_CUSTOMER, isNew: false });
     expect(mockFindUnique).toHaveBeenCalledTimes(1);
     expect(mockFindUnique).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -188,7 +188,10 @@ describe("ensureCustomerLinked", () => {
 
     const result = await ensureCustomerLinked(USER);
 
-    expect(result).toEqual({ ...UNLINKED_CUSTOMER, userId: "user-1" });
+    expect(result).toEqual({
+      customer: { ...UNLINKED_CUSTOMER, userId: "user-1" },
+      isNew: false,
+    });
     expect(mockFindUnique).toHaveBeenCalledTimes(2);
     expect(mockUpdate).toHaveBeenCalledTimes(1);
     expect(mockUpdate).toHaveBeenCalledWith(
@@ -212,7 +215,7 @@ describe("ensureCustomerLinked", () => {
 
     const result = await ensureCustomerLinked(USER);
 
-    expect(result).toEqual(NEW_CUSTOMER);
+    expect(result).toEqual({ customer: NEW_CUSTOMER, isNew: true });
     expect(mockFindUnique).toHaveBeenCalledTimes(2);
     // update は呼ばれない（乗っ取り防止）
     expect(mockUpdate).not.toHaveBeenCalled();
@@ -244,7 +247,7 @@ describe("ensureCustomerLinked", () => {
 
     const result = await ensureCustomerLinked(USER);
 
-    expect(result).toEqual(NEW_CUSTOMER);
+    expect(result).toEqual({ customer: NEW_CUSTOMER, isNew: true });
     expect(mockFindUnique).toHaveBeenCalledTimes(2);
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockCreate).toHaveBeenCalledTimes(1);
@@ -283,7 +286,7 @@ describe("ensureCustomerLinked", () => {
 
     const result = await ensureCustomerLinked(USER);
 
-    expect(result).toEqual(LINKED_CUSTOMER);
+    expect(result).toEqual({ customer: LINKED_CUSTOMER, isNew: false });
     expect(mockCreate).toHaveBeenCalledTimes(1);
     // フォールバックの findUnique（3回目）
     expect(mockFindUnique).toHaveBeenCalledTimes(3);

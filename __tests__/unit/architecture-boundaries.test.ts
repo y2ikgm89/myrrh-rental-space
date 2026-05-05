@@ -292,28 +292,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "terms",
-    "queries.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "terms",
-    "mutations.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "ical-tokens.ts",
   ),
   join(
@@ -557,9 +535,6 @@ const SERVER_ONLY_QUERY_FILES = [
   join(SRC_ROOT, "shared", "domain", "news", "admin-queries.ts"),
   join(SRC_ROOT, "shared", "domain", "news", "commands.ts"),
   join(SRC_ROOT, "shared", "domain", "news", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "terms", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "terms", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "terms", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "staff-invitations", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "staff-invitations", "commands.ts"),
   join(SRC_ROOT, "shared", "domain", "space-categories", "queries.ts"),
@@ -1338,7 +1313,7 @@ describe("architecture boundaries", () => {
     }
   });
 
-  test("post/news/terms/reservation/page/coupon/customer/faq/block-template mutation action は legacy success wrapper を使わない", () => {
+  test("post/news/reservation/page/coupon/customer/faq/block-template mutation action は legacy success wrapper を使わない", () => {
     const files = [
       // post/ は mutation 実体ファイルを直接検証（index.ts は re-export barrel）
       join(
@@ -1383,17 +1358,6 @@ describe("architecture boundaries", () => {
         "_shared",
         "actions",
         "news.ts",
-      ),
-      join(
-        SRC_ROOT,
-        "app",
-        "(admin)",
-        "admin",
-        "(dashboard)",
-        "_shared",
-        "actions",
-        "terms",
-        "index.ts",
       ),
       join(
         SRC_ROOT,

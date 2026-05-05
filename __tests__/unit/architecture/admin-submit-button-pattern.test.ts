@@ -36,14 +36,6 @@ const SUBMIT_BUTTON_ALLOWLIST = new Set<string>([
     "sections",
     "SidebarSection.tsx",
   ),
-  join(
-    ADMIN_APP_ROOT,
-    "admin",
-    "(dashboard)",
-    "terms",
-    "_components",
-    "TermsInlineEditor.tsx",
-  ),
 ]);
 
 /** JSX / HTML で submit を直指定している疑い（実装ファイルは除外） */

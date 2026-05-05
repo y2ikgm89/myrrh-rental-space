@@ -11,8 +11,6 @@ import {
   AuditAction,
   MediaType,
   MediaUsage,
-  TermsType,
-  TermsStatus,
   CouponType,
   PaymentStatus,
 } from "@generated/prisma/enums";
@@ -30,8 +28,6 @@ import {
   isValidAuditAction,
   isValidMediaType,
   isValidMediaUsage,
-  isValidTermsType,
-  isValidTermsStatus,
   isValidCouponType,
   isValidPaymentStatus,
 } from "@/shared/lib/validations/enums/guards";
@@ -242,36 +238,6 @@ describe("isValidMediaUsage", () => {
 
   test("無効なメディア用途の場合 false を返す", () => {
     expect(isValidMediaUsage("INVALID")).toBe(false);
-  });
-});
-
-describe("isValidTermsType", () => {
-  test("有効な規約タイプの場合 true を返す", () => {
-    expect(isValidTermsType(TermsType.TERMS_OF_USE)).toBe(true);
-    expect(isValidTermsType(TermsType.PRIVACY_POLICY)).toBe(true);
-    expect(isValidTermsType(TermsType.CANCELLATION)).toBe(true);
-    expect(isValidTermsType(TermsType.PAYMENT)).toBe(true);
-    expect(isValidTermsType(TermsType.RENTAL_TERMS)).toBe(true);
-    expect(isValidTermsType(TermsType.COMMERCIAL_TRANSACTION)).toBe(true);
-    expect(isValidTermsType(TermsType.REVIEW_GUIDELINES)).toBe(true);
-    expect(isValidTermsType(TermsType.COOKIE_POLICY)).toBe(true);
-    expect(isValidTermsType(TermsType.CUSTOM)).toBe(true);
-  });
-
-  test("無効な規約タイプの場合 false を返す", () => {
-    expect(isValidTermsType("INVALID")).toBe(false);
-  });
-});
-
-describe("isValidTermsStatus", () => {
-  test("有効な規約ステータスの場合 true を返す", () => {
-    expect(isValidTermsStatus(TermsStatus.DRAFT)).toBe(true);
-    expect(isValidTermsStatus(TermsStatus.PUBLISHED)).toBe(true);
-    expect(isValidTermsStatus(TermsStatus.ARCHIVED)).toBe(true);
-  });
-
-  test("無効な規約ステータスの場合 false を返す", () => {
-    expect(isValidTermsStatus("INVALID")).toBe(false);
   });
 });
 

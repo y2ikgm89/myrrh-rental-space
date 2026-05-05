@@ -26,7 +26,6 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       reviewsEnabled: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      termsId: null,
       locationId: "00000000-0000-0000-0000-000000000002",
       categoryId: null,
       category: null,

@@ -35,7 +35,6 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   facilities: ["Wi-Fi", "プロジェクター", "ホワイトボード"],
   isPublished: false,
   reviewsEnabled: true,
-  termsId: null,
   locationId: VALID_UUID,
   categoryId: null,
   discountType: "none",
@@ -76,7 +75,6 @@ describe("Space Admin Action Integration", () => {
           ...VALID_SPACE_INPUT,
           area: null,
           dailyPrice: null,
-          termsId: null,
         });
         expect(result.success).toBe(true);
       });
@@ -563,27 +561,6 @@ describe("Space Admin Action Integration", () => {
           facilities: ["x".repeat(51)],
         });
         expect(result.success).toBe(false);
-      });
-    });
-
-    describe("termsId", () => {
-      test("有効なUUIDはOK", () => {
-        const result = spaceFormSchema.safeParse({
-          ...VALID_SPACE_INPUT,
-          termsId: VALID_UUID,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("無効なUUIDはエラー", () => {
-        const result = spaceFormSchema.safeParse({
-          ...VALID_SPACE_INPUT,
-          termsId: "invalid-uuid",
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("利用規約ID");
-        }
       });
     });
 

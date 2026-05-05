@@ -30,7 +30,6 @@ const VALID_SPACE_INPUT = {
   ],
   facilities: ["WiFi", "プロジェクター", "電源"],
   isPublished: false,
-  termsId: null,
   locationId: TEST_LOCATION_ID,
   categoryId: null,
 };
@@ -424,41 +423,6 @@ describe("spaceFormSchema", () => {
       }
     });
   });
-
-  describe("termsId", () => {
-    test("nullは許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        termsId: null,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("undefinedは許可", () => {
-      const { termsId, ...withoutTermsId } = VALID_SPACE_INPUT;
-      const result = spaceFormSchema.safeParse(withoutTermsId);
-      expect(result.success).toBe(true);
-    });
-
-    test("有効なUUIDは許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        termsId: "123e4567-e89b-12d3-a456-426614174000",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("無効なUUIDはエラー", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        termsId: "invalid-uuid",
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("利用規約IDが無効");
-      }
-    });
-  });
 });
 
 describe("defaultSpaceFormValues", () => {
@@ -477,7 +441,6 @@ describe("defaultSpaceFormValues", () => {
       facilities: [],
       isPublished: false,
       reviewsEnabled: true,
-      termsId: null,
       locationId: "",
       categoryId: null,
       // 割引設定
