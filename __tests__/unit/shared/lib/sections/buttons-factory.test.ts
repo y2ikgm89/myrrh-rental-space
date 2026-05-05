@@ -1,7 +1,7 @@
 /**
  * createButtonsArraySchema factory のユニットテスト
  *
- * 5 sections (cta/hero/hero-parallax/homepage-cta + buttons array consumer) で共有される
+ * 4 sections (cta/hero/hero-parallax + buttons array consumer) で共有される
  * ボタン配列スキーマの contract 検証。size / iconName / variant / カスタム色まで網羅。
  */
 

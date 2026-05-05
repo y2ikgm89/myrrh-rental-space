@@ -30,9 +30,6 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
     id: "home",
     label: "ホーム",
     description: "トップページ — Hero + 特集セクション",
-    // JUSTIFIED DEVIATION from plan: plan omits homepage-* types but
-    // DEFAULT_PAGE_SECTIONS["home"] uses them. Adding them here so that
-    // the invariant "defaultSections types are all in allowedSectionTypes" holds.
     allowedSectionTypes: [
       "page-hero",
       "hero-parallax",
@@ -45,10 +42,6 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
       "instagram",
       "testimonial",
       "gallery",
-      "homepage-how-it-works",
-      "homepage-spaces",
-      "homepage-features",
-      "homepage-cta",
     ],
     defaultSections: DEFAULT_PAGE_SECTIONS["home"] ?? [],
     requiredSectionTypes: ["page-hero"],

@@ -46,9 +46,9 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("24 件のセクション定義を返す（page-hero + 既存 23 タイプ）", () => {
+  test("20 件のセクション定義を返す（page-hero + 既存 19 タイプ）", () => {
     const defs = getAllSectionDefinitions();
-    expect(defs).toHaveLength(24);
+    expect(defs).toHaveLength(20);
   });
 
   test("各定義は type / configSchema / metadata を持つ", () => {
@@ -62,7 +62,7 @@ describe("getAllSectionDefinitions", () => {
     }
   });
 
-  test("page-hero / 既存 19 標準タイプ / 4 homepage-* タイプが含まれる", () => {
+  test("page-hero + 既存 19 標準タイプが含まれる", () => {
     const defs = getAllSectionDefinitions();
     const types = defs.map((d) => d.type);
 
@@ -87,10 +87,6 @@ describe("getAllSectionDefinitions", () => {
       "instagram",
       "event-calendar",
       "location-list",
-      "homepage-how-it-works",
-      "homepage-spaces",
-      "homepage-features",
-      "homepage-cta",
     ];
 
     for (const type of expectedTypes) {
@@ -164,7 +160,7 @@ describe("getSectionDefinitionsByCategory", () => {
       grouped["functional"].length +
       grouped["media"].length;
 
-    expect(total).toBe(24);
+    expect(total).toBe(20);
   });
 });
 

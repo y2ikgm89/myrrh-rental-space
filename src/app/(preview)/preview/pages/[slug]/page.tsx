@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPageBySlug } from "@/admin/queries/page";
 import { getPageForEdit } from "@/admin/queries/page-section";
-import { HomepageSections } from "@/public/components/homepage/HomepageSections";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
 
@@ -40,15 +39,7 @@ export default async function ManagedPagePreviewPage({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PreviewBanner />
-      {page.slug === "home" ? (
-        <HomepageSections
-          sections={activeSections.filter(
-            (section) => section.type !== "homepage-hero",
-          )}
-        />
-      ) : (
-        <ManagedPageSections sections={activeSections} />
-      )}
+      <ManagedPageSections sections={activeSections} />
     </div>
   );
 }

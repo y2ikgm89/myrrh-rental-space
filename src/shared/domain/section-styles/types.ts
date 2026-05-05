@@ -80,14 +80,6 @@ export const DEFAULT_SECTION_STYLE: SectionStylePayload = Object.freeze({
   animation: { preset: "fade" },
 } satisfies SectionStylePayload);
 
-const COMPACT_CENTER_STYLE: SectionStylePayload = Object.freeze({
-  spacing: { paddingTop: "md", paddingBottom: "md" },
-  background: { type: "default", overlayOpacity: 0 },
-  container: { maxWidth: "xl" },
-  typography: { titleSize: "md", textAlign: "center" },
-  animation: { preset: "fade" },
-} satisfies SectionStylePayload);
-
 const CTA_SECTION_STYLE: SectionStylePayload = Object.freeze({
   spacing: { paddingTop: "md", paddingBottom: "md" },
   background: { type: "surface", overlayOpacity: 0 },
@@ -119,10 +111,6 @@ const SECTION_TYPE_STYLES: Readonly<Record<string, SectionStylePayload>> =
     "event-calendar": HERO_ADJACENT_STYLE,
     "faq-list": HERO_ADJACENT_STYLE,
     gallery: FULL_BLEED_STYLE,
-    "homepage-cta": CTA_SECTION_STYLE,
-    "homepage-features": DEFAULT_SECTION_STYLE,
-    "homepage-how-it-works": COMPACT_CENTER_STYLE,
-    "homepage-spaces": FULL_BLEED_STYLE,
     instagram: FULL_BLEED_STYLE,
     "location-list": HERO_ADJACENT_STYLE,
     map: HERO_ADJACENT_STYLE,

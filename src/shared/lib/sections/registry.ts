@@ -1,6 +1,6 @@
 // src/shared/lib/sections/registry.ts
 //
-// セクションレジストリ — 全 24 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
+// セクションレジストリ — 全 20 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
 import { isRecord } from "@/shared/lib/serialize";
@@ -43,14 +43,6 @@ import { testimonialConfigSchema } from "./definitions/testimonial/schema";
 import { testimonialMetadata } from "./definitions/testimonial/metadata";
 import { eventCalendarConfigSchema } from "./definitions/event-calendar/schema";
 import { eventCalendarMetadata } from "./definitions/event-calendar/metadata";
-import { homepageHowItWorksConfigSchema } from "./definitions/homepage-how-it-works/schema";
-import { homepageHowItWorksMetadata } from "./definitions/homepage-how-it-works/metadata";
-import { homepageSpacesConfigSchema } from "./definitions/homepage-spaces/schema";
-import { homepageSpacesMetadata } from "./definitions/homepage-spaces/metadata";
-import { homepageFeaturesConfigSchema } from "./definitions/homepage-features/schema";
-import { homepageFeaturesMetadata } from "./definitions/homepage-features/metadata";
-import { homepageCtaConfigSchema } from "./definitions/homepage-cta/schema";
-import { homepageCtaMetadata } from "./definitions/homepage-cta/metadata";
 import {
   pageHeroConfigSchema,
   pageHeroMetadata,
@@ -60,7 +52,7 @@ import {
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 24 セクション定義（page-hero 含む） */
+/** 全 20 セクション定義（page-hero 含む） */
 const definitions: Record<string, SectionDefinition> = {
   "page-hero": {
     type: "page-hero",
@@ -161,26 +153,6 @@ const definitions: Record<string, SectionDefinition> = {
     type: "location-list",
     configSchema: locationListConfigSchema,
     metadata: locationListMetadata,
-  },
-  "homepage-how-it-works": {
-    type: "homepage-how-it-works",
-    configSchema: homepageHowItWorksConfigSchema,
-    metadata: homepageHowItWorksMetadata,
-  },
-  "homepage-spaces": {
-    type: "homepage-spaces",
-    configSchema: homepageSpacesConfigSchema,
-    metadata: homepageSpacesMetadata,
-  },
-  "homepage-features": {
-    type: "homepage-features",
-    configSchema: homepageFeaturesConfigSchema,
-    metadata: homepageFeaturesMetadata,
-  },
-  "homepage-cta": {
-    type: "homepage-cta",
-    configSchema: homepageCtaConfigSchema,
-    metadata: homepageCtaMetadata,
   },
 };
 

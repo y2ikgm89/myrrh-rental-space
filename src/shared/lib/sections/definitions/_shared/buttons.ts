@@ -2,7 +2,7 @@
  * 共通ボタン配列スキーマ factory
  *
  * Section schema 共通の buttons[] 表現 SSoT。
- * cta / hero / hero-parallax / homepage-cta が利用する。
+ * cta / hero / hero-parallax が利用する。
  *
  * 機能落差を解消するため text/url/variant に加えて size/iconName/openInNewTab/
  * カスタム背景色・文字色を一括登録する。fieldRegistry.register 経由で

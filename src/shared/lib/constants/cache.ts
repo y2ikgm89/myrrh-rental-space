@@ -112,8 +112,6 @@ export const CACHE_TAGS = {
   ANNOUNCEMENT_BAR: "announcement-bar",
   /** セクション全体 */
   SECTIONS: "sections",
-  /** ホームページセクション */
-  HOMEPAGE_SECTIONS: "homepage-sections",
   /** ページセクション */
   PAGE_SECTIONS: "page-sections",
   /** 利用規約 */

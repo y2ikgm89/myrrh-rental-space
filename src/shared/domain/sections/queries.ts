@@ -2,7 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import {
   ErrorCategory,
@@ -43,80 +43,6 @@ function getDefaultSections(slug: string): PublicSection[] {
     config: section.config,
     order: section.order,
   }));
-}
-
-export type HomepagePublicData = {
-  readonly sections: readonly PublicSection[];
-};
-
-/**
- * ホームページのセクション一覧（旧 homepage-hero Section は除外、page-hero section を含む）
- */
-export async function getHomepagePublicData(): Promise<HomepagePublicData> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(
-    CACHE_TAGS.SECTIONS,
-    CACHE_TAGS.HOMEPAGE_SECTIONS,
-    getCacheTag.pages.detail("home"),
-  );
-
-  const fallbackSections = getDefaultSections("home");
-
-  const homePage = await safeFetch({
-    fetch: () =>
-      prisma.page.findUnique({
-        where: { slug: "home" },
-        select: { id: true },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getHomepagePublicData.findPage",
-  });
-
-  if (!homePage) {
-    return {
-      sections: fallbackSections,
-    };
-  }
-
-  const rawSections = await safeFetch({
-    fetch: () =>
-      prisma.section.findMany({
-        where: {
-          pageId: homePage.id,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          type: true,
-          title: true,
-          contentHtml: true,
-          contentJson: true,
-          config: true,
-          order: true,
-        },
-        orderBy: { order: "asc" },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getHomepagePublicData.sections",
-  });
-
-  const list = toPlainArray(rawSections) satisfies PublicSection[];
-  const filtered = list.filter((s) => s.type !== "homepage-hero");
-  const useSections = filtered.length > 0 ? filtered : fallbackSections;
-
-  return {
-    sections: useSections,
-  };
-}
-
-export async function getHomepageSections(): Promise<readonly PublicSection[]> {
-  const { sections } = await getHomepagePublicData();
-  return sections;
 }
 
 export async function getShowcaseSpaces(

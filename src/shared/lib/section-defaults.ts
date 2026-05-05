@@ -13,10 +13,7 @@
  */
 
 import { prisma } from "@/shared/db/prisma";
-import {
-  ensureHomepageSectionsCommand,
-  ensurePageSectionsCommand,
-} from "@/shared/domain/pages/system-pages-commands";
+import { ensurePageSectionsCommand } from "@/shared/domain/pages/system-pages-commands";
 
 /**
  * ページのデフォルトセクションを確保（additive）
@@ -33,17 +30,4 @@ export async function ensurePageSections(
   slug: string,
 ): Promise<number> {
   return ensurePageSectionsCommand(prisma, pageId, slug);
-}
-
-/**
- * ホームページにデフォルトセクションが不足している場合、追加作成
- *
- * admin のホームページ編集ページから呼ばれる（ensureSystemPage と同パターン）。
- * 公開ページからは呼ばない（読み取り専用）。
- * 内部で home Page レコードを検索し、ensurePageSectionsCommand に委譲する。
- *
- * @returns 作成されたセクション数
- */
-export async function ensureHomepageSections(): Promise<number> {
-  return ensureHomepageSectionsCommand(prisma);
 }

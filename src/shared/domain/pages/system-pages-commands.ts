@@ -74,21 +74,6 @@ export async function ensurePageSectionsCommand(
   }
 }
 
-export async function ensureHomepageSectionsCommand(
-  db: AppPrismaClient,
-): Promise<number> {
-  const homePage = await db.page.findUnique({
-    where: { slug: "home" },
-    select: { id: true },
-  });
-
-  if (!homePage) {
-    return 0;
-  }
-
-  return ensurePageSectionsCommand(db, homePage.id, "home");
-}
-
 export async function bootstrapSystemPagesCommand(
   db: AppPrismaClient,
 ): Promise<void> {
@@ -107,10 +92,6 @@ export async function bootstrapSystemPagesCommand(
           });
         }
 
-        if (definition.slug === "home") {
-          await migrateHomepageSectionsToPageId(db, existingPage.id);
-        }
-
         await ensurePageSectionsCommand(db, existingPage.id, definition.slug);
         continue;
       }
@@ -127,10 +108,6 @@ export async function bootstrapSystemPagesCommand(
         },
       });
 
-      if (definition.slug === "home") {
-        await migrateHomepageSectionsToPageId(db, page.id);
-      }
-
       await ensurePageSectionsCommand(db, page.id, definition.slug);
     } catch (error) {
       logError(error, {
@@ -140,27 +117,4 @@ export async function bootstrapSystemPagesCommand(
       });
     }
   }
-}
-
-/**
- * pageId: null のホームページセクションを実際の Page レコードに紐づける
- *
- * 冪等: pageId: null のセクションがなければ何もしない
- */
-async function migrateHomepageSectionsToPageId(
-  db: AppPrismaClient,
-  homePageId: string,
-): Promise<void> {
-  const orphanedCount = await db.section.count({
-    where: { pageId: null },
-  });
-
-  if (orphanedCount === 0) {
-    return;
-  }
-
-  await db.section.updateMany({
-    where: { pageId: null },
-    data: { pageId: homePageId },
-  });
 }

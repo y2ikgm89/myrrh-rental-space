@@ -32,13 +32,6 @@ interface PageEditorProps {
   readonly dynamicOptions: DynamicSectionOptions;
 }
 
-const HOMEPAGE_ONLY_TYPES = new Set<string>([
-  "homepage-how-it-works",
-  "homepage-spaces",
-  "homepage-features",
-  "homepage-cta",
-]);
-
 export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
   const router = useRouter();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -64,15 +57,12 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
   const activeSection =
     page.sections.find((s) => s.id === activeSectionId) ?? null;
 
-  // 利用可能な section type を計算（page-hero は既存にあれば除外、
-  // homepage-* は home ページのみ許可）
-  const isHome = page.slug === "home";
+  // 利用可能な section type を計算（page-hero は既存にあれば除外）
   const hasPageHero = page.sections.some((s) => s.type === "page-hero");
   const availableTypes = getAllSectionDefinitions()
     .map((def) => def.type)
     .filter((type) => {
       if (type === "page-hero" && hasPageHero) return false;
-      if (HOMEPAGE_ONLY_TYPES.has(type) && !isHome) return false;
       return true;
     });
 

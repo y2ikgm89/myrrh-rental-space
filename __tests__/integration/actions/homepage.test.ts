@@ -19,11 +19,13 @@ import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-secti
 // =============================================================================
 
 describe("Homepage Public Action Integration", () => {
-  describe("home defaults (Phase A)", () => {
-    test("DEFAULT_PAGE_SECTIONS.home に homepage-hero が含まれない", () => {
+  describe("home defaults (Phase A + B)", () => {
+    test("DEFAULT_PAGE_SECTIONS.home に homepage-* type が含まれない", () => {
       const home = DEFAULT_PAGE_SECTIONS["home"];
       expect(home).toBeDefined();
-      expect(home?.some((s) => s.type === "homepage-hero")).toBe(false);
+      const homepagePrefixed =
+        home?.filter((s) => s.type.startsWith("homepage-")) ?? [];
+      expect(homepagePrefixed).toHaveLength(0);
     });
 
     test("home デフォルトセクションは order が重複しない非負整数", () => {
@@ -33,6 +35,28 @@ describe("Homepage Public Action Integration", () => {
       expect(new Set(orders).size).toBe(orders.length);
       for (const o of orders) {
         expect(o).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    test("home デフォルトセクションは標準 type のみで構成される", () => {
+      const home = DEFAULT_PAGE_SECTIONS["home"] ?? [];
+      const allowedTypes = new Set([
+        "page-hero",
+        "hero",
+        "hero-parallax",
+        "features",
+        "space-showcase",
+        "post-list",
+        "news-list",
+        "cta",
+        "concept",
+        "instagram",
+        "testimonial",
+        "gallery",
+        "custom",
+      ]);
+      for (const section of home) {
+        expect(allowedTypes.has(section.type)).toBe(true);
       }
     });
   });
@@ -67,9 +91,9 @@ describe("Homepage Public Action Integration", () => {
     });
 
     test("セクションタイプ数", () => {
-      // event-calendar 追加後 18 タイプ
+      // event-calendar + location-list 追加後 19 タイプ
       const typeCount = Object.values(SectionType).length;
-      expect(typeCount).toBe(18);
+      expect(typeCount).toBe(19);
     });
   });
 

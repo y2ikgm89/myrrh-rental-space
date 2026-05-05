@@ -71,12 +71,16 @@ export function createDefaultCustomPageSections(
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [
     {
-      type: "homepage-how-it-works",
-      title: null,
+      type: "features",
+      title: "ご利用の流れ",
       config: {
-        label: "How to Reserve",
-        title: "ご利用の流れ",
-        steps: [
+        sectionLabel: "How to Reserve",
+        layout: {
+          padding: "lg",
+          containerWidth: "lg",
+          animateOnScroll: true,
+        },
+        items: [
           {
             title: "スペースを選ぶ",
             description: "用途や人数に合った空間を見つける",
@@ -90,35 +94,37 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             description: "最短1分で予約完了",
           },
         ],
-        valueProps: [
-          { title: "最短1時間から" },
-          { title: "当日予約OK" },
-          { title: "Wi-Fi完備" },
-          { title: "オンライン決済" },
-        ],
       },
       content: null,
       order: 0,
       isActive: true,
     },
     {
-      type: "homepage-spaces",
-      title: null,
+      type: "space-showcase",
+      title: "厳選スペース",
       config: {
-        label: "Selected Spaces",
-        title: "厳選スペース",
-        count: 6,
+        sectionLabel: "Selected Spaces",
+        maxItems: 6,
+        layout: {
+          padding: "lg",
+          containerWidth: "xl",
+          animateOnScroll: true,
+        },
       },
       content: null,
       order: 1,
       isActive: true,
     },
     {
-      type: "homepage-features",
-      title: null,
+      type: "features",
+      title: "選ばれる理由",
       config: {
-        label: "Why Myrrh",
-        title: "選ばれる理由",
+        sectionLabel: "Why Myrrh",
+        layout: {
+          padding: "lg",
+          containerWidth: "lg",
+          animateOnScroll: true,
+        },
         items: [
           {
             title: "自然光設計",
@@ -147,15 +153,25 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: "homepage-cta",
+      type: "cta",
       title: null,
       config: {
-        label: "Reservation",
+        sectionLabel: "Reservation",
         title: "あなたに最適な空間を",
         description:
           "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
-        buttonText: "View All Spaces",
-        buttonUrl: "/spaces",
+        buttons: [
+          {
+            text: "スペースを見る",
+            url: "/spaces",
+            variant: "primary",
+          },
+        ],
+        layout: {
+          padding: "xl",
+          containerWidth: "md",
+          animateOnScroll: true,
+        },
       },
       content: null,
       order: 3,
