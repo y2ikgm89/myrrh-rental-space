@@ -71,14 +71,18 @@ const compactSchema = z.object({
   label: field.text("ラベル", { subGroup: "text", maxLength: 200 }),
   title: field.text("タイトル", { subGroup: "text", maxLength: 200 }),
   description: field.textarea("説明", { subGroup: "text", maxLength: 4000 }),
-  image: field.group(
-    "ヒーロー画像",
-    {
+  image: z
+    .object({
       url: field.image("画像 URL"),
       alt: field.text("代替テキスト"),
-    },
-    { subGroup: "image" },
-  ),
+    })
+    .prefault({})
+    .register(fieldRegistry, {
+      fieldType: "group",
+      label: "ヒーロー画像",
+      group: "content",
+      subGroup: "image",
+    }),
   layout: sectionLayoutSchema,
 });
 

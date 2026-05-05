@@ -114,10 +114,6 @@ interface ArrayOpts<TItem extends ArrayItem> extends CommonFieldOpts {
   readonly helpText?: string;
 }
 
-interface GroupOpts extends CommonFieldOpts {
-  readonly helpText?: string;
-}
-
 interface DynamicSelectOpts {
   readonly source: DynamicSelectSource;
   readonly group?: FieldMeta["group"];
@@ -302,25 +298,6 @@ export const field = {
         ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts.helpText !== undefined && { helpText: opts.helpText }),
       });
-  },
-
-  /**
-   * オブジェクトグループ（ネストされたフィールド群）
-   *
-   * 関連するフィールドをひとつのオブジェクトにまとめる。
-   */
-  group<TFields extends { readonly [key: string]: z.ZodType }>(
-    label: string,
-    fields: TFields,
-    opts?: GroupOpts,
-  ) {
-    return z.object(fields).register(fieldRegistry, {
-      fieldType: "group",
-      label,
-      group: opts?.group ?? "content",
-      ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
-      ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
-    });
   },
 
   /**

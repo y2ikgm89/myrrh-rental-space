@@ -1,14 +1,15 @@
 // src/shared/lib/sections/definitions/_shared/layout.ts
 //
-// セクション横断の共通レイアウト・表示制御 schema factory。
+// セクション横断の共通レイアウト・表示制御 schema。
 //
 // 全 23 sections に `layout: sectionLayoutSchema` として注入され、
 // AutoSectionForm の Accordion 「デザイン」グループ内に統一表示される。
 // 公開側は SectionWrapper が config.layout を読み取り、
 // 上下余白 / コンテナ幅 / モバイル/デスクトップ非表示 / 入場アニメーションを統一適用する。
 
-import type { z } from "zod";
-import { field } from "../../field-registry";
+import { z } from "zod";
+
+import { field, fieldRegistry } from "../../field-registry";
 
 export const LAYOUT_PADDING_VALUES = ["none", "sm", "md", "lg", "xl"] as const;
 export const LAYOUT_CONTAINER_WIDTH_VALUES = [
@@ -30,10 +31,14 @@ export type LayoutContainerWidth =
   (typeof LAYOUT_CONTAINER_WIDTH_VALUES)[number];
 export type LayoutAnimate = (typeof LAYOUT_ANIMATE_VALUES)[number];
 
-/** Section 共通の layout / visibility 設定 group */
-export const sectionLayoutSchema = field.group(
-  "レイアウト・表示制御",
-  {
+/**
+ * Section 共通の layout / visibility 設定 group
+ *
+ * Zod 4 `.prefault({})` で input undefined を `{}` に置換 → 内側 fields の default が発火。
+ * Section 側で `layout: sectionLayoutSchema` と書くだけで、未指定時に全 default が適用される。
+ */
+export const sectionLayoutSchema = z
+  .object({
     padding: field.select("上下余白", {
       options: LAYOUT_PADDING_VALUES,
       default: "md",
@@ -57,8 +62,12 @@ export const sectionLayoutSchema = field.group(
       default: "fade-up",
       helpText: "スクロール時の表示演出",
     }),
-  },
-  { group: "design" },
-);
+  })
+  .prefault({})
+  .register(fieldRegistry, {
+    fieldType: "group",
+    label: "レイアウト・表示制御",
+    group: "design",
+  });
 
 export type SectionLayoutConfig = z.infer<typeof sectionLayoutSchema>;

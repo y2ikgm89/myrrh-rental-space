@@ -7,14 +7,17 @@
  *
  * - `createImageGroupSchema`: caption を含むフル版（hero / hero-parallax / concept 等）
  * - `createCompactImageGroupSchema`: caption 不要のコンパクト版（testimonial.items[] 等）
+ *
+ * Zod 4 `.prefault({})` で parent から省略された場合に内側 fields の default を発火させる。
  */
 
-import { field } from "../../field-registry";
+import { z } from "zod";
+
+import { field, fieldRegistry } from "../../field-registry";
 
 export function createImageGroupSchema(label = "画像") {
-  return field.group(
-    label,
-    {
+  return z
+    .object({
       url: field.image("画像 URL"),
       alt: field.text("代替テキスト（a11y / SEO）", {
         maxLength: 200,
@@ -24,18 +27,27 @@ export function createImageGroupSchema(label = "画像") {
         maxLength: 300,
         helpText: "画像下部に表示する説明文",
       }),
-    },
-    { subGroup: "image" },
-  );
+    })
+    .prefault({})
+    .register(fieldRegistry, {
+      fieldType: "group",
+      label,
+      group: "content",
+      subGroup: "image",
+    });
 }
 
 export function createCompactImageGroupSchema(label = "画像") {
-  return field.group(
-    label,
-    {
+  return z
+    .object({
       url: field.image("画像 URL"),
       alt: field.text("代替テキスト", { maxLength: 200 }),
-    },
-    { subGroup: "image" },
-  );
+    })
+    .prefault({})
+    .register(fieldRegistry, {
+      fieldType: "group",
+      label,
+      group: "content",
+      subGroup: "image",
+    });
 }
