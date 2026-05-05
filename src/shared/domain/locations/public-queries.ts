@@ -97,9 +97,9 @@ export type LocationForAccess = {
   readonly paymentAccepted: string | null;
 };
 
-export async function getPublishedLocationsForAccess(): Promise<
-  LocationForAccess[]
-> {
+export async function getPublishedLocationsForAccess(
+  slugs?: readonly string[],
+): Promise<LocationForAccess[]> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.LOCATIONS);
@@ -107,7 +107,11 @@ export async function getPublishedLocationsForAccess(): Promise<
   const locations = await safeFetch({
     fetch: () =>
       prisma.location.findMany({
-        where: { isPublished: true, isActive: true },
+        where: {
+          isPublished: true,
+          isActive: true,
+          ...(slugs && slugs.length > 0 && { slug: { in: [...slugs] } }),
+        },
         orderBy: { sortOrder: "asc" },
         select: {
           id: true,

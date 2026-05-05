@@ -27,6 +27,7 @@ import {
   getMapConfig,
   getEmbedConfig,
   getInstagramConfig,
+  getLocationListConfig,
 } from "@/shared/lib/validations/section-defaults";
 import {
   getPublishedFaqItems,
@@ -37,6 +38,8 @@ import { getPublishedNews } from "@/shared/domain/news/queries";
 import { getPublishedPosts } from "@/shared/domain/posts/queries";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
+import { getPublishedLocationsForAccess } from "@/shared/domain/locations/public-queries";
+import { getBusinessInfo } from "@/public/data/business";
 import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
 
 // v3 components
@@ -60,6 +63,7 @@ import { PostListSection } from "../../../_components/PostListSection";
 import { FaqListSection } from "../../../_components/FaqListSection";
 import { ContactFormSection } from "../../../_components/ContactFormSection";
 import { InstagramSection } from "../../../_components/InstagramSection";
+import { LocationListSection } from "../../../_components/LocationListSection";
 import type { SpaceListData } from "../../../_components/SpaceListSection";
 import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
@@ -275,6 +279,30 @@ export async function SectionRenderer({
       // event-calendar は /events ページで FullCalendar として直接実装済み
       // SectionRenderer 経由では null を返す（style 統合対象外）
       return null;
+    }
+
+    case SectionType.LOCATION_LIST: {
+      const config = getLocationListConfig(section.config);
+      const slugs =
+        config.mode === "selected"
+          ? config.locationSlugs.map((item) => item.slug)
+          : undefined;
+      const [locations, info] = await Promise.all([
+        getPublishedLocationsForAccess(slugs),
+        getBusinessInfo(),
+      ]);
+      return (
+        <LocationListSection
+          config={config}
+          locations={locations}
+          businessInfo={{
+            phone: info.phone,
+            email: info.email,
+            name: info.name,
+          }}
+          style={resolved}
+        />
+      );
     }
 
     default:

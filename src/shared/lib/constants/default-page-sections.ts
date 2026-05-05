@@ -269,6 +269,37 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       order: 0,
       isActive: true,
     },
+    {
+      type: "location-list",
+      title: null,
+      config: {
+        sectionLabel: "Locations",
+        title: "全拠点のご案内",
+        mode: "all",
+        locationSlugs: [],
+        overviewNavEnabled: true,
+        overviewHeadline: "",
+        globalContactEnabled: true,
+        globalContactHeadline: "代表お問い合わせ",
+        chapterLayout: "alternating",
+      },
+      content: null,
+      order: 1,
+      isActive: true,
+    },
+    {
+      type: "cta",
+      title: null,
+      config: {
+        title: "ご不明な点はお気軽にどうぞ",
+        buttons: [
+          { text: "お問い合わせ", url: "/contact", variant: "primary" },
+        ],
+      },
+      content: null,
+      order: 2,
+      isActive: true,
+    },
   ],
 
   news: [

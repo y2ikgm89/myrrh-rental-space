@@ -3,15 +3,16 @@ import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Container } from "@/public/components/design-system/container";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { LocationChapter } from "../_components/location-chapter";
+import { LocationListSection } from "../../_components/LocationListSection";
 import { getPublishedLocationForAccessBySlug } from "@/shared/domain/locations/public-queries";
+import { getBusinessInfo } from "@/public/data/business";
 import { getLocationJsonLdDataBySlug } from "@/public/lib/seo";
 import { LocationLocalBusinessJsonLd } from "@/public/components/seo/json-ld";
 import { getBaseUrl } from "@/shared/lib/constants";
+import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
+import { getLocationListConfig } from "@/shared/lib/validations/section-defaults";
 
 interface PageProps {
   readonly params: Promise<{ locationSlug: string }>;
@@ -60,9 +61,25 @@ export default async function LocationDetailPage({
   await connection();
   const { locationSlug } = await params;
 
-  const location = await getPublishedLocationForAccessBySlug(locationSlug);
+  const [location, info] = await Promise.all([
+    getPublishedLocationForAccessBySlug(locationSlug),
+    getBusinessInfo(),
+  ]);
 
   if (!location) notFound();
+
+  const config = getLocationListConfig({
+    sectionLabel: "",
+    title: "",
+    mode: "selected",
+    locationSlugs: [{ slug: locationSlug }],
+    overviewNavEnabled: false,
+    overviewHeadline: "",
+    globalContactEnabled: false,
+    globalContactHeadline: "代表お問い合わせ",
+    chapterLayout: "alternating",
+  });
+  const style = getDefaultSectionStyle("location-list");
 
   return (
     <PageLayout
@@ -79,19 +96,16 @@ export default async function LocationDetailPage({
       <Suspense fallback={null}>
         <LocationJsonLdSection slug={locationSlug} />
       </Suspense>
-      <section className="pt-12 pb-[var(--space-lg)] md:pt-20">
-        <Container>
-          <ScrollReveal>
-            <LocationChapter
-              anchorId={location.slug}
-              index={1}
-              location={location}
-              googleMapsUrl={null}
-              showSectionDivider={false}
-            />
-          </ScrollReveal>
-        </Container>
-      </section>
+      <LocationListSection
+        config={config}
+        locations={[location]}
+        businessInfo={{
+          phone: info.phone,
+          email: info.email,
+          name: info.name,
+        }}
+        style={style}
+      />
     </PageLayout>
   );
 }
