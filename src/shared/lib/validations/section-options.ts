@@ -97,7 +97,12 @@ export const textAlignValues = ["left", "center", "right"] as const;
 export type TextAlign = (typeof textAlignValues)[number];
 
 /** スペースリスト レイアウト */
-export const spaceLayoutValues = ["grid", "list", "carousel"] as const;
+export const spaceLayoutValues = [
+  "grid",
+  "list",
+  "carousel",
+  "catalog",
+] as const;
 export type SpaceLayout = (typeof spaceLayoutValues)[number];
 
 /** ニュースリスト レイアウト */
@@ -270,6 +275,7 @@ export const spaceLayoutLabels: Record<SpaceLayout, string> = {
   grid: "グリッド",
   list: "リスト",
   carousel: "カルーセル",
+  catalog: "カタログ（フィルタ + ページネーション）",
 };
 
 export const newsLayoutLabels: Record<NewsLayout, string> = {

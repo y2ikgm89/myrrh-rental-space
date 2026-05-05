@@ -3,7 +3,7 @@ import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { Section } from "@/public/components/design-system/section";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
-import { SpaceCard } from "../../_components/space-card";
+import { SpaceCard } from "../../../_components/space-list/space-card";
 
 interface RelatedSpacesProps {
   readonly currentId: string;

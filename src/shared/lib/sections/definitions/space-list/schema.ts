@@ -3,7 +3,7 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
-const layouts = ["grid", "list", "carousel"] as const;
+const layouts = ["grid", "list", "carousel", "catalog"] as const;
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9"] as const;
 
@@ -46,7 +46,8 @@ export const spaceListConfigSchema = z.object({
     options: layouts,
     default: "grid",
     group: "design",
-    helpText: "スペース一覧の並び方",
+    helpText:
+      "スペース一覧の並び方。catalog はフィルタとページネーション付きのアーカイブ表示",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 1,

@@ -8,6 +8,7 @@
  */
 
 import type { ReactElement } from "react";
+import type { SearchParams } from "nuqs/server";
 import { SectionType } from "@/shared/lib/validations/section";
 import {
   getHeroConfig,
@@ -42,7 +43,16 @@ import { getPublishedEvents } from "@/shared/domain/events/public-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
-import { getPublishedLocationsForAccess } from "@/shared/domain/locations/public-queries";
+import {
+  getActiveLocations,
+  getPublishedLocationsForAccess,
+} from "@/shared/domain/locations/public-queries";
+import {
+  getActiveCategories,
+  getPublishedSpacesPaginated,
+} from "@/shared/domain/spaces/public-queries";
+import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
+import { spaceSearchParams } from "@/public/lib/search-params";
 import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
 import { getBusinessInfo } from "@/public/data/business";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
@@ -79,10 +89,16 @@ import type { FaqData } from "../../../_components/FaqListSection";
 
 interface SectionRendererProps {
   readonly section: PublicSection;
+  /**
+   * 任意 — URL クエリパラメータ。catalog variant の space-list 等、
+   * server-side filtering / pagination が必要な section が parse する。
+   */
+  readonly searchParams?: Promise<SearchParams>;
 }
 
 export async function SectionRenderer({
   section,
+  searchParams,
 }: SectionRendererProps): Promise<ReactElement | null> {
   const resolved = getDefaultSectionStyle(section.type);
 
@@ -128,6 +144,48 @@ export async function SectionRenderer({
 
     case SectionType.SPACE_LIST: {
       const config = getSpaceListConfig(section.config);
+
+      if (config.displayLayout === "catalog") {
+        const sp = searchParams
+          ? await spaceSearchParams.parse(searchParams)
+          : { page: 1, category: null, location: null };
+        const [
+          { items, totalCount, totalPages, currentPage },
+          categories,
+          locations,
+        ] = await Promise.all([
+          getPublishedSpacesPaginated(
+            Math.max(1, sp.page),
+            undefined,
+            sp.category ?? undefined,
+            sp.location ?? undefined,
+          ),
+          getActiveCategories(),
+          getActiveLocations(),
+        ]);
+        const reviewStats = await getSpaceReviewStatsMultiple(
+          items.map((s) => s.id),
+        );
+        return (
+          <SpaceListSection
+            config={config}
+            style={resolved}
+            mode={{
+              kind: "catalog",
+              spaces: items,
+              categories,
+              locations,
+              reviewStats,
+              currentPage,
+              totalPages,
+              totalCount,
+              categoryId: sp.category,
+              locationId: sp.location,
+            }}
+          />
+        );
+      }
+
       const rawSpaces = await getShowcaseSpaces(
         config.maxItems,
         config.showOnlyPublished,
@@ -143,7 +201,11 @@ export async function SectionRenderer({
         mainImageUrl: s.mainImageUrl,
       }));
       return (
-        <SpaceListSection config={config} spaces={spaces} style={resolved} />
+        <SpaceListSection
+          config={config}
+          style={resolved}
+          mode={{ kind: "simple", spaces }}
+        />
       );
     }
 

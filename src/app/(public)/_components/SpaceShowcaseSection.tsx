@@ -17,7 +17,7 @@ import {
   getTitleStyle,
 } from "@/public/components/sections/section-style-helpers";
 import { cn } from "@/shared/lib/cn";
-import { SpaceCard } from "../spaces/_components/space-card";
+import { SpaceCard } from "./space-list/space-card";
 import { getCardGridColsClass } from "@/public/lib/section-style-maps";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";

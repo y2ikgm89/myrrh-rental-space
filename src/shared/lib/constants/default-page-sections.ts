@@ -415,8 +415,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "space-list",
       title: null,
       config: {
-        maxItems: 12,
+        sectionLabel: "",
+        title: "",
+        displayLayout: "catalog",
         showOnlyPublished: true,
+        showViewAllLink: false,
       },
       content: null,
       order: 1,

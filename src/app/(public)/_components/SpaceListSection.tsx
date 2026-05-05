@@ -1,18 +1,16 @@
-"use client";
-import { useFormatPrice } from "@/public/hooks/use-format-price";
-
 /**
- * SpaceListSection — Space listing with grid/list/carousel layout
+ * SpaceListSection — variant dispatcher (Server Component)
  *
- * Configurable columns, layout variant, and "view all" link.
- * useGSAP stagger for card entrance animation.
+ * `displayLayout` が "catalog" のときは FilterBar + SpaceGrid + Pagination を
+ * 内包したアーカイブ表示を、それ以外（grid / list / carousel）のときは既存の
+ * SpaceListSimpleView (CC) を描画する。
+ *
+ * 公開ページ /spaces は本セクションの "catalog" variant に統一テンプレート化されており、
+ * SectionRenderer は searchParams を受け取って paginated データ + filters + reviewStats を
+ * fetch して `mode={{ kind: "catalog", ... }}` で渡す。
  */
 
-import { useRef, type ReactElement } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useGSAP } from "@gsap/react";
-import { gsap } from "@/public/lib/gsap-config";
+import { Suspense, type ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
@@ -22,180 +20,130 @@ import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
   getTitleClasses,
   getTitleStyle,
-  getTextStyle,
 } from "@/public/components/sections/section-style-helpers";
-import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
-import {
-  IMAGE_ASPECT_MAP,
-  getCardGridColsClass,
-} from "@/public/lib/section-style-maps";
-import { parseSpaceImageAspect } from "@/shared/lib/validations/section-parsers";
+import { Pagination } from "@/public/components/pagination";
+import { FilterBar } from "@/public/components/ui/filter-bar";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
-import { toAppRoute } from "@/shared/lib/typed-routes";
 
-export interface SpaceListData {
+import {
+  SpaceListSimpleView,
+  type SpaceListData,
+} from "./space-list/space-list-simple-view";
+import { SpaceGrid } from "./space-list/space-grid";
+
+export type { SpaceListData };
+
+interface FilterOption {
+  readonly id: string;
+  readonly name: string;
+}
+
+interface ReviewStats {
+  readonly averageRating: number;
+  readonly totalCount: number;
+}
+
+interface CatalogSpace {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
   readonly descriptionPlainText: string;
   readonly capacity: number | null;
-  readonly hourlyPrice: number | null;
   readonly area: number | null;
+  readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
+  readonly imageUrls: readonly string[];
+  readonly category: { readonly name: string } | null;
+  readonly location: { readonly name: string };
 }
+
+export type SpaceListMode =
+  | { readonly kind: "simple"; readonly spaces: readonly SpaceListData[] }
+  | {
+      readonly kind: "catalog";
+      readonly spaces: readonly CatalogSpace[];
+      readonly categories: readonly FilterOption[];
+      readonly locations: readonly FilterOption[];
+      readonly reviewStats: Readonly<Record<string, ReviewStats>>;
+      readonly currentPage: number;
+      readonly totalPages: number;
+      readonly totalCount: number;
+      readonly categoryId: string | null;
+      readonly locationId: string | null;
+    };
 
 interface SpaceListSectionProps {
   readonly config: SpaceListConfig;
-  readonly spaces: readonly SpaceListData[];
   readonly style: SectionStylePayload;
+  readonly mode: SpaceListMode;
 }
 
 export function SpaceListSection({
   config,
-  spaces,
   style,
+  mode,
 }: SpaceListSectionProps): ReactElement {
-  const gridRef = useRef<HTMLDivElement>(null);
-  const { formatUnit } = useFormatPrice();
+  if (mode.kind === "catalog") {
+    const hasFilters = mode.categoryId !== null || mode.locationId !== null;
+    const hasHeader = Boolean(config.sectionLabel) || Boolean(config.title);
 
-  useGSAP(
-    () => {
-      const grid = gridRef.current;
-      if (!grid) return;
+    return (
+      <SectionWrapper style={style} layout={config.layout}>
+        {hasHeader && (
+          <div className="mb-10 text-center md:mb-14">
+            {config.sectionLabel && (
+              <ScrollReveal>
+                <SectionLabel>{config.sectionLabel}</SectionLabel>
+              </ScrollReveal>
+            )}
+            {config.title && (
+              <div className="mt-4" style={getTitleStyle(style)}>
+                <Heading
+                  level={2}
+                  className={cn("tracking-tight", getTitleClasses(style))}
+                >
+                  <SplitText>{config.title}</SplitText>
+                </Heading>
+              </div>
+            )}
+          </div>
+        )}
 
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const cards = grid.querySelectorAll("[data-space-list-card]");
-        if (cards.length === 0) return;
+        <Suspense fallback={null}>
+          <div className="mb-10 md:mb-14">
+            <FilterBar
+              categories={mode.categories}
+              locations={mode.locations}
+              resultCount={mode.totalCount}
+            />
+          </div>
+        </Suspense>
 
-        gsap.fromTo(
-          cards,
-          { y: REVEAL.fadeUp.y, opacity: REVEAL.fadeUp.opacity },
-          {
-            y: 0,
-            opacity: 1,
-            duration: DURATION.slow,
-            ease: EASE.outQuart,
-            stagger: STAGGER.card,
-            scrollTrigger: {
-              trigger: grid,
-              start: "top 80%",
-              toggleActions: "play none none none",
-            },
-          },
-        );
-      });
-    },
-    { scope: gridRef },
-  );
+        <Suspense fallback={null}>
+          <SpaceGrid
+            spaces={mode.spaces}
+            reviewStats={mode.reviewStats}
+            hasFilters={hasFilters}
+          />
+        </Suspense>
 
-  const colKey = Math.min(Math.max(config.columns, 1), 4);
-  const isCarousel = config.displayLayout === "carousel";
-  const isList = config.displayLayout === "list";
-
-  // grid layout は @container + container query variants を使用（Tailwind v4 推奨）
-  const layoutClass = isCarousel
-    ? "flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
-    : isList
-      ? "flex flex-col gap-4"
-      : cn("@container grid gap-6", getCardGridColsClass(colKey));
+        <div className="mt-10 md:mt-14">
+          <Pagination
+            currentPage={mode.currentPage}
+            totalPages={mode.totalPages}
+            basePath="/spaces"
+            preservedQuery={{
+              ...(mode.categoryId ? { category: mode.categoryId } : {}),
+              ...(mode.locationId ? { location: mode.locationId } : {}),
+            }}
+          />
+        </div>
+      </SectionWrapper>
+    );
+  }
 
   return (
-    <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-12 text-center md:mb-16">
-        <ScrollReveal>
-          {config.sectionLabel && (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
-          )}
-        </ScrollReveal>
-        <div className="mt-4" style={getTitleStyle(style)}>
-          <Heading
-            level={2}
-            className={cn("tracking-tight", getTitleClasses(style))}
-          >
-            <SplitText>{config.title}</SplitText>
-          </Heading>
-        </div>
-      </div>
-
-      <div ref={gridRef} className={layoutClass}>
-        {spaces.map((space) => (
-          <Link
-            key={space.id}
-            href={toAppRoute(`/spaces/${space.slug}`)}
-            data-space-list-card=""
-            className={cn(
-              "group overflow-hidden border border-border transition-colors duration-200",
-              isCarousel && "min-w-[280px] snap-center md:min-w-[320px]",
-              isList && "flex",
-            )}
-          >
-            <div
-              className={cn(
-                "overflow-hidden",
-                isList
-                  ? "w-1/3 min-w-[120px]"
-                  : IMAGE_ASPECT_MAP[parseSpaceImageAspect(config.imageAspect)],
-              )}
-            >
-              <Image
-                src={space.mainImageUrl}
-                alt={space.name}
-                width={400}
-                height={300}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes={
-                  isList
-                    ? "33vw"
-                    : `(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`
-                }
-              />
-            </div>
-            <div className={cn("p-4 md:p-5", isList && "flex-1")}>
-              <h3 className="font-heading text-base font-light tracking-tight md:text-lg">
-                {space.name}
-              </h3>
-              {space.descriptionPlainText && (
-                <p
-                  className="mt-1 line-clamp-2 text-sm text-muted-foreground"
-                  style={getTextStyle(style)}
-                >
-                  {space.descriptionPlainText}
-                </p>
-              )}
-              {(space.capacity != null || space.hourlyPrice != null) && (
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                  <span className="text-xs text-muted-foreground">
-                    {space.capacity != null && `${space.capacity}名`}
-                    {space.capacity != null && space.area != null && " / "}
-                    {space.area != null && <>{space.area}m&sup2;</>}
-                  </span>
-                  {space.hourlyPrice != null && (
-                    <span className="text-sm font-medium text-accent">
-                      {formatUnit(space.hourlyPrice, "/h")}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {config.showViewAllLink && (
-        <ScrollReveal delay={0.2}>
-          <div className="mt-10 text-center">
-            <Link
-              href={toAppRoute(config.viewAllUrl)}
-              className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {config.viewAllText} &rarr;
-              <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
-            </Link>
-          </div>
-        </ScrollReveal>
-      )}
-    </SectionWrapper>
+    <SpaceListSimpleView config={config} style={style} spaces={mode.spaces} />
   );
 }
