@@ -59,3 +59,66 @@ export function formatDateTimeFull(
     minute: "2-digit",
   }).format(value);
 }
+
+// =============================================================================
+// `<input type="datetime-local">` 用 JST helper（SSoT）
+// =============================================================================
+//
+// **Why JST 固定**:
+// `<input type="datetime-local">` の value は timezone 情報を持たない `"YYYY-MM-DDTHH:mm"` 文字列。
+// 1) 表示側で `slice(0, 16)` で UTC ISO を切り取ると、ブラウザが local 時刻として解釈し
+//    `new Date(value)` で再 UTC 化されるとオフセットが二重適用されてずれる silent bug
+// 2) サーバ (Cloud Run = UTC) で `new Date("2026-05-03T12:00")` するとサーバ local (= UTC)
+//    として parse され、JST 想定の管理者からすると 9 時間ずれる
+//
+// 解決: 表示も保存も「Asia/Tokyo 固定」で扱う。
+// Browser がどこの timezone でも、サーバが UTC でも、JST として一貫処理する。
+
+const DATETIME_LOCAL_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
+// `Z`（UTC）または `±HH:mm` オフセット付きの完全 ISO 8601 文字列を検出する。
+// Zod 4 `.datetime({ local: true })` は local + full ISO の両方を許容するため、
+// helper も同等にし、絶対時刻表現はそのまま `Date` constructor に委譲する。
+const FULL_ISO_OFFSET_REGEX = /[Zz]$|[+-]\d{2}:?\d{2}$/;
+
+/**
+ * Date を `<input type="datetime-local">` 用の JST 文字列 (`"YYYY-MM-DDTHH:mm"`) に整形。
+ *
+ * `Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" })` で JST 固定の
+ * ISO-like 形式 (`"YYYY-MM-DD HH:mm"`) を取得し、半角スペースを `T` に置換する。
+ * サーバ tz / ブラウザ tz に依存しない。
+ */
+export function formatDateTimeLocalInJst(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("sv-SE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+  })
+    .format(value)
+    .replace(" ", "T");
+}
+
+/**
+ * `<input type="datetime-local">` の値 (`"YYYY-MM-DDTHH:mm"` / `"...:ss"`)
+ * または full ISO 8601 文字列を Date に変換する。
+ *
+ * - **timezone 指定なし**（`"2026-05-03T12:00"`）→ JST として明示的に parse
+ *   （`+09:00` を付与）。サーバ tz / ブラウザ tz に依存せず常に JST 解釈
+ * - **`Z` または `±HH:mm` 付き**（`"2026-05-03T03:00:00.000Z"`）→ 絶対時刻として
+ *   そのまま `Date` constructor に委譲（Zod 4 `.datetime({ local: true })` が
+ *   両形式を許容するのと整合）
+ * - 不正な形式は `Invalid Date` を返す
+ */
+export function parseDateTimeLocalAsJst(value: string): Date {
+  if (FULL_ISO_OFFSET_REGEX.test(value)) {
+    return new Date(value);
+  }
+  if (!DATETIME_LOCAL_REGEX.test(value)) {
+    return new Date(Number.NaN);
+  }
+  const withSeconds = value.length === 16 ? `${value}:00` : value;
+  return new Date(`${withSeconds}+09:00`);
+}
