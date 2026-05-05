@@ -37,8 +37,6 @@ export {
   SocialPlatform,
   LayoutWidth,
   PostStatus,
-  TermsType,
-  TermsStatus,
   CouponType,
   AnnouncementBarType,
   DiscountType,

@@ -1,322 +1,246 @@
 import "server-only";
 
-import { TermsStatus } from "@generated/prisma/enums";
-import { parsePrismaInputJson } from "@/shared/db/json";
+import { createHash } from "node:crypto";
+import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { omitUndefined } from "@/shared/lib/serialize";
-import type {
-  CreateTermsInput,
-  CreateTermsVersionInput,
-  UpdateTermsInput,
-  UpdateTermsVersionInput,
-} from "@/shared/lib/validations/terms";
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
+import type { TermsFormInput } from "@/shared/lib/validations/terms";
 
-type CreateTermsWithVersionInput = CreateTermsInput & {
-  contentJson: string;
-  contentHtml: string;
-};
-
-type CreateTermsVersionWithHtmlInput = CreateTermsVersionInput & {
-  contentHtml: string;
-};
-
-type UpdateTermsVersionWithHtmlInput = UpdateTermsVersionInput & {
-  contentHtml: string;
-};
-
-function parseEditorStateJson(contentJson: string) {
-  return parsePrismaInputJson(contentJson, "コンテンツJSONが不正です");
+interface SlugOnly {
+  id: string;
+  slug: string;
 }
 
-async function ensureUniqueSlug(
+async function ensureSlugAvailable(
   slug: string,
   currentId?: string,
 ): Promise<void> {
-  const existing = currentId
-    ? await prisma.terms.findFirst({
-        where: {
-          slug,
-          id: { not: currentId },
-        },
-        select: { id: true },
-      })
-    : await prisma.terms.findUnique({
-        where: { slug },
-        select: { id: true },
-      });
-
+  const existing = await prisma.termsDocument.findFirst({
+    where: { slug, ...(currentId && { id: { not: currentId } }) },
+    select: { id: true },
+  });
   if (existing) {
     throw new DomainError("このスラッグは既に使用されています", "CONFLICT");
   }
 }
 
-async function ensureTermsExists(id: string): Promise<void> {
-  const existing = await prisma.terms.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!existing) {
-    throw new DomainError("規約が見つかりません", "NOT_FOUND");
-  }
-}
-
-export async function createTerms(
-  input: CreateTermsInput,
-): Promise<{ id: string }> {
-  await ensureUniqueSlug(input.slug);
-
-  const terms = await prisma.terms.create({
-    data: omitUndefined(input),
-  });
-
-  return { id: terms.id };
-}
-
-export async function createTermsWithVersion(
-  input: CreateTermsWithVersionInput,
-  userId: string,
-): Promise<{ id: string; versionId: string }> {
-  await ensureUniqueSlug(input.slug);
-
-  const contentJson = parseEditorStateJson(input.contentJson);
-
-  return prisma.$transaction(async (tx) => {
-    const terms = await tx.terms.create({
-      data: omitUndefined({
-        type: input.type,
-        title: input.title,
-        slug: input.slug,
-        isActive: input.isActive,
-      }),
-    });
-
-    const version = await tx.termsVersion.create({
-      data: {
-        termsId: terms.id,
-        contentJson,
-        contentHtml: input.contentHtml,
-        version: 1,
-        status: TermsStatus.DRAFT,
-        createdBy: userId,
-      },
-    });
-
-    return { id: terms.id, versionId: version.id };
-  });
-}
-
-export async function updateTerms(
-  id: string,
-  input: UpdateTermsInput,
-): Promise<void> {
-  await ensureTermsExists(id);
-
-  if (input.slug) {
-    await ensureUniqueSlug(input.slug, id);
-  }
-
-  await prisma.terms.update({
-    where: { id },
-    data: omitUndefined(input),
-  });
-}
-
-export async function deleteTerms(id: string): Promise<void> {
-  const [terms, spacesCount] = await Promise.all([
-    prisma.terms.findUnique({
-      where: { id },
-      select: { id: true },
-    }),
-    prisma.space.count({
-      where: { termsId: id },
-    }),
-  ]);
-
-  if (!terms) {
-    throw new DomainError("規約が見つかりません", "NOT_FOUND");
-  }
-
-  if (spacesCount > 0) {
-    throw new DomainError(
-      `この規約は ${spacesCount} 件のスペースで使用されているため削除できません`,
-      "CONFLICT",
-    );
-  }
-
-  await prisma.terms.delete({ where: { id } });
-}
-
-export async function toggleTermsActive(
-  id: string,
-  isActive: boolean,
-): Promise<void> {
-  await ensureTermsExists(id);
-
-  await prisma.terms.update({
-    where: { id },
-    data: { isActive },
-  });
-}
-
-export async function createTermsVersion(
-  input: CreateTermsVersionWithHtmlInput,
-  userId: string,
-): Promise<{ id: string; version: number }> {
-  const [terms, existingDraft, latestVersion] = await Promise.all([
-    prisma.terms.findUnique({
-      where: { id: input.termsId },
-      select: { id: true },
-    }),
-    prisma.termsVersion.findFirst({
-      where: {
-        termsId: input.termsId,
-        status: TermsStatus.DRAFT,
-      },
-      select: { id: true },
-    }),
-    prisma.termsVersion.findFirst({
-      where: { termsId: input.termsId },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
-
-  if (!terms) {
-    throw new DomainError("規約が見つかりません", "NOT_FOUND");
-  }
-
-  if (existingDraft) {
-    throw new DomainError(
-      "下書きが既に存在します。先に公開または削除してください。",
-      "CONFLICT",
-    );
-  }
-
-  const nextVersion = (latestVersion?.version ?? 0) + 1;
-  const contentJson = parseEditorStateJson(input.contentJson);
-
-  const version = await prisma.termsVersion.create({
-    data: {
-      termsId: input.termsId,
-      contentJson,
-      contentHtml: input.contentHtml,
-      version: nextVersion,
-      status: TermsStatus.DRAFT,
-      createdBy: userId,
-    },
-  });
-
+async function buildContent(input: TermsFormInput) {
+  const contentHtml = await renderEditorStateToHtmlLazy(input.contentJson);
   return {
-    id: version.id,
-    version: version.version,
+    contentJson: JSON.parse(input.contentJson) as Prisma.InputJsonValue,
+    contentHtml,
   };
 }
 
-export async function updateTermsVersion(
-  versionId: string,
-  input: UpdateTermsVersionWithHtmlInput,
-): Promise<void> {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { status: true },
-  });
+/**
+ * 規約作成
+ */
+export async function createTermsCommand(
+  input: TermsFormInput,
+): Promise<SlugOnly> {
+  await ensureSlugAvailable(input.slug);
 
-  if (!version) {
-    throw new DomainError("バージョンが見つかりません", "NOT_FOUND");
-  }
+  const { contentJson, contentHtml } = await buildContent(input);
 
-  if (version.status !== TermsStatus.DRAFT) {
-    throw new DomainError("公開済みのバージョンは編集できません", "CONFLICT");
-  }
-
-  await prisma.termsVersion.update({
-    where: { id: versionId },
+  const created = await prisma.termsDocument.create({
     data: {
-      contentJson: parseEditorStateJson(input.contentJson),
-      contentHtml: input.contentHtml,
+      type: input.type,
+      slug: input.slug,
+      title: input.title,
+      contentJson,
+      contentHtml,
+      isPublished: input.isPublished,
+      publishedAt: input.isPublished ? new Date() : null,
+      requiredAtReservation: input.requiredAtReservation,
+      requiredAtInquiry: input.requiredAtInquiry,
+      requiredAtSignup: input.requiredAtSignup,
+      showInFooter: input.showInFooter,
+      footerOrder: input.footerOrder,
     },
+    select: { id: true, slug: true },
   });
+
+  return created;
 }
 
-export async function publishTermsVersion(
-  versionId: string,
-  userId: string,
-): Promise<void> {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { termsId: true, status: true },
+/**
+ * 規約更新
+ */
+export async function updateTermsCommand(
+  id: string,
+  input: TermsFormInput,
+): Promise<SlugOnly & { previousSlug: string }> {
+  const existing = await prisma.termsDocument.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, slug: true, isPublished: true, publishedAt: true },
   });
-
-  if (!version) {
-    throw new DomainError("バージョンが見つかりません", "NOT_FOUND");
+  if (!existing) {
+    throw new DomainError("規約が見つかりません", "NOT_FOUND");
   }
 
-  if (version.status === TermsStatus.PUBLISHED) {
-    throw new DomainError("このバージョンは既に公開されています", "CONFLICT");
+  if (input.slug !== existing.slug) {
+    await ensureSlugAvailable(input.slug, id);
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.termsVersion.updateMany({
-      where: {
-        termsId: version.termsId,
-        isCurrentVersion: true,
-      },
-      data: { isCurrentVersion: false },
-    });
+  const { contentJson, contentHtml } = await buildContent(input);
 
-    await tx.termsVersion.update({
-      where: { id: versionId },
-      data: {
-        status: TermsStatus.PUBLISHED,
-        isCurrentVersion: true,
-        publishedAt: new Date(),
-        publishedBy: userId,
-      },
-    });
+  // 公開状態が false → true に変わった場合のみ publishedAt を更新
+  // 既に公開済みなら publishedAt を保持、未公開化なら null
+  const publishedAt = (() => {
+    if (!input.isPublished) return null;
+    if (existing.isPublished && existing.publishedAt)
+      return existing.publishedAt;
+    return new Date();
+  })();
+
+  const updated = await prisma.termsDocument.update({
+    where: { id },
+    data: {
+      type: input.type,
+      slug: input.slug,
+      title: input.title,
+      contentJson,
+      contentHtml,
+      isPublished: input.isPublished,
+      publishedAt,
+      requiredAtReservation: input.requiredAtReservation,
+      requiredAtInquiry: input.requiredAtInquiry,
+      requiredAtSignup: input.requiredAtSignup,
+      showInFooter: input.showInFooter,
+      footerOrder: input.footerOrder,
+    },
+    select: { id: true, slug: true },
   });
+
+  return { ...updated, previousSlug: existing.slug };
 }
 
-export async function archiveTermsVersion(versionId: string): Promise<void> {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { isCurrentVersion: true },
+/**
+ * 規約削除（ソフトデリート）
+ */
+export async function softDeleteTermsCommand(id: string): Promise<SlugOnly> {
+  const existing = await prisma.termsDocument.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, slug: true },
   });
-
-  if (!version) {
-    throw new DomainError("バージョンが見つかりません", "NOT_FOUND");
+  if (!existing) {
+    throw new DomainError("規約が見つかりません", "NOT_FOUND");
   }
 
-  if (version.isCurrentVersion) {
+  await prisma.termsDocument.update({
+    where: { id },
+    data: { deletedAt: new Date(), isPublished: false },
+  });
+
+  return existing;
+}
+
+/**
+ * 規約物理削除（ソフトデリート済みのみ）
+ */
+export async function hardDeleteTermsCommand(
+  id: string,
+): Promise<{ id: string }> {
+  const existing = await prisma.termsDocument.findUnique({
+    where: { id },
+    select: { id: true, deletedAt: true },
+  });
+  if (!existing) {
+    throw new DomainError("規約が見つかりません", "NOT_FOUND");
+  }
+  if (!existing.deletedAt) {
+    throw new DomainError("削除済みの規約のみ物理削除できます", "VALIDATION");
+  }
+
+  await prisma.termsDocument.delete({ where: { id } });
+  return { id };
+}
+
+/**
+ * 規約復元（ソフトデリート済みのみ）
+ *
+ * 復元時は `isPublished: false`（下書き）として戻し、slug 衝突がないか確認する。
+ */
+export async function restoreTermsCommand(id: string): Promise<SlugOnly> {
+  const existing = await prisma.termsDocument.findUnique({
+    where: { id },
+    select: { id: true, slug: true, deletedAt: true },
+  });
+  if (!existing) {
+    throw new DomainError("規約が見つかりません", "NOT_FOUND");
+  }
+  if (!existing.deletedAt) {
+    throw new DomainError("削除済みの規約のみ復元できます", "VALIDATION");
+  }
+
+  // 同一 slug の有効レコードが存在しないか確認（削除中に新規作成された可能性）
+  const conflict = await prisma.termsDocument.findFirst({
+    where: { slug: existing.slug, deletedAt: null, id: { not: id } },
+    select: { id: true },
+  });
+  if (conflict) {
     throw new DomainError(
-      "現在有効なバージョンはアーカイブできません",
+      "同一スラッグの規約が既に存在するため復元できません。先にスラッグを変更してください。",
       "CONFLICT",
     );
   }
 
-  await prisma.termsVersion.update({
-    where: { id: versionId },
-    data: { status: TermsStatus.ARCHIVED },
+  const restored = await prisma.termsDocument.update({
+    where: { id },
+    data: { deletedAt: null, isPublished: false, publishedAt: null },
+    select: { id: true, slug: true },
   });
+
+  return restored;
 }
 
-export async function deleteTermsVersion(versionId: string): Promise<void> {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-    select: { status: true },
+/**
+ * 同意記録の作成（公開フォーム送信時に呼ぶ）
+ *
+ * @param termsIds 同意した規約 ID 配列
+ * @param context  "reservation"/"inquiry"/"signup" 等
+ * @param resourceId 紐づくリソース ID（予約 / 問い合わせ ID 等）
+ */
+export async function recordTermsAgreementsCommand(input: {
+  termsIds: readonly string[];
+  context: string;
+  resourceId?: string | null;
+  customerId?: string | null;
+  guestEmail?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}): Promise<{ count: number }> {
+  if (input.termsIds.length === 0) return { count: 0 };
+
+  const docs = await prisma.termsDocument.findMany({
+    where: {
+      id: { in: [...input.termsIds] },
+      deletedAt: null,
+      isPublished: true,
+    },
+    select: { id: true, contentHtml: true },
   });
 
-  if (!version) {
-    throw new DomainError("バージョンが見つかりません", "NOT_FOUND");
-  }
+  if (docs.length === 0) return { count: 0 };
 
-  if (version.status !== TermsStatus.DRAFT) {
-    throw new DomainError(
-      "公開済みまたはアーカイブ済みのバージョンは削除できません",
-      "CONFLICT",
-    );
-  }
+  const data = docs.map((doc) => ({
+    termsId: doc.id,
+    contentSnapshot: doc.contentHtml,
+    contentHash: createHash("sha256").update(doc.contentHtml).digest("hex"),
+    context: input.context,
+    ...(input.resourceId !== undefined &&
+      input.resourceId !== null && { resourceId: input.resourceId }),
+    ...(input.customerId !== undefined &&
+      input.customerId !== null && { customerId: input.customerId }),
+    ...(input.guestEmail !== undefined &&
+      input.guestEmail !== null && { guestEmail: input.guestEmail }),
+    ...(input.ipAddress !== undefined &&
+      input.ipAddress !== null && { ipAddress: input.ipAddress }),
+    ...(input.userAgent !== undefined &&
+      input.userAgent !== null && { userAgent: input.userAgent }),
+  }));
 
-  await prisma.termsVersion.delete({ where: { id: versionId } });
+  const result = await prisma.termsAgreement.createMany({ data });
+  return { count: result.count };
 }

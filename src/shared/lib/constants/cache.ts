@@ -199,6 +199,11 @@ export const getCacheTag = {
     list: () => CACHE_TAGS.FAQ,
     detail: (id: string) => `${CACHE_TAGS.FAQ}-${id}`,
   },
+  terms: {
+    list: () => CACHE_TAGS.TERMS,
+    detail: (slug: string) => `${CACHE_TAGS.TERMS}-${slug}`,
+    footer: () => `${CACHE_TAGS.TERMS}-footer`,
+  },
   reservations: {
     list: () => CACHE_TAGS.RESERVATIONS,
     detail: (id: string) => `${CACHE_TAGS.RESERVATIONS}-${id}`,

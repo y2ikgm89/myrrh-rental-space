@@ -1,11 +1,10 @@
 "use server";
 
-import { z } from "zod";
+import { headers } from "next/headers";
 import {
   publicReservationSchema,
   type PublicReservationInput,
 } from "@/shared/lib/validations/public-reservation";
-import { headers } from "next/headers";
 import {
   checkActionRateLimit,
   createValidationMutationError,
@@ -14,7 +13,6 @@ import {
 import {
   formSubmitRateLimiter,
   getClientIpFromHeaders,
-  publicQueryRateLimiter,
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
@@ -28,6 +26,8 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
+import { TERMS_AGREEMENT_CONTEXT } from "@/shared/lib/validations/terms";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -35,23 +35,6 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
-import {
-  getReservationRequiredTerms,
-  type ReservationTermsSummary,
-} from "@/shared/domain/terms/public-queries";
-import type { Serialized } from "@/shared/lib/serialize";
-
-export async function fetchRequiredTerms(
-  spaceId: string,
-): Promise<Serialized<ReservationTermsSummary[]>> {
-  const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
-  if (!rateLimit.success) return [];
-
-  const parsed = z.string().uuid().safeParse(spaceId);
-  if (!parsed.success) return [];
-
-  return getReservationRequiredTerms(parsed.data);
-}
 
 export async function submitReservation(
   input: PublicReservationInput,
@@ -89,7 +72,7 @@ export async function submitReservation(
   // 4. Get current user (non-blocking — undefined if not logged in)
   const user = await getCurrentCustomerUser();
 
-  // 4.5. Extract client IP for terms audit trail
+  // 4.5. Extract client IP / userAgent for terms audit trail
   const clientIp = await getClientIpFromHeaders();
   const headersList = await headers();
   const userAgent = headersList.get("user-agent");
@@ -99,9 +82,26 @@ export async function submitReservation(
     const result = await createPublicReservationCommand({
       ...parsed.data,
       userId: user?.id,
-      clientIp,
-      userAgent,
     });
+
+    // 5.5. Record terms agreements snapshot (証跡)
+    if (parsed.data.agreedTermsIds.length > 0) {
+      fireAndForget(
+        recordTermsAgreementsCommand({
+          termsIds: parsed.data.agreedTermsIds,
+          context: TERMS_AGREEMENT_CONTEXT.RESERVATION,
+          resourceId: result.id,
+          customerId: result.customerId ?? null,
+          guestEmail: user ? null : parsed.data.email,
+          ipAddress: clientIp,
+          userAgent: userAgent ?? null,
+        }),
+        {
+          operation: "recordTermsAgreements",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+    }
 
     // 6. Invalidate cache: reservations + customers + coupons + notifications
     invalidateReservationCaches(result.id, result.customerId ?? null, {

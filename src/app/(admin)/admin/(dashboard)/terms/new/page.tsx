@@ -1,79 +1,81 @@
-import { redirect } from "next/navigation";
-import { getSettings } from "@/admin/queries/settings";
-import { TermsInlineEditorCreate } from "../_components/TermsInlineEditorCreate";
-import { isValidTermsType } from "@/shared/lib/validations/enums/guards";
-import { getTermsTypeDefaults } from "@/shared/lib/validations/terms";
+import type { Metadata } from "next";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import {
-  getTemplatesForType,
+  TERMS_TYPE_VALUES,
+  type TermsTypeValue,
+} from "@/shared/lib/validations/terms";
+import {
   applyBusinessInfo,
+  getTemplatesForType,
   type BusinessInfo,
 } from "@/shared/lib/terms-templates";
-import type { TermsType } from "@/shared/lib/validations/enums/prisma-types";
-import type { Metadata } from "next";
-import type { SearchParams } from "nuqs/server";
+import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
+import { TermsForm } from "../_components/TermsForm";
 
 export const metadata: Metadata = {
-  title: "規約作成 | Myrrh Rental Space",
+  title: "規約を新規作成 | Myrrh Rental Space",
 };
 
-function extractBusinessInfo(
-  settings: Awaited<ReturnType<typeof getSettings>>,
-): BusinessInfo {
-  return {
-    businessName: settings?.businessName ?? null,
-    representativeName: settings?.representativeName ?? null,
-    invoiceNumber: settings?.invoiceNumber ?? null,
-    email: settings?.email ?? null,
-    phoneNumber: settings?.phoneNumber ?? null,
-    postalCode: settings?.postalCode ?? null,
-    prefecture: settings?.prefecture ?? null,
-    city: settings?.city ?? null,
-    streetAddress: settings?.streetAddress ?? null,
-    buildingName: settings?.buildingName ?? null,
-  };
+const TERMS_TYPE_SET = new Set<string>(TERMS_TYPE_VALUES);
+
+function isTermsTypeValue(value: string): value is TermsTypeValue {
+  return TERMS_TYPE_SET.has(value);
 }
 
-/**
- * テンプレートがある場合、事業者情報適用済み HTML を返す
- * HTML → Lexical JSON 変換はクライアント側で行う（DOM が必要なため）
- */
-function resolveTemplateHtml(
-  type: TermsType,
-  businessInfo: BusinessInfo,
-): string | null {
-  const templates = getTemplatesForType(type);
+interface NewTermsPageProps {
+  readonly searchParams: Promise<{ type?: string }>;
+}
+
+export default async function NewTermsPage({
+  searchParams,
+}: NewTermsPageProps) {
+  const { type: typeParam } = await searchParams;
+  const typeValue: TermsTypeValue =
+    typeParam && isTermsTypeValue(typeParam) ? typeParam : "custom";
+
+  const templates = getTemplatesForType(typeValue);
   const template = templates[0];
-  if (!template) return null;
 
-  return applyBusinessInfo(template.content, businessInfo);
-}
+  let initialTemplateHtml: string | undefined;
+  let initialTitle: string | undefined;
 
-interface PageProps {
-  searchParams: Promise<SearchParams>;
-}
-
-export default async function NewTermsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const typeParam = typeof params["type"] === "string" ? params["type"] : null;
-
-  // タイプ未指定またはバリデーション失敗→一覧にリダイレクト
-  if (!typeParam || !isValidTermsType(typeParam)) {
-    redirect("/admin/terms");
+  if (template) {
+    const settings = await getPublicBusinessSettings();
+    const businessInfo: BusinessInfo = {
+      businessName: settings?.businessName ?? null,
+      representativeName: settings?.representativeName ?? null,
+      invoiceNumber: settings?.invoiceNumber ?? null,
+      email: settings?.email ?? null,
+      phoneNumber: settings?.phoneNumber ?? null,
+      postalCode: settings?.postalCode ?? null,
+      prefecture: settings?.prefecture ?? null,
+      city: settings?.city ?? null,
+      streetAddress: settings?.streetAddress ?? null,
+      buildingName: settings?.buildingName ?? null,
+    };
+    initialTemplateHtml = applyBusinessInfo(template.content, businessInfo);
+    initialTitle = template.label;
   }
 
-  const settings = await getSettings();
-  const businessInfo = extractBusinessInfo(settings);
-
-  const defaults = getTermsTypeDefaults(typeParam);
-  const templateHtml = resolveTemplateHtml(typeParam, businessInfo);
-
   return (
-    <TermsInlineEditorCreate
-      key={typeParam}
-      initialType={typeParam}
-      initialTitle={defaults?.title ?? ""}
-      initialSlug={defaults?.slug ?? ""}
-      initialTemplateHtml={templateHtml}
-    />
+    <AdminDetailLayout
+      backHref="/admin/terms"
+      title="規約を新規作成"
+      subtitle={
+        template
+          ? `${template.label} のテンプレートから作成（事業者情報は Settings 値で自動置換済み）`
+          : "新しい規約を白紙から登録します"
+      }
+    >
+      <TermsForm
+        key={typeValue}
+        mode="create"
+        initial={{
+          type: typeValue,
+          ...(initialTitle !== undefined && { title: initialTitle }),
+        }}
+        {...(initialTemplateHtml !== undefined && { initialTemplateHtml })}
+      />
+    </AdminDetailLayout>
   );
 }

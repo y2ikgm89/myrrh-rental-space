@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus, PostStatus, TermsStatus } from "@generated/prisma/enums";
+import { EventStatus, PostStatus } from "@generated/prisma/enums";
 
 export type SitemapSpace = {
   slug: string;
@@ -27,12 +27,12 @@ export type SitemapCustomPage = {
   updatedAt: Date;
 };
 
-export type SitemapTerms = {
+export type SitemapEvent = {
   slug: string;
   updatedAt: Date;
 };
 
-export type SitemapEvent = {
+export type SitemapTerms = {
   slug: string;
   updatedAt: Date;
 };
@@ -42,10 +42,10 @@ export async function getSitemapContentData(): Promise<{
   news: SitemapNews[];
   posts: SitemapPost[];
   customPages: SitemapCustomPage[];
-  terms: SitemapTerms[];
   events: SitemapEvent[];
+  terms: SitemapTerms[];
 }> {
-  const [spaces, news, posts, customPages, terms, events] = await Promise.all([
+  const [spaces, news, posts, customPages, events, terms] = await Promise.all([
     prisma.space.findMany({
       where: { isPublished: true, isActive: true },
       select: { slug: true, updatedAt: true },
@@ -79,24 +79,16 @@ export async function getSitemapContentData(): Promise<{
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.terms.findMany({
-      where: {
-        isActive: true,
-        versions: {
-          some: {
-            isCurrentVersion: true,
-            status: TermsStatus.PUBLISHED,
-          },
-        },
-      },
-      select: { slug: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" },
-    }),
     prisma.event.findMany({
       where: {
         status: EventStatus.PUBLISHED,
         deletedAt: null,
       },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.termsDocument.findMany({
+      where: { deletedAt: null, isPublished: true },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
@@ -107,7 +99,7 @@ export async function getSitemapContentData(): Promise<{
     news,
     posts,
     customPages,
-    terms,
     events,
+    terms,
   };
 }

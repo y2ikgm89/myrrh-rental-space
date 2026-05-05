@@ -1,9 +1,9 @@
 /**
  * 規約テンプレート定義
  *
- * 6 つの標準 TermsType に対応する法令準拠テンプレートを提供する。
+ * 8 種類の標準規約タイプに対応する法令準拠テンプレートを提供する。
  * 管理画面の「規約を追加」ダイアログから新規作成時に初期 HTML として投入される。
- * その後 Lexical エディタで編集され、Terms / TermsVersion に保存される。
+ * その後 Lexical エディタで編集され、TermsDocument に保存される。
  *
  * ## 参考法令・制度
  *
@@ -29,7 +29,7 @@
  * そのまま残り、管理者への入力プロンプトとして機能する。
  */
 
-import { TermsType } from "@/shared/lib/validations/enums/prisma-types";
+import { type TermsTypeValue } from "@/shared/lib/validations/terms";
 
 // =============================================================================
 // Types
@@ -1123,26 +1123,27 @@ ${BUSINESS_INFO_BLOCK}
  *
  * CUSTOM タイプは管理者が自由に内容を定義するためテンプレートを持たない。
  */
-export const TERMS_TEMPLATES: Record<TermsType, readonly TermsTemplate[]> = {
-  [TermsType.TERMS_OF_USE]: [TERMS_OF_USE_TEMPLATE],
-  [TermsType.PRIVACY_POLICY]: [PRIVACY_POLICY_TEMPLATE],
-  [TermsType.CANCELLATION]: [CANCELLATION_POLICY_TEMPLATE],
-  [TermsType.PAYMENT]: [PAYMENT_TERMS_TEMPLATE],
-  [TermsType.RENTAL_TERMS]: [RENTAL_TERMS_TEMPLATE],
-  [TermsType.COMMERCIAL_TRANSACTION]: [COMMERCIAL_TRANSACTION_TEMPLATE],
-  [TermsType.REVIEW_GUIDELINES]: [REVIEW_GUIDELINES_TEMPLATE],
-  [TermsType.COOKIE_POLICY]: [COOKIE_POLICY_TEMPLATE],
-  [TermsType.CUSTOM]: [],
-};
+export const TERMS_TEMPLATES: Record<TermsTypeValue, readonly TermsTemplate[]> =
+  {
+    ["terms-of-use"]: [TERMS_OF_USE_TEMPLATE],
+    ["privacy-policy"]: [PRIVACY_POLICY_TEMPLATE],
+    ["cancellation"]: [CANCELLATION_POLICY_TEMPLATE],
+    ["payment"]: [PAYMENT_TERMS_TEMPLATE],
+    ["rental-terms"]: [RENTAL_TERMS_TEMPLATE],
+    ["commercial-transaction"]: [COMMERCIAL_TRANSACTION_TEMPLATE],
+    ["review-guidelines"]: [REVIEW_GUIDELINES_TEMPLATE],
+    ["cookie-policy"]: [COOKIE_POLICY_TEMPLATE],
+    ["custom"]: [],
+  };
 
 export function getTemplatesForType(
-  termsType: TermsType,
+  termsType: TermsTypeValue,
 ): readonly TermsTemplate[] {
   return TERMS_TEMPLATES[termsType];
 }
 
 export function getTemplateById(
-  termsType: TermsType,
+  termsType: TermsTypeValue,
   templateId: string,
 ): TermsTemplate | undefined {
   return getTemplatesForType(termsType).find((t) => t.id === templateId);

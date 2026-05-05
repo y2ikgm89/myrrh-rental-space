@@ -18,8 +18,6 @@ import {
   AuditAction,
   MediaType,
   MediaUsage,
-  TermsType,
-  TermsStatus,
   CouponType,
   AnnouncementBarType,
   DiscountType,
@@ -62,8 +60,6 @@ const VALID_NEWS_STATUS_FILTERS = new Set(["ALL", "PUBLISHED", "DRAFT"]);
 const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction));
 const VALID_MEDIA_TYPES = new Set<string>(Object.values(MediaType));
 const VALID_MEDIA_USAGES = new Set<string>(Object.values(MediaUsage));
-const VALID_TERMS_TYPES = new Set<string>(Object.values(TermsType));
-const VALID_TERMS_STATUSES = new Set<string>(Object.values(TermsStatus));
 const VALID_COUPON_TYPES = new Set<string>(Object.values(CouponType));
 const VALID_ANNOUNCEMENT_BAR_TYPES = new Set<string>(
   Object.values(AnnouncementBarType),
@@ -173,14 +169,6 @@ export function isValidMediaType(value: unknown): value is MediaType {
 
 export function isValidMediaUsage(value: unknown): value is MediaUsage {
   return typeof value === "string" && VALID_MEDIA_USAGES.has(value);
-}
-
-export function isValidTermsType(value: unknown): value is TermsType {
-  return typeof value === "string" && VALID_TERMS_TYPES.has(value);
-}
-
-export function isValidTermsStatus(value: unknown): value is TermsStatus {
-  return typeof value === "string" && VALID_TERMS_STATUSES.has(value);
 }
 
 export function isValidCouponType(value: unknown): value is CouponType {

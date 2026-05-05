@@ -1,257 +1,218 @@
 import "server-only";
 
-import { TermsStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import {
-  getTermsTypeDefaults,
-  type TermsAgreementItem,
-  type TermsDetail,
-  type TermsVersionDetail,
-  type TermsWithVersion,
-} from "@/shared/lib/validations/terms";
 
-const AGREEMENTS_PER_PAGE = 20;
+/**
+ * 管理画面向け規約クエリ
+ * キャッシュなし（Server Component で都度取得）
+ */
 
-type ActiveTermsOption = {
+const ADMIN_LIST_SELECT = {
+  id: true,
+  type: true,
+  slug: true,
+  title: true,
+  isPublished: true,
+  publishedAt: true,
+  requiredAtReservation: true,
+  requiredAtInquiry: true,
+  requiredAtSignup: true,
+  showInFooter: true,
+  footerOrder: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+  _count: { select: { agreements: true } },
+} as const;
+
+const ADMIN_DETAIL_SELECT = {
+  id: true,
+  type: true,
+  slug: true,
+  title: true,
+  contentJson: true,
+  contentHtml: true,
+  isPublished: true,
+  publishedAt: true,
+  requiredAtReservation: true,
+  requiredAtInquiry: true,
+  requiredAtSignup: true,
+  showInFooter: true,
+  footerOrder: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+} as const;
+
+export type AdminTermsListItem = Serialized<{
   id: string;
-  title: string;
   type: string;
-};
+  slug: string;
+  title: string;
+  isPublished: boolean;
+  publishedAt: Date | null;
+  requiredAtReservation: boolean;
+  requiredAtInquiry: boolean;
+  requiredAtSignup: boolean;
+  showInFooter: boolean;
+  footerOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  agreementsCount: number;
+}>;
 
-function maskIpAddress(ip: string | null): string | null {
-  if (!ip) {
-    return null;
-  }
+export type AdminTermsDetail = Serialized<{
+  id: string;
+  type: string;
+  slug: string;
+  title: string;
+  contentJson: unknown;
+  contentHtml: string;
+  isPublished: boolean;
+  publishedAt: Date | null;
+  requiredAtReservation: boolean;
+  requiredAtInquiry: boolean;
+  requiredAtSignup: boolean;
+  showInFooter: boolean;
+  footerOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}>;
 
-  const lastDot = ip.lastIndexOf(".");
-  if (lastDot === -1) {
-    return ip;
-  }
+/**
+ * 管理: 規約一覧（ソフトデリート除外）
+ */
+export async function getAdminTermsList(): Promise<AdminTermsListItem[]> {
+  const items = await prisma.termsDocument.findMany({
+    where: { deletedAt: null },
+    orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+    select: ADMIN_LIST_SELECT,
+  });
 
-  return `${ip.slice(0, lastDot + 1)}***`;
+  return toPlainArray(
+    items.map((item) => ({
+      ...item,
+      agreementsCount: item._count.agreements,
+    })),
+  );
 }
 
-export async function getAdminTermsList(): Promise<TermsWithVersion[]> {
-  const terms = await prisma.terms.findMany({
-    include: {
-      versions: {
-        where: { isCurrentVersion: true },
-        take: 1,
-        select: {
-          id: true,
-          version: true,
-          contentHtml: true,
-          contentJson: true,
-          publishedAt: true,
-        },
-      },
-      _count: {
-        select: {
-          spaces: true,
-          agreements: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
+/**
+ * 管理: 削除済み規約一覧（ゴミ箱）
+ */
+export async function getDeletedTermsList(): Promise<AdminTermsListItem[]> {
+  const items = await prisma.termsDocument.findMany({
+    where: { deletedAt: { not: null } },
+    orderBy: { deletedAt: "desc" },
+    select: ADMIN_LIST_SELECT,
   });
 
-  return terms.map((term) => {
-    const currentVersion = term.versions[0] ?? null;
+  return toPlainArray(
+    items.map((item) => ({
+      ...item,
+      agreementsCount: item._count.agreements,
+    })),
+  );
+}
 
-    return {
-      id: term.id,
-      type: term.type,
-      title: term.title,
-      slug: term.slug,
-      isActive: term.isActive,
-      requiredAtReservation: term.requiredAtReservation,
-      showInFooter: term.showInFooter,
-      currentVersion: currentVersion
-        ? {
-            id: currentVersion.id,
-            version: currentVersion.version,
-            contentHtml: currentVersion.contentHtml,
-            contentJson: currentVersion.contentJson,
-            publishedAt: currentVersion.publishedAt ?? new Date(0),
-          }
-        : null,
-      _count: {
-        spaces: term._count.spaces,
-      },
-    };
+/**
+ * 管理: 削除済み規約の件数（バッジ表示用）
+ */
+export async function getDeletedTermsCount(): Promise<number> {
+  return prisma.termsDocument.count({
+    where: { deletedAt: { not: null } },
   });
 }
 
-export async function getActiveTermsForSelectOptions(): Promise<
-  ActiveTermsOption[]
-> {
-  const terms = await prisma.terms.findMany({
-    where: {
-      isActive: true,
-      versions: {
-        some: {
-          isCurrentVersion: true,
-          status: TermsStatus.PUBLISHED,
-        },
-      },
-    },
-    select: {
-      id: true,
-      title: true,
-      type: true,
-    },
-    orderBy: { title: "asc" },
-  });
-
-  return toPlainArray(terms);
-}
-
-export async function getTermsDefaultsForType(
-  type: string,
-): Promise<{ title: string; slug: string } | null> {
-  const defaults = getTermsTypeDefaults(type);
-  if (!defaults) {
-    return null;
-  }
-
-  const existing = await prisma.terms.findUnique({
-    where: { slug: defaults.slug },
-    select: { id: true },
-  });
-
-  if (!existing) {
-    return defaults;
-  }
-
-  const similarTerms = await prisma.terms.findMany({
-    where: {
-      slug: { startsWith: defaults.slug },
-    },
-    select: { slug: true },
-  });
-
-  const usedNumbers = new Set<number>([1]);
-  for (const term of similarTerms) {
-    const match = term.slug.match(
-      new RegExp(`^${RegExp.escape(defaults.slug)}-(\\d+)$`),
-    );
-    const suffix = match?.[1];
-    if (suffix) {
-      usedNumbers.add(Number.parseInt(suffix, 10));
-    }
-  }
-
-  let nextSuffix = 2;
-  while (usedNumbers.has(nextSuffix)) {
-    nextSuffix += 1;
-  }
-
-  return {
-    title: `${defaults.title} ${nextSuffix}`,
-    slug: `${defaults.slug}-${nextSuffix}`,
-  };
-}
-
+/**
+ * 管理: id で規約取得
+ */
 export async function getAdminTermsById(
   id: string,
-): Promise<Serialized<TermsDetail> | null> {
-  const terms = await prisma.terms.findUnique({
+): Promise<AdminTermsDetail | null> {
+  const result = await prisma.termsDocument.findUnique({
     where: { id },
-    include: {
-      versions: {
-        orderBy: { version: "desc" },
-        select: {
-          id: true,
-          version: true,
-          status: true,
-          publishedAt: true,
-          isCurrentVersion: true,
-          createdAt: true,
-        },
-      },
-      _count: {
-        select: {
-          spaces: true,
-          agreements: true,
-        },
-      },
-    },
+    select: ADMIN_DETAIL_SELECT,
   });
 
-  if (!terms) {
-    return null;
-  }
-
-  return toPlainObject(terms);
+  return result ? toPlainObject(result) : null;
 }
 
-export async function getAdminTermsVersionById(
-  versionId: string,
-): Promise<Serialized<TermsVersionDetail> | null> {
-  const version = await prisma.termsVersion.findUnique({
-    where: { id: versionId },
-  });
+/**
+ * 管理: 同意記録一覧
+ */
+const AGREEMENT_LIST_SELECT = {
+  id: true,
+  termsId: true,
+  customerId: true,
+  guestEmail: true,
+  contentHash: true,
+  agreedAt: true,
+  context: true,
+  resourceId: true,
+  ipAddress: true,
+  terms: { select: { title: true, slug: true, type: true } },
+  customer: {
+    select: { id: true, lastName: true, firstName: true, email: true },
+  },
+} as const;
 
-  return toPlainObject(version);
+export type AdminAgreementListItem = Serialized<{
+  id: string;
+  termsId: string;
+  customerId: string | null;
+  guestEmail: string | null;
+  contentHash: string;
+  agreedAt: Date;
+  context: string;
+  resourceId: string | null;
+  ipAddress: string | null;
+  terms: { title: string; slug: string; type: string };
+  customer: {
+    id: string;
+    lastName: string;
+    firstName: string;
+    email: string;
+  } | null;
+}>;
+
+export interface AdminAgreementsFilter {
+  termsId?: string | undefined;
+  context?: string | undefined;
+  customerId?: string | undefined;
+  page?: number | undefined;
+  perPage?: number | undefined;
 }
 
-export async function getTermsAgreementsForReservation(reservationId: string) {
-  return prisma.termsAgreement.findMany({
-    where: { reservationId },
-    select: {
-      id: true,
-      agreedAt: true,
-      ipAddress: true,
-      terms: { select: { title: true, type: true } },
-      version: { select: { version: true } },
-    },
-    orderBy: { agreedAt: "asc" },
-  });
-}
+export async function getAdminAgreements(
+  filter: AdminAgreementsFilter = {},
+): Promise<{
+  items: AdminAgreementListItem[];
+  total: number;
+}> {
+  const page = filter.page ?? 1;
+  const perPage = filter.perPage ?? 50;
 
-export async function getAdminTermsAgreements(
-  termsId: string,
-  page: number,
-): Promise<{ agreements: TermsAgreementItem[]; total: number }> {
-  const skip = (page - 1) * AGREEMENTS_PER_PAGE;
+  const where = {
+    ...(filter.termsId !== undefined && { termsId: filter.termsId }),
+    ...(filter.context !== undefined && { context: filter.context }),
+    ...(filter.customerId !== undefined && { customerId: filter.customerId }),
+  };
 
-  const [rawAgreements, total] = await Promise.all([
+  const [items, total] = await Promise.all([
     prisma.termsAgreement.findMany({
-      where: { termsId },
+      where,
       orderBy: { agreedAt: "desc" },
-      skip,
-      take: AGREEMENTS_PER_PAGE,
-      select: {
-        id: true,
-        agreedAt: true,
-        guestName: true,
-        guestEmail: true,
-        reservationId: true,
-        ipAddress: true,
-        version: {
-          select: { version: true },
-        },
-        user: {
-          select: { name: true, email: true },
-        },
-      },
+      skip: (page - 1) * perPage,
+      take: perPage,
+      select: AGREEMENT_LIST_SELECT,
     }),
-    prisma.termsAgreement.count({ where: { termsId } }),
+    prisma.termsAgreement.count({ where }),
   ]);
 
-  const agreements: TermsAgreementItem[] = rawAgreements.map((agreement) => ({
-    id: agreement.id,
-    agreedAt: agreement.agreedAt.toISOString(),
-    version: agreement.version.version,
-    guestName: agreement.guestName,
-    guestEmail: agreement.guestEmail,
-    userName: agreement.user?.name ?? null,
-    userEmail: agreement.user?.email ?? null,
-    reservationId: agreement.reservationId,
-    ipAddress: maskIpAddress(agreement.ipAddress),
-  }));
-
-  return { agreements, total };
+  return { items: toPlainArray(items), total };
 }

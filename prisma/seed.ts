@@ -26,7 +26,6 @@ import {
   CustomerType,
   EventStatus,
   RegistrationStatus,
-  TermsType,
 } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
@@ -38,11 +37,6 @@ import {
   buildParagraphHtml,
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
-import {
-  getTemplatesForType,
-  applyBusinessInfo,
-  type BusinessInfo,
-} from "../src/shared/lib/terms-templates";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -57,6 +51,21 @@ function buildSeedDescription(text: string) {
     ) as Prisma.InputJsonValue,
     descriptionHtml,
     descriptionPlainText: stripHtmlToText(descriptionHtml, 200),
+  };
+}
+
+/**
+ * 単純な Lexical JSON / HTML を改行保持で生成（seedTerms 用）
+ */
+function buildLexicalContent(text: string) {
+  const paragraphs = text.split(/\n+/u).filter((line) => line.length > 0);
+  const html = paragraphs.map((p) => buildParagraphHtml(p)).join("");
+  const json = paragraphs[0]
+    ? buildParagraphEditorStateJson(paragraphs.join(" "))
+    : buildParagraphEditorStateJson(text);
+  return {
+    json: JSON.parse(json) as Prisma.InputJsonValue,
+    html,
   };
 }
 
@@ -98,6 +107,7 @@ async function clearAllData() {
 
     // 予約関連
     await tx.termsAgreement.deleteMany();
+    await tx.termsDocument.deleteMany();
     await tx.reservation.deleteMany();
 
     // コンテンツ
@@ -110,8 +120,6 @@ async function clearAllData() {
     await tx.section.deleteMany();
     await tx.userPageAssignment.deleteMany();
     await tx.page.deleteMany();
-    await tx.termsVersion.deleteMany();
-    await tx.terms.deleteMany();
 
     // 顧客・問い合わせ
     await tx.inquiry.deleteMany();
@@ -2105,239 +2113,91 @@ async function seedPages() {
       console.log("✅ Inserted page-hero section for home page");
     }
   }
-
-  // privacy ページは Terms システムに移行済み（/terms/privacy-policy）
 }
 
 // =============================================================================
-// Terms
+// Terms (clean-break rebuild — VARCHAR type, single document per type)
 // =============================================================================
 
 async function seedTerms() {
-  const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-  if (!admin) {
-    console.log("⚠️ No admin user found. Skipping terms seed.");
-    return;
-  }
+  const settings = await prisma.settings.findFirst();
+  const businessName = settings?.businessName ?? "Myrrh Rental Space";
 
-  // Settings 事業者情報でテンプレートのプレースホルダーを置換
-  // 未設定のフィールドはプレースホルダーがそのまま残り、管理画面での入力プロンプトとなる
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-  });
-  const businessInfo: BusinessInfo = {
-    businessName: settings?.businessName ?? null,
-    representativeName: settings?.representativeName ?? null,
-    invoiceNumber: settings?.invoiceNumber ?? null,
-    email: settings?.email ?? null,
-    phoneNumber: settings?.phoneNumber ?? null,
-    postalCode: settings?.postalCode ?? null,
-    prefecture: settings?.prefecture ?? null,
-    city: settings?.city ?? null,
-    streetAddress: settings?.streetAddress ?? null,
-    buildingName: settings?.buildingName ?? null,
-  };
-
-  function resolveTemplateHtml(type: TermsType): string {
-    const template = getTemplatesForType(type)[0];
-    if (!template) {
-      throw new Error(`No template registered for TermsType.${type}`);
-    }
-    return applyBusinessInfo(template.content, businessInfo);
-  }
-
-  // 6 種の標準 TermsType を `terms-templates.ts` の SSoT から seed する
-  // CUSTOM は管理者が必要に応じて個別作成する前提のため seed 対象外
-  const termsConfig: {
-    type: TermsType;
-    slug: string;
-    title: string;
-    requiredAtReservation: boolean;
-    showInFooter: boolean;
-    content: string;
-  }[] = [
+  const terms = [
     {
-      type: TermsType.TERMS_OF_USE,
+      type: "terms-of-use",
       slug: "terms-of-use",
       title: "利用規約",
-      requiredAtReservation: false,
-      showInFooter: true,
-      content: resolveTemplateHtml(TermsType.TERMS_OF_USE),
+      contentText: `${businessName}の利用規約\n\n本規約は、${businessName}が提供するサービスのご利用条件を定めるものです。\n本サービスをご利用いただくお客様には、本規約に同意していただくものとします。`,
+      requiredAtReservation: true,
+      requiredAtInquiry: false,
+      requiredAtSignup: true,
+      footerOrder: 0,
     },
     {
-      type: TermsType.PRIVACY_POLICY,
+      type: "privacy-policy",
       slug: "privacy-policy",
       title: "プライバシーポリシー",
-      requiredAtReservation: true,
-      showInFooter: true,
-      content: resolveTemplateHtml(TermsType.PRIVACY_POLICY),
+      contentText: `${businessName}のプライバシーポリシー\n\n本ポリシーは、${businessName}が取得する個人情報の取り扱いについて定めるものです。\nお客様の個人情報は、関連法令に従い適切に管理いたします。`,
+      requiredAtReservation: false,
+      requiredAtInquiry: true,
+      requiredAtSignup: true,
+      footerOrder: 1,
     },
     {
-      type: TermsType.CANCELLATION,
+      type: "cancellation",
       slug: "cancellation-policy",
       title: "キャンセルポリシー",
+      contentText: `${businessName}のキャンセルポリシー\n\n予約のキャンセルについては、以下の条件に従って対応いたします。\n詳細は管理画面で編集してください。`,
       requiredAtReservation: true,
-      showInFooter: false,
-      content: resolveTemplateHtml(TermsType.CANCELLATION),
+      requiredAtInquiry: false,
+      requiredAtSignup: false,
+      footerOrder: 2,
     },
     {
-      type: TermsType.PAYMENT,
-      slug: "payment-terms",
-      title: "支払い規約",
-      requiredAtReservation: false,
-      showInFooter: false,
-      content: resolveTemplateHtml(TermsType.PAYMENT),
-    },
-    {
-      type: TermsType.RENTAL_TERMS,
-      slug: "rental-terms",
-      title: "施設利用規約",
-      requiredAtReservation: false,
-      showInFooter: false,
-      content: resolveTemplateHtml(TermsType.RENTAL_TERMS),
-    },
-    {
-      type: TermsType.COMMERCIAL_TRANSACTION,
+      type: "commercial-transaction",
       slug: "commercial-transaction",
       title: "特定商取引法に基づく表記",
+      contentText: `特定商取引法に基づく表記\n\n販売事業者: ${businessName}\nその他の表記事項は管理画面で編集してください。`,
       requiredAtReservation: false,
-      showInFooter: true,
-      content: resolveTemplateHtml(TermsType.COMMERCIAL_TRANSACTION),
-    },
-    {
-      type: TermsType.REVIEW_GUIDELINES,
-      slug: "review-guidelines",
-      title: "レビュー投稿ガイドライン",
-      requiredAtReservation: false,
-      showInFooter: false,
-      content: resolveTemplateHtml(TermsType.REVIEW_GUIDELINES),
-    },
-    {
-      type: TermsType.COOKIE_POLICY,
-      slug: "cookie-policy",
-      title: "Cookie ポリシー",
-      requiredAtReservation: false,
-      showInFooter: true,
-      content: resolveTemplateHtml(TermsType.COOKIE_POLICY),
+      requiredAtInquiry: false,
+      requiredAtSignup: false,
+      footerOrder: 3,
     },
   ];
 
-  let rentalTermsId: string | null = null;
-
-  for (const tc of termsConfig) {
-    // HTML から Lexical JSON を近似生成（段落のみ。公式パターン: contentJson + contentHtml 同時保存）
-    const plainText = tc.content
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    const contentJson = JSON.parse(
-      buildParagraphEditorStateJson(plainText),
-    ) as Prisma.InputJsonValue;
-
-    const terms = await prisma.terms.upsert({
-      where: { slug: tc.slug },
+  for (const t of terms) {
+    const { json: contentJson, html: contentHtml } = buildLexicalContent(
+      t.contentText,
+    );
+    await prisma.termsDocument.upsert({
+      where: { slug: t.slug },
       update: {
-        type: tc.type,
-        title: tc.title,
-        requiredAtReservation: tc.requiredAtReservation,
-        showInFooter: tc.showInFooter,
+        type: t.type,
+        title: t.title,
+        contentJson,
+        contentHtml,
+        requiredAtReservation: t.requiredAtReservation,
+        requiredAtInquiry: t.requiredAtInquiry,
+        requiredAtSignup: t.requiredAtSignup,
+        footerOrder: t.footerOrder,
       },
       create: {
-        type: tc.type,
-        title: tc.title,
-        slug: tc.slug,
-        requiredAtReservation: tc.requiredAtReservation,
-        showInFooter: tc.showInFooter,
-      },
-    });
-
-    // version 1 を upsert（contentJson + contentHtml 両方保存）
-    await prisma.termsVersion.upsert({
-      where: { termsId_version: { termsId: terms.id, version: 1 } },
-      update: {
-        contentHtml: tc.content,
+        type: t.type,
+        slug: t.slug,
+        title: t.title,
         contentJson,
-      },
-      create: {
-        termsId: terms.id,
-        version: 1,
-        contentHtml: tc.content,
-        contentJson,
-        status: "PUBLISHED",
+        contentHtml,
+        isPublished: true,
         publishedAt: new Date(),
-        isCurrentVersion: true,
-        createdBy: admin.id,
+        requiredAtReservation: t.requiredAtReservation,
+        requiredAtInquiry: t.requiredAtInquiry,
+        requiredAtSignup: t.requiredAtSignup,
+        showInFooter: true,
+        footerOrder: t.footerOrder,
       },
     });
-
-    console.log(`✅ Upserted terms: ${tc.title}`);
-    if (tc.type === TermsType.RENTAL_TERMS) {
-      rentalTermsId = terms.id;
-    }
-  }
-
-  // DRAFT / ARCHIVED の TermsVersion を 1 件ずつ追加（enum 網羅のため）
-  const tosTerms = await prisma.terms.findFirst({
-    where: { slug: "terms-of-use" },
-  });
-  if (tosTerms) {
-    const draftPlain = "【改定ドラフト】利用規約の改定案を準備中です。";
-    await prisma.termsVersion.upsert({
-      where: { termsId_version: { termsId: tosTerms.id, version: 2 } },
-      update: {},
-      create: {
-        termsId: tosTerms.id,
-        version: 2,
-        contentHtml: `<p>${draftPlain}</p>`,
-        contentJson: JSON.parse(
-          buildParagraphEditorStateJson(draftPlain),
-        ) as Prisma.InputJsonValue,
-        status: "DRAFT",
-        isCurrentVersion: false,
-        createdBy: admin.id,
-      },
-    });
-  }
-
-  const cancellationTerms = await prisma.terms.findFirst({
-    where: { slug: "cancellation-policy" },
-  });
-  if (cancellationTerms) {
-    const archivedPlain =
-      "【廃止】旧キャンセルポリシー（2025年3月まで適用）。現行版は下記を参照。";
-    await prisma.termsVersion.upsert({
-      where: {
-        termsId_version: { termsId: cancellationTerms.id, version: 0 },
-      },
-      update: {},
-      create: {
-        termsId: cancellationTerms.id,
-        version: 0,
-        contentHtml: `<p>${archivedPlain}</p>`,
-        contentJson: JSON.parse(
-          buildParagraphEditorStateJson(archivedPlain),
-        ) as Prisma.InputJsonValue,
-        status: "ARCHIVED",
-        publishedAt: new Date("2025-01-01T00:00:00+09:00"),
-        isCurrentVersion: false,
-        createdBy: admin.id,
-      },
-    });
-  }
-
-  // Link rental terms to the first space
-  if (rentalTermsId) {
-    const firstSpace = await prisma.space.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { id: true, slug: true, termsId: true },
-    });
-    if (firstSpace && !firstSpace.termsId) {
-      await prisma.space.update({
-        where: { id: firstSpace.id },
-        data: { termsId: rentalTermsId },
-      });
-      console.log(`✅ Linked rental terms to space: ${firstSpace.slug}`);
-    }
+    console.log(`✅ Upserted terms: ${t.title}`);
   }
 }
 
@@ -2765,10 +2625,9 @@ async function seedNavigation() {
   ];
 
   const footerItems = [
-    { label: "利用規約", url: "/terms", order: 0 },
-    { label: "プライバシーポリシー", url: "/terms/privacy-policy", order: 1 },
-    { label: "会社概要", url: "/about", order: 2 },
-    { label: "お問い合わせ", url: "/contact", order: 3 },
+    { label: "規約一覧", url: "/terms", order: 0 },
+    { label: "会社概要", url: "/about", order: 1 },
+    { label: "お問い合わせ", url: "/contact", order: 2 },
   ];
 
   for (const item of headerItems) {
@@ -2949,7 +2808,6 @@ async function seedSystemPageSections() {
     "faq",
     "news",
     "posts",
-    "terms",
     "reservation",
     "spaces",
   ];
@@ -4142,93 +4000,6 @@ async function seedLoginAttempts() {
 }
 
 // =============================================================================
-// Terms Agreements（規約同意記録・既存予約に対する必須規約同意）
-// =============================================================================
-
-async function seedTermsAgreements() {
-  const existingCount = await prisma.termsAgreement.count();
-  if (existingCount > 0) {
-    console.log(
-      `⏭️ Skipped terms agreements (${existingCount.toString()} already exist)`,
-    );
-    return;
-  }
-
-  // 必須規約（requiredAtReservation: true）の現在バージョンを取得
-  const requiredTerms = await prisma.terms.findMany({
-    where: { requiredAtReservation: true, isActive: true },
-    select: {
-      id: true,
-      slug: true,
-      versions: {
-        where: { isCurrentVersion: true },
-        select: { id: true },
-        take: 1,
-      },
-    },
-  });
-  const requiredPairs = requiredTerms
-    .map((t) => {
-      const versionId = t.versions[0]?.id;
-      return versionId ? { termsId: t.id, versionId } : null;
-    })
-    .filter((v): v is { termsId: string; versionId: string } => v !== null);
-
-  if (requiredPairs.length === 0) {
-    console.log(
-      "⚠️ No required terms with current version found. Skipping terms agreements seed.",
-    );
-    return;
-  }
-
-  // 対象予約: 既存予約の先頭半数
-  const reservations = await prisma.reservation.findMany({
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      customer: { select: { userId: true, email: true, lastName: true } },
-      startTime: true,
-    },
-  });
-  if (reservations.length === 0) {
-    console.log("⚠️ No reservations found. Skipping terms agreements seed.");
-    return;
-  }
-
-  const half = reservations.slice(
-    0,
-    Math.max(1, Math.ceil(reservations.length / 2)),
-  );
-
-  let created = 0;
-  for (const reservation of half) {
-    for (const pair of requiredPairs) {
-      await prisma.termsAgreement.create({
-        data: {
-          termsId: pair.termsId,
-          versionId: pair.versionId,
-          reservationId: reservation.id,
-          ...(reservation.customer.userId !== null
-            ? { userId: reservation.customer.userId }
-            : {
-                guestName: reservation.customer.lastName,
-                guestEmail: reservation.customer.email,
-              }),
-          agreedAt: reservation.startTime,
-          ipAddress: "hash-seed-ip",
-          userAgent: "seed",
-        },
-      });
-      created++;
-    }
-  }
-
-  console.log(
-    `✅ Created ${created.toString()} terms agreements (${half.length.toString()} reservations × ${requiredPairs.length.toString()} required terms)`,
-  );
-}
-
-// =============================================================================
 // Post / News Versions（記事バージョン履歴・version 1 スナップショット）
 // =============================================================================
 
@@ -4384,7 +4155,6 @@ async function seedAll(email: string, password: string, name: string) {
   // Phase 2: マスターデータ
   await seedLocations();
   await seedSpaceCategories();
-  await seedTerms();
 
   // Phase 3: スペース（リレーション設定）
   await seedSpaces();
@@ -4401,6 +4171,7 @@ async function seedAll(email: string, password: string, name: string) {
   await seedNews();
   await seedPages();
   await seedFaq();
+  await seedTerms();
   await seedBlogTags();
   await seedBlog();
   await seedBlogComments();
@@ -4424,7 +4195,6 @@ async function seedAll(email: string, password: string, name: string) {
   // Phase 10: 監査・バージョン履歴・規約同意・レートリミット・Instagram
   await seedPostVersions();
   await seedNewsVersions();
-  await seedTermsAgreements();
   await seedAuditLog();
   await seedLoginAttempts();
   await seedEditorComments();
@@ -4448,8 +4218,8 @@ async function seedDemo() {
   // コンテンツ
   await seedNews();
   await seedPages();
-  await seedTerms();
   await seedFaq();
+  await seedTerms();
   await seedSystemPageSections();
   await seedNavigation();
   await seedAnnouncementBar();
@@ -4492,7 +4262,6 @@ async function seedDemo() {
   // 監査・バージョン履歴・規約同意・レートリミット・Instagram
   await seedPostVersions();
   await seedNewsVersions();
-  await seedTermsAgreements();
   await seedAuditLog();
   await seedLoginAttempts();
   await seedEditorComments();

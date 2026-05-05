@@ -1,21 +1,62 @@
-/**
- * /terms — 最初の有効な規約ページにリダイレクト
- *
- * 優先順位: TERMS_OF_USE → 任意のアクティブ規約 → 404
- */
-
-import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
-import { getFirstActiveTermsSlug } from "@/shared/domain/terms/public-queries";
+import { ArticleLayout } from "@/public/components/layouts/article-layout";
+import { Heading } from "@/public/components/design-system/heading";
+import { Stack } from "@/public/components/design-system/stack";
+import { LayoutWidth } from "@/shared/types/prisma";
+import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
+import { getBaseUrl } from "@/shared/lib/constants";
+import { getPublishedTermsList } from "@/shared/domain/terms/queries";
+import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
 
-export default async function TermsPage() {
+export async function generateMetadata(): Promise<Metadata> {
   await connection();
+  return generateArticleMetadata(
+    {
+      title: "規約一覧",
+      description: "利用規約・プライバシーポリシー・キャンセルポリシー等の一覧",
+    },
+    { canonicalUrl: `${getBaseUrl()}/terms` },
+  );
+}
 
-  const slug = await getFirstActiveTermsSlug();
+export default async function TermsListPage() {
+  await connection();
+  const items = await getPublishedTermsList();
 
-  if (slug) {
-    redirect(`/terms/${slug}`);
-  }
-
-  notFound();
+  return (
+    <ArticleLayout
+      breadcrumb={[{ label: "規約一覧" }]}
+      contentWidth={LayoutWidth.MD}
+      showSidebar={false}
+    >
+      <Stack gap="xl">
+        <Heading level={1}>規約一覧</Heading>
+        {items.length === 0 ? (
+          <p className="text-muted-foreground">
+            現在公開中の規約はありません。
+          </p>
+        ) : (
+          <ul className="divide-y border-y border-border">
+            {items.map((item) => (
+              <li key={item.id} className="py-6">
+                <Link
+                  href={`/terms/${item.slug}`}
+                  className="group block transition-colors hover:bg-accent/5"
+                >
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    {TERMS_TYPE_LABELS[item.type] ?? item.type}
+                  </div>
+                  <div className="mt-2 font-heading text-xl font-light text-foreground transition-colors group-hover:text-accent">
+                    {item.title}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Stack>
+    </ArticleLayout>
+  );
 }

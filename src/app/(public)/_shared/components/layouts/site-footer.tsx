@@ -12,7 +12,7 @@ import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
 import { getFooterSettings } from "@/shared/domain/settings/queries/display";
 import { getSocialLinksForFooter } from "@/shared/domain/settings/queries/organization";
-import { getFooterTerms } from "@/shared/domain/terms/public-queries";
+import { getFooterTerms } from "@/shared/domain/terms/queries";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";

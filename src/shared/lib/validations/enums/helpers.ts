@@ -34,7 +34,6 @@ import {
   PaymentStatus,
   RegistrationStatus,
   EventStatus,
-  TermsStatus,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
@@ -503,16 +502,6 @@ export const POST_STATUS_LABELS: Record<PostStatus, string> = {
   [PostStatus.DRAFT]: "下書き",
   [PostStatus.PUBLISHED]: "公開中",
   [PostStatus.ARCHIVED]: "アーカイブ",
-};
-
-// =============================================================================
-// TermsStatus Labels
-// =============================================================================
-
-export const TERMS_STATUS_LABELS: Record<TermsStatus, string> = {
-  [TermsStatus.DRAFT]: "下書き",
-  [TermsStatus.PUBLISHED]: "公開中",
-  [TermsStatus.ARCHIVED]: "アーカイブ",
 };
 
 // =============================================================================

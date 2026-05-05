@@ -19,17 +19,32 @@ const CUSTOMER_LINK_SELECT = {
   isActive: true,
 } as const;
 
+export interface LinkedCustomer {
+  id: string;
+  email: string;
+  lastName: string;
+  firstName: string;
+  userId: string | null;
+  isActive: boolean;
+}
+
+export interface EnsureCustomerLinkedResult {
+  customer: LinkedCustomer;
+  /** 今回の呼び出しで Customer が新規作成された場合 true */
+  isNew: boolean;
+}
+
 export async function ensureCustomerLinked(user: {
   id: string;
   email: string;
   name: string;
-}) {
+}): Promise<EnsureCustomerLinkedResult> {
   // 1. userId で紐づけ済み確認
   const linked = await prisma.customer.findUnique({
     where: { userId: user.id },
     select: CUSTOMER_LINK_SELECT,
   });
-  if (linked) return linked;
+  if (linked) return { customer: linked, isNew: false };
 
   // 2. email で既存 Customer 検索 → userId 紐づけ
   const byEmail = await prisma.customer.findUnique({
@@ -38,12 +53,13 @@ export async function ensureCustomerLinked(user: {
   });
   if (byEmail) {
     if (byEmail.userId === null) {
-      // 未リンク → userId を設定してリンク
-      return prisma.customer.update({
+      // 未リンク → userId を設定してリンク（既存顧客なので isNew=false）
+      const updated = await prisma.customer.update({
         where: { id: byEmail.id },
         data: { userId: user.id },
         select: CUSTOMER_LINK_SELECT,
       });
+      return { customer: updated, isNew: false };
     }
     // 別ユーザーにリンク済み → リンクせず新規作成へ（乗っ取り防止）
   }
@@ -69,7 +85,7 @@ export async function ensureCustomerLinked(user: {
       { operation: "sendWelcomeEmail", category: ErrorCategory.EXTERNAL_API },
     );
 
-    return customer;
+    return { customer, isNew: true };
   } catch (e) {
     if (
       e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -79,7 +95,7 @@ export async function ensureCustomerLinked(user: {
         where: { userId: user.id },
         select: CUSTOMER_LINK_SELECT,
       });
-      if (fallback) return fallback;
+      if (fallback) return { customer: fallback, isNew: false };
     }
     throw e;
   }

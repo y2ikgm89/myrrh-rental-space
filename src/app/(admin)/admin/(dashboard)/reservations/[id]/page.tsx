@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getReservationById } from "@/admin/queries/reservation";
-import { getTermsAgreementsForReservation } from "@/shared/domain/terms/admin-queries";
 import { ReservationDetail } from "./_components/ReservationDetail";
 import { RestoreReservationStatusButton } from "./_components/RestoreReservationStatusButton";
-import { TermsAgreements } from "./_components/TermsAgreements";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
@@ -37,9 +35,8 @@ export async function generateMetadata({
 
 export default async function ReservationDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const [reservation, agreements, sessionUser] = await Promise.all([
+  const [reservation, sessionUser] = await Promise.all([
     getReservationById(id),
-    getTermsAgreementsForReservation(id),
     verifyAdminSession(),
   ]);
 
@@ -78,7 +75,6 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       }
     >
       <ReservationDetail key={reservation.id} reservation={reservation} />
-      <TermsAgreements agreements={agreements} />
     </AdminDetailLayout>
   );
 }
