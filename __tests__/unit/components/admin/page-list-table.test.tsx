@@ -18,22 +18,221 @@ function Passthrough({
   return <div {...props}>{children}</div>;
 }
 
+// `@/admin/components/ui` barrel の全 export を stub する。
+// `mock.module` は registered に対して **完全モック**として上書きするため、
+// 一部だけ含めると後続テスト / 連鎖 import で
+// `Export named 'X' not found` が発生する（→ `bun-patterns.md` §mock.module の
+// グローバルスコープ干渉）。
+const PassEl = ({
+  children,
+  ...props
+}: {
+  children?: ReactNode;
+  [key: string]: unknown;
+}) => <div {...props}>{children}</div>;
+const NoopFn = () => undefined;
+const StubVariants = () => "";
+
 mock.module("@/admin/components/ui", () => ({
+  // 実際に test 内で意味を持たせる stub（Table 系 / Badge）
   Badge: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  badgeVariants: StubVariants,
   Table: ({ children }: { children?: ReactNode }) => <table>{children}</table>,
+  TableHeader: PassEl,
   TableBody: ({ children }: { children?: ReactNode }) => (
     <tbody>{children}</tbody>
+  ),
+  TableFooter: PassEl,
+  TableHead: PassEl,
+  TableRow: ({ children, ...props }: { children?: ReactNode }) => (
+    <tr {...props}>{children}</tr>
   ),
   TableCell: ({ children, ...props }: { children?: ReactNode }) => (
     <td {...props}>{children}</td>
   ),
-  TableRow: ({ children, ...props }: { children?: ReactNode }) => (
-    <tr {...props}>{children}</tr>
+  TableCaption: PassEl,
+  // 以下は使用しないが barrel を完全モックするため stub を提供
+  Button: PassEl,
+  buttonVariants: StubVariants,
+  Input: PassEl,
+  Card: PassEl,
+  CardHeader: PassEl,
+  CardFooter: PassEl,
+  CardTitle: PassEl,
+  CardDescription: PassEl,
+  CardContent: PassEl,
+  Select: PassEl,
+  SelectGroup: PassEl,
+  SelectValue: PassEl,
+  SelectTrigger: PassEl,
+  SelectContent: PassEl,
+  SelectLabel: PassEl,
+  SelectItem: PassEl,
+  SelectSeparator: PassEl,
+  Dialog: PassEl,
+  DialogPortal: PassEl,
+  DialogOverlay: PassEl,
+  DialogClose: PassEl,
+  DialogTrigger: PassEl,
+  DialogContent: PassEl,
+  DialogHeader: PassEl,
+  DialogFooter: PassEl,
+  DialogTitle: PassEl,
+  DialogDescription: PassEl,
+  AlertDialog: PassEl,
+  AlertDialogPortal: PassEl,
+  AlertDialogOverlay: PassEl,
+  AlertDialogTrigger: PassEl,
+  AlertDialogContent: PassEl,
+  AlertDialogHeader: PassEl,
+  AlertDialogFooter: PassEl,
+  AlertDialogTitle: PassEl,
+  AlertDialogDescription: PassEl,
+  AlertDialogAction: PassEl,
+  AlertDialogCancel: PassEl,
+  Textarea: PassEl,
+  Label: PassEl,
+  Switch: PassEl,
+  PublishSwitch: PassEl,
+  DropdownMenu: PassEl,
+  DropdownMenuTrigger: PassEl,
+  DropdownMenuContent: PassEl,
+  DropdownMenuItem: PassEl,
+  DropdownMenuCheckboxItem: PassEl,
+  DropdownMenuRadioItem: PassEl,
+  DropdownMenuLabel: PassEl,
+  DropdownMenuSeparator: PassEl,
+  DropdownMenuShortcut: PassEl,
+  DropdownMenuGroup: PassEl,
+  DropdownMenuPortal: PassEl,
+  DropdownMenuSub: PassEl,
+  DropdownMenuSubTrigger: PassEl,
+  DropdownMenuSubContent: PassEl,
+  DropdownMenuRadioGroup: PassEl,
+  Tabs: PassEl,
+  TabsList: PassEl,
+  TabsTrigger: PassEl,
+  TabsContent: PassEl,
+  // Test side queries `input[aria-label="..."]` to drive checkbox events,
+  // so render a real <input type="checkbox"> rather than a Passthrough <div>.
+  Checkbox: ({
+    "aria-label": ariaLabel,
+    onChange,
+    checked,
+    ...props
+  }: {
+    "aria-label"?: string;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    checked?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <input
+      type="checkbox"
+      aria-label={ariaLabel}
+      onChange={onChange}
+      checked={checked}
+      {...props}
+    />
   ),
+  // Sortable (Drag & Drop)
+  DragHandle: PassEl,
+  SortableItemWrapper: PassEl,
+  SortableTableRow: PassEl,
+  SortableList: PassEl,
+  DndContext: PassEl,
+  closestCenter: NoopFn,
+  useSensor: NoopFn,
+  useSensors: NoopFn,
+  PointerSensor: class {},
+  KeyboardSensor: class {},
+  DragOverlay: PassEl,
+  SortableContext: PassEl,
+  sortableKeyboardCoordinates: NoopFn,
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: NoopFn,
+    transform: null,
+    transition: undefined,
+    isDragging: false,
+  }),
+  verticalListSortingStrategy: NoopFn,
+  arrayMove: <T,>(arr: T[]) => arr,
+  toTranslate3d: () => "",
+  Pagination: () => <nav aria-label="pagination" />,
+  Toaster: PassEl,
+  Tooltip: PassEl,
+  TooltipTrigger: PassEl,
+  TooltipContent: PassEl,
+  TooltipProvider: PassEl,
+  Collapsible: PassEl,
+  CollapsibleTrigger: PassEl,
+  CollapsibleContent: PassEl,
+  RadioGroup: PassEl,
+  RadioGroupItem: PassEl,
+  Separator: PassEl,
+  SelectionBox: PassEl,
+  Breadcrumb: PassEl,
+  SubmitButton: PassEl,
+  CharCount: PassEl,
+  useFormField: () => ({
+    id: "",
+    name: "",
+    formItemId: "",
+    formDescriptionId: "",
+    formMessageId: "",
+  }),
+  Form: PassEl,
+  FormItem: PassEl,
+  FormLabel: PassEl,
+  FormField: PassEl,
+  FormControl: PassEl,
+  FormDescription: PassEl,
+  FormMessage: PassEl,
+  ToggleGroup: PassEl,
+  ToggleGroupItem: PassEl,
+  Accordion: PassEl,
+  AccordionItem: PassEl,
+  AccordionTrigger: PassEl,
+  AccordionContent: PassEl,
+  Command: PassEl,
+  CommandDialog: PassEl,
+  CommandInput: PassEl,
+  CommandList: PassEl,
+  CommandEmpty: PassEl,
+  CommandGroup: PassEl,
+  CommandItem: PassEl,
+  CommandShortcut: PassEl,
+  CommandSeparator: PassEl,
 }));
 
 mock.module("@/admin/components/EmptyState", () => ({
   EmptyState: ({ message }: { message: string }) => <div>{message}</div>,
+}));
+
+// PageListTable は `@/admin/components/table` から CheckboxCell を import する。
+// テスト側で `<input>` を querySelector で取得するため、real input を返す stub にする。
+// 親が <TableRow>=<tr> なので <td> ラップは省略（React DOM nesting 警告回避）。
+mock.module("@/admin/components/table", () => ({
+  CheckboxCell: ({
+    "aria-label": ariaLabel,
+    onChange,
+    checked,
+    ...props
+  }: {
+    "aria-label"?: string;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    checked?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <input
+      type="checkbox"
+      aria-label={ariaLabel}
+      onChange={onChange}
+      checked={checked}
+      {...props}
+    />
+  ),
 }));
 
 mock.module("@/admin/components/status-badges", () => ({
@@ -147,7 +346,7 @@ describe("PageListTable", () => {
     });
 
     const checkbox = container.querySelector<HTMLInputElement>(
-      'input[aria-label="Alphaを選択"]',
+      'input[aria-label="Alpha を選択"]',
     );
     expect(checkbox).not.toBeNull();
 
