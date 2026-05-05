@@ -85,6 +85,18 @@ mock.module("@/shared/lib/async-utils", () => ({
 // server-only モック（テスト環境で server-only を無効化）
 mock.module("server-only", () => ({}));
 
+// `submitInquiry` は `getClientIpFromHeaders` を経由して next/headers を呼ぶため、
+// テスト環境では Headers の空インスタンスを返してリクエストスコープエラーを回避する
+mock.module("next/headers", () => ({
+  headers: () => new Headers(),
+  cookies: () => ({
+    get: () => undefined,
+    getAll: () => [],
+    set: () => {},
+    delete: () => {},
+  }),
+}));
+
 /** Next の request scope なしでも動かす（getSession は headers に依存） */
 const mockGetSession = mock(() => Promise.resolve(null));
 
