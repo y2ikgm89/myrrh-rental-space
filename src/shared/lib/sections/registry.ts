@@ -1,6 +1,6 @@
 // src/shared/lib/sections/registry.ts
 //
-// セクションレジストリ — 全 21 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
+// セクションレジストリ — 全 24 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
 import { isRecord } from "@/shared/lib/serialize";
@@ -27,6 +27,8 @@ import { heroParallaxConfigSchema } from "./definitions/hero-parallax/schema";
 import { heroParallaxMetadata } from "./definitions/hero-parallax/metadata";
 import { instagramConfigSchema } from "./definitions/instagram/schema";
 import { instagramMetadata } from "./definitions/instagram/metadata";
+import { locationListConfigSchema } from "./definitions/location-list/schema";
+import { locationListMetadata } from "./definitions/location-list/metadata";
 import { mapConfigSchema } from "./definitions/map/schema";
 import { mapMetadata } from "./definitions/map/metadata";
 import { newsListConfigSchema } from "./definitions/news-list/schema";
@@ -58,7 +60,7 @@ import {
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 23 セクション定義（page-hero 含む） */
+/** 全 24 セクション定義（page-hero 含む） */
 const definitions: Record<string, SectionDefinition> = {
   "page-hero": {
     type: "page-hero",
@@ -154,6 +156,11 @@ const definitions: Record<string, SectionDefinition> = {
     type: "event-calendar",
     configSchema: eventCalendarConfigSchema,
     metadata: eventCalendarMetadata,
+  },
+  "location-list": {
+    type: "location-list",
+    configSchema: locationListConfigSchema,
+    metadata: locationListMetadata,
   },
   "homepage-how-it-works": {
     type: "homepage-how-it-works",

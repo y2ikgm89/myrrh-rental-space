@@ -23,7 +23,10 @@ export type FieldSubGroup = "text" | "image" | "button" | "other";
  * 動的 select の取得元ソース識別子。
  * AutoSectionForm が `dynamicOptions[source]` から options を取得する。
  */
-export type DynamicSelectSource = "postCategories" | "faqCategories";
+export type DynamicSelectSource =
+  | "postCategories"
+  | "faqCategories"
+  | "locations";
 
 export interface FieldMeta {
   readonly fieldType: FieldType;

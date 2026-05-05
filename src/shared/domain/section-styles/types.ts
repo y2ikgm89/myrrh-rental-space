@@ -124,6 +124,7 @@ const SECTION_TYPE_STYLES: Readonly<Record<string, SectionStylePayload>> =
     "homepage-how-it-works": COMPACT_CENTER_STYLE,
     "homepage-spaces": FULL_BLEED_STYLE,
     instagram: FULL_BLEED_STYLE,
+    "location-list": HERO_ADJACENT_STYLE,
     map: HERO_ADJACENT_STYLE,
     "news-list": HERO_ADJACENT_STYLE,
     "post-list": HERO_ADJACENT_STYLE,

@@ -11,6 +11,7 @@ export type DynamicCategoryOption = {
 export type DynamicSectionOptions = {
   readonly postCategories: ReadonlyArray<DynamicCategoryOption>;
   readonly faqCategories: ReadonlyArray<DynamicCategoryOption>;
+  readonly locations?: ReadonlyArray<DynamicCategoryOption>;
 };
 
 /**

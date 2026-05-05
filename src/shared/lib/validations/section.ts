@@ -12,6 +12,7 @@ import {
   createCtaButtonItemSchema,
 } from "./cta-and-url";
 import { sectionLayoutSchema } from "@/shared/lib/sections/definitions/_shared/layout";
+import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
 import {
   imageAspectValues,
   cardStyleValues,
@@ -75,6 +76,7 @@ export const SectionType = {
   EMBED: "embed",
   INSTAGRAM: "instagram",
   EVENT_CALENDAR: "event-calendar",
+  LOCATION_LIST: "location-list",
 } as const;
 
 export type SectionType = (typeof SectionType)[keyof typeof SectionType];
@@ -99,6 +101,7 @@ const SECTION_TYPE_VALUES = [
   SectionType.EMBED,
   SectionType.INSTAGRAM,
   SectionType.EVENT_CALENDAR,
+  SectionType.LOCATION_LIST,
 ] as const;
 
 export type { CTAButtonItem } from "./cta-and-url";
@@ -699,7 +702,8 @@ export type SectionConfig =
   | ContactFormConfig
   | MapConfig
   | EmbedConfig
-  | InstagramConfig;
+  | InstagramConfig
+  | LocationListConfig;
 
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type UpdateSectionContentInput = z.infer<

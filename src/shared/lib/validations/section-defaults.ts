@@ -26,6 +26,8 @@ import type {
   SectionConfig,
 } from "./section";
 import { validateSectionConfig } from "./section";
+import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
+import { locationListConfigSchema } from "@/shared/lib/sections/definitions/location-list/schema";
 
 // =============================================================================
 // デフォルト設定取得（レジストリ委譲）
@@ -120,6 +122,9 @@ export const getEmbedConfig =
 export const getInstagramConfig = createTypedConfigGetterFromSchema(
   instagramConfigSchema,
 );
+export const getLocationListConfig = createTypedConfigGetterFromSchema(
+  locationListConfigSchema,
+);
 
 // =============================================================================
 // getSafeConfig — 汎用: セクションタイプに応じた config 取得（レジストリ委譲）
@@ -169,6 +174,10 @@ export function getSafeConfig(
   type: "instagram",
   config: unknown,
 ): InstagramConfig;
+export function getSafeConfig(
+  type: "location-list",
+  config: unknown,
+): LocationListConfig;
 export function getSafeConfig(type: string, config: unknown): SectionConfig {
   // config をパース試行
   const result = validateSectionConfig(type, config);
