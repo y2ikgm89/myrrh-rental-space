@@ -5,9 +5,10 @@ describe("locationFormSchema", () => {
   test("正常なデータが検証を通過する", () => {
     const validData = {
       name: "施設名",
+      slug: "test-location",
       description: "施設の説明",
       address: "東京都渋谷区1-2-3",
-      access: "渋谷駅から徒歩5分",
+      accessLines: [{ value: "渋谷駅から徒歩5分" }],
       imageUrl: "https://example.com/image.jpg",
       imageUrls: [
         { url: "https://example.com/img1.jpg" },
@@ -48,6 +49,7 @@ describe("locationFormSchema", () => {
   test("最小限のフィールドで検証を通過する", () => {
     const minimalData = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       imageUrls: [],
@@ -61,6 +63,7 @@ describe("locationFormSchema", () => {
 
   test("name が必須である", () => {
     const data = {
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
     };
@@ -72,6 +75,7 @@ describe("locationFormSchema", () => {
   test("name が空文字列の場合エラーになる", () => {
     const data = {
       name: "",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
     };
@@ -79,13 +83,17 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("名前を入力してください");
+      const nameIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "name",
+      );
+      expect(nameIssue?.message).toBe("名前を入力してください");
     }
   });
 
   test("name が100文字を超える場合エラーになる", () => {
     const data = {
       name: "a".repeat(101),
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
     };
@@ -93,16 +101,18 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "名前は100文字以内で入力してください",
+      const nameIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "name",
       );
+      expect(nameIssue?.message).toBe("名前は100文字以内で入力してください");
     }
   });
 
-  test("description が1000文字を超える場合エラーになる", () => {
+  test("description が2000文字を超える場合エラーになる", () => {
     const data = {
       name: "施設名",
-      description: "a".repeat(1001),
+      slug: "test-location",
+      description: "a".repeat(2001),
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
     };
@@ -110,8 +120,11 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "説明は1000文字以内で入力してください",
+      const descriptionIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "description",
+      );
+      expect(descriptionIssue?.message).toBe(
+        "説明は2000文字以内で入力してください",
       );
     }
   });
@@ -119,6 +132,7 @@ describe("locationFormSchema", () => {
   test("description が空文字列の場合検証を通過する", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       description: "",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
@@ -131,6 +145,7 @@ describe("locationFormSchema", () => {
   test("address が必須である", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       imageUrl: "https://example.com/image.jpg",
     };
 
@@ -141,6 +156,7 @@ describe("locationFormSchema", () => {
   test("address が空文字列の場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "",
       imageUrl: "https://example.com/image.jpg",
     };
@@ -148,13 +164,17 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("住所を入力してください");
+      const addressIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "address",
+      );
+      expect(addressIssue?.message).toBe("住所を入力してください");
     }
   });
 
   test("address が500文字を超える場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "a".repeat(501),
       imageUrl: "https://example.com/image.jpg",
     };
@@ -162,34 +182,38 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "住所は500文字以内で入力してください",
+      const addressIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "address",
       );
+      expect(addressIssue?.message).toBe("住所は500文字以内で入力してください");
     }
   });
 
-  test("access が1000文字を超える場合エラーになる", () => {
+  test("accessLines の各行が200文字を超える場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
-      access: "a".repeat(1001),
+      accessLines: [{ value: "a".repeat(201) }],
       imageUrl: "https://example.com/image.jpg",
     };
 
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "アクセス情報は1000文字以内で入力してください",
+      const accessIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "accessLines",
       );
+      expect(accessIssue?.message).toBe("1 行 200 文字以内で入力してください");
     }
   });
 
-  test("access が空文字列の場合検証を通過する", () => {
+  test("accessLines が空配列の場合検証を通過する", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
-      access: "",
+      accessLines: [],
       imageUrl: "https://example.com/image.jpg",
     };
 
@@ -200,6 +224,7 @@ describe("locationFormSchema", () => {
   test("imageUrl が必須である", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
     };
 
@@ -210,6 +235,7 @@ describe("locationFormSchema", () => {
   test("imageUrl が空文字列の場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "",
     };
@@ -217,15 +243,17 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "建物画像URLを入力してください",
+      const imageUrlIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "imageUrl",
       );
+      expect(imageUrlIssue?.message).toBe("建物画像URLを入力してください");
     }
   });
 
   test("imageUrl が不正なURL形式の場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "invalid-url",
     };
@@ -233,15 +261,17 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "有効なURLを入力してください",
+      const imageUrlIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "imageUrl",
       );
+      expect(imageUrlIssue?.message).toBe("有効なURLを入力してください");
     }
   });
 
   test("imageUrls が空配列の場合検証を通過する", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       imageUrls: [],
@@ -254,21 +284,28 @@ describe("locationFormSchema", () => {
   test("imageUrls が10枚を超える場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
-      imageUrls: Array(11).fill({ url: "https://example.com/img.jpg" }),
+      imageUrls: Array.from({ length: 11 }, (_, i) => ({
+        url: `https://example.com/img${i}.jpg`,
+      })),
     };
 
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("画像は最大10枚までです");
+      const imageUrlsIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "imageUrls",
+      );
+      expect(imageUrlsIssue?.message).toBe("画像は最大10枚までです");
     }
   });
 
   test("imageUrls に不正なURL形式が含まれる場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       imageUrls: [
@@ -280,15 +317,17 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "有効なURLを入力してください",
+      const imageUrlsIssue = result.error.issues.find(
+        (issue) => issue.path[0] === "imageUrls",
       );
+      expect(imageUrlsIssue?.message).toBe("有効なURLを入力してください");
     }
   });
 
   test("businessHours の openTime が HH:MM 形式でない場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       businessHours: {
@@ -308,7 +347,10 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      const openTimeIssue = result.error.issues.find((issue) =>
+        issue.path.includes("openTime"),
+      );
+      expect(openTimeIssue?.message).toBe(
         "開店時刻は HH:mm 形式で入力してください",
       );
     }
@@ -317,6 +359,7 @@ describe("locationFormSchema", () => {
   test("businessHours の closeTime が HH:MM 形式でない場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       businessHours: {
@@ -336,7 +379,10 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      const closeTimeIssue = result.error.issues.find((issue) =>
+        issue.path.includes("closeTime"),
+      );
+      expect(closeTimeIssue?.message).toBe(
         "閉店時刻は HH:mm 形式で入力してください",
       );
     }
@@ -345,6 +391,7 @@ describe("locationFormSchema", () => {
   test("businessHours が null の場合検証を通過する", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       businessHours: null,
@@ -357,6 +404,7 @@ describe("locationFormSchema", () => {
   test("sortOrder がデフォルトで0になる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
     };
@@ -371,6 +419,7 @@ describe("locationFormSchema", () => {
   test("sortOrder が負の数の場合エラーになる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       sortOrder: -1,
@@ -383,6 +432,7 @@ describe("locationFormSchema", () => {
   test("isPublished がデフォルトで false になる", () => {
     const data = {
       name: "施設名",
+      slug: "test-location",
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
     };

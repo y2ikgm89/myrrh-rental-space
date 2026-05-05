@@ -371,7 +371,7 @@ space.pricePerHour; // number（Decimal ではない）
 
 ## Lexical JSON Primary パターン
 
-6 モデル（Post, PostVersion, News, NewsVersion, TermsVersion, Section）が以下の構成を持つ:
+6 モデル（Post, PostVersion, News, NewsVersion, TermsDocument, Section）が以下の構成を持つ:
 
 ```prisma
 contentHtml String  @db.Text @map("content")  // HTML キャッシュ（公開表示用）
@@ -769,7 +769,7 @@ bun run db:generate
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const p = new PrismaClient({ adapter: new PrismaPg(pool) });
   (async () => {
-    const sections = await p.section.findMany({ where: { type: 'homepage-hero' } });
+    const sections = await p.section.findMany({ where: { type: 'page-hero' } });
     for (const s of sections) {
       const c = s.config;
       if (!c || typeof c !== 'object' || Array.isArray(c)) continue;

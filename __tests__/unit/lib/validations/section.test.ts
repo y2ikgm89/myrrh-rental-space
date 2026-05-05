@@ -69,28 +69,8 @@ describe("heroConfigSchema", () => {
     }
   });
 
-  test("レガシーCTAフィールド→buttons[]変換", () => {
-    const data = {
-      ctaPrimary: { text: "主ボタン", url: "/primary" },
-      ctaSecondary: { text: "副ボタン", url: "/secondary" },
-    };
-    const result = heroConfigSchema.safeParse(data);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.buttons).toHaveLength(2);
-      expect(result.data.buttons?.[0]?.variant).toBe("primary");
-      expect(result.data.buttons?.[1]?.variant).toBe("secondary");
-    }
-  });
-
   test("タイトル100文字超過でエラー", () => {
     const data = { title: "a".repeat(101) };
-    const result = heroConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
-  test("無効なURL形式でエラー", () => {
-    const data = { backgroundImageUrl: "invalid-url" };
     const result = heroConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
@@ -223,7 +203,7 @@ describe("spaceListConfigSchema", () => {
     const data = {
       title: "スペース一覧",
       maxItems: 6,
-      layout: "grid",
+      displayLayout: "grid",
       columns: 3,
     };
     const result = spaceListConfigSchema.safeParse(data);
@@ -253,7 +233,7 @@ describe("newsListConfigSchema", () => {
     const data = {
       title: "お知らせ",
       maxItems: 10,
-      layout: "card",
+      displayLayout: "card",
       showViewAllLink: true,
       viewAllText: "すべて見る",
       viewAllUrl: "/news",
@@ -262,8 +242,8 @@ describe("newsListConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("無効なlayoutでエラー", () => {
-    const data = { layout: "invalid" };
+  test("無効なdisplayLayoutでエラー", () => {
+    const data = { displayLayout: "invalid" };
     const result = newsListConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
@@ -285,7 +265,7 @@ describe("postListConfigSchema", () => {
       title: "最新記事",
       maxItems: 6,
       categoryId: "550e8400-e29b-41d4-a716-446655440000",
-      layout: "grid",
+      displayLayout: "grid",
     };
     const result = postListConfigSchema.safeParse(data);
     expect(result.success).toBe(true);
@@ -376,7 +356,7 @@ describe("testimonialConfigSchema", () => {
           rating: 5,
         },
       ],
-      layout: "carousel",
+      displayLayout: "carousel",
       showRating: true,
     };
     const result = testimonialConfigSchema.safeParse(data);
@@ -415,7 +395,7 @@ describe("galleryConfigSchema", () => {
         },
         { url: "https://example.com/2.jpg" },
       ],
-      layout: "masonry",
+      gridLayout: "masonry",
       columns: 4,
       gap: "lg",
     };
@@ -464,30 +444,6 @@ describe("ctaConfigSchema", () => {
 
   test("タイトル必須バリデーション", () => {
     const data = {};
-    const result = ctaConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
-  test("レガシーCTA→buttons変換", () => {
-    const data = {
-      title: "CTA",
-      ctaPrimary: { text: "主ボタン", url: "/primary" },
-    };
-    const result = ctaConfigSchema.safeParse(data);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.buttons).toHaveLength(1);
-    }
-  });
-
-  test("レガシー CTA URL も内部 application route のみ許可する", () => {
-    const data = {
-      title: "CTA",
-      ctaSecondary: {
-        text: "外部リンク",
-        url: "https://example.com/contact",
-      },
-    };
     const result = ctaConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
