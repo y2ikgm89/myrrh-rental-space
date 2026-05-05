@@ -37,8 +37,16 @@ import {
   getShowcaseSpaces,
   type PublicSection,
 } from "@/shared/domain/sections/queries";
-import { getPublishedNews } from "@/shared/domain/news/queries";
-import { getPublishedPosts } from "@/shared/domain/posts/queries";
+import {
+  getPublishedNews,
+  getPublishedNewsList,
+} from "@/shared/domain/news/queries";
+import {
+  getPublishedPosts,
+  getPublishedPostsList,
+  getPostCategories,
+} from "@/shared/domain/posts/queries";
+import { getPageShowSidebar } from "@/shared/domain/pages/queries";
 import { getPublishedEvents } from "@/shared/domain/events/public-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
@@ -52,7 +60,11 @@ import {
   getPublishedSpacesPaginated,
 } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
-import { spaceSearchParams } from "@/public/lib/search-params";
+import {
+  newsSearchParams,
+  postsSearchParams,
+  spaceSearchParams,
+} from "@/public/lib/search-params";
 import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
 import { getBusinessInfo } from "@/public/data/business";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
@@ -86,6 +98,11 @@ import type { SpaceListData } from "../../../_components/SpaceListSection";
 import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
 import type { FaqData } from "../../../_components/FaqListSection";
+
+/** /posts archive variant のページあたり件数（旧 page.tsx の `POSTS_PER_PAGE`） */
+const POSTS_ARCHIVE_PER_PAGE = 12;
+/** /news archive variant のページあたり件数（旧 page.tsx の `NEWS_PER_PAGE`） */
+const NEWS_ARCHIVE_PER_PAGE = 20;
 
 interface SectionRendererProps {
   readonly section: PublicSection;
@@ -239,6 +256,32 @@ export async function SectionRenderer({
 
     case SectionType.NEWS_LIST: {
       const config = getNewsListConfig(section.config);
+
+      if (config.displayLayout === "archive") {
+        const sp = searchParams
+          ? await newsSearchParams.parse(searchParams)
+          : { page: 1, q: "" };
+        const currentPage = Math.max(1, sp.page);
+        const newsResult = await getPublishedNewsList(
+          currentPage,
+          NEWS_ARCHIVE_PER_PAGE,
+          sp.q,
+        );
+        return (
+          <NewsListSection
+            config={config}
+            style={resolved}
+            mode={{
+              kind: "archive",
+              items: newsResult.items,
+              currentPage,
+              totalPages: newsResult.totalPages,
+              query: sp.q,
+            }}
+          />
+        );
+      }
+
       const rawNews = await getPublishedNews(config.maxItems);
       const news: NewsData[] = rawNews.map((n) => ({
         id: n.id,
@@ -247,11 +290,51 @@ export async function SectionRenderer({
         title: n.title,
         publishedAt: n.publishedAt,
       }));
-      return <NewsListSection config={config} news={news} style={resolved} />;
+      return (
+        <NewsListSection
+          config={config}
+          style={resolved}
+          mode={{ kind: "simple", news }}
+        />
+      );
     }
 
     case SectionType.POST_LIST: {
       const config = getPostListConfig(section.config);
+
+      if (config.displayLayout === "archive") {
+        const sp = searchParams
+          ? await postsSearchParams.parse(searchParams)
+          : { page: 1, q: "", category: "" };
+        const currentPage = Math.max(1, sp.page);
+        const [postsResult, categories, showSidebar] = await Promise.all([
+          getPublishedPostsList(
+            currentPage,
+            POSTS_ARCHIVE_PER_PAGE,
+            sp.q,
+            sp.category,
+          ),
+          getPostCategories(),
+          getPageShowSidebar("posts"),
+        ]);
+        return (
+          <PostListSection
+            config={config}
+            style={resolved}
+            mode={{
+              kind: "archive",
+              posts: postsResult.posts,
+              categories,
+              currentPage,
+              totalPages: postsResult.totalPages,
+              query: sp.q,
+              categorySlug: sp.category,
+              showSidebar,
+            }}
+          />
+        );
+      }
+
       const rawPosts = await getPublishedPosts(
         config.maxItems,
         config.categoryId || undefined,
@@ -266,7 +349,13 @@ export async function SectionRenderer({
         publishedAt: p.publishedAt,
         categoryName: p.category?.name ?? null,
       }));
-      return <PostListSection config={config} posts={posts} style={resolved} />;
+      return (
+        <PostListSection
+          config={config}
+          style={resolved}
+          mode={{ kind: "simple", posts }}
+        />
+      );
     }
 
     case SectionType.FAQ_LIST: {

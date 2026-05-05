@@ -331,6 +331,19 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       order: 0,
       isActive: true,
     },
+    {
+      type: "news-list",
+      title: null,
+      config: {
+        sectionLabel: "",
+        title: "",
+        displayLayout: "archive",
+        showViewAllLink: false,
+      },
+      content: null,
+      order: 1,
+      isActive: true,
+    },
   ],
 
   posts: [
@@ -344,6 +357,19 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       },
       content: null,
       order: 0,
+      isActive: true,
+    },
+    {
+      type: "post-list",
+      title: null,
+      config: {
+        sectionLabel: "",
+        title: "",
+        displayLayout: "archive",
+        showViewAllLink: false,
+      },
+      content: null,
+      order: 1,
       isActive: true,
     },
   ],

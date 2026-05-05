@@ -106,11 +106,11 @@ export const spaceLayoutValues = [
 export type SpaceLayout = (typeof spaceLayoutValues)[number];
 
 /** ニュースリスト レイアウト */
-export const newsLayoutValues = ["list", "card"] as const;
+export const newsLayoutValues = ["list", "card", "archive"] as const;
 export type NewsLayout = (typeof newsLayoutValues)[number];
 
 /** 投稿リスト レイアウト */
-export const postLayoutValues = ["grid", "list"] as const;
+export const postLayoutValues = ["grid", "list", "archive"] as const;
 export type PostLayout = (typeof postLayoutValues)[number];
 
 /** CTA バリエーション */
@@ -281,11 +281,13 @@ export const spaceLayoutLabels: Record<SpaceLayout, string> = {
 export const newsLayoutLabels: Record<NewsLayout, string> = {
   list: "リスト",
   card: "カード",
+  archive: "アーカイブ（検索 + ページネーション）",
 };
 
 export const postLayoutLabels: Record<PostLayout, string> = {
   grid: "グリッド",
   list: "リスト",
+  archive: "アーカイブ（検索 + カテゴリフィルタ + ページネーション）",
 };
 
 export const ctaVariantLabels: Record<CtaVariant, string> = {

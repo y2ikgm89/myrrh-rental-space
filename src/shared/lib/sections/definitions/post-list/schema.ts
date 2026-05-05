@@ -3,7 +3,7 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
-const layouts = ["grid", "list"] as const;
+const layouts = ["grid", "list", "archive"] as const;
 const imageAspects = ["16:9", "4:3", "1:1"] as const;
 
 export const postListConfigSchema = z.object({
@@ -46,7 +46,8 @@ export const postListConfigSchema = z.object({
     options: layouts,
     default: "grid",
     group: "design",
-    helpText: "記事一覧の並び方",
+    helpText:
+      "記事一覧の並び方。archive は検索 + カテゴリフィルタ + ページネーション付きのアーカイブ表示",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 1,

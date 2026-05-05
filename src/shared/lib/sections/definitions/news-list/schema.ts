@@ -3,7 +3,7 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
-const layouts = ["list", "card"] as const;
+const layouts = ["list", "card", "archive"] as const;
 
 export const newsListConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
@@ -40,7 +40,8 @@ export const newsListConfigSchema = z.object({
     options: layouts,
     default: "list",
     group: "design",
-    helpText: "お知らせの並び方",
+    helpText:
+      "お知らせの並び方。archive は検索 + ページネーション付きのアーカイブ表示",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 2,
