@@ -1,17 +1,16 @@
-"use client";
-
 /**
- * ContactFormSection — Configurable contact form section
+ * ContactFormSection — Configurable contact form section (real submit)
  *
- * Field toggles for name, phone, subject. Email + message always visible.
- * MagneticButton for submit. ScrollReveal for entrance.
+ * Server Component. PublicInquiryFormCard を内包し、Turnstile + 必須規約検証 +
+ * Server Action `submitInquiry` で実送信する。`split` variant では BusinessInfo
+ * (SC) を sticky sidebar として組み合わせる。
  */
 
 import type { ReactElement } from "react";
+import { Suspense } from "react";
 import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
-import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
@@ -20,122 +19,54 @@ import {
   getTextStyle,
 } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import {
+  PublicInquiryFormCard,
+  type RequiredInquiryTerm,
+} from "@/public/components/forms/public-inquiry-form-card";
+import { BusinessInfo } from "../contact/_components/business-info";
 import type { ContactFormConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig;
   readonly style: SectionStylePayload;
-}
-
-const INPUT_CLASS =
-  "w-full border border-border px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
-
-function ContactForm({
-  config,
-  showLabels = true,
-}: {
-  readonly config: ContactFormConfig;
-  readonly showLabels?: boolean;
-}): ReactElement {
-  const labelClass = showLabels
-    ? "mb-2 block text-eyebrow uppercase text-muted-foreground"
-    : "sr-only";
-
-  return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
-      {config.showNameField ? (
-        <div className="grid gap-5 md:grid-cols-2">
-          <div>
-            <label className={labelClass}>お名前</label>
-            <input
-              type="text"
-              placeholder="山田 太郎"
-              className={INPUT_CLASS}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>メールアドレス</label>
-            <input
-              type="email"
-              placeholder="mail@example.com"
-              className={INPUT_CLASS}
-            />
-          </div>
-        </div>
-      ) : (
-        <div>
-          <label className={labelClass}>メールアドレス</label>
-          <input
-            type="email"
-            placeholder="mail@example.com"
-            className={INPUT_CLASS}
-          />
-        </div>
-      )}
-
-      {config.showPhoneField && (
-        <div>
-          <label className={labelClass}>電話番号</label>
-          <input
-            type="tel"
-            placeholder="090-1234-5678"
-            className={INPUT_CLASS}
-          />
-        </div>
-      )}
-
-      {config.showSubjectField && (
-        <div>
-          <label className={labelClass}>件名</label>
-          <input
-            type="text"
-            placeholder="お問い合わせの件名"
-            className={INPUT_CLASS}
-          />
-        </div>
-      )}
-
-      <div>
-        <label className={labelClass}>お問い合わせ内容</label>
-        <textarea
-          rows={5}
-          placeholder="お問い合わせ内容をご記入ください"
-          className={INPUT_CLASS}
-        />
-      </div>
-
-      <div className="pt-2">
-        <MagneticButton strength={0.2}>
-          {config.submitButtonText}
-        </MagneticButton>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        ※ これはデモページです。実際の送信は行われません。
-      </p>
-    </form>
-  );
+  readonly turnstileSiteKey: string | null;
+  readonly requiredTerms: readonly RequiredInquiryTerm[];
 }
 
 export function ContactFormSection({
   config,
   style,
+  turnstileSiteKey,
+  requiredTerms,
 }: ContactFormSectionProps): ReactElement {
   const variant = config.variant;
+  const submitLabel = config.submitButtonText;
 
-  // split: 2-column (left=heading/description/contact info, right=form)
+  const formCard = (
+    <ScrollReveal delay={variant === "split" ? 0.3 : 0.2}>
+      <PublicInquiryFormCard
+        mode="live"
+        turnstileSiteKey={turnstileSiteKey}
+        requiredTerms={requiredTerms}
+        submitLabel={submitLabel}
+      />
+    </ScrollReveal>
+  );
+
+  // split: 2-column (left=heading/description/BusinessInfo, right=form)
   if (variant === "split") {
     return (
       <SectionWrapper style={style} layout={config.layout}>
         <div className="mx-auto max-w-5xl">
-          <div className="flex flex-col gap-12 md:flex-row md:gap-16">
-            <div className="flex-1">
-              <ScrollReveal>
-                {config.sectionLabel && (
+          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
+            {formCard}
+            <aside className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
+              {config.sectionLabel ? (
+                <ScrollReveal>
                   <SectionLabel>{config.sectionLabel}</SectionLabel>
-                )}
-              </ScrollReveal>
+                </ScrollReveal>
+              ) : null}
               <div style={getTitleStyle(style)}>
                 <Heading
                   level={2}
@@ -144,7 +75,7 @@ export function ContactFormSection({
                   <SplitText>{config.title}</SplitText>
                 </Heading>
               </div>
-              {config.description && (
+              {config.description ? (
                 <ScrollReveal delay={0.2}>
                   <p
                     className="mt-4 text-sm leading-relaxed text-muted-foreground"
@@ -153,30 +84,31 @@ export function ContactFormSection({
                     {config.description}
                   </p>
                 </ScrollReveal>
-              )}
-            </div>
-            <div className="flex-1">
-              <ScrollReveal delay={0.3}>
-                <ContactForm config={config} />
+              ) : null}
+              <ScrollReveal delay={0.4}>
+                <div className="mt-8">
+                  <Suspense fallback={null}>
+                    <BusinessInfo />
+                  </Suspense>
+                </div>
               </ScrollReveal>
-            </div>
+            </aside>
           </div>
         </div>
       </SectionWrapper>
     );
   }
 
-  // minimal: no labels (placeholder only), compact
-  // default: standard centered form
+  // default / minimal: centered single column
   return (
     <SectionWrapper style={style} layout={config.layout}>
       <div className="mx-auto max-w-2xl">
         <div className="mb-10 text-center md:mb-14">
-          <ScrollReveal>
-            {config.sectionLabel && (
+          {config.sectionLabel ? (
+            <ScrollReveal>
               <SectionLabel>{config.sectionLabel}</SectionLabel>
-            )}
-          </ScrollReveal>
+            </ScrollReveal>
+          ) : null}
           <div style={getTitleStyle(style)}>
             <Heading
               level={2}
@@ -185,7 +117,7 @@ export function ContactFormSection({
               <SplitText>{config.title}</SplitText>
             </Heading>
           </div>
-          {config.description && (
+          {config.description ? (
             <ScrollReveal delay={0.2}>
               <p
                 className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground"
@@ -194,12 +126,10 @@ export function ContactFormSection({
                 {config.description}
               </p>
             </ScrollReveal>
-          )}
+          ) : null}
         </div>
 
-        <ScrollReveal delay={0.3}>
-          <ContactForm config={config} showLabels={variant !== "minimal"} />
-        </ScrollReveal>
+        {formCard}
       </div>
     </SectionWrapper>
   );

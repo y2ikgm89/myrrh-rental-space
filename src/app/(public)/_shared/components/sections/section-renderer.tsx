@@ -30,6 +30,7 @@ import {
   getLocationListConfig,
 } from "@/shared/lib/validations/section-defaults";
 import {
+  getPublishedFaqCategoriesWithItems,
   getPublishedFaqItems,
   getShowcaseSpaces,
   type PublicSection,
@@ -39,7 +40,9 @@ import { getPublishedPosts } from "@/shared/domain/posts/queries";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
 import { getPublishedLocationsForAccess } from "@/shared/domain/locations/public-queries";
+import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
 import { getBusinessInfo } from "@/public/data/business";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
 
 // v3 components
@@ -204,23 +207,37 @@ export async function SectionRenderer({
       // Dual source: config.items (inline) or DB
       const inlineItems = config.items;
       const hasInlineItems = inlineItems != null && inlineItems.length > 0;
-      const items: FaqData[] = hasInlineItems
-        ? inlineItems.map((item, index) => ({
-            id: `inline-${index}`,
-            question: item.question,
-            answer: item.answer,
-          }))
-        : (
-            await getPublishedFaqItems(
-              config.maxItems,
-              config.categoryId || undefined,
-            )
-          ).map((f) => ({
-            id: f.id,
-            question: f.question,
-            answer: f.answer,
-          }));
-      return <FaqListSection config={config} items={items} style={resolved} />;
+
+      if (hasInlineItems) {
+        const items: FaqData[] = inlineItems.map((item, index) => ({
+          id: `inline-${index}`,
+          question: item.question,
+          answer: item.answer,
+        }));
+        return (
+          <FaqListSection config={config} items={items} style={resolved} />
+        );
+      }
+
+      // categoryId 指定時は単一カテゴリの flat items
+      if (config.categoryId) {
+        const items: FaqData[] = (
+          await getPublishedFaqItems(config.maxItems, config.categoryId)
+        ).map((f) => ({ id: f.id, question: f.question, answer: f.answer }));
+        return (
+          <FaqListSection config={config} items={items} style={resolved} />
+        );
+      }
+
+      // 両方未指定: 全カテゴリの categories を fetch（カテゴリ別 accordion）
+      const categories = await getPublishedFaqCategoriesWithItems();
+      return (
+        <FaqListSection
+          config={config}
+          categories={categories}
+          style={resolved}
+        />
+      );
     }
 
     // =========================================================================
@@ -253,7 +270,18 @@ export async function SectionRenderer({
 
     case SectionType.CONTACT_FORM: {
       const config = getContactFormConfig(section.config);
-      return <ContactFormSection config={config} style={resolved} />;
+      const [turnstileSiteKey, requiredTerms] = await Promise.all([
+        getTurnstileSiteKey(),
+        getRequiredTermsAtInquiry(),
+      ]);
+      return (
+        <ContactFormSection
+          config={config}
+          style={resolved}
+          turnstileSiteKey={turnstileSiteKey}
+          requiredTerms={requiredTerms}
+        />
+      );
     }
 
     case SectionType.MAP: {

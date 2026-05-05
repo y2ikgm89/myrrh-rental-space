@@ -8,7 +8,14 @@
  * Optional FAQ JSON-LD for schema.org FAQPage.
  */
 
-import { useRef, type ReactElement } from "react";
+/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped (< / > / &), safe for structured data */
+
+import {
+  useRef,
+  useState,
+  type ReactElement,
+  type SyntheticEvent,
+} from "react";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
@@ -30,7 +37,10 @@ import {
 } from "@/shared/lib/validations/section-parsers";
 import type { FaqListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import type { PublicFaqCategoryWithItems } from "@/shared/domain/sections/queries";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { FaqHelpfulVote } from "../faq/_components/faq-helpful-vote";
+import { FaqViewTracker } from "../faq/_components/faq-view-tracker";
 
 export interface FaqData {
   readonly id: string;
@@ -40,8 +50,9 @@ export interface FaqData {
 
 interface FaqListSectionProps {
   readonly config: FaqListConfig;
-  readonly items: readonly FaqData[];
   readonly style: SectionStylePayload;
+  readonly items?: readonly FaqData[];
+  readonly categories?: readonly PublicFaqCategoryWithItems[];
 }
 
 const VARIANT_STYLES = {
@@ -68,11 +79,72 @@ const VARIANT_STYLES = {
   },
 } as const;
 
+function FaqAccordionItem({
+  item,
+  defaultOpen,
+  styles,
+}: {
+  readonly item: PublicFaqCategoryWithItems["items"][number];
+  readonly defaultOpen: boolean;
+  readonly styles: (typeof VARIANT_STYLES)[keyof typeof VARIANT_STYLES];
+}): ReactElement {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const handleToggle = (e: SyntheticEvent<HTMLDetailsElement>) => {
+    setOpen(e.currentTarget.open);
+  };
+
+  return (
+    <>
+      <details
+        data-faq-item=""
+        className={cn("group", styles.item)}
+        {...(defaultOpen && { open: true })}
+        onToggle={handleToggle}
+      >
+        <summary className={styles.summary}>
+          <span>{item.question}</span>
+          {styles.marker && (
+            <span
+              className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
+              aria-hidden="true"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </span>
+          )}
+        </summary>
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+          {item.answer}
+        </p>
+        <FaqHelpfulVote
+          id={item.id}
+          helpfulCount={item.helpfulCount}
+          notHelpfulCount={item.notHelpfulCount}
+        />
+      </details>
+      <FaqViewTracker id={item.id} open={open} />
+    </>
+  );
+}
+
 export function FaqListSection({
   config,
-  items,
   style,
-}: FaqListSectionProps): ReactElement {
+  items,
+  categories,
+}: FaqListSectionProps): ReactElement | null {
   const listRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -106,12 +178,38 @@ export function FaqListSection({
     { scope: listRef },
   );
 
-  if (items.length === 0) return <></>;
-
   const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default;
   const containerWidth =
     CONTAINER_WIDTH_MAP[parseContainerWidth(config.layout.containerWidth)];
   const initialOpen = parseFaqInitialOpen(config.initialOpen);
+
+  const categoriesData = categories ?? [];
+  const flatItemsData = items ?? [];
+  const useCategoryMode = categoriesData.length > 0;
+  const flatJsonLdItems: readonly { question: string; answer: string }[] =
+    useCategoryMode
+      ? categoriesData.flatMap((c) =>
+          c.items.map((i) => ({ question: i.question, answer: i.answer })),
+        )
+      : flatItemsData.map((i) => ({ question: i.question, answer: i.answer }));
+
+  if (!useCategoryMode && flatItemsData.length === 0) return null;
+
+  const jsonLdHtml =
+    flatJsonLdItems.length === 0
+      ? null
+      : JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: flatJsonLdItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: { "@type": "Answer", text: item.answer },
+          })),
+        })
+          .replace(/</g, "\\u003c")
+          .replace(/>/g, "\\u003e")
+          .replace(/&/g, "\\u0026");
 
   return (
     <>
@@ -133,46 +231,93 @@ export function FaqListSection({
             </div>
           </div>
 
-          <div ref={listRef} className={styles.container}>
-            {items.map((item, index) => (
-              <details
-                key={item.id}
-                data-faq-item=""
-                className={cn("group", styles.item)}
-                open={
-                  initialOpen === "all" ||
-                  (initialOpen === "first" && index === 0)
-                }
-              >
-                <summary className={styles.summary}>
-                  <span>{item.question}</span>
-                  {styles.marker && (
-                    <span
-                      className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
-                      aria-hidden="true"
+          {useCategoryMode ? (
+            <div ref={listRef} className="space-y-16">
+              {categoriesData.map((category, categoryIndex) => (
+                <section
+                  key={category.id}
+                  aria-labelledby={`faq-category-${category.id}`}
+                  className="space-y-6"
+                >
+                  <header className="border-b border-border pb-3">
+                    <h3
+                      id={`faq-category-${category.id}`}
+                      className="flex items-center gap-3 font-heading text-xl font-light tracking-[0.02em] text-foreground md:text-2xl"
                     >
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      {category.iconEmoji && (
+                        <span className="text-2xl" aria-hidden="true">
+                          {category.iconEmoji}
+                        </span>
+                      )}
+                      {category.name}
+                    </h3>
+                    {category.description && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {category.description}
+                      </p>
+                    )}
+                  </header>
+
+                  <div className="divide-y divide-border">
+                    {category.items.map((item, itemIndex) => (
+                      <FaqAccordionItem
+                        key={item.id}
+                        item={item}
+                        defaultOpen={
+                          initialOpen === "all" ||
+                          (initialOpen === "first" &&
+                            categoryIndex === 0 &&
+                            itemIndex === 0)
+                        }
+                        styles={styles}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div ref={listRef} className={styles.container}>
+              {flatItemsData.map((item, index) => (
+                <details
+                  key={item.id}
+                  data-faq-item=""
+                  className={cn("group", styles.item)}
+                  open={
+                    initialOpen === "all" ||
+                    (initialOpen === "first" && index === 0)
+                  }
+                >
+                  <summary className={styles.summary}>
+                    <span>{item.question}</span>
+                    {styles.marker && (
+                      <span
+                        className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
+                        aria-hidden="true"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M12 4v16m8-8H4"
-                        />
-                      </svg>
-                    </span>
-                  )}
-                </summary>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                  {item.answer}
-                </p>
-              </details>
-            ))}
-          </div>
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                      </span>
+                    )}
+                  </summary>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                    {item.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          )}
 
           {config.showViewAllLink && (
             <ScrollReveal delay={0.2}>
@@ -190,29 +335,12 @@ export function FaqListSection({
         </div>
       </SectionWrapper>
 
-      {/* FAQ JSON-LD — Unicode-escape < > & to prevent script injection (same pattern as JsonLd.tsx) */}
-      {/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped, safe for structured data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: items.map((item) => ({
-              "@type": "Question",
-              name: item.question,
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: item.answer,
-              },
-            })),
-          })
-            .replace(/</g, "\\u003c")
-            .replace(/>/g, "\\u003e")
-            .replace(/&/g, "\\u0026"),
-        }}
-      />
-      {/* eslint-enable @eslint-react/dom-no-dangerously-set-innerhtml */}
+      {jsonLdHtml ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdHtml }}
+        />
+      ) : null}
     </>
   );
 }
