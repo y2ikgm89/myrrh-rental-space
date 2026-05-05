@@ -15,11 +15,11 @@ import { gsap } from "@/public/lib/gsap-config";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  SectionWrapper,
   getTitleClasses,
   getTitleStyle,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
 import { Heading } from "@/public/components/design-system/heading";

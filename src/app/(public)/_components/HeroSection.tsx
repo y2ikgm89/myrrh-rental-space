@@ -30,7 +30,7 @@ import {
   getTitleClasses,
   getTitleStyle,
   getTextStyle,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 
 const DEFAULT_BG_IMAGE =
   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&q=80";

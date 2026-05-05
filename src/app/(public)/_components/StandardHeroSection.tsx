@@ -37,7 +37,7 @@ import {
   getTitleClasses,
   getTitleStyle,
   getTextStyle,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 
 type HeroButton = HeroConfig["buttons"][number];
 

@@ -17,12 +17,12 @@ import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  SectionWrapper,
   getTitleClasses,
   getTitleStyle,
   getTextStyle,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";

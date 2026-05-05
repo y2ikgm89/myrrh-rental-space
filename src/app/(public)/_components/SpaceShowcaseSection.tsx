@@ -11,11 +11,11 @@ import {
 } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  SectionWrapper,
   getTitleClasses,
   getTitleStyle,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 import { cn } from "@/shared/lib/cn";
 import { SpaceCard } from "../spaces/_components/space-card";
 import { getCardGridColsClass } from "@/public/lib/section-style-maps";

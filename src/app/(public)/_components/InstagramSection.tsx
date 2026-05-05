@@ -10,11 +10,11 @@ import type { ReactElement } from "react";
 import { IconBrandInstagram, IconPlayerPlay } from "@tabler/icons-react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  SectionWrapper,
   getTitleStyle,
   getTitleClasses,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { cn } from "@/shared/lib/cn";
 import { getGridColsClass, GAP_MAP } from "@/public/lib/section-style-maps";

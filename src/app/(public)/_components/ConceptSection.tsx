@@ -14,12 +14,12 @@ import { ParallaxImage } from "@/public/components/animations/parallax-image";
 import { cn } from "@/shared/lib/cn";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  SectionWrapper,
   getTitleClasses,
   getTitleStyle,
   getTextStyle,
-} from "@/public/components/sections/SectionWrapper";
+} from "@/public/components/sections/section-style-helpers";
 import { parseConceptLayout } from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
