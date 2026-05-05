@@ -148,7 +148,7 @@ export async function deletePost(id: string) {
 
   // 関連タグをまとめて即時失効
   updateTag(CACHE_TAGS.POSTS);
-  updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
+  updateTag(CACHE_TAGS.SIDEBAR_DATA);
 
   return null;
 }

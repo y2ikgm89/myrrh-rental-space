@@ -26,12 +26,11 @@ src/app/
     │   │   ├── ui/              # image-gallery, filter-bar, share-buttons, step-indicator, section-label, turnstile-widget
     │   │   └── animations/      # scroll-reveal, fade-in, split-text, parallax-layer, parallax-image, magnetic-button
     │   └── data/                # Server データ関数（business, turnstile）
-    ├── _components/homepage/    # ホームページ専用コンポーネント
     ├── reservation/             # 予約ページ（3ステップウィザード）
     └── spaces/[slug]/           # スペース詳細（Page-First）
 
 src/shared/                      # 両方で共有（CSS変数非依存）
-  ├── lib/sections/              # セクションレジストリ・定義（22種: 標準17 + homepage-*5）・field ヘルパー
+  ├── lib/sections/              # セクションレジストリ・定義（20種: page-hero + 19 標準）・field ヘルパー
   ├── domain/locations/          # Location クエリ (public-queries.ts)
   └── domain/spaces/             # 公開スペースクエリ (public-queries.ts)
 prisma/                          # schema.prisma, migrations/, seed.ts

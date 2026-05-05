@@ -26,7 +26,7 @@ bun outdated && bun update                    # 依存更新（実行後 validat
 ## アーキテクチャ
 
 Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイアウトを完全分離（遷移はフルページリロード）。
-第 3 root layout `(preview)/` は管理画面向けプレビュー専用（`HomepageSections` / `ManagedPageSections` を共有）。
+第 3 root layout `(preview)/` は管理画面向けプレビュー専用（`ManagedPageSections` を共有）。
 管理 write 系は `executeAdminMutationResult`（認証・権限・監査ログ一括処理）。API Route のみ `checkPermission()` 直接使用。
 公開コンテンツ: `/posts`（ブログ）・`/news`・`/spaces`・`/events`・`/faq`。RSS: `/feed.xml`。
 
@@ -55,7 +55,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **server-only 定数を Client Component から import 禁止** — client-safe ファイルに分離（`admin-roles.ts` / `admin-resources.ts`）
 - **server-only / Node-only SDK 統合は `import "server-only"` 必須** — `ical-generator` / `resend` / `googleapis` / `stripe` 等（→ `server-only-patterns.md`）
 - **Cloud Run probe endpoint (`/api/live` / `/api/health`) は `proxy.ts` rate-limit 除外必須** — probe IP `unknown` 合算で 429 → コンテナ kill 連鎖の silent bug（→ `ops/deployment-patterns.md`）
-- **管理画面向け preview は第 3 root layout `(preview)/`**— `HomepageSections` / `ManagedPageSections` を `_shared/components/{homepage,pages}/` に抽出。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
+- **管理画面向け preview は第 3 root layout `(preview)/`**— `ManagedPageSections` を `_shared/components/pages/` に抽出。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
 
 ### Validation / Domain
 
