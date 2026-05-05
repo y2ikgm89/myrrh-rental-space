@@ -32,6 +32,8 @@ export type PageForEdit = {
   id: string;
   slug: string;
   title: string;
+  /** PAGE_TEMPLATES のキー（home / content / access / contact / faq / news-archive 等） */
+  template: string;
   isPublished: boolean;
   isSystem: boolean;
   metaDescription: string | null;

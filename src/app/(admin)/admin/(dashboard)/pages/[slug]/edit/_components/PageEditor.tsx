@@ -16,6 +16,7 @@ import {
 import type { PageForEdit } from "@/admin/queries/page-section";
 import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
 import { getAllSectionDefinitions } from "@/shared/lib/sections/registry";
+import { getPageTemplate } from "@/shared/lib/sections/page-templates";
 import { AddSectionDialog } from "./AddSectionDialog";
 import { SectionEditPanel } from "./SectionEditPanel";
 import { SectionListSidebar } from "./SectionListSidebar";
@@ -57,12 +58,21 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
   const activeSection =
     page.sections.find((s) => s.id === activeSectionId) ?? null;
 
-  // 利用可能な section type を計算（page-hero は既存にあれば除外）
+  // 利用可能な section type を計算
+  // - page-hero は既存にあれば除外
+  // - PAGE_TEMPLATES[page.template].allowedSectionTypes でフィルタ（spec §5.1）
+  // - template が未知の場合は全 type 許容（Page.template が unknown の fallback）
+  const template = getPageTemplate(page.template);
+  const allowedSet = template
+    ? new Set<string>(template.allowedSectionTypes)
+    : null;
+  const requiredSet = new Set<string>(template?.requiredSectionTypes ?? []);
   const hasPageHero = page.sections.some((s) => s.type === "page-hero");
   const availableTypes = getAllSectionDefinitions()
     .map((def) => def.type)
     .filter((type) => {
       if (type === "page-hero" && hasPageHero) return false;
+      if (allowedSet && !allowedSet.has(type)) return false;
       return true;
     });
 
@@ -102,6 +112,7 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
                 activeSectionId=""
                 onSelect={(id) => void setActiveSectionId(id)}
                 onAddClick={() => setAddDialogOpen(true)}
+                requiredSectionTypes={requiredSet}
               />
             </CardContent>
           </Card>
@@ -112,6 +123,7 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
               activeSectionId={activeSectionId}
               onSelect={(id) => void setActiveSectionId(id)}
               onAddClick={() => setAddDialogOpen(true)}
+              requiredSectionTypes={requiredSet}
             />
             {activeSection ? (
               <SectionEditPanel

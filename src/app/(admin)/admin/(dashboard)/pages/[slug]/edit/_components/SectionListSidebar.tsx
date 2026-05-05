@@ -100,6 +100,12 @@ interface SectionListSidebarProps {
   readonly activeSectionId: string;
   readonly onSelect: (id: string) => void;
   readonly onAddClick: () => void;
+  /**
+   * このページのテンプレートが必須としている section type 集合（PAGE_TEMPLATES.requiredSectionTypes）。
+   * 含まれる type の section は SectionListItem で削除ボタンを disabled + tooltip 表示する。
+   * 未指定時は必須判定なし（全 section が削除可）。
+   */
+  readonly requiredSectionTypes?: ReadonlySet<string>;
 }
 
 export function SectionListSidebar({
@@ -107,6 +113,7 @@ export function SectionListSidebar({
   activeSectionId,
   onSelect,
   onAddClick,
+  requiredSectionTypes,
 }: SectionListSidebarProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -212,6 +219,8 @@ export function SectionListSidebar({
             >
               {sections.map((section) => {
                 const isPageHero = section.type === "page-hero";
+                const isRequired =
+                  requiredSectionTypes?.has(section.type) ?? false;
                 return (
                   <SortableSectionListItem
                     key={section.id}
@@ -225,6 +234,12 @@ export function SectionListSidebar({
                     canDuplicate={!isPageHero}
                     canDelete={!isPageHero}
                     canDrag={!isPageHero}
+                    {...(isRequired && !isPageHero
+                      ? {
+                          disableDeleteReason:
+                            "このセクションはこのテンプレートで必須です",
+                        }
+                      : {})}
                   />
                 );
               })}

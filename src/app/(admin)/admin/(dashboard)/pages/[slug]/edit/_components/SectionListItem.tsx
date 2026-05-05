@@ -40,6 +40,13 @@ export interface SectionListItemProps {
   readonly canDelete: boolean;
   readonly canDrag: boolean;
   readonly dragHandleProps?: Record<string, unknown>;
+  /**
+   * 削除ボタンを表示するが disabled にし、tooltip でこの理由を表示する。
+   * `canDelete=true` のときのみ有効。`canDelete=false`（page-hero 等）の場合は
+   * 従来通り削除メニューアイテム自体を非表示にする。
+   * spec §5.2: PAGE_TEMPLATES.requiredSectionTypes に含まれる section で使用。
+   */
+  readonly disableDeleteReason?: string;
 }
 
 export function SectionListItem({
@@ -53,6 +60,7 @@ export function SectionListItem({
   canDelete,
   canDrag,
   dragHandleProps,
+  disableDeleteReason,
 }: SectionListItemProps) {
   return (
     <div
@@ -121,7 +129,7 @@ export function SectionListItem({
               複製
             </DropdownMenuItem>
           )}
-          {canDelete && (
+          {canDelete && !disableDeleteReason && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -130,6 +138,20 @@ export function SectionListItem({
               >
                 <IconTrash className="mr-2 h-4 w-4" aria-hidden="true" />
                 削除
+              </DropdownMenuItem>
+            </>
+          )}
+          {canDelete && disableDeleteReason && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled
+                title={disableDeleteReason}
+                aria-label={`削除（${disableDeleteReason}）`}
+                className="text-muted-foreground"
+              >
+                <IconTrash className="mr-2 h-4 w-4" aria-hidden="true" />
+                削除（必須セクション）
               </DropdownMenuItem>
             </>
           )}
