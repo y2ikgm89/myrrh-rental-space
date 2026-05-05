@@ -942,6 +942,7 @@ model Page {
   publishedAt        DateTime?
   isActive           Boolean      @default(true)
   isSystemPage       Boolean      @default(false) // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
+  template           String       @db.VarChar(64)
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
   showSidebar        Boolean? // null=デフォルト使用、true/false=明示的指定

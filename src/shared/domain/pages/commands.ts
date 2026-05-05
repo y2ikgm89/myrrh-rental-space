@@ -16,6 +16,7 @@ import {
   type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
 import { createDefaultCustomPageSections } from "@/shared/lib/constants/default-page-sections";
+import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
 
 function normalizeNullableString(
   value: string | null | undefined,
@@ -76,6 +77,7 @@ export async function createPageIfNotExistsCommand(
     data: {
       slug,
       title,
+      template: resolveTemplateForSlug(slug),
       isPublished: true,
       isActive: true,
     },
@@ -101,6 +103,7 @@ export async function ensureSystemPageCommand(slug: string) {
         slug: definition.slug,
         title: definition.title,
         description: definition.description,
+        template: resolveTemplateForSlug(definition.slug),
         isPublished: true,
         isActive: true,
         isSystemPage: true,
@@ -155,6 +158,7 @@ export async function createPageCommand(
       slug: input.slug,
       title: input.title,
       description: normalizeNullableString(input.description),
+      template: resolveTemplateForSlug(input.slug),
       isPublished: input.isPublished,
       publishedAt,
       isActive: true,

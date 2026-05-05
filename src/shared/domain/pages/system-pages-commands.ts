@@ -3,6 +3,7 @@ import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
+import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
 
 /**
  * システムページ用コマンド（引数で PrismaClient を受け取る）
@@ -119,6 +120,7 @@ export async function bootstrapSystemPagesCommand(
           slug: definition.slug,
           title: definition.title,
           description: definition.description,
+          template: resolveTemplateForSlug(definition.slug),
           isPublished: true,
           isActive: true,
           isSystemPage: true,
