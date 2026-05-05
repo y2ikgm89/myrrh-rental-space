@@ -1,3 +1,11 @@
+/**
+ * /access — アクセス・拠点情報ページ
+ *
+ * Page-Template Architecture: 全 section を SectionRenderer 経由で描画。
+ * trailing filter / hero split は廃止し、`sections.map(SectionRenderer)` のみで
+ * 構成する。`LocationsLocalBusinessJsonLd` は per-page SEO のため page.tsx 残置。
+ */
+
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Suspense } from "react";
@@ -23,19 +31,10 @@ export default async function AccessPage(): Promise<ReactElement> {
   await connection();
 
   const sections = await getPageSectionsWithFallback("access");
-  const heroSection = sections.find(
-    (s) => s.type === "hero" || s.type === "hero-parallax",
-  );
-  const trailingSections = sections.filter(
-    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
-  );
 
   return (
-    <PageLayout
-      variant="content"
-      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
-    >
-      {trailingSections.map((section) => (
+    <PageLayout variant="content">
+      {sections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
 
