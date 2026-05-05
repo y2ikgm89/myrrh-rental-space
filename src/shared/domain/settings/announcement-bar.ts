@@ -10,6 +10,7 @@ import {
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -147,8 +148,22 @@ export const announcementBarInputSchema = z.object({
     .optional(),
   isActive: z.boolean().default(true),
   priority: z.number().int().min(0).max(100).default(0),
-  startAt: z.string().nullable().optional(),
-  endAt: z.string().nullable().optional(),
+  // `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）を受け取る
+  // contract に統一。command 層で `parseDateTimeLocalAsJst` を通して JST 固定で UTC 化
+  // （サーバ tz / ブラウザ tz 非依存）。空文字は `.or(z.literal(""))` で許容、normalize
+  // 関数で null 化。
+  startAt: z
+    .string()
+    .datetime({ local: true, error: "有効な日時を入力してください" })
+    .or(z.literal(""))
+    .nullable()
+    .optional(),
+  endAt: z
+    .string()
+    .datetime({ local: true, error: "有効な日時を入力してください" })
+    .or(z.literal(""))
+    .nullable()
+    .optional(),
 });
 
 export type AnnouncementBarInput = z.infer<typeof announcementBarInputSchema>;
@@ -163,8 +178,14 @@ function normalizeAnnouncementBarInput(data: AnnouncementBarInput) {
     textColor: data.textColor || null,
     isActive: data.isActive,
     priority: data.priority,
-    startAt: data.startAt ? new Date(data.startAt) : null,
-    endAt: data.endAt ? new Date(data.endAt) : null,
+    startAt:
+      data.startAt && data.startAt !== ""
+        ? parseDateTimeLocalAsJst(data.startAt)
+        : null,
+    endAt:
+      data.endAt && data.endAt !== ""
+        ? parseDateTimeLocalAsJst(data.endAt)
+        : null,
   };
 }
 

@@ -114,11 +114,6 @@ export const spaceFormBaseSchema = z
     facilities: facilitiesSchema,
     isPublished: z.boolean().default(false),
     reviewsEnabled: z.boolean().default(true),
-    termsId: z
-      .string()
-      .uuid({ error: "利用規約IDが無効です" })
-      .optional()
-      .nullable(),
     locationId: z
       .string()
       .min(1, { error: "拠点を選択してください" })
@@ -184,7 +179,6 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   facilities: [],
   isPublished: false,
   reviewsEnabled: true,
-  termsId: null,
   locationId: "",
   categoryId: null,
   // 割引設定
@@ -245,7 +239,6 @@ export type SpaceWithStats = {
   createdAt: string;
   /** toISOString() 済み ISO 8601 文字列 */
   updatedAt: string;
-  termsId: string | null;
   locationId: string;
   categoryId: string | null;
   /** 一覧・詳細でカテゴリ名表示用（Prisma include） */

@@ -30,7 +30,6 @@ type SpaceCommandInput = {
   facilities: string[];
   isPublished: boolean;
   reviewsEnabled: boolean;
-  termsId?: string | null | undefined;
   locationId: string;
   categoryId?: string | null | undefined;
   discountType?: DiscountType | null | undefined;
@@ -72,7 +71,6 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     isPublished: input.isPublished,
     reviewsEnabled: input.reviewsEnabled,
     publishedAt,
-    termsId: input.termsId ?? null,
     locationId: input.locationId,
     categoryId: input.categoryId ?? null,
     discountType: input.discountType ?? DiscountType.none,
@@ -291,7 +289,6 @@ export async function duplicateSpaceCommand(
       ogpTitle: true,
       ogpDescription: true,
       ogpImageUrl: true,
-      termsId: true,
       discountType: true,
       discountValue: true,
       durationDiscountOverride: true,
@@ -331,7 +328,6 @@ export async function duplicateSpaceCommand(
       ogpTitle: source.ogpTitle,
       ogpDescription: source.ogpDescription,
       ogpImageUrl: source.ogpImageUrl,
-      termsId: source.termsId,
       discountType: source.discountType,
       discountValue: source.discountValue,
       durationDiscountOverride: source.durationDiscountOverride,

@@ -1,18 +1,18 @@
 /**
  * Lexical Editor テーマ定義
  *
- * @description Tailwind CSSクラスをLexicalテーマにマッピング
+ * 段落・見出し・引用・リンク・リストは外側 prose クラス（`EDITORIAL_PROSE_CLASSES`）に
+ * 委譲する。ここでは Lexical 固有または prose の範囲外（テキストフォーマット・コード
+ * ハイライト・テーブル・水平線・マーク・テーブルセル選択など）のみクラスを指定する。
+ *
+ * 編集 UI（ContentEditable 親 div）に `EDITOR_PROSE_CLASSES` を付与することで
+ * 編集中の見た目が公開ページの `Prose variant="editorial"` と完全一致する。
  */
 
 import type { EditorThemeClasses } from "lexical";
 
-/**
- * Lexicalエディタのテーマ設定
- *
- * Tailwind CSSクラスを使用してスタイリング
- */
 export const editorTheme: EditorThemeClasses = {
-  // テキストフォーマット
+  // テキストフォーマット（インライン）— prose 範囲外のため theme で指定
   text: {
     bold: "font-bold",
     italic: "italic",
@@ -22,36 +22,13 @@ export const editorTheme: EditorThemeClasses = {
     code: "font-mono bg-muted px-1 py-0.5 rounded text-sm",
   },
 
-  // 見出し（上:下 = 2:1 以上 — USWDS / Pimp my Type 推奨比率）
-  heading: {
-    h1: "font-heading text-4xl font-bold mt-8 mb-4 leading-tight",
-    h2: "font-heading text-3xl font-bold mt-8 mb-3 leading-tight",
-    h3: "text-2xl font-bold mt-6 mb-2 leading-snug",
-    h4: "text-xl font-bold mt-6 mb-2 leading-snug",
-    h5: "text-lg font-bold mt-4 mb-1",
-    h6: "text-base font-bold mt-4 mb-1",
-  },
+  // heading / paragraph / quote / link / list は外側 prose クラスに委譲（指定しない）
 
-  // 段落
-  paragraph: "mb-4 leading-relaxed",
-
-  // リンク
-  link: "text-primary underline hover:no-underline cursor-pointer",
-
-  // 引用
-  quote:
-    "border-l-4 border-muted-foreground/30 pl-4 italic my-6 text-muted-foreground",
-
-  // リスト
+  // チェックリスト固有（prose にない Lexical 独自フォーマット）
   list: {
-    nested: {
-      listitem: "list-none",
-    },
-    listitem: "mb-1",
+    nested: { listitem: "list-none" },
     listitemChecked: "line-through text-muted-foreground",
     listitemUnchecked: "",
-    ol: "list-decimal list-inside mb-4 space-y-1",
-    ul: "list-disc list-inside mb-4 space-y-1",
   },
 
   // コードブロック

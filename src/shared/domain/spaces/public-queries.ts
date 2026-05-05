@@ -176,13 +176,6 @@ export async function getSpaceBySlug(slug: string) {
               parkingInfo: true,
             },
           },
-          terms: {
-            select: {
-              title: true,
-              slug: true,
-              isActive: true,
-            },
-          },
         },
       }),
     fallback: null,

@@ -70,7 +70,14 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
           <CardHeader>
             <CardTitle>連絡先情報</CardTitle>
             <CardDescription>
-              サイトに表示する連絡先を設定します
+              サイト全体の代表連絡先を設定します。拠点ごとの交通・駐車場案内は
+              <Link
+                href="/admin/spaces?tab=locations"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                拠点管理
+              </Link>
+              で個別に設定できます。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -219,16 +226,6 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
                 )}
               />
             </div>
-
-            <p className="text-xs text-muted-foreground">
-              交通案内・駐車場案内は拠点（Location）ごとに設定します。
-              <Link
-                href="/admin/spaces?tab=locations"
-                className="ml-1 underline hover:text-foreground"
-              >
-                拠点管理を開く
-              </Link>
-            </p>
 
             <div className="flex justify-end pt-2">
               <SubmitButton

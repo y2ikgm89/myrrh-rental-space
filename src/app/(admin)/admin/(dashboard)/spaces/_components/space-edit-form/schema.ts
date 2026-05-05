@@ -89,7 +89,6 @@ export function spaceEditFormDataToSpaceFormPayload(
     reviewsEnabled: data.reviewsEnabled,
     area: data.area != null ? data.area : undefined,
     dailyPrice: data.dailyPrice != null ? data.dailyPrice : undefined,
-    termsId: data.termsId || undefined,
     locationId: data.locationId,
     categoryId: data.categoryId || undefined,
     discountType: data.discountType ?? DiscountType.none,
@@ -145,7 +144,7 @@ const TAB_FIELDS: Record<SpaceEditTabValue, (keyof SpaceEditFormData)[]> = {
     "taxRateType",
   ],
   media: ["mainImageUrl", "imageUrls"],
-  details: ["categoryId", "facilities", "termsId"],
+  details: ["categoryId", "facilities"],
   publish: [
     "isPublished",
     "reviewsEnabled",

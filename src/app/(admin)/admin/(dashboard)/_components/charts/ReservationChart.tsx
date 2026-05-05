@@ -9,14 +9,17 @@
  * - SVG props は CSS 変数を直接受け取れないため admin.css 同期 oklch を定数化
  * - X 軸ラベルは ISO 8601 文字列を JST `M/D` に整形（業界標準ダッシュボード）
  * - Tooltip は `role="status" aria-live="polite"` でスクリーンリーダー対応
+ * - ResponsiveContainer を撤廃し ResizeObserver で width 確定後にのみ
+ *   `<ComposedChart width={N} height={N}>` を render（recharts/recharts#2873 の
+ *   dev-only race warning を完全消去するための公式回避パターン）
  */
 
+import { useEffect, useRef, useState } from "react";
 import {
   Area,
   Bar,
   CartesianGrid,
   ComposedChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -33,6 +36,44 @@ import type {
   ReservationChartSummary,
 } from "@/shared/domain/dashboard/queries";
 import { formatPrice } from "@/shared/lib/pricing/format";
+
+/** dashboard chart の業界標準比率（IBM Carbon / Stripe / Vercel Analytics） */
+const CHART_ASPECT_RATIO = 3;
+/** 狭い viewport (< 720px) でも最低 240px を保証 */
+const CHART_MIN_HEIGHT = 240;
+
+/**
+ * 親要素の width を ResizeObserver で観測し、`width > 0` 確定後の値のみ返す。
+ * Recharts の `<ResponsiveContainer width="100%" height="100%">` は dynamic
+ * loading + 初回 measure で `-1` を返すため、自前 observe + 条件付き render で回避。
+ */
+function useChartContainerSize(): {
+  ref: React.RefObject<HTMLDivElement | null>;
+  width: number;
+  height: number;
+} {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const next = Math.floor(entry.contentRect.width);
+      if (next > 0) setWidth(next);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const height = Math.max(
+    Math.floor(width / CHART_ASPECT_RATIO),
+    CHART_MIN_HEIGHT,
+  );
+  return { ref, width, height };
+}
 
 type ReservationChartProps = {
   data: ChartDataPoint[];
@@ -280,6 +321,7 @@ export function ReservationChart({
   const chartTitle = `予約・売上推移（直近${windowDays}日）`;
   const chartDescription = `直近${windowDays}日間の予約数（左軸・件）と売上（右軸・円）の日次推移。合計予約数 ${summary.totalReservations.toLocaleString()} 件、合計売上 ${formatPrice(summary.totalRevenue)}。`;
   const xAxisTicks = buildXAxisTicks(data);
+  const { ref: chartContainerRef, width, height } = useChartContainerSize();
 
   return (
     <Card>
@@ -310,14 +352,25 @@ export function ReservationChart({
       </CardHeader>
       <CardContent className="pt-0">
         <figure className="space-y-3">
+          {/*
+            ResponsiveContainer 撤廃 — dynamic({ ssr: false }) との組合せで初回 measure
+            時に width=-1 を返し chart 描画前に warning が出る known issue
+            (recharts/recharts#2873)。`aspect` / `minHeight` プロップでも race の発生
+            自体は防げないため、自前 ResizeObserver で width 確定後にのみ
+            `<ComposedChart width={N} height={N}>` を直接 render する。
+            initial paint 中はプレースホルダー高さで CLS を抑制。
+          */}
           <div
+            ref={chartContainerRef}
             role="img"
             aria-label={chartDescription}
-            className="h-60 @md/main:h-72"
+            style={{ minHeight: CHART_MIN_HEIGHT }}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            {width > 0 ? (
               <ComposedChart
                 data={data}
+                width={width}
+                height={height}
                 margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
                 barCategoryGap="25%"
                 title={chartTitle}
@@ -399,7 +452,7 @@ export function ReservationChart({
                   activeDot={{ r: 4, strokeWidth: 0 }}
                 />
               </ComposedChart>
-            </ResponsiveContainer>
+            ) : null}
           </div>
           <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">

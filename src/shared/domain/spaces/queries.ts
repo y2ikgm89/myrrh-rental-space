@@ -35,7 +35,6 @@ function formatSpaceToPlain(s: {
   reviewsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
-  termsId: string | null;
   locationId: string;
   categoryId: string | null;
   location: { address: string };
@@ -74,7 +73,6 @@ function formatSpaceToPlain(s: {
     reviewsEnabled: s.reviewsEnabled,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
-    termsId: s.termsId,
     locationId: s.locationId,
     categoryId: s.categoryId,
     category: s.category,

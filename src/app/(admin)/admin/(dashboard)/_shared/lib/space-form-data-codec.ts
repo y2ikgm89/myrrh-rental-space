@@ -105,7 +105,6 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     facilities,
     isPublished: getTrimmedString(formData, "isPublished") === "true",
     reviewsEnabled: getTrimmedString(formData, "reviewsEnabled") === "true",
-    termsId: getOptionalUuid(formData, "termsId"),
     locationId: getRequiredUuidString(formData, "locationId"),
     categoryId: getOptionalUuid(formData, "categoryId"),
     discountType: getTrimmedString(formData, "discountType"),
@@ -177,7 +176,6 @@ export function spaceFormDataToFormData(
   fd.set("durationDiscountOverride", payload.durationDiscountOverride);
   fd.set("taxRateType", payload.taxRateType);
 
-  fd.set("termsId", payload.termsId ?? "");
   fd.set("locationId", payload.locationId);
   fd.set("categoryId", payload.categoryId ?? "");
 
