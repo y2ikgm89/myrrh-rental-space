@@ -1,7 +1,13 @@
 "use client";
 
 import { useQueryStates } from "nuqs";
-import { adminCouponSearchParamsParsers } from "@/shared/lib/nuqs";
+import {
+  COUPON_STATUS_FILTER_ALL,
+  COUPON_TYPE_FILTER_ALL,
+  adminCouponSearchParamsParsers,
+  isCouponStatusFilter,
+  isCouponTypeFilter,
+} from "@/shared/lib/nuqs";
 import { IconSearch, IconX } from "@tabler/icons-react";
 import { useDebouncedCallback } from "@/admin/hooks";
 import {
@@ -13,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
+import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 
 export function CouponFilters() {
   const [params, setParams] = useQueryStates(adminCouponSearchParamsParsers, {
@@ -26,25 +33,34 @@ export function CouponFilters() {
   );
 
   const clearFilters = () => {
-    void setParams({ search: null, status: null, type: null, page: 1 });
+    void setParams({
+      search: null,
+      status: null,
+      type: null,
+      page: 1,
+    });
   };
 
-  const hasFilters = params.status || params.type || params.search;
+  const hasFilters =
+    params.status !== COUPON_STATUS_FILTER_ALL ||
+    params.type !== COUPON_TYPE_FILTER_ALL ||
+    params.search !== "";
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="w-full sm:w-[140px]">
         <Select
-          value={params.status || "ALL"}
-          onValueChange={(value) =>
-            void setParams({ status: value === "ALL" ? null : value, page: 1 })
-          }
+          value={params.status}
+          onValueChange={(value) => {
+            if (!isCouponStatusFilter(value)) return;
+            void setParams({ status: value, page: 1 });
+          }}
         >
-          <SelectTrigger>
-            <SelectValue placeholder="ステータス" />
+          <SelectTrigger aria-label="ステータス">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">すべて</SelectItem>
+            <SelectItem value={COUPON_STATUS_FILTER_ALL}>すべて</SelectItem>
             <SelectItem value="active">有効</SelectItem>
             <SelectItem value="inactive">無効</SelectItem>
             <SelectItem value="expired">期限切れ</SelectItem>
@@ -56,18 +72,21 @@ export function CouponFilters() {
 
       <div className="w-full sm:w-[160px]">
         <Select
-          value={params.type || "ALL"}
-          onValueChange={(value) =>
-            void setParams({ type: value === "ALL" ? null : value, page: 1 })
-          }
+          value={params.type}
+          onValueChange={(value) => {
+            if (!isCouponTypeFilter(value)) return;
+            void setParams({ type: value, page: 1 });
+          }}
         >
-          <SelectTrigger>
-            <SelectValue placeholder="割引タイプ" />
+          <SelectTrigger aria-label="割引タイプ">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">すべて</SelectItem>
-            <SelectItem value="PERCENTAGE">パーセント割引</SelectItem>
-            <SelectItem value="FIXED_AMOUNT">定額割引</SelectItem>
+            <SelectItem value={COUPON_TYPE_FILTER_ALL}>すべて</SelectItem>
+            <SelectItem value={CouponType.PERCENTAGE}>
+              パーセント割引
+            </SelectItem>
+            <SelectItem value={CouponType.FIXED_AMOUNT}>定額割引</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -75,10 +94,13 @@ export function CouponFilters() {
       <div className="relative flex-1 min-w-[200px]">
         <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          // `key={params.search}` で URL 同期時に remount（クリア後の表示残り防止 — `BaseFilters` と同等）
+          key={params.search}
           placeholder="コード・名称で検索..."
           defaultValue={params.search}
           onChange={(e) => setSearchDebounced(e.target.value)}
           className="pl-9"
+          aria-label="クーポンコード・名称で検索"
         />
       </div>
 

@@ -68,6 +68,9 @@ import {
 // テストデータ
 const COUPON_ID = "550e8400-e29b-41d4-a716-446655440001";
 
+// validFrom / validUntil は `<input type="datetime-local">` の値形式（JST 想定）
+// で受け取る contract に変更（domain command 側で `parseDateTimeLocalAsJst` で
+// UTC Date に変換される）
 const VALID_COUPON_DATA = {
   code: "SUMMER2024",
   name: "夏季割引クーポン",
@@ -76,8 +79,8 @@ const VALID_COUPON_DATA = {
   discountValue: 10,
   minReservationAmount: 5000,
   maxDiscountAmount: 2000,
-  validFrom: new Date("2024-07-01T00:00:00Z"),
-  validUntil: new Date("2024-08-31T23:59:59Z"),
+  validFrom: "2024-07-01T09:00",
+  validUntil: "2024-08-31T23:59",
   usageLimit: 100,
   isActive: true,
   canCombineWithDurationDiscount: false,
@@ -322,14 +325,30 @@ describe("coupons/commands", () => {
 
   describe("deleteCoupon", () => {
     describe("正常系", () => {
-      test("存在するクーポンを削除できる（予約なし）", async () => {
+      test("存在するクーポンを削除できる", async () => {
         mockCouponFindUnique.mockResolvedValueOnce({
           id: COUPON_ID,
           code: "SUMMER2024",
           isActive: true,
         });
-        // 予約件数 0
-        mockReservationCount.mockResolvedValueOnce(0);
+
+        await expect(deleteCoupon(COUPON_ID)).resolves.toBeUndefined();
+
+        expect(mockCouponDelete).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: COUPON_ID },
+          }),
+        );
+      });
+
+      test("予約使用中でも削除できる（Reservation.couponId は onDelete: SetNull）", async () => {
+        mockCouponFindUnique.mockResolvedValueOnce({
+          id: COUPON_ID,
+          code: "SUMMER2024",
+          isActive: true,
+        });
+        // 予約 3 件で使用中でも削除拒否しない（bulk と挙動を統一）
+        mockReservationCount.mockResolvedValueOnce(3);
 
         await expect(deleteCoupon(COUPON_ID)).resolves.toBeUndefined();
 
@@ -351,48 +370,6 @@ describe("coupons/commands", () => {
         });
 
         expect(mockCouponDelete).not.toHaveBeenCalled();
-      });
-
-      test("予約で使用中のクーポンは CONFLICT エラーをスローする", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "SUMMER2024",
-          isActive: true,
-        });
-        // 3 件の予約で使用中
-        mockReservationCount.mockResolvedValueOnce(3);
-
-        await expect(deleteCoupon(COUPON_ID)).rejects.toMatchObject({
-          code: "CONFLICT",
-        });
-
-        expect(mockCouponDelete).not.toHaveBeenCalled();
-      });
-
-      test("予約使用中エラーメッセージに件数が含まれる", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "SUMMER2024",
-          isActive: true,
-        });
-        mockReservationCount.mockResolvedValueOnce(5);
-
-        await expect(deleteCoupon(COUPON_ID)).rejects.toMatchObject({
-          message: expect.stringContaining("5"),
-        });
-      });
-
-      test("予約 1 件でも削除不可", async () => {
-        mockCouponFindUnique.mockResolvedValueOnce({
-          id: COUPON_ID,
-          code: "SUMMER2024",
-          isActive: true,
-        });
-        mockReservationCount.mockResolvedValueOnce(1);
-
-        await expect(deleteCoupon(COUPON_ID)).rejects.toBeInstanceOf(
-          DomainError,
-        );
       });
     });
   });

@@ -6,6 +6,10 @@ import {
 } from "@/shared/lib/validations/coupon";
 import { CouponType } from "@generated/prisma/enums";
 
+// `<input type="datetime-local">` 値の固定 fixture（"YYYY-MM-DDTHH:mm" 形式、JST 想定）
+const VALID_FROM = "2024-01-01T00:00";
+const VALID_UNTIL = "2024-12-31T23:59";
+
 describe("couponCodeSchema", () => {
   test("正常なクーポンコードが検証を通過する", () => {
     const validCodes = ["SAVE20", "SUMMER2024", "ABC123XYZ", "AAAA"];
@@ -28,7 +32,7 @@ describe("couponCodeSchema", () => {
     const result = couponCodeSchema.safeParse("ABC");
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "クーポンコードは4文字以上で入力してください",
       );
     }
@@ -38,7 +42,7 @@ describe("couponCodeSchema", () => {
     const result = couponCodeSchema.safeParse("A".repeat(21));
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "クーポンコードは20文字以内で入力してください",
       );
     }
@@ -76,7 +80,7 @@ describe("couponCodeSchema", () => {
       const result = couponCodeSchema.safeParse(code);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe(expectedError);
+        expect(result.error.issues[0]?.message).toBe(expectedError);
       }
     }
   });
@@ -92,8 +96,8 @@ describe("couponFormSchema", () => {
       discountValue: 20,
       minReservationAmount: 1000,
       maxDiscountAmount: 5000,
-      validFrom: new Date("2024-01-01"),
-      validUntil: new Date("2024-12-31"),
+      validFrom: VALID_FROM,
+      validUntil: VALID_UNTIL,
       usageLimit: 100,
       isActive: true,
       canCombineWithDurationDiscount: true,
@@ -109,7 +113,7 @@ describe("couponFormSchema", () => {
       name: "1000円割引クーポン",
       type: CouponType.FIXED_AMOUNT,
       discountValue: 1000,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
       isActive: true,
       canCombineWithDurationDiscount: true,
     };
@@ -118,12 +122,39 @@ describe("couponFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  test("validUntil が空文字列の場合検証を通過する（無期限）", () => {
+    const validData = {
+      code: "SAVE20",
+      name: "無期限クーポン",
+      type: CouponType.PERCENTAGE,
+      discountValue: 20,
+      validFrom: VALID_FROM,
+      validUntil: "",
+    };
+
+    const result = couponFormSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  test("validFrom が datetime-local 形式以外の場合エラーになる", () => {
+    const data = {
+      code: "SAVE20",
+      name: "割引クーポン",
+      type: CouponType.PERCENTAGE,
+      discountValue: 20,
+      validFrom: "2024/01/01",
+    };
+
+    const result = couponFormSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
   test("code が必須である", () => {
     const data = {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -135,7 +166,7 @@ describe("couponFormSchema", () => {
       code: "SAVE20",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -148,13 +179,13 @@ describe("couponFormSchema", () => {
       name: "",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("名称を入力してください");
+      expect(result.error.issues[0]?.message).toBe("名称を入力してください");
     }
   });
 
@@ -164,13 +195,13 @@ describe("couponFormSchema", () => {
       name: "a".repeat(101),
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "名称は100文字以内で入力してください",
       );
     }
@@ -183,13 +214,13 @@ describe("couponFormSchema", () => {
       description: "a".repeat(501),
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "説明は500文字以内で入力してください",
       );
     }
@@ -202,7 +233,7 @@ describe("couponFormSchema", () => {
       description: "",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -214,7 +245,7 @@ describe("couponFormSchema", () => {
       code: "SAVE20",
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -227,13 +258,13 @@ describe("couponFormSchema", () => {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 0,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "割引値は0より大きい必要があります",
       );
     }
@@ -245,7 +276,7 @@ describe("couponFormSchema", () => {
       name: "150%割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 150,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -264,7 +295,7 @@ describe("couponFormSchema", () => {
       name: "5000円割引クーポン",
       type: CouponType.FIXED_AMOUNT,
       discountValue: 5000,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -278,13 +309,13 @@ describe("couponFormSchema", () => {
       type: CouponType.PERCENTAGE,
       discountValue: 20,
       minReservationAmount: -100,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "最低利用金額は0以上で入力してください",
       );
     }
@@ -297,13 +328,13 @@ describe("couponFormSchema", () => {
       type: CouponType.PERCENTAGE,
       discountValue: 20,
       maxDiscountAmount: 0,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "最大割引額は0より大きい必要があります",
       );
     }
@@ -327,8 +358,8 @@ describe("couponFormSchema", () => {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-12-31"),
-      validUntil: new Date("2024-01-01"),
+      validFrom: "2024-12-31T00:00",
+      validUntil: "2024-01-01T00:00",
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -342,14 +373,14 @@ describe("couponFormSchema", () => {
   });
 
   test("validUntil が validFrom と同じ日時の場合検証を通過する", () => {
-    const sameDate = new Date("2024-06-01");
+    const sameDateTime = "2024-06-01T12:00";
     const data = {
       code: "SAVE20",
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: sameDate,
-      validUntil: sameDate,
+      validFrom: sameDateTime,
+      validUntil: sameDateTime,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -362,14 +393,14 @@ describe("couponFormSchema", () => {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
       usageLimit: 10.5,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "利用回数上限は整数で入力してください",
       );
     }
@@ -381,14 +412,14 @@ describe("couponFormSchema", () => {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
       usageLimit: 0,
     };
 
     const result = couponFormSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
+      expect(result.error.issues[0]?.message).toBe(
         "利用回数上限は1以上で入力してください",
       );
     }
@@ -400,7 +431,7 @@ describe("couponFormSchema", () => {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);
@@ -416,7 +447,7 @@ describe("couponFormSchema", () => {
       name: "割引クーポン",
       type: CouponType.PERCENTAGE,
       discountValue: 20,
-      validFrom: new Date("2024-01-01"),
+      validFrom: VALID_FROM,
     };
 
     const result = couponFormSchema.safeParse(data);

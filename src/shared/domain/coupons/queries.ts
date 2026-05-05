@@ -10,7 +10,7 @@ import type {
   CouponDetailData,
   CouponFilters,
   CouponPagination,
-  CouponStatusFilter,
+  CouponStatusValue,
   GetCouponsResult,
 } from "@/shared/domain/coupons/types";
 import type { CouponType } from "@generated/prisma/enums";
@@ -91,7 +91,7 @@ function formatCouponDetail(
 }
 
 function buildStatusWhereClause(
-  status: Exclude<CouponStatusFilter, "active" | "limitReached">,
+  status: Exclude<CouponStatusValue, "active" | "limitReached">,
 ): Prisma.CouponWhereInput {
   const now = new Date();
 
@@ -293,6 +293,13 @@ export async function validateCouponCodeQuery(
   });
   const now = new Date();
 
+  // セキュリティ方針: 期限切れ / 上限到達 / 未開始 / 無効 / 不存在は
+  // **意図的に同一文言「無効なクーポンコードです」** を返す。
+  // 理由: 個別文言を出すとクーポンコード列挙攻撃（enumeration）の足がかりになる
+  // （存在するコード × 期間外/上限到達 から有効コードの形式を推測される）。
+  // 例外: `minReservationAmount` 未満は有効コードを既に保有している前提のため
+  // UX を優先して具体的な金額を返す（attacker は既にコードを知っているため
+  // 列挙の追加情報にならない）。
   if (!coupon || !coupon.isActive) {
     return { valid: false, errorMessage: "無効なクーポンコードです" };
   }

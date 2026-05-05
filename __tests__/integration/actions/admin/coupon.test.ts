@@ -62,8 +62,16 @@ const couponFormSchema = z
       .positive({ error: "最大割引額は0より大きい必要があります" })
       .optional()
       .nullable(),
-    validFrom: z.coerce.date({ error: "有効開始日を入力してください" }),
-    validUntil: z.coerce.date().optional().nullable(),
+    // datetime-local 文字列（"YYYY-MM-DDTHH:mm"）として受け取る contract に変更
+    validFrom: z
+      .string()
+      .datetime({ local: true, error: "有効開始日を入力してください" }),
+    validUntil: z
+      .string()
+      .datetime({ local: true, error: "有効な日時を入力してください" })
+      .or(z.literal(""))
+      .nullable()
+      .optional(),
     usageLimit: z.coerce
       .number()
       .int({ error: "利用回数上限は整数で入力してください" })
@@ -73,30 +81,26 @@ const couponFormSchema = z
     isActive: z.boolean().default(true),
     canCombineWithDurationDiscount: z.boolean().default(true),
   })
-  .refine(
-    (data) => {
-      if (data.type === "PERCENTAGE" && data.discountValue > 100) {
-        return false;
+  .superRefine((data, ctx) => {
+    if (data.type === "PERCENTAGE" && data.discountValue > 100) {
+      ctx.addIssue({
+        code: "custom",
+        message: "パーセント割引は100%以下で入力してください",
+        path: ["discountValue"],
+      });
+    }
+    if (data.validUntil && data.validUntil !== "") {
+      const from = new Date(data.validFrom);
+      const until = new Date(data.validUntil);
+      if (from > until) {
+        ctx.addIssue({
+          code: "custom",
+          message: "有効期限は開始日より後に設定してください",
+          path: ["validUntil"],
+        });
       }
-      return true;
-    },
-    {
-      error: "パーセント割引は100%以下で入力してください",
-      path: ["discountValue"],
-    },
-  )
-  .refine(
-    (data) => {
-      if (data.validUntil && data.validFrom > data.validUntil) {
-        return false;
-      }
-      return true;
-    },
-    {
-      error: "有効期限は開始日より後に設定してください",
-      path: ["validUntil"],
-    },
-  );
+    }
+  });
 
 // =============================================================================
 // テストデータ
@@ -110,8 +114,8 @@ const VALID_COUPON_INPUT = {
   discountValue: 20,
   minReservationAmount: 5000,
   maxDiscountAmount: 3000,
-  validFrom: new Date("2026-07-01"),
-  validUntil: new Date("2026-08-31"),
+  validFrom: "2026-07-01T00:00",
+  validUntil: "2026-08-31T23:59",
   usageLimit: 100,
   isActive: true,
   canCombineWithDurationDiscount: false,
@@ -125,7 +129,7 @@ const VALID_FIXED_COUPON_INPUT = {
   discountValue: 1000,
   minReservationAmount: null,
   maxDiscountAmount: null,
-  validFrom: new Date("2026-01-01"),
+  validFrom: "2026-01-01T00:00",
   validUntil: null,
   usageLimit: null,
   isActive: true,
@@ -453,22 +457,21 @@ describe("Coupon Admin Action Integration", () => {
     });
 
     describe("validFrom / validUntil", () => {
-      test("有効な日付は許可", () => {
+      test("datetime-local 形式の文字列は許可", () => {
         const result = couponFormSchema.safeParse({
           ...VALID_COUPON_INPUT,
-          validFrom: new Date("2026-01-01"),
-          validUntil: new Date("2026-12-31"),
+          validFrom: "2026-01-01T00:00",
+          validUntil: "2026-12-31T23:59",
         });
         expect(result.success).toBe(true);
       });
 
-      test("文字列の日付はcoerce変換", () => {
+      test("Date オブジェクトは拒否（string contract に変更）", () => {
         const result = couponFormSchema.safeParse({
           ...VALID_COUPON_INPUT,
-          validFrom: "2026-01-01",
-          validUntil: "2026-12-31",
+          validFrom: new Date("2026-01-01"),
         });
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
     });
 
@@ -534,8 +537,8 @@ describe("Coupon Admin Action Integration", () => {
       test("validUntilがvalidFromより後はOK", () => {
         const result = couponFormSchema.safeParse({
           ...VALID_COUPON_INPUT,
-          validFrom: new Date("2026-01-01"),
-          validUntil: new Date("2026-12-31"),
+          validFrom: "2026-01-01T00:00",
+          validUntil: "2026-12-31T00:00",
         });
         expect(result.success).toBe(true);
       });
@@ -543,8 +546,8 @@ describe("Coupon Admin Action Integration", () => {
       test("validUntilがvalidFromより前はエラー", () => {
         const result = couponFormSchema.safeParse({
           ...VALID_COUPON_INPUT,
-          validFrom: new Date("2026-12-31"),
-          validUntil: new Date("2026-01-01"),
+          validFrom: "2026-12-31T00:00",
+          validUntil: "2026-01-01T00:00",
         });
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -560,8 +563,17 @@ describe("Coupon Admin Action Integration", () => {
       test("validUntilがnullの場合はrefineスキップ", () => {
         const result = couponFormSchema.safeParse({
           ...VALID_COUPON_INPUT,
-          validFrom: new Date("2026-12-31"),
+          validFrom: "2026-12-31T00:00",
           validUntil: null,
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("validUntilが空文字列の場合はrefineスキップ（無期限）", () => {
+        const result = couponFormSchema.safeParse({
+          ...VALID_COUPON_INPUT,
+          validFrom: "2026-12-31T00:00",
+          validUntil: "",
         });
         expect(result.success).toBe(true);
       });

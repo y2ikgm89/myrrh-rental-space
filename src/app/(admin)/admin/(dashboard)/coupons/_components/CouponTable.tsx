@@ -19,6 +19,7 @@ import { CouponTypeBadge, CouponStatusBadge } from "./CouponStatusBadge";
 import { CouponActionCell } from "./CouponActionCell";
 import { CouponBulkActions } from "./CouponBulkActions";
 import type { CouponData } from "@/shared/domain/coupons/types";
+import type { CouponStatusType } from "../_lib/coupon-status";
 import { formatDateShort } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 
@@ -26,8 +27,14 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 // Types
 // =============================================================================
 
+/**
+ * `coupons` には Server Component 側で `getCouponStatus(coupon, now)` で
+ * 事前計算した `status` を埋め込んだ拡張型を渡す。
+ */
+export type CouponWithStatus = CouponData & { status: CouponStatusType };
+
 type CouponTableProps = {
-  coupons: CouponData[];
+  coupons: readonly CouponWithStatus[];
 };
 
 // =============================================================================
@@ -116,7 +123,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                     />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <CouponStatusBadge coupon={coupon} />
+                    <CouponStatusBadge status={coupon.status} />
                   </TableCell>
                   <TableCell className="font-mono font-medium">
                     {coupon.code}
@@ -143,7 +150,11 @@ export function CouponTable({ coupons }: CouponTableProps) {
                     </div>
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
-                    <CouponActionCell couponId={coupon.id} />
+                    <CouponActionCell
+                      couponId={coupon.id}
+                      couponName={coupon.name}
+                      isActive={coupon.isActive}
+                    />
                   </TableCell>
                 </ClickableTableRow>
               ))}
