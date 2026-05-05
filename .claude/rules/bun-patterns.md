@@ -344,7 +344,7 @@ describe("createPost", () => {
 });
 ```
 
-> **詳細リファレンス（モック詳細実装・Bun ランタイム API）**: `docs/reference/claude-rules/bun-test-reference.md`
+> **詳細リファレンス（モック詳細実装・Bun ランタイム API）**: `docs/reference/bun-test.md`
 
 ---
 

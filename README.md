@@ -45,7 +45,7 @@ src/
 - **Prisma gateway**: app 層は `@/shared/lib/validations/enums/prisma-types`（browser entry 由来、type-only）経由でのみ Prisma 型にアクセス。runtime 値は `shared/db/` / `shared/domain/` のみ直接 import 可
 - **`executeAdminMutationResult`**: 管理 write 系 Server Actions は認証・権限・監査ログを一括処理
 
-Codex 作業の正本は [`AGENTS.md`](./AGENTS.md) と [`.agents/skills/`](./.agents/skills/) です。詳細な配置方針は [`docs/architecture/codex-instructions.md`](./docs/architecture/codex-instructions.md) を参照してください。
+Codex 作業の正本は [`AGENTS.md`](./AGENTS.md) と [`.agents/skills/`](./.agents/skills/) です。詳細な配置方針は [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md) を参照してください。
 
 ## セットアップ
 
@@ -166,9 +166,9 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
 - [`SECURITY.md`](./SECURITY.md) — 脆弱性報告 policy・対応 SLA
 - [`.agents/skills/`](./.agents/skills/) — Codex ネイティブの反復作業 skill
-- [`docs/architecture/codex-instructions.md`](./docs/architecture/codex-instructions.md) — Codex 資産の配置方針
-- [`docs/plans/`](./docs/plans/) — 進行中プランのみ（完了プランは git history と ADR で辿る、clean-break 原則）
-- [`docs/architecture/`](./docs/architecture/) — アーキテクチャ図・設計判断記録
+- [`docs/`](./docs/) — Diátaxis 構成のドキュメント（`explanation/` / `how-to/` / `reference/`）
+- [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md) — Codex / Claude Code 正本配置
+- [`docs/superpowers/plans/`](./docs/superpowers/plans/) — 進行中プランのみ（完了は `.archive/` または git history）
 
 ## ライセンス
 

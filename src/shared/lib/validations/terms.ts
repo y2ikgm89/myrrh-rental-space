@@ -1,350 +1,91 @@
 import { z } from "zod";
-import {
-  TermsType,
-  TermsStatus,
-} from "@/shared/lib/validations/enums/prisma-types";
-import { isValidTermsType } from "@/shared/lib/validations/enums/guards";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
 /**
- * 文字列をTermsTypeに変換（無効な値はundefined）
+ * 規約タイプ — 業務上想定される標準値（VARCHAR 自由文字列）。
+ *
+ * Prisma `TermsType` enum を廃止し VARCHAR 化したため、新規タイプ追加で
+ * マイグレーションは不要。下記定数は seed / 管理 UI のテンプレート選択 /
+ * バッジ表示でのみ使われる。
  */
-export function parseTermsType(value: unknown): TermsType | undefined {
-  return isValidTermsType(value) ? value : undefined;
-}
-
-// ==============================================
-// Constants
-// ==============================================
-
-/**
- * 規約タイプの選択肢（デフォルトタイトル・スラッグ付き）
- */
-export const TERMS_TYPES = [
-  {
-    value: "TERMS_OF_USE",
-    label: "利用規約",
-    defaultTitle: "利用規約",
-    defaultSlug: "terms-of-use",
-  },
-  {
-    value: "PRIVACY_POLICY",
-    label: "プライバシーポリシー",
-    defaultTitle: "プライバシーポリシー",
-    defaultSlug: "privacy-policy",
-  },
-  {
-    value: "CANCELLATION",
-    label: "キャンセルポリシー",
-    defaultTitle: "キャンセルポリシー",
-    defaultSlug: "cancellation-policy",
-  },
-  {
-    value: "PAYMENT",
-    label: "支払い規約",
-    defaultTitle: "支払い規約",
-    defaultSlug: "payment-terms",
-  },
-  {
-    value: "RENTAL_TERMS",
-    label: "施設利用規約",
-    defaultTitle: "施設利用規約",
-    defaultSlug: "rental-terms",
-  },
-  {
-    value: "COMMERCIAL_TRANSACTION",
-    label: "特定商取引法に基づく表記",
-    defaultTitle: "特定商取引法に基づく表記",
-    defaultSlug: "commercial-transaction",
-  },
-  {
-    value: "REVIEW_GUIDELINES",
-    label: "レビュー投稿ガイドライン",
-    defaultTitle: "レビュー投稿ガイドライン",
-    defaultSlug: "review-guidelines",
-  },
-  {
-    value: "COOKIE_POLICY",
-    label: "Cookie ポリシー",
-    defaultTitle: "Cookie ポリシー",
-    defaultSlug: "cookie-policy",
-  },
-  {
-    value: "CUSTOM",
-    label: "カスタム規約",
-    defaultTitle: "カスタム規約",
-    defaultSlug: "custom-terms",
-  },
+export const TERMS_TYPE_VALUES = [
+  "terms-of-use",
+  "privacy-policy",
+  "cancellation",
+  "payment",
+  "rental-terms",
+  "commercial-transaction",
+  "review-guidelines",
+  "cookie-policy",
+  "custom",
 ] as const;
+export type TermsTypeValue = (typeof TERMS_TYPE_VALUES)[number];
+
+export const TERMS_TYPE_LABELS: Record<string, string> = {
+  "terms-of-use": "利用規約",
+  "privacy-policy": "プライバシーポリシー",
+  cancellation: "キャンセルポリシー",
+  payment: "支払い規約",
+  "rental-terms": "施設利用規約",
+  "commercial-transaction": "特定商取引法に基づく表記",
+  "review-guidelines": "レビュー投稿ガイドライン",
+  "cookie-policy": "Cookie ポリシー",
+  custom: "カスタム規約",
+};
+
+export const TERMS_AGREEMENT_CONTEXT = {
+  RESERVATION: "reservation",
+  INQUIRY: "inquiry",
+  SIGNUP: "signup",
+} as const;
+export type TermsAgreementContext =
+  (typeof TERMS_AGREEMENT_CONTEXT)[keyof typeof TERMS_AGREEMENT_CONTEXT];
+
+const slugSchema = z
+  .string()
+  .min(1, { error: "スラッグを入力してください" })
+  .max(50, { error: "スラッグは50文字以内です" })
+  .regex(/^[a-z0-9-]+$/u, {
+    error: "スラッグは小文字英数字とハイフンのみ使用できます",
+  });
+
+const typeSchema = z
+  .string()
+  .min(1, { error: "タイプを入力してください" })
+  .max(64, { error: "タイプは64文字以内です" })
+  .regex(/^[a-z0-9-]+$/u, {
+    error: "タイプは小文字英数字とハイフンのみ使用できます",
+  });
+
+const titleSchema = z
+  .string()
+  .min(1, { error: "タイトルを入力してください" })
+  .max(100, { error: "タイトルは100文字以内です" });
+
+const footerOrderSchema = z
+  .number()
+  .int({ error: "整数で入力してください" })
+  .min(0, { error: "0以上で入力してください" })
+  .max(999, { error: "999以下で入力してください" });
 
 /**
- * 規約タイプからデフォルト値を取得
+ * 規約作成・編集フォームスキーマ
+ *
+ * RHF + `standardSchemaResolver` の input 型互換性のため `.default()` を
+ * 使わず、呼び出し側の `defaultValues` で初期値を指定する
+ * (`zod-patterns/validation-schemas.md` §RHF 参照)。
  */
-export function getTermsTypeDefaults(
-  type: string,
-): { title: string; slug: string } | null {
-  const found = TERMS_TYPES.find((t) => t.value === type);
-  if (!found) return null;
-  return { title: found.defaultTitle, slug: found.defaultSlug };
-}
-
-// ==============================================
-// Terms Master Schemas
-// ==============================================
-
-/**
- * 規約作成スキーマ
- */
-export const createTermsSchema = z.object({
-  type: z.enum(TermsType),
-  title: z
-    .string()
-    .min(1, { error: "タイトルを入力してください" })
-    .max(100, { error: "タイトルは100文字以内で入力してください" }),
-  slug: z
-    .string()
-    .min(1, { error: "スラッグを入力してください" })
-    .max(50, { error: "スラッグは50文字以内で入力してください" })
-    .regex(/^[a-z0-9-]+$/, {
-      error: "スラッグは小文字英数字とハイフンのみ使用可能です",
-    }),
-  isActive: z.boolean().default(true),
-  requiredAtReservation: z.boolean().default(false),
-  showInFooter: z.boolean().default(false),
-});
-
-/**
- * 規約更新スキーマ
- */
-export const updateTermsSchema = createTermsSchema.partial();
-
-export type CreateTermsInput = z.input<typeof createTermsSchema>;
-export type UpdateTermsInput = z.input<typeof updateTermsSchema>;
-
-// ==============================================
-// Terms Version Schemas
-// ==============================================
-
-/**
- * 規約バージョン作成スキーマ
- */
-export const createTermsVersionSchema = z.object({
-  termsId: z.string().uuid({ error: "規約IDが無効です" }),
+export const termsFormSchema = z.object({
+  type: typeSchema,
+  slug: slugSchema,
+  title: titleSchema,
   contentJson: lexicalJsonSchema,
+  isPublished: z.boolean(),
+  requiredAtReservation: z.boolean(),
+  requiredAtInquiry: z.boolean(),
+  requiredAtSignup: z.boolean(),
+  showInFooter: z.boolean(),
+  footerOrder: footerOrderSchema,
 });
 
-/**
- * 規約バージョン公開スキーマ
- */
-export const publishTermsVersionSchema = z.object({
-  versionId: z.string().uuid({ error: "バージョンIDが無効です" }),
-});
-
-/**
- * 規約バージョン更新スキーマ
- */
-export const updateTermsVersionSchema = z.object({
-  contentJson: lexicalJsonSchema,
-});
-
-export type CreateTermsVersionInput = z.input<typeof createTermsVersionSchema>;
-export type PublishTermsVersionInput = z.input<
-  typeof publishTermsVersionSchema
->;
-export type UpdateTermsVersionInput = z.input<typeof updateTermsVersionSchema>;
-
-// ==============================================
-// Terms Agreement Schemas
-// ==============================================
-
-/**
- * 規約同意記録スキーマ
- */
-export const recordTermsAgreementSchema = z.object({
-  termsId: z.string().uuid({ error: "規約IDが無効です" }),
-  versionId: z.string().uuid({ error: "バージョンIDが無効です" }),
-  reservationId: z.string().uuid({ error: "予約IDが無効です" }).optional(),
-  userId: z.string().uuid({ error: "ユーザーIDが無効です" }).optional(),
-  guestName: z.string().optional(),
-  guestEmail: z
-    .string()
-    .email({ error: "メールアドレスが無効です" })
-    .optional(),
-  ipAddress: z.string().optional(),
-  userAgent: z.string().optional(),
-});
-
-export type RecordTermsAgreementInput = z.input<
-  typeof recordTermsAgreementSchema
->;
-
-// ==============================================
-// Response Types
-// ==============================================
-
-/**
- * 規約とその現在バージョンの型
- */
-export interface TermsWithVersion {
-  id: string;
-  type: TermsType;
-  title: string;
-  slug: string;
-  isActive: boolean;
-  requiredAtReservation: boolean;
-  showInFooter: boolean;
-  currentVersion: {
-    id: string;
-    version: number;
-    contentHtml: string;
-    contentJson: unknown;
-    publishedAt: Date;
-  } | null;
-  _count: {
-    spaces: number;
-  };
-}
-
-/**
- * 規約とその現在バージョンの型（Client Component向けシリアライズ版）
- * DateをISO文字列に、Prisma enumを文字列に変換したもの
- */
-export interface SerializedTermsWithVersion {
-  id: string;
-  type: string; // Prisma enumをプレーン文字列に変換
-  title: string;
-  slug: string;
-  isActive: boolean;
-  currentVersion: {
-    id: string;
-    version: number;
-    contentHtml: string;
-    publishedAt: string; // ISO 8601形式
-  } | null;
-}
-
-/**
- * TermsWithVersionをシリアライズ（Server → Client Component受け渡し用）
- * Prisma enumとDateをプレーン値に変換
- */
-export function serializeTermsWithVersion(
-  terms: TermsWithVersion | null,
-): SerializedTermsWithVersion | null {
-  if (!terms) return null;
-
-  return {
-    id: terms.id,
-    type: String(terms.type), // Prisma enumをプレーン文字列に変換
-    title: terms.title,
-    slug: terms.slug,
-    isActive: terms.isActive,
-    currentVersion: terms.currentVersion
-      ? {
-          id: terms.currentVersion.id,
-          version: terms.currentVersion.version,
-          contentHtml: terms.currentVersion.contentHtml,
-          publishedAt: terms.currentVersion.publishedAt.toISOString(),
-        }
-      : null,
-  };
-}
-
-/**
- * 規約詳細（管理画面用）
- */
-export interface TermsDetail {
-  id: string;
-  type: TermsType;
-  title: string;
-  slug: string;
-  isActive: boolean;
-  requiredAtReservation: boolean;
-  showInFooter: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  versions: {
-    id: string;
-    version: number;
-    status: TermsStatus;
-    publishedAt: Date | null;
-    isCurrentVersion: boolean;
-    createdAt: Date;
-  }[];
-  _count: {
-    spaces: number;
-    agreements: number;
-  };
-}
-
-/**
- * 規約バージョン詳細
- */
-export interface TermsVersionDetail {
-  id: string;
-  termsId: string;
-  version: number;
-  contentHtml: string;
-  contentJson: unknown;
-  status: TermsStatus;
-  publishedAt: Date | null;
-  publishedBy: string | null;
-  isCurrentVersion: boolean;
-  createdAt: Date;
-  createdBy: string | null;
-}
-
-/**
- * 規約同意記録
- */
-export interface TermsAgreementRecord {
-  id: string;
-  termsId: string;
-  versionId: string;
-  reservationId: string | null;
-  userId: string | null;
-  guestName: string | null;
-  guestEmail: string | null;
-  agreedAt: Date;
-  terms: {
-    title: string;
-    type: TermsType;
-  };
-  version: {
-    version: number;
-  };
-}
-
-/**
- * 管理画面での同意記録表示用（シリアライズ済み）
- */
-export interface TermsAgreementItem {
-  id: string;
-  agreedAt: string; // ISO 8601
-  version: number;
-  guestName: string | null;
-  guestEmail: string | null;
-  userName: string | null;
-  userEmail: string | null;
-  reservationId: string | null;
-  ipAddress: string | null; // 末尾マスク済み
-}
-
-export const termsAgreementItemSchema = z.object({
-  id: z.string().uuid({ error: "同意記録IDが無効です" }),
-  agreedAt: z.string().datetime({ error: "同意日時が無効です" }),
-  version: z.number().int().positive({ error: "バージョン番号が無効です" }),
-  guestName: z.string().nullable(),
-  guestEmail: z
-    .string()
-    .email({ error: "メールアドレスが無効です" })
-    .nullable(),
-  userName: z.string().nullable(),
-  userEmail: z.string().email({ error: "メールアドレスが無効です" }).nullable(),
-  reservationId: z.string().uuid({ error: "予約IDが無効です" }).nullable(),
-  ipAddress: z.string().nullable(),
-});
-
-export const adminTermsAgreementsResponseSchema = z.object({
-  agreements: z.array(termsAgreementItemSchema),
-  total: z.number().int().nonnegative({ error: "件数が無効です" }),
-});
+export type TermsFormInput = z.infer<typeof termsFormSchema>;

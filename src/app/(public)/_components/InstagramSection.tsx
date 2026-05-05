@@ -37,7 +37,7 @@ export function InstagramSection({
   const displayPosts = posts.slice(0, config.count);
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-10 text-center md:mb-14">
         <ScrollReveal>
           {config.sectionLabel && (

@@ -51,7 +51,7 @@ export function SpaceShowcaseSection({
   const remaining = spaces.slice(1);
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       {/* Section heading — left aligned, editorial */}
       <div className="mb-12 flex items-end justify-between md:mb-20">
         <div>

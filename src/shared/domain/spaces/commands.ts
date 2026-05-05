@@ -21,7 +21,6 @@ type SpaceCommandInput = {
   descriptionHtml: string;
   descriptionPlainText: string;
   addressDetail?: string | null | undefined;
-  access?: string | null | undefined;
   capacity: number;
   area?: number | null | undefined;
   hourlyPrice: number;
@@ -31,7 +30,6 @@ type SpaceCommandInput = {
   facilities: string[];
   isPublished: boolean;
   reviewsEnabled: boolean;
-  termsId?: string | null | undefined;
   locationId: string;
   categoryId?: string | null | undefined;
   discountType?: DiscountType | null | undefined;
@@ -63,7 +61,6 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     descriptionHtml: input.descriptionHtml,
     descriptionPlainText: input.descriptionPlainText,
     addressDetail: normalizeNullableString(input.addressDetail),
-    access: normalizeNullableString(input.access),
     capacity: input.capacity,
     area: input.area ?? null,
     hourlyPrice: input.hourlyPrice,
@@ -74,7 +71,6 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     isPublished: input.isPublished,
     reviewsEnabled: input.reviewsEnabled,
     publishedAt,
-    termsId: input.termsId ?? null,
     locationId: input.locationId,
     categoryId: input.categoryId ?? null,
     discountType: input.discountType ?? DiscountType.none,
@@ -279,7 +275,6 @@ export async function duplicateSpaceCommand(
       descriptionHtml: true,
       descriptionPlainText: true,
       addressDetail: true,
-      access: true,
       capacity: true,
       area: true,
       hourlyPrice: true,
@@ -294,7 +289,6 @@ export async function duplicateSpaceCommand(
       ogpTitle: true,
       ogpDescription: true,
       ogpImageUrl: true,
-      termsId: true,
       discountType: true,
       discountValue: true,
       durationDiscountOverride: true,
@@ -317,7 +311,6 @@ export async function duplicateSpaceCommand(
       descriptionHtml: source.descriptionHtml,
       descriptionPlainText: source.descriptionPlainText,
       addressDetail: source.addressDetail,
-      access: source.access,
       capacity: source.capacity,
       area: source.area,
       hourlyPrice: source.hourlyPrice,
@@ -335,7 +328,6 @@ export async function duplicateSpaceCommand(
       ogpTitle: source.ogpTitle,
       ogpDescription: source.ogpDescription,
       ogpImageUrl: source.ogpImageUrl,
-      termsId: source.termsId,
       discountType: source.discountType,
       discountValue: source.discountValue,
       durationDiscountOverride: source.durationDiscountOverride,

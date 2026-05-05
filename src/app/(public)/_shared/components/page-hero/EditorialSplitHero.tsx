@@ -22,13 +22,14 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
+import { isAppRoute } from "@/shared/lib/typed-routes";
 import type {
   HeroTransition,
-  PageHero,
-} from "@/shared/lib/sections/page-hero/schema";
+  PageHeroConfig,
+} from "@/shared/lib/sections/definitions/page-hero";
 
 export type EditorialSplitHeroProps = Omit<
-  Extract<PageHero, { variant: "editorial-split" }>,
+  Extract<PageHeroConfig, { variant: "editorial-split" }>,
   "variant"
 >;
 
@@ -51,6 +52,13 @@ export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
   transition: "crossfade",
   buttonText: "Reserve a space",
   buttonUrl: "/reservation",
+  layout: {
+    padding: "md",
+    containerWidth: "lg",
+    hideOnMobile: false,
+    hideOnDesktop: false,
+    animateOnScroll: "fade-up",
+  },
 };
 
 const AUTO_ADVANCE_MS = 6000;
@@ -479,7 +487,7 @@ export function EditorialSplitHero({
           <div className="mt-8 flex justify-center md:mt-10">
             <Button
               variant="editorial"
-              href={buttonUrl}
+              href={isAppRoute(buttonUrl) ? buttonUrl : "/reservation"}
               className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
             >
               {buttonText}

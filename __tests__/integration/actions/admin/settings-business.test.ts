@@ -32,7 +32,6 @@ const contactInfoSchema = z.object({
   phoneNumber: z.string().max(20).nullable(),
   faxNumber: z.string().max(20).nullable(),
   email: z.string().email().max(100).nullable().or(z.literal("")),
-  address: z.string().max(500).nullable(),
   postalCode: z.string().max(10).nullable(),
   prefecture: z.string().max(10).nullable(),
   city: z.string().max(50).nullable(),
@@ -110,7 +109,6 @@ const VALID_CONTACT_INFO_INPUT = {
   phoneNumber: "03-1234-5678",
   faxNumber: "03-1234-5679",
   email: "info@example.com",
-  address: "東京都渋谷区1-2-3",
   postalCode: "150-0001",
   prefecture: "東京都",
   city: "渋谷区",
@@ -260,7 +258,6 @@ describe("Settings Business Admin Action Integration", () => {
           phoneNumber: null,
           faxNumber: null,
           email: null,
-          address: null,
           postalCode: null,
           prefecture: null,
           city: null,
@@ -361,24 +358,6 @@ describe("Settings Business Admin Action Integration", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
           postalCode: "12345678901",
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("address", () => {
-      test("500文字はOK", () => {
-        const result = contactInfoSchema.safeParse({
-          ...VALID_CONTACT_INFO_INPUT,
-          address: "あ".repeat(500),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("501文字はエラー", () => {
-        const result = contactInfoSchema.safeParse({
-          ...VALID_CONTACT_INFO_INPUT,
-          address: "あ".repeat(501),
         });
         expect(result.success).toBe(false);
       });

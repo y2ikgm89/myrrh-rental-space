@@ -23,7 +23,8 @@ export function FilePreview({
 }: FilePreviewProps) {
   return (
     <div className="space-y-4">
-      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-muted">
+      {/* bg-checker: 透過 PNG / SVG の透過部分を市松模様で可視化 */}
+      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-checker">
         {previewUrl && (
           <img
             src={previewUrl}

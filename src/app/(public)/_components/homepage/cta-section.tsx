@@ -7,14 +7,13 @@ import {
   DEFAULT_SECTION_STYLE,
   type SectionStylePayload,
 } from "@/shared/domain/section-styles/types";
-import type { AppRoute } from "@/shared/lib/typed-routes";
+import type { CTAButtonItem } from "@/shared/lib/validations/cta-and-url";
 
 export interface CtaSectionProps {
   readonly label: string;
   readonly title: string;
   readonly description: string;
-  readonly buttonText: string;
-  readonly buttonUrl: AppRoute;
+  readonly buttons: readonly CTAButtonItem[];
   /** Code-owned visual style for this section. */
   readonly resolvedStyle?: SectionStylePayload;
 }
@@ -24,16 +23,23 @@ export const ctaDefaultProps: Omit<CtaSectionProps, "resolvedStyle"> = {
   title: "あなたに最適な空間を",
   description:
     "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
-  buttonText: "View All Spaces",
-  buttonUrl: "/spaces",
+  buttons: [
+    {
+      text: "View All Spaces",
+      url: "/spaces",
+      variant: "primary",
+      size: "lg",
+      iconName: "",
+      openInNewTab: false,
+    },
+  ],
 };
 
 export function CtaSection({
   label = ctaDefaultProps.label,
   title = ctaDefaultProps.title,
   description = ctaDefaultProps.description,
-  buttonText = ctaDefaultProps.buttonText,
-  buttonUrl = ctaDefaultProps.buttonUrl,
+  buttons = ctaDefaultProps.buttons,
   resolvedStyle = DEFAULT_SECTION_STYLE,
 }: Partial<CtaSectionProps> = {}): ReactElement {
   return (
@@ -52,17 +58,29 @@ export function CtaSection({
         </p>
       </ScrollReveal>
 
-      <ScrollReveal delay={0.3}>
-        <div className="mt-8 flex justify-center">
-          <Button
-            variant="editorial"
-            href={buttonUrl}
-            className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
-          >
-            {buttonText}
-          </Button>
-        </div>
-      </ScrollReveal>
+      {buttons.length > 0 && (
+        <ScrollReveal delay={0.3}>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            {buttons.map((button) => (
+              <Button
+                key={button.url}
+                variant="editorial"
+                size={button.size}
+                href={button.url}
+                {...(button.iconName && { iconName: button.iconName })}
+                {...(button.backgroundColor && {
+                  customBackgroundColor: button.backgroundColor,
+                })}
+                {...(button.textColor && { customTextColor: button.textColor })}
+                {...(button.openInNewTab && { target: "_blank" as const })}
+                className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
+              >
+                {button.text}
+              </Button>
+            ))}
+          </div>
+        </ScrollReveal>
+      )}
     </SectionWrapper>
   );
 }

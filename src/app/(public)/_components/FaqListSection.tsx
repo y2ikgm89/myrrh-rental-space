@@ -110,12 +110,12 @@ export function FaqListSection({
 
   const styles = VARIANT_STYLES[config.variant] ?? VARIANT_STYLES.default;
   const containerWidth =
-    CONTAINER_WIDTH_MAP[parseContainerWidth(config.containerWidth)];
+    CONTAINER_WIDTH_MAP[parseContainerWidth(config.layout.containerWidth)];
   const initialOpen = parseFaqInitialOpen(config.initialOpen);
 
   return (
     <>
-      <SectionWrapper style={style}>
+      <SectionWrapper style={style} layout={config.layout}>
         <div className={cn("mx-auto", containerWidth)}>
           <div className="mb-10 text-center md:mb-14">
             <ScrollReveal>

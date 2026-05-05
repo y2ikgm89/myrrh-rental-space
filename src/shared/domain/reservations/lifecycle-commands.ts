@@ -3,9 +3,17 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import {
+  CANCELLED_BY,
+  TERMINAL_RESERVATION_STATUSES,
+} from "@/shared/lib/validations/enums/helpers";
+import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { validateStatusTransition } from "./status";
 import { CUSTOMER_SELECT, buildPayload } from "./payloads";
+
+const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
+  TERMINAL_RESERVATION_STATUSES,
+);
 
 // ---------------------------------------------------------------------------
 // Admin: Status update
@@ -55,6 +63,109 @@ export async function updateReservationStatusCommand(
 
   return {
     previousStatus,
+    googleCalendarEventId: reservation.googleCalendarEventId,
+    customerId: reservation.customerId,
+    couponId: reservation.couponId,
+    payload: buildPayload({
+      reservationId: id,
+      customer: reservation.customer,
+      space: reservation.space,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      totalPrice: reservation.totalPrice,
+      notes: reservation.notes,
+      icsSequence: updated.icsSequence,
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Admin: Restore terminal status (SUPER_ADMIN only — auth enforced at action layer)
+// ---------------------------------------------------------------------------
+
+/**
+ * 終端ステータス（COMPLETED / CANCELLED / NO_SHOW）から非終端ステータス
+ * （PENDING / CONFIRMED）への復元。誤操作からの巻き戻し用途。
+ *
+ * - 復元元は終端ステータスのみ（非終端からの呼び出しは VALIDATION エラー）
+ * - 復元先は非終端ステータスのみ
+ * - CONFIRMED への復元は時間帯コンフリクトを検証（重複ありなら VALIDATION エラー）
+ * - CANCELLED から復元する場合、cancellation 関連フィールドを null に戻す
+ * - icsSequence をインクリメントして既存カレンダー予定を上書き
+ */
+export async function restoreReservationStatusCommand(
+  id: string,
+  targetStatus: ReservationStatus,
+) {
+  if (TERMINAL_STATUS_SET.has(targetStatus)) {
+    throw new DomainError(
+      "復元先には非終端ステータス（確認待ち / 確認済み）を指定してください",
+      "VALIDATION",
+    );
+  }
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id, deletedAt: null },
+    include: {
+      space: {
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
+      },
+      customer: { select: CUSTOMER_SELECT },
+    },
+  });
+
+  if (!reservation) {
+    throw new DomainError("予約が見つかりません", "NOT_FOUND");
+  }
+
+  if (!TERMINAL_STATUS_SET.has(reservation.status)) {
+    throw new DomainError(
+      "終端ステータス（完了 / キャンセル / 無断キャンセル）の予約のみ復元できます",
+      "VALIDATION",
+    );
+  }
+
+  if (targetStatus === ReservationStatus.CONFIRMED) {
+    const overlap = await checkReservationOverlap({
+      spaceId: reservation.spaceId,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      excludeReservationId: id,
+    });
+    if (overlap.hasOverlap) {
+      throw new DomainError(
+        "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
+        "VALIDATION",
+      );
+    }
+  }
+
+  const previousStatus = reservation.status;
+  const wasCancelled = previousStatus === ReservationStatus.CANCELLED;
+
+  const updated = await prisma.reservation.update({
+    where: { id, deletedAt: null },
+    data: {
+      status: targetStatus,
+      icsSequence: { increment: 1 },
+      ...(wasCancelled
+        ? {
+            cancelledAt: null,
+            cancelledByType: null,
+            cancellationReason: null,
+          }
+        : {}),
+    },
+    select: { icsSequence: true },
+  });
+
+  return {
+    previousStatus,
+    targetStatus,
     googleCalendarEventId: reservation.googleCalendarEventId,
     customerId: reservation.customerId,
     couponId: reservation.couponId,

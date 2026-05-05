@@ -193,7 +193,7 @@ export const PARALLAX = {
 | `@/public/components/animations/parallax-image.tsx`      | scrub パララックス画像（パターン A-1 の実装例）                              |
 | `@/public/components/animations/magnetic-button.tsx`     | マウス追従マグネットボタン（パターン C の実装例）                            |
 
-> **詳細リファレンス**: `docs/reference/claude-rules/gsap-reference.md`
+> **詳細リファレンス**: `docs/reference/gsap.md`
 
 ## Gotchas
 

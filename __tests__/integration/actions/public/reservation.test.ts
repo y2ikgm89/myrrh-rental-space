@@ -170,7 +170,6 @@ const VALID_INPUT = {
   email: "yamada@example.com",
   phoneNumber: "090-1234-5678",
   notes: "",
-  agreedTermsIds: [],
   turnstileToken: "test-token-valid",
 };
 
@@ -422,23 +421,6 @@ describe("submitReservation", () => {
       expect(errorResult.fieldErrors).toHaveProperty("email");
     });
 
-    test("agreedTermsIds に不正な UUID を含むとき fieldErrors を含むエラーを返す", async () => {
-      const { submitReservation } =
-        await import("@/app/(public)/_shared/actions/reservation");
-
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        agreedTermsIds: ["not-a-uuid"],
-      });
-
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("agreedTermsIds");
-    });
-
     test("バリデーション失敗時は createPublicReservationCommand が呼ばれない", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
@@ -553,7 +535,6 @@ describe("submitReservation", () => {
         lastName: "山田",
         firstName: "太郎",
         email: "yamada@example.com",
-        agreedTermsIds: [],
       });
 
       expect(result.success).toBe(true);
@@ -573,7 +554,6 @@ describe("submitReservation", () => {
         lastName: "田中",
         firstName: "花子",
         email: "tanaka@example.com",
-        agreedTermsIds: [],
       });
 
       expect(result.success).toBe(true);

@@ -3,7 +3,6 @@ import "server-only";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { InquiryStatus, ReservationStatus } from "@generated/prisma/enums";
-import { toDateString } from "@/shared/lib/serialize";
 
 export type DashboardStats = {
   reservations: {
@@ -46,14 +45,42 @@ export type RecentInquiry = {
 };
 
 export type ChartDataPoint = {
+  /** ISO 8601 date string "YYYY-MM-DD"（JST 基準） */
   date: string;
   reservations: number;
   revenue: number;
 };
 
+export type ReservationChartSummary = {
+  totalReservations: number;
+  totalRevenue: number;
+  averageReservationsPerDay: number;
+  averageRevenuePerDay: number;
+  peakReservations: number;
+  peakRevenue: number;
+};
+
+export type ReservationChartResult = {
+  data: ChartDataPoint[];
+  summary: ReservationChartSummary;
+  windowDays: number;
+};
+
 const DEFAULT_LIST_LIMIT = 5;
 const MAX_LIST_LIMIT = 50;
 const CHART_WINDOW_DAYS = 30;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const JST_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function toJstDateString(date: Date): string {
+  return JST_DATE_FORMATTER.format(date);
+}
 
 function calcChangePercent(current: number, previous: number): number {
   if (previous > 0) {
@@ -279,14 +306,15 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
   return reservations.map(mapRecentReservation);
 }
 
-export async function getReservationChartData(): Promise<ChartDataPoint[]> {
-  const now = new Date();
-  const oldestIncludedDate = new Date(
-    now.getTime() - (CHART_WINDOW_DAYS - 1) * 24 * 60 * 60 * 1000,
+export async function getReservationChartData(): Promise<ReservationChartResult> {
+  const todayJstStr = toJstDateString(new Date());
+  const todayJstMidnightUtc = new Date(`${todayJstStr}T00:00:00+09:00`);
+  const oldestJstMidnightUtc = new Date(
+    todayJstMidnightUtc.getTime() - (CHART_WINDOW_DAYS - 1) * ONE_DAY_MS,
   );
 
   type DailyStats = {
-    date: Date;
+    date: string;
     reservations: bigint;
     revenue: number | null;
   };
@@ -302,38 +330,60 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
 
   const dailyStats = await prisma.$queryRaw<DailyStats[]>`
     SELECT
-      DATE("createdAt") as date,
+      TO_CHAR("createdAt" AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD') as date,
       COUNT(*)::bigint as reservations,
       SUM(CASE WHEN status IN (${revenueStatuses}) THEN "totalPrice"::numeric ELSE 0 END) as revenue
     FROM "reservations"
-    WHERE "createdAt" >= ${oldestIncludedDate}
+    WHERE "createdAt" >= ${oldestJstMidnightUtc}
       AND status NOT IN (${excludedStatuses})
-    GROUP BY DATE("createdAt")
+    GROUP BY TO_CHAR("createdAt" AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD')
     ORDER BY date ASC
   `;
 
   const dataMap = new Map<string, { reservations: number; revenue: number }>();
   for (let index = CHART_WINDOW_DAYS - 1; index >= 0; index--) {
-    const date = new Date(now.getTime() - index * 24 * 60 * 60 * 1000);
-    dataMap.set(toDateString(date), { reservations: 0, revenue: 0 });
+    const dateUtc = new Date(
+      todayJstMidnightUtc.getTime() - index * ONE_DAY_MS,
+    );
+    dataMap.set(toJstDateString(dateUtc), { reservations: 0, revenue: 0 });
   }
 
   for (const stat of dailyStats) {
-    const dateKey = toDateString(stat.date);
-    const existing = dataMap.get(dateKey);
-    if (!existing) {
-      continue;
-    }
-
-    dataMap.set(dateKey, {
+    if (!dataMap.has(stat.date)) continue;
+    dataMap.set(stat.date, {
       reservations: Number(stat.reservations),
       revenue: Number(stat.revenue ?? 0),
     });
   }
 
-  return Array.from(dataMap.entries()).map(([date, data]) => ({
-    date: date.slice(5),
-    reservations: data.reservations,
-    revenue: data.revenue,
+  const data: ChartDataPoint[] = Array.from(dataMap, ([date, value]) => ({
+    date,
+    reservations: value.reservations,
+    revenue: value.revenue,
   }));
+
+  let totalReservations = 0;
+  let totalRevenue = 0;
+  let peakReservations = 0;
+  let peakRevenue = 0;
+  for (const point of data) {
+    totalReservations += point.reservations;
+    totalRevenue += point.revenue;
+    if (point.reservations > peakReservations)
+      peakReservations = point.reservations;
+    if (point.revenue > peakRevenue) peakRevenue = point.revenue;
+  }
+
+  return {
+    data,
+    summary: {
+      totalReservations,
+      totalRevenue,
+      averageReservationsPerDay: totalReservations / CHART_WINDOW_DAYS,
+      averageRevenuePerDay: totalRevenue / CHART_WINDOW_DAYS,
+      peakReservations,
+      peakRevenue,
+    },
+    windowDays: CHART_WINDOW_DAYS,
+  };
 }

@@ -52,7 +52,7 @@ function toLocationData(data: LocationFormData) {
     city: data.city || null,
     streetAddress: data.streetAddress || null,
     buildingName: data.buildingName || null,
-    access: data.access || null,
+    accessLines: data.accessLines.map((line) => line.value),
     parkingInfo: data.parkingInfo || null,
     amenities: data.amenities as Prisma.InputJsonValue,
     imageUrl: data.imageUrl,

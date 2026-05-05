@@ -39,6 +39,5 @@ export type PageForEdit = {
   ogpTitle: string | null;
   ogpDescription: string | null;
   ogpImageUrl: string | null;
-  pageHero: unknown;
   sections: PageSectionData[];
 };

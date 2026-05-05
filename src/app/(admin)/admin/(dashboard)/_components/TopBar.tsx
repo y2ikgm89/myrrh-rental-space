@@ -19,14 +19,12 @@ import type { ReactNode } from "react";
 type TopBarProps = {
   branding: ReactNode;
   notifications: ReactNode;
-  userBadge: ReactNode;
   searchTrigger?: ReactNode;
 };
 
 export function TopBar({
   branding,
   notifications,
-  userBadge,
   searchTrigger,
 }: TopBarProps) {
   const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
@@ -65,7 +63,6 @@ export function TopBar({
 
       {/* 右: アクション */}
       <div className="flex items-center gap-4">
-        {userBadge}
         {notifications}
         <Link
           href="/"

@@ -45,13 +45,14 @@ export function EmbedSection({
   config,
   style,
 }: EmbedSectionProps): ReactElement {
-  const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg;
+  const maxWidthClass =
+    MAX_WIDTH_MAP[config.layout.containerWidth] ?? MAX_WIDTH_MAP.lg;
   const aspectClass =
     ASPECT_RATIO_MAP[config.aspectRatio] ?? ASPECT_RATIO_MAP["16:9"];
   const radiusClass = BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)];
 
   return (
-    <SectionWrapper style={style} skipContainer>
+    <SectionWrapper style={style} layout={config.layout} skipContainer>
       <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
         {config.title && (
           <div className="mb-8 text-center md:mb-12">

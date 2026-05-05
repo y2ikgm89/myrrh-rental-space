@@ -110,7 +110,7 @@ export function TestimonialSection({
   if (config.items.length === 0) return <></>;
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (
@@ -127,13 +127,16 @@ export function TestimonialSection({
         </div>
       </div>
 
-      <div ref={gridRef} className={LAYOUT_CLASS[config.layout]}>
+      <div ref={gridRef} className={LAYOUT_CLASS[config.displayLayout]}>
         <div
-          className={config.layout === "grid" ? GRID_INNER_CLASS : undefined}
+          className={
+            config.displayLayout === "grid" ? GRID_INNER_CLASS : undefined
+          }
         >
           {config.items.map((item, index) => {
             const variant = config.variant;
-            const isFeatured = index === 0 && config.layout !== "carousel";
+            const isFeatured =
+              index === 0 && config.displayLayout !== "carousel";
 
             // variant-specific card styles
             const cardClasses = isFeatured
@@ -151,9 +154,9 @@ export function TestimonialSection({
                 data-testimonial-card=""
                 className={cn(
                   cardClasses,
-                  CARD_CLASS[config.layout],
+                  CARD_CLASS[config.displayLayout],
                   isFeatured &&
-                    config.layout === "grid" &&
+                    config.displayLayout === "grid" &&
                     "@3xl:col-span-full",
                 )}
               >
@@ -217,10 +220,10 @@ export function TestimonialSection({
                           "border-t border-border/50 pt-4",
                   )}
                 >
-                  {item.authorImageUrl && (
+                  {item.authorImage.url && (
                     <Image
-                      src={item.authorImageUrl}
-                      alt={item.authorName}
+                      src={item.authorImage.url}
+                      alt={item.authorImage.alt || item.authorName}
                       width={48}
                       height={48}
                       className="h-12 w-12 rounded-full object-cover"

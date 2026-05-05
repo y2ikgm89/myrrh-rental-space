@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { FocusEvent, ReactElement } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks";
@@ -16,6 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   Textarea,
   SubmitButton,
 } from "@/admin/components/ui";
@@ -25,6 +27,7 @@ import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { CUSTOMER_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
+import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
 
 type CustomerEditFormProps = {
   customer: CustomerWithReservations;
@@ -34,6 +37,7 @@ export function CustomerEditForm({
   customer,
 }: CustomerEditFormProps): ReactElement {
   const router = useRouter();
+  const [emailConflict, setEmailConflict] = useState(false);
 
   const { form, isPending, onSubmit } = useFormAction(
     customerFormSchema,
@@ -50,8 +54,14 @@ export function CustomerEditForm({
         companyName: customer.companyName ?? "",
         email: customer.email,
         phoneNumber: customer.phoneNumber ?? "",
-        address: customer.address ?? "",
+        postalCode: customer.postalCode ?? "",
+        prefecture: customer.prefecture ?? "",
+        city: customer.city ?? "",
+        streetAddress: customer.streetAddress ?? "",
+        building: customer.building ?? "",
         notes: customer.notes ?? "",
+        marketingOptIn: customer.marketingOptIn,
+        phoneContactOptIn: customer.phoneContactOptIn,
       },
     },
   );
@@ -66,6 +76,60 @@ export function CustomerEditForm({
     control: form.control,
     name: "customerType",
   });
+
+  const watchedEmail = useWatch({
+    control: form.control,
+    name: "email",
+  });
+
+  const watchedPrefecture = useWatch({
+    control: form.control,
+    name: "prefecture",
+  });
+
+  const watchedMarketingOptIn = useWatch({
+    control: form.control,
+    name: "marketingOptIn",
+  });
+
+  const watchedPhoneContactOptIn = useWatch({
+    control: form.control,
+    name: "phoneContactOptIn",
+  });
+
+  function handlePrefectureChange(value: string) {
+    if (!isPrefecture(value)) return;
+    setValue("prefecture", value, { shouldDirty: true });
+  }
+
+  const isEmailChanged = watchedEmail !== customer.email;
+  const showSocialLinkWarning =
+    isEmailChanged && customer.userId !== null && watchedEmail !== "";
+
+  const emailRegister = register("email");
+
+  async function handleEmailBlur(event: FocusEvent<HTMLInputElement>) {
+    await emailRegister.onBlur(event);
+    const email = event.target.value;
+    if (!email || email === customer.email) {
+      setEmailConflict(false);
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/admin/customers/check-email?email=${encodeURIComponent(email)}&excludeId=${customer.id}`,
+      );
+      if (!response.ok) {
+        setEmailConflict(false);
+        return;
+      }
+      const data = (await response.json()) as { available?: boolean };
+      setEmailConflict(data.available === false);
+    } catch {
+      // 重複チェック失敗は silent — 送信時の UNIQUE 制約で最終検証
+      setEmailConflict(false);
+    }
+  }
 
   function handleCustomerTypeChange(value: string) {
     if (!isValidCustomerType(value)) return;
@@ -233,14 +297,34 @@ export function CustomerEditForm({
             <Input
               id="email"
               type="email"
-              {...register("email")}
+              autoComplete="email"
+              {...emailRegister}
+              onBlur={handleEmailBlur}
               placeholder="example@example.com"
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? "email-error" : undefined}
+              aria-invalid={!!errors.email || emailConflict}
+              aria-describedby={
+                errors.email
+                  ? "email-error"
+                  : emailConflict
+                    ? "email-conflict"
+                    : showSocialLinkWarning
+                      ? "email-social-warning"
+                      : undefined
+              }
             />
             {errors.email && (
               <p id="email-error" className="text-xs text-destructive">
                 {errors.email.message}
+              </p>
+            )}
+            {!errors.email && emailConflict && (
+              <p id="email-conflict" className="text-xs text-destructive">
+                このメールアドレスは既に他の顧客で使用されています
+              </p>
+            )}
+            {!errors.email && !emailConflict && showSocialLinkWarning && (
+              <p id="email-social-warning" className="text-xs text-warning">
+                ソーシャル連携済みの顧客のメールアドレスを変更すると、連携が解除される可能性があります。
               </p>
             )}
           </div>
@@ -266,21 +350,152 @@ export function CustomerEditForm({
           </div>
 
           {/* 住所 */}
-          <div className="space-y-2">
-            <Label htmlFor="address">住所</Label>
-            <Input
-              id="address"
-              {...register("address")}
-              placeholder="東京都渋谷区..."
-              aria-invalid={!!errors.address}
-              aria-describedby={errors.address ? "address-error" : undefined}
-            />
-            {errors.address && (
-              <p id="address-error" className="text-xs text-destructive">
-                {errors.address.message}
-              </p>
-            )}
-          </div>
+          <fieldset className="space-y-4 rounded-lg border p-4">
+            <legend className="px-1 text-sm font-medium">住所</legend>
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">郵便番号</Label>
+              <Input
+                id="postalCode"
+                {...register("postalCode")}
+                placeholder="123-4567"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                maxLength={8}
+                className="max-w-[10rem]"
+                aria-invalid={!!errors.postalCode}
+                aria-describedby={
+                  errors.postalCode ? "postalCode-error" : undefined
+                }
+              />
+              {errors.postalCode && (
+                <p id="postalCode-error" className="text-xs text-destructive">
+                  {errors.postalCode.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
+              <div className="space-y-2">
+                <Label htmlFor="prefecture">都道府県</Label>
+                <Select
+                  {...(watchedPrefecture ? { value: watchedPrefecture } : {})}
+                  onValueChange={handlePrefectureChange}
+                >
+                  <SelectTrigger id="prefecture">
+                    <SelectValue placeholder="選択してください" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PREFECTURES.map((prefecture) => (
+                      <SelectItem key={prefecture} value={prefecture}>
+                        {prefecture}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.prefecture && (
+                  <p className="text-xs text-destructive">
+                    {errors.prefecture.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">市区町村</Label>
+                <Input
+                  id="city"
+                  {...register("city")}
+                  placeholder="渋谷区"
+                  autoComplete="address-level2"
+                  aria-invalid={!!errors.city}
+                  aria-describedby={errors.city ? "city-error" : undefined}
+                />
+                {errors.city && (
+                  <p id="city-error" className="text-xs text-destructive">
+                    {errors.city.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="streetAddress">町名・番地</Label>
+              <Input
+                id="streetAddress"
+                {...register("streetAddress")}
+                placeholder="神宮前1-1-1"
+                autoComplete="address-line1"
+                aria-invalid={!!errors.streetAddress}
+                aria-describedby={
+                  errors.streetAddress ? "streetAddress-error" : undefined
+                }
+              />
+              {errors.streetAddress && (
+                <p
+                  id="streetAddress-error"
+                  className="text-xs text-destructive"
+                >
+                  {errors.streetAddress.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="building">建物名・部屋番号</Label>
+              <Input
+                id="building"
+                {...register("building")}
+                placeholder="サンプルビル 2F"
+                autoComplete="address-line2"
+                aria-invalid={!!errors.building}
+                aria-describedby={
+                  errors.building ? "building-error" : undefined
+                }
+              />
+              {errors.building && (
+                <p id="building-error" className="text-xs text-destructive">
+                  {errors.building.message}
+                </p>
+              )}
+            </div>
+          </fieldset>
+
+          {/* 連絡可否 */}
+          <fieldset className="space-y-3 rounded-lg border p-4">
+            <legend className="px-1 text-sm font-medium">連絡可否</legend>
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="marketingOptIn" className="cursor-pointer">
+                  メルマガ・キャンペーン受信
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  プロモーション・お知らせメールの送信を許可
+                </p>
+              </div>
+              <Switch
+                id="marketingOptIn"
+                checked={watchedMarketingOptIn ?? false}
+                onCheckedChange={(checked) =>
+                  setValue("marketingOptIn", checked, { shouldDirty: true })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="phoneContactOptIn" className="cursor-pointer">
+                  電話連絡
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  予約確認・トラブル対応等の電話連絡を許可
+                </p>
+              </div>
+              <Switch
+                id="phoneContactOptIn"
+                checked={watchedPhoneContactOptIn ?? true}
+                onCheckedChange={(checked) =>
+                  setValue("phoneContactOptIn", checked, { shouldDirty: true })
+                }
+              />
+            </div>
+          </fieldset>
 
           {/* メモ */}
           <div className="space-y-2">
@@ -313,7 +528,7 @@ export function CustomerEditForm({
               isPending={isPending}
               label="顧客情報を更新"
               pendingLabel="更新中..."
-              disabled={!form.formState.isDirty}
+              disabled={!form.formState.isDirty || emailConflict}
             />
           </div>
         </div>

@@ -7,31 +7,17 @@ import { CouponFilters } from "./_components/CouponFilters";
 import { CouponTable } from "./_components/CouponTable";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { isValidCouponType } from "@/shared/lib/validations/enums/guards";
-import { loadAdminCouponSearchParams } from "@/shared/lib/nuqs";
-import { omitUndefined } from "@/shared/lib/serialize";
+import {
+  COUPON_STATUS_FILTER_ALL,
+  COUPON_TYPE_FILTER_ALL,
+  loadAdminCouponSearchParams,
+} from "@/shared/lib/nuqs";
+import { deriveCouponStatusesNow } from "./_lib/coupon-status";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "クーポン管理 | Myrrh Rental Space",
 };
-
-// クーポンステータスフィルターの型定義
-const COUPON_STATUS_FILTERS = [
-  "active",
-  "inactive",
-  "expired",
-  "limitReached",
-  "notStarted",
-] as const;
-type CouponStatusFilter = (typeof COUPON_STATUS_FILTERS)[number];
-
-const COUPON_STATUS_FILTERS_SET = new Set<string>(COUPON_STATUS_FILTERS);
-function isValidCouponStatusFilter(
-  value: unknown,
-): value is CouponStatusFilter {
-  return typeof value === "string" && COUPON_STATUS_FILTERS_SET.has(value);
-}
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -42,19 +28,30 @@ type PageProps = {
 async function CouponList({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const params = await loadAdminCouponSearchParams(searchParams);
-  const status = isValidCouponStatusFilter(params.status)
-    ? params.status
-    : undefined;
-  const type = isValidCouponType(params.type) ? params.type : undefined;
+
+  // sentinel `"ALL"` は filter 未指定として扱う。`parseAsStringLiteral` が
+  // validation 責務を担うため page 側でローカル narrowing helper は不要。
+  const status =
+    params.status === COUPON_STATUS_FILTER_ALL ? undefined : params.status;
+  const type = params.type === COUPON_TYPE_FILTER_ALL ? undefined : params.type;
 
   const result = await getCoupons(
-    omitUndefined({ status, type, search: params.search || undefined }),
+    {
+      ...(status && { status }),
+      ...(type && { type }),
+      ...(params.search && { search: params.search }),
+    },
     { page: params.page, limit: params.perPage },
   );
 
+  // Server Component 側で派生ステータスを pre-compute し Client Badge に
+  // 渡す（render 中の `new Date()` を helper に閉じ込めて React Compiler
+  // `purity` ルールに準拠する公式パターン）。
+  const couponsWithStatus = deriveCouponStatusesNow(result.coupons);
+
   return (
     <>
-      <CouponTable coupons={result.coupons} />
+      <CouponTable coupons={couponsWithStatus} />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}

@@ -1,10 +1,10 @@
 import type { ReactElement } from "react";
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
-import type { PageHero } from "@/shared/lib/sections/page-hero/schema";
+import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 
 export type CompactHeroProps = Omit<
-  Extract<PageHero, { variant: "compact" }>,
+  Extract<PageHeroConfig, { variant: "compact" }>,
   "variant"
 >;
 

@@ -22,19 +22,13 @@ import {
   SelectValue,
   TabsContent,
 } from "@/admin/components/ui";
-import { TermsType } from "@/shared/lib/validations/enums/prisma-types";
 import type { SpaceEditFormData } from "../schema";
-import {
-  SELECT_NONE_VALUE,
-  type SpaceEditCategoryOption,
-  type SpaceEditTermsOption,
-} from "../types";
+import { SELECT_NONE_VALUE, type SpaceEditCategoryOption } from "../types";
 
 type SpaceEditDetailsTabPanelProps = {
   control: Control<SpaceEditFormData>;
   setValue: UseFormSetValue<SpaceEditFormData>;
   isPending: boolean;
-  availableTerms: SpaceEditTermsOption[];
   availableCategories: SpaceEditCategoryOption[];
   newFacility: string;
   onNewFacilityChange: (value: string) => void;
@@ -47,7 +41,6 @@ export function SpaceEditDetailsTabPanel({
   control,
   setValue,
   isPending,
-  availableTerms,
   availableCategories,
   newFacility,
   onNewFacilityChange,
@@ -56,11 +49,6 @@ export function SpaceEditDetailsTabPanel({
   onRemoveFacility,
 }: SpaceEditDetailsTabPanelProps) {
   const categoryId = useWatch({ control, name: "categoryId" });
-  const termsId = useWatch({ control, name: "termsId" });
-
-  const rentalTerms = availableTerms.filter(
-    (term) => term.type === TermsType.RENTAL_TERMS,
-  );
 
   return (
     <TabsContent
@@ -156,45 +144,6 @@ export function SpaceEditDetailsTabPanel({
             )}
           </CardContent>
         </Card>
-
-        {rentalTerms.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>利用規約</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Label htmlFor="termsId">施設利用規約</Label>
-              <Select
-                value={termsId ?? SELECT_NONE_VALUE}
-                onValueChange={(value) =>
-                  setValue(
-                    "termsId",
-                    value === SELECT_NONE_VALUE ? undefined : value,
-                    { shouldDirty: true },
-                  )
-                }
-                disabled={isPending}
-              >
-                <SelectTrigger id="termsId">
-                  <SelectValue placeholder="規約を選択（任意）" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SELECT_NONE_VALUE}>
-                    なし（規約同意不要）
-                  </SelectItem>
-                  {rentalTerms.map((term) => (
-                    <SelectItem key={term.id} value={term.id}>
-                      {term.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                規約を設定すると、予約時に顧客が同意する必要があります
-              </p>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </TabsContent>
   );

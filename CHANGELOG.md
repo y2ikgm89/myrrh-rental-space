@@ -88,5 +88,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
 - [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 - [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
-- [`docs/architecture/decisions/`](./docs/architecture/decisions/) — ADR インデックス
+- [`docs/`](./docs/) — Diátaxis 構成のドキュメント（`explanation/` / `how-to/` / `reference/`）
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — コミット規約詳細

@@ -16,6 +16,7 @@ import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Container } from "@/public/components/design-system/container";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
 import { ContactForm } from "./_components/contact-form";
 import { BusinessInfo } from "./_components/business-info";
 
@@ -38,9 +39,10 @@ export default async function ContactPage({
       ? params["subject"].slice(0, 200)
       : undefined;
 
-  const [sections, turnstileSiteKey] = await Promise.all([
+  const [sections, turnstileSiteKey, requiredTerms] = await Promise.all([
     getPageSectionsWithFallback("contact"),
     getTurnstileSiteKey(),
+    getRequiredTermsAtInquiry(),
   ]);
 
   const heroSection = sections.find(
@@ -65,6 +67,11 @@ export default async function ContactPage({
               key={defaultSubject ?? ""}
               turnstileSiteKey={turnstileSiteKey}
               defaultSubject={defaultSubject}
+              requiredTerms={requiredTerms.map((t) => ({
+                id: t.id,
+                slug: t.slug,
+                title: t.title,
+              }))}
             />
             <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
               <ScrollReveal delay={0.2}>

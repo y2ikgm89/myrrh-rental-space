@@ -72,12 +72,12 @@ export type ContactInfoInput = {
   phoneNumber: string | null;
   faxNumber: string | null;
   email: string | null;
-  address: string | null;
   postalCode: string | null;
   prefecture: string | null;
   city: string | null;
   streetAddress: string | null;
   buildingName: string | null;
+  // 交通案内・駐車場案内は Location 単位で管理（Settings からは廃止済）
 };
 
 export type BusinessHoursSettingsInput = {

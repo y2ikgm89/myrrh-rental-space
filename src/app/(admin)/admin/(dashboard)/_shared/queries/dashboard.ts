@@ -10,6 +10,8 @@ import {
   type DashboardStats,
   type RecentInquiry,
   type RecentReservation,
+  type ReservationChartResult,
+  type ReservationChartSummary,
 } from "@/shared/domain/dashboard/queries";
 import { requireAdminDashboardAccess } from "./_helpers";
 
@@ -18,6 +20,8 @@ export type {
   DashboardStats,
   RecentInquiry,
   RecentReservation,
+  ReservationChartResult,
+  ReservationChartSummary,
 };
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -42,7 +46,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
   return getTodayReservationsQuery();
 }
 
-export async function getReservationChartData(): Promise<ChartDataPoint[]> {
+export async function getReservationChartData(): Promise<ReservationChartResult> {
   await requireAdminDashboardAccess();
   return getReservationChartDataQuery();
 }

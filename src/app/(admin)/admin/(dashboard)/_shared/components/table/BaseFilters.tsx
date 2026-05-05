@@ -92,6 +92,11 @@ export function BaseFilters({
       <div className="relative flex-1">
         <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          // `defaultValue` は初回マウント時のみ反映されるため、URL から
+          // search を消した（クリアボタン押下 → `setParams({ search: null })`）
+          // 後も Input 表示が古い文字列のまま残る silent bug を防ぐ。
+          // `key={params.search}` で URL 同期時に Input を remount する。
+          key={params.search}
           type="search"
           placeholder={searchPlaceholder}
           defaultValue={params.search}

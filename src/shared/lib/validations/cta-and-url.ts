@@ -4,7 +4,9 @@
  * section-design.ts から切り出した共通ユーティリティ。
  * typed section config validation から利用される。
  *
- * Phase B.C1 で新規作成（旧 section-design.ts の対応シンボルと同一実装）。
+ * Phase 2A (2026-05-02): legacy ctaPrimary/ctaSecondary 関連 helper
+ * (`createCtaSchemas` / `transformLegacyCtaToButtons` / `transformCtaFields`)
+ * を完全削除。buttons[] (`createButtonsArraySchema`) が SSoT。
  */
 
 import { z } from "zod";
@@ -63,37 +65,6 @@ export function createOptionalInternalAppRouteSchema(maxLength = 500) {
     .transform((url) => (url === "" ? "" : toAppRoute(url)));
 }
 
-/**
- * CTAボタン設定（レガシー: ctaPrimary/ctaSecondary 用）
- */
-export function createCtaSchemas<
-  TRequiredUrl extends string,
-  TOptionalUrl extends string,
->(
-  urlSchema: z.ZodType<TRequiredUrl>,
-  optionalUrlSchema: z.ZodType<TOptionalUrl>,
-) {
-  const ctaButtonSchema = z.object({
-    text: z
-      .string()
-      .min(1, { error: "ボタンテキストは必須です" })
-      .max(50, { error: "ボタンテキストは50文字以内です" }),
-    url: urlSchema,
-  });
-
-  const optionalCtaButtonSchema = z
-    .object({
-      text: z
-        .string()
-        .max(50, { error: "ボタンテキストは50文字以内です" })
-        .optional(),
-      url: optionalUrlSchema.optional(),
-    })
-    .optional();
-
-  return { ctaButtonSchema, optionalCtaButtonSchema };
-}
-
 // =============================================================================
 // HEXカラーバリデーション
 // =============================================================================
@@ -121,7 +92,7 @@ export function isValidHexColor(value: string | null | undefined): boolean {
 }
 
 // =============================================================================
-// CTAボタン配列スキーマ（新API）
+// CTAボタン配列スキーマ（buttons[] SSoT）
 // =============================================================================
 
 /** ボタンバリアント */
@@ -138,7 +109,12 @@ export const ctaButtonSizes = ["sm", "md", "lg"] as const;
 export type CTAButtonSize = (typeof ctaButtonSizes)[number];
 
 /**
- * CTAボタン配列アイテムスキーマファクトリ
+ * CTAボタン配列アイテムスキーマファクトリ。
+ *
+ * Phase 2A 以降、フィールド shape は `definitions/_shared/buttons.ts` の
+ * `createButtonsArraySchema` と一致させる必要がある。section.ts (`heroConfigSchema` /
+ * `ctaConfigSchema` の旧 schema 経由) と新 definitions レジストリの両方が同じ
+ * runtime shape を使う。
  */
 export function createCtaButtonItemSchema<TUrl extends string>(
   urlSchema: z.ZodType<TUrl>,
@@ -151,6 +127,7 @@ export function createCtaButtonItemSchema<TUrl extends string>(
     url: urlSchema,
     variant: z.enum(ctaButtonVariants).default("primary"),
     size: z.enum(ctaButtonSizes).default("lg"),
+    iconName: z.string().max(50).default(""),
     openInNewTab: z.boolean().default(false),
     backgroundColor: optionalHexColorSchema,
     textColor: optionalHexColorSchema,
@@ -165,63 +142,8 @@ export type CTAButtonItem = {
   url: AppRoute;
   variant: CTAButtonVariant;
   size: CTAButtonSize;
+  iconName: string;
   openInNewTab: boolean;
   backgroundColor?: string | undefined;
   textColor?: string | undefined;
 };
-
-/**
- * レガシーCTAフィールド（ctaPrimary/ctaSecondary）→ buttons[] に変換
- */
-export function transformLegacyCtaToButtons(
-  ctaPrimary?: { text: string; url: AppRoute } | undefined,
-  ctaSecondary?:
-    | { text?: string | undefined; url?: AppRoute | "" | undefined }
-    | undefined,
-): CTAButtonItem[] {
-  const buttons: CTAButtonItem[] = [];
-  if (ctaPrimary?.text && ctaPrimary?.url) {
-    buttons.push({
-      text: ctaPrimary.text,
-      url: ctaPrimary.url,
-      variant: "primary",
-      size: "lg",
-      openInNewTab: false,
-    });
-  }
-  if (ctaSecondary?.text && ctaSecondary?.url) {
-    buttons.push({
-      text: ctaSecondary.text,
-      url: ctaSecondary.url,
-      variant: "secondary",
-      size: "lg",
-      openInNewTab: false,
-    });
-  }
-  return buttons;
-}
-
-/**
- * レガシーCTA → buttons[] 統一変換
- *
- * heroConfigSchema / ctaConfigSchema の .transform() で共通利用。
- * buttons[] が存在すればそのまま使用し、なければレガシーフィールドから変換する。
- */
-export function transformCtaFields<
-  T extends {
-    ctaPrimary?: { text: string; url: AppRoute } | undefined;
-    ctaSecondary?:
-      | { text?: string | undefined; url?: AppRoute | "" | undefined }
-      | undefined;
-    buttons?: CTAButtonItem[] | undefined;
-  },
->(input: T) {
-  const { ctaPrimary, ctaSecondary, buttons, ...rest } = input;
-  return {
-    ...rest,
-    buttons:
-      buttons && buttons.length > 0
-        ? buttons
-        : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
-  };
-}

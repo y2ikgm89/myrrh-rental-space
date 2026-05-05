@@ -49,13 +49,22 @@ import { homepageFeaturesConfigSchema } from "./definitions/homepage-features/sc
 import { homepageFeaturesMetadata } from "./definitions/homepage-features/metadata";
 import { homepageCtaConfigSchema } from "./definitions/homepage-cta/schema";
 import { homepageCtaMetadata } from "./definitions/homepage-cta/metadata";
+import {
+  pageHeroConfigSchema,
+  pageHeroMetadata,
+} from "./definitions/page-hero";
 
 // ─────────────────────────────────────────────────────────────
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 21 セクション定義 */
+/** 全 23 セクション定義（page-hero 含む） */
 const definitions: Record<string, SectionDefinition> = {
+  "page-hero": {
+    type: "page-hero",
+    configSchema: pageHeroConfigSchema,
+    metadata: pageHeroMetadata,
+  },
   hero: {
     type: "hero",
     configSchema: heroConfigSchema,

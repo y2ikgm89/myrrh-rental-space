@@ -33,6 +33,12 @@ export const publicInquirySchema = z
       .max(5000, {
         error: "お問い合わせ内容は5000文字以内で入力してください",
       }),
+    agreedTermsIds: z
+      .array(z.string().uuid({ error: "規約IDが不正です" }))
+      .default([])
+      .refine((ids) => new Set(ids).size === ids.length, {
+        error: "同じ規約に複数回同意することはできません",
+      }),
     turnstileToken: z.string().optional(),
   })
   .refine(requireCompanyNameForCorporate, COMPANY_NAME_REFINE_ERROR);

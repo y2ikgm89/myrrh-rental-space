@@ -5,6 +5,7 @@
  * 各カテゴリをクリックすると詳細ページへ遷移
  */
 
+import { Suspense } from "react";
 import {
   IconWorld,
   IconBuilding,
@@ -16,6 +17,7 @@ import {
 } from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
+import { IntegrationHealthAlert } from "../_components/IntegrationHealthAlert";
 const SETTINGS_CATEGORIES: SettingsCardProps[] = [
   {
     title: "サイト設定",
@@ -78,6 +80,11 @@ export default async function SettingsPage() {
         </h1>
         <p className="text-muted-foreground">サイト全体の設定を管理します</p>
       </div>
+
+      {/* 外部連携ヘルスチェック: 未設定があれば alert 表示（dismiss 可能） */}
+      <Suspense fallback={null}>
+        <IntegrationHealthAlert />
+      </Suspense>
 
       {/* カテゴリカード一覧 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

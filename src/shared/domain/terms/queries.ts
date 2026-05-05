@@ -1,97 +1,227 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
-import { TermsStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
-import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { toPlainObject } from "@/shared/lib/serialize";
+import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import { slugParamSchema } from "@/shared/lib/validations/params";
 
-const publicTermsSelect = {
+/**
+ * 公開ページ向け規約クエリ
+ * 軸: deletedAt: null + isPublished: true
+ */
+
+const PUBLIC_LIST_SELECT = {
   id: true,
-  title: true,
-  slug: true,
   type: true,
-  versions: {
-    where: {
-      isCurrentVersion: true,
-      status: TermsStatus.PUBLISHED,
-    },
-    take: 1,
-    select: {
-      id: true,
-      version: true,
-      contentHtml: true,
-      contentJson: true,
-      publishedAt: true,
-    },
-  },
+  slug: true,
+  title: true,
+  publishedAt: true,
+  showInFooter: true,
+  footerOrder: true,
+  updatedAt: true,
 } as const;
 
-export type PublicTermsData = {
-  id: string;
-  title: string;
-  slug: string;
-  type: string;
-  currentVersion: {
-    id: string;
-    version: number;
-    contentHtml: string;
-    /** Lexical EditorState JSON — extractHeadings で目次抽出に使用 */
-    contentJson: unknown;
-    publishedAt: Date | null;
-  } | null;
-};
+const PUBLIC_DETAIL_SELECT = {
+  id: true,
+  type: true,
+  slug: true,
+  title: true,
+  contentHtml: true,
+  publishedAt: true,
+  updatedAt: true,
+} as const;
 
-export async function getPublicTermsBySlug(
-  slug: string,
-): Promise<Serialized<PublicTermsData> | null> {
+export type PublicTermsListItem = Serialized<{
+  id: string;
+  type: string;
+  slug: string;
+  title: string;
+  publishedAt: Date | null;
+  showInFooter: boolean;
+  footerOrder: number;
+  updatedAt: Date;
+}>;
+
+export type PublicTermsDetail = Serialized<{
+  id: string;
+  type: string;
+  slug: string;
+  title: string;
+  contentHtml: string;
+  publishedAt: Date | null;
+  updatedAt: Date;
+}>;
+
+/**
+ * 公開: 全公開規約を一覧取得（フッター含む）
+ */
+export async function getPublishedTermsList(): Promise<PublicTermsListItem[]> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.TERMS);
 
-  const validated = slugParamSchema.safeParse(slug);
-  if (!validated.success) {
-    return null;
-  }
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.termsDocument.findMany({
+        where: { deletedAt: null, isPublished: true },
+        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        select: PUBLIC_LIST_SELECT,
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedTermsList",
+  });
+
+  return toPlainArray(result);
+}
+
+/**
+ * 公開: フッターに表示する規約のみ取得
+ */
+export async function getFooterTerms(): Promise<PublicTermsListItem[]> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS, getCacheTag.terms.footer());
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.terms.findUnique({
-        where: { slug: validated.data, isActive: true },
-        select: publicTermsSelect,
+      prisma.termsDocument.findMany({
+        where: {
+          deletedAt: null,
+          isPublished: true,
+          showInFooter: true,
+        },
+        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        select: PUBLIC_LIST_SELECT,
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getFooterTerms",
+  });
+
+  return toPlainArray(result);
+}
+
+/**
+ * 公開: slug で公開中規約を取得
+ */
+export async function getPublicTermsBySlug(
+  slug: string,
+): Promise<PublicTermsDetail | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS, getCacheTag.terms.detail(slug));
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.termsDocument.findFirst({
+        where: { slug, deletedAt: null, isPublished: true },
+        select: PUBLIC_DETAIL_SELECT,
       }),
     fallback: null,
     category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.HIGH,
+    severity: ErrorSeverity.LOW,
     operationName: "getPublicTermsBySlug",
+    context: { slug },
   });
 
-  if (!result) {
-    return null;
-  }
+  return result ? toPlainObject(result) : null;
+}
 
-  const currentVersion = result.versions[0] ?? null;
+/**
+ * 公開: 予約フォームでの同意必須規約一覧
+ */
+export async function getRequiredTermsAtReservation(): Promise<
+  Array<{ id: string; slug: string; title: string; contentHtml: string }>
+> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS);
 
-  return toPlainObject({
-    id: result.id,
-    title: result.title,
-    slug: result.slug,
-    type: result.type,
-    currentVersion: currentVersion
-      ? {
-          id: currentVersion.id,
-          version: currentVersion.version,
-          contentHtml: currentVersion.contentHtml,
-          contentJson: currentVersion.contentJson,
-          publishedAt: currentVersion.publishedAt,
-        }
-      : null,
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.termsDocument.findMany({
+        where: {
+          deletedAt: null,
+          isPublished: true,
+          requiredAtReservation: true,
+        },
+        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        select: { id: true, slug: true, title: true, contentHtml: true },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getRequiredTermsAtReservation",
   });
+
+  return toPlainArray(result);
+}
+
+/**
+ * 公開: お問い合わせフォームでの同意必須規約一覧
+ */
+export async function getRequiredTermsAtInquiry(): Promise<
+  Array<{ id: string; slug: string; title: string; contentHtml: string }>
+> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.termsDocument.findMany({
+        where: {
+          deletedAt: null,
+          isPublished: true,
+          requiredAtInquiry: true,
+        },
+        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        select: { id: true, slug: true, title: true, contentHtml: true },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getRequiredTermsAtInquiry",
+  });
+
+  return toPlainArray(result);
+}
+
+/**
+ * 公開: 新規登録（サインアップ）での同意必須規約一覧
+ */
+export async function getRequiredTermsAtSignup(): Promise<
+  Array<{ id: string; slug: string; title: string; contentHtml: string }>
+> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.termsDocument.findMany({
+        where: {
+          deletedAt: null,
+          isPublished: true,
+          requiredAtSignup: true,
+        },
+        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        select: { id: true, slug: true, title: true, contentHtml: true },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getRequiredTermsAtSignup",
+  });
+
+  return toPlainArray(result);
 }

@@ -11,6 +11,7 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { generateSlug } from "@/shared/lib/slug";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -70,10 +71,10 @@ export async function createEventCommand(data: EventCommandInput) {
       descriptionHtml: data.descriptionHtml,
       descriptionPlainText: data.descriptionPlainText,
       thumbnailUrl: data.thumbnailUrl ?? null,
-      startTime: new Date(data.startTime),
-      endTime: new Date(data.endTime),
+      startTime: parseDateTimeLocalAsJst(data.startTime),
+      endTime: parseDateTimeLocalAsJst(data.endTime),
       registrationDeadline: data.registrationDeadline
-        ? new Date(data.registrationDeadline)
+        ? parseDateTimeLocalAsJst(data.registrationDeadline)
         : null,
       capacity: data.capacity ?? null,
       price: data.price ?? null,
@@ -118,8 +119,8 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
 
-  const newStartTime = new Date(data.startTime);
-  const newEndTime = new Date(data.endTime);
+  const newStartTime = parseDateTimeLocalAsJst(data.startTime);
+  const newEndTime = parseDateTimeLocalAsJst(data.endTime);
 
   await prisma.event.update({
     where: { id, deletedAt: null },
@@ -133,7 +134,7 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       startTime: newStartTime,
       endTime: newEndTime,
       registrationDeadline: data.registrationDeadline
-        ? new Date(data.registrationDeadline)
+        ? parseDateTimeLocalAsJst(data.registrationDeadline)
         : null,
       capacity: data.capacity ?? null,
       price: data.price ?? null,

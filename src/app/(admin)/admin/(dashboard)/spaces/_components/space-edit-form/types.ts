@@ -4,12 +4,6 @@
 
 export const SELECT_NONE_VALUE = "__none__";
 
-export type SpaceEditTermsOption = {
-  id: string;
-  title: string;
-  type: string;
-};
-
 export type SpaceEditLocationOption = {
   id: string;
   name: string;

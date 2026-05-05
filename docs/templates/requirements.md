@@ -20,7 +20,7 @@
 
 ## データベース設計
 
-詳細は [`DATABASE_DESIGN.md`](../architecture/DATABASE_DESIGN.md) を参照。
+詳細は [`database-design.md`](../explanation/database-design.md) を参照。
 
 ### テーブル名
 

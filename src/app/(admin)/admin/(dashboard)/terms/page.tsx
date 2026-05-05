@@ -1,23 +1,24 @@
-import { Suspense } from "react";
-import { connection } from "next/server";
-import { getTermsList } from "@/admin/queries/terms";
+import Link from "next/link";
+import type { Metadata } from "next";
+import { IconTrash } from "@tabler/icons-react";
+import { Badge, Button } from "@/admin/components/ui";
+import {
+  getAdminTermsList,
+  getDeletedTermsCount,
+} from "@/shared/domain/terms/admin-queries";
 import { TermsTable } from "./_components/TermsTable";
 import { TermsTypeSelectDialog } from "./_components/TermsTypeSelectDialog";
-import { LoadingState } from "@/admin/components/LoadingState";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "利用規約管理 | Myrrh Rental Space",
 };
 
-async function TermsListContent() {
-  await connection();
-  // WARN: 全件取得 — 50件超の運用が見込まれる場合はページネーション + 検索を追加
-  const terms = await getTermsList();
-  return <TermsTable terms={terms} />;
-}
+export default async function AdminTermsPage() {
+  const [items, deletedCount] = await Promise.all([
+    getAdminTermsList(),
+    getDeletedTermsCount(),
+  ]);
 
-export default async function TermsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -25,15 +26,30 @@ export default async function TermsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             利用規約管理
           </h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            スペースに紐づける利用規約を管理します。バージョン管理により変更履歴を追跡できます。
+          <p className="text-muted-foreground">
+            サイト規約・プライバシーポリシー・キャンセルポリシー等を管理
           </p>
         </div>
-        <TermsTypeSelectDialog />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/terms/trash">
+              <IconTrash className="mr-2 h-4 w-4" />
+              ゴミ箱
+              {deletedCount > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {deletedCount}
+                </Badge>
+              )}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/terms/agreements">同意記録</Link>
+          </Button>
+          <TermsTypeSelectDialog />
+        </div>
       </div>
-      <Suspense fallback={<LoadingState />}>
-        <TermsListContent />
-      </Suspense>
+
+      <TermsTable items={items} />
     </div>
   );
 }

@@ -5,18 +5,21 @@
  * 型アサーション完全排除
  */
 
-import { format } from "date-fns";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  formatDateTimeLocalInJst,
+  parseDateTimeLocalAsJst,
+} from "@/shared/lib/date-format";
 
 // =============================================================================
-// 日時変換
+// 日時変換（`@/shared/lib/date-format` の SSoT helper を経由）
 // =============================================================================
 
 /**
- * Date型からフォーム用文字列に変換
- * @param date - 日付（Date | string | null | undefined）
- * @returns ISO形式のローカル日時文字列（yyyy-MM-dd'T'HH:mm）
+ * Date 型から `<input type="datetime-local">` 用の JST 文字列に変換。
+ * 旧 `format(d, "yyyy-MM-dd'T'HH:mm")` (date-fns) はブラウザ tz 依存だったため、
+ * `formatDateTimeLocalInJst`（`Asia/Tokyo` 固定）に統一。
  */
 export function toFormDateString(
   date: Date | string | null | undefined,
@@ -24,17 +27,17 @@ export function toFormDateString(
   if (!date) return "";
   const dateObj = typeof date === "string" ? new Date(date) : date;
   if (isNaN(dateObj.getTime())) return "";
-  return format(dateObj, "yyyy-MM-dd'T'HH:mm");
+  return formatDateTimeLocalInJst(dateObj);
 }
 
 /**
- * フォーム文字列からDate型に変換（送信用）
- * @param value - フォームの日時文字列
- * @returns Date型（空文字列の場合はundefined）
+ * フォーム文字列（datetime-local 形式）から Date 型に変換。
+ * 旧 `new Date(value)` はサーバ tz 解釈で UTC ずれを起こしていたため、
+ * `parseDateTimeLocalAsJst`（JST 固定 parse → UTC Date）に統一。
  */
 export function toSubmitDate(value: string): Date | undefined {
   if (!value) return undefined;
-  const date = new Date(value);
+  const date = parseDateTimeLocalAsJst(value);
   return isNaN(date.getTime()) ? undefined : date;
 }
 

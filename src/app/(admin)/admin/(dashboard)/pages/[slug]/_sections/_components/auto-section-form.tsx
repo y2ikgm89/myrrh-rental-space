@@ -23,6 +23,12 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import dynamic from "next/dynamic";
 import { z } from "zod";
 import {
+  IconArticle,
+  IconLink,
+  IconPhoto,
+  IconTypography,
+} from "@tabler/icons-react";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -31,13 +37,19 @@ import {
   Label,
   Textarea,
 } from "@/admin/components/ui";
+import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
+import { FieldGroupSection } from "./FieldGroupSection";
 import { extractSchemaFields } from "./zod-introspection";
 import type { FieldInfo } from "./zod-introspection";
 import type { FieldType } from "@/shared/lib/sections/types";
+import type {
+  DynamicCategoryOption,
+  DynamicSectionOptions,
+} from "@/admin/queries/section-dynamic-options";
 import { AutoBooleanField } from "./auto-fields/AutoBooleanField";
 import { AutoSelectField } from "./auto-fields/AutoSelectField";
 import { AutoArrayField } from "./auto-fields/AutoArrayField";
@@ -72,6 +84,7 @@ export function AutoSectionForm({
   isPending,
   onDirtyChange,
   contentOnly = false,
+  dynamicOptions,
 }: ConfigFormProps) {
   const definition = getSectionDefinition(section.type);
   const isCustomType = section.type === "custom";
@@ -162,17 +175,27 @@ export function AutoSectionForm({
       isPending={isPending}
       defaultValue={defaultConfig[fieldInfo.key]}
       errors={errors}
+      dynamicOptions={dynamicOptions}
     />
+  );
+
+  // subGroup 別に content フィールドを分類（design / advanced は Accordion 内のため未分類）
+  const textFields = contentFields.filter((f) => f.meta.subGroup === "text");
+  const imageFields = contentFields.filter((f) => f.meta.subGroup === "image");
+  const buttonFields = contentFields.filter(
+    (f) => f.meta.subGroup === "button",
+  );
+  const otherFields = contentFields.filter(
+    (f) => f.meta.subGroup === undefined || f.meta.subGroup === "other",
   );
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Content: 常時展開（Accordion 外） */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Custom セクションのみ: Lexical エディタを表示 */}
         {isCustomType && (
-          <div className="space-y-2">
-            <Label>コンテンツ</Label>
+          <FieldGroupSection title="本文" icon={IconArticle}>
             <LexicalEditor
               contentJson={editorContentJson}
               onChange={setEditorContentJson}
@@ -180,10 +203,30 @@ export function AutoSectionForm({
               className={EDITOR_PROSE_CLASSES}
               height="400px"
             />
-          </div>
+          </FieldGroupSection>
         )}
 
-        {contentFields.map(renderField)}
+        {textFields.length > 0 && (
+          <FieldGroupSection title="テキスト" icon={IconTypography}>
+            {textFields.map(renderField)}
+          </FieldGroupSection>
+        )}
+
+        {imageFields.length > 0 && (
+          <FieldGroupSection title="画像" icon={IconPhoto}>
+            {imageFields.map(renderField)}
+          </FieldGroupSection>
+        )}
+
+        {buttonFields.length > 0 && (
+          <FieldGroupSection title="ボタン・リンク" icon={IconLink}>
+            {buttonFields.map(renderField)}
+          </FieldGroupSection>
+        )}
+
+        {otherFields.length > 0 && (
+          <div className="space-y-4">{otherFields.map(renderField)}</div>
+        )}
       </div>
 
       {/* Design + Advanced: Radix Accordion（type="multiple"、既定閉じ） */}
@@ -233,6 +276,7 @@ interface AutoFieldProps {
   readonly isPending: boolean;
   readonly defaultValue: unknown;
   readonly errors: FieldErrors<FieldValues>;
+  readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
 function AutoField({
@@ -243,6 +287,7 @@ function AutoField({
   isPending,
   defaultValue,
   errors,
+  dynamicOptions,
 }: AutoFieldProps) {
   const { key, meta } = fieldInfo;
   const fieldId = `auto-${key}`;
@@ -265,6 +310,7 @@ function AutoField({
       defaultValue={defaultValue}
       error={typeof errorMessage === "string" ? errorMessage : undefined}
       errors={errors}
+      dynamicOptions={dynamicOptions}
     />
   );
 }
@@ -285,6 +331,7 @@ interface AutoFieldByTypeProps {
   readonly defaultValue: unknown;
   readonly error: string | undefined;
   readonly errors: FieldErrors<FieldValues>;
+  readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
 function AutoFieldByType(props: AutoFieldByTypeProps) {
@@ -304,6 +351,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     defaultValue,
     error,
     errors,
+    dynamicOptions,
   } = props;
 
   switch (fieldType) {
@@ -392,7 +440,15 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
-    case "select":
+    case "select": {
+      const meta = fieldRegistry.get(schema);
+      const dynamicSource = meta?.dynamicSelectSource;
+      const dynamicCategoryOptions:
+        | ReadonlyArray<DynamicCategoryOption>
+        | undefined =
+        dynamicSource && dynamicOptions
+          ? dynamicOptions[dynamicSource]
+          : undefined;
       return (
         <AutoSelectField
           fieldKey={fieldKey}
@@ -404,8 +460,12 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           control={control}
           isPending={isPending}
           error={error}
+          {...(dynamicCategoryOptions !== undefined && {
+            dynamicOptions: dynamicCategoryOptions,
+          })}
         />
       );
+    }
 
     case "color":
       return (
@@ -517,6 +577,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
                   typeof nestedError === "string" ? nestedError : undefined
                 }
                 errors={errors}
+                dynamicOptions={dynamicOptions}
               />
             );
           }}

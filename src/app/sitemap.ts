@@ -53,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getPermalinkSettings(),
     getSitemapContentData(),
   ]);
-  const { spaces, news, posts, customPages, terms, events } = content;
+  const { spaces, news, posts, customPages, events, terms } = content;
 
   // 各コンテンツタイプの最新更新日を取得
   const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date();
@@ -134,7 +134,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ==========================================================================
-  // 7. 規約詳細ページ（利用規約・プライバシーポリシー等）
+  // 7. 規約詳細ページ
   // ==========================================================================
   for (const term of terms) {
     entries.push({

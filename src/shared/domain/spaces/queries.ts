@@ -21,7 +21,6 @@ function formatSpaceToPlain(s: {
   descriptionHtml: string;
   descriptionPlainText: string;
   addressDetail: string | null;
-  access: string | null;
   capacity: number;
   area: number | null;
   hourlyPrice: number;
@@ -36,7 +35,6 @@ function formatSpaceToPlain(s: {
   reviewsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
-  termsId: string | null;
   locationId: string;
   categoryId: string | null;
   location: { address: string };
@@ -61,7 +59,6 @@ function formatSpaceToPlain(s: {
     descriptionPlainText: s.descriptionPlainText,
     addressDetail: s.addressDetail,
     displayAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
-    access: s.access,
     capacity: s.capacity,
     area: s.area,
     hourlyPrice: s.hourlyPrice,
@@ -76,7 +73,6 @@ function formatSpaceToPlain(s: {
     reviewsEnabled: s.reviewsEnabled,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
-    termsId: s.termsId,
     locationId: s.locationId,
     categoryId: s.categoryId,
     category: s.category,

@@ -161,19 +161,19 @@ export async function getSpaceBySlug(slug: string) {
           imageUrls: true,
           facilities: true,
           addressDetail: true,
-          access: true,
           reviewsEnabled: true,
           metaDescription: true,
           ogpTitle: true,
           ogpDescription: true,
           ogpImageUrl: true,
           category: { select: { id: true, name: true } },
-          location: { select: { id: true, name: true, address: true } },
-          terms: {
+          location: {
             select: {
-              title: true,
-              slug: true,
-              isActive: true,
+              id: true,
+              name: true,
+              address: true,
+              accessLines: true,
+              parkingInfo: true,
             },
           },
         },
@@ -190,6 +190,10 @@ export async function getSpaceBySlug(slug: string) {
     ...space,
     imageUrls: parseStringArray(space.imageUrls),
     facilities: parseStringArray(space.facilities),
+    location: {
+      ...space.location,
+      accessLines: parseStringArray(space.location.accessLines),
+    },
     lineAddress: formatSpaceLineAddress(
       space.location.address,
       space.addressDetail,

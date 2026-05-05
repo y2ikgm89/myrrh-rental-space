@@ -93,10 +93,10 @@ export function NewsListSection({
 
   if (news.length === 0) return <></>;
 
-  const isCard = config.layout === "card";
+  const isCard = config.displayLayout === "card";
 
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mb-10 text-center md:mb-14">
         <ScrollReveal>
           {config.sectionLabel && (

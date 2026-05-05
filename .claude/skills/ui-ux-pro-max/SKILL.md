@@ -175,7 +175,7 @@ src/app/
 - `.claude/rules/frontend/project-design-config.md` — ブランド正本
 - `.claude/rules/frontend/anti-ai-design.md` — Anti-AI 強制ルール（公開ページ path-scoped）
 - `.claude/rules/frontend/design-system-memory.md` — Serena memory 記憶プロトコル
-- `docs/reference/claude-rules/micro-interactions-reference.md` — マイクロインタラクション
+- `docs/reference/micro-interactions.md` — マイクロインタラクション
 
 ## Done
 

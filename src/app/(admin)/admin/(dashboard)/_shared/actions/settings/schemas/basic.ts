@@ -111,10 +111,6 @@ export const contactInfoSchema = z.object({
     .max(100, { error: "メールアドレスは100文字以内で入力してください" })
     .nullable()
     .or(z.literal("")),
-  address: z
-    .string()
-    .max(500, { error: "住所は500文字以内で入力してください" })
-    .nullable(),
   postalCode: z
     .string()
     .max(10, { error: "郵便番号は10文字以内で入力してください" })
@@ -134,14 +130,6 @@ export const contactInfoSchema = z.object({
   buildingName: z
     .string()
     .max(100, { error: "建物名は100文字以内で入力してください" })
-    .nullable(),
-  accessInfo: z
-    .string()
-    .max(1000, { error: "アクセス情報は1000文字以内で入力してください" })
-    .nullable(),
-  parkingInfo: z
-    .string()
-    .max(500, { error: "駐車場案内は500文字以内で入力してください" })
     .nullable(),
 });
 

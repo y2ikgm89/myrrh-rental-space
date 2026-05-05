@@ -19,6 +19,7 @@ import {
   CardTitle,
   Input,
   SelectionBox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   saveManualToken,
@@ -293,21 +294,20 @@ export function ConnectionCard({
             )}
 
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
+              <SubmitButton
+                isPending={isTesting}
+                label="接続テスト"
+                pendingLabel="テスト中..."
                 variant="outline"
                 onClick={handleTestConnection}
-                disabled={!manualToken || isPending || isTesting}
-              >
-                {isTesting ? "テスト中..." : "接続テスト"}
-              </Button>
-              <Button
-                type="button"
+                disabled={!manualToken || isPending}
+              />
+              <SubmitButton
+                isPending={isSaving}
+                label="保存"
                 onClick={handleSaveManualToken}
-                disabled={!manualToken || isPending || isSaving}
-              >
-                {isSaving ? "保存中..." : "保存"}
-              </Button>
+                disabled={!manualToken || isPending}
+              />
             </div>
           </div>
         )}

@@ -149,9 +149,38 @@ import { SubmitButton } from "@/admin/components/ui";
 **適用対象外**（以下は SubmitButton に置換**しない**）:
 
 - `DeleteConfirmDialog`（内部 isPending 管理）
-- `onClick` ハンドラのボタン（`type="submit"` でないもの — Settings セクションの保存ボタン、EditorHeader 等）
-- `disabled={isPending || !isDirty}` / `disabled={isPending || hasErrors}` / `disabled={!value || isPending}` 等の**複合条件ボタン**
 - カスタムアイコン付きボタン（`Loader2` / `Save` 切替等）
+
+**`onClick` + 複合条件は SubmitButton で表現可能**（適用対象外ではない）:
+
+- `SubmitButton` は `onClick` prop を受け取ると `type="button"` に自動切替する（`SubmitButton.tsx:38-40`）— 非フォーム用途（設定パネル等の状態管理 + 個別保存、Dialog の作成/追加ボタン、接続テストボタン等）にも使える
+- `disabled` prop は内部で `isPending || disabled` を OR する — 追加条件（`!isDirty` / `!form.formState.isDirty` / `!value` 等）はそのまま渡す。`isPending` を `disabled` 式に含める必要なし
+
+```tsx
+// OK: 非フォーム + 複合条件も SubmitButton で統一
+<SubmitButton
+  isPending={isPending}
+  label="サイドバー設定を保存"
+  onClick={handleSave}
+  disabled={!isDirty}
+/>
+
+// OK: 接続テスト + 保存の 2 ボタン（複数 pending 状態）
+<SubmitButton
+  isPending={isTesting}
+  label="接続テスト"
+  pendingLabel="テスト中..."
+  variant="outline"
+  onClick={handleTest}
+  disabled={!value || isPending}
+/>
+<SubmitButton
+  isPending={isSaving}
+  label="保存"
+  onClick={handleSave}
+  disabled={!value || isPending}
+/>
+```
 
 ---
 
@@ -176,6 +205,8 @@ import { SubmitButton } from "@/admin/components/ui";
 17. **新規作成フォームに `disabled={!isDirty}` 禁止** — 新規作成は初期状態で全フィールドが空のため isDirty は常に false。isDirty 無効化は**編集モードのみ**。create/edit 共用コンポーネントでは `{...(isEdit && { disabled: !form.formState.isDirty })}` 条件スプレッド
 18. **設定セクションの SubmitButton を CardContent 内に直置き禁止** — `<div className="flex justify-end pt-2">` でラップして右寄せ。CRUD フォームの `flex justify-end gap-4` と統一
 19. **`<Input type="date" placeholder="...">` 禁止** — `type="date"` input は placeholder 属性を無視するため dead code。`aria-label` で説明する
+20. **同一 navigation chrome 情報の二重表示禁止** — user identity（email / role / avatar）/ notification badge / breadcrumb 等のグローバル UI は単一の SSoT 配置のみ。TopBar 右端と サイドバー下部の両方に email + role を出すような重複は SSoT 違反。user identity の SSoT は サイドバー下部 `UserInfo`（mobile drawer + desktop で常時表示、TopBar 側に再掲しない）
+21. **管理画面 edit form の outer `mx-auto max-w-*` 禁止** — `DashboardMain` の `p-4 lg:p-6` で十分な padding が確保され、`AdminDetailLayout` も max-width を持たない。`SpaceEditForm` / `CouponForm` / `EmailSection` 等の admin edit forms は全て full width + 内部 `grid sm:grid-cols-2` パターン。outer constraint は 1920px+ で右側に過剰な余白を生む anti-pattern。プレビュー要素を含む場合は intra-card `lg:grid-cols-2` で活用する（→ `admin-ui/forms.md` §Edit + Live Preview パターン）
 
 ---
 
@@ -188,4 +219,7 @@ import { SubmitButton } from "@/admin/components/ui";
 - **`DialogContent` には必ず `DialogTitle` が必要** — Radix `DialogTitle`（または VisuallyHidden でラップ）がないと `role="dialog"` に `aria-labelledby` が接続されず WCAG 4.1.2 違反。`DialogContent` 追加時は必ずセットで記述する
 - **Settings singleton にフィールド追加は4箇所同時更新** — ① `schema.prisma` + migrate ② `domain/settings/types.ts` の `SettingsData` 型 ③ `domain/settings/queries.ts` の get クエリ + `commands.ts` の update コマンド ④ `actions/settings/schemas.ts` の Zod スキーマ + `other.ts` の Server Action + `index.ts` barrel。`SettingsData` は `getOrCreateSettings()` が `select` なしで全カラムを返すため型追加のみで値は自動伝播
 - **Recharts の SVG props は CSS 変数を受け取れない** — `fill={CHART_COLORS.primary}` のように oklch 定数を定義して渡す。admin.css テーマトークンと同期する oklch 値をコンポーネント上部に `as const` で定義（`ReservationChart.tsx` が実装例）
+- **Recharts のラベル個別スタイリングは `tick={<CustomTick />}` 必須** — `tick={{ fontSize, fill }}` object 形式は全ラベル一律で適用される。月跨ぎを semibold で landmark 化（IBM Carbon Design System 原則）等の個別制御は React element 形式で `payload`/`x`/`y`/`index` を受け取って SVG `<text>` を返す custom 実装。`ticks` prop で値配列を明示 + `interval={0}` で追加間引き無効化（`ReservationChart.tsx` の `XAxisTick` / `buildXAxisTicks` が参照実装）
+- **Recharts 3.0+ は `accessibilityLayer` デフォルト ON** — 明示不要（v2→v3 破壊的変更、`accessibilityLayer={true}` 明記は冗長）。`<ComposedChart title="..." />` で SVG `<title>` 自動生成 → screen reader にチャート概要を伝達。Tooltip の `content` には `role="status" aria-live="polite"` を付与して値の更新をアナウンス（公式 a11y ガイド）
+- **Recharts `ResponsiveContainer` は `dynamic({ ssr: false })` 配下で警告ゼロにできない — 自前 ResizeObserver で width 確定後にのみ `<ComposedChart width={N} height={N}>` を render する** — `<ResponsiveContainer width="100%" height="100%">` / `aspect={N}` / `minHeight={N}` のいずれも、`dynamic({ ssr: false })` で client-only mount される chart で ResizeObserver の race が起きて `width(-1) / height(-1) of chart should be greater than 0` 警告がコンソールに出る（recharts/recharts#2873、v3 でも未解消の dev-only known issue）。`minHeight` は警告メッセージの fallback 値表示を変えるだけ、`aspect` でも width=-1 から派生した height=-0.333 が出る。**真の解決**: ResponsiveContainer を撤廃し、`useChartContainerSize()` 相当の hook（`useRef` + `ResizeObserver` + `useState`）で width を観測し、`width > 0 ? <ComposedChart width={width} height={width / ASPECT}> : null` で**条件付き render**する。プレースホルダー高さは wrapper div の `style={{ minHeight: 240 }}` で確保し CLS を抑制。dashboard chart の業界標準比率は 3:1（IBM Carbon / Stripe / Vercel Analytics）。`ReservationChart.tsx` の `useChartContainerSize` が参照実装。新規 chart 追加時はこの hook を抽出して再利用する
 - **`bg-muted` 系は青みがかる** — admin.css の `--color-muted: oklch(0.95 0.01 250)` は色相250（青系）。`bg-muted/30` 等の低不透明度で薄い青が目立つ。ニュートラルな背景には背景色なし or `bg-card` を使用

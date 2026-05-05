@@ -652,6 +652,7 @@ await signIn.email({
 - **`'use cache'` 関数に Zod スキーマを引数で渡すと `Cannot access safeParse on the server` エラー** — `'use cache'` の引数は React シリアライゼーションを通るため、Zod スキーマ等の関数を含むオブジェクトは渡せない。DB フェッチのみをキャッシュし、バリデーションはキャッシュ境界外で行う
 - **`verifyAdminSession()`（`@/shared/lib/admin-auth`）/ `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
+- **resource permission の上にロール制限を加える場合は `execute` callback 内で `user.role` チェック** — 新 resource enum を増やさず特権操作（restore / force-close / impersonate 等）を表現する canonical パターン。`execute: async (user) => { if (user.role !== Role.SUPER_ADMIN) throw new DomainError("...", "FORBIDDEN"); ... }`。`executeAdminMutationResult` が `DomainError("FORBIDDEN")` を `MutationError` に自動変換するため UI 側で 403 として扱える。参照実装: `restoreReservationStatus` (`reservation/mutations.ts`)
 - **Webhook トークン比較に `!==` 禁止** — `crypto.timingSafeEqual` を使用。`receivedToken !== settings.token` はタイミング攻撃に脆弱。Google Calendar webhook の `timingSafeTokenEqual()` が実装例
 - **Better Auth クライアントの `forgetPassword` は `InferClientAPI` で型推論されない** — `emailAndPassword` のコア機能だが、クライアント型に含まれない。`adminAuthClient.$fetch("/request-password-reset", { method: "POST", body: { email, redirectTo } })` で直接呼び出す（管理者用）。`resetPassword` は型推論される
 
@@ -723,6 +724,7 @@ await adminAuthClient.resetPassword({
 - **proxy.ts の `/admin/login` ガードを削除しない** — Admin Gate が無効化されると管理画面ログインページが公開される。修正時は gate cookie / token の2条件を維持すること。セッション cookie の存在だけでは通過させない（CUSTOMER ロールのセッションでもログインフォームが露出するため）
 - **`verifyAdminSession` は非管理者ロールを `/` にリダイレクト** — `/admin/login` ではなく `/` にリダイレクトする。`/admin/login` にリダイレクトすると Admin Gate で 404 になるか、gate cookie があれば無限リダイレクトループが発生する
 - **`DASHBOARD_ROLES`（`@/shared/lib/admin-auth`）がダッシュボードアクセス可能なロールの Single Source of Truth** — `verifyAdminSession`・ログインページで共有。ロール追加時はこの定数のみ更新
+- **`/admin/api/*` の Client fetch が 404 になる原因の典型は admin セッション切れ** — proxy.ts は `/admin` プレフィックスを持つ全パスにセッション必須チェックを適用するため、`/admin/api/notifications/unread-count` 等の admin API も対象。セッション cookie 不在 → `/admin/login` 307 redirect → fetch が redirect follow → `/admin/login` で admin-gate cookie もなければ `handleAdminLoginGate` が 404 を返却 → ブラウザコンソールには「API が 404」と見える silent debug trap。切り分け: ① `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/admin/api/...` で 307 が出れば proxy redirect、② DevTools → Application → Cookies で `admin-auth.session_token` と `admin_login_gate` の有無確認、③ 不在なら再ログイン
 
 ### Multiple Root Layouts
 

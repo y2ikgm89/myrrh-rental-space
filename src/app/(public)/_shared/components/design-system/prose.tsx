@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
+import { EDITORIAL_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 
 type ProseVariant = "default" | "editorial";
 
@@ -17,9 +18,8 @@ export function Prose({
   return (
     <div
       className={cn(
-        "prose prose-neutral max-w-[var(--container-measure)] leading-[var(--leading-normal)]",
-        "prose-a:text-accent prose-a:no-underline hover:prose-a:text-accent-light",
-        "prose-blockquote:font-heading prose-blockquote:italic prose-blockquote:font-light prose-blockquote:border-accent",
+        EDITORIAL_PROSE_CLASSES,
+        "max-w-[var(--container-measure)]",
         variant === "editorial" && "drop-cap",
         className,
       )}

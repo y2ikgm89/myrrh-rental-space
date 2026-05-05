@@ -11,10 +11,25 @@ import {
 } from "@/public/lib/animations";
 import type { ReactNode } from "react";
 
+/** ScrollReveal がサポートする入場アニメーション種別 */
+export type ScrollRevealVariant = "fade-up" | "fade" | "scale";
+
+/** variant -> from values の対応表。to は { y: 0, opacity: 1, scale: 1 }. */
+const VARIANT_FROM: Record<
+  ScrollRevealVariant,
+  { y?: number; opacity?: number; scale?: number }
+> = {
+  "fade-up": { y: 24, opacity: 0 },
+  fade: { opacity: 0 },
+  scale: { opacity: 0, scale: 0.96 },
+};
+
 interface ScrollRevealProps {
   readonly children: ReactNode;
   readonly className?: string;
   readonly delay?: number;
+  /** 入場アニメーション種別（デフォルト: "fade-up"） */
+  readonly variant?: ScrollRevealVariant;
 }
 
 /**
@@ -29,6 +44,7 @@ export function ScrollReveal({
   children,
   className = "",
   delay = 0,
+  variant = "fade-up",
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,23 +53,22 @@ export function ScrollReveal({
       const el = ref.current;
       if (!el) return;
 
+      const fromVars = VARIANT_FROM[variant];
+
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.fromTo(
-          el,
-          { y: 24, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: DURATION.normal,
-            ease: EASE.out,
-            delay,
-            scrollTrigger: {
-              trigger: el,
-              ...SCROLL_TRIGGER.reveal,
-            },
+        gsap.fromTo(el, fromVars, {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: DURATION.normal,
+          ease: EASE.out,
+          delay,
+          scrollTrigger: {
+            trigger: el,
+            ...SCROLL_TRIGGER.reveal,
           },
-        );
+        });
       });
     },
     { scope: ref },

@@ -170,7 +170,7 @@ const date = useWatch({ control: form.control, name: "date" });
 
 ---
 
-> **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`
+> **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/react-api.md`
 
 ---
 
@@ -282,6 +282,19 @@ useEffect(() => {
   if (storedVote) setVoted(storedVote);
 }, [storedVote]);
 ```
+
+### dismissable alert: signature-based persistence
+
+「ユーザーが了解した」を表現する dismiss ボタンは、bare `dismissed: true` flag ではなく **dismiss 対象の状態を encode した signature を保存**する。状態が変わったら signature 不一致で自動再表示されるため、新しい未設定項目・新しい警告が出たときに silently skip される silent bug を防ぐ。
+
+- **signature**: 対象 key を `.toSorted((a, b) => a.localeCompare(b)).join(",")` で安定化（順序非依存）
+- **読み取り**: `useSyncExternalStore`（hydration mismatch 回避、上記 §useSyncExternalStore 参照）
+- **楽観的更新**: dismiss クリック時に `setOptimisticDismissed(true)` で即時非表示 + `localStorage.setItem` で永続化
+- **判定**: `persistedSignature === currentSignature || optimisticDismissed` で hide
+- **scope**: ノイズ化防止のため、表示は責務領域（例: integration alert なら `/admin/settings`）に絞る
+- **localStorage 失敗ハンドリング**: try/catch で握り、本セッションのみ optimistic で非表示にフォールバック（Safari Private Mode 対応）
+
+参照実装: `src/app/(admin)/admin/(dashboard)/_components/IntegrationHealthAlertClient.tsx`
 
 ---
 

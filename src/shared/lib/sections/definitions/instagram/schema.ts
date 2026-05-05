@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const gaps = ["sm", "md", "lg"] as const;
 
@@ -8,10 +9,12 @@ export const instagramConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Follow Us",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "Instagram",
     maxLength: 100,
+    subGroup: "text",
   }),
   columns: field.number("1 行あたりの列数", {
     min: 3,
@@ -32,6 +35,7 @@ export const instagramConfigSchema = z.object({
     default: "md",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type InstagramConfig = z.infer<typeof instagramConfigSchema>;

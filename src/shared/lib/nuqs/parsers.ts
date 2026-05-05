@@ -11,7 +11,10 @@ import {
   ADMIN_SPACE_LIST_SORT_BY,
   ADMIN_SPACE_MANAGEMENT_TABS,
 } from "@/shared/lib/constants/admin-space-management";
-import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  CouponType,
+  CustomerType,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   createParser,
   createSearchParamsCache,
@@ -184,10 +187,51 @@ export async function loadAdminAuditLogSearchParams(
 // 管理画面: クーポン
 // ============================================================
 
+/** クーポンステータスフィルター sentinel（"すべて" を表す） */
+export const COUPON_STATUS_FILTER_ALL = "ALL" as const;
+/** クーポンタイプフィルター sentinel（"すべて" を表す） */
+export const COUPON_TYPE_FILTER_ALL = "ALL" as const;
+
+const couponStatusFilterValues = [
+  COUPON_STATUS_FILTER_ALL,
+  "active",
+  "inactive",
+  "expired",
+  "limitReached",
+  "notStarted",
+] as const;
+
+export type CouponStatusFilter = (typeof couponStatusFilterValues)[number];
+
+const couponTypeFilterValues = [
+  COUPON_TYPE_FILTER_ALL,
+  CouponType.PERCENTAGE,
+  CouponType.FIXED_AMOUNT,
+] as const;
+
+export type CouponTypeFilter = (typeof couponTypeFilterValues)[number];
+
+const couponStatusFilterSet = new Set<string>(couponStatusFilterValues);
+const couponTypeFilterSet = new Set<string>(couponTypeFilterValues);
+
+export function isCouponStatusFilter(
+  value: string,
+): value is CouponStatusFilter {
+  return couponStatusFilterSet.has(value);
+}
+
+export function isCouponTypeFilter(value: string): value is CouponTypeFilter {
+  return couponTypeFilterSet.has(value);
+}
+
 export const adminCouponSearchParamsParsers = {
   search: parseAsQuery,
-  status: parseAsString.withDefault(""),
-  type: parseAsString.withDefault(""),
+  status: parseAsStringLiteral(couponStatusFilterValues).withDefault(
+    COUPON_STATUS_FILTER_ALL,
+  ),
+  type: parseAsStringLiteral(couponTypeFilterValues).withDefault(
+    COUPON_TYPE_FILTER_ALL,
+  ),
   page: parseAsPage,
   perPage: parseAsPerPage,
 };

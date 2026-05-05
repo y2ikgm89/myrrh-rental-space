@@ -14,17 +14,18 @@ import type { PublicReservationInput } from "@/shared/lib/validations/public-res
 import { BookingSummary } from "./booking-summary";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 
+interface RequiredTerm {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+}
+
 interface CustomerStepProps {
   readonly form: UseFormReturn<PublicReservationInput>;
   readonly isPending: boolean;
   readonly errorMessage: string | null;
   readonly turnstileSiteKey: string | null;
-  readonly requiredTerms: ReadonlyArray<{
-    id: string;
-    title: string;
-    slug: string;
-    currentVersionId: string;
-  }>;
+  readonly requiredTerms?: readonly RequiredTerm[] | undefined;
   readonly summary: {
     locationName: string;
     spaceName: string;
@@ -42,7 +43,7 @@ export function CustomerStep({
   isPending,
   errorMessage,
   turnstileSiteKey,
-  requiredTerms,
+  requiredTerms = [],
   summary,
   onBack,
 }: CustomerStepProps): ReactElement {
@@ -202,54 +203,52 @@ export function CustomerStep({
           />
         </div>
 
-        {/* Terms + Turnstile */}
-        <div className="mt-6 space-y-3">
-          {requiredTerms.map((term) => {
-            const isChecked = agreedTermsIds?.includes(term.id) ?? false;
-            return (
-              <label key={term.id} className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 border-border accent-accent"
-                  checked={isChecked}
-                  onChange={() => {
-                    const current = form.getValues("agreedTermsIds") ?? [];
-                    const next = isChecked
-                      ? current.filter((id) => id !== term.id)
-                      : [...current, term.id];
-                    form.setValue("agreedTermsIds", next, {
-                      shouldValidate: true,
-                    });
-                  }}
-                />
-                <span className="text-sm text-muted-foreground">
-                  <a
-                    href={`/terms/${term.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent underline transition-colors hover:text-foreground"
-                  >
-                    {term.title}
-                  </a>
-                  に同意します
-                </span>
-              </label>
-            );
-          })}
-          {form.formState.errors.agreedTermsIds?.message ? (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {form.formState.errors.agreedTermsIds.message}
-            </p>
-          ) : null}
-
-          <div className="mt-4">
-            <TurnstileWidget
-              siteKey={turnstileSiteKey}
-              action={TURNSTILE_ACTIONS.reservation}
-              onVerify={handleTurnstileVerify}
-              onExpire={handleTurnstileExpire}
-            />
+        {/* Required terms agreement */}
+        {requiredTerms.length > 0 ? (
+          <div className="mt-8 space-y-3 border-t border-border pt-6">
+            {requiredTerms.map((term) => {
+              const isChecked = agreedTermsIds?.includes(term.id) ?? false;
+              return (
+                <label key={term.id} className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 border-border accent-accent"
+                    checked={isChecked}
+                    onChange={() => {
+                      const current = form.getValues("agreedTermsIds") ?? [];
+                      const next = isChecked
+                        ? current.filter((id) => id !== term.id)
+                        : [...current, term.id];
+                      form.setValue("agreedTermsIds", next, {
+                        shouldValidate: true,
+                      });
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    <a
+                      href={`/terms/${term.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent underline transition-colors hover:text-foreground"
+                    >
+                      {term.title}
+                    </a>
+                    に同意します
+                  </span>
+                </label>
+              );
+            })}
           </div>
+        ) : null}
+
+        {/* Turnstile */}
+        <div className="mt-6">
+          <TurnstileWidget
+            siteKey={turnstileSiteKey}
+            action={TURNSTILE_ACTIONS.reservation}
+            onVerify={handleTurnstileVerify}
+            onExpire={handleTurnstileExpire}
+          />
         </div>
       </div>
 

@@ -172,18 +172,6 @@ describe("field-registry", () => {
     });
   });
 
-  describe("field.group", () => {
-    it("should register with fieldType 'group'", () => {
-      const schema = field.group("グループ", {
-        name: field.text("名前"),
-        age: field.number("年齢"),
-      });
-      const meta = fieldRegistry.get(schema);
-      expect(meta?.fieldType).toBe("group");
-      expect(meta?.group).toBe("content");
-    });
-  });
-
   describe("unregistered schema", () => {
     it("should return undefined for plain z.string()", () => {
       const schema = z.string();

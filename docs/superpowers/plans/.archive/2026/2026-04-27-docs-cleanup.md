@@ -4,113 +4,113 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline execution recommended for trivial Bundle: deletion + frontmatter / index updates, logic-zero, test-zero). Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `docs/**` の dangling references / dead redirect stubs / drift を clean break で整理し、dual-AI（Codex + Claude Code）並立体制を docs 上に正確に反映する。
+**Goal:** Clean-break `docs/**` by removing dangling references / dead redirect stubs / drift, and accurately reflect the dual-AI (Codex + Claude Code) setup in docs.
 
-**Architecture:** 4 段階で確定的な drift 修正と価値ゼロコンテンツ削除のみ実施。実コンテンツ（architecture/ / operations/ / security/ / reference/claude-rules/）は active な引用が `.claude/rules/**` から確認できているため維持。clean-break 原則（ADR-0015）に従い、後方互換シム（旧パス re-export / `// removed` コメント）は付けず完全削除する。
+**Architecture:** Execute only definitive drift fixes and remove zero-value content in 4 stages. Keep real content (architecture/ / operations/ / security/ / reference/claude-rules/) because active references are confirmed in `.claude/rules/**`. Per clean-break principle (ADR-0015), do not add backward-compatibility shims (old-path re-exports / `// removed` comments); delete outright.
 
-**Tech Stack:** Markdown / git のみ。subagent dispatch・test 追加・logic 変更ゼロ。
+**Tech Stack:** Markdown / git only. No subagent dispatch, no test additions, no logic changes.
 
-**実行方法:** trivial Bundle (frontmatter + 削除中心、test 不要) のため CLAUDE.md `Subagent 規律` の最新 learning に従い **controller inline 実行**。各 Task = 1 commit、6 commits 合計。
+**Execution:** Because this is a trivial bundle (frontmatter + deletions, no tests), follow the latest CLAUDE.md "Subagent discipline" learning and run **controller inline**. Each task = 1 commit, 6 commits total.
 
 ---
 
 ## File Structure
 
-| 操作 | パス                                                     | 理由                                                                                                                                                               |
-| ---- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 削除 | `docs/guides/admin/` (空 dir)                            | 中身なし                                                                                                                                                           |
-| 削除 | `docs/reference/codex-rules/` (空 dir)                   | ADR 0013 で sync 廃止後の空殻                                                                                                                                      |
-| 削除 | `docs/guides/coding-standards.md` (19 行 redirect stub)  | 実コンテンツゼロ、`AGENTS.md` 直参照で十分                                                                                                                         |
-| 削除 | `docs/guides/type-safety.md` (17 行 redirect stub)       | 同上                                                                                                                                                               |
-| 削除 | `docs/guides/testing.md` (19 行 redirect stub)           | 同上                                                                                                                                                               |
-| 削除 | `docs/guides/nuqs.md` (20 行 redirect stub)              | 同上                                                                                                                                                               |
-| 削除 | `docs/guides/prisma.md` (22 行 redirect stub)            | 同上                                                                                                                                                               |
-| 削除 | `docs/guides/turbopack.md` (21 行 redirect stub)         | 同上                                                                                                                                                               |
-| 修正 | `docs/guides/README.md`                                  | 削除した 6 stub への link を除去、guides/ ディレクトリの存在意義を「dual-AI 入口リスト」に絞る                                                                     |
-| 修正 | `docs/architecture/decisions/README.md`                  | ADR 0022 をインデックステーブルに追加                                                                                                                              |
-| 修正 | `docs/README.md`                                         | `requirements/` 言及 2 箇所削除（ADR 0014 で 2026-04-23 削除済み）                                                                                                 |
-| 修正 | `docs/plans/README.md`                                   | dual-AI 並立を明示（現状の「Claude Code は legacy」記述は実態と乖離）                                                                                              |
-| 修正 | `docs/plans/CLAUDE.md`                                   | 同上、dual-AI 並立に整合                                                                                                                                           |
-| 維持 | `docs/architecture/agent-instructions.md` (45 行)        | Codex 配置仕様の概要、実コンテンツあり                                                                                                                             |
-| 維持 | `docs/architecture/codex-instructions.md` (87 行)        | 同上                                                                                                                                                               |
-| 維持 | `docs/operations/**` / `docs/security/**`                | 実コンテンツあり、被参照あり                                                                                                                                       |
-| 維持 | `docs/reference/claude-rules/**` (4 ファイル / 3,397 行) | `.claude/rules/{bun-patterns.md, react/hooks.md, frontend/gsap/core.md, frontend/ui-ux-patterns.md, frontend/anti-ai-design.md}` から active 参照、SSoT として継続 |
-| 維持 | `docs/plans/archive/completed-legacy.md` (358 行)        | 2026-02-07 以前の集約サマリー、履歴 SoT として維持（個別 plan は git history、これは集約のみの SoT）                                                               |
+| Action | Path                                                      | Reason                                                                                                                                                                  |
+| ------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Delete | `docs/guides/admin/` (empty dir)                          | No contents                                                                                                                                                             |
+| Delete | `docs/reference/codex-rules/` (empty dir)                 | Empty shell after sync removal in ADR 0013                                                                                                                              |
+| Delete | `docs/guides/coding-standards.md` (19-line redirect stub) | Zero real content; direct reference to `AGENTS.md` is sufficient                                                                                                        |
+| Delete | `docs/guides/type-safety.md` (17-line redirect stub)      | Same as above                                                                                                                                                           |
+| Delete | `docs/guides/testing.md` (19-line redirect stub)          | Same as above                                                                                                                                                           |
+| Delete | `docs/guides/nuqs.md` (20-line redirect stub)             | Same as above                                                                                                                                                           |
+| Delete | `docs/guides/prisma.md` (22-line redirect stub)           | Same as above                                                                                                                                                           |
+| Delete | `docs/guides/turbopack.md` (21-line redirect stub)        | Same as above                                                                                                                                                           |
+| Update | `docs/guides/README.md`                                   | Remove links to the 6 deleted stubs; narrow guides/ to a "dual-AI entry list"                                                                                           |
+| Update | `docs/architecture/decisions/README.md`                   | Add ADR 0022 to the index table                                                                                                                                         |
+| Update | `docs/README.md`                                          | Remove two `requirements/` mentions (already deleted on 2026-04-23 via ADR 0014)                                                                                        |
+| Update | `docs/plans/README.md`                                    | Clarify dual-AI parallel use (current "Claude Code is legacy" text is inaccurate)                                                                                       |
+| Update | `docs/plans/CLAUDE.md`                                    | Same as above; align with dual-AI parallel use                                                                                                                          |
+| Keep   | `docs/architecture/agent-instructions.md` (45 lines)      | Codex placement overview with real content                                                                                                                              |
+| Keep   | `docs/architecture/codex-instructions.md` (87 lines)      | Same as above                                                                                                                                                           |
+| Keep   | `docs/operations/**` / `docs/security/**`                 | Real content with active references                                                                                                                                     |
+| Keep   | `docs/reference/claude-rules/**` (4 files / 3,397 lines)  | Actively referenced from `.claude/rules/{bun-patterns.md, react/hooks.md, frontend/gsap/core.md, frontend/ui-ux-patterns.md, frontend/anti-ai-design.md}`; keep as SSoT |
+| Keep   | `docs/plans/archive/completed-legacy.md` (358 lines)      | Aggregated summary before 2026-02-07; keep as historical SoT (individual plans in git history, this file is aggregate-only)                                             |
 
 ---
 
-## Task 1: 空ディレクトリ削除
+## Task 1: Remove empty directories
 
 **Files:**
 
 - Delete: `docs/guides/admin/`
 - Delete: `docs/reference/codex-rules/`
 
-- [ ] **Step 1: 削除前に空であることを確認**
+- [ ] **Step 1: Confirm empty before deletion**
 
 ```bash
 find docs/guides/admin docs/reference/codex-rules -type f 2>/dev/null
 ```
 
-Expected: no output（ファイルゼロ）
+Expected: no output (zero files)
 
-- [ ] **Step 2: 空ディレクトリ削除**
+- [ ] **Step 2: Delete empty directories**
 
-MINGW64 では `rm -rf` は deny ルール（CLAUDE.md グローバル）。Python で削除:
+In MINGW64, `rm -rf` is denied by a global rule (CLAUDE.md). Delete via Python:
 
 ```bash
 python3 -c "import shutil; shutil.rmtree('docs/guides/admin')"
 python3 -c "import shutil; shutil.rmtree('docs/reference/codex-rules')"
 ```
 
-- [ ] **Step 3: git status で削除確認**
+- [ ] **Step 3: Confirm deletion with git status**
 
 ```bash
 git status --short docs/
 ```
 
-Expected: 空ディレクトリは git tracked でなければ status に出ない（空 dir は git untracked なため）。事実上 working tree からのみ消える。
+Expected: empty directories are not tracked, so they do not appear in status (empty dirs are untracked). They are removed only from the working tree.
 
 - [ ] **Step 4: untracked check（empty dir is git invisible）**
 
-空ディレクトリは git で tracked されないため、削除後も `git diff` には差分が出ない。本 Task の実体は **物理ディレクトリ消去のみ**で commit は不要。次 Task へ進む。
+Because empty directories are not tracked by git, no diff appears after deletion. This task is **physical directory removal only**, so no commit is needed. Proceed to the next task.
 
-> **Note:** Task 1 は commit を生成しない。物理消去後に Task 2 に進む。
+> **Note:** Task 1 does not create a commit. Proceed to Task 2 after physical deletion.
 
 ---
 
-## Task 2: ADR 0022 を decisions/README.md に追加
+## Task 2: Add ADR 0022 to decisions/README.md
 
 **Files:**
 
-- Modify: `docs/architecture/decisions/README.md` (インデックステーブル末尾)
+- Modify: `docs/architecture/decisions/README.md` (end of index table)
 
-- [ ] **Step 1: 現状確認**
+- [ ] **Step 1: Check current state**
 
 ```bash
 grep -n "0021" docs/architecture/decisions/README.md
 ```
 
-Expected: 行末が ADR 0021、0022 への行が無いことを確認
+Expected: confirm ADR 0021 is the last entry and no ADR 0022 row exists
 
-- [ ] **Step 2: ADR 0022 行を追加**
+- [ ] **Step 2: Add ADR 0022 row**
 
-`docs/architecture/decisions/README.md` の table に以下の行を ADR 0021 行の直後に挿入:
+Insert the following row into the table in `docs/architecture/decisions/README.md` immediately after the ADR 0021 row:
 
 ```markdown
-| [0022](./0022-checkbox-cell-44px-wrapper.md) | 管理 table の checkbox は 44px ヒットエリア wrapper (`CheckboxCell`) で囲む | Accepted | 2026-04-26 |
+| [0022](./0022-checkbox-cell-44px-wrapper.md) | Admin table checkboxes must be wrapped with a 44px hit-area wrapper (`CheckboxCell`) | Accepted | 2026-04-26 |
 ```
 
-> **Note:** 日付は `0022-checkbox-cell-44px-wrapper.md` 本体の `Date` フィールドを Read で確認してから記入。タイトルは ADR 内 H1 を踏襲。
+> **Note:** Confirm the date from the `Date` field in `0022-checkbox-cell-44px-wrapper.md` before filling it in. Use the ADR H1 for the title.
 
-- [ ] **Step 3: 整合確認**
+- [ ] **Step 3: Consistency check**
 
 ```bash
 ls docs/architecture/decisions/*.md | grep -c "^docs/architecture/decisions/00[0-9][0-9]-"
 grep -c "| \[00" docs/architecture/decisions/README.md
 ```
 
-Expected: ADR ファイル数 - 1 (template / README 除く) = README index 行数
+Expected: ADR file count - 1 (excluding template / README) = README index row count
 
 - [ ] **Step 4: Commit**
 
@@ -121,29 +121,29 @@ git commit -m "docs(adr): add 0022 to decisions index (drift fix)"
 
 ---
 
-## Task 3: docs/README.md の `requirements/` 言及削除
+## Task 3: Remove `requirements/` mentions from docs/README.md
 
 **Files:**
 
-- Modify: `docs/README.md` (構造ツリー L10 と クイックリンク table L25)
+- Modify: `docs/README.md` (structure tree L10 and quick links table L25)
 
-- [ ] **Step 1: 削除対象確認**
+- [ ] **Step 1: Confirm targets for deletion**
 
 ```bash
 grep -n "requirements" docs/README.md
 ```
 
-Expected: 2 行 hit（構造ツリー内の `├── requirements/` とクイックリンク table 行）
+Expected: 2 hits (the `├── requirements/` line in the structure tree and the quick links table row)
 
-- [ ] **Step 2: 構造ツリーの行を削除**
+- [ ] **Step 2: Remove the structure tree line**
 
-`docs/README.md` の L10 `├── requirements/    # 機能要件` 行を削除。前後の `├──` 接続文字を必要なら整える（`architecture/` 直下の dir 列挙行のため、削除しても他行の接続は影響なし）。
+Delete the L10 line `├── requirements/    # Functional requirements` in `docs/README.md`. Adjust adjacent `├──` connectors if needed (it's a direct child of `architecture/`, so removing it does not affect other lines).
 
-- [ ] **Step 3: クイックリンク table の行を削除**
+- [ ] **Step 3: Remove the quick links table row**
 
-`docs/README.md` の L25 `| [requirements/](./requirements/) | 機能別要件定義 | [README.md](./requirements/README.md) |` を行ごと削除。
+Delete the L25 line `| [requirements/](./requirements/) | Requirements by feature | [README.md](./requirements/README.md) |` in `docs/README.md`.
 
-- [ ] **Step 4: 残存 dangling ref ゼロ確認**
+- [ ] **Step 4: Confirm zero dangling refs**
 
 ```bash
 grep -n "requirements" docs/README.md
@@ -160,7 +160,7 @@ git commit -m "docs: remove dangling references to deleted requirements/ directo
 
 ---
 
-## Task 4: docs/guides/ redirect stub 6 ファイル削除 + README 整理
+## Task 4: Delete 6 docs/guides redirect stubs + tidy README
 
 **Files:**
 
@@ -170,53 +170,53 @@ git commit -m "docs: remove dangling references to deleted requirements/ directo
 - Delete: `docs/guides/nuqs.md`
 - Delete: `docs/guides/prisma.md`
 - Delete: `docs/guides/turbopack.md`
-- Modify: `docs/guides/README.md` (table 全削除、dual-AI 入口リストに整理)
+- Modify: `docs/guides/README.md` (remove entire table, refocus to dual-AI entry list)
 
-- [ ] **Step 1: 削除前に被参照ゼロ確認**
+- [ ] **Step 1: Confirm zero references before deletion**
 
 ```bash
 grep -rln "guides/coding-standards\|guides/type-safety\|guides/testing\|guides/nuqs\|guides/prisma\|guides/turbopack" docs/ .claude/ AGENTS.md CLAUDE.md 2>/dev/null
 ```
 
-Expected: docs/guides/README.md のみ hit（self-link）。`.claude/` / `AGENTS.md` / `CLAUDE.md` から hit が出たら削除前にそちらも併せて修正。
+Expected: only docs/guides/README.md hit (self-link). If hits appear in `.claude/` / `AGENTS.md` / `CLAUDE.md`, fix them before deletion.
 
-- [ ] **Step 2: 6 stub ファイル削除**
+- [ ] **Step 2: Delete the 6 stub files**
 
 ```bash
 git rm docs/guides/coding-standards.md docs/guides/type-safety.md docs/guides/testing.md docs/guides/nuqs.md docs/guides/prisma.md docs/guides/turbopack.md
 ```
 
-- [ ] **Step 3: docs/guides/README.md を dual-AI 入口リストに簡素化**
+- [ ] **Step 3: Simplify docs/guides/README.md into a dual-AI entry list**
 
-新内容:
+New content:
 
 ```markdown
-# 開発ガイド
+# Development Guides
 
-このディレクトリは dual-AI 体制の **dev 補助 docs 入口** として機能する。実装ルールの正本は AI 別に分離されている:
+This directory serves as the **dev helper docs entry point** for the dual-AI setup. Canonical implementation rules are separated by AI:
 
-- **Codex**: [`AGENTS.md`](../../AGENTS.md) と [`.agents/skills/`](../../.agents/skills/) — Codex 起動時に階層的に読み込まれる正本
-- **Claude Code**: [`CLAUDE.md`](../../CLAUDE.md) と [`.claude/rules/**`](../../.claude/rules/) — `paths:` frontmatter による条件付き auto-load
-- **両 AI 共通**: [`.claude/rules/**`](../../.claude/rules/) は `docs/reference/claude-rules/**` の詳細リファレンスから引用される（active 利用）
+- **Codex**: [`AGENTS.md`](../../AGENTS.md) and [`.agents/skills/`](../../.agents/skills/) — canonical sources loaded hierarchically on Codex startup
+- **Claude Code**: [`CLAUDE.md`](../../CLAUDE.md) and [`.claude/rules/**`](../../.claude/rules/) — conditional auto-load via `paths:` frontmatter
+- **Shared by both AIs**: [`.claude/rules/**`](../../.claude/rules/) is quoted from the detailed reference in `docs/reference/claude-rules/**` (active usage)
 
-本ディレクトリ配下に過去存在した個別ガイド（`coding-standards.md` / `type-safety.md` / `testing.md` / `nuqs.md` / `prisma.md` / `turbopack.md`）は redirect stub として実コンテンツを持たなかったため削除。実装ルールは AI 別の正本（上記）から直接参照する。
+The previously existing guides in this directory (`coding-standards.md` / `type-safety.md` / `testing.md` / `nuqs.md` / `prisma.md` / `turbopack.md`) were redirect stubs with no real content, so they were removed. Implementation rules should be referenced directly from the AI-specific canon (above).
 
-## 関連
+## Related
 
-- [アーキテクチャ](../architecture/README.md) — 設計判断・ADR・データフロー
-- [運用](../operations/README.md) — デプロイ・インフラ・cron
-- [セキュリティ](../security/README.md) — 認証・保護対策
-- [Codex Instruction Architecture](../architecture/codex-instructions.md) — Codex 配置仕様の詳細
-- [AI Agent Instructions Layout](../architecture/agent-instructions.md) — `.claude/*` / `AGENTS.md` の配置原則
+- [Architecture](../architecture/README.md) — design decisions, ADRs, data flow
+- [Operations](../operations/README.md) — deploy, infra, cron
+- [Security](../security/README.md) — auth, protections
+- [Codex Instruction Architecture](../architecture/codex-instructions.md) — details of Codex placement
+- [AI Agent Instructions Layout](../architecture/agent-instructions.md) — placement rules for `.claude/*` / `AGENTS.md`
 ```
 
-- [ ] **Step 4: 削除後のファイル数確認**
+- [ ] **Step 4: Confirm file count after deletion**
 
 ```bash
 ls docs/guides/
 ```
 
-Expected: `README.md` のみ
+Expected: `README.md` only
 
 - [ ] **Step 5: Commit**
 
@@ -227,55 +227,55 @@ git commit -m "docs(guides): drop redirect stubs and refocus README on dual-AI e
 
 ---
 
-## Task 5: docs/plans/ の dual-AI 並立を明示
+## Task 5: Clarify dual-AI parallel use in docs/plans/
 
 **Files:**
 
 - Modify: `docs/plans/README.md`
 - Modify: `docs/plans/CLAUDE.md`
 
-- [ ] **Step 1: 現状の問題確認**
+- [ ] **Step 1: Confirm current issue**
 
-両ファイルとも「Codex 作業では参照しない、Claude Code 用 legacy reference として残置」と記述。実態は Claude Code が active 利用中（CLAUDE.md / `.claude/**` 全域で daily 利用）。dual-AI 並立として書き直す。
+Both files say "do not reference in Codex work, left as a Claude Code legacy reference." In reality, Claude Code is actively used daily across CLAUDE.md / `.claude/**`. Rewrite to reflect dual-AI parallel use.
 
-- [ ] **Step 2: docs/plans/README.md L31 修正**
+- [ ] **Step 2: Update docs/plans/README.md L31**
 
-旧:
-
-```markdown
-Codex 作業では [`AGENTS.md`](../../AGENTS.md) と `.agents/skills` を入口にする。`docs/plans/CLAUDE.md` は Claude Code 用 legacy reference として残置するが、Codex 作業では参照しない。
-```
-
-新:
+Old:
 
 ```markdown
-本リポジトリは dual-AI 体制（Codex + Claude Code）。プラン作成 / 実行のスキルチェーンは両 AI 共通だが、入口は AI 別:
-
-- **Codex**: [`AGENTS.md`](../../AGENTS.md) と [`.agents/skills/`](../../.agents/skills/)
-- **Claude Code**: [`CLAUDE.md`](../../CLAUDE.md) と [`.claude/rules/**`](../../.claude/rules/) + [`docs/plans/CLAUDE.md`](./CLAUDE.md)（本ディレクトリ専用の補助 instruction）
+For Codex work, use [`AGENTS.md`](../../AGENTS.md) and `.agents/skills` as entry points. `docs/plans/CLAUDE.md` remains as a Claude Code legacy reference, but is not referenced for Codex work.
 ```
 
-- [ ] **Step 3: docs/plans/CLAUDE.md L3 修正**
-
-旧:
+New:
 
 ```markdown
-> Claude Code 用 legacy reference。Codex 作業では [`AGENTS.md`](../../AGENTS.md) と `.agents/skills` を入口にし、このファイルを正本として参照しない。
+This repository uses a dual-AI setup (Codex + Claude Code). The planning/execution skill chain is shared by both AIs, but entry points are AI-specific:
+
+- **Codex**: [`AGENTS.md`](../../AGENTS.md) and [`.agents/skills/`](../../.agents/skills/)
+- **Claude Code**: [`CLAUDE.md`](../../CLAUDE.md) and [`.claude/rules/**`](../../.claude/rules/) + [`docs/plans/CLAUDE.md`](./CLAUDE.md) (helper instructions for this directory)
 ```
 
-新:
+- [ ] **Step 3: Update docs/plans/CLAUDE.md L3**
+
+Old:
 
 ```markdown
-> 本ファイルは Claude Code 用の `docs/plans/` 専用補助 instruction（dual-AI 体制下で active 利用中）。Codex 作業では代わりに [`AGENTS.md`](../../AGENTS.md) と [`.agents/skills/`](../../.agents/skills/) を入口にする。
+> Legacy reference for Claude Code. For Codex work, use [`AGENTS.md`](../../AGENTS.md) and `.agents/skills` as entry points, and do not treat this file as canonical.
 ```
 
-- [ ] **Step 4: 整合確認**
+New:
+
+```markdown
+> This file provides `docs/plans/` helper instructions for Claude Code (actively used in the dual-AI setup). For Codex work, use [`AGENTS.md`](../../AGENTS.md) and [`.agents/skills/`](../../.agents/skills/) as entry points instead.
+```
+
+- [ ] **Step 4: Consistency check**
 
 ```bash
 grep -n "legacy reference" docs/plans/README.md docs/plans/CLAUDE.md
 ```
 
-Expected: no output（"legacy" 文言が両ファイルから消えている）
+Expected: no output ("legacy" text removed from both files)
 
 - [ ] **Step 5: Commit**
 
@@ -286,42 +286,42 @@ git commit -m "docs(plans): clarify dual-AI parallel use (Claude Code is active,
 
 ---
 
-## Task 6: handoff memory 更新
+## Task 6: Update handoff memory
 
 **Files:**
 
 - Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md`
 
-- [ ] **Step 1: handoff memory に C4 完了を追記**
+- [ ] **Step 1: Append C4 completion to handoff memory**
 
-`## 進捗` セクションの `⬜ **C4** — \`docs/**\` cleanup (残 1 plan)`行を、本 plan の commit SHA リストと共に`✅ **C4\*\* 完了` に書き換える。
+In the `## Progress` section, replace `⬜ **C4** — \`docs/**\` cleanup (1 plan remaining)`with`✅ **C4\*\* completed`, including this plan's commit SHA list.
 
 ```bash
-# Task 2-5 の commit SHA を取得
+# Get commit SHAs for Tasks 2-5
 git log --oneline --no-merges --grep="docs(adr)\|docs:.*requirements\|docs(guides)\|docs(plans):.*dual-AI" -10
 ```
 
-書き換え内容（テンプレート、実 SHA に置換すること）:
+Replacement content (template; replace with real SHAs):
 
 ```markdown
-- ✅ **C4 完了 (2026-04-27, commits `<TASK2_SHA>`〜`<TASK5_SHA>`)** — `docs/**` clean-break refactor 4 commit
-  - Task 1: 空ディレクトリ 2 件削除 (`docs/guides/admin/` / `docs/reference/codex-rules/`、空 dir のため commit 生成なし)
-  - Task 2 (`<TASK2_SHA>`): ADR 0022 を `decisions/README.md` インデックスに追加 (drift 修正)
-  - Task 3 (`<TASK3_SHA>`): `docs/README.md` の `requirements/` dangling ref 2 箇所削除（ADR 0014 で削除済みの directory への参照）
-  - Task 4 (`<TASK4_SHA>`): `docs/guides/` redirect stub 6 ファイル削除（実コンテンツゼロ）+ README.md を dual-AI 入口リストに簡素化
-  - Task 5 (`<TASK5_SHA>`): `docs/plans/README.md` + `docs/plans/CLAUDE.md` の dual-AI 並立明示（"Claude Code is legacy" 記述を事実と整合）
-  - **結果**: 空 dir 2 件削除、redirect stub 6 件削除（118 行）、ADR drift 1 件解消、dangling ref 2 件解消、dual-AI 整合 2 ファイル
-  - **維持判定 (削除候補だが継続維持)**: `docs/plans/archive/completed-legacy.md` (358 行、2026-02-07 以前の集約サマリー、git history 補完 SoT として価値あり)、`docs/reference/claude-rules/**` (3,397 行、`.claude/rules/` の `bun-patterns / react/hooks / frontend/gsap+ui-ux+anti-ai` 5 ファイルから active 参照あり)
+- ✅ **C4 completed (2026-04-27, commits `<TASK2_SHA>`–`<TASK5_SHA>`)** — `docs/**` clean-break refactor, 4 commits
+  - Task 1: removed 2 empty directories (`docs/guides/admin/` / `docs/reference/codex-rules/`, no commit for empty dirs)
+  - Task 2 (`<TASK2_SHA>`): add ADR 0022 to `decisions/README.md` index (drift fix)
+  - Task 3 (`<TASK3_SHA>`): remove 2 dangling `requirements/` refs from `docs/README.md` (directory already removed in ADR 0014)
+  - Task 4 (`<TASK4_SHA>`): delete 6 redirect stubs in `docs/guides/` (no real content) + simplify README.md to dual-AI entry list
+  - Task 5 (`<TASK5_SHA>`): clarify dual-AI parallel use in `docs/plans/README.md` + `docs/plans/CLAUDE.md` (align "Claude Code is legacy" text with reality)
+  - **Results**: removed 2 empty dirs, deleted 6 redirect stubs (118 lines), resolved 1 ADR drift, removed 2 dangling refs, aligned dual-AI docs in 2 files
+  - **Keep decision (was deletion candidate)**: `docs/plans/archive/completed-legacy.md` (358 lines, aggregated summary before 2026-02-07, valuable as historical SoT), `docs/reference/claude-rules/**` (3,397 lines, active references from 5 files in `.claude/rules/`: `bun-patterns / react/hooks / frontend/gsap+ui-ux+anti-ai`)
   - plan: `docs/superpowers/plans/2026-04-27-docs-cleanup.md`
 
-## 全体結果
+## Overall result
 
-C1 (rules) / C2 (agents) / C3 + C3b (skills) / C4 (docs) すべて完了。Clean-Break Refactor 4 plan セッション完結。
+C1 (rules) / C2 (agents) / C3 + C3b (skills) / C4 (docs) all complete. Clean-Break Refactor 4 plan session finished.
 ```
 
-- [ ] **Step 2: MEMORY.md index も同期**
+- [ ] **Step 2: Sync MEMORY.md index**
 
-`~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md` の `## Clean-Break Refactor C1-C4 (2026-04-27)` 行を C4 完了反映に更新。
+Update the `## Clean-Break Refactor C1-C4 (2026-04-27)` line in `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md` to reflect C4 completion.
 
 - [ ] **Step 3: Commit**
 
@@ -330,40 +330,40 @@ git add docs/superpowers/plans/2026-04-27-docs-cleanup.md
 git commit -m "docs(plan): record C4 docs cleanup completion (handoff memory updated)"
 ```
 
-> **Note:** memory file は `~/.claude/...` 配下で git 管理外。本 commit は plan ファイル本体の保存のみ。memory 更新は Step 1-2 で実施済み。
+> **Note:** Memory files under `~/.claude/...` are not tracked by git. This commit only saves the plan file; memory updates are handled in Steps 1-2.
 
 ---
 
 ## Self-Review
 
-**Spec coverage** (handoff memory `project_clean-break-refactor-handoff.md` C4 スコープ):
+**Spec coverage** (handoff memory `project_clean-break-refactor-handoff.md` C4 scope):
 
-- [x] ADR 連番確認・dead ADR supersede header → 既に整理済み（0013 / 0017 は Supersession Note 完備）。新規対応は 0022 を README に追加のみ → Task 2
-- [x] 完了 plan archive 判断 → archive/completed-legacy.md は維持（集約 SoT として価値あり）
-- [x] reference/ の重複コンテンツ削除 → reference/claude-rules/ は active 参照あり、削除しない
-- [x] guides/ の outdated 記述 → 6 redirect stub を削除 → Task 4
+- [x] ADR sequence check / dead ADR supersede headers → already cleaned (0013 / 0017 have Supersession Notes). New action only adds 0022 to README → Task 2
+- [x] Completed plan archive decision → keep archive/completed-legacy.md (valuable as aggregated SoT)
+- [x] Remove duplicate content in reference/ → keep reference/claude-rules/ due to active references
+- [x] Outdated guides/ text → delete 6 redirect stubs → Task 4
 
 **Placeholder scan**:
 
-- すべての commit message・diff content が plan 内に明記
-- 「TBD / TODO」記述ゼロ
+- All commit messages and diff content are explicitly documented in the plan
+- Zero "TBD / TODO" entries
 
 **Type consistency**:
 
-- ファイルパス・commit message が Task 間で整合
+- File paths and commit messages are consistent across tasks
 
 **Out of scope (explicit)**:
 
-- `docs/operations/bun.md` の Bun 1.3.9 → 1.3.11 更新は別 Task として別セッションで実施可（specific バージョン記載問題は AGENTS.md の "package.json + bun.lock が SSoT" 原則で曖昧記法に倒すか別途検討）
-- `docs/architecture/data-flow-analysis.md` (320 行) など大ファイルの rot 検証はスコープ外（C5 として将来実施可能）
+- Updating Bun 1.3.9 → 1.3.11 in `docs/operations/bun.md` can be a separate task in a different session (specific version references can be generalized per AGENTS.md "package.json + bun.lock are SSoT" principle)
+- Rot checks for large files like `docs/architecture/data-flow-analysis.md` (320 lines) are out of scope (possible future C5)
 
 ---
 
-## 完了基準
+## Completion criteria
 
-- [ ] Task 1 完了（空 dir 2 件物理削除）
-- [ ] Task 2-5 完了（4 commit）
-- [ ] Task 6 完了（handoff memory + plan ファイル commit）
-- [ ] `git log --oneline -10` で 4 docs commit + 1 plan commit の合計 5 commit が連続
-- [ ] `find docs/guides -type f` が `README.md` のみを返す
-- [ ] `grep -rln "requirements/\|legacy reference" docs/` が target ファイルから hit ゼロ
+- [ ] Task 1 complete (physically delete 2 empty dirs)
+- [ ] Tasks 2-5 complete (4 commits)
+- [ ] Task 6 complete (handoff memory + plan file commit)
+- [ ] `git log --oneline -10` shows 4 docs commits + 1 plan commit (5 total) in sequence
+- [ ] `find docs/guides -type f` returns only `README.md`
+- [ ] `grep -rln "requirements/\|legacy reference" docs/` returns zero hits in target files

@@ -63,6 +63,8 @@ export async function createItem(
 
 **禁止**: InlineEditorShell を使うページに AdminDetailLayout をラップすること（二重ヘッダーになる）
 
+**禁止**: `[id]/page.tsx` に detail と edit form を同居させる hybrid pattern — 詳細は `[id]/page.tsx`（`AdminDetailLayout` + 編集ボタン → `/edit`）、編集は `[id]/edit/page.tsx`（`AdminDetailLayout backLabel="詳細に戻る"` + Form）に必ず分離。編集成功時のリダイレクトは詳細ページ（`/admin/<resource>/${id}`）。参照実装: customers / coupons
+
 ---
 
 ## 詳細・編集・新規作成ページ標準構造
@@ -291,6 +293,33 @@ Event の `addressDetail` のように、**relation 経由で取得できる住�
 
 ユーザーへの可視化が必要な場合は **relation の住所を read-only でプレビュー表示**（編集不可）。Eventbrite / Peatix / connpass 全て同パターン。参照実装: `Event.addressDetail` ↔ `Location.address` + `formatEventAddress`。
 
+### Edit + Live Preview 2-column パターン（カード内部）
+
+SEO 設定・OGP・テンプレート編集等のライブプレビューが必要なフォームは、**カード内部**を `lg:grid-cols-2` で「フォーム左 / プレビュー右」に分割し、プレビューに `lg:sticky lg:top-6` を適用する。Sanity Studio / Mailchimp / Stripe Dashboard / Webflow CMS の canonical pattern。
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>基本SEO設定</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-4">{/* form fields */}</div>
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">プレビュー</p>
+        <div className="lg:sticky lg:top-6">
+          <SerpPreview ... />
+        </div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+```
+
+- **冗長 thumbnail 禁止** — プレビュー右カラムが画像を表示するため、フォーム側に小型 thumbnail を併置しない（SSoT 違反）
+- **「左1枚 + 右複数カード」とは別パターン** — あちらは inter-card layout、こちらは intra-card layout
+- 参照実装: `pages/[slug]/_seo/_components/PageSeoForm.tsx`（基本SEO + OGP の 2 カード）
+
 ---
 
 ## 親子 FK カスケード Select パターン
@@ -402,6 +431,110 @@ import { ToggleGroup, ToggleGroupItem } from "@/admin/components/ui";
 | 2-6（テキスト/アイコン） | `ToggleGroup`  | 余白サイズ、テキスト配置、コンテナ幅    |
 | 2-6（説明付きカード）    | `SelectionBox` | 決済方法、プラン選択                    |
 | 7+                       | `Select`       | タイトルサイズ（6段階）、アニメーション |
+
+---
+
+## 複合 widget を `<FormControl>` 配下に置くときの aria 注入パターン
+
+shadcn `<FormControl>` は Radix `Slot` で子 1 個に `id` / `aria-describedby` / `aria-invalid` を注入する。**フォーカス可能要素を持たない複合 widget**（MediaPicker / DnD list / カラースウォッチ群 等）を `<FormControl>` 配下に置く場合、これら 3 props を **シグネチャに追加して primary トリガーボタンに forward** すること。root `<div>` に渡されると `<FormMessage>` の error ID と紐づかず、SR にエラーが伝わらない silent a11y bug になる。
+
+```tsx
+// NG: aria 注入を捨てる（root <div> に届くだけで primary トリガーに伝わらない）
+function MyComplexField({ value, onChange }: Props) {
+  return (
+    <div>
+      <Button onClick={openPicker}>選択</Button>
+    </div>
+  );
+}
+
+// OK: id / aria-describedby / aria-invalid をシグネチャ受領 → primary トリガーに forward
+interface MyComplexFieldProps {
+  value: string;
+  onChange: (v: string) => void;
+  // shadcn FormControl が Slot 経由で注入する 3 props
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+}
+
+function MyComplexField({
+  value,
+  onChange,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
+}: MyComplexFieldProps) {
+  return (
+    <div>
+      <Button
+        id={id}
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
+        onClick={openPicker}
+      >
+        選択
+      </Button>
+    </div>
+  );
+}
+```
+
+参照実装: `MediaPickerField`(`@/admin/components/media-picker`)。Radix `Slot` は子 Component の関数 props にもマージするため、root JSX 要素ではなくコンポーネント関数引数で受け取れる。
+
+**caveat（button 系コンポーネントの場合）**: primary トリガーが `<button>` のときは `aria-invalid` を forward しない（`jsx-a11y/role-supports-aria-props` が button role での `aria-invalid` を非対応として警告 + ARIA 1.1 まで `aria-invalid` は input 系限定）。エラーメッセージは `aria-describedby` の FormMessage ID 経由で SR に十分伝わるため、`aria-invalid` 受け取り自体を省略する（`MediaPickerField` がこの方針）。
+
+## Switch / Checkbox の補足説明は `<FormDescription>` 必須
+
+`<p className="text-xs text-muted-foreground">` は `<FormControl>` の `aria-describedby` に紐づかない。`<FormDescription>` は `formDescriptionId` を自動付与してコントロールと接続するため、SR が補足を読み上げる。
+
+```tsx
+// NG: <p> は aria-describedby に紐づかない
+<FormItem>
+  <FormControl><Switch ... /></FormControl>
+  <p className="text-xs text-muted-foreground">補足説明</p>
+</FormItem>
+
+// OK: FormDescription（id 自動付与 + FormControl の aria-describedby に接続）
+<FormItem>
+  <FormControl><Switch ... /></FormControl>
+  <FormDescription className="text-xs">補足説明</FormDescription>
+</FormItem>
+```
+
+---
+
+## Destructive アクションの強調レベル基準
+
+業界標準（Material 3 / Apple HIG / GitHub Primer / Bootstrap / WordPress / Stripe / Sanity / Notion / Figma 等横断）:
+
+| 強調レベル                             | variant / className 例                                                            | 採用文脈                                                |
+| -------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **Filled red**（最強調）               | `variant="destructive"`（赤背景白文字）                                           | **確認モーダル / Danger Zone のみ**。インラインでは過剰 |
+| **Outline destructive**（中強調）      | `variant="outline" + border-destructive text-destructive hover:bg-destructive/10` | インライン破壊的アクション（変更ボタンと並ぶ削除等）    |
+| **Ghost / link destructive**（弱強調） | `variant="ghost"` + `text-destructive` / link スタイル                            | フォーム state の clear 等、実質的に破壊的でない        |
+
+**判断基準**: 操作が DB に即時反映で不可逆 → Filled。フォーム state のみ・保存前 reset で undo 可能 → Outline 以下。
+
+**Outline destructive 推奨実装**（参照: `MediaPickerField`）:
+
+- `border-destructive`（フル不透明度、隣接する `border-input` outline ボタンと濃度を揃える）
+- `text-destructive` + `hover:bg-destructive/10`
+- `focus-visible:ring-destructive`（base `ring-ring` を上書き、destructive context の keyboard 経路でも伝達）
+- `active:bg-destructive/15`（base `active:scale-[0.98]` と組み合わせ押下感）
+
+## 画像 picker UI のアスペクト比別配置パターン
+
+- **大きい画像（cover / logo / OGP / 幅 200px+）**: 画像下にボタン横並び（業界全社標準: WordPress / Stripe / Notion / Webflow / Sanity）
+- **小サムネ（avatar 等、幅 ~64px）**: 画像右横にボタン（Slack / Linear avatar 等の限定パターン）
+- **hover overlay（画像内重ね）**: タッチデバイスでアクセス不可のため**インライン文脈では避ける**。常時表示の画像下ボタンが業界標準（GitHub README 画像 / Slack プロフィール画像）
+- **fieldset で囲む場合の幅制約**: `sm:grid-cols-2` 内で fieldset 内幅 ≈ 288px。wide (240px) / logo (240px) は画像右横に置く余裕なし、square (128px) のみ理論上可能だが 4 つの一貫性が崩れるため画像下に統一
+
+## `<fieldset>` cardinality 1 の許容
+
+HTML5 仕様 "a set of form controls" は cardinality 1 でも違反ではない（MDN の "single field では通常不要" は推奨であって禁止ではない）。**視覚対称化のために単一 form control を `<fieldset>` で囲んでよい**。fieldset 内で `FormLabel` が legend と冗長になる場合は `sr-only` で残す（`htmlFor` 接続維持のため省略は禁止）。
+
+参照実装: `BasicInfoSection.tsx` のファビコン / OGP fieldset（cardinality 1）と ヘッダー / フッターロゴ fieldset（cardinality 2: 画像 + Switch）
 
 ---
 

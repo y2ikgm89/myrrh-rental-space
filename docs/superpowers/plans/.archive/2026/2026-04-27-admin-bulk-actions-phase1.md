@@ -1,16 +1,16 @@
 > **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
 
-# P19 Phase 1 — Admin Bulk Actions 実装計画
+# P19 Phase 1 — Admin Bulk Actions Implementation Plan
 
 > **Spec**: `docs/superpowers/specs/2026-04-27-admin-bulk-actions-phase1-design.md`
-> **対象**: spaces / events / news の 3 領域に bulk publish/unpublish/delete を導入
-> **Bundle 構成**: 3 Bundle (A/B/C) = 3 commit、各 Bundle 並列 dispatch 可能
+> **Scope**: add bulk publish/unpublish/delete to spaces / events / news (3 areas)
+> **Bundle structure**: 3 Bundles (A/B/C) = 3 commits; each bundle can be dispatched in parallel
 
 ## Context
 
-`/admin` 一覧ページの一括操作を `posts` / `pages` / `reservations` / `faq` に続いて spaces / events / news に対称化する。既存 `PostBulkActions` パターン（`PostBulkActions.tsx` 141 行 + `bulk-commands.ts` + `actions/post/bulk.ts`）を参照実装として複製する純粋な対称化作業。
+Align bulk actions on `/admin` list pages for spaces / events / news, following `posts` / `pages` / `reservations` / `faq`. This is a straight symmetry task: copy the existing `PostBulkActions` pattern (`PostBulkActions.tsx` 141 lines + `bulk-commands.ts` + `actions/post/bulk.ts`) as the reference implementation.
 
-各 Bundle は独立リソースの実装で**ファイル衝突なし**のため並列 dispatch 可能。controller は dispatch 後の git verify のみ実施。
+Each bundle targets an independent resource with **no file conflicts**, so parallel dispatch is possible. The controller only performs git verification after dispatch.
 
 ---
 
@@ -28,16 +28,16 @@
 
 ### Files to modify
 
-1. `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceTable.tsx` — 行 checkbox + `selectedIds` state + `<SpaceBulkActions />` 配置
-2. `src/app/(admin)/admin/(dashboard)/spaces/_components/space-table-desktop.tsx` — 同上の desktop 版調整（必要に応じて）
-3. `src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts` — `bulk.ts` の re-export 追加（barrel パターン採用済みの場合）
-4. `package.json` — `test:unit` に `bun test __tests__/unit/domain/spaces/bulk-commands.test.ts` バッチ追加
+1. `src/app/(admin)/admin/(dashboard)/spaces/_components/SpaceTable.tsx` — row checkboxes + `selectedIds` state + place `<SpaceBulkActions />`
+2. `src/app/(admin)/admin/(dashboard)/spaces/_components/space-table-desktop.tsx` — desktop variant adjustments as needed
+3. `src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts` — add `bulk.ts` re-export (if barrel pattern is used)
+4. `package.json` — add `bun test __tests__/unit/domain/spaces/bulk-commands.test.ts` to `test:unit` batch
 
 ### Tasks
 
 #### A1. domain command (`bulk-commands.ts`)
 
-参照実装: `src/shared/domain/posts/bulk-commands.ts`
+Reference implementation: `src/shared/domain/posts/bulk-commands.ts`
 
 ```typescript
 import "server-only";
@@ -64,7 +64,7 @@ export async function bulkTogglePublishedSpacesCommand(
   if (ids.length === 0)
     return { count: 0, isPublished: publish, affectedSlugs: [] };
   const now = new Date();
-  // updateMany では updated 行の slug を取得できないため、先に slug 取得 → updateMany
+  // updateMany cannot return updated slugs, so fetch slugs first → updateMany
   const targets = await prisma.space.findMany({
     where: { id: { in: ids } },
     select: { id: true, slug: true },
@@ -91,7 +91,7 @@ export async function bulkDeleteSpacesCommand(
   let count = 0;
   let skipped = 0;
   const affectedSlugs: string[] = [];
-  // FK 制約 (Reservation.spaceId) で個別 P2003 を catch するため逐次削除
+  // Delete sequentially to catch individual P2003 FK constraints (Reservation.spaceId)
   for (const target of targets) {
     try {
       await prisma.space.delete({ where: { id: target.id } });
@@ -112,15 +112,15 @@ export async function bulkDeleteSpacesCommand(
 }
 ```
 
-**規律**:
+**Discipline**:
 
-- `import "server-only"` 必須
-- `Prisma` 名前空間は `@/shared/lib/validations/enums/prisma-types` gateway 経由（`PrismaClientKnownRequestError` は **runtime sentinel** ではないため gateway OK）。実際には型のみ参照のため `import type { Prisma }` で問題なし
-- ただし `Prisma.PrismaClientKnownRequestError` は **値判定**（`instanceof`）に使うため runtime import が必要。実装者は `import { Prisma } from "@generated/prisma/client"` で直接 import すること（domain layer は gateway 経由禁止対象外、gateway 経由で `instanceof` できるか要 verify）
+- `import "server-only"` is required
+- The `Prisma` namespace should go through the `@/shared/lib/validations/enums/prisma-types` gateway (since `PrismaClientKnownRequestError` is not a runtime sentinel, gateway is OK). If only types are needed, `import type { Prisma }` is fine
+- However, `Prisma.PrismaClientKnownRequestError` is used for **value checks** (`instanceof`), so a runtime import is required. Implementers should import directly via `import { Prisma } from "@generated/prisma/client"` (domain layer is not prohibited). Verify whether `instanceof` works through the gateway
 
 #### A2. Server Action (`actions/space/bulk.ts`)
 
-参照実装: `src/app/(admin)/admin/(dashboard)/_shared/actions/post/bulk.ts`
+Reference implementation: `src/app/(admin)/admin/(dashboard)/_shared/actions/post/bulk.ts`
 
 ```typescript
 "use server";
@@ -133,15 +133,15 @@ import {
   type BulkDeleteResult,
 } from "@/shared/domain/spaces/bulk-commands";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { invalidateSpaceCaches } from "@/shared/lib/cache/space-cache"; // 既存 helper
+import { invalidateSpaceCaches } from "@/shared/lib/cache/space-cache"; // existing helper
 import { createValidationError } from "@/admin/types/server-actions";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const bulkInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "ID が不正です" }))
-    .min(1, { error: "1 件以上選択してください" })
-    .max(100, { error: "一度に処理できるのは 100 件までです" }),
+    .array(z.string().uuid({ error: "Invalid ID" }))
+    .min(1, { error: "Select at least 1 item" })
+    .max(100, { error: "You can process up to 100 items at once" }),
 });
 
 export const bulkTogglePublishedSpaces = async (
@@ -158,7 +158,7 @@ export const bulkTogglePublishedSpaces = async (
     afterSuccess: async (data) => {
       // CACHE_TAGS.SPACES + per-slug detail tag cascade
       for (const slug of data.affectedSlugs) {
-        // existing helper or invalidateSpaceCaches(undefined, slug) パターンに合わせる
+        // follow existing helper or invalidateSpaceCaches(undefined, slug) pattern
       }
     },
   });
@@ -182,50 +182,50 @@ export const bulkDeleteSpaces = async (
 };
 ```
 
-**実装者注意**:
+**Implementer notes**:
 
-- `invalidateSpaceCaches` の正確な署名は `src/shared/lib/cache/space-cache.ts` を Read して確認。bulk 版がなければ ids ループで既存版を呼ぶ
-- `createValidationError` の import 経路は `@/admin/types/server-actions` を Read して確認
-- `executeAdminMutationResult` の `action` 値は `Action` enum (`@/admin/lib/admin-resources` または `permissions.ts`) に存在する値のみ可（`publish` / `delete` は実在確認）
+- Confirm the exact `invalidateSpaceCaches` signature in `src/shared/lib/cache/space-cache.ts`. If no bulk version exists, loop ids and call the existing helper
+- Confirm the import path for `createValidationError` in `@/admin/types/server-actions`
+- `executeAdminMutationResult` `action` must be a value in the `Action` enum (`@/admin/lib/admin-resources` or `permissions.ts`) — verify `publish` / `delete` exist
 
 #### A3. UI (`SpaceBulkActions.tsx`)
 
-参照実装: `src/app/(admin)/admin/(dashboard)/posts/_components/PostBulkActions.tsx` を複製。
+Reference implementation: duplicate `src/app/(admin)/admin/(dashboard)/posts/_components/PostBulkActions.tsx`.
 
-差分:
+Differences:
 
 - `bulkTogglePostPublished` → `bulkTogglePublishedSpaces`
 - `bulkDeletePosts` → `bulkDeleteSpaces`
-- toast: `${count}件のスペースを公開しました` / `${count}件公開、${skipped}件はスキップ（FK 制約）`
-- 削除 toast: `${count}件削除、${skipped}件はスキップ（紐づく予約あり）`
-- 削除前確認: `DeleteConfirmDialog`（`pages/_components/BulkActions.tsx` 参照）を統合推奨
+- toast: `${count} spaces published` / `${count} published, ${skipped} skipped (FK constraints)`
+- delete toast: `${count} deleted, ${skipped} skipped (linked reservations)`
+- pre-delete confirmation: integrate `DeleteConfirmDialog` (see `pages/_components/BulkActions.tsx`)
 
-#### A4. Table 改修 (`SpaceTable.tsx` / `space-table-desktop.tsx`)
+#### A4. Table refactor (`SpaceTable.tsx` / `space-table-desktop.tsx`)
 
-1. `"use client"` 確認（既に Client）
-2. `useState<string[]>([])` で `selectedIds`
-3. ヘッダー row に all-select `CheckboxCell`
-4. 各 data row 先頭に `<TableCell onClick={stopRowClick}><CheckboxCell aria-label={`${space.name} を選択`} ... /></TableCell>`
-5. テーブル外（return の Fragment 末尾）に `<SpaceBulkActions selectedIds={selectedIds} onClear={() => setSelectedIds([])} />`
+1. Confirm `"use client"` (already client)
+2. Add `selectedIds` via `useState<string[]>([])`
+3. Add all-select `CheckboxCell` in header row
+4. Add `<TableCell onClick={stopRowClick}><CheckboxCell aria-label={`Select ${space.name}`} ... /></TableCell>` at the start of each data row
+5. Place `<SpaceBulkActions selectedIds={selectedIds} onClear={() => setSelectedIds([])} />` outside the table (end of return fragment)
 
-`ClickableTableRow` 採用済みの場合、checkbox セルの `onClick={stopRowClick}` で行クリック遷移を遮断する。
+If `ClickableTableRow` is used, prevent row click navigation via `onClick={stopRowClick}` on the checkbox cell.
 
 #### A5. Tests
 
 **Unit** (`__tests__/unit/domain/spaces/bulk-commands.test.ts`):
 
-- 空配列で count: 0 / DB 呼ばない
-- 複数件 publish 成功 / `affectedSlugs` 取得
-- FK 制約 (P2003) 1 件で skipped カウント
-- 全件 P2003 で count: 0 / skipped: N
+- Empty array → count: 0 / no DB calls
+- Publish multiple items succeeds / `affectedSlugs` captured
+- One P2003 FK constraint increments skipped
+- All P2003 → count: 0 / skipped: N
 
 **Integration** (`__tests__/integration/actions/admin/space-bulk.test.ts`):
 
-- 未認証 → `MutationError`
+- Unauthenticated → `MutationError`
 - VIEWER role → permission denied
-- 100 件超 → validation error
-- 正常系で `executeAdminMutationResult` mock が呼ばれる
-- mock を `mock.module("@/admin/lib/admin-action", ...)` で差し替え
+- Over 100 items → validation error
+- Happy path calls `executeAdminMutationResult` mock
+- Replace mock via `mock.module("@/admin/lib/admin-action", ...)`
 
 **package.json**:
 
@@ -234,15 +234,15 @@ export const bulkDeleteSpaces = async (
 "test:integration": "... && bun test __tests__/integration/actions/admin/space-bulk.test.ts ..."
 ```
 
-（既存バッチへの追記。既存スクリプトの順序を破らないこと）
+(Append to existing batch; do not break the existing script order)
 
 ### Verification (Bundle A)
 
 - `bun run type-check` exit 0
 - `bun test __tests__/unit/domain/spaces/bulk-commands.test.ts` exit 0
 - `bun test __tests__/integration/actions/admin/space-bulk.test.ts` exit 0
-- `git status --short` で modified/new files が想定通り
-- `git diff --stat HEAD` で行数妥当（domain ~80 + action ~70 + UI ~150 + table ~30 + tests ~250 ≈ 580 行）
+- `git status --short` shows expected modified/new files
+- `git diff --stat HEAD` line counts are reasonable (domain ~80 + action ~70 + UI ~150 + table ~30 + tests ~250 ≈ 580 lines)
 
 ---
 
@@ -261,12 +261,12 @@ export const bulkDeleteSpaces = async (
 ### Files to modify
 
 1. `src/app/(admin)/admin/(dashboard)/events/_components/EventTable.tsx`
-2. `src/app/(admin)/admin/(dashboard)/_shared/actions/event/index.ts` (barrel re-export 追加、存在しない場合スキップ)
+2. `src/app/(admin)/admin/(dashboard)/_shared/actions/event/index.ts` (add barrel re-export; skip if missing)
 3. `package.json`
 
 ### Tasks
 
-#### B1. domain command (events 固有: status filter + soft delete)
+#### B1. domain command (event-specific: status filter + soft delete)
 
 ```typescript
 import "server-only";
@@ -337,14 +337,14 @@ export async function bulkSoftDeleteEventsCommand(
 }
 ```
 
-**規律**:
+**Discipline**:
 
-- `EventStatus` enum は gateway (`prisma-types`) から import 可
-- `actor: { id: string }` は `executeAdminMutationResult` の `execute(user)` から渡す（`{ id: user.id, role: user.role }` パターン、CLAUDE.md 「ドメインコマンドの actor 引数は `{ id: string; role: Role }` オブジェクト」）
+- `EventStatus` enum can be imported from the gateway (`prisma-types`)
+- `actor: { id: string }` is passed from `executeAdminMutationResult` via `execute(user)` (`{ id: user.id, role: user.role }` pattern; CLAUDE.md requires `{ id: string; role: Role }` object)
 
 #### B2. Server Action
 
-参照実装: post/bulk.ts、ただし actor を渡す必要あり:
+Reference implementation: post/bulk.ts, but must pass actor:
 
 ```typescript
 return executeAdminMutationResult({
@@ -354,7 +354,7 @@ return executeAdminMutationResult({
     bulkSoftDeleteEventsCommand(parsed.data.ids, { id: user.id }),
   afterSuccess: async (data) => {
     for (const slug of data.affectedSlugs) {
-      // invalidateEventCaches(id, slug) を呼ぶ
+      // call invalidateEventCaches(id, slug)
     }
   },
 });
@@ -362,22 +362,22 @@ return executeAdminMutationResult({
 
 #### B3. UI (`EventBulkActions.tsx`)
 
-PostBulkActions パターン + skipped カウント表示。toast:
+PostBulkActions pattern + show skipped count. Toasts:
 
-- 公開: `${count}件のイベントを公開しました${skipped > 0 ? `（${skipped}件は状態遷移不可でスキップ）` : ""}`
-- 削除: `${count}件のイベントを削除しました`
+- Publish: `${count} events published${skipped > 0 ? ` (${skipped} skipped due to status)` : ""}`
+- Delete: `${count} events deleted`
 
-#### B4. Table 改修 (`EventTable.tsx`)
+#### B4. Table refactor (`EventTable.tsx`)
 
-Bundle A と同パターン。`aria-label` は `${event.title} を選択`。
+Same pattern as Bundle A. Use `aria-label` = `Select ${event.title}`.
 
 #### B5. Tests
 
-- 空配列・複数件・status filter（CANCELLED イベントは publish 対象外）・soft delete (`deletedAt` + `deletedById` セット確認)
+- Empty array / multiple items / status filter (CANCELLED events not publishable) / soft delete (`deletedAt` + `deletedById` set)
 
 ### Verification (Bundle B)
 
-Bundle A と同等。行数目安 ≈ 600 行。
+Same as Bundle A. Estimated line count ≈ 600 lines.
 
 ---
 
@@ -396,12 +396,12 @@ Bundle A と同等。行数目安 ≈ 600 行。
 ### Files to modify
 
 1. `src/app/(admin)/admin/(dashboard)/news/_components/NewsTable.tsx`
-2. `src/app/(admin)/admin/(dashboard)/_shared/actions/news.ts` (barrel re-export 追加)
+2. `src/app/(admin)/admin/(dashboard)/_shared/actions/news.ts` (add barrel re-export)
 3. `package.json`
 
 ### Tasks
 
-#### C1. domain command (spaces とほぼ同型、ただし FK 制約なし)
+#### C1. domain command (same as spaces, but no FK constraints)
 
 ```typescript
 export async function bulkTogglePublishedNewsCommand(
@@ -442,95 +442,95 @@ export async function bulkDeleteNewsCommand(
 
 #### C2. Server Action
 
-post/bulk.ts パターン。`invalidateNewsCaches` の存在を確認、なければ `updateTag(CACHE_TAGS.NEWS)` + per-slug `getCacheTag.news.detail(slug)` を直接呼ぶ。
+Follow the post/bulk.ts pattern. Confirm `invalidateNewsCaches` exists; if not, call `updateTag(CACHE_TAGS.NEWS)` + per-slug `getCacheTag.news.detail(slug)` directly.
 
 #### C3. UI (`NewsBulkActions.tsx`)
 
-PostBulkActions 複製。toast:「ニュース」表記、skip 概念なしのため最小版で OK。
+Duplicate PostBulkActions. Toast uses "News" wording; no skip concept, so a minimal version is OK.
 
-#### C4. Table 改修 (`NewsTable.tsx`)
+#### C4. Table refactor (`NewsTable.tsx`)
 
-Bundle A と同パターン。
+Same pattern as Bundle A.
 
 #### C5. Tests
 
-Bundle A の spaces 版から FK skip ケースを除いた最小セット。
+Minimal set based on Bundle A spaces version, excluding FK skip cases.
 
 ### Verification (Bundle C)
 
-Bundle A と同等。行数目安 ≈ 500 行（FK 処理ない分軽量）。
+Same as Bundle A. Estimated line count ≈ 500 lines (lighter without FK handling).
 
 ---
 
-## 全体検証 (Phase 1 完了時)
+## Overall verification (Phase 1 complete)
 
 1. `bun run validate` exit 0
-2. `bun run test:unit` exit 0（新規バッチ含む）
+2. `bun run test:unit` exit 0 (including new batch)
 3. `bun run test:integration` exit 0
-4. `git log --oneline main..HEAD` で 3 commit 確認
-5. 各 commit の `git show --stat HEAD~N` で対象ファイル + 行数妥当性
+4. `git log --oneline main..HEAD` shows 3 commits
+5. `git show --stat HEAD~N` per commit confirms target files + line counts
 
-dev server で手動確認（任意、`feedback_dev-server-manual.md` 準拠でユーザー手動）:
+Manual checks in dev server (optional, follow `feedback_dev-server-manual.md` for user-led verification):
 
-- `/admin/spaces` で複数選択 → 一括公開 → 公開ステータス Badge 反映
-- `/admin/events` で複数選択 → 一括削除 → ソフト削除（一覧から消える、ゴミ箱に表示される場合は確認）
-- `/admin/news` で複数選択 → 一括非公開 → 公開ステータス反映
+- `/admin/spaces`: multi-select → bulk publish → published status badge updates
+- `/admin/events`: multi-select → bulk delete → soft delete (removed from list; verify trash if applicable)
+- `/admin/news`: multi-select → bulk unpublish → published status updates
 
 ---
 
-## Subagent Dispatch 規律
+## Subagent dispatch discipline
 
-### 並列 dispatch（推奨）
+### Parallel dispatch (recommended)
 
-Bundle A / B / C はファイル衝突なしのため **3 並列 dispatch** で context isolation + 高速完了:
+Bundles A / B / C have no file conflicts, so use **3 parallel dispatches** for context isolation + faster completion:
 
 ```
-controller → 3 並列 Agent (general-purpose, sonnet)
-  - Bundle A prompt: 上記「Bundle A」節を full text で渡す
-  - Bundle B prompt: 上記「Bundle B」節を full text で渡す
-  - Bundle C prompt: 上記「Bundle C」節を full text で渡す
+controller → 3 parallel agents (general-purpose, sonnet)
+  - Bundle A prompt: pass the full text of "Bundle A" above
+  - Bundle B prompt: pass the full text of "Bundle B" above
+  - Bundle C prompt: pass the full text of "Bundle C" above
 ```
 
-### Dispatch prompt 共通注意
+### Dispatch prompt common notes
 
-- 🚫 `git add / commit / push / reset / checkout / restore / stash` 全面禁止
-- 🚫 JSDoc / コメントに「Phase X.Y」「P19」「Bundle A」等のタスク参照を含めない
-- ✅ Implementer は編集のみ、commit は controller が完了後に Bundle 単位で実施
-- ✅ import alias は `@/admin/*` / `@/public/*` / `@/shared/*` の 3 系統（`_shared/` プレフィックス二重禁止）
-- ✅ plan の type 仕様（戻り値型 `affectedSlugs: string[]` 等）は維持。削減判断は controller に escalate
-- ✅ 公式パターン違反疑いは justified deviation として報告
-- ✅ 実装着手前に `Read` で参照実装（PostBulkActions / posts/bulk-commands.ts / actions/post/bulk.ts）を確認
-- ✅ `invalidateSpaceCaches` 等 cache helper の正確な署名は実装ファイルを Read で確認
-- ✅ `executeAdminMutationResult` の `action: "publish" | "delete"` は `@/admin/lib/admin-resources` の `Action` 型に実在することを Grep で事前確認
+- 🚫 `git add / commit / push / reset / checkout / restore / stash` strictly forbidden
+- 🚫 Do not include task references like "Phase X.Y", "P19", "Bundle A" in JSDoc/comments
+- ✅ Implementers only edit; controller commits per bundle after completion
+- ✅ Import aliases are limited to `@/admin/*` / `@/public/*` / `@/shared/*` (no double `_shared/` prefixes)
+- ✅ Preserve plan type specs (e.g., return type `affectedSlugs: string[]`); escalate reductions to controller
+- ✅ Report suspected official pattern violations as justified deviations
+- ✅ Before implementation, `Read` the reference implementation (PostBulkActions / posts/bulk-commands.ts / actions/post/bulk.ts)
+- ✅ Confirm exact signatures of cache helpers like `invalidateSpaceCaches` by reading implementation files
+- ✅ Pre-verify that `executeAdminMutationResult` `action: "publish" | "delete"` exists in the `Action` type in `@/admin/lib/admin-resources`
 
-### Bundle 完了後の controller 検証
+### Controller verification after bundle completion
 
-各 Bundle 完了報告を受けたら:
+After receiving each bundle completion report:
 
-1. `git status --short` で実際の変更ファイル
-2. `wc -l <new-files>` で行数 vs implementer 報告
-3. `grep -E "^export" <new-files>` で期待 symbol 存在
-4. `bun run type-check` で型整合
-5. 上記 OK なら controller 側で `git add <files> && git commit -m "<plan 指定 message>"` でステージ + commit
+1. `git status --short` to confirm actual changed files
+2. `wc -l <new-files>` to compare line counts vs implementer report
+3. `grep -E "^export" <new-files>` to confirm expected symbols
+4. `bun run type-check` for type consistency
+5. If OK, controller runs `git add <files> && git commit -m "<plan message>"` to stage + commit
 
-### handoff memory 更新
+### Update handoff memory
 
-3 Bundle 完了 + commit 後、`~/.claude/projects/<slug>/memory/project_p17-19-sequential-handoff.md` に以下追記:
+After all 3 bundles complete + commit, append the following to `~/.claude/projects/<slug>/memory/project_p17-19-sequential-handoff.md`:
 
 ```markdown
-## P19 Phase 1 完了状態（参照のみ） ✅ 2026-04-27
+## P19 Phase 1 completion status (reference only) ✅ 2026-04-27
 
 - **Plan**: `docs/superpowers/plans/2026-04-27-admin-bulk-actions-phase1.md`
 - **Spec**: `docs/superpowers/specs/2026-04-27-admin-bulk-actions-phase1-design.md`
-- **commit 範囲**: `<base SHA>` → `<final SHA>` の 3 commit (Bundle A/B/C)
-- **未 push**: main 直接 commit、`git push` は未実行
-- **次フェーズ**: Phase 2 (customers / inquiries / coupons) を別 plan で実装
+- **commit range**: `<base SHA>` → `<final SHA>` (3 commits: Bundle A/B/C)
+- **not pushed**: direct commits on main; `git push` not executed
+- **next phase**: Phase 2 (customers / inquiries / coupons) implemented in a separate plan
 ```
 
 ---
 
-## Phase 2 / 3 への持ち越し（参考）
+## Carryover to Phases 2 / 3 (reference)
 
-- **Phase 2**: customers / inquiries / coupons の bulk 操作（同型パターン、別 plan）
-- **Phase 3**: 一括ステータス変更（CANCEL イベント + 参加者通知メール、状態遷移マップ整備）
-- **Phase 4**: 一括カテゴリ移動・タグ付け（リソース横断機能）
+- **Phase 2**: bulk actions for customers / inquiries / coupons (same pattern, separate plan)
+- **Phase 3**: bulk status changes (CANCEL events + attendee notifications, state transition map)
+- **Phase 4**: bulk category moves / tagging (cross-resource feature)

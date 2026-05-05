@@ -5,6 +5,7 @@ import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
+import { getRequiredTermsAtSignup } from "@/shared/domain/terms/queries";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";
 
@@ -20,6 +21,8 @@ export default async function LoginPage({
 }) {
   const user = await getCurrentCustomerUser();
   if (user) redirect("/mypage");
+
+  const requiredTerms = await getRequiredTermsAtSignup();
 
   const params = await searchParams;
   const errorType =
@@ -50,7 +53,13 @@ export default async function LoginPage({
           <p className="text-center text-muted-foreground">
             アカウントに連携して、予約の確認や変更が簡単にできます。
           </p>
-          <SocialLoginButtons />
+          <SocialLoginButtons
+            requiredTerms={requiredTerms.map((t) => ({
+              id: t.id,
+              slug: t.slug,
+              title: t.title,
+            }))}
+          />
           {process.env["NODE_ENV"] !== "production" && <DevLoginButton />}
         </Stack>
       </Container>

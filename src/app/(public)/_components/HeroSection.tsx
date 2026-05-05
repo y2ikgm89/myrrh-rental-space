@@ -111,8 +111,11 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
         <div className="relative min-h-[50svh] w-full md:h-full md:w-1/2">
           <div ref={imageRef} className="absolute inset-0">
             <Image
-              src={config.backgroundImageUrl || DEFAULT_BG_IMAGE}
-              alt="洗練されたレンタルスペースのインテリア"
+              src={config.backgroundImage.url || DEFAULT_BG_IMAGE}
+              alt={
+                config.backgroundImage.alt ||
+                "洗練されたレンタルスペースのインテリア"
+              }
               fill
               priority
               sizes="(min-width: 768px) 50vw, 100vw"

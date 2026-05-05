@@ -8,7 +8,6 @@ const mockFindUnique = mock<
     descriptionHtml: string;
     descriptionPlainText: string;
     addressDetail: string | null;
-    access: string | null;
     capacity: number;
     area: number | null;
     hourlyPrice: number;
@@ -72,7 +71,6 @@ const SOURCE_SPACE = {
   descriptionHtml: "<p>desc</p>",
   descriptionPlainText: "desc",
   addressDetail: "1F",
-  access: "駅から徒歩5分",
   capacity: 10,
   area: 30,
   hourlyPrice: 1000,

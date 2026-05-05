@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { createCompactImageGroupSchema } from "../_shared/image";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["grid", "carousel", "list"] as const;
 const variants = ["default", "card", "minimal"] as const;
@@ -9,17 +11,20 @@ export const testimonialConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Testimonials",
     maxLength: 50,
+    subGroup: "text",
   }),
   title: field.text("見出し", {
     default: "お客様の声",
     maxLength: 100,
+    subGroup: "text",
   }),
   items: field.array("レビュー", {
+    subGroup: "text",
     fields: {
       content: field.textarea("レビュー内容"),
       authorName: field.text("お客様の名前"),
       authorTitle: field.text("肩書き"),
-      authorImageUrl: field.image("アバター画像"),
+      authorImage: createCompactImageGroupSchema("プロフィール画像"),
       rating: field.number("評価", {
         min: 1,
         max: 5,
@@ -28,10 +33,11 @@ export const testimonialConfigSchema = z.object({
       }),
     },
   }),
-  layout: field.select("レイアウト", {
+  displayLayout: field.select("表示レイアウト", {
     options: layouts,
     default: "carousel",
     group: "design",
+    helpText: "レビューの並び方",
   }),
   showRating: field.boolean("星評価を表示する", { default: true }),
   variant: field.select("レイアウトの種類", {
@@ -39,6 +45,7 @@ export const testimonialConfigSchema = z.object({
     default: "default",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type TestimonialConfig = z.infer<typeof testimonialConfigSchema>;

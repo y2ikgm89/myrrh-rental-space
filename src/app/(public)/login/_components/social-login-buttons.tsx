@@ -4,16 +4,28 @@ import { useState } from "react";
 import { signIn } from "@/shared/lib/customer-auth-client";
 import { cn } from "@/shared/lib/cn";
 import { Stack } from "@/public/components/design-system/stack";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   GoogleLogo,
   LineLogo,
 } from "@/public/components/ui/social-provider-logos";
+import { setSignupTermsAgreementCookie } from "./signup-terms-action";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
 type Provider = "google" | "line";
+
+export interface SignupTermItem {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+}
+
+interface SocialLoginButtonsProps {
+  readonly requiredTerms?: readonly SignupTermItem[];
+}
 
 /* ------------------------------------------------------------------ */
 /*  Error message translation                                          */
@@ -31,13 +43,38 @@ function toUserMessage(raw: string): string {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function SocialLoginButtons() {
+export function SocialLoginButtons({
+  requiredTerms = [],
+}: SocialLoginButtonsProps = {}) {
   const [pending, setPending] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agreedIds, setAgreedIds] = useState<readonly string[]>([]);
 
-  const handleSignIn = (provider: Provider) => {
+  const allTermsAgreed =
+    requiredTerms.length === 0 ||
+    requiredTerms.every((term) => agreedIds.includes(term.id));
+
+  function handleToggleTerm(id: string) {
+    setAgreedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  const handleSignIn = async (provider: Provider) => {
     setPending(provider);
     setError(null);
+
+    // 規約同意を signed cookie に保存（OAuth callback まで保持）
+    if (requiredTerms.length > 0) {
+      const result = await setSignupTermsAgreementCookie({
+        termsIds: agreedIds,
+      });
+      if (isMutationError(result)) {
+        setError(result.error);
+        setPending(null);
+        return;
+      }
+    }
 
     void signIn.social({
       provider,
@@ -61,7 +98,7 @@ export function SocialLoginButtons() {
     });
   };
 
-  const disabled = pending !== null;
+  const disabled = pending !== null || !allTermsAgreed;
 
   return (
     <Stack gap="lg">
@@ -74,11 +111,45 @@ export function SocialLoginButtons() {
         </div>
       )}
 
+      {requiredTerms.length > 0 && (
+        <div className="space-y-3 border border-border p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            ご利用規約への同意
+          </p>
+          {requiredTerms.map((term) => {
+            const isChecked = agreedIds.includes(term.id);
+            return (
+              <label key={term.id} className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 border-border accent-accent"
+                  checked={isChecked}
+                  disabled={pending !== null}
+                  onChange={() => handleToggleTerm(term.id)}
+                  aria-label={`${term.title}に同意する`}
+                />
+                <span className="text-sm text-muted-foreground">
+                  <a
+                    href={`/terms/${term.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent underline transition-colors hover:text-foreground"
+                  >
+                    {term.title}
+                  </a>
+                  に同意します
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+
       {/* Google — 公式ブランドガイドライン: 白背景 + カラーロゴ + Roboto テキスト */}
       <button
         type="button"
         disabled={disabled}
-        onClick={() => handleSignIn("google")}
+        onClick={() => void handleSignIn("google")}
         className={cn(
           "flex w-full items-center justify-center gap-3 border border-border bg-background px-6 py-3 text-sm font-medium text-foreground transition-colors duration-200",
           "hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -93,7 +164,7 @@ export function SocialLoginButtons() {
       <button
         type="button"
         disabled={disabled}
-        onClick={() => handleSignIn("line")}
+        onClick={() => void handleSignIn("line")}
         className={cn(
           "flex w-full items-center justify-center gap-3 bg-[#06C755] px-6 py-3 text-sm font-medium text-white transition-opacity duration-200",
           "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#06C755] focus-visible:ring-offset-2",

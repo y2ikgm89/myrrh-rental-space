@@ -81,8 +81,14 @@ const VALID_CUSTOMER_DATA = {
   companyName: "株式会社テスト",
   email: "tanaka@example.com",
   phoneNumber: "090-1234-5678",
-  address: "東京都渋谷区1-1-1",
+  postalCode: "150-0001",
+  prefecture: "東京都",
+  city: "渋谷区",
+  streetAddress: "神宮前1-1-1",
+  building: "サンプルビル 2F",
   notes: "VIP顧客",
+  marketingOptIn: false,
+  phoneContactOptIn: true,
 } as const;
 
 describe("customers/commands", () => {
@@ -147,7 +153,11 @@ describe("customers/commands", () => {
           firstNameKana: "",
           companyName: "",
           phoneNumber: "",
-          address: "",
+          postalCode: "",
+          prefecture: "",
+          city: "",
+          streetAddress: "",
+          building: "",
           notes: "",
         });
 
@@ -158,7 +168,11 @@ describe("customers/commands", () => {
               firstNameKana: null,
               companyName: null,
               phoneNumber: null,
-              address: null,
+              postalCode: null,
+              prefecture: null,
+              city: null,
+              streetAddress: null,
+              building: null,
               notes: null,
             }),
           }),

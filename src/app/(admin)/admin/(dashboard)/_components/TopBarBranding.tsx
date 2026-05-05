@@ -9,6 +9,19 @@ type TopBarBrandingProps = {
   useHeaderLogo: boolean;
 };
 
+/**
+ * Next.js Image の `width` / `height` は aspect ratio 推論用の intrinsic 値。
+ * 実レンダーサイズは Tailwind の `h-8 w-auto` で制御する（公式: width を CSS で
+ * 変える場合は必ず height: auto も指定して aspect ratio 歪みを防ぐ）。
+ * 240:64 は横長ロゴの一般的なアスペクト比 (3.75:1) を仮定。
+ */
+const LOGO_INTRINSIC_WIDTH = 240;
+const LOGO_INTRINSIC_HEIGHT = 64;
+
+function isSvg(url: string): boolean {
+  return url.toLowerCase().endsWith(".svg");
+}
+
 export function TopBarBranding({
   siteName,
   headerLogoUrl,
@@ -29,11 +42,13 @@ export function TopBarBranding({
     <Image
       src={headerLogoUrl}
       alt={displayName}
-      width={120}
-      height={32}
-      className="h-8 w-auto object-contain"
-      onError={() => setLogoError(true)}
+      width={LOGO_INTRINSIC_WIDTH}
+      height={LOGO_INTRINSIC_HEIGHT}
       priority
+      unoptimized={isSvg(headerLogoUrl)}
+      onError={() => setLogoError(true)}
+      className="h-8 w-auto object-contain"
+      sizes="120px"
     />
   );
 }

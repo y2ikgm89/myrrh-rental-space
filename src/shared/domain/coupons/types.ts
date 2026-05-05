@@ -34,7 +34,15 @@ export type GetCouponsResult = {
   totalPages: number;
 };
 
-export type CouponStatusFilter =
+/**
+ * クーポンの派生表示ステータス（domain layer の SSoT）。
+ *
+ * `parseAsStringLiteral` ベースの URL filter 型（`@/shared/lib/nuqs` の
+ * `CouponStatusFilter` = sentinel `"ALL"` 込み）とは責務を分離する:
+ * - `CouponStatusValue`: domain 層・query 層・badge 層が扱う実ステータス値
+ * - `CouponStatusFilter`: URL クエリのフィルター値（"ALL" sentinel 込み）
+ */
+export type CouponStatusValue =
   | "active"
   | "inactive"
   | "expired"
@@ -42,7 +50,7 @@ export type CouponStatusFilter =
   | "notStarted";
 
 export type CouponFilters = {
-  status?: CouponStatusFilter | undefined;
+  status?: CouponStatusValue | undefined;
   type?: CouponType | undefined;
   search?: string | undefined;
 };

@@ -3,7 +3,6 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { defaultPageHeroHome } from "@/shared/lib/sections/page-hero/defaults";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import {
   ErrorCategory,
@@ -47,12 +46,11 @@ function getDefaultSections(slug: string): PublicSection[] {
 }
 
 export type HomepagePublicData = {
-  readonly pageHero: unknown;
   readonly sections: readonly PublicSection[];
 };
 
 /**
- * ホームページの pageHero + セクション一覧（旧 homepage-hero Section は除外）
+ * ホームページのセクション一覧（旧 homepage-hero Section は除外、page-hero section を含む）
  */
 export async function getHomepagePublicData(): Promise<HomepagePublicData> {
   "use cache";
@@ -69,7 +67,7 @@ export async function getHomepagePublicData(): Promise<HomepagePublicData> {
     fetch: () =>
       prisma.page.findUnique({
         where: { slug: "home" },
-        select: { id: true, pageHero: true },
+        select: { id: true },
       }),
     fallback: null,
     category: ErrorCategory.DATABASE,
@@ -79,7 +77,6 @@ export async function getHomepagePublicData(): Promise<HomepagePublicData> {
 
   if (!homePage) {
     return {
-      pageHero: defaultPageHeroHome,
       sections: fallbackSections,
     };
   }
@@ -113,7 +110,6 @@ export async function getHomepagePublicData(): Promise<HomepagePublicData> {
   const useSections = filtered.length > 0 ? filtered : fallbackSections;
 
   return {
-    pageHero: homePage.pageHero ?? defaultPageHeroHome,
     sections: useSections,
   };
 }

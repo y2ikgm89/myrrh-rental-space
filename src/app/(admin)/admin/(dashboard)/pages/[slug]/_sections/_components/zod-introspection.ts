@@ -17,6 +17,11 @@ import type { FieldMeta } from "@/shared/lib/sections/field-registry";
 export interface FieldInfo {
   readonly key: string;
   readonly schema: z.ZodType;
+  /**
+   * `meta` は `FieldMeta` 全体を含み、`subGroup`（text / image / button / other）も
+   * そのまま透過する。AutoSectionForm が `meta.subGroup` で content フィールドを
+   * 分類して FieldGroupSection で見出し付き表示する。
+   */
   readonly meta: FieldMeta;
 }
 

@@ -359,6 +359,8 @@ describe("Homepage Settings Admin Action Integration", () => {
     });
 
     test("有効な NEWS_LIST 設定は成功", () => {
+      // Phase 3 で section schema が `displayLayout`（per-section の表示形式）と
+      // `layout`（全 section 共通の余白・幅・可視性 group）に分離された
       const config = {
         sectionLabel: "News",
         title: "お知らせ",
@@ -366,7 +368,7 @@ describe("Homepage Settings Admin Action Integration", () => {
         showViewAllLink: true,
         viewAllText: "全てのお知らせ",
         viewAllUrl: "/news",
-        layout: "list",
+        displayLayout: "list",
         columns: 2,
       };
       const result = validateSectionConfig(SectionType.NEWS_LIST, config);
@@ -412,7 +414,8 @@ describe("Homepage Settings Admin Action Integration", () => {
       const config = getDefaultConfig(SectionType.FAQ_LIST);
       expect(config["maxItems"]).toBeGreaterThan(0);
       expect(config["variant"]).toBeDefined();
-      expect(config["containerWidth"]).toBeDefined();
+      // Phase 3 で `containerWidth` は `layout.containerWidth` に統合された
+      expect(config["layout"]).toBeDefined();
     });
 
     test("GALLERY のデフォルト設定に必須フィールドが含まれる", () => {

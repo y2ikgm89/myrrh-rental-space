@@ -85,11 +85,6 @@ export const spaceFormBaseSchema = z
       .max(500, { error: "所在地補足は500文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
-    access: z
-      .string()
-      .max(500, { error: "アクセス情報は500文字以内で入力してください" })
-      .optional()
-      .or(z.literal("")),
     capacity: z
       .number()
       .int({ error: "整数を入力してください" })
@@ -119,11 +114,6 @@ export const spaceFormBaseSchema = z
     facilities: facilitiesSchema,
     isPublished: z.boolean().default(false),
     reviewsEnabled: z.boolean().default(true),
-    termsId: z
-      .string()
-      .uuid({ error: "利用規約IDが無効です" })
-      .optional()
-      .nullable(),
     locationId: z
       .string()
       .min(1, { error: "拠点を選択してください" })
@@ -180,7 +170,6 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   name: "",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "",
-  access: "",
   capacity: 10,
   area: null,
   hourlyPrice: 0,
@@ -190,7 +179,6 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   facilities: [],
   isPublished: false,
   reviewsEnabled: true,
-  termsId: null,
   locationId: "",
   categoryId: null,
   // 割引設定
@@ -234,7 +222,6 @@ export type SpaceWithStats = {
   addressDetail: string | null;
   /** 拠点住所 + addressDetail を結合した表示用1行 */
   displayAddress: string;
-  access: string | null;
   capacity: number;
   area: number | null;
   hourlyPrice: number;
@@ -252,7 +239,6 @@ export type SpaceWithStats = {
   createdAt: string;
   /** toISOString() 済み ISO 8601 文字列 */
   updatedAt: string;
-  termsId: string | null;
   locationId: string;
   categoryId: string | null;
   /** 一覧・詳細でカテゴリ名表示用（Prisma include） */

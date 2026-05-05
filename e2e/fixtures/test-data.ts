@@ -117,6 +117,8 @@ export const urls = {
   adminMedia: "/admin/media",
   adminFaq: "/admin/faq",
   adminTerms: "/admin/terms",
+  adminTermsTrash: "/admin/terms/trash",
+  adminTermsAgreements: "/admin/terms/agreements",
 } as const;
 
 /** テストセレクタ */

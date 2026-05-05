@@ -134,7 +134,19 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               }
             />
             <DetailField label="電話番号" value={customer.phoneNumber} />
-            <DetailField label="住所" value={customer.address} />
+            <DetailField label="郵便番号" value={customer.postalCode} />
+            <DetailField label="都道府県" value={customer.prefecture} />
+            <DetailField label="市区町村" value={customer.city} />
+            <DetailField label="町名・番地" value={customer.streetAddress} />
+            <DetailField label="建物名・部屋番号" value={customer.building} />
+            <DetailField
+              label="メルマガ受信"
+              value={customer.marketingOptIn ? "可" : "不可"}
+            />
+            <DetailField
+              label="電話連絡"
+              value={customer.phoneContactOptIn ? "可" : "不可"}
+            />
           </div>
         </DetailSection>
 

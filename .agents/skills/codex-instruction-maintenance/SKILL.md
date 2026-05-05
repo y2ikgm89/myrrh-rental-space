@@ -14,7 +14,7 @@ description: Use when changing Codex project instructions, AGENTS.md, repository
 5. Treat `.codex/rules/*.rules` as command approval policy only. Do not write coding standards there.
 6. Keep `.codex/hooks.json` empty unless the repository has a concrete hook use case and the current OpenAI docs confirm the needed event is supported.
 7. When adding lessons from a code review, put concrete repeatable checks in the narrow skill or subagent that owns that surface instead of expanding `AGENTS.md`.
-8. Document structural changes in `docs/architecture/codex-instructions.md` or `docs/architecture/agent-instructions.md`.
+8. Document structural changes in `docs/explanation/ai-instructions.md`.
 
 ## Boundaries
 

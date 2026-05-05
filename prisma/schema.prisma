@@ -96,24 +96,6 @@ enum PostStatus {
   ARCHIVED
 }
 
-enum TermsType {
-  TERMS_OF_USE // サイト利用規約
-  PRIVACY_POLICY // プライバシーポリシー
-  CANCELLATION // キャンセルポリシー
-  PAYMENT // 支払い規約
-  RENTAL_TERMS // 施設利用規約（スペース別）
-  COMMERCIAL_TRANSACTION // 特定商取引法に基づく表記
-  REVIEW_GUIDELINES // レビュー投稿ガイドライン（SpaceReview 機能と連動）
-  COOKIE_POLICY // Cookie ポリシー（ePrivacy 指令準拠の独立ページ）
-  CUSTOM // カスタム規約
-}
-
-enum TermsStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 enum CouponType {
   PERCENTAGE // パーセント割引 (例: 20%)
   FIXED_AMOUNT // 定額割引 (例: ¥1,000)
@@ -252,7 +234,6 @@ model User {
   icalTokens      ICalToken[]
   auditLogs       AuditLog[]
   mediaFiles      Media[]
-  termsAgreements TermsAgreement[]
   customer        Customer?          @relation("CustomerUser")
 
   // RBAC: EDITOR用の割り当てページ（中間テーブル）
@@ -269,8 +250,6 @@ model User {
   inquiryReplies          Inquiry[]              @relation("InquiryReplies")
   reservationDeletions    Reservation[]          @relation("ReservationDeletions")
   eventDeletions          Event[]                @relation("EventDeletions")
-  createdTermsVersions    TermsVersion[]         @relation("TermsVersionCreator")
-  publishedTermsVersions  TermsVersion[]         @relation("TermsVersionPublisher")
   createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
   createdLoginTokens      LoginToken[]           @relation("LoginTokenCreator")
   createdBlockTemplates   BlockTemplate[]        @relation("BlockTemplateCreator")
@@ -394,7 +373,9 @@ model Location {
   city            String?
   streetAddress   String?
   buildingName    String?
-  access          String?  @db.Text
+  /// 交通案内（最寄り駅・路線・徒歩分数等）。1 行 = 1 経路の構造化配列。
+  /// 旧 access String 列（改行区切り）を 2026-05-01 に Json 配列化（破壊的変更）。
+  accessLines     Json     @default("[]")
   parkingInfo     String?  @db.Text
   amenities       Json     @default("{}")
   imageUrl        String
@@ -456,8 +437,8 @@ model Space {
   /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
   descriptionPlainText String   @db.Text
   /// 号室・フロア等。建物の住所は必ず `Location.address` を正本とする。
+  /// 主要交通案内・駐車場情報は親 Location（accessLines / parkingInfo）が SSoT。
   addressDetail String?   @db.Text
-  access        String?   @db.Text
   capacity      Int
   area          Decimal?  @db.Decimal(10, 2)
   hourlyPrice   Decimal   @db.Decimal(10, 2)
@@ -484,9 +465,6 @@ model Space {
   ogpDescription String?
   ogpImageUrl    String?
 
-  // 規約設定
-  termsId String? @db.Uuid // 任意の規約参照
-
   // 割引設定（Enum化）
   discountType             DiscountType             @default(none)
   discountValue            Decimal?                 @db.Decimal(10, 2)
@@ -504,7 +482,6 @@ model Space {
   icalTokens   ICalToken[]
   reviews      SpaceReview[]
   events       Event[]
-  terms        Terms?         @relation(fields: [termsId], references: [id], onDelete: SetNull)
   location     Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
@@ -513,7 +490,6 @@ model Space {
   @@index([addressDetail])
   @@index([isPublished, isActive])
   @@index([publishedAt, isActive])
-  @@index([termsId])
   @@index([locationId])
   @@index([categoryId])
   @@map("spaces")
@@ -563,7 +539,6 @@ model Reservation {
   user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   coupon          Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  termsAgreements TermsAgreement[]
   review          SpaceReview?
 
   // Soft-delete
@@ -611,7 +586,11 @@ model Customer {
   customerType       CustomerType   @default(PERSONAL)
   email              String         @unique
   phoneNumber        String?
-  address            String?        @db.Text
+  postalCode         String?        @db.VarChar(8)   // 郵便番号 "123-4567" 等
+  prefecture         String?        @db.VarChar(10)  // 都道府県（PREFECTURES SSoT）
+  city               String?        @db.VarChar(100) // 市区町村
+  streetAddress      String?        @db.VarChar(200) // 町名・番地
+  building           String?        @db.VarChar(200) // 建物名・部屋番号
   status             CustomerStatus @default(NEW)
   notes              String?        @db.Text
   totalReservations  Int            @default(0)
@@ -619,6 +598,8 @@ model Customer {
   lastReservationAt  DateTime?
   firstReservationAt DateTime?
   isActive           Boolean        @default(true)
+  marketingOptIn     Boolean        @default(false)  // メルマガ・キャンペーン受信可否
+  phoneContactOptIn  Boolean        @default(true)   // 電話連絡可否
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -631,6 +612,7 @@ model Customer {
   inquiries    Inquiry[]
   reviews              SpaceReview[]
   eventRegistrations   EventRegistration[]
+  termsAgreements      TermsAgreement[]
 
   @@index([lastName])
   @@index([firstName])
@@ -950,8 +932,6 @@ model Page {
   id                 String       @id @default(uuid()) @db.Uuid
   slug               String       @unique
   title              String
-  /// ホーム等で使用する first-class ヒーロー（variant 別 JSON）。旧 homepage-hero Section は廃止。
-  pageHero           Json?
   description        String?      @db.Text
   metaDescription    String?
   metaKeywords       String?
@@ -1123,10 +1103,10 @@ model Settings {
   businessDescription String?   @db.Text // 事業概要
 
   // Contact Info
+  // 表示用住所は postalCode + prefecture + city + streetAddress + buildingName から派生（SSoT）
   phoneNumber   String?
   faxNumber     String?
   email         String?
-  address       String? @db.Text
   postalCode    String? // 郵便番号
   prefecture    String? // 都道府県
   city          String? // 市区町村
@@ -1139,8 +1119,8 @@ model Settings {
   holidayNotice   String? @db.Text // 休業日のお知らせ
 
   // Access Info (アクセス情報)
-  accessInfo  String? @db.Text // 交通案内（最寄り駅・路線・徒歩分数等）
-  parkingInfo String? @db.Text // 駐車場案内（台数・近隣パーキング等）
+  // 交通案内・駐車場案内は Location 単位（multi-location）が SSoT。
+  // Settings 側の旧 accessInfo / parkingInfo は 2026-05-01 に廃止。
 
   // Email Settings
   senderEmail                       String?
@@ -1554,82 +1534,58 @@ model LoginAttempt {
 }
 
 // =============================================================================
-// 規約管理
+// 規約管理（clean-break rebuild）
 // =============================================================================
 
-/// 規約マスター（複数のバージョンを持つ）
-model Terms {
-  id         String    @id @default(uuid()) @db.Uuid
-  type       TermsType
-  title      String // 表示タイトル（例: "利用規約"）
-  slug       String    @unique // URL用スラッグ（例: "terms-of-use"）
-  isActive              Boolean @default(true) // 現在有効な規約か
-  requiredAtReservation Boolean @default(false) // 予約フォームで同意必須
-  showInFooter          Boolean @default(false) // フッターにリンク表示
-  createdAt             DateTime @default(now())
-  updatedAt  DateTime  @updatedAt
-  // Relations
-  versions   TermsVersion[]
-  spaces     Space[] // この規約を使用するスペース
-  agreements TermsAgreement[] // 同意記録
-  @@index([type, isActive])
-  // @unique が自動的にインデックスを作成するため @@index([slug]) は不要
-  @@map("terms")
-}
+/// 規約マスター（最新版を直接保存。バージョン履歴は同意記録の contentSnapshot で代替）
+model TermsDocument {
+  id                    String    @id @default(uuid()) @db.Uuid
+  type                  String    @db.VarChar(64)         // VARCHAR で柔軟化（旧 TermsType enum 廃止）
+  slug                  String    @unique @db.VarChar(50)
+  title                 String    @db.VarChar(100)
+  contentJson           Json                              // Lexical EditorState
+  contentHtml           String    @db.Text                // SSR / 同意記録 snapshot 用
+  isPublished           Boolean   @default(false)
+  publishedAt           DateTime?
+  requiredAtReservation Boolean   @default(false)
+  requiredAtInquiry     Boolean   @default(false)
+  requiredAtSignup      Boolean   @default(false)
+  showInFooter          Boolean   @default(true)
+  footerOrder           Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
 
-/// 規約バージョン（不変オブジェクト）
-model TermsVersion {
-  id               String      @id @default(uuid()) @db.Uuid
-  termsId String @db.Uuid
-  version          Int // 自動インクリメント（Terms内でユニーク）
-  contentHtml      String      @db.Text @map("content") // HTMLキャッシュ（公開表示用）
-  contentJson      Json? // Lexical EditorState JSON（プライマリ）
-  status           TermsStatus @default(DRAFT)
-  publishedAt      DateTime? // 公開日時
-  publishedBy String? @db.Uuid // 公開者ID（User.id）- ユーザー削除時にnull化
-  isCurrentVersion Boolean     @default(false) // 現在の有効バージョン
-  createdAt        DateTime    @default(now())
-  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
-
-  // Relations
-  terms      Terms            @relation(fields: [termsId], references: [id], onDelete: Cascade)
   agreements TermsAgreement[]
-  creator    User?            @relation("TermsVersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-  publisher  User?            @relation("TermsVersionPublisher", fields: [publishedBy], references: [id], onDelete: SetNull)
 
-  @@unique([termsId, version])
-  @@index([termsId, isCurrentVersion])
-  @@index([status, publishedAt])
-  @@map("terms_versions")
+  @@index([type])
+  @@index([deletedAt, isPublished])
+  @@index([showInFooter, isPublished, footerOrder])
+  @@map("terms_documents")
 }
 
-/// 規約同意記録（監査証跡）
+/// 規約同意記録（証跡）— 同意時の HTML スナップショットを保持しバージョン履歴を兼ねる
 model TermsAgreement {
-  id            String  @id @default(uuid()) @db.Uuid
-  termsId String @db.Uuid
-  versionId String @db.Uuid // 同意した規約バージョンID
-  reservationId String? @db.Uuid // 予約ID（予約時の同意の場合）
-  userId String? @db.Uuid // ユーザーID（ログイン済みの場合）
+  id              String   @id @default(uuid()) @db.Uuid
+  termsId         String   @db.Uuid
+  customerId      String?  @db.Uuid
+  guestEmail      String?  @db.VarChar(255)
+  contentSnapshot String   @db.Text                // 同意時 HTML 完全保存
+  contentHash     String   @db.VarChar(64)         // sha256(contentSnapshot)
+  agreedAt        DateTime @default(now())
+  context         String   @db.VarChar(64)         // "reservation"/"inquiry"/"signup"
+  resourceId      String?  @db.Uuid                // 予約 ID 等
+  ipAddress       String?  @db.VarChar(45)
+  userAgent       String?  @db.Text
 
-  // 同意者情報（ゲストユーザー用）
-  guestName  String? // ゲスト氏名
-  guestEmail String? // ゲストメール
+  terms    TermsDocument @relation(fields: [termsId], references: [id], onDelete: Restrict)
+  customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
-  // 監査情報
-  agreedAt  DateTime @default(now()) // 同意日時
-  ipAddress String? // IPアドレス（ハッシュ化）
-  userAgent String? // ブラウザ情報
-
-  // Relations
-  terms       Terms        @relation(fields: [termsId], references: [id], onDelete: Cascade)
-  version     TermsVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
-  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([reservationId])
-  @@index([userId, agreedAt])
-  @@index([termsId, versionId])
-  @@index([guestEmail, agreedAt])
+  @@index([termsId])
+  @@index([customerId])
+  @@index([resourceId])
+  @@index([agreedAt])
+  @@index([context, agreedAt])
   @@map("terms_agreements")
 }
 

@@ -10,7 +10,6 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { DashboardHeader } from "./_components/DashboardHeader";
-import { IntegrationHealthAlert } from "./_components/IntegrationHealthAlert";
 import { DashboardStatsSection } from "./_components/DashboardStatsSection";
 import { DashboardNotificationsSection } from "./_components/DashboardNotificationsSection";
 import { DashboardChartSection } from "./_components/DashboardChartSection";
@@ -51,11 +50,6 @@ export default async function AdminDashboard(): Promise<ReactElement> {
       {/* ヘッダー */}
       <Suspense fallback={<DashboardHeaderSkeleton />}>
         <DashboardHeader />
-      </Suspense>
-
-      {/* 外部連携ヘルスチェック: 未設定があれば alert 表示 */}
-      <Suspense fallback={null}>
-        <IntegrationHealthAlert />
       </Suspense>
 
       {/* 統計カード: 最も高速なDBクエリ */}

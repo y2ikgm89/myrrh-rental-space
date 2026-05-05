@@ -15,7 +15,11 @@ type CustomerRecord = {
   customerType: CustomerType;
   email: string;
   phoneNumber: string | null;
-  address: string | null;
+  postalCode: string | null;
+  prefecture: string | null;
+  city: string | null;
+  streetAddress: string | null;
+  building: string | null;
   status: CustomerStatus;
   notes: string | null;
   totalReservations: number;
@@ -23,6 +27,8 @@ type CustomerRecord = {
   lastReservationAt: Date | null;
   firstReservationAt: Date | null;
   isActive: boolean;
+  marketingOptIn: boolean;
+  phoneContactOptIn: boolean;
   userId: string | null;
   createdAt: Date;
   updatedAt: Date;

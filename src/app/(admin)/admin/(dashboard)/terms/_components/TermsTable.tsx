@@ -1,5 +1,13 @@
+"use client";
+
+import Link from "next/link";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { IconPencil, IconTrash } from "@tabler/icons-react";
 import {
   Badge,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -7,99 +15,133 @@ import {
   TableHeader,
   TableRow,
 } from "@/admin/components/ui";
-import { TERMS_TYPES } from "@/shared/lib/validations/terms";
-import type { TermsWithVersion } from "@/shared/lib/validations/terms";
-import { TermsActiveSwitch } from "./TermsActiveSwitch";
-import { TermsActionCell } from "./TermsActionCell";
-import { TermsTypeSelectDialog } from "./TermsTypeSelectDialog";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { logger } from "@/shared/lib/logger";
+import { getErrorMessage } from "@/shared/lib/errors";
+import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
+import { deleteTerms } from "@/admin/actions/terms";
+import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
 
-type TermsTableProps = {
-  terms: TermsWithVersion[];
-};
+interface TermsTableProps {
+  readonly items: AdminTermsListItem[];
+}
 
-export function TermsTable({ terms }: TermsTableProps) {
-  if (terms.length === 0) {
+export function TermsTable({ items }: TermsTableProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDelete(id: string, title: string) {
+    if (
+      !window.confirm(
+        `「${title}」を削除しますか？\n（同意記録は保持されます）`,
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const result = await deleteTerms(id);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success("規約を削除しました");
+        router.refresh();
+      } catch (error) {
+        logger.error("規約削除エラー", { error: getErrorMessage(error) });
+        toast.error("削除中にエラーが発生しました");
+      }
+    });
+  }
+
+  if (items.length === 0) {
     return (
       <div className="rounded-lg border bg-card p-12 text-center">
-        <p className="text-muted-foreground">
-          利用規約がまだ登録されていません
+        <p className="text-sm text-muted-foreground">
+          まだ規約が登録されていません
         </p>
-        <div className="mt-4">
-          <TermsTypeSelectDialog />
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>タイトル</TableHead>
-              <TableHead className="hidden md:table-cell">スラッグ</TableHead>
-              <TableHead className="hidden md:table-cell">バージョン</TableHead>
-              <TableHead className="text-center">有効/無効</TableHead>
-              <TableHead className="hidden md:table-cell">予約時必須</TableHead>
-              <TableHead className="hidden md:table-cell">フッター</TableHead>
-              <TableHead className="hidden text-right md:table-cell">
-                スペース数
-              </TableHead>
+              <TableHead>タイプ</TableHead>
+              <TableHead>スラッグ</TableHead>
+              <TableHead>状態</TableHead>
+              <TableHead>同意必須</TableHead>
+              <TableHead className="text-right">同意数</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {terms.map((term) => {
-              const typeLabel =
-                TERMS_TYPES.find((t) => t.value === term.type)?.label ??
-                String(term.type);
-              return (
-                <TableRow key={term.id}>
-                  <TableCell>
-                    <div className="font-medium">{term.title}</div>
-                    <Badge variant="outline" className="mt-1 text-xs">
-                      {typeLabel}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <code className="text-sm text-muted-foreground">
-                      {term.slug}
-                    </code>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {term.currentVersion ? (
-                      <span className="text-sm">
-                        v{term.currentVersion.version}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-warning">(未公開)</span>
+            {items.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.title}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">
+                    {TERMS_TYPE_LABELS[item.type] ?? item.type}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {item.slug}
+                </TableCell>
+                <TableCell>
+                  {item.isPublished ? (
+                    <Badge>公開中</Badge>
+                  ) : (
+                    <Badge variant="outline">下書き</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {item.requiredAtReservation && (
+                      <Badge variant="outline" className="text-xs">
+                        予約
+                      </Badge>
                     )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <TermsActiveSwitch id={term.id} isActive={term.isActive} />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {term.requiredAtReservation && (
-                      <Badge variant="success">必須</Badge>
+                    {item.requiredAtInquiry && (
+                      <Badge variant="outline" className="text-xs">
+                        問合せ
+                      </Badge>
                     )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {term.showInFooter && <Badge variant="default">表示</Badge>}
-                  </TableCell>
-                  <TableCell className="hidden text-right md:table-cell">
-                    <Badge variant="secondary">{term._count.spaces}件</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <TermsActionCell
-                      id={term.id}
-                      title={term.title}
-                      spacesCount={term._count.spaces}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                    {item.requiredAtSignup && (
+                      <Badge variant="outline" className="text-xs">
+                        登録
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {item.agreementsCount}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button asChild size="sm" variant="ghost">
+                      <Link href={`/admin/terms/${item.id}/edit`}>
+                        <IconPencil className="h-4 w-4" />
+                        <span className="sr-only">編集</span>
+                      </Link>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(item.id, item.title)}
+                      disabled={isPending}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <IconTrash className="h-4 w-4" />
+                      <span className="sr-only">削除</span>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

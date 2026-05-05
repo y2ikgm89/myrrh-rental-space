@@ -1,84 +1,84 @@
-# 2026-04-28 Claude Code 公式準拠クリーンアップ
+# 2026-04-28 Claude Code Official-Compliance Cleanup
 
 > **Snapshot: 2026-04-28**
 > **Completed: 2026-04-28**
-> 同日 ADR 0028（Claude Config Optimization）完了直後の追加クリーンアップ。
-> 公式仕様 5 層（memory / rules / subagents / skills / hooks）一次ソース検証で発見した残差逸脱を、後方互換性なしで除去する。
+> Follow-up cleanup immediately after ADR 0028 (Claude Config Optimization) on the same day.
+> Remove residual drift found by verifying the official five-layer spec (memory / rules / subagents / skills / hooks) against primary sources, with no backwards compatibility.
 
-## 一次ソース検証結果
+## Primary-source verification
 
-`.claude/rules/research-audit.md` Step 1-2 に従い、Claude Code 本体の公式 docs を WebFetch で取得して照合した。
+Following `.claude/rules/research-audit.md` Steps 1–2, we fetched Claude Code’s official docs via WebFetch and compared them to the repo.
 
-| 公式 docs                            | 検証ポイント                                                                    | 現状                                                              |
-| ------------------------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `code.claude.com/docs/en/memory`     | `.claude/rules/` + `paths:` frontmatter は公式機能                              | ✅ 全 32 rule docs `paths:` 完備                                  |
-| `code.claude.com/docs/en/skills`     | SKILL.md < 500 行、description + when_to_use 合計 1,536 chars 上限              | ✅ 全 31 skill 準拠                                               |
-| `code.claude.com/docs/en/sub-agents` | frontmatter `name`/`description` 必須、その他は任意フィールド                   | ✅ 全 15 agent 公式 frontmatter のみ使用                          |
-| `code.claude.com/docs/en/sub-agents` | **v2.1.63 で `Task` tool → `Agent` tool に rename。`Task` は alias として残存** | ⚠️ `matcher: "Task"` が残存                                       |
-| `code.claude.com/docs/en/sub-agents` | `memory:` 設定なし agent は `agent-memory/<name>/` を持たない                   | ⚠️ design-memory / react-compiler-reviewer が orphaned dir を保有 |
-| `code.claude.com/docs/en/memory`     | `MEMORY.md` 200 行 / 25KB 上限、archive は trim 推奨                            | ⚠️ 「次回参照不要」明記の archive 5 件残存                        |
+| Official docs                        | What we checked                                                             | Current state                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `code.claude.com/docs/en/memory`     | `.claude/rules/` + `paths:` frontmatter are supported                       | ✅ All 32 rule docs have `paths:`                                  |
+| `code.claude.com/docs/en/skills`     | SKILL.md < 500 lines; description + when_to_use combined ≤ 1,536 characters | ✅ All 31 skills compliant                                         |
+| `code.claude.com/docs/en/sub-agents` | Frontmatter `name` / `description` required; other fields optional          | ✅ All 15 agents use official frontmatter only                     |
+| `code.claude.com/docs/en/sub-agents` | **In v2.1.63, `Task` tool renamed to `Agent`. `Task` remains as an alias**  | ⚠️ `matcher: "Task"` still present                                 |
+| `code.claude.com/docs/en/sub-agents` | Agents without `memory:` should not have `agent-memory/<name>/`             | ⚠️ design-memory / react-compiler-reviewer keep orphaned dirs      |
+| `code.claude.com/docs/en/memory`     | `MEMORY.md` 200-line / 25KB cap; trim archives as recommended               | ⚠️ Five archives marked “no need to reference next session” remain |
 
-## 差分（破壊的変更で除去）
+## Deltas (remove with breaking changes)
 
-### Phase 1: `Task` → `Agent` matcher rename（公式 v2.1.63 準拠）
+### Phase 1: `Task` → `Agent` matcher rename (official v2.1.63)
 
-公式 docs より:
+From official docs:
 
 > In version 2.1.63, the Task tool was renamed to Agent. Existing `Task(...)` references in settings and agent definitions still work as aliases.
 
-alias は後方互換のための一時措置。クリーン実装目標に従い `Agent` に統一する。
+Aliases exist only for backwards compatibility. Per clean-break goals, standardize on `Agent`.
 
-修正対象:
+Files to change:
 
 - `.claude/settings.json` L136: `"matcher": "Task"` → `"matcher": "Agent"`
-- `.claude/rules/claude-code-patterns.md` L73: 「Task ツール不可」 → 「Agent ツール不可」
-- `.claude/rules/ops/hooks-patterns.md` L116-120: `matcher: "Task"` 解説 → `matcher: "Agent"` 解説 + v2.1.63 rename 注記
-- `.claude/skills/verify-subagent-report/SKILL.md` L149: 「Task tool 実行後」 → 「Agent tool 実行後」
+- `.claude/rules/claude-code-patterns.md` L73: “Task tool disallowed” → “Agent tool disallowed”
+- `.claude/rules/ops/hooks-patterns.md` L116–120: `matcher: "Task"` explanation → `matcher: "Agent"` + v2.1.63 rename note
+- `.claude/skills/verify-subagent-report/SKILL.md` L149: “after Task tool run” → “after Agent tool run”
 
-### Phase 2: orphaned agent-memory directory 削除
+### Phase 2: Delete orphaned `agent-memory` directories
 
-`memory:` frontmatter なしの agent に対する `.claude/agent-memory/<name>/` は孤立データ。公式仕様では `memory:` 設定時のみ生成される。
+For agents **without** `memory:` frontmatter, `.claude/agent-memory/<name>/` is orphan data. Official behavior creates these only when `memory:` is set.
 
-削除対象:
+Delete:
 
-- `.claude/agent-memory/design-memory/` (3 files) — agent .md に `memory:` なし
-- `.claude/agent-memory/react-compiler-reviewer/` (1 file) — agent .md に `memory:` なし
+- `.claude/agent-memory/design-memory/` (3 files) — no `memory:` in agent `.md`
+- `.claude/agent-memory/react-compiler-reviewer/` (1 file) — no `memory:` in agent `.md`
 
-その他 6 件（codebase-explorer / project-reviewer / security-reviewer / test-writer / test-runner / verification）は agent .md に `memory:` 設定済み = 公式準拠維持。
+The other six (codebase-explorer / project-reviewer / security-reviewer / test-writer / test-runner / verification) already have `memory:` on the agent `.md` files = keep as compliant.
 
-### Phase 3: MEMORY.md archive entry プルーニング
+### Phase 3: Prune `MEMORY.md` archive index entries
 
-公式 docs より:
+From official docs:
 
 > The first 200 lines of `MEMORY.md`, or the first 25KB, whichever comes first, are loaded at the start of every conversation.
 
-現状 130 行で上限内だが、「次回参照不要」明記の 5 件 (archive 2026-04-28) は無価値な常時注入。index から削除（**ファイル本体は学習用に保持**）。
+We are at 130 lines (under the cap), but five archive entries (2026-04-28) explicitly marked “no need to reference next session” add useless always-on context. Remove them from the index (**keep the files** for learning).
 
-削除対象 (MEMORY.md index 行のみ):
+Remove from `MEMORY.md` index only:
 
 - `project_p17-19-sequential-handoff` archive
 - `project_clean-break-refactor-handoff` archive
 - `project_clean-break-c5-handoff` archive
 - `project_meo-multi-location-handoff` archive
-- `project_section-arch-phase-b-handoff`（保持理由: 経緯学習用と明記） → これは保持
+- `project_section-arch-phase-b-handoff` (keep: noted as retained for historical learning) → **keep this one**
 
-実削除は 4 件 + section header 整理。
+Actual removals: four entries + section header cleanup.
 
-## 検証
+## Verification
 
-- `bun run validate` exit 0 維持（rule / skill / agent 配下に TypeScript 影響なし）
-- `.claude/rules/audit-exceptions.md` への新規例外不要
+- `bun run validate` stays exit 0 (no TypeScript under rule / skill / agent trees)
+- No new entries needed in `.claude/rules/audit-exceptions.md`
 
 ## ADR
 
-ADR system は 2026-04-28 ADR 0028 で撤回済み。本変更は plan 文書 + git log で履歴管理。
+The ADR system was retired on 2026-04-28 per ADR 0028. Track this change via this plan document + git history.
 
-## 完了マーカー
+## Completion marker
 
 > **Completed: 2026-04-28**
 
-実行サマリ:
+Execution summary:
 
-- Phase 1 (Task → Agent rename): `.claude/settings.json` / `.claude/rules/claude-code-patterns.md` / `.claude/rules/ops/hooks-patterns.md` / `.claude/skills/verify-subagent-report/SKILL.md` 計 4 ファイル更新
-- Phase 2 (orphaned agent-memory 削除): `.claude/agent-memory/{design-memory,react-compiler-reviewer}/` 削除（gitignore 済み = git 履歴影響なし）
-- Phase 3 (MEMORY.md プルーニング): 130 行 → 117 行（archive 4 セクション削除）
+- Phase 1 (Task → Agent rename): updated four files — `.claude/settings.json`, `.claude/rules/claude-code-patterns.md`, `.claude/rules/ops/hooks-patterns.md`, `.claude/skills/verify-subagent-report/SKILL.md`
+- Phase 2 (orphaned agent-memory): removed `.claude/agent-memory/{design-memory,react-compiler-reviewer}/` (gitignored paths = no git history impact)
+- Phase 3 (`MEMORY.md` pruning): 130 → 117 lines (removed four archive sections)

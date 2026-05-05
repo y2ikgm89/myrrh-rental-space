@@ -17,13 +17,15 @@ const VALID_UUID_2 = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
 describe("PageSection Admin Action Integration", () => {
   describe("現行 action surface", () => {
-    test("固定テンプレート編集では本文更新 action のみを公開する", () => {
+    test("admin page editor が必要とする CRUD + reorder action を公開する", () => {
       expect(typeof pageSectionActions.updatePageSection).toBe("function");
-      expect("createPageSection" in pageSectionActions).toBe(false);
-      expect("deletePageSection" in pageSectionActions).toBe(false);
-      expect("duplicatePageSection" in pageSectionActions).toBe(false);
-      expect("togglePageSection" in pageSectionActions).toBe(false);
-      expect("updatePageSectionOrder" in pageSectionActions).toBe(false);
+      expect(typeof pageSectionActions.createPageSection).toBe("function");
+      expect(typeof pageSectionActions.deletePageSection).toBe("function");
+      expect(typeof pageSectionActions.duplicatePageSection).toBe("function");
+      expect(typeof pageSectionActions.togglePageSectionActive).toBe(
+        "function",
+      );
+      expect(typeof pageSectionActions.reorderPageSections).toBe("function");
     });
   });
 

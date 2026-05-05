@@ -17,6 +17,7 @@ paths:
 - **新規 Prisma モデル追加は `schema + seed + admin-ui` の 3 点セット同時作成必須** — seed 漏れは EmptyState で実装検証不可。enum フィールドは**全値を seed に網羅**
 - **Seed 関数は `upsert` で idempotent 化 + `seedAll` / `seedDemo` 両方に登録** — `deleteMany + create` は `--demo` で既存破壊（`seedEmailTemplates` 参照）
 - **Terms / News / Post / Section / Space の seed は Lexical JSON 同時保存必須** — `contentHtml` 単独禁止。`buildParagraphEditorStateJson()` + `buildParagraphHtml()`（`@/shared/lib/lexical/description-defaults.ts`）
+- **seed の `contentJson` は paragraph-only 近似である** — `buildParagraphEditorStateJson(stripTags(html))` パターンで生成するため、テンプレ HTML に h2/h3/list/etc が含まれていても **`contentJson` は段落のみのフラット構造**（HeadingNode が 0 個）になる。`contentJson` の AST 構造に依存する派生機能（TOC 生成・heading 抽出・search index・RSS 等）は seed データで silent に動作しなくなる。**公開ページの content 派生は `contentHtml` を canonical SSoT** とする業界標準（GitHub / Notion / WordPress / Stripe Docs / rehype-slug）パターンに従う（`@/shared/lib/html/extract-headings` の `extractHeadingsFromHtml` + `injectHeadingAnchors` が参照実装、SSR/Client 同一結果を純粋関数で保証）
 
 ## 公開一覧ページの 10 点セット
 
@@ -175,6 +176,7 @@ paths:
 - **Client Component の catch ブロックで `logError` は使えない（server-only）** — `getErrorMessage(error)` + `console.error` でログを残す。空 catch（エラー握り潰し）は禁止
 - **ソフトデリート追加時は全クエリの `select` に `deletedAt: true` を追加** — 型定義に `deletedAt` を加えても、Prisma の `select` に含めないと型不一致エラー。list/detail/calendar/stats の全クエリを更新すること
 - **ソフトデリートモデルの全 `findUnique`/`findFirst`/`findMany`/`update` に `where: { deletedAt: null }` 必須** — `restoreReservationCommand` のみ例外（削除済みを復元する関数）。`update` の `where` も対象（削除済み予約への返金操作等を防止）。新規クエリ追加時・レビュー時に必ず確認
+- **終端状態を持つ state machine は双方向遷移ではなく SUPER_ADMIN restore action 別経路で実装** — `RESERVATION_STATUS_TRANSITIONS` に `CANCELLED → CONFIRMED` 等の逆方向を追加禁止（誤操作で重複予約・在庫衝突を誘発する silent bug）。canonical: ① 終端遷移時に AlertDialog で `「通常の管理者では戻せません」` 警告 ② `restoreXxxStatusCommand` を別 domain command で実装（conflict 検出 + cancellation fields クリア + `icsSequence` increment）③ Server Action は `executeAdminMutationResult` + `if (user.role !== Role.SUPER_ADMIN) throw new DomainError("...", "FORBIDDEN")` で role gate ④ UI は SUPER_ADMIN のみ表示。Stripe / Airbnb / Eventbrite 全社が同パターン。参照実装: `restoreReservationStatusCommand` (`@/shared/domain/reservations/lifecycle-commands`) + `RestoreReservationStatusButton` (`reservations/[id]/_components/`)
 - **リレーション経由クエリの親ソフトデリートガード必須** — 子モデル（EventRegistration 等）が `deletedAt` を持たなくても、親モデル（Event）が持つ場合は `where: { eventId, event: { deletedAt: null } }` で親のソフトデリートをフィルタ。CSV エクスポート・集計クエリで特に漏れやすい
 - **ドメインコマンドの mutation クエリも親ソフトデリートガード必須** — `cancelEventRegistrationCommand` 等の update 前 findFirst にも `event: { deletedAt: null }` が必要。read 系だけでなく write 系の前提クエリも対象
 - **メール一括送信は `Promise.allSettled` でパラレル化** — `sendEventCancelledToAllParticipants` / `sendEventUpdatedToAllParticipants` 等の for-of + await 逐次送信は禁止。`Promise.allSettled` + 個別エラーログで並列化する

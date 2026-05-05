@@ -1,9 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Select,
   SelectContent,
   SelectItem,
@@ -20,14 +28,18 @@ import {
   RESERVATION_STATUS_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 
-// =============================================================================
-// Component
-// =============================================================================
-
 type ReservationStatusSelectProps = {
   reservationId: string;
   currentStatus: ReservationStatus;
 };
+
+const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
+  TERMINAL_RESERVATION_STATUSES,
+);
+
+function isTerminalTransition(target: ReservationStatus): boolean {
+  return TERMINAL_STATUS_SET.has(target);
+}
 
 export function ReservationStatusSelect({
   reservationId,
@@ -35,49 +47,99 @@ export function ReservationStatusSelect({
 }: ReservationStatusSelectProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [pendingTerminal, setPendingTerminal] =
+    useState<ReservationStatus | null>(null);
 
-  const isTerminal = TERMINAL_RESERVATION_STATUSES.includes(currentStatus);
+  const isTerminal = TERMINAL_STATUS_SET.has(currentStatus);
   const allowedNextStatuses =
     RESERVATION_STATUS_TRANSITIONS[currentStatus] ?? [];
 
-  const handleStatusChange = (newStatus: ReservationStatus) => {
-    if (newStatus === currentStatus) return;
-
+  const performStatusChange = (newStatus: ReservationStatus) => {
     startTransition(async () => {
       const result = await updateReservationStatus(reservationId, newStatus);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
-
       toast.success("ステータスを更新しました");
       router.refresh();
     });
   };
 
+  const handleStatusChange = (newStatus: ReservationStatus) => {
+    if (newStatus === currentStatus) return;
+    if (isTerminalTransition(newStatus)) {
+      setPendingTerminal(newStatus);
+      return;
+    }
+    performStatusChange(newStatus);
+  };
+
+  const handleConfirmTerminal = () => {
+    if (!pendingTerminal) return;
+    const target = pendingTerminal;
+    setPendingTerminal(null);
+    performStatusChange(target);
+  };
+
   return (
-    <Select
-      value={currentStatus}
-      onValueChange={(value) => {
-        if (isValidReservationStatus(value)) handleStatusChange(value);
-      }}
-      disabled={isPending || isTerminal}
-    >
-      <SelectTrigger className="w-36">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {/* Current status is always shown */}
-        <SelectItem value={currentStatus}>
-          {RESERVATION_STATUS_LABELS[currentStatus]}
-        </SelectItem>
-        {/* Allowed transitions */}
-        {allowedNextStatuses.map((status) => (
-          <SelectItem key={status} value={status}>
-            {RESERVATION_STATUS_LABELS[status]}
+    <>
+      <Select
+        value={currentStatus}
+        onValueChange={(value) => {
+          if (isValidReservationStatus(value)) handleStatusChange(value);
+        }}
+        disabled={isPending || isTerminal}
+      >
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={currentStatus}>
+            {RESERVATION_STATUS_LABELS[currentStatus]}
           </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+          {allowedNextStatuses.map((status) => (
+            <SelectItem key={status} value={status}>
+              {RESERVATION_STATUS_LABELS[status]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <AlertDialog
+        open={pendingTerminal !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingTerminal(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ステータスを「
+              {pendingTerminal
+                ? RESERVATION_STATUS_LABELS[pendingTerminal]
+                : ""}
+              」に変更しますか？
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作後、ステータスは終端状態となり、通常の管理者では戻せません。誤操作の場合は
+              SUPER_ADMIN
+              権限を持つ管理者に「ステータスを復元」を依頼してください。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmTerminal}
+              disabled={isPending}
+            >
+              {isPending ? "変更中..." : "変更する"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

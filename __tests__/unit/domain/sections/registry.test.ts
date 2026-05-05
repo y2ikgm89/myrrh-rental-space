@@ -46,9 +46,9 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("22 件のセクション定義を返す（homepage-hero は Page.pageHero へ移行済み）", () => {
+  test("23 件のセクション定義を返す（page-hero + 既存 22 タイプ）", () => {
     const defs = getAllSectionDefinitions();
-    expect(defs).toHaveLength(22);
+    expect(defs).toHaveLength(23);
   });
 
   test("各定義は type / configSchema / metadata を持つ", () => {
@@ -62,11 +62,12 @@ describe("getAllSectionDefinitions", () => {
     }
   });
 
-  test("全 17 タイプが含まれる", () => {
+  test("page-hero / 既存 18 標準タイプ / 4 homepage-* タイプが含まれる", () => {
     const defs = getAllSectionDefinitions();
     const types = defs.map((d) => d.type);
 
     const expectedTypes = [
+      "page-hero",
       "hero",
       "hero-parallax",
       "custom",
@@ -84,6 +85,11 @@ describe("getAllSectionDefinitions", () => {
       "map",
       "embed",
       "instagram",
+      "event-calendar",
+      "homepage-how-it-works",
+      "homepage-spaces",
+      "homepage-features",
+      "homepage-cta",
     ];
 
     for (const type of expectedTypes) {
@@ -97,11 +103,12 @@ describe("getAllSectionDefinitions", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getSectionDefinitionsByCategory", () => {
-  test("カテゴリ 'hero' には 2 タイプが含まれる（hero / hero-parallax）", () => {
+  test("カテゴリ 'hero' には 3 タイプが含まれる（page-hero / hero / hero-parallax）", () => {
     const grouped = getSectionDefinitionsByCategory();
     const heroTypes = grouped["hero"].map((d) => d.type);
 
-    expect(grouped["hero"]).toHaveLength(2);
+    expect(grouped["hero"]).toHaveLength(3);
+    expect(heroTypes).toContain("page-hero");
     expect(heroTypes).toContain("hero");
     expect(heroTypes).toContain("hero-parallax");
     expect(heroTypes).not.toContain("homepage-hero");
@@ -146,7 +153,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(mediaTypes).toContain("instagram");
   });
 
-  test("全カテゴリの合計件数が 22 件になる", () => {
+  test("全カテゴリの合計件数が 23 件になる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const total =
       grouped["hero"].length +
@@ -155,7 +162,7 @@ describe("getSectionDefinitionsByCategory", () => {
       grouped["functional"].length +
       grouped["media"].length;
 
-    expect(total).toBe(22);
+    expect(total).toBe(23);
   });
 });
 

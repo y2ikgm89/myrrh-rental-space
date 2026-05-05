@@ -61,7 +61,6 @@ import {
 import {
   type SpaceEditCategoryOption,
   type SpaceEditLocationOption,
-  type SpaceEditTermsOption,
 } from "./types";
 import { SpaceEditBasicTabPanel } from "./tabs/basic-tab-panel";
 import { SpaceEditPricingTabPanel } from "./tabs/pricing-tab-panel";
@@ -79,7 +78,6 @@ function hasTopLevelField<TInput extends FieldValues>(
 export type SpaceEditFormProps = {
   space?: SpaceWithStats;
   mode: "create" | "edit";
-  availableTerms: SpaceEditTermsOption[];
   availableLocations: SpaceEditLocationOption[];
   availableCategories: SpaceEditCategoryOption[];
   taxSettings: TaxSettings;
@@ -89,7 +87,6 @@ export type SpaceEditFormProps = {
 export function SpaceEditForm({
   space,
   mode,
-  availableTerms,
   availableLocations,
   availableCategories,
   taxSettings = DEFAULT_TAX_SETTINGS,
@@ -130,7 +127,6 @@ export function SpaceEditForm({
                     JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON),
                 ),
           addressDetail: space.addressDetail ?? "",
-          access: space.access ?? "",
           capacity: space.capacity,
           area: space.area ?? undefined,
           hourlyPrice: space.hourlyPrice,
@@ -140,7 +136,6 @@ export function SpaceEditForm({
           facilities: space.facilities.map((value) => ({ value })),
           isPublished: space.isPublished,
           reviewsEnabled: space.reviewsEnabled,
-          termsId: space.termsId ?? undefined,
           locationId: space.locationId,
           categoryId: space.categoryId ?? undefined,
           discountType: space.discountType ?? DiscountType.none,
@@ -160,7 +155,6 @@ export function SpaceEditForm({
           name: "",
           descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           addressDetail: "",
-          access: "",
           capacity: 10,
           area: undefined,
           hourlyPrice: 0,
@@ -170,7 +164,6 @@ export function SpaceEditForm({
           facilities: [],
           isPublished: false,
           reviewsEnabled: true,
-          termsId: undefined,
           locationId: "",
           categoryId: undefined,
           discountType: DiscountType.none,
@@ -397,7 +390,6 @@ export function SpaceEditForm({
           control={control}
           setValue={setValue}
           isPending={isPending}
-          availableTerms={availableTerms}
           availableCategories={availableCategories}
           newFacility={newFacility}
           onNewFacilityChange={setNewFacility}

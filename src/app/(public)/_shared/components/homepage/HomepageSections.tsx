@@ -25,7 +25,8 @@ import {
   ctaDefaultProps,
   type CtaSectionProps,
 } from "../../../_components/homepage/cta-section";
-import { isAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
+import { isAppRoute } from "@/shared/lib/typed-routes";
+import type { CTAButtonItem } from "@/shared/lib/validations/cta-and-url";
 
 type HomepageRenderableSection = {
   readonly id: string;
@@ -34,7 +35,6 @@ type HomepageRenderableSection = {
 };
 
 interface HomepageSectionsProps {
-  readonly pageHero: unknown;
   readonly sections: readonly HomepageRenderableSection[];
 }
 
@@ -46,11 +46,6 @@ function str(config: unknown, key: string, fallback: string): string {
   if (!isRecord(config)) return fallback;
   const value = config[key];
   return typeof value === "string" ? value : fallback;
-}
-
-function appRoute(config: unknown, key: string, fallback: AppRoute): AppRoute {
-  const value = str(config, key, fallback);
-  return isAppRoute(value) ? value : fallback;
 }
 
 function num(config: unknown, key: string, fallback: number): number {
@@ -115,13 +110,72 @@ function mapFeaturesConfig(config: unknown): Partial<FeaturesSectionProps> {
   };
 }
 
-function mapCtaConfig(config: unknown): CtaSectionProps {
+/**
+ * homepage-cta config の buttons[] を type-guard で narrow 化する。
+ * Runtime な safeParse を経由しないため、未知のフィールドは fallback default に倒す。
+ */
+function isCtaButtonRecord(value: unknown): value is {
+  text?: unknown;
+  url?: unknown;
+  variant?: unknown;
+  size?: unknown;
+  iconName?: unknown;
+  openInNewTab?: unknown;
+  backgroundColor?: unknown;
+  textColor?: unknown;
+} {
+  return isRecord(value);
+}
+
+function isCtaVariant(value: unknown): value is CTAButtonItem["variant"] {
+  return (
+    value === "primary" ||
+    value === "secondary" ||
+    value === "outline" ||
+    value === "ghost"
+  );
+}
+
+function isCtaSize(value: unknown): value is CTAButtonItem["size"] {
+  return value === "sm" || value === "md" || value === "lg";
+}
+
+function parseCtaButton(value: unknown): CTAButtonItem | null {
+  if (!isCtaButtonRecord(value)) return null;
+  if (typeof value.text !== "string" || value.text.length === 0) return null;
+  if (typeof value.url !== "string") return null;
+  if (!isAppRoute(value.url)) return null;
+  return {
+    text: value.text,
+    url: value.url,
+    variant: isCtaVariant(value.variant) ? value.variant : "primary",
+    size: isCtaSize(value.size) ? value.size : "lg",
+    iconName: typeof value.iconName === "string" ? value.iconName : "",
+    openInNewTab:
+      typeof value.openInNewTab === "boolean" ? value.openInNewTab : false,
+    ...(typeof value.backgroundColor === "string" &&
+      value.backgroundColor.length > 0 && {
+        backgroundColor: value.backgroundColor,
+      }),
+    ...(typeof value.textColor === "string" &&
+      value.textColor.length > 0 && { textColor: value.textColor }),
+  };
+}
+
+function mapCtaConfig(config: unknown): Partial<CtaSectionProps> {
+  const rawButtons = arr(config, "buttons");
+  const parsedButtons: CTAButtonItem[] = rawButtons
+    ? rawButtons.flatMap((value) => {
+        const parsed = parseCtaButton(value);
+        return parsed ? [parsed] : [];
+      })
+    : [];
+
   return {
     label: str(config, "label", ctaDefaultProps.label),
     title: str(config, "title", ctaDefaultProps.title),
     description: str(config, "description", ctaDefaultProps.description),
-    buttonText: str(config, "buttonText", ctaDefaultProps.buttonText),
-    buttonUrl: appRoute(config, "buttonUrl", ctaDefaultProps.buttonUrl),
+    ...(parsedButtons.length > 0 && { buttons: parsedButtons }),
   };
 }
 
@@ -174,7 +228,6 @@ function renderHomepageSection(
 }
 
 export async function HomepageSections({
-  pageHero,
   sections,
 }: HomepageSectionsProps): Promise<ReactElement> {
   const rawSpaces = await getShowcaseSpaces(6, true);
@@ -191,6 +244,9 @@ export async function HomepageSections({
     categoryName: space.category?.name ?? null,
   }));
 
+  const pageHeroSection = sections.find(
+    (section) => section.type === "page-hero",
+  );
   const homepageSections = sections.filter((section) =>
     section.type.startsWith("homepage-"),
   );
@@ -198,7 +254,7 @@ export async function HomepageSections({
 
   return (
     <>
-      <PageHero data={pageHero} />
+      {pageHeroSection ? <PageHero config={pageHeroSection.config} /> : null}
       {useDefaults ? (
         <>
           <HowItWorksSection />

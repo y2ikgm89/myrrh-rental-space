@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 export const homepageSpacesConfigSchema = z.object({
-  label: field.text("ラベル", { default: "Selected Spaces" }),
-  title: field.text("見出し", { default: "厳選スペース" }),
+  label: field.text("ラベル", {
+    default: "Selected Spaces",
+    subGroup: "text",
+  }),
+  title: field.text("見出し", { default: "厳選スペース", subGroup: "text" }),
   count: field.number("表示件数", {
     min: 1,
     max: 12,
@@ -19,6 +23,7 @@ export const homepageSpacesConfigSchema = z.object({
     helpText: "0 にすると自動切替を無効化します",
     group: "advanced",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type HomepageSpacesConfig = z.infer<typeof homepageSpacesConfigSchema>;

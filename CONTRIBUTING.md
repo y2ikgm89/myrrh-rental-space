@@ -181,5 +181,5 @@ CI で以下が自動実行されます：
 ## 質問・サポート
 
 - プロジェクト固有の疑問: `AGENTS.md` + `.agents/skills/` を先に読む
-- 実装パターン: `docs/architecture/` / `docs/architecture/decisions/` を参照（過去プランは git log で辿る）
+- 実装パターン: `docs/explanation/`（設計の「なぜ」）/ `docs/how-to/`（手順）/ `docs/reference/`（仕様）を参照（過去の判断は git log で辿る）
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡

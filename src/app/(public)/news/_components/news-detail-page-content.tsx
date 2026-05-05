@@ -16,7 +16,7 @@ import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { toISOString } from "@/shared/lib/serialize";
-import { extractHeadings } from "@/shared/lib/lexical/extract-headings";
+import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 
 /** 目次を表示するための最低 h2 数。これ未満なら TOC を非表示にする。 */
 const TOC_MIN_H2 = 2;
@@ -66,7 +66,7 @@ export async function NewsDetailPageContent({
   const articleUrl = `${baseUrl}${newsItem.url}`;
   const datePublished = toISOString(newsItem.publishedAt) ?? "";
 
-  const headings = extractHeadings(newsItem.contentJson);
+  const headings = extractHeadingsFromHtml(newsItem.contentHtml);
   const h2Count = headings.filter((h) => h.level === 2).length;
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 

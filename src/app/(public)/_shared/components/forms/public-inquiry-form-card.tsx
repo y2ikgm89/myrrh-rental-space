@@ -24,6 +24,12 @@ import {
 
 export type PublicInquiryFormMode = "live" | "preview" | "disabled";
 
+export interface RequiredInquiryTerm {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+}
+
 type PublicInquiryFormCardProps = {
   readonly mode?: PublicInquiryFormMode;
   readonly turnstileSiteKey?: string | null;
@@ -32,6 +38,7 @@ type PublicInquiryFormCardProps = {
   readonly description?: string | null;
   readonly className?: string;
   readonly submitLabel?: string;
+  readonly requiredTerms?: readonly RequiredInquiryTerm[];
 };
 
 function getModeNote(mode: PublicInquiryFormMode): string {
@@ -66,6 +73,7 @@ export function PublicInquiryFormCard({
   description,
   className,
   submitLabel = "送信する",
+  requiredTerms = [],
 }: PublicInquiryFormCardProps): ReactElement {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -98,6 +106,16 @@ export function PublicInquiryFormCard({
     control: form.control,
     name: "customerType",
   });
+
+  const agreedTermsIds = useWatch({
+    control: form.control,
+    name: "agreedTermsIds",
+  });
+
+  const allTermsAgreed =
+    requiredTerms.length === 0 ||
+    requiredTerms.every((term) => agreedTermsIds?.includes(term.id));
+  const isSubmitDisabled = !isInteractive || isPending || !allTermsAgreed;
 
   function handleCustomerTypeChange(type: CustomerType) {
     if (!isInteractive) {
@@ -289,6 +307,46 @@ export function PublicInquiryFormCard({
                 />
               ) : null}
             </div>
+
+            {requiredTerms.length > 0 ? (
+              <div className="mt-8 space-y-3 border-t border-border pt-6">
+                {requiredTerms.map((term) => {
+                  const isChecked = agreedTermsIds?.includes(term.id) ?? false;
+                  return (
+                    <label key={term.id} className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 border-border accent-accent"
+                        disabled={!isInteractive || isPending}
+                        checked={isChecked}
+                        onChange={() => {
+                          if (!isInteractive) return;
+                          const current =
+                            form.getValues("agreedTermsIds") ?? [];
+                          const next = isChecked
+                            ? current.filter((id) => id !== term.id)
+                            : [...current, term.id];
+                          form.setValue("agreedTermsIds", next, {
+                            shouldValidate: true,
+                          });
+                        }}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        <a
+                          href={`/terms/${term.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent underline transition-colors hover:text-foreground"
+                        >
+                          {term.title}
+                        </a>
+                        に同意します
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
           {errorMessage !== null ? (
@@ -301,7 +359,7 @@ export function PublicInquiryFormCard({
           ) : null}
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-            <Button type="submit" disabled={!isInteractive || isPending}>
+            <Button type="submit" disabled={isSubmitDisabled}>
               {getSubmitLabel(mode, isPending, submitLabel)}
             </Button>
             <p

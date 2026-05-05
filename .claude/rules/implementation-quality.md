@@ -187,6 +187,9 @@ try {
 
 ### 禁止事項 / セキュリティ / 外部 API
 
+- **フォームヒント「上記の項目から自動生成されません」「手動で入力してください」は dead column の sign** — 構造化フィールド（`postalCode` + `prefecture` + `city` + `streetAddress` + `buildingName` 等）が既にあるのに display 用カラム（`Settings.address` 等）を並走させる SSoT 違反パターン。構造化フィールドから派生関数（`formatXxxAddress(entity)` / `buildAddress(info)` 等）に一本化し display 用カラムを destructive migration で削除するのが業界標準（Stripe / Shopify / Google Address Validation API）。実例: `Settings.address` 削除（2026-05-01 migration `20260501033054_drop_settings_address`）。新規フィールド追加時もこの sign を持ち込まない
+- **公開側で `value.split("\n")` / `\r\n+` 等の改行 split 配列展開している `String? @db.Text` カラムは SSoT 違反 sign** — 入力が `Textarea`（改行区切り plain text）/ 公開描画が配列の semantic gap。データ層を `Json @default("[]")` 配列化 + useFieldArray + dnd-kit 入力 UI（追加ボタン + 並べ替え + 削除）に揃えるのが業界標準（Eventbrite / connpass の構造化アクセス入力、shadcn / Linear / Stripe Dashboard の構造化リスト編集）。実例: `Location.access String?` → `Location.accessLines Jsonb` 配列化（2026-05-01 migration `20260501040959_location_access_to_jsonb_array`）+ `LocationChapter.tsx` の `split("\n")` 削除 + `LocationForm.tsx` に `AccessLinesField`（useFieldArray + dnd-kit）導入。新規カラム追加時もこの sign を持ち込まない
+
 ### フレームワーク固有
 
 - **`inline-block` + 日本語 + `tracking-*` の intrinsic width が letter-spacing を無視（Chromium）** — `<span inline-block tracking-[0.18em]>カレンダー</span>` の `getBoundingClientRect().width` が 64px なのに内部 text range は 82.61px で box からはみ出す。`border-b-*` を `inline-block` に付けると下線がテキスト末尾（「ー」等）まで届かない silent bug。対処: `text-decoration: underline` + `decoration-2` + `underline-offset-[Npx]` + `decoration-accent`（テキスト描画パイプラインで box 計算バイパス、`transition-colors` が `text-decoration-color` を自動含む）。参照実装: `events-view-switcher.tsx` / `mypage-nav.tsx`

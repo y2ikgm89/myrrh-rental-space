@@ -19,7 +19,6 @@ const VALID_SPACE_INPUT = {
   name: "テストスペース",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "3F 会議室A",
-  access: "渋谷駅から徒歩5分",
   capacity: 10,
   area: 50.5,
   hourlyPrice: 1000,
@@ -31,7 +30,6 @@ const VALID_SPACE_INPUT = {
   ],
   facilities: ["WiFi", "プロジェクター", "電源"],
   isPublished: false,
-  termsId: null,
   locationId: TEST_LOCATION_ID,
   categoryId: null,
 };
@@ -153,33 +151,6 @@ describe("spaceFormSchema", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
         addressDetail: "あ".repeat(501),
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
-      }
-    });
-  });
-
-  describe("access", () => {
-    test("オプショナル（undefined）は許可", () => {
-      const { access, ...withoutAccess } = VALID_SPACE_INPUT;
-      const result = spaceFormSchema.safeParse(withoutAccess);
-      expect(result.success).toBe(true);
-    });
-
-    test("空文字は許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        access: "",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("500文字超過はエラー", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        access: "あ".repeat(501),
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -452,41 +423,6 @@ describe("spaceFormSchema", () => {
       }
     });
   });
-
-  describe("termsId", () => {
-    test("nullは許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        termsId: null,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("undefinedは許可", () => {
-      const { termsId, ...withoutTermsId } = VALID_SPACE_INPUT;
-      const result = spaceFormSchema.safeParse(withoutTermsId);
-      expect(result.success).toBe(true);
-    });
-
-    test("有効なUUIDは許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        termsId: "123e4567-e89b-12d3-a456-426614174000",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("無効なUUIDはエラー", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        termsId: "invalid-uuid",
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("利用規約IDが無効");
-      }
-    });
-  });
 });
 
 describe("defaultSpaceFormValues", () => {
@@ -496,7 +432,6 @@ describe("defaultSpaceFormValues", () => {
       name: "",
       descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       addressDetail: "",
-      access: "",
       capacity: 10,
       area: null,
       hourlyPrice: 0,
@@ -506,7 +441,6 @@ describe("defaultSpaceFormValues", () => {
       facilities: [],
       isPublished: false,
       reviewsEnabled: true,
-      termsId: null,
       locationId: "",
       categoryId: null,
       // 割引設定

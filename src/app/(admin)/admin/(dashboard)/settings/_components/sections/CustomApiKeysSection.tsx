@@ -19,6 +19,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
 import {
@@ -193,17 +194,15 @@ export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
                 >
                   キャンセル
                 </Button>
-                <Button
+                <SubmitButton
+                  isPending={isPending}
+                  label="追加"
+                  pendingLabel="追加中..."
                   onClick={handleAdd}
                   disabled={
-                    isPending ||
-                    !formData.name ||
-                    !formData.keyName ||
-                    !formData.keyValue
+                    !formData.name || !formData.keyName || !formData.keyValue
                   }
-                >
-                  {isPending ? "追加中..." : "追加"}
-                </Button>
+                />
               </DialogFooter>
             </DialogContent>
           </Dialog>

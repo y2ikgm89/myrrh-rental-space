@@ -18,6 +18,7 @@ import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
+import { getRequiredTermsAtReservation } from "@/shared/domain/terms/queries";
 import { ReservationForm } from "./_components/reservation-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,14 +38,21 @@ export default async function ReservationPage({
   const rawSpaceId =
     typeof params["spaceId"] === "string" ? params["spaceId"] : undefined;
 
-  const [sections, locations, businessHours, turnstileSiteKey, user] =
-    await Promise.all([
-      getPageSectionsWithFallback("reservation"),
-      getPublishedLocationsWithSpaces(),
-      getBusinessHoursSettingsQuery(),
-      getTurnstileSiteKey(),
-      getCurrentCustomerUser(),
-    ]);
+  const [
+    sections,
+    locations,
+    businessHours,
+    turnstileSiteKey,
+    user,
+    requiredTerms,
+  ] = await Promise.all([
+    getPageSectionsWithFallback("reservation"),
+    getPublishedLocationsWithSpaces(),
+    getBusinessHoursSettingsQuery(),
+    getTurnstileSiteKey(),
+    getCurrentCustomerUser(),
+    getRequiredTermsAtReservation(),
+  ]);
 
   const customer = user ? await getCustomerByUserId(user.id) : null;
 
@@ -93,7 +101,7 @@ export default async function ReservationPage({
           prefillData={prefillData}
           initialSpaceId={initialSpaceId}
           isLoggedIn={user != null}
-          requiredTerms={[]}
+          requiredTerms={requiredTerms}
         />
       </div>
 

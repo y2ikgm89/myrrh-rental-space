@@ -191,7 +191,6 @@ describe("createSpaceCommand", () => {
       await createSpaceCommand({
         ...VALID_INPUT,
         addressDetail: "",
-        access: "",
         metaDescription: "",
       });
 
@@ -199,7 +198,6 @@ describe("createSpaceCommand", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             addressDetail: null,
-            access: null,
             metaDescription: null,
           }),
         }),

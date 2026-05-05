@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { IconPencil } from "@tabler/icons-react";
+import { connection } from "next/server";
 import { getCouponById } from "@/admin/queries/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { CouponForm } from "../_components/CouponForm";
+import { Button } from "@/admin/components/ui/button";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteCoupon } from "@/admin/actions/coupon";
-import { DetailSection } from "@/admin/components/DetailSection";
-import { DetailField } from "@/admin/components/DetailField";
-import { formatPrice } from "@/shared/lib/pricing/format";
+import { CouponDetail } from "./_components/CouponDetail";
+import { deriveCouponStatusNow } from "../_lib/coupon-status";
 import type { Metadata } from "next";
 
 type PageProps = {
@@ -31,6 +33,7 @@ export async function generateMetadata({
 }
 
 export default async function CouponDetailPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
   const coupon = await getCouponById(id);
 
@@ -38,43 +41,31 @@ export default async function CouponDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const couponWithStatus = deriveCouponStatusNow(coupon);
+
   return (
     <AdminDetailLayout
       backHref="/admin/coupons"
       title={coupon.name}
       subtitle={`コード: ${coupon.code}`}
       actions={
-        <DetailDeleteButton
-          itemName={coupon.code}
-          onDelete={deleteCoupon.bind(null, coupon.id)}
-          redirectTo="/admin/coupons"
-          successMessage="クーポンを削除しました"
-        />
+        <>
+          <DetailDeleteButton
+            itemName={coupon.code}
+            onDelete={deleteCoupon.bind(null, coupon.id)}
+            redirectTo="/admin/coupons"
+            successMessage="クーポンを削除しました"
+          />
+          <Button size="sm" asChild>
+            <Link href={`/admin/coupons/${coupon.id}/edit`}>
+              <IconPencil className="mr-2 h-4 w-4" />
+              編集
+            </Link>
+          </Button>
+        </>
       }
     >
-      <DetailSection title="利用状況">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <DetailField
-            label="利用回数"
-            value={`${coupon.usageCount}${coupon.usageLimit !== null ? ` / ${coupon.usageLimit}` : ""} 回`}
-          />
-          <DetailField
-            label="割引額"
-            value={
-              coupon.type === "PERCENTAGE"
-                ? `${coupon.discountValue}%`
-                : formatPrice(coupon.discountValue)
-            }
-          />
-          <DetailField
-            label="最低利用金額"
-            value={formatPrice(coupon.minReservationAmount, "なし")}
-          />
-        </div>
-      </DetailSection>
-
-      {/* フォーム */}
-      <CouponForm key={coupon.id} coupon={coupon} />
+      <CouponDetail coupon={couponWithStatus} />
     </AdminDetailLayout>
   );
 }

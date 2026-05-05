@@ -4,9 +4,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Settings シングルトンの MEO フィールドを Location モデルに完全移管し、Google 公式推奨の per-location LocalBusiness JSON-LD パターンを実装する（破壊的変更、後方互換なし）。
+**Goal:** Fully migrate MEO fields from the Settings singleton to the Location model and implement Google's recommended per-location LocalBusiness JSON-LD pattern (breaking change, no backward compatibility).
 
-**Architecture:** (1) Prisma schema で Settings から MEO フィールドを削除して Location に slug + 14 SEO/MEO フィールドを追加する data-preserving migration、(2) `(public)/layout.tsx` の `GraphJsonLd` を Organization+WebSite のみに改修し各 Location ページに独立した LocalBusiness JSON-LD を出力、(3) 管理画面の `MeoSection` を削除して `/admin/locations/[id]/edit` に MEO タブを統合。
+**Architecture:** (1) A data-preserving Prisma migration that removes MEO fields from Settings and adds slug + 14 SEO/MEO fields to Location, (2) refactor `(public)/layout.tsx` `GraphJsonLd` to Organization+WebSite only and emit independent LocalBusiness JSON-LD per Location page, (3) remove admin `MeoSection` and merge an MEO tab into `/admin/locations/[id]/edit`.
 
 **Tech Stack:** Next.js 16.2 / React 19.2 / Prisma 7.8 / TypeScript 6.0 / Zod 4.3 / Tailwind 4.2 / Bun 1.3 / Playwright
 
@@ -14,7 +14,7 @@
 
 ---
 
-## Phase 概要（9 commit / 9 task）
+## Phase overview (9 commits / 9 tasks)
 
 | #   | Phase                           | Files                                                                                                                            | Commit message                                                                    |
 | --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -30,11 +30,11 @@
 
 ---
 
-## 共通ルール（全 Task に適用）
+## Common rules (apply to all tasks)
 
 ### Commit message convention
 
-Conventional Commits 準拠（`scripts/check-commit-msg.sh` 必須）:
+Conventional Commits compliant (`scripts/check-commit-msg.sh` required):
 
 ```
 <type>(<scope>): <subject>
@@ -44,20 +44,20 @@ Conventional Commits 準拠（`scripts/check-commit-msg.sh` 必須）:
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 ```
 
-各 Phase の commit message は上表「Commit message」列をそのまま使う。body は「実装内容を 2-3 行で要約 + spec/ADR 参照」を含めること。
+Use the "Commit message" column above verbatim for each phase. The body must include a 2-3 line summary of implementation details plus spec/ADR references.
 
-### 検証コマンド
+### Verification commands
 
-| 段階         | コマンド                                                                                 |
-| ------------ | ---------------------------------------------------------------------------------------- |
-| 作業中       | `bun run type-check`                                                                     |
-| Task 完了前  | `bun run validate`（type-check + lint）                                                  |
-| Phase 完了前 | `bun run validate && bun test <related-files>`（CLAUDE.md ADR 0014：全テスト走らせない） |
-| Plan 完了前  | `bun run validate && bun run build`                                                      |
+| Stage                   | Command                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| During work             | `bun run type-check`                                                                            |
+| Before task completion  | `bun run validate` (type-check + lint)                                                          |
+| Before phase completion | `bun run validate && bun test <related-files>` (CLAUDE.md ADR 0014: do not run full test suite) |
+| Before plan completion  | `bun run validate && bun run build`                                                             |
 
 ### Worktree
 
-Plan 全体を **isolated worktree** で実行する：
+Run the entire plan in an **isolated worktree**:
 
 ```bash
 git worktree add .worktrees/multi-location-seo feature/multi-location-seo-foundation
@@ -68,68 +68,68 @@ robocopy ../../generated generated /E /XF nul
 bun install
 ```
 
-> **注**: `prisma/migrations/*.sql` は PreToolUse 保護のため Python 経由で書き出し（`gotchas/prisma.md` §Prisma Migrate）。
+> **Note**: Write `prisma/migrations/*.sql` via Python because of PreToolUse protection (`gotchas/prisma.md` §Prisma Migrate).
 
 ### Subagent dispatch prompt template
 
-各 Task を dispatch する際、controller は以下のテンプレートで prompt を構成する：
+When dispatching each task, the controller should use the following prompt template:
 
 ```
-あなたは Multi-Location SEO Foundation Plan の Task <N> を実装する implementer です。
+You are the implementer for Task <N> of the Multi-Location SEO Foundation Plan.
 
-📋 タスク詳細: docs/superpowers/plans/2026-04-27-multi-location-seo-foundation.md の "Task <N>" 全 step を実装してください。
+📋 Task details: implement all steps in "Task <N>" of docs/superpowers/plans/2026-04-27-multi-location-seo-foundation.md.
 
-🚫 禁止:
-- git add / commit / push / reset / checkout / restore / stash（controller 側で実行）
-- plan 範囲外のファイル編集
-- "Phase X.Y" "refactor from Y" 等のタスク参照を JSDoc/コメントに含めない
+🚫 Prohibited:
+- git add / commit / push / reset / checkout / restore / stash (controller will handle)
+- edits outside the plan scope
+- do not include task references like "Phase X.Y" or "refactor from Y" in JSDoc/comments
 
-✅ 必須:
-- 全 step を順番通りに実行（TDD: failing test → impl → passing test）
-- bun run validate（or 該当 test）で各 step 完了を検証
-- 変更後は Read で実ファイル確認
-- Plan 記載の identifier と実装が乖離した場合は justified deviation として報告
+✅ Required:
+- execute all steps in order (TDD: failing test → impl → passing test)
+- verify each step completion with bun run validate (or relevant test)
+- confirm real files with Read after changes
+- if identifiers in the plan differ from implementation, report as a justified deviation
 
-完了後、変更ファイル一覧と検証結果（type-check / lint / test）を報告してください。
+After completion, report changed files and verification results (type-check / lint / test).
 ```
 
 ---
 
 ## Task 1: Prisma schema + migration + seed
 
-**目的:** Settings から MEO フィールドを削除、Location に slug + 14 SEO/MEO フィールドを追加。data-preserving migration で既存データを最初の Location に保全。
+**Purpose:** Remove MEO fields from Settings and add slug + 14 SEO/MEO fields to Location. Use a data-preserving migration to retain existing data in the first Location.
 
 **Files:**
 
-- Modify: `prisma/schema.prisma`（Location model 拡張 + Settings model 削減）
+- Modify: `prisma/schema.prisma` (expand Location model + reduce Settings model)
 - Create: `prisma/migrations/<ts>_multi_location_seo_foundation/migration.sql`
-- Modify: `prisma/seed.ts`（`seedLocations` 関数に新フィールド追加）
+- Modify: `prisma/seed.ts` (add new fields to `seedLocations`)
 
-### Step 1.1: schema.prisma の Location モデル拡張
+### Step 1.1: Expand the Location model in schema.prisma
 
-`prisma/schema.prisma` の `model Location` を以下に置換（既存フィールドは維持、新規フィールド追加）:
+Replace `model Location` in `prisma/schema.prisma` with the following (keep existing fields, add new ones):
 
 ```prisma
 model Location {
   id              String   @id @default(uuid()) @db.Uuid
-  slug            String   @unique @db.VarChar(255)  // 新規: SEO URL / anchor / cache tag
+  slug            String   @unique @db.VarChar(255)  // New: SEO URL / anchor / cache tag
   name            String   @unique
   description     String?  @db.Text
   address         String
-  postalCode      String?  // 新規
-  prefecture      String?  // 新規
-  city            String?  // 新規
-  streetAddress   String?  // 新規
-  buildingName    String?  // 新規
+  postalCode      String?  // New
+  prefecture      String?  // New
+  city            String?  // New
+  streetAddress   String?  // New
+  buildingName    String?  // New
   access          String?  @db.Text
   parkingInfo     String?  @db.Text
   amenities       Json     @default("{}")
   imageUrl        String
   imageUrls       Json     @default("[]")
   businessHours   Json?
-  specialHolidays Json?    // 新規
+  specialHolidays Json?    // New
 
-  // MEO（Local SEO）— Settings から移管
+  // MEO (Local SEO) — migrated from Settings
   latitude              Float?
   longitude             Float?
   googleBusinessPlaceId String?
@@ -154,12 +154,12 @@ model Location {
 }
 ```
 
-### Step 1.2: schema.prisma の Settings モデルから MEO フィールド削除
+### Step 1.2: Remove MEO fields from the Settings model in schema.prisma
 
-`model Settings` 内の以下行を削除:
+Delete the following lines from `model Settings`:
 
 ```diff
--  // MEO Settings (ローカル検索最適化)
+-  // MEO Settings (Local SEO)
 -  latitude              Float?
 -  longitude             Float?
 -  priceRange            String?
@@ -169,24 +169,24 @@ model Location {
 -  paymentAccepted       String?
 ```
 
-`specialHolidays Json?` は `Settings` から削除（Location 側に移管済み）:
+Remove `specialHolidays Json?` from `Settings` (already migrated to Location):
 
 ```diff
--  specialHolidays Json? // 特別休業日（日付リスト）
+-  specialHolidays Json? // Special holidays (date list)
 ```
 
-`postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName` / `phoneNumber` / `email` は **Settings 側に維持**（全社代表情報、spec §2.1）。
+Keep `postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName` / `phoneNumber` / `email` **in Settings** (company-wide representative info, spec §2.1).
 
-### Step 1.3: migration ディレクトリ + SQL 生成
+### Step 1.3: Generate migration directory + SQL
 
-migration timestamp を生成して空ディレクトリを作成:
+Generate a migration timestamp and create an empty directory:
 
 ```bash
 TS=$(date -u +%Y%m%d%H%M%S)
 python3 -c "import os; os.makedirs(f'prisma/migrations/{$TS}_multi_location_seo_foundation', exist_ok=True)"
 ```
 
-migration.sql を Python 経由で書き出し（PreToolUse 保護回避）:
+Write migration.sql via Python (bypass PreToolUse protection):
 
 ```bash
 python3 << 'PYEOF'
@@ -194,7 +194,7 @@ import os
 import glob
 
 ts = sorted(glob.glob('prisma/migrations/*_multi_location_seo_foundation'))[-1].split(os.sep)[-1].split('_')[0]
-sql = '''-- Step 1: Location に新規カラム追加
+sql = '''-- Step 1: Add new columns to Location
 ALTER TABLE "locations"
   ADD COLUMN "slug"                    VARCHAR(255),
   ADD COLUMN "postalCode"              TEXT,
@@ -212,12 +212,12 @@ ALTER TABLE "locations"
   ADD COLUMN "phoneNumber"             TEXT,
   ADD COLUMN "email"                   TEXT;
 
--- Step 2: 既存 Location に placeholder slug 採番
+-- Step 2: Assign placeholder slugs to existing Locations
 UPDATE "locations"
 SET "slug" = 'location-' || SUBSTRING(REPLACE("id"::text, '-', '') FROM 1 FOR 8)
 WHERE "slug" IS NULL;
 
--- Step 3: Settings の MEO データを最初の Location に移管（既存値優先 merge）
+-- Step 3: Move Settings MEO data to the first Location (merge with existing values)
 UPDATE "locations" SET
   "latitude"              = COALESCE("latitude",              (SELECT "latitude"              FROM "Settings" WHERE "id" = 'singleton')),
   "longitude"             = COALESCE("longitude",             (SELECT "longitude"             FROM "Settings" WHERE "id" = 'singleton')),
@@ -240,7 +240,7 @@ WHERE "id" = (SELECT "id" FROM "locations" ORDER BY "sortOrder" ASC, "createdAt"
 ALTER TABLE "locations" ALTER COLUMN "slug" SET NOT NULL;
 ALTER TABLE "locations" ADD CONSTRAINT "locations_slug_key" UNIQUE ("slug");
 
--- Step 5: Settings から MEO フィールド削除
+-- Step 5: Drop MEO fields from Settings
 ALTER TABLE "Settings"
   DROP COLUMN "latitude",
   DROP COLUMN "longitude",
@@ -260,7 +260,7 @@ print(f'Written: {target_dir}/migration.sql')
 PYEOF
 ```
 
-### Step 1.4: migration 適用
+### Step 1.4: Apply the migration
 
 ```bash
 TS_DIR=$(ls -d prisma/migrations/*_multi_location_seo_foundation | head -1 | xargs basename)
@@ -269,23 +269,23 @@ bunx --bun prisma migrate resolve --applied "${TS_DIR}"
 bun run db:generate
 ```
 
-期待: `Migration ${TS_DIR} marked as applied.` + Prisma Client 再生成完了。
+Expected: `Migration ${TS_DIR} marked as applied.` + Prisma Client re-generated.
 
-### Step 1.5: seed.ts の seedLocations を更新
+### Step 1.5: Update seedLocations in seed.ts
 
-`prisma/seed.ts` の `seedLocations` 関数を Read して、`upsert` の `create` / `update` 両方に新フィールドを追加。例:
+Read the `seedLocations` function in `prisma/seed.ts`, then add new fields to both `create` and `update` in the `upsert`. Example:
 
 ```typescript
-// prisma/seed.ts の seedLocations 内 upsert 例
+// Example upsert in prisma/seed.ts seedLocations
 await prisma.location.upsert({
-  where: { name: "本館" },
+  where: { name: "Honkan" },
   create: {
-    name: "本館",
+    name: "Honkan",
     slug: "honkan",
-    address: "東京都渋谷区...",
+    address: "Shibuya, Tokyo...",
     postalCode: "150-0001",
-    prefecture: "東京都",
-    city: "渋谷区",
+    prefecture: "Tokyo",
+    city: "Shibuya",
     streetAddress: "...",
     buildingName: "...",
     imageUrl: "/images/locations/honkan.jpg",
@@ -298,29 +298,29 @@ await prisma.location.upsert({
     email: "honkan@example.com",
     googleBusinessPlaceId: null,
     googleReviewUrl: null,
-    priceRange: "¥1,000〜¥5,000/時間",
-    paymentAccepted: "現金, クレジットカード, 電子マネー",
+    priceRange: "¥1,000-¥5,000/hour",
+    paymentAccepted: "Cash, credit card, e-money",
     amenities: { wifi: true, parking: true, barrier_free: true },
     businessHours: {
-      /* ... 既存値維持 */
+      /* ... keep existing values */
     },
     specialHolidays: null,
   },
   update: {
     slug: "honkan",
     postalCode: "150-0001",
-    prefecture: "東京都",
-    city: "渋谷区",
-    // ...同じく全フィールド
+    prefecture: "Tokyo",
+    city: "Shibuya",
+    // ... all fields, same as create
   },
 });
 ```
 
-実コードは現在の `prisma/seed.ts` の `seedLocations` 構造を Read してから、各 Location seed エントリに **新フィールド全体を `create` + `update` 両方に追加**。slug は Location.name から `generateUniqueSlug` で生成（`@/shared/lib/slug`、ただし日本語 name は ASCII 化困難のため手動命名: `honkan` / `shibuya-ten` 等）。
+Read the current `seedLocations` structure in `prisma/seed.ts`, then add **all new fields to both `create` and `update`** for each Location seed entry. Generate slugs from Location.name with `generateUniqueSlug` (`@/shared/lib/slug`); for Japanese names, use manual ASCII-friendly names like `honkan` / `shibuya-ten`.
 
-### Step 1.6: Settings seed から MEO フィールド削除
+### Step 1.6: Remove MEO fields from Settings seed
 
-`prisma/seed.ts` の `seedSettings` 関数内 upsert から以下を削除:
+Remove the following from the `seedSettings` upsert in `prisma/seed.ts`:
 
 ```diff
 -    latitude: ...,
@@ -333,14 +333,14 @@ await prisma.location.upsert({
 -    specialHolidays: ...,
 ```
 
-### Step 1.7: seed 実行 + idempotency 検証
+### Step 1.7: Run seed + verify idempotency
 
 ```bash
 bun prisma/seed.ts
-bun prisma/seed.ts  # 2回目で count が変化しないことを確認
+bun prisma/seed.ts  # confirm counts do not change on second run
 ```
 
-検証用 ad-hoc query（`gotchas/prisma.md` §`prisma db execute --stdin`）:
+Ad-hoc query for verification (`gotchas/prisma.md` §`prisma db execute --stdin`):
 
 ```bash
 bun -e "
@@ -359,7 +359,7 @@ const p = new PrismaClient({ adapter: new PrismaPg(pool) });
 "
 ```
 
-期待: 全 Location に `slug` が設定済み、最初の Location に Settings 由来の MEO フィールドが移管済み。
+Expected: every Location has a `slug`, and Settings-origin MEO fields are migrated into the first Location.
 
 ### Step 1.8: type-check
 
@@ -367,7 +367,7 @@ const p = new PrismaClient({ adapter: new PrismaPg(pool) });
 bun run type-check
 ```
 
-期待: Settings 型から MEO フィールドが消え、Location 型に新フィールドが反映される。**この時点で Settings.latitude 等を参照する箇所は型エラーになる**（Phase 2 以降で解消）。
+Expected: MEO fields are removed from the Settings type and added to the Location type. **References to Settings.latitude, etc. should now be type errors** (resolved in Phase 2+).
 
 ### Step 1.9: Commit
 
@@ -378,7 +378,7 @@ feat(prisma): migrate MEO fields from Settings to Location with slug
 
 Add 14 SEO/MEO fields + slug to Location, drop 8 MEO fields from Settings.
 Data-preserving migration moves Settings MEO data to the first Location
-with COALESCE merge. Placeholder slug採番 (location-<id_prefix>) for
+with COALESCE merge. Assign placeholder slugs (location-<id_prefix>) for
 existing rows; admin re-naming workflow per ADR 0023.
 
 Spec: docs/superpowers/specs/2026-04-27-multi-location-seo-foundation-design.md
@@ -392,23 +392,23 @@ EOF
 
 ## Task 2: Domain layer extension
 
-**目的:** Location domain queries / commands / validation schemas に MEO フィールドを反映。Settings 側の MEO 参照を全削除。
+**Purpose:** Reflect MEO fields in Location domain queries / commands / validation schemas. Remove all MEO references from Settings.
 
 **Files:**
 
-- Modify: `src/shared/domain/locations/queries.ts`（全 select 句に新フィールド追加）
-- Modify: `src/shared/domain/locations/public-queries.ts`（`LocationForAccess` 拡張 + 新 `LocationForSeo` 型）
-- Modify: `src/shared/domain/locations/commands.ts`（`createLocationCommand` / `updateLocationCommand` の Input 型拡張）
-- Modify: `src/shared/domain/locations/types.ts`（型定義）
+- Modify: `src/shared/domain/locations/queries.ts` (add new fields to all select clauses)
+- Modify: `src/shared/domain/locations/public-queries.ts` (extend `LocationForAccess` + new `LocationForSeo` type)
+- Modify: `src/shared/domain/locations/commands.ts` (extend Input types for `createLocationCommand` / `updateLocationCommand`)
+- Modify: `src/shared/domain/locations/types.ts` (type definitions)
 - Modify: `src/shared/lib/validations/location.ts`（Zod schema）
-- Modify: `src/shared/domain/settings/queries/organization.ts`（MEO フィールド select 削除）
-- Modify: `src/shared/domain/settings/types.ts`（`SettingsData` から MEO フィールド削除）
-- Modify: `src/shared/domain/settings/admin-queries.ts`（同上）
-- Modify: `src/shared/lib/validations/settings.ts`（MEO 部分削除）
+- Modify: `src/shared/domain/settings/queries/organization.ts` (remove MEO fields from select)
+- Modify: `src/shared/domain/settings/types.ts` (remove MEO fields from `SettingsData`)
+- Modify: `src/shared/domain/settings/admin-queries.ts` (same as above)
+- Modify: `src/shared/lib/validations/settings.ts` (remove MEO section)
 
-### Step 2.1: Location domain types 更新
+### Step 2.1: Update Location domain types
 
-`src/shared/domain/locations/types.ts`（または queries.ts 内の型）に新フィールドを追加。例:
+Add new fields to `src/shared/domain/locations/types.ts` (or types in queries.ts). Example:
 
 ```typescript
 export type LocationData = {
@@ -440,16 +440,16 @@ export type LocationData = {
   readonly sortOrder: number;
   readonly isPublished: boolean;
   readonly isActive: boolean;
-  readonly createdAt: string; // toPlainObject 経由 ISO string
+  readonly createdAt: string; // ISO string via toPlainObject
   readonly updatedAt: string;
 };
 ```
 
-### Step 2.2: Location queries.ts の全 select 句に新フィールド追加
+### Step 2.2: Add new fields to all select clauses in Location queries.ts
 
-`src/shared/domain/locations/queries.ts` の各 query 関数（`getLocations` / `getLocationById` / `getLocationBySlug` / `getPublishedLocations` 等）の `select` に新フィールドを追加。
+Add new fields to `select` clauses in each query function in `src/shared/domain/locations/queries.ts` (`getLocations` / `getLocationById` / `getLocationBySlug` / `getPublishedLocations`, etc.).
 
-`getLocationBySlug(slug)` 関数を新設（spec §2.5 で必要）:
+Add a new `getLocationBySlug(slug)` function (required by spec §2.5):
 
 ```typescript
 export async function getLocationBySlug(
@@ -463,7 +463,7 @@ export async function getLocationBySlug(
       prisma.location.findUnique({
         where: { slug: validated.data },
         select: {
-          /* 全フィールド */
+          /* all fields */
         },
       }),
     fallback: null,
@@ -482,21 +482,21 @@ export async function getLocationBySlug(
 }
 ```
 
-### Step 2.3: public-queries.ts の `LocationForAccess` 拡張 + 新 `LocationForSeo` 型
+### Step 2.3: Extend `LocationForAccess` + add new `LocationForSeo` type in public-queries.ts
 
-`src/shared/domain/locations/public-queries.ts` で:
+In `src/shared/domain/locations/public-queries.ts`:
 
-- `LocationForAccess` に `slug` / `postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName` / `phoneNumber` / `email` / `latitude` / `longitude` / `googleReviewUrl` / `googleBusinessPlaceId` / `priceRange` / `paymentAccepted` / `specialHolidays` を追加
-- `getPublishedLocationsForAccess` の select にも同フィールド追加
-- 新型 `LocationForSeo`（JSON-LD 出力用、必要最小限）を export
-- 新関数 `getPublishedLocationsForSeo()` を追加（`'use cache'` + `cacheTag(CACHE_TAGS.LOCATIONS)` + 軽量 select）
-- 新関数 `getPublishedLocationForSeoBySlug(slug)` を追加
+- Add `slug` / `postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName` / `phoneNumber` / `email` / `latitude` / `longitude` / `googleReviewUrl` / `googleBusinessPlaceId` / `priceRange` / `paymentAccepted` / `specialHolidays` to `LocationForAccess`
+- Add the same fields to the `getPublishedLocationsForAccess` select
+- Export a new `LocationForSeo` type (minimal for JSON-LD output)
+- Add new `getPublishedLocationsForSeo()` (`'use cache'` + `cacheTag(CACHE_TAGS.LOCATIONS)` + lightweight select)
+- Add new `getPublishedLocationForSeoBySlug(slug)`
 
-### Step 2.4: commands.ts の Input 型拡張
+### Step 2.4: Extend Input types in commands.ts
 
-`src/shared/domain/locations/commands.ts` の `CreateLocationInput` / `UpdateLocationInput` 型に新フィールドを追加。`createLocationCommand` / `updateLocationCommand` の `prisma.location.create/update` の `data` フィールドにも反映。
+Add new fields to `CreateLocationInput` / `UpdateLocationInput` types in `src/shared/domain/locations/commands.ts`. Reflect them in the `data` fields for `prisma.location.create/update` in `createLocationCommand` / `updateLocationCommand`.
 
-slug uniqueness は Prisma `P2002` で自動制御されるが、command 内で事前 `findUnique({ where: { slug } })` チェックで先制エラーを返すと UX が良い:
+Slug uniqueness is enforced by Prisma `P2002`, but pre-checking with `findUnique({ where: { slug } })` and returning a friendly error improves UX:
 
 ```typescript
 export async function createLocationCommand(input: CreateLocationInput) {
@@ -507,29 +507,29 @@ export async function createLocationCommand(input: CreateLocationInput) {
   if (existing) {
     throw new DomainError(
       "DUPLICATE",
-      `slug "${input.slug}" は既に使用されています`,
+      `slug "${input.slug}" is already in use`,
     );
   }
   // ... create
 }
 ```
 
-### Step 2.5: validations/location.ts の Zod schema 拡張
+### Step 2.5: Extend the Zod schema in validations/location.ts
 
-`src/shared/lib/validations/location.ts` の `locationFormSchema` に新フィールドを追加（spec §2.6 の入力 UI に対応）:
+Add new fields to `locationFormSchema` in `src/shared/lib/validations/location.ts` (matches the input UI in spec §2.6):
 
 ```typescript
 export const locationFormSchema = z.object({
-  name: z.string().min(1, { error: "拠点名は必須です" }).max(100),
+  name: z.string().min(1, { error: "Location name is required" }).max(100),
   slug: z
     .string()
-    .min(1, { error: "スラッグは必須です" })
+    .min(1, { error: "Slug is required" })
     .max(255)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-      error: "スラッグは小文字英数字とハイフンのみ",
+      error: "Slug must be lowercase alphanumerics and hyphens only",
     }),
   description: z.string().max(2000).nullable().optional(),
-  address: z.string().min(1, { error: "住所は必須です" }),
+  address: z.string().min(1, { error: "Address is required" }),
   postalCode: z.string().max(10).nullable().optional(),
   prefecture: z.string().max(20).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
@@ -538,11 +538,11 @@ export const locationFormSchema = z.object({
   access: z.string().max(2000).nullable().optional(),
   parkingInfo: z.string().max(1000).nullable().optional(),
   amenities: z.record(z.string(), z.boolean()).default({}),
-  imageUrl: z.string().url({ error: "有効な画像 URL を入力してください" }),
+  imageUrl: z.string().url({ error: "Enter a valid image URL" }),
   imageUrls: z
     .array(z.object({ url: z.string().url() }))
     .refine((arr) => new Set(arr.map((i) => i.url)).size === arr.length, {
-      error: "同じ画像 URL を複数登録することはできません",
+      error: "You cannot register the same image URL multiple times",
     })
     .default([]),
   businessHours: businessHoursWeekSchema.nullable().optional(),
@@ -562,23 +562,23 @@ export const locationFormSchema = z.object({
 });
 ```
 
-### Step 2.6: Settings 側から MEO 参照を削除
+### Step 2.6: Remove MEO references from Settings
 
-以下ファイルから MEO フィールド参照を削除:
+Remove MEO field references from the following files:
 
 - `src/shared/domain/settings/queries/organization.ts`（type + select）
-- `src/shared/domain/settings/types.ts`（`SettingsData` 型）
-- `src/shared/domain/settings/admin-queries.ts`（select + 戻り値 mapping）
-- `src/shared/lib/validations/settings.ts`（MEO 関連の Zod schema delete）
-- `src/app/(public)/_shared/data/business.ts`（`getBusinessInfo()` の戻り値から MEO 関連を削除）
+- `src/shared/domain/settings/types.ts` (`SettingsData` type)
+- `src/shared/domain/settings/admin-queries.ts` (select + return mapping)
+- `src/shared/lib/validations/settings.ts` (delete MEO-related Zod schema)
+- `src/app/(public)/_shared/data/business.ts` (remove MEO fields from `getBusinessInfo()` return)
 
-### Step 2.7: type-check で参照漏れを検出
+### Step 2.7: Detect missing references via type-check
 
 ```bash
 bun run type-check 2>&1 | tee /tmp/typecheck.log
 ```
 
-期待: Phase 1 で残っていた `settings.latitude` 等の型エラーが解消、新規エラーがあれば該当ファイルを修正。
+Expected: type errors like `settings.latitude` from Phase 1 are resolved; fix any new errors in the corresponding files.
 
 ### Step 2.8: lint
 
@@ -586,14 +586,14 @@ bun run type-check 2>&1 | tee /tmp/typecheck.log
 bun run lint
 ```
 
-### Step 2.9: 関連テストの実行（既存があれば）
+### Step 2.9: Run related tests (if they exist)
 
 ```bash
 bun test __tests__/unit/domain/locations 2>&1 | tail -30
 bun test __tests__/integration/domain/locations 2>&1 | tail -30
 ```
 
-期待: Phase 1 + 2 の変更で既存テストが落ちる場合、テスト fixtures を新フィールドで更新。テストロジック自体の変更が必要なら別 commit にせず本 Phase でカバー。
+Expected: if existing tests fail due to Phase 1+2 changes, update test fixtures with new fields. If test logic itself needs changes, handle it in this phase (do not split into a separate commit).
 
 ### Step 2.10: Commit
 
@@ -605,11 +605,11 @@ refactor(locations): extend domain layer with MEO/SEO fields
 - locations queries: add slug + 14 MEO/SEO fields to all select clauses
 - locations commands: extend CreateLocationInput / UpdateLocationInput
 - locations validation: Zod schema with slug + MEO field validation
-- settings queries/types: remove migrated MEO fields (Settings 側削減)
+- settings queries/types: remove migrated MEO fields (Settings reduction)
 - public/data/business: drop MEO fields from getBusinessInfo()
 - new public-queries: getPublishedLocationsForSeo / *BySlug
 
-Spec: §2.4 (getLocalBusinessJsonLdData() の再設計準備)
+Spec: §2.4 (prep for getLocalBusinessJsonLdData() redesign)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -620,25 +620,25 @@ EOF
 
 ## Task 3: JSON-LD pure builders
 
-**目的:** per-location LocalBusiness JSON-LD ビルダーを pure function として新設。`getLocalBusinessJsonLdData()`（Settings 由来単一 LocalBusiness）を削除し、`getGraphJsonLdData()` を Organization+WebSite のみに変更。
+**Purpose:** Add a per-location LocalBusiness JSON-LD builder as a pure function. Remove `getLocalBusinessJsonLdData()` (single LocalBusiness from Settings) and change `getGraphJsonLdData()` to Organization+WebSite only.
 
 **Files:**
 
-- Create: `src/app/(public)/_shared/lib/seo/location-json-ld.ts`（pure builders）
-- Modify: `src/app/(public)/_shared/lib/seo/json-ld-config.ts`（`getLocalBusinessJsonLdData()` 削除、`getGraphJsonLdData()` 改修）
-- Modify: `src/app/(public)/_shared/lib/seo/index.ts`（barrel）
-- Modify: `src/app/(public)/_shared/components/seo/json-ld.tsx`（`<GraphJsonLd>` 改修、新 component `<LocationLocalBusinessJsonLd>` / `<LocationsLocalBusinessJsonLd>` 追加）
+- Create: `src/app/(public)/_shared/lib/seo/location-json-ld.ts` (pure builders)
+- Modify: `src/app/(public)/_shared/lib/seo/json-ld-config.ts` (remove `getLocalBusinessJsonLdData()`, refactor `getGraphJsonLdData()`)
+- Modify: `src/app/(public)/_shared/lib/seo/index.ts` (barrel)
+- Modify: `src/app/(public)/_shared/components/seo/json-ld.tsx` (refactor `<GraphJsonLd>`, add `<LocationLocalBusinessJsonLd>` / `<LocationsLocalBusinessJsonLd>`)
 
-### Step 3.1: location-json-ld.ts 新設
+### Step 3.1: Create location-json-ld.ts
 
-`src/app/(public)/_shared/lib/seo/location-json-ld.ts` を新規作成:
+Create `src/app/(public)/_shared/lib/seo/location-json-ld.ts`:
 
 ```typescript
 /**
- * per-location LocalBusiness JSON-LD ビルダー（Google 公式準拠）
+ * Per-location LocalBusiness JSON-LD builder (Google official pattern)
  *
- * 各物理拠点ごとに独立した LocalBusiness markup を生成。
- * Google Search Central の Local Business 構造化データガイドに準拠。
+ * Generates independent LocalBusiness markup per physical location.
+ * Compliant with Google Search Central Local Business structured data guide.
  *
  * @see https://developers.google.com/search/docs/appearance/structured-data/local-business
  */
@@ -715,10 +715,10 @@ function convertAmenitiesToFeatures(
 }
 
 /**
- * 1 拠点分の LocalBusiness JSON-LD データを生成（pure function）
+ * Build LocalBusiness JSON-LD data for a single location (pure function)
  *
- * @param location - SEO 用 Location データ
- * @param options.includeBranchOf - true で branchOf を併記（複数拠点時のみ）
+ * @param location - Location data for SEO
+ * @param options.includeBranchOf - include branchOf when true (only for multiple locations)
  */
 export function buildLocationLocalBusinessJsonLdData(
   location: LocationForSeo,
@@ -774,7 +774,7 @@ export function buildLocationLocalBusinessJsonLdData(
 }
 
 /**
- * 公開済み全 Location 分の JSON-LD データを取得（/access ページ用）
+ * Get JSON-LD data for all published locations (for /access page)
  */
 export async function getAllPublishedLocationsJsonLdData(): Promise<
   LocationLocalBusinessJsonLdData[]
@@ -791,7 +791,7 @@ export async function getAllPublishedLocationsJsonLdData(): Promise<
 }
 
 /**
- * 拠点単体ページ向け JSON-LD データを取得（/access/[locationSlug] 用）
+ * Get JSON-LD data for a single location page (for /access/[locationSlug])
  */
 export async function getLocationJsonLdDataBySlug(
   slug: string,
@@ -811,11 +811,11 @@ export async function getLocationJsonLdDataBySlug(
 }
 ```
 
-### Step 3.2: json-ld-config.ts のリファクタ
+### Step 3.2: Refactor json-ld-config.ts
 
-`src/app/(public)/_shared/lib/seo/json-ld-config.ts` から `LocalBusinessJsonLdData` 型と `getLocalBusinessJsonLdData()` 関数を削除。`convertToOpeningHoursSpecification` / `convertToSpecialOpeningHours` / `ATTR_LABELS` / `DAY_MAP` / `DAY_LABELS` は **export を維持**（location-json-ld.ts と Footer/BusinessInfo で再利用）。
+Remove the `LocalBusinessJsonLdData` type and `getLocalBusinessJsonLdData()` function from `src/app/(public)/_shared/lib/seo/json-ld-config.ts`. Keep exporting `convertToOpeningHoursSpecification` / `convertToSpecialOpeningHours` / `ATTR_LABELS` / `DAY_MAP` / `DAY_LABELS` (reused in location-json-ld.ts and Footer/BusinessInfo).
 
-`getGraphJsonLdData()` を以下に変更:
+Change `getGraphJsonLdData()` to:
 
 ```typescript
 export interface GraphJsonLdData {
@@ -832,7 +832,7 @@ export async function getGraphJsonLdData(): Promise<GraphJsonLdData> {
 }
 ```
 
-`getOrganizationJsonLdData()` は `sameAs` を含むよう拡張（複数拠点時に各 LocalBusiness が `branchOf` で参照する Organization のため）:
+Extend `getOrganizationJsonLdData()` to include `sameAs` (Organization referenced via `branchOf` when multiple locations exist):
 
 ```typescript
 export interface OrganizationJsonLdData {
@@ -854,7 +854,7 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
     getOrganizationSettings(),
     getSocialLinkUrls(),
   ]);
-  // ... 既存ロジックに sameAs / foundingDate / additionalType を追加
+  // ... add sameAs / foundingDate / additionalType to existing logic
   return omitUndefined({
     "@id": `${BASE_URL}/#organization`,
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
@@ -863,7 +863,7 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
     logo: settings?.headerLogoUrl || undefined,
     telephone: settings?.phoneNumber || undefined,
     email: settings?.email || undefined,
-    address: /* 既存どおり */,
+    address: /* same as existing */,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     foundingDate: settings?.establishedDate
       ? new Date(settings.establishedDate).toISOString().split("T")[0]
@@ -873,18 +873,18 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
 }
 ```
 
-### Step 3.3: seo/index.ts barrel 更新
+### Step 3.3: Update seo/index.ts barrel
 
-`src/app/(public)/_shared/lib/seo/index.ts` で:
+In `src/app/(public)/_shared/lib/seo/index.ts`:
 
-- 削除: `export { getLocalBusinessJsonLdData } from "./json-ld-config"`
-- 追加: `export { getAllPublishedLocationsJsonLdData, getLocationJsonLdDataBySlug, buildLocationLocalBusinessJsonLdData, type LocationLocalBusinessJsonLdData } from "./location-json-ld"`
+- Remove: `export { getLocalBusinessJsonLdData } from "./json-ld-config"`
+- Add: `export { getAllPublishedLocationsJsonLdData, getLocationJsonLdDataBySlug, buildLocationLocalBusinessJsonLdData, type LocationLocalBusinessJsonLdData } from "./location-json-ld"`
 
-### Step 3.4: json-ld.tsx の component 改修
+### Step 3.4: Refactor components in json-ld.tsx
 
-`src/app/(public)/_shared/components/seo/json-ld.tsx` を編集:
+Edit `src/app/(public)/_shared/components/seo/json-ld.tsx`:
 
-**`<GraphJsonLd>` 改修**:
+**Refactor `<GraphJsonLd>`**:
 
 ```tsx
 export function GraphJsonLd({
@@ -924,7 +924,7 @@ export function GraphJsonLd({
 }
 ```
 
-**新 component `<LocationLocalBusinessJsonLd>`**（単一拠点詳細ページ用）:
+**New `<LocationLocalBusinessJsonLd>` component** (single location detail page):
 
 ```tsx
 import type { LocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-json-ld";
@@ -941,7 +941,7 @@ export function LocationLocalBusinessJsonLd(
 }
 ```
 
-**新 component `<LocationsLocalBusinessJsonLd>`**（/access 一覧ページ用、複数拠点を 1 `<script>` にまとめる）:
+**New `<LocationsLocalBusinessJsonLd>` component** (for /access list page, bundle multiple locations into one `<script>`):
 
 ```tsx
 export function LocationsLocalBusinessJsonLd({
@@ -961,7 +961,7 @@ export function LocationsLocalBusinessJsonLd({
 }
 ```
 
-**`<LocalBusinessJsonLd>` 削除**: 旧単一拠点用の export を削除（`buildLocalBusinessData` も削除）。`OrganizationJsonLd` は維持。
+**Remove `<LocalBusinessJsonLd>`**: delete the legacy single-location export (and `buildLocalBusinessData`). Keep `OrganizationJsonLd`.
 
 ### Step 3.5: type-check + lint
 
@@ -970,7 +970,7 @@ bun run type-check
 bun run lint
 ```
 
-期待: 型エラーゼロ。`getLocalBusinessJsonLdData()` を import している箇所が残っていれば次の Phase で解消。
+Expected: zero type errors. If any imports of `getLocalBusinessJsonLdData()` remain, resolve them in the next phase.
 
 ### Step 3.6: Commit
 
@@ -996,19 +996,19 @@ EOF
 
 ## Task 4: Public layout refactor
 
-**目的:** `(public)/layout.tsx` の site-wide LocalBusiness を撤去。`/access` ページに `<LocationsLocalBusinessJsonLd>` を追加。LocationChapter に詳細ページへの Link を追加。
+**Purpose:** Remove the site-wide LocalBusiness from `(public)/layout.tsx`. Add `<LocationsLocalBusinessJsonLd>` to the `/access` page. Add links to detail pages from LocationChapter.
 
 **Files:**
 
-- Modify: `src/app/(public)/layout.tsx`（`<StructuredDataContent>` 改修）
-- Modify: `src/app/(public)/access/page.tsx`（`<LocationsLocalBusinessJsonLd>` 追加）
-- Modify: `src/app/(public)/access/_components/location-chapter.tsx`（Link 追加）
-- Modify: `src/app/(public)/access/_components/locations-overview.tsx`（必要なら slug を anchorId に使用）
-- Modify: `src/app/(public)/_shared/data/business.ts`（`getBusinessInfo()` の戻り値型から MEO 関連削除済み確認）
+- Modify: `src/app/(public)/layout.tsx` (refactor `<StructuredDataContent>`)
+- Modify: `src/app/(public)/access/page.tsx` (add `<LocationsLocalBusinessJsonLd>`)
+- Modify: `src/app/(public)/access/_components/location-chapter.tsx` (add link)
+- Modify: `src/app/(public)/access/_components/locations-overview.tsx` (use slug as anchorId if needed)
+- Modify: `src/app/(public)/_shared/data/business.ts` (confirm MEO fields already removed from `getBusinessInfo()` return type)
 
-### Step 4.1: layout.tsx の StructuredDataContent 改修
+### Step 4.1: Refactor StructuredDataContent in layout.tsx
 
-`src/app/(public)/layout.tsx` の `StructuredDataContent` を改修:
+Refactor `StructuredDataContent` in `src/app/(public)/layout.tsx`:
 
 ```tsx
 async function StructuredDataContent(): Promise<ReactElement> {
@@ -1022,31 +1022,31 @@ async function StructuredDataContent(): Promise<ReactElement> {
 }
 ```
 
-`getGraphJsonLdData()` の戻り値型が `{ organization, webSite }` に変わったので spread 引数も修正。
+Because `getGraphJsonLdData()` now returns `{ organization, webSite }`, update the spread arguments accordingly.
 
-### Step 4.2: access/page.tsx に LocationsLocalBusinessJsonLd 追加
+### Step 4.2: Add LocationsLocalBusinessJsonLd to access/page.tsx
 
-`src/app/(public)/access/page.tsx` の `AccessPage` 関数内に JSON-LD output を追加:
+Add JSON-LD output inside the `AccessPage` function in `src/app/(public)/access/page.tsx`:
 
 ```tsx
 import { getAllPublishedLocationsJsonLdData } from "@/public/lib/seo";
 import { LocationsLocalBusinessJsonLd } from "@/public/components/seo/json-ld";
 
-// AccessChaptersJsonLd という名前の Suspense child を作成
+// Create a Suspense child named AccessChaptersJsonLd
 async function AccessChaptersJsonLd(): Promise<ReactElement | null> {
   const locations = await getAllPublishedLocationsJsonLdData();
   return <LocationsLocalBusinessJsonLd locations={locations} />;
 }
 
-// PageLayout の children として Suspense でラップして配置
+// Wrap with Suspense as a PageLayout child
 <Suspense fallback={null}>
   <AccessChaptersJsonLd />
 </Suspense>;
 ```
 
-### Step 4.3: resolveLocations の slug 連携
+### Step 4.3: Wire slug into resolveLocations
 
-`/access/page.tsx` の `resolveLocations()` で、Location.slug がある場合は anchorId として slug をそのまま使う（複数拠点時の SEO URL 一貫性）。フォールバック合成 Location は `anchorId: "main-location"` 固定。
+In `resolveLocations()` in `/access/page.tsx`, use Location.slug as anchorId when present (consistent SEO URLs for multiple locations). For the fallback synthetic Location, keep `anchorId: "main-location"` fixed.
 
 ```typescript
 async function resolveLocations(): Promise<
@@ -1064,16 +1064,16 @@ async function resolveLocations(): Promise<
       : [];
   }
   return locations.map((loc, i) => ({
-    anchorId: loc.slug, // ← slug を anchorId に使用
+    anchorId: loc.slug, // use slug as anchorId
     index: i + 1,
     location: loc,
   }));
 }
 ```
 
-### Step 4.4: location-chapter.tsx に詳細ページ Link 追加
+### Step 4.4: Add detail page links in location-chapter.tsx
 
-`src/app/(public)/access/_components/location-chapter.tsx` の見出し or「詳細を見る」CTA を `<Link href={\`/access/${slug}\`}>` に変更。fallback Location の場合は Link を出さない（slug = "main-location" で route が存在しないため）:
+Change the heading or "View details" CTA in `src/app/(public)/access/_components/location-chapter.tsx` to `<Link href={\`/access/${slug}\`}>`. Do not render a link for the fallback Location (slug = "main-location" has no route):
 
 ```tsx
 {
@@ -1082,23 +1082,23 @@ async function resolveLocations(): Promise<
       href={`/access/${location.slug}` as Route<string>}
       className="text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
     >
-      詳細を見る
+      View details
     </Link>
   ) : null;
 }
 ```
 
-### Step 4.5: business.ts の getBusinessInfo() 型確認
+### Step 4.5: Verify getBusinessInfo() type in business.ts
 
-Phase 2 で MEO 関連を削除済み。再確認のみ:
+MEO fields were removed in Phase 2. Re-check only:
 
 ```bash
 grep -n "latitude\|longitude\|priceRange\|googleBusinessPlaceId\|googleReviewUrl\|businessAttributes\|paymentAccepted\|specialHolidays" src/app/\(public\)/_shared/data/business.ts
 ```
 
-期待: ヒットなし。
+Expected: no matches.
 
-### Step 4.6: 型チェック + dev で /access 確認
+### Step 4.6: Type-check + verify /access in dev
 
 ```bash
 bun run type-check
@@ -1106,10 +1106,10 @@ bun run lint
 bun dev
 ```
 
-ブラウザで `/access` を開いて以下を目視確認:
+Open `/access` in the browser and visually confirm:
 
-- 各 Location カードに「詳細を見る」リンクが出ている（fallback 時は出ない）
-- HTML source に `<script type="application/ld+json">` が `Organization` + `WebSite` の `@graph`（layout 由来）と `LocalBusiness[]` の `@graph`（access page 由来）の **2 つ**含まれる
+- Each Location card shows a "View details" link (not for fallback)
+- HTML source contains **two** `<script type="application/ld+json">` blocks: `Organization` + `WebSite` `@graph` (from layout) and `LocalBusiness[]` `@graph` (from access page)
 
 ### Step 4.7: Commit
 
@@ -1135,7 +1135,7 @@ EOF
 
 ## Task 5: New /access/[locationSlug] detail page
 
-**目的:** 拠点詳細ページを Next.js 16 App Router の dynamic segment として新設。LocationChapter コンポーネントを再利用しつつ、`<LocationLocalBusinessJsonLd>` を出力。
+**Purpose:** Add a location detail page as a Next.js 16 App Router dynamic segment. Reuse the LocationChapter component and emit `<LocationLocalBusinessJsonLd>`.
 
 **Files:**
 
@@ -1144,14 +1144,14 @@ EOF
 - Create: `src/app/(public)/access/[locationSlug]/error.tsx`
 - Create: `src/app/(public)/access/[locationSlug]/not-found.tsx`
 
-### Step 5.1: page.tsx 作成
+### Step 5.1: Create page.tsx
 
 ```tsx
 /**
- * /access/[locationSlug] — 拠点詳細ページ
+ * /access/[locationSlug] — Location detail page
  *
- * Per-location LocalBusiness JSON-LD（Google 公式準拠）を出力。
- * LocationChapter コンポーネントを再利用してレイアウトを統一する。
+ * Emit per-location LocalBusiness JSON-LD (Google official pattern).
+ * Reuse the LocationChapter component to keep layout consistent.
  */
 
 import type { Metadata } from "next";
@@ -1180,19 +1180,19 @@ export async function generateMetadata({
   await connection();
   const { locationSlug } = await params;
   const location = await getPublishedLocationForAccessBySlug(locationSlug);
-  if (!location) return { title: "拠点が見つかりません" };
+  if (!location) return { title: "Location not found" };
 
   const baseUrl = getBaseUrl();
   return {
-    title: `${location.name} - アクセス`,
+    title: `${location.name} - Access`,
     description:
       location.description ??
-      `${location.name}のアクセス情報・営業時間・設備をご案内します`,
+      `${location.name} access info, business hours, and amenities`,
     alternates: {
       canonical: `${baseUrl}/access/${locationSlug}`,
     },
     openGraph: {
-      title: `${location.name} - アクセス`,
+      title: `${location.name} - Access`,
       description: location.description ?? undefined,
       url: `${baseUrl}/access/${locationSlug}`,
       images: location.imageUrl ? [location.imageUrl] : undefined,
@@ -1228,8 +1228,8 @@ export default async function LocationDetailPage({
       cta={
         <SiteCTA
           label="Contact"
-          title="ご不明な点はお気軽にどうぞ"
-          buttonText="お問い合わせ"
+          title="Feel free to reach out with any questions"
+          buttonText="Contact"
           buttonHref="/contact"
         />
       }
@@ -1255,9 +1255,9 @@ export default async function LocationDetailPage({
 }
 ```
 
-> **注**: `getPublishedLocationForAccessBySlug(slug)` を Phase 2 (`public-queries.ts`) で追加していなければ追加する。Step 2.3 で `LocationForSeo` 型用の関数は追加済みだが、`LocationForAccess`（フル取得）用も別途必要。
+> **Note**: If `getPublishedLocationForAccessBySlug(slug)` was not added in Phase 2 (`public-queries.ts`), add it here. Step 2.3 already added functions for `LocationForSeo`, but `LocationForAccess` (full fetch) is still required.
 
-### Step 5.2: loading.tsx 作成
+### Step 5.2: Create loading.tsx
 
 ```tsx
 import { Container } from "@/public/components/design-system/container";
@@ -1278,7 +1278,7 @@ export default function LocationDetailLoading() {
 }
 ```
 
-### Step 5.3: error.tsx 作成
+### Step 5.3: Create error.tsx
 
 ```tsx
 "use client";
@@ -1306,13 +1306,11 @@ export default function LocationDetailError({
   return (
     <Container>
       <div className="py-20 text-center">
-        <h1 className="text-h2">拠点情報を取得できませんでした</h1>
-        <p className="mt-4 text-muted-foreground">
-          時間をおいて再度お試しください。
-        </p>
+        <h1 className="text-h2">Unable to load location details</h1>
+        <p className="mt-4 text-muted-foreground">Please try again later.</p>
         <div className="mt-8">
           <Button onClick={reset} variant="editorial">
-            再試行
+            Retry
           </Button>
         </div>
       </div>
@@ -1321,7 +1319,7 @@ export default function LocationDetailError({
 }
 ```
 
-### Step 5.4: not-found.tsx 作成
+### Step 5.4: Create not-found.tsx
 
 ```tsx
 import Link from "next/link";
@@ -1332,16 +1330,16 @@ export default function LocationNotFound() {
   return (
     <Container>
       <div className="py-20 text-center">
-        <h1 className="text-h2">拠点が見つかりません</h1>
+        <h1 className="text-h2">Location not found</h1>
         <p className="mt-4 text-muted-foreground">
-          指定された拠点は存在しないか、現在公開されていません。
+          The specified location does not exist or is not currently published.
         </p>
         <div className="mt-8 flex justify-center gap-4">
           <Button asChild variant="editorial">
-            <Link href="/access">アクセス一覧へ</Link>
+            <Link href="/access">Back to access list</Link>
           </Button>
           <Button asChild variant="ghost">
-            <Link href="/">ホームへ戻る</Link>
+            <Link href="/">Back to home</Link>
           </Button>
         </div>
       </div>
@@ -1350,9 +1348,9 @@ export default function LocationNotFound() {
 }
 ```
 
-### Step 5.5: getPublishedLocationForAccessBySlug を public-queries.ts に追加
+### Step 5.5: Add getPublishedLocationForAccessBySlug to public-queries.ts
 
-Phase 2 で追加済みでない場合、`src/shared/domain/locations/public-queries.ts` に:
+If not already added in Phase 2, add the following to `src/shared/domain/locations/public-queries.ts`:
 
 ```typescript
 export async function getPublishedLocationForAccessBySlug(
@@ -1370,7 +1368,7 @@ export async function getPublishedLocationForAccessBySlug(
       prisma.location.findUnique({
         where: { slug: validated.data, isPublished: true, isActive: true },
         select: {
-          /* 全 LocationForAccess select */
+          /* all LocationForAccess select fields */
         },
       }),
     fallback: null,
@@ -1383,17 +1381,17 @@ export async function getPublishedLocationForAccessBySlug(
 }
 ```
 
-### Step 5.6: dev でブラウザ確認
+### Step 5.6: Check in browser with dev
 
 ```bash
 bun dev
 ```
 
-`/access/honkan`（または seed 済 slug）を開いて:
+Open `/access/honkan` (or a seeded slug):
 
-- ページが描画される
-- HTML source に `<script type="application/ld+json">` で `"@type": "LocalBusiness"` が含まれる
-- 存在しない slug `/access/nonexistent-slug` で 404 表示
+- Page renders
+- HTML source contains `"@type": "LocalBusiness"` in `<script type="application/ld+json">`
+- Non-existent slug `/access/nonexistent-slug` shows 404
 
 ### Step 5.7: type-check + lint
 
@@ -1413,7 +1411,7 @@ feat(access): location detail page with per-location LocalBusiness JSON-LD
 - Reuses LocationChapter component for layout consistency
 - Emits <LocationLocalBusinessJsonLd> via Suspense
 
-Spec: §2.5 (新規ページ)
+Spec: §2.5 (new page)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1422,60 +1420,60 @@ EOF
 
 ---
 
-## Task 6: Admin — remove MeoSection (Settings 側完全削除)
+## Task 6: Admin — remove MeoSection (complete removal from Settings)
 
-**目的:** 管理画面の Settings ページから MEO セクションを完全削除。`updateMeoSettings` Server Action を削除。`meoFormSchema` を削除。
+**Purpose:** Fully remove the MEO section from the admin Settings page. Delete the `updateMeoSettings` Server Action and remove `meoFormSchema`.
 
 **Files:**
 
 - Delete: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/MeoSection.tsx`
-- Modify: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts`（export 削除）
-- Modify: `src/app/(admin)/admin/(dashboard)/settings/page.tsx` または `_components/SettingsTabs.tsx`（タブから MEO 削除）
-- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/other.ts`（`updateMeoSettings` 削除）
-- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/index.ts`（export 削除）
-- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-seo-analytics.ts`（`meoFormSchema` 削除）
+- Modify: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts` (remove export)
+- Modify: `src/app/(admin)/admin/(dashboard)/settings/page.tsx` or `_components/SettingsTabs.tsx` (remove MEO tab)
+- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/other.ts` (remove `updateMeoSettings`)
+- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/index.ts` (remove export)
+- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-seo-analytics.ts` (remove `meoFormSchema`)
 
-### Step 6.1: MeoSection.tsx 削除
+### Step 6.1: Delete MeoSection.tsx
 
 ```bash
 git rm src/app/\(admin\)/admin/\(dashboard\)/settings/_components/sections/MeoSection.tsx
 ```
 
-### Step 6.2: index.ts から export 削除
+### Step 6.2: Remove export from index.ts
 
-`src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts` の `export { MeoSection } from "./MeoSection"` を削除。
+Delete `export { MeoSection } from "./MeoSection"` from `src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts`.
 
-### Step 6.3: settings/page.tsx か SettingsTabs.tsx の MEO タブ削除
+### Step 6.3: Remove MEO tab in settings/page.tsx or SettingsTabs.tsx
 
 ```bash
-grep -rn "MeoSection\|MEO対策\|meo" src/app/\(admin\)/admin/\(dashboard\)/settings/ --include="*.tsx" --include="*.ts" | head -20
+grep -rn "MeoSection\|MEO\|meo" src/app/\(admin\)/admin/\(dashboard\)/settings/ --include="*.tsx" --include="*.ts" | head -20
 ```
 
-ヒットした箇所から MeoSection 描画を削除（タブ定義 / セクション render）。
+Remove MeoSection rendering from any hits (tab definitions / section render).
 
-### Step 6.4: updateMeoSettings 関数削除
+### Step 6.4: Remove updateMeoSettings function
 
-`src/app/(admin)/admin/(dashboard)/_shared/actions/settings/other.ts` から `updateMeoSettings` 関数全体を削除。`index.ts` の re-export も削除。
+Remove the entire `updateMeoSettings` function from `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/other.ts`. Remove its re-export from `index.ts` as well.
 
-### Step 6.5: meoFormSchema 削除
+### Step 6.5: Remove meoFormSchema
 
-`src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-seo-analytics.ts` から `meoFormSchema` 全体を削除。`schemas/index.ts` barrel に re-export があれば削除。
+Delete the entire `meoFormSchema` from `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-seo-analytics.ts`. Remove any re-export from the `schemas/index.ts` barrel.
 
-### Step 6.6: 関連 import の cleanup
+### Step 6.6: Clean up related imports
 
 ```bash
 grep -rn "MeoSection\|updateMeoSettings\|meoFormSchema" src/ __tests__/ 2>/dev/null
 ```
 
-期待: ヒットなし。残っていれば削除。
+Expected: no hits. Remove any remaining references.
 
-### Step 6.7: 関連 integration test 削除
+### Step 6.7: Remove related integration tests
 
 ```bash
 ls __tests__/integration/actions/admin/settings-meo* __tests__/integration/actions/admin/meo* 2>/dev/null
 ```
 
-該当ファイルがあれば `git rm` で削除（Phase 8 で per-location テストを別途作成）。
+If matching files exist, delete them with `git rm` (per-location tests are created in Phase 8).
 
 ### Step 6.8: type-check + lint
 
@@ -1495,7 +1493,7 @@ refactor(admin): remove Settings-level MeoSection (moved to per-Location)
 - Drop related integration tests (per-location tests added in Phase 8)
 - Clean up imports across settings page
 
-Spec: §3.1 (削除されるファイル / 関数)
+Spec: §3.1 (files / functions removed)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1506,22 +1504,22 @@ EOF
 
 ## Task 7: Admin — Location MEO tab + per-location score
 
-**目的:** `/admin/locations/[id]/edit` ページに MEO タブを追加。LocationForm を拡張して MEO フィールド入力に対応。LocationMeoScoreCard を新設（per-location 14 項目スコア）。
+**Purpose:** Add an MEO tab to `/admin/locations/[id]/edit`. Extend LocationForm to accept MEO fields. Add LocationMeoScoreCard (per-location 14-item score).
 
 **Files:**
 
-- Modify: `src/app/(admin)/admin/(dashboard)/locations/[id]/edit/page.tsx`（タブレイアウト導入）
-- Modify: `src/app/(admin)/admin/(dashboard)/locations/_components/LocationForm.tsx`（MEO セクション追加）
+- Modify: `src/app/(admin)/admin/(dashboard)/locations/[id]/edit/page.tsx` (introduce tab layout)
+- Modify: `src/app/(admin)/admin/(dashboard)/locations/_components/LocationForm.tsx` (add MEO section)
 - Create: `src/app/(admin)/admin/(dashboard)/locations/_components/LocationMeoScoreCard.tsx`
-- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts`（updateLocation Input に MEO フィールド追加）
-- Modify: `src/shared/domain/settings/admin-queries.ts`（per-location score で参照する Settings.businessName / establishedDate / SocialLink を取得する query）
-- Modify: `src/app/(admin)/admin/(dashboard)/locations/new/page.tsx`（slug + MEO フィールド入力）
+- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts` (add MEO fields to updateLocation input)
+- Modify: `src/shared/domain/settings/admin-queries.ts` (query Settings.businessName / establishedDate / SocialLink for per-location score)
+- Modify: `src/app/(admin)/admin/(dashboard)/locations/new/page.tsx` (slug + MEO field inputs)
 
-### Step 7.1: LocationForm に slug + 住所詳細 + MEO セクションを追加
+### Step 7.1: Add slug + address details + MEO section to LocationForm
 
-`src/app/(admin)/admin/(dashboard)/locations/_components/LocationForm.tsx` の現状を Read した上で、以下を追加:
+Read the current `src/app/(admin)/admin/(dashboard)/locations/_components/LocationForm.tsx`, then add the following:
 
-**slug 入力フィールド**（必須、URL 表示プレビュー付き）:
+**Slug input field** (required, with URL preview):
 
 ```tsx
 <FormField
@@ -1529,14 +1527,15 @@ EOF
   name="slug"
   render={({ field }) => (
     <FormItem>
-      <FormLabel>スラッグ（URL 識別子）</FormLabel>
+      <FormLabel>Slug (URL identifier)</FormLabel>
       <FormControl>
         <Input {...field} placeholder="honkan" disabled={isPending} />
       </FormControl>
       <FormDescription>
-        公開 URL: <code>/access/{field.value || "slug"}</code>
+        Public URL: <code>/access/{field.value || "slug"}</code>
         <br />
-        小文字英数字とハイフンのみ。一度公開後の変更は SEO に影響します。
+        Lowercase alphanumerics and hyphens only. Changing after publish affects
+        SEO.
       </FormDescription>
       <FormMessage />
     </FormItem>
@@ -1544,13 +1543,13 @@ EOF
 />
 ```
 
-**住所詳細フィールド（PostalAddress）**:
+**Address details fields (PostalAddress)**:
 
-`postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName` を `<fieldset>` にグループ化:
+Group `postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName` in a `<fieldset>`:
 
 ```tsx
 <fieldset className="rounded-lg border p-4 space-y-4">
-  <legend className="px-1 text-sm font-medium">住所詳細（構造化データ用）</legend>
+  <legend className="px-1 text-sm font-medium">Address details (structured data)</legend>
   <div className="grid gap-4 sm:grid-cols-2">
     <FormField name="postalCode" {...} />
     <FormField name="prefecture" {...} />
@@ -1561,16 +1560,16 @@ EOF
   </div>
   <FormField name="buildingName" {...} />
   <p className="text-xs text-muted-foreground">
-    上記の構造化住所は LocalBusiness JSON-LD で使用されます。`address` フィールドは表示用、ここは検索エンジン用です。
+    The structured address above is used in LocalBusiness JSON-LD. The `address` field is for display; these are for search engines.
   </p>
 </fieldset>
 ```
 
-**MEO セクション（緯度経度 / GBP / 価格帯 / 決済 / 連絡先）**:
+**MEO section (lat/long / GBP / price range / payments / contacts)**:
 
 ```tsx
 <fieldset className="rounded-lg border p-4 space-y-4">
-  <legend className="px-1 text-sm font-medium">MEO（ローカル検索最適化）</legend>
+  <legend className="px-1 text-sm font-medium">MEO (Local SEO)</legend>
 
   <div className="grid gap-4 sm:grid-cols-2">
     <FormField name="latitude" {...} />
@@ -1581,26 +1580,26 @@ EOF
   <FormField name="email" {...} />
 
   <FormField name="priceRange"
-    description="例: ¥1,000〜¥5,000/時間（最大 100 文字）" {...} />
+    description="Example: ¥1,000-¥5,000/hour (max 100 chars)" {...} />
 
   <FormField name="paymentAccepted"
-    description="現金, クレジットカード, 電子マネー, QRコード決済" {...} />
+    description="Cash, credit card, e-money, QR code payments" {...} />
 
   <FormField name="googleBusinessPlaceId"
-    description="Google Maps Platform で確認できます（ChIJ...）" {...} />
+    description="Check in Google Maps Platform (ChIJ...)" {...} />
 
   <FormField name="googleReviewUrl"
-    description="お客様に口コミ投稿を促すための URL" {...} />
+    description="URL to prompt customer reviews" {...} />
 </fieldset>
 ```
 
-**施設属性（既存 amenities フィールドを wifi / parking / etc のチェックボックスに）**:
+**Amenity attributes (reuse existing amenities field as wifi / parking / etc checkboxes)**:
 
-既存の `amenities` フィールド入力 UI を維持しつつ、`BUSINESS_ATTRIBUTE_OPTIONS`（`@/shared/lib/business-attributes` を参照）でチェックボックスを再利用。
+Keep the existing `amenities` input UI and reuse checkboxes via `BUSINESS_ATTRIBUTE_OPTIONS` (see `@/shared/lib/business-attributes`).
 
-### Step 7.2: LocationMeoScoreCard 新設
+### Step 7.2: Create LocationMeoScoreCard
 
-`src/app/(admin)/admin/(dashboard)/locations/_components/LocationMeoScoreCard.tsx` を新規作成。spec §2.6 の 14 項目（per-location 11 項目 + 全社共通 3 項目）を計算:
+Create `src/app/(admin)/admin/(dashboard)/locations/_components/LocationMeoScoreCard.tsx`. Calculate the 14 items in spec §2.6 (11 per-location + 3 global):
 
 ```tsx
 "use client";
@@ -1630,30 +1629,30 @@ function calculateMeoScore(
   },
 ): { score: number; items: ScoreItem[] } {
   const items: ScoreItem[] = [
-    { label: "拠点名", isSet: !!values.name },
+    { label: "Location name", isSet: !!values.name },
     {
-      label: "住所（構造化）",
+      label: "Address (structured)",
       isSet: !!(values.postalCode && values.prefecture && values.city),
     },
-    { label: "電話番号", isSet: !!values.phoneNumber },
-    { label: "メールアドレス", isSet: !!values.email },
+    { label: "Phone number", isSet: !!values.phoneNumber },
+    { label: "Email", isSet: !!values.email },
     {
-      label: "緯度・経度",
+      label: "Latitude / Longitude",
       isSet:
         values.latitude !== null &&
         values.latitude !== undefined &&
         values.longitude !== null &&
         values.longitude !== undefined,
     },
-    { label: "営業時間", isSet: !!values.businessHours },
-    { label: "価格帯", isSet: !!values.priceRange },
-    { label: "拠点説明", isSet: !!values.description },
-    { label: "拠点画像", isSet: !!values.imageUrl },
+    { label: "Business hours", isSet: !!values.businessHours },
+    { label: "Price range", isSet: !!values.priceRange },
+    { label: "Location description", isSet: !!values.description },
+    { label: "Location image", isSet: !!values.imageUrl },
     { label: "Google Place ID", isSet: !!values.googleBusinessPlaceId },
-    { label: "決済方法", isSet: !!values.paymentAccepted },
-    { label: "事業者名（全社）", isSet: globals.businessName },
-    { label: "設立日（全社）", isSet: globals.establishedDate },
-    { label: "ソーシャルリンク（全社）", isSet: globals.socialLinks },
+    { label: "Payment methods", isSet: !!values.paymentAccepted },
+    { label: "Business name (global)", isSet: globals.businessName },
+    { label: "Established date (global)", isSet: globals.establishedDate },
+    { label: "Social links (global)", isSet: globals.socialLinks },
   ];
   const setCount = items.filter((i) => i.isSet).length;
   return { score: Math.round((setCount / items.length) * 100), items };
@@ -1678,25 +1677,25 @@ export function LocationMeoScoreCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>MEO 情報充実度スコア（拠点）</CardTitle>
+        <CardTitle>MEO completeness score (location)</CardTitle>
         <CardDescription>
-          ローカル検索で有利になるための設定充実度を確認できます
+          Check how complete the settings are for better local search
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* 円グラフ + メッセージ + 14 項目チェックリスト UI（既存 MeoSection の SVG 流用可） */}
-        {/* spec §2.6 の表に対応 */}
+        {/* Pie chart + message + 14-item checklist UI (reuse existing MeoSection SVG if possible) */}
+        {/* Matches the table in spec §2.6 */}
       </CardContent>
     </Card>
   );
 }
 ```
 
-旧 MeoSection.tsx の SVG 円グラフ実装と項目リスト UI を**そのままコピー**して LocationMeoScoreCard に移植する（13 項目 → 14 項目に変更、全社共通項目に「全社」サフィックス）。
+Copy the SVG pie chart implementation and item list UI from the old MeoSection.tsx **as-is** into LocationMeoScoreCard (change 13 items → 14 items, add a "(global)" suffix to global items).
 
-### Step 7.3: edit/page.tsx に MEO タブ統合
+### Step 7.3: Integrate MEO tab in edit/page.tsx
 
-`src/app/(admin)/admin/(dashboard)/locations/[id]/edit/page.tsx` を改修:
+Refactor `src/app/(admin)/admin/(dashboard)/locations/[id]/edit/page.tsx`:
 
 ```tsx
 import { LocationForm } from "../../_components/LocationForm";
@@ -1735,7 +1734,7 @@ export default async function LocationEditPage({ params }: PageProps) {
     >
       <Tabs defaultValue="basic">
         <TabsList>
-          <TabsTrigger value="basic">基本情報</TabsTrigger>
+          <TabsTrigger value="basic">Basic info</TabsTrigger>
           <TabsTrigger value="meo">MEO</TabsTrigger>
         </TabsList>
         <TabsContent
@@ -1752,10 +1751,10 @@ export default async function LocationEditPage({ params }: PageProps) {
         >
           <div className="space-y-6">
             <LocationMeoScoreCard
-              control={/* form context — LocationForm から context を共有する設計判断 */}
+              control={/* form context — decision to share context from LocationForm */}
               globals={globals}
             />
-            {/* MEO 入力フォームは LocationForm 内のセクションでまとめている */}
+            {/* MEO inputs are grouped inside LocationForm sections */}
           </div>
         </TabsContent>
       </Tabs>
@@ -1764,16 +1763,16 @@ export default async function LocationEditPage({ params }: PageProps) {
 }
 ```
 
-> **設計判断**: LocationForm 内に MEO 入力 UI を含める設計と、LocationMeoScoreCard を別途配置する設計の二つが両立する。実装時は `useFormContext` で control を共有するか、edit page 全体を 1 form scope にする。Implementer は既存 LocationForm の構造を Read してから判断（バンドル時に決定）。
+> **Design decision**: Both approaches can work: keeping MEO inputs inside LocationForm and placing LocationMeoScoreCard separately. During implementation, either share control via `useFormContext` or make the entire edit page a single form scope. Decide after reading the existing LocationForm structure (during bundling).
 
-### Step 7.4: updateLocation Server Action の Zod input 拡張
+### Step 7.4: Extend Zod input for updateLocation Server Action
 
-`src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts` の `updateLocation` / `createLocation` の input schema に MEO + slug + 住所詳細 + 連絡先フィールドを追加（Phase 2 で `locationFormSchema` に追加済みなので `.shape` 経由 import）。
+Add MEO + slug + address details + contact fields to the `updateLocation` / `createLocation` input schema in `src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts` (import `.shape` from `locationFormSchema`, added in Phase 2).
 
 ```typescript
 import { locationFormSchema } from "@/shared/lib/validations/location";
 
-const updateLocationSchema = locationFormSchema; // 完全一致
+const updateLocationSchema = locationFormSchema; // exact match
 
 export async function updateLocation(
   id: string,
@@ -1795,33 +1794,33 @@ export async function updateLocation(
 }
 ```
 
-`getCacheTag.locations.detail(slug)` を `@/shared/lib/constants` に新設（per-location キャッシュ無効化用）。
+Add `getCacheTag.locations.detail(slug)` to `@/shared/lib/constants` (per-location cache invalidation).
 
-### Step 7.5: new/page.tsx も同等対応
+### Step 7.5: Apply the same to new/page.tsx
 
-`src/app/(admin)/admin/(dashboard)/locations/new/page.tsx` で `LocationForm mode="create"` に slug 入力 + MEO セクションが表示されるよう確認（LocationForm 共通実装で対応）。
+Ensure `LocationForm mode="create"` in `src/app/(admin)/admin/(dashboard)/locations/new/page.tsx` shows slug input + MEO section (handled by shared LocationForm).
 
-### Step 7.6: dev で動作確認
+### Step 7.6: Verify in dev
 
 ```bash
 bun dev
 ```
 
-`/admin/locations/[id]/edit` を開いて:
+Open `/admin/locations/[id]/edit`:
 
-- 「基本情報」「MEO」タブが表示
-- MEO タブで Place ID / 緯度経度 / 価格帯等が編集可能
-- LocationMeoScoreCard が 14 項目スコアを表示
-- 保存後 `/access/[slug]` にリダイレクトせず編集ページに留まる
-- `/access` 公開ページに変更が反映（cache invalidation 確認）
+- "Basic info" and "MEO" tabs are displayed
+- MEO tab allows editing Place ID / lat/long / price range, etc.
+- LocationMeoScoreCard displays the 14-item score
+- After save, remain on the edit page (do not redirect to `/access/[slug]`)
+- Changes reflect on the public `/access` page (cache invalidation confirmed)
 
-### Step 7.7: 関連 integration test の更新
+### Step 7.7: Update related integration tests
 
 ```bash
 grep -rn "updateLocation\|createLocation" __tests__/integration/actions/admin/ 2>/dev/null
 ```
 
-ヒットしたテストの fixture に新フィールドを追加。
+Add new fields to fixtures for matching tests.
 
 ### Step 7.8: type-check + lint
 
@@ -1838,11 +1837,11 @@ feat(admin): per-Location MEO tab with 14-item score
 
 - LocationForm: add slug + structured address + MEO fieldset
 - LocationMeoScoreCard: per-location 14-item score (11 location + 3 global)
-- edit/page.tsx: Tabs primitive [基本情報 | MEO]
+- edit/page.tsx: Tabs primitive [Basic info | MEO]
 - updateLocation: extend Zod input schema; cache invalidation per slug
 - New cache tag getCacheTag.locations.detail(slug)
 
-Spec: §2.6 (管理画面 UI 変更)
+Spec: §2.6 (admin UI changes)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1853,15 +1852,15 @@ EOF
 
 ## Task 8: Tests (unit + integration + e2e)
 
-**目的:** spec §5 のテスト戦略を実装。pure builder の unit test + DB → JSON-LD shape の integration test + 公開ページの e2e visual + JSON-LD presence。
+**Purpose:** Implement the test strategy in spec §5. Unit tests for pure builders + integration tests for DB → JSON-LD shape + e2e visuals for public pages + JSON-LD presence checks.
 
 **Files:**
 
 - Create: `__tests__/unit/lib/seo/location-json-ld.test.ts`
 - Create: `__tests__/integration/domain/locations/jsonld-data.test.ts`
-- Modify: `__tests__/integration/actions/admin/location.test.ts`（既存）— MEO フィールド更新パス追加
+- Modify: `__tests__/integration/actions/admin/location.test.ts` (existing) — add MEO field update path
 - Create: `e2e/access-location-detail.spec.ts`
-- Modify: `e2e/visual/access-page.spec.ts`（既存があれば）— 詳細ページリンクの visual regression
+- Modify: `e2e/visual/access-page.spec.ts` (if it exists) — visual regression for detail page links
 
 ### Step 8.1: location-json-ld.test.ts (unit)
 
@@ -1873,14 +1872,14 @@ import type { LocationForSeo } from "@/shared/domain/locations/public-queries";
 const baseLocation: LocationForSeo = {
   id: "11111111-1111-4111-8111-111111111111",
   slug: "honkan",
-  name: "本館",
-  description: "渋谷の中心に位置するレンタルスペース",
-  address: "東京都渋谷区...",
+  name: "Honkan",
+  description: "Rental space located in central Shibuya",
+  address: "Shibuya, Tokyo...",
   postalCode: "150-0001",
-  prefecture: "東京都",
-  city: "渋谷区",
+  prefecture: "Tokyo",
+  city: "Shibuya",
   streetAddress: "1-2-3",
-  buildingName: "本館ビル",
+  buildingName: "Honkan Building",
   imageUrl: "/images/honkan.jpg",
   businessHours: null,
   specialHolidays: null,
@@ -1889,8 +1888,8 @@ const baseLocation: LocationForSeo = {
   longitude: 139.7004,
   googleBusinessPlaceId: "ChIJxxx",
   googleReviewUrl: null,
-  priceRange: "¥1,000〜¥5,000/時間",
-  paymentAccepted: "現金, クレジットカード",
+  priceRange: "¥1,000-¥5,000/hour",
+  paymentAccepted: "Cash, credit card",
   phoneNumber: "03-1234-5678",
   email: "honkan@example.com",
 };
@@ -1936,7 +1935,7 @@ describe("buildLocationLocalBusinessJsonLdData", () => {
     expect(result.branchOf).toBeUndefined();
   });
 
-  test("converts amenities to amenityFeature with Japanese labels", () => {
+  test("converts amenities to amenityFeature with English labels", () => {
     const result = buildLocationLocalBusinessJsonLdData(baseLocation, {
       includeBranchOf: false,
     });
@@ -1947,7 +1946,7 @@ describe("buildLocationLocalBusinessJsonLdData", () => {
     });
     expect(result.amenityFeature).toContainEqual({
       "@type": "LocationFeatureSpecification",
-      name: "駐車場",
+      name: "Parking",
       value: true,
     });
   });
@@ -1958,7 +1957,7 @@ describe("buildLocationLocalBusinessJsonLdData", () => {
     });
     expect(result.address?.addressCountry).toBe("JP");
     expect(result.address?.postalCode).toBe("150-0001");
-    expect(result.address?.streetAddress).toBe("1-2-3 本館ビル");
+    expect(result.address?.streetAddress).toBe("1-2-3 Honkan Building");
   });
 
   test("currenciesAccepted is always JPY", () => {
@@ -1970,13 +1969,13 @@ describe("buildLocationLocalBusinessJsonLdData", () => {
 });
 ```
 
-実行:
+Run:
 
 ```bash
 bun test __tests__/unit/lib/seo/location-json-ld.test.ts
 ```
 
-期待: 全 test pass。
+Expected: all tests pass.
 
 ### Step 8.2: jsonld-data.test.ts (integration)
 
@@ -1993,9 +1992,9 @@ let createdIds: string[] = [];
 beforeAll(async () => {
   const loc1 = await prisma.location.create({
     data: {
-      name: "Test拠点A",
+      name: "Test Location A",
       slug: "test-loc-a",
-      address: "東京都...",
+      address: "Tokyo...",
       imageUrl: "/test-a.jpg",
       latitude: 35.0,
       longitude: 139.0,
@@ -2005,9 +2004,9 @@ beforeAll(async () => {
   });
   const loc2 = await prisma.location.create({
     data: {
-      name: "Test拠点B",
+      name: "Test Location B",
       slug: "test-loc-b",
-      address: "大阪府...",
+      address: "Osaka...",
       imageUrl: "/test-b.jpg",
       latitude: 34.0,
       longitude: 135.0,
@@ -2039,7 +2038,7 @@ describe("getLocationJsonLdDataBySlug", () => {
   test("returns LocalBusiness data for valid slug", async () => {
     const data = await getLocationJsonLdDataBySlug("test-loc-a");
     expect(data).not.toBeNull();
-    expect(data?.name).toBe("Test拠点A");
+    expect(data?.name).toBe("Test Location A");
   });
 
   test("returns null for non-existent slug", async () => {
@@ -2049,17 +2048,17 @@ describe("getLocationJsonLdDataBySlug", () => {
 });
 ```
 
-実行:
+Run:
 
 ```bash
 bun test __tests__/integration/domain/locations/jsonld-data.test.ts
 ```
 
-期待: 全 test pass。
+Expected: all tests pass.
 
-### Step 8.3: location.test.ts (integration) — MEO 更新パス追加
+### Step 8.3: location.test.ts (integration) — add MEO update path
 
-既存の `__tests__/integration/actions/admin/location.test.ts` を Read して、以下のテストケースを追加:
+Read the existing `__tests__/integration/actions/admin/location.test.ts`, then add the following test case:
 
 ```typescript
 test("updateLocation persists MEO fields", async () => {
@@ -2067,7 +2066,7 @@ test("updateLocation persists MEO fields", async () => {
     data: {
       name: "Test for MEO",
       slug: "test-meo",
-      address: "東京",
+      address: "Tokyo",
       imageUrl: "/test.jpg",
     },
   });
@@ -2075,13 +2074,13 @@ test("updateLocation persists MEO fields", async () => {
   const result = await updateLocation(created.id, {
     name: "Test for MEO",
     slug: "test-meo",
-    address: "東京",
+    address: "Tokyo",
     imageUrl: "/test.jpg",
     latitude: 35.123,
     longitude: 139.456,
     googleBusinessPlaceId: "ChIJtest",
-    priceRange: "¥1,000〜¥5,000/時間",
-    paymentAccepted: "現金",
+    priceRange: "¥1,000-¥5,000/hour",
+    paymentAccepted: "Cash",
     phoneNumber: "03-0000-0000",
     email: "test@example.com",
     amenities: {},
@@ -2109,7 +2108,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("/access/[locationSlug] detail page", () => {
   test("renders LocalBusiness JSON-LD", async ({ page }) => {
-    // seed で作成済の slug を想定（必要に応じてテスト用 fixture に置換）
+    // Assume a slug created by seed (replace with a test fixture if needed)
     await page.goto("/access/honkan");
     await expect(page).toHaveURL(/\/access\/honkan/);
 
@@ -2131,20 +2130,20 @@ test.describe("/access/[locationSlug] detail page", () => {
 });
 ```
 
-実行:
+Run:
 
 ```bash
 bunx playwright test e2e/access-location-detail.spec.ts
 ```
 
-### Step 8.5: 全テスト実行で regressions 確認
+### Step 8.5: Run full tests to check regressions
 
 ```bash
 bun run test:unit 2>&1 | tail -30
 bun run test:integration 2>&1 | tail -30
 ```
 
-期待: pre-existing failure のみ（diff 検証は controller 側 + plan-drift-detector で）。
+Expected: only pre-existing failures (diff verification via controller + plan-drift-detector).
 
 ### Step 8.6: Commit
 
@@ -2159,7 +2158,7 @@ test(seo): unit + integration + e2e for multi-location JSON-LD
 - integration: updateLocation MEO field persistence
 - e2e: /access/[slug] renders LocalBusiness JSON-LD; 404 for unknown slug
 
-Spec: §5 (テスト戦略)
+Spec: §5 (test strategy)
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -2170,18 +2169,18 @@ EOF
 
 ## Task 9: ADR + rule docs sync + handoff memory
 
-**目的:** ADR 0023 を作成。SEO / SSoT / gotchas の rule docs を per-location パターンに同期。後続 Phase 2-5 のための handoff memory を記録。
+**Purpose:** Create ADR 0023. Sync SEO / SSoT / gotchas rule docs to the per-location pattern. Record handoff memory for Phases 2-5.
 
 **Files:**
 
 - Create: `docs/architecture/decisions/0023-multi-location-seo-foundation.md`
-- Modify: `.claude/rules/frontend/seo-patterns.md`（per-location パターンに書き換え）
-- Modify: `.claude/rules/gotchas/domain.md` および `.claude/rules/gotchas/ui.md`（MeoSection 関連 gotcha cleanup + per-location cache invalidation 追加。barrel-index 分割後は sub-file に振り分け: cache invalidation は domain.md、UI gotchas は ui.md）
-- Modify: `.claude/rules/ssot-singletons.md`（MEO の SSoT を Location に変更）
+- Modify: `.claude/rules/frontend/seo-patterns.md` (rewrite to per-location pattern)
+- Modify: `.claude/rules/gotchas/domain.md` and `.claude/rules/gotchas/ui.md` (cleanup MeoSection gotchas + add per-location cache invalidation; after barrel split, place cache invalidation in domain.md and UI gotchas in ui.md)
+- Modify: `.claude/rules/ssot-singletons.md` (move MEO SSoT to Location)
 - Create: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_meo-multi-location-handoff.md`
 - Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md`
 
-### Step 9.1: ADR 0023 作成
+### Step 9.1: Create ADR 0023
 
 `docs/architecture/decisions/0023-multi-location-seo-foundation.md`:
 
@@ -2193,45 +2192,45 @@ EOF
 
 ## Context
 
-単一拠点 MEO 設計が multi-location テンプレート要件と乖離。Google [Local Business 構造化データ公式ガイド](https://developers.google.com/search/docs/appearance/structured-data/local-business) は **複数拠点 = repeated `LocalBusiness` markup per location** を推奨し、`@graph` / `branchOf` / `parentOrganization` は明示推奨していない（schema.org spec はサポート、Google 解釈は補助的）。
+The single-location MEO design diverges from multi-location template requirements. Google’s [Local Business structured data guide](https://developers.google.com/search/docs/appearance/structured-data/local-business) recommends **multiple locations = repeated `LocalBusiness` markup per location**, and does not explicitly recommend `@graph` / `branchOf` / `parentOrganization` (schema.org supports them, but Google’s interpretation is ancillary).
 
-現状 `Settings` シングルトンに `latitude` / `longitude` / `googleBusinessPlaceId` / `googleReviewUrl` / `priceRange` / `paymentAccepted` / `businessAttributes` / `specialHolidays` が集約され、`(public)/layout.tsx` の `<GraphJsonLd>` が単一 `LocalBusiness` を全公開ページ共通で出力していた。
+Currently, the `Settings` singleton aggregates `latitude` / `longitude` / `googleBusinessPlaceId` / `googleReviewUrl` / `priceRange` / `paymentAccepted` / `businessAttributes` / `specialHolidays`, and `<GraphJsonLd>` in `(public)/layout.tsx` emits a single `LocalBusiness` for all public pages.
 
 ## Decision
 
-1. **Settings から MEO フィールドを完全削除**し `Location` モデルに移管（破壊的変更、後方互換なし）
-2. `Location` に `slug` + 構造化住所（`postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName`）+ `phoneNumber` / `email` + MEO 7 フィールドを追加
-3. `(public)/layout.tsx` の `<GraphJsonLd>` から `LocalBusiness` を撤去 → `Organization` + `WebSite` のみ
-4. `/access` ページに公開済み全 Location を `<script>` 1 個にまとめた `<LocationsLocalBusinessJsonLd>` を出力
-5. 新 route `/access/[locationSlug]` を新設し、各拠点に独立した `<LocationLocalBusinessJsonLd>` を出力
-6. 管理画面の `/admin/settings` MeoSection を全廃し、`/admin/locations/[id]/edit` に MEO タブ統合
-7. **`branchOf` を optional 併記**: 複数拠点時のみ `branchOf: { "@id": "{BASE_URL}/#organization" }` を付与（schema.org spec 準拠）
+1. **Remove all MEO fields from Settings** and migrate to the `Location` model (breaking change, no backward compatibility)
+2. Add `slug` + structured address (`postalCode` / `prefecture` / `city` / `streetAddress` / `buildingName`) + `phoneNumber` / `email` + 7 MEO fields to `Location`
+3. Remove `LocalBusiness` from `<GraphJsonLd>` in `(public)/layout.tsx` → `Organization` + `WebSite` only
+4. Output `<LocationsLocalBusinessJsonLd>` on `/access` by bundling all published Locations into one `<script>`
+5. Add new route `/access/[locationSlug]` and emit `<LocationLocalBusinessJsonLd>` per location
+6. Remove `/admin/settings` MeoSection and integrate an MEO tab into `/admin/locations/[id]/edit`
+7. **Optionally include `branchOf`**: only when multiple locations, set `branchOf: { "@id": "{BASE_URL}/#organization" }` (schema.org compliant)
 
 ## Consequences
 
-**利点**:
+**Benefits**:
 
-- Google 公式パターン（per-location repeated markup）に準拠 → ローカル検索ランキング改善
-- per-location GBP 連携が前提となり Phase 2-5（GBP API / Review 収集 / Service schema / 業種特化 amenity）への基盤確立
-- multi-tenant template として複数拠点運用顧客にスケール可能
+- Aligns with Google’s official pattern (per-location repeated markup) → improved local search ranking
+- Establishes a foundation for Phase 2-5 (GBP API / review collection / Service schema / vertical amenities)
+- Scales as a multi-tenant template for customers with multiple locations
 
-**欠点 / トレードオフ**:
+**Drawbacks / trade-offs**:
 
-- 後方互換なし（Settings の MEO フィールド削除）。既存運用顧客には migration step 3 で「最初の Location に強制移管」を実行
-- placeholder slug（`location-<id_prefix>`）は SEO URL として暫定的。production では管理画面で正規 slug に手動更新する運用が必要
+- No backward compatibility (Settings MEO fields removed). Existing customers must run migration step 3 to force-migrate into the first Location
+- Placeholder slugs (`location-<id_prefix>`) are temporary SEO URLs. In production, admins must manually update to canonical slugs
 
 ## Alternatives Considered
 
-1. **Settings に MEO を残し Location にもコピー（dual SSoT）** — ドリフト不可避、運用負荷増 → 棄却
-2. **`branchOf` を必須化（schema.org spec 準拠を強化）** — Google 解釈に依存しないため optional のまま → 採用
-3. **`@graph` を全ページで維持し各 LocalBusiness を含める** — Google 公式が `@graph` を推奨していないため、各拠点ページに per-page LocalBusiness を出す方が安全 → 棄却
+1. **Keep MEO in Settings and copy to Location (dual SSoT)** — drift is inevitable, higher operational cost → rejected
+2. **Make `branchOf` mandatory (stronger schema.org compliance)** — optional is fine because Google doesn’t rely on it → accepted
+3. **Keep `@graph` on all pages and include each LocalBusiness** — Google doesn’t recommend `@graph`, so per-location pages are safer → rejected
 
 ## Operational Notes (Production Migration)
 
-1. 事前に各 Location.slug を管理画面（後続 release）で正規化する。migration step 2 の placeholder slug（`location-<id_prefix>`）は SEO URL として暫定的
-2. `bunx --bun prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > <migration.sql>` で差分生成 → `db execute --file` + `migrate resolve --applied`
-3. デプロイ後、管理画面で各 Location の slug を SEO 観点で再採番（例: `honkan` / `shibuya-ten`）→ Server Action に slug uniqueness 検証あり
-4. 旧 `Location.imageUrl` 必須制約は維持。新規拠点作成時は画像必須
+1. Before deployment, normalize each Location.slug in the admin UI (future release). The migration step 2 placeholder slug (`location-<id_prefix>`) is a temporary SEO URL
+2. Generate diff with `bunx --bun prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > <migration.sql>` → `db execute --file` + `migrate resolve --applied`
+3. After deploy, reassign each Location slug from an SEO perspective in the admin UI (e.g., `honkan` / `shibuya-ten`) → slug uniqueness validation exists in Server Actions
+4. Keep the existing `Location.imageUrl` required constraint. New locations require images
 
 ## References
 
@@ -2241,95 +2240,95 @@ EOF
 - Plan: `docs/superpowers/plans/2026-04-27-multi-location-seo-foundation.md`
 ```
 
-### Step 9.2: seo-patterns.md の書き換え
+### Step 9.2: Rewrite seo-patterns.md
 
-`.claude/rules/frontend/seo-patterns.md` の以下セクションを per-location パターンに書き換え:
+Rewrite the following sections in `.claude/rules/frontend/seo-patterns.md` to the per-location pattern:
 
-- §JSON-LD 配置 — `LocalBusiness` を「各 Location ページに per-location 出力」に変更
-- §データソース表 — `getLocalBusinessJsonLdData()` を削除、`getAllPublishedLocationsJsonLdData` / `getLocationJsonLdDataBySlug` を追加
-- §LocalBusiness プロパティ一覧 — 「Location モデルが SSoT」に変更
-- §禁止事項 4 — `@graph` 外の WebSite/LocalBusiness 個別出力禁止 → "site-wide layout で LocalBusiness を出力しない（per-location ページのみ）"
-- §ファイル配置 — `location-json-ld.ts` を追加、`getLocalBusinessJsonLdData` を削除
+- §JSON-LD placement — change `LocalBusiness` to per-location output on each Location page
+- §Data sources table — remove `getLocalBusinessJsonLdData()`, add `getAllPublishedLocationsJsonLdData` / `getLocationJsonLdDataBySlug`
+- §LocalBusiness properties — change to "Location model is the SSoT"
+- §Prohibitions 4 — disallow per-entity WebSite/LocalBusiness outside `@graph` → "do not emit LocalBusiness in site-wide layout (per-location pages only)"
+- §File placement — add `location-json-ld.ts`, remove `getLocalBusinessJsonLdData`
 
-### Step 9.3: gotchas sub-files の更新
+### Step 9.3: Update gotchas sub-files
 
-`.claude/rules/gotchas/domain.md` および `.claude/rules/gotchas/ui.md` で以下を変更:
+In `.claude/rules/gotchas/domain.md` and `.claude/rules/gotchas/ui.md`, apply the following changes:
 
-**追加**: per-location cache invalidation の項
+**Add**: a per-location cache invalidation entry
 
 ```markdown
-- **Location 編集時のキャッシュ無効化** — `updateLocation` の `afterSuccess` で `updateTag(CACHE_TAGS.LOCATIONS)` + `updateTag(getCacheTag.locations.detail(slug))` 必須。MEO フィールド更新時も同じタグで無効化（粒度を分けない）
+- **Cache invalidation on Location edits** — `updateLocation` `afterSuccess` must call `updateTag(CACHE_TAGS.LOCATIONS)` + `updateTag(getCacheTag.locations.detail(slug))`. Use the same tags for MEO field updates (no separate granularity).
 ```
 
-**削除 / 書き換え**: MEO 関連で Settings を前提にしていた gotcha 記述を per-location パターンに移植 or 削除
+**Remove / rewrite**: gotcha notes that assumed Settings-based MEO should be migrated to the per-location pattern or removed
 
-### Step 9.4: ssot-singletons.md の更新
+### Step 9.4: Update ssot-singletons.md
 
-`.claude/rules/ssot-singletons.md` の DB / Prisma / 公開 UI セクションで:
+In the DB / Prisma / public UI sections of `.claude/rules/ssot-singletons.md`:
 
-- `Settings.latitude` 等を「**Location.latitude / 各拠点別 SSoT**」に変更
-- 新項目: `getAllPublishedLocationsJsonLdData` / `getLocationJsonLdDataBySlug` を「公開 SEO」セクションに追加
-- `getLocationLocalBusinessJsonLdData()`（旧）の参照を削除
+- Change `Settings.latitude` etc. to "**Location.latitude / per-location SSoT**"
+- Add new items: `getAllPublishedLocationsJsonLdData` / `getLocationJsonLdDataBySlug` to the "public SEO" section
+- Remove references to the old `getLocationLocalBusinessJsonLdData()`
 
-### Step 9.5: handoff memory の作成
+### Step 9.5: Create handoff memory
 
 `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_meo-multi-location-handoff.md`:
 
 ````markdown
 ---
 name: project_meo-multi-location-handoff
-description: MEO 改善 5 サブプロジェクトの Phase 1 完了 / Phase 2-5 の handoff
+description: Phase 1 complete for 5 MEO improvement subprojects / handoff for Phases 2-5
 type: project
 ---
 
 > **Snapshot: 2026-04-27**
 
-## 完了済み
+## Completed
 
-- Phase 1: Multi-Location SEO Foundation（commit list で確認）
+- Phase 1: Multi-Location SEO Foundation (see commit list)
   - Spec: `docs/superpowers/specs/2026-04-27-multi-location-seo-foundation-design.md`
   - Plan: `docs/superpowers/plans/2026-04-27-multi-location-seo-foundation.md`
   - ADR: `docs/architecture/decisions/0023-multi-location-seo-foundation.md`
-  - Branch: `feature/multi-location-seo-foundation` → main マージ済み（マージ後に削除）
+  - Branch: `feature/multi-location-seo-foundation` → merged to main (delete after merge)
 
-## 残 Phase（独立サブプロジェクト、それぞれ spec → plan → 実装）
+## Remaining phases (independent subprojects, each with spec → plan → implementation)
 
-- **Phase 2**: Google Business Profile API 連携（実データ MEO スコア）
-  - 前提: Phase 1 で `Location.googleBusinessPlaceId` 確立済み
-  - 想定スコープ: GBP API クライアント + OAuth + レビュー / 写真 / 投稿頻度の取得 + admin スコア再計算
-- **Phase 3**: Review Collection Funnel
-  - 前提: Phase 1 で `Location.googleReviewUrl` 確立済み
-  - 想定スコープ: 予約完了メール CTA + マイページ CTA + QR 生成
-- **Phase 4**: Service / Offer Schema 移行
-  - 前提: Phase 1 で per-location LocalBusiness 確立済み
-  - 想定スコープ: `Product` → `Service` + `LocalBusiness.makesOffer` に Space 列挙
-- **Phase 5**: 業種特化 amenityFeature
-  - 前提: Phase 1 で `Location.amenities` 確立済み
-  - 想定スコープ: 24h利用可 / 防音 / 電源数 / Wi-Fi 速度等の schema.org enum 化
+- **Phase 2**: Google Business Profile API integration (real-data MEO score)
+  - Prerequisite: `Location.googleBusinessPlaceId` established in Phase 1
+  - Expected scope: GBP API client + OAuth + fetch reviews / photos / posting frequency + admin score recalculation
+- **Phase 3**: Review collection funnel
+  - Prerequisite: `Location.googleReviewUrl` established in Phase 1
+  - Expected scope: booking confirmation email CTA + My Page CTA + QR generation
+- **Phase 4**: Service / Offer schema migration
+  - Prerequisite: per-location LocalBusiness established in Phase 1
+  - Expected scope: `Product` → `Service` + enumerate Spaces in `LocalBusiness.makesOffer`
+- **Phase 5**: Vertical-specific amenityFeature
+  - Prerequisite: `Location.amenities` established in Phase 1
+  - Expected scope: schema.org enums for 24h availability / soundproofing / power outlets / Wi-Fi speed, etc.
 
-## 次セッション起動コマンド
+## Next session startup commands
 
 ```bash
-# Phase 2 着手時
-gh repo view --json defaultBranch  # main 確認
+# When starting Phase 2
+gh repo view --json defaultBranch  # confirm main
 git pull origin main
-# Phase 2 spec 作成: brainstorming → writing-plans
+# Phase 2 spec creation: brainstorming → writing-plans
 ```
 ````
 
 ````
 
-### Step 9.6: MEMORY.md にエントリ追加
+### Step 9.6: Add entry to MEMORY.md
 
-`~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md` の末尾に:
+Append to the end of `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md`:
 
 ```markdown
 ## MEO Multi-Location Foundation (2026-04-27)
 
-- [project_meo-multi-location-handoff.md](project_meo-multi-location-handoff.md) — Phase 1 完了、Phase 2-5 (GBP API / Review 収集 / Service Schema / 業種特化 amenity) を独立サブプロジェクトとして順次実装
+- [project_meo-multi-location-handoff.md](project_meo-multi-location-handoff.md) — Phase 1 complete; implement Phase 2-5 (GBP API / review collection / Service Schema / vertical amenities) as separate subprojects
 ````
 
-### Step 9.7: handoff memory + MEMORY.md 以外の docs を commit
+### Step 9.7: Commit docs excluding handoff memory + MEMORY.md
 
 ```bash
 git add docs/ .claude/
@@ -2348,27 +2347,27 @@ EOF
 )"
 ```
 
-memory ファイルは git 管理外（`~/.claude/projects/...`）のため、コミット不要。
+Memory files are outside git (`~/.claude/projects/...`), so no commit is needed.
 
-### Step 9.8: 最終検証
+### Step 9.8: Final verification
 
 ```bash
 bun run validate
 bun run build
 ```
 
-期待: type-check / lint / build すべて exit 0。
+Expected: type-check / lint / build all exit 0.
 
-### Step 9.9: Plan ファイル削除（CLAUDE.md clean-break 方針）
+### Step 9.9: Remove plan file (CLAUDE.md clean-break policy)
 
-`docs/plans/CLAUDE.md` のステータス管理に従い、実装完了後 plan ファイルを削除:
+Following the status management in `docs/plans/CLAUDE.md`, delete the plan file after implementation completes:
 
 ```bash
 git rm docs/superpowers/plans/2026-04-27-multi-location-seo-foundation.md
 git commit -m "chore(plans): remove completed multi-location SEO plan (clean-break)"
 ```
 
-> **注**: spec ファイル（`docs/superpowers/specs/2026-04-27-...`）は履歴として保持しても可。判断は controller。
+> **Note**: Spec files (`docs/superpowers/specs/2026-04-27-...`) may be kept as history. The controller decides.
 
 ---
 
@@ -2376,38 +2375,38 @@ git commit -m "chore(plans): remove completed multi-location SEO plan (clean-bre
 
 ### Spec coverage
 
-各 spec section に対応する task を確認:
+Confirm tasks that map to each spec section:
 
-- §2.1 データモデル変更 → Task 1 ✓
-- §2.2 マイグレーション戦略 → Task 1 ✓
-- §2.3 JSON-LD 出力アーキテクチャ → Task 3 + 4 + 5 ✓
-- §2.4 `getLocalBusinessJsonLdData()` 再設計 → Task 3 ✓
-- §2.5 公開ページ構成変更 → Task 4 + 5 ✓
-- §2.6 管理画面 UI 変更 → Task 6 + 7 ✓
-- §2.7 単一拠点フォールバック → Task 4（既存 `buildFallbackLocation()` 維持で対応済み）
-- §2.8 キャッシュ戦略 → Task 7（`getCacheTag.locations.detail(slug)` 新設）
-- §3 影響範囲 → 全 Task で網羅
+- §2.1 Data model changes → Task 1 ✓
+- §2.2 Migration strategy → Task 1 ✓
+- §2.3 JSON-LD output architecture → Task 3 + 4 + 5 ✓
+- §2.4 `getLocalBusinessJsonLdData()` redesign → Task 3 ✓
+- §2.5 Public page structure changes → Task 4 + 5 ✓
+- §2.6 Admin UI changes → Task 6 + 7 ✓
+- §2.7 Single-location fallback → Task 4 (keep existing `buildFallbackLocation()`)
+- §2.8 Cache strategy → Task 7 (add `getCacheTag.locations.detail(slug)`)
+- §3 Impact scope → covered in all tasks
 - §4 ADR → Task 9
-- §5 テスト戦略 → Task 8
-- §6 実装順序 → Task 1-9 が一致
-- §7 リスク・トレードオフ → ADR 0023 に転記
-- §8 後続サブプロジェクト → Task 9 handoff memory
+- §5 Test strategy → Task 8
+- §6 Implementation order → Tasks 1-9 match
+- §7 Risks / trade-offs → transcribed to ADR 0023
+- §8 Follow-on subprojects → Task 9 handoff memory
 
 ### Placeholder scan
 
-- "TBD" / "TODO" / "実装は spec を見て" → なし ✓
-- "Add appropriate error handling" → 各 Task で具体的に明記済み（error.tsx / catch + logError） ✓
-- "Write tests for the above" → Task 8 で具体的なテストコード記述 ✓
-- "Similar to Task N" → なし（各 Task で完結したコード提示） ✓
+- "TBD" / "TODO" / "see spec for implementation" → none ✓
+- "Add appropriate error handling" → explicitly noted in each task (error.tsx / catch + logError) ✓
+- "Write tests for the above" → concrete test code in Task 8 ✓
+- "Similar to Task N" → none (each task provides complete code) ✓
 
 ### Type consistency
 
-- `LocationForSeo` 型: Task 2 で定義、Task 3 / 5 / 8 で参照 ✓
-- `LocationLocalBusinessJsonLdData` 型: Task 3 で定義、Task 4 / 5 / 8 で参照 ✓
-- `getCacheTag.locations.detail(slug)`: Task 7 で新設、Task 9 で gotchas.md 反映 ✓
-- `getPublishedLocationForAccessBySlug`: Task 5 で参照、Step 5.5 で追加明記 ✓
-- `buildLocationLocalBusinessJsonLdData(location, options)`: 全 Task で同一シグネチャ ✓
+- `LocationForSeo` type: defined in Task 2, referenced in Tasks 3 / 5 / 8 ✓
+- `LocationLocalBusinessJsonLdData` type: defined in Task 3, referenced in Tasks 4 / 5 / 8 ✓
+- `getCacheTag.locations.detail(slug)`: added in Task 7, reflected in gotchas.md in Task 9 ✓
+- `getPublishedLocationForAccessBySlug`: referenced in Task 5, added explicitly in Step 5.5 ✓
+- `buildLocationLocalBusinessJsonLdData(location, options)`: same signature in all tasks ✓
 
-### 最終調整
+### Final adjustments
 
-Phase 2 と Phase 5 の境界に細部の重複があるため、Step 5.5 で「Phase 2 で追加済みでない場合」と条件付き記載で柔軟性を確保。
+Because there is overlap between Phase 2 and Phase 5, Step 5.5 is worded conditionally ("if not already added in Phase 2") to keep flexibility.

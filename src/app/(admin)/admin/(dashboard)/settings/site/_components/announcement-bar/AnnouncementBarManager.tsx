@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
-import { format } from "date-fns";
+import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
 import { toast } from "sonner";
 import {
   Tabs,
@@ -177,12 +177,8 @@ export function AnnouncementBarManager({
         linkText: bar.linkText || "",
         isActive: bar.isActive,
         priority: bar.priority,
-        startAt: bar.startAt
-          ? format(new Date(bar.startAt), "yyyy-MM-dd'T'HH:mm")
-          : "",
-        endAt: bar.endAt
-          ? format(new Date(bar.endAt), "yyyy-MM-dd'T'HH:mm")
-          : "",
+        startAt: bar.startAt ? formatDateTimeLocalInJst(bar.startAt) : "",
+        endAt: bar.endAt ? formatDateTimeLocalInJst(bar.endAt) : "",
       });
     } else {
       setEditingBar(null);

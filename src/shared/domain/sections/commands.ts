@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import {
   validateSectionConfig,
   type SectionConfig,
@@ -80,4 +81,194 @@ export async function updatePageSectionCommand(
   });
 
   return { pageId: existing.pageId };
+}
+
+// =============================================================================
+// CRUD コマンド（create / delete / duplicate / toggle / reorder）
+// =============================================================================
+
+/**
+ * セクションを新規作成する。registry の defaults から config を生成。
+ * page-hero は 1 ページに 1 つのみ（既存があれば CONFLICT）。
+ */
+export async function createPageSectionCommand(input: {
+  pageId: string;
+  type: string;
+}): Promise<{ id: string; pageId: string }> {
+  const definition = getSectionDefinition(input.type);
+  if (!definition) {
+    throw new DomainError("不正なセクションタイプです", "VALIDATION");
+  }
+
+  // page-hero は 1 ページに 1 つ制約
+  if (input.type === "page-hero") {
+    const existing = await prisma.section.findFirst({
+      where: { pageId: input.pageId, type: "page-hero" },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new DomainError("ヒーローは既に存在します", "CONFLICT");
+    }
+  }
+
+  // registry の defaults から config を生成
+  const defaultParse = definition.configSchema.safeParse({});
+  const config: unknown = defaultParse.success ? defaultParse.data : {};
+
+  // order: 既存セクションの max + 1（page-hero は -1 固定で先頭）
+  const maxOrder = await prisma.section.aggregate({
+    where: { pageId: input.pageId },
+    _max: { order: true },
+  });
+  const nextOrder =
+    input.type === "page-hero" ? -1 : (maxOrder._max.order ?? -1) + 1;
+
+  const created = await prisma.section.create({
+    data: {
+      pageId: input.pageId,
+      type: input.type,
+      config: cloneJsonValue(config),
+      order: nextOrder,
+      isActive: true,
+    },
+    select: { id: true, pageId: true },
+  });
+
+  if (!created.pageId) {
+    throw new DomainError("セクションの pageId が不正です", "VALIDATION");
+  }
+
+  return { id: created.id, pageId: created.pageId };
+}
+
+/** セクションを削除する。page-hero は ページ削除時のみ削除可能（個別削除は CONFLICT）。 */
+export async function deletePageSectionCommand(
+  id: string,
+): Promise<{ id: string; pageId: string }> {
+  const existing = await ensurePageSectionExists(id);
+  if (existing.type === "page-hero") {
+    throw new DomainError("ヒーローは削除できません", "CONFLICT");
+  }
+  await prisma.section.delete({ where: { id } });
+  return { id, pageId: existing.pageId };
+}
+
+/** セクションを直後に複製する。page-hero は複製不可（CONFLICT）。 */
+export async function duplicatePageSectionCommand(
+  id: string,
+): Promise<{ id: string; pageId: string }> {
+  const source = await prisma.section.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      pageId: true,
+      type: true,
+      config: true,
+      contentHtml: true,
+      contentJson: true,
+      order: true,
+      isActive: true,
+    },
+  });
+  if (!source || !source.pageId) {
+    throw new DomainError("セクションが見つかりません", "NOT_FOUND");
+  }
+  if (source.type === "page-hero") {
+    throw new DomainError("ヒーローは複製できません", "CONFLICT");
+  }
+
+  const sourcePageId = source.pageId;
+
+  const createdId = await prisma.$transaction(async (tx) => {
+    // source.order より大きい order を全部 +1 にずらす
+    await tx.section.updateMany({
+      where: { pageId: sourcePageId, order: { gt: source.order } },
+      data: { order: { increment: 1 } },
+    });
+
+    const created = await tx.section.create({
+      data: {
+        pageId: sourcePageId,
+        type: source.type,
+        config: cloneJsonValue(source.config),
+        contentHtml: source.contentHtml,
+        contentJson:
+          source.contentJson === null
+            ? Prisma.JsonNull
+            : cloneJsonValue(source.contentJson),
+        order: source.order + 1,
+        isActive: source.isActive,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  });
+
+  return { id: createdId, pageId: sourcePageId };
+}
+
+/** セクションの有効/無効をトグルする。 */
+export async function togglePageSectionActiveCommand(
+  id: string,
+): Promise<{ id: string; pageId: string; isActive: boolean }> {
+  const current = await prisma.section.findUnique({
+    where: { id },
+    select: { id: true, pageId: true, isActive: true },
+  });
+  if (!current || !current.pageId) {
+    throw new DomainError("セクションが見つかりません", "NOT_FOUND");
+  }
+
+  const updated = await prisma.section.update({
+    where: { id },
+    data: { isActive: !current.isActive },
+    select: { id: true, isActive: true },
+  });
+  return {
+    id: updated.id,
+    pageId: current.pageId,
+    isActive: updated.isActive,
+  };
+}
+
+/**
+ * 同一 pageId のセクションを並び替える。
+ * orderedIds は同一 pageId に属する全セクション ID（過不足不可）。
+ */
+export async function reorderPageSectionsCommand(input: {
+  pageId: string;
+  orderedIds: readonly string[];
+}): Promise<{ count: number; pageId: string }> {
+  const existing = await prisma.section.findMany({
+    where: { pageId: input.pageId },
+    select: { id: true, type: true, order: true },
+  });
+  const existingIds = new Set(existing.map((s) => s.id));
+
+  for (const id of input.orderedIds) {
+    if (!existingIds.has(id)) {
+      throw new DomainError("不正なセクションIDが含まれます", "VALIDATION");
+    }
+  }
+  if (existing.length !== input.orderedIds.length) {
+    throw new DomainError("セクション数が一致しません（過不足）", "VALIDATION");
+  }
+
+  // page-hero は順序不変（-1 固定で先頭維持）
+  const heroSection = existing.find((s) => s.type === "page-hero");
+
+  await prisma.$transaction(async (tx) => {
+    for (let i = 0; i < input.orderedIds.length; i++) {
+      const id = input.orderedIds[i];
+      if (id === undefined) continue;
+      // page-hero は -1 維持
+      if (heroSection && id === heroSection.id) {
+        await tx.section.update({ where: { id }, data: { order: -1 } });
+        continue;
+      }
+      await tx.section.update({ where: { id }, data: { order: i } });
+    }
+  });
+
+  return { count: input.orderedIds.length, pageId: input.pageId };
 }

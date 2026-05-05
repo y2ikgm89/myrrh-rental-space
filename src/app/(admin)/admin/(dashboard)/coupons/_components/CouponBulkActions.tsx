@@ -18,10 +18,10 @@ import {
 } from "@/admin/actions/coupon/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
-interface CouponBulkActionsProps {
+type CouponBulkActionsProps = {
   selectedIds: string[];
   onClear: () => void;
-}
+};
 
 export function CouponBulkActions({
   selectedIds,

@@ -6,6 +6,7 @@
  * 電話番号、メールアドレス、住所などの連絡先設定
  */
 
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -20,7 +21,6 @@ import {
   FormMessage,
   Input,
   SubmitButton,
-  Textarea,
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateContactInfo } from "@/admin/actions/settings";
@@ -41,28 +41,22 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
         phoneNumber: emptyToNull(data.phoneNumber),
         faxNumber: emptyToNull(data.faxNumber),
         email: emptyToNull(data.email),
-        address: emptyToNull(data.address),
         postalCode: emptyToNull(data.postalCode),
         prefecture: emptyToNull(data.prefecture),
         city: emptyToNull(data.city),
         streetAddress: emptyToNull(data.streetAddress),
         buildingName: emptyToNull(data.buildingName),
-        accessInfo: emptyToNull(data.accessInfo),
-        parkingInfo: emptyToNull(data.parkingInfo),
       }),
     {
       defaultValues: {
         phoneNumber: settings.phoneNumber || "",
         faxNumber: settings.faxNumber || "",
         email: settings.email || "",
-        address: settings.address || "",
         postalCode: settings.postalCode || "",
         prefecture: settings.prefecture || "",
         city: settings.city || "",
         streetAddress: settings.streetAddress || "",
         buildingName: settings.buildingName || "",
-        accessInfo: settings.accessInfo || "",
-        parkingInfo: settings.parkingInfo || "",
       },
       refresh: true,
       successMessage: "連絡先情報を保存しました",
@@ -76,7 +70,14 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
           <CardHeader>
             <CardTitle>連絡先情報</CardTitle>
             <CardDescription>
-              サイトに表示する連絡先を設定します
+              サイト全体の代表連絡先を設定します。拠点ごとの交通・駐車場案内は
+              <Link
+                href="/admin/spaces?tab=locations"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                拠点管理
+              </Link>
+              で個別に設定できます。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -225,76 +226,6 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>住所（表示用）</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="東京都渋谷区..."
-                      rows={2}
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    フッターなどに表示する住所形式（上記の項目から自動生成されません）
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="accessInfo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>交通案内</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder={
-                        "○○線 △△駅 北口 徒歩3分\n○○線 □□駅 西口 徒歩5分"
-                      }
-                      rows={3}
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    最寄り駅・路線・徒歩分数など。アクセスページに表示されます
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="parkingInfo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>駐車場案内</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder={
-                        "専用駐車場2台あり\n近隣コインパーキング: ○○パーキング（徒歩1分）"
-                      }
-                      rows={2}
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    駐車場の有無・台数・近隣パーキング情報。アクセスページに表示されます
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="flex justify-end pt-2">
               <SubmitButton

@@ -160,12 +160,7 @@ export function LocationChapter({
   googleMapsUrl,
   showSectionDivider = false,
 }: LocationChapterProps): ReactElement {
-  const transitLines = location.access
-    ? location.access
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-    : [];
+  const transitLines = location.accessLines;
 
   const hoursDisplay = parseBusinessHoursForDisplay(location.businessHours);
   const amenityKeys = parseAmenitiesEntries(location.amenities);

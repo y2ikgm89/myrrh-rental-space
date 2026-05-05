@@ -12,7 +12,7 @@ type LocationRecord = {
   city: string | null;
   streetAddress: string | null;
   buildingName: string | null;
-  access: string | null;
+  accessLines: string[];
   parkingInfo: string | null;
   amenities: Record<string, boolean>;
   imageUrl: string;
@@ -68,7 +68,7 @@ export type LocationData = {
   readonly city: string | null;
   readonly streetAddress: string | null;
   readonly buildingName: string | null;
-  readonly access: string | null;
+  readonly accessLines: string[];
   readonly parkingInfo: string | null;
   readonly amenities: unknown;
   readonly imageUrl: string;

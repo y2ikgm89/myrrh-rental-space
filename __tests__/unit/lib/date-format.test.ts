@@ -4,6 +4,8 @@ import {
   formatDateShort,
   formatDateTimeShort,
   formatDateTimeFull,
+  formatDateTimeLocalInJst,
+  parseDateTimeLocalAsJst,
 } from "@/shared/lib/date-format";
 
 // テスト用の固定日時（タイムゾーン影響を受けにくい日中の時刻）
@@ -300,5 +302,75 @@ describe("各関数の入力型統一テスト", () => {
       expect(formatDateTimeFull(null)).toBe("-");
       expect(formatDateTimeFull(undefined)).toBe("-");
     });
+  });
+});
+
+// =============================================================================
+// formatDateTimeLocalInJst / parseDateTimeLocalAsJst（JST 固定 round-trip）
+// =============================================================================
+
+describe("formatDateTimeLocalInJst", () => {
+  test("UTC midnight (00:00 UTC) は JST 09:00 として整形される", () => {
+    const utc = new Date("2026-05-03T00:00:00.000Z");
+    expect(formatDateTimeLocalInJst(utc)).toBe("2026-05-03T09:00");
+  });
+
+  test("UTC 15:00 は翌日 JST 00:00 として整形される（日跨ぎ）", () => {
+    const utc = new Date("2026-05-02T15:00:00.000Z");
+    expect(formatDateTimeLocalInJst(utc)).toBe("2026-05-03T00:00");
+  });
+
+  test("ISO 文字列入力もサポート", () => {
+    expect(formatDateTimeLocalInJst("2026-05-03T03:30:00.000Z")).toBe(
+      "2026-05-03T12:30",
+    );
+  });
+
+  test("年末日（UTC 12/31 16:00 → JST 1/1 01:00）でも正しく桁ゼロ詰め", () => {
+    const utc = new Date("2025-12-31T16:00:00.000Z");
+    expect(formatDateTimeLocalInJst(utc)).toBe("2026-01-01T01:00");
+  });
+});
+
+describe("parseDateTimeLocalAsJst", () => {
+  test('"YYYY-MM-DDTHH:mm" を JST として parse して UTC Date を返す', () => {
+    // JST 12:00 = UTC 03:00
+    const date = parseDateTimeLocalAsJst("2026-05-03T12:00");
+    expect(date.toISOString()).toBe("2026-05-03T03:00:00.000Z");
+  });
+
+  test('秒付き "YYYY-MM-DDTHH:mm:ss" もサポート', () => {
+    const date = parseDateTimeLocalAsJst("2026-05-03T12:00:30");
+    expect(date.toISOString()).toBe("2026-05-03T03:00:30.000Z");
+  });
+
+  test("JST 00:00（深夜）は前日 UTC 15:00 になる（日跨ぎ）", () => {
+    const date = parseDateTimeLocalAsJst("2026-05-03T00:00");
+    expect(date.toISOString()).toBe("2026-05-02T15:00:00.000Z");
+  });
+
+  test("不正な形式は Invalid Date を返す", () => {
+    expect(Number.isNaN(parseDateTimeLocalAsJst("2026/05/03").getTime())).toBe(
+      true,
+    );
+    expect(Number.isNaN(parseDateTimeLocalAsJst("invalid").getTime())).toBe(
+      true,
+    );
+    expect(Number.isNaN(parseDateTimeLocalAsJst("").getTime())).toBe(true);
+  });
+});
+
+describe("format ↔ parse round-trip（JST 同値性）", () => {
+  test("parse → format で同じ datetime-local 文字列に戻る", () => {
+    const local = "2026-05-03T12:00";
+    const utc = parseDateTimeLocalAsJst(local);
+    expect(formatDateTimeLocalInJst(utc)).toBe(local);
+  });
+
+  test("format → parse で同じ UTC instant に戻る", () => {
+    const utc = new Date("2026-05-03T03:00:00.000Z");
+    const local = formatDateTimeLocalInJst(utc);
+    const restored = parseDateTimeLocalAsJst(local);
+    expect(restored.toISOString()).toBe(utc.toISOString());
   });
 });

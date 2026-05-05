@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const heights = ["sm", "md", "lg"] as const;
 const borderRadii = ["none", "sm", "lg"] as const;
@@ -9,9 +10,10 @@ export const mapConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
     default: "Location",
     maxLength: 50,
+    subGroup: "text",
   }),
-  title: field.text("見出し", { maxLength: 100 }),
-  address: field.textarea("住所", { maxLength: 300 }),
+  title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
+  address: field.textarea("住所", { maxLength: 300, subGroup: "text" }),
   latitude: field.number("緯度", { min: -90, max: 90 }),
   longitude: field.number("経度", { min: -180, max: 180 }),
   zoom: field.number("ズームレベル", {
@@ -34,6 +36,7 @@ export const mapConfigSchema = z.object({
     default: "sm",
     group: "design",
   }),
+  layout: sectionLayoutSchema,
 });
 
 export type MapConfig = z.infer<typeof mapConfigSchema>;

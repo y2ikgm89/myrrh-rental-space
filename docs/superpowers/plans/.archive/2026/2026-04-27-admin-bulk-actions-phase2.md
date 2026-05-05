@@ -1,17 +1,17 @@
 > **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
 
-# P19 Phase 2 — Admin Bulk Actions 実装計画
+# P19 Phase 2 — Admin Bulk Actions Implementation Plan
 
 > **Spec**: `docs/superpowers/specs/2026-04-27-admin-bulk-actions-phase2-design.md`
-> **対象**: customers / inquiries / coupons の bulk delete (+ customers/coupons は isActive toggle)
-> **Bundle 構成**: 3 Bundle (D/E/F) = 3 commit、各 Bundle 並列 dispatch 可能
-> **参照ベース**: Phase 1 `docs/superpowers/plans/2026-04-27-admin-bulk-actions-phase1.md` を完全踏襲
+> **Scope**: bulk delete for customers / inquiries / coupons (+ customers/coupons include isActive toggle)
+> **Bundle structure**: 3 Bundles (D/E/F) = 3 commits; bundles can be dispatched in parallel
+> **Reference base**: fully follow Phase 1 `docs/superpowers/plans/2026-04-27-admin-bulk-actions-phase1.md`
 
 ## Context
 
-Phase 1 (spaces / events / news) で確立した `PostBulkActions` パターンを Phase 2 で 3 領域に対称適用する。Phase 2 は **status 遷移系を含めず**、`bulkDelete*Command` + `bulkToggleActive*Command` (該当時) のみに限定。**cloudflare mock は最初から全 11 export stub 化** (Phase 1 commit `aebc3052` の learning)。
+Apply the Phase 1 (spaces / events / news) `PostBulkActions` pattern symmetrically to 3 areas in Phase 2. Phase 2 **excludes status transitions**, and is limited to `bulkDelete*Command` + `bulkToggleActive*Command` (when applicable). **Cloudflare mocks should start with all 11 export stubs** (learning from Phase 1 commit `aebc3052`).
 
-各 Bundle は独立リソースの実装でファイル衝突なしのため 3 並列 dispatch 可能。
+Each bundle targets an independent resource with no file conflicts, so 3-way parallel dispatch is possible.
 
 ---
 
@@ -29,15 +29,15 @@ Phase 1 (spaces / events / news) で確立した `PostBulkActions` パターン�
 
 ### Files to modify
 
-1. `src/app/(admin)/admin/(dashboard)/customers/_components/CustomerTable.tsx` — 行 checkbox + selectedIds + `<CustomerBulkActions />`
-2. `src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts` (existing 単一ファイル) は触らない (`@/admin/actions/customer/bulk` を直接 import)
-3. `package.json` 追記不要 (既存ディレクトリ batch で吸収、Phase 1 同パターン)
+1. `src/app/(admin)/admin/(dashboard)/customers/_components/CustomerTable.tsx` — row checkboxes + selectedIds + `<CustomerBulkActions />`
+2. `src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts` (existing single file) is untouched (import `@/admin/actions/customer/bulk` directly)
+3. `package.json` — no addition needed (covered by existing directory batch, same as Phase 1)
 
 ### Tasks
 
 #### D1. domain command (`bulk-commands.ts`)
 
-参照: `src/shared/domain/spaces/bulk-commands.ts` (Phase 1 Bundle A)
+Reference: `src/shared/domain/spaces/bulk-commands.ts` (Phase 1 Bundle A)
 
 ```typescript
 import "server-only";
@@ -83,7 +83,7 @@ export async function bulkDeleteCustomersCommand(
     where: { id: { in: ids } },
     select: { id: true },
   });
-  // Reservation.customerId は onDelete: SetNull のため FK 衝突なし
+  // Reservation.customerId uses onDelete: SetNull, so no FK conflicts
   const result = await prisma.customer.deleteMany({
     where: { id: { in: targets.map((t) => t.id) } },
   });
@@ -93,7 +93,7 @@ export async function bulkDeleteCustomersCommand(
 
 #### D2. Server Action (`actions/customer/bulk.ts`)
 
-参照: `src/app/(admin)/admin/(dashboard)/_shared/actions/space/bulk.ts`
+Reference: `src/app/(admin)/admin/(dashboard)/_shared/actions/space/bulk.ts`
 
 ```typescript
 "use server";
@@ -113,9 +113,9 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 const bulkInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "ID が不正です" }))
-    .min(1, { error: "1 件以上選択してください" })
-    .max(100, { error: "一度に処理できるのは 100 件までです" }),
+    .array(z.string().uuid({ error: "Invalid ID" }))
+    .min(1, { error: "Select at least 1 item" })
+    .max(100, { error: "You can process up to 100 items at once" }),
 });
 
 export const bulkToggleActiveCustomers = async (
@@ -157,48 +157,48 @@ export const bulkDeleteCustomers = async (
 };
 ```
 
-**実装者注意**:
+**Implementer notes**:
 
-- `getCacheTag.customers.detail` の正確な署名は `@/shared/lib/constants` を Read で確認
-- `executeAdminMutationResult` の `Action` 型に `update` / `delete` の実在確認
-- 既存 `actions/customer.ts` の cache 無効化パターンと整合させる
+- Confirm the exact signature of `getCacheTag.customers.detail` in `@/shared/lib/constants`
+- Verify `update` / `delete` exist in the `Action` type used by `executeAdminMutationResult`
+- Align with existing cache invalidation patterns in `actions/customer.ts`
 
 #### D3. UI (`CustomerBulkActions.tsx`)
 
-参照: `SpaceBulkActions.tsx` (Bundle A)
+Reference: `SpaceBulkActions.tsx` (Bundle A)
 
-差分:
+Differences:
 
 - import: `bulkToggleActiveCustomers` / `bulkDeleteCustomers`
-- toast: 「顧客」表記
-- 「公開」「非公開」ラベル → 「有効化」「無効化」に変更
-- アイコン: `IconUserCheck` / `IconUserOff` / `IconTrash`
-- 削除前 `DeleteConfirmDialog` 統合
+- toast: use "Customer" wording
+- Replace "Publish/Unpublish" labels with "Activate/Deactivate"
+- Icons: `IconUserCheck` / `IconUserOff` / `IconTrash`
+- Integrate pre-delete `DeleteConfirmDialog`
 
-#### D4. Table 改修 (`CustomerTable.tsx`)
+#### D4. Table refactor (`CustomerTable.tsx`)
 
-Phase 1 同パターン:
+Same pattern as Phase 1:
 
-1. `"use client"` 確認
-2. `useState<string[]>([])` で `selectedIds`
-3. ヘッダー all-select `CheckboxCell`
-4. 行頭 `<TableCell onClick={stopRowClick}><CheckboxCell aria-label={`${customer.lastName} ${customer.firstName} を選択`} ... /></TableCell>`
-5. テーブル外に `<CustomerBulkActions selectedIds={selectedIds} onClear={() => setSelectedIds([])} />`
+1. Confirm `"use client"`
+2. Add `selectedIds` via `useState<string[]>([])`
+3. Header all-select `CheckboxCell`
+4. Row head `<TableCell onClick={stopRowClick}><CheckboxCell aria-label={`Select ${customer.lastName} ${customer.firstName}`} ... /></TableCell>`
+5. Place `<CustomerBulkActions selectedIds={selectedIds} onClear={() => setSelectedIds([])} />` outside the table
 
-`ClickableTableRow` 採用済みの場合は checkbox セルに `stopRowClick`。
+If `ClickableTableRow` is used, apply `stopRowClick` to the checkbox cell.
 
 #### D5. Tests
 
 **Unit** (`__tests__/unit/domain/customers/bulk-commands.test.ts`):
 
-- 空配列で count: 0 / DB 呼ばない
-- 複数件 isActive toggle 成功
-- 削除成功 / `affectedIds` 取得
+- Empty array → count: 0 / no DB calls
+- Multiple isActive toggles succeed
+- Delete succeeds / `affectedIds` captured
 
 **Integration** (`__tests__/integration/actions/admin/customer-bulk.test.ts`):
 
-- 認証 / 権限 / Zod validation / mock executeAdminMutationResult / mock fireAndForget
-- **cloudflare mock は最初から全 11 export stub 化** (Phase 1 commit `aebc3052` テンプレ参照)
+- Auth / permission / Zod validation / mock executeAdminMutationResult / mock fireAndForget
+- **Cloudflare mocks start with all 11 export stubs** (see Phase 1 commit `aebc3052` template)
 
 ```typescript
 const noopPurge = (): Promise<{ success: boolean }> =>
@@ -223,8 +223,8 @@ mock.module("@/shared/lib/cloudflare", () => ({
 - `bun run type-check` exit 0
 - `bun test __tests__/unit/domain/customers/bulk-commands.test.ts` exit 0
 - `bun test __tests__/integration/actions/admin/customer-bulk.test.ts` exit 0
-- `git status --short` で modified/new files が想定通り
-- 行数目安 ≈ 500 行
+- `git status --short` shows expected modified/new files
+- Estimated line count ≈ 500 lines
 
 ---
 
@@ -243,13 +243,13 @@ mock.module("@/shared/lib/cloudflare", () => ({
 ### Files to modify
 
 1. `src/app/(admin)/admin/(dashboard)/inquiries/_components/InquiryTable.tsx`
-2. `package.json` 追記不要
+2. `package.json` — no addition needed
 
 ### Tasks
 
 #### E1. domain command
 
-`Inquiry` には `isActive` がないため **delete のみ**:
+`Inquiry` has no `isActive`, so **delete only**:
 
 ```typescript
 import "server-only";
@@ -277,23 +277,23 @@ export async function bulkDeleteInquiriesCommand(
 
 #### E2. Server Action
 
-Bundle D の `bulkDeleteCustomers` を `Inquiry` 用に複製。`CACHE_TAGS.INQUIRIES` + `getCacheTag.inquiries.detail(id)` を使用。
+Duplicate Bundle D `bulkDeleteCustomers` for `Inquiry`. Use `CACHE_TAGS.INQUIRIES` + `getCacheTag.inquiries.detail(id)`.
 
 #### E3. UI (`InquiryBulkActions.tsx`)
 
-`PostBulkActions` (最小版、141 行) を参照。toggle ボタンなし、削除のみ。toast: 「お問い合わせ」表記。
+Reference `PostBulkActions` (minimal version, 141 lines). No toggle button, delete only. Toast uses "Inquiry" wording.
 
-#### E4. Table 改修
+#### E4. Table refactor
 
-Phase 1 同パターン。`aria-label` は `${inquiry.subject} を選択`。
+Same pattern as Phase 1. `aria-label` = `Select ${inquiry.subject}`.
 
 #### E5. Tests
 
-最小セット (delete のみ)。**cloudflare mock は最初から全 11 export stub 化**。
+Minimal set (delete only). **Cloudflare mocks start with all 11 export stubs**.
 
 ### Verification (Bundle E)
 
-行数目安 ≈ 350 行 (delete のみで isActive toggle なし)。
+Estimated line count ≈ 350 lines (delete only, no isActive toggle).
 
 ---
 
@@ -312,13 +312,13 @@ Phase 1 同パターン。`aria-label` は `${inquiry.subject} を選択`。
 ### Files to modify
 
 1. `src/app/(admin)/admin/(dashboard)/coupons/_components/CouponTable.tsx`
-2. `package.json` 追記不要
+2. `package.json` — no addition needed
 
 ### Tasks
 
 #### F1. domain command
 
-Bundle D customers 同型 (isActive toggle + delete):
+Same as Bundle D customers (isActive toggle + delete):
 
 ```typescript
 export type BulkToggleActiveCouponsResult = {
@@ -332,59 +332,59 @@ export type BulkDeleteCouponsResult = {
   affectedIds: string[];
 };
 
-// bulkToggleActiveCouponsCommand / bulkDeleteCouponsCommand 実装
-// Reservation.couponId は onDelete: SetNull で FK 衝突なし、Coupon.usageCount > 0 でも削除可
+// implement bulkToggleActiveCouponsCommand / bulkDeleteCouponsCommand
+// Reservation.couponId uses onDelete: SetNull (no FK conflict); delete allowed even if Coupon.usageCount > 0
 ```
 
 #### F2. Server Action
 
-Bundle D customers の Server Action を `coupon` 用に複製。`CACHE_TAGS.COUPONS` + `getCacheTag.coupons.detail(id)` を使用。
+Duplicate Bundle D customers Server Action for `coupon`. Use `CACHE_TAGS.COUPONS` + `getCacheTag.coupons.detail(id)`.
 
 #### F3. UI (`CouponBulkActions.tsx`)
 
-CustomerBulkActions と同型 (active toggle + delete)。「クーポン」表記、アイコン: `IconTicket` / `IconTicketOff` / `IconTrash`。
+Same as CustomerBulkActions (active toggle + delete). Use "Coupon" wording, icons: `IconTicket` / `IconTicketOff` / `IconTrash`.
 
-#### F4. Table 改修
+#### F4. Table refactor
 
-Phase 1 同パターン。`aria-label` は `${coupon.name} を選択`。
+Same pattern as Phase 1. `aria-label` = `Select ${coupon.name}`.
 
 #### F5. Tests
 
-Bundle D 同等。**cloudflare mock は最初から全 11 export stub 化**。
+Same as Bundle D. **Cloudflare mocks start with all 11 export stubs**.
 
 ### Verification (Bundle F)
 
-行数目安 ≈ 500 行。
+Estimated line count ≈ 500 lines.
 
 ---
 
-## 全体検証 (Phase 2 完了時)
+## Overall verification (Phase 2 complete)
 
 1. `bun run validate` exit 0
-2. `bun test __tests__/integration/actions/admin` (admin batch) で 全 pass 確認 (Phase 2 の cloudflare mock pollution が起きないこと)
-3. `git log --oneline main..HEAD` で 3 commit 確認
-4. 各 commit の `git show --stat HEAD~N` で対象ファイル + 行数妥当性
+2. `bun test __tests__/integration/actions/admin` (admin batch) passes (ensure Phase 2 cloudflare mock pollution does not occur)
+3. `git log --oneline main..HEAD` shows 3 commits
+4. `git show --stat HEAD~N` per commit confirms target files + line counts
 
 ---
 
-## Subagent Dispatch 規律
+## Subagent dispatch discipline
 
-Phase 1 と同じ:
+Same as Phase 1:
 
-- 3 並列 general-purpose (sonnet) dispatch
-- 🚫 git 全面禁止 (controller が完了後 commit)
-- 🚫 JSDoc / コメントに「Phase」「P19」「Bundle X」等のタスク参照禁止
-- ✅ import alias 二重 prefix 禁止
-- ✅ 参照実装 (Bundle A spaces / Bundle C news) を Read してから実装
-- ✅ plan API 名は実装ファイル Read で実在確認 (`getCacheTag.customers.detail` / `Action` enum / `createValidationMutationError`)
-- ✅ **cloudflare mock は最初から全 11 export stub 化** (Phase 1 reactive fix `aebc3052` を Phase 2 で再発させない)
+- 3 parallel general-purpose (sonnet) dispatch
+- 🚫 no git commands (controller commits after completion)
+- 🚫 no task references like "Phase", "P19", "Bundle X" in JSDoc/comments
+- ✅ no double prefix in import aliases
+- ✅ read reference implementations (Bundle A spaces / Bundle C news) before implementing
+- ✅ verify plan API names in real files (`getCacheTag.customers.detail` / `Action` enum / `createValidationMutationError`)
+- ✅ **Cloudflare mocks start with all 11 export stubs** (prevent Phase 1 reactive fix `aebc3052` regression)
 
 ---
 
-## Phase 3 への持ち越し
+## Carryover to Phase 3
 
-- Customer status 一括変更 (BLACKLIST 化 / VIP 昇格)
-- Inquiry status 一括変更 (RESOLVED) + 自動返信メール
-- Event 一括 CANCEL + 参加者通知メール (Phase 1 で除外済み)
-- 状態遷移マップ整備 (`CUSTOMER_STATUS_TRANSITIONS` / `INQUIRY_STATUS_TRANSITIONS` 等)
-- Phase 3 は **brainstorming + spec 作成からスタート** (本 plan の純粋対称化スコープでは扱えない)
+- Bulk customer status changes (BLACKLIST / VIP promotion)
+- Bulk inquiry status changes (RESOLVED) + auto-reply email
+- Bulk event CANCEL + attendee notification emails (excluded in Phase 1)
+- State transition map setup (`CUSTOMER_STATUS_TRANSITIONS` / `INQUIRY_STATUS_TRANSITIONS`, etc.)
+- Phase 3 starts with **brainstorming + spec creation** (outside this plan’s pure symmetry scope)

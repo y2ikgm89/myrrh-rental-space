@@ -41,10 +41,11 @@ export function ConceptSection({
 }: ConceptSectionProps): ReactElement {
   const heading = config.heading;
   const body = config.body;
-  const imageUrl = config.imageUrl;
+  const imageUrl = config.image.url;
+  const imageAlt = config.image.alt || (config.heading ?? "コンセプト");
   const imagePosition = config.imagePosition;
   const alignClass = TEXT_ALIGN_CLASS[config.textAlign];
-  const layout = parseConceptLayout(config.layout);
+  const layout = parseConceptLayout(config.contentLayout);
   const isStacked = layout === "stacked";
 
   const textBlock = (
@@ -86,14 +87,14 @@ export function ConceptSection({
 
   if (isStacked) {
     return (
-      <SectionWrapper style={style}>
+      <SectionWrapper style={style} layout={config.layout}>
         <div className="mx-auto max-w-3xl text-center">
           {imageUrl && (
             <div className="mb-12">
               <ScrollReveal delay={0.1}>
                 <ParallaxImage
                   src={imageUrl}
-                  alt={config.heading ?? "コンセプト"}
+                  alt={imageAlt}
                   className="relative"
                 />
               </ScrollReveal>
@@ -106,7 +107,7 @@ export function ConceptSection({
   }
 
   return (
-    <SectionWrapper style={style} skipContainer>
+    <SectionWrapper style={style} layout={config.layout} skipContainer>
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Image — full bleed, no container padding */}
         <div
@@ -119,7 +120,7 @@ export function ConceptSection({
             <ScrollReveal delay={0.1}>
               <ParallaxImage
                 src={imageUrl}
-                alt={config.heading ?? "コンセプト"}
+                alt={imageAlt}
                 className="relative h-full min-h-[50svh] md:min-h-[70svh]"
               />
             </ScrollReveal>

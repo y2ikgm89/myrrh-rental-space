@@ -96,7 +96,6 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     name: getTrimmedString(formData, "name"),
     descriptionJson: getTrimmedString(formData, "descriptionJson"),
     addressDetail: getTrimmedString(formData, "addressDetail"),
-    access: getTrimmedString(formData, "access"),
     capacity: getRequiredInt(formData, "capacity"),
     area: getOptionalNullableNumber(formData, "area"),
     hourlyPrice: getRequiredFiniteNumber(formData, "hourlyPrice"),
@@ -106,7 +105,6 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     facilities,
     isPublished: getTrimmedString(formData, "isPublished") === "true",
     reviewsEnabled: getTrimmedString(formData, "reviewsEnabled") === "true",
-    termsId: getOptionalUuid(formData, "termsId"),
     locationId: getRequiredUuidString(formData, "locationId"),
     categoryId: getOptionalUuid(formData, "categoryId"),
     discountType: getTrimmedString(formData, "discountType"),
@@ -150,7 +148,6 @@ export function spaceFormDataToFormData(
   fd.set("name", payload.name);
   fd.set("descriptionJson", payload.descriptionJson);
   fd.set("addressDetail", payload.addressDetail ?? "");
-  fd.set("access", payload.access ?? "");
   fd.set("capacity", String(payload.capacity));
   fd.set("hourlyPrice", String(payload.hourlyPrice));
   fd.set("mainImageUrl", payload.mainImageUrl);
@@ -179,7 +176,6 @@ export function spaceFormDataToFormData(
   fd.set("durationDiscountOverride", payload.durationDiscountOverride);
   fd.set("taxRateType", payload.taxRateType);
 
-  fd.set("termsId", payload.termsId ?? "");
   fd.set("locationId", payload.locationId);
   fd.set("categoryId", payload.categoryId ?? "");
 

@@ -4,27 +4,27 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** handoff C3 (`.claude/skills/**` cleanup) の 3 軸監査を完了し結果を canonical 記録、handoff memory を更新して **C3 完了マーク**。同時に **C3b (`paths:` 自動 activation enhancement)** を future plan として handoff に追記する。
+**Goal:** Complete the 3-axis audit for handoff C3 (`.claude/skills/**` cleanup), record the results as canonical, update handoff memory with a **C3 completion mark**, and add **C3b (`paths:` auto-activation enhancement)** as a future plan in the handoff.
 
-**Architecture:** 事前監査 (本 plan 内 §監査結果サマリ) で handoff の 3 軸 (description 必須 / 500 行未満 / reference/\*.md 分割) は全 32 件 PASS。重複・dead skill ゼロ。clean-break 対象なし → 本 plan は **no-op + 文書化 + handoff 更新** の軽量構成。後続改善 (公式新フィールド `paths:` の path-scoped autoload で常時 context 圧迫を低減する enhancement) は **C3b として handoff に retain**、別 plan / 別セッションで実施。
+**Architecture:** A pre-audit (see §Audit Summary in this plan) shows all 32 skills pass the three handoff axes (description required / under 500 lines / reference/\*.md split). Zero duplicates or dead skills. No clean-break targets → this plan is a lightweight **no-op + documentation + handoff update**. Follow-up improvements (official new `paths:` field for path-scoped autoload to reduce constant context pressure) are **retained in handoff as C3b** and executed in a separate plan/session.
 
-**Tech Stack:** Markdown + YAML frontmatter のみ。コード変更なし。プラン commit 1 件 + memory 更新 (gitignored)。
+**Tech Stack:** Markdown + YAML frontmatter only. No code changes. One plan commit + memory updates (gitignored).
 
 ---
 
-## 監査結果サマリ (canonical 監査記録)
+## Audit summary (canonical record)
 
-### 軸 1: description 必須
+### Axis 1: description required
 
-✅ **全 32 件 PASS** — description 欠落ゼロ。1,536 char 制限 (公式 spec) 超過ゼロ。
+✅ **All 32 PASS** — zero missing descriptions. Zero over the 1,536 char limit (official spec).
 
-- Block scalar `>` 多行形式: **11 件** (add-prisma-enum / add-settings-field / cloud-run-debug / create-admin-page / create-page-content / create-server-action / google-calendar-debug / instagram-debug / prisma-migration / split-action-file / stripe-debug)
-- Single-line 形式: **21 件**
-- 言語混在: 日本語形 (~25 件) + 英語 "Use when ..." 形 (3 件: `verify-subagent-report` / `worktree-bootstrap` / `create-section-type`) → CLAUDE.md グローバル設定が日本語応答を要求するが skill description は Claude の delegation 判断に使われるためどちらも valid。**強制統一不要**
+- Block scalar `>` multiline: **11 files** (add-prisma-enum / add-settings-field / cloud-run-debug / create-admin-page / create-page-content / create-server-action / google-calendar-debug / instagram-debug / prisma-migration / split-action-file / stripe-debug)
+- Single-line format: **21 files**
+- Mixed languages: Japanese (~25 files) + English "Use when ..." style (3 files: `verify-subagent-report` / `worktree-bootstrap` / `create-section-type`) → CLAUDE.md global setting requires Japanese responses, but skill descriptions are used for Claude delegation, so both are valid. **No forced unification**.
 
-### 軸 2: 500 行未満
+### Axis 2: under 500 lines
 
-✅ **全 32 件 PASS** — 公式推奨「Keep SKILL.md under 500 lines」全件遵守。
+✅ **All 32 PASS** — complies with official recommendation "Keep SKILL.md under 500 lines".
 
 | Top 5 (longest)        | lines |
 | ---------------------- | ----- |
@@ -34,74 +34,74 @@
 | instagram-debug        | 171   |
 | verify-subagent-report | 152   |
 
-最長 188 行で公式推奨上限の **38% 以下**。マージン十分。
+Longest is 188 lines, **under 38%** of the official upper bound. Plenty of margin.
 
-### 軸 3: reference/\*.md 分割
+### Axis 3: reference/\*.md splits
 
-✅ **強制分割対象ゼロ** — 200 行超 skill ゼロ。
+✅ **Zero forced splits** — no skills over 200 lines.
 
-既に reference を持つ skill (8 件): frontend-design / add-prisma-enum / add-settings-field / cloud-run-debug / google-calendar-debug / parallax-section / create-admin-page / lexical-{node,plugin,toolbar}
+Skills that already have references (8): frontend-design / add-prisma-enum / add-settings-field / cloud-run-debug / google-calendar-debug / parallax-section / create-admin-page / lexical-{node,plugin,toolbar}
 
-### 軸 4 (handoff 範囲外、検出ゼロ): 重複・dead
+### Axis 4 (out of handoff scope, zero detected): duplicates/dead
 
-✅ **検出ゼロ** — 32 件すべて機能スコープが互いに被らない。
+✅ **Zero detected** — all 32 functional scopes do not overlap.
 
-- `frontend-design` vs `ui-ux-pro-max`: 前者は brief 作成 / 後者は UI 方針調査 — 別軸
-- `lexical-audit` vs `lexical-{node,plugin,toolbar}`: 前者は監査専用 / 後者群は新規追加用 — 別軸
-- `cache-audit` vs `integration-audit`: 前者は updateTag/revalidateTag 専用 / 後者はキャッシュ + Customer + 認証 + フロー横断 — 別軸の包含関係、保持
+- `frontend-design` vs `ui-ux-pro-max`: former creates briefs / latter researches UI direction — separate axes
+- `lexical-audit` vs `lexical-{node,plugin,toolbar}`: former is audit-only / latter are for new additions — separate axes
+- `cache-audit` vs `integration-audit`: former is updateTag/revalidateTag-only / latter spans cache + customer + auth + flows — overlapping but distinct; keep
 
-### 軸 5 (公式新フィールド未活用、C3b 移行)
+### Axis 5 (official new fields unused, move to C3b)
 
-公式 spec で定義されているが現状未活用:
+Defined in the official spec but currently unused:
 
-| Field                       | 現状活用 | C3b で活用予定                                                                                                                        |
-| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `paths:`                    | **0 件** | path-scoped autoload で常時 context 圧迫を低減 (e.g., `prisma-migration` → `prisma/schema.prisma`、`lexical-*` → `src/**/lexical/**`) |
-| `when_to_use:`              | 0 件     | description が長い skill で trigger を分離して可読性向上                                                                              |
-| `arguments:`                | 0 件     | named positional arg で `$N` を使う複雑 skill (現状ゼロ、対象なし)                                                                    |
-| `argument-hint:`            | 9 件     | 既に活用済み                                                                                                                          |
-| `disable-model-invocation:` | 3 件     | 既に活用済み (adr-create / create-section-type / worktree-bootstrap)                                                                  |
+| Field                       | Current use | Planned use in C3b                                                                                                                                  |
+| --------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `paths:`                    | **0**       | Use path-scoped autoload to reduce constant context pressure (e.g., `prisma-migration` → `prisma/schema.prisma`, `lexical-*` → `src/**/lexical/**`) |
+| `when_to_use:`              | 0           | Split triggers for long descriptions to improve readability                                                                                         |
+| `arguments:`                | 0           | Complex skills using `$N` named positional args (currently none)                                                                                    |
+| `argument-hint:`            | 9           | Already used                                                                                                                                        |
+| `disable-model-invocation:` | 3           | Already used (adr-create / create-section-type / worktree-bootstrap)                                                                                |
 
-**結論:** 本 plan の clean-break スコープは確定的に no-op。C3b に移行する improvement は context 圧迫低減という明確な ROI がある別 plan として独立。
+**Conclusion:** The clean-break scope of this plan is definitively no-op. Improvements moved to C3b are a separate plan with clear ROI (reducing context pressure).
 
 ---
 
 ## File Structure
 
-**変更:**
+**Changes:**
 
-- Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md` (C3 完了マーク + C3b 起動コマンド例追記)
-- Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md` (C1-C4 progress 行を C3 完了に更新)
+- Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md` (add C3 completion mark + C3b launch command example)
+- Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md` (update C1–C4 progress line to show C3 complete)
 
-**作成:**
+**Create:**
 
-- (なし — 本 plan ファイル `docs/superpowers/plans/2026-04-27-skills-cleanup.md` 自体が監査結果の canonical 記録)
+- (none — this plan file `docs/superpowers/plans/2026-04-27-skills-cleanup.md` is the canonical audit record)
 
-**作成しない:**
+**Not created:**
 
-- 新規 SKILL.md (32 件すべて 3 軸 PASS のため改修対象なし)
-- 新規 reference/\*.md (分割対象ゼロ)
-- C3b plan ファイル本体 (起動コマンド例だけ handoff に追記、plan 本体は別セッションで作成)
+- New SKILL.md (all 32 passed on 3 axes; no changes needed)
+- New reference/\*.md (zero split targets)
+- C3b plan file itself (only add launch command example to handoff; plan body created in another session)
 
 ---
 
-## Task 1: handoff memory C3 完了マーク + C3b 追記
+## Task 1: Mark handoff memory C3 complete + add C3b
 
 **Files:**
 
 - Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md`
 
-> 注: `~/.claude/` 配下の memory file は user dir で git untracked。commit 対象外。
+> Note: memory files under `~/.claude/` live in the user dir and are git-untracked. Not part of commits.
 
-- [ ] **Step 1: 現在の handoff memory の C3 ブロックを確認**
+- [ ] **Step 1: Confirm current C3 block in handoff memory**
 
 ```bash
-grep -nE '⬜ \*\*C3\*\*|^## 進捗|^- ✅ \*\*C[12]' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md
+grep -nE '⬜ \*\*C3\*\*|^## Progress|^- ✅ \*\*C[12]' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md
 ```
 
-- [ ] **Step 2: C3 を完了マークに更新 + C3b future enhancement を追記**
+- [ ] **Step 2: Mark C3 complete + add C3b future enhancement**
 
-`Edit` ツールで以下のブロックを置換:
+Replace the following block using the `Edit` tool:
 
 Before:
 
@@ -113,84 +113,83 @@ Before:
 After:
 
 ````
-- ✅ **C3 完了 (2026-04-27)** — `.claude/skills/**` cleanup 監査 (3 軸全 PASS、no-op)
-  - 軸 1 description 必須: 32 件全 OK (1,536 char 制限内、最長 ~600 char)
-  - 軸 2 500 行未満: 32 件全 OK (最大 188 行 = `seed-audit`、上限の 38%)
-  - 軸 3 reference/*.md 強制分割: 対象ゼロ (200 行超 skill ゼロ)
-  - 重複・dead skill 検出: ゼロ
-  - canonical 監査記録: `docs/superpowers/plans/2026-04-27-skills-cleanup.md`
-  - **clean-break 対象なし → 改修コミットゼロ** (実装変更なし、plan + memory 更新のみ)
-  - **未着手 → C3b に移行**: 公式新フィールド `paths:` の path-scoped autoload による context 圧迫低減 enhancement (下記参照)
-- ⬜ **C3b** — `.claude/skills/**` `paths:` enhancement (公式 spec 新フィールド活用、context 圧迫低減)
-  - スコープ: prisma-migration / cache-audit / integration-audit / lexical-* (audit/node/plugin/toolbar) / use-server-audit / audit-settings-sections / adr-drift-audit / seed-audit / ssot-audit / verify-subagent-report 等の path-bound skill に `paths:` を追加
-  - 効果: path-scoped autoload により該当ファイル編集時のみ description が context に乗る → 全 skill description (~32 件 × 200-600 char ≒ 10-19KB) のうち path-bound 分の常時 auto-load 削減
-  - 規模: 中 (~10-15 件 skill 編集、1 plan / 1 セッション、5-10 commit 想定)
-  - 起動コマンド例:
+- ✅ **C3 complete (2026-04-27)** — `.claude/skills/**` cleanup audit (all 3 axes PASS, no-op)
+  - Axis 1 description required: all 32 OK (within 1,536 char limit, max ~600 char)
+  - Axis 2 under 500 lines: all 32 OK (max 188 lines = `seed-audit`, 38% of limit)
+  - Axis 3 reference/*.md split: zero targets (no skills over 200 lines)
+  - Duplicates/dead skill detection: zero
+  - Canonical audit record: `docs/superpowers/plans/2026-04-27-skills-cleanup.md`
+  - **No clean-break targets → zero refactor commits** (no implementation changes, plan + memory updates only)
+  - **Unstarted → move to C3b**: official new `paths:` field path-scoped autoload to reduce context pressure (see below)
+- ⬜ **C3b** — `.claude/skills/**` `paths:` enhancement (use official spec new field, reduce context pressure)
+  - Scope: add `paths:` to path-bound skills such as prisma-migration / cache-audit / integration-audit / lexical-* (audit/node/plugin/toolbar) / use-server-audit / audit-settings-sections / adr-drift-audit / seed-audit / ssot-audit / verify-subagent-report
+  - Effect: path-scoped autoload means descriptions only load when editing matching files → reduce always-on auto-load for the path-bound subset of all skill descriptions (~32 × 200-600 char ≒ 10-19KB)
+  - Size: medium (~10-15 skills edited, 1 plan / 1 session, 5-10 commits expected)
+  - Launch command example:
     ```
-    .claude/skills/** の paths field 自動 activation enhancement を writing-plans skill から開始してください。
-    Plan 場所は docs/superpowers/plans/2026-04-XX-skills-paths-enhancement.md。
-    各 path-bound skill (prisma-migration / cache-audit / lexical-* / use-server-audit 等) に
-    公式 spec の paths field を追加し、context 圧迫を低減してください。
-    skill 個別の path scope 判断は SKILL.md の description / 適用範囲を Read してから決定。
+    Start the `.claude/skills/**` paths field auto-activation enhancement via the writing-plans skill.
+    Plan location: docs/superpowers/plans/2026-04-XX-skills-paths-enhancement.md.
+    Add the official spec paths field to each path-bound skill (prisma-migration / cache-audit / lexical-* / use-server-audit, etc.) to reduce context pressure.
+    Decide each skill's path scope after reading the SKILL.md description / coverage.
     ```
 - ⬜ **C4** — `docs/**` cleanup
 ````
 
-- [ ] **Step 3: 編集後の確認**
+- [ ] **Step 3: Post-edit verification**
 
 ```bash
-grep -nE '✅ \*\*C3 完了|⬜ \*\*C3b|⬜ \*\*C4' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md
+grep -nE '✅ \*\*C3 complete|⬜ \*\*C3b|⬜ \*\*C4' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md
 ```
 
-Expected: 3 行 (C3 完了 / C3b / C4) すべて hit。
+Expected: all three lines (C3 complete / C3b / C4) hit.
 
 ---
 
-## Task 2: MEMORY.md C1-C4 progress 行を更新
+## Task 2: Update MEMORY.md C1-C4 progress line
 
 **Files:**
 
 - Modify: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md`
 
-- [ ] **Step 1: 現在の C1-C4 行を確認**
+- [ ] **Step 1: Confirm current C1-C4 line**
 
 ```bash
 grep -nE 'Clean-Break Refactor C1-C4|project_clean-break-refactor-handoff' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md
 ```
 
-- [ ] **Step 2: C2 完了行を C3 完了込みに更新**
+- [ ] **Step 2: Update C2 completion line to include C3 completion**
 
-`Edit` ツールで:
+Using the `Edit` tool:
 
 Before:
 
 ```
-- [project_clean-break-refactor-handoff.md](project_clean-break-refactor-handoff.md) — C1 完了 (commits `ca0efd7e`〜`5d298e74`、6 commit) + C2 完了 (commits `2c1b4efd`〜`ca1727a5`、3 commit、25 agent files canonical 化)。C3 (`.claude/skills/**`) / C4 (`docs/**`) は未着手
+- [project_clean-break-refactor-handoff.md](project_clean-break-refactor-handoff.md) — C1 complete (commits `ca0efd7e`–`5d298e74`, 6 commits) + C2 complete (commits `2c1b4efd`–`ca1727a5`, 3 commits, 25 agent files canonicalized). C3 (`.claude/skills/**`) / C4 (`docs/**`) untouched
 ```
 
 After:
 
 ```
-- [project_clean-break-refactor-handoff.md](project_clean-break-refactor-handoff.md) — C1 完了 (commits `ca0efd7e`〜`5d298e74`、6 commit) + C2 完了 (commits `2c1b4efd`〜`ca1727a5`、3 commit、25 agent files canonical 化) + C3 完了 (2026-04-27、no-op 監査、3 軸全 PASS、改修コミットゼロ、`docs/superpowers/plans/2026-04-27-skills-cleanup.md` に canonical 記録)。C3b (skills paths enhancement) / C4 (`docs/**`) は未着手
+- [project_clean-break-refactor-handoff.md](project_clean-break-refactor-handoff.md) — C1 complete (commits `ca0efd7e`–`5d298e74`, 6 commits) + C2 complete (commits `2c1b4efd`–`ca1727a5`, 3 commits, 25 agent files canonicalized) + C3 complete (2026-04-27, no-op audit, all 3 axes PASS, zero refactor commits, canonical record in `docs/superpowers/plans/2026-04-27-skills-cleanup.md`). C3b (skills paths enhancement) / C4 (`docs/**`) untouched
 ```
 
-- [ ] **Step 3: 編集後の確認**
+- [ ] **Step 3: Post-edit verification**
 
 ```bash
-grep -nE 'C3 完了|C3b' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md
+grep -nE 'C3 complete|C3b' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md
 ```
 
-Expected: 1 行に "C3 完了" と "C3b" 両方 hit。
+Expected: one line hits both "C3 complete" and "C3b".
 
 ---
 
-## Task 3: Plan ファイルを commit
+## Task 3: Commit the plan file
 
 **Files:**
 
-- New: `docs/superpowers/plans/2026-04-27-skills-cleanup.md` (本 plan ファイル自体)
+- New: `docs/superpowers/plans/2026-04-27-skills-cleanup.md` (this plan file itself)
 
-- [ ] **Step 1: 現在の git status 確認**
+- [ ] **Step 1: Check current git status**
 
 ```bash
 git status --short docs/superpowers/plans/
@@ -198,30 +197,29 @@ git status --short docs/superpowers/plans/
 
 Expected: `?? docs/superpowers/plans/2026-04-27-skills-cleanup.md` (untracked)
 
-- [ ] **Step 2: Plan を commit**
+- [ ] **Step 2: Commit the plan**
 
 ```bash
 git add docs/superpowers/plans/2026-04-27-skills-cleanup.md
 git commit -m "$(cat <<'EOF'
 docs(plan): record C3 skills audit (3 axes all PASS, no-op clean break)
 
-handoff C3 (`.claude/skills/**` cleanup) の監査結果を canonical 記録。
-事前監査の結果、3 軸すべて 32 件全 PASS で改修対象ゼロ:
+Record the canonical audit results for handoff C3 (`.claude/skills/**` cleanup).
+Pre-audit results: all 32 PASS across all three axes with zero refactor targets:
 
-- 軸 1 description 必須: 32 件全 OK
-- 軸 2 500 行未満: 32 件全 OK (最大 188 行)
-- 軸 3 reference/*.md 強制分割: 対象ゼロ
-- 重複・dead skill 検出: ゼロ
+- Axis 1 description required: all 32 OK
+- Axis 2 under 500 lines: all 32 OK (max 188 lines)
+- Axis 3 reference/*.md split: zero targets
+- Duplicates/dead skill detection: zero
 
-未活用の公式新フィールド `paths:` (path-scoped autoload で context
-圧迫低減) は C3b として handoff に future enhancement で記録。
+Record the unused official new `paths:` field (path-scoped autoload to reduce context pressure) as future enhancement C3b in handoff.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
 
-- [ ] **Step 3: 確認**
+- [ ] **Step 3: Verification**
 
 ```bash
 git log --oneline -1
@@ -233,37 +231,37 @@ Expected: `<SHA> docs(plan): record C3 skills audit (3 axes all PASS, no-op clea
 
 ## Task 4: Final verification
 
-- [ ] **Step 1: handoff memory の整合性確認**
+- [ ] **Step 1: Verify handoff memory consistency**
 
 ```bash
 grep -E '^- (✅|⬜) \*\*C[1-4]' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-refactor-handoff.md
 ```
 
-Expected: C1 完了 / C2 完了 / C3 完了 / C3b ⬜ / C4 ⬜ の 5 行が順に表示される。
+Expected: five lines appear in order: C1 complete / C2 complete / C3 complete / C3b ⬜ / C4 ⬜.
 
-- [ ] **Step 2: MEMORY.md の整合性確認**
+- [ ] **Step 2: Verify MEMORY.md consistency**
 
 ```bash
 grep -A 1 'Clean-Break Refactor C1-C4' ~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/MEMORY.md
 ```
 
-Expected: 1 行に "C1 完了" + "C2 完了" + "C3 完了" + "C3b" がすべて含まれる。
+Expected: one line contains "C1 complete" + "C2 complete" + "C3 complete" + "C3b".
 
-- [ ] **Step 3: Plan ファイルが git tracked であることを確認**
+- [ ] **Step 3: Confirm the plan file is git tracked**
 
 ```bash
 git ls-files docs/superpowers/plans/2026-04-27-skills-cleanup.md
 ```
 
-Expected: ファイルパスが出力される (空でない)。
+Expected: a file path prints (non-empty).
 
-- [ ] **Step 4: 全体 commit ログ確認**
+- [ ] **Step 4: Check overall commit log**
 
 ```bash
 git log --oneline -5
 ```
 
-Expected: 最新 5 commit に本 plan の commit が含まれる。
+Expected: the latest 5 commits include this plan's commit.
 
 ---
 
@@ -271,31 +269,31 @@ Expected: 最新 5 commit に本 plan の commit が含まれる。
 
 **Spec coverage:**
 
-- ✅ 公式 docs (`code.claude.com/docs/en/skills`) 準拠 → 軸 1-3 全 PASS で no-op
-- ✅ description 必須 → 全 32 件 OK
-- ✅ 500 行未満 → 全 32 件 OK
-- ✅ reference/\*.md 分割 → 対象なし
-- ✅ 重複・dead skill 完全削除 → 検出ゼロ
-- ✅ handoff memory C3 完了マーク → Task 1
-- ✅ C3b future enhancement → handoff に retain
+- ✅ Official docs compliance (`code.claude.com/docs/en/skills`) → no-op with all axes 1-3 PASS
+- ✅ Description required → all 32 OK
+- ✅ Under 500 lines → all 32 OK
+- ✅ reference/\*.md split → none
+- ✅ Duplicate/dead skills fully removed → zero detected
+- ✅ Handoff memory C3 completion mark → Task 1
+- ✅ C3b future enhancement → retained in handoff
 
-**Type consistency:** memory file path / plan file path / commit message を全 Task で統一。
+**Type consistency:** memory file path / plan file path / commit message are unified across all tasks.
 
-**Placeholder scan:** "TBD" / "implement later" / "Add appropriate" などのプレースホルダなし。各 Step に実コマンドと exact 出力を記述。
+**Placeholder scan:** No placeholders like "TBD", "implement later", "Add appropriate". Each step includes real commands and exact output.
 
 **Risk:**
 
-- 低 — 実装変更ゼロ、commit 1 件 (plan ファイル) + memory 更新 (gitignored)
-- 唯一の risk: handoff memory の Edit 文字列が他の文字列と被る場合 → Step 2 で `Edit` の `old_string` を十分一意なブロックに設定済み
+- Low — zero implementation changes, one commit (plan file) + memory updates (gitignored)
+- Only risk: handoff memory Edit string collides with other text → Step 2 sets `old_string` to a sufficiently unique block
 
 ---
 
-## 起動手順 (controller / implementer 共通)
+## Launch instructions (controller / implementer)
 
-本 plan は規模小 (3 commit 未満、いずれも非破壊) のため **inline execution** 推奨:
+This plan is small (fewer than 3 commits, all non-destructive), so **inline execution** is recommended:
 
 ```
-docs/superpowers/plans/2026-04-27-skills-cleanup.md を inline execution
-(superpowers:executing-plans skill) で実行してください。Task 1 → 2 → 3 → 4 の順、
-最後に commit + verification で完了。
+Run docs/superpowers/plans/2026-04-27-skills-cleanup.md via inline execution
+(superpowers:executing-plans skill). Proceed in Task 1 → 2 → 3 → 4 order,
+and finish with commit + verification.
 ```

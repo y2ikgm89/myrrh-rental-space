@@ -1,4 +1,3 @@
-import { getActiveTermsForSelect } from "@/admin/queries/terms";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
@@ -13,13 +12,11 @@ export const metadata: Metadata = {
 
 export default async function NewSpacePage() {
   const [
-    availableTerms,
     availableLocations,
     availableCategories,
     taxSettings,
     reviewsEnabledGlobal,
   ] = await Promise.all([
-    getActiveTermsForSelect(),
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
     getTaxSettings(),
@@ -34,7 +31,6 @@ export default async function NewSpacePage() {
     >
       <SpaceEditForm
         mode="create"
-        availableTerms={availableTerms}
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}

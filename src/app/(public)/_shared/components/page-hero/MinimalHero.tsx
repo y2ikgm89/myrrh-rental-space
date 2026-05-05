@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
-import type { PageHero } from "@/shared/lib/sections/page-hero/schema";
+import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 
 export type MinimalHeroProps = Omit<
-  Extract<PageHero, { variant: "minimal" }>,
+  Extract<PageHeroConfig, { variant: "minimal" }>,
   "variant"
 >;
 

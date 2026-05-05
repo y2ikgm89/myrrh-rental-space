@@ -175,10 +175,15 @@ describe("AutoSectionForm", () => {
             title: "本文",
             config: {
               sectionLabel: "Contents",
-              maxWidth: "lg",
               containerClass: "",
               backgroundColor: "",
-              padding: "md",
+              layout: {
+                padding: "md",
+                containerWidth: "lg",
+                hideOnMobile: false,
+                hideOnDesktop: false,
+                animateOnScroll: "fade-up",
+              },
             },
             contentHtml: null,
             contentJson: { root: { children: [] } },

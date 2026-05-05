@@ -8,6 +8,7 @@ import { createEvent, updateEvent } from "@/admin/actions/event";
 import { eventFormSchema } from "@/shared/lib/validations/event";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
 import type {
   getEventById,
   getLocationsForEvent,
@@ -47,19 +48,9 @@ function serializeDescriptionJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function formatDateTimeForInput(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("sv-SE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  })
-    .format(d)
-    .replace(" ", "T");
-}
+// `formatDateTimeLocalInJst` は `@/shared/lib/date-format` の SSoT helper
+// （旧 local 実装はクーポン管理 cleanup で `parseDateTimeLocalAsJst` と
+// セットで shared に統一）
 
 // =============================================================================
 // Component
@@ -91,10 +82,10 @@ export function EventForm({
             slug: event.slug,
             descriptionJson: serializeDescriptionJson(event.descriptionJson),
             thumbnailUrl: event.thumbnailUrl,
-            startTime: formatDateTimeForInput(event.startTime),
-            endTime: formatDateTimeForInput(event.endTime),
+            startTime: formatDateTimeLocalInJst(event.startTime),
+            endTime: formatDateTimeLocalInJst(event.endTime),
             registrationDeadline: event.registrationDeadline
-              ? formatDateTimeForInput(event.registrationDeadline)
+              ? formatDateTimeLocalInJst(event.registrationDeadline)
               : "",
             capacity: event.capacity ?? undefined,
             price: event.price ?? undefined,

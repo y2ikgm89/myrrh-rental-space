@@ -123,11 +123,6 @@ documentation:
           - "SECURITY.md"
           - "CHANGELOG.md"
 
-adr:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "docs/architecture/decisions/**"
-
 claude-rules:
   - changed-files:
       - any-glob-to-any-file:

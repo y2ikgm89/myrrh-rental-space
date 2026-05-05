@@ -127,7 +127,7 @@ export function ContactFormSection({
   // split: 2-column (left=heading/description/contact info, right=form)
   if (variant === "split") {
     return (
-      <SectionWrapper style={style}>
+      <SectionWrapper style={style} layout={config.layout}>
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col gap-12 md:flex-row md:gap-16">
             <div className="flex-1">
@@ -169,7 +169,7 @@ export function ContactFormSection({
   // minimal: no labels (placeholder only), compact
   // default: standard centered form
   return (
-    <SectionWrapper style={style}>
+    <SectionWrapper style={style} layout={config.layout}>
       <div className="mx-auto max-w-2xl">
         <div className="mb-10 text-center md:mb-14">
           <ScrollReveal>

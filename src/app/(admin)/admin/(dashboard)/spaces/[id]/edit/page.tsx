@@ -3,7 +3,6 @@ import Link from "next/link";
 import { IconExternalLink } from "@tabler/icons-react";
 import { deleteSpace } from "@/admin/actions/space";
 import { getSpaceById } from "@/admin/queries/space";
-import { getActiveTermsForSelect } from "@/admin/queries/terms";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
@@ -31,14 +30,12 @@ export default async function EditSpacePage({ params }: PageProps) {
 
   const [
     space,
-    availableTerms,
     availableLocations,
     availableCategories,
     taxSettings,
     reviewsEnabledGlobal,
   ] = await Promise.all([
     getSpaceById(id),
-    getActiveTermsForSelect(),
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
     getTaxSettings(),
@@ -77,7 +74,6 @@ export default async function EditSpacePage({ params }: PageProps) {
         key={space.id}
         space={space}
         mode="edit"
-        availableTerms={availableTerms}
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}

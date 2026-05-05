@@ -2,13 +2,14 @@ import { notFound } from "next/navigation";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getReservationById } from "@/admin/queries/reservation";
-import { getTermsAgreementsForReservation } from "@/shared/domain/terms/admin-queries";
 import { ReservationDetail } from "./_components/ReservationDetail";
-import { TermsAgreements } from "./_components/TermsAgreements";
+import { RestoreReservationStatusButton } from "./_components/RestoreReservationStatusButton";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -34,14 +35,16 @@ export async function generateMetadata({
 
 export default async function ReservationDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const [reservation, agreements] = await Promise.all([
+  const [reservation, sessionUser] = await Promise.all([
     getReservationById(id),
-    getTermsAgreementsForReservation(id),
+    verifyAdminSession(),
   ]);
 
   if (!reservation) {
     notFound();
   }
+
+  const canRestoreStatus = sessionUser.role === Role.SUPER_ADMIN;
 
   return (
     <AdminDetailLayout
@@ -50,6 +53,12 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       subtitle={reservation.space.name}
       actions={
         <>
+          {canRestoreStatus && (
+            <RestoreReservationStatusButton
+              reservationId={reservation.id}
+              currentStatus={reservation.status}
+            />
+          )}
           <DetailDeleteButton
             itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
             onDelete={deleteReservation.bind(null, reservation.id)}
@@ -66,7 +75,6 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       }
     >
       <ReservationDetail key={reservation.id} reservation={reservation} />
-      <TermsAgreements agreements={agreements} />
     </AdminDetailLayout>
   );
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { field } from "../../field-registry";
+import { sectionLayoutSchema } from "../_shared/layout";
 
 const layouts = ["grid", "masonry", "carousel"] as const;
 const gaps = ["none", "sm", "md", "lg"] as const;
@@ -12,19 +13,22 @@ export const galleryConfigSchema = z
     sectionLabel: field.text("セクションラベル", {
       default: "Gallery",
       maxLength: 50,
+      subGroup: "text",
     }),
-    title: field.text("見出し", { maxLength: 100 }),
+    title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
     images: field.array("画像", {
+      subGroup: "image",
       fields: {
         url: field.image("画像"),
         alt: field.text("代替テキスト"),
         caption: field.text("キャプション"),
       },
     }),
-    layout: field.select("レイアウト", {
+    gridLayout: field.select("ギャラリー表示", {
       options: layouts,
       default: "grid",
       group: "design",
+      helpText: "画像の並び方",
     }),
     columns: field.number("1 行あたりの列数", {
       min: 1,
@@ -51,6 +55,7 @@ export const galleryConfigSchema = z
       default: "zoom",
       group: "design",
     }),
+    layout: sectionLayoutSchema,
   })
   .refine(
     (data) =>

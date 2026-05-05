@@ -81,7 +81,7 @@ const VALID_FORM_DATA = {
   name: "渋谷スペース",
   description: "渋谷駅近くのレンタルスペース",
   address: "東京都渋谷区1-1-1",
-  access: "渋谷駅から徒歩5分",
+  accessLines: [{ value: "渋谷駅から徒歩5分" }],
   parkingInfo: "近隣コインパーキング",
   amenities: { wifi: true, parking: true } as Record<string, boolean>,
   imageUrl: "https://example.com/main.jpg",
@@ -162,13 +162,13 @@ describe("createLocation", () => {
       );
     });
 
-    test("access が空文字の場合は null に変換される", async () => {
-      await createLocation({ ...VALID_FORM_DATA, access: "" });
+    test("accessLines が空配列の場合は空配列で渡される", async () => {
+      await createLocation({ ...VALID_FORM_DATA, accessLines: [] });
 
       expect(mockLocationCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            access: null,
+            accessLines: [],
           }),
         }),
       );

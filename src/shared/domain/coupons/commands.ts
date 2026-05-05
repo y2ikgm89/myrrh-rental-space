@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import type { CouponFormOutput } from "@/shared/lib/validations/coupon";
 
 async function ensureCouponExists(id: string): Promise<{ code: string }> {
@@ -42,6 +43,13 @@ async function ensureCouponCodeAvailable(
   }
 }
 
+/**
+ * Form 入力（datetime-local 文字列）を Prisma の Date 引数に変換。
+ *
+ * `validFrom` / `validUntil` は `"YYYY-MM-DDTHH:mm"` 形式の文字列で受け取る。
+ * `parseDateTimeLocalAsJst` で **JST として明示的に parse** し、UTC Date に変換する。
+ * サーバ tz (Cloud Run = UTC) / ブラウザ tz に依存しない。
+ */
 function toCouponData(data: CouponFormOutput) {
   return {
     code: data.code,
@@ -51,8 +59,11 @@ function toCouponData(data: CouponFormOutput) {
     discountValue: data.discountValue,
     minReservationAmount: data.minReservationAmount ?? null,
     maxDiscountAmount: data.maxDiscountAmount ?? null,
-    validFrom: data.validFrom,
-    validUntil: data.validUntil ?? null,
+    validFrom: parseDateTimeLocalAsJst(data.validFrom),
+    validUntil:
+      data.validUntil && data.validUntil !== ""
+        ? parseDateTimeLocalAsJst(data.validUntil)
+        : null,
     usageLimit: data.usageLimit ?? null,
     isActive: data.isActive,
     canCombineWithDurationDiscount: data.canCombineWithDurationDiscount,
@@ -87,19 +98,19 @@ export async function updateCoupon(
   });
 }
 
+/**
+ * クーポンを削除する。
+ *
+ * `Reservation.couponId` は `onDelete: SetNull` のため、使用済みクーポンを削除しても
+ * 過去予約の参照はクリアされるだけで FK 衝突は発生しない（`Coupon.usageCount > 0`
+ * でも安全）。`bulkDeleteCouponsCommand` と挙動を統一し、UI から「単体は拒否されるが
+ * bulk なら削除できる」silent な業務挙動の差を排除する設計判断。
+ *
+ * 過去予約の使用履歴（金額・割引額等）はスナップショットとして `Reservation`
+ * 自身が保持しているため、クーポン削除後も会計データは保全される。
+ */
 export async function deleteCoupon(id: string): Promise<void> {
   await ensureCouponExists(id);
-
-  const usedReservations = await prisma.reservation.count({
-    where: { couponId: id },
-  });
-
-  if (usedReservations > 0) {
-    throw new DomainError(
-      `このクーポンは${usedReservations}件の予約で使用されているため削除できません`,
-      "CONFLICT",
-    );
-  }
 
   await prisma.coupon.delete({
     where: { id },

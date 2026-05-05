@@ -105,7 +105,8 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
       {previewUrl && (
         <div className="space-y-2">
           <label className="text-sm font-medium">プレビュー</label>
-          <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border bg-muted">
+          {/* bg-checker: 透過 PNG / SVG の透過部分を市松模様で可視化 */}
+          <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border bg-checker">
             <img
               src={previewUrl}
               alt={alt || "プレビュー"}
