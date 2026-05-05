@@ -270,6 +270,18 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       order: 0,
       isActive: true,
     },
+    {
+      type: "contact-form",
+      title: null,
+      config: {
+        sectionLabel: "",
+        title: "",
+        variant: "split",
+      },
+      content: null,
+      order: 1,
+      isActive: true,
+    },
   ],
 
   access: [
