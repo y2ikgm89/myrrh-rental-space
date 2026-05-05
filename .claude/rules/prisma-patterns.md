@@ -371,7 +371,7 @@ space.pricePerHour; // number（Decimal ではない）
 
 ## Lexical JSON Primary パターン
 
-6 モデル（Post, PostVersion, News, NewsVersion, TermsVersion, Section）が以下の構成を持つ:
+6 モデル（Post, PostVersion, News, NewsVersion, TermsDocument, Section）が以下の構成を持つ:
 
 ```prisma
 contentHtml String  @db.Text @map("content")  // HTML キャッシュ（公開表示用）
