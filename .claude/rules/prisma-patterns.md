@@ -769,7 +769,7 @@ bun run db:generate
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const p = new PrismaClient({ adapter: new PrismaPg(pool) });
   (async () => {
-    const sections = await p.section.findMany({ where: { type: 'homepage-hero' } });
+    const sections = await p.section.findMany({ where: { type: 'page-hero' } });
     for (const s of sections) {
       const c = s.config;
       if (!c || typeof c !== 'object' || Array.isArray(c)) continue;
