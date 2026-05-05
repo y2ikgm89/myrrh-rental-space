@@ -320,6 +320,27 @@ const palette = {
 const red = palette.red; // [number, number, number]（string | RGB ではなく）
 ```
 
+### `as const satisfies Record<...>` の narrow tuple は test 推論と非互換
+
+`as const satisfies` は production code で `keyof typeof X` を strict literal union に narrow するが、bun:test の `expect()` 引数推論で narrow tuple が壊れて TS2339 / TS2769 を起こす。production も test も string-keyed access が中心なら型注釈で widening する方が clean:
+
+```typescript
+// NG: narrow tuple が test の expect 引数推論を壊す + Record union member 間で optional field の存在差が出る
+export const PAGE_TEMPLATES = {
+  home: { id: "home", allowedSectionTypes: ["page-hero", ...], requiredSectionTypes: ["page-hero"] },
+  content: { id: "content", allowedSectionTypes: [...] }, // requiredSectionTypes なし
+} as const satisfies Record<string, PageTemplate>;
+// test 側で `tpl.requiredSectionTypes ?? []` が TS2339（content union member に field なし）
+
+// OK: 型注釈で widening — PageTemplate 型に union 統一され optional fields が全 entry で同型
+export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
+  home: { ... },
+  content: { ... },
+};
+```
+
+**判定基準**: `keyof typeof X` を strict literal union として export したい（特定の id のみ受け付ける関数 signature 等）→ `as const satisfies` 維持 + test 側で必要に応じて広い型へ narrow。一般的な `string` key access が中心 → `: Record<string, T>` widening を選択。Phase 1（2026-05-05 PAGE_TEMPLATES）で後者に切替えた事例あり（`PageTemplateId` export を削除）。
+
 ## 型ガードパターン
 
 ### ユーザー定義型ガード（`is` キーワード）

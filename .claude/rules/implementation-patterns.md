@@ -18,6 +18,7 @@ paths:
 - **Seed 関数は `upsert` で idempotent 化 + `seedAll` / `seedDemo` 両方に登録** — `deleteMany + create` は `--demo` で既存破壊（`seedEmailTemplates` 参照）
 - **Terms / News / Post / Section / Space の seed は Lexical JSON 同時保存必須** — `contentHtml` 単独禁止。`buildParagraphEditorStateJson()` + `buildParagraphHtml()`（`@/shared/lib/lexical/description-defaults.ts`）
 - **seed の `contentJson` は paragraph-only 近似である** — `buildParagraphEditorStateJson(stripTags(html))` パターンで生成するため、テンプレ HTML に h2/h3/list/etc が含まれていても **`contentJson` は段落のみのフラット構造**（HeadingNode が 0 個）になる。`contentJson` の AST 構造に依存する派生機能（TOC 生成・heading 抽出・search index・RSS 等）は seed データで silent に動作しなくなる。**公開ページの content 派生は `contentHtml` を canonical SSoT** とする業界標準（GitHub / Notion / WordPress / Stripe Docs / rehype-slug）パターンに従う（`@/shared/lib/html/extract-headings` の `extractHeadingsFromHtml` + `injectHeadingAnchors` が参照実装、SSR/Client 同一結果を純粋関数で保証）
+- **既存モデルへの NOT NULL カラム追加時は `prisma.<model>.create` を全箇所 grep で列挙必須** — TS error が連鎖発生し 1 箇所修正 → validate → 次のエラーを N round 繰り返す silent waste。canonical: `grep -rn "prisma\.<model>\.create\|db\.<model>\.create" src/ prisma/` で先に全箇所列挙し同時 Edit。slug → 必須値マップは `resolve<Field>For<Slug>(slug)` のような SSoT helper に集約（migration の SQL UPDATE 表とコード側マップの drift 防止）。実例: 2026-05-05 Phase 1（Page.template 追加）で `commands.ts` × 3 + `system-pages-commands.ts` × 1 の 4 箇所を 4 round 連鎖発見
 
 ## 公開一覧ページの 10 点セット
 
