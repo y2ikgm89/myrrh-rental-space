@@ -1,8 +1,24 @@
+> **Snapshot: 2026-05-06** — Implementation completed across Phase 1-7, archived as historical reference.
+>
+> **Completed Phases**:
+>
+> - Phase 1 `2cf4475e` — `Page.template` + `PAGE_TEMPLATES` SSoT 導入
+> - Phase 2 `6236b514` — `homepage-*` を標準 section type に統合
+> - Phase 3 `b80086b7` — FaqAccordion + ContactForm を section variant に内包
+> - Phase 4-A `a325b9cd` — EventCalendar + ViewSwitcher を event-calendar variant に内包
+> - Phase 4-B `952b313a` — SpaceGrid + FilterBar + Pagination を space-list catalog variant に内包
+> - Phase 4-C `3ec2e63a` — PostGrid + NewsList + SearchBar + BlogLayout を post-list / news-list archive variant に内包
+> - Phase 5 `b184f4a6` — `reservation-form` 新規 Section type 追加
+> - Phase 6-A `12eba315` — /access + /reservation page.tsx 統一テンプレート化
+> - Phase 6-B `1fbfbabe` — AddSectionDialog template-aware + 必須セクション削除メニュー disabled
+> - Phase 6-C `e1802169` — SectionRenderer に `pageSlug` prop 導入、sidebar page-template-aware 化
+> - Phase 7 — docs / rule / memory 同期 + plan archive（本 commit）
+
 # Page Template Architecture — Design Spec (Clean Break)
 
 > 対象: `/admin/pages` 編集体験と公開ページ描画の整合性統一
 > 作成: 2026-05-05
-> ステータス: Draft（ユーザー承認待ち）
+> ステータス: Implemented（Phase 1-7 全完了 2026-05-06）
 > 関連: ADR 0018（field-registry）/ ADR 0021（Section Architecture clean-break）/ ADR 0028（Claude config 最適化）
 
 ## 背景・動機
