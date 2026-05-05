@@ -4,21 +4,21 @@
 
 **Spec:** `docs/superpowers/specs/2026-05-02-admin-page-editor-phase3-design.md`
 
-**Goal:** 全 23 sections に共通 `sectionLayoutSchema` を注入し、per-section padding/maxWidth/containerWidth を吸収。公開 SectionWrapper で統一適用。destructive Section.config JSON migration 1 個。
+**Goal:** Inject a shared `sectionLayoutSchema` into all 23 sections and absorb per-section padding/maxWidth/containerWidth. Apply it uniformly via the public `SectionWrapper`. One destructive `Section.config` JSON migration.
 
-**Tech Stack:** Phase 1/2 同様 + `@theme` token (admin.css/public.css) + ScrollReveal animation primitive
+**Tech Stack:** Same as Phase 1/2 + `@theme` tokens (admin.css/public.css) + ScrollReveal animation primitive
 
-**Branch:** `refactor/docs-diataxis` で続行（Phase 1+2 の延長）
+**Branch:** Continue on `refactor/docs-diataxis` (extension of Phases 1+2)
 
 ---
 
-## Phase 3A: 共通 layout schema factory
+## Phase 3A: Shared layout schema factory
 
-### Task 1: `sectionLayoutSchema` 作成
+### Task 1: Create `sectionLayoutSchema`
 
 **Files:** Create `src/shared/lib/sections/definitions/_shared/layout.ts`
 
-- [ ] **Step 1: 実装**
+- [ ] **Step 1: Implement**
 
 ```typescript
 // src/shared/lib/sections/definitions/_shared/layout.ts
@@ -46,30 +46,30 @@ export type LayoutContainerWidth =
 export type LayoutAnimate = (typeof LAYOUT_ANIMATE_VALUES)[number];
 
 export const sectionLayoutSchema = field.group(
-  "レイアウト・表示制御",
+  "Layout & Display Controls",
   {
-    padding: field.select("上下余白", {
+    padding: field.select("Vertical Padding", {
       options: LAYOUT_PADDING_VALUES,
       default: "md",
-      helpText: "セクション上下のスペース",
+      helpText: "Vertical spacing for the section",
     }),
-    containerWidth: field.select("コンテナ幅", {
+    containerWidth: field.select("Container Width", {
       options: LAYOUT_CONTAINER_WIDTH_VALUES,
       default: "lg",
-      helpText: "コンテンツの最大幅",
+      helpText: "Maximum content width",
     }),
-    hideOnMobile: field.boolean("モバイルで非表示", {
+    hideOnMobile: field.boolean("Hide on Mobile", {
       default: false,
-      helpText: "768px 未満で非表示",
+      helpText: "Hidden below 768px",
     }),
-    hideOnDesktop: field.boolean("デスクトップで非表示", {
+    hideOnDesktop: field.boolean("Hide on Desktop", {
       default: false,
-      helpText: "768px 以上で非表示",
+      helpText: "Hidden at 768px and above",
     }),
-    animateOnScroll: field.select("入場アニメーション", {
+    animateOnScroll: field.select("Entrance Animation", {
       options: LAYOUT_ANIMATE_VALUES,
       default: "fade-up",
-      helpText: "スクロール時の表示演出",
+      helpText: "Reveal effect on scroll",
     }),
   },
   { group: "design" },
@@ -78,7 +78,7 @@ export const sectionLayoutSchema = field.group(
 export type SectionLayoutConfig = z.infer<typeof sectionLayoutSchema>;
 ```
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -88,13 +88,13 @@ git commit -m "feat(sections): add sectionLayoutSchema shared factory"
 
 ---
 
-## Phase 3B: 23 sections への一斉注入 + per-section field 削除
+## Phase 3B: Bulk inject into 23 sections + remove per-section fields
 
-### Task 2: 全 23 sections に layout: sectionLayoutSchema を追加
+### Task 2: Add layout: sectionLayoutSchema to all 23 sections
 
 **Files:** Modify all 23 `definitions/<type>/schema.ts`
 
-対象（Phase 1 で確認した 23 type）:
+Targets (23 types confirmed in Phase 1):
 
 - `page-hero` / `hero` / `hero-parallax` / `concept` / `custom`
 - `space-list` / `space-showcase` / `news-list` / `post-list` / `faq-list`
@@ -102,22 +102,22 @@ git commit -m "feat(sections): add sectionLayoutSchema shared factory"
 - `cta` / `contact-form` / `map` / `embed` / `instagram` / `event-calendar`
 - `homepage-how-it-works` / `homepage-spaces` / `homepage-features` / `homepage-cta`
 
-各 schema の `z.object({...})` または `.discriminatedUnion(...)` の各 variant に `layout: sectionLayoutSchema` を追加。
+Add `layout: sectionLayoutSchema` to each `z.object({...})` or each variant in `.discriminatedUnion(...)`.
 
-注意: page-hero は discriminated union (3 variants) — **3 variants 全部に layout を追加**。
+Note: `page-hero` uses a discriminated union (3 variants) — **add `layout` to all three variants**.
 
 ```typescript
-// 例: cta/schema.ts
+// Example: cta/schema.ts
 import { sectionLayoutSchema } from "../_shared/layout";
 
 export const ctaConfigSchema = z.object({
-  // ... 既存
+  // ... existing
   layout: sectionLayoutSchema,
 });
 ```
 
-- [ ] **Step 1: 全 23 schema 更新**
-- [ ] **Step 2: 検証**
+- [ ] **Step 1: Update all 23 schemas**
+- [ ] **Step 2: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -130,24 +130,24 @@ git add src/shared/lib/sections/definitions/
 git commit -m "refactor(sections): inject sectionLayoutSchema into all 23 section schemas"
 ```
 
-### Task 3: per-section padding/maxWidth/containerWidth 削除
+### Task 3: Remove per-section padding/maxWidth/containerWidth
 
 **Files:**
 
-- Modify `custom/schema.ts`: 削除 `padding` / `maxWidth`
-- Modify `embed/schema.ts`: 削除 `maxWidth`
-- Modify `faq-list/schema.ts`: 削除 `containerWidth`
+- Modify `custom/schema.ts`: Remove `padding` / `maxWidth`
+- Modify `embed/schema.ts`: Remove `maxWidth`
+- Modify `faq-list/schema.ts`: Remove `containerWidth`
 
-注意:
+Notes:
 
-- `validations/section.ts` の重複 schema 定義（Phase 2 でも対応した legacy SSoT 違反）も同期更新
-- `cta.variant` (default/centered/split) は内部バリアントのため**残す**
-- `concept.layout` / `features.layout` / `gallery.layout` も内部レイアウトのため残す
-- `hero.height` / `hero-parallax.height` も svh 高さで `layout.padding` と直交、残す
+- Also update the duplicated schema definitions in `validations/section.ts` (legacy SSoT violation also handled in Phase 2).
+- Keep `cta.variant` (default/centered/split) because it is an internal variant.
+- Keep `concept.layout` / `features.layout` / `gallery.layout` because they are internal layouts.
+- Keep `hero.height` / `hero-parallax.height` because they are svh heights and orthogonal to `layout.padding`.
 
-- [ ] **Step 1: 3 section schema 更新**
-- [ ] **Step 2: validations/section.ts も同期更新**
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 1: Update the 3 section schemas**
+- [ ] **Step 2: Update `validations/section.ts` in sync**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -160,26 +160,26 @@ git commit -m "chore(sections): drop per-section padding/maxWidth/containerWidth
 
 ## Phase 3C: section-options cleanup
 
-### Task 4: `paddingValues` / `maxWidthValues` の caller を新 LAYOUT\_\* に置換 or 削除
+### Task 4: Replace or remove `paddingValues` / `maxWidthValues` callers with new LAYOUT\_\* values
 
 **Files:**
 
 - Modify: `src/shared/lib/validations/section-options.ts`
-- 全 caller を grep で列挙
+- List all callers via grep
 
-- [ ] **Step 1: caller 確認**
+- [ ] **Step 1: Confirm callers**
 
 ```bash
 grep -rln "paddingValues\|maxWidthValues" src/ --include="*.ts" --include="*.tsx"
 ```
 
-- [ ] **Step 2: 各 caller を `LAYOUT_PADDING_VALUES` / `LAYOUT_CONTAINER_WIDTH_VALUES` (`@/shared/lib/sections/definitions/_shared/layout`) からの import に置換**
+- [ ] **Step 2: Replace each caller with imports from `LAYOUT_PADDING_VALUES` / `LAYOUT_CONTAINER_WIDTH_VALUES` (`@/shared/lib/sections/definitions/_shared/layout`)**
 
-公開 renderer / parser helper（`section-parsers.ts` の `parsePadding` / `parseMaxWidth`）は新 layout token に切替。
+Switch public renderers / parser helpers (`parsePadding` / `parseMaxWidth` in `section-parsers.ts`) to the new layout tokens.
 
-- [ ] **Step 3: `section-options.ts` から `paddingValues` / `Padding` / `maxWidthValues` / `MaxWidth` を削除**
+- [ ] **Step 3: Remove `paddingValues` / `Padding` / `maxWidthValues` / `MaxWidth` from `section-options.ts`**
 
-- [ ] **Step 4: 検証 + Commit**
+- [ ] **Step 4: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -189,18 +189,18 @@ git commit -m "refactor(sections): remove orphan paddingValues/maxWidthValues fr
 
 ---
 
-## Phase 3D: 公開 SectionWrapper
+## Phase 3D: Public SectionWrapper
 
-### Task 5: `SectionWrapper` 作成
+### Task 5: Create `SectionWrapper`
 
 **Files:**
 
 - Create: `src/app/(public)/_components/sections/SectionWrapper.tsx`
 
-- [ ] **Step 1: 実装（spec §5 のコード）**
+- [ ] **Step 1: Implement (spec §5 code)**
 
 ```tsx
-"use client"; // ScrollReveal が "use client" のため
+"use client"; // ScrollReveal requires "use client"
 import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import type {
@@ -277,9 +277,9 @@ function mapAnimateVariant(
 }
 ```
 
-ScrollReveal の variant が "fade-up" / "fade" / "scale" 全部対応しているか実装確認。なければ ScrollReveal 拡張（spec §7 risk）。
+Confirm ScrollReveal supports variants "fade-up" / "fade" / "scale". If not, extend ScrollReveal (spec §7 risk).
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -287,15 +287,15 @@ git add src/app/\(public\)/_components/sections/SectionWrapper.tsx
 git commit -m "feat(public): SectionWrapper applies layout/visibility/animation uniformly"
 ```
 
-### Task 6: 全 23 section components を SectionWrapper でラップ
+### Task 6: Wrap all 23 section components with SectionWrapper
 
-**Files:** 全公開 section component（HeroSection / CTASection / etc）
+**Files:** All public section components (HeroSection / CTASection / etc)
 
-- [ ] **Step 1: 各 section component を `<SectionWrapper layout={config.layout}>` でラップ**
+- [ ] **Step 1: Wrap each section component with `<SectionWrapper layout={config.layout}>`**
 
-各 section component の最外殻 `<section>` を削除し、`<SectionWrapper>` に置換。
+Remove each section component’s outer `<section>` and replace with `<SectionWrapper>`.
 
-例:
+Example:
 
 ```tsx
 // Before
@@ -309,7 +309,7 @@ export function CTASection({ config }: { config: CtaConfig }) {
 }
 ```
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -326,7 +326,7 @@ git commit -m "refactor(public): wrap all 23 section components with SectionWrap
 
 **Files:** Create `prisma/migrations/<TS>_section_layout_unification/migration.sql`
 
-- [ ] **Step 1: Migration SQL を Python heredoc で書き出し**
+- [ ] **Step 1: Write migration SQL using a Python heredoc**
 
 ```bash
 TS=$(date -u +%Y%m%d%H%M%S)
@@ -336,7 +336,7 @@ python3 -c "import os; os.makedirs('prisma/migrations/${TS}_section_layout_unifi
 python3 << 'PY'
 import os
 ts = open('/tmp/migration-ts-3e.txt').read().strip()
-sql = r"""-- Phase 3: per-section padding/maxWidth/containerWidth → layout group に移行
+sql = r"""-- Phase 3: move per-section padding/maxWidth/containerWidth into layout group
 
 -- custom
 UPDATE sections SET config = jsonb_set(
@@ -384,7 +384,7 @@ print(f'Wrote: {path}')
 PY
 ```
 
-- [ ] **Step 2: 適用**
+- [ ] **Step 2: Apply**
 
 ```bash
 TS=$(cat /tmp/migration-ts-3e.txt)
@@ -392,7 +392,7 @@ bunx --bun prisma db execute --file prisma/migrations/${TS}_section_layout_unifi
 bunx --bun prisma migrate resolve --applied "${TS}_section_layout_unification"
 ```
 
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run validate && bun run build 2>&1 | tail -10
@@ -403,7 +403,7 @@ git commit -m "feat(prisma): migration — relocate per-section padding/maxWidth
 
 ---
 
-## Phase 3F: テスト
+## Phase 3F: Tests
 
 ### Task 8: sectionLayoutSchema + SectionWrapper unit tests
 
@@ -411,14 +411,14 @@ git commit -m "feat(prisma): migration — relocate per-section padding/maxWidth
 
 - Create: `__tests__/unit/shared/lib/sections/section-layout.test.ts`
 
-- [ ] **Step 1: schema test**
+- [ ] **Step 1: Schema test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
 import { sectionLayoutSchema } from "@/shared/lib/sections/definitions/_shared/layout";
 
 describe("sectionLayoutSchema", () => {
-  test("空オブジェクトで全フィールド default 補完", () => {
+  test("fills all fields with defaults for empty object", () => {
     const r = sectionLayoutSchema.safeParse({});
     expect(r.success).toBe(true);
     if (r.success) {
@@ -430,12 +430,12 @@ describe("sectionLayoutSchema", () => {
     }
   });
 
-  test("不正な padding は reject", () => {
+  test("rejects invalid padding", () => {
     const r = sectionLayoutSchema.safeParse({ padding: "extra-large" });
     expect(r.success).toBe(false);
   });
 
-  test("hideOnMobile + hideOnDesktop 両方 true でも valid（運用上は完全非表示）", () => {
+  test("allows hideOnMobile + hideOnDesktop both true (fully hidden in practice)", () => {
     const r = sectionLayoutSchema.safeParse({
       hideOnMobile: true,
       hideOnDesktop: true,
@@ -443,14 +443,14 @@ describe("sectionLayoutSchema", () => {
     expect(r.success).toBe(true);
   });
 
-  test("animateOnScroll: none を許容", () => {
+  test("allows animateOnScroll: none", () => {
     const r = sectionLayoutSchema.safeParse({ animateOnScroll: "none" });
     expect(r.success).toBe(true);
   });
 });
 ```
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun test __tests__/unit/shared/lib/sections/section-layout.test.ts 2>&1 | tail -5
@@ -464,25 +464,25 @@ git commit -m "test(sections): sectionLayoutSchema unit tests"
 
 ### Spec coverage
 
-- [x] Section 1 共通 layout schema → Task 1
-- [x] Section 2 23 sections 注入 → Task 2
-- [x] Section 3 per-section field 削除 → Task 3
+- [x] Section 1 shared layout schema → Task 1
+- [x] Section 2 inject into 23 sections → Task 2
+- [x] Section 3 remove per-section fields → Task 3
 - [x] Section 4 migration → Task 7
 - [x] Section 5 SectionWrapper → Task 5, 6
 - [x] section-options cleanup → Task 4
-- [x] テスト → Task 8
+- [x] Tests → Task 8
 
 ### Type consistency
 
-- [x] `LAYOUT_PADDING_VALUES` / `LAYOUT_CONTAINER_WIDTH_VALUES` / `LAYOUT_ANIMATE_VALUES` 命名統一
-- [x] `SectionLayoutConfig` / `LayoutPadding` / `LayoutContainerWidth` / `LayoutAnimate` 型 export
+- [x] `LAYOUT_PADDING_VALUES` / `LAYOUT_CONTAINER_WIDTH_VALUES` / `LAYOUT_ANIMATE_VALUES` naming consistency
+- [x] `SectionLayoutConfig` / `LayoutPadding` / `LayoutContainerWidth` / `LayoutAnimate` type exports
 
 ---
 
 ## Execution Recommendation
 
-Subagent dispatch 推奨:
+Subagent dispatch recommended:
 
-- **Bundle 1 (Tasks 1-4)**: schema 統一 + section-options cleanup（4 commits）
-- **Bundle 2 (Tasks 5-7)**: 公開 renderer + migration（3 commits）
-- **Bundle 3 (Task 8)**: テスト（1 commit、controller 直接実装で OK）
+- **Bundle 1 (Tasks 1-4)**: schema unification + section-options cleanup (4 commits)
+- **Bundle 2 (Tasks 5-7)**: public renderer + migration (3 commits)
+- **Bundle 3 (Task 8)**: tests (1 commit, direct controller implementation OK)

@@ -1,76 +1,76 @@
 # Admin Page Editor Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) または `superpowers:executing-plans` to implement task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Spec:** `docs/superpowers/specs/2026-05-02-admin-page-editor-redesign-design.md`
 
-**Goal:** `/admin/pages/[slug]/edit` を master-detail UI + 意味別フィールドグループ + Section CRUD/並び替え + PageHero 統合した clean-break refactor で刷新する。
+**Goal:** Revamp `/admin/pages/[slug]/edit` with a clean-break refactor: master-detail UI + semantic field groups + Section CRUD/reorder + PageHero integration.
 
-**Architecture:** ① additive な新規コード（field-registry の `subGroup`、page-hero registry 登録、CRUD Server Actions、master-detail UI コンポーネント）を先に追加。② 公開ページ・seed の caller を新パスに切替。③ destructive migration で `Page.pageHero` 列を Section テーブルへ移管 + 旧コード一式削除を 1 commit で atomically 実施。
+**Architecture:** ① Add additive new code first (field-registry `subGroup`, page-hero registry registration, CRUD Server Actions, master-detail UI components). ② Switch public pages and seed callers to the new paths. ③ Run a destructive migration to move the `Page.pageHero` column into the Section table + remove legacy code in a single atomic commit.
 
 **Tech Stack:** Prisma 7.8 / PostgreSQL / Next.js 16.2 / React 19 + Compiler 1.0 / Zod 4 / nuqs 2.8 / dnd-kit / Radix UI / Tailwind 4.2 / bun:test
 
-**Branch:** 現在の `refactor/docs-diataxis` で続行（spec 既コミット済み、新ブランチを切ると孤立）。完了後 `bun run validate && bun run build` 通過 → main へ `git merge --ff-only`（または PR）。
+**Branch:** Continue on current `refactor/docs-diataxis` (spec already committed; a new branch would be orphaned). After completion, pass `bun run validate && bun run build` → `git merge --ff-only` into main (or PR).
 
 ---
 
 ## File Structure
 
-### 新規作成
+### New files
 
-| パス                                                                                         | 役割                                                                        |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `src/shared/lib/sections/definitions/page-hero/schema.ts`                                    | discriminated union (editorial-split / compact / minimal)                   |
-| `src/shared/lib/sections/definitions/page-hero/defaults.ts`                                  | 各 variant のデフォルト値                                                   |
-| `src/shared/lib/sections/definitions/page-hero/metadata.ts`                                  | label / icon / category                                                     |
-| `src/shared/lib/sections/definitions/page-hero/index.ts`                                     | SectionDefinition export                                                    |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListSidebar.tsx`     | 左サイド：dnd-kit Sortable + + ボタン                                       |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListItem.tsx`        | 1 行：drag handle / icon / label / kebab / active toggle                    |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditPanel.tsx`       | 右パネル：選択中 section の AutoSectionForm 描画 + page-hero variant Select |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/AddSectionDialog.tsx`       | + ボタン → type picker dialog                                               |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionTypePicker.tsx`      | type 選択 UI                                                                |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/section-edit-state.ts`      | nuqs query state SSoT                                                       |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/FieldGroupSection.tsx` | 意味別グループ見出しラッパー                                                |
-| `prisma/migrations/<TS>_drop_page_hero_to_section/migration.sql`                             | destructive migration                                                       |
-| `__tests__/unit/sections/page-hero-schema.test.ts`                                           | page-hero registry テスト                                                   |
-| `__tests__/integration/actions/admin/page-section-crud.test.ts`                              | CRUD Server Action 統合テスト                                               |
+| Path                                                                                         | Purpose                                                                      |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/shared/lib/sections/definitions/page-hero/schema.ts`                                    | discriminated union (editorial-split / compact / minimal)                    |
+| `src/shared/lib/sections/definitions/page-hero/defaults.ts`                                  | Default values for each variant                                              |
+| `src/shared/lib/sections/definitions/page-hero/metadata.ts`                                  | label / icon / category                                                      |
+| `src/shared/lib/sections/definitions/page-hero/index.ts`                                     | SectionDefinition export                                                     |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListSidebar.tsx`     | Left sidebar: dnd-kit Sortable + Add button                                  |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListItem.tsx`        | Single row: drag handle / icon / label / kebab / active toggle               |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditPanel.tsx`       | Right panel: AutoSectionForm for selected section + page-hero variant Select |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/AddSectionDialog.tsx`       | Add button → type picker dialog                                              |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionTypePicker.tsx`      | Type selection UI                                                            |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/section-edit-state.ts`      | nuqs query state SSoT                                                        |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/FieldGroupSection.tsx` | Semantic group heading wrapper                                               |
+| `prisma/migrations/<TS>_drop_page_hero_to_section/migration.sql`                             | destructive migration                                                        |
+| `__tests__/unit/sections/page-hero-schema.test.ts`                                           | page-hero registry tests                                                     |
+| `__tests__/integration/actions/admin/page-section-crud.test.ts`                              | CRUD Server Action integration tests                                         |
 
-### 変更
+### Changes
 
-| パス                                                                                         | 内容                                                          |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `src/shared/lib/sections/field-registry.ts`                                                  | `subGroup?: FieldSubGroup` 追加、helpers opts 拡張            |
-| `src/shared/lib/sections/registry.ts`                                                        | page-hero 登録、homepage-hero 既廃止コメント維持              |
-| `src/shared/lib/sections/definitions/<22 types>/schema.ts`                                   | 各 schema の `field.*()` 呼び出しに `subGroup` 注入           |
-| `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts`                          | CRUD + reorder 5 関数追加、validations + cache invalidation   |
-| `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts`                    | 新規入力型を追加                                              |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx` | content フィールドを subGroup で分類描画                      |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageEditor.tsx`             | master-detail 化                                              |
-| `src/app/(public)/_components/homepage/HomepageSections.tsx` (or similar)                    | page.pageHero → sections.find(type=page-hero)                 |
-| `src/app/(preview)/preview/pages/[slug]/page.tsx`                                            | 同上                                                          |
-| `prisma/seed.ts`                                                                             | seedPages の pageHero 書き込みを page-hero section 挿入に置換 |
-| `prisma/schema.prisma`                                                                       | `Page.pageHero` 列を削除（最終 commit）                       |
+| Path                                                                                         | Details                                                          |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `src/shared/lib/sections/field-registry.ts`                                                  | Add `subGroup?: FieldSubGroup`, extend helper opts               |
+| `src/shared/lib/sections/registry.ts`                                                        | Register page-hero, keep deprecated homepage-hero comment        |
+| `src/shared/lib/sections/definitions/<22 types>/schema.ts`                                   | Inject `subGroup` into each schema's `field.*()` calls           |
+| `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts`                          | Add 5 CRUD + reorder functions, validations + cache invalidation |
+| `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts`                    | Add new input types                                              |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx` | Render content fields grouped by subGroup                        |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageEditor.tsx`             | Convert to master-detail                                         |
+| `src/app/(public)/_components/homepage/HomepageSections.tsx` (or similar)                    | page.pageHero → sections.find(type=page-hero)                    |
+| `src/app/(preview)/preview/pages/[slug]/page.tsx`                                            | Same                                                             |
+| `prisma/seed.ts`                                                                             | Replace seedPages pageHero write with page-hero section insert   |
+| `prisma/schema.prisma`                                                                       | Remove `Page.pageHero` column (final commit)                     |
 
-### 削除（最終 commit で）
+### Removals (in final commit)
 
 - `src/shared/lib/sections/page-hero/schema.ts`
 - `src/shared/lib/sections/page-hero/defaults.ts`
-- `src/shared/lib/sections/page-hero/index.ts` （ディレクトリごと）
+- `src/shared/lib/sections/page-hero/index.ts` (entire directory)
 - `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageHeroEditor.tsx`
 - `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditor.tsx`
-- `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts` の `updatePageHero` 関数
+- `updatePageHero` function in `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts`
 
 ---
 
-## Phase A: field-registry に subGroup 追加
+## Phase A: Add subGroup to field-registry
 
-### Task A1: `FieldMeta` に optional `subGroup` を追加
+### Task A1: Add optional `subGroup` to `FieldMeta`
 
 **Files:**
 
 - Modify: `src/shared/lib/sections/field-registry.ts`
 
-- [ ] **Step 1: `FieldMeta` interface に `subGroup` 追加**
+- [ ] **Step 1: Add `subGroup` to the `FieldMeta` interface**
 
 ```typescript
 // src/shared/lib/sections/field-registry.ts L16-23
@@ -88,11 +88,11 @@ export interface FieldMeta {
 }
 ```
 
-- [ ] **Step 2: 全 helper opts インターフェースに `subGroup` 追加**
+- [ ] **Step 2: Add `subGroup` to all helper opts interfaces**
 
-`TextOpts` / `TextareaOpts` / `NumberOpts` / `BooleanOpts` / `SelectOpts` / `StringFieldOpts`（image / icon / url 用）/ `ArrayOpts` / `GroupOpts` の opts に共通で `readonly subGroup?: FieldSubGroup` を加える。
+Add `readonly subGroup?: FieldSubGroup` to the opts for `TextOpts` / `TextareaOpts` / `NumberOpts` / `BooleanOpts` / `SelectOpts` / `StringFieldOpts` (image / icon / url) / `ArrayOpts` / `GroupOpts`.
 
-例:
+Example:
 
 ```typescript
 interface TextOpts extends StringConstraints {
@@ -104,9 +104,9 @@ interface TextOpts extends StringConstraints {
 }
 ```
 
-- [ ] **Step 3: 全 `field.*` 関数で `subGroup` を `register` に渡す**
+- [ ] **Step 3: Pass `subGroup` into `register` in all `field.*` helpers**
 
-各 helper の `fieldRegistry.register(schema, { ...meta })` 呼び出しで opts.subGroup を伝播。例:
+Propagate opts.subGroup in each `fieldRegistry.register(schema, { ...meta })` call. Example:
 
 ```typescript
 function text(label: string, opts: TextOpts = {}) {
@@ -126,15 +126,15 @@ function text(label: string, opts: TextOpts = {}) {
 }
 ```
 
-`exactOptionalPropertyTypes: true` のため、optional property の代入は条件スプレッドで `subGroup` を含める or 含めないを切り分ける。
+Because `exactOptionalPropertyTypes: true`, use conditional spreads to include or omit `subGroup` without assigning undefined.
 
-- [ ] **Step 4: 検証**
+- [ ] **Step 4: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -30
 ```
 
-Expected: EXIT=0、エラーなし（既存 schema 群は未注入なので default `subGroup === undefined` で動作）。
+Expected: EXIT=0, no errors (existing schemas are not annotated yet, so default `subGroup === undefined` works).
 
 - [ ] **Step 5: Commit**
 
@@ -145,54 +145,54 @@ git commit -m "feat(field-registry): add optional subGroup to FieldMeta"
 
 ---
 
-### Task A2: 既存 22 section schema に `subGroup` を注入
+### Task A2: Inject `subGroup` into the existing 22 section schemas
 
 **Files:**
 
-- Modify: `src/shared/lib/sections/definitions/<type>/schema.ts` × 22 ファイル
+- Modify: `src/shared/lib/sections/definitions/<type>/schema.ts` × 22 files
 
-注入ルール:
+Injection rules:
 
-- `field.text` / `field.textarea` で**ラベル / タイトル / 説明 / 文言系** → `subGroup: "text"`
+- `field.text` / `field.textarea` for **labels / titles / descriptions / copy** → `subGroup: "text"`
 - `field.image` → `subGroup: "image"`
-- 画像配列の `field.array` → `subGroup: "image"`
-- ボタン用 `field.url` / ボタン文言の `field.text` / ボタン配列 `field.array` → `subGroup: "button"`
-- 上記以外（`section ラベル` / `tagline` / `viewAllText` / `categoryFilter` 等の identifier 系） → 未指定（"other"）
+- Image array `field.array` → `subGroup: "image"`
+- Button-related `field.url` / button text `field.text` / button array `field.array` → `subGroup: "button"`
+- Everything else (identifier-like `section label` / `tagline` / `viewAllText` / `categoryFilter`) → leave undefined ("other")
 
-- [ ] **Step 1: 全 schema を grep で列挙**
+- [ ] **Step 1: List all schemas**
 
 ```bash
 ls src/shared/lib/sections/definitions/ | wc -l
 ```
 
-Expected: 22 ディレクトリ（page-hero はまだ作っていないので 22）。
+Expected: 22 directories (page-hero is not created yet).
 
-- [ ] **Step 2: 各 schema に subGroup 注入（22 ファイル）**
+- [ ] **Step 2: Inject subGroup into each schema (22 files)**
 
-例: `definitions/cta/schema.ts`
+Example: `definitions/cta/schema.ts`
 
 ```typescript
 import { field } from "@/shared/lib/sections/field-registry";
 import { z } from "zod";
 
 export const ctaConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", { subGroup: "text" }),
-  title: field.text("タイトル", { subGroup: "text" }),
-  description: field.textarea("説明", { subGroup: "text" }),
-  buttons: field.array("ボタン", {
+  sectionLabel: field.text("Section Label", { subGroup: "text" }),
+  title: field.text("Title", { subGroup: "text" }),
+  description: field.textarea("Description", { subGroup: "text" }),
+  buttons: field.array("Buttons", {
     subGroup: "button",
     fields: {
-      text: field.text("ボタン文言"),
+      text: field.text("Button Text"),
       url: field.url("URL"),
-      variant: field.select("バリエーション", {
+      variant: field.select("Variant", {
         options: ["primary", "secondary", "outline"],
         default: "primary",
       }),
-      openInNewTab: field.boolean("新しいタブで開く"),
+      openInNewTab: field.boolean("Open in new tab"),
     },
   }),
-  backgroundColor: field.color("背景色", { group: "design" }),
-  variant: field.select("レイアウト", {
+  backgroundColor: field.color("Background Color", { group: "design" }),
+  variant: field.select("Layout", {
     group: "design",
     options: ["default", "centered", "split"],
     default: "default",
@@ -200,18 +200,18 @@ export const ctaConfigSchema = z.object({
 });
 ```
 
-注意: array / group の **内側の field.\* には subGroup を付けない**（親の subGroup を継承する形）。
+Note: **Do not add subGroup to inner field.\*** inside array/group (inherit from parent subGroup).
 
-各 schema を順次更新。
+Update each schema in sequence.
 
-- [ ] **Step 3: 検証**
+- [ ] **Step 3: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -10
 bun run lint 2>&1 | tail -10
 ```
 
-Expected: EXIT=0。
+Expected: EXIT=0.
 
 - [ ] **Step 4: Commit**
 
@@ -222,9 +222,9 @@ git commit -m "feat(sections): annotate 22 section schemas with subGroup"
 
 ---
 
-## Phase B: page-hero を Section レジストリに登録
+## Phase B: Register page-hero in the Section registry
 
-### Task B1: `definitions/page-hero/` 作成
+### Task B1: Create `definitions/page-hero/`
 
 **Files:**
 
@@ -233,7 +233,7 @@ git commit -m "feat(sections): annotate 22 section schemas with subGroup"
 - Create: `src/shared/lib/sections/definitions/page-hero/metadata.ts`
 - Create: `src/shared/lib/sections/definitions/page-hero/index.ts`
 
-- [ ] **Step 1: `schema.ts` を作成（discriminated union）**
+- [ ] **Step 1: Create `schema.ts` (discriminated union)**
 
 ```typescript
 // src/shared/lib/sections/definitions/page-hero/schema.ts
@@ -242,43 +242,43 @@ import { field } from "@/shared/lib/sections/field-registry";
 
 const editorialSplitSchema = z.object({
   variant: z.literal("editorial-split"),
-  label: field.text("ラベル", { subGroup: "text" }).default(""),
-  title: field.text("タイトル", { subGroup: "text" }).default(""),
-  description: field.textarea("説明", { subGroup: "text" }).default(""),
+  label: field.text("Label", { subGroup: "text" }).default(""),
+  title: field.text("Title", { subGroup: "text" }).default(""),
+  description: field.textarea("Description", { subGroup: "text" }).default(""),
   images: field
-    .array("ヒーロー画像", {
+    .array("Hero Images", {
       subGroup: "image",
       fields: {
-        url: field.image("画像 URL"),
-        alt: field.text("代替テキスト"),
+        url: field.image("Image URL"),
+        alt: field.text("Alt Text"),
       },
     })
     .default([]),
-  transition: field.select("トランジション", {
+  transition: field.select("Transition", {
     subGroup: "image",
     options: ["crossfade", "ken-burns", "clip-reveal", "scale-fade"],
     default: "crossfade",
   }),
-  buttonText: field.text("ボタン文言", { subGroup: "button" }).default(""),
-  buttonUrl: field.url("ボタン URL", { subGroup: "button" }).default(""),
+  buttonText: field.text("Button Text", { subGroup: "button" }).default(""),
+  buttonUrl: field.url("Button URL", { subGroup: "button" }).default(""),
 });
 
 const compactSchema = z.object({
   variant: z.literal("compact"),
   image: z.object({
-    url: field.image("画像 URL", { subGroup: "image" }),
-    alt: field.text("代替テキスト"),
+    url: field.image("Image URL", { subGroup: "image" }),
+    alt: field.text("Alt Text"),
   }),
-  label: field.text("ラベル", { subGroup: "text" }).default(""),
-  title: field.text("タイトル", { subGroup: "text" }).default(""),
-  description: field.textarea("説明", { subGroup: "text" }).default(""),
+  label: field.text("Label", { subGroup: "text" }).default(""),
+  title: field.text("Title", { subGroup: "text" }).default(""),
+  description: field.textarea("Description", { subGroup: "text" }).default(""),
 });
 
 const minimalSchema = z.object({
   variant: z.literal("minimal"),
-  eyebrow: field.text("アイブロー", { subGroup: "text" }).optional(),
-  title: field.text("タイトル", { subGroup: "text" }).default(""),
-  description: field.textarea("説明", { subGroup: "text" }).default(""),
+  eyebrow: field.text("Eyebrow", { subGroup: "text" }).optional(),
+  title: field.text("Title", { subGroup: "text" }).default(""),
+  description: field.textarea("Description", { subGroup: "text" }).default(""),
 });
 
 export const pageHeroConfigSchema = z.discriminatedUnion("variant", [
@@ -290,7 +290,7 @@ export const pageHeroConfigSchema = z.discriminatedUnion("variant", [
 export type PageHeroConfig = z.infer<typeof pageHeroConfigSchema>;
 ```
 
-- [ ] **Step 2: `defaults.ts` を作成**
+- [ ] **Step 2: Create `defaults.ts`**
 
 ```typescript
 // src/shared/lib/sections/definitions/page-hero/defaults.ts
@@ -299,19 +299,19 @@ import type { PageHeroConfig } from "./schema";
 export const DEFAULT_PAGE_HERO: PageHeroConfig = {
   variant: "editorial-split",
   label: "RENTAL SPACES",
-  title: "ここでしか叶わない、上質な時間。",
+  title: "Premium moments you can only have here.",
   description:
-    "ビジネスからプライベートまで、用途に合わせて選べる空間をご用意しています。",
+    "From business to private use, we offer spaces tailored to your needs.",
   images: [],
   transition: "crossfade",
-  buttonText: "スペースを見る",
+  buttonText: "View spaces",
   buttonUrl: "/spaces",
 };
 ```
 
-旧 `defaultPageHeroHome` の内容を踏襲する（既存 `src/shared/lib/sections/page-hero/defaults.ts` を参考）。
+Follow the contents of the old `defaultPageHeroHome` (refer to existing `src/shared/lib/sections/page-hero/defaults.ts`).
 
-- [ ] **Step 3: `metadata.ts` を作成**
+- [ ] **Step 3: Create `metadata.ts`**
 
 ```typescript
 // src/shared/lib/sections/definitions/page-hero/metadata.ts
@@ -320,16 +320,16 @@ import type { SectionMetadata } from "@/shared/lib/sections/types";
 
 export const pageHeroMetadata: SectionMetadata = {
   type: "page-hero",
-  label: "ページヒーロー",
-  description: "ページ先頭のヒーローエリア。variant で表示形式を切り替え",
+  label: "Page Hero",
+  description: "Hero area at the top of the page. Switch layout by variant.",
   icon: IconLayoutDashboard,
   category: "hero",
 };
 ```
 
-`SectionMetadata` の正確な field は `src/shared/lib/sections/types.ts` を確認して合わせる。
+Confirm the exact `SectionMetadata` fields in `src/shared/lib/sections/types.ts` and align accordingly.
 
-- [ ] **Step 4: `index.ts` を作成**
+- [ ] **Step 4: Create `index.ts`**
 
 ```typescript
 // src/shared/lib/sections/definitions/page-hero/index.ts
@@ -338,13 +338,13 @@ export { pageHeroMetadata } from "./metadata";
 export { DEFAULT_PAGE_HERO } from "./defaults";
 ```
 
-- [ ] **Step 5: 検証**
+- [ ] **Step 5: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -10
 ```
 
-Expected: EXIT=0。
+Expected: EXIT=0.
 
 - [ ] **Step 6: Commit**
 
@@ -355,13 +355,13 @@ git commit -m "feat(sections): add page-hero section definition (discriminated u
 
 ---
 
-### Task B2: registry.ts に page-hero を登録
+### Task B2: Register page-hero in registry.ts
 
 **Files:**
 
 - Modify: `src/shared/lib/sections/registry.ts`
 
-- [ ] **Step 1: import 追加 + sectionDefinitions マップに登録**
+- [ ] **Step 1: Add imports + register in sectionDefinitions map**
 
 ```typescript
 // registry.ts
@@ -370,29 +370,29 @@ import {
   pageHeroMetadata,
 } from "./definitions/page-hero";
 
-// ... 既存の登録
+// ... existing registrations
 "page-hero": {
   configSchema: pageHeroConfigSchema,
   metadata: pageHeroMetadata,
 },
 ```
 
-- [ ] **Step 2: section-metadata.ts に label/icon があれば追加**
+- [ ] **Step 2: Add label/icon to section-metadata.ts if present**
 
-`src/shared/lib/validations/section-metadata.ts` の `sectionTypeLabels` に `"page-hero": "ページヒーロー"` を追加。
+Add `"page-hero": "Page Hero"` to `sectionTypeLabels` in `src/shared/lib/validations/section-metadata.ts`.
 
-- [ ] **Step 3: SectionType 型拡張**
+- [ ] **Step 3: Extend SectionType type**
 
-`src/shared/lib/sections/types.ts` の `SectionType` union 型に `"page-hero"` を追加（自動で derive される構造ならスキップ）。
+Add `"page-hero"` to the `SectionType` union in `src/shared/lib/sections/types.ts` (skip if auto-derived).
 
-- [ ] **Step 4: 検証**
+- [ ] **Step 4: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -10
 bun run lint 2>&1 | tail -10
 ```
 
-Expected: EXIT=0。
+Expected: EXIT=0.
 
 - [ ] **Step 5: Commit**
 
@@ -403,7 +403,7 @@ git commit -m "feat(sections): register page-hero type in section registry"
 
 ---
 
-## Phase C: Section CRUD + 並び替え Server Actions
+## Phase C: Section CRUD + reorder Server Actions
 
 ### Task C1: `createPageSection` / `deletePageSection` / `duplicatePageSection`
 
@@ -411,9 +411,9 @@ git commit -m "feat(sections): register page-hero type in section registry"
 
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types.ts`
-- Modify: `src/shared/domain/sections/commands.ts` (新規 or 拡張)
+- Modify: `src/shared/domain/sections/commands.ts` (new or extension)
 
-- [ ] **Step 1: domain commands を実装**
+- [ ] **Step 1: Implement domain commands**
 
 `src/shared/domain/sections/commands.ts`:
 
@@ -431,25 +431,25 @@ export async function createSectionCommand(input: {
 }) {
   const definition = getSectionDefinition(input.type);
   if (!definition) {
-    throw new DomainError("不正なセクションタイプです", "VALIDATION");
+    throw new DomainError("Invalid section type.", "VALIDATION");
   }
 
-  // page-hero は 1 ページに 1 つのみ
+  // Only one page-hero per page
   if (input.type === "page-hero") {
     const existing = await prisma.section.findFirst({
       where: { pageId: input.pageId, type: "page-hero" },
       select: { id: true },
     });
     if (existing) {
-      throw new DomainError("ヒーローは既に存在します", "CONFLICT");
+      throw new DomainError("Hero already exists.", "CONFLICT");
     }
   }
 
-  // デフォルト config を生成
+  // Generate default config
   const defaultConfig = definition.configSchema.safeParse({});
   const config = defaultConfig.success ? defaultConfig.data : {};
 
-  // order: 末尾追加（同 pageId の max+1）
+  // order: append to end (max+1 for same pageId)
   const maxOrder = await prisma.section.aggregate({
     where: { pageId: input.pageId },
     _max: { order: true },
@@ -475,8 +475,7 @@ export async function deleteSectionCommand(id: string) {
     where: { id },
     select: { id: true, pageId: true, type: true },
   });
-  if (!section)
-    throw new DomainError("セクションが見つかりません", "NOT_FOUND");
+  if (!section) throw new DomainError("Section not found.", "NOT_FOUND");
 
   await prisma.section.delete({ where: { id } });
   return { id: section.id, pageId: section.pageId };
@@ -486,12 +485,12 @@ export async function duplicateSectionCommand(id: string) {
   const source = await prisma.section.findUnique({
     where: { id },
   });
-  if (!source) throw new DomainError("セクションが見つかりません", "NOT_FOUND");
+  if (!source) throw new DomainError("Section not found.", "NOT_FOUND");
   if (source.type === "page-hero") {
-    throw new DomainError("ヒーローは複製できません", "CONFLICT");
+    throw new DomainError("Hero cannot be duplicated.", "CONFLICT");
   }
 
-  // 直後に挿入: source.order+1 以降を全部+1 ずらす
+  // Insert immediately after: shift items after source.order by +1
   await prisma.$transaction(async (tx) => {
     await tx.section.updateMany({
       where: { pageId: source.pageId, order: { gt: source.order } },
@@ -515,14 +514,14 @@ export async function duplicateSectionCommand(id: string) {
     select: { id: true, pageId: true },
   });
 
-  if (!created) throw new DomainError("複製に失敗しました", "INTERNAL");
+  if (!created) throw new DomainError("Failed to duplicate.", "INTERNAL");
   return { id: created.id, pageId: created.pageId };
 }
 ```
 
-- [ ] **Step 2: Server Action ラッパーを書く**
+- [ ] **Step 2: Write Server Action wrappers**
 
-`src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts` に追加:
+Add to `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts`:
 
 ```typescript
 "use server";
@@ -537,7 +536,7 @@ import {
   deleteSectionCommand,
   duplicateSectionCommand,
 } from "@/shared/domain/sections/commands";
-import { sectionTypeSchema } from "@/shared/lib/sections/types"; // 既存 enum schema を流用 (なければ作成)
+import { sectionTypeSchema } from "@/shared/lib/sections/types"; // Reuse existing enum schema (create if missing)
 
 const createPageSectionSchema = z.object({
   pageId: z.string().uuid().nullable(),
@@ -601,15 +600,15 @@ export const duplicatePageSection = async (id: string) => {
 };
 ```
 
-注: `revalidateTag` の第 2 引数は `CACHE_LIFE` 定数（プロジェクト規約、`prisma-patterns.md` 参照）。プロジェクト既存パターンを model にして引数を合わせる。
+Note: the second argument to `revalidateTag` is the `CACHE_LIFE` constant (project convention; see `prisma-patterns.md`). Follow existing patterns for the argument.
 
-- [ ] **Step 3: 検証**
+- [ ] **Step 3: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -20
 ```
 
-Expected: EXIT=0。
+Expected: EXIT=0.
 
 - [ ] **Step 4: Commit**
 
@@ -627,7 +626,7 @@ git commit -m "feat(actions): createPageSection / deletePageSection / duplicateP
 - Modify: `src/shared/domain/sections/commands.ts`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/page-section.ts`
 
-- [ ] **Step 1: domain command 追加**
+- [ ] **Step 1: Add domain command**
 
 ```typescript
 export async function toggleSectionActiveCommand(id: string) {
@@ -635,8 +634,7 @@ export async function toggleSectionActiveCommand(id: string) {
     where: { id },
     select: { id: true, isActive: true, pageId: true },
   });
-  if (!section)
-    throw new DomainError("セクションが見つかりません", "NOT_FOUND");
+  if (!section) throw new DomainError("Section not found.", "NOT_FOUND");
 
   const updated = await prisma.section.update({
     where: { id },
@@ -650,7 +648,7 @@ export async function reorderSectionsCommand(input: {
   pageId: string | null;
   orderedIds: string[];
 }) {
-  // 検証: orderedIds が pageId に属するセクションと一致するか
+  // Validate: orderedIds match sections for pageId
   const existing = await prisma.section.findMany({
     where: { pageId: input.pageId },
     select: { id: true },
@@ -658,11 +656,11 @@ export async function reorderSectionsCommand(input: {
   const existingIds = new Set(existing.map((s) => s.id));
   for (const id of input.orderedIds) {
     if (!existingIds.has(id)) {
-      throw new DomainError("不正なセクション ID が含まれます", "VALIDATION");
+      throw new DomainError("Invalid section ID included.", "VALIDATION");
     }
   }
   if (existing.length !== input.orderedIds.length) {
-    throw new DomainError("セクション数が一致しません", "VALIDATION");
+    throw new DomainError("Section count does not match.", "VALIDATION");
   }
 
   await prisma.$transaction(async (tx) => {
@@ -680,7 +678,7 @@ export async function reorderSectionsCommand(input: {
 }
 ```
 
-- [ ] **Step 2: Server Action 追加**
+- [ ] **Step 2: Add Server Action**
 
 ```typescript
 export const togglePageSectionActive = async (id: string) => {
@@ -725,7 +723,7 @@ export const reorderPageSections = async (input: unknown) => {
 };
 ```
 
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -10
@@ -735,17 +733,17 @@ git commit -m "feat(actions): togglePageSectionActive / reorderPageSections"
 
 ---
 
-## Phase D: 新 UI コンポーネント（additive）
+## Phase D: New UI components (additive)
 
-### Task D1: AutoSectionForm の subGroup 分類描画 + FieldGroupSection
+### Task D1: Render AutoSectionForm by subGroup + FieldGroupSection
 
 **Files:**
 
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/FieldGroupSection.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx`
-- Modify: `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/zod-introspection.ts`（FieldInfo に subGroup を含める）
+- Modify: `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/zod-introspection.ts` (include subGroup in FieldInfo)
 
-- [ ] **Step 1: `FieldGroupSection` 作成**
+- [ ] **Step 1: Create `FieldGroupSection`**
 
 ```tsx
 // FieldGroupSection.tsx
@@ -777,17 +775,17 @@ export function FieldGroupSection({
 }
 ```
 
-- [ ] **Step 2: `extractSchemaFields` で subGroup を抽出**
+- [ ] **Step 2: Extract subGroup in `extractSchemaFields`**
 
-`zod-introspection.ts` の `FieldInfo` 型に `subGroup` を追加（meta から transparent に渡す）。`fieldRegistry.get(schema)?.subGroup` を `FieldInfo.meta.subGroup` に渡す。
+Add `subGroup` to the `FieldInfo` type in `zod-introspection.ts` (pass through transparently from meta). Pass `fieldRegistry.get(schema)?.subGroup` to `FieldInfo.meta.subGroup`.
 
-- [ ] **Step 3: `auto-section-form.tsx` を subGroup 分類描画に書き換え**
+- [ ] **Step 3: Rewrite `auto-section-form.tsx` to render by subGroup**
 
-既存 L168-222 の form body 部分:
+Existing form body (around L168-222):
 
 ```tsx
-// 既存: contentFields.map(renderField)
-// 新規: subGroup ごとに FieldGroupSection で分類
+// Existing: contentFields.map(renderField)
+// New: group by subGroup using FieldGroupSection
 
 const textFields = contentFields.filter((f) => f.meta.subGroup === "text");
 const imageFields = contentFields.filter((f) => f.meta.subGroup === "image");
@@ -800,22 +798,22 @@ return (
   <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
     <div className="space-y-6">
       {isCustomType && (
-        <FieldGroupSection title="本文" icon={IconArticle}>
+        <FieldGroupSection title="Body" icon={IconArticle}>
           <LexicalEditor ... />
         </FieldGroupSection>
       )}
       {textFields.length > 0 && (
-        <FieldGroupSection title="テキスト" icon={IconTypography}>
+        <FieldGroupSection title="Text" icon={IconTypography}>
           {textFields.map(renderField)}
         </FieldGroupSection>
       )}
       {imageFields.length > 0 && (
-        <FieldGroupSection title="画像" icon={IconPhoto}>
+        <FieldGroupSection title="Images" icon={IconPhoto}>
           {imageFields.map(renderField)}
         </FieldGroupSection>
       )}
       {buttonFields.length > 0 && (
-        <FieldGroupSection title="ボタン・リンク" icon={IconLink}>
+        <FieldGroupSection title="Buttons & Links" icon={IconLink}>
           {buttonFields.map(renderField)}
         </FieldGroupSection>
       )}
@@ -824,10 +822,10 @@ return (
       )}
     </div>
 
-    {/* design / advanced は既存 Accordion */}
+    {/* design / advanced use existing Accordion */}
     {hasAccordionContent && (
       <Accordion type="multiple" className="border-t border-border" defaultValue={[]}>
-        {/* 既存と同じ */}
+        {/* same as existing */}
       </Accordion>
     )}
 
@@ -836,9 +834,9 @@ return (
 );
 ```
 
-icon import: `IconArticle / IconTypography / IconPhoto / IconLink` from `@tabler/icons-react`。
+icon import: `IconArticle / IconTypography / IconPhoto / IconLink` from `@tabler/icons-react`.
 
-- [ ] **Step 4: 検証 + Commit**
+- [ ] **Step 4: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -10
@@ -848,14 +846,14 @@ git commit -m "feat(auto-section-form): render content fields by subGroup with s
 
 ---
 
-### Task D2: SectionListSidebar + SectionListItem (DnD なし)
+### Task D2: SectionListSidebar + SectionListItem (no DnD)
 
 **Files:**
 
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListSidebar.tsx`
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListItem.tsx`
 
-- [ ] **Step 1: `SectionListItem.tsx` 作成**
+- [ ] **Step 1: Create `SectionListItem.tsx`**
 
 ```tsx
 "use client";
@@ -913,7 +911,7 @@ export function SectionListItem({
       <button
         type="button"
         className="flex min-h-11 min-w-11 cursor-grab items-center justify-center text-muted-foreground"
-        aria-label="並び替え"
+        aria-label="Reorder"
         {...dragHandleProps}
       >
         <IconGripVertical className="h-4 w-4" />
@@ -939,7 +937,7 @@ export function SectionListItem({
           <button
             type="button"
             className="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-            aria-label="操作"
+            aria-label="Actions"
           >
             <IconDotsVertical className="h-4 w-4" />
           </button>
@@ -951,12 +949,12 @@ export function SectionListItem({
             ) : (
               <IconEye className="mr-2 h-4 w-4" />
             )}
-            {section.isActive ? "非表示にする" : "表示する"}
+            {section.isActive ? "Hide" : "Show"}
           </DropdownMenuItem>
           {canDuplicate && (
             <DropdownMenuItem onClick={onDuplicate}>
               <IconCopy className="mr-2 h-4 w-4" />
-              複製
+              Duplicate
             </DropdownMenuItem>
           )}
           {canDelete && (
@@ -964,7 +962,7 @@ export function SectionListItem({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className="text-destructive">
                 <IconTrash className="mr-2 h-4 w-4" />
-                削除
+                Delete
               </DropdownMenuItem>
             </>
           )}
@@ -975,7 +973,7 @@ export function SectionListItem({
 }
 ```
 
-- [ ] **Step 2: `SectionListSidebar.tsx` 作成（DnD なし）**
+- [ ] **Step 2: Create `SectionListSidebar.tsx` (no DnD)**
 
 ```tsx
 "use client";
@@ -1027,20 +1025,20 @@ export function SectionListSidebar({
         toast.error(result.error);
         return;
       }
-      toast.success("セクションを複製しました");
+      toast.success("Section duplicated");
       router.refresh();
     });
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm("このセクションを削除しますか？")) return;
+    if (!confirm("Delete this section?")) return;
     startTransition(async () => {
       const result = await deletePageSection(id);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
-      toast.success("セクションを削除しました");
+      toast.success("Section deleted");
       router.refresh();
     });
   };
@@ -1048,16 +1046,16 @@ export function SectionListSidebar({
   return (
     <aside className="space-y-2 lg:sticky lg:top-6">
       <div className="flex items-center justify-between px-2">
-        <h2 className="text-sm font-medium text-foreground">セクション</h2>
+        <h2 className="text-sm font-medium text-foreground">Sections</h2>
         <Button size="sm" variant="outline" onClick={onAddClick}>
           <IconPlus className="mr-1 h-4 w-4" />
-          追加
+          Add
         </Button>
       </div>
       <div className="space-y-0.5 rounded-lg border border-border bg-card p-2">
         {sections.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-            セクションがありません
+            No sections
           </p>
         ) : (
           sections.map((section) => (
@@ -1080,7 +1078,7 @@ export function SectionListSidebar({
 }
 ```
 
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -10
@@ -1097,7 +1095,7 @@ git commit -m "feat(page-edit): SectionListSidebar + SectionListItem (no DnD yet
 
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditPanel.tsx`
 
-- [ ] **Step 1: `SectionEditPanel.tsx` 作成**
+- [ ] **Step 1: Create `SectionEditPanel.tsx`**
 
 ```tsx
 "use client";
@@ -1125,9 +1123,9 @@ import type { ConfigFormSavePayload } from "../../_sections/_components/config-f
 import { isRecord } from "@/shared/lib/serialize";
 
 const PAGE_HERO_VARIANTS = [
-  { value: "editorial-split", label: "エディトリアル分割" },
-  { value: "compact", label: "コンパクト" },
-  { value: "minimal", label: "ミニマル" },
+  { value: "editorial-split", label: "Editorial Split" },
+  { value: "compact", label: "Compact" },
+  { value: "minimal", label: "Minimal" },
 ] as const;
 
 interface SectionEditPanelProps {
@@ -1142,7 +1140,7 @@ export function SectionEditPanel({
   const [isPending, startTransition] = useTransition();
   const isPageHero = section.type === "page-hero";
 
-  // page-hero の variant を URL/state で管理（form remount のため）
+  // Manage page-hero variant in URL/state (to remount the form)
   const initialVariant =
     isPageHero &&
     isRecord(section.config) &&
@@ -1163,17 +1161,17 @@ export function SectionEditPanel({
         toast.error(result.error);
         return;
       }
-      toast.success("保存しました");
+      toast.success("Saved");
       onUpdated?.();
     });
   };
 
   const handleVariantChange = (value: string) => {
     setVariant(value);
-    // セクションを variant で remount → AutoSectionForm が新 variant の defaults で初期化される
+    // Remount section by variant → AutoSectionForm initializes with new defaults
   };
 
-  // page-hero のときは variant を上書きした config を渡して form を再構築
+  // For page-hero, pass config with overridden variant to rebuild the form
   const adjustedSection = isPageHero
     ? {
         ...section,
@@ -1198,7 +1196,7 @@ export function SectionEditPanel({
       <CardContent className="space-y-4">
         {isPageHero && (
           <div className="space-y-2">
-            <Label htmlFor="page-hero-variant">バリアント</Label>
+            <Label htmlFor="page-hero-variant">Variant</Label>
             <Select value={variant} onValueChange={handleVariantChange}>
               <SelectTrigger id="page-hero-variant">
                 <SelectValue />
@@ -1212,7 +1210,7 @@ export function SectionEditPanel({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              バリアント変更時、現在のフォーム入力はリセットされます
+              Changing the variant resets the current form input
             </p>
           </div>
         )}
@@ -1229,7 +1227,7 @@ export function SectionEditPanel({
 }
 ```
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -10
@@ -1246,7 +1244,7 @@ git commit -m "feat(page-edit): SectionEditPanel with page-hero variant Select"
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/AddSectionDialog.tsx`
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionTypePicker.tsx`
 
-- [ ] **Step 1: `SectionTypePicker.tsx` 作成（type 選択 grid）**
+- [ ] **Step 1: Create `SectionTypePicker.tsx` (type selection grid)**
 
 ```tsx
 "use client";
@@ -1300,7 +1298,7 @@ export function SectionTypePicker({
 }
 ```
 
-- [ ] **Step 2: `AddSectionDialog.tsx` 作成**
+- [ ] **Step 2: Create `AddSectionDialog.tsx`**
 
 ```tsx
 "use client";
@@ -1341,7 +1339,7 @@ export function AddSectionDialog({
         toast.error(result.error);
         return;
       }
-      toast.success("セクションを追加しました");
+      toast.success("Section added");
       onOpenChange(false);
       router.refresh();
     });
@@ -1351,7 +1349,7 @@ export function AddSectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80svh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>セクションを追加</DialogTitle>
+          <DialogTitle>Add Section</DialogTitle>
         </DialogHeader>
         <SectionTypePicker
           availableTypes={availableTypes}
@@ -1364,7 +1362,7 @@ export function AddSectionDialog({
 }
 ```
 
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -10
@@ -1381,7 +1379,7 @@ git commit -m "feat(page-edit): AddSectionDialog + SectionTypePicker"
 
 - Create: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/section-edit-state.ts`
 
-- [ ] **Step 1: SSoT parser 定義**
+- [ ] **Step 1: Define SSoT parser**
 
 ```typescript
 import { parseAsString } from "nuqs";
@@ -1400,21 +1398,21 @@ git commit -m "feat(page-edit): URL state parser for active section"
 
 ---
 
-### Task D6: dnd-kit による drag-and-drop reorder
+### Task D6: Drag-and-drop reorder with dnd-kit
 
 **Files:**
 
 - Modify: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionListSidebar.tsx`
 
-- [ ] **Step 1: `@dnd-kit/core` `@dnd-kit/sortable` の存在確認**
+- [ ] **Step 1: Check for `@dnd-kit/core` `@dnd-kit/sortable`**
 
 ```bash
 grep -E "@dnd-kit/(core|sortable|modifiers)" package.json
 ```
 
-Expected: `@dnd-kit/core` `@dnd-kit/sortable` `@dnd-kit/modifiers` がインストール済み。
+Expected: `@dnd-kit/core` `@dnd-kit/sortable` `@dnd-kit/modifiers` installed.
 
-- [ ] **Step 2: SectionListSidebar に DndContext + SortableContext + reorderPageSections action 配線**
+- [ ] **Step 2: Wire DndContext + SortableContext + reorderPageSections action in SectionListSidebar**
 
 ```tsx
 import {
@@ -1465,7 +1463,7 @@ function SortableSectionListItem(props: SectionListItemProps & { id: string }) {
   );
 }
 
-// SectionListSidebar 内部
+// Inside SectionListSidebar
 const sensors = useSensors(
   useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -1480,8 +1478,8 @@ const handleDragEnd = (event: DragEndEvent) => {
   if (oldIndex === -1 || newIndex === -1) return;
 
   const newOrder = arrayMove(sections.slice(), oldIndex, newIndex);
-  // Optimistic UI: 親 PageEditor が router.refresh() で再取得するまで一旦表示順だけ即時反映できると better
-  // 簡易版: server action のみ
+  // Optimistic UI: parent PageEditor refreshes later; better to reflect order immediately
+  // Simple version: server action only
   startTransition(async () => {
     const result = await reorderPageSections({
       pageId: sections[0]?.pageId ?? null,
@@ -1518,7 +1516,7 @@ const handleDragEnd = (event: DragEndEvent) => {
 </DndContext>;
 ```
 
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -10
@@ -1529,15 +1527,15 @@ git commit -m "feat(page-edit): drag-and-drop reorder with dnd-kit"
 
 ---
 
-## Phase E: Wire-up + 公開側切替
+## Phase E: Wire-up + public-side switch
 
-### Task E1: PageEditor を master-detail に書き換え
+### Task E1: Rewrite PageEditor to master-detail
 
 **Files:**
 
 - Modify: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageEditor.tsx`
 
-- [ ] **Step 1: master-detail 構造に書き換え**
+- [ ] **Step 1: Rewrite to master-detail structure**
 
 ```tsx
 "use client";
@@ -1601,7 +1599,7 @@ export function PageEditor({ page }: PageEditorProps) {
   const activeSection =
     sections.find((s) => s.id === activeSectionId) ?? sections[0];
 
-  // 利用可能 type: page-hero は既に存在すれば除外、homepage-* は home のみ
+  // Available types: exclude page-hero if already present; homepage-* only for home
   const isHomepage = page.slug === "home";
   const hasPageHero = sections.some((s) => s.type === "page-hero");
   const availableTypes = (
@@ -1651,11 +1649,12 @@ export function PageEditor({ page }: PageEditorProps) {
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle>セクションを選択</CardTitle>
+                  <CardTitle>Select a section</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    左の一覧からセクションを選択するか、「追加」でセクションを作成してください
+                    Select a section from the list on the left or create one
+                    with Add.
                   </p>
                 </CardContent>
               </Card>
@@ -1682,9 +1681,9 @@ export function PageEditor({ page }: PageEditorProps) {
 }
 ```
 
-注: `getPageForEdit` の戻り値 `PageForEdit` は現状 `pageHero` を含む形だが、Task E2 以降で sections に統合する。本タスクは仮に `pageHero` を ignore する形で書く（後段で adjusted）。
+Note: `getPageForEdit` currently returns `PageForEdit` including `pageHero`, but Task E2+ integrates it into sections. For this task, ignore `pageHero` (adjust later).
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -20
@@ -1694,30 +1693,30 @@ git commit -m "feat(page-edit): wire master-detail layout in PageEditor"
 
 ---
 
-### Task E2: 公開ページ HomepageSections を page-hero section 経由に切替
+### Task E2: Switch public HomepageSections to use the page-hero section
 
 **Files:**
 
-- Modify: 公開ホームページ用 sections renderer（Explore で正確な location 確認）
+- Modify: Public homepage sections renderer (confirm exact location via Explore)
 - Modify: `src/app/(preview)/preview/pages/[slug]/page.tsx`
-- Modify: `src/admin/queries/page-section.ts`（getPageForEdit / getPageWithSections の戻り値型から `pageHero` を除去または page-hero section に統合）
+- Modify: `src/admin/queries/page-section.ts` (remove `pageHero` from getPageForEdit/getPageWithSections return types or integrate into the page-hero section)
 
-- [ ] **Step 1: 該当 caller を grep で列挙**
+- [ ] **Step 1: List relevant callers via grep**
 
 ```bash
 grep -rln "page\.pageHero\|pageHero\b" src/ --include="*.ts" --include="*.tsx"
 ```
 
-得られたリストすべてを確認し、以下のいずれかに分類:
+Review all results and classify into one of the following:
 
-- (A) 旧 `parsePageHero` / `pageHeroSchema` / `defaultPageHeroHome` を import している → page-hero section から取得する形に書き換え
-- (B) `page.pageHero` JSON 値を直接使っている → 同様
-- (C) DB query (`select: { pageHero: true }`) → select から削除
+- (A) Imports old `parsePageHero` / `pageHeroSchema` / `defaultPageHeroHome` → rewrite to read from page-hero section
+- (B) Uses `page.pageHero` JSON directly → same change
+- (C) DB query (`select: { pageHero: true }`) → remove from select
 
-- [ ] **Step 2: 公開 HomepageSections を section 経由に書き換え**
+- [ ] **Step 2: Rewrite public HomepageSections to use sections**
 
 ```typescript
-// src/app/(public)/_components/homepage/HomepageSections.tsx (path 要確認)
+// src/app/(public)/_components/homepage/HomepageSections.tsx (confirm path)
 import { isRecord } from "@/shared/lib/serialize";
 import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero";
 // ...
@@ -1739,35 +1738,35 @@ export function HomepageSections({ sections }: { sections: SectionData[] }) {
 }
 ```
 
-`PageHero` Server Component は props を `{ config: PageHeroConfig }` に書き換え（旧の `pageHero: PageHero` props を削除）。
+Rewrite the `PageHero` Server Component props to `{ config: PageHeroConfig }` (remove old `pageHero: PageHero` props).
 
-- [ ] **Step 3: preview ページも同様**
+- [ ] **Step 3: Do the same for the preview page**
 
 ```typescript
 // src/app/(preview)/preview/pages/[slug]/page.tsx
 const pageHeroSection = page.sections.find(
   (s) => s.type === "page-hero" && s.isActive,
 );
-// HomepageSections に pageHero を渡す行を削除
+// Remove the line passing pageHero to HomepageSections
 ```
 
-- [ ] **Step 4: admin queries の戻り値型から `pageHero` を除去**
+- [ ] **Step 4: Remove `pageHero` from admin query return types**
 
-`src/admin/queries/page-section.ts` の `getPageForEdit` / `getPageWithSections` の `select` から `pageHero: true` を削除し、戻り値型 `PageForEdit` から `pageHero` field を削除。
+Remove `pageHero: true` from `select` in `getPageForEdit` / `getPageWithSections` in `src/admin/queries/page-section.ts`, and remove the `pageHero` field from `PageForEdit`.
 
-- [ ] **Step 5: 検証**
+- [ ] **Step 5: Validate**
 
 ```bash
 grep -rln "page\.pageHero\|\.pageHero\b" src/ --include="*.ts" --include="*.tsx"
 ```
 
-Expected: 0 ヒット（schema.prisma 以外）。
+Expected: 0 hits (except schema.prisma).
 
 ```bash
 bun run type-check 2>&1 | tail -20
 ```
 
-Expected: EXIT=0（`Page.pageHero` 列はまだ存在するため Prisma 型定義は通る）。
+Expected: EXIT=0 (Prisma types still pass because the `Page.pageHero` column remains).
 
 - [ ] **Step 6: Commit**
 
@@ -1778,34 +1777,34 @@ git commit -m "refactor(public): HomepageSections reads page-hero section instea
 
 ---
 
-### Task E3: seedPages を page-hero section 挿入に変更
+### Task E3: Change seedPages to insert a page-hero section
 
 **Files:**
 
 - Modify: `prisma/seed.ts`
 
-- [ ] **Step 1: `seedPages` の home 部分を改修**
+- [ ] **Step 1: Revise the home portion of `seedPages`**
 
 ```typescript
-// prisma/seed.ts (関連部分)
+// prisma/seed.ts (relevant portion)
 import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero";
 
 async function seedPages(prisma: AppPrismaClient) {
-  // 既存のページ作成ロジック（pageHero を渡さない）
+  // Existing page creation logic (do not pass pageHero)
   const home = await prisma.page.upsert({
     where: { slug: "home" },
     create: {
       slug: "home",
-      title: "ホーム",
+      title: "Home",
       isPublished: true,
       isSystemPage: true,
-      // pageHero フィールドは渡さない
+      // Do not pass pageHero field
     },
     update: {},
     select: { id: true },
   });
 
-  // page-hero section を idempotent に挿入
+  // Insert page-hero section idempotently
   const existingHero = await prisma.section.findFirst({
     where: { pageId: home.id, type: "page-hero" },
     select: { id: true },
@@ -1821,25 +1820,25 @@ async function seedPages(prisma: AppPrismaClient) {
       },
     });
   }
-  // ... 他の section seed
+  // ... other section seeds
 }
 ```
 
-- [ ] **Step 2: 検証**
+- [ ] **Step 2: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -10
 ```
 
-Expected: EXIT=0。
+Expected: EXIT=0.
 
 ```bash
-# seed 実行（pageHero 列がまだ schema にあるが、書き込まないので OK）
+# Run seed (pageHero column still in schema, but not written)
 bun prisma/seed.ts 2>&1 | tail -5
-bun prisma/seed.ts 2>&1 | tail -5  # idempotency 確認
+bun prisma/seed.ts 2>&1 | tail -5  # check idempotency
 ```
 
-Expected: エラーなし、二度目も idempotent。
+Expected: no errors, idempotent on second run.
 
 - [ ] **Step 3: Commit**
 
@@ -1850,42 +1849,42 @@ git commit -m "chore(seed): seedPages inserts page-hero section instead of pageH
 
 ---
 
-## Phase F: 旧 PageEditor 関連削除（schema 変更前）
+## Phase F: Remove legacy PageEditor items (before schema change)
 
-### Task F1: 旧 PageHeroEditor / updatePageHero / SectionEditor を削除
+### Task F1: Remove legacy PageHeroEditor / updatePageHero / SectionEditor
 
 **Files:**
 
 - Delete: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/PageHeroEditor.tsx`
 - Delete: `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditor.tsx`
-- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts` （`updatePageHero` 関数を削除）
+- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts` (remove `updatePageHero` function)
 
-- [ ] **Step 1: 参照確認**
+- [ ] **Step 1: Check references**
 
 ```bash
 grep -rln "PageHeroEditor\|SectionEditor\|updatePageHero" src/ --include="*.ts" --include="*.tsx"
 ```
 
-PageEditor 経由の参照が残っていないことを確認（Task E1 で除去済みのはず）。
+Confirm there are no remaining references from PageEditor (should be removed in Task E1).
 
-- [ ] **Step 2: ファイル削除**
+- [ ] **Step 2: Remove files**
 
 ```bash
 git rm src/app/\(admin\)/admin/\(dashboard\)/pages/\[slug\]/edit/_components/PageHeroEditor.tsx
 git rm src/app/\(admin\)/admin/\(dashboard\)/pages/\[slug\]/edit/_components/SectionEditor.tsx
 ```
 
-- [ ] **Step 3: `updatePageHero` 関数を `page.ts` から削除**
+- [ ] **Step 3: Remove `updatePageHero` function from `page.ts`**
 
-`src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts` から `updatePageHero` 関数定義と export を削除。
+Remove the `updatePageHero` function definition and export from `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts`.
 
-- [ ] **Step 4: 検証**
+- [ ] **Step 4: Validate**
 
 ```bash
 bun run validate 2>&1 | tail -20
 ```
 
-Expected: EXIT=0。
+Expected: EXIT=0.
 
 - [ ] **Step 5: Commit**
 
@@ -1896,9 +1895,9 @@ git commit -m "chore(admin): drop PageHeroEditor / SectionEditor / updatePageHer
 
 ---
 
-## Phase G: Destructive migration + 旧 page-hero schema 削除
+## Phase G: Destructive migration + remove legacy page-hero schema
 
-### Task G1: Page.pageHero 列 DROP + data migration + 旧コード削除（atomic 1 commit）
+### Task G1: Drop Page.pageHero column + data migration + remove legacy code (atomic 1 commit)
 
 **Files:**
 
@@ -1906,23 +1905,23 @@ git commit -m "chore(admin): drop PageHeroEditor / SectionEditor / updatePageHer
 - Modify: `prisma/schema.prisma`
 - Delete: `src/shared/lib/sections/page-hero/{schema,defaults,index}.ts`
 
-- [ ] **Step 1: 事前 grep で残留参照ゼロ確認**
+- [ ] **Step 1: Pre-check for zero remaining references via grep**
 
 ```bash
 grep -rln "pageHero\|PageHero\|parsePageHero\|pageHeroSchema\|defaultPageHeroHome" \
   src/ --include="*.ts" --include="*.tsx" | grep -v "definitions/page-hero"
 ```
 
-Expected: 出力ゼロ（新 `definitions/page-hero/` ディレクトリ以外で参照なし）。
+Expected: no output (no references outside the new `definitions/page-hero/` directory).
 
 ```bash
-# schema.prisma の現状確認
+# Check current schema.prisma
 grep -n "pageHero" prisma/schema.prisma
 ```
 
-Expected: `pageHero Json?` 1 行のみ残存。
+Expected: only one `pageHero Json?` line remains.
 
-- [ ] **Step 2: TS タイムスタンプでディレクトリ作成**
+- [ ] **Step 2: Create directory with TS timestamp**
 
 ```bash
 TS=$(date -u +%Y%m%d%H%M%S)
@@ -1930,12 +1929,12 @@ python3 -c "import os; os.makedirs('prisma/migrations/${TS}_drop_page_hero_to_se
 echo "$TS" > /tmp/migration-ts.txt
 ```
 
-- [ ] **Step 3: migration.sql を Python で書き出し**
+- [ ] **Step 3: Write migration.sql with Python**
 
 ```bash
 TS=$(cat /tmp/migration-ts.txt)
 python3 -c "
-sql = '''-- 1) Page.pageHero JSON を Section テーブルに移行（home page のみ対象）
+sql = '''-- 1) Migrate Page.pageHero JSON to the Section table (home page only)
 INSERT INTO sections (id, \"pageId\", \"type\", \"config\", \"order\", \"isActive\", \"createdAt\", \"updatedAt\")
 SELECT
   gen_random_uuid(),
@@ -1952,28 +1951,28 @@ WHERE p.\"pageHero\" IS NOT NULL
     SELECT 1 FROM sections s WHERE s.\"pageId\" = p.id AND s.\"type\" = 'page-hero'
   );
 
--- 2) Page.pageHero 列を削除
+-- 2) Drop the Page.pageHero column
 ALTER TABLE pages DROP COLUMN \"pageHero\";
 '''
 open(f'prisma/migrations/${TS}_drop_page_hero_to_section/migration.sql', 'w', encoding='utf-8').write(sql)
 "
 ```
 
-- [ ] **Step 4: schema.prisma から `pageHero Json?` 行を削除**
+- [ ] **Step 4: Remove the `pageHero Json?` line from schema.prisma**
 
 ```typescript
-// prisma/schema.prisma の Page モデル
+// Page model in prisma/schema.prisma
 model Page {
   id                 String       @id @default(uuid()) @db.Uuid
   slug               String       @unique
   title              String
-  // pageHero Json? を削除
+  // remove pageHero Json?
   description        String?      @db.Text
-  // ... 残り
+  // ... remaining
 }
 ```
 
-- [ ] **Step 5: migration を適用**
+- [ ] **Step 5: Apply migration**
 
 ```bash
 TS=$(cat /tmp/migration-ts.txt)
@@ -1982,27 +1981,27 @@ bunx --bun prisma migrate resolve --applied "${TS}_drop_page_hero_to_section" 2>
 bun run db:generate 2>&1 | tail -3
 ```
 
-Expected: 全 EXIT=0。drift エラーが出る場合は git-migration.md の手動パターンに従う。
+Expected: all EXIT=0. If a drift error appears, follow the manual pattern in git-migration.md.
 
-- [ ] **Step 6: 旧 page-hero ディレクトリを削除**
+- [ ] **Step 6: Remove legacy page-hero directory**
 
 ```bash
 git rm -r src/shared/lib/sections/page-hero/
 ```
 
-- [ ] **Step 7: 検証**
+- [ ] **Step 7: Validate**
 
 ```bash
 bun run validate 2>&1 | tail -20
 bun run build 2>&1 | tail -30
 ```
 
-Expected: 両方 EXIT=0。
+Expected: both EXIT=0.
 
 - [ ] **Step 8: smoke test**
 
 ```bash
-# dev DB で Page.pageHero が消え、Section テーブルに type=page-hero が存在することを確認
+# Verify in dev DB that Page.pageHero is gone and Section has type=page-hero
 bun -e "
 const { PrismaClient } = require('./generated/prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
@@ -2019,7 +2018,7 @@ const p = new PrismaClient({ adapter: new PrismaPg(pool) });
 "
 ```
 
-Expected: `page-hero count: 1` 以上、`config keys: [ 'variant', 'label', 'title', ... ]`。
+Expected: `page-hero count: 1` or more, `config keys: [ 'variant', 'label', 'title', ... ]`.
 
 - [ ] **Step 9: Commit (atomic)**
 
@@ -2027,22 +2026,22 @@ Expected: `page-hero count: 1` 以上、`config keys: [ 'variant', 'label', 'tit
 TS=$(cat /tmp/migration-ts.txt)
 git add prisma/migrations/${TS}_drop_page_hero_to_section/migration.sql \
        prisma/schema.prisma \
-       src/shared/lib/sections/page-hero/  # deletion を stage
+       src/shared/lib/sections/page-hero/  # stage deletion
 git commit -m "feat(prisma): destructive migration — move Page.pageHero to Section, drop column"
 ```
 
 ---
 
-## Phase H: テスト
+## Phase H: Tests
 
-### Task H1: page-hero registry + section CRUD 単体テスト
+### Task H1: page-hero registry + section CRUD unit tests
 
 **Files:**
 
 - Create: `__tests__/unit/sections/page-hero-schema.test.ts`
 - Create: `__tests__/unit/domain/sections/commands.test.ts`
 
-- [ ] **Step 1: page-hero schema テスト**
+- [ ] **Step 1: page-hero schema tests**
 
 ```typescript
 // __tests__/unit/sections/page-hero-schema.test.ts
@@ -2089,7 +2088,7 @@ describe("pageHeroConfigSchema", () => {
 });
 ```
 
-- [ ] **Step 2: section CRUD command 単体テスト（mock-based）**
+- [ ] **Step 2: section CRUD command unit tests (mock-based)**
 
 ```typescript
 // __tests__/unit/domain/sections/commands.test.ts
@@ -2154,18 +2153,18 @@ describe("deleteSectionCommand", () => {
 });
 ```
 
-- [ ] **Step 3: 実行**
+- [ ] **Step 3: Run**
 
 ```bash
 bun test __tests__/unit/sections/page-hero-schema.test.ts 2>&1 | tail -10
 bun test __tests__/unit/domain/sections/commands.test.ts 2>&1 | tail -10
 ```
 
-Expected: 全 PASS。
+Expected: all PASS.
 
-- [ ] **Step 4: package.json `test:unit` バッチに登録**
+- [ ] **Step 4: Register in package.json `test:unit` batch**
 
-`package.json` の `test:unit` スクリプトに `bun test __tests__/unit/sections && bun test __tests__/unit/domain/sections` 等を追加（既存パターン参照）。
+Add `bun test __tests__/unit/sections && bun test __tests__/unit/domain/sections` to the `test:unit` script in `package.json` (follow existing patterns).
 
 - [ ] **Step 5: Commit**
 
@@ -2180,60 +2179,60 @@ git commit -m "test(sections): page-hero schema + section CRUD commands unit tes
 
 ### Spec coverage
 
-- [x] Section 1.1 列 DROP → Task G1
+- [x] Section 1.1 column drop → Task G1
 - [x] Section 1.3 migration SQL → Task G1
-- [x] Section 2.1 page-hero registry 登録 → Task B1, B2
-- [x] Section 2.2 旧コード削除 → Task F1, G1
-- [x] Section 2.3 公開 renderer → Task E2
+- [x] Section 2.1 page-hero registry registration → Task B1, B2
+- [x] Section 2.2 remove legacy code → Task F1, G1
+- [x] Section 2.3 public renderers → Task E2
 - [x] Section 3 field-registry subGroup → Task A1, A2
 - [x] Section 4 Server Actions CRUD/reorder → Task C1, C2
-- [x] Section 5 master-detail UI → Task D1〜D6, E1
+- [x] Section 5 master-detail UI → Task D1–D6, E1
 - [x] Section 6 URL state → Task D5
 - [x] Section 7 AutoSectionForm subGroup → Task D1
-- [x] Section 8 seed.ts 更新 → Task E3
-- [x] Section 9 post-list.categoryId → **未対応（spec で「簡易対応 = カスタム UI」と決定したが具体タスクなし）** → Phase 3 spec へ移管
-- [x] Section 10 テスト方針 → Task H1（migration data preservation test は Phase 3 候補）
+- [x] Section 8 seed.ts updates → Task E3
+- [x] Section 9 post-list.categoryId → **Unaddressed (spec decided "lightweight = custom UI" but no concrete task)** → moved to Phase 3 spec
+- [x] Section 10 test strategy → Task H1 (migration data preservation test is a Phase 3 candidate)
 
-**ギャップ**:
+**Gaps**:
 
-1. **`post-list.categoryId` の簡易対応**: Spec §9 では「`SectionEditPanel` 内で別 UI レンダリング」と決めたが、本 plan では未対応。理由: `post-list` セクション編集時のみ必要、Phase 3 で対応する方が clean。
-2. **migration data preservation 統合テスト**: Spec §10.1 で予定したが、実 DB 接続が必要で複雑。本 Phase ではローカル smoke test (Task G1 Step 8) で代替し、Phase 2 で追加検討。
+1. **Lightweight handling for `post-list.categoryId`**: Spec §9 decided to render a separate UI inside `SectionEditPanel`, but this plan does not cover it. Rationale: only needed when editing the `post-list` section; cleaner to handle in Phase 3.
+2. **Migration data preservation integration test**: Planned in Spec §10.1, but requires real DB connections and is complex. This phase uses a local smoke test (Task G1 Step 8) instead, and we can consider adding it in Phase 2.
 
-これら 2 点は `docs/superpowers/specs/2026-05-02-admin-page-editor-redesign-design.md` の Out of Scope セクションに合致するため deferred 妥当。
+These two items align with the Out of Scope section in `docs/superpowers/specs/2026-05-02-admin-page-editor-redesign-design.md`, so deferring is reasonable.
 
 ### Placeholder scan
 
-- [x] "TBD" / "TODO" 検索 → なし
-- [x] 「適切なエラーハンドリング」「バリデーション」抽象記述 → なし
-- [x] 全ステップにコードブロックまたは具体コマンドあり
+- [x] "TBD" / "TODO" search → none
+- [x] Abstract phrases like "proper error handling" or "validation" → none
+- [x] Every step includes code blocks or concrete commands
 
 ### Type consistency
 
-- [x] `createSectionCommand` / `deleteSectionCommand` / `duplicateSectionCommand` / `toggleSectionActiveCommand` / `reorderSectionsCommand` 命名統一
-- [x] Server Action は `createPageSection` / `deletePageSection` / `duplicatePageSection` / `togglePageSectionActive` / `reorderPageSections` 命名統一
-- [x] `PageHeroConfig` / `pageHeroConfigSchema` / `DEFAULT_PAGE_HERO` 命名統一
-- [x] `FieldSubGroup` / `subGroup` 命名統一
+- [x] `createSectionCommand` / `deleteSectionCommand` / `duplicateSectionCommand` / `toggleSectionActiveCommand` / `reorderSectionsCommand` naming consistency
+- [x] Server Actions `createPageSection` / `deletePageSection` / `duplicatePageSection` / `togglePageSectionActive` / `reorderPageSections` naming consistency
+- [x] `PageHeroConfig` / `pageHeroConfigSchema` / `DEFAULT_PAGE_HERO` naming consistency
+- [x] `FieldSubGroup` / `subGroup` naming consistency
 
 ---
 
 ## Execution Recommendation
 
-**Subagent-Driven Development を推奨**:
+**Recommend Subagent-Driven Development**:
 
-- Phase A → B → C → D → E → F → G → H の順で逐次実行
-- Phase A2 (22 schema 注入) は 1 implementer に全 22 ファイル更新を bundle
-- Phase G1 (destructive migration) は最も危険なので fresh subagent で個別 dispatch + 完了後 controller が `git log --oneline` + `git show --stat HEAD` で実在検証
-- 各 Phase 完了後 `bun run validate` を controller 側で確認
+- Execute sequentially in order: Phase A → B → C → D → E → F → G → H
+- Phase A2 (injecting 22 schemas) should be bundled to a single implementer for all 22 files
+- Phase G1 (destructive migration) is the riskiest, so dispatch a fresh subagent; after completion the controller verifies with `git log --oneline` + `git show --stat HEAD`
+- After each phase, have the controller run `bun run validate`
 
-**実行コマンド**:
+**Execution commands**:
 
 ```bash
-# 開始前の sanity check
-git status --short  # クリーンであるべき
-bunx --bun prisma migrate status  # 未適用 migration なし確認
-bun run validate  # ベースライン EXIT=0 確認
+# Pre-flight sanity checks
+git status --short  # should be clean
+bunx --bun prisma migrate status  # confirm no pending migrations
+bun run validate  # confirm baseline EXIT=0
 ```
 
 ---
 
-**Plan 完成。次は subagent-driven-development で逐次実装。**
+**Plan complete. Next, implement sequentially with subagent-driven-development.**

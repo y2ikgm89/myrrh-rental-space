@@ -724,6 +724,7 @@ await adminAuthClient.resetPassword({
 - **proxy.ts の `/admin/login` ガードを削除しない** — Admin Gate が無効化されると管理画面ログインページが公開される。修正時は gate cookie / token の2条件を維持すること。セッション cookie の存在だけでは通過させない（CUSTOMER ロールのセッションでもログインフォームが露出するため）
 - **`verifyAdminSession` は非管理者ロールを `/` にリダイレクト** — `/admin/login` ではなく `/` にリダイレクトする。`/admin/login` にリダイレクトすると Admin Gate で 404 になるか、gate cookie があれば無限リダイレクトループが発生する
 - **`DASHBOARD_ROLES`（`@/shared/lib/admin-auth`）がダッシュボードアクセス可能なロールの Single Source of Truth** — `verifyAdminSession`・ログインページで共有。ロール追加時はこの定数のみ更新
+- **`/admin/api/*` の Client fetch が 404 になる原因の典型は admin セッション切れ** — proxy.ts は `/admin` プレフィックスを持つ全パスにセッション必須チェックを適用するため、`/admin/api/notifications/unread-count` 等の admin API も対象。セッション cookie 不在 → `/admin/login` 307 redirect → fetch が redirect follow → `/admin/login` で admin-gate cookie もなければ `handleAdminLoginGate` が 404 を返却 → ブラウザコンソールには「API が 404」と見える silent debug trap。切り分け: ① `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/admin/api/...` で 307 が出れば proxy redirect、② DevTools → Application → Cookies で `admin-auth.session_token` と `admin_login_gate` の有無確認、③ 不在なら再ログイン
 
 ### Multiple Root Layouts
 

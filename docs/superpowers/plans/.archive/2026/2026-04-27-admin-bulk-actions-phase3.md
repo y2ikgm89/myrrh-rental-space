@@ -1,30 +1,30 @@
 > **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
 
-# P19 Phase 3 — Admin Bulk Actions (status 一括変更 + メール通知) 実装計画
+# P19 Phase 3 — Admin Bulk Actions (bulk status changes + email notifications) Implementation Plan
 
 > **Spec**: `docs/superpowers/specs/2026-04-27-admin-bulk-actions-phase3-design.md`
-> **対象**: customers / inquiries / events の bulk status 変更 + 関連メール通知
-> **Bundle 構成**: 3 Bundle (G/H/I) = 3 commit、3 並列 dispatch 可能
-> **参照ベース**: Phase 2 plan (`docs/superpowers/plans/2026-04-27-admin-bulk-actions-phase2.md`) を完全踏襲
+> **Scope**: bulk status changes for customers / inquiries / events + related email notifications
+> **Bundle structure**: 3 Bundles (G/H/I) = 3 commits, 3-way parallel dispatch possible
+> **Reference base**: fully follow Phase 2 plan (`docs/superpowers/plans/2026-04-27-admin-bulk-actions-phase2.md`)
 
 ## Context
 
-Phase 1/2 で確立した `bulkDelete*` / `bulkToggleActive*` パターンに status 遷移マップ + メール通知を拡張する。各 Bundle は独立リソース実装 + 既存 Phase 1/2 component 拡張のため、ファイル衝突なしで 3 並列 dispatch 可能。
+Extend the Phase 1/2 `bulkDelete*` / `bulkToggleActive*` patterns with status transition maps and email notifications. Each bundle targets independent resources and extends existing Phase 1/2 components, so 3-way parallel dispatch is possible without file conflicts.
 
-**Phase 2 で確立済みの規律**（再掲、全 Bundle で必須）:
+**Discipline established in Phase 2** (repeated here, required for all bundles):
 
-- 🚫 git 全面禁止 (`add` / `commit` / `push` / `reset` / `checkout` / `restore` / `stash`)
-- 🚫 JSDoc / コメントに「Phase 3」「P19」「Bundle X」等のタスク参照禁止
-- ✅ import alias 二重 prefix 禁止 (`@/admin/_shared/X` ではなく `@/admin/X`)
-- ✅ 参照実装 (Phase 2 Bundle D customers / Bundle E inquiries / Phase 1 Bundle B events) を Read してから実装
-- ✅ plan API 名は実装ファイル Read で実在確認 (`getCacheTag.<resource>.detail` / `Action` enum / `createValidationMutationError`)
-- ✅ **cloudflare mock + email 関連 mock は最初から全 export stub 化** (Phase 1 reactive fix `aebc3052` と同じ silent bug を再発させない)
+- 🚫 No git commands (`add` / `commit` / `push` / `reset` / `checkout` / `restore` / `stash`)
+- 🚫 Do not include task references like "Phase 3", "P19", "Bundle X" in JSDoc/comments
+- ✅ No double prefix in import aliases (`@/admin/X`, not `@/admin/_shared/X`)
+- ✅ Read reference implementations (Phase 2 Bundle D customers / Bundle E inquiries / Phase 1 Bundle B events) before implementing
+- ✅ Verify plan API names in real files (`getCacheTag.<resource>.detail` / `Action` enum / `createValidationMutationError`)
+- ✅ **Cloudflare mocks + email mocks start with full export stubs** (avoid the same silent bug as Phase 1 reactive fix `aebc3052`)
 
 ---
 
-## 共通: 状態遷移マップを `enums/helpers.ts` に追加
+## Common: Add status transition maps to `enums/helpers.ts`
 
-**Bundle G に同梱** (実装着手が一番軽く、cascade 影響が最小):
+**Bundled in Bundle G** (lightest start, minimal cascade impact):
 
 ```typescript
 // src/shared/lib/validations/enums/helpers.ts
@@ -36,8 +36,8 @@ import {
 } from "@generated/prisma/enums";
 
 /**
- * Customer ステータス遷移ルール（任意遷移、internal CRM）
- * 5 状態すべて自由遷移を許可。同一状態への変更は呼び出し側で no-op 化。
+ * Customer status transition rules (free transitions, internal CRM)
+ * All 5 states allow transitions; no-op handled by caller for same-state changes.
  */
 export const CUSTOMER_STATUS_TRANSITIONS: Readonly<
   Record<CustomerStatus, readonly CustomerStatus[]>
@@ -75,7 +75,7 @@ export const CUSTOMER_STATUS_TRANSITIONS: Readonly<
 };
 
 /**
- * Inquiry ステータス遷移ルール（forward only）
+ * Inquiry status transition rules (forward only)
  */
 export const INQUIRY_STATUS_TRANSITIONS: Readonly<
   Record<InquiryStatus, readonly InquiryStatus[]>
@@ -91,7 +91,7 @@ export const INQUIRY_STATUS_TRANSITIONS: Readonly<
 };
 
 /**
- * Event ステータス遷移ルール
+ * Event status transition rules
  */
 export const EVENT_STATUS_TRANSITIONS: Readonly<
   Record<EventStatus, readonly EventStatus[]>
@@ -107,7 +107,7 @@ export const EVENT_STATUS_TRANSITIONS: Readonly<
 };
 ```
 
-**Bundle G/H/I の各 implementer**: マップ自体は Bundle G で追加されるため、Bundle H/I は **Bundle G 完了後に dispatch**。または各 Bundle が部分追加（Customer/Inquiry/Event のみ）するなら並列可だが、衝突 (`enums/helpers.ts` 同時編集) を避けるため **Bundle G で 3 マップすべて追加** とする。
+**Bundle G/H/I implementers**: Since the maps are added in Bundle G, dispatch Bundle H/I **after Bundle G completes**. Bundles could partially add (Customer/Inquiry/Event only) in parallel, but to avoid conflicts (`enums/helpers.ts` concurrent edits), **Bundle G should add all 3 maps**.
 
 ---
 
@@ -117,15 +117,15 @@ export const EVENT_STATUS_TRANSITIONS: Readonly<
 
 ### Files to create
 
-1. `src/shared/domain/customers/bulk-status-commands.ts` (新規ファイル、`bulk-commands.ts` と分離)
+1. `src/shared/domain/customers/bulk-status-commands.ts` (new file, separated from `bulk-commands.ts`)
 2. `__tests__/unit/domain/customers/bulk-status-commands.test.ts`
 
 ### Files to modify
 
-1. `src/shared/lib/validations/enums/helpers.ts` — 上記 3 マップ (Customer/Inquiry/Event) すべて追加
-2. `src/app/(admin)/admin/(dashboard)/_shared/actions/customer/bulk.ts` — `bulkSetStatusCustomers` を追記 (既存ファイルに export 追加)
-3. `src/app/(admin)/admin/(dashboard)/customers/_components/CustomerBulkActions.tsx` — status 変更 DropdownMenu 追加
-4. `__tests__/integration/actions/admin/customer-bulk.test.ts` — `bulkSetStatusCustomers` test 追記
+1. `src/shared/lib/validations/enums/helpers.ts` — add all 3 maps above (Customer/Inquiry/Event)
+2. `src/app/(admin)/admin/(dashboard)/_shared/actions/customer/bulk.ts` — append `bulkSetStatusCustomers` (add export in existing file)
+3. `src/app/(admin)/admin/(dashboard)/customers/_components/CustomerBulkActions.tsx` — add status change DropdownMenu
+4. `__tests__/integration/actions/admin/customer-bulk.test.ts` — add `bulkSetStatusCustomers` tests
 
 ### Tasks
 
@@ -184,9 +184,9 @@ export async function bulkSetStatusCustomersCommand(
 }
 ```
 
-#### G2. Server Action (`actions/customer/bulk.ts` に追記)
+#### G2. Server Action (append to `actions/customer/bulk.ts`)
 
-参照: 既存 `bulkToggleActiveCustomers` / `bulkDeleteCustomers` (Phase 2 Bundle D)。
+Reference: existing `bulkToggleActiveCustomers` / `bulkDeleteCustomers` (Phase 2 Bundle D).
 
 ```typescript
 import { CustomerStatus } from "@generated/prisma/enums";
@@ -220,29 +220,29 @@ export const bulkSetStatusCustomers = async (
 };
 ```
 
-#### G3. UI 拡張 (`CustomerBulkActions.tsx`)
+#### G3. UI extension (`CustomerBulkActions.tsx`)
 
-既存 `CustomerBulkActions.tsx` (Phase 2 Bundle D) に **status 変更 DropdownMenu** を追加。
+Add a **status change DropdownMenu** to existing `CustomerBulkActions.tsx` (Phase 2 Bundle D).
 
-- `IconUserStar` (VIP) / `IconUserExclamation` (BLACKLIST) / `IconUser` 等のアイコン
-- `CUSTOMER_STATUS_LABELS` (`enums/helpers.ts`) を Dropdown items に展開
-- 選択後 `confirm()` または既存 `DeleteConfirmDialog` 同型の `BulkConfirmDialog` で確認 → `bulkSetStatusCustomers(selectedIds, status)` 実行
-- toast: 「N 件のステータスを「<label>」に変更しました（<rejected> 件は遷移不可のためスキップ）」
+- Icons: `IconUserStar` (VIP) / `IconUserExclamation` (BLACKLIST) / `IconUser`, etc.
+- Expand `CUSTOMER_STATUS_LABELS` (`enums/helpers.ts`) into Dropdown items
+- After selection, confirm via `confirm()` or `BulkConfirmDialog` (same as `DeleteConfirmDialog`) → run `bulkSetStatusCustomers(selectedIds, status)`
+- Toast: "Changed status for N items to <label> (<rejected> skipped due to invalid transitions)"
 
 #### G4. Tests
 
 **Unit** (`bulk-status-commands.test.ts`):
 
-- 空配列で count: 0
-- 同一 status の skip 確認 (no-op)
-- 5 状態間の任意遷移成功
-- rejectedIds は (現行マップでは) 同一 status のみが no-op で空、他は全許可
-- マップ違反パターン (例: 将来 BLACKLIST → BLACKLIST が rejectedIds に積まれない、no-op skip 経路)
+- Empty array → count: 0
+- Skip same-status (no-op) confirmed
+- Arbitrary transitions across 5 statuses succeed
+- rejectedIds: in current map, only same-status is no-op; all other transitions allowed
+- Map violation pattern (e.g., ensure future BLACKLIST → BLACKLIST does not get rejectedIds; no-op path)
 
-**Integration** (`customer-bulk.test.ts` 拡張):
+**Integration** (extend `customer-bulk.test.ts`):
 
-- 認証 / 権限 / Zod validation (`newStatus` enum 必須) / mock executeAdminMutationResult / mock fireAndForget
-- cloudflare mock は **既存 11 export stub 化を継続適用** (Phase 2 で確立済み、コピペ)
+- Auth / permissions / Zod validation (`newStatus` enum required) / mock executeAdminMutationResult / mock fireAndForget
+- Cloudflare mock **continues existing 11 export stubs** (established in Phase 2; copy/paste)
 
 ---
 
@@ -253,25 +253,25 @@ export const bulkSetStatusCustomers = async (
 ### Files to create
 
 1. `src/shared/domain/inquiries/bulk-status-commands.ts`
-2. `src/shared/emails/inquiry-status-notification.tsx` (新規 React Email テンプレ)
+2. `src/shared/emails/inquiry-status-notification.tsx` (new React Email template)
 3. `__tests__/unit/domain/inquiries/bulk-status-commands.test.ts`
 
 ### Files to modify
 
-1. `src/app/(admin)/admin/(dashboard)/_shared/actions/inquiry/bulk.ts` — `bulkSetStatusInquiries` 追記
-2. `src/app/(admin)/admin/(dashboard)/inquiries/_components/InquiryBulkActions.tsx` — status DropdownMenu 追加
-3. `src/shared/lib/email/inquiry-emails.ts` — `sendInquiryStatusNotificationToAll` 追記
-4. `__tests__/integration/actions/admin/inquiry-bulk.test.ts` — `bulkSetStatusInquiries` test 追記
+1. `src/app/(admin)/admin/(dashboard)/_shared/actions/inquiry/bulk.ts` — append `bulkSetStatusInquiries`
+2. `src/app/(admin)/admin/(dashboard)/inquiries/_components/InquiryBulkActions.tsx` — add status DropdownMenu
+3. `src/shared/lib/email/inquiry-emails.ts` — append `sendInquiryStatusNotificationToAll`
+4. `__tests__/integration/actions/admin/inquiry-bulk.test.ts` — add `bulkSetStatusInquiries` tests
 
 ### Tasks
 
 #### H1. domain command
 
-Customer Bundle G G1 と同型。`INQUIRY_STATUS_TRANSITIONS` を参照して forward-only 検証。戻り値型は `BulkSetStatusInquiriesResult { count, newStatus, affectedIds, rejectedIds }`。
+Same as Customer Bundle G G1. Validate forward-only via `INQUIRY_STATUS_TRANSITIONS`. Return type: `BulkSetStatusInquiriesResult { count, newStatus, affectedIds, rejectedIds }`.
 
-#### H2. 新規 React Email テンプレ (`inquiry-status-notification.tsx`)
+#### H2. New React Email template (`inquiry-status-notification.tsx`)
 
-`event-cancelled-notification.tsx` を構造踏襲してコピー作成。
+Copy structure from `event-cancelled-notification.tsx`.
 
 ```typescript
 import { Body, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components";
@@ -284,13 +284,13 @@ type Props = {
 };
 
 const HEADINGS: Record<Props["newStatus"], string> = {
-  RESOLVED: "お問い合わせの対応が完了しました",
-  CLOSED: "お問い合わせを終了いたしました",
+  RESOLVED: "Your inquiry has been resolved",
+  CLOSED: "Your inquiry has been closed",
 };
 
 const MESSAGES: Record<Props["newStatus"], string> = {
-  RESOLVED: "お問い合わせの内容について対応が完了しましたのでお知らせいたします。\nまたご不明な点がございましたらお気軽にご連絡ください。",
-  CLOSED: "お問い合わせを終了いたしました。\n再度ご相談の際は新規のお問い合わせとしてご連絡ください。",
+  RESOLVED: "We have completed the response to your inquiry.\nPlease feel free to contact us if you have any questions.",
+  CLOSED: "Your inquiry has been closed.\nIf you need further assistance, please submit a new inquiry.",
 };
 
 export function InquiryStatusNotificationEmail({ customerName, inquirySubject, newStatus, siteName }: Props) {
@@ -301,11 +301,11 @@ export function InquiryStatusNotificationEmail({ customerName, inquirySubject, n
       <Body style={main}>
         <Container style={container}>
           <Heading style={heading}>{HEADINGS[newStatus]}</Heading>
-          <Text style={text}>{customerName} 様</Text>
+          <Text style={text}>Dear {customerName},</Text>
           <Section style={detailsSection}>
-            <Text style={detailsHeading}>お問い合わせ内容</Text>
+            <Text style={detailsHeading}>Inquiry details</Text>
             <Hr style={hr} />
-            <Text style={detailItem}><strong>件名:</strong> {inquirySubject}</Text>
+            <Text style={detailItem}><strong>Subject:</strong> {inquirySubject}</Text>
           </Section>
           <Hr style={hr} />
           <Text style={text}>{MESSAGES[newStatus]}</Text>
@@ -316,10 +316,10 @@ export function InquiryStatusNotificationEmail({ customerName, inquirySubject, n
   );
 }
 
-// styles: event-cancelled-notification.tsx と同じ inline style 群をコピー
+// styles: copy the same inline styles from event-cancelled-notification.tsx
 ```
 
-#### H3. send helper (`inquiry-emails.ts` に追記)
+#### H3. send helper (append to `inquiry-emails.ts`)
 
 ```typescript
 export async function sendInquiryStatusNotificationToAll(
@@ -339,7 +339,7 @@ export async function sendInquiryStatusNotificationToAll(
       sendEmail({
         payload: {
           to: inquiry.email,
-          subject: `【お問い合わせ${newStatus === "RESOLVED" ? "対応完了" : "終了"}】${inquiry.subject}`,
+          subject: `[Inquiry ${newStatus === "RESOLVED" ? "Resolved" : "Closed"}] ${inquiry.subject}`,
           react: InquiryStatusNotificationEmail({
             customerName: inquiry.name,
             inquirySubject: inquiry.subject,
@@ -373,26 +373,26 @@ export async function sendInquiryStatusNotificationToAll(
 }
 ```
 
-import 追加: `prisma` / `logError` / `normalizeError` / `ErrorCategory` / `ErrorSeverity` / `InquiryStatusNotificationEmail`.
+Add imports: `prisma` / `logError` / `normalizeError` / `ErrorCategory` / `ErrorSeverity` / `InquiryStatusNotificationEmail`.
 
 #### H4. Server Action
 
-Bundle G G2 と同型。`afterSuccess` で `fireAndForget(sendInquiryStatusNotificationToAll(data.affectedIds, data.newStatus), { operation: "bulkSetStatusInquiries.notify", category: ErrorCategory.EXTERNAL_API })` を **`newStatus === "RESOLVED" || newStatus === "CLOSED"` の場合のみ** 呼ぶ (NEW/IN_PROGRESS への遷移ではメール送信しない)。
+Same as Bundle G G2. In `afterSuccess`, call `fireAndForget(sendInquiryStatusNotificationToAll(data.affectedIds, data.newStatus), { operation: "bulkSetStatusInquiries.notify", category: ErrorCategory.EXTERNAL_API })` **only when `newStatus === "RESOLVED" || newStatus === "CLOSED"`** (do not send emails for NEW/IN_PROGRESS transitions).
 
-#### H5. UI 拡張 (`InquiryBulkActions.tsx`)
+#### H5. UI extension (`InquiryBulkActions.tsx`)
 
-既存 `InquiryBulkActions.tsx` (Phase 2 Bundle E、delete のみだった) に status 変更 DropdownMenu 追加。`INQUIRY_STATUS_LABELS` を items に展開。
+Add a status change DropdownMenu to existing `InquiryBulkActions.tsx` (Phase 2 Bundle E was delete-only). Expand `INQUIRY_STATUS_LABELS` into items.
 
 #### H6. Tests
 
-**Unit** (`bulk-status-commands.test.ts`): forward-only 検証 + RESOLVED → NEW/IN_PROGRESS が rejectedIds に積まれること、CLOSED → 任意遷移が全 rejected。
+**Unit** (`bulk-status-commands.test.ts`): forward-only validation + RESOLVED → NEW/IN_PROGRESS accumulates rejectedIds; CLOSED → any transition is rejected.
 
-**Integration** (`inquiry-bulk.test.ts` 拡張):
+**Integration** (extend `inquiry-bulk.test.ts`):
 
-- mock email 関連: `mock.module("@/shared/lib/email/inquiry-emails", () => ({ sendInquiryReplyEmail: mock(() => Promise.resolve({ success: true })), sendInquiryStatusNotificationToAll: mock<(ids: string[], status: "RESOLVED" | "CLOSED") => Promise<void>>(() => Promise.resolve()) }))` で 2 export 完全網羅
-- newStatus が RESOLVED の場合のみ `sendInquiryStatusNotificationToAll` が affectedIds で呼ばれることを `toHaveBeenCalledWith` で検証 (CLAUDE.md learning「実 args 検証は `mock<(args: T) => ...>` 型必須」)
-- IN_PROGRESS 遷移時は email 関数が呼ばれないこと (`expect(mockFn).not.toHaveBeenCalled()`)
-- cloudflare mock は Phase 2 と同じ全 11 export stub
+- Mock email: `mock.module("@/shared/lib/email/inquiry-emails", () => ({ sendInquiryReplyEmail: mock(() => Promise.resolve({ success: true })), sendInquiryStatusNotificationToAll: mock<(ids: string[], status: "RESOLVED" | "CLOSED") => Promise<void>>(() => Promise.resolve()) }))` covers both exports
+- Verify `sendInquiryStatusNotificationToAll` is called with affectedIds only when newStatus is RESOLVED (`toHaveBeenCalledWith`, CLAUDE.md requirement: `mock<(args: T) => ...>` typing)
+- Ensure email function is not called for IN_PROGRESS transitions (`expect(mockFn).not.toHaveBeenCalled()`)
+- Cloudflare mocks use the same 11 export stubs as Phase 2
 
 ---
 
@@ -403,27 +403,27 @@ Bundle G G2 と同型。`afterSuccess` で `fireAndForget(sendInquiryStatusNotif
 ### Files to create
 
 1. `src/shared/domain/events/bulk-status-commands.ts`
-2. `src/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk.ts` (Phase 1 Bundle B で `bulkPublishEvents` / `bulkDeleteEvents` 実装済み、新規 export 追記) — **Phase 1 で既に存在するため新規ファイルではなく追記の可能性あり、implementer が Read で確認**
+2. `src/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk.ts` (Phase 1 Bundle B already implemented `bulkPublishEvents` / `bulkDeleteEvents`, add new export) — **likely existing file; implementer must confirm via Read**
 3. `__tests__/unit/domain/events/bulk-status-commands.test.ts`
 
 ### Files to modify
 
-1. `src/app/(admin)/admin/(dashboard)/events/_components/EventBulkActions.tsx` — Cancel ボタン追加
-2. `__tests__/integration/actions/admin/event-bulk.test.ts` — `bulkSetStatusEvents` test 追記
+1. `src/app/(admin)/admin/(dashboard)/events/_components/EventBulkActions.tsx` — add Cancel button
+2. `__tests__/integration/actions/admin/event-bulk.test.ts` — add `bulkSetStatusEvents` tests
 
 ### Tasks
 
 #### I1. domain command
 
-Bundle G/H と同型。`EVENT_STATUS_TRANSITIONS` 参照。`bulkSetStatusEventsCommand(ids, newStatus)` だが Phase 3 では UI から呼ぶのは `CANCELLED` のみ。マップは将来拡張用。
+Same as Bundles G/H. Reference `EVENT_STATUS_TRANSITIONS`. Use `bulkSetStatusEventsCommand(ids, newStatus)`, but in Phase 3 the UI only triggers `CANCELLED`. The map is for future expansion.
 
-戻り値: `{ count, newStatus, affectedIds, rejectedIds }`。
+Return value: `{ count, newStatus, affectedIds, rejectedIds }`.
 
-**重要**: Event は soft delete (`deletedAt`) を持つため、`findMany` の where に `deletedAt: null` 必須。`updateMany` も同条件。
+**Important**: Events are soft-deleted (`deletedAt`), so `findMany` must include `deletedAt: null`. Same for `updateMany`.
 
 #### I2. Server Action
 
-Bundle G G2 同型。`afterSuccess` で:
+Same as Bundle G G2. In `afterSuccess`:
 
 ```typescript
 afterSuccess: async (data) => {
@@ -445,68 +445,68 @@ afterSuccess: async (data) => {
 };
 ```
 
-`sendEventCancelledToAllParticipants` は `void` 返却なので `Promise.allSettled` でラップ。
+`sendEventCancelledToAllParticipants` returns `void`, so wrap with `Promise.allSettled`.
 
-`getCacheTag.events.detail(id)` の正確なシグネチャは `@/shared/lib/constants` を Read で確認 (slug ではなく id を渡す既存パターンに合わせる、Phase 1 plan の `affectedIds` cache 戦略と整合)。
+Confirm the exact signature of `getCacheTag.events.detail(id)` in `@/shared/lib/constants` (follow existing pattern using id, not slug; align with Phase 1 `affectedIds` cache strategy).
 
-#### I3. UI 拡張 (`EventBulkActions.tsx`)
+#### I3. UI extension (`EventBulkActions.tsx`)
 
-既存 `EventBulkActions.tsx` (Phase 1 Bundle B) に「キャンセル」ボタン追加。`DeleteConfirmDialog` 同型の確認 dialog (「N 件のイベントをキャンセルし、参加者に通知メールを送信します」)。
+Add a "Cancel" button to existing `EventBulkActions.tsx` (Phase 1 Bundle B). Use a `DeleteConfirmDialog`-style confirmation dialog ("Cancel N events and send notification emails to participants").
 
 #### I4. Tests
 
-**Unit**: `EVENT_STATUS_TRANSITIONS` のマップどおり遷移検証。ARCHIVED → 任意は全 rejected。
+**Unit**: verify transitions per `EVENT_STATUS_TRANSITIONS`. ARCHIVED → any transition is rejected.
 
 **Integration**:
 
-- mock event email: `mock.module("@/shared/lib/email/event-emails", () => ({ sendEventRegistrationConfirmation: mock(...), sendEventRegistrationCancelled: mock(...), sendEventAdminNotification: mock(...), sendEventCancelledToAllParticipants: mock<(eventId: string) => Promise<void>>(() => Promise.resolve()), sendEventUpdatedToAllParticipants: mock(...) }))` で 5 export 全 stub
-- CANCELLED 遷移時のみ `sendEventCancelledToAllParticipants` が affectedIds 各々で呼ばれることを検証
-- soft-deleted event が affectedIds に含まれないこと
-- cloudflare mock は Phase 1/2 と同じ 11 export stub
+- Mock event emails: `mock.module("@/shared/lib/email/event-emails", () => ({ sendEventRegistrationConfirmation: mock(...), sendEventRegistrationCancelled: mock(...), sendEventAdminNotification: mock(...), sendEventCancelledToAllParticipants: mock<(eventId: string) => Promise<void>>(() => Promise.resolve()), sendEventUpdatedToAllParticipants: mock(...) }))` covers all 5 exports
+- Verify `sendEventCancelledToAllParticipants` is called per affectedIds only on CANCELLED transition
+- Ensure soft-deleted events are not included in affectedIds
+- Cloudflare mocks use the same 11 export stubs as Phase 1/2
 
 ---
 
-## 全体検証 (Phase 3 完了時)
+## Overall verification (Phase 3 complete)
 
 1. `bun run validate` exit 0
-2. `bun test __tests__/unit/domain/{customers,inquiries,events}/bulk-status-commands.test.ts` 全 pass
-3. `bun test __tests__/integration/actions/admin` (admin batch) で 全 pass 確認 (mock pollution が起きないこと、Phase 2 の 1458 pass を上回る件数で pass)
-4. `git log --oneline main..HEAD` で 3 commit (G/H/I) 確認
-5. 各 commit の `git show --stat HEAD~N` で対象ファイル + 行数妥当性
-6. 手動 UI 確認は不要（CLAUDE.md feedback `dev-server-manual.md` のため CI に委ねる）
+2. `bun test __tests__/unit/domain/{customers,inquiries,events}/bulk-status-commands.test.ts` passes
+3. `bun test __tests__/integration/actions/admin` (admin batch) passes (no mock pollution; pass count exceeds Phase 2’s 1458)
+4. `git log --oneline main..HEAD` shows 3 commits (G/H/I)
+5. `git show --stat HEAD~N` per commit confirms target files + line counts
+6. Manual UI checks are not required (CLAUDE.md feedback `dev-server-manual.md`; rely on CI)
 
 ---
 
-## Subagent Dispatch 規律 (Phase 1/2 と同じ)
+## Subagent dispatch discipline (same as Phase 1/2)
 
-- **3 並列 general-purpose (sonnet) dispatch を推奨**、ただし Bundle G が `enums/helpers.ts` に 3 マップすべて追加するため、**Bundle G を先行 1 dispatch → 完了後に Bundle H/I を 2 並列 dispatch** が安全 (`enums/helpers.ts` の race を避ける)
-- 各 implementer 完了後、controller が `git status --short` + `git diff --stat HEAD` で実態確認 → controller が commit
-- 🚫 git 全面禁止 (`add` / `commit` / `push` / `reset` / `checkout` / `restore` / `stash`)
-- 🚫 タスク参照コメント禁止 (`Phase 3` / `Bundle G` 等)
-- ✅ implementer は plan の Files セクションに記載されたファイルのみ touch
-- ✅ 既存 Phase 1/2 component の改修は **既存 export を破壊しない** (status dropdown 追加のみ、delete/toggle は維持)
-- ✅ `enums/helpers.ts` への 3 マップ追加は Bundle G implementer の責務、Bundle H/I は読み取り専用
+- **Recommend 3 parallel general-purpose (sonnet) dispatch**, but since Bundle G adds all 3 maps in `enums/helpers.ts`, it is safest to **dispatch Bundle G first → after completion, dispatch Bundles H/I in parallel** (avoid `enums/helpers.ts` race)
+- After each implementer completes, controller verifies with `git status --short` + `git diff --stat HEAD` → controller commits
+- 🚫 No git commands (`add` / `commit` / `push` / `reset` / `checkout` / `restore` / `stash`)
+- 🚫 No task reference comments (`Phase 3` / `Bundle G`, etc.)
+- ✅ Implementers touch only files listed in the plan Files sections
+- ✅ Modifying existing Phase 1/2 components must **not break existing exports** (only add status dropdown; keep delete/toggle)
+- ✅ Adding 3 maps to `enums/helpers.ts` is Bundle G implementer’s responsibility; Bundles H/I are read-only
 
-### dispatch 順序
+### Dispatch order
 
 ```
-1. Bundle G dispatch (Customer + 3 マップ追加)
+1. Bundle G dispatch (Customer + add 3 maps)
 2. controller verify + commit
-3. Bundle H + Bundle I 2 並列 dispatch
+3. Bundle H + Bundle I in parallel
 4. controller verify + 2 commit
 ```
 
-または:
+Or:
 
 ```
-1. Bundle G を先行で実装し enums/helpers.ts のマップだけ最初の commit に含める
-2. Bundle G の残り (domain/UI/test) + H + I を 3 並列 dispatch
+1. Implement Bundle G first and include only the enums/helpers.ts maps in the first commit
+2. Dispatch the rest of Bundle G (domain/UI/test) + H + I in parallel
 ```
 
-implementer が `enums/helpers.ts` に 3 マップ全追加と Customer 専用実装の両方を持つので前者が単純。
+The first option is simpler because the implementer owns both the enums/helpers.ts map addition and the Customer-specific implementation.
 
 ---
 
-## Phase 3 完了で P19 全完了
+## Phase 3 completion finishes P19
 
-P19 Phase 1/2/3 の commit 履歴は `project_p17-19-sequential-handoff.md` に最終記録し、handoff memory を archive 候補に移行する。
+Record the Phase 1/2/3 commit history in `project_p17-19-sequential-handoff.md` and move the handoff memory to archive candidates.

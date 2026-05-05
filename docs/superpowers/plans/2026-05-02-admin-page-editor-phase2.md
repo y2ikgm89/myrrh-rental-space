@@ -4,70 +4,70 @@
 
 **Spec:** `docs/superpowers/specs/2026-05-02-admin-page-editor-phase2-design.md`
 
-**Goal:** ボタン装飾統一（A）+ 画像メタ構造化（B）+ 動的 select（C）の clean-break 拡張を一括実施。
+**Goal:** Execute clean-break extensions in one pass: button style unification (A) + image metadata structuring (B) + dynamic select (C).
 
-**Architecture:** ① Phase 2A でボタン factory を作成し 5 sections を統一、legacy CTA 削除 + データ移行。② Phase 2B で画像メタを構造化（4 sections + Section.config JSON destructive migration）。③ Phase 2C で動的 select を field-registry に追加し post-list / faq-list を統一。
+**Architecture:** ① In Phase 2A, create a button factory, unify 5 sections, remove legacy CTA + migrate data. ② In Phase 2B, structure image metadata (4 sections + destructive Section.config JSON migration). ③ In Phase 2C, add dynamic select to field-registry and unify post-list / faq-list.
 
-**Tech Stack:** Phase 1 同様（Prisma 7.8 / PostgreSQL / Next.js 16.2 / React 19 + Compiler 1.0 / Zod 4 / Tabler Icons）
+**Tech Stack:** Same as Phase 1 (Prisma 7.8 / PostgreSQL / Next.js 16.2 / React 19 + Compiler 1.0 / Zod 4 / Tabler Icons)
 
-**Branch:** `refactor/docs-diataxis` で続行（Phase 1 の延長）。
+**Branch:** Continue on `refactor/docs-diataxis` (extension of Phase 1).
 
 ---
 
 ## File Structure
 
-### 新規作成
+### New files
 
-| パス                                                                     | 役割                                                                 |
+| Path                                                                     | Purpose                                                              |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| `src/shared/lib/sections/definitions/_shared/buttons.ts`                 | `createButtonsArraySchema` factory（共通 buttons array スキーマ）    |
+| `src/shared/lib/sections/definitions/_shared/buttons.ts`                 | `createButtonsArraySchema` factory (shared buttons array schema)     |
 | `src/shared/lib/sections/definitions/_shared/image.ts`                   | `createImageGroupSchema` / `createCompactImageGroupSchema` factories |
-| `src/shared/lib/sections/dynamic-options.ts`                             | `DynamicSelectSource` 型定義 + `useDynamicSectionOptions` 関連       |
-| `src/admin/api/section-dynamic-options/route.ts` (or fetch helper)       | post categories / faq categories の取得                              |
-| `prisma/migrations/<TS>_buttons_unify_and_image_structure/migration.sql` | データ移行（buttons + image 構造化）                                 |
-| `__tests__/unit/shared/lib/sections/buttons-factory.test.ts`             | buttons factory テスト                                               |
-| `__tests__/unit/shared/lib/sections/image-factory.test.ts`               | image factory テスト                                                 |
-| `__tests__/unit/shared/lib/sections/dynamic-select.test.ts`              | dynamicSelect テスト                                                 |
+| `src/shared/lib/sections/dynamic-options.ts`                             | `DynamicSelectSource` type + `useDynamicSectionOptions`              |
+| `src/admin/api/section-dynamic-options/route.ts` (or fetch helper)       | Fetch post categories / faq categories                               |
+| `prisma/migrations/<TS>_buttons_unify_and_image_structure/migration.sql` | Data migration (buttons + image structuring)                         |
+| `__tests__/unit/shared/lib/sections/buttons-factory.test.ts`             | Buttons factory tests                                                |
+| `__tests__/unit/shared/lib/sections/image-factory.test.ts`               | Image factory tests                                                  |
+| `__tests__/unit/shared/lib/sections/dynamic-select.test.ts`              | dynamicSelect tests                                                  |
 
-### 変更
+### Changes
 
-| パス                                                                                         | 内容                                                                                     |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `src/shared/lib/sections/field-registry.ts`                                                  | `dynamicSelectSource` 追加 + `field.dynamicSelect()` ヘルパー                            |
-| `src/shared/lib/sections/definitions/cta/schema.ts`                                          | `createButtonsArraySchema` 採用、`.transform()` 削除                                     |
-| `src/shared/lib/sections/definitions/hero/schema.ts`                                         | 同上 + `backgroundImageUrl` → `backgroundImage` 構造化                                   |
-| `src/shared/lib/sections/definitions/hero-parallax/schema.ts`                                | 同上                                                                                     |
-| `src/shared/lib/sections/definitions/page-hero/schema.ts`                                    | `createButtonsArraySchema` への移行はスコープ外（既に独自実装、整合性のため検討は別 PR） |
-| `src/shared/lib/sections/definitions/homepage-cta/schema.ts`                                 | `createButtonsArraySchema` 採用                                                          |
-| `src/shared/lib/sections/definitions/concept/schema.ts`                                      | `imageUrl` → `image` 構造化                                                              |
-| `src/shared/lib/sections/definitions/testimonial/schema.ts`                                  | `items[].authorImageUrl` → `authorImage` 構造化                                          |
-| `src/shared/lib/sections/definitions/post-list/schema.ts`                                    | `categoryId` → `field.dynamicSelect`                                                     |
-| `src/shared/lib/sections/definitions/faq-list/schema.ts`                                     | `categoryId` → `field.dynamicSelect`（あれば）                                           |
-| `src/shared/lib/validations/cta-and-url.ts`                                                  | `createCtaSchemas` / `transformLegacyCtaToButtons` / `transformCtaFields` 削除           |
-| `src/shared/lib/validations/section.ts`                                                      | `heroConfigSchema` / `ctaConfigSchema` の `.transform()` 削除                            |
-| `src/public/components/design-system/button.tsx`                                             | `iconName?` / `size` / `customBackgroundColor` / `customTextColor` 受け入れ              |
-| `src/app/(public)/_components/homepage/...`                                                  | Hero / HeroParallax / Concept / Testimonial の renderer 更新                             |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditPanel.tsx`       | dynamic options を AutoSectionForm に props 経由で渡す                                   |
-| `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx` | `dynamicOptions` prop 受け入れ + select 描画時に注入                                     |
-| `prisma/seed.ts`                                                                             | `defaultPageHero` 等のデフォルト値を新構造に対応                                         |
+| Path                                                                                         | Details                                                                                    |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `src/shared/lib/sections/field-registry.ts`                                                  | Add `dynamicSelectSource` + `field.dynamicSelect()` helper                                 |
+| `src/shared/lib/sections/definitions/cta/schema.ts`                                          | Adopt `createButtonsArraySchema`, remove `.transform()`                                    |
+| `src/shared/lib/sections/definitions/hero/schema.ts`                                         | Same + structure `backgroundImageUrl` → `backgroundImage`                                  |
+| `src/shared/lib/sections/definitions/hero-parallax/schema.ts`                                | Same                                                                                       |
+| `src/shared/lib/sections/definitions/page-hero/schema.ts`                                    | Migration to `createButtonsArraySchema` out of scope (already custom; align in another PR) |
+| `src/shared/lib/sections/definitions/homepage-cta/schema.ts`                                 | Adopt `createButtonsArraySchema`                                                           |
+| `src/shared/lib/sections/definitions/concept/schema.ts`                                      | Structure `imageUrl` → `image`                                                             |
+| `src/shared/lib/sections/definitions/testimonial/schema.ts`                                  | Structure `items[].authorImageUrl` → `authorImage`                                         |
+| `src/shared/lib/sections/definitions/post-list/schema.ts`                                    | `categoryId` → `field.dynamicSelect`                                                       |
+| `src/shared/lib/sections/definitions/faq-list/schema.ts`                                     | `categoryId` → `field.dynamicSelect` (if present)                                          |
+| `src/shared/lib/validations/cta-and-url.ts`                                                  | Remove `createCtaSchemas` / `transformLegacyCtaToButtons` / `transformCtaFields`           |
+| `src/shared/lib/validations/section.ts`                                                      | Remove `.transform()` from `heroConfigSchema` / `ctaConfigSchema`                          |
+| `src/public/components/design-system/button.tsx`                                             | Accept `iconName?` / `size` / `customBackgroundColor` / `customTextColor`                  |
+| `src/app/(public)/_components/homepage/...`                                                  | Update Hero / HeroParallax / Concept / Testimonial renderers                               |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/edit/_components/SectionEditPanel.tsx`       | Pass dynamic options to AutoSectionForm via props                                          |
+| `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx` | Accept `dynamicOptions` prop + inject on select render                                     |
+| `prisma/seed.ts`                                                                             | Update defaults like `defaultPageHero` to new structure                                    |
 
-### 削除
+### Removals
 
 - `transformLegacyCtaToButtons` function
 - `transformCtaFields` function
-- `createCtaSchemas` factory（legacy）
+- `createCtaSchemas` factory (legacy)
 
 ---
 
-## Phase 2A: ボタン装飾統一
+## Phase 2A: Button style unification
 
-### Task A1: `createButtonsArraySchema` factory 作成
+### Task A1: Create `createButtonsArraySchema` factory
 
 **Files:**
 
 - Create: `src/shared/lib/sections/definitions/_shared/buttons.ts`
 
-- [ ] **Step 1: factory 実装**
+- [ ] **Step 1: Implement factory**
 
 ```typescript
 // src/shared/lib/sections/definitions/_shared/buttons.ts
@@ -80,50 +80,50 @@ import {
   optionalHexColorSchema,
 } from "@/shared/lib/validations/cta-and-url";
 
-export function createButtonsArraySchema(label = "ボタン") {
+export function createButtonsArraySchema(label = "Buttons") {
   return field
     .array(label, {
       subGroup: "button",
       fields: {
-        text: field.text("ボタンの文字", { maxLength: 50 }),
+        text: field.text("Button Text", { maxLength: 50 }),
         url: createInternalAppRouteSchema(500).register(fieldRegistry, {
           fieldType: "url",
-          label: "リンク先 URL",
+          label: "Link URL",
           group: "content",
         }),
-        variant: field.select("ボタンの種類", {
+        variant: field.select("Button Variant", {
           options: ctaButtonVariants,
           default: "primary",
         }),
-        size: field.select("ボタンの大きさ", {
+        size: field.select("Button Size", {
           options: ctaButtonSizes,
           default: "lg",
         }),
-        iconName: field.icon("アイコン（任意）", {
-          helpText: "Tabler Icons 名（例: IconArrowRight）",
+        iconName: field.icon("Icon (optional)", {
+          helpText: "Tabler Icons name (e.g., IconArrowRight)",
         }),
-        openInNewTab: field.boolean("新しいタブで開く"),
+        openInNewTab: field.boolean("Open in new tab"),
         backgroundColor: optionalHexColorSchema.register(fieldRegistry, {
           fieldType: "color",
-          label: "背景色（カスタム）",
+          label: "Background color (custom)",
           group: "content",
-          helpText: "未設定の場合は variant 既定色",
+          helpText: "If unset, use variant default color",
         }),
         textColor: optionalHexColorSchema.register(fieldRegistry, {
           fieldType: "color",
-          label: "文字色（カスタム）",
+          label: "Text color (custom)",
           group: "content",
-          helpText: "未設定の場合は variant 既定色",
+          helpText: "If unset, use variant default color",
         }),
       },
     })
     .refine((arr) => new Set(arr.map((b) => b.url)).size === arr.length, {
-      error: "同じ URL のボタンを複数登録することはできません",
+      error: "You cannot register multiple buttons with the same URL",
     });
 }
 ```
 
-- [ ] **Step 2: 検証**
+- [ ] **Step 2: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -138,35 +138,35 @@ git commit -m "feat(sections): add createButtonsArraySchema shared factory"
 
 ---
 
-### Task A2: 5 sections を `createButtonsArraySchema` に統一
+### Task A2: Unify 5 sections to `createButtonsArraySchema`
 
 **Files:**
 
-- Modify: `cta/schema.ts`、`hero/schema.ts`、`hero-parallax/schema.ts`、`homepage-cta/schema.ts`
-- Note: `page-hero/schema.ts` は Phase 1 で独自 schema 定義済みのため Phase 2 では除外（次回 PR で整合）
+- Modify: `cta/schema.ts`, `hero/schema.ts`, `hero-parallax/schema.ts`, `homepage-cta/schema.ts`
+- Note: `page-hero/schema.ts` is excluded in Phase 2 because it already has a custom schema (align in a future PR)
 
-- [ ] **Step 1: cta/schema.ts 更新**
+- [ ] **Step 1: Update cta/schema.ts**
 
 ```typescript
 import { createButtonsArraySchema } from "../_shared/buttons";
 
 export const ctaConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", { ... }),
-  title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
-  description: field.textarea("説明文", { maxLength: 500, subGroup: "text" }),
-  buttons: createButtonsArraySchema("ボタン"),
-  backgroundColor: field.color("背景色", { group: "design" }),
-  variant: field.select("レイアウトの種類", { ... }),
+  sectionLabel: field.text("Section Label", { ... }),
+  title: field.text("Heading", { maxLength: 100, subGroup: "text" }),
+  description: field.textarea("Description", { maxLength: 500, subGroup: "text" }),
+  buttons: createButtonsArraySchema("Buttons"),
+  backgroundColor: field.color("Background Color", { group: "design" }),
+  variant: field.select("Layout Variant", { ... }),
 });
 ```
 
-`.transform()` chain を削除（旧 `transformLegacyCtaToButtons` 吸収用）。
+Remove the `.transform()` chain (absorbed legacy `transformLegacyCtaToButtons`).
 
-- [ ] **Step 2: hero/schema.ts 同様に更新**
-- [ ] **Step 3: hero-parallax/schema.ts 同様に更新**
-- [ ] **Step 4: homepage-cta/schema.ts 同様に更新**
+- [ ] **Step 2: Update hero/schema.ts similarly**
+- [ ] **Step 3: Update hero-parallax/schema.ts similarly**
+- [ ] **Step 4: Update homepage-cta/schema.ts similarly**
 
-- [ ] **Step 5: 検証**
+- [ ] **Step 5: Validate**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -182,19 +182,19 @@ git commit -m "refactor(sections): unify 4 sections to use createButtonsArraySch
 
 ---
 
-### Task A3: Public Button primitive を size/icon/color 拡張
+### Task A3: Extend public Button primitive with size/icon/color
 
 **Files:**
 
-- Modify: `src/public/components/design-system/button.tsx`（または該当パス）
+- Modify: `src/public/components/design-system/button.tsx` (or relevant path)
 
-- [ ] **Step 1: 既存 props 確認**
+- [ ] **Step 1: Check existing props**
 
 ```bash
 cat src/public/components/design-system/button.tsx 2>&1 | head -50
 ```
 
-- [ ] **Step 2: `iconName` / `customBackgroundColor` / `customTextColor` props 追加**
+- [ ] **Step 2: Add `iconName` / `customBackgroundColor` / `customTextColor` props**
 
 ```tsx
 import * as TablerIcons from "@tabler/icons-react";
@@ -215,7 +215,7 @@ function resolveIcon(name: string | undefined) {
   return null;
 }
 
-// Button 内部で:
+// Inside Button:
 const Icon = resolveIcon(iconName);
 const inlineStyle: React.CSSProperties = {
   ...(customBackgroundColor && { backgroundColor: customBackgroundColor }),
@@ -230,9 +230,9 @@ return (
 );
 ```
 
-- [ ] **Step 3: 公開 Hero / CTA renderer の caller を更新** — buttons.map で iconName/size/customBackgroundColor を Button に渡す
+- [ ] **Step 3: Update public Hero / CTA renderers** — pass iconName/size/customBackgroundColor to Button in buttons.map
 
-- [ ] **Step 4: 検証 + Commit**
+- [ ] **Step 4: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -242,15 +242,15 @@ git commit -m "feat(public): Button primitive consumes iconName/size/customBackg
 
 ---
 
-### Task A4: Legacy CTA データ移行 + コード削除
+### Task A4: Legacy CTA data migration + code removal
 
 **Files:**
 
 - Create: `prisma/migrations/<TS>_buttons_unify_drop_legacy_cta/migration.sql`
-- Modify: `src/shared/lib/validations/cta-and-url.ts` (削除)
-- Modify: `src/shared/lib/validations/section.ts` (削除)
+- Modify: `src/shared/lib/validations/cta-and-url.ts` (remove)
+- Modify: `src/shared/lib/validations/section.ts` (remove)
 
-- [ ] **Step 1: 既存 DB に legacy CTA データがあるか確認**
+- [ ] **Step 1: Check for legacy CTA data in the existing DB**
 
 ```bash
 bun -e "
@@ -272,7 +272,7 @@ const p = new PrismaClient({ adapter: new PrismaPg(pool) });
 "
 ```
 
-- [ ] **Step 2: Migration SQL 書き出し（Python）**
+- [ ] **Step 2: Write migration SQL (Python)**
 
 ```bash
 TS=$(date -u +%Y%m%d%H%M%S)
@@ -282,10 +282,10 @@ python3 -c "import os; os.makedirs('prisma/migrations/${TS}_buttons_unify_drop_l
 python3 << 'PY'
 import os
 ts = open('/tmp/migration-ts-a4.txt').read().strip()
-sql = r"""-- Phase 2A: Legacy ctaPrimary / ctaSecondary を buttons[] に変換 + フィールド削除
--- hero / cta の config に legacy CTA フィールドが残っていれば、buttons array に統合する
+sql = r"""-- Phase 2A: Convert legacy ctaPrimary / ctaSecondary to buttons[] + remove fields
+-- If legacy CTA fields remain in hero/cta config, merge into buttons array
 
--- 注: jsonb_path 操作で配列構築を行う。buttons 既存配列がある場合は legacy 取り込みなし
+-- Note: build array via jsonb_path operations. If buttons array already exists, do not merge legacy fields
 
 UPDATE sections SET config = jsonb_set(
   config - 'ctaPrimary' - 'ctaSecondary',
@@ -325,7 +325,7 @@ print(f'Wrote: {path}')
 PY
 ```
 
-- [ ] **Step 3: Migration 適用**
+- [ ] **Step 3: Apply migration**
 
 ```bash
 TS=$(cat /tmp/migration-ts-a4.txt)
@@ -333,19 +333,19 @@ bunx --bun prisma db execute --file prisma/migrations/${TS}_buttons_unify_drop_l
 bunx --bun prisma migrate resolve --applied "${TS}_buttons_unify_drop_legacy_cta"
 ```
 
-- [ ] **Step 4: cta-and-url.ts から legacy 削除**
+- [ ] **Step 4: Remove legacy from cta-and-url.ts**
 
-`createCtaSchemas` / `transformLegacyCtaToButtons` / `transformCtaFields` を全部削除。
+Remove `createCtaSchemas` / `transformLegacyCtaToButtons` / `transformCtaFields`.
 
-- [ ] **Step 5: section.ts から `.transform()` 削除（既に Task A2 で対応済みなら no-op）**
+- [ ] **Step 5: Remove `.transform()` from section.ts (no-op if already handled in Task A2)**
 
 ```typescript
-// 確認: heroConfigSchema / ctaConfigSchema が transformCtaFields を使っていないか
+// Check: ensure heroConfigSchema / ctaConfigSchema do not use transformCtaFields
 grep "transformCtaFields\|transformLegacyCtaToButtons" src/
-# Expected: 0 件
+# Expected: 0 matches
 ```
 
-- [ ] **Step 6: 検証**
+- [ ] **Step 6: Validate**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -364,44 +364,44 @@ git commit -m "feat(prisma+sections): migrate legacy ctaPrimary/ctaSecondary to 
 
 ---
 
-## Phase 2B: 画像メタ構造化
+## Phase 2B: Image metadata structuring
 
-### Task B1: `createImageGroupSchema` factory 作成
+### Task B1: Create `createImageGroupSchema` factory
 
 **Files:**
 
 - Create: `src/shared/lib/sections/definitions/_shared/image.ts`
 
-- [ ] **Step 1: factory 実装**
+- [ ] **Step 1: Implement factory**
 
 ```typescript
 // src/shared/lib/sections/definitions/_shared/image.ts
 import { field } from "../../field-registry";
 
-export function createImageGroupSchema(label = "画像") {
+export function createImageGroupSchema(label = "Image") {
   return field.group(
     label,
     {
-      url: field.image("画像 URL"),
-      alt: field.text("代替テキスト（a11y / SEO）", {
+      url: field.image("Image URL"),
+      alt: field.text("Alt Text (a11y / SEO)", {
         maxLength: 200,
-        helpText: "画像が読み込めない場合や読み上げ時に使用",
+        helpText: "Used when the image fails to load or for screen readers",
       }),
-      caption: field.text("キャプション（任意）", {
+      caption: field.text("Caption (optional)", {
         maxLength: 300,
-        helpText: "画像下部に表示する説明文",
+        helpText: "Description shown below the image",
       }),
     },
     { subGroup: "image" },
   );
 }
 
-export function createCompactImageGroupSchema(label = "画像") {
+export function createCompactImageGroupSchema(label = "Image") {
   return field.group(
     label,
     {
-      url: field.image("画像 URL"),
-      alt: field.text("代替テキスト", { maxLength: 200 }),
+      url: field.image("Image URL"),
+      alt: field.text("Alt Text", { maxLength: 200 }),
     },
     { subGroup: "image" },
   );
@@ -417,7 +417,7 @@ git commit -m "feat(sections): add createImageGroupSchema shared factory"
 
 ---
 
-### Task B2: 4 sections の image を構造化
+### Task B2: Structure images in 4 sections
 
 **Files:**
 
@@ -426,22 +426,22 @@ git commit -m "feat(sections): add createImageGroupSchema shared factory"
 - [ ] **Step 1: hero/schema.ts**
 
 ```typescript
-// 削除: backgroundImageUrl: field.image("背景画像", { subGroup: "image" })
-// 追加: backgroundImage: createImageGroupSchema("背景画像")
+// Remove: backgroundImageUrl: field.image("Background Image", { subGroup: "image" })
+// Add: backgroundImage: createImageGroupSchema("Background Image")
 
 import { createImageGroupSchema } from "../_shared/image";
 
-backgroundImage: createImageGroupSchema("背景画像"),
+backgroundImage: createImageGroupSchema("Background Image"),
 ```
 
-- [ ] **Step 2: hero-parallax/schema.ts 同様**
+- [ ] **Step 2: hero-parallax/schema.ts similarly**
 - [ ] **Step 3: concept/schema.ts**
 
 ```typescript
 // imageUrl → image
 import { createImageGroupSchema } from "../_shared/image";
 
-image: createImageGroupSchema("メイン画像"),
+image: createImageGroupSchema("Main Image"),
 ```
 
 - [ ] **Step 4: testimonial/schema.ts**
@@ -453,12 +453,12 @@ import { createCompactImageGroupSchema } from "../_shared/image";
 items: z.array(
   z.object({
     // ...
-    authorImage: createCompactImageGroupSchema("プロフィール画像"),
+    authorImage: createCompactImageGroupSchema("Profile Image"),
   }),
 );
 ```
 
-- [ ] **Step 5: 検証 + Commit**
+- [ ] **Step 5: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -468,14 +468,14 @@ git commit -m "refactor(sections): structure single-string images into image gro
 
 ---
 
-### Task B3: Migration（destructive Section.config JSON）
+### Task B3: Migration (destructive Section.config JSON)
 
 **Files:**
 
 - Create: `prisma/migrations/<TS>_section_image_meta_structuring/migration.sql`
-- Create: `scripts/migrate-testimonial-images.ts` (testimonial.items[] 配列変換用)
+- Create: `scripts/migrate-testimonial-images.ts` (for converting testimonial.items[])
 
-- [ ] **Step 1: 事前 grep**
+- [ ] **Step 1: Pre-check grep**
 
 ```bash
 bun -e "
@@ -492,7 +492,7 @@ const p = new PrismaClient({ adapter: new PrismaPg(pool) });
 "
 ```
 
-- [ ] **Step 2: Migration SQL（hero / hero-parallax / concept）**
+- [ ] **Step 2: Migration SQL (hero / hero-parallax / concept)**
 
 ```bash
 TS=$(date -u +%Y%m%d%H%M%S)
@@ -502,7 +502,7 @@ python3 -c "import os; os.makedirs('prisma/migrations/${TS}_section_image_meta_s
 python3 << 'PY'
 import os
 ts = open('/tmp/migration-ts-b3.txt').read().strip()
-sql = r"""-- Phase 2B: hero / hero-parallax / concept の string image を {url, alt, caption} group に変換
+sql = r"""-- Phase 2B: Convert hero / hero-parallax / concept string images to {url, alt, caption} group
 
 -- hero
 UPDATE sections SET config = jsonb_set(
@@ -544,7 +544,7 @@ print(f'Wrote: {path}')
 PY
 ```
 
-- [ ] **Step 3: Migration 適用**
+- [ ] **Step 3: Apply migration**
 
 ```bash
 TS=$(cat /tmp/migration-ts-b3.txt)
@@ -552,7 +552,7 @@ bunx --bun prisma db execute --file prisma/migrations/${TS}_section_image_meta_s
 bunx --bun prisma migrate resolve --applied "${TS}_section_image_meta_structuring"
 ```
 
-- [ ] **Step 4: testimonial.items[] 用 bun スクリプト**
+- [ ] **Step 4: bun script for testimonial.items[]**
 
 ```typescript
 // scripts/migrate-testimonial-images.ts
@@ -603,7 +603,7 @@ main();
 bun scripts/migrate-testimonial-images.ts
 ```
 
-- [ ] **Step 5: 検証 + Commit**
+- [ ] **Step 5: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -615,23 +615,23 @@ git commit -m "feat(prisma): migration — convert string image fields to {url, 
 
 ---
 
-### Task B4: 公開 renderer 更新
+### Task B4: Update public renderers
 
 **Files:**
 
-- Modify: 公開 Hero / HeroParallax / Concept / Testimonial Component
+- Modify: Public Hero / HeroParallax / Concept / Testimonial components
 
-- [ ] **Step 1: caller grep + 修正**
+- [ ] **Step 1: grep callers + update**
 
 ```bash
 grep -rln "backgroundImageUrl\|imageUrl\|authorImageUrl" src/app/\(public\)/ src/public/ --include="*.tsx" --include="*.ts"
 ```
 
-各 caller を新構造（`backgroundImage.url` / `image.url` / `authorImage.url`）に変更。
+Update each caller to the new structure (`backgroundImage.url` / `image.url` / `authorImage.url`).
 
-`alt` も使用（aria-label / Image alt prop）。
+Also use `alt` (aria-label / Image alt prop).
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -642,21 +642,21 @@ git commit -m "refactor(public): image renderers consume {url, alt, caption} gro
 
 ---
 
-## Phase 2C: 動的 Select
+## Phase 2C: Dynamic Select
 
-### Task C1: `field.dynamicSelect` ヘルパー追加
+### Task C1: Add `field.dynamicSelect` helper
 
 **Files:**
 
 - Modify: `src/shared/lib/sections/field-registry.ts`
 
-- [ ] **Step 1: `FieldMeta.dynamicSelectSource` 追加**
+- [ ] **Step 1: Add `FieldMeta.dynamicSelectSource`**
 
 ```typescript
 export type DynamicSelectSource = "postCategories" | "faqCategories";
 
 export interface FieldMeta {
-  // ... 既存
+  // ... existing
   readonly dynamicSelectSource?: DynamicSelectSource;
 }
 
@@ -667,7 +667,7 @@ interface DynamicSelectOpts {
   readonly helpText?: string;
 }
 
-// field オブジェクトに追加
+// Add to field object
 dynamicSelect(label: string, opts: DynamicSelectOpts) {
   return z
     .string()
@@ -685,7 +685,7 @@ dynamicSelect(label: string, opts: DynamicSelectOpts) {
 },
 ```
 
-- [ ] **Step 2: 検証 + Commit**
+- [ ] **Step 2: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -695,7 +695,7 @@ git commit -m "feat(field-registry): add field.dynamicSelect helper + dynamicSel
 
 ---
 
-### Task C2: post-list / faq-list の categoryId を `dynamicSelect` に
+### Task C2: Switch post-list / faq-list categoryId to `dynamicSelect`
 
 **Files:**
 
@@ -704,24 +704,24 @@ git commit -m "feat(field-registry): add field.dynamicSelect helper + dynamicSel
 - [ ] **Step 1: post-list/schema.ts**
 
 ```typescript
-// 削除: categoryId: z.string().uuid().optional()
-// 追加:
-categoryId: field.dynamicSelect("カテゴリで絞り込み", {
+// Remove: categoryId: z.string().uuid().optional()
+// Add:
+categoryId: field.dynamicSelect("Filter by Category", {
   source: "postCategories",
   subGroup: "other",
-  helpText: "未指定の場合、全カテゴリの記事を表示",
+  helpText: "If unset, show posts from all categories",
 }),
 ```
 
-- [ ] **Step 2: faq-list/schema.ts も同様（既存 categoryId があれば）**
+- [ ] **Step 2: faq-list/schema.ts similarly (if categoryId exists)**
 
 ```bash
 grep -n "categoryId" src/shared/lib/sections/definitions/faq-list/schema.ts
 ```
 
-あれば置換、無ければ skip。
+Replace if present; skip if absent.
 
-- [ ] **Step 3: 検証 + Commit**
+- [ ] **Step 3: Validate + Commit**
 
 ```bash
 bun run type-check 2>&1 | tail -5
@@ -731,19 +731,19 @@ git commit -m "refactor(sections): post-list / faq-list categoryId via field.dyn
 
 ---
 
-### Task C3: SectionEditPanel + AutoSectionForm の dynamic options 注入
+### Task C3: Inject dynamic options into SectionEditPanel + AutoSectionForm
 
 **Files:**
 
 - Modify: `pages/[slug]/edit/_components/SectionEditPanel.tsx`
 - Modify: `pages/[slug]/_sections/_components/auto-section-form.tsx`
 - Modify: `pages/[slug]/_sections/_components/auto-fields/AutoSelectField.tsx`
-- Modify: `pages/[slug]/edit/_components/PageEditor.tsx`（fetch + props 経由）
+- Modify: `pages/[slug]/edit/_components/PageEditor.tsx` (via fetch + props)
 
-- [ ] **Step 1: getSectionDynamicOptions Server fetch**
+- [ ] **Step 1: getSectionDynamicOptions server fetch**
 
 ```typescript
-// src/admin/queries/section-dynamic-options.ts (新規)
+// src/admin/queries/section-dynamic-options.ts (new)
 import "server-only";
 import { prisma } from "@/shared/db/prisma";
 
@@ -772,9 +772,9 @@ export async function getSectionDynamicOptions(): Promise<DynamicSectionOptions>
 }
 ```
 
-注: faqCategory モデルが無ければ `[]` フォールバック。
+Note: if the faqCategory model does not exist, fall back to `[]`.
 
-- [ ] **Step 2: PageEditor の page.tsx で fetch + Client component に props 経由**
+- [ ] **Step 2: Fetch in PageEditor page.tsx and pass to client component via props**
 
 ```tsx
 // pages/[slug]/edit/page.tsx
@@ -783,7 +783,7 @@ const dynamicOptions = await getSectionDynamicOptions();
 <PageEditor key={page.id} page={page} dynamicOptions={dynamicOptions} />;
 ```
 
-- [ ] **Step 3: PageEditor → SectionEditPanel に props pipe**
+- [ ] **Step 3: Pipe props from PageEditor → SectionEditPanel**
 
 ```tsx
 <SectionEditPanel
@@ -794,7 +794,7 @@ const dynamicOptions = await getSectionDynamicOptions();
 />
 ```
 
-- [ ] **Step 4: SectionEditPanel → AutoSectionForm に pipe**
+- [ ] **Step 4: Pipe SectionEditPanel → AutoSectionForm**
 
 ```tsx
 <AutoSectionForm
@@ -803,9 +803,9 @@ const dynamicOptions = await getSectionDynamicOptions();
 />
 ```
 
-- [ ] **Step 5: AutoSectionForm 内で dynamicOptions を AutoSelectField に渡す**
+- [ ] **Step 5: Pass dynamicOptions to AutoSelectField inside AutoSectionForm**
 
-`AutoFieldByType` の `case "select"` で `meta.dynamicSelectSource` がある場合に options を上書き:
+In `AutoFieldByType` case "select", if `meta.dynamicSelectSource` exists, override options:
 
 ```tsx
 case "select":
@@ -819,18 +819,18 @@ case "select":
   );
 ```
 
-- [ ] **Step 6: AutoSelectField で dynamicOptions が渡されたら static options を上書き**
+- [ ] **Step 6: If dynamicOptions are passed to AutoSelectField, override static options**
 
 ```tsx
 const optionsToRender = dynamicOptions
   ? [
-      { value: "", label: "（指定なし）" },
+      { value: "", label: "(None)" },
       ...dynamicOptions.map((o) => ({ value: o.id, label: o.name })),
     ]
   : staticOptions;
 ```
 
-- [ ] **Step 7: 検証 + Commit**
+- [ ] **Step 7: Validate + Commit**
 
 ```bash
 bun run validate 2>&1 | tail -5
@@ -841,9 +841,9 @@ git commit -m "feat(page-edit): consume dynamicOptions for post/faq categoryId s
 
 ---
 
-## Phase 2D: テスト + cleanup
+## Phase 2D: Tests + cleanup
 
-### Task D1: factory + dynamicSelect テスト
+### Task D1: factory + dynamicSelect tests
 
 **Files:**
 
@@ -860,20 +860,20 @@ import { createButtonsArraySchema } from "@/shared/lib/sections/definitions/_sha
 describe("createButtonsArraySchema", () => {
   const schema = createButtonsArraySchema();
 
-  test("空配列が default", () => {
+  test("defaults to empty array", () => {
     const r = schema.safeParse(undefined);
     expect(r.success).toBe(true);
   });
 
-  test("最小構成（text + url）でパース成功", () => {
-    const r = schema.safeParse([{ text: "予約", url: "/reservation" }]);
+  test("parses minimal shape (text + url)", () => {
+    const r = schema.safeParse([{ text: "Reserve", url: "/reservation" }]);
     expect(r.success).toBe(true);
   });
 
-  test("size / iconName / variant フィールド対応", () => {
+  test("supports size / iconName / variant fields", () => {
     const r = schema.safeParse([
       {
-        text: "予約",
+        text: "Reserve",
         url: "/reservation",
         size: "sm",
         iconName: "IconArrowRight",
@@ -883,7 +883,7 @@ describe("createButtonsArraySchema", () => {
     expect(r.success).toBe(true);
   });
 
-  test("重複 URL は refine で reject", () => {
+  test("rejects duplicate URL via refine", () => {
     const r = schema.safeParse([
       { text: "A", url: "/a" },
       { text: "B", url: "/a" },
@@ -891,8 +891,10 @@ describe("createButtonsArraySchema", () => {
     expect(r.success).toBe(false);
   });
 
-  test("外部 URL は reject（internal app route のみ）", () => {
-    const r = schema.safeParse([{ text: "外部", url: "https://example.com" }]);
+  test("rejects external URL (internal app routes only)", () => {
+    const r = schema.safeParse([
+      { text: "External", url: "https://example.com" },
+    ]);
     expect(r.success).toBe(false);
   });
 });
@@ -910,7 +912,7 @@ import {
 describe("createImageGroupSchema", () => {
   const schema = createImageGroupSchema();
 
-  test("最小構成（url + alt）でパース成功", () => {
+  test("parses minimal shape (url + alt)", () => {
     const r = schema.safeParse({
       url: "https://example.com/a.jpg",
       alt: "alt",
@@ -918,7 +920,7 @@ describe("createImageGroupSchema", () => {
     expect(r.success).toBe(true);
   });
 
-  test("caption は optional（default 空文字）", () => {
+  test("caption is optional (default empty string)", () => {
     const r = schema.safeParse({
       url: "https://example.com/a.jpg",
       alt: "alt",
@@ -928,7 +930,7 @@ describe("createImageGroupSchema", () => {
 });
 
 describe("createCompactImageGroupSchema", () => {
-  test("caption フィールドは含まれない", () => {
+  test("caption field is not included", () => {
     const schema = createCompactImageGroupSchema();
     const r = schema.safeParse({ url: "https://example.com/a.jpg", alt: "" });
     expect(r.success).toBe(true);
@@ -943,34 +945,34 @@ import { describe, expect, test } from "bun:test";
 import { fieldRegistry, field } from "@/shared/lib/sections/field-registry";
 
 describe("field.dynamicSelect", () => {
-  const schema = field.dynamicSelect("カテゴリ", {
+  const schema = field.dynamicSelect("Category", {
     source: "postCategories",
   });
 
-  test("dynamicSelectSource メタが登録される", () => {
+  test("registers dynamicSelectSource meta", () => {
     const meta = fieldRegistry.get(schema);
     expect(meta?.dynamicSelectSource).toBe("postCategories");
     expect(meta?.fieldType).toBe("select");
   });
 
-  test("空文字を許容（カテゴリ未指定）", () => {
+  test("allows empty string (no category selected)", () => {
     const r = schema.safeParse("");
     expect(r.success).toBe(true);
   });
 
-  test("UUID を許容", () => {
+  test("allows UUID", () => {
     const r = schema.safeParse("550e8400-e29b-41d4-a716-446655440000");
     expect(r.success).toBe(true);
   });
 
-  test("非 UUID 文字列は reject", () => {
+  test("rejects non-UUID string", () => {
     const r = schema.safeParse("not-a-uuid");
     expect(r.success).toBe(false);
   });
 });
 ```
 
-- [ ] **Step 4: 検証 + Commit**
+- [ ] **Step 4: Validate + Commit**
 
 ```bash
 bun test __tests__/unit/shared/lib/sections/ 2>&1 | tail -5
@@ -984,24 +986,24 @@ git commit -m "test(sections): button factory + image factory + dynamicSelect te
 
 ### Spec coverage
 
-- [x] Section 1.1〜1.3 ボタン統一 → Task A1, A2, A3, A4
-- [x] Section 2.1〜2.4 画像メタ構造化 → Task B1, B2, B3, B4
-- [x] Section 3.1〜3.3 動的 select → Task C1, C2, C3
-- [x] Section 4 削除対象 → Task A4
-- [x] Section 7 commit 分割 → 14 tasks（spec 14 commits）
+- [x] Section 1.1–1.3 button unification → Task A1, A2, A3, A4
+- [x] Section 2.1–2.4 image metadata structuring → Task B1, B2, B3, B4
+- [x] Section 3.1–3.3 dynamic select → Task C1, C2, C3
+- [x] Section 4 removals → Task A4
+- [x] Section 7 commit split → 14 tasks (spec: 14 commits)
 
 ### Type consistency
 
-- [x] `createButtonsArraySchema` / `createImageGroupSchema` / `createCompactImageGroupSchema` / `dynamicSelect` 命名統一
-- [x] `DynamicSelectSource` 型 export
-- [x] `dynamicSelectSource` meta フィールド統一
+- [x] `createButtonsArraySchema` / `createImageGroupSchema` / `createCompactImageGroupSchema` / `dynamicSelect` naming consistency
+- [x] `DynamicSelectSource` type export
+- [x] `dynamicSelectSource` meta field consistency
 
 ---
 
 ## Execution Recommendation
 
-**Subagent-Driven Development を推奨**:
+**Recommend Subagent-Driven Development**:
 
-- Phase 2A → 2B → 2C → 2D の順序で逐次実行
-- Phase 2A4 / 2B3 は destructive migration を含むため fresh subagent dispatch + 完了後 controller が `git log --oneline` + `git show --stat HEAD` で実在検証
-- 各 Phase 完了後 `bun run validate` を controller で確認
+- Execute sequentially in order: Phase 2A → 2B → 2C → 2D
+- Phase 2A4 / 2B3 include destructive migrations, so use fresh subagent dispatch; after completion, the controller verifies with `git log --oneline` + `git show --stat HEAD`
+- After each phase, have the controller run `bun run validate`

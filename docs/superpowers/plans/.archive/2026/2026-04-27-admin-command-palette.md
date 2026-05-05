@@ -4,9 +4,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 管理画面全域に Cmd+K / Ctrl+K で起動するグローバル Command Palette を導入し、横断検索 + ナビゲーション + クイックアクションを 1 つのダイアログで提供する。
+**Goal:** Introduce a global Command Palette across the admin UI (Cmd+K / Ctrl+K) that provides cross-search, navigation, and quick actions in a single dialog.
 
-**Architecture:** Hybrid (Option C) — Recents / Nav / Quick Actions は layout で server fetch、free-text 検索は単一 Server Action `searchAdminResources` が 11 resource を `Promise.allSettled` で並列。既存 cmdk primitive (`@/admin/components/ui/command.tsx`) を流用、新規 Dialog primitive を作らない。
+**Architecture:** Hybrid (Option C) — Recents / Nav / Quick Actions are server-fetched in layout; free-text search uses a single Server Action `searchAdminResources` that searches 11 resources in parallel via `Promise.allSettled`. Reuse the existing cmdk primitive (`@/admin/components/ui/command.tsx`); no new Dialog primitive.
 
 **Tech Stack:** Next.js 16.2 / React 19.2 / cmdk 1.1 / Radix Dialog / Better Auth (`adminAuth`) / Prisma 7.8 / Tailwind v4
 
@@ -14,21 +14,21 @@
 
 ---
 
-## 重要な前提（spec からの修正点）
+## Important assumptions (spec corrections)
 
-1. **Prisma モデル名は `AuditLog`**（spec で `AdminAuditLog` と書いた箇所は読み替え）。`User.auditLogs AuditLog[]` リレーション経由で actor を絞れる
-2. **既存 admin-queries の多くは `q` パラメータを持たない** — 検索は `_shared/lib/command-palette/queries.ts` に薄い search wrapper を 11 resource 分新規実装（既存 query は流用しない）
-3. **キャッシュタグ**: Recents 用に `getCacheTag.auditLogs.recent(userId)` が必要。`@/shared/lib/constants` に存在しなければ Bundle B で追加
-4. **Rate limit**: `formSubmitRateLimiter` (`src/shared/lib/rate-limit.ts`) を流用、専用 limiter を新規追加しない
+1. **Prisma model name is `AuditLog`** (treat spec references to `AdminAuditLog` as `AuditLog`). Actor can be filtered via the `User.auditLogs AuditLog[]` relation
+2. **Most existing admin-queries lack a `q` parameter** — implement thin search wrappers for all 11 resources in `_shared/lib/command-palette/queries.ts` (do not reuse existing queries)
+3. **Cache tag**: Recents requires `getCacheTag.auditLogs.recent(userId)`. If missing in `@/shared/lib/constants`, add in Bundle B
+4. **Rate limit**: reuse `formSubmitRateLimiter` (`src/shared/lib/rate-limit.ts`), do not add a new limiter
 
 ---
 
-## Worktree 前提
+## Worktree prerequisites
 
 ```bash
-# main ブランチで未コミット変更ゼロを確認後
+# After confirming no uncommitted changes on main
 cd /g/workspace/work/website/customer/myrrh-rental-space
-git status --short                       # → 空
+git status --short                       # → empty
 git worktree add .worktrees/command-palette -b feature/admin-command-palette main
 cd .worktrees/command-palette
 python3 -c "import shutil; shutil.copy2('../../.env', '.env')"
@@ -39,47 +39,47 @@ bun install --frozen-lockfile
 
 ---
 
-## File Structure（Bundle 全体）
+## File Structure (entire bundle)
 
-### 新規ファイル
+### New files
 
-| パス                                                                                              | 責務                                                        |
-| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/CommandPalette.tsx`         | Client Component — cmdk Dialog 本体、検索 input + 結果表示  |
-| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/CommandPaletteProvider.tsx` | Client Provider — open/close state + Cmd+K listener         |
-| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/SearchTriggerButton.tsx`    | Client — TopBar の "検索 ⌘K" trigger                        |
-| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/types.ts`                   | 型定義（SearchResult / RecentItem / NavItem / QuickAction） |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/nav-items.ts`                      | 23 admin nav items SSoT + role filter                       |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/quick-actions.ts`                  | クイックアクション SSoT (新規作成系 6-8 件) + role filter   |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/queries.ts`                        | 11 resource の thin search wrapper (`server-only`)          |
-| `src/app/(admin)/admin/(dashboard)/_shared/actions/command-palette/search.ts`                     | Server Action — `searchAdminResources(query)`               |
-| `src/shared/domain/audit/recents-queries.ts`                                                      | `getRecentAuditedResources(userId, limit)` (`'use cache'`)  |
-| `docs/architecture/decisions/0024-admin-command-palette.md`                                       | ADR 0024                                                    |
+| Path                                                                                              | Responsibility                                                       |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/CommandPalette.tsx`         | Client Component — cmdk dialog, search input + results               |
+| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/CommandPaletteProvider.tsx` | Client Provider — open/close state + Cmd+K listener                  |
+| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/SearchTriggerButton.tsx`    | Client — TopBar "Search ⌘K" trigger                                  |
+| `src/app/(admin)/admin/(dashboard)/_shared/components/command-palette/types.ts`                   | Type definitions (SearchResult / RecentItem / NavItem / QuickAction) |
+| `src/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/nav-items.ts`                      | 23 admin nav items SSoT + role filter                                |
+| `src/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/quick-actions.ts`                  | Quick actions SSoT (6-8 create actions) + role filter                |
+| `src/app/(admin)/admin/(dashboard)/_shared/lib/command-palette/queries.ts`                        | Thin search wrappers for 11 resources (`server-only`)                |
+| `src/app/(admin)/admin/(dashboard)/_shared/actions/command-palette/search.ts`                     | Server Action — `searchAdminResources(query)`                        |
+| `src/shared/domain/audit/recents-queries.ts`                                                      | `getRecentAuditedResources(userId, limit)` (`'use cache'`)           |
+| `docs/architecture/decisions/0024-admin-command-palette.md`                                       | ADR 0024                                                             |
 
-### 変更ファイル
+### Modified files
 
-| パス                                                            | 変更内容                                                               |
+| Path                                                            | Changes                                                                |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx`      | `searchTrigger` slot 追加（branding 右隣）                             |
-| `src/app/(admin)/admin/(dashboard)/_components/TopBarSlots.tsx` | `SearchTriggerSlot` 追加                                               |
-| `src/app/(admin)/admin/(dashboard)/layout.tsx`                  | `<CommandPaletteProvider>` ラップ + Recents fetch + searchTrigger 配線 |
-| `src/shared/lib/constants/cache-tags.ts` (該当ファイル)         | `getCacheTag.auditLogs.recent(userId)` を追加（不在の場合）            |
-| `docs/architecture/decisions/README.md`                         | ADR 0024 を index に追加                                               |
+| `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx`      | Add `searchTrigger` slot (next to branding)                            |
+| `src/app/(admin)/admin/(dashboard)/_components/TopBarSlots.tsx` | Add `SearchTriggerSlot`                                                |
+| `src/app/(admin)/admin/(dashboard)/layout.tsx`                  | Wrap `<CommandPaletteProvider>` + Recents fetch + searchTrigger wiring |
+| `src/shared/lib/constants/cache-tags.ts` (if applicable file)   | Add `getCacheTag.auditLogs.recent(userId)` (if missing)                |
+| `docs/architecture/decisions/README.md`                         | Add ADR 0024 to index                                                  |
 
-### テストファイル
+### Test files
 
-| パス                                                          | 責務                                                                                            |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `__tests__/unit/lib/command-palette/nav-items.test.ts`        | role filter logic (4 role × 23 nav items)                                                       |
-| `__tests__/unit/lib/command-palette/quick-actions.test.ts`    | role filter (VIEWER 非表示, EDITOR/ADMIN 表示)                                                  |
-| `__tests__/unit/lib/command-palette/queries.test.ts`          | search wrapper 11 resource 各 happy path                                                        |
-| `__tests__/integration/actions/admin/command-palette.test.ts` | `searchAdminResources` Server Action（auth + role filter + Promise.allSettled fault tolerance） |
+| Path                                                          | Responsibility                                                                                 |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `__tests__/unit/lib/command-palette/nav-items.test.ts`        | Role filter logic (4 roles × 23 nav items)                                                     |
+| `__tests__/unit/lib/command-palette/quick-actions.test.ts`    | Role filter (VIEWER hidden, EDITOR/ADMIN shown)                                                |
+| `__tests__/unit/lib/command-palette/queries.test.ts`          | Search wrapper happy paths for all 11 resources                                                |
+| `__tests__/integration/actions/admin/command-palette.test.ts` | `searchAdminResources` Server Action (auth + role filter + Promise.allSettled fault tolerance) |
 
 ---
 
 ## Bundle A — UI Scaffold (4 commits)
 
-> **Implementer dispatch**: 1 implementer に Bundle A 全体をバンドル指示。各 commit 単位で commit message は plan 指定文字列をそのまま使用すること。`git add` / `commit` は implementer 側で実行可、`git reset` / `restore` / `stash` は禁止。
+> **Implementer dispatch**: Assign one implementer to handle all of Bundle A. For each commit, use the plan-specified commit message verbatim. `git add` / `commit` may be run by the implementer; `git reset` / `restore` / `stash` are forbidden.
 
 ### Task A1 — Types + Provider scaffold
 
@@ -88,7 +88,7 @@ bun install --frozen-lockfile
 - Create: `_shared/components/command-palette/types.ts`
 - Create: `_shared/components/command-palette/CommandPaletteProvider.tsx`
 
-- [ ] **Step 1: 型定義を作成**
+- [ ] **Step 1: Create type definitions**
 
 `_shared/components/command-palette/types.ts`:
 
@@ -100,7 +100,7 @@ export type NavItem = {
   label: string;
   href: string;
   resource: Resource;
-  keywords?: string[]; // fuzzy filter のキーワード補強
+  keywords?: string[]; // keyword boost for fuzzy filter
 };
 
 export type QuickAction = {
@@ -115,7 +115,7 @@ export type RecentItem = {
   id: string; // `${resource}:${resourceId}`
   resource: Resource;
   resourceId: string;
-  label: string; // "スペース: 渋谷店"
+  label: string; // "Space: Shibuya"
   href: string;
   occurredAt: string; // ISO string (Serialized)
 };
@@ -134,7 +134,7 @@ export type SearchResultGroup = {
 };
 ```
 
-- [ ] **Step 2: Provider 雛形（open state + keyboard listener）**
+- [ ] **Step 2: Provider scaffold (open state + keyboard listener)**
 
 `_shared/components/command-palette/CommandPaletteProvider.tsx`:
 
@@ -225,7 +225,7 @@ git commit -m "feat(admin): add command palette provider and types (P16 A1)"
 
 - Create: `_shared/components/command-palette/SearchTriggerButton.tsx`
 
-- [ ] **Step 1: Trigger button 実装**
+- [ ] **Step 1: Implement trigger button**
 
 `_shared/components/command-palette/SearchTriggerButton.tsx`:
 
@@ -256,7 +256,7 @@ export function SearchTriggerButton() {
         variant="ghost"
         size="icon"
         onClick={() => setOpen(true)}
-        aria-label="検索を開く"
+        aria-label="Open search"
         className="h-11 w-11 sm:hidden"
       >
         <IconSearch className="h-5 w-5" />
@@ -267,7 +267,7 @@ export function SearchTriggerButton() {
         type="button"
         variant="outline"
         onClick={() => setOpen(true)}
-        aria-label="検索を開く"
+        aria-label="Open search"
         className={cn(
           "hidden sm:inline-flex h-11 w-64 items-center justify-between gap-2",
           "px-3 text-sm text-muted-foreground hover:text-foreground",
@@ -275,7 +275,7 @@ export function SearchTriggerButton() {
       >
         <span className="inline-flex items-center gap-2">
           <IconSearch className="h-4 w-4" aria-hidden="true" />
-          検索...
+          Search...
         </span>
         <kbd className="pointer-events-none inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs text-muted-foreground">
           {shortcutLabel}
@@ -309,7 +309,7 @@ git commit -m "feat(admin): add command palette search trigger button (P16 A2)"
 
 - Create: `_shared/components/command-palette/CommandPalette.tsx`
 
-- [ ] **Step 1: Palette body（Suggested セクションのみ、検索は Bundle B で配線）**
+- [ ] **Step 1: Palette body (Suggested section only; search wired in Bundle B)**
 
 `_shared/components/command-palette/CommandPalette.tsx`:
 
@@ -343,16 +343,16 @@ export function CommandPalette() {
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
-      title="コマンドパレット"
-      description="管理画面全域の検索・ナビゲーションを行います"
+      title="Command palette"
+      description="Search and navigate across the admin UI"
     >
-      <CommandInput placeholder="コマンドや検索キーワードを入力..." />
+      <CommandInput placeholder="Type a command or search keyword..." />
       <CommandList>
-        <CommandEmpty>該当する項目がありません</CommandEmpty>
+        <CommandEmpty>No matching items</CommandEmpty>
 
         {recents.length > 0 && (
           <>
-            <CommandGroup heading="最近の操作">
+            <CommandGroup heading="Recent activity">
               {recents.map((item) => (
                 <CommandItem
                   key={item.id}
@@ -369,7 +369,7 @@ export function CommandPalette() {
 
         {quickActions.length > 0 && (
           <>
-            <CommandGroup heading="クイックアクション">
+            <CommandGroup heading="Quick actions">
               {quickActions.map((action) => (
                 <CommandItem
                   key={action.id}
@@ -384,7 +384,7 @@ export function CommandPalette() {
           </>
         )}
 
-        <CommandGroup heading="ナビゲーション">
+        <CommandGroup heading="Navigation">
           {navItems.map((nav) => (
             <CommandItem
               key={nav.id}
@@ -418,7 +418,7 @@ git commit -m "feat(admin): add command palette dialog body (P16 A3)"
 
 ---
 
-### Task A4 — TopBar slot 拡張 + layout.tsx 配線（empty data）
+### Task A4 — TopBar slot extension + layout.tsx wiring (empty data)
 
 **Files:**
 
@@ -426,7 +426,7 @@ git commit -m "feat(admin): add command palette dialog body (P16 A3)"
 - Modify: `_components/TopBarSlots.tsx`
 - Modify: `(dashboard)/layout.tsx`
 
-- [ ] **Step 1: TopBar.tsx に searchTrigger slot 追加**
+- [ ] **Step 1: Add searchTrigger slot to TopBar.tsx**
 
 ```diff
  type TopBarProps = {
@@ -448,9 +448,9 @@ git commit -m "feat(admin): add command palette dialog body (P16 A3)"
        </div>
 ```
 
-- [ ] **Step 2: TopBarSlots.tsx に SearchTriggerSlot 追加**
+- [ ] **Step 2: Add SearchTriggerSlot to TopBarSlots.tsx**
 
-ファイル末尾に追加:
+Add to the end of the file:
 
 ```tsx
 import { SearchTriggerButton } from "@/admin/_shared/components/command-palette/SearchTriggerButton";
@@ -460,20 +460,20 @@ export function SearchTriggerSlot(): ReactElement {
 }
 ```
 
-> 注: `@/admin/_shared/...` の import alias は既存パターンに合わせて確認。実態は相対パス `../_shared/components/command-palette/SearchTriggerButton` のいずれかを使う。
+> Note: Verify the `@/admin/_shared/...` import alias against existing patterns. Use the relative path `../_shared/components/command-palette/SearchTriggerButton` if needed.
 
-- [ ] **Step 3: layout.tsx で Provider + searchTrigger 配線（recents は空配列で暫定）**
+- [ ] **Step 3: Wire Provider + searchTrigger in layout.tsx (recents empty for now)**
 
 ```diff
 +import { CommandPaletteProvider } from "./_shared/components/command-palette/CommandPaletteProvider";
 +import { CommandPalette } from "./_shared/components/command-palette/CommandPalette";
-+import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items"; // ← Bundle B で実装、暫定で空配列
-+import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions"; // 同上
++import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items"; // implemented in Bundle B, empty for now
++import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions"; // same as above
 +import { SearchTriggerSlot } from "./_components/TopBarSlots";
  ...
  export default async function DashboardLayout({ children }) {
    const user = await verifyAdminSession();
-+  // Bundle B 完了後に置換: const navItems = getNavItemsForRole(user.role);
++  // Replace after Bundle B: const navItems = getNavItemsForRole(user.role);
 +  const navItems: NavItem[] = [];
 +  const quickActions: QuickAction[] = [];
 +  const recents: RecentItem[] = [];
@@ -495,9 +495,9 @@ export function SearchTriggerSlot(): ReactElement {
  }
 ```
 
-> 暫定空配列のため、Bundle A 完了時点では Cmd+K で Dialog は開くが Suggested セクションは Empty State 表示。Bundle B/C で完成。
+> With temporary empty arrays, Cmd+K opens the dialog but the Suggested section shows the empty state at the end of Bundle A. Bundles B/C complete it.
 
-- [ ] **Step 4: type-check + lint + dev で UI 確認**
+- [ ] **Step 4: type-check + lint + verify UI in dev**
 
 ```bash
 bun run validate
@@ -505,7 +505,7 @@ bun run validate
 
 Expected: EXIT 0
 
-dev server が起動していれば: `/admin` を開いて Cmd+K (mac) / Ctrl+K で Dialog open → Empty state 表示 / Esc で close を確認。
+If the dev server is running: open `/admin`, press Cmd+K (mac) / Ctrl+K to open the dialog → empty state appears → Esc closes it.
 
 - [ ] **Step 5: Commit**
 
@@ -520,7 +520,7 @@ git commit -m "feat(admin): wire command palette into TopBar and layout (P16 A4)
 
 ## Bundle B — Search Server Action + Domain queries (5 commits)
 
-> **Implementer dispatch**: 1 implementer に Bundle B 全体をバンドル指示。Bundle A の `getNavItemsForRole` / `getQuickActionsForRole` 暫定空配列を本実装に置換するため、layout.tsx の併行修正を含む。
+> **Implementer dispatch**: Assign one implementer to handle all of Bundle B. Because Bundle A uses temporary empty arrays for `getNavItemsForRole` / `getQuickActionsForRole`, include parallel edits in layout.tsx to replace them with real implementations.
 
 ### Task B1 — Nav items SSoT
 
@@ -541,109 +541,109 @@ import { hasPermission } from "@/admin/lib/permissions";
 const ALL_NAV_ITEMS: readonly NavItem[] = [
   {
     id: "dashboard",
-    label: "ダッシュボード",
+    label: "Dashboard",
     href: "/admin",
     resource: "settings",
   },
   {
     id: "spaces",
-    label: "スペース管理",
+    label: "Spaces",
     href: "/admin/spaces",
     resource: "space",
   },
   {
     id: "locations",
-    label: "場所管理",
+    label: "Locations",
     href: "/admin/spaces?tab=locations",
     resource: "location",
   },
   {
     id: "categories",
-    label: "カテゴリ管理",
+    label: "Categories",
     href: "/admin/spaces?tab=categories",
     resource: "spaceCategory",
   },
   {
     id: "reservations",
-    label: "予約管理",
+    label: "Reservations",
     href: "/admin/reservations",
     resource: "reservation",
   },
   {
     id: "customers",
-    label: "顧客管理",
+    label: "Customers",
     href: "/admin/customers",
     resource: "customer",
   },
   {
     id: "inquiries",
-    label: "お問い合わせ",
+    label: "Inquiries",
     href: "/admin/inquiries",
     resource: "inquiry",
   },
   {
     id: "events",
-    label: "イベント管理",
+    label: "Events",
     href: "/admin/events",
     resource: "event",
   },
-  { id: "posts", label: "ブログ", href: "/admin/posts", resource: "post" },
-  { id: "news", label: "お知らせ", href: "/admin/news", resource: "news" },
-  { id: "pages", label: "固定ページ", href: "/admin/pages", resource: "page" },
+  { id: "posts", label: "Blog", href: "/admin/posts", resource: "post" },
+  { id: "news", label: "News", href: "/admin/news", resource: "news" },
+  { id: "pages", label: "Pages", href: "/admin/pages", resource: "page" },
   { id: "faq", label: "FAQ", href: "/admin/faq", resource: "faq" },
-  { id: "terms", label: "規約", href: "/admin/terms", resource: "terms" },
+  { id: "terms", label: "Terms", href: "/admin/terms", resource: "terms" },
   {
     id: "navigation",
-    label: "ナビゲーション",
+    label: "Navigation",
     href: "/admin/navigation",
     resource: "navigation",
   },
   {
     id: "announcement-bar",
-    label: "アナウンスバー",
+    label: "Announcement Bar",
     href: "/admin/announcement-bar",
     resource: "announcementBar",
   },
-  { id: "media", label: "メディア", href: "/admin/media", resource: "media" },
+  { id: "media", label: "Media", href: "/admin/media", resource: "media" },
   {
     id: "block-templates",
-    label: "ブロックテンプレート",
+    label: "Block Templates",
     href: "/admin/block-templates",
     resource: "blockTemplate",
   },
   {
     id: "coupons",
-    label: "クーポン",
+    label: "Coupons",
     href: "/admin/coupons",
     resource: "coupon",
   },
   {
     id: "users",
-    label: "ユーザー管理",
+    label: "Users",
     href: "/admin/users",
     resource: "user",
   },
   {
     id: "audit-logs",
-    label: "監査ログ",
+    label: "Audit Logs",
     href: "/admin/audit-logs",
     resource: "auditLog",
   },
   {
     id: "settings-organization",
-    label: "設定: 組織情報",
+    label: "Settings: Organization",
     href: "/admin/settings/organization",
     resource: "settings",
   },
   {
     id: "settings-business",
-    label: "設定: 事業情報",
+    label: "Settings: Business",
     href: "/admin/settings/business",
     resource: "settings",
   },
   {
     id: "settings-security",
-    label: "設定: セキュリティ・連携",
+    label: "Settings: Security & Integrations",
     href: "/admin/settings/security-integrations",
     resource: "settings",
   },
@@ -658,7 +658,7 @@ export function getNavItemsForRole(role: Role): NavItem[] {
 export const ALL_NAV_ITEMS_FOR_TEST = ALL_NAV_ITEMS;
 ```
 
-> **重要**: 上記 23 件の href は plan 作成時の SSoT。実装前に `ls 'src/app/(admin)/admin/(dashboard)/'` で実在を確認し、ルート不在 / リネーム箇所は justified deviation として report する。
+> **Important**: The 23 hrefs above are the SSoT at plan creation. Before implementation, verify existence with `ls 'src/app/(admin)/admin/(dashboard)/'`; report missing/renamed routes as justified deviations.
 
 - [ ] **Step 2: Unit test**
 
@@ -673,33 +673,33 @@ import {
 } from "@/admin/_shared/lib/command-palette/nav-items";
 
 describe("getNavItemsForRole", () => {
-  test("SUPER_ADMIN は全 nav items を取得", () => {
+  test("SUPER_ADMIN gets all nav items", () => {
     expect(getNavItemsForRole(Role.SUPER_ADMIN).length).toBe(
       ALL_NAV_ITEMS_FOR_TEST.length,
     );
   });
 
-  test("VIEWER は user / auditLog 等の管理対象外 resource は除外", () => {
+  test("VIEWER excludes admin-only resources like user / auditLog", () => {
     const items = getNavItemsForRole(Role.VIEWER);
     expect(items.find((i) => i.resource === "user")).toBeUndefined();
     expect(items.find((i) => i.resource === "auditLog")).toBeUndefined();
   });
 
-  test("EDITOR は read 可能な resource のみ", () => {
+  test("EDITOR returns only readable resources", () => {
     const items = getNavItemsForRole(Role.EDITOR);
-    // EDITOR は ROLE_PERMISSIONS で読み取り可能な resource のみが返る
+    // EDITOR returns only resources readable in ROLE_PERMISSIONS
     expect(items.length).toBeGreaterThan(0);
     expect(items.length).toBeLessThanOrEqual(ALL_NAV_ITEMS_FOR_TEST.length);
   });
 
-  test("ADMIN は user / auditLog を含む", () => {
+  test("ADMIN includes user / auditLog", () => {
     const items = getNavItemsForRole(Role.ADMIN);
     expect(items.find((i) => i.resource === "user")).toBeDefined();
   });
 });
 ```
 
-- [ ] **Step 3: Test 実行**
+- [ ] **Step 3: Run tests**
 
 ```bash
 bun test __tests__/unit/lib/command-palette/nav-items.test.ts
@@ -724,7 +724,7 @@ git commit -m "feat(admin): add command palette nav items SSoT (P16 B1)"
 - Create: `_shared/lib/command-palette/quick-actions.ts`
 - Test: `__tests__/unit/lib/command-palette/quick-actions.test.ts`
 
-- [ ] **Step 1: Quick actions 定義**
+- [ ] **Step 1: Define quick actions**
 
 `_shared/lib/command-palette/quick-actions.ts`:
 
@@ -736,43 +736,43 @@ import { hasPermission } from "@/admin/lib/permissions";
 const ALL_QUICK_ACTIONS: readonly QuickAction[] = [
   {
     id: "new-space",
-    label: "新規スペースを作成",
+    label: "Create new space",
     href: "/admin/spaces/new",
     resource: "space",
   },
   {
     id: "new-reservation",
-    label: "新規予約を作成",
+    label: "Create new reservation",
     href: "/admin/reservations/new",
     resource: "reservation",
   },
   {
     id: "new-customer",
-    label: "新規顧客を登録",
+    label: "Register new customer",
     href: "/admin/customers/new",
     resource: "customer",
   },
   {
     id: "new-event",
-    label: "新規イベントを作成",
+    label: "Create new event",
     href: "/admin/events/new",
     resource: "event",
   },
   {
     id: "new-post",
-    label: "新規ブログ記事を作成",
+    label: "Create new blog post",
     href: "/admin/posts/new",
     resource: "post",
   },
   {
     id: "new-news",
-    label: "新規お知らせを作成",
+    label: "Create new news",
     href: "/admin/news/new",
     resource: "news",
   },
   {
     id: "new-coupon",
-    label: "新規クーポンを作成",
+    label: "Create new coupon",
     href: "/admin/coupons/new",
     resource: "coupon",
   },
@@ -787,7 +787,7 @@ export function getQuickActionsForRole(role: Role): QuickAction[] {
 export const ALL_QUICK_ACTIONS_FOR_TEST = ALL_QUICK_ACTIONS;
 ```
 
-> **重要**: 各 `href` の実在を `ls 'src/app/(admin)/admin/(dashboard)/<resource>/new/'` で確認。不在ルートは justified deviation として削除する。
+> **Important**: Verify each `href` exists with `ls 'src/app/(admin)/admin/(dashboard)/<resource>/new/'`. Remove missing routes as justified deviations.
 
 - [ ] **Step 2: Unit test**
 
@@ -802,17 +802,17 @@ import {
 } from "@/admin/_shared/lib/command-palette/quick-actions";
 
 describe("getQuickActionsForRole", () => {
-  test("SUPER_ADMIN は全 quick actions を取得", () => {
+  test("SUPER_ADMIN gets all quick actions", () => {
     expect(getQuickActionsForRole(Role.SUPER_ADMIN).length).toBe(
       ALL_QUICK_ACTIONS_FOR_TEST.length,
     );
   });
 
-  test("VIEWER は create 権限を持たないため空配列", () => {
+  test("VIEWER returns empty array (no create permission)", () => {
     expect(getQuickActionsForRole(Role.VIEWER)).toEqual([]);
   });
 
-  test("ADMIN は create 権限を持つ quick actions を取得", () => {
+  test("ADMIN gets quick actions with create permission", () => {
     const actions = getQuickActionsForRole(Role.ADMIN);
     expect(actions.length).toBeGreaterThan(0);
   });
@@ -839,7 +839,7 @@ Expected: 3 pass, 0 fail
 - Create: `_shared/lib/command-palette/queries.ts`
 - Test: `__tests__/unit/lib/command-palette/queries.test.ts`
 
-- [ ] **Step 1: thin search wrapper を 11 resource 分実装**
+- [ ] **Step 1: Implement thin search wrappers for 11 resources**
 
 `_shared/lib/command-palette/queries.ts`:
 
@@ -1099,13 +1099,13 @@ export const SEARCHABLE_RESOURCES = Object.keys(
 ) as Resource[];
 ```
 
-> **重要 — 実装前確認事項**:
+> **Important — pre-implementation checks**:
 >
-> - 各 model の field 名（`Reservation.reservationNumber` / `Inquiry.subject` 等）は実装者が `grep -A30 "^model <Name>" prisma/schema.prisma` で確認
-> - `deletedAt` field を持たないモデル（`Customer` / `Inquiry` / `FaqItem` / `Coupon`）は `where: { deletedAt: null }` を含めない
-> - `Location` の edit URL は `gotchas/domain.md` の per-slug invalidation pattern に合わせ後続調整可
+> - Verify each model field name (e.g., `Reservation.reservationNumber` / `Inquiry.subject`) via `grep -A30 "^model <Name>" prisma/schema.prisma`
+> - For models without `deletedAt` (`Customer` / `Inquiry` / `FaqItem` / `Coupon`), do not include `where: { deletedAt: null }`
+> - The Location edit URL can be adjusted later to match the per-slug invalidation pattern in `gotchas/domain.md`
 
-- [ ] **Step 2: Unit test（mock prisma で 11 resource）**
+- [ ] **Step 2: Unit test (mock prisma for 11 resources)**
 
 `__tests__/unit/lib/command-palette/queries.test.ts`:
 
@@ -1116,15 +1116,15 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     space: {
       findMany: mock(async () => [
-        { id: "s1", name: "渋谷店", slug: "shibuya" },
+        { id: "s1", name: "Shibuya", slug: "shibuya" },
       ]),
     },
     customer: {
       findMany: mock(async () => [
         {
           id: "c1",
-          lastName: "山田",
-          firstName: "太郎",
+          lastName: "Yamada",
+          firstName: "Taro",
           email: "y@example.com",
         },
       ]),
@@ -1135,29 +1135,25 @@ mock.module("@/shared/db/prisma", () => ({
           id: "r1",
           reservationNumber: "R001",
           startAt: new Date("2026-05-01"),
-          customer: { lastName: "山田" },
-          space: { name: "渋谷" },
+          customer: { lastName: "Yamada" },
+          space: { name: "Shibuya" },
         },
       ]),
     },
     post: {
-      findMany: mock(async () => [{ id: "p1", title: "投稿", slug: "post" }]),
+      findMany: mock(async () => [{ id: "p1", title: "Post", slug: "post" }]),
     },
     news: {
-      findMany: mock(async () => [
-        { id: "n1", title: "ニュース", slug: "news" },
-      ]),
+      findMany: mock(async () => [{ id: "n1", title: "News", slug: "news" }]),
     },
     page: {
-      findMany: mock(async () => [
-        { id: "pg1", title: "ページ", slug: "page" },
-      ]),
+      findMany: mock(async () => [{ id: "pg1", title: "Page", slug: "page" }]),
     },
     event: {
       findMany: mock(async () => [
         {
           id: "e1",
-          title: "イベント",
+          title: "Event",
           slug: "event",
           startAt: new Date("2026-05-01"),
         },
@@ -1165,19 +1161,24 @@ mock.module("@/shared/db/prisma", () => ({
     },
     inquiry: {
       findMany: mock(async () => [
-        { id: "i1", name: "問合せ", subject: "件名", createdAt: new Date() },
+        {
+          id: "i1",
+          name: "Inquiry",
+          subject: "Subject",
+          createdAt: new Date(),
+        },
       ]),
     },
     faqItem: {
       findMany: mock(async () => [
-        { id: "f1", question: "質問", categoryId: "cat1" },
+        { id: "f1", question: "Question", categoryId: "cat1" },
       ]),
     },
     coupon: {
       findMany: mock(async () => [{ id: "co1", code: "C10", name: "10% off" }]),
     },
     location: {
-      findMany: mock(async () => [{ id: "l1", name: "本館", slug: "main" }]),
+      findMany: mock(async () => [{ id: "l1", name: "Honkan", slug: "main" }]),
     },
   },
 }));
@@ -1188,7 +1189,7 @@ import {
 } from "@/admin/_shared/lib/command-palette/queries";
 
 describe("searchByResource", () => {
-  test("11 resource すべてが SEARCHABLE_RESOURCES に含まれる", () => {
+  test("all 11 resources are included in SEARCHABLE_RESOURCES", () => {
     expect(SEARCHABLE_RESOURCES.length).toBe(11);
   });
 
@@ -1205,7 +1206,7 @@ describe("searchByResource", () => {
     "coupon",
     "location",
   ] as const) {
-    test(`${resource} 検索が SearchResultItem を返す`, async () => {
+    test(`${resource} search returns SearchResultItem`, async () => {
       const group = await searchByResource(resource, "test");
       expect(group.resource).toBe(resource);
       expect(group.items.length).toBeGreaterThan(0);
@@ -1229,7 +1230,7 @@ git add src/app/\(admin\)/admin/\(dashboard\)/_shared/lib/command-palette/querie
 git commit -m "feat(admin): add 11 resource search wrappers for command palette (P16 B3)"
 ```
 
-> Note: 新規 test directory のため `package.json` の `test:unit` バッチに `bun test __tests__/unit/lib/command-palette` を追加する（CLAUDE.md 「per-directory バッチ」原則）。これは Bundle B Step B3 に含めて 1 commit 化する。
+> Note: Because this is a new test directory, add `bun test __tests__/unit/lib/command-palette` to the `test:unit` batch in `package.json` (CLAUDE.md "per-directory batch" principle). Include this in Bundle B Step B3 as a single commit.
 
 ---
 
@@ -1239,7 +1240,7 @@ git commit -m "feat(admin): add 11 resource search wrappers for command palette 
 
 - Create: `_shared/actions/command-palette/search.ts`
 
-- [ ] **Step 1: Server Action 実装**
+- [ ] **Step 1: Implement Server Action**
 
 ```ts
 "use server";
@@ -1293,11 +1294,11 @@ export async function searchAdminResources(
 }
 ```
 
-> **重要 — 実装前確認**:
+> **Important — pre-implementation checks**:
 >
-> - `checkActionRateLimit` の正確な signature を `grep -nE "^export.*checkActionRateLimit" src/shared/lib/rate-limit.ts` で確認
-> - 不在なら `formSubmitRateLimiter.consume(...)` のような既存実装パターンに合わせる
-> - `checkAdminAuth` の戻り値 type が `auth.user.role` を提供することを `Read` で確認
+> - Verify the exact signature of `checkActionRateLimit` with `grep -nE "^export.*checkActionRateLimit" src/shared/lib/rate-limit.ts`
+> - If absent, follow the existing pattern such as `formSubmitRateLimiter.consume(...)`
+> - Confirm the return type of `checkAdminAuth` provides `auth.user.role` via `Read`
 
 - [ ] **Step 2: Integration test**
 
@@ -1358,18 +1359,18 @@ describe("searchAdminResources", () => {
     mockSearchByResource.mockClear();
   });
 
-  test("空クエリは空 groups を返す", async () => {
+  test("empty query returns empty groups", async () => {
     const result = await searchAdminResources("");
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.groups).toEqual([]);
   });
 
-  test("1 文字クエリは空 groups を返す（ノイズ抑制）", async () => {
+  test("single-character query returns empty groups (noise suppression)", async () => {
     const result = await searchAdminResources("a");
     expect(result.success).toBe(true);
   });
 
-  test("有効クエリは 11 resource 並列検索", async () => {
+  test("valid query runs parallel search across 11 resources", async () => {
     const result = await searchAdminResources("test");
     expect(result.success).toBe(true);
     expect(mockSearchByResource).toHaveBeenCalledTimes(11);
@@ -1378,10 +1379,10 @@ describe("searchAdminResources", () => {
     }
   });
 
-  test("認証失敗時はエラー返却", async () => {
+  test("returns error on auth failure", async () => {
     mockCheckAuth.mockImplementationOnce(async () => ({
       success: false,
-      error: { error: "ログインが必要です", success: false as const },
+      error: { error: "Login required", success: false as const },
     }));
     const result = await searchAdminResources("test");
     expect(result.success).toBe(false);
@@ -1405,7 +1406,7 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
 
 ---
 
-### Task B5 — CommandPalette に検索結果配線
+### Task B5 — Wire search results into CommandPalette
 
 **Files:**
 
@@ -1413,9 +1414,9 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
 - Modify: `_shared/components/command-palette/CommandPaletteProvider.tsx`
 - Modify: `(dashboard)/layout.tsx`
 
-- [ ] **Step 1: Provider に検索 state 追加**
+- [ ] **Step 1: Add search state to Provider**
 
-`CommandPaletteProvider.tsx` に query / results / isPending を追加:
+Add query / results / isPending to `CommandPaletteProvider.tsx`:
 
 ```diff
 +import { useEffect, useState, useTransition } from "react";
@@ -1456,7 +1457,7 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
 +    return () => clearTimeout(timeoutId);
 +  }, [query]);
 +
-+  // Dialog close 時に query / results をクリア
++  // Clear query / results when the dialog closes
 +  useEffect(() => {
 +    if (!open) {
 +      setQuery("");
@@ -1472,7 +1473,7 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
      }}>
 ```
 
-- [ ] **Step 2: CommandPalette body に Search Results セクション追加**
+- [ ] **Step 2: Add Search Results section to CommandPalette body**
 
 ```diff
  export function CommandPalette() {
@@ -1491,11 +1492,11 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
 +      />
        <CommandList>
          <CommandEmpty>
--          該当する項目がありません
-+          {isSearching ? "検索中..." : query.length >= 2 ? "該当する項目がありません" : "コマンドを選択するか、2 文字以上で検索"}
+-          No matching items
++          {isSearching ? "Searching..." : query.length >= 2 ? "No matching items" : "Select a command or search with 2+ characters"}
          </CommandEmpty>
 +
-+        {/* 検索結果（query 2 文字以上）*/}
++        {/* Search results (query length 2+) */}
 +        {query.length >= 2 && results.map((group) => (
 +          <CommandGroup key={group.resource} heading={group.resource}>
 +            {group.items.map((item) => (
@@ -1513,12 +1514,12 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
 +          </CommandGroup>
 +        ))}
 +
-+        {/* Suggested セクション（query 空）*/}
++        {/* Suggested section (empty query) */}
 +        {query.length < 2 && (
 +          <>
              {recents.length > 0 && (...)}
              {quickActions.length > 0 && (...)}
-             <CommandGroup heading="ナビゲーション">
+            <CommandGroup heading="Navigation">
                ...
              </CommandGroup>
 +          </>
@@ -1529,7 +1530,7 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
  }
 ```
 
-- [ ] **Step 3: layout.tsx の暫定空配列を本実装に置換**
+- [ ] **Step 3: Replace temporary empty arrays in layout.tsx**
 
 ```diff
 -import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
@@ -1541,10 +1542,10 @@ git commit -m "feat(admin): add searchAdminResources server action (P16 B4)"
 -  const recents: RecentItem[] = [];
 +  const navItems = getNavItemsForRole(user.role);
 +  const quickActions = getQuickActionsForRole(user.role);
-+  const recents: RecentItem[] = []; // Bundle C で配線
++  const recents: RecentItem[] = []; // wired in Bundle C
 ```
 
-- [ ] **Step 4: Validate + dev で動作確認**
+- [ ] **Step 4: Validate + verify in dev**
 
 ```bash
 bun run validate
@@ -1552,7 +1553,7 @@ bun run validate
 
 Expected: EXIT 0
 
-dev: Cmd+K → Suggested セクションに 23 nav items + 7 quick actions 表示 / 「渋谷」等を入力 → 検索結果表示 / Esc / item 選択でナビゲーションを確認。
+dev: Cmd+K → Suggested shows 23 nav items + 7 quick actions / type "Shibuya" etc → search results appear / verify navigation on Esc or item selection.
 
 - [ ] **Step 5: Commit**
 
@@ -1565,21 +1566,21 @@ git commit -m "feat(admin): wire search action and nav items into command palett
 
 ---
 
-## Bundle C — Recents wiring + ADR + 統合テスト (3 commits)
+## Bundle C — Recents wiring + ADR + integration tests (3 commits)
 
-> **Implementer dispatch**: 1 implementer に Bundle C 全体をバンドル指示。
+> **Implementer dispatch**: Assign one implementer to handle all of Bundle C.
 
 ### Task C1 — Recents domain query
 
 **Files:**
 
 - Create: `src/shared/domain/audit/recents-queries.ts`
-- Modify: `src/shared/lib/constants/cache-tags.ts` (該当ファイル)
-- Modify: `(dashboard)/layout.tsx` (Recents 配線)
+- Modify: `src/shared/lib/constants/cache-tags.ts` (if applicable file)
+- Modify: `(dashboard)/layout.tsx` (Recents wiring)
 
-- [ ] **Step 1: cache tag 追加（不在なら）**
+- [ ] **Step 1: Add cache tag (if missing)**
 
-`@/shared/lib/constants/cache-tags.ts` の `getCacheTag` に追加:
+Add to `getCacheTag` in `@/shared/lib/constants/cache-tags.ts`:
 
 ```ts
 auditLogs: {
@@ -1587,7 +1588,7 @@ auditLogs: {
 },
 ```
 
-> 既存の `getCacheTag` 構造に合わせる。実装者は `Read` で現状確認。
+> Match the existing `getCacheTag` structure. Implementer should confirm current state via `Read`.
 
 - [ ] **Step 2: `getRecentAuditedResources` query**
 
@@ -1643,7 +1644,7 @@ export async function getRecentAuditedResources(
     where: { userId, resourceId: { not: null } },
     select: { resource: true, resourceId: true, createdAt: true },
     orderBy: { createdAt: "desc" },
-    take: limit * 3, // ユニーク化 + 権限フィルタ後 limit に絞るための buffer
+    take: limit * 3, // buffer for dedupe + permission filter before applying limit
   });
 
   const seen = new Set<string>();
@@ -1665,7 +1666,7 @@ export async function getRecentAuditedResources(
       id,
       resource,
       resourceId: log.resourceId,
-      label: `${resource}: ${log.resourceId.slice(0, 8)}`, // Bundle C 後続で resource 名解決を改良
+      label: `${resource}: ${log.resourceId.slice(0, 8)}`, // improve resource name resolution later in Bundle C
       href: buildHref(resource, log.resourceId),
       occurredAt: log.createdAt.toISOString(),
     });
@@ -1675,13 +1676,13 @@ export async function getRecentAuditedResources(
 }
 ```
 
-> **重要 — 実装前確認**:
+> **Important — pre-implementation checks**:
 >
-> - `prisma.auditLog` の field 名は schema で確認（`userId` vs `actorUserId` 等）
-> - `Resource` 型の値が `AuditLog.resource` の VARCHAR 値と一致するか確認（`enums/helpers` の SSoT）
-> - label の `resource: id-prefix` 表示は MVP 暫定。本格的な name 解決は本 plan 範囲外（後続 phase）
+> - Confirm `prisma.auditLog` field names in the schema (`userId` vs `actorUserId`, etc.)
+> - Verify `Resource` values match `AuditLog.resource` VARCHAR values (SSoT in `enums/helpers`)
+> - The `resource: id-prefix` label is MVP-only; full name resolution is out of scope (later phase)
 
-- [ ] **Step 3: layout.tsx で Recents fetch + provider に渡す**
+- [ ] **Step 3: Fetch Recents in layout.tsx + pass to provider**
 
 ```diff
 +import { getRecentAuditedResources } from "@/shared/domain/audit/recents-queries";
@@ -1693,17 +1694,17 @@ export async function getRecentAuditedResources(
 +  const recents = await getRecentAuditedResources(user.id, user.role, 8);
 ```
 
-- [ ] **Step 4: 関連 mutation で `updateTag(getCacheTag.auditLogs.recent(userId))` 追加**
+- [ ] **Step 4: Add `updateTag(getCacheTag.auditLogs.recent(userId))` in related mutations**
 
-監査ログを書き込む既存 helper `logAction()` を grep:
+Grep the existing helper `logAction()` that writes audit logs:
 
 ```bash
 grep -rln "logAction\|logUserAction" src/admin/lib/ src/shared/lib/
 ```
 
-`logAction` 内 / `executeAdminMutationResult` の audit log 書き込み後に `updateTag(getCacheTag.auditLogs.recent(userId))` を追加（fireAndForget 内で）。
+Add `updateTag(getCacheTag.auditLogs.recent(userId))` after the audit log write in `logAction` / `executeAdminMutationResult` (inside fireAndForget).
 
-> 既存の `executeAdminMutationResult` の実行順序契約（ADR 0019）を破らないよう、`fireAndForget(async () => { await logAction(...); updateTag(...); })` の形で同一 fireAndForget block 内に置く。
+> Preserve the `executeAdminMutationResult` execution order contract (ADR 0019) by placing it in the same fireAndForget block: `fireAndForget(async () => { await logAction(...); updateTag(...); })`.
 
 - [ ] **Step 5: Validate + Commit**
 
@@ -1717,7 +1718,7 @@ Expected: EXIT 0
 git add src/shared/domain/audit/recents-queries.ts \
         src/shared/lib/constants/cache-tags.ts \
         src/app/\(admin\)/admin/\(dashboard\)/layout.tsx \
-        src/admin/lib/admin-action.ts # logAction 修正がある場合
+        src/admin/lib/admin-action.ts # if logAction is modified
 git commit -m "feat(admin): wire recents into command palette via audit log query (P16 C1)"
 ```
 
@@ -1730,7 +1731,7 @@ git commit -m "feat(admin): wire recents into command palette via audit log quer
 - Create: `docs/architecture/decisions/0024-admin-command-palette.md`
 - Modify: `docs/architecture/decisions/README.md`
 
-- [ ] **Step 1: ADR 0024 作成**
+- [ ] **Step 1: Create ADR 0024**
 
 `docs/architecture/decisions/0024-admin-command-palette.md`:
 
@@ -1743,52 +1744,52 @@ git commit -m "feat(admin): wire recents into command palette via audit log quer
 
 ## Context
 
-管理画面の resource 数が 11、admin route 数が 23 を超え、サイドバー走査での到達コストが上昇。
-Linear / GitHub / Notion 等で標準化された Cmd+K UX に揃えることで admin 作業効率を改善する必要が生じた。
-公式 cmdk ライブラリは導入済み（pages エディタの "/" コマンドで使用中）だが、グローバル Command Palette は未実装。
+The admin UI has 11 resources and over 23 admin routes, increasing the cost of reaching destinations via sidebar scanning.
+Aligning with the standardized Cmd+K UX in Linear / GitHub / Notion improves admin workflow efficiency.
+The official cmdk library is already in use ("/" command in the pages editor), but a global Command Palette is not yet implemented.
 
 ## Decision
 
-Hybrid 構成 (Option C) を採用:
+Adopt the Hybrid approach (Option C):
 
-1. **Recents / Nav / Quick Actions** はサーバ side で計算（layout で fetch）し、static state として cmdk で fuzzy filter
-2. **Free-text search** は単一 Server Action `searchAdminResources(query)` が 11 resource を `Promise.allSettled` で並列検索
-3. UI primitive は既存 `_shared/components/ui/command.tsx` を流用、新規 Dialog primitive を作らない
-4. 既存 Lexical エディタの "/" コマンド（`SlashCommandPlugin`）とは責務分離し、相互依存させない
+1. **Recents / Nav / Quick Actions** are computed server-side (fetched in layout) and fuzzy-filtered in cmdk as static state
+2. **Free-text search** uses a single Server Action `searchAdminResources(query)` that searches 11 resources in parallel via `Promise.allSettled`
+3. Reuse the existing `_shared/components/ui/command.tsx` UI primitive; do not add a new Dialog primitive
+4. Keep responsibilities separate from the existing Lexical editor "/" command (`SlashCommandPlugin`); no interdependency
 
 ## Alternatives Considered
 
-- **All-Server Search**: typing 中の RTT が UX を悪化させるため不採用
-- **Indexed-Client Search**: bundle サイズと機微情報露出（顧客名・予約詳細）の問題で不採用
+- **All-Server Search**: rejected because typing RTT degrades UX
+- **Indexed-Client Search**: rejected due to bundle size and sensitive data exposure (customer names, reservation details)
 
 ## Consequences
 
 ### Positive
 
-- typing 開始から first paint まで Linear / GitHub と同等の体感速度
-- role-based filtering を server で完結、client bundle に admin 全データを含めない
-- 既存 cmdk primitive 流用で新規 dependency ゼロ
+- Perceived speed from typing to first paint comparable to Linear / GitHub
+- Role-based filtering handled on the server; no full admin data in client bundle
+- Zero new dependencies by reusing cmdk primitive
 
 ### Negative
 
-- 11 resource 並列 query は DB 負荷が増える（後続: index 追加、Cloud SQL slow query log 監視）
-- Server Action のレート制限を `formSubmitRateLimiter` 流用とすることで mutation 系と bucket 共有
+- Parallel queries across 11 resources increase DB load (follow-up: add indexes, monitor Cloud SQL slow query logs)
+- Reusing `formSubmitRateLimiter` for Server Actions shares buckets with mutation workflows
 
 ### Operational
 
-- 監査ログには影響なし（read-only）
-- Recents 表示は `AuditLog` を SoT として参照、新規テーブル追加なし
+- No impact on audit logs (read-only)
+- Recents display references `AuditLog` as SoT; no new tables added
 
 ## References
 
 - spec: `docs/superpowers/specs/2026-04-27-admin-command-palette-design.md`
 - plan: `docs/superpowers/plans/2026-04-27-admin-command-palette.md`
-- 既存 cmdk: `src/app/(admin)/admin/(dashboard)/_shared/components/ui/command.tsx`
+- Existing cmdk: `src/app/(admin)/admin/(dashboard)/_shared/components/ui/command.tsx`
 ```
 
-- [ ] **Step 2: ADR README index に追加**
+- [ ] **Step 2: Add to ADR README index**
 
-`docs/architecture/decisions/README.md` の table 末尾に:
+Add to the end of the table in `docs/architecture/decisions/README.md`:
 
 ```diff
  | [0023](./0023-multi-location-seo-foundation.md) | ... |
@@ -1805,40 +1806,40 @@ git commit -m "docs(adr): 0024 admin command palette (P16 C2)"
 
 ---
 
-### Task C3 — package.json test batch + 統合確認
+### Task C3 — package.json test batch + integration verification
 
 **Files:**
 
 - Modify: `package.json`
 
-- [ ] **Step 1: test:unit / test:integration batch 追加**
+- [ ] **Step 1: Add test:unit / test:integration batches**
 
-`package.json` の `scripts.test:unit` の `&&` chain に追加:
+Add to the `&&` chain in `scripts.test:unit` in `package.json`:
 
 ```diff
 -"test:unit": "bun test __tests__/unit/lib/foo && ...",
 +"test:unit": "bun test __tests__/unit/lib/command-palette && bun test __tests__/unit/lib/foo && ...",
 ```
 
-`scripts.test:integration` の `&&` chain に追加:
+Add to the `&&` chain in `scripts.test:integration`:
 
 ```diff
 -"test:integration": "bun test __tests__/integration/actions/admin && ...",
-+"test:integration": "bun test __tests__/integration/actions/admin && ..." # 既存に command-palette.test.ts が含まれることを確認、不在なら追加
++"test:integration": "bun test __tests__/integration/actions/admin && ..." # confirm command-palette.test.ts is included; add if missing
 ```
 
-> CLAUDE.md「per-directory バッチ」原則。新規 directory `__tests__/unit/lib/command-palette/` を `&&` chain に明示追加。
+> CLAUDE.md "per-directory batch" principle. Explicitly add the new directory `__tests__/unit/lib/command-palette/` to the `&&` chain.
 
-- [ ] **Step 2: 全テスト実行**
+- [ ] **Step 2: Run all tests**
 
 ```bash
 bun run test:unit
 bun run test:integration
 ```
 
-Expected: 全 pass
+Expected: all pass
 
-- [ ] **Step 3: 最終 validate + build**
+- [ ] **Step 3: Final validate + build**
 
 ```bash
 bun run validate && bun run build
@@ -1855,11 +1856,11 @@ git commit -m "test(admin): include command palette in test batches (P16 C3)"
 
 ---
 
-## 完了後 (worktree → main)
+## After completion (worktree → main)
 
 ```bash
 cd /g/workspace/work/website/customer/myrrh-rental-space
-git status --short                          # → 空
+git status --short                          # → empty
 git log --oneline main..feature/admin-command-palette  # → 12 commits
 git merge --ff-only feature/admin-command-palette
 git worktree remove .worktrees/command-palette
@@ -1872,39 +1873,39 @@ git branch -d feature/admin-command-palette
 
 ### 1. Spec coverage
 
-| Spec 要素                                     | カバー Task                                                                   |
-| --------------------------------------------- | ----------------------------------------------------------------------------- |
-| §3.2 cmdk Section 構成                        | A3 (Suggested), B5 (Search Results)                                           |
-| §3.3 データフロー: Recents                    | C1                                                                            |
-| §3.3 データフロー: Static Nav / Quick Actions | B1, B2                                                                        |
-| §3.3 データフロー: Search Results             | B3, B4, B5                                                                    |
-| §3.4 既存 cmdk 関数の再利用                   | B3 で thin wrapper を全 11 resource 新規実装に変更（前提修正）                |
-| §4.1 TopBar Trigger                           | A2, A4                                                                        |
-| §4.2 Dialog Layout                            | A3                                                                            |
-| §4.3 グローバルキーボード                     | A1                                                                            |
-| §5.1 Server Action                            | B4                                                                            |
-| §5.2 EDITOR の userPageAssignment             | B1 (`hasPermission` で間接担保、page resource は ROLE_PERMISSIONS で read 可) |
-| §5.3 VIEWER の create アクション非表示        | B2 (`getQuickActionsForRole`)                                                 |
-| §6 キャッシュ戦略                             | C1 (`auditLogs.recent` tag)                                                   |
-| §7 a11y                                       | A3 (`title` / `description` / `aria-label`), A2 (44px hit area)               |
-| §9 ADR Draft                                  | C2                                                                            |
+| Spec item                                  | Covered tasks                                                                            |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| §3.2 cmdk section structure                | A3 (Suggested), B5 (Search Results)                                                      |
+| §3.3 Data flow: Recents                    | C1                                                                                       |
+| §3.3 Data flow: Static Nav / Quick Actions | B1, B2                                                                                   |
+| §3.3 Data flow: Search Results             | B3, B4, B5                                                                               |
+| §3.4 Reuse existing cmdk functions         | B3 changes thin wrappers to 11 new resources (assumption fix)                            |
+| §4.1 TopBar Trigger                        | A2, A4                                                                                   |
+| §4.2 Dialog Layout                         | A3                                                                                       |
+| §4.3 Global keyboard                       | A1                                                                                       |
+| §5.1 Server Action                         | B4                                                                                       |
+| §5.2 EDITOR userPageAssignment             | B1 (indirectly enforced via `hasPermission`, page resource readable in ROLE_PERMISSIONS) |
+| §5.3 VIEWER hide create actions            | B2 (`getQuickActionsForRole`)                                                            |
+| §6 Cache strategy                          | C1 (`auditLogs.recent` tag)                                                              |
+| §7 a11y                                    | A3 (`title` / `description` / `aria-label`), A2 (44px hit area)                          |
+| §9 ADR Draft                               | C2                                                                                       |
 
 ### 2. Placeholder scan
 
-- ✓ "TBD" / "TODO" は Task C1 Step 2 の "label の resource: id-prefix 表示は MVP 暫定" のみ。これは「後続 phase の改善余地」として意図的に残す
-- ✓ 全 Step に具体的なコード例 / コマンド付き
+- ✓ "TBD" / "TODO" appears only in Task C1 Step 2 ("resource: id-prefix label is MVP-only"). This is intentionally left as an improvement area for a later phase
+- ✓ Every step includes concrete code examples / commands
 
 ### 3. Type consistency
 
-- `NavItem` / `QuickAction` / `RecentItem` / `SearchResultItem` / `SearchResultGroup` を A1 で定義、以降全 Task で同名参照
-- `getNavItemsForRole` / `getQuickActionsForRole` / `getRecentAuditedResources` の signature が layout.tsx 配線と一致
-- `searchByResource` / `searchAdminResources` の戻り値型が test mock と整合
+- `NavItem` / `QuickAction` / `RecentItem` / `SearchResultItem` / `SearchResultGroup` defined in A1 and referenced consistently afterward
+- Signatures of `getNavItemsForRole` / `getQuickActionsForRole` / `getRecentAuditedResources` match layout.tsx wiring
+- Return types of `searchByResource` / `searchAdminResources` align with test mocks
 
 ---
 
-## リスク・実装中の判断ポイント
+## Risks / decision points during implementation
 
-1. **Bundle B Task B3**: 11 resource の field 名を schema 確認時に乖離があれば justified deviation で報告
-2. **Bundle B Task B4**: `checkActionRateLimit` の signature 確認が rate-limit.ts 不在ならば `formSubmitRateLimiter.consume(...)` 直接呼び出しにフォールバック
-3. **Bundle C Task C1**: `prisma.auditLog` の field 名（`userId` / `actorUserId` 等）が schema 実装と乖離した場合は schema を SoT として plan 修正
-4. **Bundle B Task B5**: dev で動作確認時に Cmd+K が capture されない場合、`event.target` に応じた listener 改善が必要（contenteditable / textarea 内で発火しない仕様は GitHub / Linear と同じため、現状維持で OK）
+1. **Bundle B Task B3**: If schema field names for the 11 resources differ, report as a justified deviation
+2. **Bundle B Task B4**: If `checkActionRateLimit` signature is absent in rate-limit.ts, fall back to direct `formSubmitRateLimiter.consume(...)`
+3. **Bundle C Task C1**: If `prisma.auditLog` fields (`userId` / `actorUserId`, etc.) differ from schema, treat schema as SoT and update the plan
+4. **Bundle B Task B5**: If Cmd+K is not captured in dev, adjust the listener based on `event.target` (not firing in contenteditable/textarea matches GitHub/Linear behavior, so current behavior is OK)

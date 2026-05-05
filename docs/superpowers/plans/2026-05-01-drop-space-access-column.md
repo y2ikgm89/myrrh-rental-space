@@ -8,7 +8,7 @@
 
 **Tech Stack:** Prisma 7.8 (manual migration via `db execute --file` due to PreToolUse protection on `prisma/migrations/*.sql`), Next.js 16, React 19, TypeScript 6.0 strict, Zod 4, RHF, bun:test.
 
-**Bundling rationale:** Schema column drop and code that references it are tightly coupled — any intermediate state would fail `bun run type-check` (Prisma generated types lose `access` instantly on `db:generate`). Per CLAUDE.md "密結合タスクは 1 implementer にバンドル" + "1-commit BREAKING plan 実行時は ... controller 最終統合", individual tasks must NOT commit. The final task creates one atomic commit on the worktree branch.
+**Bundling rationale:** Schema column drop and code that references it are tightly coupled — any intermediate state would fail `bun run type-check` (Prisma generated types lose `access` instantly on `db:generate`). Per CLAUDE.md ("bundle tightly coupled tasks to one implementer" + "for 1-commit BREAKING plans, controller does the final integration"), individual tasks must NOT commit. The final task creates one atomic commit on the worktree branch.
 
 ---
 
@@ -35,7 +35,7 @@
 - **Modify** `src/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/schema.ts:90` — remove `access: data.access || undefined` from submit payload mapper
 - **Modify** `src/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/SpaceEditForm.tsx:133,163` — remove `access` from `defaultValues` (both create + edit modes)
 - **Modify** `src/app/(admin)/admin/(dashboard)/spaces/_components/space-edit-form/...` — find and remove the FormField rendering `access` Textarea (likely in BasicInfoFields or AccessFields component)
-- **Modify** `src/app/(admin)/admin/(dashboard)/spaces/[id]/_components/SpaceDetail.tsx:140-141` — remove `<DetailField label="アクセス" value={space.access} />` block
+- **Modify** `src/app/(admin)/admin/(dashboard)/spaces/[id]/_components/SpaceDetail.tsx:140-141` — remove `<DetailField label="Access" value={space.access} />` block
 - **Modify** `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/types.ts:301-315` — remove `SpaceEditorFormData` type entirely (dead code, no callers verified via grep)
 
 ### Public UI
@@ -45,7 +45,7 @@
 
 ### Seed
 
-- **Modify** `prisma/seed.ts:584,610,637` — remove `access: "東京メトロ「表参道駅」A1出口より徒歩5分"` from each Space seed entry (3 occurrences)
+- **Modify** `prisma/seed.ts:584,610,637` — remove `access: "5-minute walk from Tokyo Metro Omotesando Station A1 Exit"` from each Space seed entry (3 occurrences)
 
 ### Tests
 
@@ -149,7 +149,7 @@ Expected: directory created (empty, will write `migration.sql` next). Save `$TS`
 Remove line 462 (`access        String?   @db.Text`) entirely. Surrounding lines 460-463 should look like:
 
 ```prisma
-  /// 号室・フロア等。建物の住所は必ず `Location.address` を正本とする。
+  /// Room/floor details. The building address must always use `Location.address` as SSoT.
   addressDetail String?   @db.Text
   capacity      Int
 ```
@@ -212,7 +212,7 @@ Find the field block:
 ```typescript
     access: z
       .string()
-      .max(500, { error: "アクセス情報は500文字以内で入力してください" })
+      .max(500, { error: "Access information must be within 500 characters" })
       .optional(),
 ```
 
@@ -384,7 +384,7 @@ Expected: 1–2 hits showing the FormField. Likely in `BasicInfoFields.tsx` / `A
 
 Open the file from Step 3 and delete the entire `<FormField name="access" ...>...</FormField>` block (including its surrounding wrapper / label / textarea). If the wrapper component becomes empty (only the access field), also delete the wrapper.
 
-If the form had a section heading like "アクセス" / "Access" associated only with this field, delete the heading too.
+If the form had a section heading like "Access" associated only with this field, delete the heading too.
 
 - [ ] **Step 5: `SpaceDetail.tsx` — remove access display (line ~140-141)**
 
@@ -392,7 +392,7 @@ Find:
 
 ```typescript
           {space.access && (
-            <DetailField label="アクセス" value={space.access} />
+            <DetailField label="Access" value={space.access} />
           )}
 ```
 
@@ -404,7 +404,7 @@ The type is referenced only within its own file (verified via grep). Delete the 
 
 ```typescript
 /**
- * スペース編集用フォームデータ
+ * Form data for space editing
  */
 export type SpaceEditorFormData = {
   name: string;
@@ -476,7 +476,7 @@ Replace:
   space.access ? (
     <div>
       <Heading level={2} className="mb-4">
-        アクセス
+        Access
       </Heading>
       <div className="flex items-start gap-2 text-sm text-muted-foreground">
         <IconWalk className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -500,7 +500,7 @@ With Location-inherited rendering:
   (space.location.accessLines.length > 0 || space.location.parkingInfo) ? (
     <div>
       <Heading level={2} className="mb-4">
-        アクセス
+        Access
       </Heading>
       <Stack gap="md">
         {space.location.accessLines.length > 0 ? (
@@ -559,7 +559,7 @@ Read the file and confirm the `space` prop already includes `location.accessLine
 - [ ] **Step 1: Remove access entries from 3 Space seed blocks**
 
 ```bash
-grep -n 'access: "東京メトロ' prisma/seed.ts
+grep -n 'access: "Tokyo Metro' prisma/seed.ts
 ```
 
 Expected: 3 hits at lines ~584, ~610, ~637. Delete each `access: "..."` line.
@@ -580,13 +580,13 @@ Expected: 0 hits. (The grep filter excludes Location.accessLines, OAuth access_t
 
 - [ ] **Step 1: `__tests__/fixtures/reservations.ts` (lines 13, 72)**
 
-Remove `access: string;` from the type and `access: "渋谷駅徒歩5分",` from the fixture object.
+Remove `access: string;` from the type and `access: "5-minute walk from Shibuya Station",` from the fixture object.
 
 - [ ] **Step 2: `__tests__/integration/actions/admin/space.test.ts` (lines 26, 316, 324, 332)**
 
 Remove:
 
-- `access: "渋谷駅から徒歩5分",` from the valid input fixture (line ~26)
+- `access: "5-minute walk from Shibuya Station",` from the valid input fixture (line ~26)
 - The 3 validation test cases that test the `access` field length boundaries:
   - `access: "",` (empty string accepted) — line ~316
   - `access: "x".repeat(500),` (max length accepted) — line ~324
@@ -596,7 +596,7 @@ If a `describe("access field validation", ...)` block wraps these cases, delete 
 
 - [ ] **Step 3: `__tests__/integration/actions/admin/space-duplicate.test.ts` (lines 11, 75)**
 
-Remove `access: string | null;` from the type and `access: "駅から徒歩5分",` from the fixture.
+Remove `access: string | null;` from the type and `access: "5-minute walk from the station",` from the fixture.
 
 - [ ] **Step 4: `__tests__/unit/domain/spaces/commands.test.ts` (lines 194, 202)**
 
@@ -614,8 +614,8 @@ Remove `access: "",` from the codec test fixture.
 
 Remove:
 
-- `access: "渋谷駅から徒歩5分",` from valid fixture (line ~22)
-- 3 validation test cases (`access: ""`, `access: "あ".repeat(501)`, etc.) — delete entire test cases
+- `access: "5-minute walk from Shibuya Station",` from valid fixture (line ~22)
+- 3 validation test cases (`access: ""`, `access: "a".repeat(501)`, etc.) — delete entire test cases
 - `access: "",` from another fixture (line ~499)
 
 If a `describe` block wraps the access validation cases, delete the entire describe.
@@ -678,7 +678,7 @@ bun prisma/seed.ts > /tmp/seed1.log 2>&1; echo "EXIT=$?"
 bun prisma/seed.ts > /tmp/seed2.log 2>&1; echo "EXIT=$?"
 ```
 
-Expected: both `EXIT=0`. Second run should not error or duplicate data (idempotency check per CLAUDE.md `seed 関数は upsert で idempotent 化`).
+Expected: both `EXIT=0`. Second run should not error or duplicate data (idempotency check per CLAUDE.md "seed functions are idempotent via upsert").
 
 - [ ] **Step 6: Smoke-test public space detail page in browser (manual)**
 
@@ -688,9 +688,9 @@ bun dev
 
 Open http://localhost:3000/spaces/<any-published-slug> in a browser. Verify:
 
-1. The "アクセス" heading appears with `IconWalk` (transit) and `IconCar` (parking) sections sourced from the parent Location
+1. The "Access" heading appears with `IconWalk` (transit) and `IconCar` (parking) sections sourced from the parent Location
 2. No JavaScript console errors
-3. Old per-space text "東京メトロ「表参道駅」..." is no longer rendered (it now comes from `Location.accessLines` via the parent location)
+3. Old per-space text "Tokyo Metro 'Omotesando Station'..." is no longer rendered (it now comes from `Location.accessLines` via the parent location)
 
 Stop the dev server when done (`Ctrl+C` or kill the process — Bun dev server is user-managed per `.remember/feedback`).
 
@@ -845,4 +845,4 @@ The plan does NOT auto-merge or auto-push. Final integration is the user's decis
 
 - **Subagent dispatch is OPTIONAL for this plan**. Tasks 2–9 are tightly coupled and modify many files — dispatching individual subagents adds friction without parallelism benefit. RECOMMENDED: execute inline (executing-plans skill) in the main session, since the controller already has full context of all file paths and the bundling rationale.
 - **DO NOT amend the atomic commit** if validation fails post-commit. Create a follow-up `fix:` commit on the same branch (clearer history per CLAUDE.md `Prefer to create a new commit rather than amending`).
-- **Database is destructive** — `DROP COLUMN` is irreversible without backup. Pre-existing dev data in `Space.access` will be permanently lost. This is consistent with the 2026-05-01 prior destructive migrations and the "破壊的変更してOK" user directive.
+- **Database is destructive** — `DROP COLUMN` is irreversible without backup. Pre-existing dev data in `Space.access` will be permanently lost. This is consistent with the 2026-05-01 prior destructive migrations and the "destructive changes are OK" user directive.

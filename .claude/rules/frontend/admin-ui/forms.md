@@ -63,6 +63,8 @@ export async function createItem(
 
 **禁止**: InlineEditorShell を使うページに AdminDetailLayout をラップすること（二重ヘッダーになる）
 
+**禁止**: `[id]/page.tsx` に detail と edit form を同居させる hybrid pattern — 詳細は `[id]/page.tsx`（`AdminDetailLayout` + 編集ボタン → `/edit`）、編集は `[id]/edit/page.tsx`（`AdminDetailLayout backLabel="詳細に戻る"` + Form）に必ず分離。編集成功時のリダイレクトは詳細ページ（`/admin/<resource>/${id}`）。参照実装: customers / coupons
+
 ---
 
 ## 詳細・編集・新規作成ページ標準構造

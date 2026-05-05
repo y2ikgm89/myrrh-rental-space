@@ -4,46 +4,46 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `.claude/agents/**` 25 件の subagent 定義ファイルを Claude Code 公式 subagent docs (`code.claude.com/docs/en/sub-agents`) の canonical 形式に揃え、後方互換シムなしで clean break する。
+**Goal:** Align 25 subagent definition files in `.claude/agents/**` to the canonical format in the official Claude Code subagent docs (`code.claude.com/docs/en/sub-agents`), with a clean break and no backward-compatibility shim.
 
-**Architecture:** Handoff memory `project_clean-break-refactor-handoff.md` の C2 スコープに沿って 3 軸監査を実施: **(A) tools 最小権限** / **(B) description proactively pattern** / **(C) memory: project 必要時のみ**。事前 grep の結果、25 件全てが `tools` を YAML list 形式で記述しており公式 canonical（comma-separated）と異なるため Phase 1 で正規化。`memory: project` 宣言 15 件中 5 件が backing dir 不在で、うち body に Memory management 節を持たない 2 件 (`cache-strategy-reviewer` / `lexical-reviewer`) を Phase 2 で削除。Phase 3 で C1 の rule docs barrel split（`server-actions.md` / `frontend/accessibility.md` / `gotchas.md`）後に stale 化した §section anchor refs を更新。description / 重複 / dead subagent は事前監査でクリーン判定（→ Phase 4 で再確認）。
+**Architecture:** Conduct a three-axis audit per the C2 scope in handoff memory `project_clean-break-refactor-handoff.md`: **(A) least-privilege tools** / **(B) proactive description pattern** / **(C) memory: project only when required**. Pre-grep found all 25 files use YAML list `tools`, which differs from the canonical comma-separated format, so Phase 1 normalizes it. Of 15 `memory: project` declarations, five lack backing dirs; two of those (`cache-strategy-reviewer` / `lexical-reviewer`) also lack a Memory management section and are removed in Phase 2. Phase 3 updates stale §section anchor refs caused by the C1 rule docs barrel split (`server-actions.md` / `frontend/accessibility.md` / `gotchas.md`). Description / duplication / dead subagents were deemed clean in pre-audit (→ rechecked in Phase 4).
 
-**Tech Stack:** Markdown + YAML frontmatter のみ。コード変更なし。検証は `grep` + YAML 構造目視。
+**Tech Stack:** Markdown + YAML frontmatter only. No code changes. Verification uses `grep` + visual YAML structure checks.
 
 ---
 
 ## File Structure
 
-**対象ファイル: `.claude/agents/*.md` 全 25 件（変更）**
+**Target files: all 25 `.claude/agents/*.md` (modified)**
 
-| 領域                                       | ファイル数 | 備考                                                                                                                       |
-| ------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 全 25 件 (Phase 1)                         | 25         | `tools:` を YAML list → comma-separated に正規化                                                                           |
-| `cache-strategy-reviewer` (Phase 2)        | 1          | `memory: project` 削除（body に memory 言及なし）                                                                          |
-| `lexical-reviewer` (Phase 2)               | 1          | `memory: project` 削除（body に memory 言及なし）                                                                          |
-| `accessibility-reviewer` (Phase 3)         | 1          | `frontend/accessibility.md §タッチターゲット` → barrel 外 sub-file (`frontend/accessibility/touch-text.md`) に anchor 修正 |
-| `editorial-consistency-reviewer` (Phase 3) | 1          | 同上                                                                                                                       |
-| `plan-drift-detector` (Phase 3)            | 1          | `gotchas.md §Claude Code 設定` → `gotchas/claude-code.md` に anchor 修正                                                   |
+| Area                                       | File count | Notes                                                                                                            |
+| ------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| All 25 (Phase 1)                           | 25         | Normalize `tools:` from YAML list → comma-separated                                                              |
+| `cache-strategy-reviewer` (Phase 2)        | 1          | Remove `memory: project` (no memory mention in body)                                                             |
+| `lexical-reviewer` (Phase 2)               | 1          | Remove `memory: project` (no memory mention in body)                                                             |
+| `accessibility-reviewer` (Phase 3)         | 1          | Fix anchor `frontend/accessibility.md §Touch targets` → barrel sub-file (`frontend/accessibility/touch-text.md`) |
+| `editorial-consistency-reviewer` (Phase 3) | 1          | Same as above                                                                                                    |
+| `plan-drift-detector` (Phase 3)            | 1          | Fix anchor `gotchas.md §Claude Code settings` → `gotchas/claude-code.md`                                         |
 
-**変更しないもの（保持判定）:**
+**Items not changed (kept):**
 
-- `description: >` block scalar 形式（YAML 仕様適合、可読性のため維持）
-- `model: sonnet` 全件（公式 spec 適合、`inherit` への変更不要）
-- `memory: project` 13 件（10 件は backing dir あり / 3 件は backing dir なしだが body に Memory management 節あり = lazy-create 待機状態）
-- 25 件の機能分担（重複・dead は事前監査で検出されず）
+- `description: >` block scalar format (YAML-compliant, keep for readability)
+- `model: sonnet` for all (spec-compliant; no need to change to `inherit`)
+- `memory: project` for 13 files (10 have backing dirs / 3 lack backing dirs but have Memory management sections = waiting for lazy-create)
+- Functional responsibilities across 25 files (no duplication/dead agents found in pre-audit)
 
-**作成しない:**
+**Not created:**
 
-- 新規 backing dir（lazy-create に任せる、空 `MEMORY.md` 事前作成は noise）
-- 新規 subagent
+- New backing dirs (leave to lazy-create; pre-creating empty `MEMORY.md` is noise)
+- New subagents
 
 ---
 
-## 事前監査の確定事項
+## Pre-audit confirmed items
 
-### tools フォーマット (Phase 1 対象)
+### tools format (Phase 1 target)
 
-**現状（25 件全て）:**
+**Current (all 25):**
 
 ```yaml
 tools:
@@ -52,29 +52,29 @@ tools:
   - Glob
 ```
 
-**目標（公式 canonical）:**
+**Target (official canonical):**
 
 ```yaml
 tools: Read, Grep, Glob
 ```
 
-**理由:** 公式 docs `code.claude.com/docs/en/sub-agents` の全例示が comma-separated 単行。YAML list 形式も技術的に有効だが、後方互換シム的な多重表記を避け canonical 一本化する（clean break）。
+**Rationale:** All examples in official docs `code.claude.com/docs/en/sub-agents` use a single comma-separated line. YAML lists are technically valid, but we avoid dual formats and unify on the canonical form (clean break).
 
-### memory: project orphan 判定 (Phase 2 対象)
+### memory: project orphan determination (Phase 2 target)
 
-| Agent                     | backing dir | body Memory management 節 | 判定                     |
-| ------------------------- | ----------- | ------------------------- | ------------------------ |
-| `cache-strategy-reviewer` | なし        | なし                      | **削除**                 |
-| `db-migration-reviewer`   | なし        | あり (lines 134-145)      | 維持（lazy-create 待機） |
-| `lexical-reviewer`        | なし        | なし                      | **削除**                 |
-| `test-runner`             | なし        | あり (lines 104-116)      | 維持                     |
-| `verification`            | なし        | あり (lines 89-106)       | 維持                     |
+| Agent                     | backing dir | body Memory management section | Decision                |
+| ------------------------- | ----------- | ------------------------------ | ----------------------- |
+| `cache-strategy-reviewer` | none        | none                           | **Remove**              |
+| `db-migration-reviewer`   | none        | yes (lines 134-145)            | Keep (lazy-create wait) |
+| `lexical-reviewer`        | none        | none                           | **Remove**              |
+| `test-runner`             | none        | yes (lines 104-116)            | Keep                    |
+| `verification`            | none        | yes (lines 89-106)             | Keep                    |
 
-判定基準は CLAUDE.md `.claude/agents/<name>.md` ルール「本文で MEMORY 参照を持つ設計か `.claude/agent-memory/<name>/` に dir があるかで判定」に準拠。
+Criteria follow the CLAUDE.md rule for `.claude/agents/<name>.md`: determine whether the body includes MEMORY references or `.claude/agent-memory/<name>/` has a dir.
 
-### Stale anchor refs (Phase 3 対象)
+### Stale anchor refs (Phase 3 target)
 
-C1 完了 commit `5d298e74` 時点で rule docs を barrel split したが、agent body の §section anchor 4 件が更新漏れ:
+At C1 completion commit `5d298e74`, rule docs were barrel split, but four §section anchors in agent bodies were missed:
 
 ```
 .claude/agents/accessibility-reviewer.md:173
@@ -82,16 +82,16 @@ C1 完了 commit `5d298e74` 時点で rule docs を barrel split したが、age
 .claude/agents/plan-drift-detector.md:130
 ```
 
-C1 で生成された sub-file の正確なパス・§セクション名は Phase 3 のタスクで `Read` + `Grep` で確認してから書き換える。
+Confirm the exact paths and § section names of C1-generated sub-files via `Read` + `Grep` in Phase 3 before rewriting.
 
-### 重複・dead subagent 監査結果
+### Duplicate/dead subagent audit results
 
-事前精査で全 25 件の機能差分を確認、重複・dead は検出されず。Phase 4 で再確認のみ実施。
+Pre-review confirmed functional differences across all 25; no duplicates or dead agents detected. Phase 4 performs a recheck only.
 
-- `accessibility-reviewer` vs `editorial-consistency-reviewer`: WCAG 規格レビュー vs Editorial Magazine token 整合性 — 別軸
-- `test-runner` vs `verification`: 個別テスト診断 vs build/type-check/lint 包括 — 別軸
-- `test-writer` vs `e2e-test-writer`: bun:test vs Playwright — 別軸
-- `design-memory` vs `editorial-consistency-reviewer`: 持続的デザイン記憶（Write） vs 違反検出（Read-only） — 別軸
+- `accessibility-reviewer` vs `editorial-consistency-reviewer`: WCAG standards review vs Editorial Magazine token consistency — separate axes
+- `test-runner` vs `verification`: per-test diagnosis vs build/type-check/lint umbrella — separate axes
+- `test-writer` vs `e2e-test-writer`: bun:test vs Playwright — separate axes
+- `design-memory` vs `editorial-consistency-reviewer`: persistent design memory (write) vs violation detection (read-only) — separate axes
 
 ---
 
@@ -99,35 +99,35 @@ C1 で生成された sub-file の正確なパス・§セクション名は Phas
 
 **Files:**
 
-- Modify: `.claude/agents/accessibility-reviewer.md` (行 9-12)
-- Modify: `.claude/agents/animation-cleanup-reviewer.md` (行 8-12)
-- Modify: `.claude/agents/better-auth-reviewer.md` (行 9-15)
-- Modify: `.claude/agents/cache-strategy-reviewer.md` (行 9-12)
-- Modify: `.claude/agents/codebase-explorer.md` (行 8-12)
-- Modify: `.claude/agents/db-migration-reviewer.md` (行 8-12)
-- Modify: `.claude/agents/design-memory.md` (行 8-12)
-- Modify: `.claude/agents/e2e-test-writer.md` (行 8-14)
-- Modify: `.claude/agents/editorial-consistency-reviewer.md` (行 8-11)
-- Modify: `.claude/agents/email-template-reviewer.md` (行 9-13)
-- Modify: `.claude/agents/event-flow-reviewer.md` (行 7-10)
-- Modify: `.claude/agents/large-file-detector.md` (行 8-10)
-- Modify: `.claude/agents/lexical-reviewer.md` (行 8-14)
-- Modify: `.claude/agents/performance-analyzer.md` (行 7-10)
-- Modify: `.claude/agents/plan-drift-detector.md` (行 9-13)
-- Modify: `.claude/agents/project-reviewer.md` (行 9-13)
-- Modify: `.claude/agents/rate-limit-reviewer.md` (行 7-10)
-- Modify: `.claude/agents/react-compiler-reviewer.md` (行 8-14)
-- Modify: `.claude/agents/reservation-flow-reviewer.md` (行 7-10)
-- Modify: `.claude/agents/route-structure-reviewer.md` (行 8-12)
-- Modify: `.claude/agents/security-reviewer.md` (行 8-11)
-- Modify: `.claude/agents/test-runner.md` (行 8-12)
-- Modify: `.claude/agents/test-writer.md` (行 8-14)
-- Modify: `.claude/agents/verification.md` (行 8-12)
-- Modify: `.claude/agents/zod-schema-reviewer.md` (行 8-14)
+- Modify: `.claude/agents/accessibility-reviewer.md` (lines 9-12)
+- Modify: `.claude/agents/animation-cleanup-reviewer.md` (lines 8-12)
+- Modify: `.claude/agents/better-auth-reviewer.md` (lines 9-15)
+- Modify: `.claude/agents/cache-strategy-reviewer.md` (lines 9-12)
+- Modify: `.claude/agents/codebase-explorer.md` (lines 8-12)
+- Modify: `.claude/agents/db-migration-reviewer.md` (lines 8-12)
+- Modify: `.claude/agents/design-memory.md` (lines 8-12)
+- Modify: `.claude/agents/e2e-test-writer.md` (lines 8-14)
+- Modify: `.claude/agents/editorial-consistency-reviewer.md` (lines 8-11)
+- Modify: `.claude/agents/email-template-reviewer.md` (lines 9-13)
+- Modify: `.claude/agents/event-flow-reviewer.md` (lines 7-10)
+- Modify: `.claude/agents/large-file-detector.md` (lines 8-10)
+- Modify: `.claude/agents/lexical-reviewer.md` (lines 8-14)
+- Modify: `.claude/agents/performance-analyzer.md` (lines 7-10)
+- Modify: `.claude/agents/plan-drift-detector.md` (lines 9-13)
+- Modify: `.claude/agents/project-reviewer.md` (lines 9-13)
+- Modify: `.claude/agents/rate-limit-reviewer.md` (lines 7-10)
+- Modify: `.claude/agents/react-compiler-reviewer.md` (lines 8-14)
+- Modify: `.claude/agents/reservation-flow-reviewer.md` (lines 7-10)
+- Modify: `.claude/agents/route-structure-reviewer.md` (lines 8-12)
+- Modify: `.claude/agents/security-reviewer.md` (lines 8-11)
+- Modify: `.claude/agents/test-runner.md` (lines 8-12)
+- Modify: `.claude/agents/test-writer.md` (lines 8-14)
+- Modify: `.claude/agents/verification.md` (lines 8-12)
+- Modify: `.claude/agents/zod-schema-reviewer.md` (lines 8-14)
 
-> **対象行は監査時点。実装時は Read で frontmatter ブロック先頭の `tools:` を確認してから Edit。`---` （frontmatter 終了）の前にある `tools:` セクション全体を 1 行に置換する。**
+> **Line numbers are as of audit time. When implementing, use Read to confirm the `tools:` block at the start of frontmatter before editing. Replace the entire `tools:` section before the `---` (frontmatter end) with a single line.**
 
-- [ ] **Step 1: 違反パターンの存在確認 (Pre-edit grep)**
+- [ ] **Step 1: Confirm violation pattern exists (pre-edit grep)**
 
 Run:
 
@@ -135,11 +135,11 @@ Run:
 grep -lE '^tools:$' .claude/agents/*.md | wc -l
 ```
 
-Expected: `25`（全 25 件で YAML list 形式の `tools:` 単独行が存在）
+Expected: `25` (all 25 have a standalone YAML list `tools:` line)
 
-- [ ] **Step 2: 代表 1 件で Edit パターン確立 — `accessibility-reviewer.md`**
+- [ ] **Step 2: Establish edit pattern on one representative file — `accessibility-reviewer.md`**
 
-`accessibility-reviewer.md` の frontmatter（行 9-12 周辺）:
+Frontmatter in `accessibility-reviewer.md` (around lines 9-12):
 
 Before:
 
@@ -173,11 +173,11 @@ tools: Read, Grep, Glob
 model: sonnet
 ```
 
-- [ ] **Step 3: 残り 24 件にも同じパターンで Edit を反復適用**
+- [ ] **Step 3: Apply the same edit pattern to the remaining 24**
 
-各ファイルで `Read` → frontmatter の `tools:` ブロックを確認 → comma-separated 1 行に Edit。`mcp__context7__*` などの長い tool 名を含むファイルでも同様。
+For each file, `Read` → confirm the `tools:` block in frontmatter → edit to a single comma-separated line. Do the same even for files containing long tool names like `mcp__context7__*`.
 
-例えば `better-auth-reviewer.md`:
+Example: `better-auth-reviewer.md`:
 
 Before:
 
@@ -201,7 +201,7 @@ model: sonnet
 memory: project
 ```
 
-`design-memory.md` のように `skills:` を含むものも同様（`skills:` は YAML list のまま維持、`tools:` だけ正規化）:
+Files like `design-memory.md` that include `skills:` follow the same rule (keep `skills:` as YAML list; normalize `tools:` only):
 
 Before:
 
@@ -227,7 +227,7 @@ model: sonnet
 memory: project
 ```
 
-`large-file-detector.md` のように 2 tool しかないものも同じ:
+Same for files with only two tools like `large-file-detector.md`:
 
 Before:
 
@@ -245,7 +245,7 @@ tools: Glob, Bash
 model: sonnet
 ```
 
-- [ ] **Step 4: 違反パターンが完全に消えたことを検証 (Post-edit grep)**
+- [ ] **Step 4: Verify violation pattern is fully removed (post-edit grep)**
 
 Run:
 
@@ -253,19 +253,19 @@ Run:
 grep -lE '^tools:$' .claude/agents/*.md
 ```
 
-Expected: 出力なし（exit 1）
+Expected: no output (exit 1)
 
-確認用 inverse grep:
+Inverse grep for confirmation:
 
 ```bash
 grep -E '^tools: ' .claude/agents/*.md | wc -l
 ```
 
-Expected: `25`（全 25 件で comma-separated 形式に変換済み）
+Expected: `25` (all 25 converted to comma-separated format)
 
-- [ ] **Step 5: YAML 構造の最低限の sanity check**
+- [ ] **Step 5: Minimal YAML structure sanity check**
 
-frontmatter ブロック（`---` で挟まれた範囲）が壊れていないか確認。各ファイルで `---` が 2 個（先頭 + frontmatter 終端）あること:
+Confirm the frontmatter block (between `---`) is intact. Each file should have exactly two `---` markers (start + frontmatter end):
 
 ```bash
 for f in .claude/agents/*.md; do
@@ -274,7 +274,7 @@ for f in .claude/agents/*.md; do
 done
 ```
 
-Expected: 出力なし
+Expected: no output
 
 - [ ] **Step 6: Commit**
 
@@ -282,9 +282,7 @@ Expected: 出力なし
 git add .claude/agents/
 git commit -m "refactor(agents): normalize tools to canonical comma-separated format
 
-公式 docs (code.claude.com/docs/en/sub-agents) の canonical YAML
-frontmatter 形式に揃える。25 件全てで tools を YAML list から
-comma-separated 単行に変換 (clean break, 機能差分なし)。
+Align to the canonical YAML frontmatter format in official docs (code.claude.com/docs/en/sub-agents). Convert tools from YAML list to a single comma-separated line for all 25 files (clean break, no functional changes).
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -295,12 +293,12 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 
-- Modify: `.claude/agents/cache-strategy-reviewer.md` (行 14: `memory: project` を削除)
-- Modify: `.claude/agents/lexical-reviewer.md` (行 16: `memory: project` を削除)
+- Modify: `.claude/agents/cache-strategy-reviewer.md` (line 14: remove `memory: project`)
+- Modify: `.claude/agents/lexical-reviewer.md` (line 16: remove `memory: project`)
 
-> **判定根拠:** 両者とも `.claude/agent-memory/<name>/` dir なし + body に Memory management 節なし。`db-migration-reviewer` / `test-runner` / `verification` は backing dir なしだが body に Memory management 節があり、lazy-create 待機状態として **維持**。
+> **Rationale:** Both lack `.claude/agent-memory/<name>/` dirs and have no Memory management section in the body. `db-migration-reviewer` / `test-runner` / `verification` lack backing dirs but do have Memory management sections, so **keep** as lazy-create pending.
 
-- [ ] **Step 1: 削除対象ファイル 2 件の現状確認**
+- [ ] **Step 1: Confirm current state of the two removal targets**
 
 Run:
 
@@ -315,9 +313,9 @@ Expected:
 .claude/agents/lexical-reviewer.md:16:memory: project
 ```
 
-- [ ] **Step 2: `cache-strategy-reviewer.md` から `memory: project` 行を削除**
+- [ ] **Step 2: Remove `memory: project` line from `cache-strategy-reviewer.md`**
 
-Before（行 13-15 周辺、Task 1 完了後の状態を前提）:
+Before (around lines 13-15, assuming Task 1 completion state):
 
 ```yaml
 model: sonnet
@@ -345,11 +343,11 @@ model: sonnet
 ---
 ```
 
-- [ ] **Step 3: `lexical-reviewer.md` から `memory: project` 行を削除**
+- [ ] **Step 3: Remove `memory: project` line from `lexical-reviewer.md`**
 
-`cache-strategy-reviewer` と同パターンで Edit。
+Edit using the same pattern as `cache-strategy-reviewer`.
 
-- [ ] **Step 4: 削除後の検証 — 維持対象 13 件は残っていること**
+- [ ] **Step 4: Post-delete verification — ensure the 13 keep targets remain**
 
 Run:
 
@@ -357,7 +355,7 @@ Run:
 grep -lE '^memory: project$' .claude/agents/*.md | sort
 ```
 
-Expected: 13 件（`cache-strategy-reviewer.md` と `lexical-reviewer.md` が含まれない）
+Expected: 13 (does not include `cache-strategy-reviewer.md` or `lexical-reviewer.md`)
 
 ```
 .claude/agents/better-auth-reviewer.md
@@ -381,13 +379,11 @@ Expected: 13 件（`cache-strategy-reviewer.md` と `lexical-reviewer.md` が含
 git add .claude/agents/cache-strategy-reviewer.md .claude/agents/lexical-reviewer.md
 git commit -m "refactor(agents): remove orphan memory: project declarations
 
-backing dir + body Memory management 節がいずれも存在しない 2 件で
-memory: project 宣言を削除 (CLAUDE.md §自動ロード の判定基準に準拠)。
-他 13 件は backing dir または body Memory management 節を持つため
-維持。
+Remove the memory: project declaration for the two agents that have neither a backing dir nor a body Memory management section (per CLAUDE.md §Auto-load criteria).
+Keep the other 13 because they have a backing dir or a body Memory management section.
 
-- cache-strategy-reviewer: dir 不在 + body memory 言及なし
-- lexical-reviewer: dir 不在 + body memory 言及なし
+- cache-strategy-reviewer: no dir + no body memory mention
+- lexical-reviewer: no dir + no body memory mention
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -398,13 +394,13 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 
-- Modify: `.claude/agents/accessibility-reviewer.md` (行 173)
-- Modify: `.claude/agents/editorial-consistency-reviewer.md` (行 96)
-- Modify: `.claude/agents/plan-drift-detector.md` (行 130)
+- Modify: `.claude/agents/accessibility-reviewer.md` (line 173)
+- Modify: `.claude/agents/editorial-consistency-reviewer.md` (line 96)
+- Modify: `.claude/agents/plan-drift-detector.md` (line 130)
 
-> **背景:** C1 完了 commit `5d298e74` で `.claude/rules/frontend/accessibility.md` と `.claude/rules/gotchas.md` を barrel-index pattern に分割。agent body の §section anchor が barrel ではなく sub-file を指すべき状態に drift しているため修正する。
+> **Background:** In C1 completion commit `5d298e74`, `.claude/rules/frontend/accessibility.md` and `.claude/rules/gotchas.md` were split into a barrel-index pattern. Agent body §section anchors should point to sub-files, but drifted to barrel refs, so we fix them.
 
-- [ ] **Step 1: barrel split 後の sub-file 配置を確認**
+- [ ] **Step 1: Confirm sub-file layout after barrel split**
 
 Run:
 
@@ -412,107 +408,107 @@ Run:
 ls .claude/rules/frontend/accessibility/ .claude/rules/gotchas/
 ```
 
-Expected output に sub-file 名が表示される（`touch-text.md` / `claude-code.md` などを含む）。
+Expected output includes sub-file names (such as `touch-text.md` / `claude-code.md`).
 
-- [ ] **Step 2: §タッチターゲット の正確な所在を確認**
+- [ ] **Step 2: Find the exact location of §Touch targets**
 
 Run:
 
 ```bash
-grep -lE 'タッチターゲット|44px|2\.5\.5' .claude/rules/frontend/accessibility/*.md
+grep -lE 'Touch targets|44px|2\.5\.5' .claude/rules/frontend/accessibility/*.md
 ```
 
-Expected: `touch-text.md` を含む sub-file が表示される。
+Expected: sub-file containing `touch-text.md` appears.
 
-該当 sub-file 内の正確な § section heading を確認:
+Confirm the exact § section heading in the target sub-file:
 
 ```bash
 grep -nE '^##' .claude/rules/frontend/accessibility/touch-text.md
 ```
 
-- [ ] **Step 3: §Claude Code 設定 の正確な所在を確認**
+- [ ] **Step 3: Find the exact location of §Claude Code settings**
 
 Run:
 
 ```bash
-grep -lE 'Claude Code 設定|hook スクリプト' .claude/rules/gotchas/*.md
+grep -lE 'Claude Code settings|hook script' .claude/rules/gotchas/*.md
 ```
 
-Expected: `claude-code.md` を含む sub-file が表示される。
+Expected: sub-file containing `claude-code.md` appears.
 
-該当 sub-file 内の正確な § section heading を確認:
+Confirm the exact § section heading in the target sub-file:
 
 ```bash
 grep -nE '^##' .claude/rules/gotchas/claude-code.md
 ```
 
-- [ ] **Step 4: `accessibility-reviewer.md` の anchor 修正**
+- [ ] **Step 4: Fix anchor in `accessibility-reviewer.md`**
 
-行 173 周辺を Read して現状を確認した上で Edit。
+Read around line 173 and then edit after confirming current state.
 
-Before（例、Step 2 で確認した sub-file 名と § を反映する）:
+Before (example, reflect the sub-file name and § confirmed in Step 2):
 
 ```markdown
-→ 詳細: `.claude/rules/frontend/accessibility.md` §タッチターゲット（WCAG 2.5.5 Enhanced）
+→ Details: `.claude/rules/frontend/accessibility.md` §Touch targets (WCAG 2.5.5 Enhanced)
 ```
 
 After:
 
 ```markdown
-→ 詳細: `.claude/rules/frontend/accessibility/touch-text.md` §タッチターゲット（WCAG 2.5.5 Enhanced）
+→ Details: `.claude/rules/frontend/accessibility/touch-text.md` §Touch targets (WCAG 2.5.5 Enhanced)
 ```
 
-> sub-file の正確な name と § heading は Step 2 grep の結果に揃える。`touch-text.md` 以外（例: `interactive.md`）が hit する場合はそちらを採用。
+> Align the exact sub-file name and § heading with Step 2 grep results. If something other than `touch-text.md` (e.g., `interactive.md`) is hit, use that instead.
 
-- [ ] **Step 5: `editorial-consistency-reviewer.md` の anchor 修正**
+- [ ] **Step 5: Fix anchor in `editorial-consistency-reviewer.md`**
 
-行 96 周辺を Read して Edit。Step 4 と同じ参照先 sub-file に揃える:
+Read around line 96 and edit. Align to the same sub-file as Step 4:
 
 Before:
 
 ```markdown
-→ 詳細: `.claude/rules/frontend/accessibility.md` §タッチターゲット
+→ Details: `.claude/rules/frontend/accessibility.md` §Touch targets
 ```
 
 After:
 
 ```markdown
-→ 詳細: `.claude/rules/frontend/accessibility/touch-text.md` §タッチターゲット
+→ Details: `.claude/rules/frontend/accessibility/touch-text.md` §Touch targets
 ```
 
-- [ ] **Step 6: `plan-drift-detector.md` の anchor 修正**
+- [ ] **Step 6: Fix anchor in `plan-drift-detector.md`**
 
-行 130 周辺を Read して Edit:
+Read around line 130 and edit:
 
 Before:
 
 ```markdown
-- `.claude/rules/gotchas.md` §Claude Code 設定 — plan の schema 前提検証ルール
+- `.claude/rules/gotchas.md` §Claude Code settings — schema precondition validation rules for plans
 ```
 
 After:
 
 ```markdown
-- `.claude/rules/gotchas/claude-code.md` §Claude Code 設定 — plan の schema 前提検証ルール
+- `.claude/rules/gotchas/claude-code.md` §Claude Code settings — schema precondition validation rules for plans
 ```
 
-> Step 3 grep で `claude-code.md` 以外（例: `general.md`）に該当 § が入っている場合はそちらを採用。
+> If Step 3 grep shows the § in something other than `claude-code.md` (e.g., `general.md`), use that.
 
-- [ ] **Step 7: 残った barrel-only refs の最終 grep**
+- [ ] **Step 7: Final grep for remaining barrel-only refs**
 
-修正対象として既知の 4 行以外で stale なものが残っていないか確認:
+Check that no stale items remain beyond the four known lines:
 
 ```bash
 grep -nE '\.claude/rules/(frontend/accessibility|gotchas)\.md \xc2\xa7' .claude/agents/*.md
 ```
 
-Note: `\xc2\xa7` は `§` の UTF-8 byte 表現。MINGW64 で `§` リテラルが渡せない場合に使う。代替として:
+Note: `\xc2\xa7` is the UTF-8 byte sequence for `§`. Use it if MINGW64 cannot pass a `§` literal. Alternative:
 
 ```bash
 grep -nE '\.claude/rules/(frontend/accessibility|gotchas)\.md ' .claude/agents/*.md
 ```
 
-Expected: 出力なし（barrel に直接 §section を付ける ref が残っていない）。barrel ファイル名のみの ref（例 `project-reviewer.md:66 .claude/rules/server-actions.md` のような § なし path 単独）は維持して OK（barrel 自体への ref は autoload chain で解決される）。
+Expected: no output (no refs that attach §section directly to barrel). Refs that only mention the barrel filename (e.g., `project-reviewer.md:66 .claude/rules/server-actions.md` without a §) are OK to keep (barrel refs are resolved by the autoload chain).
 
 - [ ] **Step 8: Commit**
 
@@ -520,13 +516,12 @@ Expected: 出力なし（barrel に直接 §section を付ける ref が残っ�
 git add .claude/agents/accessibility-reviewer.md .claude/agents/editorial-consistency-reviewer.md .claude/agents/plan-drift-detector.md
 git commit -m "docs(agents): update stale §anchor refs after C1 rule barrel split
 
-C1 (commit 5d298e74) で frontend/accessibility.md と gotchas.md を
-barrel-index pattern に分割した結果、agent body の §section anchor が
-barrel ではなく sub-file を指すべき状態に drift していたため修正。
+C1 (commit 5d298e74) split frontend/accessibility.md and gotchas.md
+Because the barrel-index split caused agent body §section anchors to drift to barrel refs instead of sub-files, we corrected them.
 
-- accessibility-reviewer: §タッチターゲット → frontend/accessibility/touch-text.md
-- editorial-consistency-reviewer: 同上
-- plan-drift-detector: §Claude Code 設定 → gotchas/claude-code.md
+- accessibility-reviewer: §Touch targets → frontend/accessibility/touch-text.md
+- editorial-consistency-reviewer: same as above
+- plan-drift-detector: §Claude Code settings → gotchas/claude-code.md
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -535,9 +530,9 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ## Task 4: Final verification
 
-**Files:** 変更なし（読み取り検証のみ）
+**Files:** no changes (read-only verification)
 
-- [ ] **Step 1: 25 件の最終 frontmatter sanity check**
+- [ ] **Step 1: Final frontmatter sanity check for 25 files**
 
 ```bash
 for f in .claude/agents/*.md; do
@@ -546,19 +541,19 @@ for f in .claude/agents/*.md; do
 done | head -200
 ```
 
-Expected: 全 25 件で `name:` / `description:` / `tools: …` (comma-separated 1 行) / `model: sonnet` の 4 フィールドが確実に存在。`memory: project` は 13 件で確認できる。`---` ブロックが破損していない。
+Expected: all 25 have `name:` / `description:` / `tools: …` (single comma-separated line) / `model: sonnet`. `memory: project` appears in 13 files. The `---` block is intact.
 
-- [ ] **Step 2: `name` 重複なし確認**
+- [ ] **Step 2: Confirm no duplicate `name`**
 
 ```bash
 grep -hE '^name: ' .claude/agents/*.md | sort | uniq -d
 ```
 
-Expected: 出力なし（重複 name なし）
+Expected: no output (no duplicate names)
 
-- [ ] **Step 3: 機能差分の最終目視確認（重複・dead 検出）**
+- [ ] **Step 3: Final visual check of functional differences (detect duplicates/dead)**
 
-各 agent の `description` 1 行目だけ抜粋して並べて読み、機能重複がないか確認:
+Extract and read only the first line of each agent's `description` to check for functional overlap:
 
 ```bash
 for f in .claude/agents/*.md; do
@@ -567,50 +562,50 @@ for f in .claude/agents/*.md; do
 done
 ```
 
-期待結果（事前監査と一致）:
+Expected result (matches pre-audit):
 
-- 25 件すべて機能スコープが互いに被らない
-- `accessibility-reviewer` (WCAG 規格) と `editorial-consistency-reviewer` (Editorial Magazine token) は別軸
-- `test-runner` (個別テスト診断) と `verification` (build/type-check/lint 包括) は別軸
-- `test-writer` (bun:test) と `e2e-test-writer` (Playwright) は別軸
-- `design-memory` (Write 含む持続的記憶) と `editorial-consistency-reviewer` (Read-only 違反検出) は別軸
+- All 25 scopes do not overlap
+- `accessibility-reviewer` (WCAG standards) and `editorial-consistency-reviewer` (Editorial Magazine tokens) are separate axes
+- `test-runner` (per-test diagnosis) and `verification` (build/type-check/lint umbrella) are separate axes
+- `test-writer` (bun:test) and `e2e-test-writer` (Playwright) are separate axes
+- `design-memory` (persistent memory with Write) and `editorial-consistency-reviewer` (read-only violation detection) are separate axes
 
-重複 / dead を検出した場合のみ追加 commit で削除。検出なしであれば追加 commit 不要（plan 終了）。
+Only if duplicates/dead are detected, delete them in an additional commit. If none, no extra commit is needed (plan ends).
 
-- [ ] **Step 4: 全変更のサマリ確認**
+- [ ] **Step 4: Review summary of all changes**
 
 ```bash
 git log --oneline main..HEAD
 ```
 
-Expected: 3 commit（Task 1 / Task 2 / Task 3）
+Expected: 3 commits (Task 1 / Task 2 / Task 3)
 
 ```bash
 git diff --stat main..HEAD -- .claude/agents/
 ```
 
-Expected: 27-30 行程度の総変更（25 件 tools 正規化 + 2 件 memory 削除 + 3 件 anchor 修正）。新規ファイル / 削除ファイルなし。
+Expected: ~27-30 total lines changed (25 tools normalizations + 2 memory removals + 3 anchor fixes). No new files / deletions.
 
-- [ ] **Step 5: CLAUDE.md / AGENTS.md cross-reference 検証**
+- [ ] **Step 5: Verify CLAUDE.md / AGENTS.md cross-references**
 
-CLAUDE.md には `.claude/agents/<name>.md` 行 (line 253 付近) があるが、subagent 個別名へのリンクはなく、形式だけの説明文。今回の変更で CLAUDE.md 更新は不要であることを確認:
+CLAUDE.md has a `.claude/agents/<name>.md` line (around line 253), but no links to specific subagent names—just format description. Confirm no CLAUDE.md update is needed for this change:
 
 ```bash
 grep -nE '\.claude/agents/' CLAUDE.md AGENTS.md 2>/dev/null
 ```
 
-Expected: CLAUDE.md line 253 のみ hit（generic な subagent 説明文 `frontmatter name / description / tools:（最小権限）/ model: sonnet / memory: project`）。具体 agent 名への ref はなく更新不要。
+Expected: only CLAUDE.md line 253 hits (generic subagent description `frontmatter name / description / tools: (least privilege) / model: sonnet / memory: project`). No specific agent name refs, so no update needed.
 
-- [ ] **Step 6: 最終報告**
+- [ ] **Step 6: Final report**
 
-完了報告に含める内容:
+Include in completion report:
 
-- 3 commit の SHA
-- 変更ファイル数（25 件正規化 / 2 件 memory 削除 / 3 件 anchor 修正、合計 27-28 ファイル touched）
-- backing dir 維持 13 件・削除 2 件の判定根拠
-- 重複・dead 検出ゼロ
+- SHAs of 3 commits
+- Changed file counts (25 normalizations / 2 memory removals / 3 anchor fixes; total 27-28 files touched)
+- Rationale for keeping 13 backing dirs and removing 2
+- Zero duplicates/dead detected
 
-`MEMORY.md` の `project_clean-break-refactor-handoff.md` に「✅ C2 完了」を追記する。
+Append "✅ C2 complete" to `project_clean-break-refactor-handoff.md` in `MEMORY.md`.
 
 ---
 
@@ -618,28 +613,26 @@ Expected: CLAUDE.md line 253 のみ hit（generic な subagent 説明文 `frontm
 
 **Spec coverage:**
 
-- ✅ 公式 docs 準拠 → Phase 1 で tools canonical 化（comma-separated）
-- ✅ tools 最小権限 → 事前監査済み、変更不要（既に Read/Grep/Glob ベース、書き込み権限は test-writer / e2e-test-writer / design-memory のみ正当）
-- ✅ description proactively pattern → 全 25 件に trigger phrase 存在を事前確認、変更不要
-- ✅ memory: project 必要時のみ → Phase 2 で orphan 2 件削除
-- ✅ 重複・dead subagent 完全削除 → 事前監査で検出ゼロ、Phase 4 で再確認
+- ✅ Official docs compliance → canonicalize tools in Phase 1 (comma-separated)
+- ✅ Least-privilege tools → pre-audited, no change (already Read/Grep/Glob-based; write permissions only for test-writer / e2e-test-writer / design-memory)
+- ✅ Proactive description pattern → trigger phrases preconfirmed in all 25, no change
+- ✅ memory: project only when needed → remove 2 orphans in Phase 2
+- ✅ Duplicate/dead subagents fully removed → zero detected in pre-audit, recheck in Phase 4
 
-**Type consistency:** 全 phase で扱う identifier（agent name / file path / § section anchor）は事前 grep で実在確認済み。Step 2-3 の grep で sub-file の正確な name + § を実行時に再取得する設計で、plan 内 hardcode を避ける。
+**Type consistency:** Identifiers used across phases (agent name / file path / § section anchor) are verified via pre-grep. Steps 2-3 re-fetch the exact sub-file name + § at runtime, avoiding hardcoded values in the plan.
 
-**Placeholder scan:** "TBD" / "implement later" / "Add appropriate" などのプレースホルダ表現はなし。各 Step に実コードと exact grep コマンドを記述。
+**Placeholder scan:** No placeholder phrases like "TBD", "implement later", "Add appropriate". Each step includes real code and exact grep commands.
 
 **Risk:**
 
-- Phase 3 で sub-file 名が事前監査時から変わっている可能性（C1 後にさらに分割があれば）→ Step 2-3 の grep で実行時確認することで mitigation
-- Phase 1 で frontmatter 内の `description: >` block scalar の indent が崩れた場合、YAML parser がエラーを出すが Phase 1 step 5 の `---` count check で検出可能
+- Sub-file names may differ from pre-audit by Phase 3 (if additional splits after C1) → mitigate by runtime grep in Steps 2-3
+- If `description: >` block scalar indentation breaks in Phase 1, YAML parser errors; detect via the Phase 1 step 5 `---` count check
 
 ---
 
-## 起動手順（implementer 向け短縮プロンプト）
+## Launch instructions (short prompt for implementer)
 
 ```
-docs/superpowers/plans/2026-04-28-agents-cleanup.md を subagent-driven-development で
-実行してください。Phase 1 / 2 / 3 / 4 の順に進め、各 Phase の最終 Step で commit し、
-全 3 commit 完了後に Phase 4 で最終検証してください。
-implementer model は sonnet、git は add / commit のみ許可（reset / restore / stash 全面禁止）。
+Execute docs/superpowers/plans/2026-04-28-agents-cleanup.md with subagent-driven-development. Proceed in Phase 1 / 2 / 3 / 4 order, commit at the final step of each phase, and run final verification in Phase 4 after all 3 commits complete.
+Implementer model is sonnet, and git is restricted to add / commit only (reset / restore / stash fully prohibited).
 ```

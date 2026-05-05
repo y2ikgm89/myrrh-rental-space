@@ -8,6 +8,7 @@
 ## コマンド
 
 ```bash
+# 初回: bun install → bunx --bun prisma migrate dev → bun run db:seed
 bun dev                                       # 開発サーバー（Turbopack）
 bun run validate                              # type-check → lint（作業中）
 bun run validate && bun run build             # 完全検証（コミット前必須）
@@ -25,6 +26,7 @@ bun outdated && bun update                    # 依存更新（実行後 validat
 ## アーキテクチャ
 
 Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイアウトを完全分離（遷移はフルページリロード）。
+第 3 root layout `(preview)/` は管理画面向けプレビュー専用（`HomepageSections` / `ManagedPageSections` を共有）。
 管理 write 系は `executeAdminMutationResult`（認証・権限・監査ログ一括処理）。API Route のみ `checkPermission()` 直接使用。
 公開コンテンツ: `/posts`（ブログ）・`/news`・`/spaces`・`/events`・`/faq`。RSS: `/feed.xml`。
 
@@ -64,6 +66,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **ドメインコマンドの actor 引数は `{ id: string; role: Role }` オブジェクト** — 単独 `actorUserId: string` 禁止
 - **GCal outbound sync は attendees 空 + description マーカー + fireAndForget**（→ `ical-patterns.md`）— description 1 行目に `予約ID:` / `イベントID:` マーカーで inbound ループ防止
 - **Turnstile 配置基準** — 未認証公開フォーム必須、認証済みでも予約・決済等の高リスク操作は許容、参照系は不要
+- **datetime-local 入力は `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst`（`@/shared/lib/date-format`）経由必須** — `new Date(localStr)` / `format(d, "yyyy-MM-dd'T'HH:mm")` は tz 依存で 9 時間ずれる silent bug。schema は `z.string().datetime({ local: true })`、command 層で UTC 変換（→ `ssot-singletons.md` §日時フォーマット）
 
 詳細（datetime-local / Mutually exclusive boolean / 配列 uniqueness 等）: `zod-patterns/validation-schemas.md` / `implementation-patterns.md`
 

@@ -146,6 +146,34 @@ registrationDeadline: z.string()
   .optional();
 ```
 
+**command 層での UTC 変換は `parseDateTimeLocalAsJst` 必須**: schema は文字列を通すだけ、Date 化はドメインコマンド側で行う。`new Date(data.startTime)` は **サーバ tz (Cloud Run UTC) 解釈** で 9 時間ずれる silent bug を起こすため禁止:
+
+```typescript
+// NG: サーバ tz 依存（Cloud Run UTC で 12:00 を解釈 → JST 21:00 で保存される）
+startTime: new Date(data.startTime),
+
+// OK: `parseDateTimeLocalAsJst` で JST 固定 parse → UTC Date 化
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
+startTime: parseDateTimeLocalAsJst(data.startTime),
+validUntil: data.validUntil && data.validUntil !== ""
+  ? parseDateTimeLocalAsJst(data.validUntil)
+  : null,
+```
+
+`parseDateTimeLocalAsJst` は full ISO（`Z` / `±HH:mm`）入力もそのまま委譲するため、`.datetime({ local: true })` の両形式に対応する。**フォーム表示（initial value）も同 SSoT で揃える**:
+
+```typescript
+// NG: ブラウザ tz 依存（date-fns format / .slice(0, 16) など）
+defaultValue: format(new Date(coupon.validFrom), "yyyy-MM-dd'T'HH:mm"),  // tz 依存
+defaultValue: coupon.validFrom.slice(0, 16),                              // UTC を local 解釈する silent bug
+
+// OK: `formatDateTimeLocalInJst` で JST 固定表示
+import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
+defaultValue: formatDateTimeLocalInJst(coupon.validFrom),
+```
+
+参照実装: `couponFormSchema` + `commands.ts toCouponData()`、`eventFormBaseSchema` + `events/commands.ts`、`barFormSchema` + `settings/announcement-bar.ts normalizeAnnouncementBarInput()`
+
 ## URLパラメータバリデーション
 
 ```typescript
@@ -200,6 +228,20 @@ const recentSchema = z.object({
 ```
 
 既存 JSON `{ type: "recent", enabled: true }` は safeParse で `layout: "compact"` が補完される。DB migration 不要で破壊的拡張を完遂できる。
+
+## ネスト object の inner default 発火 — `.prefault({})` 必須
+
+`z.object({ inner: z.object({ a: z.string().default("x") }) })` で input `{}`（inner キーなし）の挙動:
+
+- **`.default({})`** — output に `{}` がそのまま流れて **inner default は発火しない**（`{ inner: {} }`）
+- **`.prefault({})`** — input undefined を `{}` に置換 → parser 通過 → **inner default が発火**（`{ inner: { a: "x" } }`）
+
+共通 group schema を section / form 横断で注入する場合（parent が省略してもデフォルト展開したい）は `.prefault({})` 一択。
+`parseSectionConfig` のような fallback chain で両 fallback が `safeParse({})` を呼ぶ設計の場合、`.default({})` を使うと sub-field が required のまま全 fallback fail → throw に到達する silent bug を生む。
+
+generic helper（`<TFields>` で受けて `.prefault({})` を内蔵）は TS が `TFields` 全要素 ZodDefault かを推論できず型エラー。**各 schema 定義側で `z.object({...}).prefault({}).register(...)` を直接呼ぶのが Zod 4 公式 idiom**（generic helper 化禁止）。
+
+参照実装: `sectionLayoutSchema` / `createImageGroupSchema`（`@/shared/lib/sections/definitions/_shared/{layout,image}`）
 
 ## React Hook Form 連携
 

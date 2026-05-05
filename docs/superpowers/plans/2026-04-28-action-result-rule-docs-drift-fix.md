@@ -1,12 +1,12 @@
-# ActionResult / createSuccess / createFailure rule docs drift 解消 Implementation Plan
+# ActionResult / createSuccess / createFailure rule docs drift resolution Implementation Plan
 
-> **In Progress: 2026-04-29** — `.claude/rules/` 配下 8 ファイルの helper / 型 / import 表記の差分解消 1 commit 待機中。`src/` 実装変更ゼロ、ADR 不要。
+> **In Progress: 2026-04-29** — Waiting on a single commit to resolve helper/type/import drift across 8 files under `.claude/rules/`. No `src/` implementation changes, no ADR needed.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `.claude/rules/` 配下 8 ファイルの helper / 型 / import 表記を実装 (`executeAdminMutationResult` + `MutationResult<T>`) に追従させ、`createSuccess` / `createFailure` / `ActionResult` 等の架空シンボル参照を完全に解消する。
+**Goal:** Align helper/type/import references across the 8 `.claude/rules/` files with the implementation (`executeAdminMutationResult` + `MutationResult<T>`), and fully remove references to fictional symbols like `createSuccess` / `createFailure` / `ActionResult`.
 
-**Architecture:** 1 commit / 8 ファイル一括修正 / Pattern A-F 適用 / 5 grep verification / `src/` 実装変更ゼロ / ADR 不要。
+**Architecture:** One commit / batch update of 8 files / apply Patterns A–F / 5 grep verifications / no `src/` changes / no ADR.
 
 **Tech Stack:** Markdown (rule docs only), bash grep verification, lefthook pre-commit (prettier-fix only).
 
@@ -16,53 +16,53 @@
 
 ## File Structure
 
-修正対象ファイル (spec § Modification Targets 参照):
+Target files (see spec § Modification Targets):
 
-| #   | File                                           | 適用 Pattern      |
-| --- | ---------------------------------------------- | ----------------- |
-| 1   | `.claude/rules/error-handling.md`              | A, B, C, D, E     |
-| 2   | `.claude/rules/auth-patterns.md`               | A, B, D           |
-| 3   | `.claude/rules/frontend/admin-ui-patterns.md`  | 節全削除 (D 関連) |
-| 4   | `.claude/rules/implementation-quality.md`      | A, B, D           |
-| 5   | `.claude/rules/test-quality.md`                | A, D              |
-| 6   | `.claude/rules/server-actions/prohibitions.md` | A                 |
-| 7   | `.claude/rules/server-actions/use-cache.md`    | A                 |
-| 8   | `.claude/rules/type-safety.md`                 | F (§4 削除)       |
+| #   | File                                           | Applied Pattern               |
+| --- | ---------------------------------------------- | ----------------------------- |
+| 1   | `.claude/rules/error-handling.md`              | A, B, C, D, E                 |
+| 2   | `.claude/rules/auth-patterns.md`               | A, B, D                       |
+| 3   | `.claude/rules/frontend/admin-ui-patterns.md`  | Delete section (related to D) |
+| 4   | `.claude/rules/implementation-quality.md`      | A, B, D                       |
+| 5   | `.claude/rules/test-quality.md`                | A, D                          |
+| 6   | `.claude/rules/server-actions/prohibitions.md` | A                             |
+| 7   | `.claude/rules/server-actions/use-cache.md`    | A                             |
+| 8   | `.claude/rules/type-safety.md`                 | F (delete §4)                 |
 
-**Pattern 一覧** (詳細は spec 参照):
+**Pattern list** (see spec for details):
 
-- **A**: `executeAdminMutationResult` 内の `success: (result) => createSuccess(...)` callback 削除 (実装に `success` プロパティなし)
+- **A**: Remove `success: (result) => createSuccess(...)` callbacks inside `executeAdminMutationResult` (no `success` property in implementation)
 - **B**: `createFailure("...")` → `createMutationError("...")`
 - **C**: `createValidationError` → `createValidationMutationError`
-- **D**: import 文を `@/admin/types/server-actions` / `@/shared/types/server-actions` (不在) → `@/shared/lib/mutation-result` / `@/admin/lib/admin-action` / `@/shared/lib/action-helpers` (実在)
-- **E**: `error-handling.md` のみ — `ActionResult<TData>` 型定義節を `MutationResult<T> = T | MutationError` 節に置換
-- **F**: `type-safety.md` §4「TypeScript 6.0 条件型 (`as unknown as T`)」例外節全削除 (架空型 `ActionSuccess<T>` を例に使用)
+- **D**: Replace imports from `@/admin/types/server-actions` / `@/shared/types/server-actions` (nonexistent) with `@/shared/lib/mutation-result` / `@/admin/lib/admin-action` / `@/shared/lib/action-helpers` (existing)
+- **E**: `error-handling.md` only — replace the `ActionResult<TData>` section with `MutationResult<T> = T | MutationError`
+- **F**: `type-safety.md` §4 exception section (“TypeScript 6.0 conditional types (`as unknown as T`)”) fully removed (uses fictional `ActionSuccess<T>`)
 
 ---
 
 ## Tasks
 
-### Task 1: Baseline grep カウント (修正前の現状把握)
+### Task 1: Baseline grep count (pre-change snapshot)
 
 **Files:** None (read-only verification)
 
-**Goal:** 修正前の forbidden symbol 出現箇所数を記録し、Task 10 の 0 件確認の根拠にする。
+**Goal:** Record the count of forbidden symbols before changes to justify the Task 10 "0 hits" verification.
 
-- [ ] **Step 1: 全 forbidden symbol を grep してファイル別カウント**
+- [ ] **Step 1: Grep all forbidden symbols and count by file**
 
 ```bash
 grep -rnE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/ | wc -l
 ```
 
-Expected: **71 件** (現状 baseline、commit `da3e2ede` 時点)
+Expected: **71 hits** (current baseline at commit `da3e2ede`)
 
-- [ ] **Step 2: ファイル別カウントを取得**
+- [ ] **Step 2: Capture per-file counts**
 
 ```bash
 grep -rcE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/ | grep -v ":0$"
 ```
 
-Expected (順不同):
+Expected (order may vary):
 
 - `.claude/rules/auth-patterns.md:11`
 - `.claude/rules/error-handling.md:34`
@@ -73,13 +73,13 @@ Expected (順不同):
 - `.claude/rules/server-actions/prohibitions.md:1`
 - `.claude/rules/type-safety.md:2`
 
-合計 71 件 / 8 ファイル。
+Total: 71 hits / 8 files.
 
-数値が異なる場合は本 plan 開始前に他ブランチで rule docs が更新されている。Task 1 の baseline 値を実測値で記録し直して進める (Task 10 の verification は実測 baseline を使わず「forbidden パターン 0 件」で固定)。
+If the numbers differ, rule docs were updated on another branch before this plan started. Record the measured baseline in Task 1 and proceed (Task 10 verification stays fixed to "0 forbidden patterns," not the measured baseline).
 
 ---
 
-### Task 2: `error-handling.md` 修正 (canonical SSoT 節を最初に確定)
+### Task 2: Update `error-handling.md` (establish canonical SSoT section first)
 
 **Files:**
 
@@ -87,9 +87,9 @@ Expected (順不同):
 
 **Apply Patterns:** A, B, C, D, E
 
-**Goal:** drift の中核である「`ActionResult` 型定義 + createSuccess/createFailure helper」のセクションを `MutationResult<T>` + `createMutationError` に置換。後続 Task 3-9 はこのファイルへ cross-reference する。
+**Goal:** Replace the core drift section (“`ActionResult` type definition + createSuccess/createFailure helpers”) with `MutationResult<T>` + `createMutationError`. Tasks 3–9 will cross-reference this file.
 
-- [ ] **Step 1: 現状の修正対象箇所を grep で特定**
+- [ ] **Step 1: Locate current drift with grep**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/error-handling.md
@@ -97,16 +97,16 @@ grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|Actio
 
 Expected: 34 hits (Task 1 baseline)
 
-- [ ] **Step 2: §「ActionResult 型」セクション (`### createSuccess / createFailure` 節を含む) を全置換**
+- [ ] **Step 2: Replace the “ActionResult” section (including `### createSuccess / createFailure`)**
 
-`error-handling.md` の `## ActionResult 型` セクション全体 (`### createSuccess / createFailure` + 型定義 + 例コード) を以下の新セクションに置換:
+Replace the entire `## ActionResult` section (`### createSuccess / createFailure`, type definitions, and example code) with the following new section:
 
 ````markdown
-## MutationResult<T> 型
+## MutationResult<T>
 
 ### createMutationError / isMutationError
 
-`@/shared/lib/mutation-result` のヘルパーを必ず使用する。直接オブジェクトリテラルを返却しない:
+Always use helpers from `@/shared/lib/mutation-result`. Do not return object literals directly:
 
 ```typescript
 import {
@@ -116,51 +116,51 @@ import {
   type MutationError,
 } from "@/shared/lib/mutation-result";
 
-// NG: オブジェクトリテラル直接返却
-return { error: "エラー" };
+// NG: return object literal directly
+return { error: "Error" };
 return { error: "...", fieldErrors: { ... } };
 
-// OK: ヘルパー使用 (failure path)
-return createMutationError("エラーが発生しました");
-return createMutationError("入力内容に誤りがあります", { email: ["無効なメール"] }); // fieldErrors付き
+// OK: helper usage (failure path)
+return createMutationError("An error occurred");
+return createMutationError("There are errors in the input", { email: ["Invalid email"] }); // with fieldErrors
 
-// OK: success path は T を直接返す (ラッパー不要)
+// OK: success path returns T directly (no wrapper)
 return { id: post.id };
 ```
 ````
 
-型定義:
+Type definitions:
 
 ```typescript
-// 失敗
+// Failure
 type MutationError = {
   readonly error: string;
   readonly code?: string;
   readonly fieldErrors?: Record<string, string[]>;
 };
 
-// 統合 (success: T | failure: MutationError)
+// Union (success: T | failure: MutationError)
 type MutationResult<T = null> = T | MutationError;
 
-// 判定
+// Predicate
 function isMutationError(result: unknown): result is MutationError;
 ```
 
-`executeAdminMutationResult` は `MutationResult<TData>` を返す。`execute` の戻り値 `TData` が success path (ラッパーなし)、`DomainError` throw が `MutationError` に自動変換される (failure path)。
+`executeAdminMutationResult` returns `MutationResult<TData>`. The `execute` return value `TData` is the success path (no wrapper), while a `DomainError` throw is automatically converted to `MutationError` (failure path).
 
 ````
 
-- [ ] **Step 3: §「バリデーションエラー (Zod)」の helper 名を Pattern C で統一**
+- [ ] **Step 3: Standardize validation helper name with Pattern C**
 
 ```typescript
-// 旧
+// Old
 import { createValidationError } from "@/shared/lib/action-helpers";
 const parsed = postSchema.safeParse(data);
 if (!parsed.success) {
   return createValidationError(parsed.error);
 }
 
-// 新
+// New
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 const parsed = postSchema.safeParse(data);
 if (!parsed.success) {
@@ -168,7 +168,7 @@ if (!parsed.success) {
 }
 ````
 
-- [ ] **Step 4: §「Server Actions エラーパターン」§「認証エラー (executeAdminMutationResult — 推奨パターン)」の例コードを Pattern A + B + D で書き換え**
+- [ ] **Step 4: Rewrite examples in “Server Actions error patterns” and “Auth error (executeAdminMutationResult — recommended pattern)” using Patterns A + B + D**
 
 ```typescript
 "use server";
@@ -192,44 +192,44 @@ export const createPost = async (input: CreatePostInput) => {
 };
 ```
 
-`executeAdminMutationResult` の自動処理一覧 (テキスト) も以下に修正:
+Update the text describing `executeAdminMutationResult` automatic handling:
 
-- `DomainError のキャッチ → createFailure(error.message) 変換` → `DomainError のキャッチ → MutationError ({ error: error.message, code: error.code }) に自動変換`
+- `Catch DomainError → convert with createFailure(error.message)` → `Catch DomainError → auto-convert to MutationError ({ error: error.message, code: error.code })`
 
-- [ ] **Step 5: §「データベースエラー」「ビジネスロジックエラー (早期リターン)」「ドメイン固有エラー (ReservationOverlapError)」の例コードで Pattern A + B 適用**
+- [ ] **Step 5: Apply Patterns A + B to examples in “Database error,” “Business logic error (early return),” and “Domain-specific error (ReservationOverlapError)”**
 
-具体的に以下の置換を全て行う (該当箇所は grep で `createSuccess` / `createFailure` でヒット):
+Apply these replacements (find via grep for `createSuccess` / `createFailure`):
 
 ```typescript
-// 旧
-success: () => createSuccess("スペースを更新しました"),
-success: () => createSuccess("公開しました"),
+// Old
+success: () => createSuccess("Space updated"),
+success: () => createSuccess("Published"),
 
-// 新 (Pattern A: success callback 削除)
-// (削除のみ — execute の戻り値を直接 return するため)
+// New (Pattern A: remove success callback)
+// (delete only — return value from execute directly)
 
-// 旧
+// Old
 return createFailure(error.message);
-return createFailure("予約の作成に失敗しました");
-return createFailure("操作に失敗しました");
+return createFailure("Failed to create reservation");
+return createFailure("Operation failed");
 
-// 新 (Pattern B)
+// New (Pattern B)
 return createMutationError(error.message);
-return createMutationError("予約の作成に失敗しました");
-return createMutationError("操作に失敗しました");
+return createMutationError("Failed to create reservation");
+return createMutationError("Operation failed");
 ```
 
-- [ ] **Step 6: §「禁止事項」§4「直接オブジェクトリテラルによる ActionResult 返却禁止」を更新**
+- [ ] **Step 6: Update “Prohibitions” §4**
 
 ```markdown
-4. **直接オブジェクトリテラルによる MutationResult 返却禁止**
-   - failure path: `createMutationError()` を使用
-   - success path: domain command の戻り値 `T` を直接 return (ラッパー不要)
+4. **Do not return MutationResult via object literals**
+   - failure path: use `createMutationError()`
+   - success path: return domain command result `T` directly (no wrapper)
 ```
 
-- [ ] **Step 7: §「ファイル配置」表で `@/admin/lib/admin-action` / `@/shared/lib/mutation-result` のエントリ確認 (既存の表に修正不要なら skip)**
+- [ ] **Step 7: Confirm `@/admin/lib/admin-action` / `@/shared/lib/mutation-result` entries in the “File placement” table (skip if already correct)**
 
-- [ ] **Step 8: 修正後 grep で 0 件確認**
+- [ ] **Step 8: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/error-handling.md
@@ -239,7 +239,7 @@ Expected: 0 hits
 
 ---
 
-### Task 3: `auth-patterns.md` 修正
+### Task 3: Update `auth-patterns.md`
 
 **Files:**
 
@@ -247,9 +247,9 @@ Expected: 0 hits
 
 **Apply Patterns:** A, B, D
 
-**Goal:** auth-patterns.md の `executeAdminMutationResult` 例コードと NG パターンを実装一致に。
+**Goal:** Align `executeAdminMutationResult` examples and NG patterns in auth-patterns.md with the implementation.
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "createSuccess|createFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/auth-patterns.md
@@ -257,10 +257,10 @@ grep -nE "createSuccess|createFailure|@/admin/types/server-actions|@/shared/type
 
 Expected: 11 hits
 
-- [ ] **Step 2: §「executeAdminMutationResult (書き込み系 — 標準パターン)」の例コードを書き換え**
+- [ ] **Step 2: Rewrite the “executeAdminMutationResult (write path — standard pattern)” example**
 
 ```typescript
-// 旧
+// Old
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createSuccess } from "@/admin/types/server-actions";
 
@@ -272,7 +272,7 @@ export const createSpace = async (input: SpaceFormData) => {
     resource: "space",
     action: "create",
     execute: async () => createSpaceCommand(parsed.data),
-    success: (result) => createSuccess("作成しました", result),
+    success: (result) => createSuccess("Created", result),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SPACES);
     },
@@ -280,7 +280,7 @@ export const createSpace = async (input: SpaceFormData) => {
   });
 };
 
-// 新 (Pattern A + D + C)
+// New (Pattern A + D + C)
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 
@@ -298,23 +298,23 @@ export const createSpace = async (input: SpaceFormData) => {
     resolveAuditResourceId: (data) => data.id,
   });
 };
-// 戻り型: MutationResult<{ id: string }> = { id: string } | MutationError
+// Return type: MutationResult<{ id: string }> = { id: string } | MutationError
 ```
 
-- [ ] **Step 3: §「EDITOR ロール用リソース単位アクセス制御」の例コードで Pattern A 適用**
+- [ ] **Step 3: Apply Pattern A to the “EDITOR role resource access control” example**
 
 ```typescript
-// 旧
+// Old
 return executeAdminMutationResult({
   resource: "page",
   action: "update",
   resourceId: id,
   checkResourceAccess: true,
   execute: async (user) => updatePageCommand(id, parsed.data),
-  success: (result) => createSuccess("更新しました", result),
+  success: (result) => createSuccess("Updated", result),
 });
 
-// 新
+// New
 return executeAdminMutationResult({
   resource: "page",
   action: "update",
@@ -324,49 +324,49 @@ return executeAdminMutationResult({
 });
 ```
 
-- [ ] **Step 4: §「NG パターン」の `createFailure("権限がありません")` を Pattern B で置換**
+- [ ] **Step 4: Replace `createFailure("You do not have permission")` using Pattern B**
 
 ```typescript
-// 旧
+// Old
 if (session?.user.role !== "SUPER_ADMIN")
-  return createFailure("権限がありません");
+  return createFailure("You do not have permission");
 
-// 新
+// New
 if (session?.user.role !== "SUPER_ADMIN")
-  return createMutationError("権限がありません");
+  return createMutationError("You do not have permission");
 ```
 
-- [ ] **Step 5: §「Server Actions (cache() 不使用)」の `createFailure` import + 呼び出しを Pattern B + D で置換**
+- [ ] **Step 5: Replace `createFailure` import + usage in “Server Actions (cache() unused)” with Pattern B + D**
 
 ```typescript
-// 旧
+// Old
 import { createFailure } from "@/shared/types/server-actions";
 
 export async function myAction() {
   const session = await getAdminSession();
   const user = getAdminSessionUser(session);
   if (!user) {
-    return createFailure("ログインが必要です");
+    return createFailure("Login required");
   }
 }
 
-// 新
+// New
 import { createMutationError } from "@/shared/lib/mutation-result";
 
 export async function myAction() {
   const session = await getAdminSession();
   const user = getAdminSessionUser(session);
   if (!user) {
-    return createMutationError("ログインが必要です");
+    return createMutationError("Login required");
   }
 }
 ```
 
-- [ ] **Step 6: §「`/admin/api/(auth)/login` の Server Action」等の残箇所も同パターンで一括修正**
+- [ ] **Step 6: Apply the same pattern to remaining sections (e.g., `/admin/api/(auth)/login` Server Action)**
 
-`grep -nE "createSuccess|createFailure" .claude/rules/auth-patterns.md` で残箇所確認し、全て Pattern A + B 適用。
+Use `grep -nE "createSuccess|createFailure" .claude/rules/auth-patterns.md` to find remaining instances and apply Patterns A + B.
 
-- [ ] **Step 7: 修正後 grep で 0 件確認**
+- [ ] **Step 7: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/auth-patterns.md
@@ -376,57 +376,57 @@ Expected: 0 hits
 
 ---
 
-### Task 4: `frontend/admin-ui-patterns.md` 修正 (節全削除)
+### Task 4: Update `frontend/admin-ui-patterns.md` (delete section)
 
 **Files:**
 
 - Modify: `.claude/rules/frontend/admin-ui-patterns.md`
 
-**Apply Patterns:** D (節全削除)
+**Apply Patterns:** D (delete section)
 
-**Goal:** 「Server Actions の型インポート」節は `@/admin/types/server-actions` パスが不在のため節そのものが dead doc。節全体を削除。
+**Goal:** The “Server Actions type imports” section is dead because the `@/admin/types/server-actions` path does not exist. Remove the entire section.
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "createSuccess|createFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/frontend/admin-ui-patterns.md
 ```
 
-Expected: 8 hits (全て「Server Actions の型インポート」節および「禁止事項 #5」内)
+Expected: 8 hits (all within the “Server Actions type imports” section and “Prohibitions #5”)
 
-- [ ] **Step 2: 「Server Actions の型インポート」節全体を削除**
+- [ ] **Step 2: Delete the entire “Server Actions type imports” section**
 
-以下のセクションを完全削除 (見出しから次の `---` または次の `##` まで):
+Delete this section completely (from the heading to the next `---` or `##`):
 
 ````markdown
-## Server Actions の型インポート
+## Server Actions type imports
 
-管理画面内の**全ファイル**（Server Actions・`'use client'` コンポーネント・hooks・型定義ファイルを問わず）は `@/admin/types/server-actions` から import する:
+In the admin app, **all files** (Server Actions, `'use client'` components, hooks, and type definition files) should import from `@/admin/types/server-actions`:
 
 ```typescript
-// OK: 管理画面専用（Server Actions・'use client' コンポーネント・hooks すべて共通）
+// OK: Admin-only (Server Actions, 'use client' components, hooks)
 import {
   createSuccess,
   createFailure,
   type ActionResult,
 } from "@/admin/types/server-actions";
 
-// NG: 共有型を直接 import（管理画面内では禁止）
+// NG: Import shared types directly (forbidden in admin app)
 import { createSuccess, createFailure } from "@/shared/types/server-actions";
 ```
 ````
 
-`@/admin/types/server-actions` は `@/shared/types/server-actions` の re-export に加え、`AuditUser` 型も提供する。
+`@/admin/types/server-actions` re-exports `@/shared/types/server-actions` and also provides `AuditUser`.
 
 ---
 
 ````
 
-- [ ] **Step 3: §「禁止事項」#5「`@/shared/types/server-actions` を管理画面で直接使用禁止 — `@/admin/types/server-actions` 経由」を削除**
+- [ ] **Step 3: Remove “Prohibitions #5: Do not use `@/shared/types/server-actions` directly in admin”**
 
-該当行を削除し、後続の禁止事項番号を繰り上げ (#5 → #6 → #5 化、以降全て -1)。
+Delete the line and shift subsequent prohibition numbers up (#5 → #6 → #5, etc.).
 
-- [ ] **Step 4: 修正後 grep で 0 件確認**
+- [ ] **Step 4: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/frontend/admin-ui-patterns.md
@@ -436,7 +436,7 @@ Expected: 0 hits
 
 ---
 
-### Task 5: `implementation-quality.md` 修正
+### Task 5: Update `implementation-quality.md`
 
 **Files:**
 
@@ -444,9 +444,9 @@ Expected: 0 hits
 
 **Apply Patterns:** A, B
 
-**Goal:** 例コードで Pattern A + B 適用。
+**Goal:** Apply Patterns A + B to example code.
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "createSuccess|createFailure" .claude/rules/implementation-quality.md
@@ -454,10 +454,10 @@ grep -nE "createSuccess|createFailure" .claude/rules/implementation-quality.md
 
 Expected: 4 hits
 
-- [ ] **Step 2: §1「形骸化実装禁止」の OK 例コードを書き換え**
+- [ ] **Step 2: Rewrite the OK example in §1 “No hollow implementations”**
 
 ```typescript
-// 旧
+// Old
 export async function deleteItem(id: string) {
   return executeAdminMutationResult({
     resource: "item",
@@ -467,16 +467,16 @@ export async function deleteItem(id: string) {
         where: { id },
         select: { id: true },
       });
-      if (!item) return createFailure("アイテムが見つかりません");
+      if (!item) return createFailure("Item not found");
 
       await prisma.item.delete({ where: { id } });
       updateTag(CACHE_TAGS.ITEMS);
-      return createSuccess("削除しました");
+      return createSuccess("Deleted");
     },
   });
 }
 
-// 新 (Pattern A + B)
+// New (Pattern A + B)
 export async function deleteItem(id: string) {
   return executeAdminMutationResult({
     resource: "item",
@@ -487,7 +487,7 @@ export async function deleteItem(id: string) {
         where: { id },
         select: { id: true },
       });
-      if (!item) throw new DomainError("アイテムが見つかりません", "NOT_FOUND");
+      if (!item) throw new DomainError("Item not found", "NOT_FOUND");
 
       await prisma.item.delete({ where: { id } });
       return { id };
@@ -497,12 +497,12 @@ export async function deleteItem(id: string) {
 }
 ```
 
-(備考: `if (!item) return createFailure(...)` パターンは `executeAdminMutationResult` 内部の `execute` callback では `DomainError` throw が canonical。`createMutationError` は callback 外の Server Action 直接 return 用。)
+(Note: `if (!item) return createFailure(...)` is not canonical inside the `execute` callback of `executeAdminMutationResult`; throw `DomainError` instead. `createMutationError` is for returning directly from a Server Action outside the callback.)
 
-- [ ] **Step 3: §「必須事項」§4「エラーハンドリング」の例コードを Pattern B で書き換え**
+- [ ] **Step 3: Rewrite the error handling example in §“Must-have items” §4 using Pattern B**
 
 ```typescript
-// 旧
+// Old
 import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 
 try {
@@ -513,10 +513,10 @@ try {
     severity: ErrorSeverity.MEDIUM,
     context: { operation: "deleteItem" },
   });
-  return createFailure("操作に失敗しました");
+  return createFailure("Operation failed");
 }
 
-// 新
+// New
 import {
   logError,
   ErrorCategory,
@@ -532,11 +532,11 @@ try {
     severity: ErrorSeverity.MEDIUM,
     context: { operation: "deleteItem" },
   });
-  return createMutationError("操作に失敗しました");
+  return createMutationError("Operation failed");
 }
 ```
 
-- [ ] **Step 4: 修正後 grep で 0 件確認**
+- [ ] **Step 4: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/implementation-quality.md
@@ -546,7 +546,7 @@ Expected: 0 hits
 
 ---
 
-### Task 6: `test-quality.md` 修正
+### Task 6: Update `test-quality.md`
 
 **Files:**
 
@@ -554,33 +554,33 @@ Expected: 0 hits
 
 **Apply Patterns:** A, D
 
-**Goal:** 「`createSuccess` 推論サンプル」を `MutationResult<T>` の推論サンプルに置換。
+**Goal:** Replace the `createSuccess` inference samples with `MutationResult<T>` inference samples.
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "createSuccess|ActionSuccess" .claude/rules/test-quality.md
 ```
 
-Expected: 9 hits (全て `createSuccess` の推論サンプル + ActionSuccess 関連)
+Expected: 9 hits (all `createSuccess` inference samples + ActionSuccess references)
 
-- [ ] **Step 2: §「型推論」関連節 (test-quality.md:253 周辺) の例コードを置換**
+- [ ] **Step 2: Replace the “type inference” example section (around test-quality.md:253)**
 
 ```typescript
-// 旧
-return createSuccess({ name }); // 型が推論されない場合あり
+// Old
+return createSuccess({ name }); // type may not infer
 return createSuccess({ name });
 const success = createSuccess(); // ActionSuccess<void>
 
-// 新 (Pattern A + D)
-return { name }; // execute callback の戻り値、型は MutationResult<{ name: string }> に統合
+// New (Pattern A + D)
+return { name }; // execute callback return, type becomes MutationResult<{ name: string }>
 return { name };
 return null; // void success path: MutationResult<null> = null | MutationError
 ```
 
-具体的な周辺文脈は `Read` で取得して文意を保ったまま書き換える。`MutationResult<T = null>` のデフォルトジェネリクスにより `null` が success path の sentinel になることを明示。
+Read the surrounding context and rewrite while preserving meaning. Explicitly note that `MutationResult<T = null>` uses `null` as the success-path sentinel.
 
-- [ ] **Step 3: 修正後 grep で 0 件確認**
+- [ ] **Step 3: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/test-quality.md
@@ -590,7 +590,7 @@ Expected: 0 hits
 
 ---
 
-### Task 7: `server-actions/prohibitions.md` 修正
+### Task 7: Update `server-actions/prohibitions.md`
 
 **Files:**
 
@@ -598,29 +598,29 @@ Expected: 0 hits
 
 **Apply Patterns:** A
 
-**Goal:** 例コード 1 箇所書き換え。
+**Goal:** Rewrite one example.
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "createSuccess|createFailure" .claude/rules/server-actions/prohibitions.md
 ```
 
-Expected: 1 hit (line 77 周辺)
+Expected: 1 hit (around line 77)
 
-- [ ] **Step 2: 該当例コードを Pattern A で書き換え**
+- [ ] **Step 2: Rewrite the example using Pattern A**
 
 ```typescript
-// 旧
-return createSuccess("削除しました");
+// Old
+return createSuccess("Deleted");
 
-// 新 (success path は T を直接 return; 削除なら null = MutationResult<null> default)
+// New (success path returns T directly; for deletions null = MutationResult<null> default)
 return null;
 ```
 
-または文脈次第で `return { id }` 等の意味のある戻り値に置換。`Read` で周辺文脈確認後に判断。
+Depending on context, you can replace with a meaningful return like `return { id }`. Use `Read` to check surrounding context before deciding.
 
-- [ ] **Step 3: 修正後 grep で 0 件確認**
+- [ ] **Step 3: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/server-actions/prohibitions.md
@@ -630,7 +630,7 @@ Expected: 0 hits
 
 ---
 
-### Task 8: `server-actions/use-cache.md` 修正
+### Task 8: Update `server-actions/use-cache.md`
 
 **Files:**
 
@@ -638,33 +638,33 @@ Expected: 0 hits
 
 **Apply Patterns:** A
 
-**Goal:** 例コード 2 箇所書き換え。
+**Goal:** Rewrite two example blocks.
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "createSuccess|createFailure" .claude/rules/server-actions/use-cache.md
 ```
 
-Expected: 2 hits (line 142, 153 周辺)
+Expected: 2 hits (around lines 142 and 153)
 
-- [ ] **Step 2: 該当例コードを Pattern A で書き換え**
+- [ ] **Step 2: Rewrite the examples using Pattern A**
 
 ```typescript
-// 旧 (line 142 周辺)
-return createSuccess("投稿を作成しました", { id: post.id });
+// Old (around line 142)
+return createSuccess("Post created", { id: post.id });
 
-// 新
+// New
 return { id: post.id };
 
-// 旧 (line 153 周辺)
-return createSuccess("投稿を削除しました");
+// Old (around line 153)
+return createSuccess("Post deleted");
 
-// 新
+// New
 return null;
 ```
 
-- [ ] **Step 3: 修正後 grep で 0 件確認**
+- [ ] **Step 3: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/server-actions/use-cache.md
@@ -674,7 +674,7 @@ Expected: 0 hits
 
 ---
 
-### Task 9: `type-safety.md` Pattern F 適用 (§4 削除)
+### Task 9: Apply Pattern F to `type-safety.md` (delete §4)
 
 **Files:**
 
@@ -682,41 +682,43 @@ Expected: 0 hits
 
 **Apply Patterns:** F
 
-**Goal:** §4「TypeScript 6.0 条件型 (`as unknown as T`)」例外節 (架空型 `ActionSuccess<T>` 使用) を全削除。
+**Goal:** Remove the §4 exception section “TypeScript 6.0 conditional types (`as unknown as T`)” (uses fictional `ActionSuccess<T>`).
 
-- [ ] **Step 1: 修正対象を grep で特定**
+- [ ] **Step 1: Locate targets with grep**
 
 ```bash
 grep -nE "ActionSuccess" .claude/rules/type-safety.md
 ```
 
-Expected: 2 hits (line 209, 210)
+Expected: 2 hits (around lines 209–210)
 
-- [ ] **Step 2: §4 例外節全体を削除**
+- [ ] **Step 2: Delete the entire §4 exception block**
 
-`type-safety.md` の以下のブロック (line 205-211) を完全削除:
+Delete the following block (around lines 205–211) from `type-safety.md`:
 
 ````markdown
-**4. TypeScript 6.0 条件型（`as unknown as T`）**
+**4. TypeScript 6.0 conditional types (`as unknown as T`)**
 
 ```typescript
-// OK: 条件型を含む型への代入（TS 6.0 で厳格化）
-// ActionSuccess<T> は条件型のため直接 as では不可、二段階キャストが必要
+// OK: assignment into conditional types (stricter in TS 6.0)
+// ActionSuccess<T> is conditional, so a direct `as` is invalid; use two-step cast
 return result as unknown as ActionSuccess<T>;
 ```
 ````
 
 ````
 
-削除後、後続の `**5. keysOf / entriesOf / omitUndefined**` の番号は据え置き (`5.` のまま、grep 互換性のため番号変更しない)。
+After deletion, keep the numbering of `**5. keysOf / entriesOf / omitUndefined**` as-is (remain `5.` for grep compatibility).
 
-- [ ] **Step 3: §4 削除に伴う他節からの cross-reference 確認**
+- [ ] **Step 3: Check for cross-references to §4**
 
-`grep -n "§4\|例外 4" .claude/rules/type-safety.md` で削除節への参照がないことを確認。あれば該当文も同時更新。
+Verify that no other sections reference it:
 
-Expected: 0 cross-references
+`grep -n "§4\|Exception 4" .claude/rules/type-safety.md`
 
-- [ ] **Step 4: 修正後 grep で 0 件確認**
+Expected: 0 cross-references (update any referencing text if found).
+
+- [ ] **Step 4: Verify 0 hits after update**
 
 ```bash
 grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/type-safety.md
@@ -726,13 +728,13 @@ Expected: 0 hits
 
 ---
 
-### Task 10: 全体 Verification (drift 解消の grep ground truth 検証)
+### Task 10: Overall verification (grep ground truth for drift resolution)
 
 **Files:** None (read-only verification)
 
-**Goal:** spec § Verification の 5 grep コマンドで drift 解消を確定。
+**Goal:** Confirm drift resolution using the five grep commands in spec § Verification.
 
-- [ ] **Step 1: forbidden symbol 0 件確認**
+- [ ] **Step 1: Confirm 0 hits for forbidden symbols**
 
 ```bash
 grep -rnE "createSuccess|createFailure|ActionResult|ActionSuccess|ActionFailure" .claude/rules/
@@ -740,7 +742,7 @@ grep -rnE "createSuccess|createFailure|ActionResult|ActionSuccess|ActionFailure"
 
 Expected: **0 hits**
 
-- [ ] **Step 2: forbidden import パス 0 件確認**
+- [ ] **Step 2: Confirm 0 hits for forbidden import paths**
 
 ```bash
 grep -rnE "@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/
@@ -748,35 +750,35 @@ grep -rnE "@/admin/types/server-actions|@/shared/types/server-actions" .claude/r
 
 Expected: **0 hits**
 
-- [ ] **Step 3: 表記揺れ解消確認**
+- [ ] **Step 3: Confirm naming normalization**
 
 ```bash
 grep -rnE "createValidationError\b" .claude/rules/
 ```
 
-Expected: **0 hits** (canonical は `createValidationMutationError`)
+Expected: **0 hits** (canonical is `createValidationMutationError`)
 
 ```bash
 grep -rnE "createValidationMutationError" .claude/rules/
 ```
 
-Expected: **1 件以上** (canonical 参照)
+Expected: **1+ hits** (canonical references)
 
-- [ ] **Step 4: 新 canonical helper / 型がヒットすることを sanity check**
+- [ ] **Step 4: Sanity-check canonical helpers/types are present**
 
 ```bash
 grep -rnE "createMutationError|MutationResult<|isMutationError" .claude/rules/
 ```
 
-Expected: ヒットあり (具体的件数は問わない、`error-handling.md` の MutationResult<T> 節 + 各ファイルの例コードで複数ヒット想定)
+Expected: hits present (exact count not required; expect multiple hits from `error-handling.md` MutationResult<T> section + examples)
 
 ```bash
 grep -rnE "@/admin/lib/admin-action|@/shared/lib/mutation-result" .claude/rules/
 ```
 
-Expected: ヒットあり
+Expected: hits present
 
-- [ ] **Step 5: 実装側に新規シンボルが追加されていない確認 (実装変更ゼロ)**
+- [ ] **Step 5: Confirm no new symbols were added in implementation (no src changes)**
 
 ```bash
 git diff --stat src/
@@ -784,87 +786,85 @@ git diff --stat src/
 
 Expected: **0 files changed**
 
-- [ ] **Step 6: 全体差分の sanity check**
+- [ ] **Step 6: Sanity-check overall diff**
 
 ```bash
 git diff --stat .claude/rules/
 ```
 
-Expected: 8 ファイル変更 (Modification Targets と一致)
+Expected: 8 files changed (matches Modification Targets)
 
 ```bash
 git status --short
 ```
 
-Expected: 8 ファイルすべてが ` M` (modified) 状態、`??` (untracked) や `D` (deleted) なし
+Expected: all 8 files show ` M` (modified); no `??` (untracked) or `D` (deleted)
 
 ---
 
-### Task 11: Commit (1 commit で全 8 ファイル)
+### Task 11: Commit (all 8 files in one commit)
 
 **Files:** None (commit only)
 
-**Goal:** drift 解消を 1 commit に集約。中間 drift 状態を作らない。
+**Goal:** Consolidate the drift fix into a single commit. Avoid intermediate drift states.
 
-- [ ] **Step 1: 修正対象 8 ファイルのみを stage (他の untracked / modified 混入を防ぐ)**
+- [ ] **Step 1: Stage only the 8 target files (avoid other untracked/modified files)**
 
 ```bash
 git add .claude/rules/error-handling.md .claude/rules/auth-patterns.md .claude/rules/frontend/admin-ui-patterns.md .claude/rules/implementation-quality.md .claude/rules/test-quality.md .claude/rules/server-actions/prohibitions.md .claude/rules/server-actions/use-cache.md .claude/rules/type-safety.md
 ```
 
-- [ ] **Step 2: stage 内容の最終確認**
+- [ ] **Step 2: Final staged diff check**
 
 ```bash
 git diff --cached --stat
 ```
 
-Expected: 8 ファイル変更、`src/` / `package.json` / `bun.lock` / `prisma/migrations/` 不在。
+Expected: 8 files changed, no `src/` / `package.json` / `bun.lock` / `prisma/migrations/`.
 
-- [ ] **Step 3: commit (Conventional Commits 形式、lefthook commit-msg hook が type を強制)**
+- [ ] **Step 3: Commit (Conventional Commits; lefthook enforces type)**
 
 ```bash
 git commit -m "$(cat <<'EOF'
-docs(rules): createSuccess/createFailure drift を MutationResult/createMutationError に統一
+docs(rules): align createSuccess/createFailure drift with MutationResult/createMutationError
 
-.claude/rules/ 配下 8 ファイルが Server Action 戻り値 SSoT として
-記述していた createSuccess / createFailure / ActionResult<TData> /
-@/admin/types/server-actions パス等は src/ 実装に存在せず、実装は
-MutationResult<T> = T | MutationError と createMutationError で
-完結していた。rule docs を実装に追従させ、Pattern A-F に基づき
-8 ファイル一括修正。実装変更ゼロ、ADR 不要。
+Eight files under .claude/rules/ referenced createSuccess / createFailure / ActionResult<TData>
+and the @/admin/types/server-actions path, which do not exist in src. The implementation
+uses MutationResult<T> = T | MutationError and createMutationError. Update the rule docs
+to match implementation per Patterns A–F. No implementation changes, no ADR.
 
 Spec: docs/superpowers/specs/2026-04-28-action-result-rule-docs-drift-design.md
-Closes: Clean-Break Refactor C5 Phase 4 Finding 2 持ち越し
+Closes: Clean-Break Refactor C5 Phase 4 Finding 2 carryover
 EOF
 )"
 ```
 
-Expected: lefthook prettier-fix / protected-files / conventional-commits パス、commit 成功。
+Expected: lefthook prettier-fix / protected-files / conventional-commits pass, commit succeeds.
 
-- [ ] **Step 4: commit 後の最終確認**
+- [ ] **Step 4: Final check after commit**
 
 ```bash
 git log --oneline -1
 ```
 
-Expected: commit message が `docs(rules): createSuccess/createFailure drift を ...` で始まる、SHA が記録される。
+Expected: commit message starts with `docs(rules): createSuccess/createFailure drift ...`, SHA recorded.
 
 ```bash
 git diff HEAD~1 --stat
 ```
 
-Expected: 8 ファイル変更、insertions / deletions 数が rule docs 修正規模 (推定 200-300 行) と整合。
+Expected: 8 files changed, insertions/deletions align with expected rule doc edit size (approx. 200–300 lines).
 
-- [ ] **Step 5: handoff memory の Finding 2 を完了マーク**
+- [ ] **Step 5: Mark Finding 2 as completed in handoff memory**
 
-`~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-c5-handoff.md` の `## 持ち越し: Finding 2` セクションに完了注記を追加:
+Add a completion note to the `## Carryover: Finding 2` section in `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_clean-break-c5-handoff.md`:
 
 ```markdown
-### 持ち越し: Finding 2 (createSuccess / createFailure drift)
+### Carryover: Finding 2 (createSuccess / createFailure drift)
 
-✅ **Completed: 2026-04-28** — `docs/superpowers/plans/2026-04-28-action-result-rule-docs-drift-fix.md` で解消、commit `<新規 SHA>`。Approach 1 (rule docs を実装に追従) で 8 ファイル一括修正、実装変更ゼロ、ADR 不要。
+✅ **Completed: 2026-04-28** — resolved in `docs/superpowers/plans/2026-04-28-action-result-rule-docs-drift-fix.md`, commit `<NEW SHA>`. Approach 1 (align rule docs to implementation) updated 8 files, no implementation changes, no ADR.
 
-(以下、既存内容を保持)
+(Keep the existing content below.)
 ```
 
 ---
@@ -873,38 +873,38 @@ Expected: 8 ファイル変更、insertions / deletions 数が rule docs 修正�
 
 **1. Spec coverage:**
 
-- Spec § Modification Targets の 8 ファイル全て → Task 2-9 でカバー ✅
-- Spec § Replacement Patterns A-F → Task 内で全パターン適用 ✅
-- Spec § Verification の 5 grep cmd → Task 10 Step 1-5 でカバー ✅
-- Spec § Phase / Commit Plan (1 commit) → Task 11 で実装 ✅
+- Spec § Modification Targets: all 8 files covered in Tasks 2–9 ✅
+- Spec § Replacement Patterns A–F: all applied within tasks ✅
+- Spec § Verification 5 grep cmds: covered in Task 10 Steps 1–5 ✅
+- Spec § Phase / Commit Plan (1 commit): implemented in Task 11 ✅
 
-**2. Placeholder scan:** TBD / TODO / "implement later" / "Similar to Task N" なし ✅
+**2. Placeholder scan:** TBD / TODO / "implement later" / "Similar to Task N" none ✅
 
 **3. Type consistency:**
 
-- `createMutationError` / `createValidationMutationError` / `MutationResult<T>` / `MutationError` / `executeAdminMutationResult` / `isMutationError` の名称が全 Task で一貫 ✅
-- import パス (`@/shared/lib/mutation-result` / `@/admin/lib/admin-action` / `@/shared/lib/action-helpers`) が全 Task で一貫 ✅
+- `createMutationError` / `createValidationMutationError` / `MutationResult<T>` / `MutationError` / `executeAdminMutationResult` / `isMutationError` naming is consistent across all tasks ✅
+- Import paths (`@/shared/lib/mutation-result` / `@/admin/lib/admin-action` / `@/shared/lib/action-helpers`) are consistent across all tasks ✅
 
-**4. 中間 type-check 状態:** rule docs のみ修正のため type-check / lint への影響ゼロ。中間 commit 不要 (1 commit で完結)。
+**4. Intermediate type-check state:** Only rule docs are updated, so no impact on type-check/lint. No intermediate commits needed (single commit).
 
 ---
 
 ## Execution Notes
 
-### Subagent dispatch 時の注意
+### Notes for subagent dispatch
 
-- **git 全面禁止** (add / commit / push / reset / checkout / restore / stash) — controller 側で Task 11 の commit を実行
-- **import alias 3 系統** — `@/admin/*` / `@/public/*` / `@/shared/*` (rule docs 内の例コードで使用、subagent が誤った prefix を付けないよう注意)
-- **Plan deviation policy** — Pattern A-F 以外の追加修正が必要な場合は justified deviation として報告 (例: 周辺文脈で意味が通らない置換は Read で確認後判断)
-- **Bundle 推奨** — Task 2-9 は密結合 (同一 commit に集約) のため 1 implementer に bundle dispatch。Task 10-11 は controller 実行 (verification + commit)
+- **Git strictly forbidden** (add / commit / push / reset / checkout / restore / stash) — controller executes Task 11 commit
+- **Import alias families** — `@/admin/*` / `@/public/*` / `@/shared/*` (used in rule doc examples; ensure subagent does not add wrong prefixes)
+- **Plan deviation policy** — if extra fixes beyond Patterns A–F are needed, report as justified deviation (e.g., when context makes a replacement nonsensical, confirm via Read)
+- **Bundle recommended** — Tasks 2–9 are tightly coupled (single commit), so dispatch to one implementer. Tasks 10–11 are executed by controller (verification + commit)
 
 ### Risk
 
-- rule docs の例コードは長文の場合があり、Edit tool の `old_string` 完全一致が失敗するリスクあり (linter / prettier 整形差分)。失敗時は Read 再取得 + より長い context window で再 Edit。
-- `type-safety.md` §4 削除時の前後 blank line 数 (markdown 整形) は prettier-fix が自動調整するため Step 2 は厳密な空白指定不要。
+- Rule doc examples can be long, so exact `old_string` matches may fail due to lint/prettier differences. If it fails, re-Read and retry with a longer context window.
+- When deleting §4 in `type-safety.md`, blank-line counts will be auto-adjusted by prettier-fix; Step 2 does not require strict whitespace.
 
-### Out of scope の再確認 (spec § Out of Scope と一致)
+### Out-of-scope confirmation (matches spec § Out of Scope)
 
-- `src/` 実装変更なし
-- ADR 採番なし
-- AGENTS.md / docs/architecture / docs/guides 配下は別 plan
+- No `src/` implementation changes
+- No ADR numbering
+- AGENTS.md / docs/architecture / docs/guides are handled in a separate plan

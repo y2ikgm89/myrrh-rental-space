@@ -1,36 +1,36 @@
 # Google Business Profile Sync Implementation Plan (MEO Phase 2)
 
-> **In Progress: 2026-04-29** — worktree `feature/google-business-profile-sync` で 15 commit 実装完了。validate + build 全成功。次は smoke test (`GBP_STUB_MODE=true`) + main `--no-ff` merge + Google Cloud Console 申請。
+> **In Progress: 2026-04-29** — 15 commits implemented on worktree `feature/google-business-profile-sync`. validate + build all succeeded. Next: smoke test (`GBP_STUB_MODE=true`) + main `--no-ff` merge + Google Cloud Console application.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Phase 1 で確立した `Location` MEO フィールドを Google Business Profile (GBP) に外向き同期する。OAuth 連携 + Settings SSoT + fireAndForget on save + manual button + stub mode の構成。
+**Goal:** Sync the `Location` MEO fields established in Phase 1 outward to Google Business Profile (GBP). OAuth integration + Settings SSoT + fireAndForget on save + manual button + stub mode.
 
-**Architecture:** `src/shared/lib/google-business-profile/` を `google-calendar/` 同型構造で新設。`Settings.googleBusinessProfileAuth` (encrypted JSON) で OAuth token 保管、`Location.gbpSyncEnabled / gbpSyncedAt / gbpSyncError` で同期状態管理。`GBP_STUB_MODE=true` で API 呼び出しを no-op 化し、access 承認待ちでも実装完遂可能。
+**Architecture:** Create `src/shared/lib/google-business-profile/` with the same structure as `google-calendar/`. Store OAuth tokens in `Settings.googleBusinessProfileAuth` (encrypted JSON), and manage sync state with `Location.gbpSyncEnabled / gbpSyncedAt / gbpSyncError`. With `GBP_STUB_MODE=true`, API calls are no-op, allowing implementation completion while access approval is pending.
 
-**Tech Stack:** googleapis 171.4 (`mybusinessbusinessinformation` / `mybusinessaccountmanagement` v1) / Prisma 7.8 / Next.js 16 Server Actions / Better Auth 1.6 / Zod 4.3。既存 `withGoogleApiRetry` / `encrypt` / `decrypt` / `fireAndForget` / `executeAdminMutationResult` を流用。
+**Tech Stack:** googleapis 171.4 (`mybusinessbusinessinformation` / `mybusinessaccountmanagement` v1) / Prisma 7.8 / Next.js 16 Server Actions / Better Auth 1.6 / Zod 4.3. Reuse existing `withGoogleApiRetry` / `encrypt` / `decrypt` / `fireAndForget` / `executeAdminMutationResult`.
 
 **Spec:** `docs/superpowers/specs/2026-04-28-google-business-profile-sync-design.md`
 
-**Worktree:** 新セッションで `feature/google-business-profile-sync` を新規作成して実装する。
+**Worktree:** Create `feature/google-business-profile-sync` in a new session for implementation.
 
-**Reference:** Phase 1 (multi-location SEO foundation, ADR 0023, commits `822746b9`〜`a77b471c`) と同型構造。
+**Reference:** Same structure as Phase 1 (multi-location SEO foundation, ADR 0023, commits `822746b9`–`a77b471c`).
 
 ---
 
-## Bundle 化推奨（subagent-driven-development）
+## Recommended bundling (subagent-driven-development)
 
-| Bundle | Tasks      | Rationale                                         |
-| ------ | ---------- | ------------------------------------------------- |
-| **A**  | 1, 2       | DB migration + serverEnv（独立、small）           |
-| **B**  | 3          | Foundational lib（unit tests 含む、~580 lines）   |
-| **C**  | 4, 5, 6    | Core sync logic（密結合、type-check 中間 broken） |
-| **D**  | 7, 8       | Domain + OAuth callback（独立 testable）          |
-| **E**  | 9, 10      | Server Actions + fireAndForget 配線               |
-| **F**  | 11, 12, 13 | UI（密結合、Form props drill）                    |
-| **G**  | 14, 15     | Docs + ADR（独立、trivial）                       |
+| Bundle | Tasks      | Rationale                                                |
+| ------ | ---------- | -------------------------------------------------------- |
+| **A**  | 1, 2       | DB migration + serverEnv (independent, small)            |
+| **B**  | 3          | Foundational lib (includes unit tests, ~580 lines)       |
+| **C**  | 4, 5, 6    | Core sync logic (tightly coupled, mid type-check broken) |
+| **D**  | 7, 8       | Domain + OAuth callback (independent, testable)          |
+| **E**  | 9, 10      | Server Actions + fireAndForget wiring                    |
+| **F**  | 11, 12, 13 | UI (tightly coupled, form props drilling)                |
+| **G**  | 14, 15     | Docs + ADR (independent, trivial)                        |
 
-合計 7 bundle、subagent-driven-development で順次 dispatch。Bundle C / F は 1 implementer 内で sequential commit 推奨。
+Total 7 bundles, dispatched sequentially via subagent-driven-development. Bundle C / F should be sequential commits within one implementer.
 
 ---
 
@@ -40,13 +40,13 @@
 
 ```
 src/shared/lib/google-business-profile/
-├── client.ts            (~80 lines)  OAuth クライアント生成 + token refresh handler
+├── client.ts            (~80 lines)  OAuth client creation + token refresh handler
 ├── oauth.ts             (~100 lines) authorize URL / getToken / revoke
 ├── account.ts           (~60 lines)  GBP account / location discovery
-├── location-sync.ts     (~150 lines) Location → GBP PATCH ロジック (stub mode 分岐含む)
-├── retry.ts             (~80 lines)  withGbpApiRetry (withGoogleApiRetry 同型)
+├── location-sync.ts     (~150 lines) Location → GBP PATCH logic (includes stub mode branching)
+├── retry.ts             (~80 lines)  withGbpApiRetry (same shape as withGoogleApiRetry)
 ├── stub.ts              (~30 lines)  GBP_STUB_MODE no-op
-├── settings.ts          (~80 lines)  Settings auth 読み書き helper
+├── settings.ts          (~80 lines)  Settings auth read/write helper
 ├── helpers.ts           (~80 lines)  buildGbpFieldMask / buildBusinessHoursPayload / formatGbpError
 ├── types.ts             (~50 lines)  GbpAuthState / GbpSyncResult / GbpLocationPayload
 └── index.ts             (~10 lines)  barrel (server-only)
@@ -61,16 +61,16 @@ src/app/(admin)/admin/(dashboard)/_shared/actions/settings/
 └── google-business-profile.ts (~150 lines) Server Actions: initiate / revoke / triggerSync / toggle
 
 src/app/(admin)/admin/(dashboard)/settings/_components/sections/
-└── GoogleBusinessProfileSection.tsx (~180 lines) 連携 UI
+└── GoogleBusinessProfileSection.tsx (~180 lines) integration UI
 
 src/app/(admin)/admin/(dashboard)/locations/_components/
-└── LocationGbpSyncCard.tsx (~120 lines) MEO タブ内の GBP 同期カード
+└── LocationGbpSyncCard.tsx (~120 lines) GBP sync card inside the MEO tab
 
 docs/architecture/decisions/
 └── 0027-google-business-profile-sync.md (~80 lines) ADR
 
 docs/guides/admin/
-└── google-business-profile-setup.md (~100 lines) 申請ワークフロー guide
+└── google-business-profile-setup.md (~100 lines) application workflow guide
 
 prisma/migrations/<ts>_add_gbp_sync_fields/
 └── migration.sql (~15 lines)
@@ -99,35 +99,35 @@ src/shared/lib/env/server.ts
   - GBP_STUB_MODE: z.string().optional()
 
 src/shared/domain/settings/types.ts
-  - SettingsData に googleBusinessProfileEnabled / googleBusinessProfileAuth 追加
+  - Add googleBusinessProfileEnabled / googleBusinessProfileAuth to SettingsData
 
 src/shared/domain/settings/admin-queries.ts
-  - select 句に gbpSync 関連フィールド追加
+  - Add gbpSync-related fields to select clauses
 
 src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts
-  - updateLocation の afterSuccess に fireAndForget(syncLocationToGbpCommand) 追加
-  - createLocation も同様
+  - Add fireAndForget(syncLocationToGbpCommand) to updateLocation afterSuccess
+  - Same for createLocation
 
 src/app/(admin)/admin/(dashboard)/locations/_components/LocationForm.tsx
-  - meo TabsContent に <LocationGbpSyncCard /> 追加 (edit mode のみ)
+  - Add <LocationGbpSyncCard /> to MEO TabsContent (edit mode only)
 
 src/app/(admin)/admin/(dashboard)/locations/_components/LocationTable.tsx
-  - GBP 同期状態バッジ列追加
+  - Add GBP sync status badge column
 
 src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts
-  - GoogleBusinessProfileSection を export
+  - Export GoogleBusinessProfileSection
 
 src/app/(admin)/admin/(dashboard)/settings/api/page.tsx
-  - GoogleBusinessProfileSection を render
+  - Render GoogleBusinessProfileSection
 
 src/shared/domain/locations/queries.ts
-  - select 句に gbpSync 関連フィールド追加
+  - Add gbpSync-related fields to select clauses
 
 src/shared/domain/locations/types.ts
-  - LocationDetail / LocationListItem に gbpSync 関連フィールド追加
+  - Add gbpSync-related fields to LocationDetail / LocationListItem
 
 package.json (test:unit / test:integration scripts)
-  - 新規 directory `__tests__/unit/lib/google-business-profile` を batch に追加
+  - Add new directory `__tests__/unit/lib/google-business-profile` to the batch
 ```
 
 ---
@@ -145,9 +145,9 @@ package.json (test:unit / test:integration scripts)
 - Modify: `src/shared/domain/locations/types.ts`
 - Modify: `src/shared/domain/locations/queries.ts`
 
-- [ ] **Step 1.1: schema.prisma に Settings 追加**
+- [ ] **Step 1.1: Add Settings to schema.prisma**
 
-`Settings` モデルの `googleCalendarOAuthEnabled` 直後に追加:
+Add immediately after `googleCalendarOAuthEnabled` in the `Settings` model:
 
 ```prisma
   // Google Business Profile (MEO Phase 2)
@@ -155,9 +155,9 @@ package.json (test:unit / test:integration scripts)
   googleBusinessProfileAuth    Json?   // { accessToken, refreshToken, expiresAt, accountId } encrypted
 ```
 
-- [ ] **Step 1.2: schema.prisma に Location 追加**
+- [ ] **Step 1.2: Add Location fields to schema.prisma**
 
-`Location` モデルの `email` 直後に追加:
+Add immediately after `email` in the `Location` model:
 
 ```prisma
   // GBP Sync (MEO Phase 2)
@@ -166,20 +166,20 @@ package.json (test:unit / test:integration scripts)
   gbpSyncError   String?   @db.Text
 ```
 
-`@@index([sortOrder])` の直後に追加:
+Add immediately after `@@index([sortOrder])`:
 
 ```prisma
   @@index([gbpSyncError])
 ```
 
-- [ ] **Step 1.3: migration.sql 手書き**
+- [ ] **Step 1.3: Write migration.sql manually**
 
 ```bash
 TS=$(date -u +%Y%m%d%H%M%S)
 python3 -c "import os; os.makedirs('prisma/migrations/${TS}_add_gbp_sync_fields', exist_ok=True)"
 ```
 
-`prisma/migrations/${TS}_add_gbp_sync_fields/migration.sql` を python3 で書き出す（PreToolUse hook が `prisma/migrations/*.sql` を Write 拒否するため）:
+Write `prisma/migrations/${TS}_add_gbp_sync_fields/migration.sql` via python3 (PreToolUse hook blocks writing `prisma/migrations/*.sql`):
 
 ```sql
 ALTER TABLE "settings" ADD COLUMN "googleBusinessProfileEnabled" BOOLEAN NOT NULL DEFAULT false;
@@ -200,25 +200,25 @@ bunx --bun prisma migrate resolve --applied ${TS}_add_gbp_sync_fields
 bunx --bun prisma generate
 ```
 
-Expected: 全コマンド exit 0、`@generated/prisma/client` 再生成
+Expected: all commands exit 0, `@generated/prisma/client` regenerated
 
-- [ ] **Step 1.5: types.ts / queries.ts 同期更新**
+- [ ] **Step 1.5: Sync update types.ts / queries.ts**
 
-`src/shared/domain/settings/types.ts` の `SettingsData` interface に追加:
+Add to the `SettingsData` interface in `src/shared/domain/settings/types.ts`:
 
 ```typescript
 googleBusinessProfileEnabled: boolean;
 googleBusinessProfileAuth: Prisma.JsonValue | null;
 ```
 
-`src/shared/domain/settings/admin-queries.ts` の全 `select` 句に追加（参照: `googleCalendarOAuthEnabled` の隣）:
+Add to all `select` clauses in `src/shared/domain/settings/admin-queries.ts` (next to `googleCalendarOAuthEnabled`):
 
 ```typescript
 googleBusinessProfileEnabled: true,
 googleBusinessProfileAuth: true,
 ```
 
-`src/shared/domain/locations/types.ts` の `LocationDetail` / `LocationListItem` に追加:
+Add to `LocationDetail` / `LocationListItem` in `src/shared/domain/locations/types.ts`:
 
 ```typescript
 gbpSyncEnabled: boolean;
@@ -226,7 +226,7 @@ gbpSyncedAt: Date | null;
 gbpSyncError: string | null;
 ```
 
-`src/shared/domain/locations/queries.ts` の admin 用 `select` 句に追加（public-queries では追加不要）:
+Add to the admin `select` clause in `src/shared/domain/locations/queries.ts` (no need for public-queries):
 
 ```typescript
 gbpSyncEnabled: true,
@@ -234,7 +234,7 @@ gbpSyncedAt: true,
 gbpSyncError: true,
 ```
 
-- [ ] **Step 1.6: type-check 検証**
+- [ ] **Step 1.6: Type-check verification**
 
 ```bash
 bun run type-check
@@ -257,16 +257,16 @@ git commit -m "feat(prisma): add GBP sync fields to Settings and Location"
 
 - Modify: `src/shared/lib/env/server.ts`
 
-- [ ] **Step 2.1: serverEnv に GBP_STUB_MODE 追加**
+- [ ] **Step 2.1: Add GBP_STUB_MODE to serverEnv**
 
-`Stripe` セクションの直後（`GOOGLE_CLIENT_ID` の前）に追加:
+Add right after the `Stripe` section (before `GOOGLE_CLIENT_ID`):
 
 ```typescript
     // Google Business Profile
     GBP_STUB_MODE: z.string().optional(),
 ```
 
-`runtimeEnv` block 内（同ファイル末尾付近）にも追加:
+Also add inside the `runtimeEnv` block (near the end of the file):
 
 ```typescript
     GBP_STUB_MODE: process.env["GBP_STUB_MODE"],
@@ -293,11 +293,11 @@ git commit -m "feat(env): add GBP_STUB_MODE for Google Business Profile stub mod
 - Test: `__tests__/unit/lib/google-business-profile/retry.test.ts`
 - Test: `__tests__/unit/lib/google-business-profile/helpers.test.ts`
 - Test: `__tests__/unit/lib/google-business-profile/stub.test.ts`
-- Modify: `package.json` (test:unit batch に追加)
+- Modify: `package.json` (add to test:unit batch)
 
-**Reference:** `src/shared/lib/google-calendar/retry.ts` を SSoT としてコピー改名。
+**Reference:** Copy/rename `src/shared/lib/google-calendar/retry.ts` as SSoT.
 
-- [ ] **Step 3.1: types.ts 作成**
+- [ ] **Step 3.1: Create types.ts**
 
 ```typescript
 import "server-only";
@@ -356,19 +356,19 @@ export type GbpLocationPayload = {
 };
 ```
 
-- [ ] **Step 3.2: retry.ts 作成（withGoogleApiRetry 同型）**
+- [ ] **Step 3.2: Create retry.ts (same shape as withGoogleApiRetry)**
 
-`src/shared/lib/google-calendar/retry.ts` をベースにコピー、関数名を `withGbpApiRetry` / `isRetryableGbpApiError` / `extractGbpFirstErrorReason` に変更。リトライ判定ロジック（429 / 500 / 503 / 403 reason 検査 / network error）は同一。
+Copy from `src/shared/lib/google-calendar/retry.ts`, rename functions to `withGbpApiRetry` / `isRetryableGbpApiError` / `extractGbpFirstErrorReason`. Retry logic (429 / 500 / 503 / 403 reason check / network error) stays the same.
 
-- [ ] **Step 3.3: helpers.ts 作成 — buildGbpFieldMask + buildBusinessHoursPayload + buildLocationPayload + formatGbpError**
+- [ ] **Step 3.3: Create helpers.ts — buildGbpFieldMask + buildBusinessHoursPayload + buildLocationPayload + formatGbpError**
 
-`Location` の `name / postalCode / city / streetAddress / buildingName / phoneNumber / businessHours / latitude / longitude` を引数に受け、`GbpLocationPayload` を返す pure function。`businessHours` JSON は `{ monday: { open: "09:00", close: "18:00" }, ..., sunday: { closed: true } }` 形式想定。`buildBusinessHoursPayload` は GBP `TimePeriod` 配列に変換、不正な時刻フォーマット / closed: true はスキップ。
+Pure function that takes `Location` fields `name / postalCode / city / streetAddress / buildingName / phoneNumber / businessHours / latitude / longitude` and returns `GbpLocationPayload`. `businessHours` JSON assumes `{ monday: { open: "09:00", close: "18:00" }, ..., sunday: { closed: true } }`. `buildBusinessHoursPayload` converts to GBP `TimePeriod` array, skipping invalid time formats and closed: true.
 
-`buildGbpFieldMask` は基本フィールド (title / storefrontAddress / phoneNumbers.primaryPhone / regularHours / websiteUri) を常時含み、`latitude && longitude` 両方ある場合のみ `latlng` を追加。
+`buildGbpFieldMask` always includes base fields (title / storefrontAddress / phoneNumbers.primaryPhone / regularHours / websiteUri), and adds `latlng` only when both `latitude && longitude` exist.
 
-`formatGbpError` は Error → message、長い message は 200 文字 + "..." に truncate、非 Error → "Unknown GBP API error" fallback。
+`formatGbpError`: Error → message, long messages truncated to 200 chars + "..."; non-Error → "Unknown GBP API error" fallback.
 
-- [ ] **Step 3.4: stub.ts 作成**
+- [ ] **Step 3.4: Create stub.ts**
 
 ```typescript
 import "server-only";
@@ -386,27 +386,27 @@ export async function syncLocationStub(
 }
 ```
 
-- [ ] **Step 3.5: 単体テスト — retry.test.ts**
+- [ ] **Step 3.5: Unit test — retry.test.ts**
 
-`__tests__/unit/lib/google-calendar/retry.test.ts` をベースにコピーして関数名を置換。retry 判定 / 429 / 500 / 503 / 403 reason / network error / 4xx 即時失敗をテスト。
+Copy from `__tests__/unit/lib/google-calendar/retry.test.ts` and replace function names. Test retry decisions / 429 / 500 / 503 / 403 reason / network error / immediate 4xx failure.
 
-- [ ] **Step 3.6: 単体テスト — helpers.test.ts**
+- [ ] **Step 3.6: Unit test — helpers.test.ts**
 
-カバー対象:
+Coverage:
 
-- `buildGbpFieldMask`: latlng 有/無で fields 配列分岐、基本フィールド常時包含
-- `buildBusinessHoursPayload`: 正常 JSON → TimePeriod 配列変換 / null・空 → undefined / 不正フォーマット → スキップ / closed: true → スキップ
-- `buildLocationPayload`: 完全な Location → GbpLocationPayload 全プロパティ確認
-- `formatGbpError`: Error / 非 Error / 長い message truncate
+- `buildGbpFieldMask`: fields array with/without latlng, base fields always included
+- `buildBusinessHoursPayload`: valid JSON → TimePeriod array / null or empty → undefined / invalid format → skip / closed: true → skip
+- `buildLocationPayload`: complete Location → verify all GbpLocationPayload properties
+- `formatGbpError`: Error / non-Error / truncate long messages
 
-- [ ] **Step 3.7: 単体テスト — stub.test.ts**
+- [ ] **Step 3.7: Unit test — stub.test.ts**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
 import { syncLocationStub } from "@/shared/lib/google-business-profile/stub";
 
 describe("syncLocationStub", () => {
-  test("locationId をそのまま返し、syncedAt は現在時刻", async () => {
+  test("returns locationId as-is and syncedAt is current time", async () => {
     const before = Date.now();
     const result = await syncLocationStub({ locationId: "loc-1" });
     const after = Date.now();
@@ -417,17 +417,17 @@ describe("syncLocationStub", () => {
 });
 ```
 
-- [ ] **Step 3.8: package.json test:unit batch 追加**
+- [ ] **Step 3.8: Add to package.json test:unit batch**
 
-`package.json` の `test:unit` script に `bun test __tests__/unit/lib/google-business-profile` を `&&` チェーンで追加（per-directory batch、ADR 0010 準拠）。
+Add `bun test __tests__/unit/lib/google-business-profile` to the `test:unit` script in `package.json` with `&&` chaining (per-directory batch, ADR 0010).
 
-- [ ] **Step 3.9: 単体テスト実行**
+- [ ] **Step 3.9: Run unit tests**
 
 ```bash
 bun test __tests__/unit/lib/google-business-profile
 ```
 
-Expected: 全 pass
+Expected: all pass
 
 - [ ] **Step 3.10: Commit**
 
@@ -440,7 +440,7 @@ git commit -m "feat(gbp): add foundational lib (types/retry/helpers/stub) with u
 
 ## Phase B: Core Sync Logic (Tasks 4-6)
 
-> **Bundle 化推奨**: Task 4-6 は密結合。subagent-driven-development では 1 implementer に bundle して 3 commit を順次作成。中間 type-check broken は許容。
+> **Bundling recommendation**: Tasks 4–6 are tightly coupled. In subagent-driven-development, bundle to one implementer and create three commits sequentially. Intermediate type-check breaks are acceptable.
 
 ### Task 4: location-sync.ts core
 
@@ -449,24 +449,24 @@ git commit -m "feat(gbp): add foundational lib (types/retry/helpers/stub) with u
 - Create: `src/shared/lib/google-business-profile/location-sync.ts`
 - Create: `src/shared/lib/google-business-profile/index.ts`
 
-- [ ] **Step 4.1: location-sync.ts 作成**
+- [ ] **Step 4.1: Create location-sync.ts**
 
-主要ロジック:
+Core logic:
 
-1. `serverEnv.GBP_STUB_MODE === "true"` → `syncLocationStub(input)` 早期 return
-2. Location 取得 + `gbpSyncEnabled` / `googleBusinessPlaceId` 判定（false / null なら skip + DB 更新）
-3. Settings から auth 取得（`getGbpAuthState()`）→ null なら "GBP 連携未設定" を `gbpSyncError` に記録
-4. `getGbpClient(auth)` で `mybusinessbusinessinformation` v1 client 取得
-5. `buildLocationPayload` + `buildGbpFieldMask` でリクエスト構築
-6. `withGbpApiRetry(() => client.locations.patch({ name, updateMask, requestBody }))` 呼び出し
-7. 成功時: `gbpSyncedAt` 更新 + `gbpSyncError` null クリア
-8. 失敗時: `formatGbpError` で truncate → `gbpSyncError` 記録 + `logError` (MEDIUM) → throw せず graceful degradation
+1. `serverEnv.GBP_STUB_MODE === "true"` → `syncLocationStub(input)` early return
+2. Fetch Location + check `gbpSyncEnabled` / `googleBusinessPlaceId` (if false/null, skip + update DB)
+3. Get auth from Settings (`getGbpAuthState()`); if null, record "GBP integration not configured" in `gbpSyncError`
+4. `getGbpClient(auth)` to get `mybusinessbusinessinformation` v1 client
+5. Build request with `buildLocationPayload` + `buildGbpFieldMask`
+6. Call `withGbpApiRetry(() => client.locations.patch({ name, updateMask, requestBody }))`
+7. On success: update `gbpSyncedAt` + clear `gbpSyncError`
+8. On failure: truncate via `formatGbpError` → record `gbpSyncError` + `logError` (MEDIUM) → no throw, graceful degradation
 
-GBP の resource name は `Location.googleBusinessPlaceId` がそのまま `locations/{id}` 形式で保管されている前提（Phase 1 の入力 UI で確認）。
+Assume GBP resource name stored in `Location.googleBusinessPlaceId` as `locations/{id}` (confirmed in Phase 1 input UI).
 
-`siteUrl` は `getAppUrl()` (`@/shared/lib/utils/get-app-url`) で取得。
+`siteUrl` is obtained via `getAppUrl()` (`@/shared/lib/utils/get-app-url`).
 
-- [ ] **Step 4.2: index.ts barrel 作成**
+- [ ] **Step 4.2: Create index.ts barrel**
 
 ```typescript
 import "server-only";
@@ -486,7 +486,7 @@ export {
 export type { GbpAuthState, GbpSyncInput, GbpSyncResult } from "./types";
 ```
 
-- [ ] **Step 4.3: Commit（type-check broken 許容、Task 5/6 で解消）**
+- [ ] **Step 4.3: Commit (allow type-check broken; fixed in Tasks 5/6)**
 
 ```bash
 git add src/shared/lib/google-business-profile/location-sync.ts src/shared/lib/google-business-profile/index.ts
@@ -503,9 +503,9 @@ git commit -m "feat(gbp): add location-sync core with stub mode early return"
 - Create: `src/shared/lib/google-business-profile/oauth.ts`
 - Create: `src/shared/lib/google-business-profile/account.ts`
 
-**Reference:** `src/shared/lib/google-calendar/oauth.ts` の OAuth2Client 初期化パターン。
+**Reference:** OAuth2Client initialization pattern in `src/shared/lib/google-calendar/oauth.ts`.
 
-- [ ] **Step 5.1: client.ts 作成 — OAuth クライアント生成 + token refresh handler**
+- [ ] **Step 5.1: Create client.ts — OAuth client creation + token refresh handler**
 
 ```typescript
 import "server-only";
@@ -561,17 +561,17 @@ export async function getGbpClient(auth: GbpAuthState) {
 export { GBP_SCOPES };
 ```
 
-**注**: `google.mybusinessbusinessinformation` の正確なメソッド構造は `googleapis` SDK バージョンに依存。実装時に SDK 型定義で確認し、必要に応じて method chain (`.accounts.locations.patch` 等) を調整。
+**Note**: The exact method structure of `google.mybusinessbusinessinformation` depends on the `googleapis` SDK version. Verify using SDK type definitions during implementation and adjust method chains (`.accounts.locations.patch`, etc.) as needed.
 
-- [ ] **Step 5.2: oauth.ts 作成 — authorize URL / token exchange / revoke**
+- [ ] **Step 5.2: Create oauth.ts — authorize URL / token exchange / revoke**
 
-エクスポート関数:
+Exported functions:
 
 - `getGbpAuthorizeUrl(state: string): string` — `oauth2Client.generateAuthUrl({ access_type: "offline", prompt: "consent", scope: GBP_SCOPES, state })`
-- `exchangeGbpAuthCode(code: string): Promise<{ accessToken, refreshToken, expiresAt }>` — `oauth2Client.getToken(code)` → token 検証 + 整形
-- `revokeGbpToken(refreshToken: string): Promise<void>` — `oauth2Client.revokeToken(refreshToken)`、失敗時は `logError` (LOW) のみで握り潰さず `void` return（ユーザー体験優先）
+- `exchangeGbpAuthCode(code: string): Promise<{ accessToken, refreshToken, expiresAt }>` — `oauth2Client.getToken(code)` → verify + normalize token
+- `revokeGbpToken(refreshToken: string): Promise<void>` — `oauth2Client.revokeToken(refreshToken)`; on failure, only `logError` (LOW) and return void (prioritize user experience)
 
-- [ ] **Step 5.3: account.ts 作成 — accounts.list**
+- [ ] **Step 5.3: Create account.ts — accounts.list**
 
 ```typescript
 import "server-only";
@@ -614,23 +614,23 @@ git commit -m "feat(gbp): add OAuth client/flow + account discovery"
 
 - Create: `src/shared/lib/google-business-profile/settings.ts`
 
-- [ ] **Step 6.1: settings.ts 作成**
+- [ ] **Step 6.1: Create settings.ts**
 
-エクスポート関数:
+Exported functions:
 
-- `getGbpAuthState(): Promise<GbpAuthState | null>` — Settings から `googleBusinessProfileAuth` (Json) を取得 → `decrypt(encrypted)` → `JSON.parse` → `GbpAuthState` 型として返す。`googleBusinessProfileEnabled === false` または auth null → null 返却。decrypt / parse 失敗時は `logError` (HIGH) + null 返却（次回連携で復旧可能）
+- `getGbpAuthState(): Promise<GbpAuthState | null>` — get `googleBusinessProfileAuth` (Json) from Settings → `decrypt(encrypted)` → `JSON.parse` → return as `GbpAuthState`. If `googleBusinessProfileEnabled === false` or auth null → return null. If decrypt/parse fails, `logError` (HIGH) + return null (recoverable on next connect)
 - `saveGbpAuthState(state: GbpAuthState): Promise<void>` — `encrypt(JSON.stringify(state))` → `Settings.update({ googleBusinessProfileAuth: { encrypted }, googleBusinessProfileEnabled: true })`
 - `clearGbpAuthState(): Promise<void>` — `Settings.update({ googleBusinessProfileAuth: null, googleBusinessProfileEnabled: false })`
 
-Settings は singleton のため `findFirstOrThrow({ where: { id: { not: undefined } }, select: { id: true } })` で id 取得後 update。`encrypt` / `decrypt` は `@/shared/lib/crypto` から import（`googleCalendarServiceAccountJson` の `safeDecrypt` + `encryptApiKey` パターンと同型）。
+Settings is a singleton, so fetch the id with `findFirstOrThrow({ where: { id: { not: undefined } }, select: { id: true } })` and update. Import `encrypt` / `decrypt` from `@/shared/lib/crypto` (same pattern as `googleCalendarServiceAccountJson` `safeDecrypt` + `encryptApiKey`).
 
-- [ ] **Step 6.2: type-check 全 pass 確認**
+- [ ] **Step 6.2: Confirm type-check passes**
 
 ```bash
 bun run type-check
 ```
 
-Expected: exit 0（全 lib モジュールが整合）
+Expected: exit 0 (all lib modules are consistent)
 
 - [ ] **Step 6.3: Commit**
 
@@ -649,9 +649,9 @@ git commit -m "feat(gbp): add Settings auth encrypt/decrypt helper"
 
 - Create: `src/shared/domain/locations/gbp-sync-commands.ts`
 - Test: `__tests__/integration/domain/locations/gbp-sync-commands.test.ts`
-- Modify: `package.json` (`test:integration` に `__tests__/integration/domain/locations` 確認)
+- Modify: `package.json` (ensure `__tests__/integration/domain/locations` is in `test:integration`)
 
-- [ ] **Step 7.1: gbp-sync-commands.ts 作成**
+- [ ] **Step 7.1: Create gbp-sync-commands.ts**
 
 ```typescript
 import "server-only";
@@ -692,25 +692,25 @@ export async function toggleLocationGbpSyncCommand(
 }
 ```
 
-- [ ] **Step 7.2: integration テスト**
+- [ ] **Step 7.2: Integration test**
 
-`@/shared/lib/google-business-profile` を mock し、`mock.module` で全 export を stub 化（`syncLocationToGbp` / `getGbpAuthState` / `saveGbpAuthState` / `clearGbpAuthState` / `listGbpAccounts` / `getGbpAuthorizeUrl` / `exchangeGbpAuthCode` / `revokeGbpToken`）。**全 export を stub 化必須**（C5 Phase 2 で確立した cloudflare 全 stub テンプレに準拠、partial mock は batch pollution の silent bug）。
+Mock `@/shared/lib/google-business-profile` and stub all exports with `mock.module` (`syncLocationToGbp` / `getGbpAuthState` / `saveGbpAuthState` / `clearGbpAuthState` / `listGbpAccounts` / `getGbpAuthorizeUrl` / `exchangeGbpAuthCode` / `revokeGbpToken`). **All exports must be stubbed** (follow the C5 Phase 2 cloudflare all-stub template; partial mocks cause silent batch pollution).
 
-カバー対象:
+Coverage:
 
-- `syncLocationToGbpCommand` が `syncLocationToGbp` に locationId を委譲
-- `toggleLocationGbpSyncCommand` の `enabled: false` で `gbpSyncError` クリア
-- `toggleLocationGbpSyncCommand` の `enabled: true` で既存 `gbpSyncError` 保持
+- `syncLocationToGbpCommand` delegates locationId to `syncLocationToGbp`
+- `toggleLocationGbpSyncCommand` clears `gbpSyncError` when `enabled: false`
+- `toggleLocationGbpSyncCommand` preserves existing `gbpSyncError` when `enabled: true`
 
-mock 型は `mock<(input: SyncLocationToGbpInput) => Promise<GbpSyncResult>>()` で引数型を明示（CLAUDE.md learning: 引数なし mock 型は false-positive pass する）。
+Declare mock types as `mock<(input: SyncLocationToGbpInput) => Promise<GbpSyncResult>>()` (CLAUDE.md learning: mocks without argument types can false-positive pass).
 
-- [ ] **Step 7.3: テスト実行**
+- [ ] **Step 7.3: Run tests**
 
 ```bash
 bun test __tests__/integration/domain/locations
 ```
 
-Expected: 全 pass
+Expected: all pass
 
 - [ ] **Step 7.4: Commit**
 
@@ -727,9 +727,9 @@ git commit -m "feat(gbp): add domain commands for sync/toggle with integration t
 
 - Create: `src/app/api/google-business-profile/oauth/callback/route.ts`
 
-**Reference:** `src/app/api/instagram/oauth/callback/route.ts` の OAuth callback パターン。
+**Reference:** OAuth callback pattern in `src/app/api/instagram/oauth/callback/route.ts`.
 
-- [ ] **Step 8.1: route.ts 作成**
+- [ ] **Step 8.1: Create route.ts**
 
 ```typescript
 import "server-only";
@@ -808,7 +808,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 ```
 
-`unstable_rethrow` は Next.js 16 PPR の bail-out エラー再 throw（gotchas.md §Route Handler 準拠）。
+`unstable_rethrow` rethrows Next.js 16 PPR bail-out errors (per gotchas.md §Route Handler).
 
 - [ ] **Step 8.2: type-check + Commit**
 
@@ -827,35 +827,35 @@ git commit -m "feat(gbp): add OAuth callback route handler"
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-business-profile.ts`
 - Test: `__tests__/integration/actions/admin/google-business-profile.test.ts`
 
-- [ ] **Step 9.1: Server Actions 作成**
+- [ ] **Step 9.1: Create Server Actions**
 
-エクスポート関数:
+Exported functions:
 
-- `initiateGbpAuth(): Promise<void>` — `getGbpAuthorizeUrl("")` → `redirect(url)`（state は Phase 2 では空、Phase 3 で CSRF 対策）
+- `initiateGbpAuth(): Promise<void>` — `getGbpAuthorizeUrl("")` → `redirect(url)` (state is empty in Phase 2; CSRF protection in Phase 3)
 - `revokeGbpAuth()` — `executeAdminMutationResult({ resource: "settings", action: "update", execute: async () => { revokeGbpToken + clearGbpAuthState }, afterSuccess: () => updateTag(CACHE_TAGS.INTEGRATION_SETTINGS) })`
 - `triggerGbpSync(locationId: string)` — `executeAdminMutationResult({ resource: "location", action: "update", resourceId: locationId, execute: () => syncLocationToGbpCommand({ locationId }), afterSuccess: () => updateTag(CACHE_TAGS.LOCATIONS) })`
-- `toggleLocationGbpSync(locationId: string, enabled: boolean)` — 同上で `toggleLocationGbpSyncCommand`
+- `toggleLocationGbpSync(locationId: string, enabled: boolean)` — same flow via `toggleLocationGbpSyncCommand`
 
-`initiateGbpAuth` は `redirect()` するため戻り値型 `Promise<void>` で `executeAdminMutationResult` を経由しない（`redirect()` は throw する Next.js API のため try/catch で握り潰せない）。代わりに関数冒頭で `verifyAdminSession()` を直接呼んで権限チェックする。
+`initiateGbpAuth` uses `redirect()`, so return type is `Promise<void>` and it does not go through `executeAdminMutationResult` (`redirect()` throws in Next.js, so try/catch cannot swallow). Instead, call `verifyAdminSession()` directly at the start for auth checks.
 
-- [ ] **Step 9.2: integration テスト**
+- [ ] **Step 9.2: Integration test**
 
-`@/shared/lib/google-business-profile` + `@/shared/domain/locations/gbp-sync-commands` を mock。各 Server Action の認証 / 権限 / 成功 / 失敗パスを検証。テンプレートは `__tests__/integration/actions/admin/settings-google-calendar.test.ts` を参照。
+Mock `@/shared/lib/google-business-profile` + `@/shared/domain/locations/gbp-sync-commands`. Validate auth/permission/success/failure paths for each Server Action. See `__tests__/integration/actions/admin/settings-google-calendar.test.ts` template.
 
-カバー対象:
+Coverage:
 
-- `initiateGbpAuth` が `redirect` を呼ぶ（Next.js redirect は internal error throw のため try/catch で検出）
-- `revokeGbpAuth` が `revokeGbpToken` + `clearGbpAuthState` を呼ぶ
-- `triggerGbpSync` が成功時 `MutationResult<{ locationId, syncedAt }>` を返す
-- `toggleLocationGbpSync` が `enabled: false` で成功
+- `initiateGbpAuth` calls `redirect` (Next.js redirect throws internal error, detected via try/catch)
+- `revokeGbpAuth` calls `revokeGbpToken` + `clearGbpAuthState`
+- `triggerGbpSync` returns `MutationResult<{ locationId, syncedAt }>` on success
+- `toggleLocationGbpSync` succeeds when `enabled: false`
 
-- [ ] **Step 9.3: テスト実行**
+- [ ] **Step 9.3: Run tests**
 
 ```bash
 bun test __tests__/integration/actions/admin/google-business-profile.test.ts
 ```
 
-Expected: 全 pass
+Expected: all pass
 
 - [ ] **Step 9.4: Commit**
 
@@ -866,21 +866,21 @@ git commit -m "feat(gbp): add Server Actions for OAuth + sync trigger + toggle"
 
 ---
 
-### Task 10: updateLocation afterSuccess fireAndForget 配線
+### Task 10: updateLocation afterSuccess fireAndForget wiring
 
 **Files:**
 
-- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts` (or 同等パス)
+- Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/location.ts` (or equivalent path)
 
-- [ ] **Step 10.1: 該当ファイル特定 + afterSuccess 拡張**
+- [ ] **Step 10.1: Locate file + extend afterSuccess**
 
-実装前 grep:
+Pre-implementation grep:
 
 ```bash
 grep -rln "updateLocationCommand\|updateLocation\b" 'src/app/(admin)/admin/(dashboard)/_shared/actions/'
 ```
 
-該当ファイルの `updateLocation` Server Action `afterSuccess` に追加:
+Add to the `updateLocation` Server Action `afterSuccess` in the target file:
 
 ```typescript
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -897,7 +897,7 @@ afterSuccess: (data) => {
 },
 ```
 
-`createLocation` Server Action にも同パターン追加（新規拠点も初回同期を試行、Place ID 未設定なら command 内部で skip）。
+Add the same pattern to `createLocation` Server Action (new locations attempt initial sync; skip inside the command if Place ID is missing).
 
 - [ ] **Step 10.2: type-check + Commit**
 
@@ -919,29 +919,29 @@ git commit -m "feat(gbp): wire fireAndForget GBP sync to location create/update"
 - Modify: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts`
 - Modify: `src/app/(admin)/admin/(dashboard)/settings/api/page.tsx`
 
-**Reference:** `GoogleCalendarSection.tsx` を構造参考に。
+**Reference:** Use `GoogleCalendarSection.tsx` structure as a reference.
 
-- [ ] **Step 11.1: Section コンポーネント作成**
+- [ ] **Step 11.1: Create Section component**
 
-実装内容:
+Implementation details:
 
-- 連携状態 badge: 未連携 / 連携済み（accountName 表示）/ エラー
-- 「Google で連携」ボタン → `<form action={initiateGbpAuth}>` で Server Action 呼び出し（redirect で Google OAuth に遷移）
-- 「解除」ボタン → AlertDialog confirmation → `revokeGbpAuth` Server Action
-- `useSearchParams` で `gbp_success` / `gbp_error` query param を読み取り toast 表示
-- 説明文: "接続後、各 Location の MEO タブで `gbpSyncEnabled` を有効化することで同期されます"
+- Connection status badge: not connected / connected (show accountName) / error
+- "Connect with Google" button → call Server Action via `<form action={initiateGbpAuth}>` (redirect to Google OAuth)
+- "Disconnect" button → AlertDialog confirmation → `revokeGbpAuth` Server Action
+- Use `useSearchParams` to read `gbp_success` / `gbp_error` query params and show toast
+- Description text: "After connecting, enable `gbpSyncEnabled` in each Location's MEO tab to sync."
 
-a11y: 全ボタン `min-h-11` 以上、role="status" + aria-live="polite" でフィードバック、エラー badge tooltip。
+a11y: all buttons `min-h-11`+, feedback with role="status" + aria-live="polite", error badge tooltip.
 
-- [ ] **Step 11.2: index.ts barrel に export 追加**
+- [ ] **Step 11.2: Add export to index.ts barrel**
 
 ```typescript
 export { GoogleBusinessProfileSection } from "./GoogleBusinessProfileSection";
 ```
 
-- [ ] **Step 11.3: settings/api/page.tsx に <GoogleBusinessProfileSection /> 追加**
+- [ ] **Step 11.3: Add <GoogleBusinessProfileSection /> to settings/api/page.tsx**
 
-`<GoogleCalendarSection />` の直後に挿入:
+Insert immediately after `<GoogleCalendarSection />`:
 
 ```tsx
 <GoogleBusinessProfileSection settings={settings} />
@@ -971,7 +971,7 @@ git commit -m "feat(gbp): add GoogleBusinessProfileSection settings UI"
 - Create: `src/app/(admin)/admin/(dashboard)/locations/_components/LocationGbpSyncCard.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/locations/_components/LocationForm.tsx`
 
-- [ ] **Step 12.1: LocationGbpSyncCard.tsx 作成**
+- [ ] **Step 12.1: Create LocationGbpSyncCard.tsx**
 
 Client Component (`"use client"`)。Props:
 
@@ -982,21 +982,21 @@ Client Component (`"use client"`)。Props:
 - `gbpSyncError: string | null`
 - `gbpEnabledGlobally: boolean`
 
-UI 要素:
+UI elements:
 
-- Card with title "Google Business Profile 同期"
-- `placeIdMissing` warning（Place ID 未設定時）
-- `globallyDisabled` warning（`Settings.googleBusinessProfileEnabled` false 時）
-- Switch: この拠点の同期 ON/OFF（`toggleLocationGbpSync` Server Action、楽観的更新 + ロールバック）
-- 最終同期時刻表示（`formatDateTime(gbpSyncedAt)` または "未同期"）
-- Error badge（`gbpSyncError` が truthy 時）
-- 「今すぐ同期」ボタン（`triggerGbpSync` Server Action、`useTransition` + feedback `role="status" aria-live="polite"`）
+- Card with title "Google Business Profile Sync"
+- `placeIdMissing` warning (when Place ID is not set)
+- `globallyDisabled` warning (when `Settings.googleBusinessProfileEnabled` is false)
+- Switch: sync ON/OFF for this location (`toggleLocationGbpSync` Server Action, optimistic update + rollback)
+- Last sync time display (`formatDateTime(gbpSyncedAt)` or "Not synced")
+- Error badge (when `gbpSyncError` is truthy)
+- "Sync now" button (`triggerGbpSync` Server Action, `useTransition` + feedback `role="status" aria-live="polite"`)
 
-無効化条件: `isPending` / `enabled === false` / `globallyDisabled` / `placeIdMissing`
+Disable conditions: `isPending` / `enabled === false` / `globallyDisabled` / `placeIdMissing`
 
-- [ ] **Step 12.2: LocationForm.tsx の meo TabsContent に組み込む**
+- [ ] **Step 12.2: Integrate into LocationForm.tsx MEO TabsContent**
 
-`LocationMeoScoreCard` の直後に追加（edit mode のみ、`location` prop 存在時）:
+Add immediately after `LocationMeoScoreCard` (edit mode only, when `location` prop exists):
 
 ```tsx
 {
@@ -1013,7 +1013,7 @@ UI 要素:
 }
 ```
 
-`settings` prop が LocationForm に存在しない場合は親 page (`locations/[id]/edit/page.tsx`) で `getSettings()` 取得 + prop drill 必要。
+If the `settings` prop does not exist in LocationForm, fetch `getSettings()` in the parent page (`locations/[id]/edit/page.tsx`) and prop-drill.
 
 - [ ] **Step 12.3: validate + Commit**
 
@@ -1031,9 +1031,9 @@ git commit -m "feat(gbp): add LocationGbpSyncCard to MEO tab"
 
 - Modify: `src/app/(admin)/admin/(dashboard)/locations/_components/LocationTable.tsx`
 
-- [ ] **Step 13.1: バッジ列追加**
+- [ ] **Step 13.1: Add badge column**
 
-`<TableHead>GBP 同期</TableHead>` を追加し、各行で badge 表示:
+Add `<TableHead>GBP Sync</TableHead>` and show a badge per row:
 
 ```tsx
 function GbpSyncBadge({
@@ -1047,20 +1047,20 @@ function GbpSyncBadge({
   syncedAt: Date | null;
   error: string | null;
 }) {
-  if (!hasPlaceId) return <Badge variant="secondary">Place ID 未設定</Badge>;
-  if (!enabled) return <Badge variant="secondary">同期 OFF</Badge>;
+  if (!hasPlaceId) return <Badge variant="secondary">Place ID not set</Badge>;
+  if (!enabled) return <Badge variant="secondary">Sync OFF</Badge>;
   if (error)
     return (
       <Badge variant="destructive" title={error}>
-        エラー
+        Error
       </Badge>
     );
-  if (syncedAt) return <Badge variant="success">同期済</Badge>;
-  return <Badge variant="outline">未同期</Badge>;
+  if (syncedAt) return <Badge variant="success">Synced</Badge>;
+  return <Badge variant="outline">Not synced</Badge>;
 }
 ```
 
-`<TableCell><GbpSyncBadge ... /></TableCell>` の onClick に `stopRowClick` 適用（既存 ClickableTableRow パターン、admin-ui-patterns.md §テーブル行クリック遷移）。
+Apply `stopRowClick` to `<TableCell><GbpSyncBadge ... /></TableCell>` onClick (existing ClickableTableRow pattern, admin-ui-patterns.md §table row click navigation).
 
 - [ ] **Step 13.2: validate + Commit**
 
@@ -1080,18 +1080,18 @@ git commit -m "feat(gbp): add sync status badge column to LocationTable"
 
 - Create: `docs/guides/admin/google-business-profile-setup.md`
 
-- [ ] **Step 14.1: setup guide 作成**
+- [ ] **Step 14.1: Create setup guide**
 
-内容:
+Contents:
 
-- Google Cloud Console での API 有効化手順
+- API enablement steps in Google Cloud Console
   - "My Business Business Information API"
   - "My Business Account Management API"
-- OAuth 2.0 Client ID 設定（既存 `GOOGLE_CLIENT_ID` 流用、redirect URI 追加: `https://<domain>/api/google-business-profile/oauth/callback`）
-- Business Profile API access request form 提出（用途記載例）
-- 承認待ち期間の運用（`GBP_STUB_MODE=true` で UI 動作確認）
-- 承認後の動作確認手順
-- トラブルシューティング: 403 forbidden / no_accounts_found / token expiry / 数十拠点同時保存時のレート制限
+- OAuth 2.0 Client ID setup (reuse existing `GOOGLE_CLIENT_ID`, add redirect URI: `https://<domain>/api/google-business-profile/oauth/callback`)
+- Submit Business Profile API access request form (usage example text)
+- Operating during approval wait (`GBP_STUB_MODE=true` for UI verification)
+- Post-approval verification steps
+- Troubleshooting: 403 forbidden / no_accounts_found / token expiry / rate limits when saving dozens of locations
 
 - [ ] **Step 14.2: Commit**
 
@@ -1109,7 +1109,7 @@ git commit -m "docs(gbp): add Google Business Profile setup guide"
 - Create: `docs/architecture/decisions/0027-google-business-profile-sync.md`
 - Modify: `docs/architecture/decisions/README.md`
 
-- [ ] **Step 15.1: ADR 採番衝突 cross-check**
+- [ ] **Step 15.1: ADR numbering conflict cross-check**
 
 ```bash
 ls docs/architecture/decisions/ | grep "^00" | tail -5
@@ -1118,13 +1118,13 @@ for w in .worktrees/*; do
 done
 ```
 
-Expected: 0026 が main の最新、0027 は未使用。worktree にも 0027 不在を確認（衝突あれば 0028+ にリネーム）。
+Expected: 0026 is the latest on main, 0027 unused. Confirm 0027 is absent in the worktree (rename to 0028+ if conflicts).
 
-- [ ] **Step 15.2: ADR 0027 作成**
+- [ ] **Step 15.2: Create ADR 0027**
 
-Spec §8 の ADR draft を ADR フォーマット（Status / Date / Context / Decision / Consequences / Alternatives / References）に整形。Decision は 6 項目（OAuth-based / app SSoT / single-account / fireAndForget on save + manual / graceful degradation / stub mode）。
+Format the ADR draft from spec §8 into ADR format (Status / Date / Context / Decision / Consequences / Alternatives / References). Decision has 6 items (OAuth-based / app SSoT / single-account / fireAndForget on save + manual / graceful degradation / stub mode).
 
-- [ ] **Step 15.3: README.md index に追加**
+- [ ] **Step 15.3: Add to README.md index**
 
 ```markdown
 | [0027](0027-google-business-profile-sync.md) | Google Business Profile sync | Accepted | 2026-04-XX |
@@ -1150,39 +1150,39 @@ bun run validate && bun run build
 Expected: exit 0
 
 - [ ] **Smoke test (stub mode)**:
-  1. `.env.local` に `GBP_STUB_MODE=true` 追加
-  2. `bun dev` 再起動
-  3. 設定 > Google Business Profile セクション表示確認（連携前は "未連携" badge）
-  4. Location 編集 → MEO タブ → 「今すぐ同期」ボタン → 成功表示（stub では DB の `gbpSyncedAt` 更新なし、stub.ts の logger.info のみ）
-  5. LocationTable に GBP 同期 badge 列が表示される
+  1. Add `GBP_STUB_MODE=true` to `.env.local`
+  2. Restart `bun dev`
+  3. Confirm Settings > Google Business Profile section is visible (badge shows "Not connected" before linking)
+  4. Edit Location → MEO tab → "Sync now" button → success display (stub does not update DB `gbpSyncedAt`, only stub.ts logger.info)
+  5. LocationTable shows the GBP sync badge column
 
 ---
 
 ## Self-Review Checklist
 
-- [x] **Spec coverage**: 全 9 セクションを task に対応付け
-  - §1 目的 / §2 アーキテクチャ → Task 1-13
-  - §3 申請ワークフロー → Task 14
-  - §4 テスト戦略 → Task 3.5-3.7 (unit) / Task 7.2 / Task 9.2 (integration)
-  - §5 マイグレーション → Task 1
-  - §6 リスク → 各 task の注釈
-  - §7 スコープ境界 → 全 task
+- [x] **Spec coverage**: map all 9 sections to tasks
+  - §1 Goal / §2 Architecture → Tasks 1-13
+  - §3 Application workflow → Task 14
+  - §4 Test strategy → Tasks 3.5-3.7 (unit) / Task 7.2 / Task 9.2 (integration)
+  - §5 Migration → Task 1
+  - §6 Risks → notes per task
+  - §7 Scope boundary → all tasks
   - §8 ADR → Task 15
-  - §9 ground truth → plan 冒頭で実施済み
+  - §9 Ground truth → done at plan start
 
-- [x] **No placeholders**: 全 step に実コード / 実コマンド / 実 file path 記載
+- [x] **No placeholders**: real code / commands / file paths in every step
 
-- [x] **Type consistency**: `syncLocationToGbp` (lib) → `syncLocationToGbpCommand` (domain) → `triggerGbpSync` (Server Action) の責務階層一貫、`GbpSyncResult` は全層で同一型
+- [x] **Type consistency**: responsibility hierarchy `syncLocationToGbp` (lib) → `syncLocationToGbpCommand` (domain) → `triggerGbpSync` (Server Action) is consistent; `GbpSyncResult` is the same type at every layer
 
-- [x] **Bundle 化指示**: Bundle A-G で 7 bundle、Task 4-6 (Bundle C) と Task 11-13 (Bundle F) は密結合のため 1 implementer に bundle、commit message は plan 指定文字列を使用
+- [x] **Bundling instructions**: 7 bundles (A–G); Tasks 4–6 (Bundle C) and Tasks 11–13 (Bundle F) are tightly coupled, so bundle to one implementer; use plan-specified commit messages
 
-- [x] **ground truth 反映**:
-  - ADR 0027 採番（cross-check 実施）
-  - Settings encryption pattern (`googleCalendarServiceAccountJson` 同型、`encrypt`/`decrypt` 流用)
-  - OAuth callback 配置 (`api/instagram/oauth/callback/` 同型)
-  - LocationForm の Tabs 構造 (`forceMount` + `meo` tab 既存)
-  - `updateLocation` の `{ id, slug }` 戻り値（`fireAndForget` で `data.id` 使用可）
-  - `fireAndForget(promise, { operation, category })` シグネチャ
-  - `executeAdminMutationResult` の `afterSuccess(data)` パターン
+- [x] **Ground truth alignment**:
+  - ADR 0027 numbering (cross-check done)
+  - Settings encryption pattern (same as `googleCalendarServiceAccountJson`, reuse `encrypt`/`decrypt`)
+  - OAuth callback placement (same as `api/instagram/oauth/callback/`)
+  - LocationForm tabs structure (`forceMount` + existing `meo` tab)
+  - `updateLocation` return `{ id, slug }` (allows `data.id` in `fireAndForget`)
+  - `fireAndForget(promise, { operation, category })` signature
+  - `executeAdminMutationResult` `afterSuccess(data)` pattern
   - `mybusinessbusinessinformation` / `mybusinessaccountmanagement` v1 endpoint
   - OAuth scope `https://www.googleapis.com/auth/business.manage`

@@ -1,70 +1,70 @@
 # Clean-Break Refactor C5 Implementation Plan
 
-> **In Progress: 2026-04-29** — Phase C5b/C5c/C5a/C5d の dispatch スケジュール待機中。各 phase は 1 implementer dispatch で完了する設計。
+> **In Progress: 2026-04-29** — Waiting on dispatch schedule for Phase C5b/C5c/C5a/C5d. Each phase is designed to complete via a single implementer dispatch.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** skills / rules / subagents / docs を公式ベストプラクティス準拠で L3+L4 (積極的削除 + 階層構造再考) clean-break refactor する。
+**Goal:** Refactor skills / rules / subagents / docs into official best-practice L3+L4 (aggressive deletions + hierarchy rethink) via a clean-break refactor.
 
-**Architecture:** 4 phase 順次 dispatch (C5b → C5c → C5a → C5d)。各 phase = 1 implementer dispatch で複数 commit 完成、controller が phase 別 commit に分離。Reviewer は phase 完了ごとに combined dispatch (spec compliance + code quality 1 prompt)。
+**Architecture:** Sequential dispatch across 4 phases (C5b → C5c → C5a → C5d). Each phase = one implementer dispatch finishing multiple commits, which the controller splits by phase. The reviewer uses a combined dispatch after each phase (spec compliance + code quality in one prompt).
 
 **Tech Stack:** Markdown frontmatter (YAML), `.claude/{rules,skills,agents}/`, `docs/architecture/decisions/`, `docs/superpowers/{specs,plans}/`, `scripts/verify-policy-docs.mjs`, `bun run validate`.
 
-**Spec:** `docs/superpowers/specs/2026-04-27-clean-break-c5-design.md` — ground truth として実装中に参照。
+**Spec:** `docs/superpowers/specs/2026-04-27-clean-break-c5-design.md` — referenced during implementation as ground truth.
 
-**ADR 採番:** 0025 (subagent dispatch template SSoT) + 0026 (skill naming convention)。各 phase 開始時に `ls docs/architecture/decisions/00*.md | tail -1` で再確認。
+**ADR numbers:** 0025 (subagent dispatch template SSoT) + 0026 (skill naming convention). At the start of each phase, re-check with `ls docs/architecture/decisions/00*.md | tail -1`.
 
 ---
 
-## Phase 共通 dispatch 規律
+## Shared phase dispatch discipline
 
-各 phase の implementer dispatch prompt に以下を含める:
+Include the following in each phase's implementer dispatch prompt:
 
 ```
-🚫 Git 全面禁止 (add / commit / push / reset / checkout / restore / stash すべて NG)
-編集のみ許可。controller が phase 完了後に commit する。
+🚫 Git completely prohibited (add / commit / push / reset / checkout / restore / stash all NG)
+Editing only. The controller commits after phase completion.
 
-🔧 Path alias は 3 系統のみ:
+🔧 Path aliases: only 3 families:
   @/admin/* → src/app/(admin)/admin/(dashboard)/_shared/*
   @/public/* → src/app/(public)/_shared/*
   @/shared/* → src/shared/*
-  「@/admin/_shared/X」のような二重 prefix は誤り。
+  Double prefixes like "@/admin/_shared/X" are invalid.
 
-📋 Plan deviation: plan 記載 identifier と実装が乖離していれば
-justified deviation として保持し報告 (強制 rename 禁止)。
+📋 Plan deviation: if plan identifiers diverge from implementation,
+keep and report as a justified deviation (no forced renames).
 
-📊 完了報告フォーマット:
-  ## 編集ファイル
-  - <path>: <変更概要>
-  ## 新規作成ファイル
-  - <path>: <目的>
-  ## 削除ファイル
-  - <path>: <削除理由>
+📊 Completion report format:
+  ## Edited files
+  - <path>: <summary of change>
+  ## New files
+  - <path>: <purpose>
+  ## Deleted files
+  - <path>: <deletion reason>
   ## DEVIATION
-  - (なければ「なし」と明記)
+  - (if none, explicitly write "None")
   ## VERIFICATION
-  - <controller が確認すべき grep / ls コマンド>
+  - <grep / ls commands the controller should verify>
 ```
 
-各 phase 完了後 controller は 3 段検証:
+After each phase, the controller performs a 3-step verification:
 
-1. `git status --short` で modifications + untracked 列挙
-2. `wc -l` で対象ファイルの行数 delta 確認
-3. `grep` で期待 symbol 存在 + 削除 symbol 不在を確認
+1. List modifications + untracked with `git status --short`
+2. Check line-count delta for target files with `wc -l`
+3. Confirm expected symbols exist and removed symbols do not via `grep`
 
 ---
 
-## Phase 1: C5b — Rules audit + barrel-index 拡張 (5 commits)
+## Phase 1: C5b — Rules audit + barrel-index expansion (5 commits)
 
-**目的:** Rules を SSoT として安定化させ、後続 phase の dispatch prompt + docs 修正の参照基盤を整える。
+**Purpose:** Stabilize rules as SSoT and prepare the reference foundation for later phase dispatch prompts + doc updates.
 
-**dispatch 単位:** 1 implementer (sonnet) で Task 1.1〜1.5 を順次実施し、controller が commit boundary で 5 commit に分離。
+**Dispatch unit:** One implementer (sonnet) runs Tasks 1.1–1.5 sequentially; the controller splits into five commits at commit boundaries.
 
 ### Task 1.1: Stale rule + paths gap investigation (read-only)
 
 **Files:** read-only, no edits.
 
-- [ ] **Step 1: 全 rule docs の paths frontmatter 状態を grep**
+- [ ] **Step 1: Grep paths frontmatter status across all rule docs**
 
 ```bash
 for f in $(find .claude/rules -name "*.md"); do
@@ -75,23 +75,23 @@ for f in $(find .claude/rules -name "*.md"); do
 done
 ```
 
-Expected output: paths frontmatter のない rule docs リスト。各 file について以下の判定基準で「漏れ」かどうか確定する:
+Expected output: list of rule docs without paths frontmatter. For each file, determine whether it is a "gap" using the criteria below:
 
-- **漏れと判定**: rule docs 本文で `src/` 配下の具体的パターン (`enums/guards.ts` / `domain/` / `actions/` 等) を言及している、または該当 path で編集する際に load されるべき内容を持つ
-- **漏れではない**: rule docs が project-wide な原則 (例: SSOT 哲学 / 命名規則 ADR 等) を扱い特定 path に紐付かない
+- **Gap**: rule docs mention specific patterns under `src/` (`enums/guards.ts` / `domain/` / `actions/`, etc.) or contain content that should load only when editing those paths
+- **Not a gap**: rule docs cover project-wide principles (e.g., SSOT philosophy / naming ADRs) and do not map to a specific path
 
-判定理由は /tmp/c5b-investigation.md に記録。
+Record the rationale in /tmp/c5b-investigation.md.
 
-- [ ] **Step 2: rule docs に書かれた helper / API 名を抽出**
+- [ ] **Step 2: Extract helper / API names mentioned in rule docs**
 
 ```bash
 grep -rohE '`[a-z][a-zA-Z]+\(\)`' .claude/rules/ | sort -u > /tmp/c5b-rule-helpers.txt
 wc -l /tmp/c5b-rule-helpers.txt
 ```
 
-Expected: rule docs で言及されている関数名一覧。
+Expected: list of function names referenced in rule docs.
 
-- [ ] **Step 3: 各 helper が src/ に存在するか cross-grep**
+- [ ] **Step 3: Cross-grep whether each helper exists in src/**
 
 ```bash
 while read helper; do
@@ -103,54 +103,54 @@ while read helper; do
 done < /tmp/c5b-rule-helpers.txt
 ```
 
-Expected: src/ に存在しない（stale な）helper 名リスト。
+Expected: list of stale helper names that do not exist in src/.
 
-- [ ] **Step 4: 結果を /tmp/c5b-investigation.md にまとめて controller に報告**
+- [ ] **Step 4: Summarize results in /tmp/c5b-investigation.md and report to the controller**
 
 Format:
 
 ```
 ## paths gap (N files)
-- <path>: <推奨 paths>
+- <path>: <recommended paths>
 
 ## stale helpers (N)
-- <helper>: <発見した rule file>
+- <helper>: <rule file where found>
 
-## tailwind-patterns.md 分割案
-- <subtopic>.md: <該当行範囲>
+## tailwind-patterns.md split proposal
+- <subtopic>.md: <line range>
 
-## zod-patterns.md 分割案
-- <subtopic>.md: <該当行範囲>
+## zod-patterns.md split proposal
+- <subtopic>.md: <line range>
 ```
 
-- [ ] **Step 5: Implementer 報告 → controller が承認 → Task 1.2 に進む (commit なし、investigation のみ)**
+- [ ] **Step 5: Implementer reports → controller approves → proceed to Task 1.2 (no commit, investigation only)**
 
-### Task 1.2: tailwind-patterns.md を barrel-index 化
+### Task 1.2: Barrel-index tailwind-patterns.md
 
 **Files:**
 
-- Modify: `.claude/rules/tailwind-patterns.md` (569 → ~50 行に縮小)
+- Modify: `.claude/rules/tailwind-patterns.md` (569 → ~50 lines)
 - Create: `.claude/rules/tailwind-patterns/<subtopic>.md` (4-6 sub-files)
 
-**参考:** 既存 barrel-index 適用例は `react-patterns.md` (親) + `react/<subtopic>.md` 配下を参照。
+**Reference:** See existing barrel-index usage in `react-patterns.md` (parent) + `react/<subtopic>.md` subfiles.
 
-- [ ] **Step 1: 親 file の最終形フォーマットを確認**
+- [ ] **Step 1: Confirm the final format for the parent file**
 
-`react-patterns.md` を read してフォーマット (frontmatter `paths:` + sub-file links のみ) を確認。
+Read `react-patterns.md` to confirm the format (frontmatter `paths:` + sub-file links only).
 
-- [ ] **Step 2: subtopic 分割案を確定 (Task 1.1 投資結果から)**
+- [ ] **Step 2: Finalize subtopic split (from Task 1.1 results)**
 
-例: `tailwind-patterns/`
+Example: `tailwind-patterns/`
 
-- `responsive-breakpoints.md` (md/lg/xl 使用基準)
-- `container-queries.md` (@container / @md/main: 等)
+- `responsive-breakpoints.md` (md/lg/xl usage guidelines)
+- `container-queries.md` (@container / @md/main:, etc.)
 - `grid-overlap.md` (col-start cell overlap pattern)
 - `inline-style-vs-arbitrary.md` (Tailwind v4 specificity)
-- `theme-tokens.md` (@theme arbitrary 値昇格)
+- `theme-tokens.md` (@theme arbitrary value promotion)
 
-- [ ] **Step 3: sub-file を新規作成 (該当行を移植 + frontmatter 追加)**
+- [ ] **Step 3: Create sub-files (move relevant lines + add frontmatter)**
 
-Frontmatter テンプレート:
+Frontmatter template:
 
 ```yaml
 ---
@@ -161,12 +161,12 @@ paths:
 ---
 # <Subtopic Title>
 
-<元の本文>
+<original content>
 ```
 
-- [ ] **Step 4: 親 `tailwind-patterns.md` を縮小**
+- [ ] **Step 4: Shrink parent `tailwind-patterns.md`**
 
-新フォーマット:
+New format:
 
 ```yaml
 ---
@@ -176,9 +176,9 @@ paths:
   - src/**/*.css
 ---
 
-# Tailwind 4 パターン
+# Tailwind 4 Patterns
 
-> **Barrel-index:** 各 subtopic は path-scoped autoload で連鎖ロードされる。
+> **Barrel-index:** Each subtopic is chain-loaded via path-scoped autoload.
 
 - [Responsive breakpoints](tailwind-patterns/responsive-breakpoints.md)
 - [Container queries](tailwind-patterns/container-queries.md)
@@ -187,65 +187,65 @@ paths:
 - [Theme tokens](tailwind-patterns/theme-tokens.md)
 ```
 
-- [ ] **Step 5: 移行漏れ確認**
+- [ ] **Step 5: Check for missing migrations**
 
 ```bash
 diff <(git show HEAD:.claude/rules/tailwind-patterns.md | wc -l) <(cat .claude/rules/tailwind-patterns.md .claude/rules/tailwind-patterns/*.md | wc -l)
 ```
 
-Expected: 新側が +N (frontmatter 分のみ増加)。元コンテンツ消失なし。
+Expected: New side is +N (frontmatter only). No content loss.
 
-- [ ] **Step 6: Implementer 完了報告 → controller が commit**
+- [ ] **Step 6: Implementer reports completion → controller commits**
 
 Commit message:
 
 ```
-refactor(rules): tailwind-patterns.md を barrel-index 化
+refactor(rules): barrel-index tailwind-patterns.md
 
-569 行を 5 subtopic (responsive-breakpoints / container-queries / grid-overlap /
-inline-style-vs-arbitrary / theme-tokens) に分割。親 file は paths frontmatter +
-sub-file links のみ。autoload chain 維持。
+Split 569 lines into 5 subtopics (responsive-breakpoints / container-queries / grid-overlap /
+inline-style-vs-arbitrary / theme-tokens). Parent file has only paths frontmatter +
+sub-file links. Keep the autoload chain.
 
 C5b Task 1.2
 ```
 
-### Task 1.3: zod-patterns.md を barrel-index 化
+### Task 1.3: Barrel-index zod-patterns.md
 
 **Files:**
 
-- Modify: `.claude/rules/zod-patterns.md` (746 → ~50 行)
+- Modify: `.claude/rules/zod-patterns.md` (746 → ~50 lines)
 - Create: `.claude/rules/zod-patterns/<subtopic>.md` (5-7 sub-files)
 
-- [ ] **Step 1〜6: Task 1.2 と同手順で zod-patterns.md を分割**
+- [ ] **Step 1–6: Split zod-patterns.md using the same steps as Task 1.2**
 
-subtopic 分割案 (Task 1.1 投資結果に従う):
+Subtopic split proposal (based on Task 1.1 results):
 
-- `validation-schemas.md` (基本 schema 構築)
-- `error-formatting.md` (`error:` パラメータ + safeParse)
+- `validation-schemas.md` (basic schema construction)
+- `error-formatting.md` (`error:` parameter + safeParse)
 - `cross-field-refine.md` (top-level refine pattern)
-- `array-uniqueness.md` (`.refine()` での重複拒否)
+- `array-uniqueness.md` (duplicate rejection via `.refine()`)
 - `metadata-registry.md` (`z.registry<T>().register(schema, meta)`)
 - `enum-and-literals.md` (parseAsStringLiteral + isValid\* gate)
 
 Commit message:
 
 ```
-refactor(rules): zod-patterns.md を barrel-index 化
+refactor(rules): barrel-index zod-patterns.md
 
-746 行を 6 subtopic に分割。親 file は paths frontmatter + sub-file links のみ。
+Split 746 lines into 6 subtopics. Parent file has only paths frontmatter + sub-file links.
 
 C5b Task 1.3
 ```
 
-### Task 1.4: paths frontmatter 漏れ補完
+### Task 1.4: Fill missing paths frontmatter
 
 **Files:**
 
-- Modify: Task 1.1 で発見した paths 欠落 rule docs (件数は investigation 結果次第)
+- Modify: rule docs missing paths found in Task 1.1 (count depends on investigation results)
 
-- [ ] **Step 1: 各漏れ file に paths frontmatter を追記**
+- [ ] **Step 1: Add paths frontmatter to each missing file**
 
-例 (`type-safety.md` が漏れていた場合):
+Example (if `type-safety.md` was missing):
 
 ```yaml
 ---
@@ -255,9 +255,9 @@ paths:
 ---
 ```
 
-判定基準: rule docs 本文で言及されている src/ 配下のパターン (例: `enums/guards.ts`, `domain/`, `actions/`) に対して `paths:` で広く auto-load される設定。
+Criteria: configure `paths:` to broadly autoload for src patterns mentioned in rule docs text (e.g., `enums/guards.ts`, `domain/`, `actions/`).
 
-- [ ] **Step 2: 全 rule docs の paths 適用率を再 grep で確認**
+- [ ] **Step 2: Re-check paths coverage across all rule docs with grep**
 
 ```bash
 total=$(find .claude/rules -name "*.md" | wc -l)
@@ -265,51 +265,51 @@ with_paths=$(grep -rl "^paths:" .claude/rules/ | wc -l)
 echo "$with_paths / $total ($(( with_paths * 100 / total ))%)"
 ```
 
-Expected: 100% に到達 (barrel parent も sub-file も全て paths を持つ)。
+Expected: reach 100% (both barrel parents and sub-files have paths).
 
 - [ ] **Step 3: Commit**
 
 Commit message:
 
 ```
-refactor(rules): paths frontmatter 漏れを補完 (autoload 適用率 100% 化)
+refactor(rules): fill missing paths frontmatter (autoload coverage 100%)
 
-Task 1.1 investigation で検出した N 件の paths gap を補完。rule docs が
-適切な src パスから path-scoped autoload されるよう統一。
+Fill N paths gaps found in Task 1.1 investigation. Standardize rule docs
+to autoload path-scoped from the appropriate src paths.
 
 C5b Task 1.4
 ```
 
-### Task 1.5: Stale rule docs 削除/更新 + AGENTS.md 同期
+### Task 1.5: Remove/update stale rule docs + sync AGENTS.md
 
 **Files:**
 
-- Modify or Delete: Task 1.1 で発見した stale rule docs (helper 名が src/ にゼロ参照のもの)
-- Modify: `AGENTS.md` (該当節)
+- Modify or Delete: stale rule docs found in Task 1.1 (helpers with zero refs in src/)
+- Modify: `AGENTS.md` (relevant section)
 
-- [ ] **Step 1: stale 判定**
+- [ ] **Step 1: Stale determination**
 
-Task 1.1 の stale helper リストを再検証:
+Re-validate the stale helper list from Task 1.1:
 
 ```bash
-# 各 stale helper について最終確認 (絞り込み: テストファイル除外)
+# Final check for each stale helper (filter: exclude test files)
 grep -rln "<helper-name>" src/ --include="*.ts" --include="*.tsx" | grep -v __tests__
 ```
 
-ゼロ件の helper を rule docs から削除対象とする。残存している場合は rule 側の記述更新。
+Helpers with zero hits are removal targets in rule docs. If they still exist, update the rule text accordingly.
 
-- [ ] **Step 2: rule docs から stale 記述を削除 (または更新)**
+- [ ] **Step 2: Remove (or update) stale references from rule docs**
 
-削除パターン: stale helper のみ言及している段落 / 表行は丸ごと削除。
-更新パターン: 段落内の一部のみ stale なら該当文を削除し前後を繋げる。
+Deletion pattern: delete entire paragraphs or table rows that only mention stale helpers.
+Update pattern: if only part of a paragraph is stale, remove that sentence and stitch the rest.
 
-- [ ] **Step 3: AGENTS.md 同期**
+- [ ] **Step 3: Sync AGENTS.md**
 
 ```bash
 node scripts/verify-policy-docs.mjs
 ```
 
-Expected: byte-identical 検証成功。失敗した場合は AGENTS.md の対応セクションを CLAUDE.md / rule docs と同期。
+Expected: byte-identical verification succeeds. If it fails, sync the relevant AGENTS.md section with CLAUDE.md / rule docs.
 
 - [ ] **Step 4: bun run validate**
 
@@ -317,22 +317,22 @@ Expected: byte-identical 検証成功。失敗した場合は AGENTS.md の対�
 bun run validate
 ```
 
-Expected: type-check + lint 成功。
+Expected: type-check + lint succeed.
 
 - [ ] **Step 5: Commit**
 
 Commit message:
 
 ```
-refactor(rules): stale rule docs 削除 + AGENTS.md 同期
+refactor(rules): remove stale rule docs + sync AGENTS.md
 
-src/ に参照ゼロな helper 名 N 件を rule docs から削除。AGENTS.md の対応
-セクションを CLAUDE.md と byte-identical 同期。
+Remove N helper names with zero references in src/ from rule docs. Sync the
+corresponding AGENTS.md section to be byte-identical with CLAUDE.md.
 
 C5b Task 1.5
 ```
 
-### Phase 1 完了 reviewer
+### Phase 1 completion reviewer
 
 - [ ] **Reviewer dispatch (combined: spec compliance + code quality)**
 
@@ -342,11 +342,11 @@ Prompt template:
 Review Phase 1 (C5b) commits against spec docs/superpowers/specs/2026-04-27-clean-break-c5-design.md §3.1.
 
 Verify:
-1. tailwind-patterns.md / zod-patterns.md が barrel-index 化されているか (親 file が paths + links のみ)
-2. paths frontmatter 適用率が 100% か
-3. stale rule 削除後の参照漏れがないか (`grep -rn "<deleted-name>" .claude/ docs/ CLAUDE.md`)
-4. AGENTS.md 同期成功 (`node scripts/verify-policy-docs.mjs`)
-5. bun run validate 成功
+1. tailwind-patterns.md / zod-patterns.md are barrel-indexed (parent file only has paths + links)
+2. paths frontmatter coverage is 100%
+3. no missing references after stale rule removal (`grep -rn "<deleted-name>" .claude/ docs/ CLAUDE.md`)
+4. AGENTS.md sync succeeds (`node scripts/verify-policy-docs.mjs`)
+5. bun run validate succeeds
 
 Return JSON:
 {
@@ -356,21 +356,21 @@ Return JSON:
 }
 ```
 
-NEEDS_CHANGES なら controller が該当 task に戻って修正、再 dispatch。
+If NEEDS_CHANGES, the controller returns to the task, fixes, and re-dispatches.
 
 ---
 
-## Phase 2: C5c — Subagents canonical + dispatch-template 抽出 (4 commits)
+## Phase 2: C5c — Subagents canonical + dispatch-template extraction (4 commits)
 
-**目的:** Subagent frontmatter を公式 canonical 形式に統一し、dispatch prompt template を skill 化。
+**Purpose:** Normalize subagent frontmatter to the official canonical format and convert the dispatch prompt template into a skill.
 
-**dispatch 単位:** 1 implementer (sonnet) で Task 2.1〜2.4 を順次実施。
+**Dispatch unit:** One implementer (sonnet) runs Tasks 2.1–2.4 sequentially.
 
 ### Task 2.1: Agent frontmatter compliance + usage investigation (read-only)
 
 **Files:** read-only.
 
-- [ ] **Step 1: 全 agent の frontmatter 形式チェック**
+- [ ] **Step 1: Check frontmatter format for all agents**
 
 ```bash
 for f in .claude/agents/*.md; do
@@ -389,9 +389,9 @@ for f in .claude/agents/*.md; do
 done
 ```
 
-Expected: agent ごとの frontmatter 状態。`YAML_LIST_TOOLS` は comma-separated に変換対象、`NO_MODEL` は `model: sonnet` 追加対象。
+Expected: per-agent frontmatter status. `YAML_LIST_TOOLS` marks conversion to comma-separated, `NO_MODEL` marks adding `model: sonnet`.
 
-- [ ] **Step 2: 各 agent の利用実績を grep**
+- [ ] **Step 2: Grep usage for each agent**
 
 ```bash
 for f in .claude/agents/*.md; do
@@ -401,9 +401,9 @@ for f in .claude/agents/*.md; do
 done | sort -k2 -n
 ```
 
-Expected: 利用実績ゼロ (refs=0) な agent リスト = 削除候補。
+Expected: agents with zero usage (refs=0) = deletion candidates.
 
-- [ ] **Step 3: memory: project の backing dir / body Memory 節 cross-check**
+- [ ] **Step 3: Cross-check memory: project backing dir / body Memory section**
 
 ```bash
 for f in .claude/agents/*.md; do
@@ -416,35 +416,35 @@ for f in .claude/agents/*.md; do
 done
 ```
 
-Expected: dir=no かつ body=0 な agent は `memory: project` 削除対象。
+Expected: agents with dir=no and body=0 are removal targets for `memory: project`.
 
-- [ ] **Step 4: 結果を /tmp/c5c-investigation.md にまとめて controller に報告**
+- [ ] **Step 4: Summarize results in /tmp/c5c-investigation.md and report to controller**
 
 Format:
 
 ```
-## frontmatter 修正対象
+## frontmatter change targets
 - <agent>: <issue>
 
-## 削除候補 agent (利用実績ゼロ)
+## deletion candidate agents (zero usage)
 - <agent>
 
-## memory: project 削除対象
+## memory: project removal targets
 - <agent>
 
-## CLAUDE.md「Subagent 規律」節の dispatch prompt 抽出範囲
-- 該当行範囲: CLAUDE.md L<start>-L<end>
+## Extraction range for dispatch prompt from CLAUDE.md "Subagent discipline" section
+- Line range: CLAUDE.md L<start>-L<end>
 ```
 
-- [ ] **Step 5: Implementer 報告 → controller 承認 → Task 2.2 へ (commit なし)**
+- [ ] **Step 5: Implementer reports → controller approves → proceed to Task 2.2 (no commit)**
 
-### Task 2.2: Frontmatter canonical 化 (25 agents)
+### Task 2.2: Canonicalize frontmatter (25 agents)
 
 **Files:**
 
-- Modify: `.claude/agents/*.md` (Task 2.1 で frontmatter 修正対象と判定された agents)
+- Modify: `.claude/agents/*.md` (agents flagged for frontmatter changes in Task 2.1)
 
-- [ ] **Step 1: YAML list `tools:` を comma-separated 単行へ変換**
+- [ ] **Step 1: Convert YAML list `tools:` to a single comma-separated line**
 
 Before:
 
@@ -461,128 +461,128 @@ After:
 tools: Read, Grep, Glob
 ```
 
-- [ ] **Step 2: 不足 frontmatter 補完**
+- [ ] **Step 2: Fill missing frontmatter**
 
-- `model:` 欠落 → `model: sonnet` 追加 (description の trigger 文から implementer か reviewer か判定不能なら sonnet 既定)
-- `description:` の trigger phrase 統一 (`Use proactively when ...` または「～した後に使用」)
+- Missing `model:` → add `model: sonnet` (if description trigger cannot determine implementer vs reviewer, default to sonnet)
+- Standardize `description:` trigger phrase (`Use proactively when ...` or "Use after ...")
 
-- [ ] **Step 3: memory: project 整合**
+- [ ] **Step 3: Align memory: project**
 
-Task 2.1 Step 3 で削除対象と判定された agent から `memory: project` フィールドを削除。
+Remove the `memory: project` field from agents marked for removal in Task 2.1 Step 3.
 
-- [ ] **Step 4: 検証**
+- [ ] **Step 4: Validate**
 
 ```bash
-# 全 agent が canonical 形式かを再 grep
+# Re-grep to ensure all agents are in canonical format
 for f in .claude/agents/*.md; do
   bad=$(awk '/^tools:/,/^[a-z]+:/' "$f" | grep -c "^  -" || echo 0)
   [ "$bad" -gt 0 ] && echo "[FAIL] $f still has YAML list tools"
 done
 ```
 
-Expected: 出力ゼロ。
+Expected: no output.
 
 - [ ] **Step 5: Commit**
 
 Commit message:
 
 ```
-refactor(agents): frontmatter を公式 canonical 形式に統一
+refactor(agents): normalize frontmatter to official canonical format
 
-全 agent の tools を YAML list → comma-separated 単行へ変換。model: sonnet
-を欠落 agent に追加。memory: project の backing dir / body Memory 節を持た
-ない agent から該当フィールドを削除 (2026-04-23 既実施分の続き)。
+Convert all agents' tools from YAML lists to a single comma-separated line. Add
+model: sonnet to agents missing it. Remove `memory: project` from agents without
+a backing dir / body Memory section (continuation of 2026-04-23).
 
 C5c Task 2.2
 ```
 
-### Task 2.3: 利用実績ゼロ agent 削除 + 参照修正
+### Task 2.3: Delete zero-usage agents + update references
 
 **Files:**
 
-- Delete: `.claude/agents/<unused-agent>.md` (Task 2.1 Step 2 で refs=0 と判定された agents)
-- Modify: `CLAUDE.md` (「自動ロード」節 + reviewer dispatch 例)
+- Delete: `.claude/agents/<unused-agent>.md` (agents flagged as refs=0 in Task 2.1 Step 2)
+- Modify: `CLAUDE.md` ("Auto-load" section + reviewer dispatch example)
 
-- [ ] **Step 1: 削除候補 agent を再確認**
+- [ ] **Step 1: Reconfirm deletion candidate agents**
 
 ```bash
-# Task 2.1 結果を再 grep で再現
+# Reproduce Task 2.1 results via grep
 ```
 
-- [ ] **Step 2: ファイル削除**
+- [ ] **Step 2: Delete files**
 
 ```bash
 git rm .claude/agents/<unused-agent>.md
 ```
 
-- [ ] **Step 3: 参照修正**
+- [ ] **Step 3: Update references**
 
 ```bash
-# CLAUDE.md / AGENTS.md / 他 docs で削除 agent 名が残らないか
+# Ensure deleted agent names do not remain in CLAUDE.md / AGENTS.md / other docs
 for name in <deleted-agents>; do
   grep -rn "$name" .claude/ docs/ CLAUDE.md AGENTS.md 2>/dev/null | grep -v "^\.claude/agents/$name\.md"
 done
 ```
 
-Expected: 出力ゼロ。残ってれば該当 file を Edit して削除。
+Expected: no output. If any remain, edit the file to remove them.
 
 - [ ] **Step 4: bun run validate**
 
-Expected: 成功。
+Expected: success.
 
 - [ ] **Step 5: Commit**
 
 Commit message:
 
 ```
-refactor(agents): 利用実績ゼロ agent N 件を削除 + 参照修正
+refactor(agents): delete N zero-usage agents + update references
 
-CLAUDE.md / docs に subagent_type で参照されていない agent を削除。
-CLAUDE.md「自動ロード」節 + reviewer dispatch 例も同 commit で更新。
+Delete agents not referenced by subagent_type in CLAUDE.md / docs.
+Update CLAUDE.md "Auto-load" section + reviewer dispatch example in the same commit.
 
-削除対象: <agent-name-list>
+Deletion targets: <agent-name-list>
 
 C5c Task 2.3
 ```
 
-### Task 2.4: subagent-dispatch-template skill 新設 + ADR 0025 + CLAUDE.md 短縮
+### Task 2.4: Add subagent-dispatch-template skill + ADR 0025 + shorten CLAUDE.md
 
 **Files:**
 
 - Create: `.claude/skills/subagent-dispatch-template/SKILL.md`
 - Create: `docs/architecture/decisions/0025-subagent-dispatch-template-ssot.md`
-- Modify: `CLAUDE.md` (「Subagent 規律」節短縮)
-- Modify: `docs/architecture/decisions/README.md` (0025 entry 追加)
+- Modify: `CLAUDE.md` (shorten "Subagent discipline" section)
+- Modify: `docs/architecture/decisions/README.md` (add 0025 entry)
 
-- [ ] **Step 1: ADR 採番再確認**
+- [ ] **Step 1: Reconfirm ADR numbering**
 
 ```bash
 ls docs/architecture/decisions/00*.md | tail -1
 git worktree list
 ```
 
-Expected: 最新 0024、並走 worktree なし → 0025 確定。
+Expected: latest is 0024, no parallel worktrees → confirm 0025.
 
-- [ ] **Step 2: subagent-dispatch-template/SKILL.md 作成**
+- [ ] **Step 2: Create subagent-dispatch-template/SKILL.md**
 
 ```yaml
 ---
 name: subagent-dispatch-template
-description: subagent-driven-development や Agent tool で implementer / reviewer subagent を dispatch する際の prompt template SSoT。git 全面禁止 / import alias 3 系統 / plan deviation policy / 完了報告フォーマットを規律として強制する。
-when_to_use: subagent-driven-development skill 実行時、または Agent tool で implementer / reviewer を dispatch する直前に参照。
+description: SSoT prompt template for dispatching implementer/reviewer subagents via subagent-driven-development or the Agent tool. Enforces no git usage, three import alias families, plan deviation policy, and completion report format as discipline.
+when_to_use: Use when running the subagent-driven-development skill, or right before dispatching implementer/reviewer subagents via the Agent tool.
 ---
 # Subagent Dispatch Template
 
-## Implementer prompt 必須項目
+## Required implementer prompt items
 
-(本文は CLAUDE.md「Subagent 規律」節から移植)
+(Body is migrated from the CLAUDE.md "Subagent discipline" section)
 ...
 ```
 
-- [ ] **Step 3: ADR 0025 作成**
+- [ ] **Step 3: Create ADR 0025**
 
 ```markdown
-# 0025 — Subagent dispatch template SSoT を skill 化
+# 0025 — Convert Subagent dispatch template SSoT into a skill
 
 - Status: Accepted
 - Date: 2026-04-27
@@ -590,33 +590,33 @@ when_to_use: subagent-driven-development skill 実行時、または Agent tool 
 
 ## Context
 
-CLAUDE.md「Subagent 規律」節に dispatch prompt template (git 全面禁止 / import
-alias / plan deviation policy / 完了報告フォーマット) が散在しており、新規
-plan 作成時に毎回 controller が手動で複製していた。
+The CLAUDE.md "Subagent discipline" section scattered the dispatch prompt template
+(no git, import alias families, plan deviation policy, completion report format), and
+the controller manually copied it each time a new plan was created.
 
 ## Decision
 
-`subagent-dispatch-template` skill を新設し、CLAUDE.md からは「→ skill 参照」
-の 1 行で短縮する。Skill 本体に dispatch prompt の SSoT を集約。
+Create the `subagent-dispatch-template` skill and shorten CLAUDE.md to a single
+"→ see skill" line. Consolidate the dispatch prompt SSoT in the skill itself.
 
 ## Consequences
 
-- Plan 作成時の dispatch prompt は skill content を直接 invoke / 参照
-- CLAUDE.md「Subagent 規律」節は規律 list (git 禁止理由 / 検証 3 段階等) のみ残す
-- 規律変更は skill 1 箇所更新で完結
+- For plan creation, dispatch prompts directly invoke/reference the skill content
+- CLAUDE.md "Subagent discipline" section keeps only the discipline list (git prohibition reason, 3-step verification, etc.)
+- Discipline changes are completed by updating a single skill
 ```
 
-- [ ] **Step 4: CLAUDE.md 短縮**
+- [ ] **Step 4: Shorten CLAUDE.md**
 
-「Subagent 規律」節の dispatch prompt template 部分を以下に置換:
+Replace the dispatch prompt template portion of the "Subagent discipline" section with:
 
 ```markdown
-- **Implementer dispatch prompt の SSoT** — `.claude/skills/subagent-dispatch-template/SKILL.md` 参照。git 全面禁止 / import alias 3 系統 / plan deviation policy / 完了報告フォーマットを skill 1 箇所で管理 (ADR 0025)
+- **SSoT for implementer dispatch prompt** — see `.claude/skills/subagent-dispatch-template/SKILL.md`. Manage no git usage, three import alias families, plan deviation policy, and completion report format in one skill (ADR 0025).
 ```
 
-規律 list (検証 3 段階 / sonnet 以上 / parallel 後の 3 段検証 等) は残す。
+Keep the discipline list (3-step verification / sonnet+ / 3-step verification after parallel, etc.).
 
-- [ ] **Step 5: ADR README に 0025 entry 追加**
+- [ ] **Step 5: Add 0025 entry to ADR README**
 
 ```markdown
 | 0025 | [Subagent dispatch template SSoT](0025-subagent-dispatch-template-ssot.md) | Accepted | 2026-04-27 |
@@ -629,41 +629,41 @@ bun run validate
 node scripts/verify-policy-docs.mjs
 ```
 
-Expected: 両方成功。
+Expected: both succeed.
 
 - [ ] **Step 7: Commit**
 
 Commit message:
 
 ```
-feat(skills): subagent-dispatch-template skill 新設 + ADR 0025
+feat(skills): add subagent-dispatch-template skill + ADR 0025
 
-CLAUDE.md「Subagent 規律」節に散在していた dispatch prompt template を
-skill として SSoT 化。CLAUDE.md からは「→ skill 参照」1 行で短縮。
-ADR 0025 で SSoT 移管を記録。
+Consolidate the dispatch prompt template scattered in the CLAUDE.md "Subagent discipline"
+section into a skill SSoT. Shorten CLAUDE.md to a single "→ see skill" line.
+Record the SSoT move in ADR 0025.
 
 C5c Task 2.4
 ```
 
-### Phase 2 完了 reviewer
+### Phase 2 completion reviewer
 
 - [ ] **Reviewer dispatch (combined)**
 
-Prompt: Phase 1 reviewer template の Phase 2 版。spec §3.2 / §4.1 C5c を check。
+Prompt: Phase 2 version of the Phase 1 reviewer template. Check spec §3.2 / §4.1 C5c.
 
 ---
 
 ## Phase 3: C5a — Skills new fields + responsibility merge (5 commits)
 
-**目的:** Skills に公式新フィールドを戦略的適用、責務重複解消、命名規則統一。
+**Purpose:** Strategically apply official new fields to skills, resolve overlapping responsibilities, and unify naming conventions.
 
-**dispatch 単位:** 1 implementer (sonnet) で Task 3.1〜3.5 を順次実施。
+**Dispatch unit:** One implementer (sonnet) runs Tasks 3.1–3.5 sequentially.
 
 ### Task 3.1: Skill duplication + naming investigation (read-only)
 
 **Files:** read-only.
 
-- [ ] **Step 1: 全 skill の frontmatter 取得**
+- [ ] **Step 1: Collect frontmatter for all skills**
 
 ```bash
 for f in .claude/skills/*/SKILL.md; do
@@ -677,107 +677,107 @@ for f in .claude/skills/*/SKILL.md; do
 done
 ```
 
-Expected: 各 skill のフィールド適用状態。description が 1,536 char 超過 (truncate されてしまう) skill は要短縮。
+Expected: per-skill field adoption status. Skills with descriptions over 1,536 chars (truncated) must be shortened.
 
-- [ ] **Step 2: 命名 prefix 分析**
+- [ ] **Step 2: Analyze naming prefixes**
 
 ```bash
 ls .claude/skills/ | awk -F- '{print $1}' | sort | uniq -c | sort -rn
 ```
 
-Expected: prefix 分布 (`add-` 2, `create-` 3, `audit-` 4, `cloud-` 1, `google-` 1, ... 等)。`*-debug` 群と `audit-*` 群が混在 prefix なら統一対象。
+Expected: prefix distribution (`add-` 2, `create-` 3, `audit-` 4, `cloud-` 1, `google-` 1, etc.). If `*-debug` and `audit-*` are mixed, unify prefixes.
 
-- [ ] **Step 3: 責務重複候補の精査**
+- [ ] **Step 3: Evaluate overlap candidates**
 
 ```bash
-# add-prisma-enum と add-settings-field の本文比較
+# Compare contents of add-prisma-enum and add-settings-field
 diff <(cat .claude/skills/add-prisma-enum/SKILL.md) <(cat .claude/skills/add-settings-field/SKILL.md)
 
-# lexical-* 3 skill の本文比較
+# Compare contents of the three lexical-* skills
 wc -l .claude/skills/lexical-{node,plugin,toolbar}/SKILL.md
 ```
 
-Expected: 共通する scaffolding 手順、または明確に独立した手順、を判定。
+Expected: determine whether scaffolding steps are shared or clearly independent.
 
-- [ ] **Step 4: lexical-\* 統合可否の 3 択判定**
+- [ ] **Step 4: 3-option decision on lexical-\* consolidation**
 
-候補:
+Options:
 
-- (a) **merge**: 1 skill `lexical-add` に統合、内部で type 引数 (node / plugin / toolbar) で分岐
-- (b) **階層化**: barrel pattern で `lexical/` dir 配下に `node.md` / `plugin.md` / `toolbar.md` + 親 `SKILL.md` でルーティング
-- (c) **現状維持**: 独立した責務として保持
+- (a) **merge**: consolidate into one `lexical-add` skill, branching by type argument (node / plugin / toolbar)
+- (b) **hierarchical**: apply barrel pattern under `lexical/` dir with `node.md` / `plugin.md` / `toolbar.md` + parent `SKILL.md` routing
+- (c) **keep as-is**: keep as independent responsibilities
 
-判定基準:
+Decision criteria:
 
-- 共通 scaffolding が 70%+ → (a) merge
-- 共通 30-70% → (b) 階層化
-- 共通 30%- → (c) 現状維持
+- Shared scaffolding 70%+ → (a) merge
+- Shared 30–70% → (b) hierarchical
+- Shared <30% → (c) keep as-is
 
-- [ ] **Step 5: rename mapping 作成**
+- [ ] **Step 5: Create rename mapping**
 
 ```
-*-debug 群 (cloud-run-debug / google-calendar-debug / instagram-debug / stripe-debug / turbopack-hmr) → debug-* prefix
+*-debug group (cloud-run-debug / google-calendar-debug / instagram-debug / stripe-debug / turbopack-hmr) → debug-* prefix
   - cloud-run-debug → debug-cloud-run
   - google-calendar-debug → debug-google-calendar
   - instagram-debug → debug-instagram
   - stripe-debug → debug-stripe
-  - turbopack-hmr → debug-turbopack (HMR は debug 文脈)
+  - turbopack-hmr → debug-turbopack (HMR is a debug context)
 
-audit-* 群 (cache-audit / lexical-audit / seed-audit / ssot-audit / use-server-audit / memory-staleness-audit / adr-drift-audit / integration-audit / audit-settings-sections) は既に audit prefix → 命名一貫性確認のみ
+audit-* group (cache-audit / lexical-audit / seed-audit / ssot-audit / use-server-audit / memory-staleness-audit / adr-drift-audit / integration-audit / audit-settings-sections) already uses the audit prefix → only check naming consistency
 ```
 
-- [ ] **Step 6: 結果を /tmp/c5a-investigation.md にまとめて controller に報告**
+- [ ] **Step 6: Summarize results in /tmp/c5a-investigation.md and report to controller**
 
 Format:
 
 ```
-## 新フィールド適用候補
-### when_to_use 追加
-- <skill>: <理由>
+## New field adoption candidates
+### when_to_use additions
+- <skill>: <reason>
 
-### argument-hint 追加
-- <skill>: <hint 文字列>
+### argument-hint additions
+- <skill>: <hint string>
 
-### disable-model-invocation: true 追加
-- <skill>: <理由>
+### disable-model-invocation: true additions
+- <skill>: <reason>
 
-## 責務重複統合
+## Responsibility overlap consolidation
 ### add-prisma-enum + add-settings-field
-- <merge / 共通化 / 現状維持> + 理由
+- <merge / shared reference / keep as-is> + reason
 
 ### lexical-* (3 skills)
-- <a/b/c> + 理由
+- <a/b/c> + reason
 
 ## rename mapping
-- <old> → <new>: <理由>
+- <old> → <new>: <reason>
 
-## description 1,536 char 超過
-- <skill>: <文字数>
+## description over 1,536 chars
+- <skill>: <character count>
 ```
 
-- [ ] **Step 7: controller 承認 → Task 3.2 へ (commit なし)**
+- [ ] **Step 7: Controller approval → Task 3.2 (no commit)**
 
-### Task 3.2: 新フィールド戦略的適用
+### Task 3.2: Strategic application of new fields
 
 **Files:**
 
-- Modify: `.claude/skills/<skill>/SKILL.md` (Task 3.1 結果に従う複数 skill)
+- Modify: `.claude/skills/<skill>/SKILL.md` (multiple skills based on Task 3.1 results)
 
-- [ ] **Step 1: when_to_use 追加対象 skill に適用**
+- [ ] **Step 1: Apply to skills targeted for when_to_use**
 
-例:
+Example:
 
 ```yaml
 ---
 name: prisma-migration
 description: ...
-when_to_use: schema.prisma 編集後、bunx --bun prisma migrate dev で migration 作成する直前。db-migration-reviewer agent の前段として使う。
+when_to_use: After editing schema.prisma, right before running bunx --bun prisma migrate dev to create a migration. Use as a precursor to the db-migration-reviewer agent.
 ---
 ```
 
-- [ ] **Step 2: argument-hint 追加対象 skill に適用**
+- [ ] **Step 2: Apply to skills targeted for argument-hint**
 
-例:
+Example:
 
 ```yaml
 ---
@@ -787,9 +787,9 @@ argument-hint: <action-file-path>
 ---
 ```
 
-- [ ] **Step 3: disable-model-invocation: true 適用**
+- [ ] **Step 3: Apply disable-model-invocation: true**
 
-人間 trigger 限定 skill (debug-\* 系 / turbopack-hmr 等) に追加:
+Add to human-trigger-only skills (debug-\* / turbopack-hmr, etc.):
 
 ```yaml
 ---
@@ -799,89 +799,89 @@ disable-model-invocation: true
 ---
 ```
 
-理由: これらは開発者が状況判断して呼ぶ skill であり、autoload で誤起動するとデバッグ context を汚染する。
+Reason: these skills are invoked based on developer judgment, and autoload misfires would contaminate debug context.
 
-- [ ] **Step 4: description 1,536 char 超過 skill を短縮**
+- [ ] **Step 4: Shorten skills with descriptions over 1,536 chars**
 
-該当 skill (Task 3.1 Step 1 結果) の description を 1,536 char 以内に圧縮。詳細は本文に移動。
+Compress the description of the target skills (from Task 3.1 Step 1 results) to within 1,536 chars. Move details to the body.
 
 - [ ] **Step 5: bun run validate**
 
-Expected: 成功。
+Expected: success.
 
 - [ ] **Step 6: Commit**
 
 Commit message:
 
 ```
-feat(skills): when_to_use / argument-hint / disable-model-invocation を戦略的適用
+feat(skills): strategically apply when_to_use / argument-hint / disable-model-invocation
 
-- when_to_use: triggering precision 不足 N 件に追加
-- argument-hint: 引数取る skill N 件に追加
-- disable-model-invocation: 人間 trigger 限定 skill N 件に true 設定
-- description 1,536 char 超過 N 件を短縮
+- when_to_use: add to N skills with insufficient triggering precision
+- argument-hint: add to N skills that take arguments
+- disable-model-invocation: set true on N human-trigger-only skills
+- description: shorten N skills over 1,536 chars
 
 C5a Task 3.2
 ```
 
-### Task 3.3: lexical-\* 統合可否の決定 + 適用
+### Task 3.3: Decide + apply lexical-\* consolidation
 
-**Files:** Task 3.1 Step 4 の決定に従う。
+**Files:** Follow the decision from Task 3.1 Step 4.
 
-- [ ] **Step 1: 決定された案 (a/b/c) を適用**
+- [ ] **Step 1: Apply the chosen option (a/b/c)**
 
-(a) merge の場合:
+(a) If merge:
 
 ```bash
 mkdir .claude/skills/lexical-add
-# lexical-{node,plugin,toolbar} の content を統合
-# 旧 dir 3 件を削除
+# Merge content from lexical-{node,plugin,toolbar}
+# Delete the three old dirs
 git rm -r .claude/skills/lexical-{node,plugin,toolbar}/
 ```
 
-(b) 階層化の場合: barrel-pattern 適用 (rules barrel-index と同手法)
+(b) If hierarchical: apply barrel-pattern (same as rules barrel-index)
 
-(c) 現状維持の場合: Task 3.3 を skip (Task 3.4 へ)
+(c) If keep as-is: skip Task 3.3 (move to Task 3.4)
 
-- [ ] **Step 2: 参照修正**
+- [ ] **Step 2: Update references**
 
 ```bash
 grep -rn "lexical-node\|lexical-plugin\|lexical-toolbar" .claude/ docs/ CLAUDE.md AGENTS.md
 ```
 
-Expected: 旧 skill 名残存ゼロ (Task 3.5 で再 sweep するが先行修正)。
+Expected: no old skill names remain (Task 3.5 will re-sweep, but this is an early fix).
 
-- [ ] **Step 3: Commit (該当案を適用した場合のみ)**
+- [ ] **Step 3: Commit (only if the chosen option is applied)**
 
-Commit message例 ((a) の場合):
+Commit message example (if (a)):
 
 ```
-refactor(skills): lexical-{node,plugin,toolbar} を lexical-add に統合
+refactor(skills): merge lexical-{node,plugin,toolbar} into lexical-add
 
-3 skill の共通 scaffolding を 1 skill にマージ、内部で type 引数 (node /
-plugin / toolbar) で分岐。責務重複解消。命名規則 add-* prefix に統一。
+Merge shared scaffolding from three skills into one, branching by type argument (node /
+plugin / toolbar). Resolve overlap. Unify naming to add-* prefix.
 
 C5a Task 3.3
 ```
 
-### Task 3.4: rename: _-debug → debug-_ (audit-\* も統一確認)
+### Task 3.4: rename: _-debug → debug-_ (also confirm audit-\*)
 
 **Files:**
 
-- Rename (git mv): `.claude/skills/cloud-run-debug` → `.claude/skills/debug-cloud-run`、他 4 件
-- Modify: 各 SKILL.md の `name:` フィールド
+- Rename (git mv): `.claude/skills/cloud-run-debug` → `.claude/skills/debug-cloud-run`, plus 4 others
+- Modify: `name:` field in each SKILL.md
 
-- [ ] **Step 1: dir + name フィールド rename**
+- [ ] **Step 1: Rename dir + name field**
 
 ```bash
 git mv .claude/skills/cloud-run-debug .claude/skills/debug-cloud-run
-# SKILL.md の name: を更新
-# 5 skill 全て同様に
+# Update name: in SKILL.md
+# Apply to all 5 skills
 ```
 
-- [ ] **Step 2: audit-\* 群の命名一貫性確認**
+- [ ] **Step 2: Check naming consistency for audit-\* group**
 
-`audit-settings-sections` のみ `audit-` prefix 単発、他は `cache-audit` / `lexical-audit` 等 suffix 形式。これを統一する場合:
+Only `audit-settings-sections` uses the `audit-` prefix, while others use suffix forms like `cache-audit` / `lexical-audit`. If unifying:
 
 ```bash
 git mv .claude/skills/cache-audit .claude/skills/audit-cache
@@ -892,14 +892,14 @@ git mv .claude/skills/use-server-audit .claude/skills/audit-use-server
 git mv .claude/skills/memory-staleness-audit .claude/skills/audit-memory-staleness
 git mv .claude/skills/adr-drift-audit .claude/skills/audit-adr-drift
 git mv .claude/skills/integration-audit .claude/skills/audit-integration
-# audit-settings-sections は既に prefix なので変更不要
+# audit-settings-sections already uses prefix, no change needed
 ```
 
-決定: `audit-*` prefix 統一を採用 (ADR 0026 で formalize)。
+Decision: adopt `audit-*` prefix unification (formalize in ADR 0026).
 
-- [ ] **Step 3: name フィールド更新**
+- [ ] **Step 3: Update name field**
 
-各 SKILL.md の `name:` を新 dir 名と一致させる。
+Match each SKILL.md `name:` to the new dir name.
 
 - [ ] **Step 4: bun run validate**
 
@@ -908,25 +908,25 @@ git mv .claude/skills/integration-audit .claude/skills/audit-integration
 Commit message:
 
 ```
-refactor(skills): naming 規則統一 — *-debug → debug-*、*-audit → audit-*
+refactor(skills): unify naming rules — *-debug → debug-*, *-audit → audit-*
 
-ADR 0026 (skill naming convention) に従い prefix 統一:
-- 5 debug skills: cloud-run-debug 等 → debug-* prefix
-- 8 audit skills: cache-audit 等 → audit-* prefix
+Unify prefixes per ADR 0026 (skill naming convention):
+- 5 debug skills: cloud-run-debug, etc. → debug-* prefix
+- 8 audit skills: cache-audit, etc. → audit-* prefix
 
 C5a Task 3.4
 ```
 
-### Task 3.5: ADR 0026 + add-prisma-enum/add-settings-field 共通化 + 全参照修正
+### Task 3.5: ADR 0026 + consolidate add-prisma-enum/add-settings-field + update all references
 
 **Files:**
 
 - Create: `docs/architecture/decisions/0026-skill-naming-convention.md`
 - Modify: `docs/architecture/decisions/README.md`
 - Modify: `add-prisma-enum/SKILL.md` + `add-settings-field/SKILL.md` (or merge)
-- Modify: 全参照箇所 (CLAUDE.md / docs / 他 skill / agents)
+- Modify: all reference locations (CLAUDE.md / docs / other skills / agents)
 
-- [ ] **Step 1: ADR 0026 作成**
+- [ ] **Step 1: Create ADR 0026**
 
 ```markdown
 # 0026 — Skill naming convention
@@ -938,52 +938,52 @@ C5a Task 3.4
 
 Skill naming convention:
 
-- `add-*`: 新規リソース追加 (DB enum / settings field 等)
-- `create-*`: scaffolding (admin page / page content / server action 等)
-- `audit-*`: 監査・検出 (cache / seed / ssot / use-server / memory-staleness / etc)
-- `debug-*`: 環境/サービス診断 (cloud-run / google-calendar / instagram / stripe / turbopack)
-- `<topic>` (no prefix): 機能・カテゴリ skill (frontend-design / parallax-section / ui-ux-pro-max / etc)
+- `add-*`: new resource additions (DB enum / settings field, etc.)
+- `create-*`: scaffolding (admin page / page content / server action, etc.)
+- `audit-*`: audit/detection (cache / seed / ssot / use-server / memory-staleness / etc.)
+- `debug-*`: environment/service diagnostics (cloud-run / google-calendar / instagram / stripe / turbopack)
+- `<topic>` (no prefix): feature/category skills (frontend-design / parallax-section / ui-ux-pro-max / etc.)
 
 ## Consequences
 
-- 旧 _-debug / _-audit / 単発 audit-\* skill は新 prefix に rename (commit `<rename-sha>`)
-- 新規 skill 作成時は本規則に従う
-- 例外は ADR で正当化が必要
+- Old _-debug / _-audit / single audit-\* skills are renamed to the new prefix (commit `<rename-sha>`)
+- New skills must follow this rule
+- Exceptions require ADR justification
 ```
 
-- [ ] **Step 2: ADR README に 0026 entry 追加**
+- [ ] **Step 2: Add 0026 entry to ADR README**
 
-- [ ] **Step 3: add-prisma-enum / add-settings-field 共通化判定の適用**
+- [ ] **Step 3: Apply consolidation decision for add-prisma-enum / add-settings-field**
 
-Task 3.1 Step 3 の結果に従う:
+Follow results from Task 3.1 Step 3:
 
-- 高重複 (70%+) → merge
-- 中重複 (30-70%) → 共通 reference file 抽出 (`reference/scaffold-common.md`)
-- 低重複 (-30%) → 現状維持
+- High overlap (70%+) → merge
+- Medium overlap (30–70%) → extract shared reference file (`reference/scaffold-common.md`)
+- Low overlap (<30%) → keep as-is
 
-- [ ] **Step 4: 全参照修正 (Phase 完了 sweep)**
+- [ ] **Step 4: Update all references (phase-complete sweep)**
 
 ```bash
-# 旧 skill 名が残ってないか確認
+# Check that no old skill names remain
 for old in cloud-run-debug google-calendar-debug instagram-debug stripe-debug turbopack-hmr cache-audit lexical-audit seed-audit ssot-audit use-server-audit memory-staleness-audit adr-drift-audit integration-audit; do
   refs=$(grep -rn "$old" .claude/ docs/ CLAUDE.md AGENTS.md 2>/dev/null | grep -v "$old.md:" | wc -l)
   [ "$refs" -gt 0 ] && echo "[FAIL] $old still has $refs refs"
 done
 ```
 
-Expected: 出力ゼロ。残ってれば該当 file を Edit。
+Expected: no output. If any remain, edit the file to remove them.
 
-特に以下の SSoT は手動確認必須 (grep で hits があった場合は同 commit 内で update):
+The following SSoT items require manual checks (if grep hits, update in the same commit):
 
-- `CLAUDE.md`「自動ロード」節の skill name 列挙 / `## ハードルール` 内の skill 言及
-- `AGENTS.md` の対応セクション (CLAUDE.md と byte-identical)
-- `docs/architecture/decisions/README.md` 内の skill 参照
-- 他 skill (`SKILL.md` body 内の cross-reference)
-- 他 agent (`.claude/agents/*.md` body 内 dispatch 例)
+- `CLAUDE.md` "Auto-load" section skill name lists / skill mentions in `## Hard Rules`
+- `AGENTS.md` corresponding section (byte-identical to CLAUDE.md)
+- skill references in `docs/architecture/decisions/README.md`
+- other skills (cross-references in SKILL.md body)
+- other agents (dispatch examples in `.claude/agents/*.md` body)
 
-- [ ] **Step 5: Live activation テスト**
+- [ ] **Step 5: Live activation test**
 
-新 skill 名 1 件 (例 `/audit-cache`) を起動して機能確認 (controller 手動)。
+Activate one new skill name (e.g., `/audit-cache`) and confirm behavior (controller manual).
 
 - [ ] **Step 6: bun run validate + verify-policy-docs**
 
@@ -992,47 +992,47 @@ Expected: 出力ゼロ。残ってれば該当 file を Edit。
 Commit message:
 
 ```
-docs(adr): 0026 skill naming convention + add-* 共通化 + 全参照修正
+docs(adr): 0026 skill naming convention + add-* consolidation + update all references
 
-ADR 0026 で skill naming convention (add-* / create-* / audit-* / debug-*)
-を formalize。add-prisma-enum / add-settings-field の共通 scaffolding を
-<merge / reference 化 / 現状維持>。CLAUDE.md / docs / 他 skill から旧 skill
-名参照を一斉修正。
+Formalize the skill naming convention (add-* / create-* / audit-* / debug-*) in ADR 0026.
+Consolidate shared scaffolding between add-prisma-enum / add-settings-field as
+<merge / reference / keep as-is>. Update all old skill name references across
+CLAUDE.md / docs / other skills.
 
 C5a Task 3.5
 ```
 
-### Phase 3 完了 reviewer
+### Phase 3 completion reviewer
 
 - [ ] **Reviewer dispatch (combined)**
 
-Prompt: Phase 1 reviewer template の Phase 3 版。spec §3.3 / §4.1 C5a を check。
+Prompt: Phase 3 version of the Phase 1 reviewer template. Check spec §3.3 / §4.1 C5a.
 
 ---
 
 ## Phase 4: C5d — Docs audit + cleanup (6 commits)
 
-**目的:** docs/ 整合性、archive 判定、dangling link 削除、version drift 修正。
+**Purpose:** docs/ consistency, archive decisions, dangling link removal, version drift fixes.
 
-**dispatch 単位:** 1 implementer (sonnet) で Task 4.1〜4.6 を順次実施。
+**Dispatch unit:** One implementer (sonnet) runs Tasks 4.1–4.6 sequentially.
 
-### Task 4.1: ADR README index 同期 audit + 修正
+### Task 4.1: ADR README index sync audit + fixes
 
 **Files:**
 
 - Modify: `docs/architecture/decisions/README.md`
 
-- [ ] **Step 1: ADR file 数と README index 行数を比較**
+- [ ] **Step 1: Compare ADR file count with README index row count**
 
 ```bash
 file_count=$(ls docs/architecture/decisions/00*.md | wc -l)
 index_count=$(grep -cE "^\| \[00" docs/architecture/decisions/README.md)
-echo "files=$file_count, index=$index_count, expected_diff=1 (template 含む)"
+echo "files=$file_count, index=$index_count, expected_diff=1 (includes template)"
 ```
 
-Expected: `file_count = index_count` (template が別行扱いなら +1)。
+Expected: `file_count = index_count` (if template counts separately, +1).
 
-- [ ] **Step 2: 各 ADR が README に index されているか cross-grep**
+- [ ] **Step 2: Cross-grep to ensure each ADR is indexed in README**
 
 ```bash
 for f in docs/architecture/decisions/00*.md; do
@@ -1042,73 +1042,73 @@ for f in docs/architecture/decisions/00*.md; do
 done
 ```
 
-Expected: 出力ゼロ。出力あれば README に追加。
+Expected: no output. If output appears, add to README.
 
-- [ ] **Step 3: index 順序 (採番順) 確認 + 必要なら整列**
+- [ ] **Step 3: Check index order (by number) and reorder if needed**
 
 - [ ] **Step 4: Commit**
 
 Commit message:
 
 ```
-docs(adr): README index 同期 — 漏れ N 件追加 + 採番順整列
+docs(adr): sync README index — add N missing entries + reorder by number
 
-ADR file N 件のうち README index 漏れ M 件を追加。表行を採番順に整列。
+Add M missing README index rows out of N ADR files. Reorder rows by number.
 
 C5d Task 4.1
 ```
 
-### Task 4.2: Design docs dangling link 修正
+### Task 4.2: Fix dangling links in design docs
 
 **Files:**
 
-- Modify: `docs/architecture/**/*.md` (dangling link を持つ file)
+- Modify: `docs/architecture/**/*.md` (files with dangling links)
 
-- [ ] **Step 1: link 全抽出**
+- [ ] **Step 1: Extract all links**
 
 ```bash
 grep -rohE "\]\([^)]+\.md[^)]*\)" docs/architecture/ | sort -u | sed 's/^.\(.*\))$/\1/' > /tmp/c5d-links.txt
 wc -l /tmp/c5d-links.txt
 ```
 
-- [ ] **Step 2: 各 link 先の物理実在確認**
+- [ ] **Step 2: Verify each link target exists on disk**
 
 ```bash
 while read link; do
-  # 相対 link を絶対 path に変換 (簡易、context 必要なら手動)
+  # Convert relative links to absolute paths (simple; handle context manually if needed)
   if [ ! -f "docs/architecture/$link" ] && [ ! -f "$link" ]; then
     echo "[DANGLING] $link"
   fi
 done < /tmp/c5d-links.txt
 ```
 
-Expected: dangling link リスト。
+Expected: list of dangling links.
 
-- [ ] **Step 3: 各 dangling link を修正 (削除 or 正しい path に置換)**
+- [ ] **Step 3: Fix each dangling link (delete or replace with correct path)**
 
-判定基準:
+Criteria:
 
-- link 先が削除済み → link を削除 (該当文も削除 or 置換)
-- link 先が rename → 新 path に修正
+- If link target was deleted → remove the link (delete or replace the sentence)
+- If link target was renamed → update to the new path
 
 - [ ] **Step 4: Commit**
 
 Commit message:
 
 ```
-docs(architecture): dangling link N 件を修正
+docs(architecture): fix N dangling links
 
-design docs 内の link を物理実在確認、削除済み file への link N 件を削除、
-rename 済み file への link M 件を新 path に修正。
+Verify design-doc links on disk, remove N links to deleted files, and update M links
+to renamed files with the new paths.
 
 C5d Task 4.2
 ```
 
-### Task 4.3: Plan / spec archive 判定 (read-only investigation)
+### Task 4.3: Plan/spec archive determination (read-only investigation)
 
 **Files:** read-only.
 
-- [ ] **Step 1: 全 plan / spec の commit SHA 抽出**
+- [ ] **Step 1: Extract commit SHAs from all plans/specs**
 
 ```bash
 for f in docs/superpowers/plans/*.md docs/superpowers/specs/*.md; do
@@ -1117,7 +1117,7 @@ for f in docs/superpowers/plans/*.md docs/superpowers/specs/*.md; do
 done > /tmp/c5d-plan-shas.txt
 ```
 
-- [ ] **Step 2: 各 SHA が main で実在するか確認**
+- [ ] **Step 2: Confirm each SHA exists on main**
 
 ```bash
 while IFS=: read file shas; do
@@ -1127,63 +1127,63 @@ while IFS=: read file shas; do
 done < /tmp/c5d-plan-shas.txt
 ```
 
-- [ ] **Step 3: 各 plan の実装状態判定**
+- [ ] **Step 3: Determine implementation status for each plan**
 
-判定基準:
+Criteria:
 
-- すべての plan 内 SHA が main 実在 + plan 内最終 task が完了済み (commit log と照合) → archive 候補
-- 一部 SHA missing or 未実装 → 現状維持
+- All SHAs in the plan exist on main + final task completed (match commit log) → archive candidate
+- Some SHAs missing or unimplemented → keep as-is
 
-- [ ] **Step 4: 結果を /tmp/c5d-archive-list.md にまとめて controller に報告**
+- [ ] **Step 4: Summarize results in /tmp/c5d-archive-list.md and report to controller**
 
 Format:
 
 ```
-## archive 候補 plan
-- <path>: 実装完了 (最終 SHA <sha>)
+## archive candidate plans
+- <path>: implementation complete (final SHA <sha>)
 
-## archive 候補 spec
-- <path>: 該当 plan 完了
+## archive candidate specs
+- <path>: related plan complete
 
-## 現状維持
-- <path>: 理由
+## keep as-is
+- <path>: reason
 ```
 
-- [ ] **Step 5: controller 承認 → Task 4.4 へ (commit なし)**
+- [ ] **Step 5: Controller approval → Task 4.4 (no commit)**
 
-### Task 4.4: Plan / spec を .archive/2026/ に移動 + README 更新
+### Task 4.4: Move plans/specs to .archive/2026/ + update README
 
 **Files:**
 
-- Move (git mv): Task 4.3 で archive 候補と判定された plan / spec
-- Create: `docs/superpowers/plans/.archive/2026/` + `docs/superpowers/specs/.archive/2026/` (なければ)
+- Move (git mv): plans/specs marked as archive candidates in Task 4.3
+- Create: `docs/superpowers/plans/.archive/2026/` + `docs/superpowers/specs/.archive/2026/` (if missing)
 - Modify: `docs/superpowers/plans/README.md` (or `.archive/README.md`)
 
-- [ ] **Step 1: archive dir 作成**
+- [ ] **Step 1: Create archive dir**
 
 ```bash
 mkdir -p docs/superpowers/plans/.archive/2026
 mkdir -p docs/superpowers/specs/.archive/2026
 ```
 
-- [ ] **Step 2: 移動**
+- [ ] **Step 2: Move**
 
 ```bash
 for plan in <archive-list>; do
   git mv "$plan" "docs/superpowers/plans/.archive/2026/$(basename $plan)"
 done
-# spec も同様
+# same for specs
 ```
 
-- [ ] **Step 3: archive 移動した plan / spec に Snapshot 注記追加**
+- [ ] **Step 3: Add Snapshot note to archived plans/specs**
 
-各 archive 済み file 冒頭に:
+At the top of each archived file:
 
 ```markdown
 > **Snapshot: 2026-04-27** — Implementation completed, archived as historical reference.
 ```
 
-- [ ] **Step 4: README 更新 (active vs archive 分離)**
+- [ ] **Step 4: Update README (separate active vs archive)**
 
 `docs/superpowers/plans/README.md`:
 
@@ -1192,11 +1192,11 @@ done
 
 ## Active
 
-- (空 or 進行中の plan)
+- (empty or in-progress plans)
 
 ## Archive
 
-- [.archive/2026/](.archive/2026/) — 完了済み plan
+- [.archive/2026/](.archive/2026/) — completed plans
 ```
 
 - [ ] **Step 5: Commit**
@@ -1204,147 +1204,146 @@ done
 Commit message:
 
 ```
-docs(plans): 完了済み plan / spec を .archive/2026/ に移動
+docs(plans): move completed plans/specs to .archive/2026/
 
-実装完了 (commit SHA で main 実在確認済) の plan N 件 + spec M 件を archive
-dir に移動。各 file 冒頭に Snapshot 注記追加。README に active vs archive
-の分離を明記。
+Move N plans + M specs that are complete (commit SHAs verified on main) into the archive
+dir. Add Snapshot notes at each file top. Update README to explicitly separate active vs archive.
 
 C5d Task 4.4
 ```
 
-### Task 4.5: docs/guides/ + docs/reference/ version drift 修正
+### Task 4.5: Fix version drift in docs/guides/ + docs/reference/
 
 **Files:**
 
 - Modify: `docs/guides/**/*.md` + `docs/reference/**/*.md`
 
-- [ ] **Step 1: package.json から ground truth 取得**
+- [ ] **Step 1: Get ground truth from package.json**
 
 ```bash
 node -e "const p = require('./package.json'); for (const [k,v] of Object.entries(p.dependencies || {})) console.log(k, v)" | grep -E "next|react|@prisma|tailwindcss|zod|better-auth|lexical|nuqs"
 ```
 
-Expected: 各主要 lib の version。
+Expected: versions of each major library.
 
-- [ ] **Step 2: docs 内の version 表記 grep**
+- [ ] **Step 2: Grep version mentions in docs**
 
 ```bash
 grep -rnE "Next\.js [0-9]+\.[0-9]+|React [0-9]+\.[0-9]+|Prisma [0-9]+\.[0-9]+|Tailwind [0-9]+\.[0-9]+|Zod [0-9]+\.[0-9]+|Better Auth [0-9]+\.[0-9]+|Lexical [0-9]+\.[0-9]+" docs/guides/ docs/reference/ 2>/dev/null
 ```
 
-- [ ] **Step 3: drift 検出箇所を ground truth に揃える**
+- [ ] **Step 3: Align drifted entries to ground truth**
 
-例: `Prisma 7.7` → `Prisma 7.8` (package.json と一致)
+Example: `Prisma 7.7` → `Prisma 7.8` (match package.json)
 
 - [ ] **Step 4: Commit**
 
 Commit message:
 
 ```
-docs(guides): version drift 修正 — package.json と一致
+docs(guides): fix version drift — match package.json
 
-docs/guides/ + docs/reference/ 内の lib version 表記 N 箇所を package.json
-と byte-identical に揃える (Prisma X.X / Next.js X.X / etc)。
+Align N library version mentions in docs/guides/ + docs/reference/ to be byte-identical
+with package.json (Prisma X.X / Next.js X.X / etc).
 
 C5d Task 4.5
 ```
 
-### Task 4.6: 廃止済み機能の記述削除
+### Task 4.6: Remove descriptions of deprecated features
 
 **Files:**
 
 - Modify: `docs/**/*.md` + `.serena/memories/**/*.md`
 
-- [ ] **Step 1: 廃止済み feature 名 grep**
+- [ ] **Step 1: Grep deprecated feature names**
 
 ```bash
 grep -rln "Supabase\|FullCalendar\|Three\.js\|three\.js\|PixiJS\|pixi" docs/ .serena/memories/ 2>/dev/null
 ```
 
-Expected: 廃止済み feature を含む file リスト。
+Expected: list of files containing deprecated features.
 
-- [ ] **Step 2: 各 file の該当記述精査**
+- [ ] **Step 2: Review relevant passages in each file**
 
-判定:
+Criteria:
 
-- 「過去使用していた」「移行済み」と明示的に履歴文脈で言及 → 残す (Snapshot 文脈)
-- 「現在使用中」「設定方法」等の現状参照 → 削除 (廃止済み)
+- Explicit historical context like "used in the past" or "migrated" → keep (Snapshot context)
+- Current-state references like "currently used" or "how to configure" → remove (deprecated)
 
-- [ ] **Step 3: 削除 / 修正**
+- [ ] **Step 3: Delete / update**
 
 - [ ] **Step 4: Commit**
 
 Commit message:
 
 ```
-docs: 廃止済み機能 (Supabase / FullCalendar / Three.js / PixiJS) の現状参照記述削除
+docs: remove current-state references to deprecated features (Supabase / FullCalendar / Three.js / PixiJS)
 
-現状使用中として記述されていた廃止済み feature を docs / serena memories から
-削除。履歴文脈の言及 (移行記録等) は Snapshot 注記付きで保持。
+Remove deprecated features described as currently used from docs / serena memories.
+Keep historical-context mentions (migration records, etc.) with Snapshot notes.
 
 C5d Task 4.6
 ```
 
-### Phase 4 完了 reviewer
+### Phase 4 completion reviewer
 
 - [ ] **Reviewer dispatch (combined)**
 
-Prompt: Phase 1 reviewer template の Phase 4 版。spec §3.4 / §4.1 C5d を check。
+Prompt: Phase 4 version of the Phase 1 reviewer template. Check spec §3.4 / §4.1 C5d.
 
 ---
 
-## 全体検証
+## Overall verification
 
 - [ ] **bun run validate && bun run build**
 
-Expected: 両方成功。
+Expected: both succeed.
 
 - [ ] **node scripts/verify-policy-docs.mjs**
 
-Expected: byte-identical 同期成功。
+Expected: byte-identical sync succeeds.
 
-- [ ] **全参照漏れ最終 sweep**
+- [ ] **Final sweep for missing references**
 
 ```bash
-# Phase 横断で旧 name が残ってないか
+# Ensure no old names remain across phases
 for old in <deleted-agents> <renamed-skills>; do
   grep -rn "$old" .claude/ docs/ CLAUDE.md AGENTS.md 2>/dev/null
 done
 ```
 
-Expected: 出力ゼロ (削除済み agent / 旧 skill 名がどこにも残らない)。
+Expected: no output (deleted agents / old skill names remain nowhere).
 
-- [ ] **Git log 確認**
+- [ ] **Check git log**
 
 ```bash
 git log --oneline | head -25
 ```
 
-Expected: 14-23 commit、phase ごとに論理単位で分離。
+Expected: 14–23 commits, separated by phase in logical units.
 
-- [ ] **handoff memory 更新 / archive**
+- [ ] **Update/archive handoff memory**
 
-`~/.claude/projects/<slug>/memory/project_clean-break-c5-handoff.md` を:
+Update `~/.claude/projects/<slug>/memory/project_clean-break-c5-handoff.md`:
 
-- 完遂した場合: archive 注記追加 (`> **Completed: 2026-04-27** — ...`)
-- 部分完遂の場合: 残 phase + 起動コマンド更新
+- If completed: add archive note (`> **Completed: 2026-04-27** — ...`)
+- If partially completed: update remaining phases + launch commands
 
-- [ ] **CLAUDE.md learning codify (revise-claude-md skill 使用)**
+- [ ] **CLAUDE.md learning codify (use revise-claude-md skill)**
 
-C5 で得た学びを CLAUDE.md に追記:
+Append learnings from C5 to CLAUDE.md:
 
-- 規模感 (4 phase / 14-23 commit) を Clean-Break Refactor の reference として
-- C5b/c/a/d の各 phase 固有の罠 (cascade ref / context budget / etc)
+- Scale (4 phases / 14–23 commits) as a Clean-Break Refactor reference
+- Phase-specific pitfalls in C5b/c/a/d (cascade ref / context budget / etc.)
 
-セッション末で `revise-claude-md` skill を呼ぶ (CLAUDE.md learning「revise-claude-md はセッション終了直前に呼ぶ」遵守)。
+At session end, invoke the `revise-claude-md` skill (per CLAUDE.md learning: "call revise-claude-md right before session end").
 
 ---
 
-## Risk + Mitigation (再掲)
+## Risk + Mitigation (recap)
 
-spec §5 を参照。Phase 跨ぎ参照修正漏れ / context 圧迫 / ADR 採番衝突 / stale 削除 silent 壊れ / skill rename invocation 壊れ の 5 件を控制。
+See spec §5. Control five risks: missed cross-phase reference fixes / context pressure / ADR numbering conflicts / silent breakage from stale deletions / broken skill rename invocations.
 
 ## Out of Scope
 
-spec §7 を参照。skill content 品質改善 / rule 文言改善 / agent 内部 prompt 改善 / design docs 新規作成 / .claude/hooks/ audit は別 plan。
+See spec §7. Skill content quality improvements / rule wording improvements / agent internal prompt improvements / new design docs / .claude/hooks/ audit are covered in another plan.

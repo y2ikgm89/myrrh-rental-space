@@ -1,11 +1,11 @@
-# 完了済み計画アーカイブ（連番形式 + 2026-02-07 以前）
+# Completed Plan Archive (Serial Format + before 2026-02-07)
 
-> このファイルは [`docs/plans/README.md`](../README.md) から分離した過去完了プランの履歴です。
-> 連番形式（`001-*` ～ `080-*`）と日付形式の 2026-02-07 以前を含みます。
-> アクティブな計画と直近完了は親 README.md を参照してください。
+> This file is the history of completed plans split from [`docs/plans/README.md`](../README.md).
+> It includes serial format (`001-*` to `080-*`) and date format entries before 2026-02-07.
+> See the parent README.md for active plans and recent completions.
 
-> **圧縮済み**: 2026-04-23 に詳細を git history に委譲。
-> 各 plan の実装詳細・変更ファイル・Step 単位の履歴は git log で確認:
+> **Compressed**: details delegated to git history on 2026-04-23.
+> For each plan's implementation details, changed files, and step-by-step history, check git log:
 >
 > ```bash
 > git log --all --diff-filter=A -- docs/plans/<plan-name>.md
@@ -15,344 +15,344 @@
 
 ---
 
-### 080 - プロジェクト最適化スコア改善 (2026-02-07) ✅
+### 080 - Project optimization score improvements (2026-02-07) ✅
 
-PWA（manifest + icons）、Web Vitals → GA4 送信（GDPR 対応）、WCAG AA コントラスト検証を実装。
+Implemented PWA (manifest + icons), Web Vitals → GA4 reporting (GDPR compliance), and WCAG AA contrast validation.
 
-### 079 - Citation/MEO 総合強化 (2026-02-06) ✅
+### 079 - Citation/MEO comprehensive enhancement (2026-02-06) ✅
 
-@graph JSON-LD パターンで LocalBusiness + WebSite 統合構造化データを実装し、NAP 一貫性・Google Maps/口コミリンク・施設属性アイコン・MEO スコア 13 項目化を実施。
+Implemented unified LocalBusiness + WebSite structured data via @graph JSON-LD, enforced NAP consistency, added Google Maps/review links, facility attribute icons, and expanded MEO score to 13 items.
 
-### 078 - 全セクション型 v3 実装 + [slug] ルート復元 (2026-02-04) ✅
+### 078 - Implement all v3 section types + restore [slug] route (2026-02-04) ✅
 
-残り 12 セクション型の公開コンポーネントを作成して SectionRenderer を全 17 type 対応に統一し、[slug] 動的ページルートを復元。
+Created public components for the remaining 12 section types, unified SectionRenderer to support all 17 types, and restored the [slug] dynamic page route.
 
-### 077 - ホームページ DB 連携 (2026-02-04) ✅
+### 077 - Homepage DB integration (2026-02-04) ✅
 
-v3 ホームページを静的ダミーデータから DB 駆動に移行し、HomepageSectionRenderer で SectionType → v3 コンポーネントを出し分け。
+Migrated the v3 homepage from static dummy data to DB-driven, and branched SectionType → v3 components in HomepageSectionRenderer.
 
-### 076 - カスタムページURL統一 (2026-01-29) ✅
+### 076 - Unify custom page URLs (2026-01-29) ✅
 
-`/p/[slug]` プレフィックスを廃止して `/[slug]` に統一し、専用ページは RESERVED_SLUGS でコード管理。
+Abolished the `/p/[slug]` prefix and standardized to `/[slug]`, managing dedicated pages via RESERVED_SLUGS.
 
-### 075 - 公開/管理画面CSS完全分離 (2026-01-28) ✅
+### 075 - Full separation of public/admin CSS (2026-01-28) ✅
 
-Next.js 16 Multiple Root Layouts パターンで `(admin)/` と `(public)/` の CSS・レイアウトを完全分離し、Tailwind 4 `@theme` を admin.css / public.css に独立。
+Fully separated `(admin)/` and `(public)/` CSS/layouts using the Next.js 16 Multiple Root Layouts pattern, and split Tailwind 4 `@theme` into admin.css / public.css.
 
-### 074 - 管理画面UI/UX改善 (2026-01-28) ✅
+### 074 - Admin UI/UX improvements (2026-01-28) ✅
 
-Trust Blue パレットでミニマル統一デザインに刷新し、WCAG 準拠タッチターゲット（44px）・モバイル最適化・全共通コンポーネントのトランジション追加を実施。
+Refreshed to a minimal unified design with the Trust Blue palette, added WCAG-compliant touch targets (44px), mobile optimization, and transitions across all shared components.
 
-### 073 - カテゴリー・タグUI統一化 (2026-01-26) ✅
+### 073 - Unify category/tag UI (2026-01-26) ✅
 
-投稿カテゴリー・タグ管理に共通フック（use-taxonomy-filters）・SortableTableHead・TaxonomyEditor を作成して nuqs 対応と UI/UX を他の管理画面と統一。
+Created a shared hook (use-taxonomy-filters), SortableTableHead, and TaxonomyEditor for post category/tag management, added nuqs support, and unified UI/UX with other admin screens.
 
-### 072 - カテゴリ・タグSEO設定機能 (2026-01-26) ✅
+### 072 - Category/tag SEO settings (2026-01-26) ✅
 
-Prisma で PostCategory / PostTag に SEO フィールドを追加し、カテゴリ・タグ専用編集ページと公開ページメタデータを整備。
+Added SEO fields to PostCategory / PostTag in Prisma, built dedicated edit pages for categories/tags, and updated public page metadata.
 
-### 070 - Instagram連携機能 + 管理画面UI統一 (2026-01-25) ✅
+### 070 - Instagram integration + admin UI unification (2026-01-25) ✅
 
-Instagram OAuth + 手動トークン両対応の設定 UI・oEmbed Lexical ノード・公開ページセクション・トークン自動更新 Cron を実装し、既存ラジオボタンを SelectionBox に統一。
+Implemented settings UI for both Instagram OAuth and manual tokens, oEmbed Lexical node, public page sections, and token auto-refresh cron, plus unified existing radio buttons to SelectionBox.
 
-### 069 - Lexical テキスト変換機能 (2026-01-25) ✅
+### 069 - Lexical text transform feature (2026-01-25) ✅
 
-Lexical エディタに lowercase / uppercase / capitalize のテキストケース変換プラグインをスラッシュコマンドとツールバードロップダウンで追加。
+Added a text case transform plugin (lowercase / uppercase / capitalize) to the Lexical editor via slash commands and toolbar dropdown.
 
-### 068 - Lexical X（Twitter）埋め込み機能 (2026-01-25) ✅
+### 068 - Lexical X (Twitter) embed feature (2026-01-25) ✅
 
-Lexical に X（Twitter）投稿の静的 iframe 埋め込みノード（XNode / XPlugin）を追加し、全 URL 形式対応と XSS 防止を実装。
+Added a static iframe embed node for X (Twitter) posts in Lexical (XNode / XPlugin), supporting all URL formats and XSS prevention.
 
-### 067 - Lexical コメント機能 InlineEditor統合 (2026-01-25) ✅
+### 067 - Lexical comment feature InlineEditor integration (2026-01-25) ✅
 
-Lexical コメント機能を Blog / News / Page の InlineEditor に統合し、排他的パネル管理フック（useEditorPanels）でサイドパネルの開閉を一元管理。
+Integrated the Lexical comment feature into the InlineEditor for Blog / News / Page, and centralized side-panel open/close with the exclusive panel management hook (useEditorPanels).
 
-### 066 - スペース・ニュースのスラッグ対応 (2026-01-23) ✅
+### 066 - Slug support for Space/News (2026-01-23) ✅
 
-Space / News の公開 URL を UUID から人間可読スラッグ（`/spaces/meeting-room-a` 等）に変更し、Prisma スキーマ・Server Actions・リンク生成箇所を一括更新。
+Changed public URLs for Space / News from UUIDs to human-readable slugs (e.g., `/spaces/meeting-room-a`) and updated Prisma schema, Server Actions, and link generation.
 
-### 065 - Cache-Control + Cloudflareキャッシュパージ (2026-01-23) ✅
+### 065 - Cache-Control + Cloudflare cache purge (2026-01-23) ✅
 
-Next.js PPR + Cloudflare CDN 連携で `s-maxage=3600` Cache-Control を設定し、全公開コンテンツ Server Actions にパージ呼び出しを追加（帯域幅 95% 削減目標）。
+Configured `s-maxage=3600` Cache-Control via Next.js PPR + Cloudflare CDN integration, and added purge calls to all public-content Server Actions (target 95% bandwidth reduction).
 
-### 064 - 割引・クーポンシステム Phase 1 (2026-01-22) ✅
+### 064 - Discount/coupon system Phase 1 (2026-01-22) ✅
 
-Prisma に Coupon モデルを追加し、長時間割引・汎用クーポンコード・手動割引の料金計算ロジック（pricing.ts）と管理 UI・公開ページ統合を実装。
+Added a Coupon model in Prisma, implemented pricing logic (pricing.ts) for long-stay discounts, generic coupon codes, and manual discounts, plus admin UI and public page integration.
 
-### 063 - プロジェクト品質改善 (2026-01-22) ✅
+### 063 - Project quality improvements (2026-01-22) ✅
 
-本番必須環境変数の強制バリデーション、共有ライブラリ依存の修正、Resend / Google Calendar / Stripe のモック基盤構築を実施。
+Implemented enforced validation for production-required env vars, fixed shared library dependencies, and built mock foundations for Resend / Google Calendar / Stripe.
 
-### 060 - CI/CD品質改善 (2026-01-21) ✅
+### 060 - CI/CD quality improvements (2026-01-21) ✅
 
-Dependabot 設定・CSP セキュリティヘッダー 8 種・テストカバレッジ有効化（Codecov 連携）・TypeDoc API ドキュメント設定を追加。
+Added Dependabot config, eight CSP security headers, test coverage enablement (Codecov integration), and TypeDoc API doc configuration.
 
 ### 059 - Unified Editor SidePanel (2026-01-21) ✅
 
-管理画面コンテンツ編集 UI をプラグイン型 ContentTypeConfig アーキテクチャに統一し、UnifiedSidePanel と再利用可能フィールドコンポーネント群を作成。
+Unified admin content editing UI under a plugin-style ContentTypeConfig architecture, creating UnifiedSidePanel and reusable field components.
 
 ### 058 - Performance Optimization (2026-01-20) ✅
 
-公開 Server Actions に `'use cache'` + `cacheLife` を追加し、メール送信を `fireAndForget` 非ブロッキング実行に移行してレスポンスを最適化。
+Added `'use cache'` + `cacheLife` to public Server Actions and moved email sending to non-blocking `fireAndForget` to optimize responses.
 
 ### 057 - Project Improvement Plan (2026-01-20) ✅
 
-ENCRYPTION_KEY 本番必須化・API レート制限・GCal Webhook トークン検証（Phase 1）、`fireAndForget` パターン統一（Phase 2）、settings.ts / NavigationManager / AnnouncementBarManager の大規模ファイル分割（Phase 3）を実施。
+Implemented ENCRYPTION_KEY as production-required, API rate limiting, GCal webhook token validation (Phase 1), unified `fireAndForget` pattern (Phase 2), and major file splits for settings.ts / NavigationManager / AnnouncementBarManager (Phase 3).
 
 ### Code Quality Improvement - Type Safety Phase 4 (2026-01-20) ✅
 
-`BLOCK_TYPES` const 配列 + `isBlockType()` 型ガードで ToolbarPlugin の `as BlockType` を置換し、`z.nativeEnum(Role)` 適用で型アサーションを累計 84 → 57 箇所（-32%）削減。
+Replaced ToolbarPlugin `as BlockType` with a `BLOCK_TYPES` const array + `isBlockType()` type guard, and reduced type assertions from 84 → 57 (-32%) by applying `z.nativeEnum(Role)`.
 
 ### Code Quality Improvement - Type Safety Phase 3 (2026-01-20) ✅
 
-`keysOf` / `filterTruthy` / `parseEnumAttribute` ユーティリティを作成し、`Object.keys() as Type[]` / `.filter(Boolean) as T[]` / DOM 属性 as キャストを型安全パターンに置換（84 → 61 箇所）。
+Created `keysOf` / `filterTruthy` / `parseEnumAttribute` utilities and replaced `Object.keys() as Type[]` / `.filter(Boolean) as T[]` / DOM attribute casts with type-safe patterns (84 → 61).
 
 ### Code Quality Improvement - Utility Extraction Phase 2 (2026-01-20) ✅
 
-`.toISOString().split('T')[0]` を `toDateString()` に、`.split(',')[0]` を `extractFirstFromCommaList()` に統一して 10 ファイルを更新。
+Unified `.toISOString().split('T')[0]` to `toDateString()` and `.split(',')[0]` to `extractFirstFromCommaList()` across 10 files.
 
 ### Code Quality Improvement - Utility Extraction Phase 1 (2026-01-20) ✅
 
-`normalizeError()` / `toDateString()` / `safeArrayAccess()` ユーティリティを新規作成し、コードベース全体の重複エラーハンドリング・日付変換パターンを統一。
+Added new utilities `normalizeError()` / `toDateString()` / `safeArrayAccess()` and unified duplicate error handling and date conversion patterns across the codebase.
 
 ### 055-admin-ui-ux-unification.md (2026-01-19) ✅
 
-EmptyState（10 テーブル）・LoadingState（16 ページ）・日付/金額フォーマット・エラー表示・StatusBanner を統一し、相対インポートをパスエイリアスに一括移行。
+Unified EmptyState (10 tables), LoadingState (16 pages), date/amount formatting, error display, and StatusBanner, then migrated relative imports to path aliases.
 
 ### Test Infrastructure & Coverage Improvement (2026-01-19) ✅
 
-Zod 4 + @hookform/resolvers 互換修正・モック基盤改善・E2E 除外設定を行い、Public Actions 統合テスト 4 ファイル（+54 テスト）を追加して計 924 テスト通過。
+Fixed Zod 4 + @hookform/resolvers compatibility, improved mock infrastructure, and set E2E exclusions. Added four Public Actions integration test files (+54 tests) for a total of 924 passing tests.
 
 ### 054-filter-form-unification.md (2026-01-19) ✅
 
-BaseFilters を全フィルターに展開し `useFormAction` フックを作成して、5 フィルター + 3 フォームをパターン統一（コード削減 ~550 行、デバウンスバグ修正）。
+Expanded BaseFilters to all filters and created a `useFormAction` hook, unifying patterns across 5 filters + 3 forms (code reduction ~550 lines, debounce bug fix).
 
 ### 053-admin-code-cleanup.md (2026-01-19) ✅
 
-PublishSwitch 共通化・NewsFilters デバウンスバグ修正・BaseFilters 基底コンポーネント・SidePanelShell を作成して管理画面の重複コードを整理。
+Unified PublishSwitch, fixed NewsFilters debounce bug, created BaseFilters base component and SidePanelShell, and cleaned up duplicate admin code.
 
 ### 052-hardcode-config-centralization.md (2026-01-19) ✅
 
-`@t3-oss/env-nextjs` で環境変数バリデーション基盤を整備し、SITE_DEFAULTS / SESSION_CONFIG / PAGINATION_DEFAULTS / URL helpers を定数ファイルに集約（URL フォールバック 18 箇所を統一ヘルパーに移行）。
+Built env var validation with `@t3-oss/env-nextjs` and consolidated SITE_DEFAULTS / SESSION_CONFIG / PAGINATION_DEFAULTS / URL helpers into constant files (migrated 18 URL fallbacks to a unified helper).
 
 ### 051-header-logo-branding.md (2026-01-19) ✅
 
-Prisma にロゴ表示設定フィールド（useHeaderLogo / useFooterLogo / footerLogoUrl）を追加し、公開ページヘッダー・フッター・管理画面 TopBar に DB 連動ブランディングを統合。
+Added logo display settings fields in Prisma (useHeaderLogo / useFooterLogo / footerLogoUrl) and integrated DB-driven branding into public headers/footers and the admin TopBar.
 
 ### 050-colocation-refactor.md (2026-01-19) ✅
 
-`src/admin/` と `src/public/` を App Router 配下の `(admin)/_shared/` / `(public)/_shared/` に移動し、Next.js 公式コロケーションパターンに準拠した構造に統合。
+Moved `src/admin/` and `src/public/` into `(admin)/_shared/` / `(public)/_shared/` under the App Router, aligning to the official Next.js colocation pattern.
 
 ### 049-type-safety-improvements.md (2026-01-19) ✅
 
-BusinessHours 型・FormData 型安全ヘルパー・Set-based O(1) 型ガード 15 個を作成し、JSON フィールド / FormData / `as Enum` アサーションを安全なパターンに置換。
+Created BusinessHours types, FormData type-safe helpers, and 15 Set-based O(1) type guards, replacing JSON field / FormData / `as Enum` assertions with safe patterns.
 
 ### 048-staff-invitation-flow.md (2026-01-19) ✅
 
-管理者直接パスワード設定方式を廃止し、招待メール → /admin/setup/[token] でスタッフ自身がパスワード設定するセキュアな招待フローに移行。
+Abolished direct admin password setup and switched to a secure invite flow where staff set their own password via invite email → /admin/setup/[token].
 
 ### 046-customer-creation.md (2026-01-18) ✅
 
-管理画面の顧客管理に新規顧客作成機能（/admin/customers/new + CustomerForm）を追加し、電話予約時の事前登録を可能に。
+Added new customer creation (/admin/customers/new + CustomerForm) to admin customer management, enabling pre-registration for phone reservations.
 
 ### 045-admin-reservation-creation.md (2026-01-18) ✅
 
-管理者が手動予約入力できる新規予約ページ（顧客検索・TimeSlotSelector・料金計算・GCal/iCal 同期）を実装。
+Implemented a new reservation page for manual admin entry (customer search, TimeSlotSelector, pricing calculation, GCal/iCal sync).
 
 ### 044-space-management-tab-integration.md (2026-01-18) ✅
 
-スペース・場所・カテゴリー管理の 3 独立ページを 1 ページ 3 タブに統合し、サイドバー項目を 16 → 14 に削減。
+Consolidated three separate pages (space/location/category management) into one page with three tabs, reducing sidebar items from 16 → 14.
 
 ### 043-space-location-category.md (2026-01-18) ✅
 
-Prisma に Location / SpaceCategory モデルを追加し、スペースに場所・用途カテゴリーの 2 分類軸と管理 CRUD UI・公開ページ表示を実装。
+Added Location / SpaceCategory models in Prisma and implemented two classification axes (location + usage category) for spaces, plus admin CRUD UI and public page display.
 
 ### 042-complete-separation-architecture.md (2026-01-18) ✅
 
-`src/admin/` / `src/public/` / `src/shared/` の 3 ディレクトリ構造に完全分離し、admin → public 相互参照ゼロ・ユーティリティ関数の重複解消を達成。
+Fully separated the three-directory structure (`src/admin/` / `src/public/` / `src/shared/`), achieving zero admin → public cross-references and eliminating duplicate utility functions.
 
 ### 041-admin-cleanup-refactoring.md (2026-01-17) ✅
 
-サイドバー拡充・廃止コンポーネント削除・命名規則統一・6 テーブルの Server Component 化（TanStack Table 削除）・孤立設定セクションのタブ統合を実施。
+Expanded the sidebar, removed deprecated components, unified naming conventions, converted six tables to Server Components (removed TanStack Table), and merged isolated settings sections into tabs.
 
 ### 040-system-features-tab-integration.md (2026-01-17) ✅
 
-ナビゲーション・お知らせバー管理をサイト設定に 5 タブ統合し、旧ページをリダイレクト化してシステム管理ページをシンプル化。
+Consolidated navigation and announcement bar management into five tabs under site settings, redirected old pages, and simplified the system management page.
 
 ### 039-settings-category-tabs.md (2026-01-17) ✅
 
-設定カテゴリー各ページに nuqs + Radix UI Tabs による URL 状態同期タブ UI（site 3 / business 3 / notify 3 / api 4 / system 3 タブ）を追加。
+Added URL-synced tab UI using nuqs + Radix UI Tabs to each settings category page (site 3 / business 3 / notify 3 / api 4 / system 3 tabs).
 
 ### 038-settings-page-restructure.md (2026-01-17) ✅
 
-10 タブ設定ページを iOS 設定風カテゴリカード方式（site / business / notify / api / system の 5 カテゴリ）に再構築。
+Rebuilt the 10-tab settings page into an iOS-style category card layout (5 categories: site / business / notify / api / system).
 
 ### 037-blog-sidebar.md (2026-01-17) ✅
 
-ブログページに検索・新着・人気・カテゴリー・タグの 5 ウィジェットサイドバーを追加し、サイト設定・ページ単位での表示制御を実装。
+Added a five-widget sidebar to the blog page (search, new, popular, categories, tags) and implemented visibility controls via site settings and per-page settings.
 
 ### 036-test-coverage-full.md (2026-01-17) ✅
 
-Bun Test + Playwright E2E を導入し、Unit/Integration 約 50 ファイルと E2E 195 テスト（auth/reservation/spaces/blog/users）を追加して GitHub Actions CI を整備。
+Introduced Bun Test + Playwright E2E, added ~50 Unit/Integration files and 195 E2E tests (auth/reservation/spaces/blog/users), and set up GitHub Actions CI.
 
 ### 035-performance-optimization.md (2026-01-16) ✅
 
-DB コネクションプール調整・ダッシュボード集計の `$queryRaw` 最適化・公開ページ先頭 2 画像への priority 追加でパフォーマンスを改善。
+Improved performance by tuning DB connection pool, optimizing `$queryRaw` for dashboard aggregation, and adding priority to the first two public page images.
 
 ### 034-react-compiler-memoization-cleanup.md (2026-01-16) ✅
 
-React Compiler 対応で `useCallback`（50 → 12 ファイル）・`useMemo`（4 → 2 ファイル）を削除し、Lexical / useEffect 依存など正当なケースのみ保持。
+Removed `useCallback` (50 → 12 files) and `useMemo` (4 → 2 files) for React Compiler compatibility, keeping only legitimate cases like Lexical/useEffect dependencies.
 
 ### 033-media-picker-integration.md (2026-01-16) ✅
 
-画像設定 UI を URL 直接入力からメディアライブラリダイアログ（ライブラリ選択 + URL 入力 + アップロード 3 タブ）に移行し、5 箇所のフォームに統合。
+Moved image settings UI from direct URL input to a media library dialog (library select + URL input + upload 3 tabs) and unified into five forms.
 
 ### 031-terms-agreement-management.md (2026-01-16) ✅
 
-Prisma に Terms / TermsVersion / TermsAgreement モデルを追加し、スペース別利用規約のバージョン管理・スクロール検出付き同意ダイアログ・RBAC 権限を実装。
+Added Terms / TermsVersion / TermsAgreement models in Prisma, implementing per-space terms versioning, scroll-detection consent dialog, and RBAC permissions.
 
 ### 032-enum-type-guards.md (2026-01-16) ✅
 
-中央集権型ガードモジュール（enums.ts）を作成して Prisma enum の `as ReservationStatus` 等の型アサーションを全削除し、JSON フィールドへの実行時バリデーションを追加。
+Created a centralized guard module (enums.ts), removed all Prisma enum assertions like `as ReservationStatus`, and added runtime validation for JSON fields.
 
 ### 031-media-type-assertion-removal.md (2026-01-16) ✅
 
-Zod スキーマで Prisma 生成 enum を直接 re-export し `isValidMediaType` / `isValidMediaUsage` 型ガードを追加することで、`as MediaType` / `as MediaUsage` を全 4 箇所で排除。
+Directly re-exported Prisma-generated enums via Zod schemas and added `isValidMediaType` / `isValidMediaUsage` type guards, eliminating all four uses of `as MediaType` / `as MediaUsage`.
 
 ### 030-media-management.md (2026-01-16) ✅
 
-Prisma に Media モデル・MediaType / MediaUsage enum を追加し、Supabase Storage 連携・グリッド/リストビュー管理 UI・Lexical MediaLibraryPlugin を実装。
+Added Media model and MediaType / MediaUsage enums in Prisma, and implemented Supabase Storage integration, grid/list view management UI, and Lexical MediaLibraryPlugin.
 
 ### 029-type-errors-fix.md (2026-01-16) ✅
 
-`isSystemPage` Prisma マイグレーション適用・`canDeletePage` の同期関数エラー修正・`generateMetadata` 内クエリへの `'use cache'` 追加でビルドエラーを解消。
+Applied the `isSystemPage` Prisma migration, fixed a sync function error in `canDeletePage`, and added `'use cache'` to queries inside `generateMetadata` to resolve build errors.
 
 ### 028-prisma-decimal-serialization-fix.md (2026-01-16) ✅
 
-SpaceListSection で Prisma Decimal 型が Client Component に渡せない問題を `SerializedSpace` 型 + `.toNumber()` 変換で修正。
+Fixed the issue where Prisma Decimal types could not be passed to Client Components in SpaceListSection by using `SerializedSpace` + `.toNumber()` conversion.
 
 ### 027-nuqs-best-practices.md (2026-01-16) ✅
 
-Pagination に `history: 'push'`・検索入力に `throttleMs: 500` を追加し、管理画面パーサー集約と `createLoader` パターンに統一。
+Added `history: 'push'` to Pagination and `throttleMs: 500` to search input, consolidating admin parsers and standardizing on the `createLoader` pattern.
 
 ### 026-remove-as-const-assertions.md (2026-01-16) ✅
 
-`as const` 削除・`getSessionUser` 型ガード・`getRoleFromSession` ヘルパー・URLSearchParams バリデーション・JSON config 型ガード 7 関数追加で 50+ ファイルの型アサーションを大幅削減（Phase 1–3）。
+Removed `as const`, added a `getSessionUser` type guard, `getRoleFromSession` helper, URLSearchParams validation, and seven JSON config type guards, significantly reducing type assertions across 50+ files (Phases 1–3).
 
 ### 025-homepage-settings-to-pages.md (2026-01-15) ✅
 
-ホームページセクション管理を「設定 > ホームページタブ」からページ管理に移動し、設定タブを 10 → 9 に削減。
+Moved homepage section management from "Settings > Homepage tab" to page management, reducing settings tabs from 10 → 9.
 
 ### 024-bun-test-framework.md (2026-01-14) ✅
 
-Bun ネイティブテストランナーで Prisma / Better Auth / Next.js モック基盤を構築し、121 テスト（379 expect）150ms 実行の初期テスト環境を整備。
+Built a Prisma / Better Auth / Next.js mock foundation using the native Bun test runner, establishing an initial test environment with 121 tests (379 expects) running in 150ms.
 
 ### 023-grapesjs-removal-homepage-settings.md (2026-01-14) ✅
 
-GrapesJS ビジュアルエディターを完全削除して Lexical に統一し、CTA / Blog / News / FAQ の 4 セクション型ホームページ設定を管理画面に新設。
+Fully removed the GrapesJS visual editor and unified on Lexical, adding homepage settings for four section types (CTA / Blog / News / FAQ) in the admin UI.
 
 ### 022-type-safety-hof-migration.md (2026-01-13) ✅
 
-AuditUser 型で `as never` アサーション 30+ 箇所を排除し、13 ファイルの手動認証パターンを `withPermission` HOF に統一、React 19 の `forwardRef` 廃止対応を実施。
+Removed 30+ `as never` assertions with the AuditUser type, unified manual auth patterns across 13 files into the `withPermission` HOF, and handled React 19 `forwardRef` removal.
 
 ### 021-seo-accessibility-optimization.md (2026-01-13) ✅
 
-Settings DB 連動メタデータファクトリ・WebSite / Article JSON-LD・SkipLink / ARIA ライブリージョン・WCAG AA コントラスト比改善（4.5:1 以上）を実装。
+Implemented Settings DB-driven metadata factory, WebSite / Article JSON-LD, SkipLink / ARIA live regions, and WCAG AA contrast ratio improvements (4.5:1+).
 
 ### 021-permission-management-system.md (2026-01-13) ✅
 
-5 階層 RBAC（SUPER_ADMIN / ADMIN / EDITOR / VIEWER / USER）・コードベース権限ライブラリ・監査ログ・ログイン試行レートリミット（5 回/15 分）・権限マトリクス UI を実装。
+Implemented 5-tier RBAC (SUPER_ADMIN / ADMIN / EDITOR / VIEWER / USER), a codebase permissions library, audit logs, login attempt rate limits (5 per 15 minutes), and a permissions matrix UI.
 
 ### 020-blog-news-grapesjs-migration.md (2026-01-13) ✅
 
-BlogPostStatus / NewsStatus enum と Version モデルを Prisma に追加し、Blog / News エディターを GrapesJS に統合して publish / unpublish 分離とバージョン自動作成を実装。
+Added BlogPostStatus / NewsStatus enums and Version model in Prisma, integrated Blog / News editors into GrapesJS, and implemented publish/unpublish separation with automatic version creation.
 
 ### 019-admin-ui-ux-integration.md (2026-01-13) ✅
 
-AdminLayoutContext でサイドバー状態（expanded / collapsed / hidden）を管理し、レスポンシブサイドバー・TopBar・Recharts 予約/売上グラフをダッシュボードに追加。
+Managed sidebar state (expanded / collapsed / hidden) via AdminLayoutContext and added responsive sidebar, TopBar, and Recharts reservation/revenue graphs to the dashboard.
 
 ### 018-grapesjs-database-integration.md (2026-01-13) ✅
 
-GrapesPage / GrapesPageVersion モデルを Prisma に追加し、CRUD / バージョン履歴 / バックアップ / SEO / 公開ページ（`/g/[slug]`）を実装。
+Added GrapesPage / GrapesPageVersion models in Prisma and implemented CRUD, version history, backups, SEO, and public pages (`/g/[slug]`).
 
 ### 017-grapesjs-custom-blocks.md (2026-01-13) ✅
 
-GrapesJS にレンタルスペース専用カスタムブロック 5 種（HeroSection / ReservationForm / FeatureGrid / TestimonialSlider / ContactSection）を追加し、CSS 変数テーマ対応のレンダラーを実装。
+Added five rental-space-specific custom blocks to GrapesJS (HeroSection / ReservationForm / FeatureGrid / TestimonialSlider / ContactSection) and implemented a renderer supporting CSS variable themes.
 
 ### 016-grapesjs-visual-editor.md (2026-01-13) ✅
 
-@grapesjs/react v2.0.0 を導入し、TypeScript 型定義・SSR 回避・カスタムブロック登録・動的インポート（コード分割）でビジュアルエディター環境を構築。
+Introduced @grapesjs/react v2.0.0 and built a visual editor environment with TypeScript typings, SSR avoidance, custom block registration, and dynamic imports (code splitting).
 
 ### 015-code-quality-refactoring.md (2026-01-12) ✅
 
-Server Action ヘルパー統一・React 19 フォームフック作成・Admin UI コンポーネントの CVA → TV 移行・`class-variance-authority` パッケージ削除を実施。
+Unified Server Action helpers, created React 19 form hooks, migrated Admin UI components from CVA → TV, and removed the `class-variance-authority` package.
 
 ### 014-reservation-calendar.md (2026-01-11) ✅
 
-管理画面の予約管理に月/週/日 3 ビュー切り替えカレンダー（URL 状態管理・スペースフィルター・ステータス変更ダイアログ）を Clean Architecture で実装。
+Implemented a month/week/day view switch calendar for admin reservation management (URL state, space filters, status change dialog) with Clean Architecture.
 
 ### 013-google-calendar-integration.md (2026-01-11) ✅
 
-Google Calendar サービスアカウント連携・iCal 生成（RFC 5545）・iCal フィード配信・Cron ポーリング + Webhook 双方向同期（Phase 1–4 全完了）を実装。
+Implemented Google Calendar service account integration, iCal generation (RFC 5545), iCal feed delivery, and Cron polling + Webhook bidirectional sync (Phases 1–4 complete).
 
 ### 012-nextjs-best-practices.md (2026-01-11) ✅
 
-管理ルートを Route Group `(admin)/admin/` に変更し、`cache()` API で verifySession をメモ化する DAL パターン・withAuth HOF 改善を実施。
+Moved admin routes to Route Group `(admin)/admin/`, implemented a DAL pattern memoizing verifySession via `cache()`, and improved the withAuth HOF.
 
 ### 011-server-client-separation.md (2026-01-11) ✅
 
-blog/categories（506 行）と settings/navigation（1068 行）の巨大ページを Next.js 公式の Server / Client Component 分離パターンに準拠してリファクタリング。
+Refactored large pages blog/categories (506 lines) and settings/navigation (1068 lines) to match the official Next.js Server/Client Component separation pattern.
 
 ### 010-withauth-badge-improvements.md (2026-01-11) ✅
 
-全 Server Actions mutation 関数（69 関数）を withAuth HOF に移行し、Inquiry / Customer / Publish ステータスの Badge variant 色を意味的整合に修正。
+Migrated all Server Actions mutation functions (69 functions) to the withAuth HOF and aligned Badge variant colors for Inquiry / Customer / Publish statuses.
 
 ### 009-delayed-improvements.md (2026-01-11) ✅
 
-5 つの重複 StatusBadge を `status-badges.tsx` に統一、withAuth HOF を追加、5 ファイルを PascalCase にリネーム、Turnstile の重複関数を削除。
+Consolidated five duplicate StatusBadge components into `status-badges.tsx`, added the withAuth HOF, renamed five files to PascalCase, and removed duplicate Turnstile functions.
 
 ### 008-api-keys-management.md (2026-01-11) ✅
 
-Resend / Turnstile / Google Maps の API キーを AES-256-GCM 暗号化で保存・マスク表示し、接続テスト機能と管理画面「APIキー」タブを追加。
+Stored Resend / Turnstile / Google Maps API keys with AES-256-GCM encryption and masked display, adding connection tests and an admin "API Keys" tab.
 
 ### 007-announcement-bar-design-styles.md (2026-01-11) ✅
 
-お知らせバーに solid / gradient / outlined / glass / minimal の 5 デザインスタイルプリセットとリアルタイムプレビューを追加。
+Added five design style presets (solid / gradient / outlined / glass / minimal) plus real-time preview to the announcement bar.
 
 ### 006-announcement-bar-and-news-editor.md (2026-01-11) ✅
 
-お知らせ管理に TipTap リッチテキストエディター（画像・YouTube）を統合し、AnnouncementBar（3 タイプ・カスタム色・表示期間）を新規実装。
+Integrated the TipTap rich text editor (images/YouTube) into announcement management and implemented a new AnnouncementBar (3 types, custom colors, display period).
 
 ### 005-actionresult-complete-migration.md (2026-01-10) ✅
 
-全管理画面 Server Actions（11 ファイル）を ActionResult<T> 型に統一し、BusinessHoursSection の unsafe cast を `??` に置換。
+Unified all admin Server Actions (11 files) under ActionResult<T> and replaced unsafe casts in BusinessHoursSection with `??`.
 
 ### 004-type-safety-improvement.md (2026-01-10) ✅
 
-JSON フィールドの Zod バリデーション・Prisma WhereInput 型エイリアス・共通 ActionResult<T> 型を新規作成して型安全性の基盤を整備。
+Created Zod validation for JSON fields, Prisma WhereInput type aliases, and a shared ActionResult<T> type to establish type-safety foundations.
 
 ### 003-reservation-terms-agreement.md (2026-01-10) ✅
 
-予約フォームに規約同意チェックボックスを追加し、同意日時（termsAgreedAt）を DB に記録、管理画面から有効/無効・文言を設定可能に。
+Added a terms agreement checkbox to the reservation form, recorded consent time (termsAgreedAt) in the DB, and made enable/disable + copy editable from the admin UI.
 
 ### 002-stripe-payment-settings.md (2026-01-10) ✅
 
-EditorToolbar に ImageUploadDialog を統合し、Stripe API キー AES-256-GCM 暗号化保存・接続テスト機能・決済タブを管理画面に追加。
+Integrated ImageUploadDialog into EditorToolbar and added AES-256-GCM encrypted Stripe API keys, connection tests, and a payments tab to the admin UI.
 
 ### 001-architecture-improvements.md (2026-01-10) ✅
 
-tsconfig の ES2017 → ES2022 更新・フォント変数修正・PostgreSQL Pool 接続設定強化・layout.tsx コメント明確化でアーキテクチャ基盤を整備。
+Updated tsconfig from ES2017 → ES2022, fixed font variables, strengthened PostgreSQL pool connection settings, and clarified layout.tsx comments to improve architecture foundations.
 
 ### settings-tab-refactoring.md (2026-01-09) ✅
 
-設定画面の page.tsx を 773 行 → 110 行に削減し、nuqs URL 状態管理による 6 タブ構成（一般・事業者・SEO・メール・予約・システム）に再構築。
+Reduced settings page.tsx from 773 → 110 lines and rebuilt it into a 6-tab layout with nuqs URL state (general / business / SEO / mail / reservations / system).
 
 ### tiptap-integration.md (2026-01-09) ✅
 
-TipTap エディタを導入し、RichTextEditor / EditorToolbar / EditorContent を作成して BlogForm に統合。
+Introduced the TipTap editor, created RichTextEditor / EditorToolbar / EditorContent, and integrated them into BlogForm.
 
 ---
 
-## 未着手の計画
+## Unstarted plans
 
-なし
+None
