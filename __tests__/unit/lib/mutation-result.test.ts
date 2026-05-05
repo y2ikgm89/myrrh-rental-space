@@ -41,6 +41,7 @@ describe("createValidationMutationError", () => {
     const result = createValidationMutationError(zodError as ZodError);
     expect(result).toEqual({
       error: "入力内容に誤りがあります",
+      code: "VALIDATION",
       fieldErrors: {
         title: ["タイトルは必須です"],
         slug: ["スラッグは必須です"],
