@@ -119,12 +119,19 @@ describe("pageHeroConfigSchema", () => {
       expect(result.success).toBe(true);
     });
 
-    test("image オブジェクト（url + alt）が必須", () => {
+    test("image 省略時は createImageGroupSchema の .prefault({}) で default 補完される", () => {
+      // Phase 3 で `createImageGroupSchema` を `z.object(...).prefault({}).register(...)` に
+      // リファクタしたため、image を省略してもデフォルト `{ url: "", alt: "", caption: "" }`
+      // が生成される（同 group factory を使う他 section と一貫した挙動）。
       const result = pageHeroConfigSchema.safeParse({
         variant: "compact",
-        // image なし
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      if (result.success && result.data.variant === "compact") {
+        // url / alt は field.text の default("") で空文字に展開される。
+        // caption は field によって default の有無が異なるため `toMatchObject` で部分一致。
+        expect(result.data.image).toMatchObject({ url: "", alt: "" });
+      }
     });
   });
 
