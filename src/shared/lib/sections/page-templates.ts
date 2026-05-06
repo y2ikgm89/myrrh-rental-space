@@ -41,6 +41,7 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
       "concept",
       "instagram",
       "testimonial",
+      "value-props",
       "gallery",
     ],
     defaultSections: DEFAULT_PAGE_SECTIONS["home"] ?? [],

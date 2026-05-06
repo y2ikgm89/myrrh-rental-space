@@ -14,6 +14,7 @@ import {
 import { sectionLayoutSchema } from "@/shared/lib/sections/definitions/_shared/layout";
 import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
 import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
+import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
 import {
   imageAspectValues,
   cardStyleValues,
@@ -79,6 +80,7 @@ export const SectionType = {
   INSTAGRAM: "instagram",
   EVENT_CALENDAR: "event-calendar",
   LOCATION_LIST: "location-list",
+  VALUE_PROPS: "value-props",
 } as const;
 
 export type SectionType = (typeof SectionType)[keyof typeof SectionType];
@@ -105,6 +107,7 @@ const SECTION_TYPE_VALUES = [
   SectionType.INSTAGRAM,
   SectionType.EVENT_CALENDAR,
   SectionType.LOCATION_LIST,
+  SectionType.VALUE_PROPS,
 ] as const;
 
 export type { CTAButtonItem } from "./cta-and-url";
@@ -711,7 +714,8 @@ export type SectionConfig =
   | EmbedConfig
   | InstagramConfig
   | LocationListConfig
-  | ReservationFormConfig;
+  | ReservationFormConfig
+  | ValuePropsConfig;
 
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type UpdateSectionContentInput = z.infer<

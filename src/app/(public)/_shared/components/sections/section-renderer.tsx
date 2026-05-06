@@ -22,6 +22,7 @@ import {
   getFaqListConfig,
   getFeaturesConfig,
   getTestimonialConfig,
+  getValuePropsConfig,
   getGalleryConfig,
   getCtaConfig,
   getContactFormConfig,
@@ -83,6 +84,7 @@ import {
 } from "../../../_components/SpaceShowcaseSection";
 import { SpaceListSection } from "../../../_components/SpaceListSection";
 import { FeaturesSection } from "../../../_components/FeaturesSection";
+import { ValuePropsSection } from "../../../_components/ValuePropsSection";
 import { CTASection } from "../../../_components/CTASection";
 import { TestimonialSection } from "../../../_components/TestimonialSection";
 import { GallerySection } from "../../../_components/GallerySection";
@@ -414,6 +416,11 @@ export async function SectionRenderer({
     case SectionType.FEATURES: {
       const config = getFeaturesConfig(section.config);
       return <FeaturesSection config={config} style={resolved} />;
+    }
+
+    case SectionType.VALUE_PROPS: {
+      const config = getValuePropsConfig(section.config);
+      return <ValuePropsSection config={config} style={resolved} />;
     }
 
     case SectionType.TESTIMONIAL: {

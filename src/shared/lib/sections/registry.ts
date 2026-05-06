@@ -1,6 +1,6 @@
 // src/shared/lib/sections/registry.ts
 //
-// セクションレジストリ — 全 21 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
+// セクションレジストリ — 全 22 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
 import { isRecord } from "@/shared/lib/serialize";
@@ -43,6 +43,8 @@ import { spaceShowcaseConfigSchema } from "./definitions/space-showcase/schema";
 import { spaceShowcaseMetadata } from "./definitions/space-showcase/metadata";
 import { testimonialConfigSchema } from "./definitions/testimonial/schema";
 import { testimonialMetadata } from "./definitions/testimonial/metadata";
+import { valuePropsConfigSchema } from "./definitions/value-props/schema";
+import { valuePropsMetadata } from "./definitions/value-props/metadata";
 import { eventCalendarConfigSchema } from "./definitions/event-calendar/schema";
 import { eventCalendarMetadata } from "./definitions/event-calendar/metadata";
 import {
@@ -54,7 +56,7 @@ import {
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 21 セクション定義（page-hero 含む） */
+/** 全 22 セクション定義（page-hero 含む） */
 const definitions: Record<string, SectionDefinition> = {
   "page-hero": {
     type: "page-hero",
@@ -115,6 +117,11 @@ const definitions: Record<string, SectionDefinition> = {
     type: "testimonial",
     configSchema: testimonialConfigSchema,
     metadata: testimonialMetadata,
+  },
+  "value-props": {
+    type: "value-props",
+    configSchema: valuePropsConfigSchema,
+    metadata: valuePropsMetadata,
   },
   gallery: {
     type: "gallery",

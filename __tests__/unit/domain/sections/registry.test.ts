@@ -46,9 +46,9 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("21 件のセクション定義を返す（page-hero + 既存 20 タイプ）", () => {
+  test("22 件のセクション定義を返す（page-hero + 既存 21 タイプ）", () => {
     const defs = getAllSectionDefinitions();
-    expect(defs).toHaveLength(21);
+    expect(defs).toHaveLength(22);
   });
 
   test("各定義は type / configSchema / metadata を持つ", () => {
@@ -62,7 +62,7 @@ describe("getAllSectionDefinitions", () => {
     }
   });
 
-  test("page-hero + 既存 20 標準タイプが含まれる", () => {
+  test("page-hero + 既存 21 標準タイプが含まれる", () => {
     const defs = getAllSectionDefinitions();
     const types = defs.map((d) => d.type);
 
@@ -79,6 +79,7 @@ describe("getAllSectionDefinitions", () => {
       "faq-list",
       "features",
       "testimonial",
+      "value-props",
       "gallery",
       "cta",
       "contact-form",
@@ -112,13 +113,14 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(heroTypes).not.toContain("homepage-hero");
   });
 
-  test("カテゴリ 'content' に custom / concept / features が含まれる", () => {
+  test("カテゴリ 'content' に custom / concept / features / value-props が含まれる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const contentTypes = grouped["content"].map((d) => d.type);
 
     expect(contentTypes).toContain("custom");
     expect(contentTypes).toContain("concept");
     expect(contentTypes).toContain("features");
+    expect(contentTypes).toContain("value-props");
   });
 
   test("カテゴリ 'list' に space-list / space-showcase / news-list / post-list / faq-list / location-list が含まれる", () => {
@@ -153,7 +155,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(mediaTypes).toContain("instagram");
   });
 
-  test("全カテゴリの合計件数が 21 件になる", () => {
+  test("全カテゴリの合計件数が 22 件になる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const total =
       grouped["hero"].length +
@@ -162,7 +164,7 @@ describe("getSectionDefinitionsByCategory", () => {
       grouped["functional"].length +
       grouped["media"].length;
 
-    expect(total).toBe(21);
+    expect(total).toBe(22);
   });
 });
 
