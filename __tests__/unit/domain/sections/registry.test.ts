@@ -46,7 +46,7 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("22 件のセクション定義を返す（page-hero + 既存 21 タイプ）", () => {
+  test("22 件のセクション定義を返す（page-hero + 標準 21 タイプ）", () => {
     const defs = getAllSectionDefinitions();
     expect(defs).toHaveLength(22);
   });
@@ -62,7 +62,7 @@ describe("getAllSectionDefinitions", () => {
     }
   });
 
-  test("page-hero + 既存 21 標準タイプが含まれる", () => {
+  test("page-hero + 標準 21 タイプが含まれる", () => {
     const defs = getAllSectionDefinitions();
     const types = defs.map((d) => d.type);
 

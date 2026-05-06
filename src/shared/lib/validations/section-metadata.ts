@@ -69,12 +69,3 @@ export const sectionTypesByCategory: {
     types: (grouped[category] ?? []).map((d) => d.type),
   };
 });
-
-/** ホームページセクションのデフォルト順序 */
-export const defaultHomepageSectionOrder: string[] = [
-  "hero-parallax",
-  "concept",
-  "space-showcase",
-  "features",
-  "cta",
-];
