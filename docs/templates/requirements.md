@@ -20,7 +20,7 @@
 
 ## データベース設計
 
-詳細は [`database-design.md`](../explanation/database-design.md) を参照。
+スキーマの SSoT は `prisma/schema.prisma`。本セクションには新規追加・変更する**テーブルの差分**だけを書く。
 
 ### テーブル名
 

@@ -6,19 +6,18 @@
 
 ## ドキュメント
 
-| ファイル                                                       | 内容                                      |
-| -------------------------------------------------------------- | ----------------------------------------- |
-| [architecture.md](./architecture.md)                           | 全体アーキテクチャと責務分離              |
-| [project-structure.md](./project-structure.md)                 | ディレクトリ構造と配置方針                |
-| [tech-stack.md](./tech-stack.md)                               | 採用技術とバージョン前提                  |
-| [database-design.md](./database-design.md)                     | Prisma / PostgreSQL 設計                  |
-| [caching.md](./caching.md)                                     | `use cache` / tag 運用                    |
-| [data-flow.md](./data-flow.md)                                 | 公開↔管理のデータフロー解析               |
-| [page-sections.md](./page-sections.md)                         | ページセクションの設計                    |
-| [content-managed-pages.md](./content-managed-pages.md)         | 固定デザイン + 型付きコンテンツ編集の方針 |
-| [security-model.md](./security-model.md)                       | 多層防御 / RBAC / 信用境界                |
-| [ai-instructions.md](./ai-instructions.md)                     | Codex / Claude Code の正本配置            |
-| [typescript-version-policy.md](./typescript-version-policy.md) | TypeScript 6.x RC / 安定版移行方針        |
+| ファイル                                                       | 内容                                            |
+| -------------------------------------------------------------- | ----------------------------------------------- |
+| [architecture.md](./architecture.md)                           | 全体アーキテクチャと責務分離                    |
+| [project-structure.md](./project-structure.md)                 | Multiple Root Layouts の判断と層の責務          |
+| [tech-stack.md](./tech-stack.md)                               | 採用技術の判断（バージョンは `AGENTS.md` 参照） |
+| [caching.md](./caching.md)                                     | PPR / `'use cache'` / タグ駆動無効化の方針      |
+| [content-managed-pages.md](./content-managed-pages.md)         | 固定デザイン + 型付きコンテンツ編集の方針       |
+| [security-model.md](./security-model.md)                       | 多層防御 / RBAC / 信用境界                      |
+| [ai-instructions.md](./ai-instructions.md)                     | Codex / Claude Code の正本配置                  |
+| [typescript-version-policy.md](./typescript-version-policy.md) | TypeScript 6.x RC / 安定版移行方針              |
+
+**実装の SSoT**: ファイル配列・cache invalidation の最新状態・Prisma スキーマは実コードを ground truth にする（`src/` / `prisma/schema.prisma` / `.claude/rules/**`）。本ディレクトリには手動メンテのファイル列挙やスキーマミラーを置かない（drift の温床になるため）。
 
 ## 現在の原則
 
