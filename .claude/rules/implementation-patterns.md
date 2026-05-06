@@ -117,6 +117,23 @@ paths:
 
 - **完了済み plan / spec は `docs/superpowers/{plans,specs}/.archive/<year>/` 配下に保管** — 各 archive file 冒頭に `> **Snapshot: YYYY-MM-DD** — Implementation completed, archived as historical reference.` 追記。判定: ① plan 内 commit SHA が main で実在 ② plan の最終 task 完了済 ③ 実装が main に存在
 
+## Section + Variant SC dispatcher パターン
+
+既存 CC section に新 variant（catalog / archive 等）を追加する canonical 構造（Phase 4-A/B/C で 4 sections に統一適用）:
+
+- **トップ**: SC dispatcher（async）。`mode: { kind: "simple" | "<variant>"; ... }` discriminated union prop で分岐
+- **inner**: 既存 CC を `<type>-list-simple-view.tsx` 等に分離（`useGSAP` / `useFormatPrice` 等の hook を維持）
+- **新 variant**: SC として SC dispatcher 内に inline 実装、または async 子 SC（`SpaceCard` 等）を含める
+- **SectionRenderer**: 該当 case で `displayLayout === "<variant>"` 分岐し、必要な server fetch + `searchParams.parse` + `pageSlug` 処理を section dispatcher に渡す
+- **page.tsx**: `<SectionRenderer key={section.id} section={section} searchParams={searchParams} pageSlug="<slug>" />` を統一
+
+参照実装:
+
+- `SpaceListSection.tsx` (catalog variant — FilterBar + SpaceGrid + Pagination 内包)
+- `PostListSection.tsx` (archive variant — BlogLayout + SearchBar + PostCategoryFilter + PostGrid + Pagination 内包)
+- `NewsListSection.tsx` (archive variant — SearchBar + NewsList + Pagination 内包)
+- `EventCalendarSection.tsx` (calendar-list-toggle variant — EventsViewSwitcher 内包)
+
 ## Gotchas
 
 ### ドメイン・料金・予約・ホームページ
