@@ -110,6 +110,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **implementer は sonnet 以上**（haiku 禁止、report 捏造リスク）
 - **完了報告後は独立検証**: `git log --oneline` + `git show --stat HEAD`
 - **密結合タスクは 1 implementer にバンドル**
+- **handoff memo の "pre-existing fail" 主張は実 test で再現確認してから信じる** — 別セッションで解決済みのことがある（memo 駆動で深追い禁止）
 
 ---
 

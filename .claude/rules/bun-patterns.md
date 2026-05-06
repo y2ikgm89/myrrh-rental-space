@@ -484,6 +484,8 @@ createCommand({ name: "test" });
 - **`mock.module()` のグローバルスコープ干渉** — 複数テストファイルを同時実行すると、ファイル A の `mock.module("@/shared/lib/foo", ...)` がファイル B の実 import を上書きし、`Export named 'X' not found` エラーやハングを引き起こす。対策: (1) モック対象モジュールの**全 export をモックに含める**（使わない関数もスタブで返す）。(2) `package.json` の `test` スクリプトでディレクトリ別に分離実行（`bun test __tests__/unit/lib && bun test __tests__/unit/api && ...`）。特に `@/shared/db/enums`, `@/shared/lib/errors/server`, `@/shared/lib/crypto`, `@/shared/lib/route-responses`, `@/shared/lib/constants` は複数テストでモックされるため全 export 必須。単独実行（`bun test <file>`）では問題なし
 - **`Promise.reject()` が `fireAndForget` テストで "Unhandled error between tests"** — `Promise.reject()` は即座に rejected になり、`fireAndForget` の `.catch()` 登録前に Bun が未処理として検出する場合がある。`queueMicrotask(() => reject(error))` で遅延拒否し、`.catch()` が先に登録されるようにする
 - **`bun run test:unit` の exit-code / notification summary は信頼しない** — per-directory `&&` チェーンの末尾バッチだけ pass すると background notification が「exit 0」と表示されるケースがある（2026-05-05 セッションで 28 件 fail を見落とした実例）。fail の真値は `grep -c "^(fail)"` または末尾の `Ran [0-9]+ tests across [0-9]+ files` 直前の `[0-9]+ pass` / `[0-9]+ fail` 行で確認する。bg job では `grep -E "^\(fail\)"` を tail で抽出するパターンが安全
+- **`package.json` test バッチの ghost dir は silent fail** — 存在しない `__tests__/...` path をバッチに残すと `bun test` が `333 files were searched / Tests need ".test"...` で exit 1。新規 dir 削除 / rename 時は `test:unit` / `test:integration` script を grep で確認（2026-05-06 `__tests__/unit/domain/terms` ghost で実発生）
+- **形骸化 test (`expect(module.fn).toBeDefined()` のみ) は timeout 延長より削除が canonical** — 実装変更を検出しない test は `test-quality.md` 「形骸化テスト禁止」違反。dynamic import が遅い場合（calendar-sync route 18.9s 等）の対処は timeout 延長ではなく削除して本質的な behavior coverage を別途追加する
 
 ## 参考
 
