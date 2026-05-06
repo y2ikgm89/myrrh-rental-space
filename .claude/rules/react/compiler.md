@@ -276,6 +276,27 @@ function ExpensiveList({ items }: { items: Item[] }) {
 // 'use no memo' エスケープハッチは全モードで有効（Rules of React 違反を一時除外）
 ```
 
+### 動的 component を JSX render すると `static-components` violation
+
+`Reflect.get(icons, name)` 等で名前解決した component を JSX `<Icon />` で render すると `@eslint-react/static-components` + `react-hooks/static-components` で error（"Component is created during render"）。`createElement(Icon, props)` で回避:
+
+```tsx
+// NG: Reflect.get + JSX → static-components error
+const Icon = Reflect.get(icons, name);
+return <Icon className={className} size={size} />;
+
+// OK: createElement で render
+import { createElement } from "react";
+const Icon = Reflect.get(icons, name);
+return createElement(Icon, {
+  className,
+  size,
+  ...(strokeWidth !== undefined && { strokeWidth }),
+});
+```
+
+参照実装: `@/public/components/ui/dynamic-tabler-icon`（async Server Component で `await import("@tabler/icons-react")` + `createElement`）
+
 ### Rules of React（コンパイラが最適化できる条件）
 
 React Compiler は以下のルールに準拠したコードのみ最適化する。
