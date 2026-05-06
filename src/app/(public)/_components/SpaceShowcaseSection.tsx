@@ -1,24 +1,11 @@
 /**
- * SpaceShowcaseSection — Space card grid (Server Component)
- *
- * Reuses SpaceCard for consistent design. Animation via ScrollReveal.
+ * SpaceShowcaseSection — Dispatches to grid or carousel variant based on
+ * `config.displayLayout`. Both variants live under `_components/space-showcase/`.
  */
 
 import type { ReactElement } from "react";
-import {
-  ScrollReveal,
-  ScrollRevealGroup,
-} from "@/public/components/animations/scroll-reveal";
-import { SectionLabel } from "@/public/components/ui/SectionLabel";
-import { Heading } from "@/public/components/design-system/heading";
-import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
-import {
-  getTitleClasses,
-  getTitleStyle,
-} from "@/public/components/sections/section-style-helpers";
-import { cn } from "@/shared/lib/cn";
-import { SpaceCard } from "./space-list/space-card";
-import { getCardGridColsClass } from "@/public/lib/section-style-maps";
+import { SpacesCarousel } from "./space-showcase/_spaces-carousel";
+import { SpacesGrid } from "./space-showcase/_spaces-grid";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
@@ -46,84 +33,9 @@ export function SpaceShowcaseSection({
   config,
   spaces,
   style,
-}: SpaceShowcaseSectionProps): ReactElement {
-  const featured = spaces[0];
-  const remaining = spaces.slice(1);
-
-  return (
-    <SectionWrapper style={style} layout={config.layout}>
-      {/* Section heading — left aligned, editorial */}
-      <div className="mb-12 flex items-end justify-between md:mb-20">
-        <div>
-          <ScrollReveal>
-            {config.sectionLabel ? (
-              <SectionLabel>{config.sectionLabel}</SectionLabel>
-            ) : null}
-            <div className="mt-4" style={getTitleStyle(style)}>
-              <Heading
-                level={2}
-                className={cn(getTitleClasses(style), "tracking-tight")}
-              >
-                {config.title}
-              </Heading>
-            </div>
-          </ScrollReveal>
-        </div>
-        {/* Decorative line extending to right */}
-        <div className="mb-3 hidden flex-1 md:block">
-          <div className="ml-12 h-px bg-border" aria-hidden="true" />
-        </div>
-      </div>
-
-      {/* Featured first card — large */}
-      {featured && (
-        <ScrollReveal>
-          <div className="mb-10 md:mb-16">
-            <SpaceCard
-              slug={featured.slug}
-              name={featured.name}
-              description={featured.descriptionPlainText}
-              capacity={featured.capacity}
-              area={featured.area}
-              hourlyPrice={featured.hourlyPrice}
-              mainImageUrl={featured.mainImageUrl}
-              imageUrls={featured.imageUrls}
-              categoryName={featured.categoryName}
-              locationName={featured.locationName ?? undefined}
-            />
-          </div>
-        </ScrollReveal>
-      )}
-
-      {/* Remaining cards — smaller grid (@container for responsive card columns) */}
-      {remaining.length > 0 && (
-        <div className="@container">
-          <ScrollRevealGroup
-            className={cn(
-              "grid gap-6",
-              getCardGridColsClass(config.columns),
-              "@md:gap-8",
-            )}
-            stagger={0.08}
-          >
-            {remaining.map((space) => (
-              <SpaceCard
-                key={space.id}
-                slug={space.slug}
-                name={space.name}
-                description={space.descriptionPlainText}
-                capacity={space.capacity}
-                area={space.area}
-                hourlyPrice={space.hourlyPrice}
-                mainImageUrl={space.mainImageUrl}
-                imageUrls={space.imageUrls}
-                categoryName={space.categoryName}
-                locationName={space.locationName ?? undefined}
-              />
-            ))}
-          </ScrollRevealGroup>
-        </div>
-      )}
-    </SectionWrapper>
-  );
+}: SpaceShowcaseSectionProps): ReactElement | null {
+  if (config.displayLayout === "carousel") {
+    return <SpacesCarousel config={config} spaces={spaces} style={style} />;
+  }
+  return <SpacesGrid config={config} spaces={spaces} style={style} />;
 }

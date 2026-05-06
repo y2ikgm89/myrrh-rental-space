@@ -283,6 +283,8 @@ export const spaceShowcaseConfigSchema = z.object({
     .default("Our Spaces"),
   maxItems: z.number().int().min(1).max(12).default(3),
   showOnlyPublished: z.boolean().default(true),
+  displayLayout: z.enum(["grid", "carousel"]).default("grid"),
+  autoPlayInterval: z.number().int().min(0).max(30).default(5),
   columns: z.number().int().min(2).max(4).default(3),
   cardStyle: z.enum(cardStyleValues).default("bordered"),
   imageAspect: z.enum(showcaseImageAspectValues).default("4:3"),

@@ -5,6 +5,7 @@ import { sectionLayoutSchema } from "../_shared/layout";
 
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9", "1:1"] as const;
+const displayLayouts = ["grid", "carousel"] as const;
 
 export const spaceShowcaseConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
@@ -28,12 +29,28 @@ export const spaceShowcaseConfigSchema = z.object({
     default: true,
     group: "advanced",
   }),
+  displayLayout: field.select("レイアウト", {
+    options: displayLayouts,
+    default: "grid",
+    group: "design",
+    helpText: "grid: 特集 + グリッド / carousel: 重なりカードカルーセル",
+  }),
+  autoPlayInterval: field.number("オートプレイ間隔（秒）", {
+    min: 0,
+    max: 30,
+    default: 5,
+    suffix: "秒",
+    group: "design",
+    helpText:
+      "carousel レイアウト時のみ有効。0 で停止。3 秒以上推奨。reduced-motion 設定時は自動で停止します。",
+  }),
   columns: field.number("1 行あたりの列数", {
     min: 2,
     max: 4,
     default: 3,
     suffix: "列",
     group: "design",
+    helpText: "grid レイアウト時のみ有効",
   }),
   cardStyle: field.select("カードの見た目", {
     options: cardStyles,
