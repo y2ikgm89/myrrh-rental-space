@@ -3,7 +3,12 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 
-const layouts = ["hero-first", "equal-grid", "icon-left"] as const;
+const itemLayouts = ["hero-first", "equal-grid", "icon-left"] as const;
+const displayLayouts = [
+  "grid",
+  "numbered-steps",
+  "numbered-editorial",
+] as const;
 
 export const featuresConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
@@ -24,18 +29,26 @@ export const featuresConfigSchema = z.object({
       description: field.textarea("説明文"),
     },
   }),
+  displayLayout: field.select("レイアウト", {
+    options: displayLayouts,
+    default: "numbered-editorial",
+    group: "design",
+    helpText:
+      "grid: アイコン付きカードグリッド / numbered-steps: 番号付き 3 ステップ + アイコン中央配置 / numbered-editorial: 番号付き divide-y 構造化リスト",
+  }),
   columns: field.number("1 行あたりの列数", {
     min: 1,
     max: 4,
     default: 3,
     suffix: "列",
     group: "design",
+    helpText: "grid レイアウト時のみ有効",
   }),
   itemLayout: field.select("アイテムレイアウト", {
-    options: layouts,
+    options: itemLayouts,
     default: "hero-first",
     group: "design",
-    helpText: "特徴項目の並び方",
+    helpText: "grid レイアウト時のみ有効",
   }),
   layout: sectionLayoutSchema,
 });

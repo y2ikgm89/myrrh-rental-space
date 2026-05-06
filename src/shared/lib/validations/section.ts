@@ -399,6 +399,9 @@ export const featuresConfigSchema = z.object({
       }),
     )
     .default([]),
+  displayLayout: z
+    .enum(["grid", "numbered-steps", "numbered-editorial"])
+    .default("numbered-editorial"),
   columns: z.number().int().min(1).max(4).default(3),
   itemLayout: z.enum(featuresLayoutValues).default("hero-first"),
   layout: sectionLayoutSchema,
