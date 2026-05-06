@@ -1,6 +1,6 @@
 "use client";
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import { IconX } from "@tabler/icons-react";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import { cn } from "@/shared/lib/cn";

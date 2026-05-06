@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { useQueryStates } from "nuqs";
 import { useTransition } from "react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { DropdownMenu } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
 import { spaceSearchParamsParsers } from "@/public/lib/search-params";
 

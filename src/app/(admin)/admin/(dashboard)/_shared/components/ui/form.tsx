@@ -10,7 +10,7 @@ import {
   type FieldPath,
   type FieldValues,
 } from "react-hook-form";
-import { Slot } from "@radix-ui/react-slot";
+import { Slot as SlotPrimitive } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
 import { Label } from "@/admin/components/ui/label";
 
@@ -117,11 +117,14 @@ function FormLabel({
 // FormControl（Slot で子要素に aria 属性をマージ）
 // =============================================================================
 
-function FormControl({ ref, ...props }: ComponentPropsWithRef<typeof Slot>) {
+function FormControl({
+  ref,
+  ...props
+}: ComponentPropsWithRef<typeof SlotPrimitive.Slot>) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
   return (
-    <Slot
+    <SlotPrimitive.Slot
       ref={ref}
       id={formItemId}
       aria-describedby={

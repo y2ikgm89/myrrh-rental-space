@@ -1,4 +1,4 @@
-import { Slot } from "@radix-ui/react-slot";
+import { Slot as SlotPrimitive } from "radix-ui";
 import { tv, type VariantProps } from "tailwind-variants";
 
 import { cn } from "@/shared/lib/cn";
@@ -69,7 +69,7 @@ function Button({
   ref,
   ...props
 }: ButtonProps) {
-  const Comp = asChild ? Slot : "button";
+  const Comp = asChild ? SlotPrimitive.Slot : "button";
   return (
     <Comp
       type={asChild ? undefined : type}

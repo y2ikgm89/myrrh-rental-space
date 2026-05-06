@@ -1,6 +1,6 @@
 "use client";
 
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Tooltip as TooltipPrimitive } from "radix-ui";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";

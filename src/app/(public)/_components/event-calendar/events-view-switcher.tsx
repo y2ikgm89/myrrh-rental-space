@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import * as Tabs from "@radix-ui/react-tabs";
+import { Tabs } from "radix-ui";
 import { useQueryStates } from "nuqs";
 import { cn } from "@/shared/lib/cn";
 import {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import * as Dialog from "@radix-ui/react-dialog";
+import { Dialog } from "radix-ui";
 import { IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import type { KeyboardEvent } from "react";
 import { ImageFrame } from "../design-system/image-frame";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import * as Tabs from "@radix-ui/react-tabs";
+import { Tabs } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
 import { ReservationList } from "./reservation-list";
 import type { ReservationListItem } from "./reservation-list";

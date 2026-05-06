@@ -1,6 +1,6 @@
 "use client";
 
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { IconChevronRight } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";

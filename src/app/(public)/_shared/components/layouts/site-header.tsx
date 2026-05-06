@@ -12,8 +12,7 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import * as NavigationMenu from "@radix-ui/react-navigation-menu";
-import * as Dialog from "@radix-ui/react-dialog";
+import { NavigationMenu, Dialog } from "radix-ui";
 import { IconChevronDown, IconMenu2, IconX } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";

@@ -1,6 +1,6 @@
 "use client";
 
-import * as SelectPrimitive from "@radix-ui/react-select";
+import { Select as SelectPrimitive } from "radix-ui";
 import { IconCheck, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";

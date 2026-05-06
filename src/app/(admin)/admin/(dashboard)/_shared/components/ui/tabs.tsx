@@ -10,7 +10,7 @@
  * @see https://www.radix-ui.com/primitives/docs/components/tabs
  */
 
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Tabs as TabsPrimitive } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
