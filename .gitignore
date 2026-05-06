@@ -82,10 +82,14 @@ docs/api/
 .claude/state/
 .claude/memory/
 .claude/agent-memory/
+.claude/worktrees/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 tmpclaude-*-cwd
 nul
+
+# mintty screenshots
+mintty.*.png
 
 # Serena MCP tool files
 .serena/
