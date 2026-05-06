@@ -47,7 +47,6 @@ export default async function MypageLayout({
   // 新規顧客の場合、signup 同意 cookie を消費して同意記録
   // Next.js 公式パターン: layout Server Component で cookies() を read/write 可
   const cookieStore = await cookies();
-  // eslint-disable-next-line @eslint-react/purity
   const signupCookie = cookieStore.get(SIGNUP_TERMS_COOKIE_NAME);
   if (signupCookie) {
     if (isNew) {
@@ -72,7 +71,6 @@ export default async function MypageLayout({
       }
     }
     // 既存顧客でも cookie をクリーンアップ（再利用防止）
-    // eslint-disable-next-line @eslint-react/purity
     cookieStore.delete(SIGNUP_TERMS_COOKIE_NAME);
   }
 
