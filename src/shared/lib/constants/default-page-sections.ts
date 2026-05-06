@@ -75,39 +75,51 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: "ご利用の流れ",
       config: {
         sectionLabel: "How to Reserve",
+        title: "ご利用の流れ",
+        displayLayout: "numbered-steps",
+        items: [
+          {
+            icon: "IconSearch",
+            title: "スペースを選ぶ",
+            description: "用途や人数に合った空間を見つける",
+          },
+          {
+            icon: "IconCalendarEvent",
+            title: "日時を決める",
+            description: "カレンダーから空き状況を確認",
+          },
+          {
+            icon: "IconCircleCheck",
+            title: "オンラインで予約",
+            description: "最短1分で予約完了",
+          },
+        ],
         layout: {
           padding: "lg",
           containerWidth: "lg",
           animateOnScroll: "fade-up",
         },
-        items: [
-          {
-            title: "スペースを選ぶ",
-            description: "用途や人数に合った空間を見つける",
-          },
-          {
-            title: "日時を決める",
-            description: "カレンダーから空き状況を確認",
-          },
-          {
-            title: "オンラインで予約",
-            description: "最短1分で予約完了",
-          },
-        ],
       },
       content: null,
       order: 0,
       isActive: true,
     },
     {
-      type: "space-showcase",
-      title: "厳選スペース",
+      type: "value-props",
+      title: null,
       config: {
-        sectionLabel: "Selected Spaces",
-        maxItems: 6,
+        sectionLabel: "",
+        title: "",
+        iconStyle: "tabler",
+        items: [
+          { icon: "IconClock", title: "最短1時間から" },
+          { icon: "IconCalendarCheck", title: "当日予約OK" },
+          { icon: "IconWifi", title: "Wi-Fi完備" },
+          { icon: "IconCreditCard", title: "オンライン決済" },
+        ],
         layout: {
-          padding: "lg",
-          containerWidth: "xl",
+          padding: "md",
+          containerWidth: "lg",
           animateOnScroll: "fade-up",
         },
       },
@@ -116,15 +128,35 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
+      type: "space-showcase",
+      title: "厳選スペース",
+      config: {
+        sectionLabel: "Selected Spaces",
+        title: "厳選スペース",
+        maxItems: 8,
+        showOnlyPublished: true,
+        displayLayout: "carousel",
+        autoPlayInterval: 5,
+        columns: 3,
+        cardStyle: "bordered",
+        imageAspect: "4:3",
+        layout: {
+          padding: "lg",
+          containerWidth: "xl",
+          animateOnScroll: "fade-up",
+        },
+      },
+      content: null,
+      order: 2,
+      isActive: true,
+    },
+    {
       type: "features",
       title: "選ばれる理由",
       config: {
         sectionLabel: "Why Myrrh",
-        layout: {
-          padding: "lg",
-          containerWidth: "lg",
-          animateOnScroll: "fade-up",
-        },
+        title: "選ばれる理由",
+        displayLayout: "numbered-editorial",
         items: [
           {
             title: "自然光設計",
@@ -147,9 +179,14 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
               "可動式の家具と設備で、会議・撮影・イベントなど用途に合わせた配置変更が可能です。",
           },
         ],
+        layout: {
+          padding: "lg",
+          containerWidth: "lg",
+          animateOnScroll: "fade-up",
+        },
       },
       content: null,
-      order: 2,
+      order: 3,
       isActive: true,
     },
     {
@@ -174,7 +211,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         },
       },
       content: null,
-      order: 3,
+      order: 4,
       isActive: true,
     },
   ],
