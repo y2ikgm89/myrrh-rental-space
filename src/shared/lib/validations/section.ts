@@ -466,7 +466,11 @@ export const galleryConfigSchema = z.object({
 
 // --- Functional ---
 
-/** CTA セクション設定 */
+/** CTA セクション設定
+ *
+ * `title` は default `""` を持つ。canonical SSoT (`definitions/cta/schema.ts`) と整合し、
+ * `safeParse({})` がデフォルト値を生成できる契約を保つ（SectionRenderer の fallback 経路）。
+ */
 export const ctaConfigSchema = z.object({
   sectionLabel: z
     .string()
@@ -474,8 +478,8 @@ export const ctaConfigSchema = z.object({
     .default("Ready to Begin?"),
   title: z
     .string()
-    .min(1, { error: "タイトルは必須です" })
-    .max(100, { error: "タイトルは100文字以内です" }),
+    .max(100, { error: "タイトルは100文字以内です" })
+    .default(""),
   description: z
     .string()
     .max(500, { error: "説明は500文字以内です" })

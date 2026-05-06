@@ -78,7 +78,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         layout: {
           padding: "lg",
           containerWidth: "lg",
-          animateOnScroll: true,
+          animateOnScroll: "fade-up",
         },
         items: [
           {
@@ -108,7 +108,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         layout: {
           padding: "lg",
           containerWidth: "xl",
-          animateOnScroll: true,
+          animateOnScroll: "fade-up",
         },
       },
       content: null,
@@ -123,7 +123,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         layout: {
           padding: "lg",
           containerWidth: "lg",
-          animateOnScroll: true,
+          animateOnScroll: "fade-up",
         },
         items: [
           {
@@ -170,7 +170,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         layout: {
           padding: "xl",
           containerWidth: "md",
-          animateOnScroll: true,
+          animateOnScroll: "fade-up",
         },
       },
       content: null,

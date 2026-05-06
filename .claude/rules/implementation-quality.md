@@ -214,6 +214,8 @@ try {
 - **RHF 7.72 で `Control<T>` が invariant** — 異なるフォーム型で共有するコンポーネントの公式パターンは存在しない。Pure Component（RHF 非依存の値+callback props）+ Connected ラッパー（`as Path<T>` で型ブリッジ）が最善。`as Control<any>` / `as never` 禁止。参照実装: `LayoutFields.tsx` + `LayoutFieldsConnected`
 - **`exactOptionalPropertyTypes` で optional prop に `T | undefined` を渡せない** — `prop?: string` に `string | undefined` を渡すとエラー。コンポーネント props では `prop: string | undefined`（required + union）で宣言する。`prop?: string` は「省略可能だが渡すなら `string`」の意味
 - **認証・プライベートページには `robots: { index: false, follow: false }` 必須** — `/login`, `/admin/login`, `/admin/forgot-password`, `/admin/reset-password`, `/mypage/*` 等。layout.tsx に設定すれば全サブページに継承。未設定だとクロールバジェット浪費＋低品質ページ評価リスク
+- **Zod schema / Server module の挙動確認は `bun -e "import('./path/to/module.ts').then(...)"`** — dev server 起動・ブラウザ往復なしに `safeParse({})` / 関数戻り値を直接検証できる。SSoT ドリフト調査・スキーマ整合検証で特に有効（例: 2026-05-07 home CTA throw root cause を `bun -e "const {ctaConfigSchema} = await import('./src/.../section.ts'); console.log(ctaConfigSchema.safeParse({}))"` で 1 コマンド特定）。`tsx` / `ts-node` 不要、TypeScript はそのまま実行可能
+- **`createTypedConfigGetterFromSchema` の fallback 契約** — `section-defaults.ts` の `getXxxConfig` は「実 config parse 失敗 → `safeParse({})` フォールバック → それも失敗で throw」。**全 section schema は empty object で必ず default 値を生成できなければならない**。required field を追加する際は `.default()` を必ず付ける（または `.optional()` 化）。`title.min(1)` のような default なし required は SectionRenderer throw → ErrorBoundary 露出の silent bug（→ `ssot-singletons.md` §Section schema 重複）
 
 ### セキュリティ
 
