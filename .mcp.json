@@ -8,13 +8,11 @@
       }
     },
     "context7": {
-      "command": "bunx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "ctx7sk-cd6ff437-5e4e-4f23-8a87-82e0856d9948"
-      ]
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      }
     }
   }
 }
