@@ -32,6 +32,7 @@ import {
   getLocationListConfig,
   getEventCalendarConfig,
   getReservationFormConfig,
+  getPageHeroConfig,
 } from "@/shared/lib/validations/section-defaults";
 import {
   getPublishedFaqCategoriesWithItems,
@@ -74,6 +75,7 @@ import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
 
 // v3 components
+import { PageHero } from "../page-hero/PageHero";
 import { HeroSection } from "../../../_components/HeroSection";
 import { StandardHeroSection } from "../../../_components/StandardHeroSection";
 import { ConceptSection } from "../../../_components/ConceptSection";
@@ -135,6 +137,11 @@ export async function SectionRenderer({
     // =========================================================================
     // Hero variants
     // =========================================================================
+
+    case SectionType.PAGE_HERO: {
+      const config = getPageHeroConfig(section.config);
+      return <PageHero config={config} />;
+    }
 
     case SectionType.HERO: {
       const config = getHeroConfig(section.config);

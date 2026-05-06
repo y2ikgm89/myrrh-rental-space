@@ -34,6 +34,8 @@ import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/re
 import { reservationFormConfigSchema } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
 import { valuePropsConfigSchema } from "@/shared/lib/sections/definitions/value-props/schema";
+import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero/schema";
+import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
 
 // =============================================================================
 // デフォルト設定取得（レジストリ委譲）
@@ -144,6 +146,9 @@ export const getValuePropsConfig = createTypedConfigGetterFromSchema(
   valuePropsConfigSchema,
 );
 
+export const getPageHeroConfig =
+  createTypedConfigGetterFromSchema(pageHeroConfigSchema);
+
 // =============================================================================
 // getSafeConfig — 汎用: セクションタイプに応じた config 取得（レジストリ委譲）
 // =============================================================================
@@ -208,6 +213,10 @@ export function getSafeConfig(
   type: "value-props",
   config: unknown,
 ): ValuePropsConfig;
+export function getSafeConfig(
+  type: "page-hero",
+  config: unknown,
+): PageHeroConfig;
 export function getSafeConfig(type: string, config: unknown): SectionConfig {
   // config をパース試行
   const result = validateSectionConfig(type, config);
