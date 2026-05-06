@@ -122,8 +122,8 @@ function handleAdminLoginGate(
 ): NextResponse {
   const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
 
-  // gate cookie がある → 通過
-  if (gateCookie?.value === "1") {
+  // gate cookie がある → 通過（timing-safe comparison for defensive consistency）
+  if (gateCookie?.value && timingSafeEqual(gateCookie.value, "1")) {
     return createResponse(req, pathname);
   }
 

@@ -362,7 +362,7 @@ export default async function Page() {
 
 | 関数                       | キャッシュ     | 未認証時           | 用途                                              |
 | -------------------------- | -------------- | ------------------ | ------------------------------------------------- |
-| `verifyCustomerSession()`  | なし           | `/login` redirect  | マイページ（CUSTOMER 認証、管理者→`/admin`）      |
+| `verifyCustomerSession()`  | `cache()` あり | `/login` redirect  | マイページ（CUSTOMER 認証、管理者→`/admin`）      |
 | `getCurrentCustomerUser()` | `cache()` あり | `undefined` を返す | 公開ページ（オプショナル顧客認証）                |
 | `getCustomerSession()`     | なし           | `null` を返す      | マイページ Server Actions                         |
 | `getCustomerSessionUser()` | なし           | `null` を返す      | マイページ Server Actions（型安全なユーザー取得） |

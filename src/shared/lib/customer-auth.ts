@@ -75,7 +75,9 @@ function createCustomerAuth() {
     },
     emailAndPassword: {
       // 開発環境のみ有効（dev-login-action 用）
-      enabled: serverEnv.NODE_ENV !== "production",
+      // staging で `NODE_ENV=production` 設定時にも誤って enable しないよう、
+      // 明示的に `=== "development"` を採用（`!== "production"` は staging で true になり得る）
+      enabled: serverEnv.NODE_ENV === "development",
     },
     ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
     account: {
@@ -145,14 +147,18 @@ async function resolveRequestHeaders(
 }
 
 /** 顧客セッション検証（管理者ロールはリダイレクト） */
-export async function verifyCustomerSession() {
-  const session = await getCustomerSession();
-  if (!session) redirect("/login");
-  const user = getCustomerSessionUser(session);
-  if (!user) redirect("/login");
-  if (isDashboardRole(user.role)) redirect("/admin");
-  return { session, user };
-}
+export const verifyCustomerSession = cache(
+  async (
+    requestHeaders?: Headers,
+  ): Promise<{ session: CustomerSession; user: CustomerUser }> => {
+    const session = await getCustomerSession(requestHeaders);
+    if (!session) redirect("/login");
+    const user = getCustomerSessionUser(session);
+    if (!user) redirect("/login");
+    if (isDashboardRole(user.role)) redirect("/admin");
+    return { session, user };
+  },
+);
 
 /** 現在の顧客ユーザー取得（リダイレクトなし） */
 export const getCurrentCustomerUser = cache(
