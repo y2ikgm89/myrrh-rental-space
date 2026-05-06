@@ -14,13 +14,54 @@ paths:
 
 ### 公式が定義する 5 層
 
-| 層                      | 公式パス                                                             | 公式 frontmatter                                                       |
-| ----------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **Memory**              | `CLAUDE.md` / `~/.claude/projects/<slug>/memory/MEMORY.md`           | なし（plain markdown）                                                 |
-| **Rules (path-scoped)** | `.claude/rules/**/*.md`                                              | `description` (任意) + **`paths:` (必須)**                             |
-| **Subagents**           | `.claude/agents/<name>.md`                                           | `name`, `description` (必須) + `tools` / `model` / `memory` 等（任意） |
-| **Skills**              | `.claude/skills/<name>/SKILL.md`                                     | `description` (recommended) + `paths` / `allowed-tools` 等（任意）     |
-| **Hooks**               | `.claude/settings.json` の `hooks` フィールド + `.claude/hooks/*.sh` | n/a (settings.json 設定)                                               |
+| 層                      | 公式パス                                                             | 公式 frontmatter                           |
+| ----------------------- | -------------------------------------------------------------------- | ------------------------------------------ |
+| **Memory**              | `CLAUDE.md` / `~/.claude/projects/<slug>/memory/MEMORY.md`           | なし（plain markdown）                     |
+| **Rules (path-scoped)** | `.claude/rules/**/*.md`                                              | `description` (任意) + **`paths:` (必須)** |
+| **Subagents**           | `.claude/agents/<name>.md`                                           | 下記 sub-agent 公式フィールド表を参照      |
+| **Skills**              | `.claude/skills/<name>/SKILL.md`                                     | 下記 skill 公式フィールド表を参照          |
+| **Hooks**               | `.claude/settings.json` の `hooks` フィールド + `.claude/hooks/*.sh` | n/a (settings.json 設定)                   |
+
+#### Sub-agent 公式 frontmatter（`code.claude.com/docs/en/sub-agents`）
+
+| フィールド        | 必須 | 値・説明                                                                      |
+| ----------------- | ---- | ----------------------------------------------------------------------------- |
+| `name`            | ✓    | unique identifier                                                             |
+| `description`     | ✓    | when Claude should delegate                                                   |
+| `tools`           | -    | 許可ツールリスト                                                              |
+| `disallowedTools` | -    | 拒否ツールリスト                                                              |
+| `model`           | -    | `sonnet` / `opus` / `haiku` / `inherit`                                       |
+| `permissionMode`  | -    | `default` / `acceptEdits` / `auto` / `dontAsk` / `bypassPermissions` / `plan` |
+| `maxTurns`        | -    | 最大ターン数                                                                  |
+| `skills`          | -    | ロードする skill 名リスト                                                     |
+| `mcpServers`      | -    | MCP サーバー指定                                                              |
+| `hooks`           | -    | lifecycle hooks                                                               |
+| `memory`          | -    | `user` / `project` / `local`                                                  |
+| `background`      | -    | boolean — バックグラウンド実行                                                |
+| `effort`          | -    | `low` / `medium` / `high` / `xhigh` / `max`                                   |
+| `isolation`       | -    | `worktree`                                                                    |
+| `color`           | -    | UI color tag                                                                  |
+| `initialPrompt`   | -    | 初期プロンプト                                                                |
+
+#### Skill 公式 frontmatter（`code.claude.com/docs/en/skills`）
+
+| フィールド                 | 必須 | 値・説明                                                                   |
+| -------------------------- | ---- | -------------------------------------------------------------------------- |
+| `name`                     | -    | max 64 chars                                                               |
+| `description`              | 推奨 | activation hint（**`description` + `when_to_use` 合算で 1,536 文字上限**） |
+| `when_to_use`              | -    | description 補足（合算で 1,536 文字上限）                                  |
+| `disable-model-invocation` | -    | boolean                                                                    |
+| `user-invocable`           | -    | boolean                                                                    |
+| `allowed-tools`            | -    | 許可ツールリスト                                                           |
+| `argument-hint`            | -    | argument 形式ヒント                                                        |
+| `arguments`                | -    | argument 定義                                                              |
+| `model`                    | -    | sub-agent と同様                                                           |
+| `effort`                   | -    | sub-agent と同様                                                           |
+| `context`                  | -    | `fork`                                                                     |
+| `agent`                    | -    | 起動 sub-agent 型                                                          |
+| `hooks`                    | -    | lifecycle hooks                                                            |
+| `paths`                    | -    | glob patterns — path-specific skill activation                             |
+| `shell`                    | -    | `bash` / `powershell`                                                      |
 
 ### 撤回済み独自パターン（再導入禁止）
 
@@ -35,8 +76,8 @@ paths:
 ### 新規 rule / skill / agent 作成時のチェックリスト
 
 - [ ] **rule**: `paths:` frontmatter あり（常時ロード禁止）
-- [ ] **skill**: SKILL.md 500 行未満、description 1,536 文字以下、reference は `reference/*.md` に分割
-- [ ] **agent**: frontmatter は `name`/`description`/`tools`/`model`/`memory` 等公式フィールドのみ
+- [ ] **skill**: SKILL.md 500 行未満、`description` + `when_to_use` 合算 1,536 文字以下、reference は `reference/*.md` に分割。frontmatter は上記 skill 公式フィールド表のキーのみ
+- [ ] **agent**: frontmatter は上記 sub-agent 公式フィールド表のキーのみ。独自フィールド導入禁止
 - [ ] **新カテゴリ作成時**: ドメイン分類（Prisma / React / Tailwind / Auth / Server Actions 等）に統合できないか先検討。メタ分類（gotchas / patterns / etc.）の新ディレクトリ作成は禁止
 - [ ] **常時ロード rule 追加禁止** — 全 rule は `paths:` 必須
 
