@@ -57,13 +57,25 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # @prisma/client runtime（WASM ランタイムエンジン）
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-# PostgreSQL 以外の WASM query_compiler を削除（adapter-pg は postgresql のみ dynamic import）
+# Cloud Run runner で未参照の Prisma client 成果物を削除:
+# - PostgreSQL 以外の WASM query_compiler（adapter-pg は postgresql のみ dynamic import）
+# - source maps（production で不要）
+# - Edge runtime 用 wasm-compiler-edge（Cloud Run + Bun では未参照）
+# - Browser stub（runtime/index-browser.* と root の index-browser.js / edge.*）
+# - generator-build/（`prisma generate` 専用、runner で未起動）
 RUN find ./node_modules/@prisma/client/runtime \
     \( -name 'query_compiler_*.cockroachdb.*' \
     -o -name 'query_compiler_*.mysql.*' \
     -o -name 'query_compiler_*.sqlite.*' \
-    -o -name 'query_compiler_*.sqlserver.*' \) \
-    -delete
+    -o -name 'query_compiler_*.sqlserver.*' \
+    -o -name '*.map' \
+    -o -name 'index-browser.*' \
+    -o -name 'wasm-compiler-edge.*' \) \
+    -delete && \
+    rm -rf ./node_modules/@prisma/client/generator-build && \
+    rm -f ./node_modules/@prisma/client/edge.js \
+          ./node_modules/@prisma/client/edge.d.ts \
+          ./node_modules/@prisma/client/index-browser.js
 # Prisma CLI + schema / migrations — Cloud Run Job 側で `bunx --bun prisma migrate deploy` を実行するため
 # 同一 image を Cloud Run service と migrate Job で共有する（cloudbuild.yaml の migrate-update/execute 参照）。
 # standalone trace には `prisma` パッケージが含まれないため明示コピーが必須。
