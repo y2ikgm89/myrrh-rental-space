@@ -10,7 +10,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   searchByResource,
   SEARCHABLE_RESOURCES,
-} from "@/admin/lib/command-palette/queries";
+} from "@/shared/domain/admin-search/queries";
 import type { SearchResultGroup } from "@/admin/components/command-palette/types";
 
 type SearchPayload = { groups: SearchResultGroup[] };

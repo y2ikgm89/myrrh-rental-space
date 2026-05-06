@@ -11,7 +11,7 @@ import {
   getPageForEdit,
   getPageWithSections,
 } from "@/admin/queries/page-section";
-import { getSectionDynamicOptions } from "@/admin/queries/section-dynamic-options";
+import { getSectionDynamicOptions } from "@/shared/domain/sections/dynamic-options";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { PageEditor } from "./_components/PageEditor";

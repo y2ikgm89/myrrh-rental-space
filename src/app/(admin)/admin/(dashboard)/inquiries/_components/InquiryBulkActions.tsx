@@ -23,7 +23,7 @@ import {
 } from "@/admin/actions/inquiry/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { INQUIRY_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { InquiryStatus } from "@generated/prisma/enums";
+import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface InquiryBulkActionsProps {
   selectedIds: string[];

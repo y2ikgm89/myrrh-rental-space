@@ -10,7 +10,7 @@ import {
   bulkDeleteInquiriesCommand,
   type BulkDeleteInquiriesResult,
 } from "@/shared/domain/inquiries/bulk-commands";
-import { InquiryStatus } from "@generated/prisma/enums";
+import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   bulkSetStatusInquiriesCommand,
   type BulkSetStatusInquiriesResult,

@@ -1,7 +1,6 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { requireAdminPermission } from "./_helpers";
 
 export type DynamicCategoryOption = {
   readonly id: string;
@@ -17,10 +16,10 @@ export type DynamicSectionOptions = {
 /**
  * セクション編集 UI の動的 select に渡す options を一括取得する。
  * post-list / faq-list セクションの categoryId field が利用する。
+ *
+ * 認証は consumer の Server Component / API route で行う（query 層は pure）。
  */
 export async function getSectionDynamicOptions(): Promise<DynamicSectionOptions> {
-  await requireAdminPermission("page", "read");
-
   const [postCategories, faqCategories] = await Promise.all([
     prisma.postCategory.findMany({
       select: { id: true, name: true },

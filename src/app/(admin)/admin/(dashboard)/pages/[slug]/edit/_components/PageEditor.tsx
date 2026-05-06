@@ -14,7 +14,7 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import type { PageForEdit } from "@/admin/queries/page-section";
-import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
+import type { DynamicSectionOptions } from "@/shared/domain/sections/dynamic-options";
 import { getAllSectionDefinitions } from "@/shared/lib/sections/registry";
 import { getPageTemplate } from "@/shared/lib/sections/page-templates";
 import { AddSectionDialog } from "./AddSectionDialog";

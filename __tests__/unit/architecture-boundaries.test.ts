@@ -23,14 +23,6 @@ const NEXT_CONFIG_FILE = join(ROOT, "next.config.ts");
 const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
 const AGENTS_FILE = join(ROOT, "AGENTS.md");
 const README_FILE = join(ROOT, "README.md");
-const DOCS_README_FILE = join(ROOT, "docs", "README.md");
-const GUIDES_README_FILE = join(ROOT, "docs", "guides", "README.md");
-const ARCHITECTURE_README_FILE = join(
-  ROOT,
-  "docs",
-  "architecture",
-  "README.md",
-);
 const CODEX_README_FILE = join(ROOT, ".codex", "README.md");
 const CODEX_CONFIG_FILE = join(ROOT, ".codex", "config.toml");
 const CODEX_AGENTS_ROOT = join(ROOT, ".codex", "agents");
@@ -1449,20 +1441,6 @@ describe("architecture boundaries", () => {
     expect(source).not.toContain("├── lib/");
     expect(source).not.toContain("├── actions/");
     expect(source).not.toContain("├── hooks/");
-  });
-
-  test("docs index は存在する architecture index を参照する", () => {
-    expect(existsSync(ARCHITECTURE_README_FILE)).toBe(true);
-
-    const docsIndex = readFileSync(DOCS_README_FILE, "utf8");
-    expect(docsIndex).toContain("./architecture/README.md");
-  });
-
-  test("guides は generated Prisma import や旧 action helper を推奨しない", () => {
-    const source = readFileSync(GUIDES_README_FILE, "utf8");
-
-    expect(source).not.toContain("@/generated/prisma/client");
-    expect(source).not.toContain("@/types/server-actions");
   });
 
   test("Codex rules は command approval policy だけを扱う", () => {

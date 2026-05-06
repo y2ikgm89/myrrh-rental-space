@@ -12,7 +12,7 @@ import {
   type BulkToggleActiveCustomersResult,
   type BulkDeleteCustomersResult,
 } from "@/shared/domain/customers/bulk-commands";
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   bulkSetStatusCustomersCommand,
   type BulkSetStatusCustomersResult,

@@ -49,7 +49,7 @@ import type { FieldType } from "@/shared/lib/sections/types";
 import type {
   DynamicCategoryOption,
   DynamicSectionOptions,
-} from "@/admin/queries/section-dynamic-options";
+} from "@/shared/domain/sections/dynamic-options";
 import { AutoBooleanField } from "./auto-fields/AutoBooleanField";
 import { AutoSelectField } from "./auto-fields/AutoSelectField";
 import { AutoArrayField } from "./auto-fields/AutoArrayField";

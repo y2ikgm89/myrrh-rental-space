@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { prisma } from "@/shared/db/prisma";
+import { findCustomerByEmailExcept } from "@/shared/domain/customers/queries";
 import {
   logError,
   ErrorCategory,
@@ -46,13 +46,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const { email, excludeId } = parsed.data;
 
-    const existing = await prisma.customer.findFirst({
-      where: {
-        email,
-        ...(excludeId ? { NOT: { id: excludeId } } : {}),
-      },
-      select: { id: true },
-    });
+    const existing = await findCustomerByEmailExcept(email, excludeId);
 
     return NextResponse.json({ available: existing === null });
   } catch (error: unknown) {

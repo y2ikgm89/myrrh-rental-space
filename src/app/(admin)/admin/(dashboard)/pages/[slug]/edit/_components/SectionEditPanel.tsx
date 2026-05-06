@@ -29,7 +29,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { isRecord } from "@/shared/lib/serialize";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
-import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
+import type { DynamicSectionOptions } from "@/shared/domain/sections/dynamic-options";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 import { AutoSectionForm } from "../../_sections/_components/auto-section-form";
 import type { ConfigFormSavePayload } from "../../_sections/_components/config-forms/shared";

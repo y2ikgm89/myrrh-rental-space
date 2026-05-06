@@ -30,7 +30,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
 }));
-mock.module("@/admin/lib/command-palette/queries", () => ({
+mock.module("@/shared/domain/admin-search/queries", () => ({
   searchByResource: mockSearchByResource,
   SEARCHABLE_RESOURCES: [
     "space",

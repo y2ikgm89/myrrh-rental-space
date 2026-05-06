@@ -15,7 +15,7 @@ import {
   type BulkSetStatusEventsResult,
 } from "@/shared/domain/events/bulk-status-commands";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
-import { EventStatus } from "@generated/prisma/enums";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
 import { ErrorCategory } from "@/shared/lib/errors";

@@ -26,7 +26,7 @@ import {
 } from "@/admin/actions/customer/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { CUSTOMER_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface CustomerBulkActionsProps {
   selectedIds: string[];

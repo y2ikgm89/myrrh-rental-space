@@ -72,7 +72,7 @@ mock.module("@/shared/db/prisma", () => ({
 import {
   searchByResource,
   SEARCHABLE_RESOURCES,
-} from "@/admin/lib/command-palette/queries";
+} from "@/shared/domain/admin-search/queries";
 
 describe("searchByResource", () => {
   test("11 resource すべてが SEARCHABLE_RESOURCES に含まれる", () => {

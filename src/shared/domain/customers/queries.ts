@@ -293,6 +293,25 @@ export async function searchCustomers(
   return customers;
 }
 
+/**
+ * メールアドレス重複事前チェック（顧客作成・編集フォームの onBlur 用）
+ *
+ * `excludeId` を渡すと該当 ID を除外して検索（編集時に自分自身の email を許可）。
+ * UNIQUE 制約 P2002 失敗を画面上で事前警告するための軽量 lookup。
+ */
+export async function findCustomerByEmailExcept(
+  email: string,
+  excludeId?: string,
+): Promise<{ id: string } | null> {
+  return prisma.customer.findFirst({
+    where: {
+      email,
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
+    },
+    select: { id: true },
+  });
+}
+
 export async function getCustomerByUserId(userId: string) {
   return prisma.customer.findUnique({
     where: { userId },

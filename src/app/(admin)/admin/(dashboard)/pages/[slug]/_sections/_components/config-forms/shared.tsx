@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { IconDeviceFloppy } from "@tabler/icons-react";
 import { SubmitButton } from "@/admin/components/ui";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
-import type { DynamicSectionOptions } from "@/admin/queries/section-dynamic-options";
+import type { DynamicSectionOptions } from "@/shared/domain/sections/dynamic-options";
 
 export interface ConfigFormSavePayload {
   config: Record<string, unknown>;
