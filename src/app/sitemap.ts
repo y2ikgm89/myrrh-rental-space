@@ -15,6 +15,10 @@ import { getSitemapContentData } from "@/shared/domain/sitemap/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
+import {
+  getFeatureFilterContext,
+  isUrlDisabled,
+} from "@/shared/lib/features/check";
 
 // =============================================================================
 // Types
@@ -48,12 +52,14 @@ const STATIC_PAGES = [
 // =============================================================================
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // 設定と全データを並列取得
-  const [permalinkSettings, content] = await Promise.all([
+  // 設定 / 全データ / Feature filter を並列取得
+  const [permalinkSettings, content, featureCtx] = await Promise.all([
     getPermalinkSettings(),
     getSitemapContentData(),
+    getFeatureFilterContext(),
   ]);
   const { spaces, news, posts, customPages, events, terms } = content;
+  const { enabled, disabledRoutes } = featureCtx;
 
   // 各コンテンツタイプの最新更新日を取得
   const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date();
@@ -64,9 +70,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: SitemapEntry[] = [];
 
   // ==========================================================================
-  // 1. 静的ページ
+  // 1. 静的ページ — disabled feature の publicRoutes を除外
   // ==========================================================================
   for (const path of STATIC_PAGES) {
+    if (isUrlDisabled(path, disabledRoutes)) continue;
     entries.push({
       url: `${BASE_URL}${path}`,
       lastModified: new Date(),
@@ -74,57 +81,68 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ==========================================================================
-  // 2. 一覧ページ（各コンテンツの最新更新日を使用）
+  // 2. 一覧ページ（feature ON のもののみ追加）
   // ==========================================================================
-  entries.push({
-    url: `${BASE_URL}/spaces`,
-    lastModified: latestSpaceUpdate,
-  });
-  entries.push({
-    url: `${BASE_URL}/news`,
-    lastModified: latestNewsUpdate,
-  });
-  entries.push({
-    url: `${BASE_URL}/posts`,
-    lastModified: latestPostUpdate,
-  });
-  entries.push({
-    url: `${BASE_URL}/events`,
-    lastModified: latestEventUpdate,
-  });
-
-  // ==========================================================================
-  // 3. スペース詳細ページ
-  // ==========================================================================
-  for (const space of spaces) {
+  if (enabled.has("spaces")) {
     entries.push({
-      url: `${BASE_URL}/spaces/${space.slug}`,
-      lastModified: space.updatedAt,
+      url: `${BASE_URL}/spaces`,
+      lastModified: latestSpaceUpdate,
+    });
+  }
+  if (enabled.has("news")) {
+    entries.push({ url: `${BASE_URL}/news`, lastModified: latestNewsUpdate });
+  }
+  if (enabled.has("posts")) {
+    entries.push({ url: `${BASE_URL}/posts`, lastModified: latestPostUpdate });
+  }
+  if (enabled.has("events")) {
+    entries.push({
+      url: `${BASE_URL}/events`,
+      lastModified: latestEventUpdate,
     });
   }
 
   // ==========================================================================
-  // 4. お知らせ詳細ページ
+  // 3-8. 詳細ページ（feature OFF なら丸ごと除外）
   // ==========================================================================
-  for (const item of news) {
-    entries.push({
-      url: `${BASE_URL}/news/${item.slug}`,
-      lastModified: item.updatedAt,
-    });
+  if (enabled.has("spaces")) {
+    for (const space of spaces) {
+      entries.push({
+        url: `${BASE_URL}/spaces/${space.slug}`,
+        lastModified: space.updatedAt,
+      });
+    }
+  }
+  if (enabled.has("news")) {
+    for (const item of news) {
+      entries.push({
+        url: `${BASE_URL}/news/${item.slug}`,
+        lastModified: item.updatedAt,
+      });
+    }
+  }
+  if (enabled.has("posts")) {
+    for (const post of posts) {
+      entries.push({
+        url: `${BASE_URL}${buildPostCanonicalPath(post, permalinkSettings ?? undefined)}`,
+        lastModified: post.updatedAt,
+      });
+    }
+  }
+  if (enabled.has("events")) {
+    // 過去イベントも含める（schema.org/Event の endDate + eventStatus で
+    // Google が終了判定するため noindex や sitemap 除外は不要）
+    // @see https://developers.google.com/search/docs/appearance/structured-data/event
+    for (const event of events) {
+      entries.push({
+        url: `${BASE_URL}/events/${event.slug}`,
+        lastModified: event.updatedAt,
+      });
+    }
   }
 
   // ==========================================================================
-  // 5. 投稿詳細ページ
-  // ==========================================================================
-  for (const post of posts) {
-    entries.push({
-      url: `${BASE_URL}${buildPostCanonicalPath(post, permalinkSettings ?? undefined)}`,
-      lastModified: post.updatedAt,
-    });
-  }
-
-  // ==========================================================================
-  // 6. カスタムページ
+  // カスタムページ / 規約 — feature gate 対象外（CMS-managed / 法的要件）
   // ==========================================================================
   for (const page of customPages) {
     entries.push({
@@ -132,27 +150,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: page.updatedAt,
     });
   }
-
-  // ==========================================================================
-  // 7. 規約詳細ページ
-  // ==========================================================================
   for (const term of terms) {
     entries.push({
       url: `${BASE_URL}/terms/${term.slug}`,
       lastModified: term.updatedAt,
-    });
-  }
-
-  // ==========================================================================
-  // 8. イベント詳細ページ
-  // 過去イベントも含める（schema.org/Event の endDate + eventStatus で
-  // Google が終了判定するため noindex や sitemap 除外は不要）
-  // @see https://developers.google.com/search/docs/appearance/structured-data/event
-  // ==========================================================================
-  for (const event of events) {
-    entries.push({
-      url: `${BASE_URL}/events/${event.slug}`,
-      lastModified: event.updatedAt,
     });
   }
 

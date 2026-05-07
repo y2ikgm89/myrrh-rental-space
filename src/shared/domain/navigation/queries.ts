@@ -9,6 +9,10 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import {
+  getFeatureFilterContext,
+  isUrlDisabled,
+} from "@/shared/lib/features/check";
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 
@@ -60,6 +64,8 @@ export async function getPublicNavigation(
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.NAVIGATION);
+  // feature module の ON/OFF が変わったら nav も再生成
+  cacheTag(CACHE_TAGS.FEATURE_MODULES);
 
   const items = await safeFetch({
     fetch: () =>
@@ -93,19 +99,30 @@ export async function getPublicNavigation(
     operationName: "getPublicNavigation",
   });
 
-  return items.map((item) => ({
-    id: item.id,
-    label: item.label,
-    url: item.url,
-    isExternal: item.isExternal,
-    children: item.children.map((child) => ({
-      id: child.id,
-      label: child.label,
-      url: child.url,
-      isExternal: child.isExternal,
-      children: EMPTY_NAV_CHILDREN,
-    })),
-  }));
+  const ctx = await getFeatureFilterContext();
+
+  // 内部リンクで disabled module の publicRoutes に hit するものは除外。
+  // 外部リンク（isExternal）は feature gate の対象外。
+  const isItemEnabled = (url: string, isExternal: boolean): boolean =>
+    isExternal || !isUrlDisabled(url, ctx.disabledRoutes);
+
+  return items
+    .filter((item) => isItemEnabled(item.url, item.isExternal))
+    .map((item) => ({
+      id: item.id,
+      label: item.label,
+      url: item.url,
+      isExternal: item.isExternal,
+      children: item.children
+        .filter((child) => isItemEnabled(child.url, child.isExternal))
+        .map((child) => ({
+          id: child.id,
+          label: child.label,
+          url: child.url,
+          isExternal: child.isExternal,
+          children: EMPTY_NAV_CHILDREN,
+        })),
+    }));
 }
 
 export async function getHeaderNavigation(): Promise<readonly PublicNavItem[]> {

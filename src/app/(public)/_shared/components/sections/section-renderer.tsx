@@ -10,6 +10,7 @@
 import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { SectionType } from "@/shared/lib/validations/section";
+import { getFeatureFilterContext } from "@/shared/lib/features/check";
 import {
   getHeroConfig,
   getHeroParallaxConfig,
@@ -131,6 +132,14 @@ export async function SectionRenderer({
   searchParams,
   pageSlug,
 }: SectionRendererProps): Promise<ReactElement | null> {
+  // 該当 section type が disabled feature module に紐づく場合は早期 null。
+  // 例: spaces feature OFF 時にホームに埋め込まれた space-showcase / space-list を非表示化。
+  // 公開ページ自体の 404 ガードは page.tsx の requireFeatureEnabled が担う（Phase 2）。
+  const featureCtx = await getFeatureFilterContext();
+  if (featureCtx.disabledSectionTypes.has(section.type)) {
+    return null;
+  }
+
   const resolved = getDefaultSectionStyle(section.type);
 
   switch (section.type) {
