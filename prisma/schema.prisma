@@ -1326,7 +1326,14 @@ model Settings {
   // Review Feature Gate (multi-tenant SaaS pattern)
   /// サイト全体のレビュー機能 ON/OFF（global gate）。false の場合 per-space `reviewsEnabled` に関わらず全レビュー非表示。
   /// 上位 gate: Global OFF → 全て非表示 / Global ON → per-space toggle が効く（WordPress / Ghost precedence）。
+  /// @deprecated Phase 6 で `featureModules.reviews` に統合し DROP 予定（2026-05-07 着手の feature-modules 計画）。
   reviewsEnabledGlobal Boolean @default(true)
+
+  /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
+  /// 形式: `Record<FeatureModule, boolean>` — 全 9 module（spaces / reservation / events / posts / news / faq / access / contact / reviews）。
+  /// OFF module は public route 404 / nav prune / sitemap prune / section registry filter / cron 早期 return に伝播。
+  /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES。seed.ts と migration が全 module を explicit に保つ。
+  featureModules Json @default("{}")
 
   // Webhook設定（Push Notifications）
   googleCalendarWebhookChannelId  String? // Webhook チャンネルID

@@ -375,6 +375,22 @@ async function seedSettings() {
     senderEmail: "noreply@example.com",
     senderName: "Myrrh Rental Space",
     replyToEmail: "support@example.com",
+
+    // Feature Modules — Sanity / Stripe Capabilities 流の declarative composition。
+    // 全 9 module を explicit に true で初期化（rental space SaaS template の標準構成）。
+    // SSoT: @/shared/lib/features/registry の FEATURE_MODULES_LIST。
+    // 個別環境で OFF にしたい module は管理画面 /admin/settings/features（Phase 5）から制御。
+    featureModules: {
+      spaces: true,
+      reservation: true,
+      events: true,
+      posts: true,
+      news: true,
+      faq: true,
+      access: true,
+      contact: true,
+      reviews: true,
+    },
   };
 
   await prisma.settings.upsert({

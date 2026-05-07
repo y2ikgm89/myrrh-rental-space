@@ -111,3 +111,20 @@ export function parseBusinessAttributes(
   if (!result.success) return null;
   return Object.keys(result.data).length > 0 ? result.data : null;
 }
+
+const featureModulesSchema = z.record(z.string(), z.boolean());
+
+/**
+ * JSON値をRecord<string, boolean>にパース（Feature Module ON/OFF map 用）。
+ *
+ * - 空オブジェクト / 不正値 / null / undefined → `{}`
+ * - boolean 以外の値を持つ key は silently 除外
+ *
+ * SSoT: `Settings.featureModules` JSON column。registry: `@/shared/lib/features/registry`。
+ * 解決ロジック: `@/shared/lib/features/check.ts` の `getEnabledFeatures`。
+ */
+export function parseFeatureModules(value: unknown): Record<string, boolean> {
+  if (value === null || value === undefined) return {};
+  const result = featureModulesSchema.safeParse(value);
+  return result.success ? result.data : {};
+}

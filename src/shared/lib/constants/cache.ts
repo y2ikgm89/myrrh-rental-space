@@ -150,6 +150,8 @@ export const CACHE_TAGS = {
   BLOCK_TEMPLATES: "block-templates",
   /** スペースレビュー */
   REVIEWS: "reviews",
+  /** 機能モジュール ON/OFF（Settings.featureModules） */
+  FEATURE_MODULES: "feature-modules",
   /** イベント */
   EVENTS: "events",
   /** イベント参加登録 */

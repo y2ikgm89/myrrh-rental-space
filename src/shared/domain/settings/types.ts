@@ -151,6 +151,14 @@ export type SettingsData = {
   footerShowSocialLinks: boolean;
   eventImportEnabled: boolean;
   reviewsEnabledGlobal: boolean;
+  /**
+   * Feature Module ON/OFF map.
+   *
+   * 形式: `Record<FeatureModule, boolean>` — 9 module（spaces / reservation / events /
+   * posts / news / faq / access / contact / reviews）。SSoT: `@/shared/lib/features/registry`。
+   * 解決ロジック（依存伝播含む）は `@/shared/lib/features/check.ts`。
+   */
+  featureModules: Record<string, boolean>;
   themeColor: string;
   createdAt: Date;
   updatedAt: Date;
