@@ -18,22 +18,22 @@ mock.module("next/navigation", () => ({
   notFound: mockNotFound,
 }));
 
-// react cache はテスト環境では single-call wrapper として振る舞えば十分
-mock.module("react", () => ({
-  cache: <T extends (...args: never[]) => unknown>(fn: T): T => fn,
-}));
-
 const { getEnabledFeatures, isFeatureEnabled, requireFeatureEnabled } =
   await import("@/shared/lib/features/check");
 
+const setStored = (stored: FeatureModulesMap): void => {
+  mockGetFeatureModulesSettings.mockImplementation(() =>
+    Promise.resolve(stored),
+  );
+};
+
 describe("getEnabledFeatures", () => {
   beforeEach(() => {
-    mockGetFeatureModulesSettings.mockReset();
     mockNotFound.mockClear();
   });
 
   test("全 module true の場合、全 module を返す", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({
+    setStored({
       spaces: true,
       reservation: true,
       events: true,
@@ -52,14 +52,14 @@ describe("getEnabledFeatures", () => {
   });
 
   test("空 map の場合、何も有効化されない（fail-closed）", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({});
+    setStored({});
 
     const enabled = await getEnabledFeatures();
     expect(enabled.size).toBe(0);
   });
 
   test("spaces OFF の場合、reservation / reviews も自動 OFF（依存解決）", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({
+    setStored({
       spaces: false,
       reservation: true,
       reviews: true,
@@ -80,7 +80,7 @@ describe("getEnabledFeatures", () => {
   });
 
   test("explicit false は即時 OFF", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({
+    setStored({
       spaces: true,
       reservation: true,
       events: false,
@@ -98,7 +98,7 @@ describe("getEnabledFeatures", () => {
   });
 
   test("未知 key は無視する（registry にない module は OFF）", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({
+    setStored({
       spaces: true,
       unknown_module: true,
     });
@@ -111,40 +111,35 @@ describe("getEnabledFeatures", () => {
 });
 
 describe("isFeatureEnabled", () => {
-  beforeEach(() => {
-    mockGetFeatureModulesSettings.mockReset();
-  });
-
   test("有効 module で true", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({ spaces: true });
+    setStored({ spaces: true });
     expect(await isFeatureEnabled("spaces")).toBe(true);
   });
 
   test("無効 module で false", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({ spaces: false });
+    setStored({ spaces: false });
     expect(await isFeatureEnabled("spaces")).toBe(false);
   });
 
   test("DB に key が無い場合 false（fail-closed）", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({});
+    setStored({});
     expect(await isFeatureEnabled("spaces")).toBe(false);
   });
 });
 
 describe("requireFeatureEnabled", () => {
   beforeEach(() => {
-    mockGetFeatureModulesSettings.mockReset();
     mockNotFound.mockClear();
   });
 
   test("有効 module では何もしない", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({ contact: true });
+    setStored({ contact: true });
     await requireFeatureEnabled("contact");
     expect(mockNotFound).not.toHaveBeenCalled();
   });
 
   test("無効 module では notFound() を呼ぶ", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({ contact: false });
+    setStored({ contact: false });
     await expect(requireFeatureEnabled("contact")).rejects.toThrow(
       "notFound called",
     );
@@ -152,7 +147,7 @@ describe("requireFeatureEnabled", () => {
   });
 
   test("依存先が OFF の場合も notFound() を呼ぶ", async () => {
-    mockGetFeatureModulesSettings.mockResolvedValue({
+    setStored({
       spaces: false,
       reservation: true,
     });

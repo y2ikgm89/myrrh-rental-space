@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { ReservationStatus } from "@generated/prisma/enums";
 
 type CreateReviewInput = {
@@ -13,13 +14,8 @@ type CreateReviewInput = {
 };
 
 export async function createReviewCommand(input: CreateReviewInput) {
-  // Global gate: multi-tenant サイト全体でレビュー機能が無効化されている場合
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { reviewsEnabledGlobal: true },
-  });
-
-  if (settings && !settings.reviewsEnabledGlobal) {
+  // Global gate: featureModules.reviews（依存元 spaces 含む）で OFF なら拒否。
+  if (!(await isFeatureEnabled("reviews"))) {
     throw new DomainError(
       "レビュー機能は現在サイト全体で無効化されています",
       "VALIDATION",

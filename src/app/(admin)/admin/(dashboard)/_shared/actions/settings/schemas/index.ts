@@ -35,8 +35,6 @@ export {
   type ReservationSettingsInput,
   permalinkSettingsSchema,
   type PermalinkSettingsInput,
-  reviewsGlobalSettingsSchema,
-  type ReviewsGlobalSettingsInput,
   featureModulesSettingsSchema,
   type FeatureModulesSettingsInput,
   sidebarSettingsSchema,

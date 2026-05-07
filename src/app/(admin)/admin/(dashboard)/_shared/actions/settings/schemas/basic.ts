@@ -313,18 +313,6 @@ export const permalinkSettingsSchema = z.object({
 export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>;
 
 // =============================================================================
-// Reviews Feature Gate (multi-tenant global toggle)
-// =============================================================================
-
-export const reviewsGlobalSettingsSchema = z.object({
-  reviewsEnabledGlobal: z.boolean(),
-});
-
-export type ReviewsGlobalSettingsInput = z.infer<
-  typeof reviewsGlobalSettingsSchema
->;
-
-// =============================================================================
 // Feature Modules（Sanity / Stripe Capabilities 流の declarative composition）
 // =============================================================================
 // 全 9 module を必須キーとして要求（Sanity declarative pattern）。

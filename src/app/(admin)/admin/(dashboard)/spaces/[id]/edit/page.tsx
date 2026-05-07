@@ -6,7 +6,7 @@ import { getSpaceById } from "@/admin/queries/space";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
-import { getReviewsEnabledGlobal } from "@/shared/domain/settings/public-queries";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
@@ -33,13 +33,13 @@ export default async function EditSpacePage({ params }: PageProps) {
     availableLocations,
     availableCategories,
     taxSettings,
-    reviewsEnabledGlobal,
+    reviewsFeatureEnabled,
   ] = await Promise.all([
     getSpaceById(id),
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
     getTaxSettings(),
-    getReviewsEnabledGlobal(),
+    isFeatureEnabled("reviews"),
   ]);
 
   if (!space) notFound();
@@ -58,11 +58,7 @@ export default async function EditSpacePage({ params }: PageProps) {
             redirectTo="/admin/spaces"
           />
           <Button variant="outline" size="sm" asChild>
-            <Link
-              href={`/spaces/${space.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link href={`/spaces/${space.slug}`} target="_blank">
               <IconExternalLink className="mr-2 h-4 w-4" />
               公開ページを見る
             </Link>
@@ -77,7 +73,7 @@ export default async function EditSpacePage({ params }: PageProps) {
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}
-        reviewsEnabledGlobal={reviewsEnabledGlobal}
+        reviewsFeatureEnabled={reviewsFeatureEnabled}
       />
     </AdminDetailLayout>
   );

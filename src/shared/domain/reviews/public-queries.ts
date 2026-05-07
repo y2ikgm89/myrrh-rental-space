@@ -8,21 +8,19 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 
 /**
  * サイト全体のレビュー機能 global gate
  *
- * multi-tenant SaaS pattern: Settings.reviewsEnabledGlobal が false の場合
- * 全スペースでレビュー非表示（per-space `Space.reviewsEnabled` に関わらず）。
- * 3 つの review query すべてが invocation 開始時にこの関数で gate 判定する。
+ * Phase 6 で `Settings.reviewsEnabledGlobal` を廃止し、
+ * `Settings.featureModules.reviews` SSoT へ完全統合。
+ * `isFeatureEnabled("reviews")` が依存解決（reviews requires spaces）含めて
+ * 解決する（spaces OFF → reviews も自動 OFF）。
  */
 async function isReviewsEnabledGlobally(): Promise<boolean> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: { reviewsEnabledGlobal: true },
-  });
-  return settings?.reviewsEnabledGlobal ?? true;
+  return isFeatureEnabled("reviews");
 }
 
 /**

@@ -458,14 +458,6 @@ export async function updateEventImportEnabled(
   });
 }
 
-export async function updateReviewsGlobalSettings(data: {
-  reviewsEnabledGlobal: boolean;
-}): Promise<void> {
-  await prisma.settings.updateMany({
-    data: { reviewsEnabledGlobal: data.reviewsEnabledGlobal },
-  });
-}
-
 /**
  * Feature Module ON/OFF map を Settings.featureModules JSON column に書き込む。
  *

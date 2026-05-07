@@ -31,7 +31,6 @@ import {
   permalinkSettingsSchema,
   headerSettingsSchema,
   footerSettingsSchema,
-  reviewsGlobalSettingsSchema,
   featureModulesSettingsSchema,
   type MaintenanceSettingsInput,
   type CookieConsentSettingsInput,
@@ -40,7 +39,6 @@ import {
   type PermalinkSettingsInput,
   type HeaderSettingsInput,
   type FooterSettingsInput,
-  type ReviewsGlobalSettingsInput,
   type FeatureModulesSettingsInput,
 } from "./schemas";
 
@@ -216,28 +214,6 @@ export async function updateFooterSettings(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
       updateTag(CACHE_TAGS.SOCIAL_LINKS);
-    },
-  });
-}
-
-export async function updateReviewsGlobalSettings(
-  data: ReviewsGlobalSettingsInput,
-): Promise<MutationResult> {
-  const parsed = reviewsGlobalSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateReviewsGlobalSettings(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.REVIEWS);
-      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
     },
   });
 }

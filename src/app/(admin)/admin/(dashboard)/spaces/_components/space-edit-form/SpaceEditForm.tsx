@@ -81,7 +81,7 @@ export type SpaceEditFormProps = {
   availableLocations: SpaceEditLocationOption[];
   availableCategories: SpaceEditCategoryOption[];
   taxSettings: TaxSettings;
-  reviewsEnabledGlobal: boolean;
+  reviewsFeatureEnabled: boolean;
 };
 
 export function SpaceEditForm({
@@ -90,7 +90,7 @@ export function SpaceEditForm({
   availableLocations,
   availableCategories,
   taxSettings = DEFAULT_TAX_SETTINGS,
-  reviewsEnabledGlobal,
+  reviewsFeatureEnabled,
 }: SpaceEditFormProps) {
   const router = useRouter();
   /** スペース管理ハブの `tab` と衝突しないよう `section` を使用 */
@@ -405,7 +405,7 @@ export function SpaceEditForm({
           setValue={setValue}
           getValues={getValues}
           isPending={isPending}
-          reviewsEnabledGlobal={reviewsEnabledGlobal}
+          reviewsFeatureEnabled={reviewsFeatureEnabled}
         />
       </Tabs>
 

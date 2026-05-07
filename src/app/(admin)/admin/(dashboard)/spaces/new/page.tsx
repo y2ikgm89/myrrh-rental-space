@@ -1,7 +1,7 @@
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
-import { getReviewsEnabledGlobal } from "@/shared/domain/settings/public-queries";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SpaceEditForm } from "../_components/SpaceEditForm";
 import type { Metadata } from "next";
@@ -15,12 +15,12 @@ export default async function NewSpacePage() {
     availableLocations,
     availableCategories,
     taxSettings,
-    reviewsEnabledGlobal,
+    reviewsFeatureEnabled,
   ] = await Promise.all([
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
     getTaxSettings(),
-    getReviewsEnabledGlobal(),
+    isFeatureEnabled("reviews"),
   ]);
 
   return (
@@ -34,7 +34,7 @@ export default async function NewSpacePage() {
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}
-        reviewsEnabledGlobal={reviewsEnabledGlobal}
+        reviewsFeatureEnabled={reviewsFeatureEnabled}
       />
     </AdminDetailLayout>
   );

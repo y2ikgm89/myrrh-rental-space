@@ -150,7 +150,6 @@ export type SettingsData = {
   footerHoursLabel: string;
   footerShowSocialLinks: boolean;
   eventImportEnabled: boolean;
-  reviewsEnabledGlobal: boolean;
   /**
    * Feature Module ON/OFF map.
    *

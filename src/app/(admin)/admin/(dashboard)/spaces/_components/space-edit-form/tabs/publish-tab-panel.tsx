@@ -31,7 +31,7 @@ type SpaceEditPublishTabPanelProps = {
   setValue: UseFormSetValue<SpaceEditFormData>;
   getValues: UseFormGetValues<SpaceEditFormData>;
   isPending: boolean;
-  reviewsEnabledGlobal: boolean;
+  reviewsFeatureEnabled: boolean;
 };
 
 export function SpaceEditPublishTabPanel({
@@ -41,7 +41,7 @@ export function SpaceEditPublishTabPanel({
   setValue,
   getValues,
   isPending,
-  reviewsEnabledGlobal,
+  reviewsFeatureEnabled,
 }: SpaceEditPublishTabPanelProps) {
   const isPublished = useWatch({ control, name: "isPublished" });
   const reviewsEnabled = useWatch({ control, name: "reviewsEnabled" });
@@ -80,14 +80,14 @@ export function SpaceEditPublishTabPanel({
             <CardTitle>レビュー設定</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {!reviewsEnabledGlobal ? (
+            {!reviewsFeatureEnabled ? (
               <div className="rounded-lg border border-warning/50 bg-warning/5 p-3 text-sm text-muted-foreground">
                 レビュー機能はサイト全体で無効化されています。この設定は{" "}
                 <Link
-                  href="/admin/settings/site?tab=features"
+                  href="/admin/settings/features"
                   className="underline hover:text-foreground"
                 >
-                  サイト設定の「機能」タブ
+                  機能モジュール設定
                 </Link>{" "}
                 で変更できます。個別の ON/OFF は Global ON 時のみ有効です。
               </div>
@@ -99,7 +99,7 @@ export function SpaceEditPublishTabPanel({
                 onCheckedChange={(checked) => {
                   setValue("reviewsEnabled", checked, { shouldDirty: true });
                 }}
-                disabled={isPending || !reviewsEnabledGlobal}
+                disabled={isPending || !reviewsFeatureEnabled}
               />
               <div className="space-y-1">
                 <label

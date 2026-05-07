@@ -16,17 +16,16 @@ const mockSpaceReviewUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
 const mockSpaceReviewDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "review-1" }),
 );
-const mockSettingsFindUnique = mock<
-  () => Promise<{ reviewsEnabledGlobal: boolean } | null>
->(() => Promise.resolve({ reviewsEnabledGlobal: true }));
+// Phase 6 から `createReviewCommand` は `isFeatureEnabled("reviews")` を直接呼ぶ。
+// settings.findUnique mock は不要。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
-      findUnique: mockSettingsFindUnique,
-    },
     reservation: {
       findUnique: mockReservationFindUnique,
     },
@@ -37,6 +36,10 @@ mock.module("@/shared/db/prisma", () => ({
       delete: mockSpaceReviewDelete,
     },
   },
+}));
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
 }));
 
 mock.module("@generated/prisma/enums", () => ({
@@ -84,10 +87,10 @@ const COMPLETED_RESERVATION = {
 
 describe("createReviewCommand", () => {
   beforeEach(() => {
-    mockSettingsFindUnique.mockReset();
+    mockIsFeatureEnabled.mockReset();
     mockReservationFindUnique.mockReset();
     mockSpaceReviewCreate.mockReset();
-    mockSettingsFindUnique.mockResolvedValue({ reviewsEnabledGlobal: true });
+    mockIsFeatureEnabled.mockResolvedValue(true);
     mockReservationFindUnique.mockResolvedValue(null);
     mockSpaceReviewCreate.mockResolvedValue({
       id: REVIEW_ID,

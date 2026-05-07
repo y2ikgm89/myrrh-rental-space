@@ -27,13 +27,13 @@ interface ReviewFormProps {
   readonly reservationId: string;
   readonly spaceName: string;
   readonly reviewsEnabled: boolean;
-  readonly reviewsEnabledGlobal: boolean;
+  readonly reviewsFeatureEnabled: boolean;
   readonly turnstileSiteKey: string | null;
 }
 
 type ReviewFormInnerProps = Omit<
   ReviewFormProps,
-  "reviewsEnabled" | "reviewsEnabledGlobal"
+  "reviewsEnabled" | "reviewsFeatureEnabled"
 >;
 
 // ---------------------------------------------------------------------------
@@ -52,10 +52,10 @@ export function ReviewForm({
   reservationId,
   spaceName,
   reviewsEnabled,
-  reviewsEnabledGlobal,
+  reviewsFeatureEnabled,
   turnstileSiteKey,
 }: ReviewFormProps) {
-  if (!reviewsEnabledGlobal) {
+  if (!reviewsFeatureEnabled) {
     return (
       <div className="rounded-lg border border-border bg-surface p-6 text-center">
         <p className="text-sm text-muted-foreground">

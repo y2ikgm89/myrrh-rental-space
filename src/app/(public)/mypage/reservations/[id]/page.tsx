@@ -11,10 +11,8 @@ import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
-import {
-  getReservationDeadlineSettings,
-  getReviewsEnabledGlobal,
-} from "@/shared/domain/settings/public-queries";
+import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -111,14 +109,13 @@ export default async function ReservationDetailPage({
 
   const isCompleted = reservation.status === ReservationStatus.COMPLETED;
 
-  const [existingReview, turnstileSiteKey, reviewsEnabledGlobal] =
-    await Promise.all([
-      isCompleted
-        ? getReviewForReservation(reservation.id, customer.id)
-        : Promise.resolve(null),
-      getTurnstileSiteKey(),
-      getReviewsEnabledGlobal(),
-    ]);
+  const [existingReview, turnstileSiteKey, reviewsEnabled] = await Promise.all([
+    isCompleted
+      ? getReviewForReservation(reservation.id, customer.id)
+      : Promise.resolve(null),
+    getTurnstileSiteKey(),
+    isFeatureEnabled("reviews"),
+  ]);
 
   const serializedReservation = toPlainObject({
     ...reservation,
@@ -201,7 +198,7 @@ export default async function ReservationDetailPage({
             reservationId={reservation.id}
             spaceName={reservation.space.name}
             reviewsEnabled={reservation.space.reviewsEnabled}
-            reviewsEnabledGlobal={reviewsEnabledGlobal}
+            reviewsFeatureEnabled={reviewsEnabled}
             turnstileSiteKey={turnstileSiteKey}
           />
         </>
