@@ -243,6 +243,48 @@ generic helper（`<TFields>` で受けて `.prefault({})` を内蔵）は TS が
 
 参照実装: `sectionLayoutSchema` / `createImageGroupSchema`（`@/shared/lib/sections/definitions/_shared/{layout,image}`）
 
+## Length check の内部構造（runtime introspection 用）
+
+`z.array().min(N).max(M)` / `z.string().min(N).max(M)` 等の length check は `_zod.def.checks` 配列に格納される。各 check の値は **`_zod.def.minimum` / `_zod.def.maximum` キー**で保持される（`_zod.def.value` ではない — これは silent debug 沼）:
+
+```typescript
+// z.array(...).min(2).max(4) の内部構造
+{
+  _zod: {
+    def: {
+      type: "array",
+      checks: [
+        { _zod: { def: { check: "min_length", minimum: 2 } } },
+        { _zod: { def: { check: "max_length", maximum: 4 } } },
+      ],
+    },
+  },
+}
+```
+
+schema constraint を runtime introspection する場合（admin UI 連動・dynamic form 生成等）は `bun -e "import('./schema.ts').then(m => console.log(JSON.stringify(m.schema._zod.def, null, 2)))"` で実構造を dump してから helper を書く。`value` キーで取得しようとして `undefined` が返る場合は `minimum` / `maximum` を試す。
+
+参照実装: `getArrayConstraints` (`pages/[slug]/_sections/_components/zod-introspection.ts`) — `field.array({ min, max })` の制約を読み取り `AutoArrayField` の追加/削除ボタン disable に流す。
+
+## `.default([])` は `.min()` 検証を skip する（`safeParse({})` 契約両立）
+
+`z.array(...).min(2).default([])` で input が `undefined` の場合、Zod 4 は default 値 `[]` を返し `.min(2)` validator を skip する（公式仕様）:
+
+```typescript
+const s = z.array(z.string()).min(2).default([]);
+s.parse(undefined); // → [] （min 検証 skip、default fallback）
+s.parse([]); //         → throws（min 違反）
+s.parse(["a"]); //      → throws（min 違反）
+s.parse(["a", "b"]); // → ["a", "b"]（OK）
+```
+
+これにより **section schema の `safeParse({})` 成立契約と admin write-side 検証（min/max）を両立**できる:
+
+- Schema fallback chain（`createTypedConfigGetterFromSchema`）: input undefined → `[]` で安全に通る
+- Admin form / Server Action: 実 input は `.min(N).max(M)` で厳格検証
+
+object 系の `.prefault({})` 必須パターンとは挙動が異なるため混同しない（object は default で inner default が発火しない / array は default で min 検証が skip される）。
+
 ## React Hook Form 連携
 
 ```typescript
