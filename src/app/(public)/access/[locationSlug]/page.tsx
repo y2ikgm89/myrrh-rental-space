@@ -13,6 +13,7 @@ import { LocationLocalBusinessJsonLd } from "@/public/components/seo/json-ld";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
 import { getLocationListConfig } from "@/shared/lib/validations/section-defaults";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   readonly params: Promise<{ locationSlug: string }>;
@@ -59,6 +60,7 @@ export default async function LocationDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
+  await requireFeatureEnabled("access");
   const { locationSlug } = await params;
 
   const [location, info] = await Promise.all([

@@ -6,6 +6,7 @@ import {
   buildNewsMetadata,
 } from "../_components/news-detail-page-content";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -22,6 +23,7 @@ export async function generateMetadata({
 
 export default async function NewsDetailPage({ params }: PageProps) {
   await connection();
+  await requireFeatureEnabled("news");
 
   const { slug } = await params;
   const newsItem = await getPublishedNewsItem(slug);

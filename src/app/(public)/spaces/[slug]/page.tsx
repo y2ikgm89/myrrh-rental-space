@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
   ProductJsonLd,
@@ -54,6 +55,7 @@ export default async function SpaceDetailPage({
   params,
 }: SpaceDetailPageProps) {
   await connection();
+  await requireFeatureEnabled("spaces");
   const { slug } = await params;
   const space = await getSpaceBySlug(slug);
   if (!space) notFound();

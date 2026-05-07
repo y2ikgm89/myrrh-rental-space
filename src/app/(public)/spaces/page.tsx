@@ -13,6 +13,7 @@ import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 
@@ -29,6 +30,7 @@ export default async function SpacesPage({
   searchParams,
 }: SpacesPageProps): Promise<ReactElement> {
   await connection();
+  await requireFeatureEnabled("spaces");
   const sections = await getPageSectionsWithFallback("spaces");
 
   return (

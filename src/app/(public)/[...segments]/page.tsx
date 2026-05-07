@@ -13,6 +13,7 @@ import { getPublicPage } from "@/shared/domain/pages/queries";
 import { getPageSections } from "@/shared/domain/sections/queries";
 import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
@@ -76,6 +77,9 @@ export default async function DynamicPage({ params }: PageProps) {
   if (settings?.postUrlPrefixEnabled ?? true) {
     notFound();
   }
+
+  // post-detail 経路のみ posts feature gate を適用（custom page 経路は CMS-managed のため未 gate）
+  await requireFeatureEnabled("posts");
 
   const route = resolvePostDetailRoute(segments);
   if (!route) {

@@ -41,6 +41,7 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 import { RelatedEvents } from "./_components/related-events";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -82,6 +83,7 @@ export default async function EventDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
+  await requireFeatureEnabled("events");
 
   const { slug } = await params;
   const event = await getPublishedEventBySlug(slug);

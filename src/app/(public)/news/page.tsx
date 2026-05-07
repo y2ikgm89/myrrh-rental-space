@@ -17,6 +17,7 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import { getBaseUrl } from "@/shared/lib/constants";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   searchParams: Promise<SearchParams>;
@@ -41,6 +42,7 @@ export default async function NewsPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
+  await requireFeatureEnabled("news");
 
   const sections = await getPageSectionsWithFallback("news");
   const baseUrl = getBaseUrl();

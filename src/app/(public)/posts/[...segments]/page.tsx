@@ -7,6 +7,7 @@ import {
 } from "../_components/post-detail-page-content";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
@@ -29,6 +30,7 @@ export async function generateMetadata({
 
 export default async function PostDetailPage({ params }: PageProps) {
   await connection();
+  await requireFeatureEnabled("posts");
 
   const { segments } = await params;
   const route = resolvePostDetailRoute(segments);
