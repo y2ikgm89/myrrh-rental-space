@@ -152,3 +152,63 @@ const FEATURE_MODULE_SET = new Set<string>(FEATURE_MODULES_LIST);
 export function isFeatureModule(value: string): value is FeatureModule {
   return FEATURE_MODULE_SET.has(value);
 }
+
+/**
+ * Feature Module の「初期値」を構築する。
+ *
+ * 全 9 module を ON で初期化し、`disabledIds` に含まれる module のみ OFF にする。
+ * - seed.ts の新規 install 時の `Settings.featureModules` 初期化
+ * - 管理画面の「すべて初期値に戻す」ボタン等の reset 用途
+ *
+ * env var driven override は呼び出し側で解決して `disabledIds` に渡す（このヘルパー
+ * 自体は env を読まない pure function — テスト可能性のため）。
+ *
+ * @example
+ * buildInitialFeatureModules()
+ * // => { spaces: true, reservation: true, ..., reviews: true }
+ *
+ * buildInitialFeatureModules(["events", "faq"])
+ * // => { spaces: true, ..., events: false, faq: false, ... }
+ */
+export function buildInitialFeatureModules(
+  disabledIds: readonly string[] = [],
+): Record<FeatureModule, boolean> {
+  const disabled = new Set<string>(disabledIds);
+  // Record の cardinality を全 module で完全網羅（不変条件）
+  const spaces = !disabled.has("spaces");
+  const reservation = !disabled.has("reservation");
+  const events = !disabled.has("events");
+  const posts = !disabled.has("posts");
+  const news = !disabled.has("news");
+  const faq = !disabled.has("faq");
+  const access = !disabled.has("access");
+  const contact = !disabled.has("contact");
+  const reviews = !disabled.has("reviews");
+  return {
+    spaces,
+    reservation,
+    events,
+    posts,
+    news,
+    faq,
+    access,
+    contact,
+    reviews,
+  };
+}
+
+/**
+ * カンマ区切り env var 文字列を `disabledIds` 配列に正規化する。
+ *
+ * 形式: `"events,faq"` / `"events, posts , news"`（空白許容）
+ * 空文字 / undefined → 空配列。
+ */
+export function parseDisabledFeatureModulesEnv(
+  value: string | undefined,
+): readonly string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}

@@ -33,6 +33,10 @@ import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
 import { DEFAULT_PAGE_HERO } from "../src/shared/lib/sections/definitions/page-hero";
 import {
+  buildInitialFeatureModules,
+  parseDisabledFeatureModulesEnv,
+} from "../src/shared/lib/features/registry";
+import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
 } from "../src/shared/lib/lexical/description-defaults";
@@ -342,6 +346,26 @@ async function seedStaffUsers() {
 // Settings (Singleton - upsert)
 // =============================================================================
 
+/**
+ * 新規 install 時の Feature Module 初期値を解決する。
+ *
+ * SSoT: `FEATURE_MODULES_LIST`（registry）。全 module を ON で初期化するのが
+ * rental space SaaS template の標準構成。個別環境で初期 OFF にしたい module は
+ * env var で指定する:
+ *
+ *   SEED_FEATURE_MODULES_DISABLED=events,faq
+ *
+ * 既存 install では re-seed しても feature toggle はリセットされない
+ * （`update` 経路に featureModules を含めないため、管理画面 /admin/settings/features
+ * で行ったユーザー編集が保持される）。
+ */
+function resolveSeedFeatureModules(): Record<string, boolean> {
+  const disabled = parseDisabledFeatureModulesEnv(
+    process.env["SEED_FEATURE_MODULES_DISABLED"],
+  );
+  return buildInitialFeatureModules(disabled);
+}
+
 async function seedSettings() {
   const settingsData = {
     siteName: "Myrrh Rental Space",
@@ -375,30 +399,17 @@ async function seedSettings() {
     senderEmail: "noreply@example.com",
     senderName: "Myrrh Rental Space",
     replyToEmail: "support@example.com",
-
-    // Feature Modules — Sanity / Stripe Capabilities 流の declarative composition。
-    // 全 9 module を explicit に true で初期化（rental space SaaS template の標準構成）。
-    // SSoT: @/shared/lib/features/registry の FEATURE_MODULES_LIST。
-    // 個別環境で OFF にしたい module は管理画面 /admin/settings/features（Phase 5）から制御。
-    featureModules: {
-      spaces: true,
-      reservation: true,
-      events: true,
-      posts: true,
-      news: true,
-      faq: true,
-      access: true,
-      contact: true,
-      reviews: true,
-    },
   };
 
+  // featureModules は「create only」で書き込む（既存 install の toggle 編集を保持）。
+  // SSoT: FEATURE_MODULES_LIST registry + SEED_FEATURE_MODULES_DISABLED env var。
   await prisma.settings.upsert({
     where: { id: "singleton" },
     update: settingsData,
     create: {
       id: "singleton",
       ...settingsData,
+      featureModules: resolveSeedFeatureModules(),
     },
   });
 

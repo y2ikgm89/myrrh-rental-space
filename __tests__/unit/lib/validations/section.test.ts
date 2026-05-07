@@ -442,9 +442,23 @@ describe("ctaConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("タイトル必須バリデーション", () => {
-    const data = {};
-    const result = ctaConfigSchema.safeParse(data);
+  // architectural contract: 全 section schema は safeParse({}) 成立必須
+  // （`createTypedConfigGetterFromSchema` の fallback chain が空 config からの
+  // 復元を要求するため）。タイトル等の "必須" 制約は UI 層 (admin form) で行い、
+  // schema 層は permissive で default 値を適用する。SSoT 詳細: ssot-singletons.md
+  // §Section schema 重複。
+  test("空 config でも default 値で safeParse 成功する", () => {
+    const result = ctaConfigSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.title).toBe("");
+      expect(result.data.variant).toBe("default");
+      expect(result.data.buttons).toEqual([]);
+    }
+  });
+
+  test("title が string 以外（型違反）はバリデーション失敗", () => {
+    const result = ctaConfigSchema.safeParse({ title: 123 });
     expect(result.success).toBe(false);
   });
 });
@@ -703,9 +717,12 @@ describe("型ガード関数", () => {
       variant: "default",
       sectionLabel: "Ready to Begin?",
     };
-    const invalidCta = { title: "" };
+    // architectural contract: 空 config / title:"" は default 適用で valid。
+    // 型違反（title が string 以外）のみ false を返す。
     expect(isCtaConfig(validCta)).toBe(true);
-    expect(isCtaConfig(invalidCta)).toBe(false);
+    expect(isCtaConfig({})).toBe(true);
+    expect(isCtaConfig({ title: "" })).toBe(true);
+    expect(isCtaConfig({ title: 123 })).toBe(false);
   });
 });
 

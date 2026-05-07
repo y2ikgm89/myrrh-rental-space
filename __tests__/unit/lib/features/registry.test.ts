@@ -2,7 +2,9 @@ import { describe, test, expect } from "bun:test";
 import {
   FEATURE_MODULES,
   FEATURE_MODULES_LIST,
+  buildInitialFeatureModules,
   isFeatureModule,
+  parseDisabledFeatureModulesEnv,
   type FeatureModule,
 } from "@/shared/lib/features/registry";
 
@@ -80,5 +82,84 @@ describe("isFeatureModule", () => {
       const narrowed: FeatureModule = value;
       expect(narrowed).toBe("spaces");
     }
+  });
+});
+
+describe("parseDisabledFeatureModulesEnv", () => {
+  test("undefined / 空文字 → 空配列", () => {
+    expect(parseDisabledFeatureModulesEnv(undefined)).toEqual([]);
+    expect(parseDisabledFeatureModulesEnv("")).toEqual([]);
+  });
+
+  test("単一 module を返す", () => {
+    expect(parseDisabledFeatureModulesEnv("events")).toEqual(["events"]);
+  });
+
+  test("カンマ区切り複数 module を返す", () => {
+    expect(parseDisabledFeatureModulesEnv("events,faq,posts")).toEqual([
+      "events",
+      "faq",
+      "posts",
+    ]);
+  });
+
+  test("前後の空白を trim する", () => {
+    expect(parseDisabledFeatureModulesEnv("  events , faq , posts  ")).toEqual([
+      "events",
+      "faq",
+      "posts",
+    ]);
+  });
+
+  test("空エントリは除外する", () => {
+    expect(parseDisabledFeatureModulesEnv("events,,faq,")).toEqual([
+      "events",
+      "faq",
+    ]);
+  });
+});
+
+describe("buildInitialFeatureModules", () => {
+  test("disabledIds 未指定で全 9 module true", () => {
+    const result = buildInitialFeatureModules();
+    expect(result.spaces).toBe(true);
+    expect(result.reservation).toBe(true);
+    expect(result.events).toBe(true);
+    expect(result.posts).toBe(true);
+    expect(result.news).toBe(true);
+    expect(result.faq).toBe(true);
+    expect(result.access).toBe(true);
+    expect(result.contact).toBe(true);
+    expect(result.reviews).toBe(true);
+  });
+
+  test("空配列でも全 9 module true（undefined と同等）", () => {
+    expect(buildInitialFeatureModules([])).toEqual(
+      buildInitialFeatureModules(),
+    );
+  });
+
+  test("disabledIds に含まれる module のみ false", () => {
+    const result = buildInitialFeatureModules(["events", "faq"]);
+    expect(result.events).toBe(false);
+    expect(result.faq).toBe(false);
+    expect(result.spaces).toBe(true);
+    expect(result.reviews).toBe(true);
+  });
+
+  test("registry にない id は無視される（fail-closed: 余分な key は構築しない）", () => {
+    const result = buildInitialFeatureModules(["unknown_module", "events"]);
+    expect(result.events).toBe(false);
+    // unknown_module は Record<FeatureModule, boolean> に含まれない
+    expect(Object.keys(result).sort()).toEqual(
+      [...FEATURE_MODULES_LIST].sort(),
+    );
+  });
+
+  test("戻り値の key が FEATURE_MODULES_LIST と完全一致（drift 防止）", () => {
+    const result = buildInitialFeatureModules();
+    const resultKeys: string[] = Object.keys(result).sort();
+    const registryKeys: string[] = [...FEATURE_MODULES_LIST].sort();
+    expect(resultKeys).toEqual(registryKeys);
   });
 });
