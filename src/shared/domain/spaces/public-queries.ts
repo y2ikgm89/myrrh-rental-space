@@ -14,7 +14,10 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-import { parseStringArray } from "@/shared/lib/json-validators";
+import {
+  parseFacilities,
+  parseStringArray,
+} from "@/shared/lib/json-validators";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 const spaceListSelect = {
@@ -31,7 +34,7 @@ const spaceListSelect = {
   facilities: true,
   addressDetail: true,
   reviewsEnabled: true,
-  category: { select: { id: true, name: true } },
+  category: { select: { id: true, name: true, icon: true } },
   location: { select: { name: true, address: true } },
 } as const;
 
@@ -46,7 +49,7 @@ function mapSpaceListItem(s: SpaceListRow) {
     dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
     area: s.area ? Number(s.area) : null,
     imageUrls: parseStringArray(s.imageUrls),
-    facilities: parseStringArray(s.facilities),
+    facilities: parseFacilities(s.facilities),
     lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
   };
 }
@@ -166,7 +169,7 @@ export async function getSpaceBySlug(slug: string) {
           ogpTitle: true,
           ogpDescription: true,
           ogpImageUrl: true,
-          category: { select: { id: true, name: true } },
+          category: { select: { id: true, name: true, icon: true } },
           location: {
             select: {
               id: true,
@@ -189,7 +192,7 @@ export async function getSpaceBySlug(slug: string) {
   return toPlainObject({
     ...space,
     imageUrls: parseStringArray(space.imageUrls),
-    facilities: parseStringArray(space.facilities),
+    facilities: parseFacilities(space.facilities),
     location: {
       ...space.location,
       accessLines: parseStringArray(space.location.accessLines),

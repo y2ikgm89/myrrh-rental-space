@@ -1,8 +1,9 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Input, Textarea, Label } from "@/admin/components/ui";
+import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import {
   spaceCategoryFormSchema,
   defaultSpaceCategoryFormValues,
@@ -24,6 +25,8 @@ export function CategoryForm({
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
   } = useForm<SpaceCategoryFormInput>({
     resolver: standardSchemaResolver(spaceCategoryFormSchema),
@@ -37,6 +40,8 @@ export function CategoryForm({
         }
       : defaultSpaceCategoryFormValues,
   });
+
+  const iconValue = useWatch({ control, name: "icon" });
 
   return (
     <form
@@ -75,16 +80,13 @@ export function CategoryForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="icon">アイコン名</Label>
-          <Input
+          <Label htmlFor="icon">アイコン</Label>
+          <IconPickerField
             id="icon"
-            {...register("icon")}
-            placeholder="例: building"
+            value={iconValue ?? ""}
+            onChange={(name) => setValue("icon", name, { shouldDirty: true })}
             disabled={isPending}
           />
-          <p className="text-xs text-muted-foreground">
-            アイコン名を入力（Lucide icons）
-          </p>
           {errors.icon && (
             <p className="text-sm text-destructive">{errors.icon.message}</p>
           )}

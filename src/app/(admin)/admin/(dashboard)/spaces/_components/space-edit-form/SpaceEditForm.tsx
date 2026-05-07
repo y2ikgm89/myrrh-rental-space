@@ -101,6 +101,7 @@ export function SpaceEditForm({
       .withOptions({ history: "push", shallow: true }),
   );
   const [newFacility, setNewFacility] = useState("");
+  const [newFacilityIconName, setNewFacilityIconName] = useState("");
   const dndContextId = useId();
   const clientNonceRef = useRef(0);
   const lastHandledActionKeyRef = useRef<string | null>(null);
@@ -133,7 +134,10 @@ export function SpaceEditForm({
           dailyPrice: space.dailyPrice ?? undefined,
           mainImageUrl: space.mainImageUrl,
           imageUrls: space.imageUrls.map((url) => ({ url })),
-          facilities: space.facilities.map((value) => ({ value })),
+          facilities: space.facilities.map((f) => ({
+            name: f.name,
+            iconName: f.iconName,
+          })),
           isPublished: space.isPublished,
           reviewsEnabled: space.reviewsEnabled,
           locationId: space.locationId,
@@ -318,10 +322,11 @@ export function SpaceEditForm({
 
   const addFacility = () => {
     const trimmed = newFacility.trim();
-    const alreadyExists = facilityFields.some((f) => f.value === trimmed);
+    const alreadyExists = facilityFields.some((f) => f.name === trimmed);
     if (trimmed && !alreadyExists) {
-      appendFacility({ value: trimmed });
+      appendFacility({ name: trimmed, iconName: newFacilityIconName });
       setNewFacility("");
+      setNewFacilityIconName("");
     }
   };
 
@@ -393,6 +398,8 @@ export function SpaceEditForm({
           availableCategories={availableCategories}
           newFacility={newFacility}
           onNewFacilityChange={setNewFacility}
+          newFacilityIconName={newFacilityIconName}
+          onNewFacilityIconNameChange={setNewFacilityIconName}
           onAddFacility={addFacility}
           facilityFields={facilityFields}
           onRemoveFacility={removeFacility}

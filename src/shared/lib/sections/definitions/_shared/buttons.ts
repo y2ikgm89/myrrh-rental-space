@@ -46,9 +46,7 @@ export function createButtonsArraySchema(label = "ボタン") {
           options: ctaButtonSizes,
           default: "lg",
         }),
-        iconName: field.icon("アイコン（任意）", {
-          helpText: "Tabler Icons の名前を入力（例: IconArrowRight）",
-        }),
+        iconName: field.icon("アイコン（任意）"),
         openInNewTab: field.boolean("新しいタブで開く"),
         backgroundColor: optionalHexColorSchema.register(fieldRegistry, {
           fieldType: "color",

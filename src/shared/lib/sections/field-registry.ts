@@ -37,6 +37,14 @@ export interface FieldMeta {
   readonly group: "content" | "design" | "advanced";
   readonly subGroup?: FieldSubGroup;
   readonly dynamicSelectSource?: DynamicSelectSource;
+  /**
+   * text / textarea / url / number 入力欄の左端に表示する curation icon 名。
+   * 例: "IconLink"（URL）/ "IconMail"（メール）/ "IconSearch"（検索）。
+   * SR は併記 label のみ読み上げる（icon は装飾、`aria-hidden`）。
+   */
+  readonly leadingIcon?: string;
+  /** 入力欄の右端に表示する curation icon 名（バリデーション status 等）。 */
+  readonly trailingIcon?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -57,6 +65,16 @@ interface StringConstraints {
 interface CommonFieldOpts {
   readonly group?: FieldMeta["group"];
   readonly subGroup?: FieldSubGroup;
+  /**
+   * Input adornment（left）— curation icon 名。
+   * 対応: text / url / number。textarea / boolean / select / image / icon は非対応（silent ignore）。
+   */
+  readonly leadingIcon?: string;
+  /**
+   * Input adornment（right）— curation icon 名。
+   * 対応: text / url / number。textarea / boolean / select / image / icon は非対応（silent ignore）。
+   */
+  readonly trailingIcon?: string;
 }
 
 interface TextOpts extends StringConstraints, CommonFieldOpts {
@@ -144,6 +162,12 @@ export const field = {
           placeholder: opts.placeholder,
         }),
         ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+        ...(opts?.leadingIcon !== undefined && {
+          leadingIcon: opts.leadingIcon,
+        }),
+        ...(opts?.trailingIcon !== undefined && {
+          trailingIcon: opts.trailingIcon,
+        }),
       });
   },
 
@@ -160,6 +184,12 @@ export const field = {
           placeholder: opts.placeholder,
         }),
         ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+        ...(opts?.leadingIcon !== undefined && {
+          leadingIcon: opts.leadingIcon,
+        }),
+        ...(opts?.trailingIcon !== undefined && {
+          trailingIcon: opts.trailingIcon,
+        }),
       });
   },
 
@@ -179,6 +209,12 @@ export const field = {
       ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
       ...(opts?.suffix !== undefined && { suffix: opts.suffix }),
       ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+      ...(opts?.leadingIcon !== undefined && {
+        leadingIcon: opts.leadingIcon,
+      }),
+      ...(opts?.trailingIcon !== undefined && {
+        trailingIcon: opts.trailingIcon,
+      }),
     });
   },
 
@@ -266,6 +302,11 @@ export const field = {
           placeholder: opts.placeholder,
         }),
         ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+        // url field のデフォルト leading icon は IconLink（明示指定で上書き可）
+        leadingIcon: opts?.leadingIcon ?? "IconLink",
+        ...(opts?.trailingIcon !== undefined && {
+          trailingIcon: opts.trailingIcon,
+        }),
       });
   },
 

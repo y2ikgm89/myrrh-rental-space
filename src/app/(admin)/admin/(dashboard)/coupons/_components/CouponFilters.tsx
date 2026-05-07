@@ -8,7 +8,7 @@ import {
   isCouponStatusFilter,
   isCouponTypeFilter,
 } from "@/shared/lib/nuqs";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import { useDebouncedCallback } from "@/admin/hooks";
 import {
   Button,
@@ -91,15 +91,14 @@ export function CouponFilters() {
         </Select>
       </div>
 
-      <div className="relative flex-1 min-w-[200px]">
-        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex-1 min-w-[200px]">
         <Input
           // `key={params.search}` で URL 同期時に remount（クリア後の表示残り防止 — `BaseFilters` と同等）
           key={params.search}
           placeholder="コード・名称で検索..."
           defaultValue={params.search}
           onChange={(e) => setSearchDebounced(e.target.value)}
-          className="pl-9"
+          leadingIcon="IconSearch"
           aria-label="クーポンコード・名称で検索"
         />
       </div>

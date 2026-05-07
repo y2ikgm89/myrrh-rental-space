@@ -117,6 +117,7 @@ export function EventRegistrationForm({
           required
           placeholder="mail@example.com"
           autoComplete="email"
+          leadingIcon="IconMail"
           {...(form.formState.errors.email?.message !== undefined && {
             error: form.formState.errors.email.message,
           })}
@@ -129,6 +130,7 @@ export function EventRegistrationForm({
           type="tel"
           placeholder="090-1234-5678"
           autoComplete="tel"
+          leadingIcon="IconPhone"
           {...(form.formState.errors.phone?.message !== undefined && {
             error: form.formState.errors.phone.message,
           })}

@@ -174,6 +174,7 @@ export function CustomerStep({
             type="email"
             required
             placeholder="mail@example.com"
+            leadingIcon="IconMail"
             {...(form.formState.errors.email?.message && {
               error: form.formState.errors.email.message,
             })}
@@ -185,6 +186,7 @@ export function CustomerStep({
             label="電話番号（任意）"
             type="tel"
             placeholder="03-1234-5678"
+            leadingIcon="IconPhone"
             {...(form.formState.errors.phoneNumber?.message && {
               error: form.formState.errors.phoneNumber.message,
             })}

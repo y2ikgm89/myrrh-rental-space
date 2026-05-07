@@ -397,20 +397,13 @@ export {
   $createFeatureIconItemNode,
   $isFeatureIconItemNode,
   ICON_SIZES,
-  ICON_LIBRARIES,
   isIconSize,
-  isIconLibrary,
   featureIconListColumnsState,
   featureIconListAccentColorState,
   featureIconListIconSizeState,
   featureIconItemNameState,
-  featureIconItemLibraryState,
 } from "./FeatureIconListNode";
-export type {
-  FeatureIconListColumns,
-  IconSize,
-  IconLibrary,
-} from "./FeatureIconListNode";
+export type { FeatureIconListColumns, IconSize } from "./FeatureIconListNode";
 
 // Cover
 export {

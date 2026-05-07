@@ -8,7 +8,6 @@ import {
   IconLinkOff,
   IconMail,
   IconPhone,
-  IconSearch,
   IconUser,
 } from "@tabler/icons-react";
 import { formatDate } from "@/shared/lib/date-format";
@@ -327,16 +326,13 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
               </div>
             ) : showCustomerSearch ? (
               <div className="space-y-3">
-                <div className="relative">
-                  <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="名前、メール、電話番号で検索..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                <Input
+                  type="search"
+                  placeholder="名前、メール、電話番号で検索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  leadingIcon="IconSearch"
+                />
 
                 {isSearching && (
                   <div className="text-sm text-muted-foreground">検索中...</div>

@@ -59,11 +59,59 @@ export type BusinessHours = z.infer<typeof businessHoursSchema>;
  *
  * @example
  * const imageUrls = parseStringArray(space.imageUrls)
- * const facilities = parseStringArray(space.facilities)
  * const tags = parseStringArray(post.tags)
  */
 export function parseStringArray(value: unknown): string[] {
   const result = stringArraySchema.safeParse(value);
+  return result.success ? result.data : [];
+}
+
+// ============================================================================
+// Space.facilities ({ name, iconName }[])
+// ============================================================================
+
+const facilityItemSchema = z.object({
+  name: z
+    .string()
+    .min(1, { error: "設備名を入力してください" })
+    .max(50, { error: "設備名は50文字以内で入力してください" }),
+  // 空文字許容（icon 未指定 — UI で fallback として text のみ表示）
+  iconName: z.string().max(64),
+});
+
+/**
+ * 設備配列の canonical SSoT スキーマ。
+ *
+ * - 各設備は `{ name: string; iconName: string }` の object（Airbnb / Booking.com 標準）
+ * - `name` は React key の stable ID として機能するため重複禁止
+ * - `iconName` は `@/shared/lib/icon-curation` の curation 識別子（空文字 = icon 未指定）
+ *
+ * write-side（フォーム / Server Action）からは `.default([])` を chain して使う。
+ * read-side（DB JSON パース）は `parseFacilities()` ヘルパー経由で使う。
+ */
+export const facilitiesSchema = z
+  .array(facilityItemSchema)
+  .refine((arr) => new Set(arr.map((f) => f.name)).size === arr.length, {
+    error: "同じ名前の設備を複数登録することはできません",
+  });
+
+export type FacilityItem = z.infer<typeof facilityItemSchema>;
+
+/**
+ * unknown 値を `FacilityItem[]` に安全に変換
+ *
+ * `Space.facilities` は構造化された設備リスト（Airbnb / Booking.com 標準）。
+ * `{ name: string; iconName: string }[]` 形式で保存。
+ * 旧 `string[]` 形式はマイグレーション 20260507163006 で object 化済み。
+ *
+ * バリデーション失敗時は空配列を返す（防御的読み取り、historical data の自己修復）。
+ *
+ * @example
+ * const facilities = parseFacilities(space.facilities)
+ * // facilities[0].name / facilities[0].iconName でアクセス
+ */
+export function parseFacilities(value: unknown): FacilityItem[] {
+  const result = facilitiesSchema.safeParse(value);
   return result.success ? result.data : [];
 }
 

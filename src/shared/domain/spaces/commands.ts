@@ -27,7 +27,7 @@ type SpaceCommandInput = {
   dailyPrice?: number | null | undefined;
   mainImageUrl: string;
   imageUrls: string[];
-  facilities: string[];
+  facilities: { name: string; iconName: string }[];
   isPublished: boolean;
   reviewsEnabled: boolean;
   locationId: string;

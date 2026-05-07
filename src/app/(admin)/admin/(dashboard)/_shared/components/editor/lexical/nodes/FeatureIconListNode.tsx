@@ -16,9 +16,43 @@ import {
   createState,
   ElementNode,
 } from "lexical";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { parseString } from "../config/type-guards";
 import { createEnumGuard } from "../config/type-guards";
 import { type AccentColor, isAccentColor } from "../config/accent-colors";
+import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
+
+/**
+ * curation list の icon を SVG として要素内に埋め込む。
+ * - `name` 空または curation 外: 既存の SVG 子要素を除去（テキスト fallback）
+ * - 該当 icon あり: `<svg>` を `data-icon-svg` 属性付きで innerHTML として埋め込み
+ *
+ * `createDOM` / `updateDOM` / `exportDOM` から共通で呼ばれる。
+ * `renderToStaticMarkup` は同期関数で SSR / browser 両環境で動作する（react-dom/server）。
+ */
+function renderIconSvgInto(host: HTMLElement, iconName: string): void {
+  // 既存の埋め込み SVG をクリア（updateDOM で icon が変わった場合）
+  const existing = host.querySelector(":scope > svg[data-icon-svg]");
+  if (existing) existing.remove();
+
+  if (iconName === "") return;
+  const Icon = getCuratedIconComponent(iconName);
+  if (!Icon) return;
+
+  const svgMarkup = renderToStaticMarkup(
+    createElement(Icon, {
+      className: "feature-icon-svg",
+      "aria-hidden": true,
+    }),
+  );
+  // SVG を最初の子として挿入（li 内の paragraph テキストはそのまま残す）
+  host.insertAdjacentHTML("afterbegin", svgMarkup);
+  // 挿入後に識別用 data-icon-svg 属性を付与（Tabler IconProps 型が strict で
+  // data-* を受け付けないため、DOM 経由で setAttribute）
+  const inserted = host.querySelector(":scope > svg");
+  if (inserted) inserted.setAttribute("data-icon-svg", "");
+}
 
 // =============================================================================
 // Types
@@ -29,10 +63,6 @@ export type FeatureIconListColumns = 1 | 2 | 3;
 export const ICON_SIZES = ["sm", "md", "lg"] as const;
 export type IconSize = (typeof ICON_SIZES)[number];
 export const isIconSize = createEnumGuard<IconSize>(ICON_SIZES);
-
-export const ICON_LIBRARIES = ["lucide", "simple-icons"] as const;
-export type IconLibrary = (typeof ICON_LIBRARIES)[number];
-export const isIconLibrary = createEnumGuard<IconLibrary>(ICON_LIBRARIES);
 
 // =============================================================================
 // Helpers
@@ -203,11 +233,6 @@ export const featureIconItemNameState = createState("iconName", {
   parse: parseString,
 });
 
-export const featureIconItemLibraryState = createState("iconLibrary", {
-  parse: (v: unknown): IconLibrary =>
-    typeof v === "string" && isIconLibrary(v) ? v : "lucide",
-});
-
 // =============================================================================
 // FeatureIconItemNode
 // =============================================================================
@@ -216,10 +241,7 @@ export class FeatureIconItemNode extends ElementNode {
   override $config() {
     return this.config("feature-icon-item", {
       extends: ElementNode,
-      stateConfigs: [
-        { flat: true, stateConfig: featureIconItemNameState },
-        { flat: true, stateConfig: featureIconItemLibraryState },
-      ],
+      stateConfigs: [{ flat: true, stateConfig: featureIconItemNameState }],
     });
   }
 
@@ -234,15 +256,7 @@ export class FeatureIconItemNode extends ElementNode {
         return {
           conversion: (element) => {
             const iconName = element.getAttribute("data-icon-name") ?? "";
-            const iconLibraryRaw = element.getAttribute("data-icon-library");
-            const node = $createFeatureIconItemNode({
-              iconName,
-              iconLibrary:
-                typeof iconLibraryRaw === "string" &&
-                isIconLibrary(iconLibraryRaw)
-                  ? iconLibraryRaw
-                  : "lucide",
-            });
+            const node = $createFeatureIconItemNode({ iconName });
             return { node };
           },
           priority: 2,
@@ -262,10 +276,7 @@ export class FeatureIconItemNode extends ElementNode {
       "data-icon-name",
       $getState(this, featureIconItemNameState),
     );
-    li.setAttribute(
-      "data-icon-library",
-      $getState(this, featureIconItemLibraryState),
-    );
+    renderIconSvgInto(li, $getState(this, featureIconItemNameState));
     return li;
   }
 
@@ -278,15 +289,7 @@ export class FeatureIconItemNode extends ElementNode {
     if (iconNameChange !== null) {
       const [newIconName] = iconNameChange;
       dom.setAttribute("data-icon-name", newIconName);
-    }
-    const iconLibraryChange = $getStateChange(
-      this,
-      prevNode,
-      featureIconItemLibraryState,
-    );
-    if (iconLibraryChange !== null) {
-      const [newIconLibrary] = iconLibraryChange;
-      dom.setAttribute("data-icon-library", newIconLibrary);
+      renderIconSvgInto(dom, newIconName);
     }
     return false;
   }
@@ -294,14 +297,9 @@ export class FeatureIconItemNode extends ElementNode {
   override exportDOM() {
     const li = document.createElement("li");
     li.setAttribute("data-feature-icon-item", "");
-    li.setAttribute(
-      "data-icon-name",
-      $getState(this, featureIconItemNameState),
-    );
-    li.setAttribute(
-      "data-icon-library",
-      $getState(this, featureIconItemLibraryState),
-    );
+    const iconName = $getState(this, featureIconItemNameState);
+    li.setAttribute("data-icon-name", iconName);
+    renderIconSvgInto(li, iconName);
     return { element: li };
   }
 
@@ -339,12 +337,10 @@ export function $createFeatureIconListContainerNode(
 export function $createFeatureIconItemNode(
   params: {
     iconName?: string;
-    iconLibrary?: IconLibrary;
   } = {},
 ): FeatureIconItemNode {
   const node = $create(FeatureIconItemNode);
   $setState(node, featureIconItemNameState, params.iconName ?? "");
-  $setState(node, featureIconItemLibraryState, params.iconLibrary ?? "lucide");
   return node;
 }
 

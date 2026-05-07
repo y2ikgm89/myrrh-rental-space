@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/public/components/design-system/dialog";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 
 export function SpaceDetailDialog({
   space,
@@ -115,10 +116,13 @@ export function SpaceDetailDialog({
                 <div className="flex flex-wrap gap-1.5">
                   {facilities.map((f) => (
                     <span
-                      key={f}
-                      className="border border-border px-2 py-1 text-xs tracking-[0.18em] text-muted-foreground"
+                      key={f.name}
+                      className="inline-flex items-center gap-1.5 border border-border px-2 py-1 text-xs tracking-[0.18em] text-muted-foreground"
                     >
-                      {f}
+                      {f.iconName ? (
+                        <CuratedIcon name={f.iconName} className="h-3 w-3" />
+                      ) : null}
+                      <span>{f.name}</span>
                     </span>
                   ))}
                 </div>

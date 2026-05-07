@@ -1678,3 +1678,68 @@ table[style*="--table-border-color"] th {
   border-width: var(--table-border-width, 1px);
   border-style: solid;
 }
+
+/* --------------------------------------------------------------------------
+ * FeatureIconListNode
+ *
+ * data-columns: 1 / 2 / 3（モバイルは 1 列、md+ で指定列数）
+ * data-icon-size: sm / md / lg（SVG サイズ）
+ * data-color: AccentColor（--accent / --accent-fg を継承）
+ *
+ * Lexical exportDOM が `<ul data-feature-icon-list>` + `<li data-feature-icon-item>` を出力。
+ * 各 li の最初の子要素として `<svg data-icon-svg>`（curation icon）が埋め込まれる。
+ * curation 外の icon name や空 name の場合は SVG なし（テキストのみ表示）。
+ * -------------------------------------------------------------------------- */
+
+[data-feature-icon-list] {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+}
+
+@media (min-width: 48rem) {
+  [data-feature-icon-list][data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-feature-icon-list][data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+[data-feature-icon-item] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+[data-feature-icon-item] > svg[data-icon-svg] {
+  flex-shrink: 0;
+  color: var(--accent, var(--color-accent));
+}
+
+[data-feature-icon-list][data-icon-size="sm"] svg[data-icon-svg] {
+  width: 1rem;
+  height: 1rem;
+}
+
+[data-feature-icon-list][data-icon-size="md"] svg[data-icon-svg] {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+[data-feature-icon-list][data-icon-size="lg"] svg[data-icon-svg] {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* li 内の段落テキストのマージンリセット（SVG 横並びでベースライン揃え） */
+[data-feature-icon-item] > :is(p, div):first-of-type {
+  margin-top: 0;
+}
+
+[data-feature-icon-item] > :is(p, div):last-child {
+  margin-bottom: 0;
+}

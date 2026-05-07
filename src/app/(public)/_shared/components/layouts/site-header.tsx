@@ -17,6 +17,7 @@ import { IconChevronDown, IconMenu2, IconX } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import type { SiteBrand as SiteBrandValue } from "@/shared/domain/settings/queries/display";
 import {
   HeaderScrollBehavior,
@@ -65,16 +66,16 @@ const HIDE_THRESHOLD = 150;
  * hover / focus-visible / aria-current=page（現在ページ）で同じ表示 → 一貫した視覚フィードバック。
  */
 const DESKTOP_NAV_LINK_CLASS =
-  "relative whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 aria-[current=page]:text-foreground aria-[current=page]:after:origin-left aria-[current=page]:after:scale-x-100";
+  "relative inline-flex items-center gap-1.5 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 aria-[current=page]:text-foreground aria-[current=page]:after:origin-left aria-[current=page]:after:scale-x-100";
 
 const DROPDOWN_LINK_CLASS =
-  "block rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
+  "flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
 
 const MOBILE_PARENT_CLASS =
-  "font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:outline-none";
+  "inline-flex items-center gap-2 font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:outline-none";
 
 const MOBILE_CHILD_CLASS =
-  "text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+  "inline-flex items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
 
 /**
  * 指定された URL が現在のパスと一致するか判定する。
@@ -109,7 +110,10 @@ function NavItemLink({
 
   const content = (
     <>
-      {item.label}
+      {item.iconName ? (
+        <CuratedIcon name={item.iconName} className="h-3.5 w-3.5 shrink-0" />
+      ) : null}
+      <span>{item.label}</span>
       {item.isExternal && <span className="sr-only"> (新しいタブで開く)</span>}
     </>
   );

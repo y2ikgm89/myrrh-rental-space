@@ -42,6 +42,7 @@ import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";
 import {
@@ -352,6 +353,8 @@ function AutoField({
       placeholder={meta.placeholder}
       helpText={meta.helpText}
       suffix={meta.suffix}
+      leadingIcon={meta.leadingIcon}
+      trailingIcon={meta.trailingIcon}
       schema={fieldInfo.schema}
       register={register}
       setValue={setValue}
@@ -373,6 +376,8 @@ interface AutoFieldByTypeProps {
   readonly placeholder: string | undefined;
   readonly helpText: string | undefined;
   readonly suffix: string | undefined;
+  readonly leadingIcon: string | undefined;
+  readonly trailingIcon: string | undefined;
   readonly schema: z.ZodType;
   readonly register: UseFormRegister<FieldValues>;
   readonly setValue: UseFormSetValue<FieldValues>;
@@ -393,6 +398,8 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     placeholder,
     helpText,
     suffix,
+    leadingIcon,
+    trailingIcon,
     schema,
     register,
     setValue,
@@ -406,7 +413,6 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
 
   switch (fieldType) {
     case "text":
-    case "icon":
       return (
         <div className="space-y-2">
           <Label htmlFor={fieldId}>{label}</Label>
@@ -415,6 +421,8 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
             {...register(fieldKey)}
             placeholder={placeholder}
             disabled={isPending}
+            {...(leadingIcon !== undefined && { leadingIcon })}
+            {...(trailingIcon !== undefined && { trailingIcon })}
           />
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
@@ -425,6 +433,19 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
             </p>
           )}
         </div>
+      );
+
+    case "icon":
+      return (
+        <AutoIconField
+          fieldId={fieldId}
+          fieldKey={fieldKey}
+          label={label}
+          helpText={helpText}
+          control={control}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "textarea":
@@ -459,6 +480,8 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
               type="number"
               {...register(fieldKey, { valueAsNumber: true })}
               disabled={isPending}
+              {...(leadingIcon !== undefined && { leadingIcon })}
+              {...(trailingIcon !== undefined && { trailingIcon })}
             />
             {suffix && (
               <span className="text-sm text-muted-foreground shrink-0">
@@ -554,6 +577,8 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
             {...register(fieldKey)}
             placeholder={placeholder ?? "https://..."}
             disabled={isPending}
+            {...(leadingIcon !== undefined && { leadingIcon })}
+            {...(trailingIcon !== undefined && { trailingIcon })}
           />
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
@@ -617,6 +642,8 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
                 placeholder={subField.meta.placeholder}
                 helpText={subField.meta.helpText}
                 suffix={subField.meta.suffix}
+                leadingIcon={subField.meta.leadingIcon}
+                trailingIcon={subField.meta.trailingIcon}
                 schema={subField.schema}
                 register={register}
                 setValue={setValue}
@@ -730,6 +757,45 @@ function AutoColorFieldControlled({
           className="flex-1"
         />
       </div>
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AutoIconField({
+  fieldKey,
+  fieldId,
+  label,
+  helpText,
+  control,
+  isPending,
+  error,
+}: {
+  readonly fieldKey: string;
+  readonly fieldId: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+  readonly error: string | undefined;
+}) {
+  const { field } = useController({ control, name: fieldKey });
+  const value = typeof field.value === "string" ? field.value : "";
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <IconPickerField
+        id={fieldId}
+        value={value}
+        onChange={(name) => field.onChange(name)}
+        disabled={isPending}
+      />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (
         <p role="alert" className="text-sm text-destructive">

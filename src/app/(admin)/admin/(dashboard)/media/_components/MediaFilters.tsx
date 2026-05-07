@@ -8,12 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryStates } from "nuqs";
 import { adminMediaSearchParamsParsers } from "@/shared/lib/nuqs";
 import { cn } from "@/shared/lib/cn";
-import {
-  IconSearch,
-  IconLayoutGrid,
-  IconList,
-  IconUpload,
-} from "@tabler/icons-react";
+import { IconLayoutGrid, IconList, IconUpload } from "@tabler/icons-react";
 import {
   Button,
   Input,
@@ -61,14 +56,14 @@ export function MediaFilters() {
         {/* Left: Filters */}
         <div className="flex flex-wrap gap-2 items-center">
           {/* Search */}
-          <div className="relative">
-            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div>
             <Input
               type="search"
               placeholder="検索..."
               defaultValue={params.search}
               onChange={handleSearchChange}
-              className="w-48 pl-9"
+              className="w-48"
+              leadingIcon="IconSearch"
             />
           </div>
 

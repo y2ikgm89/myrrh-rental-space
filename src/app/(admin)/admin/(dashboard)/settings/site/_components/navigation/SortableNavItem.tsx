@@ -10,6 +10,7 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import type { Serialized } from "@/shared/lib/serialize";
 import { IconExternalLink } from "@tabler/icons-react";
 import type { NavigationItemData, SocialLinkData } from "./types";
@@ -101,6 +102,12 @@ export function SortableNavRow({
           <DragHandle />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
+          {item.iconName ? (
+            <CuratedIcon
+              name={item.iconName}
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+            />
+          ) : null}
           <span className="truncate text-sm font-medium">{item.label}</span>
           <span className="hidden truncate text-xs text-muted-foreground sm:inline">
             {item.url}

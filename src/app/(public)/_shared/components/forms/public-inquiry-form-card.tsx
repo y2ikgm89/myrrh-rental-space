@@ -265,6 +265,7 @@ export function PublicInquiryFormCard({
                 disabled={!isInteractive || isPending}
                 placeholder="mail@example.com"
                 autoComplete="email"
+                leadingIcon="IconMail"
                 {...(form.formState.errors.email?.message !== undefined && {
                   error: form.formState.errors.email.message,
                 })}

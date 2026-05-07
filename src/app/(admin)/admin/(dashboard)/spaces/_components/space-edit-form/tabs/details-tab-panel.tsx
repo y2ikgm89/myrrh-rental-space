@@ -22,6 +22,8 @@ import {
   SelectValue,
   TabsContent,
 } from "@/admin/components/ui";
+import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import type { SpaceEditFormData } from "../schema";
 import { SELECT_NONE_VALUE, type SpaceEditCategoryOption } from "../types";
 
@@ -32,6 +34,8 @@ type SpaceEditDetailsTabPanelProps = {
   availableCategories: SpaceEditCategoryOption[];
   newFacility: string;
   onNewFacilityChange: (value: string) => void;
+  newFacilityIconName: string;
+  onNewFacilityIconNameChange: (value: string) => void;
   onAddFacility: () => void;
   facilityFields: FieldArrayWithId<SpaceEditFormData, "facilities", "id">[];
   onRemoveFacility: (index: number) => void;
@@ -44,6 +48,8 @@ export function SpaceEditDetailsTabPanel({
   availableCategories,
   newFacility,
   onNewFacilityChange,
+  newFacilityIconName,
+  onNewFacilityIconNameChange,
   onAddFacility,
   facilityFields,
   onRemoveFacility,
@@ -99,19 +105,31 @@ export function SpaceEditDetailsTabPanel({
             <CardTitle>設備・アメニティ</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={newFacility}
-                onChange={(e) => onNewFacilityChange(e.target.value)}
-                placeholder="例: WiFi、プロジェクター"
-                disabled={isPending}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    onAddFacility();
-                  }
-                }}
-              />
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-facility-name">設備名</Label>
+                <Input
+                  id="new-facility-name"
+                  value={newFacility}
+                  onChange={(e) => onNewFacilityChange(e.target.value)}
+                  placeholder="例: WiFi、プロジェクター"
+                  disabled={isPending}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onAddFacility();
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>アイコン (任意)</Label>
+                <IconPickerField
+                  value={newFacilityIconName}
+                  onChange={onNewFacilityIconNameChange}
+                  disabled={isPending}
+                />
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -126,15 +144,21 @@ export function SpaceEditDetailsTabPanel({
                 {facilityFields.map((field, index) => (
                   <span
                     key={field.id}
-                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm"
                   >
-                    {field.value}
+                    {field.iconName ? (
+                      <CuratedIcon
+                        name={field.iconName}
+                        className="h-3.5 w-3.5"
+                      />
+                    ) : null}
+                    {field.name}
                     <button
                       type="button"
                       onClick={() => onRemoveFacility(index)}
                       disabled={isPending}
                       className="ml-1 text-muted-foreground hover:text-foreground"
-                      aria-label={`${field.value}を削除`}
+                      aria-label={`${field.name}を削除`}
                     >
                       <IconX className="h-3 w-3" />
                     </button>

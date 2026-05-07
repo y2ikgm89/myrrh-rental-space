@@ -21,6 +21,7 @@ import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { updateSpacePublish } from "@/admin/actions/space";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatCurrency } from "@/shared/lib/pricing/format";
@@ -281,8 +282,18 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {facilities.map((facility) => (
-                <Badge key={facility} variant="secondary">
-                  {facility}
+                <Badge
+                  key={facility.name}
+                  variant="secondary"
+                  className="inline-flex items-center gap-1.5"
+                >
+                  {facility.iconName ? (
+                    <CuratedIcon
+                      name={facility.iconName}
+                      className="h-3.5 w-3.5"
+                    />
+                  ) : null}
+                  <span>{facility.name}</span>
                 </Badge>
               ))}
             </div>

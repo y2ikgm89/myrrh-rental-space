@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import {
   parseBusinessHours,
+  parseFacilities,
   parseStringArray,
 } from "@/shared/lib/json-validators";
 import {
@@ -65,7 +66,7 @@ function formatSpaceToPlain(s: {
     dailyPrice: s.dailyPrice,
     mainImageUrl: s.mainImageUrl,
     imageUrls: parseStringArray(s.imageUrls),
-    facilities: parseStringArray(s.facilities),
+    facilities: parseFacilities(s.facilities),
     businessHours: parseBusinessHours(s.businessHours),
     isPublished: s.isPublished,
     publishedAt: s.publishedAt ? s.publishedAt.toISOString() : null,

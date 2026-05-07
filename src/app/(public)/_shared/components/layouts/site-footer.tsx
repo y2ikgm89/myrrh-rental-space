@@ -17,6 +17,7 @@ import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { CopyrightYear } from "./copyright-year";
 import { SiteBrand } from "./site-brand";
 import { SocialLinks } from "./social-links";
@@ -132,7 +133,7 @@ function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
 /* -------------------------------------------------------------------------- */
 
 const NAV_LINK_CLASS =
-  "text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+  "inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
 
 const CONTACT_LINK_CLASS =
   "text-foreground transition-colors hover:underline hover:underline-offset-4 focus-visible:underline focus-visible:underline-offset-4 focus-visible:outline-none";
@@ -195,28 +196,41 @@ export async function Footer(): Promise<ReactElement> {
                 {footerSettings.navigationLabel}
               </h2>
               <ul className="mt-4 space-y-3">
-                {footerNav.map((item) => (
-                  <li key={item.id}>
-                    {item.isExternal ? (
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={NAV_LINK_CLASS}
-                      >
-                        {item.label}
-                        <span className="sr-only"> (新しいタブで開く)</span>
-                      </a>
-                    ) : (
-                      <Link
-                        href={toAppRoute(item.url)}
-                        className={NAV_LINK_CLASS}
-                      >
-                        {item.label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
+                {footerNav.map((item) => {
+                  const inner = (
+                    <>
+                      {item.iconName ? (
+                        <CuratedIcon
+                          name={item.iconName}
+                          className="h-3.5 w-3.5 shrink-0"
+                        />
+                      ) : null}
+                      <span>{item.label}</span>
+                    </>
+                  );
+                  return (
+                    <li key={item.id}>
+                      {item.isExternal ? (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={NAV_LINK_CLASS}
+                        >
+                          {inner}
+                          <span className="sr-only"> (新しいタブで開く)</span>
+                        </a>
+                      ) : (
+                        <Link
+                          href={toAppRoute(item.url)}
+                          className={NAV_LINK_CLASS}
+                        >
+                          {inner}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
           )}
@@ -231,7 +245,11 @@ export async function Footer(): Promise<ReactElement> {
             <meta itemProp="name" content={info.name} />
             <ul className="mt-4 space-y-3 text-sm text-foreground">
               {info.email && (
-                <li>
+                <li className="flex items-center gap-2">
+                  <CuratedIcon
+                    name="IconMail"
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
                   <a
                     itemProp="email"
                     href={`mailto:${info.email}`}
@@ -242,7 +260,11 @@ export async function Footer(): Promise<ReactElement> {
                 </li>
               )}
               {info.phone && (
-                <li>
+                <li className="flex items-center gap-2">
+                  <CuratedIcon
+                    name="IconPhone"
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
                   <a
                     itemProp="telephone"
                     href={`tel:${info.phone}`}
@@ -257,7 +279,12 @@ export async function Footer(): Promise<ReactElement> {
                   itemProp="address"
                   itemScope
                   itemType="https://schema.org/PostalAddress"
+                  className="flex items-start gap-2"
                 >
+                  <CuratedIcon
+                    name="IconMapPin"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                  />
                   <span className="text-muted-foreground">
                     {info.postalCode && (
                       <meta itemProp="postalCode" content={info.postalCode} />

@@ -157,6 +157,7 @@ export function ProfileForm({
         value={defaultValues.email}
         disabled
         autoComplete="email"
+        leadingIcon="IconMail"
       />
       <p className="text-xs text-muted-foreground -mt-4">
         メールアドレスはソーシャルアカウントから取得されます
@@ -166,6 +167,7 @@ export function ProfileForm({
         label="電話番号（任意）"
         type="tel"
         autoComplete="tel"
+        leadingIcon="IconPhone"
         {...form.register("phoneNumber")}
         {...(form.formState.errors.phoneNumber?.message && {
           error: form.formState.errors.phoneNumber.message,

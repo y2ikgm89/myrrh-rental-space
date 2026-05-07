@@ -516,6 +516,23 @@ export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
   [ReservationStatus.NO_SHOW]: "無断キャンセル",
 };
 
+/**
+ * ReservationStatus → curation icon 識別子の固定マッピング SSoT。
+ *
+ * Stripe Dashboard / Linear / Shopify Admin 等の status badge は
+ * **icon prefix で意味補強**（color 単独は WCAG 1.4.1 違反）。
+ *
+ * 消費者: 管理画面 ReservationTable / EventDetailDialog / 各種 status Badge。
+ * 描画は `<CuratedIcon name={RESERVATION_STATUS_ICONS[status]} />` で。
+ */
+export const RESERVATION_STATUS_ICONS: Record<ReservationStatus, string> = {
+  [ReservationStatus.PENDING]: "IconClock",
+  [ReservationStatus.CONFIRMED]: "IconCheck",
+  [ReservationStatus.COMPLETED]: "IconCircleCheck",
+  [ReservationStatus.CANCELLED]: "IconX",
+  [ReservationStatus.NO_SHOW]: "IconAlertCircle",
+};
+
 // =============================================================================
 // AuditAction Labels
 // =============================================================================
@@ -656,6 +673,27 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
   [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
+};
+
+/**
+ * NotificationType → curation icon 識別子の固定マッピング SSoT。
+ *
+ * GitHub / Linear / GitLab 等の notification list は **icon prefix で type 識別**
+ * （PR=git-pull-request、issue=alert-circle、comment=message 等）。
+ * 視覚的高速 scan + WCAG 1.4.1 準拠のため必須。
+ *
+ * 消費者: 管理画面 NotificationTable / DashboardNotificationsSection / TopBar bell。
+ * 描画は `<CuratedIcon name={NOTIFICATION_TYPE_ICONS[type]} />` で。
+ */
+export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
+  [NOTIFICATION_TYPE.RESERVATION_NEW]: "IconCalendarPlus",
+  [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "IconX",
+  [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "IconCalendarTime",
+  [NOTIFICATION_TYPE.RESERVATION_UPDATE]: "IconCalendarTime",
+  [NOTIFICATION_TYPE.INQUIRY_NEW]: "IconMail",
+  [NOTIFICATION_TYPE.REVIEW_NEW]: "IconStar",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "IconUsersGroup",
+  [NOTIFICATION_TYPE.FAQ_STALE]: "IconQuestionMark",
 };
 
 export type ReservationAction = "new" | "update" | "cancel";

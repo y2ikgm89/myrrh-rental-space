@@ -66,10 +66,7 @@ describe("FeatureIconItemNode", () => {
     const editor = createEditor();
     await editor.update(() => {
       const container = $createFeatureIconListContainerNode();
-      const item = $createFeatureIconItemNode({
-        iconName: "Instagram",
-        iconLibrary: "simple-icons",
-      });
+      const item = $createFeatureIconItemNode({ iconName: "IconClock" });
       const para = $createParagraphNode();
       item.append(para);
       container.append(item);
@@ -79,8 +76,7 @@ describe("FeatureIconItemNode", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const itemJson = (json.root.children[0] as any).children[0];
     expect(itemJson.type).toBe("feature-icon-item");
-    expect(itemJson.iconName).toBe("Instagram");
-    expect(itemJson.iconLibrary).toBe("simple-icons");
+    expect(itemJson.iconName).toBe("IconClock");
   });
 
   test("$isFeatureIconListContainerNode and $isFeatureIconItemNode type guards work", async () => {

@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { CategoryActionCell } from "./CategoryActionCell";
 import type { SpaceCategoryWithStats } from "@/shared/lib/validations/space-category";
 
@@ -56,9 +57,15 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   {category.icon ? (
-                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                      {category.icon}
-                    </code>
+                    <span className="inline-flex items-center gap-2">
+                      <CuratedIcon
+                        name={category.icon}
+                        className="h-4 w-4 text-foreground"
+                      />
+                      <code className="text-xs text-muted-foreground">
+                        {category.icon}
+                      </code>
+                    </span>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}

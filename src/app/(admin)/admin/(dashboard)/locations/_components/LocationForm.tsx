@@ -356,11 +356,10 @@ export function LocationForm({
             amenities: location.amenities as Record<string, boolean>,
             imageUrl: location.imageUrl,
             // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
-            imageUrls: (location.imageUrls as string[]).map((url) => ({ url })),
+            imageUrls: location.imageUrls.map((url) => ({ url })),
             businessHours:
               location.businessHours as LocationFormInput["businessHours"],
-            specialHolidays:
-              (location.specialHolidays as string[] | null) ?? null,
+            specialHolidays: location.specialHolidays,
             latitude: location.latitude,
             longitude: location.longitude,
             googleBusinessPlaceId: location.googleBusinessPlaceId ?? "",

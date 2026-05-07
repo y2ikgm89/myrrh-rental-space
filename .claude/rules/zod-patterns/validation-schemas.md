@@ -285,6 +285,31 @@ s.parse(["a", "b"]); // → ["a", "b"]（OK）
 
 object 系の `.prefault({})` 必須パターンとは挙動が異なるため混同しない（object は default で inner default が発火しない / array は default で min 検証が skip される）。
 
+## Read-side / Write-side で default の有無を分離する canonical pattern
+
+同じスキーマを「DB JSON read」と「フォーム write」両方で使う場合、canonical は **`.default()` なし** で定義し、form 利用側で `.default([])` を chain する:
+
+- **Read-side**（`parseXxx(value: unknown)` ヘルパー）: `safeParse(value)` で strict 判定、失敗時は `[]` fallback。`.default([])` を canonical に混ぜると undefined input が silent に通り防御的型ガードが効かなくなる
+- **Write-side**（form / Server Action schema）: input undefined → `[]`（min 検証 skip）の Zod 4 公式挙動を `safeParse({})` 契約と両立させたい
+
+```typescript
+// canonical（json-validators.ts）— .default() なし、parseFacilities が safeParse fallback
+export const facilitiesSchema = z
+  .array(facilityItemSchema)
+  .refine(/* uniqueness */);
+
+export function parseFacilities(value: unknown): FacilityItem[] {
+  const result = facilitiesSchema.safeParse(value);
+  return result.success ? result.data : []; // strict + helper fallback
+}
+
+// form 利用側（admin/lib/validations/space.ts）— canonical を import + .default([])
+import { facilitiesSchema } from "@/shared/lib/json-validators";
+const facilitiesFormSchema = facilitiesSchema.default([]);
+```
+
+**禁止**: 1 つの schema に `.default([])` を混ぜて両用する（read-side で undefined が silent 通過する silent bug）。`facilitiesSchema` 統合（2026-05-08）が参照実装。
+
 ## React Hook Form 連携
 
 ```typescript

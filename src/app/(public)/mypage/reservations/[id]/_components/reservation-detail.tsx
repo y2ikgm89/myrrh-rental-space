@@ -8,9 +8,11 @@ import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
+  RESERVATION_STATUS_ICONS,
   CANCELLED_BY,
 } from "@/shared/lib/validations/enums/helpers";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { getAppUrl } from "@/shared/lib/constants";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
@@ -155,6 +157,12 @@ export function ReservationDetail({
         </Heading>
         <div className="flex items-center gap-2">
           <Badge variant={RESERVATION_BADGE_VARIANTS[status] ?? "default"}>
+            {isValidReservationStatus(reservation.status) ? (
+              <CuratedIcon
+                name={RESERVATION_STATUS_ICONS[reservation.status]}
+                className="mr-1 inline h-3 w-3"
+              />
+            ) : null}
             {statusLabel}
           </Badge>
           <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>

@@ -1,6 +1,5 @@
 "use client";
 
-import { IconSearch } from "@tabler/icons-react";
 import { useQueryStates } from "nuqs";
 import {
   Select,
@@ -93,14 +92,13 @@ export function ReviewFilters() {
         </Select>
       </div>
 
-      <div className="relative flex-1">
-        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex-1">
         <Input
           type="search"
           placeholder="スペース名、顧客名で検索..."
           defaultValue={params.rvSearch}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-9"
+          leadingIcon="IconSearch"
         />
       </div>
     </div>

@@ -12,8 +12,10 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPE_BADGE_VARIANTS,
+  NOTIFICATION_TYPE_ICONS,
   isValidNotificationType,
 } from "@/shared/lib/validations/enums/helpers";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import {
   Badge,
@@ -90,6 +92,9 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
               const badgeVariant = validType
                 ? NOTIFICATION_TYPE_BADGE_VARIANTS[validType]
                 : "secondary";
+              const typeIconName = validType
+                ? NOTIFICATION_TYPE_ICONS[validType]
+                : null;
               const href = getNotificationResourceHref(
                 notification.type,
                 notification.resourceType,
@@ -107,7 +112,15 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
                     )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <Badge variant={badgeVariant}>{typeLabel}</Badge>
+                    <Badge
+                      variant={badgeVariant}
+                      className="inline-flex items-center gap-1.5"
+                    >
+                      {typeIconName ? (
+                        <CuratedIcon name={typeIconName} className="h-3 w-3" />
+                      ) : null}
+                      <span>{typeLabel}</span>
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="min-w-0">

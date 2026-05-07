@@ -6,7 +6,7 @@
 
 import { useQueryStates } from "nuqs";
 import { adminPostSearchParamsParsers } from "@/shared/lib/nuqs";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import { Button, Input, SubmitButton } from "@/admin/components/ui";
 import { getFormString } from "@/shared/lib/form-data";
 import { EDITOR_COMMENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
@@ -64,12 +64,12 @@ export function CommentFilters() {
       {/* 検索 */}
       <form onSubmit={handleSearch} className="flex items-center gap-2">
         <div className="relative">
-          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             name="search"
             placeholder="コメント内容・投稿者名で検索"
             defaultValue={params.search}
-            className="pl-9 w-64"
+            className="w-64"
+            leadingIcon="IconSearch"
           />
           {params.search && (
             <button

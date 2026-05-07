@@ -1,6 +1,6 @@
 "use client";
 
-import type { UseFormReturn } from "react-hook-form";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 import {
   Button,
   Input,
@@ -18,6 +18,7 @@ import {
   Switch,
   SubmitButton,
 } from "@/admin/components/ui";
+import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { isValidSocialPlatform } from "@/shared/lib/validations/enums/guards";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
@@ -57,6 +58,7 @@ export function NavigationDialog({
   parentOptions,
   onSubmit,
 }: NavigationDialogProps) {
+  const navIconName = useWatch({ control: form.control, name: "iconName" });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -95,6 +97,22 @@ export function NavigationDialog({
                   {form.formState.errors.url.message}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nav-iconName">アイコン（任意）</Label>
+              <IconPickerField
+                id="nav-iconName"
+                value={navIconName ?? ""}
+                onChange={(name) =>
+                  form.setValue("iconName", name, { shouldDirty: true })
+                }
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                ラベル左にアイコンを表示します。未設定ならテキストのみ（Editorial
+                方針デフォルト）。
+              </p>
             </div>
 
             <div className="space-y-2">

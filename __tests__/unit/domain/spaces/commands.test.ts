@@ -104,7 +104,10 @@ const VALID_INPUT = {
   hourlyPrice: 1000,
   mainImageUrl: "https://example.com/image.jpg",
   imageUrls: ["https://example.com/image1.jpg"],
-  facilities: ["Wi-Fi", "プロジェクター"],
+  facilities: [
+    { name: "Wi-Fi", iconName: "IconWifi" },
+    { name: "プロジェクター", iconName: "IconPresentation" },
+  ],
   isPublished: false,
   reviewsEnabled: true,
   locationId: LOCATION_ID,

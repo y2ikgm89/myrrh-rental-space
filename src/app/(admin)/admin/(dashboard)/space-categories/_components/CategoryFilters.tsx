@@ -1,6 +1,5 @@
 "use client";
 
-import { IconSearch } from "@tabler/icons-react";
 import { useQueryStates } from "nuqs";
 import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useRef, useEffect } from "react";
@@ -50,14 +49,13 @@ export function CategoryFilters() {
       </div>
 
       {/* 検索 */}
-      <div className="relative flex-1">
-        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex-1">
         <Input
           type="search"
           placeholder="名前・説明で検索..."
           defaultValue={params.catSearch}
           onChange={(e) => setSearchDebounced(e.target.value)}
-          className="pl-9"
+          leadingIcon="IconSearch"
         />
       </div>
     </div>

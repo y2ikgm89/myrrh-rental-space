@@ -15,8 +15,10 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import {
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPE_BADGE_VARIANTS,
+  NOTIFICATION_TYPE_ICONS,
   isValidNotificationType,
 } from "@/shared/lib/validations/enums/helpers";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 
@@ -56,6 +58,9 @@ export async function DashboardNotificationsSection() {
               const badgeVariant = isValidNotificationType(notification.type)
                 ? NOTIFICATION_TYPE_BADGE_VARIANTS[notification.type]
                 : "secondary";
+              const typeIconName = isValidNotificationType(notification.type)
+                ? NOTIFICATION_TYPE_ICONS[notification.type]
+                : null;
               const href = getNotificationResourceHref(
                 notification.type,
                 notification.resourceType,
@@ -76,7 +81,18 @@ export async function DashboardNotificationsSection() {
                   {notification.isRead && <span className="w-2 shrink-0" />}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <Badge variant={badgeVariant}>{typeLabel}</Badge>
+                      <Badge
+                        variant={badgeVariant}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        {typeIconName ? (
+                          <CuratedIcon
+                            name={typeIconName}
+                            className="h-3 w-3"
+                          />
+                        ) : null}
+                        <span>{typeLabel}</span>
+                      </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDateTimeShort(notification.createdAt)}
                       </span>

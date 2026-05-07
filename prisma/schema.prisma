@@ -445,6 +445,10 @@ model Space {
   dailyPrice    Decimal?  @db.Decimal(10, 2)
   mainImageUrl  String
   imageUrls     Json      @default("[]")
+  /// 構造化された設備リスト（Airbnb / Booking.com 標準パターン）。
+  /// JSON 配列 `{ name: string; iconName: string }[]`。
+  /// `iconName` は `@/shared/lib/icon-curation` の curation 識別子。
+  /// 空文字 = icon 未指定（fallback で text のみ表示）。
   facilities    Json      @default("[]")
   businessHours Json?
   isPublished   Boolean   @default(false)
@@ -987,6 +991,10 @@ model NavigationItem {
   parentId String? @db.Uuid
   label      String
   url        String
+  /// 任意の Tabler curation icon 識別子（例: "IconHome"）。
+  /// NULL ならアイコンなし（text-only、Editorial 方針デフォルト）。
+  /// icon-only モードは禁止（NN/g 準拠 — 必ず label と併記、SR は label のみ読み上げ）。
+  iconName   String?        @db.VarChar(64)
   isExternal Boolean        @default(false)
   order      Int
   isActive   Boolean        @default(true)

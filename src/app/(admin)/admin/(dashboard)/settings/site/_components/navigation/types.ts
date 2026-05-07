@@ -27,6 +27,7 @@ export type NavFormData = {
   parentId: string | null;
   label: string;
   url: string;
+  iconName: string;
   isExternal: boolean;
   order: number;
   isActive: boolean;
@@ -37,6 +38,8 @@ export const navFormSchema = z.object({
   parentId: z.string().nullable(),
   label: z.string().min(1, { error: "ラベルは必須です" }).max(50),
   url: z.string().min(1, { error: "URLは必須です" }),
+  // フォームでは空文字を許可（未選択 = "" で扱い、command 層で NULL に正規化）
+  iconName: z.string().max(64),
   isExternal: z.boolean(),
   order: z.number().int().min(0),
   isActive: z.boolean(),
@@ -149,6 +152,7 @@ export function rebuildHierarchy(
       type: original.type,
       label: original.label,
       url: original.url,
+      iconName: original.iconName,
       isExternal: original.isExternal,
       order: update.order,
       isActive: original.isActive,

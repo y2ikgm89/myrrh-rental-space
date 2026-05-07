@@ -22,6 +22,7 @@ import {
   Textarea,
 } from "@/admin/components/ui";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import {
   getArrayConstraints,
   getArrayItemShape,
@@ -238,6 +239,18 @@ function ArrayItemField({
     );
   }
 
+  if (fieldType === "icon") {
+    return (
+      <ArrayItemIconField
+        fieldName={fieldName}
+        label={itemLabel}
+        helpText={meta?.helpText}
+        control={control}
+        isPending={isPending}
+      />
+    );
+  }
+
   if (fieldType === "select") {
     // 配列内アイテムの select は簡略化して Input にフォールバック
     const options = getSelectOptions(itemField.schema);
@@ -254,7 +267,7 @@ function ArrayItemField({
     }
   }
 
-  // text, icon, url, color — テキスト入力
+  // text, url, color — テキスト入力
   return (
     <div className="space-y-2">
       <Label>{itemLabel}</Label>
@@ -263,6 +276,12 @@ function ArrayItemField({
         {...register(fieldName)}
         placeholder={meta?.placeholder}
         disabled={isPending}
+        {...(meta?.leadingIcon !== undefined && {
+          leadingIcon: meta.leadingIcon,
+        })}
+        {...(meta?.trailingIcon !== undefined && {
+          trailingIcon: meta.trailingIcon,
+        })}
       />
     </div>
   );
@@ -293,6 +312,37 @@ function ArrayItemImageField({
       {...(helpText !== undefined && { helpText })}
       {...(isPending && { disabled: true })}
     />
+  );
+}
+
+function ArrayItemIconField({
+  fieldName,
+  label,
+  helpText,
+  control,
+  isPending,
+}: {
+  readonly fieldName: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+}) {
+  const id = useId();
+  const { field } = useController({ control, name: fieldName });
+  const value = typeof field.value === "string" ? field.value : "";
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <IconPickerField
+        id={id}
+        value={value}
+        onChange={(name) => field.onChange(name)}
+        disabled={isPending}
+      />
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+    </div>
   );
 }
 

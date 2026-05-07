@@ -37,6 +37,7 @@ paths:
 - **review agent の「欠落」「型不整合」報告は Read + Glob で実在確認** — project-reviewer は `Serialized<T>` 型を未把握で Date→string を warning 化、route-structure-reviewer は MINGW64 `()` 含みパス Glob で実在 `loading.tsx` を「欠落」扱いする傾向あり
 - **レビューエージェント指摘**: `claude-code-patterns.md` と照合して誤報除外。`bun run lint` exit 状態 + Read を ground truth とする
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン。違反大量報告時はまず validate を ground truth に
+- **「クリーン実装になってる？」「型アサーションない？」等のスコープ曖昧監査依頼は WIP 差分か全プロジェクトかを明示確認** — subagent dispatch prompt にも scope を明記必須。WIP 差分のみで「クリーン」と報告し、ユーザーは全プロジェクトを意図していて手戻り発生する silent UX bug（2026-05-08 実発生、project-reviewer の WIP-only スコープに気付かず）
 
 ## Plan 作成時の事前検証
 

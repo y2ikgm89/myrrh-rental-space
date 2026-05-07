@@ -21,7 +21,7 @@ export type SpaceOption = {
   dailyPrice: number | null;
   mainImageUrl: string;
   imageUrls: string[];
-  facilities: string[];
+  facilities: { name: string; iconName: string }[];
 };
 
 export type LocationWithSpaces = {
@@ -380,7 +380,15 @@ export async function getPublishedLocationsWithSpaces(): Promise<
             ? s.imageUrls.filter((u): u is string => typeof u === "string")
             : [],
           facilities: Array.isArray(s.facilities)
-            ? s.facilities.filter((f): f is string => typeof f === "string")
+            ? s.facilities.filter(
+                (f): f is { name: string; iconName: string } =>
+                  typeof f === "object" &&
+                  f !== null &&
+                  "name" in f &&
+                  "iconName" in f &&
+                  typeof (f as { name: unknown }).name === "string" &&
+                  typeof (f as { iconName: unknown }).iconName === "string",
+              )
             : [],
         })),
       })),

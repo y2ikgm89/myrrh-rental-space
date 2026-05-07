@@ -659,3 +659,25 @@ const [testPending, startTestTransition] = useTransition();
 
 - 設定セクションで `useState` + 手動 `onChange` のフォーム管理（`useFormAction` を使用）
 - `useRefreshOnSuccess` フック（削除済み、`useFormAction` の `refresh: true` で代替）
+
+## Input adornment（leadingIcon / trailingIcon）
+
+shadcn `<Input>` (`@/admin/components/ui`) は **`leadingIcon` / `trailingIcon` / `trailingSlot` props** で curation icon の adornment を受け付ける。**inline `<div className="relative">` + `<svg absolute left-3>` + `<Input className="pl-9">` パターン禁止**（DRY 違反）— `<Input leadingIcon="IconSearch" placeholder="検索" aria-label="..." />` で declarative に書く。
+
+- 業界標準: Material UI `InputAdornment` / Tailwind UI `input with leading icon` / Stripe Elements の prefix 慣例
+- icon は `aria-hidden="true"` 自動（NN/g + WCAG — SR は label のみ読む）
+- icon-only モード禁止（必ず `<Label>` or `aria-label` 併記、必要なら `<FormLabel className="sr-only">`）
+- `pointer-events-none` で input click を妨げない
+- `pl-9` / `pr-9` の padding 自動付与、未指定なら `<input>` 直接 return（後方互換）
+
+**Section schema で declarative 利用**:
+
+- `field.text("URL", { leadingIcon: "IconLink" })` / `field.text("住所", { leadingIcon: "IconMapPin" })` / `field.text("電話", { leadingIcon: "IconPhone" })`
+- `field.url("...")` は **default で `leadingIcon: "IconLink"`** が自動付与（業界 convention）
+- `field.number("料金", { leadingIcon: "IconCurrencyYen" })` 等の prefix
+- 対応 fieldType: **text / url / number** のみ。`field.textarea` / `field.boolean` / `field.select` / `field.image` / `field.icon` は型は受け付けるが silent ignore（`Textarea` 系は icon adornment 業界標準的に稀のため）
+- AutoSectionForm の `case "text" | "url" | "number"` + AutoArrayField の `ArrayItemField` (items[] 内 text/url) で配線済み
+
+**DRY 化対象の inline 実装**: `CouponFilters` / `FaqCategoryItemsFilters` / `InquiryDetail` / `LocationFilters` / `MediaFilters` / `PageFilters` / `CommentFilters` / `CategoryManager` / `TagManager` / `CustomerSelector` / `ReservationFilters` / `CategoryFilters` / `ReviewFilters` / `SpaceFilters` / `StaffFilters` の 15 ファイルで `<IconSearch absolute>` + `<Input pl-9>` パターン残存。新規実装は必ず `<Input leadingIcon="IconSearch" />` を使う。
+
+**Curation 必須**: `leadingIcon` / `trailingIcon` に渡す名前は `@/shared/lib/icon-curation.ts` の `ICON_CATEGORIES` に登録必須 — 未登録は `getCuratedIconComponent()` で undefined → icon 描画されない silent bug（`field.url()` の default `IconLink` も同 curation に登録済み）。詳細 → `ssot-singletons.md` §IconPickerField エントリ。

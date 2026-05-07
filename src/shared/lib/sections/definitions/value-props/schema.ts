@@ -22,9 +22,7 @@ export const valuePropsConfigSchema = z.object({
     max: 4,
     helpText: "推奨は 4 項目（業界標準: Apple / Aesop / Hermès）",
     fields: {
-      icon: field.icon("アイコン", {
-        helpText: "Tabler Icons の名前（例: IconClock）",
-      }),
+      icon: field.icon("アイコン"),
       eyebrow: field.text("英語ラベル (eyebrow)", {
         maxLength: 24,
         helpText: "serif italic で表示される短い英語ラベル（例: Speed）",

@@ -8,8 +8,10 @@ import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
+  RESERVATION_STATUS_ICONS,
 } from "@/shared/lib/validations/enums/helpers";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
@@ -87,6 +89,12 @@ export function ReservationCard({
         <Badge
           variant={RESERVATION_BADGE_VARIANTS[reservation.status] ?? "default"}
         >
+          {isValidReservationStatus(reservation.status) ? (
+            <CuratedIcon
+              name={RESERVATION_STATUS_ICONS[reservation.status]}
+              className="mr-1 inline h-3 w-3"
+            />
+          ) : null}
           {statusLabel}
         </Badge>
       </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { IconSearch } from "@tabler/icons-react";
 import { useQueryStates } from "nuqs";
 import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
 import {
@@ -187,14 +186,13 @@ export function SpaceFilters({
         </div>
       </div>
 
-      <div className="relative flex-1">
-        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex-1">
         <Input
           type="search"
           placeholder="名前・住所・説明で検索..."
           defaultValue={params.spSearch}
           onChange={(e) => setSearchDebounced(e.target.value)}
-          className="pl-9"
+          leadingIcon="IconSearch"
         />
       </div>
     </div>

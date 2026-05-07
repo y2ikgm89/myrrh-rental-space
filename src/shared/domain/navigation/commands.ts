@@ -13,6 +13,13 @@ export const navigationItemInputSchema = z.object({
     .min(1, { error: "ラベルは必須です" })
     .max(50, { error: "ラベルは50文字以内" }),
   url: z.string().min(1, { error: "URLは必須です" }).max(500),
+  /**
+   * Tabler curation icon 識別子（例: "IconHome"）。
+   * NULL/空文字 = アイコンなし（text-only、Editorial 方針デフォルト）。
+   * curation 外の値はサーバ側で許可するが描画時に no-op fallback される。
+   * icon-only モードは禁止 — UI 層で必ず label と併記される（NN/g 準拠）。
+   */
+  iconName: z.string().max(64).nullable().optional(),
   isExternal: z.boolean().default(false),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
@@ -59,9 +66,14 @@ export type SocialLinkInput = z.infer<typeof socialLinkInputSchema>;
 export type SocialLinkOrderInput = z.infer<typeof socialLinkOrderInputSchema>;
 
 function normalizeNavigationItemInput(data: NavigationItemInput) {
+  // 空文字を NULL に正規化（DB の VARCHAR(64) NULL を Editorial デフォルト
+  // 「アイコンなし」のセマンティクスに揃えるため）
+  const iconName =
+    data.iconName === undefined || data.iconName === "" ? null : data.iconName;
   return {
     ...data,
     parentId: data.parentId ?? null,
+    iconName,
   };
 }
 

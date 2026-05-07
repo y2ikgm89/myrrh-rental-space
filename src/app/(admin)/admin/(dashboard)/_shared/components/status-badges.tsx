@@ -21,8 +21,10 @@ import {
   PUBLISH_LABELS,
   REGISTRATION_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
+  RESERVATION_STATUS_ICONS,
   AUDIT_ACTION_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 // =============================================================================
@@ -127,7 +129,13 @@ export function ReservationStatusBadge({
   status: ReservationStatus;
 }) {
   const config = reservationStatusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  const iconName = RESERVATION_STATUS_ICONS[status];
+  return (
+    <Badge variant={config.variant} className="inline-flex items-center gap-1">
+      <CuratedIcon name={iconName} className="h-3 w-3" />
+      <span>{config.label}</span>
+    </Badge>
+  );
 }
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {

@@ -451,4 +451,43 @@ export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES);
 
 **挿入実行**: ツールバーは `executeInsertItem`（`dialog` は同期 `openDialog`、それ以外は 1 回の `editor.update`）。スラッシュメニューはトリガー削除と同一 `update` 内で `applyInsertItemInUpdate`（`dialog` は `queueMicrotask` で `openDialog`）。`type: "transform"` は `applyInUpdate` で $ API のみとし、ネストした `editor.update` を禁止。
 
-**ポイント**: Floating Text Format Toolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
+**ポイント**: Floating Text Format Toolbar 経由で開くインラインノード（Ruby / Tooltip 等)は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
+
+## exportDOM 内で curation icon を SVG として埋め込む（FeatureIconListNode pattern）
+
+Lexical Node の `exportDOM` / `createDOM` で curation icon を `<svg>` として直接埋め込みたい場合（公開側で `SanitizedHtml` 経由の static HTML 描画で利用するため、追加の rehype-react layer を作らずに icon を可視化）、**`react-dom/server` の `renderToStaticMarkup` + `insertAdjacentHTML` + `setAttribute` 後付け** pattern を使う:
+
+```typescript
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
+
+function renderIconSvgInto(host: HTMLElement, iconName: string): void {
+  // updateDOM で icon が変わった場合の重複防止
+  host.querySelector(":scope > svg[data-icon-svg]")?.remove();
+  if (iconName === "") return;
+  const Icon = getCuratedIconComponent(iconName);
+  if (!Icon) return; // curation 外は no-op fallback（テキストのみ表示）
+  const markup = renderToStaticMarkup(
+    createElement(Icon, { className: "feature-icon-svg", "aria-hidden": true }),
+  );
+  host.insertAdjacentHTML("afterbegin", markup);
+  // Tabler IconProps 型は data-* を受け付けないため挿入後に setAttribute で後付け
+  host.querySelector(":scope > svg")?.setAttribute("data-icon-svg", "");
+}
+```
+
+**重要なポイント**:
+
+- `renderToStaticMarkup` は **同期関数** で SSR / browser 両環境で動作（`react-dom/server`）— Lexical の同期 `exportDOM` / `createDOM` から直接呼べる
+- `getCuratedIconComponent` は `@/shared/components/icon-curation/component-map` の **client-safe SSoT**（`"use client"` なし、Lexical SSR / admin Client / public 共有）
+- **Tabler `IconProps` 型は `data-*` を受け付けない silent fail** — `createElement(Icon, { "data-icon-svg": "" })` は TS 型エラー、`setAttribute` で後付けが canonical
+- 既存 SVG を削除してから挿入（`updateDOM` で icon が変わった場合の重複防止）
+- 公開側 CSS で `[data-feature-icon-list][data-icon-size="sm"] svg[data-icon-svg]` セレクタでサイズ・色制御
+- `createDOM` / `updateDOM` / `exportDOM` から共通で呼ぶ（Lexical エディタ内 / 公開 HTML / Mobile fallback すべてで一貫した描画）
+
+**curation 外は silent no-op**: `getCuratedIconComponent(name)` が undefined を返したら icon は埋め込まれず、`<li>` 内の paragraph テキストのみが残る。既存 DB に lucide / simple-icons 名が残っている場合の自然 fallback として機能する。
+
+**他の icon library で同 pattern を使う場合**: lucide-react / heroicons 等も React component を export するため動作するが、本プロジェクトは **Tabler 単一ライブラリ統一**（CLAUDE.md「アイコンライブラリは `@tabler/icons-react`」）。新規 Lexical Node でアイコン埋め込みが必要な場合は curation 経由（または curation 外を許容するなら `dynamic-tabler-icon` の `Reflect.get` pattern）を使う。
+
+参照実装: `FeatureIconListNode.tsx` の `renderIconSvgInto` ヘルパー（2026-05-08 lucide/simple-icons から Tabler 統一時に追加）。

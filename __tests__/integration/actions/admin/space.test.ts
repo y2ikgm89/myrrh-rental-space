@@ -32,7 +32,11 @@ const VALID_SPACE_INPUT: SpaceFormData = {
     "https://example.com/image1.jpg",
     "https://example.com/image2.jpg",
   ],
-  facilities: ["Wi-Fi", "プロジェクター", "ホワイトボード"],
+  facilities: [
+    { name: "Wi-Fi", iconName: "IconWifi" },
+    { name: "プロジェクター", iconName: "IconPresentation" },
+    { name: "ホワイトボード", iconName: "IconBulb" },
+  ],
   isPublished: false,
   reviewsEnabled: true,
   locationId: VALID_UUID,
@@ -542,7 +546,10 @@ describe("Space Admin Action Integration", () => {
       test("空文字の設備名はエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          facilities: ["Wi-Fi", ""],
+          facilities: [
+            { name: "Wi-Fi", iconName: "IconWifi" },
+            { name: "", iconName: "" },
+          ],
         });
         expect(result.success).toBe(false);
       });
@@ -550,7 +557,7 @@ describe("Space Admin Action Integration", () => {
       test("50文字の設備名はOK", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          facilities: ["x".repeat(50)],
+          facilities: [{ name: "x".repeat(50), iconName: "" }],
         });
         expect(result.success).toBe(true);
       });
@@ -558,7 +565,18 @@ describe("Space Admin Action Integration", () => {
       test("51文字の設備名はエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          facilities: ["x".repeat(51)],
+          facilities: [{ name: "x".repeat(51), iconName: "" }],
+        });
+        expect(result.success).toBe(false);
+      });
+
+      test("同じ名前の設備は重複エラー", () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          facilities: [
+            { name: "Wi-Fi", iconName: "IconWifi" },
+            { name: "Wi-Fi", iconName: "" },
+          ],
         });
         expect(result.success).toBe(false);
       });

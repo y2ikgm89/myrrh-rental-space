@@ -28,10 +28,21 @@ const spaceEditFormImageUrlsSchema = z
     error: "同じ画像を複数登録することはできません",
   });
 
+/**
+ * 設備配列のフォームスキーマ（構造化 — Airbnb / Booking.com 標準）
+ *
+ * `useFieldArray` の object 配列要件 + `name` を React key の stable ID として重複禁止。
+ * `iconName` は `@/shared/lib/icon-curation` の curation 識別子（空文字 = icon 未指定）。
+ */
 const spaceEditFormFacilitiesSchema = z
-  .array(z.object({ value: z.string().min(1).max(50) }))
-  .refine((arr) => new Set(arr.map((item) => item.value)).size === arr.length, {
-    error: "同じ設備を複数登録することはできません",
+  .array(
+    z.object({
+      name: z.string().min(1).max(50),
+      iconName: z.string().max(64),
+    }),
+  )
+  .refine((arr) => new Set(arr.map((item) => item.name)).size === arr.length, {
+    error: "同じ名前の設備を複数登録することはできません",
   });
 
 /**
@@ -84,7 +95,10 @@ export function spaceEditFormDataToSpaceFormPayload(
     hourlyPrice: data.hourlyPrice,
     mainImageUrl: data.mainImageUrl,
     imageUrls: data.imageUrls.map((f) => f.url),
-    facilities: data.facilities.map((f) => f.value),
+    facilities: data.facilities.map((f) => ({
+      name: f.name,
+      iconName: f.iconName,
+    })),
     isPublished: data.isPublished ?? false,
     reviewsEnabled: data.reviewsEnabled,
     area: data.area != null ? data.area : undefined,

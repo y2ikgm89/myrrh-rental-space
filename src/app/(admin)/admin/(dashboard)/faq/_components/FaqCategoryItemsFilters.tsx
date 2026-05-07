@@ -9,7 +9,7 @@
 
 import { useTransition } from "react";
 import { useQueryStates } from "nuqs";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import {
   Input,
   Select,
@@ -77,17 +77,13 @@ export function FaqCategoryItemsFilters() {
         </Select>
       </div>
 
-      <div className="relative flex-1">
-        <IconSearch
-          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
+      <div className="flex-1">
         <Input
           type="search"
           placeholder="質問・回答で検索..."
           defaultValue={params.search}
           onChange={(e) => setSearchDebounced(e.target.value)}
-          className="pl-9"
+          leadingIcon="IconSearch"
           aria-label="質問を検索"
         />
       </div>

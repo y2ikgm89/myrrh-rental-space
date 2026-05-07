@@ -20,6 +20,7 @@ export type PublicNavItem = {
   readonly id: string;
   readonly label: string;
   readonly url: string;
+  readonly iconName: string | null;
   readonly isExternal: boolean;
   readonly children: readonly PublicNavItem[];
 };
@@ -30,6 +31,7 @@ export type NavigationItemData = {
   parentId: string | null;
   label: string;
   url: string;
+  iconName: string | null;
   isExternal: boolean;
   order: number;
   isActive: boolean;
@@ -79,6 +81,7 @@ export async function getPublicNavigation(
           id: true,
           label: true,
           url: true,
+          iconName: true,
           isExternal: true,
           children: {
             where: { isActive: true },
@@ -87,6 +90,7 @@ export async function getPublicNavigation(
               id: true,
               label: true,
               url: true,
+              iconName: true,
               isExternal: true,
             },
           },
@@ -112,6 +116,7 @@ export async function getPublicNavigation(
       id: item.id,
       label: item.label,
       url: item.url,
+      iconName: item.iconName,
       isExternal: item.isExternal,
       children: item.children
         .filter((child) => isItemEnabled(child.url, child.isExternal))
@@ -119,6 +124,7 @@ export async function getPublicNavigation(
           id: child.id,
           label: child.label,
           url: child.url,
+          iconName: child.iconName,
           isExternal: child.isExternal,
           children: EMPTY_NAV_CHILDREN,
         })),
@@ -144,6 +150,7 @@ export async function getNavigationItems(
       parentId: true,
       label: true,
       url: true,
+      iconName: true,
       isExternal: true,
       order: true,
       isActive: true,
@@ -156,6 +163,7 @@ export async function getNavigationItems(
           parentId: true,
           label: true,
           url: true,
+          iconName: true,
           isExternal: true,
           order: true,
           isActive: true,

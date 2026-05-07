@@ -12,6 +12,7 @@ import { Prose } from "../../../_shared/components/design-system/prose";
 import { Badge } from "../../../_shared/components/design-system/badge";
 import { Stack } from "../../../_shared/components/design-system/stack";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 
 interface SpaceInfoProps {
   readonly space: {
@@ -22,7 +23,10 @@ interface SpaceInfoProps {
     /** 拠点住所 + 所在地補足の1行 */
     readonly lineAddress: string;
     readonly facilities: JsonValue;
-    readonly category: { readonly name: string } | null;
+    readonly category: {
+      readonly name: string;
+      readonly icon: string | null;
+    } | null;
     /**
      * 親 Location（accessLines / parkingInfo は Booking.com Room → Property の
      * 業界標準パターンに沿って Space 詳細から表示する）。
@@ -36,17 +40,37 @@ interface SpaceInfoProps {
 }
 
 export function SpaceInfo({ space }: SpaceInfoProps) {
-  // facilities はスキーマで重複禁止が保証されている（JsonValue 型ガードのみ実施）
-  const facilities: readonly string[] = Array.isArray(space.facilities)
-    ? space.facilities.filter((v): v is string => typeof v === "string")
-    : [];
+  // facilities は構造化済み { name, iconName }[]（migration 20260507163006 で object 化）。
+  // 念のため防御的に object 形状のみフィルタ（curation 外 iconName でも no-op fallback）。
+  const facilities: readonly { name: string; iconName: string }[] =
+    Array.isArray(space.facilities)
+      ? space.facilities.filter(
+          (v): v is { name: string; iconName: string } =>
+            typeof v === "object" &&
+            v !== null &&
+            "name" in v &&
+            "iconName" in v &&
+            typeof (v as { name: unknown }).name === "string" &&
+            typeof (v as { iconName: unknown }).iconName === "string",
+        )
+      : [];
 
   return (
     <Stack gap="xl">
       {/* Category + Meta */}
       <div>
         <div className="mb-4 flex flex-wrap gap-2">
-          {space.category ? <Badge>{space.category.name}</Badge> : null}
+          {space.category ? (
+            <Badge>
+              {space.category.icon ? (
+                <CuratedIcon
+                  name={space.category.icon}
+                  className="mr-1 inline h-3 w-3"
+                />
+              ) : null}
+              {space.category.name}
+            </Badge>
+          ) : null}
           {space.location ? (
             <Badge variant="info">{space.location.name}</Badge>
           ) : null}
@@ -87,15 +111,23 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
           <Heading level={2} className="mb-4">
             設備・備品
           </Heading>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-            {facilities.map((facility) => (
-              <div
-                key={facility}
-                className="border border-border px-3 py-2 text-sm"
-              >
-                {facility}
-              </div>
-            ))}
+          <div className="@container">
+            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3">
+              {facilities.map((facility) => (
+                <div
+                  key={facility.name}
+                  className="flex items-center gap-3 border border-border px-3 py-2 text-sm"
+                >
+                  {facility.iconName ? (
+                    <CuratedIcon
+                      name={facility.iconName}
+                      className="h-4 w-4 shrink-0 text-accent"
+                    />
+                  ) : null}
+                  <span>{facility.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : null}

@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
-import { IconSearch, IconX, IconSettings } from "@tabler/icons-react";
+import { IconX, IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
 import {
   Button,
@@ -365,14 +365,13 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         <CardContent className="space-y-4">
           {/* フィルター */}
           <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex-1 min-w-[200px]">
               <Input
                 type="search"
                 placeholder="カテゴリーを検索..."
                 defaultValue={filterParams.search}
                 onChange={(e) => setSearchDebounced(e.target.value)}
-                className="pl-9"
+                leadingIcon="IconSearch"
                 aria-label="カテゴリーを検索"
               />
             </div>

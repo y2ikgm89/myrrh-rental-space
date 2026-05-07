@@ -10,6 +10,7 @@ import {
   DurationDiscountOverride,
   TaxRateType,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { facilitiesSchema } from "@/shared/lib/json-validators";
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -31,16 +32,11 @@ const imageUrlsSchema = z
   .default([]);
 
 /**
- * 設備タグ配列のバリデーション
- *
- * 各設備名は React key の stable ID として機能するため、重複を禁止する。
+ * 設備配列フォーム用スキーマ — canonical `facilitiesSchema` (`@/shared/lib/json-validators`) に
+ * `.default([])` を chain。input undefined → `[]`（min 検証 skip）の Zod 4 公式挙動で
+ * `safeParse({})` 契約と write-side 検証の両立を維持。
  */
-const facilitiesSchema = z
-  .array(z.string().min(1).max(50))
-  .refine((arr) => new Set(arr).size === arr.length, {
-    error: "同じ設備を複数登録することはできません",
-  })
-  .default([]);
+const facilitiesFormSchema = facilitiesSchema.default([]);
 
 /**
  * スペース割引タイプ
@@ -111,7 +107,7 @@ export const spaceFormBaseSchema = z
       .min(1, { error: "メイン画像URLを入力してください" })
       .url({ error: "有効なURLを入力してください" }),
     imageUrls: imageUrlsSchema,
-    facilities: facilitiesSchema,
+    facilities: facilitiesFormSchema,
     isPublished: z.boolean().default(false),
     reviewsEnabled: z.boolean().default(true),
     locationId: z
@@ -228,7 +224,7 @@ export type SpaceWithStats = {
   dailyPrice: number | null;
   mainImageUrl: string;
   imageUrls: string[];
-  facilities: string[];
+  facilities: { name: string; iconName: string }[];
   businessHours: Record<string, unknown> | null;
   isPublished: boolean;
   /** toISOString() 済み ISO 8601 文字列（React 19 RSC 境界シリアライゼーション対応） */
