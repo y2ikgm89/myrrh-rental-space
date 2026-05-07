@@ -108,17 +108,22 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "value-props",
       title: null,
       config: {
-        sectionLabel: "",
-        title: "",
-        iconStyle: "tabler",
         items: [
-          { icon: "IconClock", title: "最短1時間から" },
-          { icon: "IconCalendarCheck", title: "当日予約OK" },
-          { icon: "IconWifi", title: "Wi-Fi完備" },
-          { icon: "IconCreditCard", title: "オンライン決済" },
+          { icon: "IconClock", eyebrow: "Speed", title: "最短1時間から" },
+          {
+            icon: "IconCalendarCheck",
+            eyebrow: "Flexibility",
+            title: "当日予約OK",
+          },
+          { icon: "IconWifi", eyebrow: "Connectivity", title: "Wi-Fi完備" },
+          {
+            icon: "IconCreditCard",
+            eyebrow: "Payment",
+            title: "オンライン決済",
+          },
         ],
         layout: {
-          padding: "md",
+          padding: "none",
           containerWidth: "lg",
           animateOnScroll: "fade-up",
         },
@@ -142,7 +147,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         imageAspect: "4:3",
         layout: {
           padding: "lg",
-          containerWidth: "xl",
+          containerWidth: "full",
           animateOnScroll: "fade-up",
         },
       },

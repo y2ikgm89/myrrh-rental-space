@@ -115,6 +115,8 @@ interface ArrayItem {
 interface ArrayOpts<TItem extends ArrayItem> extends CommonFieldOpts {
   readonly fields: TItem;
   readonly helpText?: string;
+  readonly min?: number;
+  readonly max?: number;
 }
 
 interface DynamicSelectOpts {
@@ -230,7 +232,7 @@ export const field = {
       });
   },
 
-  /** 画像 URL 入力 */
+  /** 画像選択（MediaPicker ダイアログ — `AutoImageField` で描画） */
   image(label: string, opts?: StringFieldOpts) {
     return applyStringConstraints(z.string(), opts ?? {})
       .default(opts?.default ?? "")
@@ -287,20 +289,30 @@ export const field = {
    * オブジェクト配列（繰り返しフィールド）
    *
    * `fields` に各アイテムのフィールド定義を渡す。
-   * デフォルトは空配列 `[]`。
+   * デフォルトは空配列 `[]` — `safeParse({})` 成立契約に従い、`.default()` は
+   * `.min()` / `.max()` 検証を skip するため空配列の fallback は常に通る。
+   * `min` / `max` は実 input が渡された場合の admin write-side 検証に使う。
    */
   array<TItem extends ArrayItem>(label: string, opts: ArrayOpts<TItem>) {
     const itemSchema = z.object(opts.fields);
-    return z
-      .array(itemSchema)
-      .default([])
-      .register(fieldRegistry, {
-        fieldType: "array",
-        label,
-        group: opts.group ?? "content",
-        ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
-        ...(opts.helpText !== undefined && { helpText: opts.helpText }),
+    let arr = z.array(itemSchema);
+    if (opts.min !== undefined) {
+      arr = arr.min(opts.min, {
+        error: `${label}は${opts.min}件以上必要です`,
       });
+    }
+    if (opts.max !== undefined) {
+      arr = arr.max(opts.max, {
+        error: `${label}は${opts.max}件までです`,
+      });
+    }
+    return arr.default([]).register(fieldRegistry, {
+      fieldType: "array",
+      label,
+      group: opts.group ?? "content",
+      ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
+      ...(opts.helpText !== undefined && { helpText: opts.helpText }),
+    });
   },
 
   /**

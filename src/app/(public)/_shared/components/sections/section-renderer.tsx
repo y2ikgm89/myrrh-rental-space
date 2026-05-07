@@ -436,7 +436,7 @@ export async function SectionRenderer({
 
     case SectionType.VALUE_PROPS: {
       const config = getValuePropsConfig(section.config);
-      return <ValuePropsSection config={config} style={resolved} />;
+      return <ValuePropsSection config={config} />;
     }
 
     case SectionType.TESTIMONIAL: {
