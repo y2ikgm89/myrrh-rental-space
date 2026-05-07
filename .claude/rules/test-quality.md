@@ -459,6 +459,39 @@ describe("commandName", () => {
 
 `__tests__/integration/actions/admin/*.test.ts` は Server Actions 内の Zod スキーマを**再現**したインライン定義を持つ（import ではない）。実ソースのスキーマ分割・リネーム時は、このインラインコピーも並行更新する。更新漏れはテスト通過のまま非整合を残すサイレントバグになる。
 
+## Section schema test contract（`safeParse({})` 成立 + default assert）
+
+`field.text()` 等のヘルパーが `.default("")` を必ず適用するため、section schema は
+architectural contract として `safeParse({})` 常に success。**test で required-field
+validation を期待しない**（schema 層は permissive、UI 層 = admin form の
+`useFormAction` + zod resolver が必須バリデーション責務）。
+
+```typescript
+// OK: 空 config で default 適用を assert
+test("空 config でも default 値で safeParse 成功する", () => {
+  const result = ctaConfigSchema.safeParse({});
+  expect(result.success).toBe(true);
+  if (result.success) {
+    expect(result.data.title).toBe(""); // .default("") 適用
+    expect(result.data.variant).toBe("default"); // field.select の default
+  }
+});
+
+// OK: 型違反のみ reject（値違反ではない）
+test("title が string 以外（型違反）はバリデーション失敗", () => {
+  expect(ctaConfigSchema.safeParse({ title: 123 }).success).toBe(false);
+});
+
+// NG: schema 層に required 期待（commit 94e19608 で修正）
+test("タイトル必須バリデーション", () => {
+  expect(ctaConfigSchema.safeParse({}).success).toBe(false); // ← 失敗する
+});
+```
+
+`isXxxConfig` 型ガード test も同方針: 空 config / `title: ""` は valid（default 適用）、
+type 違反のみ false を返す。`createTypedConfigGetterFromSchema` の fallback chain
+(`safeParse({})` 成立必須）に寄り添う設計（→ `ssot-singletons.md` §Section schema 重複）。
+
 ## 必須事項
 
 1. **新機能にはテストを追加**

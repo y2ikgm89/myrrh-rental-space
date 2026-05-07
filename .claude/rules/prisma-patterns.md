@@ -446,6 +446,39 @@ export function PostContent({ post }: { post: Post }) {
 
 ## クエリパターン
 
+### user-mutable JSONB 列の seed upsert split パターン
+
+Settings の JSONB 列で管理画面 UI を介してユーザーが編集する値（`featureModules` /
+`sidebarWidgets` / `customApiKeys` 等）は、seed の `upsert` を split する:
+
+- `create`（新規 install）: 初期値を含める
+- `update`（re-seed）: **当該列を含めない**（user 編集を保持）
+
+```typescript
+// NG: re-seed で user toggle がリセットされる
+await prisma.settings.upsert({
+  where: { id: "singleton" },
+  update: { ...settingsData, featureModules: defaultModules }, // user 編集を上書き
+  create: { id: "singleton", ...settingsData, featureModules: defaultModules },
+});
+
+// OK: create only で初期化、update では user 編集を保持
+await prisma.settings.upsert({
+  where: { id: "singleton" },
+  update: settingsData, // featureModules 除外
+  create: {
+    id: "singleton",
+    ...settingsData,
+    featureModules: resolveSeedFeatureModules(),
+  },
+});
+```
+
+検証: 任意の JSONB 値を手動で書き換えてから seed を再実行し、書き換え値が
+残ることを `bun -e` で確認する。
+
+参照実装: `prisma/seed.ts` `seedSettings()` の `featureModules` 配線。
+
 ### upsert の race condition（公式 Issue #3242）
 
 Prisma の `upsert` は真のアトミック操作ではない（SELECT → INSERT/UPDATE）。同時リクエストで P2002 (Unique constraint failed) が発生する。**`findUnique` → 条件付き `update`/`create` + P2002 フォールバック** を推奨:
