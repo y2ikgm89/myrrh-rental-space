@@ -300,7 +300,7 @@ function LocationChapter({
             <a
               href={mapsHref}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noreferrer"
               className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-foreground"
             >
               <IconMapPin className="h-4 w-4 text-accent" aria-hidden="true" />

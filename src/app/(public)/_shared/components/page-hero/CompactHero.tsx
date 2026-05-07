@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import Image from "next/image";
+import { Button } from "@/public/components/design-system/button";
 import { cn } from "@/shared/lib/cn";
+import { isAppRoute } from "@/shared/lib/typed-routes";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 
 export type CompactHeroProps = Omit<
@@ -16,6 +18,7 @@ export function CompactHero({
   label,
   title,
   description,
+  buttons,
 }: CompactHeroProps): ReactElement {
   return (
     <section
@@ -53,6 +56,21 @@ export function CompactHero({
         <p className="mt-4 max-w-[28rem] text-sm leading-relaxed text-muted-foreground md:text-base">
           {description}
         </p>
+        {buttons.length > 0 && (
+          <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
+            {buttons.map((btn) => (
+              <Button
+                key={btn.url}
+                variant="editorial"
+                href={isAppRoute(btn.url) ? btn.url : "/reservation"}
+                className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
+                {...(btn.openInNewTab && { target: "_blank" as const })}
+              >
+                {btn.text}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

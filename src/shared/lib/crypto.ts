@@ -186,3 +186,14 @@ export function encryptApiKey(plaintext: string): string {
 export function encryptStripeData(plaintext: string): string {
   return encrypt(plaintext, { purpose: "stripe" });
 }
+
+/**
+ * Google OAuth トークン用の暗号化（access_token / refresh_token 共通）
+ *
+ * Better Auth が `Account` テーブルに直書きする token は plaintext のため、
+ * application 層境界（`getGoogleOAuthAccount` / `updateGoogleOAuthAccountTokens`）で
+ * transparent encryption を施し、漸進的に at-rest 暗号化済み状態へ収束させる。
+ */
+export function encryptOAuthToken(plaintext: string): string {
+  return encrypt(plaintext, { purpose: "oauth-google" });
+}

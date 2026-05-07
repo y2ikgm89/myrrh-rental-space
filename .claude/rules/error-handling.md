@@ -484,6 +484,11 @@ try {
    }
    ```
 
+8. **ユーザー向け error formatter の `return error.message` fallback 禁止**
+   - 既知パターンマップ + 未知 fallback で `return error.message` する formatter（`formatGoogleApiError` 等）は GCP project ID / service account email / API endpoint URL 等のインフラ詳細を UI / API レスポンスに露出させる経路
+   - 未知 fallback は **generic message を return + `logError(category: EXTERNAL_API)` で server-side に詳細を保持**。運用調査は Cloud Logging 経由で `category=EXTERNAL_API operation=<formatter-name>` を辿る
+   - 実例: 2026-05-07 `formatGoogleApiError` clean-break（`return error.message` を `logError + GENERIC_MESSAGE` に置換）
+
 ## ファイル配置
 
 | パス                           | 内容                                                                                                                                                                                  |

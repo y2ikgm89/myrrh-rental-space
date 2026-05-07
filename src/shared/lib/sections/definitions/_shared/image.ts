@@ -18,7 +18,7 @@ import { field, fieldRegistry } from "../../field-registry";
 export function createImageGroupSchema(label = "画像") {
   return z
     .object({
-      url: field.image("画像 URL"),
+      url: field.image("画像"),
       alt: field.text("代替テキスト（a11y / SEO）", {
         maxLength: 200,
         helpText: "画像が読み込めない場合や読み上げ時に使用",
@@ -40,7 +40,7 @@ export function createImageGroupSchema(label = "画像") {
 export function createCompactImageGroupSchema(label = "画像") {
   return z
     .object({
-      url: field.image("画像 URL"),
+      url: field.image("画像"),
       alt: field.text("代替テキスト", { maxLength: 200 }),
     })
     .prefault({})

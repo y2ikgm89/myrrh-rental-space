@@ -176,11 +176,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                       className="flex-1"
                       asChild
                     >
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={item.url} target="_blank" rel="noreferrer">
                         <IconExternalLink className="h-4 w-4 mr-1" />
                         開く
                       </a>

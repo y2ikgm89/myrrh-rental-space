@@ -8,6 +8,7 @@
 
 import { $getState, $setState } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { IconPhoto, IconPhotoOff } from "@tabler/icons-react";
 import {
   $isGalleryItemNode,
   type GalleryItemNode,
@@ -16,9 +17,11 @@ import {
   galleryItemCaptionState,
 } from "../../nodes/GalleryNode";
 import { InspectorHeader } from "../InspectorHeader";
-import { InspectorSection } from "../InspectorSection";
+import { InspectorFields } from "../InspectorFields";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label } from "@/admin/components/ui";
+import { Button } from "@/admin/components/ui/button";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
 // =============================================================================
 // Types
@@ -46,11 +49,18 @@ export function GalleryItemInspectorPanel({
     caption: $getState(node, galleryItemCaptionState),
   }));
 
-  const handleSrcChange = (value: string) => {
-    updateNode((n) => {
-      $setState(n, galleryItemSrcState, value);
-    });
-  };
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: "POST",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      updateNode((n) => {
+        $setState(n, galleryItemSrcState, selected.url);
+        $setState(n, galleryItemAltState, selected.alt ?? "");
+      });
+    },
+  });
 
   const handleAltChange = (value: string) => {
     updateNode((n) => {
@@ -68,58 +78,63 @@ export function GalleryItemInspectorPanel({
     <div>
       <InspectorHeader title="ギャラリーアイテム" />
 
-      <InspectorSection title="画像">
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="inspector-gallery-item-src" className="text-xs">
-              画像URL
-            </Label>
-            <Input
-              id="inspector-gallery-item-src"
-              value={src}
-              onChange={(e) => handleSrcChange(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              className="h-8 text-sm"
-            />
-          </div>
-
-          {src && (
-            <div className="rounded-md overflow-hidden border border-border">
+      <InspectorFields title="画像">
+        <div className="space-y-2">
+          <Label className="text-xs">画像</Label>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-checker">
+            {src ? (
               <img
                 src={src}
-                alt={alt || ""}
-                className="w-full h-auto object-cover max-h-32"
+                alt={alt}
+                className="h-full w-full object-contain"
+                draggable={false}
               />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="inspector-gallery-item-alt" className="text-xs">
-              代替テキスト（ALT）
-            </Label>
-            <Input
-              id="inspector-gallery-item-alt"
-              value={alt}
-              onChange={(e) => handleAltChange(e.target.value)}
-              placeholder="画像の説明"
-              className="h-8 text-sm"
-            />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <IconPhotoOff className="h-8 w-8" />
+              </div>
+            )}
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="inspector-gallery-item-caption" className="text-xs">
-              キャプション
-            </Label>
-            <Input
-              id="inspector-gallery-item-caption"
-              value={caption}
-              onChange={(e) => handleCaptionChange(e.target.value)}
-              placeholder="キャプションテキスト（任意）"
-              className="h-8 text-sm"
-            />
-          </div>
+          <Button
+            type="button"
+            variant={src ? "outline" : "default"}
+            size="sm"
+            className="w-full"
+            onClick={() => imagePicker.openPicker()}
+          >
+            <IconPhoto className="mr-2 h-4 w-4" />
+            {src ? "画像を差し替え" : "画像を選択"}
+          </Button>
         </div>
-      </InspectorSection>
+
+        <div className="space-y-2">
+          <Label htmlFor="inspector-gallery-item-alt" className="text-xs">
+            代替テキスト（ALT）
+          </Label>
+          <Input
+            id="inspector-gallery-item-alt"
+            value={alt}
+            onChange={(e) => handleAltChange(e.target.value)}
+            placeholder="画像の説明"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="inspector-gallery-item-caption" className="text-xs">
+            キャプション
+          </Label>
+          <Input
+            id="inspector-gallery-item-caption"
+            value={caption}
+            onChange={(e) => handleCaptionChange(e.target.value)}
+            placeholder="キャプションテキスト（任意）"
+            className="h-8 text-sm"
+          />
+        </div>
+      </InspectorFields>
+
+      {imagePicker.mediaPickerDialog}
     </div>
   );
 }

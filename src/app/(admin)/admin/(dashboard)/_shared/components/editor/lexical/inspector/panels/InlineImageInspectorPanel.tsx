@@ -27,8 +27,11 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconMaximize,
+  IconPhoto,
+  IconPhotoOff,
 } from "@tabler/icons-react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
 // =============================================================================
 // Constants
@@ -75,6 +78,19 @@ export function InlineImageInspectorPanel({
       width: $getState(node, inlineWidthState),
     }));
 
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: "POST",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      updateNode((n) => {
+        $setState(n, inlineSrcState, selected.url);
+        $setState(n, inlineAltTextState, selected.alt ?? "");
+      });
+    },
+  });
+
   const handleAltTextChange = (value: string) =>
     updateNode((n) => {
       $setState(n, inlineAltTextState, value);
@@ -98,8 +114,31 @@ export function InlineImageInspectorPanel({
 
       <InspectorFields title="基本設定">
         <div className="space-y-2">
-          <Label className="text-xs">URL</Label>
-          <p className="text-xs text-muted-foreground truncate">{src}</p>
+          <Label className="text-xs">画像</Label>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-checker">
+            {src ? (
+              <img
+                src={src}
+                alt={altText}
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <IconPhotoOff className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => imagePicker.openPicker()}
+          >
+            <IconPhoto className="mr-2 h-4 w-4" />
+            画像を差し替え
+          </Button>
         </div>
 
         <div className="space-y-2">
@@ -158,6 +197,8 @@ export function InlineImageInspectorPanel({
           )}
         </div>
       </InspectorFields>
+
+      {imagePicker.mediaPickerDialog}
     </div>
   );
 }

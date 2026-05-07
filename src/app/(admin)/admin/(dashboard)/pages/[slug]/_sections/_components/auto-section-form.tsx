@@ -9,10 +9,11 @@
  * 「custom」セクションタイプのみ Lexical エディタを先頭に表示する。
  */
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import {
   useController,
   useForm,
+  useWatch,
   type Control,
   type FieldErrors,
   type FieldValues,
@@ -43,7 +44,10 @@ import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";
-import { extractSchemaFields } from "./zod-introspection";
+import {
+  extractDiscriminatedUnionInfo,
+  extractSchemaFields,
+} from "./zod-introspection";
 import type { FieldInfo } from "./zod-introspection";
 import type { FieldType } from "@/shared/lib/sections/types";
 import type {
@@ -112,17 +116,21 @@ export function AutoSectionForm({
     : {};
 
   const schema = definition?.configSchema;
-  const fields = schema ? extractSchemaFields(schema) : [];
+
+  // Discriminated union 判定（page-hero 等）— variant 切替時の form.reset 制御に使用
+  const duInfo = schema ? extractDiscriminatedUnionInfo(schema) : undefined;
 
   // standardSchemaResolver は StandardSchemaV1<FieldValues> を要求するが、
   // z.ZodType<unknown> は input 型が unknown のため直接互換しない。
-  // configSchema は常に z.object({...}) で定義されるため FieldValues と互換。
+  // configSchema は常に z.object({...}) または z.discriminatedUnion(...) で
+  // 定義されるため FieldValues と互換。
   // type-safety.md §許可例外 7 で文書化された境界変換パターン。
   const {
     register,
     handleSubmit,
     setValue,
     control,
+    reset,
     formState: { isDirty, errors },
   } = useForm<Record<string, unknown>>({
     ...(schema
@@ -134,6 +142,48 @@ export function AutoSectionForm({
       : {}),
     defaultValues: defaultConfig,
   });
+
+  // Discriminator field の current value を監視
+  // discriminator が無い schema では useWatch は no-op（undefined を返す）
+  const watchedDiscriminator = useWatch({
+    control,
+    name: duInfo?.discriminator ?? "__no_discriminator__",
+  });
+
+  // 直前に reset / 初期化した variant 値を ref で記憶し、無限ループを防ぐ
+  // 初期値は section.config 由来の variant（defaultConfig.variant）
+  const lastVariantRef = useRef<string | undefined>(
+    isRecord(defaultConfig) && typeof defaultConfig["variant"] === "string"
+      ? defaultConfig["variant"]
+      : undefined,
+  );
+
+  // Variant 切替時に form.reset で新 variant の default 値を流し込む（RHF 公式パターン）
+  // useEffectEvent で schema / duInfo / reset を deps から外し、watchedDiscriminator の
+  // 純粋な変化のみで trigger する（react-hooks/exhaustive-deps 準拠）
+  const applyVariantReset = useEffectEvent((nextVariant: string) => {
+    if (!duInfo || !schema) return;
+    const validValues = new Set(duInfo.options.map((o) => o.value));
+    if (!validValues.has(nextVariant)) return;
+    if (lastVariantRef.current === nextVariant) return;
+    const fallback = schema.safeParse({
+      [duInfo.discriminator]: nextVariant,
+    });
+    if (fallback.success && isRecord(fallback.data)) {
+      lastVariantRef.current = nextVariant;
+      reset(fallback.data);
+    }
+  });
+
+  useEffect(() => {
+    if (typeof watchedDiscriminator !== "string") return;
+    applyVariantReset(watchedDiscriminator);
+  }, [watchedDiscriminator]);
+
+  const watchedValues: Record<string, unknown> | undefined = duInfo
+    ? { [duInfo.discriminator]: watchedDiscriminator }
+    : undefined;
+  const fields = schema ? extractSchemaFields(schema, watchedValues) : [];
   const isEditorDirty =
     isCustomType && editorContentJson !== initialEditorContentJson;
   const isFormDirty = isDirty || isEditorDirty;

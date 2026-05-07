@@ -28,11 +28,7 @@ export function SidebarCustom({ widget }: SidebarCustomProps): ReactElement {
           href={widget.linkUrl}
           className={SIDEBAR_CTA_CLASS}
           target={widget.linkUrl.startsWith("http") ? "_blank" : undefined}
-          rel={
-            widget.linkUrl.startsWith("http")
-              ? "noopener noreferrer"
-              : undefined
-          }
+          rel={widget.linkUrl.startsWith("http") ? "noreferrer" : undefined}
         >
           {widget.linkLabel ?? widget.linkUrl}
         </a>

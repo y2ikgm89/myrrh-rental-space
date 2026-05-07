@@ -21,9 +21,9 @@ export function computeDistance(
 
 export function getCardStyle(distance: number): CardStyle {
   if (distance === 0) return { zIndex: 30, scale: 1, opacity: 1 };
-  if (distance === 1) return { zIndex: 20, scale: 0.9, opacity: 0.7 };
-  if (distance === 2) return { zIndex: 10, scale: 0.82, opacity: 0.4 };
-  return { zIndex: 5, scale: 0.75, opacity: 0.2 };
+  if (distance === 1) return { zIndex: 20, scale: 0.9, opacity: 0.85 };
+  if (distance === 2) return { zIndex: 10, scale: 0.82, opacity: 0.6 };
+  return { zIndex: 5, scale: 0.75, opacity: 0.25 };
 }
 
 /**

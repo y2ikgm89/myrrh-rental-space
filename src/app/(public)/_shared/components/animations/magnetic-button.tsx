@@ -146,10 +146,7 @@ export function MagneticButton({
         href={href}
         className={baseClassName}
         {...(hasInlineStyle && { style: inlineStyle })}
-        {...(openInNewTab && {
-          target: "_blank",
-          rel: "noopener noreferrer",
-        })}
+        {...(openInNewTab && { target: "_blank" as const })}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >

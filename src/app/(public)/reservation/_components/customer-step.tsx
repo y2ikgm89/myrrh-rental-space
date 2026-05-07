@@ -228,7 +228,6 @@ export function CustomerStep({
                     <a
                       href={`/terms/${term.slug}`}
                       target="_blank"
-                      rel="noopener noreferrer"
                       className="text-accent underline transition-colors hover:text-foreground"
                     >
                       {term.title}

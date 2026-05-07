@@ -201,7 +201,7 @@ export async function Footer(): Promise<ReactElement> {
                       <a
                         href={item.url}
                         target="_blank"
-                        rel="noopener noreferrer"
+                        rel="noreferrer"
                         className={NAV_LINK_CLASS}
                       >
                         {item.label}

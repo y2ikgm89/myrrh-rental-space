@@ -451,7 +451,7 @@ model Space {
   publishedAt   DateTime?
   isActive      Boolean   @default(true)
   /// レビュー機能の per-space ON/OFF。false の場合は公開ページで非表示 + 投稿不可。
-  /// 新規スペースはデフォルト false（opt-in）。`Settings.reviewsEnabledGlobal` が上位 gate。
+  /// 新規スペースはデフォルト false（opt-in）。`Settings.featureModules.reviews` が上位 gate。
   reviewsEnabled Boolean  @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

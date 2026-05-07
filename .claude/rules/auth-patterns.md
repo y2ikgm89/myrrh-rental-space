@@ -499,6 +499,16 @@ export default async function MypageLayout({ children }) {
 }
 ```
 
+### OAuth token の at-rest encryption（Better Auth 互換）
+
+Better Auth が `Account.{accessToken,refreshToken}` を OAuth callback で **plaintext 直書き**する制約下で、本ルールの「`basePrisma` を Better Auth に渡す」「`databaseHooks` 不使用」規律と互換な at-rest encryption は **application 層境界の transparent encryption** で実装する（`$extends` query middleware は不使用 — Better Auth に拡張前クライアントを渡す原則を維持）:
+
+- **read** (`getGoogleOAuthAccount` 等): `isEncrypted(value)` で encrypted/legacy plaintext を判定、encrypted は `safeDecrypt`、plaintext は ① そのまま return ② `fireAndForget(reEncryptLegacyOAuthToken(...))` で background 再暗号化を予約
+- **write** (`updateGoogleOAuthAccountTokens`): `encryptOAuthToken(plaintext)` で必ず encrypt してから DB 書き込み
+- **migration script 不要** — Better Auth callback 直書きの token は最初の application 層 read で encrypt 化、以降は OAuth refresh / token rotate のたびに encrypted state へ自然収束（実装: 2026-05-07、purpose=`"oauth-google"`、AES-256-GCM + HKDF）
+- `reEncryptLegacyOAuthToken` は再読み込み + `isEncrypted` + 値一致の 3 段チェックで競合書き込みを no-op fallback
+- 新規 OAuth provider 追加時はこの pattern を踏襲（`encryptOAuthToken` の purpose を `"oauth-<provider>"` に分けて HKDF 派生鍵を分離）
+
 ### ensureCustomerLinked（User ↔ Customer 遅延紐づけ）
 
 `databaseHooks.user.create.after` は FK 制約違反を起こすため使用禁止（[GitHub Issue #7260](https://github.com/better-auth/better-auth/issues/7260)）。マイページ layout で `ensureCustomerLinked(user)` を呼び、アプリケーション層で紐づけ:

@@ -1,7 +1,24 @@
 import "server-only";
 
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+
+const GENERIC_MESSAGE = "Google Calendarとの通信中にエラーが発生しました";
+
 /**
- * Google APIエラーをユーザーフレンドリーなメッセージに変換
+ * Google APIエラーをユーザーフレンドリーなメッセージに変換する。
+ *
+ * 既知のエラーパターン（invalid_grant / not found / forbidden / invalid_client / quota）は
+ * 日本語の対処メッセージにマップする。それ以外は generic メッセージを返し、
+ * GCP project ID / service account email / 内部 URL 等のインフラ詳細が
+ * 管理 UI / API レスポンスに漏洩することを防ぐ（2026-05-07 clean-break）。
+ *
+ * 詳細は server-side `logError` で保持されるため、運用時の調査は
+ * Cloud Logging から `category=EXTERNAL_API operation=formatGoogleApiError` を辿る。
  */
 export function formatGoogleApiError(error: unknown): string {
   if (error instanceof Error) {
@@ -22,9 +39,12 @@ export function formatGoogleApiError(error: unknown): string {
     if (message.includes("quota")) {
       return "APIクォータを超過しました。しばらく待ってから再試行してください";
     }
-
-    return error.message;
   }
 
-  return "Google Calendarとの通信中にエラーが発生しました";
+  logError(normalizeError(error), {
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.MEDIUM,
+    context: { operation: "formatGoogleApiError" },
+  });
+  return GENERIC_MESSAGE;
 }

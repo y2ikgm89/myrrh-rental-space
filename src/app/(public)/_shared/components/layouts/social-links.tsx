@@ -68,7 +68,7 @@ export function SocialLinks({ links }: SocialLinksProps): ReactElement | null {
             key={link.url}
             href={link.url}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
             className={cn(
               "text-muted-foreground transition-colors hover:text-foreground",
               visibility,

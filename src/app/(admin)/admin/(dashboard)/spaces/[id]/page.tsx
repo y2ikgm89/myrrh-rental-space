@@ -53,11 +53,7 @@ export default async function SpaceDetailPage({ params }: PageProps) {
             redirectTo="/admin/spaces"
           />
           <Button variant="outline" size="sm" asChild>
-            <Link
-              href={`/spaces/${space.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link href={`/spaces/${space.slug}`} target="_blank">
               <IconExternalLink className="mr-2 h-4 w-4" />
               公開ページを見る
             </Link>

@@ -136,8 +136,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
   reviews: {
     id: "reviews",
     label: "レビュー",
-    description:
-      "スペースレビューの投稿・公開（旧 Settings.reviewsEnabledGlobal を吸収）",
+    description: "スペースレビューの投稿・公開",
     requires: ["spaces"],
     publicRoutes: [],
     pageSlugs: [],

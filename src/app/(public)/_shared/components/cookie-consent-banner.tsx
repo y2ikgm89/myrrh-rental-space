@@ -148,7 +148,7 @@ export function CookieConsentBanner({
                   href={effectivePolicyUrl}
                   className="text-accent underline underline-offset-4 hover:text-foreground"
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noreferrer"
                 >
                   詳細
                 </a>

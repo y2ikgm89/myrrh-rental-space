@@ -28,8 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-import { Input } from "@/admin/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
+import { IconPhoto, IconPhotoOff, IconTrash } from "@tabler/icons-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   $createCoverNode,
   COVER_MIN_HEIGHTS,
@@ -98,6 +99,16 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
   const [contentAlign, setContentAlign] = useState<CoverContentAlign>("center");
   const [contentPosition, setContentPosition] =
     useState<CoverContentPosition>("center");
+
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: "POST",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      setBackgroundImageUrl(selected.url);
+    },
+  });
 
   const resetState = () => {
     setBackgroundImageUrl("");
@@ -183,12 +194,44 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
 
         <div className="py-4 space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">背景画像 URL</Label>
-            <Input
-              placeholder="https://example.com/image.jpg"
-              value={backgroundImageUrl}
-              onChange={(e) => setBackgroundImageUrl(e.target.value)}
-            />
+            <Label className="text-sm font-medium">背景画像</Label>
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-checker">
+              {backgroundImageUrl ? (
+                <img
+                  src={backgroundImageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                  <IconPhotoOff className="h-8 w-8" />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={backgroundImageUrl ? "outline" : "default"}
+                size="sm"
+                className="flex-1"
+                onClick={() => imagePicker.openPicker()}
+              >
+                <IconPhoto className="mr-2 h-4 w-4" />
+                {backgroundImageUrl ? "画像を差し替え" : "画像を選択"}
+              </Button>
+              {backgroundImageUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBackgroundImageUrl("")}
+                  aria-label="背景画像を削除"
+                >
+                  <IconTrash className="h-4 w-4 text-destructive" />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -297,6 +340,7 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
           </Button>
         </DialogFooter>
       </DialogContent>
+      {imagePicker.mediaPickerDialog}
     </Dialog>
   );
 }

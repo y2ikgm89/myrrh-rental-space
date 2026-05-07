@@ -174,7 +174,6 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
           <a
             href={archiveUrl}
             target="_blank"
-            rel="noopener noreferrer"
             className="hover:text-foreground"
           >
             <IconExternalLink className="h-3 w-3" />
@@ -308,7 +307,6 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
           <a
             href={archiveUrl}
             target="_blank"
-            rel="noopener noreferrer"
             className="hover:text-foreground"
           >
             <IconExternalLink className="h-3 w-3" />

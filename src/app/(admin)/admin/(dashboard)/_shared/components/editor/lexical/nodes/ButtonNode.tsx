@@ -149,7 +149,7 @@ function ButtonComponent({
       <a
         href={href}
         target={openInNewTab ? "_blank" : undefined}
-        rel={openInNewTab ? "noopener noreferrer" : undefined}
+        rel={openInNewTab ? "noreferrer" : undefined}
         className={cn(
           BUTTON_BASE_CLASS,
           VARIANT_STYLES[variant],
@@ -252,7 +252,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
 
     if (openInNewTab) {
       link.target = "_blank";
-      link.rel = "noopener noreferrer";
+      link.rel = "noreferrer";
     }
 
     wrapper.appendChild(link);

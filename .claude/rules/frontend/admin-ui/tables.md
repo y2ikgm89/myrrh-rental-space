@@ -180,8 +180,8 @@ export function ReservationActionCell({ id }: { id: string }) {
 // NG: href に外部URL（target="_blank" 不可）
 <ActionDropdownItem href={externalUrl}>外部リンク</ActionDropdownItem>
 
-// OK: window.open() で新タブ
-<ActionDropdownItem onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}>
+// OK: window.open() で新タブ（noreferrer は noopener を内包する仕様のため単独で十分）
+<ActionDropdownItem onClick={() => window.open(url, '_blank', 'noreferrer')}>
   外部リンク
 </ActionDropdownItem>
 ```

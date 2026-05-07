@@ -45,8 +45,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-import { Input } from "@/admin/components/ui/input";
+import { Button } from "@/admin/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
+import { IconPhoto, IconPhotoOff, IconTrash } from "@tabler/icons-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
 // =============================================================================
 // Types
@@ -111,9 +113,21 @@ export function CoverInspectorPanel({
     .getEditorState()
     .read(() => $getState(node, contentPositionState));
 
-  const handleBgUrlChange = (value: string) => {
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: "POST",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      updateNode((n) => {
+        $setState(n, backgroundImageUrlState, selected.url);
+      });
+    },
+  });
+
+  const handleBgUrlClear = () => {
     updateNode((n) => {
-      $setState(n, backgroundImageUrlState, value);
+      $setState(n, backgroundImageUrlState, "");
     });
   };
 
@@ -164,13 +178,44 @@ export function CoverInspectorPanel({
 
       <InspectorSection title="背景画像">
         <div className="space-y-2">
-          <Label className="text-xs">画像 URL</Label>
-          <Input
-            className="h-8 text-sm"
-            placeholder="https://example.com/image.jpg"
-            value={backgroundImageUrl}
-            onChange={(e) => handleBgUrlChange(e.target.value)}
-          />
+          <Label className="text-xs">画像</Label>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-checker">
+            {backgroundImageUrl ? (
+              <img
+                src={backgroundImageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <IconPhotoOff className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={backgroundImageUrl ? "outline" : "default"}
+              size="sm"
+              className="flex-1"
+              onClick={() => imagePicker.openPicker()}
+            >
+              <IconPhoto className="mr-2 h-4 w-4" />
+              {backgroundImageUrl ? "画像を差し替え" : "画像を選択"}
+            </Button>
+            {backgroundImageUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleBgUrlClear}
+                aria-label="背景画像を削除"
+              >
+                <IconTrash className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
+          </div>
         </div>
       </InspectorSection>
 
@@ -276,6 +321,8 @@ export function CoverInspectorPanel({
           </RadioGroup>
         </div>
       </InspectorSection>
+
+      {imagePicker.mediaPickerDialog}
     </div>
   );
 }

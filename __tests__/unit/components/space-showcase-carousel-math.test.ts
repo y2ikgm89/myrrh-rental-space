@@ -56,17 +56,17 @@ describe("getCardStyle", () => {
     expect(getCardStyle(0)).toEqual({ zIndex: 30, scale: 1, opacity: 1 });
   });
 
-  test("距離 1 は scale 0.9 / opacity 0.7", () => {
-    expect(getCardStyle(1)).toEqual({ zIndex: 20, scale: 0.9, opacity: 0.7 });
+  test("距離 1 は scale 0.9 / opacity 0.85", () => {
+    expect(getCardStyle(1)).toEqual({ zIndex: 20, scale: 0.9, opacity: 0.85 });
   });
 
-  test("距離 2 は scale 0.82 / opacity 0.4", () => {
-    expect(getCardStyle(2)).toEqual({ zIndex: 10, scale: 0.82, opacity: 0.4 });
+  test("距離 2 は scale 0.82 / opacity 0.6", () => {
+    expect(getCardStyle(2)).toEqual({ zIndex: 10, scale: 0.82, opacity: 0.6 });
   });
 
-  test("距離 3 以上は最背面 + opacity 0.2", () => {
-    expect(getCardStyle(3)).toEqual({ zIndex: 5, scale: 0.75, opacity: 0.2 });
-    expect(getCardStyle(99)).toEqual({ zIndex: 5, scale: 0.75, opacity: 0.2 });
+  test("距離 3 以上は最背面 + opacity 0.25", () => {
+    expect(getCardStyle(3)).toEqual({ zIndex: 5, scale: 0.75, opacity: 0.25 });
+    expect(getCardStyle(99)).toEqual({ zIndex: 5, scale: 0.75, opacity: 0.25 });
   });
 });
 

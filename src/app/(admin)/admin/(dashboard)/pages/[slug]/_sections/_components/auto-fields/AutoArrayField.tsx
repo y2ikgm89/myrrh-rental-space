@@ -6,6 +6,7 @@
 
 import { useId } from "react";
 import {
+  useController,
   useFieldArray,
   type Control,
   type FieldValues,
@@ -22,11 +23,13 @@ import {
 } from "@/admin/components/ui";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
+  getArrayConstraints,
   getArrayItemShape,
   extractFieldMetaDeep,
   getSelectOptions,
 } from "../zod-introspection";
 import type { ArrayItemFieldInfo } from "../zod-introspection";
+import { AutoImageField } from "./AutoImageField";
 
 export function AutoArrayField({
   fieldKey,
@@ -59,6 +62,19 @@ export function AutoArrayField({
       }))
     : [];
 
+  // schema 由来の min / max 制約（field.array({ min, max }) で登録されたもの）
+  const { min, max } = getArrayConstraints(schema);
+  const canAdd = max === undefined || fields.length < max;
+  const canRemove = min === undefined || fields.length > min;
+  const constraintHint = (() => {
+    if (min !== undefined && max !== undefined) {
+      return min === max ? `${min}件必須` : `${min}〜${max}件`;
+    }
+    if (max !== undefined) return `最大${max}件`;
+    if (min !== undefined) return `最低${min}件`;
+    return null;
+  })();
+
   // 新しいアイテムのデフォルト値を生成
   const createEmptyItem = (): Record<string, unknown> => {
     const empty: Record<string, unknown> = {};
@@ -84,13 +100,25 @@ export function AutoArrayField({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label>{label}</Label>
+        <div className="flex items-baseline gap-2">
+          <Label>{label}</Label>
+          {constraintHint ? (
+            <span className="text-xs text-muted-foreground">
+              ({constraintHint})
+            </span>
+          ) : null}
+        </div>
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => append(createEmptyItem())}
-          disabled={isPending}
+          disabled={isPending || !canAdd}
+          aria-label={
+            !canAdd && max !== undefined
+              ? `最大 ${max} 件のため追加できません`
+              : undefined
+          }
         >
           <IconPlus className="h-3 w-3 mr-1" />
           追加
@@ -114,7 +142,12 @@ export function AutoArrayField({
                 variant="ghost"
                 size="sm"
                 onClick={() => remove(index)}
-                disabled={isPending}
+                disabled={isPending || !canRemove}
+                aria-label={
+                  !canRemove && min !== undefined
+                    ? `最低 ${min} 件必要なため削除できません`
+                    : undefined
+                }
               >
                 <IconTrash className="h-3 w-3 text-destructive" />
               </Button>
@@ -126,6 +159,7 @@ export function AutoArrayField({
                 index={index}
                 itemField={itemField}
                 register={register}
+                control={control}
                 isPending={isPending}
               />
             ))}
@@ -141,12 +175,14 @@ function ArrayItemField({
   index,
   itemField,
   register,
+  control,
   isPending,
 }: {
   readonly parentKey: string;
   readonly index: number;
   readonly itemField: ArrayItemFieldInfo;
   readonly register: UseFormRegister<FieldValues>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
 }) {
   const fieldName = `${parentKey}.${index}.${itemField.key}`;
@@ -190,6 +226,18 @@ function ArrayItemField({
     );
   }
 
+  if (fieldType === "image") {
+    return (
+      <ArrayItemImageField
+        fieldName={fieldName}
+        label={itemLabel}
+        helpText={meta?.helpText}
+        control={control}
+        isPending={isPending}
+      />
+    );
+  }
+
   if (fieldType === "select") {
     // 配列内アイテムの select は簡略化して Input にフォールバック
     const options = getSelectOptions(itemField.schema);
@@ -206,7 +254,7 @@ function ArrayItemField({
     }
   }
 
-  // text, icon, url, image, color — すべてテキスト入力
+  // text, icon, url, color — テキスト入力
   return (
     <div className="space-y-2">
       <Label>{itemLabel}</Label>
@@ -217,6 +265,34 @@ function ArrayItemField({
         disabled={isPending}
       />
     </div>
+  );
+}
+
+function ArrayItemImageField({
+  fieldName,
+  label,
+  helpText,
+  control,
+  isPending,
+}: {
+  readonly fieldName: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+}) {
+  const id = useId();
+  const { field } = useController({ control, name: fieldName });
+
+  return (
+    <AutoImageField
+      fieldId={id}
+      label={label}
+      value={typeof field.value === "string" ? field.value : undefined}
+      onSelect={(url) => field.onChange(url)}
+      {...(helpText !== undefined && { helpText })}
+      {...(isPending && { disabled: true })}
+    />
   );
 }
 

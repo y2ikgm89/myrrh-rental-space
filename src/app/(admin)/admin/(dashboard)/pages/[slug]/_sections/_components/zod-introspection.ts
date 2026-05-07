@@ -193,10 +193,162 @@ export function getArrayItemShape(
 }
 
 /**
+ * ZodArray の min / max 制約を取得する。
+ *
+ * `field.array({ min, max })` で登録された制約は `_zod.def.checks` 配列に
+ * `{ _zod: { def: { check: "min_length" | "max_length", value: number } } }`
+ * として格納される。
+ */
+export interface ArrayConstraints {
+  readonly min?: number;
+  readonly max?: number;
+}
+
+export function getArrayConstraints(schema: z.ZodType): ArrayConstraints {
+  const def = getZodDef(schema);
+  if (!def) return {};
+
+  const type = def["type"];
+
+  // ZodDefault → innerType
+  if (type === "default" && isZodType(def["innerType"])) {
+    return getArrayConstraints(def["innerType"]);
+  }
+
+  // ZodArray → checks 配列を walk
+  if (type === "array") {
+    const checks = def["checks"];
+    if (!Array.isArray(checks)) return {};
+
+    let min: number | undefined;
+    let max: number | undefined;
+
+    for (const check of checks) {
+      if (!isRecord(check)) continue;
+      // ZodCheck は ZodType と同じく `_zod.def` を持つ（型は異なるが構造は共通）
+      const zodMeta = check["_zod"];
+      if (!isRecord(zodMeta)) continue;
+      const checkDef = zodMeta["def"];
+      if (!isRecord(checkDef)) continue;
+      const kind = checkDef["check"];
+      // Zod 4: min_length は `minimum`、max_length は `maximum` キーで値を持つ
+      if (kind === "min_length" && typeof checkDef["minimum"] === "number") {
+        min = checkDef["minimum"];
+      } else if (
+        kind === "max_length" &&
+        typeof checkDef["maximum"] === "number"
+      ) {
+        max = checkDef["maximum"];
+      }
+    }
+
+    return {
+      ...(min !== undefined && { min }),
+      ...(max !== undefined && { max }),
+    };
+  }
+
+  return {};
+}
+
+// ─────────────────────────────────────────────────────────────
+// Discriminated Union 対応
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Zod 4 の `z.discriminatedUnion()` 情報。
+ *
+ * `_zod.def`:
+ *  - `type: "union"`
+ *  - `discriminator: string` （例: "variant"）
+ *  - `options: ZodObject[]` （各 variant schema）
+ *  - `inclusive: true`
+ *
+ * 各 option の `.shape[discriminator]` は `z.literal(...)` で `_zod.def.values: [literalValue]`。
+ */
+export interface DiscriminatedUnionInfo {
+  readonly discriminator: string;
+  readonly options: ReadonlyArray<{
+    readonly value: string;
+    readonly schema: z.ZodType & { shape: Record<string, z.ZodType> };
+  }>;
+  readonly meta: FieldMeta | undefined;
+}
+
+/**
+ * ZodDiscriminatedUnion を判定して discriminator + options を抽出する。
+ * ZodDefault / ZodOptional でラップされていても unwrap して再帰探索する。
+ */
+export function extractDiscriminatedUnionInfo(
+  schema: z.ZodType,
+): DiscriminatedUnionInfo | undefined {
+  const def = getZodDef(schema);
+  if (!def) return undefined;
+
+  const type = def["type"];
+
+  // ZodDefault → unwrap
+  if (type === "default" && isZodType(def["innerType"])) {
+    return extractDiscriminatedUnionInfo(def["innerType"]);
+  }
+
+  // ZodOptional → unwrap
+  if (type === "optional" && isZodType(def["innerType"])) {
+    return extractDiscriminatedUnionInfo(def["innerType"]);
+  }
+
+  // discriminated union: type === "union" + discriminator が string
+  if (type !== "union") return undefined;
+  const discriminator = def["discriminator"];
+  if (typeof discriminator !== "string") return undefined;
+
+  const rawOptions = def["options"];
+  if (!Array.isArray(rawOptions)) return undefined;
+
+  const options: DiscriminatedUnionInfo["options"][number][] = [];
+  for (const option of rawOptions) {
+    if (!isZodType(option) || !hasShape(option)) continue;
+    const literalSchema = option.shape[discriminator];
+    if (!literalSchema) continue;
+    const literalDef = getZodDef(literalSchema);
+    if (!literalDef || literalDef["type"] !== "literal") continue;
+    const values = literalDef["values"];
+    if (!Array.isArray(values) || typeof values[0] !== "string") continue;
+    options.push({ value: values[0], schema: option });
+  }
+
+  if (options.length === 0) return undefined;
+
+  return {
+    discriminator,
+    options,
+    meta: fieldRegistry.get(schema),
+  };
+}
+
+/**
  * ZodObject の shape からフィールド情報を抽出する。
  * FieldMeta のないフィールドはスキップする。
+ *
+ * Discriminated union の場合は `currentValues[discriminator]` で active variant を選び、
+ * `[discriminator field, ...activeVariantFields]` を結合返却する。discriminator field の
+ * meta は registry に登録された FieldMeta を使い、options は各 variant の literal 値から
+ * 動的に合成する（zod-introspection 内で `getSelectOptions` が enum schema を期待する形に
+ * `z.enum()` を合成して渡す）。
+ *
+ * @param schema  - section の configSchema
+ * @param currentValues - RHF の current form values（discriminator 値の解決に使用）
  */
-export function extractSchemaFields(schema: z.ZodType): FieldInfo[] {
+export function extractSchemaFields(
+  schema: z.ZodType,
+  currentValues?: Record<string, unknown>,
+): FieldInfo[] {
+  // Discriminated union の場合は専用処理
+  const duInfo = extractDiscriminatedUnionInfo(schema);
+  if (duInfo) {
+    return extractDiscriminatedUnionFields(duInfo, currentValues);
+  }
+
   const shape = getZodObjectShape(schema);
   if (!shape) return [];
 
@@ -208,4 +360,60 @@ export function extractSchemaFields(schema: z.ZodType): FieldInfo[] {
     }
   }
   return fields;
+}
+
+/**
+ * Discriminated union のフィールドを抽出する。
+ * `[discriminator field, ...activeVariantFields]` を返す。
+ * active variant 内の discriminator field（z.literal）は重複描画を避けるため除外する。
+ */
+function extractDiscriminatedUnionFields(
+  duInfo: DiscriminatedUnionInfo,
+  currentValues: Record<string, unknown> | undefined,
+): FieldInfo[] {
+  const { discriminator, options, meta } = duInfo;
+
+  // discriminator field の current value を解決（無効値は先頭 option にフォールバック）
+  const rawCurrent = currentValues?.[discriminator];
+  const validValues = new Set(options.map((o) => o.value));
+  const firstOption = options[0];
+  if (!firstOption) return [];
+  const currentValue =
+    typeof rawCurrent === "string" && validValues.has(rawCurrent)
+      ? rawCurrent
+      : firstOption.value;
+
+  // Active variant schema
+  const activeOption =
+    options.find((o) => o.value === currentValue) ?? firstOption;
+
+  // Discriminator field を select として synthesize
+  // `z.enum(values)` を作って AutoSelectField の getSelectOptions が options を取得できるようにする
+  const valueTuple = options.map((o) => o.value);
+  const [head, ...rest] = valueTuple;
+  if (head === undefined) return [];
+  const discriminatorSchema = z.enum([head, ...rest]);
+  const discriminatorMeta: FieldMeta = meta ?? {
+    fieldType: "select",
+    label: discriminator,
+    group: "content",
+    subGroup: "other",
+  };
+  const discriminatorField: FieldInfo = {
+    key: discriminator,
+    schema: discriminatorSchema,
+    meta: discriminatorMeta,
+  };
+
+  // Active variant の他フィールド（discriminator 自身を除外）
+  const variantFields: FieldInfo[] = [];
+  for (const [key, fieldSchema] of Object.entries(activeOption.schema.shape)) {
+    if (key === discriminator) continue;
+    const fieldMeta = extractFieldMetaDeep(fieldSchema);
+    if (fieldMeta) {
+      variantFields.push({ key, schema: fieldSchema, meta: fieldMeta });
+    }
+  }
+
+  return [discriminatorField, ...variantFields];
 }

@@ -22,6 +22,7 @@ import { InspectorHeader } from "../InspectorHeader";
 import { InspectorSection } from "../InspectorSection";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label } from "@/admin/components/ui";
+import { Button } from "@/admin/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
+import { IconPhoto, IconUser, IconTrash } from "@tabler/icons-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
 // =============================================================================
 // Constants
@@ -84,9 +87,21 @@ export function TestimonialItemInspectorPanel({
     });
   };
 
-  const handleAvatarUrlChange = (value: string) => {
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: "POST",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      updateNode((n) => {
+        $setState(n, testimonialAvatarUrlState, selected.url);
+      });
+    },
+  });
+
+  const handleAvatarClear = () => {
     updateNode((n) => {
-      $setState(n, testimonialAvatarUrlState, value);
+      $setState(n, testimonialAvatarUrlState, "");
     });
   };
 
@@ -138,13 +153,47 @@ export function TestimonialItemInspectorPanel({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">アバター画像 URL</Label>
-            <Input
-              value={avatarUrl}
-              onChange={(e) => handleAvatarUrlChange(e.target.value)}
-              placeholder="https://example.com/avatar.jpg"
-              className="h-8 text-sm"
-            />
+            <Label className="text-xs">アバター画像</Label>
+            <div className="flex items-center gap-3">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-border bg-checker">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                    <IconUser className="h-6 w-6" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Button
+                  type="button"
+                  variant={avatarUrl ? "outline" : "default"}
+                  size="sm"
+                  className="w-full"
+                  onClick={() => imagePicker.openPicker()}
+                >
+                  <IconPhoto className="mr-2 h-4 w-4" />
+                  {avatarUrl ? "差し替え" : "画像を選択"}
+                </Button>
+                {avatarUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleAvatarClear}
+                  >
+                    <IconTrash className="mr-2 h-4 w-4 text-destructive" />
+                    削除
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </InspectorSection>
@@ -178,6 +227,8 @@ export function TestimonialItemInspectorPanel({
           </div>
         </div>
       </InspectorSection>
+
+      {imagePicker.mediaPickerDialog}
     </div>
   );
 }

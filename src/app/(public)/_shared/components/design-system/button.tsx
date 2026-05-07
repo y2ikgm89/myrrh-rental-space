@@ -88,7 +88,6 @@ interface ButtonAsLink extends ButtonBaseProps {
   readonly href: AppRoute;
   readonly onClick?: () => void;
   readonly target?: "_blank" | "_self";
-  readonly rel?: string;
 }
 
 type ButtonProps = ButtonAsButton | ButtonAsLink;
@@ -136,9 +135,6 @@ export function Button(props: ButtonProps) {
         className={classes}
         {...(hasInlineStyle && { style: inlineStyle })}
         {...(props.target && { target: props.target })}
-        {...(props.target === "_blank" && {
-          rel: props.rel ?? "noopener noreferrer",
-        })}
         {...(props.onClick && { onClick: props.onClick })}
       >
         {iconNode}

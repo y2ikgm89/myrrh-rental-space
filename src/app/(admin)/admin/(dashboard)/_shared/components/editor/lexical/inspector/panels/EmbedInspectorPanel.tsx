@@ -50,7 +50,7 @@ export function EmbedInspectorPanel<T extends LexicalNode>({
           <a
             href={url}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
             className="text-xs text-primary hover:underline break-all"
           >
             {url}

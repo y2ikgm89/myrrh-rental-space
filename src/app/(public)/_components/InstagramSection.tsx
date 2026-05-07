@@ -78,7 +78,7 @@ export function InstagramSection({
                 key={post.id}
                 href={post.postUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noreferrer"
                 className="group relative block aspect-square overflow-hidden bg-muted"
               >
                 {post.mediaUrl ? (

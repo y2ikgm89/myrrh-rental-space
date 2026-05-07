@@ -74,7 +74,11 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
   const result = await safeFetch({
     fetch: () =>
       prisma.page.findUnique({
-        where: { slug },
+        where: {
+          slug,
+          isPublished: true,
+          isActive: true,
+        },
         select: {
           title: true,
           description: true,

@@ -74,10 +74,7 @@ function CTAButtons({
           <Link
             href={toAppRoute(secondaryButton.url)}
             className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-            {...(secondaryButton.openInNewTab && {
-              target: "_blank",
-              rel: "noopener noreferrer",
-            })}
+            {...(secondaryButton.openInNewTab && { target: "_blank" as const })}
             {...((secondaryButton.backgroundColor ||
               secondaryButton.textColor) && {
               style: {

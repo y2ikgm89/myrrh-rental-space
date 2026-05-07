@@ -358,6 +358,7 @@ pending state で text を変えると button 幅が変化してレイアウト�
 ### 公開ページ レスポンシブ標準
 
 - **公開ページ見出しの `text-wrap` / `word-break` は `@layer base` が SSoT** — `public.css` の `@layer base` が `h1`–`h6` に `text-wrap: balance` + `word-break: auto-phrase`（日本語フレーズ折返し, Chrome 119+）を自動適用する。個別コンポーネントで `text-wrap-*` / `break-*` ユーティリティを重ねない。`whitespace-nowrap` が必要な特殊ケース（バッジ等）は例外
+- **`SectionWrapper` の `LAYOUT_CONTAINER_WIDTH_CLASSES` は名前と幅が逆転** — `sm: --prose-narrow` / `md: --prose-medium` / `lg: --container-max` (1280px / **wider**) / `xl: --container-editorial` (50rem=800px / **narrower**) / `full: max-w-none`。`xl` は editorial 幅で `lg` より狭い反直感マッピング。フルワイド（viewport 全幅）が必要なら `containerWidth: "full"`、標準ページ幅は `lg`、editorial 記事測度は `xl`。`xl` を「lg より広い」と誤読すると silent に container が縮む（実例: 2026-05-07 home space-showcase carousel が `xl` 設定で 800px に潰されカードが見切れた → `full` に変更）
 - **公開ページ見出しの font-weight / letter-spacing / line-height も `@theme --text-*--*` が SSoT** — `text-h1` 等の utility を使う箇所で `font-light` / `leading-*` / `tracking-*` を重ねない（→ `tailwind-patterns/theme-tokens.md` §Typography SSoT）。意図的 override は editorial-card featured variant のみ
 - **公開カレンダーの曜日色は日=`text-destructive`、土=`text-info`** — 日本標準のカレンダー配色。日曜始まり。今日マーカーは `bg-accent text-accent-foreground rounded-full`。曜日ヘッダーは `bg-surface` + 枠線
 - **日本語ラベルのタブ/ナビに `uppercase` 禁止** — `uppercase` は Latin 専用。日本語タブは Journal タブパターン（`text-sm tracking-[0.18em]`、uppercase なし）に合わせる。ヘッダーナビ（`text-[0.75rem] uppercase`）は英語ラベル向け

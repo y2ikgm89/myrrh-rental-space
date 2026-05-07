@@ -118,7 +118,7 @@ function NavItemLink({
     <a
       href={item.url}
       target="_blank"
-      rel="noopener noreferrer"
+      rel="noreferrer"
       className={className}
       {...(onNavigate && { onClick: onNavigate })}
     >

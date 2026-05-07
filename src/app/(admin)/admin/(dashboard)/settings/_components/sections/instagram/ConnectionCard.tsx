@@ -184,7 +184,7 @@ export function ConnectionCard({
                 <a
                   href={`https://www.instagram.com/${config.username}`}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noreferrer"
                   className="flex items-center gap-1"
                 >
                   <IconExternalLink className="h-4 w-4" />

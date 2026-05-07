@@ -50,8 +50,18 @@ export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
     "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
   images: [DEFAULT_IMAGE],
   transition: "crossfade",
-  buttonText: "Reserve a space",
-  buttonUrl: "/reservation",
+  buttons: [
+    {
+      text: "Reserve a space",
+      url: "/reservation",
+      variant: "primary",
+      size: "lg",
+      iconName: "",
+      openInNewTab: false,
+      backgroundColor: "",
+      textColor: "",
+    },
+  ],
   layout: {
     padding: "md",
     containerWidth: "lg",
@@ -153,8 +163,7 @@ export function EditorialSplitHero({
   description = editorialSplitHeroDefaults.description,
   images = editorialSplitHeroDefaults.images,
   transition = editorialSplitHeroDefaults.transition,
-  buttonText = editorialSplitHeroDefaults.buttonText,
-  buttonUrl = editorialSplitHeroDefaults.buttonUrl,
+  buttons = editorialSplitHeroDefaults.buttons,
 }: Partial<EditorialSplitHeroProps> = {}): ReactElement {
   const contentRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -483,17 +492,23 @@ export function EditorialSplitHero({
           </p>
         </ScrollReveal>
 
-        <ScrollReveal delay={0.4}>
-          <div className="mt-8 flex justify-center md:mt-10">
-            <Button
-              variant="editorial"
-              href={isAppRoute(buttonUrl) ? buttonUrl : "/reservation"}
-              className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
-            >
-              {buttonText}
-            </Button>
-          </div>
-        </ScrollReveal>
+        {buttons.length > 0 && (
+          <ScrollReveal delay={0.4}>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4 md:mt-10">
+              {buttons.map((btn) => (
+                <Button
+                  key={btn.url}
+                  variant="editorial"
+                  href={isAppRoute(btn.url) ? btn.url : "/reservation"}
+                  className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
+                  {...(btn.openInNewTab && { target: "_blank" as const })}
+                >
+                  {btn.text}
+                </Button>
+              ))}
+            </div>
+          </ScrollReveal>
+        )}
       </div>
     </section>
   );

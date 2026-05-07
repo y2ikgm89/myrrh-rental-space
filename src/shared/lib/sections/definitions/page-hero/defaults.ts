@@ -27,8 +27,18 @@ export const DEFAULT_PAGE_HERO: PageHeroConfig = {
     },
   ],
   transition: "crossfade",
-  buttonText: "Reserve a space",
-  buttonUrl: "/reservation",
+  buttons: [
+    {
+      text: "Reserve a space",
+      url: "/reservation",
+      variant: "primary",
+      size: "lg",
+      iconName: "",
+      openInNewTab: false,
+      backgroundColor: "",
+      textColor: "",
+    },
+  ],
   layout: {
     padding: "md",
     containerWidth: "lg",

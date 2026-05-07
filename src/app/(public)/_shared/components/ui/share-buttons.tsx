@@ -120,7 +120,7 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
             <a
               href={buildHref(url, title)}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noreferrer"
               aria-label={ariaLabel}
               className={BUTTON_CLASSES}
             >

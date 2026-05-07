@@ -73,7 +73,7 @@ paths:
 
 ## Feature toggle 粒度
 
-- **Feature toggle 粒度** — 単一 tenant は per-entity 単一層、multi-tenant template は `Settings.xxxEnabledGlobal` + `Entity.xxxEnabled` の 2 層（precedence: Global OFF → 常に非表示 / Global ON → per-entity 効く）。参照: `Settings.reviewsEnabledGlobal` ↔ `Space.reviewsEnabled`
+- **Feature toggle 粒度** — 単一 tenant は per-entity 単一層、multi-tenant template は `Settings.featureModules.<module>` + `Entity.<feature>Enabled` の 2 層（precedence: Global OFF → 常に非表示 / Global ON → per-entity 効く）。参照: `Settings.featureModules.reviews` ↔ `Space.reviewsEnabled`（`isFeatureEnabled("reviews")` 経由で解決、依存伝播は `requires` で fixed-point）
 
 ## Lexical 新規ノード（バリアント選択 UI）
 

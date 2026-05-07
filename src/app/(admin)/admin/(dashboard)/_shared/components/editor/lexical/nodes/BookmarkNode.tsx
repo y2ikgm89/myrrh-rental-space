@@ -89,7 +89,7 @@ function BookmarkComponent({
       <a
         href={url}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="noreferrer"
         className="block border rounded-lg overflow-hidden hover:bg-muted/50 transition-colors"
         draggable={false}
         onClick={(e) => e.preventDefault()} // エディタ内ではナビゲーション無効
@@ -225,7 +225,7 @@ export class BookmarkNode extends DecoratorNode<ReactElement> {
     const link = document.createElement("a");
     link.href = url;
     link.target = "_blank";
-    link.rel = "noopener noreferrer";
+    link.rel = "noreferrer";
 
     const content = document.createElement("div");
     content.setAttribute("data-bookmark-content", "");

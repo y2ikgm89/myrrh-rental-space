@@ -167,7 +167,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
                 }
                 rel={
                   currentBar.linkUrl.startsWith("http")
-                    ? "noopener noreferrer"
+                    ? "noreferrer"
                     : undefined
                 }
               >

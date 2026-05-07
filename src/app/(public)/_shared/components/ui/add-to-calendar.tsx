@@ -47,7 +47,7 @@ export function AddToCalendar({
           <a
             href={urls.google}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
           >
             <IconBrandGoogle className="h-4 w-4" aria-hidden="true" />
@@ -58,7 +58,7 @@ export function AddToCalendar({
           <a
             href={urls.outlookWeb}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
           >
             <OutlookLogo className="h-4 w-4" aria-hidden="true" />

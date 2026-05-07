@@ -14,6 +14,10 @@ import {
   pageHeroMetadata,
 } from "@/shared/lib/sections/definitions/page-hero";
 import { fieldRegistry } from "@/shared/lib/sections/field-registry";
+import {
+  extractDiscriminatedUnionInfo,
+  extractSchemaFields,
+} from "@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/zod-introspection";
 
 // ─────────────────────────────────────────────────────────────
 // pageHeroConfigSchema — discriminated union 検証
@@ -66,7 +70,7 @@ describe("pageHeroConfigSchema", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         const message = result.error.issues.map((i) => i.message).join(" / ");
-        expect(message).toContain("同じ画像URL");
+        expect(message).toContain("同じ画像を複数登録することはできません");
       }
     });
 
@@ -91,20 +95,78 @@ describe("pageHeroConfigSchema", () => {
       expect(result.success).toBe(false);
     });
 
-    test("buttonUrl は内部 app route（/foo）を許容", () => {
+    test("buttons[].url は内部 app route（/foo）を許容", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "editorial-split",
         images: [{ url: "https://example.com/a.jpg", alt: "a" }],
-        buttonUrl: "/reservation",
+        buttons: [
+          {
+            text: "予約する",
+            url: "/reservation",
+            variant: "primary",
+            size: "lg",
+          },
+        ],
       });
       expect(result.success).toBe(true);
     });
 
-    test("buttonUrl は外部 URL（https）を reject（createInternalAppRouteSchema 仕様）", () => {
+    test("buttons[].url は外部 URL（https）を reject（createInternalAppRouteSchema 仕様）", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "editorial-split",
         images: [{ url: "https://example.com/a.jpg", alt: "a" }],
-        buttonUrl: "https://external.example.com/foo",
+        buttons: [
+          {
+            text: "外部",
+            url: "https://external.example.com/foo",
+            variant: "primary",
+            size: "lg",
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("buttons は複数登録可能（最大個数制限なし、URL 重複のみ禁止）", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "editorial-split",
+        images: [{ url: "https://example.com/a.jpg", alt: "a" }],
+        buttons: [
+          {
+            text: "予約する",
+            url: "/reservation",
+            variant: "primary",
+            size: "lg",
+          },
+          {
+            text: "詳細を見る",
+            url: "/spaces",
+            variant: "secondary",
+            size: "lg",
+          },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("buttons の URL 重複は refine で reject", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "editorial-split",
+        images: [{ url: "https://example.com/a.jpg", alt: "a" }],
+        buttons: [
+          {
+            text: "A",
+            url: "/reservation",
+            variant: "primary",
+            size: "lg",
+          },
+          {
+            text: "B",
+            url: "/reservation",
+            variant: "secondary",
+            size: "lg",
+          },
+        ],
       });
       expect(result.success).toBe(false);
     });
@@ -210,5 +272,85 @@ describe("field-registry 登録整合性", () => {
     // registry shapes は schema 構築時に register される ので、
     // schema が success path を通った時点で全 inner field が登録されている
     expect(fieldRegistry).toBeDefined();
+  });
+
+  test("pageHeroConfigSchema 自体に discriminator field meta が登録されている", () => {
+    // AutoSectionForm の zod-introspection が discriminated union schema を
+    // バリアント select として描画するため、discriminator field meta が必須
+    const meta = fieldRegistry.get(pageHeroConfigSchema);
+    expect(meta).toBeDefined();
+    expect(meta?.fieldType).toBe("select");
+    expect(meta?.label).toBe("バリアント");
+    expect(meta?.group).toBe("content");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// AutoSectionForm zod-introspection の discriminated union 対応
+// ─────────────────────────────────────────────────────────────
+
+describe("zod-introspection / discriminated union 対応", () => {
+  test("extractDiscriminatedUnionInfo は discriminator + 全 options を返す", () => {
+    const info = extractDiscriminatedUnionInfo(pageHeroConfigSchema);
+    expect(info).toBeDefined();
+    expect(info?.discriminator).toBe("variant");
+    const values = info?.options.map((o) => o.value).sort();
+    expect(values).toEqual(["compact", "editorial-split", "minimal"]);
+  });
+
+  test("extractSchemaFields(schema) は discriminator + 先頭 variant のフィールドを返す", () => {
+    const fields = extractSchemaFields(pageHeroConfigSchema);
+    const keys = fields.map((f) => f.key);
+    // 先頭 option = editorial-split のフィールド (variant 自身は重複除外せず先頭で synthesize される)
+    expect(keys).toContain("variant"); // synthesized discriminator field
+    expect(keys).toContain("title");
+    expect(keys).toContain("description");
+    expect(keys).toContain("label");
+    expect(keys).toContain("images");
+    expect(keys).toContain("buttons");
+    // discriminator が先頭にいる
+    expect(keys[0]).toBe("variant");
+    // discriminator field の meta は select
+    expect(fields[0]?.meta.fieldType).toBe("select");
+  });
+
+  test("extractSchemaFields(schema, { variant: 'minimal' }) は minimal のフィールドを返す", () => {
+    const fields = extractSchemaFields(pageHeroConfigSchema, {
+      variant: "minimal",
+    });
+    const keys = fields.map((f) => f.key);
+    expect(keys).toContain("variant");
+    expect(keys).toContain("eyebrow"); // minimal にしかない
+    expect(keys).toContain("title");
+    expect(keys).toContain("description");
+    // editorial-split / compact のフィールドは出ない
+    expect(keys).not.toContain("images");
+    expect(keys).not.toContain("buttons");
+  });
+
+  test("extractSchemaFields(schema, { variant: 'compact' }) は compact のフィールドを返す", () => {
+    const fields = extractSchemaFields(pageHeroConfigSchema, {
+      variant: "compact",
+    });
+    const keys = fields.map((f) => f.key);
+    expect(keys).toContain("variant");
+    expect(keys).toContain("image"); // compact は単一画像
+    expect(keys).toContain("title");
+    expect(keys).toContain("description");
+    expect(keys).toContain("label");
+    expect(keys).toContain("buttons"); // compact にもボタンを追加
+    // editorial-split / minimal にしかないフィールドは出ない
+    expect(keys).not.toContain("images");
+    expect(keys).not.toContain("eyebrow");
+  });
+
+  test("不正な variant 値は先頭 option にフォールバック", () => {
+    const fields = extractSchemaFields(pageHeroConfigSchema, {
+      variant: "non-existent-variant",
+    });
+    const keys = fields.map((f) => f.key);
+    // 先頭 = editorial-split
+    expect(keys).toContain("images");
+    expect(keys).toContain("buttons");
   });
 });

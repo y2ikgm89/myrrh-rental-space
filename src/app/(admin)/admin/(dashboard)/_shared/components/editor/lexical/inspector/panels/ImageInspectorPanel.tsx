@@ -29,8 +29,11 @@ import {
   IconAlignLeft,
   IconAlignCenter,
   IconAlignRight,
+  IconPhoto,
+  IconPhotoOff,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
 // =============================================================================
 // Constants
@@ -79,6 +82,21 @@ export function ImageInspectorPanel({
       caption: $getState(node, captionState),
     }));
 
+  const imagePicker = useSingleMediaPicker({
+    defaultUsage: "POST",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      updateNode((n) => {
+        $setState(n, srcState, selected.url);
+        $setState(n, altState, selected.alt ?? "");
+        $setState(n, widthState, undefined);
+        $setState(n, heightState, undefined);
+      });
+    },
+  });
+
   const handleAltChange = (value: string) =>
     updateNode((n) => {
       $setState(n, altState, value);
@@ -115,8 +133,31 @@ export function ImageInspectorPanel({
 
       <InspectorFields title="基本設定">
         <div className="space-y-2">
-          <Label className="text-xs">URL</Label>
-          <p className="text-xs text-muted-foreground truncate">{src}</p>
+          <Label className="text-xs">画像</Label>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-checker">
+            {src ? (
+              <img
+                src={src}
+                alt={alt}
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <IconPhotoOff className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => imagePicker.openPicker()}
+          >
+            <IconPhoto className="mr-2 h-4 w-4" />
+            画像を差し替え
+          </Button>
         </div>
 
         <div className="space-y-2">
@@ -198,6 +239,8 @@ export function ImageInspectorPanel({
           </div>
         </div>
       </InspectorFields>
+
+      {imagePicker.mediaPickerDialog}
     </div>
   );
 }
