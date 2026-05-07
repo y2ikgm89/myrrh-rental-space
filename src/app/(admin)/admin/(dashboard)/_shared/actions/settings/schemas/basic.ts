@@ -324,6 +324,28 @@ export type ReviewsGlobalSettingsInput = z.infer<
   typeof reviewsGlobalSettingsSchema
 >;
 
+// =============================================================================
+// Feature Modules（Sanity / Stripe Capabilities 流の declarative composition）
+// =============================================================================
+// 全 9 module を必須キーとして要求（Sanity declarative pattern）。
+// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES_LIST。
+// 新規 module 追加時はここにキーを追加（4 箇所同時更新の 1 つ）。
+export const featureModulesSettingsSchema = z.object({
+  spaces: z.boolean(),
+  reservation: z.boolean(),
+  events: z.boolean(),
+  posts: z.boolean(),
+  news: z.boolean(),
+  faq: z.boolean(),
+  access: z.boolean(),
+  contact: z.boolean(),
+  reviews: z.boolean(),
+});
+
+export type FeatureModulesSettingsInput = z.infer<
+  typeof featureModulesSettingsSchema
+>;
+
 // Re-export from validations for sidebar
 export { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
 

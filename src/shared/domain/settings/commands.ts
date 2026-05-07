@@ -466,5 +466,20 @@ export async function updateReviewsGlobalSettings(data: {
   });
 }
 
+/**
+ * Feature Module ON/OFF map を Settings.featureModules JSON column に書き込む。
+ *
+ * 入力は schema 層（`featureModulesSettingsSchema`）で全 9 module の boolean 必須に
+ * 検証済みのため、ここでは純粋な write を行うのみ。依存解決は read 側
+ * (`@/shared/lib/features/check.ts` の `getEnabledFeatures`) で行う。
+ */
+export async function updateFeatureModulesCommand(
+  modules: Record<string, boolean>,
+): Promise<void> {
+  await prisma.settings.updateMany({
+    data: { featureModules: modules as Prisma.InputJsonValue },
+  });
+}
+
 // Re-export integration commands (Stripe, Google Calendar, iCal)
 export * from "./integration-commands";

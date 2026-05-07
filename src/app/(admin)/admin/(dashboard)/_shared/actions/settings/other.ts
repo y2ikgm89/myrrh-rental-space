@@ -32,6 +32,7 @@ import {
   headerSettingsSchema,
   footerSettingsSchema,
   reviewsGlobalSettingsSchema,
+  featureModulesSettingsSchema,
   type MaintenanceSettingsInput,
   type CookieConsentSettingsInput,
   type ReservationSettingsInput,
@@ -40,6 +41,7 @@ import {
   type HeaderSettingsInput,
   type FooterSettingsInput,
   type ReviewsGlobalSettingsInput,
+  type FeatureModulesSettingsInput,
 } from "./schemas";
 
 export async function updateMaintenanceSettings(
@@ -236,6 +238,43 @@ export async function updateReviewsGlobalSettings(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.REVIEWS);
       updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+    },
+  });
+}
+
+/**
+ * Feature Module ON/OFF map を更新する。
+ *
+ * 影響範囲: 公開ページ 404 ガード（page.tsx）/ navigation prune /
+ * sitemap prune / SectionRenderer skip / cron 早期 return。
+ * cache invalidation は影響範囲に応じて広範囲に実行する必要がある。
+ */
+export async function updateFeatureModulesSettings(
+  data: FeatureModulesSettingsInput,
+): Promise<MutationResult> {
+  const parsed = featureModulesSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await settingsCommands.updateFeatureModulesCommand(parsed.data);
+      return null;
+    },
+    afterSuccess: () => {
+      // FEATURE_MODULES SSoT 自体
+      updateTag(CACHE_TAGS.FEATURE_MODULES);
+      // Phase 3 で feature filter を埋め込んだ全 consumer を invalidate
+      updateTag(CACHE_TAGS.NAVIGATION);
+      updateTag(CACHE_TAGS.PAGE_SECTIONS);
+      updateTag(CACHE_TAGS.SECTIONS);
+      // sitemap 生成は dynamic で feature filter を毎回読むため明示 invalidate 不要だが、
+      // Cloud CDN にキャッシュされている可能性があるため明示する
+      updateTag(CACHE_TAGS.PAGES);
+      updateTag(CACHE_TAGS.REVIEWS);
     },
   });
 }

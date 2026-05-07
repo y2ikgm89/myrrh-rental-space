@@ -37,6 +37,8 @@ export {
   type PermalinkSettingsInput,
   reviewsGlobalSettingsSchema,
   type ReviewsGlobalSettingsInput,
+  featureModulesSettingsSchema,
+  type FeatureModulesSettingsInput,
   sidebarSettingsSchema,
   robotsTxtSettingsSchema,
   type RobotsTxtSettingsInput,

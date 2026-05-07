@@ -14,6 +14,7 @@ import {
   IconSettings,
   IconNavigation,
   IconSpeakerphone,
+  IconToggleLeft,
 } from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
@@ -67,6 +68,13 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     href: "/admin/settings/system",
     icon: IconSettings,
     items: ["メンテナンス", "Cookie", "権限"],
+  },
+  {
+    title: "機能モジュール",
+    description: "イベント・ブログ・ニュース・FAQ 等の機能 ON/OFF を切り替え",
+    href: "/admin/settings/features",
+    icon: IconToggleLeft,
+    items: ["スペース", "予約", "イベント", "ブログ", "FAQ", "レビュー"],
   },
 ];
 

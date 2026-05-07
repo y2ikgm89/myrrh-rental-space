@@ -128,6 +128,7 @@ export {
   updateHeaderSettings,
   updateFooterSettings,
   updateReviewsGlobalSettings,
+  updateFeatureModulesSettings,
 } from "./other";
 
 // =============================================================================
