@@ -9,6 +9,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {
@@ -21,6 +22,11 @@ export async function GET(request: Request) {
     });
     if (authorizationResult) {
       return authorizationResult;
+    }
+
+    // Feature module gate — reservation OFF なら早期 return
+    if (!(await isFeatureEnabled("reservation"))) {
+      return jsonSuccess({ skipped: true, reason: "feature_disabled" });
     }
 
     // JST で翌日の日付を計算（Cloud Run は UTC 環境）

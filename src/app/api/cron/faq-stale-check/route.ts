@@ -17,6 +17,7 @@ import {
 } from "@/shared/domain/notifications/commands";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   ErrorCategory,
@@ -41,6 +42,11 @@ export async function GET(request: Request) {
       operation: "faqStaleCheck",
     });
     if (authResult) return authResult;
+
+    // Feature module gate — faq OFF なら早期 return
+    if (!(await isFeatureEnabled("faq"))) {
+      return jsonSuccess({ skipped: true, reason: "feature_disabled" });
+    }
 
     // 重複抑制: 直近 6 日以内に同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）
     if (

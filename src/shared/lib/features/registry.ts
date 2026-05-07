@@ -81,7 +81,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: ["events"],
     sectionTypes: ["event-calendar"],
     templates: ["events-archive"],
-    cronPaths: ["/api/cron/event-reminder"],
+    cronPaths: ["/api/cron/event-import"],
   },
   posts: {
     id: "posts",
@@ -111,7 +111,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: ["faq"],
     sectionTypes: ["faq-list"],
     templates: ["faq"],
-    cronPaths: ["/api/cron/faq-stale-check"],
+    cronPaths: ["/api/cron/faq-stale-check", "/api/cron/faq-trash-cleanup"],
   },
   access: {
     id: "access",

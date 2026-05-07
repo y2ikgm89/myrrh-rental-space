@@ -21,6 +21,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 /**
@@ -42,6 +43,11 @@ export async function GET(request: Request) {
     });
     if (authorizationResult) {
       return authorizationResult;
+    }
+
+    // Feature module gate — events OFF なら早期 return（DB / GCal 接続を一切しない）
+    if (!(await isFeatureEnabled("events"))) {
+      return jsonSuccess({ skipped: true, reason: "feature_disabled" });
     }
 
     // Google Calendar が有効か確認

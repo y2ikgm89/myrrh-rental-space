@@ -13,6 +13,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { permanentlyDeleteExpiredFaqTrash } from "@/shared/domain/faq/analytics-commands";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   ErrorCategory,
@@ -33,6 +34,11 @@ export async function GET(request: Request) {
       operation: "faqTrashCleanup",
     });
     if (authResult) return authResult;
+
+    // Feature module gate — faq OFF なら早期 return
+    if (!(await isFeatureEnabled("faq"))) {
+      return jsonSuccess({ skipped: true, reason: "feature_disabled" });
+    }
 
     const result = await permanentlyDeleteExpiredFaqTrash(RETENTION_DAYS);
 
