@@ -89,24 +89,41 @@ describe("hasPermission", () => {
   });
 
   describe("EDITOR", () => {
-    test("割り当てページの編集権限のみ", () => {
-      // 閲覧可能
+    test("page edit + 副次リソースのみ", () => {
+      // page の閲覧・編集（assigned page のみ実効、access チェックは resource-level）
       expect(hasPermission(Role.EDITOR, "page", "read")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "post", "read")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "news", "read")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "faq", "read")).toBe(true);
-
-      // 編集可能
       expect(hasPermission(Role.EDITOR, "page", "update")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "post", "update")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "news", "update")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "faq", "update")).toBe(true);
+
+      // 副次リソース（page 編集に必要）
+      expect(hasPermission(Role.EDITOR, "media", "create")).toBe(true);
+      expect(hasPermission(Role.EDITOR, "media", "read")).toBe(true);
+      expect(hasPermission(Role.EDITOR, "media", "update")).toBe(true);
+      expect(hasPermission(Role.EDITOR, "blockTemplate", "read")).toBe(true);
+      expect(hasPermission(Role.EDITOR, "notification", "read")).toBe(true);
     });
 
-    test("作成・削除・公開権限を持たない", () => {
+    test("page の create / delete / publish 権限を持たない（ADMIN+ 専管）", () => {
       expect(hasPermission(Role.EDITOR, "page", "create")).toBe(false);
       expect(hasPermission(Role.EDITOR, "page", "delete")).toBe(false);
-      expect(hasPermission(Role.EDITOR, "post", "publish")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "page", "publish")).toBe(false);
+    });
+
+    test("post / news / faq / event 等の独立コンテンツ resource は権限なし", () => {
+      // page-only EDITOR 設計のため、コンテンツ系 resource は閲覧すらできない
+      expect(hasPermission(Role.EDITOR, "post", "read")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "post", "update")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "news", "read")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "news", "update")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "faq", "read")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "faq", "update")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "event", "read")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "event", "update")).toBe(false);
+    });
+
+    test("blockTemplate / notification の write 権限は持たない", () => {
+      expect(hasPermission(Role.EDITOR, "blockTemplate", "create")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "blockTemplate", "delete")).toBe(false);
+      expect(hasPermission(Role.EDITOR, "notification", "update")).toBe(false);
     });
 
     test("スペース・予約・顧客管理権限を持たない", () => {

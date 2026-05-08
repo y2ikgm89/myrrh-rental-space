@@ -43,7 +43,10 @@ export type RolePermissions = Record<Role, PermissionKey[]>;
  *
  * SUPER_ADMIN: 全権限
  * ADMIN: コンテンツ管理全般
- * EDITOR: 割り当てページ編集のみ
+ * EDITOR: 割り当て page 編集のみ（page / media upload / blockTemplate read /
+ *   notification read）。post / news / faq / event / コンテンツ系は ADMIN+ 専管。
+ *   `userPageAssignment` で page-level access を gate する設計のため、独立 resource
+ *   への編集権限は与えない（`userHasResourceAccess` は page UUID 専用判定）
  * VIEWER: 閲覧のみ
  * USER: 公開ユーザー（管理機能なし）
  */
@@ -251,25 +254,16 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "notification:delete",
   ],
   EDITOR: [
-    // 割り当てページ編集のみ（要リソースIDチェック）
-    "post:read",
-    "post:update",
-    "news:read",
-    "news:update",
+    // 割り当てページ編集のみ — `userPageAssignment` で gate
     "page:read",
     "page:update",
-    "faq:read",
-    "faq:update",
+    // ページ編集に必要な副次リソース
     "media:create",
     "media:read",
-    "media:update", // アップロード・閲覧・編集のみ
-    "blockTemplate:create",
+    "media:update",
     "blockTemplate:read",
-    "blockTemplate:delete", // テンプレート管理
-    "event:read",
-    "event:update",
+    // 管理タスク認知（既読操作は ADMIN+）
     "notification:read",
-    "notification:update",
   ],
   VIEWER: [
     // 閲覧のみ
@@ -363,14 +357,24 @@ export function userHasPermission(
 }
 
 /**
- * ユーザーが特定リソースIDへのアクセス権を持つかチェック
+ * ユーザーが特定リソースIDへのアクセス権を持つかチェック。
  *
- * EDITORロールの場合、assignedPagesに含まれるリソースのみアクセス可能
+ * EDITOR ロールは `page` resource 専用の resource-level access 制御を受ける:
+ * - **resourceId は page UUID 必須** — `userPageAssignment` テーブルが page に
+ *   のみ紐づく設計のため、`assignedPageIds.includes(resourceId)` は page UUID
+ *   でしか成立しない。slug や section ID を渡すと常に拒否される silent bug。
+ * - section 等の **page 子リソース**で `checkResourceAccess: true` を使う場合は、
+ *   `executeAdminMutationResult` の `resolveResourceId` callback で子 ID から
+ *   親 page UUID を解決してから渡す（→ `auth-patterns.md`）。
+ *
+ * EDITOR の権限自体（`ROLE_PERMISSIONS.EDITOR`）は page / media / blockTemplate(read)
+ * / notification(read) に絞られているため、他 resource はそもそも `hasPermission`
+ * で先に弾かれる。本関数の page-UUID 比較ロジックは `page` resource でのみ意味を持つ。
  *
  * @param user ユーザー
  * @param resource リソース種別
  * @param action アクション種別
- * @param resourceId リソースID
+ * @param resourceId page UUID（EDITOR の access 判定対象）
  * @returns 権限があればtrue
  */
 export async function userHasResourceAccess(
@@ -389,14 +393,13 @@ export async function userHasResourceAccess(
     return true;
   }
 
-  // EDITORはpageAssignmentsに含まれるリソースのみアクセス可能
-  // ただし、resourceIdなしの場合（一覧表示など）は許可
-  // 一覧表示時はフィルタリングで対応
+  // resourceId 不在（一覧表示等）は許可。実際の絞り込みはクエリ層で
+  // `getAssignedPageIdsForUser` を使って実装する
   if (!resourceId) {
     return true;
   }
 
-  // DBからページ割り当てを取得
+  // EDITOR は割り当てられた page UUID のみアクセス可能
   const assignedPageIds = await getAssignedPageIdsForUser(user.id);
   return assignedPageIds.includes(resourceId);
 }

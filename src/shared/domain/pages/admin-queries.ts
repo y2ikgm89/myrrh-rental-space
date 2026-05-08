@@ -101,6 +101,22 @@ export async function getPageBySlugQuery(
   return toPlainObject(page);
 }
 
+/**
+ * EDITOR の `userPageAssignment` チェック用に slug から page UUID を解決する。
+ *
+ * `executeAdminMutationResult` の `resolveResourceId` callback から呼ばれ、
+ * 認証後に軽量 `findUnique` で `id` のみを取得する（→ `auth-patterns.md`）。
+ */
+export async function getPageIdBySlugQuery(
+  slug: string,
+): Promise<string | null> {
+  const row = await prisma.page.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  return row?.id ?? null;
+}
+
 export async function getPageForPublicQuery(
   slug: string,
 ): Promise<PageData | null> {

@@ -19,6 +19,7 @@ import {
   bulkDeletePagesCommand,
   bulkTogglePagePublishedCommand,
 } from "@/shared/domain/pages/commands";
+import { getPageIdBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import {
   createPageSchema,
   getSystemPageDefinition,
@@ -63,7 +64,9 @@ export async function updatePage(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: slug,
+    checkResourceAccess: true,
+    resolveResourceId: () => getPageIdBySlugQuery(slug),
+    resolveAuditResourceId: () => slug,
     execute: async () => {
       await updatePageCommand(slug, parsed.data);
       return null;
@@ -139,7 +142,9 @@ export async function restorePage(slug: string): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: slug,
+    checkResourceAccess: true,
+    resolveResourceId: () => getPageIdBySlugQuery(slug),
+    resolveAuditResourceId: () => slug,
     execute: async () => {
       await restorePageCommand(slug);
       return null;
@@ -216,7 +221,9 @@ export async function updatePageSeo(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: slug,
+    checkResourceAccess: true,
+    resolveResourceId: () => getPageIdBySlugQuery(slug),
+    resolveAuditResourceId: () => slug,
     execute: async () => {
       const definition = getSystemPageDefinition(slug);
       await updatePageSeoCommand(slug, {
