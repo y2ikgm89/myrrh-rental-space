@@ -181,7 +181,7 @@ const label =
   data.label satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue;
 ```
 
-参照実装: `@/shared/domain/navigation/commands.ts` の `normalizeNavigationItemInput`（`ButtonLabelToken[]` 配列を Prisma の Json 列に渡す境界 cast）。discriminated union の token 配列が `Prisma.InputJsonValue` と直接 assignable でないため必要。
+参照実装: `@/shared/domain/navigation/commands.ts` の `normalizeNavigationItemInput`（`PortableTextSpan[]` 配列を Prisma の Json 列に渡す境界 cast）。discriminated union の span 配列が `Prisma.InputJsonValue` と直接 assignable でないため必要。
 
 **3. SectionConfig union widening（`validateSectionConfig` 内部のみ）**
 
@@ -307,6 +307,28 @@ runtime エラーやサイレントバグを防ぐ。新規コンポーネント
 
 参照実装: `@/public/components/design-system/image-frame.tsx`（`FillProps | DimensionProps`）。
 Next.js `<Image>` の「width+height OR fill 必須」契約を型レベルで強制。
+
+## Sanity Portable Text 互換の `_type` discriminator
+
+公式 Sanity Portable Text 仕様では discriminated union の discriminator field を `_type` (underscore prefix) とする。本プロジェクトの `PortableTextSpan` / `PortableTextBlock` も同仕様準拠で実装する：
+
+```typescript
+// @/shared/lib/portable-text/schema.ts
+export const portableTextSpanSchema = z.discriminatedUnion("_type", [
+  z.object({
+    _key: z.string().min(1),
+    _type: z.literal("span"),
+    text: z.string().max(500),
+  }),
+  z.object({
+    _key: z.string().min(1),
+    _type: z.literal("iconInline"),
+    name: z.string().regex(/^Icon[A-Z][A-Za-z0-9]*$/),
+  }),
+]);
+```
+
+旧 `type: "..."` 形式（`ButtonLabelToken`）は 2026-05-09 Phase 0 で完全廃止済み。新規 schema 追加時は `_type` 命名を踏襲する（Sanity Portable Text 公式 / Sanity Studio の Block Content と同 shape を保つことで将来的な editor 統合・JSON 互換性を確保）。
 
 ## `satisfies` キーワード
 
@@ -476,7 +498,7 @@ import { createUser } from "./user";
 ## Gotchas
 
 - **`exactOptionalPropertyTypes` 下で optional boolean prop に三項演算子禁止** — `disabled={condition ? !isDirty : undefined}` は型エラー（`boolean | undefined` は `boolean?` と非互換）。条件スプレッド `{...(condition && { disabled: !isDirty })}` を使用
-- **任意 schema の `.default()` は z.input 型を optional 化する（z.enum 限定ではない）** — `z.array(...).default([])` / `z.object(...).default({})` 等あらゆる schema で適用される Zod 4 公式挙動。RHF `standardSchemaResolver` に渡す form schema は `.default()` を持たない素の `z.array(itemSchema)` / `z.object({...})` で構築し、UI の `defaultValues` で初期値を補う。domain schema が `.default()` を持つ場合（例: `buttonLabelSchema = z.array(...).default([])`）、form 用には primitive な `buttonLabelTokenSchema` を直接 import して `z.array(buttonLabelTokenSchema).refine(...)` で再構築する。実例: 2026-05-09 NavigationItem rich label 化で `navFormSchema.label` を `buttonLabelSchema.refine()` から `z.array(buttonLabelTokenSchema).refine()` に変更して RHF input 型 mismatch を解消
+- **任意 schema の `.default()` は z.input 型を optional 化する（z.enum 限定ではない）** — `z.array(...).default([])` / `z.object(...).default({})` 等あらゆる schema で適用される Zod 4 公式挙動。RHF `standardSchemaResolver` に渡す form schema は `.default()` を持たない素の `z.array(itemSchema)` / `z.object({...})` で構築し、UI の `defaultValues` で初期値を補う。domain schema が `.default()` を持つ場合（例: `createSpanArraySchema()` は `.default([])` を内蔵）、form 用には primitive な `portableTextSpanSchema` を直接 import して `z.array(portableTextSpanSchema).refine(...)` で再構築する。実例: 2026-05-09 NavigationItem rich label 化で `navFormSchema.label` を factory schema 経由ではなく `z.array(portableTextSpanSchema).refine()` で RHF input 型 mismatch を解消
 - **`__tests__/` は type-check 対象に含まれている**（`tsconfig.test.json`）— `bun run type-check` が `tsc -p tsconfig.test.json` も実行し、テスト内型エラーを検出する
 - **`Serialized<T>` は配列・object 構造を保持する** — `Serialized<string[]>` = `string[]`、`Serialized<string[] \| null>` = `string[] \| null`、`Serialized<{ a: Date; b: string[] }>` = `{ a: string; b: string[] }`。`Date → string` のみが substitution、配列要素・object key は再帰展開（`@/shared/lib/serialize` 定義）。`(serializedValue.imageUrls as string[])` 等の back-cast は dead code（`LocationWithStats.imageUrls` / `specialHolidays as string[] \| null` を 2026-05-08 削除）。`Serialized<T>` 型を持つ field に対する `as` cast を見たら redundant の sign
 - **`?: never` variant 混在の discriminated union で `"key" in options && options.key` は TS2774** — `{ a: string; b?: never } | { a?: never; b: T }` のような型では、`"b" in options` で narrow 後 `options.b` が `T` 型に確定し truthy check が常時 true 扱いされる（`This condition will always return true since this function is always defined`）。`if (options.b)` 単独で十分（`?: never` variant は実行時 undefined で falsy）。`in` operator は **キー存在しない variant の絞り込み** が目的、value の null check と組み合わせない。`executeAdminMutationResult` の `resolveResourceId` callback 検出で実遭遇（2026-05-08）

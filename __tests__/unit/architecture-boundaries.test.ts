@@ -1515,4 +1515,46 @@ describe("architecture boundaries", () => {
     expect(source).toContain("max_threads = 6");
     expect(source).toContain("max_depth = 1");
   });
+
+  test("Phase 0 で削除済の旧 ButtonLabelToken / RichLabelInput / TokenLabel symbol が src/ に残存しない", () => {
+    const FORBIDDEN_PATTERNS = [
+      "ButtonLabelToken",
+      "buttonLabelSchema",
+      "buttonLabelTokenSchema",
+      "createTextToken",
+      "createIconToken",
+      "labelToPlainText",
+      "isTextToken",
+      "isIconToken",
+      "TokenLabel",
+      "RichLabelInput",
+      "rich-label-input",
+      "serialize-tokens",
+      "/_shared/button-label",
+    ] as const;
+
+    function walk(dir: string, files: string[] = []): string[] {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(path, files);
+        } else if (/\.(ts|tsx)$/u.test(entry.name)) {
+          files.push(path);
+        }
+      }
+      return files;
+    }
+
+    const violations: string[] = [];
+    for (const path of walk(SRC_ROOT)) {
+      const source = readFileSync(path, "utf8");
+      for (const pattern of FORBIDDEN_PATTERNS) {
+        if (source.includes(pattern)) {
+          violations.push(`${relative(ROOT, path)}: ${pattern}`);
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });
