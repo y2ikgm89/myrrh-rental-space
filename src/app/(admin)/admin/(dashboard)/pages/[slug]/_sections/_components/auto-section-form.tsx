@@ -43,6 +43,8 @@ import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
+import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { buttonLabelSchema } from "@/shared/lib/sections/definitions/_shared/button-label";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";
 import {
@@ -448,6 +450,19 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
+    case "rich-label":
+      return (
+        <AutoRichLabelField
+          fieldId={fieldId}
+          fieldKey={fieldKey}
+          label={label}
+          helpText={helpText}
+          control={control}
+          isPending={isPending}
+          error={error}
+        />
+      );
+
     case "textarea":
       return (
         <div className="space-y-2">
@@ -795,6 +810,47 @@ function AutoIconField({
         value={value}
         onChange={(name) => field.onChange(name)}
         disabled={isPending}
+      />
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AutoRichLabelField({
+  fieldKey,
+  fieldId,
+  label,
+  helpText,
+  control,
+  isPending,
+  error,
+}: {
+  readonly fieldKey: string;
+  readonly fieldId: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+  readonly error: string | undefined;
+}) {
+  const { field } = useController({ control, name: fieldKey });
+  const parsed = buttonLabelSchema.safeParse(field.value);
+  const value = parsed.success ? parsed.data : [];
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <RichLabelInput
+        id={fieldId}
+        value={value}
+        onChange={(tokens) => field.onChange(tokens)}
+        disabled={isPending}
+        aria-label={label}
       />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (

@@ -1,15 +1,23 @@
 /**
  * createButtonsArraySchema factory のユニットテスト
  *
- * 4 sections (cta/hero/hero-parallax + buttons array consumer) で共有される
- * ボタン配列スキーマの contract 検証。size / iconName / variant / カスタム色まで網羅。
+ * 4 sections (cta / hero / hero-parallax / page-hero) で共有される
+ * ボタン配列スキーマの contract 検証。label (token 配列) / size / variant /
+ * カスタム色 / URL 制約 / uniqueness を網羅。
  */
 
 import { describe, expect, test } from "bun:test";
 
 import { createButtonsArraySchema } from "@/shared/lib/sections/definitions/_shared/buttons";
+import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
 
 const schema = createButtonsArraySchema();
+
+const textOnly: ButtonLabelToken[] = [{ type: "text", value: "予約する" }];
+const iconPrefixed: ButtonLabelToken[] = [
+  { type: "icon", name: "IconArrowRight" },
+  { type: "text", value: "詳しく見る" },
+];
 
 describe("createButtonsArraySchema", () => {
   describe("default / empty array", () => {
@@ -28,9 +36,9 @@ describe("createButtonsArraySchema", () => {
   });
 
   describe("最小構成", () => {
-    test("text + url のみでパース成功（他フィールドは default 補完）", () => {
+    test("label + url のみでパース成功（他フィールドは default 補完）", () => {
       const result = schema.safeParse([
-        { text: "予約する", url: "/reservation" },
+        { label: textOnly, url: "/reservation" },
       ]);
       expect(result.success).toBe(true);
       if (result.success && result.data[0]) {
@@ -39,28 +47,64 @@ describe("createButtonsArraySchema", () => {
         expect(result.data[0].openInNewTab).toBe(false);
       }
     });
+
+    test("label が空配列でも受け付ける（field.richLabel の .default([]) 契約）", () => {
+      const result = schema.safeParse([{ label: [], url: "/empty" }]);
+      expect(result.success).toBe(true);
+    });
   });
 
-  describe("拡張フィールド（Phase 2A 追加）", () => {
+  describe("label token 配列", () => {
+    test("text token のみ", () => {
+      const result = schema.safeParse([{ label: textOnly, url: "/foo" }]);
+      expect(result.success).toBe(true);
+    });
+
+    test("icon prefix + text 混在 (旧 prefix 配置の token 化)", () => {
+      const result = schema.safeParse([{ label: iconPrefixed, url: "/foo" }]);
+      expect(result.success).toBe(true);
+    });
+
+    test("text 中央 icon 挿入 (新規対応の任意位置)", () => {
+      const tokens: ButtonLabelToken[] = [
+        { type: "text", value: "詳しく " },
+        { type: "icon", name: "IconArrowRight" },
+        { type: "text", value: " 見る" },
+      ];
+      const result = schema.safeParse([{ label: tokens, url: "/foo" }]);
+      expect(result.success).toBe(true);
+    });
+
+    test("不正な icon name (IconXxx 形式違反) は reject", () => {
+      const result = schema.safeParse([
+        { label: [{ type: "icon", name: "invalid_name" }], url: "/foo" },
+      ]);
+      expect(result.success).toBe(false);
+    });
+
+    test("不明な token type は reject", () => {
+      const result = schema.safeParse([
+        { label: [{ type: "emoji", value: "🎉" }], url: "/foo" },
+      ]);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("拡張フィールド", () => {
     test("size: sm/md/lg を受け付ける", () => {
       for (const size of ["sm", "md", "lg"] as const) {
-        const result = schema.safeParse([{ text: "Test", url: "/test", size }]);
+        const result = schema.safeParse([
+          { label: textOnly, url: "/test", size },
+        ]);
         expect(result.success).toBe(true);
       }
     });
 
     test("不正な size は reject", () => {
       const result = schema.safeParse([
-        { text: "Test", url: "/test", size: "huge" },
+        { label: textOnly, url: "/test", size: "huge" },
       ]);
       expect(result.success).toBe(false);
-    });
-
-    test("iconName は任意の文字列を受け付ける", () => {
-      const result = schema.safeParse([
-        { text: "進む", url: "/foo", iconName: "IconArrowRight" },
-      ]);
-      expect(result.success).toBe(true);
     });
 
     test("variant: primary/secondary/outline/ghost を受け付ける", () => {
@@ -71,7 +115,7 @@ describe("createButtonsArraySchema", () => {
         "ghost",
       ] as const) {
         const result = schema.safeParse([
-          { text: "Test", url: "/test", variant },
+          { label: textOnly, url: "/test", variant },
         ]);
         expect(result.success).toBe(true);
       }
@@ -80,7 +124,7 @@ describe("createButtonsArraySchema", () => {
     test("backgroundColor / textColor は任意のカスタム色（HEX）", () => {
       const result = schema.safeParse([
         {
-          text: "カスタム色",
+          label: textOnly,
           url: "/foo",
           backgroundColor: "#1a73e8",
           textColor: "#ffffff",
@@ -91,14 +135,14 @@ describe("createButtonsArraySchema", () => {
 
     test("backgroundColor / textColor は空文字を許容", () => {
       const result = schema.safeParse([
-        { text: "未設定色", url: "/foo", backgroundColor: "", textColor: "" },
+        { label: textOnly, url: "/foo", backgroundColor: "", textColor: "" },
       ]);
       expect(result.success).toBe(true);
     });
 
     test("不正な HEX 色は reject", () => {
       const result = schema.safeParse([
-        { text: "不正色", url: "/foo", backgroundColor: "red" },
+        { label: textOnly, url: "/foo", backgroundColor: "red" },
       ]);
       expect(result.success).toBe(false);
     });
@@ -106,20 +150,20 @@ describe("createButtonsArraySchema", () => {
 
   describe("URL 制約（internal app route only）", () => {
     test("内部パス（/foo）は OK", () => {
-      const result = schema.safeParse([{ text: "ホーム", url: "/" }]);
+      const result = schema.safeParse([{ label: textOnly, url: "/" }]);
       expect(result.success).toBe(true);
     });
 
     test("外部 URL（https://）は reject", () => {
       const result = schema.safeParse([
-        { text: "外部", url: "https://example.com" },
+        { label: textOnly, url: "https://example.com" },
       ]);
       expect(result.success).toBe(false);
     });
 
     test("protocol-relative URL は reject", () => {
       const result = schema.safeParse([
-        { text: "//evil", url: "//evil.example.com" },
+        { label: textOnly, url: "//evil.example.com" },
       ]);
       expect(result.success).toBe(false);
     });
@@ -128,8 +172,8 @@ describe("createButtonsArraySchema", () => {
   describe("uniqueness 制約", () => {
     test("同じ URL のボタン重複は refine で reject", () => {
       const result = schema.safeParse([
-        { text: "A", url: "/dup" },
-        { text: "B", url: "/dup" },
+        { label: textOnly, url: "/dup" },
+        { label: [{ type: "text", value: "別" }], url: "/dup" },
       ]);
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -140,9 +184,9 @@ describe("createButtonsArraySchema", () => {
 
     test("異なる URL なら複数ボタン許容", () => {
       const result = schema.safeParse([
-        { text: "A", url: "/a" },
-        { text: "B", url: "/b" },
-        { text: "C", url: "/c" },
+        { label: [{ type: "text", value: "A" }], url: "/a" },
+        { label: [{ type: "text", value: "B" }], url: "/b" },
+        { label: [{ type: "text", value: "C" }], url: "/c" },
       ]);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -151,14 +195,14 @@ describe("createButtonsArraySchema", () => {
     });
   });
 
-  describe("バリデーション", () => {
-    test("text が空文字は reject（必須）", () => {
-      const result = schema.safeParse([{ text: "", url: "/foo" }]);
-      expect(result.success).toBe(false);
-    });
-
-    test("text が 50 文字超は reject（maxLength）", () => {
-      const result = schema.safeParse([{ text: "a".repeat(51), url: "/foo" }]);
+  describe("text token 制約", () => {
+    test("text value 200 文字超は reject (text token max)", () => {
+      const result = schema.safeParse([
+        {
+          label: [{ type: "text", value: "a".repeat(201) }],
+          url: "/foo",
+        },
+      ]);
       expect(result.success).toBe(false);
     });
   });
