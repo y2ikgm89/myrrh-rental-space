@@ -138,7 +138,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
                   if (e.key === "Escape") setIsEditingYear(false);
                 }}
                 onBlur={commitYearInput}
-                className="w-20 border-b border-accent bg-transparent text-center text-lg font-light text-foreground outline-none"
+                className="w-20 border-b border-accent bg-transparent text-center text-lg font-light text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="年を入力"
               />
             ) : (

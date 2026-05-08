@@ -145,7 +145,7 @@ export function LoginForm(): ReactElement {
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          className="w-full h-10 px-3 py-2 bg-card border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1 focus:border-primary"
+          className="w-full h-10 px-3 py-2 bg-card border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1 focus-visible:border-primary"
           placeholder="admin@example.com"
         />
       </div>
@@ -165,7 +165,7 @@ export function LoginForm(): ReactElement {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="w-full h-10 px-3 py-2 pr-10 bg-card border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1 focus:border-primary"
+            className="w-full h-10 px-3 py-2 pr-10 bg-card border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1 focus-visible:border-primary"
             placeholder="••••••••"
           />
           <button

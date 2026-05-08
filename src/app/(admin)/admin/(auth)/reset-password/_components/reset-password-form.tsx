@@ -114,7 +114,7 @@ export function ResetPasswordForm({ token, turnstileSiteKey }: Props) {
           autoComplete="new-password"
           disabled={isPending}
           placeholder="8文字以上"
-          className="h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-foreground shadow-sm transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1"
+          className="h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-foreground shadow-sm transition-all duration-200 placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1"
         />
       </div>
 
@@ -136,7 +136,7 @@ export function ResetPasswordForm({ token, turnstileSiteKey }: Props) {
           placeholder="もう一度入力してください"
           aria-invalid={fieldError ? "true" : undefined}
           aria-describedby={fieldError ? "confirm-password-error" : undefined}
-          className="h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-foreground shadow-sm transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1"
+          className="h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-foreground shadow-sm transition-all duration-200 placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1"
         />
         {fieldError ? (
           <p

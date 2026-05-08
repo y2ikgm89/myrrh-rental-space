@@ -122,7 +122,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           required
           minLength={8}
           autoComplete="new-password"
-          className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+          className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent"
           placeholder="8文字以上"
         />
         <p className="mt-1 text-xs text-muted-foreground">
@@ -145,7 +145,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           required
           minLength={8}
           autoComplete="new-password"
-          className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+          className="w-full px-3 py-2 border border-input rounded-md shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent"
           placeholder="もう一度入力"
         />
       </div>

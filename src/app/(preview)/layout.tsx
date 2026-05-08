@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function PreviewRootLayout({
+async function PreviewTaxProvider({
   children,
-}: Readonly<{
+}: {
   children: ReactNode;
-}>): Promise<ReactElement> {
+}): Promise<ReactElement> {
   const taxSettings = await getPublicTaxSettings();
   const publicTaxDisplay = {
     standardRate: taxSettings.standardRate,
@@ -24,13 +24,23 @@ export default async function PreviewRootLayout({
   };
 
   return (
+    <TaxSettingsProvider value={publicTaxDisplay}>
+      {children}
+    </TaxSettingsProvider>
+  );
+}
+
+export default function PreviewRootLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>): ReactElement {
+  return (
     <html lang="ja">
       <body className="bg-background font-sans text-foreground antialiased">
-        <TaxSettingsProvider value={publicTaxDisplay}>
-          <Suspense fallback={<main className="min-h-screen bg-background" />}>
-            {children}
-          </Suspense>
-        </TaxSettingsProvider>
+        <Suspense fallback={<main className="min-h-screen bg-background" />}>
+          <PreviewTaxProvider>{children}</PreviewTaxProvider>
+        </Suspense>
       </body>
     </html>
   );
