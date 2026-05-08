@@ -25,10 +25,14 @@ import { IconPickerDialog } from "@/admin/components/icon-picker/IconPickerDialo
 import {
   ICON_CHIP_CLASS_NAME,
   ICON_DATA_ATTR,
+  KEY_DATA_ATTR,
   applyTokens,
   serializeNodes,
 } from "./serialize-tokens";
-import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import {
+  createIconToken,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 
 interface RichLabelInputProps {
   readonly value: ButtonLabelToken[];
@@ -74,21 +78,20 @@ export function RichLabelInput({
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || !root.contains(sel.anchorNode)) {
       // selection なし or editor 外 → 末尾に追加して onChange
-      const next: ButtonLabelToken[] = [
-        ...value,
-        { type: "icon", name: iconName },
-      ];
+      const next: ButtonLabelToken[] = [...value, createIconToken(iconName)];
       onChange(next);
       return;
     }
     const range = sel.getRangeAt(0);
+    const newToken = createIconToken(iconName);
     const span = document.createElement("span");
-    span.setAttribute(ICON_DATA_ATTR, iconName);
+    span.setAttribute(ICON_DATA_ATTR, newToken.name);
+    span.setAttribute(KEY_DATA_ATTR, newToken._key);
     span.setAttribute("contenteditable", "false");
     span.setAttribute("role", "img");
-    span.setAttribute("aria-label", iconName);
+    span.setAttribute("aria-label", newToken.name);
     span.className = ICON_CHIP_CLASS_NAME;
-    span.textContent = iconName;
+    span.textContent = newToken.name;
     range.deleteContents();
     range.insertNode(span);
     // caret を span 直後へ

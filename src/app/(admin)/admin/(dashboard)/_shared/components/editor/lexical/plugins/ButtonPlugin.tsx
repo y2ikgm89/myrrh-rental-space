@@ -3,7 +3,11 @@
  *
  * @description ボタン/CTAの挿入を提供するプラグイン
  *
- * ダイアログでテキスト、URL、スタイルを設定し、Buttonノードを挿入
+ * Phase 5 (rich label tokens) 対応版:
+ * - label は ButtonLabelToken[] (RichLabelInput)
+ * - variant: primary / secondary / ghost / link / editorial (5 種、公開 Button Primitive と一致)
+ * - AccentColor (10色) で bronze 以外の accent 指定可能
+ * - WCAG 2.5.5 Enhanced (44px 以上) は lexical-content.css で保証
  */
 
 "use client";
@@ -41,6 +45,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
+import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { ColorSwatchPicker } from "../inspector/ColorSwatchPicker";
+import {
+  createTextToken,
+  labelToPlainText,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
+import { type AccentColor } from "../config/accent-colors";
 import {
   BUTTON_VARIANT_LABELS,
   BUTTON_SIZE_LABELS,
@@ -56,41 +68,49 @@ type ButtonPluginProps = {
   onClose: () => void;
 };
 
+function createDefaultLabel(): ButtonLabelToken[] {
+  return [createTextToken("ボタン")];
+}
+
 // =============================================================================
 // Component
 // =============================================================================
 
 export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
   const [editor] = useLexicalComposerContext();
-  const [text, setText] = useState("ボタン");
+  const [label, setLabel] = useState<ButtonLabelToken[]>(() =>
+    createDefaultLabel(),
+  );
   const [href, setHref] = useState("");
-  const [variant, setVariant] = useState<ButtonVariant>("primary");
+  const [variant, setVariant] = useState<ButtonVariant>("editorial");
   const [size, setSize] = useState<ButtonSize>("md");
   const [alignment, setAlignment] = useState<ButtonAlignment>("center");
+  const [color, setColor] = useState<AccentColor>("default");
   const [openInNewTab, setOpenInNewTab] = useState(false);
 
   const resetForm = () => {
-    setText("ボタン");
+    setLabel(createDefaultLabel());
     setHref("");
-    setVariant("primary");
+    setVariant("editorial");
     setSize("md");
     setAlignment("center");
+    setColor("default");
     setOpenInNewTab(false);
   };
 
   const handleInsert = () => {
-    if (!text.trim() || !href.trim()) return;
+    if (!isValid) return;
 
     editor.update(() => {
       const buttonNode = $createButtonNode({
-        text: text.trim(),
+        label,
         href: href.trim(),
         variant,
         size,
         alignment,
+        color,
         openInNewTab,
       });
-
       $insertNodeToNearestRoot(buttonNode);
     });
 
@@ -103,7 +123,8 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
     onClose();
   };
 
-  const isValid = text.trim() !== "" && href.trim() !== "";
+  const isValid =
+    labelToPlainText(label).trim().length > 0 && href.trim() !== "";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -113,15 +134,18 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* テキスト */}
+          {/* ラベル (rich label tokens) */}
           <div className="space-y-2">
-            <Label htmlFor="button-text">ボタンテキスト</Label>
-            <Input
-              id="button-text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="ボタンに表示するテキスト"
+            <Label htmlFor="button-label">ボタンテキスト</Label>
+            <RichLabelInput
+              id="button-label"
+              value={label}
+              onChange={setLabel}
+              aria-label="ボタンテキスト（テキスト + アイコン混在可）"
             />
+            <p className="text-xs text-muted-foreground">
+              テキストにアイコンを混在できます。アイコンは「アイコン挿入」ボタンから追加してください。
+            </p>
           </div>
 
           {/* URL */}
@@ -200,6 +224,12 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* AccentColor */}
+          <div className="space-y-2">
+            <Label>アクセントカラー</Label>
+            <ColorSwatchPicker value={color} onChange={setColor} />
           </div>
 
           {/* 新しいタブで開く */}

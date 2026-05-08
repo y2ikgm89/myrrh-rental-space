@@ -2641,7 +2641,10 @@ async function seedBlogComments() {
 
 async function seedNavigation() {
   // label は ButtonLabelToken[] 形式（テキスト + アイコンの混在 token 配列）。
-  const t = (value: string) => [{ type: "text" as const, value }];
+  // _key は token ごとの stable identity（Sanity Portable Text 互換）。
+  const t = (value: string) => [
+    { _key: crypto.randomUUID(), type: "text" as const, value },
+  ];
 
   const headerItems = [
     { label: t("ホーム"), url: "/", order: 0 },

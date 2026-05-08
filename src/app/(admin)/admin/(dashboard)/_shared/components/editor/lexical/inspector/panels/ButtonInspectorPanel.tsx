@@ -1,7 +1,7 @@
 /**
  * Button Inspector Panel
  *
- * @description ButtonNodeのプロパティ編集パネル
+ * @description ButtonNodeのプロパティ編集パネル (Phase 5: rich label tokens 対応版)
  */
 
 "use client";
@@ -17,11 +17,12 @@ import {
   isButtonVariant,
   isButtonSize,
   isButtonAlignment,
-  buttonTextState,
+  buttonLabelState,
   buttonHrefState,
   buttonVariantState,
   buttonSizeState,
   buttonAlignmentState,
+  buttonColorState,
   buttonOpenInNewTabState,
 } from "../../nodes/ButtonNode";
 import { InspectorHeader } from "../InspectorHeader";
@@ -35,6 +36,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
+import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { ColorSwatchPicker } from "../ColorSwatchPicker";
+import { type ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { type AccentColor } from "../../config/accent-colors";
 import {
   BUTTON_VARIANT_LABELS,
   BUTTON_SIZE_LABELS,
@@ -61,20 +66,21 @@ export function ButtonInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isButtonNode);
 
-  const { text, href, variant, size, alignment, openInNewTab } = editor
+  const { label, href, variant, size, alignment, color, openInNewTab } = editor
     .getEditorState()
     .read(() => ({
-      text: $getState(node, buttonTextState),
+      label: $getState(node, buttonLabelState),
       href: $getState(node, buttonHrefState),
       variant: $getState(node, buttonVariantState),
       size: $getState(node, buttonSizeState),
       alignment: $getState(node, buttonAlignmentState),
+      color: $getState(node, buttonColorState),
       openInNewTab: $getState(node, buttonOpenInNewTabState),
     }));
 
-  const handleTextChange = (value: string) =>
+  const handleLabelChange = (value: ButtonLabelToken[]) =>
     updateNode((n) => {
-      $setState(n, buttonTextState, value);
+      $setState(n, buttonLabelState, value);
     });
 
   const handleHrefChange = (value: string) =>
@@ -106,6 +112,11 @@ export function ButtonInspectorPanel({
     }
   };
 
+  const handleColorChange = (value: AccentColor) =>
+    updateNode((n) => {
+      $setState(n, buttonColorState, value);
+    });
+
   const handleOpenInNewTabChange = (value: boolean) =>
     updateNode((n) => {
       $setState(n, buttonOpenInNewTabState, value);
@@ -117,14 +128,14 @@ export function ButtonInspectorPanel({
 
       <InspectorFields title="基本設定">
         <div className="space-y-2">
-          <Label htmlFor="inspector-button-text" className="text-xs">
+          <Label htmlFor="inspector-button-label" className="text-xs">
             テキスト
           </Label>
-          <Input
-            id="inspector-button-text"
-            value={text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            className="h-8 text-sm"
+          <RichLabelInput
+            id="inspector-button-label"
+            value={label}
+            onChange={handleLabelChange}
+            aria-label="ボタンテキスト（テキスト + アイコン混在可）"
           />
         </div>
 
@@ -203,6 +214,11 @@ export function ButtonInspectorPanel({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">アクセントカラー</Label>
+          <ColorSwatchPicker value={color} onChange={handleColorChange} />
         </div>
       </InspectorFields>
     </div>

@@ -29,7 +29,7 @@ const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 const VALID_NAVIGATION_ITEM_INPUT = {
   type: "HEADER_DESKTOP" as const,
   parentId: null,
-  label: [{ type: "text" as const, value: "ホーム" }],
+  label: [{ _key: "k", type: "text" as const, value: "ホーム" }],
   url: "/",
   isExternal: false,
   order: 0,
@@ -66,7 +66,7 @@ describe("Navigation Admin Action Integration", () => {
       test("parentIdはオプション（省略可能）", () => {
         const input = {
           type: "HEADER_DESKTOP" as const,
-          label: [{ type: "text" as const, value: "ホーム" }],
+          label: [{ _key: "k", type: "text" as const, value: "ホーム" }],
           url: "/",
           order: 0,
         };
@@ -86,7 +86,7 @@ describe("Navigation Admin Action Integration", () => {
       test("isExternalはデフォルトでfalse", () => {
         const input = {
           type: "HEADER_DESKTOP" as const,
-          label: [{ type: "text" as const, value: "ホーム" }],
+          label: [{ _key: "k", type: "text" as const, value: "ホーム" }],
           url: "/",
           order: 0,
         };
@@ -100,7 +100,7 @@ describe("Navigation Admin Action Integration", () => {
       test("isActiveはデフォルトでtrue", () => {
         const input = {
           type: "HEADER_DESKTOP" as const,
-          label: [{ type: "text" as const, value: "ホーム" }],
+          label: [{ _key: "k", type: "text" as const, value: "ホーム" }],
           url: "/",
           order: 0,
         };
@@ -174,7 +174,9 @@ describe("Navigation Admin Action Integration", () => {
       test("text token 200 文字までは OK", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
-          label: [{ type: "text" as const, value: "あ".repeat(200) }],
+          label: [
+            { _key: "k", type: "text" as const, value: "あ".repeat(200) },
+          ],
         });
         expect(result.success).toBe(true);
       });
@@ -182,7 +184,9 @@ describe("Navigation Admin Action Integration", () => {
       test("text token 201 文字はエラー", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
-          label: [{ type: "text" as const, value: "あ".repeat(201) }],
+          label: [
+            { _key: "k", type: "text" as const, value: "あ".repeat(201) },
+          ],
         });
         expect(result.success).toBe(false);
       });
@@ -190,7 +194,7 @@ describe("Navigation Admin Action Integration", () => {
       test("icon token のみ (text token 不在) はエラー (icon-only モード禁止)", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
-          label: [{ type: "icon" as const, name: "IconHome" }],
+          label: [{ _key: "k", type: "icon" as const, name: "IconHome" }],
         });
         expect(result.success).toBe(false);
       });
@@ -199,8 +203,8 @@ describe("Navigation Admin Action Integration", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
           label: [
-            { type: "icon" as const, name: "IconHome" },
-            { type: "text" as const, value: "ホーム" },
+            { _key: "k", type: "icon" as const, name: "IconHome" },
+            { _key: "k", type: "text" as const, value: "ホーム" },
           ],
         });
         expect(result.success).toBe(true);
@@ -209,7 +213,7 @@ describe("Navigation Admin Action Integration", () => {
       test("日本語ラベルは許可", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
-          label: [{ type: "text" as const, value: "お問い合わせ" }],
+          label: [{ _key: "k", type: "text" as const, value: "お問い合わせ" }],
         });
         expect(result.success).toBe(true);
       });
@@ -485,7 +489,7 @@ describe("Navigation Admin Action Integration", () => {
         id: VALID_UUID,
         type: NavigationType.HEADER_DESKTOP,
         parentId: null,
-        label: [{ type: "text", value: "スペース" }],
+        label: [{ _key: "k", type: "text", value: "スペース" }],
         url: "/spaces",
         isExternal: false,
         order: 0,
@@ -497,7 +501,7 @@ describe("Navigation Admin Action Integration", () => {
             id: "550e8400-e29b-41d4-a716-446655440001",
             type: NavigationType.HEADER_DESKTOP,
             parentId: VALID_UUID,
-            label: [{ type: "text", value: "会議室" }],
+            label: [{ _key: "k", type: "text", value: "会議室" }],
             url: "/spaces/conference",
             isExternal: false,
             order: 0,
@@ -509,11 +513,13 @@ describe("Navigation Admin Action Integration", () => {
         ],
       };
 
-      expect(rootItem.label).toEqual([{ type: "text", value: "スペース" }]);
+      expect(rootItem.label).toEqual([
+        { _key: "k", type: "text", value: "スペース" },
+      ]);
       expect(rootItem.parentId).toBeNull();
       expect(rootItem.children).toHaveLength(1);
       expect(rootItem.children[0].label).toEqual([
-        { type: "text", value: "会議室" },
+        { _key: "k", type: "text", value: "会議室" },
       ]);
       expect(rootItem.children[0].parentId).toBe(VALID_UUID);
     });
@@ -544,7 +550,7 @@ describe("Navigation Admin Action Integration", () => {
     test("text token 200文字（境界）", () => {
       const result = navigationItemSchema.safeParse({
         ...VALID_NAVIGATION_ITEM_INPUT,
-        label: [{ type: "text" as const, value: "x".repeat(200) }],
+        label: [{ _key: "k", type: "text" as const, value: "x".repeat(200) }],
       });
       expect(result.success).toBe(true);
     });
@@ -552,7 +558,7 @@ describe("Navigation Admin Action Integration", () => {
     test("text token 201文字（境界超過）", () => {
       const result = navigationItemSchema.safeParse({
         ...VALID_NAVIGATION_ITEM_INPUT,
-        label: [{ type: "text" as const, value: "x".repeat(201) }],
+        label: [{ _key: "k", type: "text" as const, value: "x".repeat(201) }],
       });
       expect(result.success).toBe(false);
     });

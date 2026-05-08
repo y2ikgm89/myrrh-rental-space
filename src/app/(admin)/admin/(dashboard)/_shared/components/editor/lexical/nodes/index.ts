@@ -106,11 +106,12 @@ export {
   BUTTON_VARIANTS,
   BUTTON_SIZES,
   BUTTON_ALIGNMENTS,
-  buttonTextState,
+  buttonLabelState,
   buttonHrefState,
   buttonVariantState,
   buttonSizeState,
   buttonAlignmentState,
+  buttonColorState,
   buttonOpenInNewTabState,
 } from "./ButtonNode";
 export type { ButtonVariant, ButtonSize, ButtonAlignment } from "./ButtonNode";

@@ -1180,16 +1180,24 @@ details[data-collapsible-item]
 }
 
 /* --------------------------------------------------------------------------
- * 1f. Button (CTA)
+ * 1f. Button (CTA) — Phase 5: rich label tokens + AccentColor + WCAG 2.5.5
  *
+ * data-button: コンテナマーカー
  * data-button-alignment: left | center | right
- * data-button-variant: primary | secondary | outline
- * data-button-size: sm | md | lg
+ * data-button-variant: primary | secondary | ghost | link | editorial
+ *   (公開 Button Primitive と完全一致)
+ * data-button-size: sm | md | lg (全 size で min-height: 2.75rem 以上 — WCAG 2.5.5 AAA)
+ * data-color: AccentColor (10色) — bronze 以外の accent 上書き
+ *
+ * ルール: createDOM / exportDOM では CSS class 禁止 (Lexical Rule §17)、
+ * data-attribute のみで構築。スタイルは本セクションが SSoT。
+ * 視覚は `@/public/components/design-system/button.tsx` の Button Primitive と一致。
+ * Editorial Magazine 規約: 全 variant sharp edge (border-radius: 0)。
  * -------------------------------------------------------------------------- */
 
 /* ---- Container ---- */
 
-[data-button-alignment] {
+[data-button] {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
   display: flex;
@@ -1205,67 +1213,124 @@ details[data-collapsible-item]
   justify-content: flex-end;
 }
 
-/* ---- Link (button appearance) ---- */
+/* ---- Link base (button appearance) ---- */
 
-[data-button-alignment] > a {
+[data-button] > a {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   font-weight: 500;
-  transition:
-    color 0.15s,
-    background-color 0.15s,
-    opacity 0.15s;
   text-decoration: none;
+  /* Sharp edges per Editorial Magazine convention */
+  border-radius: 0;
+  transition:
+    color 200ms,
+    background-color 200ms,
+    border-color 200ms;
 }
 
-/* Variants */
+/* SVG icon (CuratedIcon embedded via renderToStaticMarkup) inherits color */
+[data-button] > a > svg {
+  flex-shrink: 0;
+  color: currentColor;
+}
 
+/* ---- Variants — 公開 Button Primitive と視覚一致 ---- */
+
+/* primary: bronze accent 塗り */
 [data-button-variant="primary"] > a {
-  background-color: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-radius: 9999px;
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
 }
 [data-button-variant="primary"] > a:hover {
-  opacity: 0.9;
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 90%,
+    transparent
+  );
 }
 
+/* secondary: 透明背景 + 細枠 */
 [data-button-variant="secondary"] > a {
-  background-color: var(--color-secondary, var(--color-muted));
-  color: var(--color-secondary-foreground, var(--color-foreground));
-  border-radius: 9999px;
+  background-color: transparent;
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
 }
 [data-button-variant="secondary"] > a:hover {
-  opacity: 0.8;
+  border-color: color-mix(in oklch, var(--color-foreground) 30%, transparent);
 }
 
-[data-button-variant="outline"] > a {
-  border: 1px solid var(--color-foreground);
-  background-color: var(--color-background);
+/* ghost: 完全透明、hover で surface */
+[data-button-variant="ghost"] > a {
+  background-color: transparent;
   color: var(--color-foreground);
-  border-radius: 0;
 }
-[data-button-variant="outline"] > a:hover {
-  background-color: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+[data-button-variant="ghost"] > a:hover {
+  background-color: var(--color-surface, var(--color-muted));
 }
 
-/* Sizes */
+/* link: テキストのみ、padding/min-height ゼロ */
+[data-button-variant="link"] > a {
+  background-color: transparent;
+  color: var(--accent, var(--color-accent));
+  text-underline-offset: 4px;
+  /* link variant は size の padding/min-height を上書き */
+  padding: 0;
+  min-height: 0;
+}
+[data-button-variant="link"] > a:hover {
+  color: var(--color-foreground);
+  text-decoration: underline;
+}
+
+/* editorial: 太枠 + bronze accent reverse on hover (CTA 標準) */
+[data-button-variant="editorial"] > a {
+  background-color: transparent;
+  color: var(--color-foreground);
+  border: 1px solid var(--color-foreground);
+  transition:
+    color 300ms,
+    background-color 300ms,
+    border-color 300ms;
+}
+[data-button-variant="editorial"] > a:hover {
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
+  border-color: var(--accent, var(--color-accent));
+}
+
+/* ---- Sizes — WCAG 2.5.5 Enhanced (AAA) min-height: 2.75rem (44px) 以上 ---- */
+/* 公開 Button Primitive (sizeClasses) と完全一致 */
 
 [data-button-size="sm"] > a {
-  height: 2rem;
-  padding-inline: 0.75rem;
-  font-size: 0.75rem;
+  min-height: 2.75rem; /* 44px */
+  padding: 0.5rem 0.75rem; /* px-3 py-2 */
+  font-size: 0.875rem; /* text-sm */
 }
 [data-button-size="md"] > a {
-  height: 2.5rem;
-  padding-inline: 1rem;
-  font-size: 0.875rem;
+  min-height: 2.75rem; /* 44px */
+  padding: 0.625rem 1.25rem; /* px-5 py-2.5 */
+  font-size: 1rem; /* text-base */
 }
 [data-button-size="lg"] > a {
-  height: 3rem;
-  padding-inline: 1.5rem;
-  font-size: 1rem;
+  min-height: 3rem; /* 48px */
+  padding: 0.75rem 1.75rem; /* px-7 py-3 */
+  font-size: 1.125rem; /* text-lg */
+}
+
+/* Icon size by button size (CuratedIcon SVG) */
+[data-button-size="sm"] > a > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+[data-button-size="md"] > a > svg {
+  width: 1rem;
+  height: 1rem;
+}
+[data-button-size="lg"] > a > svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* --------------------------------------------------------------------------

@@ -1,17 +1,25 @@
-﻿/**
+/**
  * Button Node
  *
  * @description ボタン/CTAを表示するDecoratorNode
- * variant: primary/secondary/outline
- * size: sm/md/lg
- * alignment: left/center/right
+ *
+ * 公開 Button Primitive (`@/public/components/design-system/button`) と
+ * variant / size / sharp edge / WCAG 2.5.5 (44px) を完全一致させる。
+ * label は ButtonLabelToken[] (text + icon 混在の rich label)。
+ * AccentColor (data-color 10色) で bronze 以外の accent も指定可能。
+ *
+ * Lexical Rule §17 準拠: createDOM / exportDOM では CSS クラス禁止、
+ * data-attribute のみで構築し `lexical-content.css` の
+ * `[data-button-*]` セレクタで公開 Button Primitive と視覚一致するスタイルを適用。
+ *
+ * Phase 1-4 で確立した rich label token pattern (Section.config.buttons[] /
+ * NavigationItem.label) を Lexical 本文中の Button にも適用する Phase 5。
  */
 
 "use client";
 
-import { cn } from "@/shared/lib/cn";
-
-import type { ReactElement } from "react";
+import { type ReactElement, createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -22,11 +30,23 @@ import type {
 } from "lexical";
 import {
   $create,
+  $getNodeByKey,
   $getState,
   $setState,
   createState,
   DecoratorNode,
 } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
+import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
+import {
+  buttonLabelTokenSchema,
+  createTextToken,
+  isIconToken,
+  isTextToken,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
 import {
   createEnumGuard,
   parseBoolean,
@@ -37,14 +57,21 @@ import {
 // Types
 // =============================================================================
 
-export type ButtonVariant = "primary" | "secondary" | "outline";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "link"
+  | "editorial";
 export type ButtonSize = "sm" | "md" | "lg";
 export type ButtonAlignment = "left" | "center" | "right";
 
 export const BUTTON_VARIANTS: readonly ButtonVariant[] = [
   "primary",
   "secondary",
-  "outline",
+  "ghost",
+  "link",
+  "editorial",
 ] as const;
 export const BUTTON_SIZES: readonly ButtonSize[] = ["sm", "md", "lg"] as const;
 export const BUTTON_ALIGNMENTS: readonly ButtonAlignment[] = [
@@ -63,37 +90,19 @@ export const isButtonAlignment =
   createEnumGuard<ButtonAlignment>(BUTTON_ALIGNMENTS);
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-const VARIANT_STYLES: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-  secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-  outline:
-    "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-};
-
-const SIZE_STYLES: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs",
-  md: "h-10 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
-};
-
-const ALIGNMENT_STYLES: Record<ButtonAlignment, string> = {
-  left: "justify-start",
-  center: "justify-center",
-  right: "justify-end",
-};
-
-const BUTTON_BASE_CLASS =
-  "inline-flex items-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-
-// =============================================================================
 // State
 // =============================================================================
 
-export const buttonTextState = createState("text", {
-  parse: parseStringWithDefault("ボタン"),
+export const buttonLabelState = createState("label", {
+  parse: (v: unknown): ButtonLabelToken[] => {
+    if (!Array.isArray(v)) return [];
+    const result: ButtonLabelToken[] = [];
+    for (const item of v) {
+      const parsed = buttonLabelTokenSchema.safeParse(item);
+      if (parsed.success) result.push(parsed.data);
+    }
+    return result;
+  },
 });
 
 export const buttonHrefState = createState("href", {
@@ -115,57 +124,97 @@ export const buttonAlignmentState = createState("alignment", {
     typeof v === "string" && isButtonAlignment(v) ? v : "center",
 });
 
+export const buttonColorState = createState("color", {
+  parse: (v: unknown): AccentColor =>
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
+
 export const buttonOpenInNewTabState = createState("openInNewTab", {
   parse: parseBoolean,
 });
 
 // =============================================================================
-// Component
+// Icon helpers
+// =============================================================================
+
+/** Icon token を SVG markup として埋め込む (FeatureIconListNode pattern 準拠) */
+function renderIconSvgMarkup(iconName: string): string {
+  const Icon = getCuratedIconComponent(iconName);
+  if (!Icon) return "";
+  return renderToStaticMarkup(
+    createElement(Icon, {
+      "aria-hidden": true,
+    }),
+  );
+}
+
+// =============================================================================
+// Component (editor preview)
 // =============================================================================
 
 function ButtonComponent({
-  text,
-  href,
-  variant,
-  size,
-  alignment,
-  openInNewTab,
   nodeKey,
 }: {
-  text: string;
-  href: string;
-  variant: ButtonVariant;
-  size: ButtonSize;
-  alignment: ButtonAlignment;
-  openInNewTab: boolean;
   nodeKey: NodeKey;
-}) {
+}): ReactElement | null {
+  const [editor] = useLexicalComposerContext();
+
+  const state = editor.getEditorState().read(() => {
+    const node = $getNodeByKey(nodeKey);
+    if (!$isButtonNode(node)) return null;
+    return {
+      label: $getState(node, buttonLabelState),
+      href: $getState(node, buttonHrefState),
+      variant: $getState(node, buttonVariantState),
+      size: $getState(node, buttonSizeState),
+      alignment: $getState(node, buttonAlignmentState),
+      color: $getState(node, buttonColorState),
+      openInNewTab: $getState(node, buttonOpenInNewTabState),
+    };
+  });
+
+  if (!state) return null;
+
   return (
     <div
       data-lexical-node-key={nodeKey}
-      data-button-alignment={alignment}
-      className={cn("my-6 flex", ALIGNMENT_STYLES[alignment])}
+      data-button="true"
+      data-button-alignment={state.alignment}
+      data-button-variant={state.variant}
+      data-button-size={state.size}
+      {...(state.color !== "default" && { "data-color": state.color })}
     >
       <a
-        href={href}
-        target={openInNewTab ? "_blank" : undefined}
-        rel={openInNewTab ? "noreferrer" : undefined}
-        className={cn(
-          BUTTON_BASE_CLASS,
-          VARIANT_STYLES[variant],
-          SIZE_STYLES[size],
-        )}
+        href={state.href}
+        {...(state.openInNewTab && {
+          target: "_blank",
+          rel: "noreferrer",
+        })}
         draggable={false}
-        onClick={(e) => e.preventDefault()} // エディタ内ではナビゲーション無効
+        onClick={(e) => e.preventDefault()}
       >
-        {text}
+        {state.label.map((token) => {
+          if (isTextToken(token)) {
+            return <span key={token._key}>{token.value}</span>;
+          }
+          if (isIconToken(token)) {
+            return (
+              <CuratedIcon
+                key={token._key}
+                name={token.name}
+                aria-hidden="true"
+              />
+            );
+          }
+          return null;
+        })}
       </a>
     </div>
   );
 }
 
 // =============================================================================
-// DOM Conversion
+// DOM Conversion (importDOM)
 // =============================================================================
 
 function $convertButtonElement(
@@ -174,27 +223,31 @@ function $convertButtonElement(
   const link = element.querySelector("a");
   if (!link) return null;
 
-  const text = link.textContent ?? "ボタン";
+  const text = link.textContent ?? "";
   const href = link.getAttribute("href") ?? "#";
   const variantAttr = element.getAttribute("data-button-variant");
   const sizeAttr = element.getAttribute("data-button-size");
   const alignmentAttr = element.getAttribute("data-button-alignment");
+  const colorAttr = element.getAttribute("data-color");
   const openInNewTab = link.getAttribute("target") === "_blank";
 
-  const variant =
+  const variant: ButtonVariant =
     variantAttr && isButtonVariant(variantAttr) ? variantAttr : "primary";
-  const size = sizeAttr && isButtonSize(sizeAttr) ? sizeAttr : "md";
-  const alignment =
+  const size: ButtonSize = sizeAttr && isButtonSize(sizeAttr) ? sizeAttr : "md";
+  const alignment: ButtonAlignment =
     alignmentAttr && isButtonAlignment(alignmentAttr)
       ? alignmentAttr
       : "center";
+  const color: AccentColor =
+    colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
 
   const node = $createButtonNode({
-    text,
+    label: text ? [createTextToken(text)] : [],
     href,
     variant,
     size,
     alignment,
+    color,
     openInNewTab,
   });
   return { node };
@@ -209,11 +262,12 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
     return this.config("button", {
       extends: DecoratorNode,
       stateConfigs: [
-        { flat: true, stateConfig: buttonTextState },
+        { flat: true, stateConfig: buttonLabelState },
         { flat: true, stateConfig: buttonHrefState },
         { flat: true, stateConfig: buttonVariantState },
         { flat: true, stateConfig: buttonSizeState },
         { flat: true, stateConfig: buttonAlignmentState },
+        { flat: true, stateConfig: buttonColorState },
         { flat: true, stateConfig: buttonOpenInNewTabState },
       ],
     });
@@ -222,7 +276,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (element.hasAttribute("data-button-alignment")) {
+        if (element.hasAttribute("data-button")) {
           return {
             conversion: $convertButtonElement,
             priority: 1,
@@ -234,25 +288,41 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
   }
 
   override exportDOM(): DOMExportOutput {
-    const text = $getState(this, buttonTextState);
+    const label = $getState(this, buttonLabelState);
     const href = $getState(this, buttonHrefState);
     const variant = $getState(this, buttonVariantState);
     const size = $getState(this, buttonSizeState);
     const alignment = $getState(this, buttonAlignmentState);
+    const color = $getState(this, buttonColorState);
     const openInNewTab = $getState(this, buttonOpenInNewTabState);
 
     const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-button", "true");
     wrapper.setAttribute("data-button-alignment", alignment);
     wrapper.setAttribute("data-button-variant", variant);
     wrapper.setAttribute("data-button-size", size);
+    if (color !== "default") {
+      wrapper.setAttribute("data-color", color);
+    }
 
     const link = document.createElement("a");
-    link.href = href;
-    link.textContent = text;
-
+    link.setAttribute("href", href);
     if (openInNewTab) {
-      link.target = "_blank";
-      link.rel = "noreferrer";
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noreferrer");
+    }
+
+    for (const token of label) {
+      if (isTextToken(token)) {
+        const span = document.createElement("span");
+        span.textContent = token.value;
+        link.appendChild(span);
+      } else if (isIconToken(token)) {
+        const markup = renderIconSvgMarkup(token.name);
+        if (markup) {
+          link.insertAdjacentHTML("beforeend", markup);
+        }
+      }
     }
 
     wrapper.appendChild(link);
@@ -261,6 +331,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
+    div.setAttribute("data-button", "true");
     div.setAttribute(
       "data-button-alignment",
       $getState(this, buttonAlignmentState),
@@ -273,17 +344,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
   }
 
   override decorate(): ReactElement {
-    return (
-      <ButtonComponent
-        text={$getState(this, buttonTextState)}
-        href={$getState(this, buttonHrefState)}
-        variant={$getState(this, buttonVariantState)}
-        size={$getState(this, buttonSizeState)}
-        alignment={$getState(this, buttonAlignmentState)}
-        openInNewTab={$getState(this, buttonOpenInNewTabState)}
-        nodeKey={this.getKey()}
-      />
-    );
+    return <ButtonComponent nodeKey={this.getKey()} />;
   }
 }
 
@@ -291,43 +352,34 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
 // Factory Functions
 // =============================================================================
 
-/**
- * ボタンノードを作成する
- *
- * @param params - ボタンのパラメータ
- * @returns ButtonNode インスタンス
- */
 export function $createButtonNode({
-  text,
-  href,
+  label = [],
+  href = "#",
   variant = "primary",
   size = "md",
   alignment = "center",
+  color = "default",
   openInNewTab = false,
 }: {
-  text: string;
-  href: string;
+  label?: ButtonLabelToken[];
+  href?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   alignment?: ButtonAlignment;
+  color?: AccentColor;
   openInNewTab?: boolean;
-}): ButtonNode {
+} = {}): ButtonNode {
   const node = $create(ButtonNode);
-  $setState(node, buttonTextState, text);
+  $setState(node, buttonLabelState, label);
   $setState(node, buttonHrefState, href);
   $setState(node, buttonVariantState, variant);
   $setState(node, buttonSizeState, size);
   $setState(node, buttonAlignmentState, alignment);
+  $setState(node, buttonColorState, color);
   $setState(node, buttonOpenInNewTabState, openInNewTab);
   return node;
 }
 
-/**
- * ノードがButtonNodeかどうかを判定する
- *
- * @param node - 判定対象のノード
- * @returns ButtonNodeの場合true
- */
 export function $isButtonNode(
   node: LexicalNode | null | undefined,
 ): node is ButtonNode {

@@ -28,14 +28,14 @@ export function TokenLabel({
 }: TokenLabelProps): ReactElement {
   return (
     <>
-      {tokens.map((token, i) => {
+      {tokens.map((token) => {
         if (isTextToken(token)) {
-          return <Fragment key={i}>{token.value}</Fragment>;
+          return <Fragment key={token._key}>{token.value}</Fragment>;
         }
         if (isIconToken(token)) {
           return (
             <CuratedIcon
-              key={i}
+              key={token._key}
               name={token.name}
               {...(iconClassName !== undefined && { className: iconClassName })}
               aria-hidden="true"

@@ -64,9 +64,11 @@ export const COLLAPSIBLE_STYLE_LABELS: Record<CollapsibleStyle, string> = {
 // =============================================================================
 
 export const BUTTON_VARIANT_LABELS: Record<ButtonVariant, string> = {
-  primary: "プライマリ",
-  secondary: "セカンダリ",
-  outline: "アウトライン",
+  primary: "プライマリ（塗り）",
+  secondary: "セカンダリ（枠線）",
+  ghost: "ゴースト（透明）",
+  link: "リンク（テキスト）",
+  editorial: "エディトリアル（CTA）",
 };
 
 export const BUTTON_SIZE_LABELS: Record<ButtonSize, string> = {

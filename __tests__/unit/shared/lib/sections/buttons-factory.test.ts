@@ -9,14 +9,18 @@
 import { describe, expect, test } from "bun:test";
 
 import { createButtonsArraySchema } from "@/shared/lib/sections/definitions/_shared/buttons";
-import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import {
+  createIconToken,
+  createTextToken,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 
 const schema = createButtonsArraySchema();
 
-const textOnly: ButtonLabelToken[] = [{ type: "text", value: "予約する" }];
+const textOnly: ButtonLabelToken[] = [createTextToken("予約する")];
 const iconPrefixed: ButtonLabelToken[] = [
-  { type: "icon", name: "IconArrowRight" },
-  { type: "text", value: "詳しく見る" },
+  createIconToken("IconArrowRight"),
+  createTextToken("詳しく見る"),
 ];
 
 describe("createButtonsArraySchema", () => {
@@ -67,9 +71,9 @@ describe("createButtonsArraySchema", () => {
 
     test("text 中央 icon 挿入 (新規対応の任意位置)", () => {
       const tokens: ButtonLabelToken[] = [
-        { type: "text", value: "詳しく " },
-        { type: "icon", name: "IconArrowRight" },
-        { type: "text", value: " 見る" },
+        createTextToken("詳しく "),
+        createIconToken("IconArrowRight"),
+        createTextToken(" 見る"),
       ];
       const result = schema.safeParse([{ label: tokens, url: "/foo" }]);
       expect(result.success).toBe(true);
@@ -77,14 +81,20 @@ describe("createButtonsArraySchema", () => {
 
     test("不正な icon name (IconXxx 形式違反) は reject", () => {
       const result = schema.safeParse([
-        { label: [{ type: "icon", name: "invalid_name" }], url: "/foo" },
+        {
+          label: [{ _key: "k1", type: "icon", name: "invalid_name" }],
+          url: "/foo",
+        },
       ]);
       expect(result.success).toBe(false);
     });
 
     test("不明な token type は reject", () => {
       const result = schema.safeParse([
-        { label: [{ type: "emoji", value: "🎉" }], url: "/foo" },
+        {
+          label: [{ _key: "k1", type: "emoji", value: "🎉" }],
+          url: "/foo",
+        },
       ]);
       expect(result.success).toBe(false);
     });
@@ -173,7 +183,7 @@ describe("createButtonsArraySchema", () => {
     test("同じ URL のボタン重複は refine で reject", () => {
       const result = schema.safeParse([
         { label: textOnly, url: "/dup" },
-        { label: [{ type: "text", value: "別" }], url: "/dup" },
+        { label: [createTextToken("別")], url: "/dup" },
       ]);
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -184,9 +194,9 @@ describe("createButtonsArraySchema", () => {
 
     test("異なる URL なら複数ボタン許容", () => {
       const result = schema.safeParse([
-        { label: [{ type: "text", value: "A" }], url: "/a" },
-        { label: [{ type: "text", value: "B" }], url: "/b" },
-        { label: [{ type: "text", value: "C" }], url: "/c" },
+        { label: [createTextToken("A")], url: "/a" },
+        { label: [createTextToken("B")], url: "/b" },
+        { label: [createTextToken("C")], url: "/c" },
       ]);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -199,7 +209,7 @@ describe("createButtonsArraySchema", () => {
     test("text value 200 文字超は reject (text token max)", () => {
       const result = schema.safeParse([
         {
-          label: [{ type: "text", value: "a".repeat(201) }],
+          label: [{ _key: "k1", type: "text", value: "a".repeat(201) }],
           url: "/foo",
         },
       ]);

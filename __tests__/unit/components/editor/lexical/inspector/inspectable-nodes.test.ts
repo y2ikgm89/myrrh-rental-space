@@ -19,9 +19,13 @@ import {
 import {
   ButtonNode,
   $createButtonNode,
-  buttonTextState,
+  buttonLabelState,
   buttonHrefState,
 } from "@/admin/components/editor/lexical/nodes/ButtonNode";
+import {
+  createTextToken,
+  labelToPlainText,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 import {
   ImageNode,
   $createImageNode,
@@ -77,7 +81,7 @@ describe("inspectable-nodes", () => {
         const root = $getRoot();
         root.clear();
         const buttonNode = $createButtonNode({
-          text: "テストボタン",
+          label: [createTextToken("テストボタン")],
           href: "https://example.com",
         });
         root.append(buttonNode);
@@ -158,7 +162,7 @@ describe("inspectable-nodes", () => {
         const root = $getRoot();
         root.clear();
         const buttonNode = $createButtonNode({
-          text: "テスト",
+          label: [createTextToken("テスト")],
           href: "#",
         });
         root.append(buttonNode);
@@ -170,7 +174,9 @@ describe("inspectable-nodes", () => {
 
         expect(info.nodeType).toBe("button");
         // NodeState APIでプロパティを読み取る
-        expect($getState(info.node, buttonTextState)).toBe("テスト");
+        expect(labelToPlainText($getState(info.node, buttonLabelState))).toBe(
+          "テスト",
+        );
         expect($getState(info.node, buttonHrefState)).toBe("#");
       });
     });
