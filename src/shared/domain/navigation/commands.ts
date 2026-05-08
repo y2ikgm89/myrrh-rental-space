@@ -69,14 +69,12 @@ export type SocialLinkInput = z.infer<typeof socialLinkInputSchema>;
 export type SocialLinkOrderInput = z.infer<typeof socialLinkOrderInputSchema>;
 
 function normalizeNavigationItemInput(data: NavigationItemInput) {
-  // ButtonLabelToken[] を Prisma の Json 列に渡すための SDK 境界 cast。
-  // discriminated union が InputJsonValue と直接 assignable ではないため。
-  const label =
-    data.label as ReadonlyArray<Prisma.JsonValue> as Prisma.InputJsonValue;
   return {
     ...data,
     parentId: data.parentId ?? null,
-    label,
+    // ButtonLabelToken[] を Prisma の Json 列に渡すための SDK 境界 cast
+    // (type-safety.md §許可例外 #2: Prisma JSON 型)
+    label: data.label satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue,
   };
 }
 

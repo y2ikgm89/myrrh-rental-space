@@ -127,12 +127,11 @@ export function Button(props: ButtonProps) {
     );
   }
 
-  const buttonProps = props as AsButton & ButtonContentProps;
   return (
     <button
-      type={buttonProps.type ?? "button"}
-      disabled={buttonProps.disabled}
-      onClick={buttonProps.onClick}
+      type={"type" in props ? (props.type ?? "button") : "button"}
+      disabled={"disabled" in props ? props.disabled : undefined}
+      onClick={props.onClick}
       className={cn(
         classes,
         "disabled:opacity-50 disabled:pointer-events-none",
