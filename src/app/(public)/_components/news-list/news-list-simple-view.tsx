@@ -28,6 +28,7 @@ import { getGridColsClass } from "@/public/lib/section-style-maps";
 import type { NewsListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export interface NewsData {
   readonly id: string;
@@ -109,7 +110,9 @@ export function NewsListSimpleView({
             level={2}
             className={cn(getTitleClasses(style), "tracking-tight")}
           >
-            <SplitText>{config.title}</SplitText>
+            <SplitText>
+              <PortableTextSpans spans={config.title} />
+            </SplitText>
           </Heading>
         </div>
       </div>

@@ -37,6 +37,7 @@ import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/re
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 import { ReservationForm } from "../reservation/_components/reservation-form";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface ReservationFormSectionProps {
   readonly config: ReservationFormConfig;
@@ -109,7 +110,9 @@ export async function ReservationFormSection({
                 level={2}
                 className={cn("tracking-tight", getTitleClasses(style))}
               >
-                <SplitText>{config.title}</SplitText>
+                <SplitText>
+                  <PortableTextSpans spans={config.title} />
+                </SplitText>
               </Heading>
             </div>
           )}

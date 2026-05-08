@@ -40,6 +40,8 @@ import { AccessMap } from "./access-map";
 import type { LocationForAccess } from "@/shared/domain/locations/public-queries";
 import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 const ATTR_ICONS: Record<string, typeof IconWifi> = {
   wifi: IconWifi,
@@ -621,7 +623,7 @@ export function LocationListSection({
                   level={2}
                   className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
-                  {config.title}
+                  <PortableTextSpans spans={config.title} />
                 </Heading>
               </div>
             )}
@@ -634,7 +636,7 @@ export function LocationListSection({
           <div className="pb-12 md:pb-16">
             <LocationsOverviewBlock
               entries={entries}
-              headline={overviewHeadline}
+              headline={spansToPlainText(overviewHeadline)}
             />
           </div>
         </ScrollReveal>
@@ -644,7 +646,7 @@ export function LocationListSection({
         <ScrollReveal>
           <div className="border-b border-border pb-16 md:pb-20">
             <GlobalContactBlock
-              headline={config.globalContactHeadline}
+              headline={spansToPlainText(config.globalContactHeadline)}
               businessInfo={businessInfo}
             />
           </div>

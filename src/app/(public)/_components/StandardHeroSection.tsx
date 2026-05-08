@@ -34,6 +34,7 @@ import type { HeroConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { spansToPlainText } from "@/shared/lib/portable-text";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -202,7 +203,7 @@ export function StandardHeroSection({
                 )}
               >
                 <SplitText trigger={false} delay={0.3}>
-                  {config.title}
+                  <PortableTextSpans spans={config.title} />
                 </SplitText>
               </Heading>
             </div>
@@ -260,7 +261,7 @@ export function StandardHeroSection({
                   )}
                 >
                   <SplitText trigger={false} delay={0.3}>
-                    {config.title}
+                    <PortableTextSpans spans={config.title} />
                   </SplitText>
                 </Heading>
               </div>
@@ -369,7 +370,7 @@ export function StandardHeroSection({
               )}
             >
               <SplitText trigger={false} delay={0.3}>
-                {config.title}
+                <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
           </div>

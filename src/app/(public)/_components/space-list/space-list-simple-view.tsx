@@ -33,6 +33,7 @@ import { parseSpaceImageAspect } from "@/shared/lib/validations/section-parsers"
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export interface SpaceListData {
   readonly id: string;
@@ -113,7 +114,9 @@ export function SpaceListSimpleView({
             level={2}
             className={cn("tracking-tight", getTitleClasses(style))}
           >
-            <SplitText>{config.title}</SplitText>
+            <SplitText>
+              <PortableTextSpans spans={config.title} />
+            </SplitText>
           </Heading>
         </div>
       </div>

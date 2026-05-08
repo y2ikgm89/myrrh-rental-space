@@ -14,6 +14,7 @@ import { DynamicTablerIcon } from "@/public/components/ui/dynamic-tabler-icon";
 import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface Props {
   readonly config: FeaturesConfig;
@@ -38,7 +39,7 @@ export function FeaturesNumberedSteps({
               level={2}
               className={cn(getTitleClasses(style), "tracking-tight")}
             >
-              {config.title}
+              <PortableTextSpans spans={config.title} />
             </Heading>
           </div>
         </ScrollReveal>

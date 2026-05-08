@@ -26,6 +26,7 @@ import {
 import { BusinessInfo } from "../contact/_components/business-info";
 import type { ContactFormConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig;
@@ -72,7 +73,9 @@ export function ContactFormSection({
                   level={2}
                   className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
-                  <SplitText>{config.title}</SplitText>
+                  <SplitText>
+                    <PortableTextSpans spans={config.title} />
+                  </SplitText>
                 </Heading>
               </div>
               {config.description ? (
@@ -114,7 +117,9 @@ export function ContactFormSection({
               level={2}
               className={cn("mt-4 tracking-tight", getTitleClasses(style))}
             >
-              <SplitText>{config.title}</SplitText>
+              <SplitText>
+                <PortableTextSpans spans={config.title} />
+              </SplitText>
             </Heading>
           </div>
           {config.description ? (

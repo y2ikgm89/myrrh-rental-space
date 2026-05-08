@@ -16,6 +16,7 @@ import { getCardGridColsClass } from "@/public/lib/section-style-maps";
 import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface Props {
   readonly config: FeaturesConfig;
@@ -37,7 +38,7 @@ export function FeaturesGrid({ config, style }: Props): ReactElement | null {
               level={2}
               className={cn(getTitleClasses(style), "tracking-tight")}
             >
-              {config.title}
+              <PortableTextSpans spans={config.title} />
             </Heading>
           </div>
         </ScrollReveal>

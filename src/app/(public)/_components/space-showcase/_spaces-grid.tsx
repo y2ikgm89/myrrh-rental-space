@@ -23,6 +23,7 @@ import { getCardGridColsClass } from "@/public/lib/section-style-maps";
 import type { ShowcaseSpaceData } from "../SpaceShowcaseSection";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface Props {
   readonly config: SpaceShowcaseConfig;
@@ -47,7 +48,7 @@ export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
                 level={2}
                 className={cn(getTitleClasses(style), "tracking-tight")}
               >
-                {config.title}
+                <PortableTextSpans spans={config.title} />
               </Heading>
             </div>
           </ScrollReveal>

@@ -25,6 +25,7 @@ import { EventListView } from "./event-calendar/event-list-view";
 import { EventCalendarView } from "./event-calendar/event-calendar-view";
 import { EventsViewSwitcher } from "./event-calendar/events-view-switcher";
 import type { EventCardData } from "./event-calendar/event-card";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface EventCalendarSectionProps {
   readonly config: EventCalendarConfig;
@@ -69,7 +70,9 @@ export function EventCalendarSection({
                   level={2}
                   className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
-                  <SplitText>{config.title}</SplitText>
+                  <SplitText>
+                    <PortableTextSpans spans={config.title} />
+                  </SplitText>
                 </Heading>
               </div>
             )}

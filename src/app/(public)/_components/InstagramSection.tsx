@@ -22,6 +22,7 @@ import type { InstagramConfig } from "@/shared/lib/validations/section";
 import { parseGapSize } from "@/shared/lib/validations/section-parsers";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import type { InstagramPostData } from "@/shared/domain/instagram/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface InstagramSectionProps {
   readonly config: InstagramConfig;
@@ -49,7 +50,7 @@ export function InstagramSection({
             level={2}
             className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
           >
-            {config.title}
+            <PortableTextSpans spans={config.title} />
           </Heading>
         </div>
       </div>

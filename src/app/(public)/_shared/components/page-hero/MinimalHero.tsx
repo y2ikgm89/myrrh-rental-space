@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export type MinimalHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "minimal" }>,
@@ -30,7 +31,7 @@ export function MinimalHero({
         </p>
       ) : null}
       <h1 className="mt-4 font-heading text-[clamp(2.25rem,6vw,3.5rem)] font-light tracking-tight">
-        {title}
+        <PortableTextSpans spans={title} />
       </h1>
       <p className="mt-6 max-w-[40rem] text-base leading-relaxed text-muted-foreground">
         {description}

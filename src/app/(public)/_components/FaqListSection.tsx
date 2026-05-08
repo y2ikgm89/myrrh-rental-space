@@ -41,6 +41,7 @@ import type { PublicFaqCategoryWithItems } from "@/shared/domain/sections/querie
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { FaqHelpfulVote } from "../faq/_components/faq-helpful-vote";
 import { FaqViewTracker } from "../faq/_components/faq-view-tracker";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export interface FaqData {
   readonly id: string;
@@ -226,7 +227,9 @@ export function FaqListSection({
                 level={2}
                 className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
               >
-                <SplitText>{config.title}</SplitText>
+                <SplitText>
+                  <PortableTextSpans spans={config.title} />
+                </SplitText>
               </Heading>
             </div>
           </div>

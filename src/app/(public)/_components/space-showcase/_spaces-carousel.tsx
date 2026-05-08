@@ -42,6 +42,8 @@ import { getCardStyle, shortestStep, wrapIndex } from "./_carousel-math";
 import type { ShowcaseSpaceData } from "../SpaceShowcaseSection";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 const SM = 640;
 const LG = 1024;
@@ -361,7 +363,7 @@ export function SpacesCarousel({
               level={2}
               className={cn(getTitleClasses(style), "tracking-tight")}
             >
-              {config.title}
+              <PortableTextSpans spans={config.title} />
             </Heading>
           </div>
         </ScrollReveal>
@@ -376,7 +378,7 @@ export function SpacesCarousel({
           ref={carouselRef}
           className="relative overflow-hidden px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 md:px-10"
           role="region"
-          aria-label={config.title}
+          aria-label={spansToPlainText(config.title)}
           aria-roledescription="carousel"
           aria-live={autoPlayEnabled ? "off" : "polite"}
           tabIndex={0}

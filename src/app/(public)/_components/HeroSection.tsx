@@ -26,6 +26,7 @@ import { HERO_PARALLAX_HEIGHT_MAP } from "@/public/lib/section-style-maps";
 import { parseHeroParallaxHeight } from "@/shared/lib/validations/section-parsers";
 import type { HeroParallaxConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -139,9 +140,9 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
           ref={contentRef}
           className="flex w-full flex-col justify-center px-6 py-12 md:w-1/2 md:px-12 md:py-0 lg:px-20"
         >
-          {config.tagline && (
+          {config.tagline.length > 0 && (
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
-              {config.tagline}
+              <PortableTextSpans spans={config.tagline} />
             </p>
           )}
 
@@ -151,7 +152,7 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
               className={cn("mt-6", getTitleClasses(style), "leading-[1.05]")}
             >
               <SplitText trigger={false} delay={0.5}>
-                {config.title}
+                <PortableTextSpans spans={config.title} />
               </SplitText>
             </Heading>
           </div>

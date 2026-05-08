@@ -31,6 +31,7 @@ import {
   type SpaceListData,
 } from "./space-list/space-list-simple-view";
 import { SpaceGrid } from "./space-list/space-grid";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export type { SpaceListData };
 
@@ -103,7 +104,9 @@ export function SpaceListSection({
                   level={2}
                   className={cn("tracking-tight", getTitleClasses(style))}
                 >
-                  <SplitText>{config.title}</SplitText>
+                  <SplitText>
+                    <PortableTextSpans spans={config.title} />
+                  </SplitText>
                 </Heading>
               </div>
             )}

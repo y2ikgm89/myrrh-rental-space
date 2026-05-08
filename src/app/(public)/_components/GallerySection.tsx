@@ -37,6 +37,7 @@ import {
 } from "@/shared/lib/validations/section-parsers";
 import type { GalleryConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface GallerySectionProps {
   readonly config: GalleryConfig;
@@ -140,7 +141,9 @@ export function GallerySection({
               level={2}
               className={cn("mt-4 tracking-tight", getTitleClasses(style))}
             >
-              <SplitText>{config.title}</SplitText>
+              <SplitText>
+                <PortableTextSpans spans={config.title} />
+              </SplitText>
             </Heading>
           </div>
         </div>

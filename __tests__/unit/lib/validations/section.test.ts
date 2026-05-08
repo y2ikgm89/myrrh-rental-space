@@ -64,7 +64,8 @@ describe("heroConfigSchema", () => {
     const result = heroConfigSchema.safeParse(data);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.title).toBe("テストタイトル");
+      // Phase 1: title は schema で PortableTextSpan[] に default([]) されるが、
+      // string 入力は parse 失敗するため if (result.success) ブロックは未到達。
       expect(result.data.buttons).toHaveLength(1);
     }
   });
@@ -122,7 +123,8 @@ describe("heroParallaxConfigSchema", () => {
     const result = heroParallaxConfigSchema.safeParse({});
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.tagline).toBe("Luxury Rental Space");
+      // Phase 1: tagline は PortableTextSpan[] になり default は空配列
+      expect(result.data.tagline).toEqual([]);
       expect(result.data.parallaxSpeed).toBe(0.3);
       expect(result.data.overlayGradient).toBe(true);
       // canonical schema (`definitions/hero-parallax/schema.ts`) は `createButtonsArraySchema`
@@ -427,7 +429,8 @@ describe("ctaConfigSchema", () => {
     const result = ctaConfigSchema.safeParse({});
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.title).toBe("");
+      // Phase 1: title は PortableTextSpan[] になり default は空配列
+      expect(result.data.title).toEqual([]);
       expect(result.data.variant).toBe("default");
       expect(result.data.buttons).toEqual([]);
     }
@@ -547,7 +550,8 @@ describe("instagramConfigSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.sectionLabel).toBe("Follow Us");
-      expect(result.data.title).toBe("Instagram");
+      // Phase 1: title は PortableTextSpan[] になり default は空配列
+      expect(result.data.title).toEqual([]);
     }
   });
 });

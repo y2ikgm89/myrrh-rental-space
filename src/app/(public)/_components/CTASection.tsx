@@ -23,6 +23,7 @@ import type { CtaConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { spansToPlainText } from "@/shared/lib/portable-text";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface CTASectionProps {
   readonly config: CtaConfig;
@@ -121,7 +122,9 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
                 level={2}
                 className={cn("mt-6 tracking-tight", getTitleClasses(style))}
               >
-                <SplitText>{config.title}</SplitText>
+                <SplitText>
+                  <PortableTextSpans spans={config.title} />
+                </SplitText>
               </Heading>
             </div>
             {config.description && (
@@ -166,7 +169,9 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
             level={2}
             className={cn("mt-6 tracking-tight", getTitleClasses(style))}
           >
-            <SplitText>{config.title}</SplitText>
+            <SplitText>
+              <PortableTextSpans spans={config.title} />
+            </SplitText>
           </Heading>
         </div>
 

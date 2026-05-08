@@ -25,6 +25,7 @@ import {
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 interface Props {
   readonly config: FeaturesConfig;
@@ -83,7 +84,7 @@ export function FeaturesNumberedEditorial({
               level={2}
               className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
             >
-              {config.title}
+              <PortableTextSpans spans={config.title} />
             </Heading>
           </div>
         </ScrollReveal>

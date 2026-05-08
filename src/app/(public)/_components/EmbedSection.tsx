@@ -20,6 +20,8 @@ import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import type { EmbedConfig } from "@/shared/lib/validations/section";
 import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 const MAX_WIDTH_MAP = {
   sm: "max-w-2xl",
@@ -65,7 +67,7 @@ export function EmbedSection({
                   level={2}
                   className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
-                  {config.title}
+                  <PortableTextSpans spans={config.title} />
                 </Heading>
               </div>
             </ScrollReveal>
@@ -80,7 +82,7 @@ export function EmbedSection({
                 className="h-full w-full border-0"
                 allowFullScreen
                 loading="lazy"
-                title={config.title ?? "Embedded content"}
+                title={spansToPlainText(config.title) || "Embedded content"}
               />
             </div>
           ) : config.embedCode ? (

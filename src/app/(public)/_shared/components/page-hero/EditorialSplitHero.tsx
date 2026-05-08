@@ -28,6 +28,7 @@ import type {
   PageHeroConfig,
 } from "@/shared/lib/sections/definitions/page-hero";
 import { createSpan } from "@/shared/lib/portable-text";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export type EditorialSplitHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "editorial-split" }>,
@@ -45,8 +46,8 @@ const DEFAULT_IMAGE: HeroImage = {
 };
 
 export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
-  label: "Volume One — Spring 2026",
-  title: "Where silence works.",
+  label: [createSpan("Volume One — Spring 2026")],
+  title: [createSpan("Where silence works.")],
   description:
     "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
   images: [DEFAULT_IMAGE],
@@ -452,7 +453,7 @@ export function EditorialSplitHero({
             "md:[text-shadow:none]",
           )}
         >
-          {label}
+          <PortableTextSpans spans={label} />
         </p>
 
         <h1
@@ -467,7 +468,7 @@ export function EditorialSplitHero({
           )}
         >
           <SplitText trigger={false} delay={0.5}>
-            {title}
+            <PortableTextSpans spans={title} />
           </SplitText>
         </h1>
 

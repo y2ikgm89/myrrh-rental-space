@@ -21,6 +21,8 @@ import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import type { MapConfig } from "@/shared/lib/validations/section";
 import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 const HEIGHT_MAP = {
   sm: "h-[300px]",
@@ -66,7 +68,7 @@ export function MapSection({
                 level={2}
                 className={cn("mt-4 tracking-tight", getTitleClasses(style))}
               >
-                {config.title}
+                <PortableTextSpans spans={config.title} />
               </Heading>
             </div>
           </ScrollReveal>
@@ -88,7 +90,7 @@ export function MapSection({
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title={config.title ?? "Google Maps"}
+              title={spansToPlainText(config.title) || "Google Maps"}
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-muted">

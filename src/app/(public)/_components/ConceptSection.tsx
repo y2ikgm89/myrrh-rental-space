@@ -23,6 +23,8 @@ import {
 import { parseConceptLayout } from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 /** text-left は CSS デフォルトなので省略し、非デフォルト値のみクラスを付与 */
 const TEXT_ALIGN_CLASS: Record<string, string | undefined> = {
@@ -42,7 +44,8 @@ export function ConceptSection({
   const heading = config.heading;
   const body = config.body;
   const imageUrl = config.image.url;
-  const imageAlt = config.image.alt || (config.heading ?? "コンセプト");
+  const imageAlt =
+    config.image.alt || spansToPlainText(config.heading) || "コンセプト";
   const imagePosition = config.imagePosition;
   const alignClass = TEXT_ALIGN_CLASS[config.textAlign];
   const layout = parseConceptLayout(config.contentLayout);
@@ -61,7 +64,9 @@ export function ConceptSection({
           level={2}
           className={cn(getTitleClasses(style), "leading-[1.1] tracking-tight")}
         >
-          <SplitText>{heading}</SplitText>
+          <SplitText>
+            <PortableTextSpans spans={heading} />
+          </SplitText>
         </Heading>
       </div>
 
