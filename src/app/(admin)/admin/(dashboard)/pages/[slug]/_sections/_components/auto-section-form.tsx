@@ -43,8 +43,8 @@ import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
-import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
-import { buttonLabelSchema } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
+import { createSpanArraySchema } from "@/shared/lib/portable-text";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";
 import {
@@ -450,7 +450,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
-    case "rich-label":
+    case "portable-text-inline":
       return (
         <AutoRichLabelField
           fieldId={fieldId}
@@ -839,13 +839,13 @@ function AutoRichLabelField({
   readonly error: string | undefined;
 }) {
   const { field } = useController({ control, name: fieldKey });
-  const parsed = buttonLabelSchema.safeParse(field.value);
+  const parsed = createSpanArraySchema().safeParse(field.value);
   const value = parsed.success ? parsed.data : [];
 
   return (
     <div className="space-y-2">
       <Label htmlFor={fieldId}>{label}</Label>
-      <RichLabelInput
+      <PortableTextInlineEditor
         id={fieldId}
         value={value}
         onChange={(tokens) => field.onChange(tokens)}

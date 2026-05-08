@@ -16,9 +16,9 @@ import {
   type AppRoute,
 } from "@/shared/lib/typed-routes";
 import {
-  buttonLabelSchema,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  createSpanArraySchema,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 
 // =============================================================================
 // URL / CTAボタン共通スキーマ
@@ -124,7 +124,7 @@ export function createCtaButtonItemSchema<TUrl extends string>(
   urlSchema: z.ZodType<TUrl>,
 ) {
   return z.object({
-    label: buttonLabelSchema,
+    label: createSpanArraySchema(),
     url: urlSchema,
     variant: z.enum(ctaButtonVariants).default("primary"),
     size: z.enum(ctaButtonSizes).default("lg"),
@@ -138,7 +138,7 @@ export function createCtaButtonItemSchema<TUrl extends string>(
  * CTAボタン配列アイテムの出力型
  */
 export type CTAButtonItem = {
-  label: ButtonLabelToken[];
+  label: PortableTextSpan[];
   url: AppRoute;
   variant: CTAButtonVariant;
   size: CTAButtonSize;

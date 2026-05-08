@@ -16,18 +16,18 @@ import {
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
-  buttonLabelSchema,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  createSpanArraySchema,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 
-function parseLabelTokens(value: unknown): ButtonLabelToken[] {
-  const result = buttonLabelSchema.safeParse(value);
+function parseLabelSpans(value: unknown): PortableTextSpan[] {
+  const result = createSpanArraySchema().safeParse(value);
   return result.success ? result.data : [];
 }
 
 export type PublicNavItem = {
   readonly id: string;
-  readonly label: ButtonLabelToken[];
+  readonly label: PortableTextSpan[];
   readonly url: string;
   readonly isExternal: boolean;
   readonly children: readonly PublicNavItem[];
@@ -37,7 +37,7 @@ export type NavigationItemData = {
   id: string;
   type: NavigationType;
   parentId: string | null;
-  label: ButtonLabelToken[];
+  label: PortableTextSpan[];
   url: string;
   isExternal: boolean;
   order: number;
@@ -119,14 +119,14 @@ export async function getPublicNavigation(
     .filter((item) => isItemEnabled(item.url, item.isExternal))
     .map((item) => ({
       id: item.id,
-      label: parseLabelTokens(item.label),
+      label: parseLabelSpans(item.label),
       url: item.url,
       isExternal: item.isExternal,
       children: item.children
         .filter((child) => isItemEnabled(child.url, child.isExternal))
         .map((child) => ({
           id: child.id,
-          label: parseLabelTokens(child.label),
+          label: parseLabelSpans(child.label),
           url: child.url,
           isExternal: child.isExternal,
           children: EMPTY_NAV_CHILDREN,
@@ -179,10 +179,10 @@ export async function getNavigationItems(
 
   return items.map((item) => ({
     ...item,
-    label: parseLabelTokens(item.label),
+    label: parseLabelSpans(item.label),
     children: item.children.map((child) => ({
       ...child,
-      label: parseLabelTokens(child.label),
+      label: parseLabelSpans(child.label),
       children: [],
     })),
   }));

@@ -36,9 +36,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
 import { ColorSwatchPicker } from "../ColorSwatchPicker";
-import { type ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { type PortableTextSpan } from "@/shared/lib/portable-text";
 import { type AccentColor } from "../../config/accent-colors";
 import {
   BUTTON_VARIANT_LABELS,
@@ -78,7 +78,7 @@ export function ButtonInspectorPanel({
       openInNewTab: $getState(node, buttonOpenInNewTabState),
     }));
 
-  const handleLabelChange = (value: ButtonLabelToken[]) =>
+  const handleLabelChange = (value: PortableTextSpan[]) =>
     updateNode((n) => {
       $setState(n, buttonLabelState, value);
     });
@@ -131,7 +131,7 @@ export function ButtonInspectorPanel({
           <Label htmlFor="inspector-button-label" className="text-xs">
             テキスト
           </Label>
-          <RichLabelInput
+          <PortableTextInlineEditor
             id="inspector-button-label"
             value={label}
             onChange={handleLabelChange}

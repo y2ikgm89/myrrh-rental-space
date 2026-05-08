@@ -2640,10 +2640,10 @@ async function seedBlogComments() {
 // =============================================================================
 
 async function seedNavigation() {
-  // label は ButtonLabelToken[] 形式（テキスト + アイコンの混在 token 配列）。
-  // _key は token ごとの stable identity（Sanity Portable Text 互換）。
-  const t = (value: string) => [
-    { _key: crypto.randomUUID(), type: "text" as const, value },
+  // label は PortableTextSpan[] 形式（テキスト + アイコンの混在 span 配列）。
+  // _key は span ごとの stable identity（Sanity Portable Text 公式準拠）。
+  const t = (text: string) => [
+    { _key: crypto.randomUUID(), _type: "span" as const, text },
   ];
 
   const headerItems = [

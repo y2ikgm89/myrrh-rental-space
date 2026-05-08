@@ -33,7 +33,7 @@ import {
 import type { HeroConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
-import { labelToPlainText } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -81,7 +81,7 @@ function HeroButtons({
             },
           })}
         >
-          {labelToPlainText(secondary.label)}
+          {spansToPlainText(secondary.label)}
           <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
         </Link>
       )}

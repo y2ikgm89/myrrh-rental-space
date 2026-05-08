@@ -27,7 +27,7 @@ import type {
   HeroTransition,
   PageHeroConfig,
 } from "@/shared/lib/sections/definitions/page-hero";
-import { createTextToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { createSpan } from "@/shared/lib/portable-text";
 
 export type EditorialSplitHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "editorial-split" }>,
@@ -53,7 +53,7 @@ export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
   transition: "crossfade",
   buttons: [
     {
-      label: [createTextToken("Reserve a space")],
+      label: [createSpan("Reserve a space")],
       url: "/reservation",
       variant: "primary",
       size: "lg",

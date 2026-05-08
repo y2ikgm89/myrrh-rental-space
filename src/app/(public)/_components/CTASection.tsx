@@ -22,7 +22,7 @@ import {
 import type { CtaConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
-import { labelToPlainText } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface CTASectionProps {
   readonly config: CtaConfig;
@@ -84,7 +84,7 @@ function CTAButtons({
               },
             })}
           >
-            {labelToPlainText(secondaryButton.label)}
+            {spansToPlainText(secondaryButton.label)}
             <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
           </Link>
         )}

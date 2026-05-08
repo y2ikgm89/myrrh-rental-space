@@ -23,8 +23,8 @@ import {
 } from "@/admin/components/ui";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
-import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
-import { buttonLabelSchema } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
+import { createSpanArraySchema } from "@/shared/lib/portable-text";
 import {
   getArrayConstraints,
   getArrayItemShape,
@@ -90,7 +90,7 @@ export function AutoArrayField({
           case "number":
             empty[f.key] = 0;
             break;
-          case "rich-label":
+          case "portable-text-inline":
             empty[f.key] = [];
             break;
           default:
@@ -256,7 +256,7 @@ function ArrayItemField({
     );
   }
 
-  if (fieldType === "rich-label") {
+  if (fieldType === "portable-text-inline") {
     return (
       <ArrayItemRichLabelField
         fieldName={fieldName}
@@ -378,13 +378,13 @@ function ArrayItemRichLabelField({
 }) {
   const id = useId();
   const { field } = useController({ control, name: fieldName });
-  const parsed = buttonLabelSchema.safeParse(field.value);
+  const parsed = createSpanArraySchema().safeParse(field.value);
   const value = parsed.success ? parsed.data : [];
 
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <RichLabelInput
+      <PortableTextInlineEditor
         id={id}
         value={value}
         onChange={(tokens) => field.onChange(tokens)}

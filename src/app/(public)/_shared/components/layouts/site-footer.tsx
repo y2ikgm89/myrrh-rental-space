@@ -18,7 +18,7 @@ import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
-import { TokenLabel } from "@/shared/components/TokenLabel";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { CopyrightYear } from "./copyright-year";
 import { SiteBrand } from "./site-brand";
 import { SocialLinks } from "./social-links";
@@ -199,8 +199,8 @@ export async function Footer(): Promise<ReactElement> {
               <ul className="mt-4 space-y-3">
                 {footerNav.map((item) => {
                   const inner = (
-                    <TokenLabel
-                      tokens={item.label}
+                    <PortableTextSpans
+                      spans={item.label}
                       iconClassName="h-3.5 w-3.5 shrink-0"
                     />
                   );

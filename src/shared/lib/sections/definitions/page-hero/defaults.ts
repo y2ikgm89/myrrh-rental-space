@@ -4,7 +4,7 @@
  * seed.ts / migration の COALESCE / 未設定時のフォールバック値として使用。
  */
 
-import { createTextToken } from "../_shared/button-label";
+import { createSpan } from "@/shared/lib/portable-text";
 import type { PageHeroConfig } from "./schema";
 
 export const DEFAULT_PAGE_HERO: PageHeroConfig = {
@@ -30,7 +30,7 @@ export const DEFAULT_PAGE_HERO: PageHeroConfig = {
   transition: "crossfade",
   buttons: [
     {
-      label: [createTextToken("Reserve a space")],
+      label: [createSpan("Reserve a space")],
       url: "/reservation",
       variant: "primary",
       size: "lg",

@@ -4,7 +4,7 @@
  * Section schema 共通の buttons[] 表現 SSoT。
  * cta / hero / hero-parallax が利用する。
  *
- * label は ButtonLabelToken[] モデル（テキスト + アイコン混在）。
+ * label は PortableTextSpan[] モデル（テキスト + アイコン混在）。
  * fieldRegistry.register 経由で AutoSectionForm が編集 UI を自動生成。
  */
 
@@ -31,7 +31,7 @@ export function createButtonsArraySchema(label = "ボタン") {
     .array(label, {
       subGroup: "button",
       fields: {
-        label: field.richLabel("ボタンの文字", {
+        label: field.portableTextInline("ボタンの文字", {
           subGroup: "text",
           helpText:
             "テキストとアイコンを組み合わせてラベルを作成できます。テキストのみでも可。",

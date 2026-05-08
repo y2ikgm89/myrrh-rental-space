@@ -14,10 +14,10 @@ import type {
   SocialPlatform,
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
-  buttonLabelTokenSchema,
-  labelToPlainText,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  portableTextSpanSchema,
+  spansToPlainText,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 import type {
   NavigationItemData,
   SocialLinkData,
@@ -30,7 +30,7 @@ import type {
 export type NavFormData = {
   type: NavigationType;
   parentId: string | null;
-  label: ButtonLabelToken[];
+  label: PortableTextSpan[];
   url: string;
   isExternal: boolean;
   order: number;
@@ -41,9 +41,9 @@ export const navFormSchema = z.object({
   type: z.enum(["HEADER_DESKTOP", "HEADER_MOBILE", "FOOTER"]),
   parentId: z.string().nullable(),
   label: z
-    .array(buttonLabelTokenSchema)
-    .max(50, { error: "ラベル token は50件以内です" })
-    .refine((tokens) => labelToPlainText(tokens).trim().length > 0, {
+    .array(portableTextSpanSchema)
+    .max(50, { error: "Span は50件以内です" })
+    .refine((spans) => spansToPlainText(spans).trim().length > 0, {
       error: "ラベルにテキストを 1 文字以上含めてください",
     }),
   url: z.string().min(1, { error: "URLは必須です" }),

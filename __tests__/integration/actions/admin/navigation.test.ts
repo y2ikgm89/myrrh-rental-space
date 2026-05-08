@@ -489,7 +489,7 @@ describe("Navigation Admin Action Integration", () => {
         id: VALID_UUID,
         type: NavigationType.HEADER_DESKTOP,
         parentId: null,
-        label: [{ _key: "k", type: "text", value: "スペース" }],
+        label: [{ _key: "k", _type: "span", text: "スペース" }],
         url: "/spaces",
         isExternal: false,
         order: 0,
@@ -501,7 +501,7 @@ describe("Navigation Admin Action Integration", () => {
             id: "550e8400-e29b-41d4-a716-446655440001",
             type: NavigationType.HEADER_DESKTOP,
             parentId: VALID_UUID,
-            label: [{ _key: "k", type: "text", value: "会議室" }],
+            label: [{ _key: "k", _type: "span", text: "会議室" }],
             url: "/spaces/conference",
             isExternal: false,
             order: 0,
@@ -514,12 +514,12 @@ describe("Navigation Admin Action Integration", () => {
       };
 
       expect(rootItem.label).toEqual([
-        { _key: "k", type: "text", value: "スペース" },
+        { _key: "k", _type: "span", text: "スペース" },
       ]);
       expect(rootItem.parentId).toBeNull();
       expect(rootItem.children).toHaveLength(1);
       expect(rootItem.children[0].label).toEqual([
-        { _key: "k", type: "text", value: "会議室" },
+        { _key: "k", _type: "span", text: "会議室" },
       ]);
       expect(rootItem.children[0].parentId).toBe(VALID_UUID);
     });

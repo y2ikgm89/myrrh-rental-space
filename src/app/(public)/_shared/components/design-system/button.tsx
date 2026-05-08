@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { TokenLabel } from "@/shared/components/TokenLabel";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
-import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
 type ButtonSize = "sm" | "md" | "lg";
@@ -46,12 +46,12 @@ interface ButtonBaseProps {
 }
 
 /**
- * `label` は Sanity Portable Text 互換のトークン配列。
- * text トークンはテキストとして、icon トークンは curation icon として
+ * `label` は Sanity Portable Text 公式準拠の Span 配列。
+ * span はテキストとして、iconInline は curation icon として
  * 順次描画する。`children` と排他（discriminated union）。
  */
 interface LabelProps extends ButtonBaseProps {
-  readonly label: ButtonLabelToken[];
+  readonly label: PortableTextSpan[];
   readonly children?: never;
 }
 
@@ -105,8 +105,8 @@ export function Button(props: ButtonProps) {
 
   const content =
     "label" in props && props.label !== undefined ? (
-      <TokenLabel
-        tokens={props.label}
+      <PortableTextSpans
+        spans={props.label}
         iconClassName={iconSizeClasses[resolveIconSize(size, variant)]}
       />
     ) : (

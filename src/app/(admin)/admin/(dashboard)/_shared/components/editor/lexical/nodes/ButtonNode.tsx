@@ -5,7 +5,7 @@
  *
  * 公開 Button Primitive (`@/public/components/design-system/button`) と
  * variant / size / sharp edge / WCAG 2.5.5 (44px) を完全一致させる。
- * label は ButtonLabelToken[] (text + icon 混在の rich label)。
+ * label は PortableTextSpan[] (text + icon 混在の rich label)。
  * AccentColor (data-color 10色) で bronze 以外の accent も指定可能。
  *
  * Lexical Rule §17 準拠: createDOM / exportDOM では CSS クラス禁止、
@@ -40,12 +40,10 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
 import {
-  buttonLabelTokenSchema,
-  createTextToken,
-  isIconToken,
-  isTextToken,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  portableTextSpanSchema,
+  createSpan,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
 import {
   createEnumGuard,
@@ -94,11 +92,11 @@ export const isButtonAlignment =
 // =============================================================================
 
 export const buttonLabelState = createState("label", {
-  parse: (v: unknown): ButtonLabelToken[] => {
+  parse: (v: unknown): PortableTextSpan[] => {
     if (!Array.isArray(v)) return [];
-    const result: ButtonLabelToken[] = [];
+    const result: PortableTextSpan[] = [];
     for (const item of v) {
-      const parsed = buttonLabelTokenSchema.safeParse(item);
+      const parsed = portableTextSpanSchema.safeParse(item);
       if (parsed.success) result.push(parsed.data);
     }
     return result;
@@ -193,20 +191,13 @@ function ButtonComponent({
         draggable={false}
         onClick={(e) => e.preventDefault()}
       >
-        {state.label.map((token) => {
-          if (isTextToken(token)) {
-            return <span key={token._key}>{token.value}</span>;
+        {state.label.map((span) => {
+          if (span._type === "span") {
+            return <span key={span._key}>{span.text}</span>;
           }
-          if (isIconToken(token)) {
-            return (
-              <CuratedIcon
-                key={token._key}
-                name={token.name}
-                aria-hidden="true"
-              />
-            );
-          }
-          return null;
+          return (
+            <CuratedIcon key={span._key} name={span.name} aria-hidden="true" />
+          );
         })}
       </a>
     </div>
@@ -242,7 +233,7 @@ function $convertButtonElement(
     colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
 
   const node = $createButtonNode({
-    label: text ? [createTextToken(text)] : [],
+    label: text ? [createSpan(text)] : [],
     href,
     variant,
     size,
@@ -312,13 +303,13 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
       link.setAttribute("rel", "noreferrer");
     }
 
-    for (const token of label) {
-      if (isTextToken(token)) {
-        const span = document.createElement("span");
-        span.textContent = token.value;
-        link.appendChild(span);
-      } else if (isIconToken(token)) {
-        const markup = renderIconSvgMarkup(token.name);
+    for (const span of label) {
+      if (span._type === "span") {
+        const el = document.createElement("span");
+        el.textContent = span.text;
+        link.appendChild(el);
+      } else {
+        const markup = renderIconSvgMarkup(span.name);
         if (markup) {
           link.insertAdjacentHTML("beforeend", markup);
         }
@@ -361,7 +352,7 @@ export function $createButtonNode({
   color = "default",
   openInNewTab = false,
 }: {
-  label?: ButtonLabelToken[];
+  label?: PortableTextSpan[];
   href?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;

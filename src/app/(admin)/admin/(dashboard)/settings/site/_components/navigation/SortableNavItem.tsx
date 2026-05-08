@@ -10,8 +10,8 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
-import { TokenLabel } from "@/shared/components/TokenLabel";
-import { labelToPlainText } from "@/shared/lib/sections/definitions/_shared/button-label";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 import type { Serialized } from "@/shared/lib/serialize";
 import { IconExternalLink } from "@tabler/icons-react";
 import type { NavigationItemData, SocialLinkData } from "./types";
@@ -104,8 +104,8 @@ export function SortableNavRow({
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
-            <TokenLabel
-              tokens={item.label}
+            <PortableTextSpans
+              spans={item.label}
               iconClassName="h-4 w-4 shrink-0 text-muted-foreground"
             />
           </span>
@@ -152,7 +152,7 @@ export function SortableNavRow({
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        itemName={labelToPlainText(item.label) || "メニュー"}
+        itemName={spansToPlainText(item.label) || "メニュー"}
         onConfirm={() => onDelete(item.id)}
         isPending={isPending}
       />

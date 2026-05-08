@@ -10,17 +10,17 @@ import { describe, expect, test } from "bun:test";
 
 import { createButtonsArraySchema } from "@/shared/lib/sections/definitions/_shared/buttons";
 import {
-  createIconToken,
-  createTextToken,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  createInlineIcon,
+  createSpan,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 
 const schema = createButtonsArraySchema();
 
-const textOnly: ButtonLabelToken[] = [createTextToken("予約する")];
-const iconPrefixed: ButtonLabelToken[] = [
-  createIconToken("IconArrowRight"),
-  createTextToken("詳しく見る"),
+const textOnly: PortableTextSpan[] = [createSpan("予約する")];
+const iconPrefixed: PortableTextSpan[] = [
+  createInlineIcon("IconArrowRight"),
+  createSpan("詳しく見る"),
 ];
 
 describe("createButtonsArraySchema", () => {
@@ -70,10 +70,10 @@ describe("createButtonsArraySchema", () => {
     });
 
     test("text 中央 icon 挿入 (新規対応の任意位置)", () => {
-      const tokens: ButtonLabelToken[] = [
-        createTextToken("詳しく "),
-        createIconToken("IconArrowRight"),
-        createTextToken(" 見る"),
+      const tokens: PortableTextSpan[] = [
+        createSpan("詳しく "),
+        createInlineIcon("IconArrowRight"),
+        createSpan(" 見る"),
       ];
       const result = schema.safeParse([{ label: tokens, url: "/foo" }]);
       expect(result.success).toBe(true);
@@ -183,7 +183,7 @@ describe("createButtonsArraySchema", () => {
     test("同じ URL のボタン重複は refine で reject", () => {
       const result = schema.safeParse([
         { label: textOnly, url: "/dup" },
-        { label: [createTextToken("別")], url: "/dup" },
+        { label: [createSpan("別")], url: "/dup" },
       ]);
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -194,9 +194,9 @@ describe("createButtonsArraySchema", () => {
 
     test("異なる URL なら複数ボタン許容", () => {
       const result = schema.safeParse([
-        { label: [createTextToken("A")], url: "/a" },
-        { label: [createTextToken("B")], url: "/b" },
-        { label: [createTextToken("C")], url: "/c" },
+        { label: [createSpan("A")], url: "/a" },
+        { label: [createSpan("B")], url: "/b" },
+        { label: [createSpan("C")], url: "/c" },
       ]);
       expect(result.success).toBe(true);
       if (result.success) {

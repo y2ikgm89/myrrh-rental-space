@@ -18,8 +18,8 @@ import {
   Switch,
   SubmitButton,
 } from "@/admin/components/ui";
-import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
-import { TokenLabel } from "@/shared/components/TokenLabel";
+import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { isValidSocialPlatform } from "@/shared/lib/validations/enums/guards";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
@@ -72,11 +72,11 @@ export function NavigationDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="nav-label">ラベル</Label>
-              <RichLabelInput
+              <PortableTextInlineEditor
                 id="nav-label"
                 value={navLabel ?? []}
-                onChange={(tokens) =>
-                  form.setValue("label", tokens, {
+                onChange={(spans) =>
+                  form.setValue("label", spans, {
                     shouldDirty: true,
                     shouldValidate: true,
                   })
@@ -127,7 +127,7 @@ export function NavigationDialog({
                   <SelectItem value="none">なし（トップレベル）</SelectItem>
                   {parentOptions.map((parent) => (
                     <SelectItem key={parent.id} value={parent.id}>
-                      <TokenLabel tokens={parent.label} />
+                      <PortableTextSpans spans={parent.label} />
                     </SelectItem>
                   ))}
                 </SelectContent>

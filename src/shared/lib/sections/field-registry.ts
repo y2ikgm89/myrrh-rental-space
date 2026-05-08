@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 
-import { buttonLabelSchema } from "./definitions/_shared/button-label";
+import { createSpanArraySchema } from "@/shared/lib/portable-text";
 import type { FieldType } from "./types";
 
 // ─────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ interface DynamicSelectOpts {
   readonly helpText?: string;
 }
 
-interface RichLabelOpts {
+interface PortableTextInlineOpts {
   readonly group?: FieldMeta["group"];
   readonly subGroup?: FieldSubGroup;
   readonly helpText?: string;
@@ -387,14 +387,14 @@ export const field = {
   },
 
   /**
-   * リッチラベル（ButtonLabelToken[] — テキスト + アイコンの混在配列）
+   * Portable Text インライン（PortableTextSpan[] — テキスト + アイコンの混在配列）
    *
-   * Sanity Portable Text 互換のボタンラベルモデル。
+   * Sanity Portable Text 互換のインラインスパンモデル。
    * `safeParse({})` で空配列にフォールバック（field defaults 契約）。
    */
-  richLabel(label: string, opts?: RichLabelOpts) {
-    return buttonLabelSchema.register(fieldRegistry, {
-      fieldType: "rich-label",
+  portableTextInline(label: string, opts?: PortableTextInlineOpts) {
+    return createSpanArraySchema().register(fieldRegistry, {
+      fieldType: "portable-text-inline",
       label,
       group: opts?.group ?? "content",
       ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),

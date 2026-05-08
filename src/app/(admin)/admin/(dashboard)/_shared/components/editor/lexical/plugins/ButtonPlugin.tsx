@@ -4,7 +4,7 @@
  * @description ボタン/CTAの挿入を提供するプラグイン
  *
  * Phase 5 (rich label tokens) 対応版:
- * - label は ButtonLabelToken[] (RichLabelInput)
+ * - label は PortableTextSpan[] (PortableTextInlineEditor)
  * - variant: primary / secondary / ghost / link / editorial (5 種、公開 Button Primitive と一致)
  * - AccentColor (10色) で bronze 以外の accent 指定可能
  * - WCAG 2.5.5 Enhanced (44px 以上) は lexical-content.css で保証
@@ -45,13 +45,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
 import { ColorSwatchPicker } from "../inspector/ColorSwatchPicker";
 import {
-  createTextToken,
-  labelToPlainText,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  createSpan,
+  spansToPlainText,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 import { type AccentColor } from "../config/accent-colors";
 import {
   BUTTON_VARIANT_LABELS,
@@ -68,8 +68,8 @@ type ButtonPluginProps = {
   onClose: () => void;
 };
 
-function createDefaultLabel(): ButtonLabelToken[] {
-  return [createTextToken("ボタン")];
+function createDefaultLabel(): PortableTextSpan[] {
+  return [createSpan("ボタン")];
 }
 
 // =============================================================================
@@ -78,7 +78,7 @@ function createDefaultLabel(): ButtonLabelToken[] {
 
 export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
   const [editor] = useLexicalComposerContext();
-  const [label, setLabel] = useState<ButtonLabelToken[]>(() =>
+  const [label, setLabel] = useState<PortableTextSpan[]>(() =>
     createDefaultLabel(),
   );
   const [href, setHref] = useState("");
@@ -124,7 +124,7 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
   };
 
   const isValid =
-    labelToPlainText(label).trim().length > 0 && href.trim() !== "";
+    spansToPlainText(label).trim().length > 0 && href.trim() !== "";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -137,7 +137,7 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
           {/* ラベル (rich label tokens) */}
           <div className="space-y-2">
             <Label htmlFor="button-label">ボタンテキスト</Label>
-            <RichLabelInput
+            <PortableTextInlineEditor
               id="button-label"
               value={label}
               onChange={setLabel}

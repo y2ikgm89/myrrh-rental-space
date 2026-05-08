@@ -6,7 +6,7 @@
  * Subtly follows cursor when hovered, snaps back with elastic ease.
  * Supports both <a> and <button> elements.
  *
- * `label` (ButtonLabelToken[]) でテキスト + アイコンの混在ラベルを描画する。
+ * `label` (PortableTextSpan[]) でテキスト + アイコンの混在ラベルを描画する。
  */
 
 import {
@@ -16,13 +16,13 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { TokenLabel } from "@/shared/components/TokenLabel";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
-import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 type MagneticButtonSize = "sm" | "md" | "lg";
 
@@ -50,7 +50,7 @@ interface MagneticButtonBaseProps {
 }
 
 interface LabelMode extends MagneticButtonBaseProps {
-  readonly label: ButtonLabelToken[];
+  readonly label: PortableTextSpan[];
   readonly children?: never;
 }
 
@@ -122,7 +122,10 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
 
   const content =
     "label" in props && props.label !== undefined ? (
-      <TokenLabel tokens={props.label} iconClassName={iconSizeClasses[size]} />
+      <PortableTextSpans
+        spans={props.label}
+        iconClassName={iconSizeClasses[size]}
+      />
     ) : (
       props.children
     );

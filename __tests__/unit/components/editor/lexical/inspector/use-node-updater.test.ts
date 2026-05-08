@@ -31,10 +31,7 @@ import {
   ImageNode,
   $isImageNode,
 } from "@/admin/components/editor/lexical/nodes/ImageNode";
-import {
-  createTextToken,
-  labelToPlainText,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+import { createSpan, spansToPlainText } from "@/shared/lib/portable-text";
 
 // =============================================================================
 // Test Setup
@@ -67,7 +64,7 @@ describe("useNodeUpdater pattern", () => {
         const root = $getRoot();
         root.clear();
         const buttonNode = $createButtonNode({
-          label: [createTextToken("初期テキスト")],
+          label: [createSpan("初期テキスト")],
           href: "https://example.com",
           variant: "primary",
         });
@@ -90,7 +87,7 @@ describe("useNodeUpdater pattern", () => {
         const targetNode = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(targetNode)) {
           $setState(targetNode, buttonLabelState, [
-            createTextToken("更新後テキスト"),
+            createSpan("更新後テキスト"),
           ]);
         }
       });
@@ -99,7 +96,7 @@ describe("useNodeUpdater pattern", () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(node)) {
-          expect(labelToPlainText($getState(node, buttonLabelState))).toBe(
+          expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
             "更新後テキスト",
           );
         }
@@ -133,7 +130,7 @@ describe("useNodeUpdater pattern", () => {
         const targetNode = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(targetNode)) {
           $setState(targetNode, buttonLabelState, [
-            createTextToken("新しいテキスト"),
+            createSpan("新しいテキスト"),
           ]);
           $setState(targetNode, buttonHrefState, "https://new-url.com");
           $setState(targetNode, buttonVariantState, "secondary");
@@ -143,7 +140,7 @@ describe("useNodeUpdater pattern", () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(node)) {
-          expect(labelToPlainText($getState(node, buttonLabelState))).toBe(
+          expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
             "新しいテキスト",
           );
           expect($getState(node, buttonHrefState)).toBe("https://new-url.com");
@@ -167,7 +164,7 @@ describe("useNodeUpdater pattern", () => {
         const root = $getRoot();
         root.clear();
         const buttonNode = $createButtonNode({
-          label: [createTextToken("テスト")],
+          label: [createSpan("テスト")],
           href: "#",
         });
         root.append(buttonNode);
@@ -179,7 +176,7 @@ describe("useNodeUpdater pattern", () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          originalText = labelToPlainText($getState(node, buttonLabelState));
+          originalText = spansToPlainText($getState(node, buttonLabelState));
         }
       });
 
@@ -189,7 +186,7 @@ describe("useNodeUpdater pattern", () => {
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          $setState(node, buttonLabelState, [createTextToken("更新後")]);
+          $setState(node, buttonLabelState, [createSpan("更新後")]);
         }
       });
 
@@ -197,7 +194,7 @@ describe("useNodeUpdater pattern", () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          const updatedText = labelToPlainText(
+          const updatedText = spansToPlainText(
             $getState(node, buttonLabelState),
           );
           expect(updatedText).toBe("更新後");
@@ -213,7 +210,7 @@ describe("useNodeUpdater pattern", () => {
         const root = $getRoot();
         root.clear();
         const buttonNode = $createButtonNode({
-          label: [createTextToken("初期値")],
+          label: [createSpan("初期値")],
           href: "#",
         });
         root.append(buttonNode);
@@ -224,14 +221,14 @@ describe("useNodeUpdater pattern", () => {
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          $setState(node, buttonLabelState, [createTextToken("更新1")]);
+          $setState(node, buttonLabelState, [createSpan("更新1")]);
         }
       });
 
       await editor.update(() => {
         const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          $setState(node, buttonLabelState, [createTextToken("更新2")]);
+          $setState(node, buttonLabelState, [createSpan("更新2")]);
         }
       });
 
@@ -239,7 +236,7 @@ describe("useNodeUpdater pattern", () => {
       editor.getEditorState().read(() => {
         const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          expect(labelToPlainText($getState(node, buttonLabelState))).toBe(
+          expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
             "更新2",
           );
         }

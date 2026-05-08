@@ -100,7 +100,7 @@ const SOCIAL_ID = "social-1";
 
 const VALID_NAV_INPUT = {
   type: "HEADER_DESKTOP" as const,
-  label: [{ _key: "tk-home", type: "text" as const, value: "ホーム" }],
+  label: [{ _key: "tk-home", _type: "span" as const, text: "ホーム" }],
   url: "/",
   isExternal: false,
   order: 0,
@@ -179,7 +179,7 @@ describe("navigationItemInputSchema バリデーション", () => {
     test("label の text token が200文字以内なら通過する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: [{ _key: "k", type: "text" as const, value: "あ".repeat(200) }],
+        label: [{ _key: "k", _type: "span" as const, text: "あ".repeat(200) }],
       });
       expect(result.success).toBe(true);
     });
@@ -188,8 +188,8 @@ describe("navigationItemInputSchema バリデーション", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
         label: [
-          { _key: "k", type: "icon" as const, name: "IconHome" },
-          { _key: "k", type: "text" as const, value: "ホーム" },
+          { _key: "k", _type: "iconInline" as const, name: "IconHome" },
+          { _key: "k", _type: "span" as const, text: "ホーム" },
         ],
       });
       expect(result.success).toBe(true);
@@ -216,7 +216,7 @@ describe("navigationItemInputSchema バリデーション", () => {
     test("label に text token がない（icon のみ）で失敗する (icon-only モード禁止)", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: [{ _key: "k", type: "icon" as const, name: "IconHome" }],
+        label: [{ _key: "k", _type: "iconInline" as const, name: "IconHome" }],
       });
       expect(result.success).toBe(false);
     });
@@ -224,7 +224,7 @@ describe("navigationItemInputSchema バリデーション", () => {
     test("label の text token が201文字で失敗する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: [{ _key: "k", type: "text" as const, value: "あ".repeat(201) }],
+        label: [{ _key: "k", _type: "span" as const, text: "あ".repeat(201) }],
       });
       expect(result.success).toBe(false);
     });
@@ -460,7 +460,7 @@ describe("createNavigationItem", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             type: "HEADER_DESKTOP",
-            label: [{ _key: "tk-home", type: "text", value: "ホーム" }],
+            label: [{ _key: "tk-home", _type: "span", text: "ホーム" }],
             url: "/",
             isExternal: false,
             order: 0,
@@ -536,7 +536,7 @@ describe("updateNavigationItem", () => {
 
     test("update が正しいデータで呼ばれる", async () => {
       const labelTokens = [
-        { _key: "tk-update", type: "text" as const, value: "更新後ラベル" },
+        { _key: "tk-update", _type: "span" as const, text: "更新後ラベル" },
       ];
       await updateNavigationItem(NAV_ID, {
         ...VALID_NAV_INPUT,

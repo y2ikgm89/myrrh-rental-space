@@ -6,20 +6,19 @@ import { Prisma } from "@generated/prisma/client";
 import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
-  buttonLabelSchema,
-  labelToPlainText,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+  createSpanArraySchema,
+  spansToPlainText,
+} from "@/shared/lib/portable-text";
 
 export const navigationItemInputSchema = z.object({
   type: z.enum(NavigationType),
   parentId: z.string().uuid().nullable().optional(),
   /**
-   * Sanity Portable Text 互換の token 配列（テキスト + アイコン混在）。
-   * UI 層で空ナビ防止のため `min(1)` の text segment 必須を form schema 側で強制する。
-   * icon-only モード（text token ゼロ）は NN/g 準拠で UI 層が拒否する想定。
+   * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在）。
+   * icon-only モード（span token ゼロ）は NN/g 準拠で UI 層が拒否する想定。
    */
-  label: buttonLabelSchema.refine(
-    (tokens) => labelToPlainText(tokens).trim().length > 0,
+  label: createSpanArraySchema({ maxSpans: 30 }).refine(
+    (spans) => spansToPlainText(spans).trim().length > 0,
     { error: "ラベルにテキストを 1 文字以上含めてください" },
   ),
   url: z.string().min(1, { error: "URLは必須です" }).max(500),
@@ -72,7 +71,7 @@ function normalizeNavigationItemInput(data: NavigationItemInput) {
   return {
     ...data,
     parentId: data.parentId ?? null,
-    // ButtonLabelToken[] を Prisma の Json 列に渡すための SDK 境界 cast
+    // PortableTextSpan[] を Prisma の Json 列に渡すための SDK 境界 cast
     // (type-safety.md §許可例外 #2: Prisma JSON 型)
     label: data.label satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue,
   };
