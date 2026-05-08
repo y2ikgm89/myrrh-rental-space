@@ -533,6 +533,7 @@ bunx playwright test --grep "<test title>"         # 名前フィルター
 - **`bun run test` / `bun run test:watch` / `bun run test:coverage` は廃止** — 冗長・coverage は per-directory batch と非互換
 - **`createImageGroupSchema()` / `sectionLayoutSchema` 等 `z.object(...).prefault({}).register(...)` パターンは省略時に inner default を生成する** — `expect(result.success).toBe(false)` の「image / layout 省略時 fail」期待は新仕様で必ず pass になり silent break。section schema を使う test は `prefault` で展開された default を `toMatchObject({ url: "", alt: "" })` 等で部分一致させる（field によって caption の default 有無が異なるため `toEqual` では flake する）
 - **`prisma/migrations/<timestamp>_<name>/` の存在確認は Glob ではなく `ls prisma/migrations/`** — Glob `prisma/migrations/2026*` はディレクトリにマッチしない（Glob ツールはファイルのみ）ため「migration 不在」と誤判定する silent bug。`prisma/migrations/2026*/migration.sql` のような末尾ファイル指定なら Glob 可
+- **失敗 test が現在の変更由来か pre-existing かは `git stash && bun test <file> && git stash pop` で切り分け** — stashed 状態で再実行し fail が再現するなら pre-existing（test fixture が前 commit の schema 変更に追従していないケース等）。pre-existing と確定したら自分の変更で深追いしない。実例: 2026-05-08 spaceFormSchema 13 件 fail を `git stash` で `40ca005e feat(spaces): structured facilities` の test fixture 未追従と切り分け（facilities が `string[]` → `{ name, iconName }[]` 化されたが VALID_SPACE_INPUT 未更新）
 
 ## ファイル配置
 
