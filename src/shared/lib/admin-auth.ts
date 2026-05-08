@@ -177,6 +177,21 @@ function createAdminAuth() {
             // 監査ログ失敗でも認証フローを阻害しない
           }
         }
+
+        // パスワードリセット完了（Better Auth 公式パス /reset-password）
+        // リセット要求のみ記録 → 完了未記録だとインシデント調査時に証跡が不完全。
+        // ctx.context.newSession があれば user.id を取得、なければ token からのみ記録。
+        if (ctx.path === "/reset-password") {
+          try {
+            const userId = ctx.context.newSession?.user.id;
+            void logAuthEvent(AuditAction.PASSWORD_CHANGE, userId, {
+              method: "reset",
+              email: ctx.context.newSession?.user.email,
+            });
+          } catch {
+            // 監査ログ失敗でも認証フローを阻害しない
+          }
+        }
       }),
     },
     trustedOrigins: [appUrl],

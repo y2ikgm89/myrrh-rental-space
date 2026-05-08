@@ -20,6 +20,10 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { getR2BucketName, getR2Client } from "./client";
+import {
+  detectImageMimeFromMagicBytes,
+  SUPPORTED_IMAGE_MIME_TYPES,
+} from "./image-magic-bytes";
 import { buildPublicUrl, generateStorageKey, type StoragePrefix } from "./keys";
 
 // =============================================================================
@@ -129,12 +133,40 @@ export async function uploadFile(
     const arrayBuffer = await file.arrayBuffer();
     const body = new Uint8Array(arrayBuffer);
 
+    // 画像 upload では magic-byte 検証で MIME type を server-side 確定する
+    // （クライアント供給の file.type はブラウザで偽装可能 → XSS / cache-poisoning 経路）。
+    // 非画像 prefix（例: PDF 等）は将来拡張時に分岐する。
+    const isImageUpload = (validation.allowedTypes as readonly string[]).every(
+      (t) =>
+        SUPPORTED_IMAGE_MIME_TYPES.includes(
+          t as (typeof SUPPORTED_IMAGE_MIME_TYPES)[number],
+        ),
+    );
+    let resolvedContentType: string = file.type;
+    if (isImageUpload) {
+      const detected = detectImageMimeFromMagicBytes(body);
+      if (!detected) {
+        return {
+          success: false,
+          error:
+            "ファイルの中身が画像として認識できません。対応形式（JPEG / PNG / WebP / GIF）でアップロードしてください。",
+        };
+      }
+      if (!validation.allowedTypes.includes(detected)) {
+        return {
+          success: false,
+          error: `この拠点で許可されていない画像形式です（検出: ${detected}）`,
+        };
+      }
+      resolvedContentType = detected;
+    }
+
     await getR2Client().send(
       new PutObjectCommand({
         Bucket: getR2BucketName(),
         Key: key,
         Body: body,
-        ContentType: file.type,
+        ContentType: resolvedContentType,
         CacheControl: options?.cacheControl ?? DEFAULT_CACHE_CONTROL,
         ContentLength: file.size,
       }),
