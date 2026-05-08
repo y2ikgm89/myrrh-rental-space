@@ -15,6 +15,10 @@ import {
   toAppRoute,
   type AppRoute,
 } from "@/shared/lib/typed-routes";
+import {
+  buttonLabelSchema,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 
 // =============================================================================
 // URL / CTAボタン共通スキーマ
@@ -120,14 +124,10 @@ export function createCtaButtonItemSchema<TUrl extends string>(
   urlSchema: z.ZodType<TUrl>,
 ) {
   return z.object({
-    text: z
-      .string()
-      .min(1, { error: "ボタンテキストは必須です" })
-      .max(50, { error: "ボタンテキストは50文字以内です" }),
+    label: buttonLabelSchema,
     url: urlSchema,
     variant: z.enum(ctaButtonVariants).default("primary"),
     size: z.enum(ctaButtonSizes).default("lg"),
-    iconName: z.string().max(50).default(""),
     openInNewTab: z.boolean().default(false),
     backgroundColor: optionalHexColorSchema,
     textColor: optionalHexColorSchema,
@@ -138,11 +138,10 @@ export function createCtaButtonItemSchema<TUrl extends string>(
  * CTAボタン配列アイテムの出力型
  */
 export type CTAButtonItem = {
-  text: string;
+  label: ButtonLabelToken[];
   url: AppRoute;
   variant: CTAButtonVariant;
   size: CTAButtonSize;
-  iconName: string;
   openInNewTab: boolean;
   backgroundColor?: string | undefined;
   textColor?: string | undefined;

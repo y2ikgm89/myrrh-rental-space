@@ -22,6 +22,7 @@ import {
 import type { CtaConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { labelToPlainText } from "@/shared/lib/sections/definitions/_shared/button-label";
 
 interface CTASectionProps {
   readonly config: CtaConfig;
@@ -56,9 +57,7 @@ function CTAButtons({
             href={primaryButton.url}
             strength={0.35}
             size={primaryButton.size}
-            {...(primaryButton.iconName && {
-              iconName: primaryButton.iconName,
-            })}
+            label={primaryButton.label}
             {...(primaryButton.backgroundColor && {
               customBackgroundColor: primaryButton.backgroundColor,
             })}
@@ -66,9 +65,7 @@ function CTAButtons({
               customTextColor: primaryButton.textColor,
             })}
             openInNewTab={primaryButton.openInNewTab}
-          >
-            {primaryButton.text}
-          </MagneticButton>
+          />
         )}
         {secondaryButton && (
           <Link
@@ -87,7 +84,7 @@ function CTAButtons({
               },
             })}
           >
-            {secondaryButton.text}
+            {labelToPlainText(secondaryButton.label)}
             <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
           </Link>
         )}

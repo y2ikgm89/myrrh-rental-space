@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import * as TablerIcons from "@tabler/icons-react";
-import type { IconProps } from "@tabler/icons-react";
-import { createElement } from "react";
-import type { CSSProperties, FC, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
+import {
+  isIconToken,
+  isTextToken,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
 type ButtonSize = "sm" | "md" | "lg";
@@ -36,70 +39,77 @@ const iconSizeClasses = {
   lg: "h-5 w-5",
 } as const satisfies Record<ButtonSize, string>;
 
-type TablerIconComponent = FC<IconProps>;
-
-function isTablerIconComponent(value: unknown): value is TablerIconComponent {
-  return typeof value === "function";
-}
-
-/**
- * Tabler icon を name 文字列から動的解決する純関数。
- *
- * Phase 2 では bundle 影響を許容して全 Tabler Icons を import 経由で参照
- * （`@tabler/icons-react` の tree-shaking はクラス参照に対しては効かないが
- * named export 単位では効く想定）。Phase 3 で allowlist 縮小予定。
- */
-function resolveTablerIcon(
-  name: string | undefined,
-): TablerIconComponent | null {
-  if (!name) return null;
-  const registry: Record<string, unknown> = TablerIcons;
-  const Icon = registry[name];
-  return isTablerIconComponent(Icon) ? Icon : null;
-}
-
 interface ButtonBaseProps {
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
-  readonly children: ReactNode;
   readonly className?: string;
-  /**
-   * Tabler Icons 名（例: `IconArrowRight`）。
-   * 未指定または不明な name の場合は何も描画しない。
-   */
-  readonly iconName?: string;
-  /**
-   * カスタム背景色（HEX）。variant 既定色を上書きする。
-   */
+  /** カスタム背景色（HEX）。variant 既定色を上書きする。 */
   readonly customBackgroundColor?: string;
-  /**
-   * カスタム文字色（HEX）。variant 既定色を上書きする。
-   */
+  /** カスタム文字色（HEX）。variant 既定色を上書きする。 */
   readonly customTextColor?: string;
 }
 
-interface ButtonAsButton extends ButtonBaseProps {
+/**
+ * `label` は Sanity Portable Text 互換のトークン配列。
+ * text トークンはテキストとして、icon トークンは curation icon として
+ * 順次描画する。`children` と排他（discriminated union）。
+ */
+interface LabelProps extends ButtonBaseProps {
+  readonly label: ButtonLabelToken[];
+  readonly children?: never;
+}
+
+interface ChildrenProps extends ButtonBaseProps {
+  readonly label?: never;
+  readonly children: ReactNode;
+}
+
+type ButtonContentProps = LabelProps | ChildrenProps;
+
+interface AsButton {
   readonly href?: undefined;
   readonly type?: "button" | "submit";
   readonly disabled?: boolean;
   readonly onClick?: () => void;
 }
 
-interface ButtonAsLink extends ButtonBaseProps {
+interface AsLink {
   readonly href: AppRoute;
   readonly onClick?: () => void;
   readonly target?: "_blank" | "_self";
 }
 
-type ButtonProps = ButtonAsButton | ButtonAsLink;
+type ButtonProps = ButtonContentProps & (AsButton | AsLink);
+
+function renderTokens(
+  tokens: ButtonLabelToken[],
+  size: ButtonSize,
+  variant: ButtonVariant,
+): ReactNode {
+  const iconSize = variant === "link" ? "md" : size;
+  return tokens.map((token, i) => {
+    if (isTextToken(token)) {
+      return <span key={i}>{token.value}</span>;
+    }
+    if (isIconToken(token)) {
+      return (
+        <CuratedIcon
+          key={i}
+          name={token.name}
+          className={iconSizeClasses[iconSize]}
+          aria-hidden="true"
+        />
+      );
+    }
+    return null;
+  });
+}
 
 export function Button(props: ButtonProps) {
   const {
     variant = "primary",
     size = "md",
-    children,
     className,
-    iconName,
     customBackgroundColor,
     customTextColor,
   } = props;
@@ -110,7 +120,6 @@ export function Button(props: ButtonProps) {
     className,
   );
 
-  // React Compiler 対応 — Object.assign 禁止、スプレッドのみ使用
   const inlineStyle: CSSProperties = {
     ...(customBackgroundColor && { backgroundColor: customBackgroundColor }),
     ...(customTextColor && { color: customTextColor }),
@@ -118,16 +127,10 @@ export function Button(props: ButtonProps) {
   const hasInlineStyle =
     Boolean(customBackgroundColor) || Boolean(customTextColor);
 
-  // createElement 経由で動的解決する（render 中の JSX <Icon /> は
-  // react-hooks/static-components 違反になるため避ける）。
-  const ResolvedIcon = resolveTablerIcon(iconName);
-  const iconSize = variant === "link" ? "md" : size;
-  const iconNode = ResolvedIcon
-    ? createElement(ResolvedIcon, {
-        className: iconSizeClasses[iconSize],
-        "aria-hidden": true,
-      })
-    : null;
+  const content =
+    "label" in props && props.label !== undefined
+      ? renderTokens(props.label, size, variant)
+      : props.children;
 
   if ("href" in props && typeof props.href === "string") {
     return (
@@ -135,28 +138,27 @@ export function Button(props: ButtonProps) {
         href={props.href}
         className={classes}
         {...(hasInlineStyle && { style: inlineStyle })}
-        {...(props.target && { target: props.target })}
+        {...("target" in props && props.target && { target: props.target })}
         {...(props.onClick && { onClick: props.onClick })}
       >
-        {iconNode}
-        {children}
+        {content}
       </Link>
     );
   }
 
+  const buttonProps = props as AsButton & ButtonContentProps;
   return (
     <button
-      type={props.type ?? "button"}
-      disabled={props.disabled}
-      onClick={props.onClick}
+      type={buttonProps.type ?? "button"}
+      disabled={buttonProps.disabled}
+      onClick={buttonProps.onClick}
       className={cn(
         classes,
         "disabled:opacity-50 disabled:pointer-events-none",
       )}
       {...(hasInlineStyle && { style: inlineStyle })}
     >
-      {iconNode}
-      {children}
+      {content}
     </button>
   );
 }

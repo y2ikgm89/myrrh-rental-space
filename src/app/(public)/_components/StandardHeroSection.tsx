@@ -33,6 +33,7 @@ import {
 import type { HeroConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { labelToPlainText } from "@/shared/lib/sections/definitions/_shared/button-label";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -58,15 +59,13 @@ function HeroButtons({
           href={primary.url}
           strength={0.35}
           size={primary.size}
-          {...(primary.iconName && { iconName: primary.iconName })}
+          label={primary.label}
           {...(primary.backgroundColor && {
             customBackgroundColor: primary.backgroundColor,
           })}
           {...(primary.textColor && { customTextColor: primary.textColor })}
           openInNewTab={primary.openInNewTab}
-        >
-          {primary.text}
-        </MagneticButton>
+        />
       )}
       {secondary && (
         <Link
@@ -82,7 +81,7 @@ function HeroButtons({
             },
           })}
         >
-          {secondary.text}
+          {labelToPlainText(secondary.label)}
           <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
         </Link>
       )}

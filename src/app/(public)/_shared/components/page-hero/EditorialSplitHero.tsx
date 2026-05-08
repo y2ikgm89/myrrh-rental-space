@@ -52,11 +52,10 @@ export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
   transition: "crossfade",
   buttons: [
     {
-      text: "Reserve a space",
+      label: [{ type: "text", value: "Reserve a space" }],
       url: "/reservation",
       variant: "primary",
       size: "lg",
-      iconName: "",
       openInNewTab: false,
       backgroundColor: "",
       textColor: "",
@@ -502,9 +501,8 @@ export function EditorialSplitHero({
                   href={isAppRoute(btn.url) ? btn.url : "/reservation"}
                   className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
                   {...(btn.openInNewTab && { target: "_blank" as const })}
-                >
-                  {btn.text}
-                </Button>
+                  label={btn.label}
+                />
               ))}
             </div>
           </ScrollReveal>

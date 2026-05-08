@@ -4,9 +4,8 @@
  * Section schema 共通の buttons[] 表現 SSoT。
  * cta / hero / hero-parallax が利用する。
  *
- * 機能落差を解消するため text/url/variant に加えて size/iconName/openInNewTab/
- * カスタム背景色・文字色を一括登録する。fieldRegistry.register 経由で
- * AutoSectionForm が編集 UI を自動生成。
+ * label は ButtonLabelToken[] モデル（テキスト + アイコン混在）。
+ * fieldRegistry.register 経由で AutoSectionForm が編集 UI を自動生成。
  */
 
 import { fieldRegistry, field } from "../../field-registry";
@@ -32,7 +31,11 @@ export function createButtonsArraySchema(label = "ボタン") {
     .array(label, {
       subGroup: "button",
       fields: {
-        text: field.text("ボタンの文字", { minLength: 1, maxLength: 50 }),
+        label: field.richLabel("ボタンの文字", {
+          subGroup: "text",
+          helpText:
+            "テキストとアイコンを組み合わせてラベルを作成できます。テキストのみでも可。",
+        }),
         url: createInternalAppRouteSchema(500).register(fieldRegistry, {
           fieldType: "url",
           label: "リンク先 URL",
@@ -46,7 +49,6 @@ export function createButtonsArraySchema(label = "ボタン") {
           options: ctaButtonSizes,
           default: "lg",
         }),
-        iconName: field.icon("アイコン（任意）"),
         openInNewTab: field.boolean("新しいタブで開く"),
         backgroundColor: optionalHexColorSchema.register(fieldRegistry, {
           fieldType: "color",

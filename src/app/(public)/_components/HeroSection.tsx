@@ -171,9 +171,11 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
           {config.buttons.length > 0 && (
             <div className="mt-10 flex flex-col items-start gap-4">
               {config.buttons.map((btn) => (
-                <MagneticButton key={btn.url} href={btn.url}>
-                  {btn.text}
-                </MagneticButton>
+                <MagneticButton
+                  key={btn.url}
+                  href={btn.url}
+                  label={btn.label}
+                />
               ))}
             </div>
           )}

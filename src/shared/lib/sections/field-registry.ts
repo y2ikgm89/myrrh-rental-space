@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 
+import { buttonLabelSchema } from "./definitions/_shared/button-label";
 import type { FieldType } from "./types";
 
 // ─────────────────────────────────────────────────────────────
@@ -142,6 +143,13 @@ interface DynamicSelectOpts {
   readonly group?: FieldMeta["group"];
   readonly subGroup?: FieldSubGroup;
   readonly helpText?: string;
+}
+
+interface RichLabelOpts {
+  readonly group?: FieldMeta["group"];
+  readonly subGroup?: FieldSubGroup;
+  readonly helpText?: string;
+  readonly placeholder?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -376,5 +384,24 @@ export const field = {
         ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
         ...(opts.helpText !== undefined && { helpText: opts.helpText }),
       });
+  },
+
+  /**
+   * リッチラベル（ButtonLabelToken[] — テキスト + アイコンの混在配列）
+   *
+   * Sanity Portable Text 互換のボタンラベルモデル。
+   * `safeParse({})` で空配列にフォールバック（field defaults 契約）。
+   */
+  richLabel(label: string, opts?: RichLabelOpts) {
+    return buttonLabelSchema.register(fieldRegistry, {
+      fieldType: "rich-label",
+      label,
+      group: opts?.group ?? "content",
+      ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
+      ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+      ...(opts?.placeholder !== undefined && {
+        placeholder: opts.placeholder,
+      }),
+    });
   },
 } as const;

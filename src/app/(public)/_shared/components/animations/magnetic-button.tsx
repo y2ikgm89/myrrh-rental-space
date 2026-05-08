@@ -6,26 +6,27 @@
  * Subtly follows cursor when hovered, snaps back with elastic ease.
  * Supports both <a> and <button> elements.
  *
- * Phase 2 拡張: iconName / size / customBackgroundColor / customTextColor /
- * openInNewTab を受け入れて section schema の buttons[] アイテムを忠実に描画する。
+ * `label` (ButtonLabelToken[]) でテキスト + アイコンの混在ラベルを描画する。
  */
 
 import {
-  createElement,
   useRef,
   type CSSProperties,
-  type FC,
   type ReactElement,
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import * as TablerIcons from "@tabler/icons-react";
-import type { IconProps } from "@tabler/icons-react";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
+import {
+  isIconToken,
+  isTextToken,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 
 type MagneticButtonSize = "sm" | "md" | "lg";
 
@@ -41,46 +42,62 @@ const iconSizeClasses = {
   lg: "h-5 w-5",
 } as const satisfies Record<MagneticButtonSize, string>;
 
-type TablerIconComponent = FC<IconProps>;
-
-function isTablerIconComponent(value: unknown): value is TablerIconComponent {
-  return typeof value === "function";
-}
-
-function resolveTablerIcon(
-  name: string | undefined,
-): TablerIconComponent | null {
-  if (!name) return null;
-  const registry: Record<string, unknown> = TablerIcons;
-  const Icon = registry[name];
-  return isTablerIconComponent(Icon) ? Icon : null;
-}
-
-interface MagneticButtonProps {
-  readonly children: ReactNode;
+interface MagneticButtonBaseProps {
   readonly className?: string;
   readonly strength?: number;
   readonly onClick?: () => void;
   readonly href?: AppRoute;
   readonly size?: MagneticButtonSize;
-  readonly iconName?: string;
   readonly customBackgroundColor?: string;
   readonly customTextColor?: string;
   readonly openInNewTab?: boolean;
 }
 
-export function MagneticButton({
-  children,
-  className = "",
-  strength = 0.3,
-  onClick,
-  href,
-  size = "md",
-  iconName,
-  customBackgroundColor,
-  customTextColor,
-  openInNewTab,
-}: MagneticButtonProps): ReactElement {
+interface LabelMode extends MagneticButtonBaseProps {
+  readonly label: ButtonLabelToken[];
+  readonly children?: never;
+}
+
+interface ChildrenMode extends MagneticButtonBaseProps {
+  readonly label?: never;
+  readonly children: ReactNode;
+}
+
+type MagneticButtonProps = LabelMode | ChildrenMode;
+
+function renderTokens(
+  tokens: ButtonLabelToken[],
+  size: MagneticButtonSize,
+): ReactNode {
+  return tokens.map((token, i) => {
+    if (isTextToken(token)) {
+      return <span key={i}>{token.value}</span>;
+    }
+    if (isIconToken(token)) {
+      return (
+        <CuratedIcon
+          key={i}
+          name={token.name}
+          className={iconSizeClasses[size]}
+          aria-hidden="true"
+        />
+      );
+    }
+    return null;
+  });
+}
+
+export function MagneticButton(props: MagneticButtonProps): ReactElement {
+  const {
+    className = "",
+    strength = 0.3,
+    onClick,
+    href,
+    size = "md",
+    customBackgroundColor,
+    customTextColor,
+    openInNewTab,
+  } = props;
   const ref = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
   const motionOk = useMotionPreference();
   const setRef = (element: HTMLAnchorElement | HTMLButtonElement | null) => {
@@ -122,7 +139,6 @@ export function MagneticButton({
     className,
   );
 
-  // React Compiler 対応: スプレッド合成のみ（Object.assign 禁止）
   const inlineStyle: CSSProperties = {
     ...(customBackgroundColor && { backgroundColor: customBackgroundColor }),
     ...(customTextColor && { color: customTextColor }),
@@ -130,15 +146,10 @@ export function MagneticButton({
   const hasInlineStyle =
     Boolean(customBackgroundColor) || Boolean(customTextColor);
 
-  // createElement 経由で動的解決する（render 中の JSX <Icon /> は
-  // react-hooks/static-components 違反になるため避ける）。
-  const ResolvedIcon = resolveTablerIcon(iconName);
-  const iconNode = ResolvedIcon
-    ? createElement(ResolvedIcon, {
-        className: iconSizeClasses[size],
-        "aria-hidden": true,
-      })
-    : null;
+  const content =
+    "label" in props && props.label !== undefined
+      ? renderTokens(props.label, size)
+      : props.children;
 
   if (href) {
     return (
@@ -151,8 +162,7 @@ export function MagneticButton({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        {iconNode}
-        {children}
+        {content}
       </Link>
     );
   }
@@ -167,8 +177,7 @@ export function MagneticButton({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      {iconNode}
-      {children}
+      {content}
     </button>
   );
 }

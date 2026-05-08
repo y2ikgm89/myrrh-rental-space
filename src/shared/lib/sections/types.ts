@@ -18,6 +18,7 @@ export const FIELD_TYPES = [
   "icon",
   "array",
   "group",
+  "rich-label",
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];

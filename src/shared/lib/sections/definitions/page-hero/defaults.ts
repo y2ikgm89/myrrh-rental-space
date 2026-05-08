@@ -29,11 +29,10 @@ export const DEFAULT_PAGE_HERO: PageHeroConfig = {
   transition: "crossfade",
   buttons: [
     {
-      text: "Reserve a space",
+      label: [{ type: "text", value: "Reserve a space" }],
       url: "/reservation",
       variant: "primary",
       size: "lg",
-      iconName: "",
       openInNewTab: false,
       backgroundColor: "",
       textColor: "",
