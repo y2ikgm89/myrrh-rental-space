@@ -18,7 +18,7 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual [--update-sna
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
 bun run db:seed                               # Seed
 bun run analyze / lhci                        # bundle 解析 / Lighthouse CI
-bun outdated && bun update                    # 依存更新（実行後 validate 必須）
+bun outdated && bun update                    # 依存更新（メジャー更新は upgrade-deps SKILL 経由、実行後 validate 必須）
 ```
 
 保護ファイル（PreToolUse hook で編集拒否）: `.env*` / `bun.lock` / `prisma/migrations/*.sql`

@@ -1,11 +1,10 @@
 # Specs
 
-設計仕様ドキュメント。各 spec は対応する plan の完了後に `.archive/2026/` に移動する。
+設計仕様・設計ドラフト。**対応する plan が archive になったタイミング**で、この領域の関連ファイルも `.archive/<年>/` へ寄せる。
 
-## Active
+## 運用（anti-drift）
 
-- [2026-04-27-clean-break-c5-design.md](./2026-04-27-clean-break-c5-design.md) — C5 Clean-Break Refactor 設計仕様（進行中）
+- アクティブ一覧は README で保守しない。直下の Markdown をソース・オブ・トゥルースとする。
+- 命名は対応する plan と同日プレフィックスを揃えると追跡しやすい（例: `2026-05-02-*-design.md`）。
 
-## Archive
-
-- [.archive/2026/](.archive/2026/) — 完了済み spec（対応 plan が archive されたものと同期）
+アーカイブ: [.archive/](.archive/)

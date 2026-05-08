@@ -1,6 +1,9 @@
 ---
 name: frontend-design
 description: 公開ページの新規 UI や大幅なリデザイン前に使う。ブランド、anti-AI、再利用方針を短い design brief に落としてから実装する。
+paths:
+  - src/app/(public)/**/*.tsx
+  - src/app/(public)/**/*.css
 ---
 
 # frontend-design

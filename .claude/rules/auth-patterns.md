@@ -764,6 +764,11 @@ await adminAuthClient.resetPassword({
 
 ### Gotchas
 
+### Better Auth hooks の挙動（TS 型に出ない仕様）
+
+- **`hooks.after` は APIError throw 時にも発火する** — `to-auth-endpoints.mjs` で APIError は catch されて `internalContext.context.returned` に格納されてから after hook が呼ばれる。成功 / 失敗の対称配線は `ctx.context.returned.status !== "OK"` で判定（TS 型では露出していない実装由来の挙動）。`/reset-password` の `PASSWORD_CHANGE` / `PASSWORD_RESET_FAILED` 対称監査ログ（`admin-auth.ts`）が canonical 参照実装
+- **`onAPIError.onError(error, ctx)` の `ctx` は静的 AuthContext のみ** — `ctx.path` / `ctx.body` は未提供（型は `(error, ctx: AuthContext) => void`、内部で `betterFetch` の閉包から渡される静的 instance context）。per-request の path / body / email を含む失敗トラッキングは `onAPIError` ではなく `hooks.after` + `ctx.context.returned` で実装する
+
 ### 認証 / ルーティング
 
 ### Admin Gate

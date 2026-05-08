@@ -1,6 +1,6 @@
 # AI Agent Instructions
 
-最終更新: 2026-04-29
+最終更新: 2026-05-08
 
 このリポジトリは Codex / Claude Code の 2 つの AI エージェントを併用する。両者の正本は完全に分離し、一方を他方にミラーしない。後方互換のための同期スクリプトや mirror 用 CI job は持たない。
 
@@ -27,30 +27,11 @@ OpenAI Codex 公式の配置に合わせる。
 
 同じ階層では `AGENTS.override.md` が `AGENTS.md` より優先される。このリポジトリではルート `AGENTS.md` を恒久的な正本にし、下位 override は必要になるまで追加しない。
 
-### Repository Skills（`.agents/skills/`）
+### Repository Skills と Custom Agents
 
-| Skill                           | 用途                                    |
-| ------------------------------- | --------------------------------------- |
-| `admin-clean-break`             | 管理画面、Server Actions、mutation 変更 |
-| `admin-ui-review`               | 管理画面 UI、共有 chrome、z-index、導線 |
-| `auth-rbac-change`              | Better Auth、RBAC、admin gate、監査     |
-| `lexical-editor`                | 管理画面 Lexical editor                 |
-| `media-storage-change`          | media domain、R2/S3、media picker       |
-| `prisma-data-change`            | Prisma schema、migration、seed、DB 境界 |
-| `public-site-change`            | 公開 route、公開 UI、SEO、公開 form     |
-| `project-validation`            | 完了前、PR 前、release 前の検証         |
-| `codex-instruction-maintenance` | Codex ネイティブ資産の保守              |
+Skill 名・用途・Sandbox 別 subagent は [AGENTS.md](../../AGENTS.md) を正本とし、この文書では二重管理しない。
 
-### Custom Agents（`.codex/agents/`）
-
-| Agent               | 用途                                                     | Sandbox         |
-| ------------------- | -------------------------------------------------------- | --------------- |
-| `codebase_explorer` | 実装前の read-only コードパス調査                        | read-only       |
-| `admin_ui_reviewer` | 管理画面 UI、共有 chrome、レイヤー、アクセシビリティ確認 | read-only       |
-| `docs_researcher`   | OpenAI / Next.js / React / Prisma など一次情報の確認     | read-only       |
-| `test_verifier`     | 対象テストや validate の実行と結果要約                   | workspace-write |
-
-Codex は subagent を明示依頼なしに spawn しない。通常作業ではメイン agent が実装し、ユーザーが「subagent を使って」「並列で調査して」などと依頼した場合だけ使う。
+Codex は subagent を明示依頼なしに spawn しない。ユーザーが「subagent を使って」「並列で調査して」などと指示したときだけ `.codex/agents/*.toml` を使う。
 
 ## Claude Code の正本
 
@@ -76,15 +57,15 @@ Claude Code 公式の配置 (`code.claude.com/docs/en/{memory,sub-agents,skills,
 
 ## 共通ドキュメント
 
-両 AI から参照する詳細リファレンスは `docs/reference/` 配下に集約する。AI 専用の命名（`claude-rules` 等）は使わない。
+両 AI から参照する非エージェント専用ドキュメントは `docs/` に集約する。AI 専用ディレクトリ名（`claude-rules` のような別名）は使わない。
 
-| パス                | 内容                                   |
-| ------------------- | -------------------------------------- |
-| `docs/explanation/` | 設計の「なぜ」                         |
-| `docs/how-to/`      | 手順                                   |
-| `docs/reference/`   | 仕様（gsap / react-api / bun-test 等） |
-| `docs/superpowers/` | superpowers skill 生成 plans / specs   |
-| `docs/templates/`   | ドキュメントテンプレート               |
+| パス                | 内容                             |
+| ------------------- | -------------------------------- |
+| `docs/explanation/` | 設計の「なぜ」                   |
+| `docs/how-to/`      | 手順                             |
+| `docs/reference/`   | API・ランタイムの事実記述        |
+| `docs/superpowers/` | plan / spec ドラフト・アーカイブ |
+| `docs/templates/`   | doc / plan の雛形                |
 
 ## 相互参照禁止のルール
 

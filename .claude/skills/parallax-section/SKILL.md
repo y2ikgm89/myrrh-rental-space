@@ -1,6 +1,8 @@
 ---
 name: parallax-section
 description: 公開ページのスクロール演出セクションを追加するときに使う。GSAP、effect level、reduced motion、モバイル縮退を前提に実装する。
+paths:
+  - src/app/(public)/**/*.tsx
 ---
 
 # parallax-section

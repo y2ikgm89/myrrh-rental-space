@@ -1,6 +1,9 @@
 ---
 name: upgrade-deps
 description: 依存関係のアップグレード。bun outdated で確認 → semver 範囲内更新 → メジャー/マイナーアップグレード → validate → lint エラー修正 → build 検証の一連フロー。「依存関係を更新して」「パッケージをアップグレードして」場面で使用。
+paths:
+  - package.json
+  - bun.lock
 ---
 
 # 依存関係アップグレードスキル
@@ -25,6 +28,9 @@ bun update
 ```
 
 ### Step 3: メジャー/マイナーアップグレード（ユーザー確認）
+
+メジャー changelog の取得は `gh release view <tag> -R <owner>/<repo>` を ground truth とする。WebFetch は新規リリース直後（同日〜数日以内）のページで日付・内容を訓練データから hallucinate することがある。
+パッケージのサブパス export（`<pkg>/locale` 等）が必要な場合は `bun pm view <pkg> exports` で install 前に構造確認。
 
 更新候補をテーブルで提示し、ユーザーに確認:
 
@@ -81,9 +87,10 @@ Breaking changes fixed:
 
 ## 既知のアップグレード注意点
 
-| パッケージ                    | 注意点                                                                                                                            |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `@eslint-react/eslint-plugin` | v2→v3 でルール名変更（`hooks-extra/*` → `@eslint-react/*`）、新ルール追加（purity, unsupported-syntax, component-hook-factories） |
-| `prisma`                      | マイナーでも generated client の API が変わることがある。必ず `bun run db:generate`                                               |
-| `better-auth`                 | パッチでも Prisma adapter の互換性が変わることがある。`@better-auth/prisma-adapter` も同時更新                                    |
-| `next`                        | `next.config.ts` の experimental オプション名が変わることがある                                                                   |
+| パッケージ                    | 注意点                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@eslint-react/eslint-plugin` | v2→v3 でルール名変更（`hooks-extra/*` → `@eslint-react/*`）、新ルール追加（purity, unsupported-syntax, component-hook-factories）                                                                                                                                                                                      |
+| `prisma`                      | マイナーでも generated client の API が変わることがある。必ず `bun run db:generate`                                                                                                                                                                                                                                    |
+| `better-auth`                 | パッチでも Prisma adapter の互換性が変わることがある。`@better-auth/prisma-adapter` も同時更新                                                                                                                                                                                                                         |
+| `next`                        | `next.config.ts` の experimental オプション名が変わることがある                                                                                                                                                                                                                                                        |
+| scoped package rename         | 公式 changelog で「legacy 名は互換維持」「新 scoped 名が推奨」と明記されている場合、`bun add <new-scoped>@latest && bun remove <legacy>` で direct dep を切替 + source の import を新名に統一。bun.lock に legacy が transitive で残るのは正常（package contract）。例: `react-day-picker` → `@daypicker/react`（v10） |

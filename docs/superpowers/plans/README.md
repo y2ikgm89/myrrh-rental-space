@@ -1,11 +1,12 @@
 # Plans
 
-Implementation plan documents. After completion, each plan is moved under `.archive/2026/`.
+実装計画 Markdown。ワーク完了後のみ `.archive/<年>/` へ移す。
 
-## Active
+## 運用（Diátaxis / anti-drift）
 
-- [2026-04-27-clean-break-c5.md](./2026-04-27-clean-break-c5.md) — C5 clean-break refactor (skills / rules / subagents / docs), Phases 1–4 (in progress)
+- **アクティブ一覧は README に書かない** — ディレクトリ直下の `YYYY-MM-DD-*.md` がそのままカタログになる。一覧を README に複製すると未更新のまま残りやすい。
+- **新規**: [`templates/plan.md`](../templates/plan.md) をコピーし、kebab-case で命名する。
+- **README の追記行の雛形**: [`templates/plan-readme-entry.md`](../templates/plan-readme-entry.md)。チーム運用で「今週のアクティブだけ共有」したい場合に限り、この 1 行を手で維持する。
+- **完了後**: `.archive/<年>/` へ移動し、対応する spec も specs 側でアーカイブする。
 
-## Archive
-
-- [.archive/2026/](.archive/2026/) — Completed plans (moved only after confirming implementation commits exist on `main`)
+アーカイブ: [.archive/](.archive/)

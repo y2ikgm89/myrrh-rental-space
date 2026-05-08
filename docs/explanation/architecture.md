@@ -1,6 +1,6 @@
 # システムアーキテクチャ
 
-最終更新: 2026-03-22
+最終更新: 2026-05-08
 
 ## 概要
 
@@ -39,33 +39,15 @@ graph TB
 
 ### 2. ドメイン境界
 
-- `src/shared/domain/settings`
-- `src/shared/domain/navigation`
-- `src/shared/domain/dashboard`
-- `src/shared/domain/audit-log`
-- `src/shared/domain/block-template`
-- `src/shared/domain/coupons`
-- `src/shared/domain/customers`
-- `src/shared/domain/faq`
-- `src/shared/domain/instagram`
-- `src/shared/domain/inquiries`
-- `src/shared/domain/locations`
-- `src/shared/domain/pages`
-- `src/shared/domain/post-comments`
-- `src/shared/domain/sections`
-- `src/shared/domain/posts`
-- `src/shared/domain/news`
-- `src/shared/domain/editor-comments`
-- `src/shared/domain/media`
-- `src/shared/domain/reservations`
-- `src/shared/domain/spaces`
-- `src/shared/domain/staff-invitations`
-- `src/shared/domain/space-categories`
-- `src/shared/domain/terms`
-- `src/shared/domain/users`
-- `src/shared/domain/user-page-assignments`
+業務ロジックと読み取りモデルは `src/shared/domain/*` に集約する。**モジュール一覧とファイル分割の正本はリポジトリ内のディレクトリ**とし、この節での列挙はしない（リストはすぐ drift する）。
 
-現時点では公開ルーティングと公開データ取得の中核を domain に移設済み。`src/app/(public)` からの Prisma 直参照は禁止し、公開側の DB query wrapper は残さない。`settings` context は `queries.ts`, `admin-queries.ts`, `api-key-queries.ts`, `api-key-commands.ts`, `commands.ts`, `announcement-bar.ts`, `types.ts`, `robots-txt.ts` に分割済みで、Google Calendar 設定・Webhook 状態・双方向同期設定・iCal トークン/フィード設定、Analytics 設定、管理画面 branding 取得も同境界に収容する。`navigation` context は `queries.ts` と `commands.ts` に分割済み。`pages` と `sections` は `queries.ts`, `admin-queries.ts`, `commands.ts`, `system-pages.ts`, `types.ts` に分割済みで、公開取得・管理一覧・system page bootstrap・homepage/page section 編集を同境界へ収容する。`posts` context も `queries.ts`, `admin-queries.ts`, `commands.ts`, `routing.ts`, `types.ts` に分割済みで、公開取得・管理一覧・publish/versioning・taxonomy 管理を同境界へ収容する。`news` context も `queries.ts`, `admin-queries.ts`, `commands.ts`, `types.ts` に分割済みで、公開取得・管理一覧・publish/versioning を同境界へ収容する。`faq` context も `queries.ts`, `commands.ts`, `types.ts` に分割済みで、カテゴリ/項目の管理一覧・状態変更・並び替えを同境界へ収容する。`instagram` context も `queries.ts`, `commands.ts`, `types.ts` に分割済みで、接続設定・手動投稿・OAuth callback・token refresh を同境界へ収容する。`spaces`, `reservations`, `media`, `editor-comments` も query/command 境界へ移設済みで、一覧・詳細・作成更新・storage / calendar / comment thread 操作を同境界へ収容する。管理画面の read/write は `dashboard`, `audit-log`, `block-template`, `post-comments`, `posts`, `news`, `faq`, `terms`, `inquiries`, `instagram`, `locations`, `space-categories`, `customers`, `coupons`, `users`, `staff-invitations`, `settings/api-keys`, `pages`, `sections`, `spaces`, `reservations`, `media`, `editor-comments` まで domain 正本へ移設済み。`app` 層は generated Prisma model / client type を直接参照せず、必要な read model は `shared/domain/*/types.ts` を正本にする。加えて `app/api/*`, admin lib, calendar / iCal / sitemap / bootstrap helper も domain query/command を正本にしたため、`src/shared/domain/*` と `src/shared/db/*` の外に Prisma 直 import を残さない。Better Auth の Prisma adapter も `src/shared/db/better-auth-adapter.ts` に隔離し、`shared/lib/auth.ts` は DB client を直接握らない。
+共通の約束だけをここに書く。
+
+- `src/app/(public)`（および公開 API/route）から Prisma を直接 import しない。
+- UI / route が Prisma の generated 型へ依存しない。公開する型は `shared/domain/*/types.ts` と DB ゲートウェイ経由を正とする。
+- 各 bounded context は `queries.ts` / `commands.ts` / `types.ts` 等の役割分割を基本とし、必要に応じて `admin-queries.ts` や feature 特有のモジュールを追加する。
+- `app/api/*`・admin 補助・calendar / iCal / sitemap 等も、データアクセスの正本は domain query・command に寄せる。
+- Better Auth 用 Prisma adapter は `src/shared/db/better-auth-adapter.ts` に隔離し、`shared/lib/auth.ts` は DB client を直接握らない。
 
 ### 3. DB 境界
 
@@ -95,31 +77,18 @@ graph TB
 
 ## ルーティングポリシー
 
-### 公開ページ
+公開ルートの URL 一覧・動的 segment・custom page と投稿の fallback 関係は、`src/app/(public)` と `src/shared/domain/posts/routing.ts` を正本とする。ここでは設計上の要点だけ示す。
 
-- 固定ページ: `/`, `/about`, `/contact`, `/faq`, `/privacy`, `/reservation`, `/spaces`, `/terms`
-- ニュース:
-  - 一覧 `/news`
-  - 詳細 `/news/[slug]`
-  - preview `/news/preview/[slug]`
-- 投稿:
-  - 一覧 `/posts`
-  - 詳細 `/posts/[...segments]`
-  - preview `/posts/preview/[slug]`
-- カスタムページ:
-  - `src/app/(public)/[...segments]/page.tsx`
-  - 1 segment は `custom page` を優先
-  - 投稿 prefix 無効時のみ、custom page で解決できないパスを投稿詳細へ fallback
+| カテゴリ       | 要点                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| 固定ページ     | 明示的な `page.tsx` を持つ route                                                      |
+| ニュース       | 一覧・詳細・preview の専用 route                                                      |
+| 投稿           | permalink モードに応じて `routing.ts` が canonical を解決                             |
+| カスタムページ | `[...segments]` で解決。詳細は [content-managed-pages.md](./content-managed-pages.md) |
 
 ### 投稿 permalink 解決
 
-`src/shared/domain/posts/routing.ts` が以下を解決する。
-
-- `post_name`: `/posts/[slug]` または `/{slug}`
-- `category_name`: `/posts/[category]/[slug]` または `/{category}/{slug}`
-- `date_name`: `/posts/[year]/[month]/[slug]` または `/{year}/{month}/{slug}`
-
-canonical URL は常に現在の permalink 設定から再生成する。代替経路で表示されても canonical は設定値へ収束させる。
+`src/shared/domain/posts/routing.ts` が `post_name` / `category_name` / `date_name` の別パターンを解決する。canonical は常に現在の permalink 設定へ収束させる。
 
 ### proxy の責務
 
@@ -143,31 +112,26 @@ canonical URL は常に現在の permalink 設定から再生成する。代替�
 - blanket な `connection()` は使わない
 - 年表示のような時刻依存 UI は leaf component へ分離する
 
-### ExperienceShell
+### スクロール・演出（Lenis / GSAP）
 
-- Lenis、Scroll orchestration、VisualEffectsProvider、PerformanceMonitor は `ExperienceShell` に集約
-- グローバル layout では読み込まず、演出が必要なページだけ opt-in する
-- 現在はホームページが opt-in 済み
+- スムーススクロールは `LenisProvider` で提供（`src/app/(public)/layout.tsx`）。GSAP・ScrollTrigger 連携は [`reference/gsap.md`](../reference/gsap.md) とページ近傍の実装を参照。
+- 演出コストが高い処理はページ・セクション単位で読み込みを抑える。
 
 ### Preview
 
-- 通常詳細ページに query-string preview 分岐は持たない
-- preview は `posts` / `news` の専用 route でのみ描画し、常に `noindex`
+- 通常の詳細ページには query-string の preview 分岐を持たせない。
+- preview は `posts` / `news` 等の専用 route のみで描画し、常に `noindex`。
 
 ## データ取得とキャッシュ
 
-- 読み取りは `'use cache'` + `cacheLife()` + `cacheTag()` を基本とする
-- 投稿 URL を返す query は `CACHE_TAGS.PERMALINK` も付与し、permalink 設定変更で無効化できるようにする
-- 更新直後の read-your-own-writes が必要な箇所は `updateTag()`
-- 遅延再検証でよい箇所は `revalidateTag()`
+理由・レイヤリング・タグ設計は [caching.md](./caching.md) に集約する。
 
 ## 管理画面の方針
 
-- 管理画面は引き続き route group 内に UI を保持する
-- write 系 Server Action は `権限確認 + Zod 入力検証 + domain command 呼び出し + cache invalidation` の thin adapter を正本にする
-- `navigation`, `announcementBar`, `blockTemplate`, `customers`, `coupons`, `faq`, `ical-tokens`, `inquiries`, `instagram`, `locations`, `news`, `post-comments`, `posts`, `space-categories`, `staff-invitations`, `terms`, `users`, `settings/api-keys`, `settings/basic`, `settings/business`, `settings/email`, `settings/other`, `settings/discount`, `settings/tax`, `settings/robots-txt`, `settings/google-calendar`, `settings/stripe` は `executeAdminMutation()` + domain command へ移行済み
-- `dashboard`, `audit-log` の read 系は admin action から Prisma を外し、domain query を正本にする
-- それ以外の admin action は同パターンへ段階的に移行する
+- UI と thin adapter は引き続き route group 内に置く。
+- mutation は「権限確認 → Zod → domain command → キャッシュ無効化」を基本とし、`executeAdminMutationResult` を共通入口にする。
+- read は Server Component の `@/admin/queries/*`、クライアント側は `/admin/api/*` に統一する。
+- 個別リソースの移行状況はコードが正本。一覧を docs に複製しない。
 
 ## 静的検証ルール
 

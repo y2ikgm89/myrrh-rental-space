@@ -19,10 +19,6 @@
 
 **実装の SSoT**: ファイル配列・cache invalidation の最新状態・Prisma スキーマは実コードを ground truth にする（`src/` / `prisma/schema.prisma` / `.claude/rules/**`）。本ディレクトリには手動メンテのファイル列挙やスキーマミラーを置かない（drift の温床になるため）。
 
-## 現在の原則
+## 現在の原則（要約）
 
-- `src/app/*` は route / page / layout / route handler の orchestration に限定する
-- 業務ロジックと read model は `src/shared/domain/*` を正本にする
-- Prisma と Better Auth adapter の境界は `src/shared/db/*` に固定する
-- auth は `/api/auth/[...all]` と `src/shared/lib/auth.ts` の静的 `auth` export を正本にする
-- `proxy.ts` は coarse gate と共通セキュリティヘッダーに限定し、本認可の正本にはしない
+アプリ層と domain の責務分離などの全体原則は [architecture.md](./architecture.md) を参照。この README は索引に徹する。

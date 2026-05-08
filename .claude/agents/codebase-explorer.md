@@ -6,7 +6,7 @@ description: >
   implementations, or answering questions about the codebase structure.
   Remembers file locations and patterns across sessions for faster lookups.
 tools: Read, Grep, Glob, LS
-model: sonnet
+model: haiku
 memory: project
 ---
 

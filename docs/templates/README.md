@@ -14,5 +14,5 @@
 ## 使い方
 
 1. 該当テンプレートをコピーして対象ディレクトリに配置（kebab-case で命名）
-2. plan / spec の場合は `docs/superpowers/{plans,specs}/README.md` の Active セクションに 1 行追加
+2. plan / spec は `docs/superpowers/plans/` または `docs/superpowers/specs/` 直下に置く（一覧の正本はディレクトリ。README への追記は任意で [plan-readme-entry.md](./plan-readme-entry.md) を利用）
 3. 完了後は `.archive/<year>/` に移動

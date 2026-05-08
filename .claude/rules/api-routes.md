@@ -76,6 +76,8 @@ Checkout Session は5イベントで処理する（[公式](https://docs.stripe.
 
 **べき等性ガード必須** — 処理前に現在の `paymentStatus` をチェックし、既に処理済みならスキップ（Webhook 重複配信対策）
 
+**atomic claim パターン必須** — `findUnique → update` の 2 ステップ idempotency は並行配信で race window が残り、確認メール / 監査ログが二重実行される。`updateMany({ where: { status: { not: TARGET } } })` の `count` 判定で claim 成否を gate する（→ `prisma-patterns.md` §状態遷移の atomic claim）
+
 ````
 
 ## Cron パターン
@@ -141,7 +143,7 @@ export async function GET(request: Request) {
 
 - **Webhook の署名ヘッダー存在チェックを DB 読み取りの前に配置** — `stripe-signature` ヘッダーが無いリクエストを `getStripeSettings()` 等の DB アクセス・復号処理の前に 400 で弾く。偽造リクエストによる不要な DB 負荷を防止
 - **Stripe `checkout.session.completed` で即座に fulfill しない** — `session.payment_status === "paid"` を必ずチェック。非同期決済（銀行振込等）は `"unpaid"` で来るため `async_payment_succeeded` を待つ。カード決済のみでも将来の決済手段追加に備える
-- **Webhook べき等性ガード必須** — 処理前に現在の `paymentStatus` をチェックし、既に処理済み（PAID / REFUNDED）ならスキップ。Stripe は同じイベントを複数回配信する可能性がある
+- **Webhook べき等性ガードは atomic claim で実装** — `findUnique → update` の 2 ステップは並行配信で race window が残るため、`prisma.reservation.updateMany({ where: { id, paymentStatus: { not: PAID } } })` の `count` 判定で排他制御する。relation 込みデータが必要なら claim 成功後に `findUniqueOrThrow` で再取得。`claimReservationAsPaid` (`@/shared/domain/reservations/payment-queries`) が canonical 参照実装
 - **`payment_intent` フィールドは `string | PaymentIntent | null`** — `typeof session.payment_intent === "string"` で型安全に取得。`as` 禁止
 
 ### CSV Export
