@@ -171,3 +171,14 @@ export async function getPageSectionQuery(id: string) {
     pageId: section.pageId,
   };
 }
+
+/** EDITOR のページ割当チェック用（権限ゲートで sectionId から pageId を解決） */
+export async function getSectionPageIdQuery(
+  sectionId: string,
+): Promise<string | null> {
+  const row = await prisma.section.findUnique({
+    where: { id: sectionId },
+    select: { pageId: true },
+  });
+  return row?.pageId ?? null;
+}

@@ -136,13 +136,19 @@ export async function updatePage(
 `executeAdminMutationResult` は以下の順序で実行する。**順序を変更してはならない**:
 
 ```
-1. permission check (checkPermission / checkResourceAccess)
-2. execute(user) — DB mutation（DomainError は catch で `{ error: message }` に変換）
-3. await afterSuccess(data) — クリティカル副作用（cache invalidation / 通知生成 / email fireAndForget）
-4. fireAndForget(logAction(...)) — 監査ログ（非ブロッキング）
+1. checkAdminAuth() — 認証（DB lookup より前に必ず）
+2. resolveResourceId(user) — 認証後に resourceId を解決（callback 指定時のみ）
+3. hasPermission() — RBAC ロールベース認可
+4. userHasResourceAccess() — EDITOR の userPageAssignment チェック（checkResourceAccess: true 時のみ）
+5. execute(user) — DB mutation（DomainError は catch で `{ error: message }` に変換）
+6. await afterSuccess(data) — クリティカル副作用（cache invalidation / 通知生成 / email fireAndForget）
+7. fireAndForget(logAction(...)) — 監査ログ（非ブロッキング）
 ```
 
-**禁止**: `await logAction(...)` でクリティカルパスに入れる。監査書き込み失敗時に catch で rethrow され `afterSuccess` がスキップ → `updateTag` が呼ばれず公開ページが stale のままになる silent bug（同一ユーザーが次回リクエストで古い値を見る + 再試行すると P2002 等で再度失敗する連鎖）。
+**禁止**:
+
+- `await logAction(...)` でクリティカルパスに入れる。監査書き込み失敗時に catch で rethrow され `afterSuccess` がスキップ → `updateTag` が呼ばれず公開ページが stale のままになる silent bug（同一ユーザーが次回リクエストで古い値を見る + 再試行すると P2002 等で再度失敗する連鎖）。
+- 認証 (1) より前に DB lookup を置く（未認証 request が DB に到達 = DoS / cache-layer poisoning 経路）。`sectionId → pageId` のような認可キー解決は `resolveResourceId` callback を使い、認証後に呼ばせる。`resourceId` (静的) と `resolveResourceId` (認証後 DB lookup) は discriminated union で型レベル排他化されている。
 
 監査失敗は `fireAndForget` が内部で `logError`（category: `DATABASE`, severity: `MEDIUM`）で記録するため observability は保たれ、コンプライアンス監査でも欠損を検出できる。
 

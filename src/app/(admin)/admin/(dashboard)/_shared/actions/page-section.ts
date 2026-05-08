@@ -15,6 +15,7 @@ import {
   togglePageSectionActiveCommand,
   updatePageSectionCommand,
 } from "@/shared/domain/sections/commands";
+import { getSectionPageIdQuery } from "@/shared/domain/sections/admin-queries";
 import {
   updateSectionContentSchema,
   type UpdateSectionContentInput,
@@ -47,13 +48,13 @@ function revalidatePages(pageId?: string) {
 }
 
 // =============================================================================
-// updatePageSection（既存）
+// updatePageSection
 // =============================================================================
 
 export async function updatePageSection(
   id: string,
   input: UpdateSectionContentInput,
-): Promise<MutationResult> {
+): Promise<MutationResult<{ pageId: string }>> {
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) return createValidationMutationError(parsedId.error);
 
@@ -69,23 +70,22 @@ export async function updatePageSection(
         ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
         : null;
 
-  let pageId = "";
-
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: parsedId.data,
+    checkResourceAccess: true,
+    resolveResourceId: () => getSectionPageIdQuery(parsedId.data),
+    resolveAuditResourceId: () => parsedId.data,
     execute: async () => {
       const result = await updatePageSectionCommand(
         parsedId.data,
         parsed.data,
         contentHtml,
       );
-      pageId = result.pageId;
-      return null;
+      return { pageId: result.pageId };
     },
-    afterSuccess: () => {
-      revalidatePages(pageId);
+    afterSuccess: (data) => {
+      revalidatePages(data.pageId);
     },
   });
 }
@@ -103,6 +103,7 @@ export async function createPageSection(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
+    checkResourceAccess: true,
     resourceId: parsed.data.pageId,
     execute: async () => {
       const result = await createPageSectionCommand(parsed.data);
@@ -128,7 +129,9 @@ export async function deletePageSection(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: parsedId.data,
+    checkResourceAccess: true,
+    resolveResourceId: () => getSectionPageIdQuery(parsedId.data),
+    resolveAuditResourceId: () => parsedId.data,
     execute: async () => {
       const result = await deletePageSectionCommand(parsedId.data);
       return { id: result.id, pageId: result.pageId };
@@ -152,7 +155,8 @@ export async function duplicatePageSection(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: parsedId.data,
+    checkResourceAccess: true,
+    resolveResourceId: () => getSectionPageIdQuery(parsedId.data),
     execute: async () => {
       const result = await duplicatePageSectionCommand(parsedId.data);
       return { id: result.id, pageId: result.pageId };
@@ -177,7 +181,9 @@ export async function togglePageSectionActive(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: parsedId.data,
+    checkResourceAccess: true,
+    resolveResourceId: () => getSectionPageIdQuery(parsedId.data),
+    resolveAuditResourceId: () => parsedId.data,
     execute: async () => {
       const result = await togglePageSectionActiveCommand(parsedId.data);
       return {
@@ -205,6 +211,7 @@ export async function reorderPageSections(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
+    checkResourceAccess: true,
     resourceId: parsed.data.pageId,
     execute: async () => {
       const result = await reorderPageSectionsCommand({

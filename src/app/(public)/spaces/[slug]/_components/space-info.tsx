@@ -1,4 +1,3 @@
-import type { JsonValue } from "@prisma/client/runtime/client";
 import {
   IconUsers,
   IconRuler2,
@@ -13,6 +12,7 @@ import { Badge } from "../../../_shared/components/design-system/badge";
 import { Stack } from "../../../_shared/components/design-system/stack";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
+import { parseFacilities } from "@/shared/lib/json-validators";
 
 interface SpaceInfoProps {
   readonly space: {
@@ -22,7 +22,8 @@ interface SpaceInfoProps {
     readonly area: number | null;
     /** 拠点住所 + 所在地補足の1行 */
     readonly lineAddress: string;
-    readonly facilities: JsonValue;
+    /** Prisma Json（{ name, iconName }[] 形式 — `parseFacilities` で防御的型ガード） */
+    readonly facilities: unknown;
     readonly category: {
       readonly name: string;
       readonly icon: string | null;
@@ -40,20 +41,10 @@ interface SpaceInfoProps {
 }
 
 export function SpaceInfo({ space }: SpaceInfoProps) {
-  // facilities は構造化済み { name, iconName }[]（migration 20260507163006 で object 化）。
-  // 念のため防御的に object 形状のみフィルタ（curation 外 iconName でも no-op fallback）。
-  const facilities: readonly { name: string; iconName: string }[] =
-    Array.isArray(space.facilities)
-      ? space.facilities.filter(
-          (v): v is { name: string; iconName: string } =>
-            typeof v === "object" &&
-            v !== null &&
-            "name" in v &&
-            "iconName" in v &&
-            typeof (v as { name: unknown }).name === "string" &&
-            typeof (v as { iconName: unknown }).iconName === "string",
-        )
-      : [];
+  // facilities は構造化済み `{ name, iconName }[]`（migration 20260507163006）。
+  // `parseFacilities` が SSoT — `facilitiesSchema` の uniqueness refine + curation 外
+  // iconName fallback を一括適用する（`@/shared/lib/json-validators`）。
+  const facilities = parseFacilities(space.facilities);
 
   return (
     <Stack gap="xl">

@@ -9,7 +9,10 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-import { parseStringArray } from "@/shared/lib/json-validators";
+import {
+  parseFacilities,
+  parseStringArray,
+} from "@/shared/lib/json-validators";
 
 export type SpaceOption = {
   id: string;
@@ -376,20 +379,8 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         ...l,
         spaces: l.spaces.map((s) => ({
           ...s,
-          imageUrls: Array.isArray(s.imageUrls)
-            ? s.imageUrls.filter((u): u is string => typeof u === "string")
-            : [],
-          facilities: Array.isArray(s.facilities)
-            ? s.facilities.filter(
-                (f): f is { name: string; iconName: string } =>
-                  typeof f === "object" &&
-                  f !== null &&
-                  "name" in f &&
-                  "iconName" in f &&
-                  typeof (f as { name: unknown }).name === "string" &&
-                  typeof (f as { iconName: unknown }).iconName === "string",
-              )
-            : [],
+          imageUrls: parseStringArray(s.imageUrls),
+          facilities: parseFacilities(s.facilities),
         })),
       })),
   );
