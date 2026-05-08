@@ -23,6 +23,8 @@ import {
 } from "@/admin/components/ui";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
+import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { buttonLabelSchema } from "@/shared/lib/sections/definitions/_shared/button-label";
 import {
   getArrayConstraints,
   getArrayItemShape,
@@ -87,6 +89,9 @@ export function AutoArrayField({
             break;
           case "number":
             empty[f.key] = 0;
+            break;
+          case "rich-label":
+            empty[f.key] = [];
             break;
           default:
             empty[f.key] = "";
@@ -251,6 +256,18 @@ function ArrayItemField({
     );
   }
 
+  if (fieldType === "rich-label") {
+    return (
+      <ArrayItemRichLabelField
+        fieldName={fieldName}
+        label={itemLabel}
+        helpText={meta?.helpText}
+        control={control}
+        isPending={isPending}
+      />
+    );
+  }
+
   if (fieldType === "select") {
     // 配列内アイテムの select は簡略化して Input にフォールバック
     const options = getSelectOptions(itemField.schema);
@@ -340,6 +357,39 @@ function ArrayItemIconField({
         value={value}
         onChange={(name) => field.onChange(name)}
         disabled={isPending}
+      />
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+    </div>
+  );
+}
+
+function ArrayItemRichLabelField({
+  fieldName,
+  label,
+  helpText,
+  control,
+  isPending,
+}: {
+  readonly fieldName: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+}) {
+  const id = useId();
+  const { field } = useController({ control, name: fieldName });
+  const parsed = buttonLabelSchema.safeParse(field.value);
+  const value = parsed.success ? parsed.data : [];
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <RichLabelInput
+        id={id}
+        value={value}
+        onChange={(tokens) => field.onChange(tokens)}
+        disabled={isPending}
+        aria-label={label}
       />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
     </div>
