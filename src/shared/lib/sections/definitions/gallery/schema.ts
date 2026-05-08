@@ -15,7 +15,7 @@ export const galleryConfigSchema = z
       maxLength: 50,
       subGroup: "text",
     }),
-    title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
+    title: field.portableTextInline("見出し", { subGroup: "text" }),
     images: field.array("画像", {
       subGroup: "image",
       fields: {

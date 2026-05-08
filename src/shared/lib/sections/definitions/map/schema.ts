@@ -12,7 +12,7 @@ export const mapConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
+  title: field.portableTextInline("見出し", { subGroup: "text" }),
   address: field.textarea("住所", { maxLength: 300, subGroup: "text" }),
   latitude: field.number("緯度", { min: -90, max: 90 }),
   longitude: field.number("経度", { min: -180, max: 180 }),

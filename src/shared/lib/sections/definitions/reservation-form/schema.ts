@@ -21,9 +21,7 @@ export const reservationFormConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "ご予約",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   description: field.textarea("説明文", {

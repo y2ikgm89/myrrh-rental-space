@@ -11,9 +11,7 @@ export const contactFormConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "お問い合わせ",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   description: field.textarea("説明文", { maxLength: 500, subGroup: "text" }),

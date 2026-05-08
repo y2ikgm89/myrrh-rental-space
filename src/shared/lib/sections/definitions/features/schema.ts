@@ -16,9 +16,7 @@ export const featuresConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "Features",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   items: field.array("特徴", {

@@ -13,9 +13,7 @@ export const locationListConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("セクション見出し", {
-    default: "全拠点のご案内",
-    maxLength: 100,
+  title: field.portableTextInline("セクション見出し", {
     subGroup: "text",
   }),
 
@@ -38,9 +36,7 @@ export const locationListConfigSchema = z.object({
     helpText: "ページ内で拠点へジャンプする目次（拠点 2 件以上で意味あり）",
     group: "design",
   }),
-  overviewHeadline: field.text("ナビ見出し（省略可）", {
-    default: "",
-    maxLength: 100,
+  overviewHeadline: field.portableTextInline("ナビ見出し（省略可）", {
     helpText: "未指定時は拠点数に応じて自動生成",
     subGroup: "text",
   }),
@@ -51,9 +47,7 @@ export const locationListConfigSchema = z.object({
     helpText: "Settings の電話 / メールを章の上に表示",
     group: "design",
   }),
-  globalContactHeadline: field.text("代表お問い合わせ見出し", {
-    default: "代表お問い合わせ",
-    maxLength: 100,
+  globalContactHeadline: field.portableTextInline("代表お問い合わせ見出し", {
     subGroup: "text",
   }),
 

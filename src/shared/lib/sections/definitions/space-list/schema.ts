@@ -13,9 +13,7 @@ export const spaceListConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "スペース一覧",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   maxItems: field.number("最大表示件数", {

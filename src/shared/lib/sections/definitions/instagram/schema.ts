@@ -11,9 +11,7 @@ export const instagramConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "Instagram",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   columns: field.number("1 行あたりの列数", {

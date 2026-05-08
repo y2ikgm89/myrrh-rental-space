@@ -20,8 +20,8 @@ const HERO_TRANSITIONS = [
 
 const editorialSplitSchema = z.object({
   variant: z.literal("editorial-split"),
-  label: field.text("ラベル", { subGroup: "text", maxLength: 200 }),
-  title: field.text("タイトル", { subGroup: "text", maxLength: 200 }),
+  label: field.portableTextInline("ラベル", { subGroup: "text" }),
+  title: field.portableTextInline("タイトル", { subGroup: "text" }),
   description: field.textarea("説明", {
     subGroup: "text",
     maxLength: 4000,
@@ -50,8 +50,8 @@ const editorialSplitSchema = z.object({
 
 const compactSchema = z.object({
   variant: z.literal("compact"),
-  label: field.text("ラベル", { subGroup: "text", maxLength: 200 }),
-  title: field.text("タイトル", { subGroup: "text", maxLength: 200 }),
+  label: field.portableTextInline("ラベル", { subGroup: "text" }),
+  title: field.portableTextInline("タイトル", { subGroup: "text" }),
   description: field.textarea("説明", { subGroup: "text", maxLength: 4000 }),
   image: z
     .object({
@@ -72,7 +72,7 @@ const compactSchema = z.object({
 const minimalSchema = z.object({
   variant: z.literal("minimal"),
   eyebrow: field.text("アイブロー", { subGroup: "text", maxLength: 200 }),
-  title: field.text("タイトル", { subGroup: "text", maxLength: 200 }),
+  title: field.portableTextInline("タイトル", { subGroup: "text" }),
   description: field.textarea("説明", { subGroup: "text", maxLength: 4000 }),
   layout: sectionLayoutSchema,
 });

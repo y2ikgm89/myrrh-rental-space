@@ -12,9 +12,7 @@ export const faqListConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "よくあるご質問",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   categoryId: field.dynamicSelect("カテゴリで絞り込み", {

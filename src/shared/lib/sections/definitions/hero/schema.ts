@@ -16,7 +16,7 @@ const variantOptions = [
 ] as const;
 
 export const heroConfigSchema = z.object({
-  title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
+  title: field.portableTextInline("見出し", { subGroup: "text" }),
   subtitle: field.textarea("サブ見出し", {
     maxLength: 300,
     subGroup: "text",

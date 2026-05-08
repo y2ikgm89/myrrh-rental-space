@@ -15,9 +15,7 @@ export const conceptConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  heading: field.text("見出し", {
-    default: "空間が、体験を変える",
-    maxLength: 100,
+  heading: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   body: field.textarea("本文", {

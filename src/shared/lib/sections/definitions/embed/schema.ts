@@ -12,7 +12,7 @@ export const embedConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
-  title: field.text("見出し", { maxLength: 100, subGroup: "text" }),
+  title: field.portableTextInline("見出し", { subGroup: "text" }),
   embedUrl: field.url("埋め込み URL"),
   embedCode: field.textarea("埋め込みコード", { maxLength: 10000 }),
   aspectRatio: field.select("アスペクト比", {

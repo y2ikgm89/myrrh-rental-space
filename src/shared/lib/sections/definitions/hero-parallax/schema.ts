@@ -10,14 +10,10 @@ const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 const overlayStyles = ["gradient", "solid", "none"] as const;
 
 export const heroParallaxConfigSchema = z.object({
-  tagline: field.text("タグライン", {
-    default: "Luxury Rental Space",
-    maxLength: 50,
+  tagline: field.portableTextInline("タグライン", {
     subGroup: "text",
   }),
-  title: field.text("見出し", {
-    default: "洗練された空間で 特別なひとときを",
-    maxLength: 100,
+  title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
   subtitle: field.textarea("サブ見出し", {
