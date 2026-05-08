@@ -27,8 +27,7 @@ export const valuePropsConfigSchema = z.object({
         maxLength: 24,
         helpText: "serif italic で表示される短い英語ラベル（例: Speed）",
       }),
-      title: field.text("日本語ラベル", {
-        maxLength: 30,
+      title: field.portableTextInline("日本語ラベル", {
         helpText: "sans-serif で表示されるラベル（例: 最短1時間から）",
       }),
     },

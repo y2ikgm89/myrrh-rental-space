@@ -44,7 +44,7 @@ export const faqListConfigSchema = z.object({
     .array("カスタム項目", {
       subGroup: "text",
       fields: {
-        question: field.text("質問"),
+        question: field.portableTextInline("質問"),
         answer: field.textarea("回答"),
       },
     })

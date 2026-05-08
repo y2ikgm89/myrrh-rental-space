@@ -23,7 +23,7 @@ export const featuresConfigSchema = z.object({
     subGroup: "text",
     fields: {
       icon: field.icon("アイコン"),
-      title: field.text("項目の見出し"),
+      title: field.portableTextInline("項目の見出し"),
       description: field.textarea("説明文"),
     },
   }),
