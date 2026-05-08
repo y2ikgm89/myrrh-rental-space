@@ -92,17 +92,35 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         items: [
           {
             icon: "IconSearch",
-            title: "スペースを選ぶ",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "スペースを選ぶ",
+              },
+            ],
             description: "用途や人数に合った空間を見つける",
           },
           {
             icon: "IconCalendarEvent",
-            title: "日時を決める",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "日時を決める",
+              },
+            ],
             description: "カレンダーから空き状況を確認",
           },
           {
             icon: "IconCircleCheck",
-            title: "オンラインで予約",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "オンラインで予約",
+              },
+            ],
             description: "最短1分で予約完了",
           },
         ],
@@ -121,17 +139,49 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         items: [
-          { icon: "IconClock", eyebrow: "Speed", title: "最短1時間から" },
+          {
+            icon: "IconClock",
+            eyebrow: "Speed",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "最短1時間から",
+              },
+            ],
+          },
           {
             icon: "IconCalendarCheck",
             eyebrow: "Flexibility",
-            title: "当日予約OK",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "当日予約OK",
+              },
+            ],
           },
-          { icon: "IconWifi", eyebrow: "Connectivity", title: "Wi-Fi完備" },
+          {
+            icon: "IconWifi",
+            eyebrow: "Connectivity",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "Wi-Fi完備",
+              },
+            ],
+          },
           {
             icon: "IconCreditCard",
             eyebrow: "Payment",
-            title: "オンライン決済",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "オンライン決済",
+              },
+            ],
           },
         ],
         layout: {
@@ -188,22 +238,46 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         displayLayout: "numbered-editorial",
         items: [
           {
-            title: "自然光設計",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "自然光設計",
+              },
+            ],
             description:
               "全室に大きな窓を配置。時間帯で変化する光が、空間に深みを与えます。",
           },
           {
-            title: "遮音性能",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "遮音性能",
+              },
+            ],
             description:
               "プロフェッショナル水準の遮音設計。外部の喧騒を遮断し、深い集中を可能にします。",
           },
           {
-            title: "即日予約",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "即日予約",
+              },
+            ],
             description:
               "オンラインで空き状況確認から決済まで完結。当日予約にも対応しています。",
           },
           {
-            title: "柔軟なレイアウト",
+            title: [
+              {
+                _key: crypto.randomUUID(),
+                _type: "span" as const,
+                text: "柔軟なレイアウト",
+              },
+            ],
             description:
               "可動式の家具と設備で、会議・撮影・イベントなど用途に合わせた配置変更が可能です。",
           },
