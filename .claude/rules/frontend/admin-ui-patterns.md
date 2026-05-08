@@ -184,6 +184,40 @@ import { SubmitButton } from "@/admin/components/ui";
 
 ---
 
+## Sticky 子サイドバー（grid 内 + sticky TopBar 配下）
+
+管理画面 edit / detail ページで grid layout 内に sticky な sub-sidebar を配置するパターン。`PageEditor` の `SectionListSidebar` が canonical 参照実装。
+
+**3 点セット必須**:
+
+```tsx
+<div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
+  <aside className="flex flex-col gap-2 lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:max-h-[calc(100svh-var(--header-height)-2rem)]">
+    <div className="...">{/* 固定ヘッダー */}</div>
+    <div className="lg:flex-1 lg:overflow-y-auto">
+      {/* 内部 scroll するリスト */}
+    </div>
+  </aside>
+  <PrimaryPanel />
+</div>
+```
+
+1. **grid 親に `lg:items-start`** — `align-self: stretch` デフォルトで aside が右カラム高さに引き伸ばされ sticky containing block が cell 全高化 → sticky が機能しない silent bug 防止
+2. **dock 位置は `lg:top-[calc(var(--header-height)+1rem)]`** — TopBar (`sticky top-0 h-16`) の直下 16px に正確 dock。`--header-height` (mobile 56px / tablet+ 64px) に responsive 追従
+3. **`lg:max-h-[calc(100svh-var(--header-height)-2rem)]` + 内部 `lg:flex-1 lg:overflow-y-auto`** — viewport 内に aside 全体を収め、長いリストは内部 scroll。`100svh` (small viewport height) で mobile dynamic chrome 対応
+
+**禁止パターン**:
+
+- `lg:top-6` 等 TopBar 高さ未満の dock 値 → aside が TopBar 背後に隠れる silent bug
+- `lg:items-start` 不在で `lg:sticky` 配置 → 死に体 sticky（追尾しないように見える）
+- `100vh` 利用 → mobile address bar 高さ不安定
+
+業界標準: WordPress Gutenberg / Notion / Linear / Stripe Dashboard と同等パターン。
+
+参照実装: `pages/[slug]/edit/_components/{PageEditor,SectionListSidebar}.tsx`
+
+---
+
 ## 禁止事項
 
 1. **型 re-export の追加禁止** — 共有型のローカル aliases は不要（`export type Foo = SharedFoo`）

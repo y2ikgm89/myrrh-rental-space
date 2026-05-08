@@ -192,7 +192,7 @@ export function SectionListSidebar({
     .map((s) => s.id);
 
   return (
-    <aside className="space-y-2 lg:sticky lg:top-6">
+    <aside className="flex flex-col gap-2 lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:max-h-[calc(100svh-var(--header-height)-2rem)]">
       <div className="flex items-center justify-between px-2">
         <h2 className="text-sm font-medium text-foreground">セクション</h2>
         <Button size="sm" variant="outline" onClick={onAddClick}>
@@ -200,7 +200,7 @@ export function SectionListSidebar({
           追加
         </Button>
       </div>
-      <div className="space-y-0.5 rounded-lg border border-border bg-card p-2">
+      <div className="space-y-0.5 rounded-lg border border-border bg-card p-2 lg:flex-1 lg:overflow-y-auto">
         {sections.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
             セクションがありません

@@ -117,7 +117,7 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+          <div className="grid gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
             <SectionListSidebar
               sections={page.sections}
               activeSectionId={activeSectionId}
