@@ -9,8 +9,8 @@ import type { PageHeroConfig } from "./schema";
 
 export const DEFAULT_PAGE_HERO: PageHeroConfig = {
   variant: "editorial-split",
-  label: "Volume One — Spring 2026",
-  title: "Where silence works.",
+  label: [createSpan("Volume One — Spring 2026")],
+  title: [createSpan("Where silence works.")],
   description:
     "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
   images: [

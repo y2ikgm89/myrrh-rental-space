@@ -51,7 +51,13 @@ export function createDefaultCustomPageSections(
       type: "cta",
       title: null,
       config: {
-        title: "ご予約・お問い合わせ",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "ご予約・お問い合わせ",
+          },
+        ],
         description: "空き状況の確認やご相談はこちらから承ります。",
         ctaPrimary: { text: "予約する", url: "/reservation" },
         ctaSecondary: { text: "お問い合わせ", url: "/contact" },
@@ -75,7 +81,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: "ご利用の流れ",
       config: {
         sectionLabel: "How to Reserve",
-        title: "ご利用の流れ",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "ご利用の流れ",
+          },
+        ],
         displayLayout: "numbered-steps",
         items: [
           {
@@ -137,7 +149,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: "厳選スペース",
       config: {
         sectionLabel: "Selected Spaces",
-        title: "厳選スペース",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "厳選スペース",
+          },
+        ],
         maxItems: 8,
         showOnlyPublished: true,
         displayLayout: "carousel",
@@ -160,7 +178,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: "選ばれる理由",
       config: {
         sectionLabel: "Why Myrrh",
-        title: "選ばれる理由",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "選ばれる理由",
+          },
+        ],
         displayLayout: "numbered-editorial",
         items: [
           {
@@ -199,7 +223,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "Reservation",
-        title: "あなたに最適な空間を",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "あなたに最適な空間を",
+          },
+        ],
         description:
           "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
         buttons: [
@@ -226,7 +256,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "About",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "About" },
+        ],
         subtitle:
           "ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース。",
         variant: "minimal",
@@ -248,7 +280,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "cta",
       title: null,
       config: {
-        title: "お問い合わせ",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "お問い合わせ",
+          },
+        ],
         description:
           "ご質問やご相談がございましたら、お気軽にお問い合わせください。",
         ctaPrimary: { text: "お問い合わせ", url: "/contact" },
@@ -265,7 +303,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "FAQ",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "FAQ" },
+        ],
         subtitle: "ご不明点がございましたら、まずはこちらをご確認ください。",
         variant: "minimal",
       },
@@ -288,7 +328,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "cta",
       title: null,
       config: {
-        title: "お探しの答えが見つかりませんか？",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "お探しの答えが見つかりませんか？",
+          },
+        ],
         description: "ご不明点がございましたら、お気軽にお問い合わせください。",
         ctaPrimary: { text: "お問い合わせ", url: "/contact" },
       },
@@ -303,7 +349,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "Contact",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "Contact",
+          },
+        ],
         subtitle:
           "ご質問やご要望がございましたら、お気軽にお問い合わせください。",
         variant: "minimal",
@@ -317,7 +369,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "",
-        title: "",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
         variant: "split",
       },
       content: null,
@@ -331,7 +385,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "Access",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "Access" },
+        ],
         subtitle: "最寄り駅・駐車場・営業時間をご案内します。",
         variant: "minimal",
       },
@@ -344,13 +400,27 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "Locations",
-        title: "全拠点のご案内",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "全拠点のご案内",
+          },
+        ],
         mode: "all",
         locationSlugs: [],
         overviewNavEnabled: true,
-        overviewHeadline: "",
+        overviewHeadline: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
         globalContactEnabled: true,
-        globalContactHeadline: "代表お問い合わせ",
+        globalContactHeadline: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "代表お問い合わせ",
+          },
+        ],
         chapterLayout: "alternating",
       },
       content: null,
@@ -361,7 +431,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "cta",
       title: null,
       config: {
-        title: "ご不明な点はお気軽にどうぞ",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "ご不明な点はお気軽にどうぞ",
+          },
+        ],
         buttons: [
           { text: "お問い合わせ", url: "/contact", variant: "primary" },
         ],
@@ -377,7 +453,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "News",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "News" },
+        ],
         subtitle: "お知らせ・最新情報をお届けします。",
         variant: "minimal",
       },
@@ -390,7 +468,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "",
-        title: "",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
         displayLayout: "archive",
         showViewAllLink: false,
       },
@@ -405,7 +485,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "Blog",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "Blog" },
+        ],
         subtitle: "最新のお知らせやお役立ち情報をお届けします。",
         variant: "minimal",
       },
@@ -418,7 +500,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "",
-        title: "",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
         displayLayout: "archive",
         showViewAllLink: false,
       },
@@ -433,7 +517,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "Reserve",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "Reserve",
+          },
+        ],
         subtitle:
           "3ステップで簡単予約。お好みのスペースと日時をお選びください。",
         variant: "minimal",
@@ -447,7 +537,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "",
-        title: "",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
       },
       content: null,
       order: 1,
@@ -460,7 +552,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "Events",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "Events" },
+        ],
         subtitle: "開催予定のイベント・ワークショップ情報",
         variant: "minimal",
       },
@@ -483,7 +577,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
-        title: "Spaces",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "Spaces" },
+        ],
         subtitle: "ご利用可能なレンタルスペースをお探しください。",
         variant: "minimal",
       },
@@ -496,7 +592,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       title: null,
       config: {
         sectionLabel: "",
-        title: "",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
         displayLayout: "catalog",
         showOnlyPublished: true,
         showViewAllLink: false,
