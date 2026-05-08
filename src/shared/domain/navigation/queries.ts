@@ -15,12 +15,20 @@ import {
 } from "@/shared/lib/features/check";
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
+import {
+  buttonLabelSchema,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
+
+function parseLabelTokens(value: unknown): ButtonLabelToken[] {
+  const result = buttonLabelSchema.safeParse(value);
+  return result.success ? result.data : [];
+}
 
 export type PublicNavItem = {
   readonly id: string;
-  readonly label: string;
+  readonly label: ButtonLabelToken[];
   readonly url: string;
-  readonly iconName: string | null;
   readonly isExternal: boolean;
   readonly children: readonly PublicNavItem[];
 };
@@ -29,9 +37,8 @@ export type NavigationItemData = {
   id: string;
   type: NavigationType;
   parentId: string | null;
-  label: string;
+  label: ButtonLabelToken[];
   url: string;
-  iconName: string | null;
   isExternal: boolean;
   order: number;
   isActive: boolean;
@@ -81,7 +88,6 @@ export async function getPublicNavigation(
           id: true,
           label: true,
           url: true,
-          iconName: true,
           isExternal: true,
           children: {
             where: { isActive: true },
@@ -90,7 +96,6 @@ export async function getPublicNavigation(
               id: true,
               label: true,
               url: true,
-              iconName: true,
               isExternal: true,
             },
           },
@@ -114,17 +119,15 @@ export async function getPublicNavigation(
     .filter((item) => isItemEnabled(item.url, item.isExternal))
     .map((item) => ({
       id: item.id,
-      label: item.label,
+      label: parseLabelTokens(item.label),
       url: item.url,
-      iconName: item.iconName,
       isExternal: item.isExternal,
       children: item.children
         .filter((child) => isItemEnabled(child.url, child.isExternal))
         .map((child) => ({
           id: child.id,
-          label: child.label,
+          label: parseLabelTokens(child.label),
           url: child.url,
-          iconName: child.iconName,
           isExternal: child.isExternal,
           children: EMPTY_NAV_CHILDREN,
         })),
@@ -150,7 +153,6 @@ export async function getNavigationItems(
       parentId: true,
       label: true,
       url: true,
-      iconName: true,
       isExternal: true,
       order: true,
       isActive: true,
@@ -163,7 +165,6 @@ export async function getNavigationItems(
           parentId: true,
           label: true,
           url: true,
-          iconName: true,
           isExternal: true,
           order: true,
           isActive: true,
@@ -178,8 +179,10 @@ export async function getNavigationItems(
 
   return items.map((item) => ({
     ...item,
+    label: parseLabelTokens(item.label),
     children: item.children.map((child) => ({
       ...child,
+      label: parseLabelTokens(child.label),
       children: [],
     })),
   }));

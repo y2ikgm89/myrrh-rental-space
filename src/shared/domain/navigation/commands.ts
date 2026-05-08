@@ -2,24 +2,27 @@ import "server-only";
 
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buttonLabelSchema,
+  labelToPlainText,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 
 export const navigationItemInputSchema = z.object({
   type: z.enum(NavigationType),
   parentId: z.string().uuid().nullable().optional(),
-  label: z
-    .string()
-    .min(1, { error: "ラベルは必須です" })
-    .max(50, { error: "ラベルは50文字以内" }),
-  url: z.string().min(1, { error: "URLは必須です" }).max(500),
   /**
-   * Tabler curation icon 識別子（例: "IconHome"）。
-   * NULL/空文字 = アイコンなし（text-only、Editorial 方針デフォルト）。
-   * curation 外の値はサーバ側で許可するが描画時に no-op fallback される。
-   * icon-only モードは禁止 — UI 層で必ず label と併記される（NN/g 準拠）。
+   * Sanity Portable Text 互換の token 配列（テキスト + アイコン混在）。
+   * UI 層で空ナビ防止のため `min(1)` の text segment 必須を form schema 側で強制する。
+   * icon-only モード（text token ゼロ）は NN/g 準拠で UI 層が拒否する想定。
    */
-  iconName: z.string().max(64).nullable().optional(),
+  label: buttonLabelSchema.refine(
+    (tokens) => labelToPlainText(tokens).trim().length > 0,
+    { error: "ラベルにテキストを 1 文字以上含めてください" },
+  ),
+  url: z.string().min(1, { error: "URLは必須です" }).max(500),
   isExternal: z.boolean().default(false),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
@@ -66,14 +69,14 @@ export type SocialLinkInput = z.infer<typeof socialLinkInputSchema>;
 export type SocialLinkOrderInput = z.infer<typeof socialLinkOrderInputSchema>;
 
 function normalizeNavigationItemInput(data: NavigationItemInput) {
-  // 空文字を NULL に正規化（DB の VARCHAR(64) NULL を Editorial デフォルト
-  // 「アイコンなし」のセマンティクスに揃えるため）
-  const iconName =
-    data.iconName === undefined || data.iconName === "" ? null : data.iconName;
+  // ButtonLabelToken[] を Prisma の Json 列に渡すための SDK 境界 cast。
+  // discriminated union が InputJsonValue と直接 assignable ではないため。
+  const label =
+    data.label as ReadonlyArray<Prisma.JsonValue> as Prisma.InputJsonValue;
   return {
     ...data,
     parentId: data.parentId ?? null,
-    iconName,
+    label,
   };
 }
 

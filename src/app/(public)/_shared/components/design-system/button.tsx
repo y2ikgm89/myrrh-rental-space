@@ -2,14 +2,10 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
+import { TokenLabel } from "@/shared/components/TokenLabel";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
-import {
-  isIconToken,
-  isTextToken,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
 type ButtonSize = "sm" | "md" | "lg";
@@ -81,28 +77,8 @@ interface AsLink {
 
 type ButtonProps = ButtonContentProps & (AsButton | AsLink);
 
-function renderTokens(
-  tokens: ButtonLabelToken[],
-  size: ButtonSize,
-  variant: ButtonVariant,
-): ReactNode {
-  const iconSize = variant === "link" ? "md" : size;
-  return tokens.map((token, i) => {
-    if (isTextToken(token)) {
-      return <span key={i}>{token.value}</span>;
-    }
-    if (isIconToken(token)) {
-      return (
-        <CuratedIcon
-          key={i}
-          name={token.name}
-          className={iconSizeClasses[iconSize]}
-          aria-hidden="true"
-        />
-      );
-    }
-    return null;
-  });
+function resolveIconSize(size: ButtonSize, variant: ButtonVariant): ButtonSize {
+  return variant === "link" ? "md" : size;
 }
 
 export function Button(props: ButtonProps) {
@@ -128,9 +104,14 @@ export function Button(props: ButtonProps) {
     Boolean(customBackgroundColor) || Boolean(customTextColor);
 
   const content =
-    "label" in props && props.label !== undefined
-      ? renderTokens(props.label, size, variant)
-      : props.children;
+    "label" in props && props.label !== undefined ? (
+      <TokenLabel
+        tokens={props.label}
+        iconClassName={iconSizeClasses[resolveIconSize(size, variant)]}
+      />
+    ) : (
+      props.children
+    );
 
   if ("href" in props && typeof props.href === "string") {
     return (

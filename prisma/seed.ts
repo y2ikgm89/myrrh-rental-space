@@ -2640,21 +2640,24 @@ async function seedBlogComments() {
 // =============================================================================
 
 async function seedNavigation() {
+  // label は ButtonLabelToken[] 形式（テキスト + アイコンの混在 token 配列）。
+  const t = (value: string) => [{ type: "text" as const, value }];
+
   const headerItems = [
-    { label: "ホーム", url: "/", order: 0 },
-    { label: "スペース", url: "/spaces", order: 1 },
-    { label: "イベント", url: "/events", order: 2 },
-    { label: "ブログ", url: "/posts", order: 3 },
-    { label: "お知らせ", url: "/news", order: 4 },
-    { label: "よくある質問", url: "/faq", order: 5 },
-    { label: "アクセス", url: "/access", order: 6 },
-    { label: "お問い合わせ", url: "/contact", order: 7 },
+    { label: t("ホーム"), url: "/", order: 0 },
+    { label: t("スペース"), url: "/spaces", order: 1 },
+    { label: t("イベント"), url: "/events", order: 2 },
+    { label: t("ブログ"), url: "/posts", order: 3 },
+    { label: t("お知らせ"), url: "/news", order: 4 },
+    { label: t("よくある質問"), url: "/faq", order: 5 },
+    { label: t("アクセス"), url: "/access", order: 6 },
+    { label: t("お問い合わせ"), url: "/contact", order: 7 },
   ];
 
   const footerItems = [
-    { label: "規約一覧", url: "/terms", order: 0 },
-    { label: "会社概要", url: "/about", order: 1 },
-    { label: "お問い合わせ", url: "/contact", order: 2 },
+    { label: t("規約一覧"), url: "/terms", order: 0 },
+    { label: t("会社概要"), url: "/about", order: 1 },
+    { label: t("お問い合わせ"), url: "/contact", order: 2 },
   ];
 
   for (const item of headerItems) {

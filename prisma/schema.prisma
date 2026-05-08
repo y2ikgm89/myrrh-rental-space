@@ -986,15 +986,14 @@ model Section {
 }
 
 model NavigationItem {
-  id         String         @id @default(uuid()) @db.Uuid
-  type       NavigationType
-  parentId String? @db.Uuid
-  label      String
+  id       String         @id @default(uuid()) @db.Uuid
+  type     NavigationType
+  parentId String?        @db.Uuid
+  /// Sanity Portable Text 互換の token 配列（{type:"text",value} | {type:"icon",name}）。
+  /// テキスト + アイコンの混在を任意位置で表現する SSoT。空配列 [] は許容しない（空ナビ防止は admin form 層で）。
+  /// icon-only モードは禁止（NN/g 準拠 — 必ず text token と併記、SR は text のみ読み上げ）。
+  label      Json
   url        String
-  /// 任意の Tabler curation icon 識別子（例: "IconHome"）。
-  /// NULL ならアイコンなし（text-only、Editorial 方針デフォルト）。
-  /// icon-only モードは禁止（NN/g 準拠 — 必ず label と併記、SR は label のみ読み上げ）。
-  iconName   String?        @db.VarChar(64)
   isExternal Boolean        @default(false)
   order      Int
   isActive   Boolean        @default(true)

@@ -13,6 +13,11 @@ import type {
   NavigationType,
   SocialPlatform,
 } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  buttonLabelTokenSchema,
+  labelToPlainText,
+  type ButtonLabelToken,
+} from "@/shared/lib/sections/definitions/_shared/button-label";
 import type {
   NavigationItemData,
   SocialLinkData,
@@ -25,9 +30,8 @@ import type {
 export type NavFormData = {
   type: NavigationType;
   parentId: string | null;
-  label: string;
+  label: ButtonLabelToken[];
   url: string;
-  iconName: string;
   isExternal: boolean;
   order: number;
   isActive: boolean;
@@ -36,10 +40,13 @@ export type NavFormData = {
 export const navFormSchema = z.object({
   type: z.enum(["HEADER_DESKTOP", "HEADER_MOBILE", "FOOTER"]),
   parentId: z.string().nullable(),
-  label: z.string().min(1, { error: "ラベルは必須です" }).max(50),
+  label: z
+    .array(buttonLabelTokenSchema)
+    .max(50, { error: "ラベル token は50件以内です" })
+    .refine((tokens) => labelToPlainText(tokens).trim().length > 0, {
+      error: "ラベルにテキストを 1 文字以上含めてください",
+    }),
   url: z.string().min(1, { error: "URLは必須です" }),
-  // フォームでは空文字を許可（未選択 = "" で扱い、command 層で NULL に正規化）
-  iconName: z.string().max(64),
   isExternal: z.boolean(),
   order: z.number().int().min(0),
   isActive: z.boolean(),
@@ -152,7 +159,6 @@ export function rebuildHierarchy(
       type: original.type,
       label: original.label,
       url: original.url,
-      iconName: original.iconName,
       isExternal: original.isExternal,
       order: update.order,
       isActive: original.isActive,

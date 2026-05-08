@@ -16,17 +16,13 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
+import { TokenLabel } from "@/shared/components/TokenLabel";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
-import {
-  isIconToken,
-  isTextToken,
-  type ButtonLabelToken,
-} from "@/shared/lib/sections/definitions/_shared/button-label";
+import type { ButtonLabelToken } from "@/shared/lib/sections/definitions/_shared/button-label";
 
 type MagneticButtonSize = "sm" | "md" | "lg";
 
@@ -64,28 +60,6 @@ interface ChildrenMode extends MagneticButtonBaseProps {
 }
 
 type MagneticButtonProps = LabelMode | ChildrenMode;
-
-function renderTokens(
-  tokens: ButtonLabelToken[],
-  size: MagneticButtonSize,
-): ReactNode {
-  return tokens.map((token, i) => {
-    if (isTextToken(token)) {
-      return <span key={i}>{token.value}</span>;
-    }
-    if (isIconToken(token)) {
-      return (
-        <CuratedIcon
-          key={i}
-          name={token.name}
-          className={iconSizeClasses[size]}
-          aria-hidden="true"
-        />
-      );
-    }
-    return null;
-  });
-}
 
 export function MagneticButton(props: MagneticButtonProps): ReactElement {
   const {
@@ -147,9 +121,11 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
     Boolean(customBackgroundColor) || Boolean(customTextColor);
 
   const content =
-    "label" in props && props.label !== undefined
-      ? renderTokens(props.label, size)
-      : props.children;
+    "label" in props && props.label !== undefined ? (
+      <TokenLabel tokens={props.label} iconClassName={iconSizeClasses[size]} />
+    ) : (
+      props.children
+    );
 
   if (href) {
     return (

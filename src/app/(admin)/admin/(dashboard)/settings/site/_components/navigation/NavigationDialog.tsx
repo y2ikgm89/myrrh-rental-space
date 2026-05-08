@@ -18,7 +18,8 @@ import {
   Switch,
   SubmitButton,
 } from "@/admin/components/ui";
-import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
+import { RichLabelInput } from "@/admin/components/rich-label-input/RichLabelInput";
+import { TokenLabel } from "@/shared/components/TokenLabel";
 import { isValidSocialPlatform } from "@/shared/lib/validations/enums/guards";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
@@ -58,7 +59,7 @@ export function NavigationDialog({
   parentOptions,
   onSubmit,
 }: NavigationDialogProps) {
-  const navIconName = useWatch({ control: form.control, name: "iconName" });
+  const navLabel = useWatch({ control: form.control, name: "label" });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -71,12 +72,21 @@ export function NavigationDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="nav-label">ラベル</Label>
-              <Input
+              <RichLabelInput
                 id="nav-label"
-                {...form.register("label")}
-                placeholder="メニューラベル"
+                value={navLabel ?? []}
+                onChange={(tokens) =>
+                  form.setValue("label", tokens, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
                 disabled={isPending}
+                aria-label="メニューラベル"
               />
+              <p className="text-xs text-muted-foreground">
+                テキストにアイコンを混在できます。アイコンは「アイコン挿入」ボタンから追加してください。
+              </p>
               {form.formState.errors.label && (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.label.message}
@@ -100,22 +110,6 @@ export function NavigationDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nav-iconName">アイコン（任意）</Label>
-              <IconPickerField
-                id="nav-iconName"
-                value={navIconName ?? ""}
-                onChange={(name) =>
-                  form.setValue("iconName", name, { shouldDirty: true })
-                }
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                ラベル左にアイコンを表示します。未設定ならテキストのみ（Editorial
-                方針デフォルト）。
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="nav-parentId">
                 親メニュー（サブメニューの場合）
               </Label>
@@ -133,7 +127,7 @@ export function NavigationDialog({
                   <SelectItem value="none">なし（トップレベル）</SelectItem>
                   {parentOptions.map((parent) => (
                     <SelectItem key={parent.id} value={parent.id}>
-                      {parent.label}
+                      <TokenLabel tokens={parent.label} />
                     </SelectItem>
                   ))}
                 </SelectContent>

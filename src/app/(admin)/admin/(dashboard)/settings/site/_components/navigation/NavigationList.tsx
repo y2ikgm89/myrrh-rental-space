@@ -20,6 +20,7 @@ import type { SensorDescriptor, SensorOptions } from "@dnd-kit/core";
 import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import type { Serialized } from "@/shared/lib/serialize";
 import { DragHandle } from "@/admin/components/ui/sortable";
+import { TokenLabel } from "@/shared/components/TokenLabel";
 import type {
   NavigationItemData,
   SocialLinkData,
@@ -147,8 +148,11 @@ export function NavigationList({
                 {activeItem ? (
                   <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 opacity-90 shadow-lg ring-2 ring-primary/20">
                     <DragHandle />
-                    <span className="text-sm font-medium">
-                      {activeItem.label}
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                      <TokenLabel
+                        tokens={activeItem.label}
+                        iconClassName="h-4 w-4 shrink-0 text-muted-foreground"
+                      />
                     </span>
                   </div>
                 ) : null}

@@ -100,7 +100,7 @@ const SOCIAL_ID = "social-1";
 
 const VALID_NAV_INPUT = {
   type: "HEADER_DESKTOP" as const,
-  label: "ホーム",
+  label: [{ type: "text" as const, value: "ホーム" }],
   url: "/",
   isExternal: false,
   order: 0,
@@ -176,10 +176,21 @@ describe("navigationItemInputSchema バリデーション", () => {
       expect(result.success).toBe(true);
     });
 
-    test("label が50文字のとき通過する", () => {
+    test("label の text token が200文字以内なら通過する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: "あ".repeat(50),
+        label: [{ type: "text" as const, value: "あ".repeat(200) }],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("label に icon token を含めて通過する", () => {
+      const result = navigationItemInputSchema.safeParse({
+        ...VALID_NAV_INPUT,
+        label: [
+          { type: "icon" as const, name: "IconHome" },
+          { type: "text" as const, value: "ホーム" },
+        ],
       });
       expect(result.success).toBe(true);
     });
@@ -194,18 +205,26 @@ describe("navigationItemInputSchema バリデーション", () => {
   });
 
   describe("異常系", () => {
-    test("label が空文字で失敗する", () => {
+    test("label が空配列で失敗する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: "",
+        label: [],
       });
       expect(result.success).toBe(false);
     });
 
-    test("label が51文字で失敗する", () => {
+    test("label に text token がない（icon のみ）で失敗する (icon-only モード禁止)", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: "あ".repeat(51),
+        label: [{ type: "icon" as const, name: "IconHome" }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("label の text token が201文字で失敗する", () => {
+      const result = navigationItemInputSchema.safeParse({
+        ...VALID_NAV_INPUT,
+        label: [{ type: "text" as const, value: "あ".repeat(201) }],
       });
       expect(result.success).toBe(false);
     });
@@ -441,7 +460,7 @@ describe("createNavigationItem", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             type: "HEADER_DESKTOP",
-            label: "ホーム",
+            label: [{ type: "text", value: "ホーム" }],
             url: "/",
             isExternal: false,
             order: 0,
@@ -518,13 +537,13 @@ describe("updateNavigationItem", () => {
     test("update が正しいデータで呼ばれる", async () => {
       await updateNavigationItem(NAV_ID, {
         ...VALID_NAV_INPUT,
-        label: "更新後ラベル",
+        label: [{ type: "text" as const, value: "更新後ラベル" }],
       });
 
       expect(mockNavigationItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            label: "更新後ラベル",
+            label: [{ type: "text", value: "更新後ラベル" }],
           }),
         }),
       );

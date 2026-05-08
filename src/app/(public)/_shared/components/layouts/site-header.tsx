@@ -17,7 +17,7 @@ import { IconChevronDown, IconMenu2, IconX } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
-import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
+import { TokenLabel } from "@/shared/components/TokenLabel";
 import type { SiteBrand as SiteBrandValue } from "@/shared/domain/settings/queries/display";
 import {
   HeaderScrollBehavior,
@@ -110,10 +110,7 @@ function NavItemLink({
 
   const content = (
     <>
-      {item.iconName ? (
-        <CuratedIcon name={item.iconName} className="h-3.5 w-3.5 shrink-0" />
-      ) : null}
-      <span>{item.label}</span>
+      <TokenLabel tokens={item.label} iconClassName="h-3.5 w-3.5 shrink-0" />
       {item.isExternal && <span className="sr-only"> (新しいタブで開く)</span>}
     </>
   );
@@ -179,7 +176,7 @@ function MobileNavItem({
           "[&::-webkit-details-marker]:hidden",
         )}
       >
-        {item.label}
+        <TokenLabel tokens={item.label} iconClassName="h-3.5 w-3.5 shrink-0" />
         <IconChevronDown
           className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
           aria-hidden="true"
@@ -359,7 +356,10 @@ export function Header({
                   {item.children.length > 0 ? (
                     <>
                       <NavigationMenu.Trigger className="group relative inline-flex items-center gap-1 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:text-foreground data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100">
-                        {item.label}
+                        <TokenLabel
+                          tokens={item.label}
+                          iconClassName="h-3.5 w-3.5 shrink-0"
+                        />
                         <IconChevronDown
                           className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180"
                           aria-hidden="true"
