@@ -4,6 +4,7 @@ import {
   generateStorageKey,
   buildPublicUrl,
   extractKeyFromUrl,
+  isValidStorageFolder,
   type StoragePrefix,
 } from "@/shared/lib/r2/keys";
 
@@ -16,38 +17,86 @@ describe("STORAGE_PREFIXES", () => {
   });
 });
 
+describe("isValidStorageFolder", () => {
+  test("英数字・ハイフンの slug を許可", () => {
+    expect(isValidStorageFolder("space-1")).toBe(true);
+    expect(isValidStorageFolder("abc123")).toBe(true);
+    expect(isValidStorageFolder("a")).toBe(true);
+  });
+
+  test("path traversal / 大文字 / 記号は拒否", () => {
+    expect(isValidStorageFolder("../etc")).toBe(false);
+    expect(isValidStorageFolder("space/sub")).toBe(false);
+    expect(isValidStorageFolder("Space")).toBe(false);
+    expect(isValidStorageFolder("space_1")).toBe(false);
+    expect(isValidStorageFolder("space.1")).toBe(false);
+  });
+
+  test("空文字 / 64 文字超 / 先頭末尾ハイフンは拒否", () => {
+    expect(isValidStorageFolder("")).toBe(false);
+    expect(isValidStorageFolder("a".repeat(65))).toBe(false);
+    expect(isValidStorageFolder("-foo")).toBe(false);
+    expect(isValidStorageFolder("foo-")).toBe(false);
+  });
+});
+
 describe("generateStorageKey", () => {
-  test("prefix + folder + timestamp + uuid + ext で key を生成", () => {
+  test("MIME 由来の拡張子で key を生成（image/jpeg → .jpg）", () => {
     const key = generateStorageKey({
       prefix: STORAGE_PREFIXES.SPACES,
-      filename: "photo.jpg",
+      contentType: "image/jpeg",
       folder: "space-1",
     });
     expect(key).toMatch(/^spaces\/space-1\/\d+-[0-9a-f-]+\.jpg$/);
   });
 
+  test("PNG / WebP / GIF も MIME → 公式拡張子", () => {
+    expect(
+      generateStorageKey({
+        prefix: STORAGE_PREFIXES.MEDIA,
+        contentType: "image/png",
+      }),
+    ).toMatch(/\.png$/);
+    expect(
+      generateStorageKey({
+        prefix: STORAGE_PREFIXES.MEDIA,
+        contentType: "image/webp",
+      }),
+    ).toMatch(/\.webp$/);
+    expect(
+      generateStorageKey({
+        prefix: STORAGE_PREFIXES.MEDIA,
+        contentType: "image/gif",
+      }),
+    ).toMatch(/\.gif$/);
+  });
+
   test("folder 省略時は prefix 直下に配置", () => {
     const key = generateStorageKey({
       prefix: STORAGE_PREFIXES.MEDIA,
-      filename: "doc.pdf",
+      contentType: "image/png",
     });
-    expect(key).toMatch(/^media\/\d+-[0-9a-f-]+\.pdf$/);
+    expect(key).toMatch(/^media\/\d+-[0-9a-f-]+\.png$/);
   });
 
-  test("大文字拡張子は小文字化", () => {
-    const key = generateStorageKey({
-      prefix: STORAGE_PREFIXES.POSTS,
-      filename: "IMAGE.PNG",
-    });
-    expect(key).toMatch(/\.png$/);
+  test("不正な folder（path traversal）は throw", () => {
+    expect(() =>
+      generateStorageKey({
+        prefix: STORAGE_PREFIXES.SPACES,
+        contentType: "image/jpeg",
+        folder: "../etc",
+      }),
+    ).toThrow(/Invalid storage folder/);
   });
 
-  test("拡張子なしファイルは ext 空で生成", () => {
-    const key = generateStorageKey({
-      prefix: STORAGE_PREFIXES.MEDIA,
-      filename: "noext",
-    });
-    expect(key).toMatch(/^media\/\d+-[0-9a-f-]+$/);
+  test("不正な folder（slash）は throw", () => {
+    expect(() =>
+      generateStorageKey({
+        prefix: STORAGE_PREFIXES.SPACES,
+        contentType: "image/jpeg",
+        folder: "space/sub",
+      }),
+    ).toThrow(/Invalid storage folder/);
   });
 });
 

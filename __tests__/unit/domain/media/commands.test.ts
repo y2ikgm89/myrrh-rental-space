@@ -31,19 +31,22 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// r2 モック
-const mockUploadFile = mock<
-  () => Promise<{
-    success: boolean;
-    url?: string;
-    path?: string;
-    error?: string;
-  }>
->(() =>
+// r2 モック（discriminated union: success: true → url/path/contentType, false → error）
+type MockUploadResult =
+  | {
+      success: true;
+      url: string;
+      path: string;
+      contentType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+    }
+  | { success: false; error: string };
+
+const mockUploadFile = mock<() => Promise<MockUploadResult>>(() =>
   Promise.resolve({
     success: true,
     url: "https://media.test.example.com/media/folder/x.jpg",
     path: "media/folder/x.jpg",
+    contentType: "image/jpeg",
   }),
 );
 const mockDeleteFile = mock<() => Promise<{ success: boolean }>>(() =>
@@ -124,6 +127,7 @@ describe("uploadMediaCommand", () => {
       success: true,
       url: MEDIA_URL,
       path: STORAGE_PATH,
+      contentType: "image/jpeg",
     });
     mockMediaCreate.mockResolvedValue({ id: MEDIA_ID, url: MEDIA_URL });
   });
@@ -194,9 +198,10 @@ describe("uploadMediaCommand", () => {
       });
     });
 
-    test("ストレージアップロードが失敗（エラーメッセージなし）でも DomainError をスローする", async () => {
+    test("ストレージアップロードが失敗（エラーメッセージ空文字）でも DomainError をスローする", async () => {
       mockUploadFile.mockResolvedValue({
         success: false,
+        error: "",
       });
 
       await expect(uploadMediaCommand(UPLOAD_INPUT)).rejects.toMatchObject({
@@ -205,11 +210,12 @@ describe("uploadMediaCommand", () => {
       });
     });
 
-    test("URL が返されない場合 DomainError をスローする", async () => {
+    test("upload が success: false を返した場合 DomainError をスローする", async () => {
+      // 新 API は discriminated union により success: true 時は url/path/contentType
+      // 必須（型レベル強制）。ランタイムで失敗を表現する canonical は success: false。
       mockUploadFile.mockResolvedValue({
-        success: true,
-        path: STORAGE_PATH,
-        // url が欠落
+        success: false,
+        error: "署名検証失敗",
       });
 
       await expect(uploadMediaCommand(UPLOAD_INPUT)).rejects.toThrow(

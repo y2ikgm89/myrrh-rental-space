@@ -29,44 +29,69 @@ const PAYMENT_EMAIL_SELECT = {
 } as const;
 
 /**
- * 予約の現在の paymentStatus を取得（べき等性チェック用）
+ * 決済完了の atomic claim: `paymentStatus !== PAID` の予約のみを PAID に遷移させる。
+ *
+ * Stripe webhook は `checkout.session.completed` と `async_payment_succeeded` を
+ * 並行配信しうる（公式仕様）。`findUnique → update` の 2 ステップでは race window が
+ * 残るため、`updateMany({ where: { paymentStatus: { not: PAID } } })` の **WHERE 条件**
+ * 自体で claim する（PostgreSQL の単一 UPDATE は atomic）。
+ *
+ * @returns claim 成功時のみ予約データを返す。既に PAID（重複配信 / 既処理）または
+ *   予約が存在しない場合は `null` を返し、呼び出し元はメール送信や cache invalidate を skip する。
  */
-export async function getReservationPaymentStatus(reservationId: string) {
-  return prisma.reservation.findUnique({
-    where: { id: reservationId, deletedAt: null },
-    select: { id: true, paymentStatus: true },
-  });
-}
-
-/**
- * 決済完了: paymentStatus → PAID
- * べき等性: 呼び出し元で現在のステータスを事前チェックすること
- */
-export async function updateReservationPaymentCompleted(
+export async function claimReservationAsPaid(
   reservationId: string,
   data: {
     stripePaymentIntentId: string | null;
   },
 ) {
-  return prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+  const result = await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      paymentStatus: { not: PaymentStatus.PAID },
+    },
     data: {
       paymentStatus: PaymentStatus.PAID,
       stripePaymentIntentId: data.stripePaymentIntentId,
       paidAt: new Date(),
     },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  // claim 成功後にメール送信用の relation 付きデータを取得
+  return prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
     select: PAYMENT_EMAIL_SELECT,
   });
 }
 
 /**
- * 決済失敗: paymentStatus → FAILED
+ * 決済失敗の atomic claim: PAID / REFUNDED 以外の予約のみ FAILED に遷移させる。
+ *
+ * @returns claim 成功時 `true`。既に PAID / REFUNDED や予約不在で no-op の場合 `false`。
  */
-export async function markReservationPaymentFailed(reservationId: string) {
-  return prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+export async function claimReservationAsFailed(
+  reservationId: string,
+): Promise<boolean> {
+  const result = await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      paymentStatus: {
+        notIn: [
+          PaymentStatus.PAID,
+          PaymentStatus.REFUNDED,
+          PaymentStatus.FAILED,
+        ],
+      },
+    },
     data: { paymentStatus: PaymentStatus.FAILED },
   });
+  return result.count > 0;
 }
 
 /**
@@ -97,11 +122,20 @@ export async function savePaymentIntentId(
 }
 
 /**
- * 返金完了: paymentStatus → REFUNDED
+ * 返金完了の atomic claim: REFUNDED 以外の予約のみ REFUNDED に遷移させる。
+ *
+ * @returns claim 成功時 `true`。既に REFUNDED または予約不在で no-op の場合 `false`。
  */
-export async function markReservationRefunded(reservationId: string) {
-  return prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
+export async function claimReservationAsRefunded(
+  reservationId: string,
+): Promise<boolean> {
+  const result = await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      paymentStatus: { not: PaymentStatus.REFUNDED },
+    },
     data: { paymentStatus: PaymentStatus.REFUNDED },
   });
+  return result.count > 0;
 }

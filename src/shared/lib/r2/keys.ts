@@ -4,12 +4,24 @@
  * Key 構造: `{prefix}/{folder}/{timestamp}-{uuid}.{ext}`
  *
  * - `prefix`: `STORAGE_PREFIXES` の 4 値のいずれか（R2 バケット内の仮想フォルダ）
- * - `folder`: 任意サブパス（spaceId / postId / logo 等のスコープ）
+ * - `folder`: 任意サブパス（spaceId / postId / logo 等のスコープ）。
+ *   path traversal 防止のため `[a-z0-9-]+` のみ許可（複数階層は使わない設計）。
  * - `timestamp-uuid.ext`: 衝突回避のためのランダム化ファイル名
+ *   （拡張子は **server-side 検出済み MIME から派生** — user filename は使用しない）
  *
  * Public URL: `{R2_PUBLIC_URL}/{key}` で Cloudflare R2 カスタムドメインから配信。
  * Server Action プロキシ方式で保存・削除するため Presigned URL は使わない。
+ *
+ * @security user filename をそのまま key に流すと `evil.png/../../foo` のような
+ *   path-segment injection が可能（key は literal だが CDN URL 正規化と非対称になり
+ *   cache poisoning / 将来の prefix-based authorization の bypass 経路になる）。
+ *   このモジュールは **filename を一切 key に転記しない** clean-break 設計。
  */
+
+import {
+  IMAGE_MIME_EXTENSIONS,
+  type SupportedImageMimeType,
+} from "./image-magic-bytes";
 
 export const STORAGE_PREFIXES = {
   SPACES: "spaces",
@@ -22,36 +34,54 @@ export type StoragePrefix =
   (typeof STORAGE_PREFIXES)[keyof typeof STORAGE_PREFIXES];
 
 /**
- * ファイル名から拡張子（小文字、ドットなし）を抽出する。
- * 拡張子がない場合は空文字を返す。
+ * folder セグメントの許可文字: 小文字英数字 + ハイフン（slug-style）。
+ * Stripe / Shopify / GitHub の URL slug 業界標準と一致。
  */
-function getFileExtension(filename: string): string {
-  const idx = filename.lastIndexOf(".");
-  if (idx < 0 || idx === filename.length - 1) return "";
-  return filename.slice(idx + 1).toLowerCase();
+const FOLDER_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+
+/**
+ * folder 文字列が安全かを判定する。複数階層 / path traversal / 大文字 / 記号は拒否。
+ */
+export function isValidStorageFolder(folder: string): boolean {
+  if (folder.length === 0 || folder.length > 64) return false;
+  return FOLDER_PATTERN.test(folder);
 }
 
 type GenerateStorageKeyInput = {
   prefix: StoragePrefix;
-  filename: string;
-  /** 任意のサブフォルダ（例: spaceId / postId / logo）*/
+  /**
+   * **server-side で検出済みの MIME type**（`detectImageMimeFromMagicBytes` の戻り値等）。
+   * クライアント供給の `file.type` は magic-byte 偽装可能なため受け付けない。
+   */
+  contentType: SupportedImageMimeType;
+  /** 任意のサブフォルダ（`isValidStorageFolder` を通過した値のみ）*/
   folder?: string;
 };
 
 /**
  * 衝突回避つきの R2 Object Key を生成する。
  *
+ * @throws {Error} folder が許可パターン (`[a-z0-9-]+`) を満たさない場合
+ *
  * @example
- *   generateStorageKey({ prefix: "spaces", folder: "abc", filename: "hero.jpg" })
+ *   generateStorageKey({
+ *     prefix: "spaces",
+ *     folder: "abc",
+ *     contentType: "image/jpeg",
+ *   })
  *   // => "spaces/abc/1713654000000-550e8400-e29b-41d4-a716-446655440000.jpg"
  */
 export function generateStorageKey(input: GenerateStorageKeyInput): string {
-  const ext = getFileExtension(input.filename);
+  if (input.folder !== undefined && !isValidStorageFolder(input.folder)) {
+    throw new Error(
+      `Invalid storage folder: must match /^[a-z0-9-]+$/ (max 64 chars). Got: ${JSON.stringify(input.folder)}`,
+    );
+  }
+  const ext = IMAGE_MIME_EXTENSIONS[input.contentType];
   const uniqueId = crypto.randomUUID();
   const timestamp = Date.now();
   const folderSegment = input.folder ? `${input.folder}/` : "";
-  const extSegment = ext ? `.${ext}` : "";
-  return `${input.prefix}/${folderSegment}${timestamp}-${uniqueId}${extSegment}`;
+  return `${input.prefix}/${folderSegment}${timestamp}-${uniqueId}.${ext}`;
 }
 
 /**

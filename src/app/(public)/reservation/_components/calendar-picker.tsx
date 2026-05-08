@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import { DayPicker } from "react-day-picker";
-import { ja } from "react-day-picker/locale";
+import { DayPicker } from "@daypicker/react";
+import { ja } from "@daypicker/react/locale";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import { getWeekdayKey } from "@/shared/lib/reservation/time-slots-utils";
 

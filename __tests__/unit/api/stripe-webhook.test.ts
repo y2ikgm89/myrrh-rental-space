@@ -25,10 +25,8 @@ const mockGetStripeClient = mock<
   }>
 >();
 
-// Payment Queries
-const mockGetReservationPaymentStatus =
-  mock<(id: string) => Promise<{ paymentStatus: string } | null>>();
-const mockUpdateReservationPaymentCompleted = mock<
+// Payment Queries (atomic claim API)
+const mockClaimReservationAsPaid = mock<
   (
     id: string,
     data: { stripePaymentIntentId: string | null },
@@ -38,18 +36,19 @@ const mockUpdateReservationPaymentCompleted = mock<
     notes: string | null;
     startTime: string;
     endTime: string;
+    icsSequence: number;
     customer: { email: string; lastName: string; firstName: string };
     space: { name: string; location: { name: string } | null };
-  }>
+  } | null>
 >();
 const mockSavePaymentIntentId =
   mock<(id: string, piId: string) => Promise<void>>();
-const mockMarkReservationPaymentFailed = mock<(id: string) => Promise<void>>();
+const mockClaimReservationAsFailed = mock<(id: string) => Promise<boolean>>();
 const mockFindReservationByPaymentIntent =
   mock<
     (piId: string) => Promise<{ id: string; paymentStatus: string } | null>
   >();
-const mockMarkReservationRefunded = mock<(id: string) => Promise<void>>();
+const mockClaimReservationAsRefunded = mock<(id: string) => Promise<boolean>>();
 
 // Next.js cache
 const mockRevalidateTag = mock<(tag: string, profile: string) => void>();
@@ -110,19 +109,17 @@ mock.module("@/app/(admin)/admin/(dashboard)/_shared/lib/stripe", () => ({
 }));
 
 mock.module("@/shared/domain/reservations/payment-queries", () => ({
-  getReservationPaymentStatus: (id: string) =>
-    mockGetReservationPaymentStatus(id),
-  updateReservationPaymentCompleted: (
+  claimReservationAsPaid: (
     id: string,
     data: { stripePaymentIntentId: string | null },
-  ) => mockUpdateReservationPaymentCompleted(id, data),
+  ) => mockClaimReservationAsPaid(id, data),
   savePaymentIntentId: (id: string, piId: string) =>
     mockSavePaymentIntentId(id, piId),
-  markReservationPaymentFailed: (id: string) =>
-    mockMarkReservationPaymentFailed(id),
+  claimReservationAsFailed: (id: string) => mockClaimReservationAsFailed(id),
   findReservationByPaymentIntent: (piId: string) =>
     mockFindReservationByPaymentIntent(piId),
-  markReservationRefunded: (id: string) => mockMarkReservationRefunded(id),
+  claimReservationAsRefunded: (id: string) =>
+    mockClaimReservationAsRefunded(id),
 }));
 
 mock.module("next/cache", () => ({
@@ -270,12 +267,11 @@ describe("POST /api/webhooks/stripe", () => {
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
-    mockGetReservationPaymentStatus.mockReset();
-    mockUpdateReservationPaymentCompleted.mockReset();
+    mockClaimReservationAsPaid.mockReset();
     mockSavePaymentIntentId.mockReset();
-    mockMarkReservationPaymentFailed.mockReset();
+    mockClaimReservationAsFailed.mockReset();
     mockFindReservationByPaymentIntent.mockReset();
-    mockMarkReservationRefunded.mockReset();
+    mockClaimReservationAsRefunded.mockReset();
     mockRevalidateTag.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();
@@ -312,15 +308,13 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     });
-    mockGetReservationPaymentStatus.mockResolvedValue({
-      paymentStatus: "PENDING",
+    mockClaimReservationAsPaid.mockResolvedValue({
+      ...DEFAULT_RESERVATION,
+      icsSequence: 0,
     });
-    mockUpdateReservationPaymentCompleted.mockResolvedValue(
-      DEFAULT_RESERVATION,
-    );
     mockSavePaymentIntentId.mockResolvedValue(undefined);
-    mockMarkReservationPaymentFailed.mockResolvedValue(undefined);
-    mockMarkReservationRefunded.mockResolvedValue(undefined);
+    mockClaimReservationAsFailed.mockResolvedValue(true);
+    mockClaimReservationAsRefunded.mockResolvedValue(true);
     mockFindReservationByPaymentIntent.mockResolvedValue(null);
   });
 
@@ -420,10 +414,9 @@ describe("POST /api/webhooks/stripe", () => {
     expect(body.received).toBe(true);
 
     // fulfill が呼ばれた
-    expect(mockUpdateReservationPaymentCompleted).toHaveBeenCalledWith(
-      "res-123",
-      { stripePaymentIntentId: "pi-123" },
-    );
+    expect(mockClaimReservationAsPaid).toHaveBeenCalledWith("res-123", {
+      stripePaymentIntentId: "pi-123",
+    });
 
     // キャッシュ無効化 (3点セット)
     expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
@@ -450,7 +443,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockSavePaymentIntentId).toHaveBeenCalledWith("res-123", "pi-456");
 
     // fulfill は呼ばれない
-    expect(mockUpdateReservationPaymentCompleted).not.toHaveBeenCalled();
+    expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
 
     // キャッシュ無効化は実行される
     expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
@@ -463,10 +456,9 @@ describe("POST /api/webhooks/stripe", () => {
   // べき等性: 既に PAID
   // ---------------------------------------------------------------------------
 
-  test("べき等性: checkout.session.completed で既に PAID → 再処理しない", async () => {
-    mockGetReservationPaymentStatus.mockResolvedValue({
-      paymentStatus: "PAID",
-    });
+  test("べき等性: checkout.session.completed で既に PAID（atomic claim が null）→ メール / cache invalidate スキップ", async () => {
+    // atomic claim: 既に PAID なら updateMany.count === 0 で null を返す
+    mockClaimReservationAsPaid.mockResolvedValueOnce(null);
 
     const event = makeSessionCompletedEvent("paid", "pi-123");
     mockConstructEvent.mockReturnValue(event);
@@ -477,9 +469,9 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
 
-    // スキップされた
-    expect(mockUpdateReservationPaymentCompleted).not.toHaveBeenCalled();
-    expect(mockSavePaymentIntentId).not.toHaveBeenCalled();
+    // claim 自体は呼ばれるが、null 戻り値で副作用がスキップされる
+    expect(mockClaimReservationAsPaid).toHaveBeenCalledTimes(1);
+    expect(mockFireAndForget).not.toHaveBeenCalled();
     expect(mockRevalidateTag).not.toHaveBeenCalled();
   });
 
@@ -500,12 +492,10 @@ describe("POST /api/webhooks/stripe", () => {
       },
     };
     mockConstructEvent.mockReturnValue(event);
-    mockGetReservationPaymentStatus.mockResolvedValue({
-      paymentStatus: "PENDING",
-    });
-    mockUpdateReservationPaymentCompleted.mockResolvedValue({
+    mockClaimReservationAsPaid.mockResolvedValueOnce({
       ...DEFAULT_RESERVATION,
       id: "res-456",
+      icsSequence: 0,
     });
 
     const response = await POST(makeRequest("body"));
@@ -513,10 +503,9 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockUpdateReservationPaymentCompleted).toHaveBeenCalledWith(
-      "res-456",
-      { stripePaymentIntentId: "pi-789" },
-    );
+    expect(mockClaimReservationAsPaid).toHaveBeenCalledWith("res-456", {
+      stripePaymentIntentId: "pi-789",
+    });
     expect(mockFireAndForget).toHaveBeenCalled();
   });
 
@@ -543,7 +532,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockMarkReservationPaymentFailed).toHaveBeenCalledWith("res-789");
+    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith("res-789");
     expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
   });
 
@@ -570,14 +559,13 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockMarkReservationPaymentFailed).toHaveBeenCalledWith("res-exp");
+    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith("res-exp");
     expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
   });
 
-  test("べき等性: checkout.session.expired で既に PAID → スキップ", async () => {
-    mockGetReservationPaymentStatus.mockResolvedValue({
-      paymentStatus: "PAID",
-    });
+  test("べき等性: checkout.session.expired で既に PAID → claim が false で cache invalidate スキップ", async () => {
+    // atomic claim: 既に PAID/REFUNDED/FAILED なら count === 0 で false を返す
+    mockClaimReservationAsFailed.mockResolvedValueOnce(false);
     const event = {
       type: "checkout.session.expired",
       data: {
@@ -594,7 +582,9 @@ describe("POST /api/webhooks/stripe", () => {
     const response = await POST(makeRequest("body"));
 
     expect(response.status).toBe(200);
-    expect(mockMarkReservationPaymentFailed).not.toHaveBeenCalled();
+    // claim は呼ばれるが false 戻り値で cache invalidate スキップ
+    expect(mockClaimReservationAsFailed).toHaveBeenCalledTimes(1);
+    expect(mockRevalidateTag).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------
@@ -617,22 +607,25 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockFindReservationByPaymentIntent).toHaveBeenCalledWith(
       "pi-refund-123",
     );
-    expect(mockMarkReservationRefunded).toHaveBeenCalledWith("res-ref-1");
+    expect(mockClaimReservationAsRefunded).toHaveBeenCalledWith("res-ref-1");
     expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
   });
 
-  test("べき等性: charge.refunded で既に REFUNDED → スキップ", async () => {
+  test("べき等性: charge.refunded で既に REFUNDED → claim が false で cache invalidate スキップ", async () => {
     const event = makeChargeRefundedEvent("pi-refund-123");
     mockConstructEvent.mockReturnValue(event);
     mockFindReservationByPaymentIntent.mockResolvedValue({
       id: "res-ref-1",
       paymentStatus: "REFUNDED",
     });
+    mockClaimReservationAsRefunded.mockResolvedValueOnce(false);
 
     const response = await POST(makeRequest("body"));
 
     expect(response.status).toBe(200);
-    expect(mockMarkReservationRefunded).not.toHaveBeenCalled();
+    // claim は呼ばれるが false 戻り値で cache invalidate スキップ
+    expect(mockClaimReservationAsRefunded).toHaveBeenCalledTimes(1);
+    expect(mockRevalidateTag).not.toHaveBeenCalled();
   });
 
   test("charge.refunded で payment_intent が null → ログのみ、200 を返す", async () => {
@@ -644,7 +637,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockMarkReservationRefunded).not.toHaveBeenCalled();
+    expect(mockClaimReservationAsRefunded).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -658,7 +651,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockMarkReservationRefunded).not.toHaveBeenCalled();
+    expect(mockClaimReservationAsRefunded).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -680,8 +673,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(body.received).toBe(true);
 
     // 何も処理されない
-    expect(mockGetReservationPaymentStatus).not.toHaveBeenCalled();
-    expect(mockUpdateReservationPaymentCompleted).not.toHaveBeenCalled();
+    expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------
@@ -709,8 +701,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(body.received).toBe(true);
 
     // 処理はスキップ
-    expect(mockGetReservationPaymentStatus).not.toHaveBeenCalled();
-    expect(mockUpdateReservationPaymentCompleted).not.toHaveBeenCalled();
+    expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalled();
   });
 });

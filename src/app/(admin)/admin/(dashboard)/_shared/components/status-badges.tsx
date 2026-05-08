@@ -233,6 +233,10 @@ const auditActionConfig = {
     label: AUDIT_ACTION_LABELS.PASSWORD_RESET_REQUEST,
     variant: "secondary",
   },
+  PASSWORD_RESET_FAILED: {
+    label: AUDIT_ACTION_LABELS.PASSWORD_RESET_FAILED,
+    variant: "destructive",
+  },
   ROLE_CHANGE: {
     label: AUDIT_ACTION_LABELS.ROLE_CHANGE,
     variant: "secondary",

@@ -178,16 +178,44 @@ function createAdminAuth() {
           }
         }
 
-        // パスワードリセット完了（Better Auth 公式パス /reset-password）
-        // リセット要求のみ記録 → 完了未記録だとインシデント調査時に証跡が不完全。
-        // ctx.context.newSession があれば user.id を取得、なければ token からのみ記録。
+        // パスワードリセット (Better Auth 公式パス /reset-password)
+        //
+        // Better Auth の after hook は **エラー throw 時にも発火する**
+        // (to-auth-endpoints.mjs: APIError を catch して context.returned に格納)。
+        // 成功 (newSession 確立 / 200 系 returned) と失敗 (returned が APIError) を
+        // ctx.context.returned で分岐し、PASSWORD_CHANGE / PASSWORD_RESET_FAILED
+        // を対称配線する（証跡完全性 + brute-force 試行追跡）。
         if (ctx.path === "/reset-password") {
           try {
-            const userId = ctx.context.newSession?.user.id;
-            void logAuthEvent(AuditAction.PASSWORD_CHANGE, userId, {
-              method: "reset",
-              email: ctx.context.newSession?.user.email,
-            });
+            const newSession = ctx.context.newSession;
+            const returned: unknown = ctx.context.returned;
+            const returnedRecord = isRecord(returned) ? returned : null;
+            const status = returnedRecord
+              ? typeof returnedRecord["status"] === "string"
+                ? returnedRecord["status"]
+                : null
+              : null;
+            const isError = status !== null && status !== "OK";
+
+            if (newSession && !isError) {
+              void logAuthEvent(
+                AuditAction.PASSWORD_CHANGE,
+                newSession.user.id,
+                {
+                  method: "reset",
+                  email: newSession.user.email,
+                },
+              );
+            } else {
+              const reasonRaw = returnedRecord
+                ? typeof returnedRecord["message"] === "string"
+                  ? returnedRecord["message"]
+                  : ""
+                : "";
+              void logAuthEvent(AuditAction.PASSWORD_RESET_FAILED, undefined, {
+                reason: reasonRaw.slice(0, 200),
+              });
+            }
           } catch {
             // 監査ログ失敗でも認証フローを阻害しない
           }

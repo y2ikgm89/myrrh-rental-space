@@ -28,6 +28,21 @@ export type SupportedImageMimeType =
   (typeof SUPPORTED_IMAGE_MIME_TYPES)[number];
 
 /**
+ * 検出済み MIME type に対応する公式拡張子（小文字、ドットなし）。
+ *
+ * R2 object key の拡張子は **server-side で検出した MIME** から派生させる
+ * （クライアント供給の `file.name` は path traversal / 任意拡張子の経路）。
+ *
+ * @see https://www.iana.org/assignments/media-types/media-types.xhtml#image
+ */
+export const IMAGE_MIME_EXTENSIONS: Record<SupportedImageMimeType, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+/**
  * 先頭バイト列から画像 MIME type を確定する。
  *
  * @returns 検出した MIME type、または非対応の場合 null

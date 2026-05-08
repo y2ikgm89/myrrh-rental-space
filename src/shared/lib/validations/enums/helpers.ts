@@ -549,6 +549,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AuditAction.PERMISSION_DENIED]: "権限拒否",
   [AuditAction.PASSWORD_CHANGE]: "パスワード変更",
   [AuditAction.PASSWORD_RESET_REQUEST]: "パスワードリセット要求",
+  [AuditAction.PASSWORD_RESET_FAILED]: "パスワードリセット失敗",
   [AuditAction.ROLE_CHANGE]: "ロール変更",
 };
 

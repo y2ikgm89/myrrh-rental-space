@@ -25,7 +25,7 @@ export async function uploadMediaCommand(input: {
       folder: input.folder,
     });
 
-    if (!result.success || !result.url || !result.path) {
+    if (!result.success) {
       throw new DomainError(
         result.error || "アップロードに失敗しました",
         "UNEXPECTED",
@@ -40,7 +40,9 @@ export async function uploadMediaCommand(input: {
         storagePath: result.path,
         url: result.url,
         bucket: STORAGE_PREFIXES.MEDIA,
-        mimeType: input.file.type,
+        // server-side で magic-byte 検出した MIME を canonical 値として保存
+        // （client 供給の file.type は偽装可能なため使わない）
+        mimeType: result.contentType,
         size: input.file.size,
         width: null,
         height: null,
