@@ -25,8 +25,9 @@ import {
   bulkSetStatusCustomers,
 } from "@/admin/actions/customer/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { keysOf } from "@/shared/lib/serialize";
 import { CUSTOMER_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface CustomerBulkActionsProps {
   selectedIds: string[];
@@ -147,16 +148,14 @@ export function CustomerBulkActions({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {(Object.keys(CUSTOMER_STATUS_LABELS) as CustomerStatus[]).map(
-                (status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => handleBulkSetStatus(status)}
-                  >
-                    {CUSTOMER_STATUS_LABELS[status]}
-                  </DropdownMenuItem>
-                ),
-              )}
+              {keysOf(CUSTOMER_STATUS_LABELS).map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onClick={() => handleBulkSetStatus(status)}
+                >
+                  {CUSTOMER_STATUS_LABELS[status]}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 

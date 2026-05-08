@@ -22,8 +22,9 @@ import {
   bulkSetStatusInquiries,
 } from "@/admin/actions/inquiry/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { keysOf } from "@/shared/lib/serialize";
 import { INQUIRY_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface InquiryBulkActionsProps {
   selectedIds: string[];
@@ -98,16 +99,14 @@ export function InquiryBulkActions({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {(Object.keys(INQUIRY_STATUS_LABELS) as InquiryStatus[]).map(
-                (status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => handleBulkSetStatus(status)}
-                  >
-                    {INQUIRY_STATUS_LABELS[status]}
-                  </DropdownMenuItem>
-                ),
-              )}
+              {keysOf(INQUIRY_STATUS_LABELS).map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onClick={() => handleBulkSetStatus(status)}
+                >
+                  {INQUIRY_STATUS_LABELS[status]}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 

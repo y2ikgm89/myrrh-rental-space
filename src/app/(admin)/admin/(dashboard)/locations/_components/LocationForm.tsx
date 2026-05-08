@@ -46,6 +46,10 @@ import {
   defaultLocationFormValues,
   type LocationFormInput,
 } from "@/shared/lib/validations/location";
+import {
+  parseBusinessAttributes,
+  parseBusinessHours,
+} from "@/shared/lib/json-validators";
 import { createLocation, updateLocation } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { cn } from "@/shared/lib/cn";
@@ -353,12 +357,11 @@ export function LocationForm({
             buildingName: location.buildingName ?? "",
             accessLines: location.accessLines.map((value) => ({ value })),
             parkingInfo: location.parkingInfo ?? "",
-            amenities: location.amenities as Record<string, boolean>,
+            amenities: parseBusinessAttributes(location.amenities) ?? {},
             imageUrl: location.imageUrl,
             // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
             imageUrls: location.imageUrls.map((url) => ({ url })),
-            businessHours:
-              location.businessHours as LocationFormInput["businessHours"],
+            businessHours: parseBusinessHours(location.businessHours),
             specialHolidays: location.specialHolidays,
             latitude: location.latitude,
             longitude: location.longitude,

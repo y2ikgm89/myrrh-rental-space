@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import * as TablerIcons from "@tabler/icons-react";
+import type { IconProps } from "@tabler/icons-react";
 import { createElement } from "react";
-import type { CSSProperties, ComponentType, ReactNode } from "react";
+import type { CSSProperties, FC, ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 import type { AppRoute } from "@/shared/lib/typed-routes";
 
@@ -35,6 +36,12 @@ const iconSizeClasses = {
   lg: "h-5 w-5",
 } as const satisfies Record<ButtonSize, string>;
 
+type TablerIconComponent = FC<IconProps>;
+
+function isTablerIconComponent(value: unknown): value is TablerIconComponent {
+  return typeof value === "function";
+}
+
 /**
  * Tabler icon を name 文字列から動的解決する純関数。
  *
@@ -44,17 +51,11 @@ const iconSizeClasses = {
  */
 function resolveTablerIcon(
   name: string | undefined,
-): ComponentType<{ className?: string; "aria-hidden"?: boolean }> | null {
+): TablerIconComponent | null {
   if (!name) return null;
   const registry: Record<string, unknown> = TablerIcons;
   const Icon = registry[name];
-  if (typeof Icon === "function") {
-    return Icon as ComponentType<{
-      className?: string;
-      "aria-hidden"?: boolean;
-    }>;
-  }
-  return null;
+  return isTablerIconComponent(Icon) ? Icon : null;
 }
 
 interface ButtonBaseProps {

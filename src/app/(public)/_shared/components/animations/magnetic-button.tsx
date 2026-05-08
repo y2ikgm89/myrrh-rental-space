@@ -14,12 +14,13 @@ import {
   createElement,
   useRef,
   type CSSProperties,
-  type ComponentType,
+  type FC,
   type ReactElement,
   type ReactNode,
 } from "react";
 import Link from "next/link";
 import * as TablerIcons from "@tabler/icons-react";
+import type { IconProps } from "@tabler/icons-react";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
@@ -40,19 +41,19 @@ const iconSizeClasses = {
   lg: "h-5 w-5",
 } as const satisfies Record<MagneticButtonSize, string>;
 
+type TablerIconComponent = FC<IconProps>;
+
+function isTablerIconComponent(value: unknown): value is TablerIconComponent {
+  return typeof value === "function";
+}
+
 function resolveTablerIcon(
   name: string | undefined,
-): ComponentType<{ className?: string; "aria-hidden"?: boolean }> | null {
+): TablerIconComponent | null {
   if (!name) return null;
   const registry: Record<string, unknown> = TablerIcons;
   const Icon = registry[name];
-  if (typeof Icon === "function") {
-    return Icon as ComponentType<{
-      className?: string;
-      "aria-hidden"?: boolean;
-    }>;
-  }
-  return null;
+  return isTablerIconComponent(Icon) ? Icon : null;
 }
 
 interface MagneticButtonProps {
