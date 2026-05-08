@@ -73,7 +73,7 @@ describe("homepage-section re-export", () => {
 
   test("heroConfigSchemaが機能する", () => {
     const data = {
-      title: "テスト",
+      title: [{ _key: "k1", _type: "span" as const, text: "テスト" }],
       height: "lg",
       buttons: [],
     };
@@ -83,7 +83,7 @@ describe("homepage-section re-export", () => {
 
   test("ctaConfigSchemaが機能する", () => {
     const data = {
-      title: "CTA",
+      title: [{ _key: "k1", _type: "span" as const, text: "CTA" }],
       buttons: [
         {
           text: "ボタン",
@@ -109,8 +109,11 @@ describe("homepage-section re-export", () => {
     expect(result.success).toBe(true);
   });
 
-  test("無効なデータでエラー", () => {
-    const data = { title: "a".repeat(101) };
+  test("無効なデータでエラー（span text 500 超）", () => {
+    // Phase 1: per-span 500 char 制限
+    const data = {
+      title: [{ _key: "k1", _type: "span" as const, text: "a".repeat(501) }],
+    };
     const result = heroConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });

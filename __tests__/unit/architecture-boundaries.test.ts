@@ -1557,4 +1557,30 @@ describe("architecture boundaries", () => {
 
     expect(violations).toEqual([]);
   });
+
+  test("Phase 1 で PortableTextSpan[] 化済の見出しフィールドは schema で string を受け付けない", async () => {
+    const { validateSectionConfig } =
+      await import("@/shared/lib/validations/section");
+    const targets: { type: string; field: string }[] = [
+      { type: "concept", field: "heading" },
+      { type: "cta", field: "title" },
+      { type: "hero", field: "title" },
+      { type: "features", field: "title" },
+      { type: "testimonial", field: "title" },
+    ];
+    for (const { type, field } of targets) {
+      // 空 config は default で [] になる（safeParse({}) 契約）
+      const empty = validateSectionConfig(type, {});
+      expect(empty.success).toBe(true);
+      if (empty.success) {
+        const value = (empty.data as Record<string, unknown>)[field];
+        expect(Array.isArray(value)).toBe(true);
+      }
+      // string 入力は配列要求で fail
+      const stringInput = validateSectionConfig(type, {
+        [field]: "string-not-array",
+      });
+      expect(stringInput.success).toBe(false);
+    }
+  });
 });

@@ -44,7 +44,13 @@ import { getDefaultConfig } from "@/shared/lib/sections/registry";
 describe("heroConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "テストタイトル",
+      title: [
+        {
+          _key: "test-title-key",
+          _type: "span" as const,
+          text: "テストタイトル",
+        },
+      ],
       subtitle: "テストサブタイトル",
       backgroundImageUrl: "https://example.com/image.jpg",
       buttons: [
@@ -70,8 +76,17 @@ describe("heroConfigSchema", () => {
     }
   });
 
-  test("タイトル100文字超過でエラー", () => {
-    const data = { title: "a".repeat(101) };
+  test("title span のテキスト 500 文字超過でエラー", () => {
+    // Phase 1: 旧 maxLength: 100 から PortableTextSpan の per-span 500 char 制限へ移行
+    const data = {
+      title: [
+        {
+          _key: "test-title-key",
+          _type: "span" as const,
+          text: "a".repeat(501),
+        },
+      ],
+    };
     const result = heroConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
@@ -110,8 +125,16 @@ describe("heroConfigSchema", () => {
 describe("heroParallaxConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      tagline: "Test Tagline",
-      title: "Test Title",
+      tagline: [
+        {
+          _key: "test-tagline-key",
+          _type: "span" as const,
+          text: "Test Tagline",
+        },
+      ],
+      title: [
+        { _key: "test-title-key", _type: "span" as const, text: "Test Title" },
+      ],
       subtitle: "Test Subtitle",
       backgroundImageUrl: "https://example.com/bg.jpg",
     };
@@ -133,8 +156,14 @@ describe("heroParallaxConfigSchema", () => {
     }
   });
 
-  test("タグライン50文字超過でエラー", () => {
-    const data = { tagline: "a".repeat(51) };
+  test("tagline span 配列 51 件超過でエラー（maxSpans=50）", () => {
+    // Phase 1: 旧 maxLength: 50 から PortableTextSpan の maxSpans 50 制限へ移行
+    const tagline = Array.from({ length: 51 }, (_, i) => ({
+      _key: `test-tagline-key-${i}`,
+      _type: "span" as const,
+      text: "a",
+    }));
+    const data = { tagline };
     const result = heroParallaxConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
@@ -172,7 +201,9 @@ describe("customConfigSchema", () => {
 describe("conceptConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      heading: "見出し",
+      heading: [
+        { _key: "test-heading-key", _type: "span" as const, text: "見出し" },
+      ],
       body: "本文テキスト",
       imageUrl: "https://example.com/concept.jpg",
       imagePosition: "left",
@@ -205,7 +236,13 @@ describe("conceptConfigSchema", () => {
 describe("spaceListConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "スペース一覧",
+      title: [
+        {
+          _key: "test-title-key",
+          _type: "span" as const,
+          text: "スペース一覧",
+        },
+      ],
       maxItems: 6,
       displayLayout: "grid",
       columns: 3,
@@ -235,7 +272,9 @@ describe("spaceListConfigSchema", () => {
 describe("newsListConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "お知らせ",
+      title: [
+        { _key: "test-title-key", _type: "span" as const, text: "お知らせ" },
+      ],
       maxItems: 10,
       displayLayout: "card",
       showViewAllLink: true,
@@ -265,7 +304,9 @@ describe("newsListConfigSchema", () => {
 describe("postListConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "最新記事",
+      title: [
+        { _key: "test-title-key", _type: "span" as const, text: "最新記事" },
+      ],
       maxItems: 6,
       categoryId: "550e8400-e29b-41d4-a716-446655440000",
       displayLayout: "grid",
@@ -288,7 +329,13 @@ describe("postListConfigSchema", () => {
 describe("faqListConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "よくある質問",
+      title: [
+        {
+          _key: "test-title-key",
+          _type: "span" as const,
+          text: "よくある質問",
+        },
+      ],
       items: [
         { question: "質問1", answer: "回答1" },
         { question: "質問2", answer: "回答2" },
@@ -312,7 +359,7 @@ describe("faqListConfigSchema", () => {
 describe("featuresConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "特徴",
+      title: [{ _key: "test-title-key", _type: "span" as const, text: "特徴" }],
       items: [
         { icon: "wifi", title: "Wi-Fi完備", description: "高速Wi-Fi利用可能" },
         { title: "駐車場", description: "無料駐車場完備" },
@@ -334,7 +381,9 @@ describe("featuresConfigSchema", () => {
 describe("testimonialConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "お客様の声",
+      title: [
+        { _key: "test-title-key", _type: "span" as const, text: "お客様の声" },
+      ],
       items: [
         {
           content: "素晴らしい空間でした",
@@ -403,7 +452,13 @@ describe("galleryConfigSchema", () => {
 describe("ctaConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "ご予約はこちら",
+      title: [
+        {
+          _key: "test-title-key",
+          _type: "span" as const,
+          text: "ご予約はこちら",
+        },
+      ],
       description: "今すぐ予約して特別な体験を",
       buttons: [
         {
@@ -449,7 +504,13 @@ describe("ctaConfigSchema", () => {
 describe("contactFormConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "お問い合わせ",
+      title: [
+        {
+          _key: "test-title-key",
+          _type: "span" as const,
+          text: "お問い合わせ",
+        },
+      ],
       description: "お気軽にお問い合わせください",
       showNameField: true,
       showPhoneField: false,
@@ -477,7 +538,9 @@ describe("contactFormConfigSchema", () => {
 describe("mapConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "アクセス",
+      title: [
+        { _key: "test-title-key", _type: "span" as const, text: "アクセス" },
+      ],
       address: "東京都渋谷区...",
       latitude: 35.6812,
       longitude: 139.7671,
@@ -515,7 +578,7 @@ describe("mapConfigSchema", () => {
 describe("embedConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "動画",
+      title: [{ _key: "test-title-key", _type: "span" as const, text: "動画" }],
       embedUrl: "https://www.youtube.com/embed/xxxxx",
       aspectRatio: "16:9",
       maxWidth: "lg",
@@ -539,7 +602,9 @@ describe("instagramConfigSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
       sectionLabel: "Follow Us",
-      title: "Instagram",
+      title: [
+        { _key: "test-title-key", _type: "span" as const, text: "Instagram" },
+      ],
     };
     const result = instagramConfigSchema.safeParse(data);
     expect(result.success).toBe(true);
@@ -566,7 +631,15 @@ describe("createSectionSchema", () => {
       pageId: "550e8400-e29b-41d4-a716-446655440000",
       type: "hero",
       title: "ヒーローセクション",
-      config: { title: "Test" },
+      config: {
+        title: [
+          {
+            _key: "cfg-title-key",
+            _type: "span" as const,
+            text: "Test",
+          },
+        ],
+      },
       design: {},
       isActive: true,
     };
@@ -649,22 +722,22 @@ describe("updateSectionOrderSchema", () => {
 describe("validateSectionConfig", () => {
   test("HEROタイプで有効なconfig", () => {
     const result = validateSectionConfig("hero", {
-      title: "Test Hero",
+      title: [{ _key: "h1", _type: "span" as const, text: "Test Hero" }],
       height: "lg",
     });
     expect(result.success).toBe(true);
   });
 
-  test("HEROタイプで無効なconfig", () => {
+  test("HEROタイプで無効なconfig（span text 500 文字超過）", () => {
     const result = validateSectionConfig("hero", {
-      title: "a".repeat(101),
+      title: [{ _key: "h1", _type: "span" as const, text: "a".repeat(501) }],
     });
     expect(result.success).toBe(false);
   });
 
   test("CTAタイプで有効なconfig", () => {
     const result = validateSectionConfig("cta", {
-      title: "CTA Title",
+      title: [{ _key: "c1", _type: "span" as const, text: "CTA Title" }],
       buttons: [],
     });
     expect(result.success).toBe(true);
@@ -692,17 +765,18 @@ describe("型ガード関数", () => {
 
   test("isCtaConfig", () => {
     const validCta = {
-      title: "CTA",
+      title: [{ _key: "v1", _type: "span" as const, text: "CTA" }],
       buttons: [],
       variant: "default",
       sectionLabel: "Ready to Begin?",
     };
-    // architectural contract: 空 config / title:"" は default 適用で valid。
-    // 型違反（title が string 以外）のみ false を返す。
+    // architectural contract: 空 config / title: [] は default 適用で valid。
+    // Phase 1 で title は PortableTextSpan[]。型違反のみ false を返す。
     expect(isCtaConfig(validCta)).toBe(true);
     expect(isCtaConfig({})).toBe(true);
-    expect(isCtaConfig({ title: "" })).toBe(true);
+    expect(isCtaConfig({ title: [] })).toBe(true);
     expect(isCtaConfig({ title: 123 })).toBe(false);
+    expect(isCtaConfig({ title: "string-not-array" })).toBe(false);
   });
 });
 
