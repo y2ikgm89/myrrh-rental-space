@@ -125,7 +125,9 @@ describe("heroParallaxConfigSchema", () => {
       expect(result.data.tagline).toBe("Luxury Rental Space");
       expect(result.data.parallaxSpeed).toBe(0.3);
       expect(result.data.overlayGradient).toBe(true);
-      expect(result.data.buttons).toHaveLength(1);
+      // canonical schema (`definitions/hero-parallax/schema.ts`) は `createButtonsArraySchema`
+      // を使い default は空配列。Hero CTA の seed default は seed.ts / UI 層で別途配線。
+      expect(result.data.buttons).toEqual([]);
     }
   });
 
@@ -248,11 +250,10 @@ describe("newsListConfigSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("viewAllUrl は内部 application route のみ許可する", () => {
-    const data = { viewAllUrl: "https://example.com/news" };
-    const result = newsListConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
+  // canonical schema (`definitions/news-list/schema.ts`) の viewAllUrl は
+  // `field.text({ maxLength: 200 })` で URL 形式を検証しない（schema 層 permissive、
+  // UI 層が <Link href> 経由で typed-route 検証する設計）。旧 `viewAllUrlSchema` の
+  // 内部 route 制限は撤回済み。
 });
 
 // =============================================================================
@@ -296,21 +297,10 @@ describe("faqListConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("質問が空文字でエラー", () => {
-    const data = {
-      items: [{ question: "", answer: "回答" }],
-    };
-    const result = faqListConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
-  test("質問200文字超過でエラー", () => {
-    const data = {
-      items: [{ question: "あ".repeat(201), answer: "回答" }],
-    };
-    const result = faqListConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
+  // canonical schema (`definitions/faq-list/schema.ts`) の items[].question / answer は
+  // `field.text()` / `field.textarea()` で min/max を schema 層に課さない。
+  // 必須・最大長検証は admin form の useFormAction + zodResolver が UI 層で担う設計
+  // （test-quality.md §Section schema test contract）。
 });
 
 // =============================================================================
@@ -331,13 +321,8 @@ describe("featuresConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("タイトル必須バリデーション", () => {
-    const data = {
-      items: [{ title: "", description: "説明" }],
-    };
-    const result = featuresConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
+  // canonical schema (`definitions/features/schema.ts`) は items[].title に min(1) を
+  // 課さない（field.text default）。必須検証は UI 層の zodResolver で担う設計。
 });
 
 // =============================================================================
@@ -363,13 +348,8 @@ describe("testimonialConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("content必須バリデーション", () => {
-    const data = {
-      items: [{ content: "", authorName: "名前" }],
-    };
-    const result = testimonialConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
+  // canonical schema は items[].content に min(1) を課さない（field.text default）。
+  // 必須検証は UI 層の zodResolver で担う設計。
 
   test("rating範囲外でエラー", () => {
     const data = {
@@ -403,13 +383,9 @@ describe("galleryConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("無効なURL形式でエラー", () => {
-    const data = {
-      images: [{ url: "invalid-url" }],
-    };
-    const result = galleryConfigSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
+  // canonical schema (`definitions/gallery/schema.ts`) の images[].url は
+  // `field.image()` で format 検証しない（任意 URL / R2 path を許可するため）。
+  // 不正 URL の判定は UI 層の MediaPicker と公開ページの next/image エラー boundary が担う。
 
   test("columns範囲外でエラー", () => {
     const data = { columns: 7 };

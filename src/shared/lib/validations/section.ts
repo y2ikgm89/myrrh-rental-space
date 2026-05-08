@@ -1,65 +1,24 @@
 /**
- * 統一セクション バリデーションスキーマ
+ * 統一セクション バリデーションスキーマ（re-export shell）
  *
- * 旧 homepage-section.ts + page-section.ts を統合。
- * SectionType に応じた config スキーマを Zod で型安全に管理。
- * admin/public 両方で使用。
+ * 旧: 17 セクション分の inline schema 定義（805 行）
+ * 新: canonical SSoT (`@/shared/lib/sections/definitions/<type>/schema.ts`) からの
+ *     re-export + CRUD 共通スキーマ + 型ガードのみ。
+ *
+ * Section schema の正本は必ず `definitions/<type>/schema.ts`。
+ * ここに inline schema 定義を再導入することは禁止（drift の温床）。
+ *
+ * SectionType 値は `Section.type String @db.VarChar(64)` で管理（Prisma enum 廃止後）。
  */
 
 import { z } from "zod";
-import {
-  createInternalAppRouteSchema,
-  createCtaButtonItemSchema,
-} from "./cta-and-url";
-import { sectionLayoutSchema } from "@/shared/lib/sections/definitions/_shared/layout";
-import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
-import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
-import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
-import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero/schema";
-import {
-  imageAspectValues,
-  cardStyleValues,
-  borderRadiusValues,
-  gapSizeValues,
-  contentPositionValues,
-  overlayStyleValues,
-  heroParallaxHeightValues,
-  featuresLayoutValues,
-  faqInitialOpenValues,
-  galleryHoverEffectValues,
-  conceptLayoutValues,
-  heroHeightValues,
-  heroVariantValues,
-  imagePositionValues,
-  textAlignValues,
-  spaceLayoutValues,
-  newsLayoutValues,
-  postLayoutValues,
-  ctaVariantValues,
-  testimonialLayoutValues,
-  testimonialVariantValues,
-  galleryLayoutValues,
-  galleryGapValues,
-  contactFormVariantValues,
-  faqVariantValues,
-  mapHeightValues,
-  embedAspectRatioValues,
-  spaceImageAspectValues,
-  showcaseImageAspectValues,
-  postImageAspectValues,
-  galleryImageAspectValues,
-} from "./section-options";
+
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 
 // =============================================================================
-// SectionType 文字列定数（Prisma enum 廃止後の定義）
+// SectionType 定数（DB VARCHAR の SSoT）
 // =============================================================================
 
-/**
- * セクションタイプ定数
- *
- * Prisma enum を廃止し、Section.type を String @db.VarChar(64) に変更。
- * 既存コードとの互換性のため as const オブジェクトで定義。
- */
 export const SectionType = {
   HERO: "hero",
   HERO_PARALLAX: "hero-parallax",
@@ -87,7 +46,6 @@ export const SectionType = {
 
 export type SectionType = (typeof SectionType)[keyof typeof SectionType];
 
-/** SectionType の値配列（z.enum 用） */
 const SECTION_TYPE_VALUES = [
   SectionType.HERO,
   SectionType.HERO_PARALLAX,
@@ -113,595 +71,136 @@ const SECTION_TYPE_VALUES = [
   SectionType.PAGE_HERO,
 ] as const;
 
+const VALID_SECTION_TYPES = new Set<string>(Object.values(SectionType));
+
+export function isSectionType(value: unknown): value is SectionType {
+  return typeof value === "string" && VALID_SECTION_TYPES.has(value);
+}
+
+// =============================================================================
+// Canonical schema + 型 re-export（SSoT: definitions/<type>/schema.ts）
+// =============================================================================
+
+export {
+  heroConfigSchema,
+  type HeroConfig,
+} from "@/shared/lib/sections/definitions/hero/schema";
+export {
+  heroParallaxConfigSchema,
+  type HeroParallaxConfig,
+} from "@/shared/lib/sections/definitions/hero-parallax/schema";
+export {
+  customConfigSchema,
+  type CustomConfig,
+} from "@/shared/lib/sections/definitions/custom/schema";
+export {
+  conceptConfigSchema,
+  type ConceptConfig,
+} from "@/shared/lib/sections/definitions/concept/schema";
+export {
+  spaceListConfigSchema,
+  type SpaceListConfig,
+} from "@/shared/lib/sections/definitions/space-list/schema";
+export {
+  spaceShowcaseConfigSchema,
+  type SpaceShowcaseConfig,
+} from "@/shared/lib/sections/definitions/space-showcase/schema";
+export {
+  newsListConfigSchema,
+  type NewsListConfig,
+} from "@/shared/lib/sections/definitions/news-list/schema";
+export {
+  postListConfigSchema,
+  type PostListConfig,
+} from "@/shared/lib/sections/definitions/post-list/schema";
+export {
+  faqListConfigSchema,
+  type FaqListConfig,
+} from "@/shared/lib/sections/definitions/faq-list/schema";
+export {
+  featuresConfigSchema,
+  type FeaturesConfig,
+} from "@/shared/lib/sections/definitions/features/schema";
+export {
+  testimonialConfigSchema,
+  type TestimonialConfig,
+} from "@/shared/lib/sections/definitions/testimonial/schema";
+export {
+  galleryConfigSchema,
+  type GalleryConfig,
+} from "@/shared/lib/sections/definitions/gallery/schema";
+export {
+  ctaConfigSchema,
+  type CtaConfig,
+} from "@/shared/lib/sections/definitions/cta/schema";
+export {
+  contactFormConfigSchema,
+  type ContactFormConfig,
+} from "@/shared/lib/sections/definitions/contact-form/schema";
+export {
+  reservationFormConfigSchema,
+  type ReservationFormConfig,
+} from "@/shared/lib/sections/definitions/reservation-form/schema";
+export {
+  mapConfigSchema,
+  type MapConfig,
+} from "@/shared/lib/sections/definitions/map/schema";
+export {
+  embedConfigSchema,
+  type EmbedConfig,
+} from "@/shared/lib/sections/definitions/embed/schema";
+export {
+  instagramConfigSchema,
+  type InstagramConfig,
+} from "@/shared/lib/sections/definitions/instagram/schema";
+export {
+  eventCalendarConfigSchema,
+  type EventCalendarConfig,
+} from "@/shared/lib/sections/definitions/event-calendar/schema";
+export {
+  locationListConfigSchema,
+  type LocationListConfig,
+} from "@/shared/lib/sections/definitions/location-list/schema";
+export {
+  valuePropsConfigSchema,
+  type ValuePropsConfig,
+} from "@/shared/lib/sections/definitions/value-props/schema";
+export {
+  pageHeroConfigSchema,
+  type PageHeroConfig,
+} from "@/shared/lib/sections/definitions/page-hero/schema";
+
+// CTA / TextAlign の補助型・定数も互換 re-export
 export type { CTAButtonItem } from "./cta-and-url";
 export { ctaButtonVariants, ctaButtonSizes } from "./cta-and-url";
 export type { TextAlign } from "./section-options";
 
 // =============================================================================
-// 共通スキーマ
+// SectionConfig union（全 22 セクション）
 // =============================================================================
 
-const internalAppRouteSchema = createInternalAppRouteSchema(500);
-const viewAllUrlSchema = createInternalAppRouteSchema(200);
-const ctaButtonItemSchema = createCtaButtonItemSchema(internalAppRouteSchema);
-// ボタンの URL は React key の stable ID として使われるため、一意性を保証する
-const ctaButtonsArraySchema = z
-  .array(ctaButtonItemSchema)
-  .refine(
-    (buttons) => new Set(buttons.map((b) => b.url)).size === buttons.length,
-    { error: "同じURLのボタンを複数登録することはできません" },
-  );
-
-// =============================================================================
-// セクションタイプ別 config スキーマ
-// =============================================================================
-
-// --- Hero variants ---
-
-/** Hero セクション設定 */
-export const heroConfigSchema = z.object({
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
-  subtitle: z
-    .string()
-    .max(300, { error: "サブタイトルは300文字以内です" })
-    .optional(),
-  backgroundImage: z
-    .object({
-      url: z.string().default(""),
-      alt: z.string().max(200).default(""),
-      caption: z.string().max(300).default(""),
-    })
-    .default({ url: "", alt: "", caption: "" }),
-  buttons: ctaButtonsArraySchema.default([]),
-  height: z.enum(heroHeightValues).default("md"),
-  heightCustom: z.number().min(20).max(100).default(60).optional(),
-  overlay: z.boolean().default(true),
-  overlayOpacity: z.number().min(0).max(100).default(40),
-  variant: z.enum(heroVariantValues).default("default"),
-  videoUrl: z.string().url().optional().or(z.literal("")),
-  parallaxSpeed: z.number().min(0).max(1).default(0.5),
-  layout: sectionLayoutSchema,
-});
-
-/** Hero Parallax セクション設定（v3） */
-export const heroParallaxConfigSchema = z.object({
-  tagline: z
-    .string()
-    .max(50, { error: "タグラインは50文字以内です" })
-    .default("Luxury Rental Space"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("洗練された空間で 特別なひとときを"),
-  subtitle: z
-    .string()
-    .max(300, { error: "サブタイトルは300文字以内です" })
-    .default("厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。"),
-  backgroundImage: z
-    .object({
-      url: z.string().default(""),
-      alt: z.string().max(200).default(""),
-      caption: z.string().max(300).default(""),
-    })
-    .default({ url: "", alt: "", caption: "" }),
-  buttons: ctaButtonsArraySchema.default([
-    {
-      text: "Reserve Now",
-      url: "/reservation",
-      variant: "primary",
-      size: "lg",
-      iconName: "",
-      openInNewTab: false,
-    },
-  ]),
-  parallaxSpeed: z.number().min(0).max(1).default(0.3),
-  overlayGradient: z.boolean().default(true),
-  scrollIndicator: z.boolean().default(true),
-  contentPosition: z.enum(contentPositionValues).default("center"),
-  height: z.enum(heroParallaxHeightValues).default("lg"),
-  heightCustom: z.number().min(20).max(100).default(80).optional(),
-  overlayStyle: z.enum(overlayStyleValues).default("gradient"),
-  layout: sectionLayoutSchema,
-});
-
-// --- Content ---
-
-/** Custom セクション設定（Lexical リッチテキスト） */
-export const customConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Contents"),
-  containerClass: z.string().max(200).optional(),
-  backgroundColor: z.string().max(50).optional(),
-  layout: sectionLayoutSchema,
-});
-
-/** Concept セクション設定（v3） */
-export const conceptConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Our Philosophy"),
-  heading: z
-    .string()
-    .max(100, { error: "見出しは100文字以内です" })
-    .default("空間が、体験を変える"),
-  body: z
-    .string()
-    .max(1000, { error: "本文は1000文字以内です" })
-    .default(
-      "洗練されたデザインと上質な設備が調和する空間。\nビジネスミーティングからプライベートパーティーまで、\nあらゆるシーンに最適な環境をご用意しています。",
-    ),
-  image: z
-    .object({
-      url: z.string().default(""),
-      alt: z.string().max(200).default(""),
-      caption: z.string().max(300).default(""),
-    })
-    .default({ url: "", alt: "", caption: "" }),
-  imagePosition: z.enum(imagePositionValues).default("right"),
-  textAlign: z.enum(textAlignValues).default("left"),
-  contentLayout: z.enum(conceptLayoutValues).default("side-by-side"),
-  imageAspect: z.enum(imageAspectValues).default("original"),
-  layout: sectionLayoutSchema,
-});
-
-// --- Lists ---
-
-/** SpaceList セクション設定 */
-export const spaceListConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Spaces"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("スペース一覧"),
-  maxItems: z.number().int().min(1).max(24).default(6),
-  showOnlyPublished: z.boolean().default(true),
-  showViewAllLink: z.boolean().default(true),
-  viewAllText: z
-    .string()
-    .max(50, { error: "テキストは50文字以内です" })
-    .default("全てのスペースを見る"),
-  viewAllUrl: viewAllUrlSchema.default("/spaces"),
-  displayLayout: z.enum(spaceLayoutValues).default("grid"),
-  columns: z.number().int().min(1).max(4).default(3),
-  cardStyle: z.enum(cardStyleValues).default("bordered"),
-  imageAspect: z.enum(spaceImageAspectValues).default("4:3"),
-  layout: sectionLayoutSchema,
-});
-
-/** SpaceShowcase セクション設定（v3） */
-export const spaceShowcaseConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Spaces"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("Our Spaces"),
-  maxItems: z.number().int().min(1).max(12).default(3),
-  showOnlyPublished: z.boolean().default(true),
-  displayLayout: z.enum(["grid", "carousel"]).default("grid"),
-  autoPlayInterval: z.number().int().min(0).max(30).default(5),
-  columns: z.number().int().min(2).max(4).default(3),
-  cardStyle: z.enum(cardStyleValues).default("bordered"),
-  imageAspect: z.enum(showcaseImageAspectValues).default("4:3"),
-  layout: sectionLayoutSchema,
-});
-
-/** NewsList セクション設定 */
-export const newsListConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("News"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("お知らせ"),
-  maxItems: z.number().int().min(1).max(20).default(5),
-  showViewAllLink: z.boolean().default(true),
-  viewAllText: z
-    .string()
-    .max(50, { error: "テキストは50文字以内です" })
-    .default("全てのお知らせ"),
-  viewAllUrl: viewAllUrlSchema.default("/news"),
-  displayLayout: z.enum(newsLayoutValues).default("list"),
-  columns: z.number().int().min(2).max(4).default(2),
-  layout: sectionLayoutSchema,
-});
-
-/** PostList セクション設定 */
-export const postListConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Blog"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("最新の記事"),
-  maxItems: z.number().int().min(1).max(20).default(6),
-  showViewAllLink: z.boolean().default(true),
-  viewAllText: z
-    .string()
-    .max(50, { error: "テキストは50文字以内です" })
-    .default("全ての記事"),
-  viewAllUrl: viewAllUrlSchema.default("/posts"),
-  categoryId: z.string().uuid().or(z.literal("")).default(""),
-  displayLayout: z.enum(postLayoutValues).default("grid"),
-  columns: z.number().int().min(1).max(4).default(3),
-  imageAspect: z.enum(postImageAspectValues).default("16:9"),
-  layout: sectionLayoutSchema,
-});
-
-/** FaqList セクション設定 */
-export const faqListConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("FAQ"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("よくあるご質問"),
-  categoryId: z.string().uuid().or(z.literal("")).default(""),
-  maxItems: z.number().int().min(1).max(50).default(10),
-  showViewAllLink: z.boolean().default(true),
-  viewAllText: z
-    .string()
-    .max(50, { error: "テキストは50文字以内です" })
-    .default("全てのFAQ"),
-  viewAllUrl: viewAllUrlSchema.default("/faq"),
-  items: z
-    .array(
-      z.object({
-        question: z
-          .string()
-          .min(1, { error: "質問は必須です" })
-          .max(200, { error: "質問は200文字以内です" }),
-        answer: z
-          .string()
-          .min(1, { error: "回答は必須です" })
-          .max(5000, { error: "回答は5000文字以内です" }),
-      }),
-    )
-    .optional(),
-  variant: z.enum(faqVariantValues).default("default"),
-  initialOpen: z.enum(faqInitialOpenValues).default(faqInitialOpenValues[1]),
-  layout: sectionLayoutSchema,
-});
-
-// --- Features ---
-
-/** Features セクション設定（v3） */
-export const featuresConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Features"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("Features"),
-  items: z
-    .array(
-      z.object({
-        icon: z.string().max(50).optional(),
-        title: z
-          .string()
-          .min(1, { error: "タイトルは必須です" })
-          .max(100, { error: "タイトルは100文字以内です" }),
-        description: z
-          .string()
-          .max(500, { error: "説明は500文字以内です" })
-          .optional(),
-      }),
-    )
-    .default([]),
-  displayLayout: z
-    .enum(["grid", "numbered-steps", "numbered-editorial"])
-    .default("numbered-editorial"),
-  columns: z.number().int().min(1).max(4).default(3),
-  itemLayout: z.enum(featuresLayoutValues).default("hero-first"),
-  layout: sectionLayoutSchema,
-});
-
-/** Testimonial セクション設定 */
-export const testimonialConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Testimonials"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("お客様の声"),
-  items: z
-    .array(
-      z.object({
-        content: z
-          .string()
-          .min(1, { error: "内容は必須です" })
-          .max(1000, { error: "内容は1000文字以内です" }),
-        authorName: z
-          .string()
-          .min(1, { error: "名前は必須です" })
-          .max(50, { error: "名前は50文字以内です" }),
-        authorTitle: z.string().max(100).optional(),
-        authorImage: z
-          .object({
-            url: z.string().default(""),
-            alt: z.string().max(200).default(""),
-          })
-          .default({ url: "", alt: "" }),
-        rating: z.number().int().min(1).max(5).optional(),
-      }),
-    )
-    .default([]),
-  displayLayout: z.enum(testimonialLayoutValues).default("carousel"),
-  showRating: z.boolean().default(true),
-  variant: z.enum(testimonialVariantValues).default("default"),
-  layout: sectionLayoutSchema,
-});
-
-/** Gallery セクション設定 */
-export const galleryConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Gallery"),
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
-  images: z
-    .array(
-      z.object({
-        url: z.string().url({ error: "有効なURLを入力してください" }),
-        alt: z.string().max(200).optional(),
-        caption: z.string().max(300).optional(),
-      }),
-    )
-    .default([]),
-  gridLayout: z.enum(galleryLayoutValues).default("grid"),
-  columns: z.number().int().min(1).max(6).default(3),
-  gap: z.enum(galleryGapValues).default("md"),
-  enableLightbox: z.boolean().default(true),
-  imageAspect: z.enum(galleryImageAspectValues).default("original"),
-  hoverEffect: z.enum(galleryHoverEffectValues).default("zoom"),
-  layout: sectionLayoutSchema,
-});
-
-// --- Functional ---
-
-/** CTA セクション設定
- *
- * `title` は default `""` を持つ。canonical SSoT (`definitions/cta/schema.ts`) と整合し、
- * `safeParse({})` がデフォルト値を生成できる契約を保つ（SectionRenderer の fallback 経路）。
- */
-export const ctaConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Ready to Begin?"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default(""),
-  description: z
-    .string()
-    .max(500, { error: "説明は500文字以内です" })
-    .optional(),
-  buttons: ctaButtonsArraySchema.default([]),
-  backgroundColor: z.string().max(50).optional(),
-  variant: z.enum(ctaVariantValues).default("default"),
-  layout: sectionLayoutSchema,
-});
-
-/** ContactForm セクション設定 */
-export const contactFormConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Contact"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("お問い合わせ"),
-  description: z
-    .string()
-    .max(500, { error: "説明は500文字以内です" })
-    .optional(),
-  showNameField: z.boolean().default(true),
-  showPhoneField: z.boolean().default(true),
-  showSubjectField: z.boolean().default(true),
-  submitButtonText: z.string().max(30).default("送信する"),
-  variant: z.enum(contactFormVariantValues).default("default"),
-  layout: sectionLayoutSchema,
-});
-
-/** Map セクション設定 */
-export const mapConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Location"),
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
-  address: z.string().max(300).optional(),
-  latitude: z.number().min(-90).max(90).optional(),
-  longitude: z.number().min(-180).max(180).optional(),
-  zoom: z.number().int().min(1).max(20).default(15),
-  height: z.enum(mapHeightValues).default("md"),
-  showAddressBelow: z.boolean().default(true),
-  borderRadius: z.enum(borderRadiusValues).default("sm"),
-  layout: sectionLayoutSchema,
-});
-
-/** Embed セクション設定 */
-export const embedConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Media"),
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
-  embedUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .optional()
-    .or(z.literal("")),
-  embedCode: z.string().max(10000).optional(),
-  aspectRatio: z.enum(embedAspectRatioValues).default("16:9"),
-  borderRadius: z.enum(borderRadiusValues).default("sm"),
-  layout: sectionLayoutSchema,
-});
-
-/** Instagram セクション設定 */
-export const instagramConfigSchema = z.object({
-  sectionLabel: z
-    .string()
-    .max(50, { error: "ラベルは50文字以内です" })
-    .default("Follow Us"),
-  title: z
-    .string()
-    .max(100, { error: "タイトルは100文字以内です" })
-    .default("Instagram"),
-  columns: z.number().int().min(3).max(6).default(6),
-  count: z.number().int().min(6).max(12).default(6),
-  gap: z.enum(gapSizeValues).default("md"),
-  layout: sectionLayoutSchema,
-});
-
-// =============================================================================
-// レジストリ委譲
-// =============================================================================
-
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
-
-/** SectionType 型ガード */
-const VALID_SECTION_TYPES = new Set<string>(Object.values(SectionType));
-export function isSectionType(value: unknown): value is SectionType {
-  return typeof value === "string" && VALID_SECTION_TYPES.has(value);
-}
-
-/**
- * セクションタイプに応じた config を検証（レジストリ委譲）
- *
- * type は string を受け付け、未知の type は失敗を返す。
- * 戻り型を SectionConfig union に widening することで、
- * 呼び出し側の `as SectionConfig` が不要になる。
- */
-export function validateSectionConfig(
-  type: string,
-  config: unknown,
-):
-  | { success: true; data: SectionConfig }
-  | { success: false; error: z.ZodError } {
-  const def = getSectionDefinition(type);
-  if (!def) {
-    return { success: false, error: new z.ZodError([]) };
-  }
-  const result = def.configSchema.safeParse(config);
-  if (result.success) {
-    return { success: true, data: result.data as SectionConfig };
-  }
-  return { success: false, error: result.error };
-}
-
-// =============================================================================
-// CRUD スキーマ
-// =============================================================================
-
-/** セクション作成スキーマ */
-export const createSectionSchema = z.object({
-  pageId: z.string().uuid().optional(), // null = ホームページ
-  type: z.enum(SECTION_TYPE_VALUES, {
-    error: "有効なセクションタイプを選択してください",
-  }),
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
-  config: z.record(z.string(), z.unknown()).default({}),
-  contentJson: z
-    .string()
-    .max(500000, { error: "コンテンツは500,000文字以内です" })
-    .optional(),
-  order: z.number().int().min(0).optional(),
-  isActive: z.boolean().default(true),
-});
-
-/** セクション本文更新スキーマ */
-export const updateSectionContentSchema = z.strictObject({
-  config: z.record(z.string(), z.unknown()).optional(),
-  contentJson: z
-    .string()
-    .max(500000, { error: "コンテンツは500,000文字以内です" })
-    .optional(),
-});
-
-/** セクション更新スキーマ */
-export const updateSectionSchema = updateSectionContentSchema.extend({
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
-  isActive: z.boolean().optional(),
-});
-
-/** セクション順序更新スキーマ */
-export const updateSectionOrderSchema = z.object({
-  sections: z
-    .array(
-      z.object({
-        id: z.string().uuid(),
-        order: z.number().int().min(0),
-      }),
-    )
-    .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
-      error: "同じIDを複数指定することはできません",
-    }),
-});
-
-// =============================================================================
-// 型エクスポート
-// =============================================================================
-
-// Output types（バリデーション後）
-export type HeroConfig = z.output<typeof heroConfigSchema>;
-export type HeroParallaxConfig = z.output<typeof heroParallaxConfigSchema>;
-export type CustomConfig = z.output<typeof customConfigSchema>;
-export type ConceptConfig = z.output<typeof conceptConfigSchema>;
-export type SpaceListConfig = z.output<typeof spaceListConfigSchema>;
-export type SpaceShowcaseConfig = z.output<typeof spaceShowcaseConfigSchema>;
-export type NewsListConfig = z.output<typeof newsListConfigSchema>;
-export type PostListConfig = z.output<typeof postListConfigSchema>;
-export type FaqListConfig = z.output<typeof faqListConfigSchema>;
-export type FeaturesConfig = z.output<typeof featuresConfigSchema>;
-export type TestimonialConfig = z.output<typeof testimonialConfigSchema>;
-export type GalleryConfig = z.output<typeof galleryConfigSchema>;
-export type CtaConfig = z.output<typeof ctaConfigSchema>;
-export type ContactFormConfig = z.output<typeof contactFormConfigSchema>;
-export type MapConfig = z.output<typeof mapConfigSchema>;
-export type EmbedConfig = z.output<typeof embedConfigSchema>;
-export type InstagramConfig = z.output<typeof instagramConfigSchema>;
-
-// Input types（フォーム入力用）
-export type HeroConfigInput = z.input<typeof heroConfigSchema>;
-export type HeroParallaxConfigInput = z.input<typeof heroParallaxConfigSchema>;
-export type CustomConfigInput = z.input<typeof customConfigSchema>;
-export type ConceptConfigInput = z.input<typeof conceptConfigSchema>;
-export type SpaceListConfigInput = z.input<typeof spaceListConfigSchema>;
-export type SpaceShowcaseConfigInput = z.input<
-  typeof spaceShowcaseConfigSchema
->;
-export type NewsListConfigInput = z.input<typeof newsListConfigSchema>;
-export type PostListConfigInput = z.input<typeof postListConfigSchema>;
-export type FaqListConfigInput = z.input<typeof faqListConfigSchema>;
-export type FeaturesConfigInput = z.input<typeof featuresConfigSchema>;
-export type TestimonialConfigInput = z.input<typeof testimonialConfigSchema>;
-export type GalleryConfigInput = z.input<typeof galleryConfigSchema>;
-export type CtaConfigInput = z.input<typeof ctaConfigSchema>;
-export type ContactFormConfigInput = z.input<typeof contactFormConfigSchema>;
-export type MapConfigInput = z.input<typeof mapConfigSchema>;
-export type EmbedConfigInput = z.input<typeof embedConfigSchema>;
-export type InstagramConfigInput = z.input<typeof instagramConfigSchema>;
+import type { HeroConfig } from "@/shared/lib/sections/definitions/hero/schema";
+import type { HeroParallaxConfig } from "@/shared/lib/sections/definitions/hero-parallax/schema";
+import type { CustomConfig } from "@/shared/lib/sections/definitions/custom/schema";
+import type { ConceptConfig } from "@/shared/lib/sections/definitions/concept/schema";
+import type { SpaceListConfig } from "@/shared/lib/sections/definitions/space-list/schema";
+import type { SpaceShowcaseConfig } from "@/shared/lib/sections/definitions/space-showcase/schema";
+import type { NewsListConfig } from "@/shared/lib/sections/definitions/news-list/schema";
+import type { PostListConfig } from "@/shared/lib/sections/definitions/post-list/schema";
+import type { FaqListConfig } from "@/shared/lib/sections/definitions/faq-list/schema";
+import type { FeaturesConfig } from "@/shared/lib/sections/definitions/features/schema";
+import type { TestimonialConfig } from "@/shared/lib/sections/definitions/testimonial/schema";
+import type { GalleryConfig } from "@/shared/lib/sections/definitions/gallery/schema";
+import type { CtaConfig } from "@/shared/lib/sections/definitions/cta/schema";
+import type { ContactFormConfig } from "@/shared/lib/sections/definitions/contact-form/schema";
+import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
+import type { MapConfig } from "@/shared/lib/sections/definitions/map/schema";
+import type { EmbedConfig } from "@/shared/lib/sections/definitions/embed/schema";
+import type { InstagramConfig } from "@/shared/lib/sections/definitions/instagram/schema";
+import type { EventCalendarConfig } from "@/shared/lib/sections/definitions/event-calendar/schema";
+import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
+import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
+import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero/schema";
 
 export type SectionConfig =
   | HeroConfig
@@ -718,13 +217,86 @@ export type SectionConfig =
   | GalleryConfig
   | CtaConfig
   | ContactFormConfig
+  | ReservationFormConfig
   | MapConfig
   | EmbedConfig
   | InstagramConfig
+  | EventCalendarConfig
   | LocationListConfig
-  | ReservationFormConfig
   | ValuePropsConfig
   | PageHeroConfig;
+
+// =============================================================================
+// セクション設定の検証（レジストリ委譲）
+// =============================================================================
+
+/**
+ * type に応じた config を canonical schema で検証する。
+ * 戻り値型を SectionConfig union に widening することで、呼び出し側の
+ * `as SectionConfig` が不要になる（→ `type-safety.md` §`as` 許可例外）。
+ */
+export function validateSectionConfig(
+  type: string,
+  config: unknown,
+):
+  | { success: true; data: SectionConfig }
+  | { success: false; error: z.ZodError } {
+  const def = getSectionDefinition(type);
+  if (!def) {
+    return { success: false, error: new z.ZodError([]) };
+  }
+  const result = def.configSchema.safeParse(config);
+  if (result.success) {
+    // 各 schema の output 型は個別だが、戻り値型注釈で SectionConfig に widening
+    return { success: true, data: result.data as SectionConfig };
+  }
+  return { success: false, error: result.error };
+}
+
+// =============================================================================
+// CRUD スキーマ（admin Server Actions 用）
+// =============================================================================
+
+export const createSectionSchema = z.object({
+  pageId: z.string().uuid().optional(),
+  type: z.enum(SECTION_TYPE_VALUES, {
+    error: "有効なセクションタイプを選択してください",
+  }),
+  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
+  config: z.record(z.string(), z.unknown()).default({}),
+  contentJson: z
+    .string()
+    .max(500000, { error: "コンテンツは500,000文字以内です" })
+    .optional(),
+  order: z.number().int().min(0).optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const updateSectionContentSchema = z.strictObject({
+  config: z.record(z.string(), z.unknown()).optional(),
+  contentJson: z
+    .string()
+    .max(500000, { error: "コンテンツは500,000文字以内です" })
+    .optional(),
+});
+
+export const updateSectionSchema = updateSectionContentSchema.extend({
+  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateSectionOrderSchema = z.object({
+  sections: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        order: z.number().int().min(0),
+      }),
+    )
+    .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+      error: "同じIDを複数指定することはできません",
+    }),
+});
 
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type UpdateSectionContentInput = z.infer<
@@ -734,8 +306,26 @@ export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;
 export type UpdateSectionOrderInput = z.infer<typeof updateSectionOrderSchema>;
 
 // =============================================================================
-// 型ガード関数
+// 個別 type guards（runtime check が必要なケース用）
 // =============================================================================
+
+import { heroConfigSchema } from "@/shared/lib/sections/definitions/hero/schema";
+import { heroParallaxConfigSchema } from "@/shared/lib/sections/definitions/hero-parallax/schema";
+import { customConfigSchema } from "@/shared/lib/sections/definitions/custom/schema";
+import { conceptConfigSchema } from "@/shared/lib/sections/definitions/concept/schema";
+import { spaceListConfigSchema } from "@/shared/lib/sections/definitions/space-list/schema";
+import { spaceShowcaseConfigSchema } from "@/shared/lib/sections/definitions/space-showcase/schema";
+import { newsListConfigSchema } from "@/shared/lib/sections/definitions/news-list/schema";
+import { postListConfigSchema } from "@/shared/lib/sections/definitions/post-list/schema";
+import { faqListConfigSchema } from "@/shared/lib/sections/definitions/faq-list/schema";
+import { featuresConfigSchema } from "@/shared/lib/sections/definitions/features/schema";
+import { testimonialConfigSchema } from "@/shared/lib/sections/definitions/testimonial/schema";
+import { galleryConfigSchema } from "@/shared/lib/sections/definitions/gallery/schema";
+import { ctaConfigSchema } from "@/shared/lib/sections/definitions/cta/schema";
+import { contactFormConfigSchema } from "@/shared/lib/sections/definitions/contact-form/schema";
+import { mapConfigSchema } from "@/shared/lib/sections/definitions/map/schema";
+import { embedConfigSchema } from "@/shared/lib/sections/definitions/embed/schema";
+import { instagramConfigSchema } from "@/shared/lib/sections/definitions/instagram/schema";
 
 function createConfigGuard<T>(schema: z.ZodType<T>) {
   return (config: unknown): config is T => schema.safeParse(config).success;
@@ -762,8 +352,7 @@ export const isEmbedConfig = createConfigGuard(embedConfigSchema);
 export const isInstagramConfig = createConfigGuard(instagramConfigSchema);
 
 // =============================================================================
-// Parse helpers（Zod 不使用 — クライアントバンドル軽量化）
-// section-parsers.ts から re-export。admin/public 両方で使用可能。
+// Parser / Metadata の互換 re-export
 // =============================================================================
 
 export {
@@ -801,5 +390,4 @@ export {
   parseTextAlign,
 } from "./section-parsers";
 
-// Re-export metadata (labels, icons, categories)
 export * from "./section-metadata";

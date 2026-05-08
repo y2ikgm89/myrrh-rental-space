@@ -55,6 +55,13 @@ export const heroConfigSchema = z.object({
     group: "design",
   }),
   videoUrl: field.url("動画 URL", { subGroup: "image" }),
+  parallaxSpeed: field.number("パララックス速度", {
+    min: 0,
+    max: 1,
+    default: 0.5,
+    helpText: "0 で固定、1 で最大スクロール効果（variant=parallax 時に有効）",
+    group: "design",
+  }),
   layout: sectionLayoutSchema,
 });
 
