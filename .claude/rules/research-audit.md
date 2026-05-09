@@ -49,6 +49,7 @@ paths:
 - **Plan 内の helper / API 名は rule docs 記述を盲信せず実装 grep で照合** — `.claude/rules/<>.md` が stale 化している場合あり。実装 SSoT で rule docs 追従
 - **Plan の Task が別 plan / 既存実装で対処済の場合 no-op 判定が正しい完遂** — implementer は「やらなくていい」を BLOCKED でなく DONE_WITH_CONCERNS で報告
 - **Plan の "新規作成" 系 task 候補は対象 SSoT シンボル名を `grep -rn "<symbol>" src/` で先行検証必須** — earlier phase が予防的に SSoT を入れているケースあり（実例: 2026-05-09 Phase 4 plan で `portableTextBlockSchema` / `createBlockArraySchema` / `createBlock` / `blocksToPlainText` を新規 Task 1 として記述したが、Phase 0 commit `2c8c86b9` の時点で既に `src/shared/lib/portable-text/{schema,factory,text,index}.ts` に実装済だった）。「Phase N で span を入れたついでに block も factory に追加」のような pre-emptive SSoT は phase 跨ぎで起きやすい。plan 作成前に各新規 task の中核 symbol で grep し、hit があれば task を「不要」or「修正のみ」に格下げ
+- **Plan の「次 phase で別 plan として扱う」は除外宣言であって将来確約ではない** — 元 spec に該当 phase の記述がない場合、その文言は単に「本 phase の対象外」という否定的境界を示すだけで、要求や動機の記録ではない。新セッションで「次 phase 着手」候補として浮上した時は、必ず元 spec を grep して **明示的な要求 / 動機が記録されているか** を ground truth 確認する。spec 不在の場合は架空 phase として retract 候補（実例: 2026-05-09 Phase 5 retract、Phase 4 plan の「対象外: contentJson は Phase 5 で別 plan」注記を「将来計画」と誤読し brainstorming で 30 分浪費 → 元 spec line 442「Lexical で rich text 化済、それ自体は変更なし」を発見して retract、commit `c16e5dcc`）
 
 ## SSoT 重複検出と version drift
 
