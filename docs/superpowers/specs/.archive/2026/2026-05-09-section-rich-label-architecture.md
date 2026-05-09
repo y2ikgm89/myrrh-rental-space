@@ -1,6 +1,8 @@
 # Spec: 全テキストフィールドを Portable Text に統一（Clean Break）
 
-> **Snapshot: 2026-05-09** — 設計案、実装は別セッション
+> **Snapshot: 2026-05-09** — Phase 0-4 全 implementation completed, archived as historical reference.
+>
+> **Phase 5 retract (2026-05-09)**: 本 spec line 442 が明記する通り「Lexical Editor 系の Post / News / Terms 本文（既に Lexical で rich text 化済、それ自体は変更なし）」。一時的に Phase 4 plan が「Phase 5 で別 plan」と仮置きしたが、(1) 元 spec に Phase 5 記述なし、(2) `.claude/rules/frontend/lexical/conventions.md` の責務分離原則「full WYSIWYG → Lexical / 短い label・段落 → Portable Text」、(3) Lexical 46 custom nodes + 61 plugins の規模、により Phase 5 は廃止。Lexical エコシステムは Post/News/Terms/Space/Event の contentJson 編集に限定維持で確定。
 >
 > **方針**: 破壊的変更 OK / 後方互換なし / 公式 Portable Text 準拠 / クリーン実装単一 path
 

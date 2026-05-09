@@ -1,5 +1,9 @@
 # Portable Text Phase 4: Long-form textarea → PortableTextBlock[] Implementation Plan
 
+> **Snapshot: 2026-05-09** — Implementation completed (8 commits `01030f56` → `15d2e64b`), archived as historical reference.
+>
+> **Phase 5 retract (2026-05-09)**: 本 plan が「対象外: Post/News/Terms/Space/Event の contentJson は Phase 5 で別 plan」と記載していたが、(1) 元 spec (`docs/superpowers/specs/2026-05-09-section-rich-label-architecture.md`) line 442「既に Lexical で rich text 化済、それ自体は変更なし」、(2) `.claude/rules/frontend/lexical/conventions.md` の責務分離原則「full WYSIWYG → Lexical / 短い label・段落 → Portable Text」、(3) Lexical 46 custom nodes + 61 plugins の規模、を根拠に **Phase 5 は廃止**。Lexical エコシステムは Post/News/Terms/Space/Event の contentJson 編集に限定維持。次 phase 候補は要求発生時に再評価する。
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Section の長文 textarea 14 fields × 11 sections を `PortableTextBlock[]` に統一し、Lexical wrapper editor (`PortableTextBlockEditor`) で編集 / 公開ページで `<PortableText>` SC 描画する。
