@@ -13,7 +13,7 @@ export const ctaConfigSchema = z.object({
     subGroup: "text",
   }),
   title: field.portableTextInline("見出し", { subGroup: "text" }),
-  description: field.textarea("説明文", { maxLength: 500, subGroup: "text" }),
+  description: field.portableTextBlock("説明文", { subGroup: "text" }),
   buttons: createButtonsArraySchema("ボタン"),
   backgroundColor: field.color("背景色", { group: "design" }),
   variant: field.select("レイアウトの種類", {

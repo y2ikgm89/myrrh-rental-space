@@ -14,7 +14,7 @@ export const eventCalendarConfigSchema = z.object({
   title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
-  description: field.textarea("説明文", { maxLength: 500, subGroup: "text" }),
+  description: field.portableTextBlock("説明文", { subGroup: "text" }),
   maxEvents: field.number("最大表示件数", {
     min: 1,
     max: 50,

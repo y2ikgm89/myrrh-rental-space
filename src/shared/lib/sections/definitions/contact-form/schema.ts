@@ -14,7 +14,7 @@ export const contactFormConfigSchema = z.object({
   title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
-  description: field.textarea("説明文", { maxLength: 500, subGroup: "text" }),
+  description: field.portableTextBlock("説明文", { subGroup: "text" }),
   showNameField: field.boolean("名前フィールドを表示する", { default: true }),
   showPhoneField: field.boolean("電話番号フィールドを表示する", {
     default: true,

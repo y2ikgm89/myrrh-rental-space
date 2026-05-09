@@ -18,10 +18,7 @@ export const conceptConfigSchema = z.object({
   heading: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
-  body: field.textarea("本文", {
-    default:
-      "洗練されたデザインと機能性を兼ね備えた空間。\nビジネスミーティングからプライベートパーティーまで。\nあらゆるシーンに対応する上質な空間をご提供します。",
-    maxLength: 1000,
+  body: field.portableTextBlock("本文", {
     subGroup: "text",
   }),
   image: createImageGroupSchema("メイン画像"),

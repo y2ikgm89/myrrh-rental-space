@@ -19,7 +19,7 @@ export const testimonialConfigSchema = z.object({
   items: field.array("レビュー", {
     subGroup: "text",
     fields: {
-      content: field.textarea("レビュー内容"),
+      content: field.portableTextBlock("レビュー内容"),
       authorName: field.portableTextInline("お客様の名前"),
       authorTitle: field.portableTextInline("肩書き"),
       authorImage: createCompactImageGroupSchema("プロフィール画像"),

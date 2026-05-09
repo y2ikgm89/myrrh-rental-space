@@ -22,9 +22,9 @@ const editorialSplitSchema = z.object({
   variant: z.literal("editorial-split"),
   label: field.portableTextInline("ラベル", { subGroup: "text" }),
   title: field.portableTextInline("タイトル", { subGroup: "text" }),
-  description: field.textarea("説明", {
+  description: field.portableTextBlock("説明", {
     subGroup: "text",
-    maxLength: 4000,
+    maxBlocks: 100,
   }),
   images: field
     .array("ヒーロー画像", {
@@ -52,7 +52,10 @@ const compactSchema = z.object({
   variant: z.literal("compact"),
   label: field.portableTextInline("ラベル", { subGroup: "text" }),
   title: field.portableTextInline("タイトル", { subGroup: "text" }),
-  description: field.textarea("説明", { subGroup: "text", maxLength: 4000 }),
+  description: field.portableTextBlock("説明", {
+    subGroup: "text",
+    maxBlocks: 100,
+  }),
   image: z
     .object({
       url: field.image("画像"),
@@ -73,7 +76,10 @@ const minimalSchema = z.object({
   variant: z.literal("minimal"),
   eyebrow: field.text("アイブロー", { subGroup: "text", maxLength: 200 }),
   title: field.portableTextInline("タイトル", { subGroup: "text" }),
-  description: field.textarea("説明", { subGroup: "text", maxLength: 4000 }),
+  description: field.portableTextBlock("説明", {
+    subGroup: "text",
+    maxBlocks: 100,
+  }),
   layout: sectionLayoutSchema,
 });
 

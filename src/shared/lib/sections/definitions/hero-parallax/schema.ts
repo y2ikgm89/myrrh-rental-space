@@ -16,10 +16,7 @@ export const heroParallaxConfigSchema = z.object({
   title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
-  subtitle: field.textarea("サブ見出し", {
-    default:
-      "厳選されたレンタルスペースで、ビジネスからプライベートまで、あらゆるシーンに対応する上質な空間をご提供します。",
-    maxLength: 300,
+  subtitle: field.portableTextBlock("サブ見出し", {
     subGroup: "text",
   }),
   backgroundImage: createImageGroupSchema("背景画像"),

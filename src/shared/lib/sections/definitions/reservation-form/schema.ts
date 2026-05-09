@@ -24,8 +24,7 @@ export const reservationFormConfigSchema = z.object({
   title: field.portableTextInline("見出し", {
     subGroup: "text",
   }),
-  description: field.textarea("説明文", {
-    maxLength: 500,
+  description: field.portableTextBlock("説明文", {
     subGroup: "text",
   }),
   defaultSpaceId: field.text("デフォルトスペース ID", {

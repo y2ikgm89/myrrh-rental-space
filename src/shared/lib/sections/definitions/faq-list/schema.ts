@@ -43,7 +43,7 @@ export const faqListConfigSchema = z.object({
       subGroup: "text",
       fields: {
         question: field.portableTextInline("質問"),
-        answer: field.textarea("回答"),
+        answer: field.portableTextBlock("回答"),
       },
     })
     .optional(),

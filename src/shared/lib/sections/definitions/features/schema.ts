@@ -24,7 +24,7 @@ export const featuresConfigSchema = z.object({
     fields: {
       icon: field.icon("アイコン"),
       title: field.portableTextInline("項目の見出し"),
-      description: field.textarea("説明文"),
+      description: field.portableTextBlock("説明文"),
     },
   }),
   displayLayout: field.select("レイアウト", {
