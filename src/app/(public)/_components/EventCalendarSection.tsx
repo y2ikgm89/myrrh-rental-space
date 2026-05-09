@@ -26,6 +26,7 @@ import { EventCalendarView } from "./event-calendar/event-calendar-view";
 import { EventsViewSwitcher } from "./event-calendar/events-view-switcher";
 import type { EventCardData } from "./event-calendar/event-card";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 
 interface EventCalendarSectionProps {
   readonly config: EventCalendarConfig;
@@ -57,14 +58,16 @@ export function EventCalendarSection({
   return (
     <SectionWrapper style={style} layout={config.layout}>
       <div className="mx-auto max-w-5xl">
-        {(config.sectionLabel || config.title || config.description) && (
+        {(config.sectionLabel ||
+          config.title.length > 0 ||
+          config.description.length > 0) && (
           <div className="mb-10 text-center md:mb-14">
             {config.sectionLabel && (
               <ScrollReveal>
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               </ScrollReveal>
             )}
-            {config.title && (
+            {config.title.length > 0 && (
               <div style={getTitleStyle(style)}>
                 <Heading
                   level={2}
@@ -76,14 +79,14 @@ export function EventCalendarSection({
                 </Heading>
               </div>
             )}
-            {config.description && (
+            {config.description.length > 0 && (
               <ScrollReveal delay={0.2}>
-                <p
-                  className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground"
+                <div
+                  className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
                   style={getTextStyle(style)}
                 >
-                  {config.description}
-                </p>
+                  <PortableText blocks={config.description} />
+                </div>
               </ScrollReveal>
             )}
           </div>

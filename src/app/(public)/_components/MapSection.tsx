@@ -22,7 +22,11 @@ import type { MapConfig } from "@/shared/lib/validations/section";
 import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
-import { spansToPlainText } from "@/shared/lib/portable-text";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
+import {
+  blocksToPlainText,
+  spansToPlainText,
+} from "@/shared/lib/portable-text";
 
 const HEIGHT_MAP = {
   sm: "h-[300px]",
@@ -40,8 +44,9 @@ function buildMapEmbedUrl(config: MapConfig, apiKey: string): string | null {
   if (config.latitude != null && config.longitude != null) {
     return `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${config.latitude},${config.longitude}&zoom=${config.zoom}&maptype=roadmap`;
   }
-  if (config.address) {
-    const q = encodeURIComponent(config.address);
+  const addressText = blocksToPlainText(config.address);
+  if (addressText.length > 0) {
+    const q = encodeURIComponent(addressText);
     return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${q}&zoom=${config.zoom}`;
   }
   return null;
@@ -103,14 +108,14 @@ export function MapSection({
         </div>
       </ScrollReveal>
 
-      {config.showAddressBelow && config.address && (
+      {config.showAddressBelow && config.address.length > 0 && (
         <ScrollReveal delay={0.2}>
-          <p
-            className="mt-4 text-center text-sm text-muted-foreground"
+          <div
+            className="mt-4 text-center text-sm text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-2"
             style={getTextStyle(style)}
           >
-            {config.address}
-          </p>
+            <PortableText blocks={config.address} />
+          </div>
         </ScrollReveal>
       )}
     </SectionWrapper>

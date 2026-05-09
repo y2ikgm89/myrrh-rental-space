@@ -27,6 +27,7 @@ import { BusinessInfo } from "../contact/_components/business-info";
 import type { ContactFormConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface ContactFormSectionProps {
@@ -79,14 +80,14 @@ export function ContactFormSection({
                   </SplitText>
                 </Heading>
               </div>
-              {config.description ? (
+              {config.description.length > 0 ? (
                 <ScrollReveal delay={0.2}>
-                  <p
-                    className="mt-4 text-sm leading-relaxed text-muted-foreground"
+                  <div
+                    className="mt-4 text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
                     style={getTextStyle(style)}
                   >
-                    {config.description}
-                  </p>
+                    <PortableText blocks={config.description} />
+                  </div>
                 </ScrollReveal>
               ) : null}
               <ScrollReveal delay={0.4}>
@@ -123,14 +124,14 @@ export function ContactFormSection({
               </SplitText>
             </Heading>
           </div>
-          {config.description ? (
+          {config.description.length > 0 ? (
             <ScrollReveal delay={0.2}>
-              <p
-                className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground"
+              <div
+                className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
                 style={getTextStyle(style)}
               >
-                {config.description}
-              </p>
+                <PortableText blocks={config.description} />
+              </div>
             </ScrollReveal>
           ) : null}
         </div>

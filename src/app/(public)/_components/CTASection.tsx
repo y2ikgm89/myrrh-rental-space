@@ -24,6 +24,7 @@ import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 
 interface CTASectionProps {
   readonly config: CtaConfig;
@@ -127,14 +128,14 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
                 </SplitText>
               </Heading>
             </div>
-            {config.description && (
+            {config.description.length > 0 && (
               <ScrollReveal delay={0.2}>
-                <p
-                  className="mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base"
+                <div
+                  className="mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
                   style={getTextStyle(style)}
                 >
-                  {config.description}
-                </p>
+                  <PortableText blocks={config.description} />
+                </div>
               </ScrollReveal>
             )}
           </div>
@@ -175,14 +176,14 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
           </Heading>
         </div>
 
-        {config.description && (
+        {config.description.length > 0 && (
           <ScrollReveal delay={0.2}>
-            <p
-              className="mx-auto mt-8 max-w-lg text-sm leading-[2] text-muted-foreground md:text-base"
+            <div
+              className="mx-auto mt-8 max-w-lg text-sm leading-[2] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
               style={getTextStyle(style)}
             >
-              {config.description}
-            </p>
+              <PortableText blocks={config.description} />
+            </div>
           </ScrollReveal>
         )}
 

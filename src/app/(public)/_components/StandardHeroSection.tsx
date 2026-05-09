@@ -35,6 +35,7 @@ import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -208,14 +209,14 @@ export function StandardHeroSection({
               </Heading>
             </div>
           )}
-          {config.subtitle && (
+          {config.subtitle.length > 0 && (
             <ScrollReveal delay={0.5}>
-              <p
-                className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base"
+              <div
+                className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
                 style={getTextStyle(style)}
               >
-                {config.subtitle}
-              </p>
+                <PortableText blocks={config.subtitle} />
+              </div>
             </ScrollReveal>
           )}
           {(primaryButton ?? secondaryButton) && (
@@ -266,14 +267,14 @@ export function StandardHeroSection({
                 </Heading>
               </div>
             )}
-            {config.subtitle && (
+            {config.subtitle.length > 0 && (
               <ScrollReveal delay={0.2}>
-                <p
-                  className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base"
+                <div
+                  className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
                   style={getTextStyle(style)}
                 >
-                  {config.subtitle}
-                </p>
+                  <PortableText blocks={config.subtitle} />
+                </div>
               </ScrollReveal>
             )}
             {(primaryButton ?? secondaryButton) && (
@@ -376,14 +377,14 @@ export function StandardHeroSection({
           </div>
         )}
 
-        {config.subtitle && (
+        {config.subtitle.length > 0 && (
           <ScrollReveal delay={0.2}>
-            <p
-              className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base"
+            <div
+              className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
               style={getTextStyle(style)}
             >
-              {config.subtitle}
-            </p>
+              <PortableText blocks={config.subtitle} />
+            </div>
           </ScrollReveal>
         )}
 

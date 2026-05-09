@@ -38,6 +38,7 @@ import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 import { ReservationForm } from "../reservation/_components/reservation-form";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 
 interface ReservationFormSectionProps {
   readonly config: ReservationFormConfig;
@@ -116,10 +117,10 @@ export async function ReservationFormSection({
               </Heading>
             </div>
           )}
-          {config.description && (
-            <p className="mt-3 text-sm text-muted-foreground md:text-base">
-              {config.description}
-            </p>
+          {config.description.length > 0 && (
+            <div className="mt-3 text-sm text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3">
+              <PortableText blocks={config.description} />
+            </div>
           )}
         </div>
       )}

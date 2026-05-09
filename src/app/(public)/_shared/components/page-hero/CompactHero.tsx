@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/cn";
 import { isAppRoute } from "@/shared/lib/typed-routes";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 
 export type CompactHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "compact" }>,
@@ -54,9 +55,9 @@ export function CompactHero({
         <h1 className="mt-4 font-heading text-[clamp(2rem,5vw,3rem)] font-light tracking-tight">
           <PortableTextSpans spans={title} />
         </h1>
-        <p className="mt-4 max-w-[28rem] text-sm leading-relaxed text-muted-foreground md:text-base">
-          {description}
-        </p>
+        <div className="mt-4 max-w-[28rem] text-sm leading-relaxed text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3">
+          <PortableText blocks={description} />
+        </div>
         {buttons.length > 0 && (
           <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
             {buttons.map((btn) => (

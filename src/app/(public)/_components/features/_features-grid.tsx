@@ -17,6 +17,7 @@ import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface Props {
@@ -70,13 +71,13 @@ export function FeaturesGrid({ config, style }: Props): ReactElement | null {
               <h3 className="font-heading text-xl font-light tracking-tight">
                 <PortableTextSpans spans={item.title} />
               </h3>
-              {item.description ? (
-                <p
-                  className="text-sm leading-[1.9] text-muted-foreground"
+              {item.description.length > 0 ? (
+                <div
+                  className="text-sm leading-[1.9] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
                   style={getTextStyle(style)}
                 >
-                  {item.description}
-                </p>
+                  <PortableText blocks={item.description} />
+                </div>
               ) : null}
             </article>
           ))}

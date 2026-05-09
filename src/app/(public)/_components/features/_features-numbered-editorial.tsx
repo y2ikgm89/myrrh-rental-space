@@ -26,6 +26,7 @@ import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface Props {
@@ -108,13 +109,13 @@ export function FeaturesNumberedEditorial({
               <h3 className="font-heading text-xl font-light tracking-tight md:text-2xl">
                 <PortableTextSpans spans={feature.title} />
               </h3>
-              {feature.description ? (
-                <p
-                  className="mt-3 text-sm leading-[1.9] text-muted-foreground md:text-base"
+              {feature.description.length > 0 ? (
+                <div
+                  className="mt-3 text-sm leading-[1.9] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
                   style={getTextStyle(style)}
                 >
-                  {feature.description}
-                </p>
+                  <PortableText blocks={feature.description} />
+                </div>
               ) : null}
             </div>
           </div>

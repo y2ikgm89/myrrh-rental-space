@@ -27,6 +27,7 @@ import { parseHeroParallaxHeight } from "@/shared/lib/validations/section-parser
 import type { HeroParallaxConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -160,13 +161,13 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
           {/* Decorative divider */}
           <div className="mt-8 h-px w-12 bg-accent/40" aria-hidden="true" />
 
-          {config.subtitle && (
-            <p
-              className="mt-6 max-w-sm text-sm leading-[2] text-muted-foreground"
+          {config.subtitle.length > 0 && (
+            <div
+              className="mt-6 max-w-sm text-sm leading-[2] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
               style={getTextStyle(style)}
             >
-              {config.subtitle}
-            </p>
+              <PortableText blocks={config.subtitle} />
+            </div>
           )}
 
           {config.buttons.length > 0 && (

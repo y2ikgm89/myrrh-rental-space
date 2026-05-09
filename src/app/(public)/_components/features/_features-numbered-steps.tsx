@@ -15,6 +15,7 @@ import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface Props {
@@ -69,10 +70,10 @@ export function FeaturesNumberedSteps({
             <h3 className="font-heading text-xl font-light tracking-[0.01em]">
               <PortableTextSpans spans={step.title} />
             </h3>
-            {step.description ? (
-              <p className="mt-3 text-sm leading-[1.8] text-muted-foreground">
-                {step.description}
-              </p>
+            {step.description.length > 0 ? (
+              <div className="mt-3 text-sm leading-[1.8] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3">
+                <PortableText blocks={step.description} />
+              </div>
             ) : null}
           </div>
         ))}

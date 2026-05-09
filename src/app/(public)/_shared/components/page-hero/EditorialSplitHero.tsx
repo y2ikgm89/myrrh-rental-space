@@ -27,7 +27,8 @@ import type {
   HeroTransition,
   PageHeroConfig,
 } from "@/shared/lib/sections/definitions/page-hero";
-import { createSpan } from "@/shared/lib/portable-text";
+import { createBlock, createSpan } from "@/shared/lib/portable-text";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
 export type EditorialSplitHeroProps = Omit<
@@ -48,8 +49,13 @@ const DEFAULT_IMAGE: HeroImage = {
 export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
   label: [createSpan("Volume One — Spring 2026")],
   title: [createSpan("Where silence works.")],
-  description:
-    "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
+  description: [
+    createBlock([
+      createSpan(
+        "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
+      ),
+    ]),
+  ],
   images: [DEFAULT_IMAGE],
   transition: "crossfade",
   buttons: [
@@ -488,9 +494,9 @@ export function EditorialSplitHero({
         )}
       >
         <ScrollReveal delay={0.3}>
-          <p className="max-w-[22rem] text-sm leading-[2.1] text-muted-foreground md:text-base">
-            {description}
-          </p>
+          <div className="max-w-[22rem] text-sm leading-[2.1] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3">
+            <PortableText blocks={description} />
+          </div>
         </ScrollReveal>
 
         {buttons.length > 0 && (

@@ -24,6 +24,7 @@ import { parseConceptLayout } from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 
 /** text-left は CSS デフォルトなので省略し、非デフォルト値のみクラスを付与 */
@@ -71,21 +72,15 @@ export function ConceptSection({
       </div>
 
       <ScrollReveal delay={0.2}>
-        <p
+        <div
           className={cn(
-            "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base",
+            "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-4",
             isStacked && "mx-auto max-w-2xl",
           )}
           style={getTextStyle(style)}
         >
-          {body.split("\n").map((line, i, arr) => (
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            <span key={i}>
-              {line}
-              {i < arr.length - 1 && <br />}
-            </span>
-          ))}
-        </p>
+          <PortableText blocks={body} />
+        </div>
       </ScrollReveal>
     </div>
   );

@@ -27,6 +27,7 @@ import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface TestimonialSectionProps {
@@ -177,7 +178,7 @@ export function TestimonialSection({
                   </span>
                 )}
 
-                <p
+                <div
                   className={cn(
                     variant !== "minimal" && "mt-3",
                     isFeatured
@@ -185,7 +186,7 @@ export function TestimonialSection({
                       : variant === "default"
                         ? "text-base leading-[1.9] italic"
                         : "text-sm leading-relaxed",
-                    "text-foreground",
+                    "text-foreground [&_p]:mt-0 [&_p+p]:mt-3",
                   )}
                   style={getTextStyle(style)}
                 >
@@ -197,7 +198,7 @@ export function TestimonialSection({
                       &ldquo;
                     </span>
                   )}
-                  {item.content}
+                  <PortableText blocks={item.content} />
                   {variant === "minimal" && (
                     <span
                       className="ml-1 font-serif text-lg text-accent/30"
@@ -206,7 +207,7 @@ export function TestimonialSection({
                       &rdquo;
                     </span>
                   )}
-                </p>
+                </div>
 
                 {config.showRating && item.rating != null && (
                   <div className="mt-4">
