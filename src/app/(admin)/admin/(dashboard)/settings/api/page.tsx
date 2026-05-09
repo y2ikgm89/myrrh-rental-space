@@ -16,6 +16,7 @@ import {
 } from "@/admin/queries/api-keys";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
+import { getGbpAuthState } from "@/shared/lib/google-business-profile";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -25,6 +26,7 @@ import {
   CloudflareSection,
   CustomApiKeysSection,
   GoogleCalendarSection,
+  GoogleBusinessProfileSection,
   ICalFeedSection,
   TwoWaySyncSection,
   InstagramSection,
@@ -44,6 +46,7 @@ async function ApiSettingsContent(): Promise<ReactElement> {
     customApiKeys,
     settings,
     instagramConfig,
+    gbpAuthState,
   ] = await Promise.all([
     getResendConfig(),
     getTurnstileConfig(),
@@ -52,7 +55,12 @@ async function ApiSettingsContent(): Promise<ReactElement> {
     getCustomApiKeys(),
     getSettings(),
     getInstagramConfig(),
+    getGbpAuthState(),
   ]);
+
+  const gbpAuthInfo = gbpAuthState
+    ? { accountName: gbpAuthState.accountName }
+    : null;
 
   const tabs = [
     // メール
@@ -86,6 +94,10 @@ async function ApiSettingsContent(): Promise<ReactElement> {
             content: (
               <div className="space-y-6">
                 <GoogleCalendarSection settings={settings} />
+                <GoogleBusinessProfileSection
+                  enabled={settings.googleBusinessProfileEnabled}
+                  authInfo={gbpAuthInfo}
+                />
                 <ICalFeedSection />
                 <TwoWaySyncSection settings={settings} />
               </div>

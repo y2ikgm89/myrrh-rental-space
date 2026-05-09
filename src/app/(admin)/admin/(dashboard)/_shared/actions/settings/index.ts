@@ -102,6 +102,17 @@ export {
 } from "./google-calendar";
 
 // =============================================================================
+// Google Business Profile Actions
+// =============================================================================
+
+export {
+  initiateGbpAuth,
+  revokeGbpAuth,
+  triggerGbpSync,
+  toggleLocationGbpSync,
+} from "./google-business-profile";
+
+// =============================================================================
 // Stripe Actions
 // =============================================================================
 

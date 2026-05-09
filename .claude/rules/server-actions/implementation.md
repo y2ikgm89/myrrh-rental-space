@@ -242,3 +242,30 @@ async function getSettings() {
   return toPlainObject(result)
 }
 ```
+
+## Server Action redirect の typedRoutes cast
+
+Next.js 16 `typedRoutes: true` 環境で外部 OAuth URL（Google / Meta / Instagram 等が返す動的 URL）を `redirect()` に渡す場合、`redirect(url as Route<string>)` の library boundary cast が必要（`router.push` `ClickableTableRow` パターンと同列の例外）。
+
+```typescript
+// src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-business-profile.ts
+"use server";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
+import { getGbpAuthorizeUrl } from "@/shared/lib/google-business-profile";
+
+export async function initiateGbpAuth() {
+  // ... auth/permission check
+  const url = await getGbpAuthorizeUrl();
+  // OAuth provider が返す動的 URL は string 型のため Route<string> へ cast
+  redirect(url as Route<string>);
+}
+```
+
+**ルール**:
+
+- `import type { Route } from "next"` は型のみ import で `"use server"` ファイル制約と非衝突（async 関数のみ export 規律を破らない）
+- consumer 側では cast 不要（library boundary を 1 箇所に閉じ込める）
+- 内部 app route は `toAppRoute()` (`@/shared/lib/typed-routes`) で narrow するのが canonical、cast を使うのは外部 OAuth / 完全動的 URL のみ
+
+参照実装: `actions/settings/google-business-profile.ts` の `initiateGbpAuth` / Instagram OAuth callback handler

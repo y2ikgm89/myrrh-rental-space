@@ -15,6 +15,33 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { LocationActionCell } from "./LocationActionCell";
 
 // =============================================================================
+// GbpSyncBadge — 拠点ごとの GBP 同期ステータス表示
+// =============================================================================
+
+function GbpSyncBadge({
+  hasPlaceId,
+  enabled,
+  syncedAt,
+  error,
+}: {
+  hasPlaceId: boolean;
+  enabled: boolean;
+  syncedAt: string | null;
+  error: string | null;
+}) {
+  if (!hasPlaceId) return <Badge variant="secondary">Place ID 未設定</Badge>;
+  if (!enabled) return <Badge variant="secondary">同期 OFF</Badge>;
+  if (error)
+    return (
+      <Badge variant="destructive" title={error}>
+        エラー
+      </Badge>
+    );
+  if (syncedAt) return <Badge variant="success">同期済</Badge>;
+  return <Badge variant="outline">未同期</Badge>;
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -46,6 +73,9 @@ export function LocationTable({ locations }: LocationTableProps) {
               <TableHead className="hidden lg:table-cell">住所</TableHead>
               <TableHead className="hidden text-right md:table-cell">
                 スペース数
+              </TableHead>
+              <TableHead className="hidden text-center md:table-cell">
+                GBP 同期
               </TableHead>
               <TableHead className="text-center">公開状態</TableHead>
               <TableHead className="text-right">操作</TableHead>
@@ -82,6 +112,14 @@ export function LocationTable({ locations }: LocationTableProps) {
                 </TableCell>
                 <TableCell className="hidden text-right md:table-cell">
                   <Badge variant="secondary">{location._count.spaces}件</Badge>
+                </TableCell>
+                <TableCell className="hidden text-center md:table-cell">
+                  <GbpSyncBadge
+                    hasPlaceId={!!location.googleBusinessPlaceId}
+                    enabled={location.gbpSyncEnabled}
+                    syncedAt={location.gbpSyncedAt}
+                    error={location.gbpSyncError}
+                  />
                 </TableCell>
                 <TableCell className="text-center">
                   <PublishSwitch

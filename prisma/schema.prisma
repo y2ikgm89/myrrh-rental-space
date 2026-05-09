@@ -393,6 +393,11 @@ model Location {
   phoneNumber           String?
   email                 String?
 
+  // GBP Sync
+  gbpSyncEnabled Boolean   @default(true)
+  gbpSyncedAt    DateTime?
+  gbpSyncError   String?   @db.Text
+
   sortOrder       Int      @default(0)
   isPublished     Boolean  @default(false)
   isActive        Boolean  @default(true)
@@ -405,6 +410,7 @@ model Location {
 
   @@index([isPublished, isActive])
   @@index([sortOrder])
+  @@index([gbpSyncError])
   @@map("locations")
 }
 
@@ -1298,6 +1304,10 @@ model Settings {
   // OAuth連携（管理者個人カレンダー用）
   googleCalendarOAuthEnabled Boolean @default(false)
   // ※ access_token/refresh_tokenはAccountテーブルに保存
+
+  // Google Business Profile sync
+  googleBusinessProfileEnabled Boolean @default(false)
+  googleBusinessProfileAuth    Json?   // { accessToken, refreshToken, expiresAt, accountId } encrypted
 
   // Google Meet ビデオ会議自動生成
   googleCalendarMeetEnabled Boolean @default(false)
