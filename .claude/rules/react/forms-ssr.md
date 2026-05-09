@@ -162,3 +162,9 @@ useEffect(() => {
 - `PortableTextBlockEditor.blocksEqualIgnoringKey`（`@/admin/components/portable-text/block-editor`）
 
 歴史: 2026-05-10 セッション commit `abee2423` で修正（Phase 0 Portable Text 導入時から潜在の silent bug）。
+
+---
+
+## 単一行 contenteditable は `flex items-center` 必須
+
+- **`<div contenteditable aria-multiline="false">` は `flex min-h-11 items-center` 必須** — `<input>` は UA stylesheet で text を vertical center するが、contenteditable `<div>` はブロック要素で text が top 揃えになる視覚的不一致（`<input>` 慣習からの silent bug）。`aria-multiline="true"`（複数行）は top 揃えが正解（複数 paragraph 配置）。`PortableTextInlineEditor` の className `flex min-h-11 w-full items-center rounded-md ...` が canonical 参照実装（commit `e797f6eb`、2026-05-10）
