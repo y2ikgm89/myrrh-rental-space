@@ -176,3 +176,7 @@ const initialConfig = {
   },
 };
 ```
+
+## Gotchas
+
+- **Lexical の slash command 拡張は ComponentPicker `dialog` entry 経由が公式準拠** — `EmojiPickerPlugin` の `:` trigger は special case（独自 typeahead）。新規 inline insert（icon / mention 等）を `/xxx` で起動する場合は ① `nodes/XxxNode.tsx` (DecoratorNode + `isInline()=true`) ② `plugins/XxxPlugin.tsx` (`DialogPluginProps` 受取り → 既存 admin dialog を再利用 → 選択時 `selection.removeText()` + `$insertNodes`) ③ `dialog-registry.ts` + `insert-items/<category>.ts` に `type: "dialog"` entry 追加 — の 3 点で完了。Portable Text editor の `/icon` DOM trigger 直挿入（`slash-trigger.ts`）は contenteditable + DOM walker パターンの制約による別実装、Lexical へ移植しない。参照実装: `InlineIconPlugin.tsx`（admin の `IconPickerDialog` を `DialogPluginProps` 薄ラッパー経由で再利用）

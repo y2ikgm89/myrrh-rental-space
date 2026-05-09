@@ -32,6 +32,7 @@ import {
   IconPilcrow,
   IconPointer,
   IconScissors,
+  IconShape,
 } from "@tabler/icons-react";
 import { INSERT_PAGE_BREAK_COMMAND } from "../../plugins/PageBreakPlugin";
 import { applyTextCaseToSelection } from "../../plugins/TextCasePlugin";
@@ -202,6 +203,17 @@ export const STRUCTURE_INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: true,
     showInPicker: true,
     dialogId: "button",
+  },
+  {
+    id: "inline-icon",
+    type: "dialog",
+    label: "アイコン",
+    icon: IconShape,
+    keywords: ["icon", "アイコン", "symbol", "tabler", "inline"],
+    category: "widget",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "inline-icon",
   },
 
   // ========== その他 ==========

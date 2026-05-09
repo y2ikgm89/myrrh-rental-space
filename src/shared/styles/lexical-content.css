@@ -1808,3 +1808,30 @@ table[style*="--table-border-color"] th {
 [data-feature-icon-item] > :is(p, div):last-child {
   margin-bottom: 0;
 }
+
+/* --------------------------------------------------------------------------
+ * Inline Icon Node
+ *
+ * data-lexical-inline-icon: span container（exportDOM / createDOM 共通）
+ * data-icon-name: curation icon 識別子（IconHome / IconStar など）
+ *
+ * テキスト行の中央に SVG をベースライン揃えで配置。
+ * - フォントサイズ追従（width/height: 1em）
+ * - 色は currentColor で文字色を継承
+ * - 編集中は前後にゼロ幅 spacing（caret 位置の視認性のため `margin-inline: 0.05em`）
+ * -------------------------------------------------------------------------- */
+
+[data-lexical-inline-icon] {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -0.15em;
+  margin-inline: 0.05em;
+  color: currentColor;
+}
+
+[data-lexical-inline-icon] > svg[data-icon-svg],
+[data-lexical-inline-icon] > svg.inline-icon-svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}

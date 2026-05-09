@@ -445,6 +445,13 @@ export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES);
 | `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                 |
 | `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時） |
 
+### Inspector 要否の判断基準
+
+- **Inspector 必須**: 複数 state を持ち編集後に「変更」させたい複合ノード（Image / Button / Callout / Steps / Tabs / Layout 等）
+- **Inspector 省略可**: 単純な単一 state（`name` / `emoji` / `text` のみ等）で「削除→再挿入」が自然な inline ノード（Notion / Slack の inline emoji と同パターン、`InlineIconNode` が参照実装）
+
+Inspector 省略時は上記表の `inspector-registry.ts` / `inspector/hooks/inspectable-nodes.ts` / `inspector/InspectorSidebar.tsx` switch case / `inspector/panels/index.ts` / `inspectable-nodes.test.ts` の 5 箇所更新が不要になり scope が小さくなる。設計判断としては、編集後に状態を変更させる UX 価値が低い inline ノードはあえて Inspector を作らないのが clean break。
+
 **HTML→Lexical JSON**: `tryConvertHtmlStringToLexicalJsonString`（`html-to-lexical-json.ts`）の戻りは `ConvertHtmlToLexicalJsonResult`。失敗時に `EMPTY` へ黙ってフォールバックしない。空 HTML（trim 後）のみ意図した空ドキュメントとして `ok: true` + `EMPTY_LEXICAL_EDITOR_STATE_JSON`。
 
 **挿入メニュー UI**: ツールバー「挿入」は **カテゴリごとのサブメニュー**（`DropdownMenuSub`）。項目が **6 件以上**のカテゴリはサブメニュー内 **2 カラム**。タイムライン・料金表等は `patterns`、カラム・コールアウト等は `layout`。詳細は `.claude/rules/frontend/lexical/toolbar-layout.md` の「挿入メニュー」。

@@ -41,6 +41,7 @@ import {
   InlineImagePlugin,
   TestimonialPlugin,
   FeatureIconListPlugin,
+  InlineIconPlugin,
   CoverPlugin,
 } from "../plugins";
 
@@ -86,6 +87,7 @@ export const REGISTRY_DIALOG_IDS = [
   "inlineImage",
   "testimonial",
   "feature-icon-list",
+  "inline-icon",
   "cover",
 ] as const;
 
@@ -128,5 +130,6 @@ export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
   { dialogId: "inlineImage", component: InlineImagePlugin },
   { dialogId: "testimonial", component: TestimonialPlugin },
   { dialogId: "feature-icon-list", component: FeatureIconListPlugin },
+  { dialogId: "inline-icon", component: InlineIconPlugin },
   { dialogId: "cover", component: CoverPlugin },
 ];

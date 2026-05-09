@@ -406,6 +406,14 @@ export {
 } from "./FeatureIconListNode";
 export type { FeatureIconListColumns, IconSize } from "./FeatureIconListNode";
 
+// InlineIcon — curated Tabler icon を本文中にインライン挿入する DecoratorNode
+export {
+  InlineIconNode,
+  $createInlineIconNode,
+  $isInlineIconNode,
+  inlineIconNameState,
+} from "./InlineIconNode";
+
 // Cover
 export {
   CoverNode,

@@ -155,6 +155,8 @@ export { TestimonialPlugin } from "./TestimonialPlugin";
 
 export { FeatureIconListPlugin } from "./FeatureIconListPlugin";
 
+export { InlineIconPlugin } from "./InlineIconPlugin";
+
 export { CoverPlugin } from "./CoverPlugin";
 
 export {

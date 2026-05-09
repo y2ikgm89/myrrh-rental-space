@@ -74,6 +74,7 @@ import {
   FeatureIconListContainerNode,
   FeatureIconItemNode,
 } from "../nodes/FeatureIconListNode";
+import { InlineIconNode } from "../nodes/InlineIconNode";
 import { CoverNode } from "../nodes/CoverNode";
 import { CaptionBoxNode } from "../nodes/CaptionBoxNode";
 import { CaptionBoxTitleNode } from "../nodes/CaptionBoxNode";
@@ -172,6 +173,7 @@ export const EDITOR_NODES: ReadonlyArray<
   TestimonialItemNode,
   FeatureIconListContainerNode,
   FeatureIconItemNode,
+  InlineIconNode,
   CoverNode,
   CaptionBoxNode,
   CaptionBoxTitleNode,
