@@ -24,7 +24,11 @@ import {
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
-import { createSpanArraySchema } from "@/shared/lib/portable-text";
+import { PortableTextBlockEditor } from "@/admin/components/portable-text/block-editor/PortableTextBlockEditor";
+import {
+  createBlockArraySchema,
+  createSpanArraySchema,
+} from "@/shared/lib/portable-text";
 import {
   getArrayConstraints,
   getArrayItemShape,
@@ -91,6 +95,7 @@ export function AutoArrayField({
             empty[f.key] = 0;
             break;
           case "portable-text-inline":
+          case "portable-text-block":
             empty[f.key] = [];
             break;
           default:
@@ -268,6 +273,18 @@ function ArrayItemField({
     );
   }
 
+  if (fieldType === "portable-text-block") {
+    return (
+      <ArrayItemRichBlocksField
+        fieldName={fieldName}
+        label={itemLabel}
+        helpText={meta?.helpText}
+        control={control}
+        isPending={isPending}
+      />
+    );
+  }
+
   if (fieldType === "select") {
     // 配列内アイテムの select は簡略化して Input にフォールバック
     const options = getSelectOptions(itemField.schema);
@@ -388,6 +405,39 @@ function ArrayItemRichLabelField({
         id={id}
         value={value}
         onChange={(tokens) => field.onChange(tokens)}
+        disabled={isPending}
+        aria-label={label}
+      />
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+    </div>
+  );
+}
+
+function ArrayItemRichBlocksField({
+  fieldName,
+  label,
+  helpText,
+  control,
+  isPending,
+}: {
+  readonly fieldName: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+}) {
+  const id = useId();
+  const { field } = useController({ control, name: fieldName });
+  const parsed = createBlockArraySchema().safeParse(field.value);
+  const value = parsed.success ? parsed.data : [];
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <PortableTextBlockEditor
+        id={id}
+        value={value}
+        onChange={(blocks) => field.onChange(blocks)}
         disabled={isPending}
         aria-label={label}
       />

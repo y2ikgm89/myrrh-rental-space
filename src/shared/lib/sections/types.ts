@@ -19,6 +19,7 @@ export const FIELD_TYPES = [
   "array",
   "group",
   "portable-text-inline",
+  "portable-text-block",
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];

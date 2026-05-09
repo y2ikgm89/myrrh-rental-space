@@ -44,7 +44,11 @@ import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
-import { createSpanArraySchema } from "@/shared/lib/portable-text";
+import { PortableTextBlockEditor } from "@/admin/components/portable-text/block-editor/PortableTextBlockEditor";
+import {
+  createBlockArraySchema,
+  createSpanArraySchema,
+} from "@/shared/lib/portable-text";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";
 import {
@@ -463,6 +467,19 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
+    case "portable-text-block":
+      return (
+        <AutoRichBlocksField
+          fieldId={fieldId}
+          fieldKey={fieldKey}
+          label={label}
+          helpText={helpText}
+          control={control}
+          isPending={isPending}
+          error={error}
+        />
+      );
+
     case "textarea":
       return (
         <div className="space-y-2">
@@ -849,6 +866,47 @@ function AutoRichLabelField({
         id={fieldId}
         value={value}
         onChange={(tokens) => field.onChange(tokens)}
+        disabled={isPending}
+        aria-label={label}
+      />
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AutoRichBlocksField({
+  fieldKey,
+  fieldId,
+  label,
+  helpText,
+  control,
+  isPending,
+  error,
+}: {
+  readonly fieldKey: string;
+  readonly fieldId: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  readonly control: Control<FieldValues>;
+  readonly isPending: boolean;
+  readonly error: string | undefined;
+}) {
+  const { field } = useController({ control, name: fieldKey });
+  const parsed = createBlockArraySchema().safeParse(field.value);
+  const value = parsed.success ? parsed.data : [];
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <PortableTextBlockEditor
+        id={fieldId}
+        value={value}
+        onChange={(blocks) => field.onChange(blocks)}
         disabled={isPending}
         aria-label={label}
       />

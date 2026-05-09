@@ -7,7 +7,10 @@
 
 import { z } from "zod";
 
-import { createSpanArraySchema } from "@/shared/lib/portable-text";
+import {
+  createBlockArraySchema,
+  createSpanArraySchema,
+} from "@/shared/lib/portable-text";
 import type { FieldType } from "./types";
 
 // ─────────────────────────────────────────────────────────────
@@ -150,6 +153,14 @@ interface PortableTextInlineOpts {
   readonly subGroup?: FieldSubGroup;
   readonly helpText?: string;
   readonly placeholder?: string;
+}
+
+interface PortableTextBlockOpts {
+  readonly group?: FieldMeta["group"];
+  readonly subGroup?: FieldSubGroup;
+  readonly helpText?: string;
+  readonly placeholder?: string;
+  readonly maxBlocks?: number;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -398,6 +409,29 @@ export const field = {
       label,
       group: opts?.group ?? "content",
       ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
+      ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+      ...(opts?.placeholder !== undefined && {
+        placeholder: opts.placeholder,
+      }),
+    });
+  },
+
+  /**
+   * Portable Text ブロック（PortableTextBlock[] — 段落 + アイコン inline の混在配列）
+   *
+   * Sanity Portable Text 互換のブロック配列モデル。各 block は paragraph を 1 つ表し、
+   * children に PortableTextSpan[] を持つ（text node + iconInline span の混在）。
+   * `safeParse({})` で空配列にフォールバック（field defaults 契約）。
+   */
+  portableTextBlock(label: string, opts?: PortableTextBlockOpts) {
+    const schema = createBlockArraySchema(
+      opts?.maxBlocks !== undefined ? { maxBlocks: opts.maxBlocks } : undefined,
+    );
+    return schema.register(fieldRegistry, {
+      fieldType: "portable-text-block",
+      label,
+      group: opts?.group ?? "content",
+      subGroup: opts?.subGroup ?? "text",
       ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
       ...(opts?.placeholder !== undefined && {
         placeholder: opts.placeholder,
