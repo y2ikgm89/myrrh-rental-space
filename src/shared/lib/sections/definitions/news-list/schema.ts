@@ -24,9 +24,7 @@ export const newsListConfigSchema = z.object({
   showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
     default: true,
   }),
-  viewAllText: field.text("「すべて見る」リンクの文字", {
-    default: "全てのお知らせ",
-    maxLength: 50,
+  viewAllText: field.portableTextInline("「すべて見る」リンクの文字", {
     subGroup: "button",
   }),
   viewAllUrl: field.text("「すべて見る」リンク先 URL", {

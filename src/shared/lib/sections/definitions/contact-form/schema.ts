@@ -22,9 +22,7 @@ export const contactFormConfigSchema = z.object({
   showSubjectField: field.boolean("件名フィールドを表示する", {
     default: true,
   }),
-  submitButtonText: field.text("送信ボタンの文字", {
-    default: "送信する",
-    maxLength: 30,
+  submitButtonText: field.portableTextInline("送信ボタンの文字", {
     subGroup: "button",
   }),
   variant: field.select("レイアウトの種類", {
