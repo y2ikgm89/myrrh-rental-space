@@ -51,7 +51,20 @@ describe("heroConfigSchema", () => {
           text: "テストタイトル",
         },
       ],
-      subtitle: "テストサブタイトル",
+      subtitle: [
+        {
+          _key: "test-subtitle-block",
+          _type: "block" as const,
+          style: "normal" as const,
+          children: [
+            {
+              _key: "test-subtitle-span",
+              _type: "span" as const,
+              text: "テストサブタイトル",
+            },
+          ],
+        },
+      ],
       backgroundImageUrl: "https://example.com/image.jpg",
       buttons: [
         {
@@ -135,7 +148,20 @@ describe("heroParallaxConfigSchema", () => {
       title: [
         { _key: "test-title-key", _type: "span" as const, text: "Test Title" },
       ],
-      subtitle: "Test Subtitle",
+      subtitle: [
+        {
+          _key: "test-subtitle-block",
+          _type: "block" as const,
+          style: "normal" as const,
+          children: [
+            {
+              _key: "test-subtitle-span",
+              _type: "span" as const,
+              text: "Test Subtitle",
+            },
+          ],
+        },
+      ],
       backgroundImageUrl: "https://example.com/bg.jpg",
     };
     const result = heroParallaxConfigSchema.safeParse(data);
@@ -204,7 +230,20 @@ describe("conceptConfigSchema", () => {
       heading: [
         { _key: "test-heading-key", _type: "span" as const, text: "見出し" },
       ],
-      body: "本文テキスト",
+      body: [
+        {
+          _key: "test-body-block",
+          _type: "block" as const,
+          style: "normal" as const,
+          children: [
+            {
+              _key: "test-body-span",
+              _type: "span" as const,
+              text: "本文テキスト",
+            },
+          ],
+        },
+      ],
       imageUrl: "https://example.com/concept.jpg",
       imagePosition: "left",
       textAlign: "center",
@@ -222,9 +261,11 @@ describe("conceptConfigSchema", () => {
     }
   });
 
-  test("本文1000文字超過でエラー", () => {
-    const data = { body: "あ".repeat(1001) };
-    const result = conceptConfigSchema.safeParse(data);
+  test("body が string 以外（型違反）はバリデーション失敗", () => {
+    // Phase 4: textarea(maxLength: 1000) → portableTextBlock に切替済み。
+    // 文字数制限は schema 層で課さず、UI 層 zodResolver が担う設計
+    // （createBlockArraySchema の maxBlocks 50 は構造制約のみ）。
+    const result = conceptConfigSchema.safeParse({ body: "string-not-array" });
     expect(result.success).toBe(false);
   });
 });
@@ -278,7 +319,13 @@ describe("newsListConfigSchema", () => {
       maxItems: 10,
       displayLayout: "card",
       showViewAllLink: true,
-      viewAllText: "すべて見る",
+      viewAllText: [
+        {
+          _key: "test-viewall-span",
+          _type: "span" as const,
+          text: "すべて見る",
+        },
+      ],
       viewAllUrl: "/news",
     };
     const result = newsListConfigSchema.safeParse(data);
@@ -341,13 +388,39 @@ describe("faqListConfigSchema", () => {
           question: [
             { _key: "test-question-23", _type: "span" as const, text: "質問1" },
           ],
-          answer: "回答1",
+          answer: [
+            {
+              _key: "test-answer-block-1",
+              _type: "block" as const,
+              style: "normal" as const,
+              children: [
+                {
+                  _key: "test-answer-span-1",
+                  _type: "span" as const,
+                  text: "回答1",
+                },
+              ],
+            },
+          ],
         },
         {
           question: [
             { _key: "test-question-70", _type: "span" as const, text: "質問2" },
           ],
-          answer: "回答2",
+          answer: [
+            {
+              _key: "test-answer-block-2",
+              _type: "block" as const,
+              style: "normal" as const,
+              children: [
+                {
+                  _key: "test-answer-span-2",
+                  _type: "span" as const,
+                  text: "回答2",
+                },
+              ],
+            },
+          ],
         },
       ],
       variant: "bordered",
@@ -380,13 +453,39 @@ describe("featuresConfigSchema", () => {
               text: "Wi-Fi完備",
             },
           ],
-          description: "高速Wi-Fi利用可能",
+          description: [
+            {
+              _key: "test-features-block-1",
+              _type: "block" as const,
+              style: "normal" as const,
+              children: [
+                {
+                  _key: "test-features-span-1",
+                  _type: "span" as const,
+                  text: "高速Wi-Fi利用可能",
+                },
+              ],
+            },
+          ],
         },
         {
           title: [
             { _key: "test-title-71", _type: "span" as const, text: "駐車場" },
           ],
-          description: "無料駐車場完備",
+          description: [
+            {
+              _key: "test-features-block-2",
+              _type: "block" as const,
+              style: "normal" as const,
+              children: [
+                {
+                  _key: "test-features-span-2",
+                  _type: "span" as const,
+                  text: "無料駐車場完備",
+                },
+              ],
+            },
+          ],
         },
       ],
       columns: 3,
@@ -411,7 +510,20 @@ describe("testimonialConfigSchema", () => {
       ],
       items: [
         {
-          content: "素晴らしい空間でした",
+          content: [
+            {
+              _key: "test-testimonial-block",
+              _type: "block" as const,
+              style: "normal" as const,
+              children: [
+                {
+                  _key: "test-testimonial-span",
+                  _type: "span" as const,
+                  text: "素晴らしい空間でした",
+                },
+              ],
+            },
+          ],
           authorName: [
             {
               _key: "test-authorName-60",
@@ -443,7 +555,20 @@ describe("testimonialConfigSchema", () => {
     const data = {
       items: [
         {
-          content: "内容",
+          content: [
+            {
+              _key: "test-testimonial-block-rate",
+              _type: "block" as const,
+              style: "normal" as const,
+              children: [
+                {
+                  _key: "test-testimonial-span-rate",
+                  _type: "span" as const,
+                  text: "内容",
+                },
+              ],
+            },
+          ],
           authorName: [
             {
               _key: "test-authorName-44",
@@ -508,7 +633,20 @@ describe("ctaConfigSchema", () => {
           text: "ご予約はこちら",
         },
       ],
-      description: "今すぐ予約して特別な体験を",
+      description: [
+        {
+          _key: "test-cta-desc-block",
+          _type: "block" as const,
+          style: "normal" as const,
+          children: [
+            {
+              _key: "test-cta-desc-span",
+              _type: "span" as const,
+              text: "今すぐ予約して特別な体験を",
+            },
+          ],
+        },
+      ],
       buttons: [
         {
           text: "予約する",
@@ -560,10 +698,29 @@ describe("contactFormConfigSchema", () => {
           text: "お問い合わせ",
         },
       ],
-      description: "お気軽にお問い合わせください",
+      description: [
+        {
+          _key: "test-contact-desc-block",
+          _type: "block" as const,
+          style: "normal" as const,
+          children: [
+            {
+              _key: "test-contact-desc-span",
+              _type: "span" as const,
+              text: "お気軽にお問い合わせください",
+            },
+          ],
+        },
+      ],
       showNameField: true,
       showPhoneField: false,
-      submitButtonText: "送信",
+      submitButtonText: [
+        {
+          _key: "test-submit-span",
+          _type: "span" as const,
+          text: "送信",
+        },
+      ],
       variant: "minimal",
     };
     const result = contactFormConfigSchema.safeParse(data);
@@ -591,7 +748,20 @@ describe("mapConfigSchema", () => {
       title: [
         { _key: "test-title-key", _type: "span" as const, text: "アクセス" },
       ],
-      address: "東京都渋谷区...",
+      address: [
+        {
+          _key: "test-map-address-block",
+          _type: "block" as const,
+          style: "normal" as const,
+          children: [
+            {
+              _key: "test-map-address-span",
+              _type: "span" as const,
+              text: "東京都渋谷区...",
+            },
+          ],
+        },
+      ],
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 15,

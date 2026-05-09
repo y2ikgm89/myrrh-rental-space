@@ -1636,4 +1636,80 @@ describe("architecture boundaries", () => {
       expect(stringInput.success).toBe(false);
     }
   });
+
+  test("Phase 4 で PortableTextBlock[] 化済の long-form フィールドは schema で string を受け付けない", async () => {
+    const { validateSectionConfig } =
+      await import("@/shared/lib/validations/section");
+    // root-level fields (空 config で default 適用が成立する section types)
+    const rootTargets: { type: string; field: string }[] = [
+      { type: "concept", field: "body" },
+      { type: "contact-form", field: "description" },
+      { type: "cta", field: "description" },
+      { type: "event-calendar", field: "description" },
+      { type: "hero", field: "subtitle" },
+      { type: "hero-parallax", field: "subtitle" },
+      { type: "map", field: "address" },
+      { type: "reservation-form", field: "description" },
+    ];
+    for (const { type, field } of rootTargets) {
+      const empty = validateSectionConfig(type, {});
+      expect(empty.success).toBe(true);
+      if (empty.success) {
+        const value = (empty.data as Record<string, unknown>)[field];
+        expect(Array.isArray(value)).toBe(true);
+      }
+      const stringInput = validateSectionConfig(type, {
+        [field]: "string-not-array",
+      });
+      expect(stringInput.success).toBe(false);
+    }
+
+    // page-hero は discriminated union のため variant 指定で 3 variants を個別検証
+    for (const variant of ["editorial-split", "compact", "minimal"] as const) {
+      const valid = validateSectionConfig("page-hero", { variant });
+      expect(valid.success).toBe(true);
+      if (valid.success) {
+        const value = (valid.data as Record<string, unknown>)["description"];
+        expect(Array.isArray(value)).toBe(true);
+      }
+      const stringInput = validateSectionConfig("page-hero", {
+        variant,
+        description: "string-not-array",
+      });
+      expect(stringInput.success).toBe(false);
+    }
+
+    // items[] inner fields (faq-list / features / testimonial)
+    const itemTargets: {
+      type: string;
+      field: string;
+      itemTemplate?: Record<string, unknown>;
+    }[] = [
+      {
+        type: "faq-list",
+        field: "answer",
+        itemTemplate: { question: [] },
+      },
+      {
+        type: "features",
+        field: "description",
+        itemTemplate: { title: [] },
+      },
+      {
+        type: "testimonial",
+        field: "content",
+        itemTemplate: {
+          authorName: [],
+          authorTitle: [],
+          authorImage: { url: "", alt: "" },
+        },
+      },
+    ];
+    for (const { type, field, itemTemplate } of itemTargets) {
+      const stringInItem = validateSectionConfig(type, {
+        items: [{ ...(itemTemplate ?? {}), [field]: "string-not-array" }],
+      });
+      expect(stringInItem.success).toBe(false);
+    }
+  });
 });
