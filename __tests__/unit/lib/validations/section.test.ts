@@ -575,7 +575,8 @@ describe("contactFormConfigSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.showNameField).toBe(true);
-      expect(result.data.submitButtonText).toBe("送信する");
+      // Phase 3: submitButtonText は PortableTextSpan[] になり default は空配列
+      expect(result.data.submitButtonText).toEqual([]);
     }
   });
 });

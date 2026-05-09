@@ -329,7 +329,7 @@ export function FaqListSection({
                   href={toAppRoute(config.viewAllUrl)}
                   className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {config.viewAllText} &rarr;
+                  <PortableTextSpans spans={config.viewAllText} /> &rarr;
                   <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
                 </Link>
               </div>

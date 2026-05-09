@@ -27,6 +27,7 @@ import { BusinessInfo } from "../contact/_components/business-info";
 import type { ContactFormConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig;
@@ -42,7 +43,7 @@ export function ContactFormSection({
   requiredTerms,
 }: ContactFormSectionProps): ReactElement {
   const variant = config.variant;
-  const submitLabel = config.submitButtonText;
+  const submitLabel = spansToPlainText(config.submitButtonText);
 
   const formCard = (
     <ScrollReveal delay={variant === "split" ? 0.3 : 0.2}>
