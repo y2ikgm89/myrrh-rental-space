@@ -89,3 +89,76 @@ export default async function Page({ searchParams }: Props) {
 **参照実装**: `/admin/*/[id]/edit/page.tsx` 全体、`reservation/page.tsx`（`key={initialSpaceId ?? ""}`）、`terms/new/page.tsx`（`key={typeParam}`）、Lexical `InspectorSidebar.tsx`（wrapper div の `key={selectedNode.nodeKey}`）
 
 **同一ルート内 Client Component の node 切替にも応用**: Lexical Inspector パネルのように「同じ型の別インスタンス」を切り替える場合、wrapper 要素に `key={instanceId}` を付けて配下をまとめて remount する（個別パネルに key を付けるより保守しやすい）。
+
+---
+
+## 親の safeParse(field.value) と子の identity-based useEffect は非互換
+
+`useController` ベースの親が毎レンダリングで `safeParse(field.value).data` を子の prop として渡すパターンは、子の `useRef === value` identity 比較を破壊する。
+
+```tsx
+// 親（auto-section-form.tsx パターン）
+const { field } = useController({ control, name });
+const parsed = createSpanArraySchema().safeParse(field.value);
+const value = parsed.success ? parsed.data : []; // 毎レンダリング新参照
+
+return <PortableTextInlineEditor value={value} onChange={field.onChange} />;
+```
+
+```tsx
+// 子（旧実装、典型的アンチパターン）
+const lastValueRef = useRef(value);
+useEffect(() => {
+  if (lastValueRef.current === value) return; // 常に false
+  applyDom(root, value); // 毎入力実行
+  lastValueRef.current = value;
+}, [value]);
+```
+
+`safeParse().data` は Zod が parse 成功時に新しいオブジェクトを返すため、参照が常に変化する。子の identity 比較は false → `applyDom` 毎入力実行 → contenteditable では `innerHTML` 全置換 → cursor リセット → 各 keystroke が「先頭挿入」扱いされて typed text が**完全逆順**（"hello" → "olleh"）になる silent bug。
+
+### 修正パターン: 子側で deep-equal 比較
+
+```tsx
+function spansEqualIgnoringKey(
+  a: PortableTextSpan[],
+  b: PortableTextSpan[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ai = a[i],
+      bi = b[i];
+    if (!ai || !bi || ai._type !== bi._type) return false;
+    if (ai._type === "span" && bi._type === "span" && ai.text !== bi.text)
+      return false;
+    if (
+      ai._type === "iconInline" &&
+      bi._type === "iconInline" &&
+      ai.name !== bi.name
+    )
+      return false;
+  }
+  return true;
+}
+
+useEffect(() => {
+  const root = editorRef.current;
+  if (!root) return;
+  const currentDom = serializeNodes(root); // DOM の現在状態を読む
+  if (spansEqualIgnoringKey(currentDom, value)) return; // semantic 一致なら skip
+  applyDom(root, value);
+}, [value]);
+```
+
+`_key` を無視する理由: `serializeNodes` は新規テキストノードに対し毎回新しい `_key` を生成するため、内部編集後の DOM と value（onChange で送り出した値）の semantic 比較には key 無視必須。
+
+### 判定基準
+
+子コンポーネントが contenteditable / DOM 直接操作系（spans 配列、blocks 配列、tree 構造等）を扱う場合は **deep-equal 必須**。プリミティブや RHF `register` ベースの input/textarea は React の controlled input が cursor を保つため不要。
+
+### 参照実装
+
+- `PortableTextInlineEditor.spansEqualIgnoringKey`（`@/admin/components/portable-text/inline-editor`）
+- `PortableTextBlockEditor.blocksEqualIgnoringKey`（`@/admin/components/portable-text/block-editor`）
+
+歴史: 2026-05-10 セッション commit `abee2423` で修正（Phase 0 Portable Text 導入時から潜在の silent bug）。
