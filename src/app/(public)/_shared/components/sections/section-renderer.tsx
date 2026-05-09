@@ -106,6 +106,7 @@ import type { SpaceListData } from "../../../_components/SpaceListSection";
 import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
 import type { FaqData } from "../../../_components/FaqListSection";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 /** /posts archive variant のページあたり件数（旧 page.tsx の `POSTS_PER_PAGE`） */
 const POSTS_ARCHIVE_PER_PAGE = 12;
@@ -394,9 +395,13 @@ export async function SectionRenderer({
       const hasInlineItems = inlineItems != null && inlineItems.length > 0;
 
       if (hasInlineItems) {
+        // FaqData.question は string 契約（DB 由来 FaqItem.question と統一）。
+        // Section.config.items[].question は PortableTextSpan[] 化したが、
+        // FaqListSection 描画は plain text 前提のため境界で派生する
+        // （inline 項目の iconInline 描画は将来 FaqData 型拡張で対応）。
         const items: FaqData[] = inlineItems.map((item, index) => ({
           id: `inline-${index}`,
-          question: item.question,
+          question: spansToPlainText(item.question),
           answer: item.answer,
         }));
         return (

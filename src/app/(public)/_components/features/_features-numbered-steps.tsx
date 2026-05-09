@@ -15,6 +15,7 @@ import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface Props {
   readonly config: FeaturesConfig;
@@ -47,7 +48,7 @@ export function FeaturesNumberedSteps({
 
       <ScrollRevealGroup className="grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 md:gap-12">
         {config.items.map((step, i) => (
-          <div key={step.title} className="text-center">
+          <div key={spansToPlainText(step.title)} className="text-center">
             {step.icon ? (
               <div className="mb-5 flex justify-center">
                 <DynamicTablerIcon
@@ -66,7 +67,7 @@ export function FeaturesNumberedSteps({
               {String(i + 1).padStart(2, "0")}
             </span>
             <h3 className="font-heading text-xl font-light tracking-[0.01em]">
-              {step.title}
+              <PortableTextSpans spans={step.title} />
             </h3>
             {step.description ? (
               <p className="mt-3 text-sm leading-[1.8] text-muted-foreground">

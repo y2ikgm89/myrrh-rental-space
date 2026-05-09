@@ -26,6 +26,7 @@ import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface Props {
   readonly config: FeaturesConfig;
@@ -93,7 +94,7 @@ export function FeaturesNumberedEditorial({
       <div ref={gridRef}>
         {items.map((feature, index) => (
           <div
-            key={feature.title}
+            key={spansToPlainText(feature.title)}
             data-feature=""
             className="grid grid-cols-1 gap-4 border-t border-border py-10 md:grid-cols-[6rem_1fr] md:gap-12 md:py-14"
           >
@@ -105,7 +106,7 @@ export function FeaturesNumberedEditorial({
             </span>
             <div className="max-w-xl">
               <h3 className="font-heading text-xl font-light tracking-tight md:text-2xl">
-                {feature.title}
+                <PortableTextSpans spans={feature.title} />
               </h3>
               {feature.description ? (
                 <p

@@ -17,6 +17,7 @@ import { cn } from "@/shared/lib/cn";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface Props {
   readonly config: FeaturesConfig;
@@ -53,7 +54,10 @@ export function FeaturesGrid({ config, style }: Props): ReactElement | null {
           stagger={0.08}
         >
           {config.items.map((item) => (
-            <article key={item.title} className="flex flex-col gap-4">
+            <article
+              key={spansToPlainText(item.title)}
+              className="flex flex-col gap-4"
+            >
               {item.icon ? (
                 <DynamicTablerIcon
                   iconName={item.icon}
@@ -64,7 +68,7 @@ export function FeaturesGrid({ config, style }: Props): ReactElement | null {
                 />
               ) : null}
               <h3 className="font-heading text-xl font-light tracking-tight">
-                {item.title}
+                <PortableTextSpans spans={item.title} />
               </h3>
               {item.description ? (
                 <p

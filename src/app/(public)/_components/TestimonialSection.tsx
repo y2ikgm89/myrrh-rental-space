@@ -27,6 +27,7 @@ import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 interface TestimonialSectionProps {
   readonly config: TestimonialConfig;
@@ -226,17 +227,22 @@ export function TestimonialSection({
                   {item.authorImage.url && (
                     <Image
                       src={item.authorImage.url}
-                      alt={item.authorImage.alt || item.authorName}
+                      alt={
+                        item.authorImage.alt ||
+                        spansToPlainText(item.authorName)
+                      }
                       width={48}
                       height={48}
                       className="h-12 w-12 rounded-full object-cover"
                     />
                   )}
                   <div>
-                    <p className="text-sm font-medium">{item.authorName}</p>
-                    {item.authorTitle && (
+                    <p className="text-sm font-medium">
+                      <PortableTextSpans spans={item.authorName} />
+                    </p>
+                    {item.authorTitle.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {item.authorTitle}
+                        <PortableTextSpans spans={item.authorTitle} />
                       </p>
                     )}
                   </div>

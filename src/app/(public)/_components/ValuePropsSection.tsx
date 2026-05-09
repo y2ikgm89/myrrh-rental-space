@@ -27,6 +27,8 @@ import { createElement, type ReactElement } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { cn } from "@/shared/lib/cn";
 import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 import type {
   LayoutAnimate,
   LayoutContainerWidth,
@@ -105,7 +107,7 @@ export function ValuePropsSection({
 
         return (
           <div
-            key={`${item.eyebrow}-${item.title}`}
+            key={`${item.eyebrow}-${spansToPlainText(item.title)}`}
             className="flex flex-col items-center gap-4 px-6 py-8 text-center md:px-8 md:py-10"
           >
             {iconElement}
@@ -115,9 +117,9 @@ export function ValuePropsSection({
                   {item.eyebrow}
                 </span>
               ) : null}
-              {item.title ? (
+              {item.title.length > 0 ? (
                 <span className="text-sm tracking-[0.02em] text-foreground">
-                  {item.title}
+                  <PortableTextSpans spans={item.title} />
                 </span>
               ) : null}
             </div>
