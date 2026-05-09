@@ -3,24 +3,22 @@
 /**
  * PortableTextInlineEditor — PortableTextSpan[] ベースの inline ラベルエディタ
  *
- * 業界 reference: Sanity Portable Text 公式の Span data model + JVM Rich Text Icons の
- * ツールバーピッカー UX。
+ * 業界 reference: Sanity Portable Text 公式の Span data model + Notion / Slack の
+ * slash command pattern。
  *
  * 機能:
  * - contenteditable に span（テキスト）+ iconInline chip を inline 配置
- * - ツールバー「アイコン挿入」ボタン → IconPickerDialog → カーソル位置に iconInline span 挿入
+ * - `/icon` と入力すると IconPickerDialog が開く（slash command）
+ * - 選択するとカーソル位置に iconInline span を挿入し、`/icon` テキストを置換
  * - icon chip クリックで削除（差し替えは削除→再挿入）
  * - input イベントで serialize → onChange(spans)
  *
  * a11y:
  * - role="textbox" + aria-multiline="false" + aria-label
  * - icon chip は role="img" + aria-label
- * - ツールバーボタン min-h-11 min-w-11 (WCAG 2.5.5 Enhanced)
  */
 
 import { useEffect, useRef, useState } from "react";
-import { IconPlus } from "@tabler/icons-react";
-import { Button } from "@/admin/components/ui";
 import { IconPickerDialog } from "@/admin/components/icon-picker/IconPickerDialog";
 import {
   ICON_CHIP_CLASS_NAME,
@@ -34,6 +32,35 @@ import {
   createInlineIcon,
   type PortableTextSpan,
 } from "@/shared/lib/portable-text";
+import {
+  detectSlashIconTrigger,
+  replaceTriggerWithElement,
+  type SlashTrigger,
+} from "../slash-trigger";
+
+/**
+ * `_key` を無視して semantic に等価か判定する。
+ * serializeNodes は新規テキストノードに対し毎回新しい `_key` を生成するため、
+ * 内部編集後の DOM と value（onChange で送り出した値）の比較には key 無視必須。
+ */
+function spansEqualIgnoringKey(
+  a: PortableTextSpan[],
+  b: PortableTextSpan[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ai = a[i];
+    const bi = b[i];
+    if (!ai || !bi) return false;
+    if (ai._type !== bi._type) return false;
+    if (ai._type === "span") {
+      if (bi._type !== "span" || ai.text !== bi.text) return false;
+    } else {
+      if (bi._type !== "iconInline" || ai.name !== bi.name) return false;
+    }
+  }
+  return true;
+}
 
 interface PortableTextInlineEditorProps {
   readonly value: PortableTextSpan[];
@@ -54,35 +81,46 @@ export function PortableTextInlineEditor({
 }: PortableTextInlineEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
-  const lastValueRef = useRef<PortableTextSpan[]>(value);
+  const triggerRef = useRef<SlashTrigger | null>(null);
 
   // value prop → DOM 同期（外部更新時のみ。内部編集は serialize 経由で onChange）
+  //
+  // 親（auto-section-form 等）が毎レンダリングで Zod safeParse を経由して
+  // 新しい配列参照を返すため、reference equality チェック（旧実装）では
+  // 常に false になり applySpans が毎回実行されてカーソルがリセットされる。
+  // 代わりに DOM の現在状態と value を semantic 比較し、一致なら skip する。
   useEffect(() => {
     const root = editorRef.current;
     if (!root) return;
-    if (lastValueRef.current === value) return;
+    const currentDom = serializeNodes(root);
+    if (spansEqualIgnoringKey(currentDom, value)) return;
     applySpans(root, value, document);
-    lastValueRef.current = value;
   }, [value]);
+
+  const serializeAndEmit = () => {
+    const root = editorRef.current;
+    if (!root) return;
+    const spans = serializeNodes(root);
+    onChange(spans);
+  };
 
   const handleInput = () => {
     const root = editorRef.current;
     if (!root) return;
-    const spans = serializeNodes(root);
-    lastValueRef.current = spans;
-    onChange(spans);
+
+    // `/icon` slash command 検出（dialog がまだ開いていない場合のみ）
+    if (!iconDialogOpen) {
+      const trigger = detectSlashIconTrigger(root);
+      if (trigger) {
+        triggerRef.current = trigger;
+        setIconDialogOpen(true);
+      }
+    }
+
+    serializeAndEmit();
   };
 
-  const insertIconAtCaret = (iconName: string) => {
-    const root = editorRef.current;
-    if (!root) return;
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || !root.contains(sel.anchorNode)) {
-      const next: PortableTextSpan[] = [...value, createInlineIcon(iconName)];
-      onChange(next);
-      return;
-    }
-    const range = sel.getRangeAt(0);
+  const buildIconChip = (iconName: string): HTMLElement => {
     const newSpan = createInlineIcon(iconName);
     const el = document.createElement("span");
     el.setAttribute(ICON_NAME_ATTR, newSpan.name);
@@ -93,13 +131,39 @@ export function PortableTextInlineEditor({
     el.setAttribute("aria-label", newSpan.name);
     el.className = ICON_CHIP_CLASS_NAME;
     el.textContent = newSpan.name;
-    range.deleteContents();
-    range.insertNode(el);
-    range.setStartAfter(el);
-    range.setEndAfter(el);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    handleInput();
+    return el;
+  };
+
+  const handleIconConfirm = (iconName: string) => {
+    if (!iconName) return;
+    const root = editorRef.current;
+    if (!root) return;
+
+    const trigger = triggerRef.current;
+    triggerRef.current = null;
+    const el = buildIconChip(iconName);
+
+    if (trigger && root.contains(trigger.node)) {
+      // `/icon` テキストを chip で置換
+      replaceTriggerWithElement(trigger, el);
+    } else {
+      // Fallback: 現在の cursor 位置 or 末尾に追加
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && root.contains(sel.anchorNode)) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(el);
+        range.setStartAfter(el);
+        range.setEndAfter(el);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        const next: PortableTextSpan[] = [...value, createInlineIcon(iconName)];
+        onChange(next);
+        return;
+      }
+    }
+    serializeAndEmit();
   };
 
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -107,11 +171,11 @@ export function PortableTextInlineEditor({
     const iconSpan = target.closest(`[${ICON_NAME_ATTR}]`);
     if (!iconSpan || !editorRef.current?.contains(iconSpan)) return;
     iconSpan.parentNode?.removeChild(iconSpan);
-    handleInput();
+    serializeAndEmit();
   };
 
   return (
-    <div className="space-y-2">
+    <>
       <div
         ref={editorRef}
         id={id}
@@ -126,30 +190,15 @@ export function PortableTextInlineEditor({
         onClick={handleEditorClick}
         className="min-h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:border-primary"
       />
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIconDialogOpen(true)}
-          disabled={disabled}
-          aria-label="アイコンを挿入"
-        >
-          <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
-          アイコン挿入
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          カーソル位置にアイコンを挿入できます
-        </span>
-      </div>
       <IconPickerDialog
         open={iconDialogOpen}
-        onOpenChange={setIconDialogOpen}
-        value=""
-        onConfirm={(name) => {
-          if (name) insertIconAtCaret(name);
+        onOpenChange={(open) => {
+          setIconDialogOpen(open);
+          if (!open) triggerRef.current = null;
         }}
+        value=""
+        onConfirm={handleIconConfirm}
       />
-    </div>
+    </>
   );
 }

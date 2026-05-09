@@ -3,26 +3,23 @@
 /**
  * PortableTextBlockEditor — PortableTextBlock[] ベースの長文ラベルエディタ
  *
- * 業界 reference: Sanity Portable Text 公式の Block data model + 既存
- * `PortableTextInlineEditor` と同じ contenteditable + DOM walker パターン。
- * Lexical は使わない（spans editor と同じく軽量実装で SSR safe + dynamic import 不要）。
+ * 業界 reference: Sanity Portable Text 公式の Block data model + Notion / Slack の
+ * slash command pattern。Lexical は使わない（spans editor と同じく軽量実装で SSR safe）。
  *
  * 機能:
  * - contenteditable に各 block を `<p>` として配置
  * - Enter キーで block split（新しい `<p>` 作成）
- * - ツールバー「アイコン挿入」ボタン → IconPickerDialog → カーソル位置に iconInline span 挿入
+ * - `/icon` と入力すると IconPickerDialog が開く（slash command）
+ * - 選択するとカーソル位置に iconInline span を挿入し、`/icon` テキストを置換
  * - icon chip クリックで削除（差し替えは削除→再挿入）
  * - input イベントで serialize → onChange(blocks)
  *
  * a11y:
  * - role="textbox" + aria-multiline="true" + aria-label
  * - icon chip は role="img" + aria-label
- * - ツールバーボタン min-h-11 min-w-11 (WCAG 2.5.5 Enhanced)
  */
 
 import { useEffect, useRef, useState } from "react";
-import { IconPlus } from "@tabler/icons-react";
-import { Button } from "@/admin/components/ui";
 import { IconPickerDialog } from "@/admin/components/icon-picker/IconPickerDialog";
 import {
   applyBlocks,
@@ -36,6 +33,42 @@ import {
   createInlineIcon,
   type PortableTextBlock,
 } from "@/shared/lib/portable-text";
+import {
+  detectSlashIconTrigger,
+  replaceTriggerWithElement,
+  type SlashTrigger,
+} from "../slash-trigger";
+
+/**
+ * `_key` を無視して semantic に等価か判定する。
+ * serializeBlocks は新規テキストノードに対し毎回新しい `_key` を生成するため、
+ * 内部編集後の DOM と value（onChange で送り出した値）の比較には key 無視必須。
+ */
+function blocksEqualIgnoringKey(
+  a: PortableTextBlock[],
+  b: PortableTextBlock[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ai = a[i];
+    const bi = b[i];
+    if (!ai || !bi) return false;
+    if (ai.style !== bi.style) return false;
+    if (ai.children.length !== bi.children.length) return false;
+    for (let j = 0; j < ai.children.length; j++) {
+      const aj = ai.children[j];
+      const bj = bi.children[j];
+      if (!aj || !bj) return false;
+      if (aj._type !== bj._type) return false;
+      if (aj._type === "span") {
+        if (bj._type !== "span" || aj.text !== bj.text) return false;
+      } else {
+        if (bj._type !== "iconInline" || aj.name !== bj.name) return false;
+      }
+    }
+  }
+  return true;
+}
 
 interface PortableTextBlockEditorProps {
   readonly value: PortableTextBlock[];
@@ -56,53 +89,46 @@ export function PortableTextBlockEditor({
 }: PortableTextBlockEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
-  const lastValueRef = useRef<PortableTextBlock[]>(value);
+  const triggerRef = useRef<SlashTrigger | null>(null);
 
   // value prop → DOM 同期（外部更新時のみ。内部編集は serialize 経由で onChange）
+  //
+  // 親（auto-section-form 等）が毎レンダリングで Zod safeParse を経由して
+  // 新しい配列参照を返すため、reference equality チェック（旧実装）では
+  // 常に false になり applyBlocks が毎回実行されてカーソルがリセットされる。
+  // 代わりに DOM の現在状態と value を semantic 比較し、一致なら skip する。
   useEffect(() => {
     const root = editorRef.current;
     if (!root) return;
-    if (lastValueRef.current === value) return;
+    const currentDom = serializeBlocks(root);
+    if (blocksEqualIgnoringKey(currentDom, value)) return;
     applyBlocks(root, value, document);
-    lastValueRef.current = value;
   }, [value]);
+
+  const serializeAndEmit = () => {
+    const root = editorRef.current;
+    if (!root) return;
+    const blocks = serializeBlocks(root);
+    onChange(blocks);
+  };
 
   const handleInput = () => {
     const root = editorRef.current;
     if (!root) return;
-    const blocks = serializeBlocks(root);
-    lastValueRef.current = blocks;
-    onChange(blocks);
+
+    // `/icon` slash command 検出（dialog がまだ開いていない場合のみ）
+    if (!iconDialogOpen) {
+      const trigger = detectSlashIconTrigger(root);
+      if (trigger) {
+        triggerRef.current = trigger;
+        setIconDialogOpen(true);
+      }
+    }
+
+    serializeAndEmit();
   };
 
-  const insertIconAtCaret = (iconName: string) => {
-    const root = editorRef.current;
-    if (!root) return;
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || !root.contains(sel.anchorNode)) {
-      // Fallback: append icon to last block (or create new block)
-      const lastBlock = value[value.length - 1];
-      const newBlocks: PortableTextBlock[] =
-        lastBlock !== undefined
-          ? [
-              ...value.slice(0, -1),
-              {
-                ...lastBlock,
-                children: [...lastBlock.children, createInlineIcon(iconName)],
-              },
-            ]
-          : [
-              {
-                _key: crypto.randomUUID(),
-                _type: "block",
-                style: "normal",
-                children: [createInlineIcon(iconName)],
-              },
-            ];
-      onChange(newBlocks);
-      return;
-    }
-    const range = sel.getRangeAt(0);
+  const buildIconChip = (iconName: string): HTMLElement => {
     const newSpan = createInlineIcon(iconName);
     const el = document.createElement("span");
     el.setAttribute(ICON_NAME_ATTR, newSpan.name);
@@ -113,13 +139,56 @@ export function PortableTextBlockEditor({
     el.setAttribute("aria-label", newSpan.name);
     el.className = ICON_CHIP_CLASS_NAME;
     el.textContent = newSpan.name;
-    range.deleteContents();
-    range.insertNode(el);
-    range.setStartAfter(el);
-    range.setEndAfter(el);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    handleInput();
+    return el;
+  };
+
+  const handleIconConfirm = (iconName: string) => {
+    if (!iconName) return;
+    const root = editorRef.current;
+    if (!root) return;
+
+    const trigger = triggerRef.current;
+    triggerRef.current = null;
+    const el = buildIconChip(iconName);
+
+    if (trigger && root.contains(trigger.node)) {
+      // `/icon` テキストを chip で置換
+      replaceTriggerWithElement(trigger, el);
+    } else {
+      // Fallback: 現在の cursor 位置 or 末尾の block に追加
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && root.contains(sel.anchorNode)) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(el);
+        range.setStartAfter(el);
+        range.setEndAfter(el);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        const lastBlock = value[value.length - 1];
+        const newBlocks: PortableTextBlock[] =
+          lastBlock !== undefined
+            ? [
+                ...value.slice(0, -1),
+                {
+                  ...lastBlock,
+                  children: [...lastBlock.children, createInlineIcon(iconName)],
+                },
+              ]
+            : [
+                {
+                  _key: crypto.randomUUID(),
+                  _type: "block",
+                  style: "normal",
+                  children: [createInlineIcon(iconName)],
+                },
+              ];
+        onChange(newBlocks);
+        return;
+      }
+    }
+    serializeAndEmit();
   };
 
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -127,11 +196,11 @@ export function PortableTextBlockEditor({
     const iconSpan = target.closest(`[${ICON_NAME_ATTR}]`);
     if (!iconSpan || !editorRef.current?.contains(iconSpan)) return;
     iconSpan.parentNode?.removeChild(iconSpan);
-    handleInput();
+    serializeAndEmit();
   };
 
   return (
-    <div className="space-y-2">
+    <>
       <div
         ref={editorRef}
         id={id}
@@ -146,30 +215,15 @@ export function PortableTextBlockEditor({
         onClick={handleEditorClick}
         className="min-h-[6rem] w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:border-primary [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
       />
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIconDialogOpen(true)}
-          disabled={disabled}
-          aria-label="アイコンを挿入"
-        >
-          <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
-          アイコン挿入
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          Enter で改段落、カーソル位置にアイコンを挿入できます
-        </span>
-      </div>
       <IconPickerDialog
         open={iconDialogOpen}
-        onOpenChange={setIconDialogOpen}
-        value=""
-        onConfirm={(name) => {
-          if (name) insertIconAtCaret(name);
+        onOpenChange={(open) => {
+          setIconDialogOpen(open);
+          if (!open) triggerRef.current = null;
         }}
+        value=""
+        onConfirm={handleIconConfirm}
       />
-    </div>
+    </>
   );
 }
