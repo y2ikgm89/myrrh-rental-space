@@ -6,6 +6,15 @@
  */
 
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
+import { createBlock, createSpan } from "@/shared/lib/portable-text";
+
+/**
+ * Phase 4: textarea -> block 移行 helper
+ * 単一行テキストを PortableTextBlock 配列にラップして defaults に流す。
+ */
+function block(text: string) {
+  return [createBlock([createSpan(text)])];
+}
 
 export type DefaultSectionDef = {
   type: string;
@@ -58,7 +67,7 @@ export function createDefaultCustomPageSections(
             text: "ご予約・お問い合わせ",
           },
         ],
-        description: "空き状況の確認やご相談はこちらから承ります。",
+        description: block("空き状況の確認やご相談はこちらから承ります。"),
         ctaPrimary: { text: "予約する", url: "/reservation" },
         ctaSecondary: { text: "お問い合わせ", url: "/contact" },
       },
@@ -99,7 +108,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "スペースを選ぶ",
               },
             ],
-            description: "用途や人数に合った空間を見つける",
+            description: block("用途や人数に合った空間を見つける"),
           },
           {
             icon: "IconCalendarEvent",
@@ -110,7 +119,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "日時を決める",
               },
             ],
-            description: "カレンダーから空き状況を確認",
+            description: block("カレンダーから空き状況を確認"),
           },
           {
             icon: "IconCircleCheck",
@@ -121,7 +130,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "オンラインで予約",
               },
             ],
-            description: "最短1分で予約完了",
+            description: block("最短1分で予約完了"),
           },
         ],
         layout: {
@@ -245,8 +254,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "自然光設計",
               },
             ],
-            description:
+            description: block(
               "全室に大きな窓を配置。時間帯で変化する光が、空間に深みを与えます。",
+            ),
           },
           {
             title: [
@@ -256,8 +266,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "遮音性能",
               },
             ],
-            description:
+            description: block(
               "プロフェッショナル水準の遮音設計。外部の喧騒を遮断し、深い集中を可能にします。",
+            ),
           },
           {
             title: [
@@ -267,8 +278,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "即日予約",
               },
             ],
-            description:
+            description: block(
               "オンラインで空き状況確認から決済まで完結。当日予約にも対応しています。",
+            ),
           },
           {
             title: [
@@ -278,8 +290,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
                 text: "柔軟なレイアウト",
               },
             ],
-            description:
+            description: block(
               "可動式の家具と設備で、会議・撮影・イベントなど用途に合わせた配置変更が可能です。",
+            ),
           },
         ],
         layout: {
@@ -304,8 +317,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             text: "あなたに最適な空間を",
           },
         ],
-        description:
+        description: block(
           "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
+        ),
         buttons: [
           {
             text: "スペースを見る",
@@ -333,8 +347,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "About" },
         ],
-        subtitle:
+        subtitle: block(
           "ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース。",
+        ),
         variant: "minimal",
       },
       content: null,
@@ -361,8 +376,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             text: "お問い合わせ",
           },
         ],
-        description:
+        description: block(
           "ご質問やご相談がございましたら、お気軽にお問い合わせください。",
+        ),
         ctaPrimary: { text: "お問い合わせ", url: "/contact" },
         ctaSecondary: { text: "スペースを見る", url: "/spaces" },
       },
@@ -380,7 +396,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "FAQ" },
         ],
-        subtitle: "ご不明点がございましたら、まずはこちらをご確認ください。",
+        subtitle: block(
+          "ご不明点がございましたら、まずはこちらをご確認ください。",
+        ),
         variant: "minimal",
       },
       content: null,
@@ -409,7 +427,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             text: "お探しの答えが見つかりませんか？",
           },
         ],
-        description: "ご不明点がございましたら、お気軽にお問い合わせください。",
+        description: block(
+          "ご不明点がございましたら、お気軽にお問い合わせください。",
+        ),
         ctaPrimary: { text: "お問い合わせ", url: "/contact" },
       },
       content: null,
@@ -430,8 +450,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             text: "Contact",
           },
         ],
-        subtitle:
+        subtitle: block(
           "ご質問やご要望がございましたら、お気軽にお問い合わせください。",
+        ),
         variant: "minimal",
       },
       content: null,
@@ -462,7 +483,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "Access" },
         ],
-        subtitle: "最寄り駅・駐車場・営業時間をご案内します。",
+        subtitle: block("最寄り駅・駐車場・営業時間をご案内します。"),
         variant: "minimal",
       },
       content: null,
@@ -530,7 +551,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "News" },
         ],
-        subtitle: "お知らせ・最新情報をお届けします。",
+        subtitle: block("お知らせ・最新情報をお届けします。"),
         variant: "minimal",
       },
       content: null,
@@ -562,7 +583,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "Blog" },
         ],
-        subtitle: "最新のお知らせやお役立ち情報をお届けします。",
+        subtitle: block("最新のお知らせやお役立ち情報をお届けします。"),
         variant: "minimal",
       },
       content: null,
@@ -598,8 +619,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             text: "Reserve",
           },
         ],
-        subtitle:
+        subtitle: block(
           "3ステップで簡単予約。お好みのスペースと日時をお選びください。",
+        ),
         variant: "minimal",
       },
       content: null,
@@ -629,7 +651,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "Events" },
         ],
-        subtitle: "開催予定のイベント・ワークショップ情報",
+        subtitle: block("開催予定のイベント・ワークショップ情報"),
         variant: "minimal",
       },
       content: null,
@@ -654,7 +676,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "Spaces" },
         ],
-        subtitle: "ご利用可能なレンタルスペースをお探しください。",
+        subtitle: block("ご利用可能なレンタルスペースをお探しください。"),
         variant: "minimal",
       },
       content: null,

@@ -4,15 +4,20 @@
  * seed.ts / migration の COALESCE / 未設定時のフォールバック値として使用。
  */
 
-import { createSpan } from "@/shared/lib/portable-text";
+import { createBlock, createSpan } from "@/shared/lib/portable-text";
 import type { PageHeroConfig } from "./schema";
 
 export const DEFAULT_PAGE_HERO: PageHeroConfig = {
   variant: "editorial-split",
   label: [createSpan("Volume One — Spring 2026")],
   title: [createSpan("Where silence works.")],
-  description:
-    "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
+  description: [
+    createBlock([
+      createSpan(
+        "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
+      ),
+    ]),
+  ],
   images: [
     {
       url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
