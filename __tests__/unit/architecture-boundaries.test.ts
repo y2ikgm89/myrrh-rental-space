@@ -1610,4 +1610,30 @@ describe("architecture boundaries", () => {
       expect(stringInItem.success).toBe(false);
     }
   });
+
+  test("Phase 3 で PortableTextSpan[] 化済のリンク/ボタンテキストは schema で string を受け付けない", async () => {
+    const { validateSectionConfig } =
+      await import("@/shared/lib/validations/section");
+    const targets: { type: string; field: string }[] = [
+      { type: "contact-form", field: "submitButtonText" },
+      { type: "faq-list", field: "viewAllText" },
+      { type: "news-list", field: "viewAllText" },
+      { type: "post-list", field: "viewAllText" },
+      { type: "space-list", field: "viewAllText" },
+    ];
+    for (const { type, field } of targets) {
+      // 空 config は default で [] になる
+      const empty = validateSectionConfig(type, {});
+      expect(empty.success).toBe(true);
+      if (empty.success) {
+        const value = (empty.data as Record<string, unknown>)[field];
+        expect(Array.isArray(value)).toBe(true);
+      }
+      // string 入力は配列要求で fail
+      const stringInput = validateSectionConfig(type, {
+        [field]: "string-not-array",
+      });
+      expect(stringInput.success).toBe(false);
+    }
+  });
 });
