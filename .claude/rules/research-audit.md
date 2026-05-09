@@ -48,6 +48,7 @@ paths:
 - **Plan 記載の component prop / type 仕様も `ls + grep` で実在確認必須** — 公開 Component の prop 表 / import 元 export / 型 field 一覧の 3 軸を ground truth として確認
 - **Plan 内の helper / API 名は rule docs 記述を盲信せず実装 grep で照合** — `.claude/rules/<>.md` が stale 化している場合あり。実装 SSoT で rule docs 追従
 - **Plan の Task が別 plan / 既存実装で対処済の場合 no-op 判定が正しい完遂** — implementer は「やらなくていい」を BLOCKED でなく DONE_WITH_CONCERNS で報告
+- **Plan の "新規作成" 系 task 候補は対象 SSoT シンボル名を `grep -rn "<symbol>" src/` で先行検証必須** — earlier phase が予防的に SSoT を入れているケースあり（実例: 2026-05-09 Phase 4 plan で `portableTextBlockSchema` / `createBlockArraySchema` / `createBlock` / `blocksToPlainText` を新規 Task 1 として記述したが、Phase 0 commit `2c8c86b9` の時点で既に `src/shared/lib/portable-text/{schema,factory,text,index}.ts` に実装済だった）。「Phase N で span を入れたついでに block も factory に追加」のような pre-emptive SSoT は phase 跨ぎで起きやすい。plan 作成前に各新規 task の中核 symbol で grep し、hit があれば task を「不要」or「修正のみ」に格下げ
 
 ## SSoT 重複検出と version drift
 
