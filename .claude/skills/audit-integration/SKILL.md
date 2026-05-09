@@ -67,7 +67,7 @@ grep -rn "from.*admin.*queries\|from.*admin.*actions" 'src/app/(public)/' --incl
 
 ## 実行手順
 
-1. 4つの Agent を並行起動して各観点を調査
+1. 各観点を controller 直接実行で調査（grep + Read）。**4 並列 Agent dispatch は実環境で thrashing 実績あり** — path-scoped rule auto-load の累積が subagent context を爆発させ、generic "ready to continue" / "Prompt is too long" / hallucinated report で全 agent が失敗する（2026-05-10 セッションで実観測）。`claude-code-patterns.md` §"Implementer subagent thrashing 後は fresh subagent 再 dispatch ではなく controller 直接続行が canonical" と同根
 2. 結果をテーブル形式で統合レポート出力
 3. 発見された問題を重要度別に分類（🔴 CRITICAL / 🟡 HIGH / 🟢 LOW）
 4. ユーザー承認後に修正を適用
