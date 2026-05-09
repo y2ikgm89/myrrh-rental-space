@@ -9,6 +9,10 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import {
+  CUSTOMER_STATUS_LABELS,
+  CUSTOMER_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 export async function GET(request: Request): Promise<Response> {
   try {
@@ -26,6 +30,10 @@ export async function GET(request: Request): Promise<Response> {
       { header: "姓カナ", accessor: (c) => c.lastNameKana },
       { header: "名カナ", accessor: (c) => c.firstNameKana },
       { header: "会社名", accessor: (c) => c.companyName },
+      {
+        header: "顧客タイプ",
+        accessor: (c) => CUSTOMER_TYPE_LABELS[c.customerType],
+      },
       { header: "メール", accessor: (c) => c.email },
       { header: "電話番号", accessor: (c) => c.phoneNumber },
       { header: "郵便番号", accessor: (c) => c.postalCode },
@@ -33,7 +41,10 @@ export async function GET(request: Request): Promise<Response> {
       { header: "市区町村", accessor: (c) => c.city },
       { header: "町名・番地", accessor: (c) => c.streetAddress },
       { header: "建物名", accessor: (c) => c.building },
-      { header: "ステータス", accessor: (c) => c.status },
+      {
+        header: "ステータス",
+        accessor: (c) => CUSTOMER_STATUS_LABELS[c.status],
+      },
       { header: "予約回数", accessor: (c) => c.totalReservations },
       { header: "利用総額", accessor: (c) => c.totalSpent },
       {
