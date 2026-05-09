@@ -188,7 +188,7 @@ export function PortableTextInlineEditor({
         aria-disabled={disabled}
         onInput={handleInput}
         onClick={handleEditorClick}
-        className="min-h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:border-primary"
+        className="flex min-h-11 w-full items-center rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:border-primary"
       />
       <IconPickerDialog
         open={iconDialogOpen}
