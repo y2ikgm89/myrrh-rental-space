@@ -337,8 +337,18 @@ describe("faqListConfigSchema", () => {
         },
       ],
       items: [
-        { question: "質問1", answer: "回答1" },
-        { question: "質問2", answer: "回答2" },
+        {
+          question: [
+            { _key: "test-question-23", _type: "span" as const, text: "質問1" },
+          ],
+          answer: "回答1",
+        },
+        {
+          question: [
+            { _key: "test-question-70", _type: "span" as const, text: "質問2" },
+          ],
+          answer: "回答2",
+        },
       ],
       variant: "bordered",
     };
@@ -361,8 +371,23 @@ describe("featuresConfigSchema", () => {
     const data = {
       title: [{ _key: "test-title-key", _type: "span" as const, text: "特徴" }],
       items: [
-        { icon: "wifi", title: "Wi-Fi完備", description: "高速Wi-Fi利用可能" },
-        { title: "駐車場", description: "無料駐車場完備" },
+        {
+          icon: "wifi",
+          title: [
+            {
+              _key: "test-title-19",
+              _type: "span" as const,
+              text: "Wi-Fi完備",
+            },
+          ],
+          description: "高速Wi-Fi利用可能",
+        },
+        {
+          title: [
+            { _key: "test-title-71", _type: "span" as const, text: "駐車場" },
+          ],
+          description: "無料駐車場完備",
+        },
       ],
       columns: 3,
     };
@@ -387,8 +412,20 @@ describe("testimonialConfigSchema", () => {
       items: [
         {
           content: "素晴らしい空間でした",
-          authorName: "田中太郎",
-          authorTitle: "CEO",
+          authorName: [
+            {
+              _key: "test-authorName-60",
+              _type: "span" as const,
+              text: "田中太郎",
+            },
+          ],
+          authorTitle: [
+            {
+              _key: "test-authorTitle-17",
+              _type: "span" as const,
+              text: "CEO",
+            },
+          ],
           rating: 5,
         },
       ],
@@ -404,7 +441,19 @@ describe("testimonialConfigSchema", () => {
 
   test("rating範囲外でエラー", () => {
     const data = {
-      items: [{ content: "内容", authorName: "名前", rating: 6 }],
+      items: [
+        {
+          content: "内容",
+          authorName: [
+            {
+              _key: "test-authorName-44",
+              _type: "span" as const,
+              text: "名前",
+            },
+          ],
+          rating: 6,
+        },
+      ],
     };
     const result = testimonialConfigSchema.safeParse(data);
     expect(result.success).toBe(false);

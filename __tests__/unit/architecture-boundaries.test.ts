@@ -1583,4 +1583,31 @@ describe("architecture boundaries", () => {
       expect(stringInput.success).toBe(false);
     }
   });
+
+  test("Phase 2 で PortableTextSpan[] 化済の items[] 見出しフィールドは schema で string を受け付けない", async () => {
+    const { validateSectionConfig } =
+      await import("@/shared/lib/validations/section");
+    type ItemTarget = {
+      type: string;
+      field: string;
+      itemTemplate?: Record<string, unknown>;
+    };
+    const targets: ItemTarget[] = [
+      { type: "features", field: "title" },
+      { type: "testimonial", field: "authorName" },
+      { type: "testimonial", field: "authorTitle" },
+      { type: "faq-list", field: "question" },
+      {
+        type: "value-props",
+        field: "title",
+        itemTemplate: { icon: "IconClock", eyebrow: "Speed" },
+      },
+    ];
+    for (const { type, field, itemTemplate } of targets) {
+      const stringInItem = validateSectionConfig(type, {
+        items: [{ ...(itemTemplate ?? {}), [field]: "string-not-array" }],
+      });
+      expect(stringInItem.success).toBe(false);
+    }
+  });
 });
