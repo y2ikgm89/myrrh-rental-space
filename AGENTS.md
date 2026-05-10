@@ -34,8 +34,8 @@
 | TypeScript   | 6.0.3      | `target: es2025`, `erasableSyntaxOnly`       |
 | Bun          | 1.3.13     | `bun:test`, `packageManager` と一致          |
 | Prisma       | 7.8.0      | WASM, mapped enums                           |
-| Better Auth  | 1.6.9      | RBAC, Google/LINE OAuth（`bun.lock` 解決版） |
-| Tailwind CSS | 4.2.4      | CSS-first, `@theme`                          |
+| Better Auth  | 1.6.10     | RBAC, Google/LINE OAuth（`bun.lock` 解決版） |
+| Tailwind CSS | 4.3.0      | CSS-first, `@theme`                          |
 | Zod          | 4.4.3      | `{ error: }` パラメータ                      |
 
 ### Project Structure
