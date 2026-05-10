@@ -1,15 +1,15 @@
 /**
  * SectionWrapper — セクション横断の layout / visibility / animation を統一適用
  *
- * Phase 3 Bundle 2 で `layout: SectionLayoutConfig`（外側 padding / containerWidth /
- * モバイル/デスクトップ非表示 / 入場アニメ）の統一適用を導入。
- * 既存の `style: SectionStylePayload`（背景・タイポグラフィ・テキストカラー）も
- * 後方互換のため保持する。両方指定された場合:
+ * 2 つの責務領域:
+ *   - `layout: SectionLayoutConfig` — 外側 padding / containerWidth /
+ *     hideOnMobile / hideOnDesktop / animateOnScroll
+ *   - `style: SectionStylePayload` — 背景タイプ / テキスト揃え / customClass
+ *
+ * 両方指定時の優先順位:
  *   - padding / containerWidth は `layout` 優先
  *   - background / textAlign / customClass は `style` から
  *   - hideOnMobile / hideOnDesktop / animateOnScroll は `layout` のみ
- *
- * 既存呼び出し（`<SectionWrapper style={style}>`）は引き続き動作する。
  */
 
 import type { CSSProperties, ReactNode } from "react";
@@ -46,7 +46,7 @@ const LAYOUT_CONTAINER_WIDTH_CLASSES: Record<LayoutContainerWidth, string> = {
 };
 
 // =============================================================================
-// Mapping tables — Legacy SectionStylePayload (後方互換)
+// Mapping tables — SectionStylePayload (background / spacing / typography)
 // =============================================================================
 
 const paddingTopMap: Record<
@@ -145,7 +145,7 @@ export function SectionWrapper({
     ? LAYOUT_CONTAINER_WIDTH_CLASSES[layout.containerWidth]
     : maxWidthMap[style.container.maxWidth];
 
-  // ---- background / textAlign / customClass (legacy style 由来、layout は触らない) ----
+  // ---- background / textAlign / customClass (style payload 由来、layout は触らない) ----
   const bgClass = backgroundMap[style.background.type];
   const alignClass =
     style.typography.textAlign !== "left"

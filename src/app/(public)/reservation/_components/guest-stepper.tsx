@@ -1,6 +1,18 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
+
+const STEP_BUTTON_CLASS = cn(
+  "inline-flex h-11 w-11 items-center justify-center border border-border",
+  "text-lg transition-colors duration-200 hover:border-foreground/30",
+  "disabled:opacity-40 disabled:pointer-events-none",
+);
+
+const NUMBER_INPUT_CLASS = cn(
+  "h-11 w-14 border border-border bg-transparent text-center text-sm",
+  "focus-visible:border-accent focus-visible:outline-none",
+);
 
 interface GuestStepperProps {
   readonly value: number;
@@ -55,9 +67,7 @@ export function GuestStepper({
         aria-label="利用人数を減らす"
         disabled={value <= min}
         onClick={() => handleStep(value - 1)}
-        className="inline-flex h-11 w-11 items-center justify-center border border-border
-          text-lg transition-colors duration-200 hover:border-foreground/30
-          disabled:opacity-40 disabled:pointer-events-none"
+        className={STEP_BUTTON_CLASS}
       >
         −
       </button>
@@ -75,17 +85,14 @@ export function GuestStepper({
             commitInput();
           }
         }}
-        className="h-11 w-14 border border-border bg-transparent text-center text-sm
-          focus-visible:border-accent focus-visible:outline-none"
+        className={NUMBER_INPUT_CLASS}
       />
       <button
         type="button"
         aria-label="利用人数を増やす"
         disabled={value >= max}
         onClick={() => handleStep(value + 1)}
-        className="inline-flex h-11 w-11 items-center justify-center border border-border
-          text-lg transition-colors duration-200 hover:border-foreground/30
-          disabled:opacity-40 disabled:pointer-events-none"
+        className={STEP_BUTTON_CLASS}
       >
         +
       </button>
