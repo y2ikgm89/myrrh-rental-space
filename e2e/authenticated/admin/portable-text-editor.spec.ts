@@ -59,28 +59,19 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test("PortableTextBlockEditor が同画面に存在し、Enter で段落分割できる", async ({
+  test("PortableTextBlockEditor の description field で Enter 段落分割できる", async ({
     page,
   }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
     await page.waitForLoadState("networkidle");
 
-    // block editor は aria-multiline="true"。description / body 系 field で使われる
+    // home page-hero schema は全 variant が `description: field.portableTextBlock(...)` を持つ
+    // (definitions/page-hero/schema.ts) ため block editor は必ず存在する
     const blockEditor = page
       .locator('[role="textbox"][aria-multiline="true"]')
       .first();
-
-    // home の page-hero に block field がない構成もあるので存在確認は best-effort
-    const blockEditorCount = await blockEditor.count();
-    if (blockEditorCount === 0) {
-      test.skip(
-        true,
-        "このページに PortableTextBlockEditor が存在しないため block 入力はスキップ",
-      );
-      return;
-    }
-
     await expect(blockEditor).toBeVisible({ timeout: 15000 });
+
     await blockEditor.click();
     await page.keyboard.type("一段落目");
     await page.keyboard.press("Enter");

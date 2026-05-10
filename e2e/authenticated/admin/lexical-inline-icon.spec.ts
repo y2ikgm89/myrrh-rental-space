@@ -85,26 +85,20 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
       timeout: 5000,
     });
 
-    // 検索欄で絞り込み（curation 最初の 1 件をクリック）
-    const searchInput = dialog.getByRole("searchbox").first();
+    // 検索欄で絞り込み（aria-label="アイコンを検索" の `<input type="search">`）
+    const searchInput = dialog.getByLabel("アイコンを検索");
     await expect(searchInput).toBeVisible();
     await searchInput.fill("clock");
 
-    // 検索結果の最初の icon を選択
-    const firstIconButton = dialog
-      .locator("button[data-icon-name], button:has(svg)")
-      .first();
+    // 検索結果の最初の icon ボタン（aria-label="<label>（<name>）" + aria-pressed）
+    const firstIconButton = dialog.locator("button[aria-pressed]").first();
+    await expect(firstIconButton).toBeVisible({ timeout: 5000 });
     await firstIconButton.click();
 
-    // 確定ボタン（`onConfirm` を発火）
-    const confirmButton = dialog.getByRole("button", {
-      name: /確定|挿入|追加|決定/,
-    });
-    if ((await confirmButton.count()) > 0) {
-      await confirmButton.first().click();
-    }
+    // 確定ボタンは「選択」（実装: IconPickerDialog.tsx の primary action）
+    await dialog.getByRole("button", { name: "選択", exact: true }).click();
 
-    // editor に inline-icon DOM が挿入される
+    // editor に inline-icon DOM が挿入される（exportDOM の data-lexical-inline-icon）
     const inlineIcon = editor.locator("[data-lexical-inline-icon]").first();
     await expect(inlineIcon).toBeVisible({ timeout: 5000 });
   });
