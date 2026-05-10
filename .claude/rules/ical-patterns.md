@@ -50,83 +50,9 @@ paths:
 - **`Asia/Tokyo` VTIMEZONE を必ず付与** — `@touch4it/ical-timezones` の `getVtimezoneComponent` を `ical({ timezone: { name, generator } })` に渡す
 - **UTC Z 形式のみの DTSTART 禁止** — Outlook / Apple の夏時間互換性のため TZID 付き DTSTART が推奨（`ical-generator` が自動処理）
 
-## Route Handler パターン
+## Route Handler + メール添付
 
-顧客認証付き `.ics` ダウンロード:
-
-```typescript
-// 処理順序: 認証 → バリデーション → 所有者チェック → ICS 生成
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await getCustomerSession();
-    if (!session) return new NextResponse("Unauthorized", { status: 401 });
-
-    const parsed = paramSchema.safeParse(await params);
-    if (!parsed.success) return new NextResponse("Invalid id", { status: 400 });
-
-    const customer = await getCustomerByUserId(session.user.id);
-    if (!customer) return new NextResponse("Customer not found", { status: 404 });
-
-    const reservation = await getReservationForCalendar({
-      reservationId: parsed.data.id,
-      customerId: customer.id,
-    });
-    if (!reservation) return new NextResponse("Not found", { status: 404 });
-
-    const ics = reservation.status === "CANCELLED"
-      ? buildReservationCancelCalendar(params, getAppHost())
-      : buildReservationCalendar(params, getAppHost());
-
-    return new NextResponse(ics, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": `attachment; filename="reservation-${id.slice(0, 8)}.ics"`,
-        "Cache-Control": "private, no-store",
-      },
-    });
-  } catch (error) {
-    unstable_rethrow(error);
-    logError(...);
-    return new NextResponse("Internal Server Error", { status: 500 });
-  }
-}
-```
-
-## メール添付パターン
-
-予約確認メールでの ICS 添付 + 3 プロバイダリンク:
-
-```typescript
-const host = getAppHost();
-const appUrl = getAppUrl();
-const calendarSettings = await getCalendarEmailSettings();
-
-const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
-  ? buildAddToCalendarUrls({
-      summary: `【予約】${spaceName}`,
-      description: "...",
-      startTime,
-      endTime,
-      icsDownloadUrl: `${appUrl}/api/calendar/reservation/${reservationId}`,
-    })
-  : undefined;
-
-const attachments = calendarSettings.icalAttachmentEnabled
-  ? [
-      {
-        filename: `reservation-${reservationId.slice(0, 8)}.ics`,
-        content: Buffer.from(
-          buildReservationCalendar({ ..., sequence: icsSequence }, host),
-          "utf-8",
-        ),
-      },
-    ]
-  : undefined;
-```
+顧客認証付き .ics ダウンロード Route Handler と予約・イベント確認メールでの ICS 添付 + 3 プロバイダ Add to Calendar URL 配線は `ical-patterns/route-and-email.md` を参照。
 
 ## SEQUENCE インクリメント対象
 
@@ -179,38 +105,9 @@ const attachments = calendarSettings.icalAttachmentEnabled
 
 ---
 
-## GCal Outbound Sync（ICS と別系統）
+## GCal Outbound Sync
 
-ICS 配信（顧客向け、`@/shared/lib/ical`）と GCal API outbound sync（運営向け、
-`@/shared/lib/calendar-sync/*-outbound.ts`）は系統が異なる。ICS は RFC 5545
-ファイル配信で参加者自身のカレンダーアプリ管理、outbound は運営マスターカレンダー
-への server-to-server 書き込み。両者を混在させないこと。
-
-### 原則
-
-- **attendees は指定しない** — サービスアカウント + DWD 必須のため技術制約（[Google 公式](https://developers.google.com/calendar/api/v3/reference/events/insert): "Service accounts need to use domain-wide delegation of authority to populate the attendee list."）+ 業界標準（Eventbrite / Peatix / connpass / Luma / Meetup 全社）+ GDPR 第三者提供回避
-- **description 1 行目にループ防止マーカー** — `${OUTBOUND_RESERVATION_MARKER} <id>` / `${OUTBOUND_EVENT_MARKER} <id>`（`@/shared/lib/calendar-sync/loop-prevention`）。inbound は `isAppGeneratedCalendarEvent(description)` で outbound 由来をスキップ
-- **status 不問で同期** — DRAFT / PUBLISHED / SCHEDULED 全て反映。CANCELLED / soft delete のみ GCal 側から削除（`deleteXxxCalendarSync`）
-- **fireAndForget で非ブロッキング** — Server Action `afterSuccess` で `fireAndForget(syncXxxOutbound(id), { operation: "syncXxxOutbound.<action>", category: ErrorCategory.EXTERNAL_API })`。GCal 障害時もアクション本体は成功
-- **冪等性** — `<Entity>.googleCalendarEventId String? @unique` に保存。update 時は既存 ID で `updateCalendarEvent`、無ければ `syncXxxToCalendar` で新規作成分岐（`syncXxxOutbound` helper 内で集約）
-- **エラー記録の単一化** — `markXxxCalendarSyncError` が内部で `logError` を呼ぶラッパーの場合、**catch / 非成功パス両方で直接 `logError` と重複呼び出し禁止**。Event は DB カラム無し・`logError` のみラッパーのため重複に注意。Reservation は `calendarSyncError` / `calendarSyncedAt` カラムあり DB 書き込みも伴う（両方呼ぶのが意味がある）
-- **`<Entity>.icsSequence` は GCal 未使用** — ICS 配信用（METHOD:CANCEL / REQUEST の SEQUENCE）。GCal API は etag で冪等管理するため outbound では参照しない（`SEQUENCE インクリメント対象外` リストに `googleCalendarEventId` / `calendarSyncedAt` を既出）
-- **`operation` 文字列は mutation 別に一意** — Cloud Logging の可観測性のため `syncXxxOutbound.create` / `.update` / `.publish` / `.duplicate` / `deleteXxxOutbound.cancel` / `.delete` のように命名
-
-### 新規 outbound sync 追加時のチェックリスト
-
-1. `src/shared/lib/calendar-sync/<entity>-outbound.ts`（`import "server-only"` 必須）— `syncXxxToCalendar` / `updateXxxCalendarSync` / `deleteXxxCalendarSync`
-2. `src/shared/domain/<entity>/calendar-sync.ts`（`import "server-only"` 必須）— save / clear / markError helper + `getXxxForCalendarSync`（`EventSyncContext` 相当型を返す）
-3. `src/shared/lib/calendar-sync/loop-prevention.ts` にマーカー定数追加（`OUTBOUND_XXX_MARKER`）+ `isAppGeneratedCalendarEvent` を更新
-4. 対応する inbound（あれば）に `isAppGeneratedCalendarEvent` でスキップ追加
-5. Server Action `afterSuccess` に `fireAndForget` 配線（create / update / publish / cancel / delete / duplicate 全ケース、一意の `operation` 名）
-6. `<action>.ts` は `"use server"` のため async function 以外 export 禁止。`syncXxxOutbound` / `deleteXxxOutbound` は非 export internal helper
-7. soft delete 時は `execute` 内で `getEventById` 等から `googleCalendarEventId` を先取りして戻り値に含める（`afterSuccess` では DB から取得不可）
-8. unit test は `event-outbound.test.ts` 構造を踏襲（`mock.module` で `@/shared/lib/google-calendar` の **全 export 網羅**）
-
-参照実装: `src/shared/lib/calendar-sync/event-outbound.ts`（予約は `outbound.ts`、domain 層は `src/shared/domain/events/calendar-sync.ts`）
-
----
+ICS 配信と別系統の GCal API outbound sync（attendees 不指定 / description マーカー / fireAndForget / 新規追加チェックリスト 8 項目）は `ical-patterns/gcal-outbound-sync.md` を参照。
 
 ## 参照
 
