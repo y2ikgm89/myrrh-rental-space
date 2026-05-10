@@ -1,0 +1,111 @@
+import { test, expect } from "@playwright/test";
+
+/**
+ * 管理画面 - Lexical InlineIcon E2E（管理者認証済み state）
+ *
+ * Phase 3: Lexical 本文に inline curated icon を挿入する slash command の smoke test。
+ *
+ * シナリオ:
+ *   1. ブログ新規作成画面で editor が起動する
+ *   2. `/` を入力するとスラッシュコマンドの ComponentPicker が表示される
+ *   3. 「アイコン」項目（structure カテゴリ）が候補に存在する
+ *   4. 「アイコン」を選択すると IconPickerDialog が開く
+ *   5. dialog の検索欄でアイコンを絞り込み → 選択 → 確定
+ *   6. editor 本文に `[data-lexical-inline-icon]` 要素が挿入される
+ *
+ * 前提:
+ *   - playwright.config.ts の chromium-admin project で実行
+ *   - setup-admin により admin user が認証済み
+ *   - dev サーバー稼働中
+ *
+ * 設計:
+ *   - 実 OAuth / 実 DB write は不要（editor 内挿入の DOM 表現のみ検証）
+ *   - InlineIconPlugin の domain 動作は unit test 側で担保（contenteditable + slash trigger）
+ *   - 本 spec は ComponentPicker → Dialog → 挿入確認の **flow smoke** に集中
+ */
+
+const NEW_POST_PATH = "/admin/blog/new";
+
+test.describe("Lexical InlineIcon - slash command 挿入", () => {
+  test("/ を入力すると ComponentPicker に「アイコン」候補が表示される", async ({
+    page,
+  }) => {
+    await page.goto(NEW_POST_PATH);
+    await page.waitForLoadState("networkidle");
+
+    const editor = page.locator('[contenteditable="true"]').first();
+    await expect(editor).toBeVisible({ timeout: 15000 });
+
+    await editor.click();
+    await page.keyboard.type("/icon");
+
+    // ComponentPicker (typeahead) が dropdown 表示される
+    // 公式 Lexical は role="listbox"、項目は role="option"
+    const iconOption = page.getByRole("option", { name: /アイコン/ }).first();
+    await expect(iconOption).toBeVisible({ timeout: 5000 });
+  });
+
+  test("「アイコン」を選択すると IconPickerDialog が開く", async ({ page }) => {
+    await page.goto(NEW_POST_PATH);
+    await page.waitForLoadState("networkidle");
+
+    const editor = page.locator('[contenteditable="true"]').first();
+    await expect(editor).toBeVisible({ timeout: 15000 });
+
+    await editor.click();
+    await page.keyboard.type("/icon");
+
+    const iconOption = page.getByRole("option", { name: /アイコン/ }).first();
+    await expect(iconOption).toBeVisible({ timeout: 5000 });
+    await iconOption.click();
+
+    // IconPickerDialog の DialogTitle「アイコンを選択」
+    await expect(
+      page.getByRole("dialog").getByText("アイコンを選択"),
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  test("Dialog で icon を選択 → 確定で editor に inline icon が挿入される", async ({
+    page,
+  }) => {
+    await page.goto(NEW_POST_PATH);
+    await page.waitForLoadState("networkidle");
+
+    const editor = page.locator('[contenteditable="true"]').first();
+    await expect(editor).toBeVisible({ timeout: 15000 });
+
+    await editor.click();
+    await page.keyboard.type("/icon");
+
+    const iconOption = page.getByRole("option", { name: /アイコン/ }).first();
+    await iconOption.click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("アイコンを選択")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // 検索欄で絞り込み（curation 最初の 1 件をクリック）
+    const searchInput = dialog.getByRole("searchbox").first();
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill("clock");
+
+    // 検索結果の最初の icon を選択
+    const firstIconButton = dialog
+      .locator("button[data-icon-name], button:has(svg)")
+      .first();
+    await firstIconButton.click();
+
+    // 確定ボタン（`onConfirm` を発火）
+    const confirmButton = dialog.getByRole("button", {
+      name: /確定|挿入|追加|決定/,
+    });
+    if ((await confirmButton.count()) > 0) {
+      await confirmButton.first().click();
+    }
+
+    // editor に inline-icon DOM が挿入される
+    const inlineIcon = editor.locator("[data-lexical-inline-icon]").first();
+    await expect(inlineIcon).toBeVisible({ timeout: 5000 });
+  });
+});
