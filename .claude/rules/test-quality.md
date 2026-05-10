@@ -6,7 +6,13 @@ paths:
 
 # テスト品質ルール
 
-> Bun Test / Playwright E2E対応
+> Bun Test / Playwright E2E 対応
+
+> 詳細サブルール（path-scoped auto-load）:
+>
+> - **Bun Unit / Integration テスト + ドメインコマンドテスト** — `test-quality/unit-bun.md`
+> - **Bun Test 型安全パターン 8 種** — `test-quality/types.md`
+> - **Playwright E2E + Next.js App Router Gotchas** — `test-quality/e2e.md`
 
 ## テスト分類
 
@@ -15,417 +21,6 @@ paths:
 | Unit        | Bun Test       | `__tests__/unit/`        | 関数・ユーティリティ |
 | Integration | Bun Test       | `__tests__/integration/` | Server Actions・API  |
 | E2E         | Playwright     | `e2e/`                   | ユーザーフロー       |
-
-## Bunテスト（Unit/Integration）
-
-### 基本構造
-
-```typescript
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-
-describe("機能名", () => {
-  beforeAll(() => {
-    // セットアップ
-  });
-
-  afterAll(() => {
-    // クリーンアップ
-  });
-
-  test("期待する動作を説明", () => {
-    const result = someFunction();
-    expect(result).toBe(expected);
-  });
-});
-```
-
-### server-only のモック（テスト環境必須）
-
-`import 'server-only'` を含むモジュール（`crypto.ts`, `logger.ts`, `prisma.ts` 等）をテストで直接 import する場合、
-`__tests__/setup.ts` の `mock.module('server-only', () => ({}))` が必須（プリロード設定済み）。
-
-```typescript
-// __tests__/setup.ts（設定済み — 編集不要）
-import { mock } from "bun:test";
-mock.module("server-only", () => ({})); // server-only を no-op にする
-```
-
-**禁止**: `bun test --conditions=react-server` — React を `react.react-server.js`（`createContext`・`useRef` 未定義）に解決してしまう
-
-### @t3-oss/env-nextjs のスナップショット問題
-
-`serverEnv`（`@/shared/lib/env/server` の `createEnv()` 結果）はモジュールロード時点の `process.env` のスナップショット。
-テストで `process.env["KEY"]` を変更しても `serverEnv.KEY` には反映されない。
-
-```typescript
-// NG: serverEnv を使ったコードはテストで env 変更が効かない
-function getMasterKey() {
-  const key = serverEnv.ENCRYPTION_KEY; // スナップショット — delete process.env["KEY"] が効かない
-}
-
-// OK: process.env を直接参照（遅延評価 — テストで変更が反映される）
-function getMasterKey() {
-  const key = process.env["ENCRYPTION_KEY"]; // 毎回評価
-}
-```
-
-テストで変更を必要とする env 変数は `process.env` 直接参照で実装し、
-デフォルト値は `__tests__/setup.ts` のプリロードで設定する（`ENCRYPTION_KEY` 参照）。
-
-### 環境変数のモック
-
-```typescript
-describe("crypto", () => {
-  const originalKey = process.env.ENCRYPTION_KEY;
-
-  beforeAll(() => {
-    process.env.ENCRYPTION_KEY = "test-key";
-  });
-
-  afterAll(() => {
-    if (originalKey) {
-      process.env.ENCRYPTION_KEY = originalKey;
-    } else {
-      delete process.env.ENCRYPTION_KEY;
-    }
-  });
-});
-```
-
-### Server Actionsテスト
-
-```typescript
-import { describe, test, expect, beforeEach, mock } from "bun:test";
-
-const mockGetSession = mock(() => null);
-mock.module("@/shared/lib/admin-auth", () => ({
-  getAdminSession: mockGetSession,
-}));
-
-const { createNews } = await import("@/admin/actions/news");
-
-describe("createNews", () => {
-  beforeEach(() => {
-    // Bun は mock.mockReset() を使用（vi.restoreAllMocks() は Vitest API で Bun では不可）
-    mockGetSession.mockReset();
-    mockGetSession.mockResolvedValue({ user: ADMIN_USER });
-  });
-
-  test("管理者は作成できる", async () => {
-    const result = await createNews(validData);
-    expect(result.success).toBe(true);
-  });
-
-  test("未認証はエラー", async () => {
-    mockGetSession.mockResolvedValue(null);
-    const result = await createNews(validData);
-    expect(result.success).toBe(false);
-  });
-});
-```
-
-### mock.module の追従更新（最重要）
-
-Server Action が新しい domain query / external helper を呼び出すようになったら、
-対応する integration test の `mock.module()` にも stub を追加する必要がある。
-
-**未更新の兆候**:
-
-- テスト実行時に `prisma.xxx.findMany() Authentication failed against the database server`
-- テスト実行時に実 DB に接続しようとする（ネットワークエラー / 認証エラー）
-- `cacheLife() is only available with the cacheComponents config` エラー → Route Handler が呼ぶ `'use cache'` 関数（`getIcalOrganizer` 等の設定クエリ）のモック漏れ。テスト環境には PPR dynamic scope がないため `cacheLife()` が throw する。`mock.module("@/shared/domain/settings/queries/<x>", () => ({ <fn>: mock(...) }))` を追加
-
-**検出手順**:
-
-1. `bun test <failing-file>` で実行 → エラーメッセージで「未モックの domain query」を特定
-2. 該当 Server Action の import 文を確認し、モック漏れを洗い出す
-3. `mock.module("@/shared/domain/<x>/queries", () => ({ <fn>: mock(...) }))` を追加
-
-**参照実装**: `deleteAccountAction` が `getEventIdsByCustomerId` を呼び出すようになった時、
-`mypage-account.test.ts` に以下を追加して解決:
-
-```typescript
-mock.module("@/shared/domain/events/registration-queries", () => ({
-  getEventIdsByCustomerId: mock(() => Promise.resolve([])),
-}));
-```
-
-### toHaveBeenCalledWith 差分の読み方
-
-`- Expected - 0 / + Received + N` = **「期待値より N 個多いプロパティがある」**
-
-主な原因:
-
-- Zod スキーマの `.default()` 値が実装で展開されてテスト期待値に未反映
-  （例: `customerType: CustomerType.PERSONAL` が default で埋まる）
-- Server Action に新規フィールドが追加されたがテスト期待値が未更新
-
-対処: 実装の呼び出し引数をそのまま `toHaveBeenCalledWith` に反映する。
-`expect.objectContaining({...})` でパーシャルマッチに緩和してもよいが、
-破壊的変更検出の観点では厳密マッチ推奨。
-
-## Bun Test 型安全パターン
-
-`noUncheckedIndexedAccess` / `strict` 有効環境での Bun テスト固有の型制約と対処法。
-
-### 1. `mock()` の空配列型推論
-
-Bun の `mock()` は引数から戻り値型を推論する。空配列 `[]` は `never[]` と推論されるため、後から `mockResolvedValue([{ id: 'x' }])` を呼ぶと TS2322 になる。
-
-```typescript
-// NG: never[] 推論 → mockResolvedValue([{ pageId: 'x' }]) がエラー
-const mockFindMany = mock(() => Promise.resolve([]));
-
-// OK: 型引数で明示
-const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() =>
-  Promise.resolve([]),
-);
-```
-
-### 2. `toContain` の要素型制約
-
-`expect(arr).toContain(value)` は `arr` の要素型と `value` の型が一致している必要がある。
-`Object.values()` の戻り値（`SomeEnum[]`）に `string` を `toContain` すると型不一致になる。
-
-```typescript
-// NG: SectionType[] に string を toContain → TS2345
-expect(Object.values(SectionType)).toContain("HERO");
-
-// OK: string[] に変換してから
-const sectionTypeValues: string[] = Object.values(SectionType);
-expect(sectionTypeValues).toContain("HERO");
-```
-
-### 3. `toEqual` の型一致要件
-
-`expect(a).toEqual(b)` も型が一致している必要がある。const 配列と型付き配列の比較では型注釈を付ける。
-
-```typescript
-// NG: string[] と CustomerStatus[] の比較 → TS2769
-expect(CUSTOMER_STATUSES.sort()).toEqual(
-  ["NEW", "REGULAR", "VIP", "INACTIVE", "BLACKLIST"].sort(),
-);
-
-// OK: 明示的な型注釈
-const expectedStatuses: CustomerStatus[] = [
-  "NEW",
-  "REGULAR",
-  "VIP",
-  "INACTIVE",
-  "BLACKLIST",
-];
-expect(CUSTOMER_STATUSES.sort()).toEqual(expectedStatuses.sort());
-```
-
-### 4. `toPlainObject<T>: T` の型 vs ランタイム不一致
-
-`toPlainObject` の返り型は `T`（入力の型をそのまま保持）だが、ランタイムでは `Date → string` 変換・Symbol 除去・関数除去が行われる。型と実態が乖離するため `unknown` 経由でアクセス。
-
-```typescript
-// NG: result.createdAt の型は Date だが実行時は string → toBe('2024-...') で型エラー
-const result = toPlainObject({
-  createdAt: new Date("2024-01-15T10:30:00.000Z"),
-});
-expect(result.createdAt).toBe("2024-01-15T10:30:00.000Z");
-
-// OK: unknown 経由でアクセス
-const result = toPlainObject({
-  createdAt: new Date("2024-01-15T10:30:00.000Z"),
-});
-const createdAt: unknown = result.createdAt;
-expect(createdAt).toBe("2024-01-15T10:30:00.000Z");
-
-// OK: Symbol プロパティ除去の検証
-const plain: unknown = result;
-expect(plain).toEqual({ id: 1 });
-```
-
-### 5. `executeAdminMutationResult` の型推論
-
-`executeAdminMutationResult` はジェネリクスで戻り値型を推論する。`execute` コールバックの戻り値型が複雑な場合、TypeScript が `unknown` に推論することがある。明示的な型引数で解決する。
-
-```typescript
-// NG: 戻り値型が unknown に推論される
-const result = await executeAdminMutationResult({
-  resource: "space",
-  action: "create",
-  execute: async () => {
-    return { name }; // 型が推論されない場合あり
-  },
-});
-
-// OK: 型引数を明示 (execute callback の戻り値 T が MutationResult<T> の success path)
-const result = await executeAdminMutationResult<{ name: string }>({
-  resource: "space",
-  action: "create",
-  execute: async () => {
-    return { name }; // execute callback は T を直接返す (ラッパー不要)
-  },
-});
-```
-
-### 6. `MutationResult<T>` の型判定
-
-`MutationResult<T> = T | MutationError` では `isMutationError()` で failure path を判定する。明示的な型引数が必要な場合は `isMutationError` を使用する。
-
-```typescript
-// NG: MutationResult に success プロパティは存在しない
-const result = await action();
-expect(result.success).toBe(false); // TS18046 / プロパティなし
-
-// OK: isMutationError で failure path 判定
-const result = await action();
-expect(isMutationError(result)).toBe(true);
-
-// OK: void success path: MutationResult<null> = null | MutationError
-return null; // null が success sentinel
-```
-
-### 7. `unknown` な戻り値の検証には `toMatchObject`
-
-カリー化パターン等で戻り値が `unknown` 型になる場合、プロパティアクセスは TS18046 になる。`toMatchObject` は `unknown` を受け入れる。
-
-```typescript
-// NG: result が unknown 型でプロパティアクセスできない
-const result = await action("arg");
-expect(result.success).toBe(false); // TS18046
-
-// OK: toMatchObject は unknown を受け入れる
-expect(result).toMatchObject({ success: false });
-expect(result).toMatchObject({
-  success: false,
-  error: expect.stringContaining("権限"),
-});
-```
-
-### 8. `import type` と `mock.module()` の共存
-
-`mock.module()` でモジュールを差し替えても、`import type` で型のみを import することは可能。型は コンパイル時に消去されるため、ランタイムのモックと干渉しない。
-
-```typescript
-// OK: 型のみのインポートはモックと共存可能
-import type { MutationResult } from "@/shared/lib/mutation-result";
-mock.module("@/shared/lib/admin-auth", () => ({
-  getAdminSession: mockGetSession,
-}));
-
-// 型注釈に使用
-const result: MutationResult<void> = await createPost(data);
-```
-
-## Playwrightテスト（E2E）
-
-### 基本構造
-
-```typescript
-import { test, expect, type Page } from "@playwright/test";
-import { urls, testUsers } from "../fixtures";
-
-test.describe("機能名", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
-  });
-
-  test("ユーザーストーリーを説明", async ({ page }) => {
-    await page.goto(urls.adminNews);
-    await page.waitForLoadState("networkidle");
-
-    await expect(page.locator("h1")).toContainText("ニュース");
-  });
-});
-```
-
-### 認証ヘルパー
-
-```typescript
-async function loginAsAdmin(page: Page) {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
-}
-```
-
-### 条件付きスキップ
-
-```typescript
-test("編集ページが表示される", async ({ page }) => {
-  const editButton = page.locator('a:has-text("編集")').first();
-
-  if ((await editButton.count()) === 0) {
-    test.skip(true, "データが存在しません");
-    return;
-  }
-
-  await editButton.click();
-  // ...
-});
-```
-
-### spec 作成時の path verify 必須
-
-E2E spec 内の `page.goto("/admin/...")` 等の path は、推測ではなく **実 page.tsx を Glob で確認してから記述**する。
-
-```typescript
-// NG: 推測 path → /admin/login へ silent redirect → `[contenteditable="true"]` timeout
-const NEW_POST_PATH = "/admin/blog/new"; // 実体は /admin/posts/new
-
-// OK: Glob `src/app/(admin)/admin/(dashboard)/posts/new/**/*.tsx` で実 page.tsx 確認後に記述
-const NEW_POST_PATH = "/admin/posts/new";
-```
-
-silent fail の症状: spec が generic locator (`[contenteditable="true"]` 等) を待つが、未認証 redirect 先 `/admin/login` に該当要素がなく timeout。setup-admin で auth state 適用済みでも、誤 path は admin gate / proxy.ts のリダイレクト rule で fallthrough する。
-
-### 待機パターン
-
-```typescript
-// ネットワーク完了を待機
-await page.waitForLoadState("networkidle");
-
-// 特定要素の表示を待機
-await expect(page.locator("text=保存しました")).toBeVisible({
-  timeout: 10000,
-});
-
-// アニメーション待機
-await page.waitForTimeout(300);
-
-// URL変更を待機
-await page.waitForURL(urls.adminNews, { timeout: 10000 });
-```
-
-### レスポンシブテスト
-
-```typescript
-test("モバイルでも表示される", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 667 });
-  await page.goto(urls.adminNews);
-
-  await expect(page.locator("h1")).toContainText("ニュース");
-});
-```
-
-### UI モード（デバッグ）
-
-E2E テスト失敗時はまず UI モードで原因を特定する:
-
-```bash
-bun run e2e:ui                        # 対話的実行（ステップ実行・スクリーンショット確認）
-PWDEBUG=1 bun run e2e                 # ブレークポイントで一時停止
-```
-
-- **ステップ実行**: 各アクションを1操作ずつ確認
-- **スクリーンショット**: 失敗時の画面状態とDOM確認
-- **ネットワーク**: リクエスト/レスポンスの内容確認
-- **Trace Viewer**: `playwright show-trace trace.zip` でオフライン再生可
-
-### Playwright × Next.js App Router Gotchas
-
-- **`page.waitForURL` は App Router soft navigation で `net::ERR_ABORTED`** — `router.push` は `load` event を発火しないため `waitForURL`（default `waitUntil: "load"`）が timeout / detach error。canonical: `await row.click(); await expect(page).toHaveURL(pattern, { timeout: 10000 })` の URL polling。`Promise.all([waitForURL, click])` も同問題で危険
-- **`row.click()` の center が `stopRowClick` cell に落ちる** — `ClickableTableRow` を test で click する際、center 位置が CheckboxCell / Email / ActionDropdown 等の `stopRowClick` cell に当たると `e.stopPropagation()` で navigation 阻害。canonical: `row.locator("td").nth(2).click()` で name cell（非 stop）を明示ターゲット。列順前提を docstring に書く
-- **`useEffect` + `router.replace` の URL cleanup 検証は `toHaveURL` 必須** — `await page.waitForTimeout(500); expect(page.url()).not.toContain("foo")` は React commit phase + async router.replace と race。canonical: `await expect(page).toHaveURL(/^(?!.*foo).*\/path/, { timeout: 5000 })` の polling + 否定 lookahead
-- **`page.getByRole("dialog").getByText(literal)` の strict mode 違反** — DialogTitle (`<h2>`) と body / footer の placeholder 文言が同一 substring を含むと両マッチで `strict mode violation`。canonical: `dialog.getByRole("heading", { name: "..." })` で role narrow、または `{ exact: true }` で完全一致
 
 ## 禁止事項
 
@@ -439,8 +34,8 @@ PWDEBUG=1 bun run e2e                 # ブレークポイントで一時停止
    - 実際の動作を検証しないテストを書かない
 
 3. **ハードコード禁止**
-   - URLは`fixtures`から取得
-   - テストデータは`testUsers`等から取得
+   - URL は `fixtures` から取得
+   - テストデータは `testUsers` 等から取得
 
 4. **待機なしのアサーション禁止**
    - `await expect(...).toBeVisible()` を使用
@@ -451,41 +46,9 @@ PWDEBUG=1 bun run e2e                 # ブレークポイントで一時停止
    - `vi.mock()` → `mock.module()`
    - `vi.fn()` → `mock()`
 
-## ドメインコマンドテスト（`__tests__/unit/domain/<domain>/commands.test.ts`）
-
-全27ドメインのコマンドテストが `__tests__/unit/domain/` に存在。新規ドメイン追加時は同パターンでテスト作成必須。
-
-```typescript
-// 標準構造
-mock.module("server-only", () => ({}));
-mock.module("@/shared/db/prisma", () => ({
-  prisma: { model: { method: mockFn } },
-}));
-// @/shared/lib/constants はモック不要
-import { command } from "@/shared/domain/<domain>/commands";
-
-describe("commandName", () => {
-  describe("正常系", () => {
-    /* ... */
-  });
-  describe("異常系", () => {
-    /* DomainError テスト */
-  });
-});
-```
-
-**新規テスト追加後は `package.json` の `test` スクリプトにバッチ追加を確認**
-
-## 統合テストのインライン Zod スキーマは手動保守
-
-`__tests__/integration/actions/admin/*.test.ts` は Server Actions 内の Zod スキーマを**再現**したインライン定義を持つ（import ではない）。実ソースのスキーマ分割・リネーム時は、このインラインコピーも並行更新する。更新漏れはテスト通過のまま非整合を残すサイレントバグになる。
-
 ## Section schema test contract（`safeParse({})` 成立 + default assert）
 
-`field.text()` 等のヘルパーが `.default("")` を必ず適用するため、section schema は
-architectural contract として `safeParse({})` 常に success。**test で required-field
-validation を期待しない**（schema 層は permissive、UI 層 = admin form の
-`useFormAction` + zod resolver が必須バリデーション責務）。
+`field.text()` 等のヘルパーが `.default("")` を必ず適用するため、section schema は architectural contract として `safeParse({})` 常に success。**test で required-field validation を期待しない**（schema 層は permissive、UI 層 = admin form の `useFormAction` + zod resolver が必須バリデーション責務）。
 
 ```typescript
 // OK: 空 config で default 適用を assert
@@ -509,9 +72,7 @@ test("タイトル必須バリデーション", () => {
 });
 ```
 
-`isXxxConfig` 型ガード test も同方針: 空 config / `title: ""` は valid（default 適用）、
-type 違反のみ false を返す。`createTypedConfigGetterFromSchema` の fallback chain
-(`safeParse({})` 成立必須）に寄り添う設計（→ `ssot-singletons.md` §Section schema 重複）。
+`isXxxConfig` 型ガード test も同方針: 空 config / `title: ""` は valid（default 適用）、type 違反のみ false を返す。`createTypedConfigGetterFromSchema` の fallback chain (`safeParse({})` 成立必須）に寄り添う設計（→ `ssot-singletons.md` §Section schema 重複）。
 
 ## 必須事項
 
@@ -525,9 +86,9 @@ type 違反のみ false を返す。`createTypedConfigGetterFromSchema` の fall
    - 原因を調査して修正
    - テストを削除して逃げない
 
-3. **E2Eテストの構造**
-   - セクションごとに`test.describe`で分割
-   - JSDocでテストシナリオを文書化
+3. **E2E テストの構造**
+   - セクションごとに `test.describe` で分割
+   - JSDoc でテストシナリオを文書化
 
 ## コマンド
 
@@ -566,5 +127,5 @@ bunx playwright test --grep "<test title>"         # 名前フィルター
 | `__tests__/fixtures/`    | テストデータ（users, reservations）              |
 | `__tests__/helpers/`     | テストヘルパー（session-mock, assertions）       |
 | `__tests__/setup.ts`     | グローバルセットアップ（env 設定）               |
-| `e2e/`                   | E2Eテスト                                        |
+| `e2e/`                   | E2E テスト                                       |
 | `playwright.config.ts`   | Playwright 設定（workers: 1, chromium のみ）     |
