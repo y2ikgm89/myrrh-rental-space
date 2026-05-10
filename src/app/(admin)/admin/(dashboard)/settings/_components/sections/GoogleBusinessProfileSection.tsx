@@ -18,6 +18,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { initiateGbpAuth, revokeGbpAuth } from "@/admin/actions/settings";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -147,14 +148,13 @@ export function GoogleBusinessProfileSection({
             </Button>
           ) : (
             <form action={initiateGbpAuth}>
-              <Button
-                type="submit"
+              <SubmitButton
+                isPending={isPending}
+                label="Google で連携"
+                pendingLabel="連携中..."
                 variant="outline"
-                disabled={isPending}
                 className="min-h-11"
-              >
-                Google で連携
-              </Button>
+              />
             </form>
           )}
         </div>

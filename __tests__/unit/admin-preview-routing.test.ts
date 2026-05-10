@@ -20,7 +20,7 @@ describe("preview routing", () => {
     expect(openSpy).toHaveBeenCalledWith(
       "/posts/preview/hello-world",
       "_blank",
-      "noopener,noreferrer",
+      "noreferrer",
     );
   });
 
@@ -30,7 +30,7 @@ describe("preview routing", () => {
     expect(openSpy).toHaveBeenCalledWith(
       "/news/preview/release-note",
       "_blank",
-      "noopener,noreferrer",
+      "noreferrer",
     );
   });
 

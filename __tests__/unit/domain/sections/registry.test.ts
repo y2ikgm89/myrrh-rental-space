@@ -174,7 +174,10 @@ describe("getSectionDefinitionsByCategory", () => {
 
 describe("validateSectionConfig", () => {
   test("'hero' に有効な config を渡すと success: true を返す", () => {
-    const result = validateSectionConfig("hero", { title: "Test" });
+    // Phase 1 で title は PortableTextSpan[] 化済み（_key + _type: "span" + text の object 配列）
+    const result = validateSectionConfig("hero", {
+      title: [{ _key: "k1", _type: "span" as const, text: "Test" }],
+    });
 
     expect(result.success).toBe(true);
     if (result.success) {

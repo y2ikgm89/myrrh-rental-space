@@ -121,7 +121,7 @@ describe("GET /api/admin/export/customers", () => {
       ];
 
       expect(rows).toEqual([testCustomer]);
-      expect(columns).toHaveLength(22);
+      expect(columns).toHaveLength(23);
 
       const headers = columns.map((c) => c.header);
       expect(headers).toEqual([
@@ -131,6 +131,7 @@ describe("GET /api/admin/export/customers", () => {
         "姓カナ",
         "名カナ",
         "会社名",
+        "顧客タイプ",
         "メール",
         "電話番号",
         "郵便番号",

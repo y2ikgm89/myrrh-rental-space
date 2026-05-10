@@ -122,6 +122,17 @@ mock.module("@/admin/components/ui", () => ({
   TableRow: ({ children, ...props }: { children?: ReactNode }) => (
     <tr {...props}>{children}</tr>
   ),
+  // Dialog 系（IconPickerField 等の子 component が import）
+  Dialog: Passthrough,
+  DialogPortal: Passthrough,
+  DialogOverlay: Passthrough,
+  DialogClose: Passthrough,
+  DialogTrigger: Passthrough,
+  DialogContent: Passthrough,
+  DialogHeader: Passthrough,
+  DialogFooter: Passthrough,
+  DialogTitle: Passthrough,
+  DialogDescription: Passthrough,
 }));
 
 mock.module("next/image", () => ({

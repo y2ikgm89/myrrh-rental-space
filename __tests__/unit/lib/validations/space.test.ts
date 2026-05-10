@@ -28,7 +28,11 @@ const VALID_SPACE_INPUT = {
     "https://example.com/images/1.jpg",
     "https://example.com/images/2.jpg",
   ],
-  facilities: ["WiFi", "プロジェクター", "電源"],
+  facilities: [
+    { name: "WiFi", iconName: "" },
+    { name: "プロジェクター", iconName: "" },
+    { name: "電源", iconName: "" },
+  ],
   isPublished: false,
   locationId: TEST_LOCATION_ID,
   categoryId: null,
@@ -386,18 +390,43 @@ describe("spaceFormSchema", () => {
       expect(result.success).toBe(true);
     });
 
-    test("空文字を含む配列はエラー", () => {
+    test("name 空文字を含む要素はエラー", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        facilities: ["WiFi", ""],
+        facilities: [
+          { name: "WiFi", iconName: "" },
+          { name: "", iconName: "" },
+        ],
       });
       expect(result.success).toBe(false);
     });
 
-    test("51文字以上の要素はエラー", () => {
+    test("name が 51文字以上の要素はエラー", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        facilities: ["あ".repeat(51)],
+        facilities: [{ name: "あ".repeat(51), iconName: "" }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("iconName 付きの要素は許可", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        facilities: [
+          { name: "WiFi", iconName: "IconWifi" },
+          { name: "プロジェクター", iconName: "IconDeviceTv" },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("name 重複はエラー（uniqueness 契約）", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        facilities: [
+          { name: "WiFi", iconName: "IconWifi" },
+          { name: "WiFi", iconName: "" },
+        ],
       });
       expect(result.success).toBe(false);
     });

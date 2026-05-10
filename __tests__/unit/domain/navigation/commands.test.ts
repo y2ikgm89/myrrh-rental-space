@@ -221,10 +221,10 @@ describe("navigationItemInputSchema バリデーション", () => {
       expect(result.success).toBe(false);
     });
 
-    test("label の text token が201文字で失敗する", () => {
+    test("label の text token が501文字で失敗する（PortableTextSpan max 500）", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        label: [{ _key: "k", _type: "span" as const, text: "あ".repeat(201) }],
+        label: [{ _key: "k", _type: "span" as const, text: "あ".repeat(501) }],
       });
       expect(result.success).toBe(false);
     });
