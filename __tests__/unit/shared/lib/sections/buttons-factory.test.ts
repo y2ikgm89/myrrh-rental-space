@@ -82,7 +82,7 @@ describe("createButtonsArraySchema", () => {
     test("不正な icon name (IconXxx 形式違反) は reject", () => {
       const result = schema.safeParse([
         {
-          label: [{ _key: "k1", type: "icon", name: "invalid_name" }],
+          label: [{ _key: "k1", _type: "iconInline", name: "invalid_name" }],
           url: "/foo",
         },
       ]);
@@ -206,10 +206,10 @@ describe("createButtonsArraySchema", () => {
   });
 
   describe("text token 制約", () => {
-    test("text value 200 文字超は reject (text token max)", () => {
+    test("text 501 文字超は reject (PortableTextSpan max)", () => {
       const result = schema.safeParse([
         {
-          label: [{ _key: "k1", type: "text", value: "a".repeat(201) }],
+          label: [{ _key: "k1", _type: "span", text: "a".repeat(501) }],
           url: "/foo",
         },
       ]);

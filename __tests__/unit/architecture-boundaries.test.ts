@@ -1558,6 +1558,71 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  test('Phase 0 で廃止された旧 token shape (`type:"text"|"icon"`) が __tests__/ の fixture に残存しない', () => {
+    // Phase 0 (commit `2c8c86b9`) で `ButtonLabelToken` の `type` discriminator は
+    // Sanity Portable Text 公式の `_type` discriminator + `text` field に rename された。
+    // src/ は別 test (`Phase 0 で削除済の...`) がカバーするが、`__tests__/` の fixture が
+    // 旧 shape のまま放置されると test:integration / test:unit で silent fail を起こす
+    // （実例: 2026-05-10 navigation.test.ts / homepage-settings.test.ts で発生）。
+    //
+    // 検出パターン:
+    //   - `type: "text" as const, value:` (旧 TextToken)
+    //   - `type: "icon" as const, name:` (旧 IconToken — name 単体は inline icon と
+    //     共有のため context で限定)
+    //   - `, type: "text",` / `, type: "icon",` (短縮形)
+    const PATTERNS: readonly RegExp[] = [
+      /\btype:\s*"text"\s+as\s+const\s*,\s*value:/,
+      /\btype:\s*"icon"\s+as\s+const\s*,\s*name:/,
+      /\btype:\s*"text"\s*,\s*value:\s*"/,
+    ] as const;
+
+    const TESTS_ROOT = join(ROOT, "__tests__");
+    const E2E_ROOT = join(ROOT, "e2e");
+    const violations: string[] = [];
+
+    function walkSpec(root: string): string[] {
+      if (!existsSync(root)) return [];
+      const out: string[] = [];
+      const stack = [root];
+      while (stack.length > 0) {
+        const dir = stack.pop()!;
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const path = join(dir, entry.name);
+          if (entry.isDirectory()) {
+            stack.push(path);
+          } else if (/\.(ts|tsx)$/u.test(entry.name)) {
+            out.push(path);
+          }
+        }
+      }
+      return out;
+    }
+
+    // 旧 shape を「reject される」negative test fixture として **意図的に**
+    // 残している schema 検証 spec のみ allowlist に追加。
+    const ALLOWLIST: readonly string[] = [
+      // PortableTextSpanSchema の「旧 type:'text' は受け付けない」 negative test
+      "__tests__/unit/lib/portable-text/schema.test.ts",
+    ] as const;
+
+    for (const root of [TESTS_ROOT, E2E_ROOT]) {
+      for (const path of walkSpec(root)) {
+        // 自分自身の test ファイルはパターン文字列を含むため除外
+        if (path.endsWith("architecture-boundaries.test.ts")) continue;
+        const rel = relative(ROOT, path).replaceAll("\\", "/");
+        if (ALLOWLIST.includes(rel)) continue;
+        const source = readFileSync(path, "utf8");
+        for (const re of PATTERNS) {
+          if (re.test(source)) {
+            violations.push(`${relative(ROOT, path)}: matches ${re.source}`);
+          }
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   test("Phase 1 で PortableTextSpan[] 化済の見出しフィールドは schema で string を受け付けない", async () => {
     const { validateSectionConfig } =
       await import("@/shared/lib/validations/section");
