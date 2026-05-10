@@ -360,13 +360,17 @@ describe("Homepage Settings Admin Action Integration", () => {
 
     test("有効な NEWS_LIST 設定は成功", () => {
       // Phase 3 で section schema が `displayLayout`（per-section の表示形式）と
-      // `layout`（全 section 共通の余白・幅・可視性 group）に分離された
+      // `layout`（全 section 共通の余白・幅・可視性 group）に分離された。
+      // Portable Text Phase 1 / Phase 3 で `title` / `viewAllText` は
+      // `PortableTextSpan[]` 化（`_type: "span"`）。
       const config = {
         sectionLabel: "News",
-        title: "お知らせ",
+        title: [{ _key: "k1", _type: "span" as const, text: "お知らせ" }],
         maxItems: 5,
         showViewAllLink: true,
-        viewAllText: "全てのお知らせ",
+        viewAllText: [
+          { _key: "k2", _type: "span" as const, text: "全てのお知らせ" },
+        ],
         viewAllUrl: "/news",
         displayLayout: "list",
         columns: 2,
@@ -380,10 +384,18 @@ describe("Homepage Settings Admin Action Integration", () => {
       expect(result.success).toBe(false);
     });
 
-    test("全 SectionType に対して validatesectionConfig が実行できる", () => {
+    test("全 SectionType の safeParse({}) 契約が成立する（fallback chain 互換）", () => {
+      // test-quality.md §Section schema test contract:
+      // 「全 schema は safeParse({}) 成立必須」が architectural contract。
+      //
+      // 例外: page-hero は discriminated union（variant: editorial-split /
+      // compact / minimal）のため、discriminator value 不在で safeParse は
+      // 失敗する設計（`ssot-singletons.md` §page-hero）。AutoSectionForm が
+      // `useWatch` + form.reset で discriminator を補ってから schema を通す。
+      const SKIP_DISCRIMINATED_UNIONS = new Set(["page-hero"]);
       for (const type of Object.values(SectionType)) {
-        const defaultConfig = getDefaultConfig(type);
-        const result = validateSectionConfig(type, defaultConfig);
+        if (SKIP_DISCRIMINATED_UNIONS.has(type)) continue;
+        const result = validateSectionConfig(type, {});
         expect(result.success).toBe(true);
       }
     });
