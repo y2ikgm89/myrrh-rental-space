@@ -23,7 +23,7 @@ Target files (see spec § Modification Targets):
 | 1   | `.claude/rules/error-handling.md`              | A, B, C, D, E                 |
 | 2   | `.claude/rules/auth-patterns.md`               | A, B, D                       |
 | 3   | `.claude/rules/frontend/admin-ui-patterns.md`  | Delete section (related to D) |
-| 4   | `.claude/rules/implementation-quality.md`      | A, B, D                       |
+| 4   | `.claude/rules/code-quality.md`                | A, B, D                       |
 | 5   | `.claude/rules/test-quality.md`                | A, D                          |
 | 6   | `.claude/rules/server-actions/prohibitions.md` | A                             |
 | 7   | `.claude/rules/server-actions/use-cache.md`    | A                             |
@@ -66,7 +66,7 @@ Expected (order may vary):
 
 - `.claude/rules/auth-patterns.md:11`
 - `.claude/rules/error-handling.md:34`
-- `.claude/rules/implementation-quality.md:4`
+- `.claude/rules/code-quality.md:4`
 - `.claude/rules/frontend/admin-ui-patterns.md:8`
 - `.claude/rules/server-actions/use-cache.md:2`
 - `.claude/rules/test-quality.md:9`
@@ -436,11 +436,11 @@ Expected: 0 hits
 
 ---
 
-### Task 5: Update `implementation-quality.md`
+### Task 5: Update `code-quality.md`
 
 **Files:**
 
-- Modify: `.claude/rules/implementation-quality.md`
+- Modify: `.claude/rules/code-quality.md`
 
 **Apply Patterns:** A, B
 
@@ -449,7 +449,7 @@ Expected: 0 hits
 - [ ] **Step 1: Locate targets with grep**
 
 ```bash
-grep -nE "createSuccess|createFailure" .claude/rules/implementation-quality.md
+grep -nE "createSuccess|createFailure" .claude/rules/code-quality.md
 ```
 
 Expected: 4 hits
@@ -539,7 +539,7 @@ try {
 - [ ] **Step 4: Verify 0 hits after update**
 
 ```bash
-grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/implementation-quality.md
+grep -nE "createSuccess|createFailure|createValidationError\b|ActionResult|ActionSuccess|ActionFailure|@/admin/types/server-actions|@/shared/types/server-actions" .claude/rules/code-quality.md
 ```
 
 Expected: 0 hits
@@ -811,7 +811,7 @@ Expected: all 8 files show ` M` (modified); no `??` (untracked) or `D` (deleted)
 - [ ] **Step 1: Stage only the 8 target files (avoid other untracked/modified files)**
 
 ```bash
-git add .claude/rules/error-handling.md .claude/rules/auth-patterns.md .claude/rules/frontend/admin-ui-patterns.md .claude/rules/implementation-quality.md .claude/rules/test-quality.md .claude/rules/server-actions/prohibitions.md .claude/rules/server-actions/use-cache.md .claude/rules/type-safety.md
+git add .claude/rules/error-handling.md .claude/rules/auth-patterns.md .claude/rules/frontend/admin-ui-patterns.md .claude/rules/code-quality.md .claude/rules/test-quality.md .claude/rules/server-actions/prohibitions.md .claude/rules/server-actions/use-cache.md .claude/rules/type-safety.md
 ```
 
 - [ ] **Step 2: Final staged diff check**
