@@ -24,7 +24,7 @@ import { test, expect } from "@playwright/test";
  *   - 本 spec は ComponentPicker → Dialog → 挿入確認の **flow smoke** に集中
  */
 
-const NEW_POST_PATH = "/admin/blog/new";
+const NEW_POST_PATH = "/admin/posts/new";
 
 test.describe("Lexical InlineIcon - slash command 挿入", () => {
   test("/ を入力すると ComponentPicker に「アイコン」候補が表示される", async ({
@@ -59,9 +59,9 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
     await expect(iconOption).toBeVisible({ timeout: 5000 });
     await iconOption.click();
 
-    // IconPickerDialog の DialogTitle「アイコンを選択」
+    // IconPickerDialog の DialogTitle（heading role で footer の "アイコンを選択してください" と区別）
     await expect(
-      page.getByRole("dialog").getByText("アイコンを選択"),
+      page.getByRole("dialog").getByRole("heading", { name: "アイコンを選択" }),
     ).toBeVisible({ timeout: 5000 });
   });
 
@@ -81,9 +81,9 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
     await iconOption.click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText("アイコンを選択")).toBeVisible({
-      timeout: 5000,
-    });
+    await expect(
+      dialog.getByRole("heading", { name: "アイコンを選択" }),
+    ).toBeVisible({ timeout: 5000 });
 
     // 検索欄で絞り込み（aria-label="アイコンを検索" の `<input type="search">`）
     const searchInput = dialog.getByLabel("アイコンを検索");

@@ -3,11 +3,16 @@
  *
  * @description スラッシュコマンドでコンポーネントを挿入するプラグイン
  *
- * "/" を入力するとメニューが表示され、ブロックタイプやメディアを選択できる
- * カテゴリー別にグループ化されたメニュー表示
+ * "/" を入力するとメニューが表示され、ブロックタイプやメディアを選択できる。
+ * カテゴリー別にグループ化されたメニュー表示。
  *
- * 挿入処理は Lexical 推奨どおり、トリガー文字削除と `applyInsertItemInUpdate` を
- * 同一の `editor.update` にまとめる（ネストした update を避ける）。
+ * 挿入処理:
+ * - **command / transform**: トリガー文字削除と `applyInsertItemInUpdate` を
+ *   同一の `editor.update` に集約（ネストした update を避ける）
+ * - **dialog**: トリガー文字削除と closeMenu のみ `editor.update` 内で行い、
+ *   `openDialog(dialogId)` は **`editor.update` の外で同期呼び出し**
+ *   （React state 更新は editor mutation と独立するため、queueMicrotask での
+ *   遅延ハック不要 + DialogRenderer の re-render が確実に発火する）
  */
 
 "use client";
@@ -199,11 +204,27 @@ export function ComponentPickerPlugin({
     closeMenu: () => void,
     _matchingString: string,
   ) => {
+    const item = selectedOption.insertItem;
+
+    // dialog: editor.update 内ではトリガー文字削除と closeMenu のみ。
+    // openDialog は React state 更新のため editor.update の外で同期呼び出し。
+    if (item.type === "dialog") {
+      editor.update(() => {
+        if (nodeToRemove) {
+          nodeToRemove.remove();
+        }
+        closeMenu();
+      });
+      openDialog?.(item.dialogId);
+      return;
+    }
+
+    // command / transform: 全て同一 editor.update 内で実行。
     editor.update(() => {
       if (nodeToRemove) {
         nodeToRemove.remove();
       }
-      applyInsertItemInUpdate(selectedOption.insertItem, editor, openDialog);
+      applyInsertItemInUpdate(item, editor);
       closeMenu();
     });
   };

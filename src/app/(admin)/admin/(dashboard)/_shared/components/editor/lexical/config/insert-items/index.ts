@@ -13,8 +13,10 @@
  * 1. 該当カテゴリのファイルに `InsertItem` エントリーを追加
  * 2. `type: "dialog"` の場合は `../dialog-registry.ts` にもエントリーを追加
  *
- * 挿入の実行は Lexical の推奨どおり **単一の `editor.update` 内**にまとめる。
- * スラッシュメニューは `applyInsertItemInUpdate`、ツールバーは `executeInsertItem` を使う。
+ * 実行モデル:
+ * - **command / transform**: `editor.update` 内で `applyInsertItemInUpdate` 経由
+ * - **dialog**: `editor.update` の **外** で `openDialog(dialogId)` を同期呼び出し
+ *   （React state side-effect のため editor.update 内で起動しない）
  *
  * @remarks Lexical 内部の barrel export として許容（`.claude/rules/gotchas.md` §Lexical 例外）。
  */
@@ -25,7 +27,20 @@ import { EMBED_INSERT_ITEMS } from "./embed";
 import { LAYOUT_INSERT_ITEMS } from "./layout";
 import { MEDIA_INSERT_ITEMS } from "./media";
 import { STRUCTURE_INSERT_ITEMS } from "./structure";
-import type { InsertItem } from "./types";
+import type {
+  CommandInsertItem,
+  InsertItem,
+  TransformInsertItem,
+} from "./types";
+
+/**
+ * `editor.update` 内で適用可能なインサートアイテム（dialog を含まない）。
+ *
+ * Dialog 起動は React state side-effect のため editor.update の外で実行する設計。
+ * 型レベルで `applyInsertItemInUpdate` の引数を非 dialog に narrow して
+ * 呼び出し側の dialog 取りこぼしを防止する。
+ */
+export type ApplyableInsertItem = CommandInsertItem | TransformInsertItem;
 
 // =============================================================================
 // Re-exports — types & metadata
@@ -92,7 +107,9 @@ export function getPickerInsertItems(
 
 /**
  * ツールバー「挿入」など、既存の update 外から挿入を実行する。
- * ダイアログ型は同期的に `openDialog` のみ。それ以外は 1 回の `editor.update` に集約する。
+ *
+ * - **dialog**: 同期的に `openDialog(dialogId)` のみ呼ぶ（editor.update に入らない）
+ * - **command / transform**: 1 回の `editor.update` に `applyInsertItemInUpdate` を集約
  */
 export function executeInsertItem(
   item: InsertItem,
@@ -104,29 +121,24 @@ export function executeInsertItem(
     return;
   }
   editor.update(() => {
-    applyInsertItemInUpdate(item, editor, openDialog);
+    applyInsertItemInUpdate(item, editor);
   });
 }
 
 /**
- * 既に `editor.update` のコールバック内にいるときに呼ぶ（スラッシュメニューと併用）。
- * ダイアログ型は `openDialog` を `queueMicrotask` で遅延し、同一 update 内の DOM 確定後に開く。
+ * `editor.update` のコールバック内で `command` / `transform` 型を適用する。
+ *
+ * 引数型は `ApplyableInsertItem`（dialog 排除）で narrow 済み。
+ * Dialog 起動は React state side-effect のため editor.update の外（呼び出し側）で
+ * `openDialog(item.dialogId)` を同期呼び出しすること（旧 `queueMicrotask` ハック廃止）。
  */
 export function applyInsertItemInUpdate(
-  item: InsertItem,
-  _editor: LexicalEditor,
-  openDialog?: (id: DialogId) => void,
+  item: ApplyableInsertItem,
+  editor: LexicalEditor,
 ): void {
   switch (item.type) {
-    case "dialog": {
-      const dialogId = item.dialogId;
-      queueMicrotask(() => {
-        openDialog?.(dialogId);
-      });
-      break;
-    }
     case "command":
-      item.dispatch(_editor);
+      item.dispatch(editor);
       break;
     case "transform":
       item.applyInUpdate();
