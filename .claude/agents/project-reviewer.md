@@ -172,9 +172,9 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 ## Rule count reference
 
-**Always-load (1):** gotchas
+**Always-load (0):** 全 rule は `paths:` 必須（CLAUDE.md「常時ロード rule はゼロ維持」原則）
 
-**Conditional by paths: (25):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns, resend-patterns, api-routes, anti-ai-design, project-design-config, design-system-memory, gsap-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
+**Conditional by paths:** type-safety, code-quality, implementation-patterns, test-quality, bun-patterns, error-handling, react/_, server-actions/_, auth-patterns, prisma-patterns, zod-patterns/_, nuqs-patterns, tailwind-patterns/_, server-only-patterns, resend-patterns, external-api-retry-patterns, ical-patterns, api-routes, frontend/anti-ai-design, frontend/project-design-config, frontend/design-system-memory, frontend/sections, frontend/seo-patterns, frontend/external-link-rel, frontend/gsap/_, frontend/accessibility/_, frontend/lexical/_, frontend/admin-inline-editor-patterns, frontend/admin-ui-patterns, frontend/admin-ui/_, ops/deployment-patterns, ops/hooks-patterns, claude-code-patterns, ssot-singletons, audit-exceptions, research-audit, git-migration, project-structure, api-routes
 
 ## False positive 防止（例外節の cross-check）
 

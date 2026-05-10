@@ -485,3 +485,24 @@ pending state で text を変えると button 幅が変化してレイアウト�
 - **リスト `.map` 内の個別 `<ScrollReveal delay={i*0.08}>` wrap は anti-pattern** — 縦並びで大きなカード（event-list 等）は 2 個目以降が viewport 外で `opacity:0` のまま待機、スクロールしないと見えない silent bug。`ScrollRevealGroup`（1 ScrollTrigger + stagger、`@/public/components/animations/scroll-reveal`）に集約。event-list-view / post-grid / space-grid / news-list / features-section / how-it-works-section / SpaceShowcaseSection で統一済み。詳細は `frontend/gsap/matchmedia.md` §パターン D
 - **Structured list の canonical border/divider pattern** — `divide-y border-y border-border divide-border` をコンテナに適用（上下 + 各アイテム間の線）。per-item `cn("border-b", i === 0 && "border-t")` 分岐ロジックは廃止。features-section / event-list-view / news-list が参照実装
 - **news archive は `<ul>/<li>` ではなく `<div className="divide-y border-y ...">`** — event-list と同形で統一。Editorial Magazine（Kinfolk / Cereal / The Gentlewoman）は news archive を `<ul>` でマークアップしない業界標準
+
+### 公開ページ実装 SSoT
+
+#### 料金表示 — コンポーネント種別で SSoT 分岐
+
+- **Client Component**: `useFormatPrice`（`TaxSettingsProvider` / layout.tsx 経由）
+- **Server Component**: `getPublicTaxSettings()` + `formatUnitPriceWithTax()` を直接呼ぶ（`'use cache'` でリクエスト単位 dedup、グリッド N 枚描画でも DB 1 回）
+- **silent bug**: Client 化のためだけに Hook を選ぶと SpaceCard 等の `"use client"` 不要なカードが Server 化できなくなる
+- **両方禁止**: `toLocaleString()` 直接表示
+
+#### フィルタ・選択 UI — design-system/select.tsx が SSoT
+
+- **canonical**: `_shared/components/design-system/select.tsx`（ネイティブ `<select>` + Editorial border-bottom primitive）
+- **禁止**: 新規 Radix Select / 自作 Popover、`@/admin/components/ui/select.tsx`（Radix Select）の公開ページからの cross-import（admin/public 分離）
+- **理由**: OS-native picker（モバイル UX 最適）+ a11y / キーボード操作自動 + JS ゼロ + WCAG 2.5.5 タッチターゲット 44px を同時満足
+- **"All" sentinel**: `value=""` で onChange 時に null マッピング（Material Design 3 "All" chip pattern）
+
+#### 公開フォーム autoComplete
+
+- `family-name` / `given-name` / `email` / `organization` を適切に設定
+- 未設定はブラウザ自動入力が機能しない

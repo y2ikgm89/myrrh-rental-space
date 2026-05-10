@@ -40,6 +40,7 @@ if (!parsed.success) return jsonValidationError(parsed.error);
 - **`checkRateLimit(pathname, clientIp)` に一元化**（`proxy.ts` で呼び出し）
 - エンドポイント別: `/api/auth` → 10/15分、`/api/admin/login-tokens` → 30/分、その他 → 100/分
 - **Webhook・Cron・Cloud Run probe (`/api/live`, `/api/health`) はレート制限対象外**（`proxy.ts` で早期リターン）。Cloud Run probe は `x-forwarded-for` を設定せず `getClientIp()` が `"unknown"` を返すため、burst 時に probe が同一 bucket に合算されて 429 となり liveness 失敗 → コンテナ kill 連鎖の silent bug になる
+- **`proxy.ts` のレート制限は Server Actions をカバーしない** — Server Actions はページ URL への POST（`/contact` 等）で、proxy の `/api` 判定をバイパスする。公開フォーム送信には `checkActionRateLimit(formSubmitRateLimiter)` を Server Action 冒頭で呼ぶ。`getClientIpFromHeaders()` で `headers()` 経由の IP 取得
 
 ## Webhook パターン
 

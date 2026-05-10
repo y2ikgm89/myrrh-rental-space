@@ -74,6 +74,8 @@ import { Activity } from 'react'
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` パターンは React Compiler が最適化できないため error。JSX 前に変数抽出する
 - **`useSyncExternalStore` の `getServerSnapshot` で配列・オブジェクトを毎回新規生成しない** — `return []` / `return {}` は NG。モジュール定数や固定参照を返す。プリミティブ（`null`, `false` 等）は OK
 - **`// eslint-disable-next-line` は multi-line JSX element の別 line の prop に効かない** — JSON-LD 用 `<script>` 等で element 開始 line（`<script` の前）に disable comment を置いても、`@eslint-react/dom-no-dangerously-set-innerhtml` rule は別 line の prop で trigger するため抑制されない（disable は element 開始 line のみに作用）。canonical: file 先頭 / module 先頭に block-level `/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped, safe for structured data */` を置く（`@/public/components/seo/json-ld.tsx` が参照実装）
+- **`exactOptionalPropertyTypes` で Prisma create の optional フィールドに `input.field` を直接渡せない** — `field?: string` に `string | undefined` は非互換。条件スプレッド `...(input.field !== undefined && { field: input.field })` を使用。`notifications/commands.ts` パターン参照
+- **`exactOptionalPropertyTypes` で pricing 関数の `null` と `undefined` を混同しない** — `calculateReservationPrice` の `spaceDiscount` は `SpaceDiscountSettings | null`。`undefined` を渡すと型エラー
 
 ## 参考
 
