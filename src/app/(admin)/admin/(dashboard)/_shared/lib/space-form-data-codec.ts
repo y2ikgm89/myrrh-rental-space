@@ -88,24 +88,24 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     .filter((u) => u.length > 0);
 
   // 設備配列は { name, iconName } の object として JSON 1 つずつ append される。
-  // 失敗 / 空文字列は skip（防御的読み取り）。
+  // 不正な JSON / shape mismatch / 空文字列は skip（防御的読み取り）。
   const facilities = formData
     .getAll("facilities")
     .map((v) => {
       const trimmed = String(v).trim();
       if (trimmed.length === 0) return null;
+      let parsed: unknown;
       try {
-        const parsed: unknown = JSON.parse(trimmed);
-        if (
-          isRecord(parsed) &&
-          typeof parsed["name"] === "string" &&
-          typeof parsed["iconName"] === "string"
-        ) {
-          return { name: parsed["name"], iconName: parsed["iconName"] };
-        }
+        parsed = JSON.parse(trimmed);
       } catch {
-        // 旧形式の string 互換性: name のみ受け入れて iconName 空文字
-        return { name: trimmed, iconName: "" };
+        return null;
+      }
+      if (
+        isRecord(parsed) &&
+        typeof parsed["name"] === "string" &&
+        typeof parsed["iconName"] === "string"
+      ) {
+        return { name: parsed["name"], iconName: parsed["iconName"] };
       }
       return null;
     })
