@@ -18,9 +18,6 @@ export { StripeSection } from "./StripeSection";
 // Posts Settings
 export { PermalinkSection } from "./PermalinkSection";
 
-// 注: 機能モジュール（multi-tenant feature gates）は /admin/settings/features に独立移動済み（Phase 5）
-// 旧 ReviewsSection は Phase 6 で完全削除（featureModules.reviews へ統合）
-
 // External Service API Keys
 export { ResendSection } from "./ResendSection";
 export { TurnstileSection } from "./TurnstileSection";

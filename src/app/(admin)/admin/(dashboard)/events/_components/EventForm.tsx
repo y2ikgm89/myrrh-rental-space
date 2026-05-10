@@ -48,10 +48,6 @@ function serializeDescriptionJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-// `formatDateTimeLocalInJst` は `@/shared/lib/date-format` の SSoT helper
-// （旧 local 実装はクーポン管理 cleanup で `parseDateTimeLocalAsJst` と
-// セットで shared に統一）
-
 // =============================================================================
 // Component
 // =============================================================================

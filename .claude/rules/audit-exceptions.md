@@ -16,6 +16,21 @@ paths:
 - `select.tsx` の `required` — `frontend/project-design-config.md` で Radix 制約として除外
 - `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
 
+## 「legacy / 互換」コメント sanctioned 例外
+
+grep `(legacy|Legacy|//.*旧|//.*互換|@deprecated)` で hit するが**違反として報告しない**パターン:
+
+- `reEncryptLegacyOAuthToken` / `legacy plaintext token` (`shared/domain/auth/`) — Better Auth at-rest encryption migration helper（`auth-patterns.md` §OAuth token encryption）
+- `fix-legacy-lexical-rows.md` への docs ref — docs filename 自体が legacy 命名で削除不可
+- `legacy データ` / `legacy object format` — defensive parser の historical data 自己修復 transform
+- `S3 互換 API` (`env/server.ts`) — Cloudflare R2 機能説明
+- `React Compiler 互換` / `FieldValues と互換` / `直接互換` — 設計説明
+- `互換 API` / `互換 re-export` (`section-metadata.ts` / `section.ts`) — 後方互換 re-export shell
+- `adornment が無ければ 直接 return` (`input.tsx`) / `Settings にフォールバック` (`access-map.tsx`) — graceful fallback 設計
+- `glass-shimmer` (announcement-bar) — animation 機能名
+
+**真の history-only 注記の削除判定**: コメント単体で隣接コードへの参照が失われ「過去の cleanup の事実だけを記述」するもの（例: 削除済 helper への言及 / Phase X で削除した旧 component への言及）は削除対象。設計説明 / defensive parser comment は維持。
+
 ## 使い方
 
 該当パターンが上記に記載されていれば **Critical / High 扱いで報告しない**。

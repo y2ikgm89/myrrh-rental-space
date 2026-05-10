@@ -41,7 +41,7 @@ export const locationListConfigSchema = z.object({
     subGroup: "text",
   }),
 
-  // 代表連絡先（旧 AccessGlobalInfo）
+  // 代表連絡先
   globalContactEnabled: field.boolean("代表お問い合わせを表示", {
     default: true,
     helpText: "Settings の電話 / メールを章の上に表示",

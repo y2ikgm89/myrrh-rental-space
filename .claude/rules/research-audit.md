@@ -38,6 +38,7 @@ paths:
 - **レビューエージェント指摘**: `claude-code-patterns.md` と照合して誤報除外。`bun run lint` exit 状態 + Read を ground truth とする
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン。違反大量報告時はまず validate を ground truth に
 - **「クリーン実装になってる？」「型アサーションない？」等のスコープ曖昧監査依頼は WIP 差分か全プロジェクトかを明示確認** — subagent dispatch prompt にも scope を明記必須。WIP 差分のみで「クリーン」と報告し、ユーザーは全プロジェクトを意図していて手戻り発生する silent UX bug（2026-05-08 実発生、project-reviewer の WIP-only スコープに気付かず）
+- **スコア化依頼で 10/10 を約束しない** — subjective scoring の上限は理論値、9.85-9.9 が現実的天井。残る差分は Lexical fork の `useCallback` / Email templates 内 hex / `unstable_rethrow|retry` 等の sanctioned 例外で構造的に削減不可。「10 を目指す」要望は「9.9 + 多日投資」phase 計画 (`docs/superpowers/plans/`) + handoff memory に分解する。スコア提示後の「改善余地あり」評価は per-item で実態確認（factory / re-export shell / defensive parser の区別を Read で検証）してからユーザーに提案する — grep カウントを盲信して dead 提案を作らない（実例: 2026-05-10 監査で「Zod .meta() 採用 3 件のみ → 横展開余地あり」評価が `fieldRegistry.register` grep 漏れによる誤評価で実態 ~20 件、提案撤回した）
 
 ## Plan 作成時の事前検証
 
@@ -53,6 +54,7 @@ paths:
 
 ## SSoT 重複検出と version drift
 
+- **Zod metadata 採用範囲の grep は `fieldRegistry.register` を含める必須** — `grep "\.meta(\|z\.registry"` 単体だと field-registry SSoT の registration を見落として「採用 N 件のみ」誤判定する。canonical: `grep -rn "\.meta(\|z\.registry\|fieldRegistry\.register\|register(fieldRegistry" src/`。実例: 2026-05-10 監査で 4 件 → 実態 ~20 件で「.meta() 横展開余地あり」評価が dead 提案だった
 - **SSoT 重複検出の grep**: symbol 名だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep
 - **`<library> X.Y` 形式の version 表記は `package.json` (SSoT) と drift しやすい** — `bun update` 後は `grep -rn '<lib> [0-9]\+\.[0-9]\+' .claude/ CLAUDE.md src/` で参照箇所一括更新
 - **ESLint `no-restricted-syntax` selector は静的+動的両対応** — `> ArrayExpression` は literal `[a, b]` のみ、`items.map(...)` 等の動的配列を見逃す。`CallExpression[callee.property.name='map']` 経路も `selector` に含める

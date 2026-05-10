@@ -38,7 +38,7 @@ export { SettingsDialog } from "./SettingsDialog";
 export type { SettingsDialogProps } from "./SettingsDialog";
 export { InlineEditorShell } from "./InlineEditorShell";
 
-// 旧型定義（side-panel フィールドコンポーネントが使用）
+// side-panel フィールドコンポーネントが参照する shared 型
 export type {
   EditorHeaderProps,
   SidePanelSectionProps,
