@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /**
  * 管理画面 - 顧客詳細表示 reflection E2E（管理者認証済み state）
@@ -25,10 +25,54 @@ import { test, expect } from "@playwright/test";
  *   - playwright.config.ts の chromium-admin project で実行
  *   - setup-admin により admin user が認証済み
  *   - dev サーバー稼働中
- *   - 顧客が 1 名以上存在する（seed の dev-customer 等、または手動作成）
+ *   - 顧客が 1 名以上存在する場合のみ詳細ページ遷移系を検証（無ければ skip）
  */
 
 const ADMIN_CUSTOMERS_PATH = "/admin/customers";
+
+/** ClickableTableRow は `<tr tabindex="0">` のみ（rules で role="link" 禁止）。
+ *  tbody 配下に scope して TableHeader 行を除外。 */
+const CUSTOMER_ROW_SELECTOR = 'tbody tr[tabindex="0"]';
+
+const CUSTOMER_DETAIL_URL_PATTERN = /\/admin\/customers\/[0-9a-f-]+(?:\?|$)/;
+
+/** 顧客行が無ければ test.skip するヘルパー（Empty state / 未 seed 環境対応）。 */
+async function gotoListAndRequireCustomer(page: Page) {
+  await page.goto(ADMIN_CUSTOMERS_PATH);
+  await page.waitForLoadState("networkidle");
+  // テーブル全体が描画されるまで待機（Suspense / RSC 遅延対策）
+  await expect(
+    page.getByRole("heading", { name: /顧客|Customer/ }).first(),
+  ).toBeVisible({
+    timeout: 15000,
+  });
+  const customerRow = page.locator(CUSTOMER_ROW_SELECTOR).first();
+  const count = await page.locator(CUSTOMER_ROW_SELECTOR).count();
+  if (count === 0) {
+    test.skip(
+      true,
+      "dev DB に顧客が登録されていません（seed で dev-customer を作成してください）",
+    );
+  }
+  return customerRow;
+}
+
+/** 行クリック → 詳細ページ遷移を URL pattern で確実に待機する canonical pattern。
+ *
+ *  - `row.click()` の center 位置は CheckboxCell / Email / ActionDropdown 等の
+ *    `stopRowClick` cell に落ちうるため、name cell（3 番目 = `td:nth(2)`、
+ *    `stopRowClick` 非適用）を明示ターゲットして click 伝播を保証する。
+ *  - Next.js App Router の soft navigation は load event を発火しないため
+ *    `waitForURL` ではなく URL を直接 polling する `toHaveURL` を使う。
+ */
+async function clickRowAndWaitForDetail(
+  page: Page,
+  row: ReturnType<Page["locator"]>,
+) {
+  // 列順: [0] CheckboxCell(stop) [1] StatusBadge [2] 名前 [3] 区分 ...
+  await row.locator("td").nth(2).click();
+  await expect(page).toHaveURL(CUSTOMER_DETAIL_URL_PATTERN, { timeout: 10000 });
+}
 
 test.describe("admin 顧客詳細 - reflection smoke", () => {
   test("/admin/customers がリスト or 空状態を表示する", async ({ page }) => {
@@ -45,39 +89,14 @@ test.describe("admin 顧客詳細 - reflection smoke", () => {
   });
 
   test("顧客行をクリックすると詳細ページに遷移する", async ({ page }) => {
-    await page.goto(ADMIN_CUSTOMERS_PATH);
-    await page.waitForLoadState("networkidle");
-
-    // ClickableTableRow は href を持つ。tbody 内の行を取得
-    const customerRow = page
-      .locator('tr[role="link"], tr[tabindex="0"]')
-      .first();
-    if (!(await customerRow.isVisible().catch(() => false))) {
-      test.skip(true, "顧客が登録されていません");
-      return;
-    }
-
-    await customerRow.click();
-    await page.waitForLoadState("networkidle");
-
-    // /admin/customers/<uuid> パターンに遷移
-    expect(page.url()).toMatch(/\/admin\/customers\/[0-9a-f-]+(\?|$)/);
+    const customerRow = await gotoListAndRequireCustomer(page);
+    await clickRowAndWaitForDetail(page, customerRow);
+    expect(page.url()).toMatch(CUSTOMER_DETAIL_URL_PATTERN);
   });
 
   test("詳細ページで基本情報セクションが表示される", async ({ page }) => {
-    await page.goto(ADMIN_CUSTOMERS_PATH);
-    await page.waitForLoadState("networkidle");
-
-    const customerRow = page
-      .locator('tr[role="link"], tr[tabindex="0"]')
-      .first();
-    if (!(await customerRow.isVisible().catch(() => false))) {
-      test.skip(true, "顧客が登録されていません");
-      return;
-    }
-
-    await customerRow.click();
-    await page.waitForLoadState("networkidle");
+    const customerRow = await gotoListAndRequireCustomer(page);
+    await clickRowAndWaitForDetail(page, customerRow);
 
     // AdminDetailLayout: title (h1) + DetailSection「基本情報」
     await expect(page.getByText("基本情報").first()).toBeVisible({
@@ -91,19 +110,8 @@ test.describe("admin 顧客詳細 - reflection smoke", () => {
   });
 
   test("詳細ページに編集ボタン（リンク）が存在する", async ({ page }) => {
-    await page.goto(ADMIN_CUSTOMERS_PATH);
-    await page.waitForLoadState("networkidle");
-
-    const customerRow = page
-      .locator('tr[role="link"], tr[tabindex="0"]')
-      .first();
-    if (!(await customerRow.isVisible().catch(() => false))) {
-      test.skip(true, "顧客が登録されていません");
-      return;
-    }
-
-    await customerRow.click();
-    await page.waitForLoadState("networkidle");
+    const customerRow = await gotoListAndRequireCustomer(page);
+    await clickRowAndWaitForDetail(page, customerRow);
 
     // AdminDetailLayout actions に「編集」リンク（href が /edit を含む）
     const editLink = page.locator(

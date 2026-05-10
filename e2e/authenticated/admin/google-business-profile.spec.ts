@@ -74,11 +74,12 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     await page.goto(`${API_SETTINGS_PATH}&gbp_success=1`);
     await page.waitForLoadState("networkidle");
 
-    // useEffect 内で router.replace により query が削除される
-    // （即時ではなく React Effect の commit phase 後）
-    await page.waitForTimeout(500);
-
-    expect(page.url()).not.toContain("gbp_success");
+    // useEffect → router.replace は async commit phase で発火するため
+    // 固定 timeout ではなく toHaveURL の auto-retry で polling 検証する
+    // （tab=calendar は GoogleBusinessProfileSection の cleanup ロジックで保持される）
+    await expect(page).toHaveURL(/^(?!.*gbp_success).*\/admin\/settings\/api/, {
+      timeout: 5000,
+    });
   });
 
   test("`gbp_error=invalid_state` query で開くと URL から query が clean up される", async ({
@@ -87,8 +88,8 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     await page.goto(`${API_SETTINGS_PATH}&gbp_error=invalid_state`);
     await page.waitForLoadState("networkidle");
 
-    await page.waitForTimeout(500);
-
-    expect(page.url()).not.toContain("gbp_error");
+    await expect(page).toHaveURL(/^(?!.*gbp_error).*\/admin\/settings\/api/, {
+      timeout: 5000,
+    });
   });
 });
