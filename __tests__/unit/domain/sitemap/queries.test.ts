@@ -1,0 +1,152 @@
+import { describe, test, expect, mock, beforeEach } from "bun:test";
+
+const mockSpaceFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+const mockNewsFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+const mockPostFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+const mockPageFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+const mockEventFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+const mockTermsFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+
+mock.module("server-only", () => ({}));
+mock.module("@/shared/db/prisma", () => ({
+  prisma: {
+    space: { findMany: mockSpaceFindMany },
+    news: { findMany: mockNewsFindMany },
+    post: { findMany: mockPostFindMany },
+    page: { findMany: mockPageFindMany },
+    event: { findMany: mockEventFindMany },
+    termsDocument: { findMany: mockTermsFindMany },
+  },
+}));
+mock.module("@generated/prisma/enums", () => ({
+  PostStatus: { PUBLISHED: "PUBLISHED", DRAFT: "DRAFT" },
+  EventStatus: {
+    PUBLISHED: "PUBLISHED",
+    DRAFT: "DRAFT",
+    CANCELLED: "CANCELLED",
+  },
+}));
+
+const { getSitemapContentData } =
+  await import("@/shared/domain/sitemap/queries");
+
+describe("getSitemapContentData", () => {
+  beforeEach(() => {
+    mockSpaceFindMany.mockReset();
+    mockNewsFindMany.mockReset();
+    mockPostFindMany.mockReset();
+    mockPageFindMany.mockReset();
+    mockEventFindMany.mockReset();
+    mockTermsFindMany.mockReset();
+  });
+
+  test("6 model 全て空でも { spaces, news, posts, customPages, events, terms } を返す", async () => {
+    mockSpaceFindMany.mockResolvedValueOnce([]);
+    mockNewsFindMany.mockResolvedValueOnce([]);
+    mockPostFindMany.mockResolvedValueOnce([]);
+    mockPageFindMany.mockResolvedValueOnce([]);
+    mockEventFindMany.mockResolvedValueOnce([]);
+    mockTermsFindMany.mockResolvedValueOnce([]);
+
+    const result = await getSitemapContentData();
+
+    expect(result).toEqual({
+      spaces: [],
+      news: [],
+      posts: [],
+      customPages: [],
+      events: [],
+      terms: [],
+    });
+  });
+
+  test("space は isPublished + isActive の AND filter", async () => {
+    await getSitemapContentData();
+
+    expect(mockSpaceFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { isPublished: true, isActive: true },
+        orderBy: { updatedAt: "desc" },
+      }),
+    );
+  });
+
+  test("post は status: PUBLISHED filter + category.slug を select に含む", async () => {
+    await getSitemapContentData();
+
+    expect(mockPostFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "PUBLISHED" },
+        select: expect.objectContaining({
+          category: { select: { slug: true } },
+        }),
+      }),
+    );
+  });
+
+  test("customPages (Page) は isSystemPage: false で system page 除外", async () => {
+    await getSitemapContentData();
+
+    expect(mockPageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          isPublished: true,
+          isActive: true,
+          isSystemPage: false,
+        }),
+      }),
+    );
+  });
+
+  test("event は status: PUBLISHED + deletedAt: null（soft delete 除外）", async () => {
+    await getSitemapContentData();
+
+    expect(mockEventFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "PUBLISHED", deletedAt: null },
+      }),
+    );
+  });
+
+  test("terms は deletedAt: null + isPublished: true", async () => {
+    await getSitemapContentData();
+
+    expect(mockTermsFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { deletedAt: null, isPublished: true },
+      }),
+    );
+  });
+
+  test("レコード入りデータが正しく shape で返る", async () => {
+    const updated = new Date("2025-06-01T00:00:00Z");
+    mockSpaceFindMany.mockResolvedValueOnce([
+      { slug: "studio-a", updatedAt: updated },
+    ]);
+    mockPostFindMany.mockResolvedValueOnce([
+      {
+        slug: "hello",
+        updatedAt: updated,
+        publishedAt: updated,
+        category: { slug: "news" },
+      },
+    ]);
+
+    const result = await getSitemapContentData();
+
+    expect(result.spaces).toEqual([{ slug: "studio-a", updatedAt: updated }]);
+    expect(result.posts[0]?.category?.slug).toBe("news");
+  });
+});
