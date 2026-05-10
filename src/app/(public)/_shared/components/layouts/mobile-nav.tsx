@@ -17,8 +17,8 @@ import {
   IconUser,
   type TablerIcon,
 } from "@tabler/icons-react";
+import type { Route } from "next";
 import { cn } from "@/shared/lib/cn";
-import type { AppRoute } from "@/shared/lib/typed-routes";
 
 export type MobileNavAuthKind = "mypage" | "login" | null;
 
@@ -27,7 +27,7 @@ interface MobileNavProps {
 }
 
 interface NavItem {
-  readonly href: AppRoute;
+  readonly href: Route;
   readonly icon: TablerIcon;
   readonly label: string;
   /** exact `/` 以外の判定を startsWith で行う */

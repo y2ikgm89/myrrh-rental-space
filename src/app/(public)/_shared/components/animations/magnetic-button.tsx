@@ -20,8 +20,8 @@ import { PortableTextSpans } from "@/shared/components/portable-text/PortableTex
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
+import type { Route } from "next";
 import { cn } from "@/shared/lib/cn";
-import type { AppRoute } from "@/shared/lib/typed-routes";
 import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 type MagneticButtonSize = "sm" | "md" | "lg";
@@ -42,7 +42,7 @@ interface MagneticButtonBaseProps {
   readonly className?: string;
   readonly strength?: number;
   readonly onClick?: () => void;
-  readonly href?: AppRoute;
+  readonly href?: Route;
   readonly size?: MagneticButtonSize;
   readonly customBackgroundColor?: string;
   readonly customTextColor?: string;

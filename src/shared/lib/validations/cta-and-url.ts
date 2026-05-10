@@ -1,20 +1,13 @@
 /**
- * URL / CTA ボタン / HEXカラー バリデーションヘルパー
+ * URL / CTA ボタン / HEX カラー バリデーションヘルパー。
  *
- * section-design.ts から切り出した共通ユーティリティ。
- * typed section config validation から利用される。
- *
- * Phase 2A (2026-05-02): legacy ctaPrimary/ctaSecondary 関連 helper
- * (`createCtaSchemas` / `transformLegacyCtaToButtons` / `transformCtaFields`)
- * を完全削除。buttons[] (`createButtonsArraySchema`) が SSoT。
+ * typed section config validation から利用される共通ユーティリティ。
+ * CTA ボタン配列は `createButtonsArraySchema`（`_shared/buttons.ts`）が SSoT。
  */
 
+import type { Route } from "next";
 import { z } from "zod";
-import {
-  isAppRoute,
-  toAppRoute,
-  type AppRoute,
-} from "@/shared/lib/typed-routes";
+import { isAppRoute, toAppRoute } from "@/shared/lib/typed-routes";
 import {
   createSpanArraySchema,
   type PortableTextSpan,
@@ -139,7 +132,7 @@ export function createCtaButtonItemSchema<TUrl extends string>(
  */
 export type CTAButtonItem = {
   label: PortableTextSpan[];
-  url: AppRoute;
+  url: Route;
   variant: CTAButtonVariant;
   size: CTAButtonSize;
   openInNewTab: boolean;

@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/cn";
-import { toAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
+import type { Route } from "next";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 const NAV_ITEMS = [
   { href: "/mypage", label: "予約一覧" },
   { href: "/mypage/events", label: "イベント" },
   { href: "/mypage/inquiries", label: "お問い合わせ" },
   { href: "/mypage/settings", label: "設定" },
-] satisfies readonly { href: AppRoute; label: string }[];
+] satisfies readonly { href: Route; label: string }[];
 
 function getActiveItem(pathname: string) {
   return (

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { cn } from "@/shared/lib/cn";
-import type { AppRoute } from "@/shared/lib/typed-routes";
 import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
@@ -70,7 +70,7 @@ interface AsButton {
 }
 
 interface AsLink {
-  readonly href: AppRoute;
+  readonly href: Route;
   readonly onClick?: () => void;
   readonly target?: "_blank" | "_self";
 }

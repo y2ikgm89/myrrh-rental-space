@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
+import type { Route } from "next";
 import type { AdminSpaceManagementTab } from "@/shared/lib/constants";
 import { cn } from "@/shared/lib/cn";
-import { toAppRoute, type AppRoute } from "@/shared/lib/typed-routes";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 // =============================================================================
 // 型・定数
@@ -32,7 +33,7 @@ const tabTriggerClass = cn(
 function hrefForTab(
   tab: AdminSpaceManagementTab,
   current: URLSearchParams,
-): AppRoute {
+): Route {
   const next = new URLSearchParams(current.toString());
   next.set("tab", tab);
   const qs = next.toString();

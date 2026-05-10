@@ -26,7 +26,7 @@ import type {
 } from "@/shared/domain/posts/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { generateSlug } from "@/shared/lib/slug";
-import type { AppRoute } from "@/shared/lib/typed-routes";
+import type { Route } from "next";
 import {
   categoryFormSchema,
   tagFormSchema,
@@ -69,7 +69,7 @@ const CONFIG = {
   },
 } satisfies Record<
   string,
-  { label: string; urlPrefix: string; backUrl: AppRoute }
+  { label: string; urlPrefix: string; backUrl: Route }
 >;
 
 // =============================================================================
