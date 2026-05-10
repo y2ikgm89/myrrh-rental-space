@@ -12,7 +12,7 @@ export {
   getGbpAuthState,
   saveGbpAuthState,
   clearGbpAuthState,
-} from "./settings";
+} from "@/shared/domain/google-business-profile/settings";
 export { listGbpAccounts } from "./account";
 export type { GbpAccount } from "./account";
 export {

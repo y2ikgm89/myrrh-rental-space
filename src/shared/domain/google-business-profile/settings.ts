@@ -20,7 +20,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { isRecord } from "@/shared/lib/serialize";
 
-import type { GbpAuthState } from "./types";
+import type { GbpAuthState } from "@/shared/lib/google-business-profile/types";
 
 const GBP_AUTH_PURPOSE = "api-key";
 

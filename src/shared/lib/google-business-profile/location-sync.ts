@@ -27,7 +27,7 @@ import {
   formatGbpError,
 } from "./helpers";
 import { withGbpApiRetry } from "./retry";
-import { getGbpAuthState } from "./settings";
+import { getGbpAuthState } from "@/shared/domain/google-business-profile/settings";
 import { syncLocationStub } from "./stub";
 import type { GbpSyncInput, GbpSyncResult } from "./types";
 

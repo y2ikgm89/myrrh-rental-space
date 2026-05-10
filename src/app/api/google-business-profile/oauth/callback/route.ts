@@ -22,7 +22,7 @@ import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { listGbpAccounts } from "@/shared/lib/google-business-profile/account";
 import { createOAuth2Client } from "@/shared/lib/google-business-profile/client";
 import { exchangeGbpAuthCode } from "@/shared/lib/google-business-profile/oauth";
-import { saveGbpAuthState } from "@/shared/lib/google-business-profile/settings";
+import { saveGbpAuthState } from "@/shared/domain/google-business-profile/settings";
 import {
   ErrorCategory,
   ErrorSeverity,

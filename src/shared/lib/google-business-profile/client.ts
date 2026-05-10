@@ -13,7 +13,7 @@ import { google } from "googleapis";
 import { serverEnv } from "@/shared/lib/env/server";
 import { getAppUrl } from "@/shared/lib/constants/urls";
 
-import { saveGbpAuthState } from "./settings";
+import { saveGbpAuthState } from "@/shared/domain/google-business-profile/settings";
 import type { GbpAuthState } from "./types";
 
 /** GBP API に必要な OAuth スコープ */
