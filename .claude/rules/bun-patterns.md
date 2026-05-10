@@ -479,6 +479,11 @@ createCommand({ name: "test" });
    - `bun test --conditions=react-server` は CLI フラグとして機能するが、React を server build に解決して `createContext`・`useRef` が消えるため `server-only` 対策には**使わない**こと
    - `server-only` 対策は `__tests__/setup.ts` の `mock.module('server-only', () => ({}))` で対処（設定済み）
 
+7. **「Phase 完遂」「test green」宣言前に `test:unit` + `test:integration` 両走必須**
+   - unit pass のみで完遂宣言すると integration fixture drift（Portable Text rename / migration 追従 / mock 漏れ等）が silent に残る
+   - 実例: 2026-05-10 セッションで unit 3934 pass / integration 22 fail（navigation / homepage-settings の Phase 0 token rename + section schema PortableTextSpan 化追従漏れ）
+   - canonical 完遂順: `bun run validate` → `bun run test:unit` → `bun run test:integration` → `bun run build`
+
 ## Gotchas
 
 - **`mock.module()` のグローバルスコープ干渉** — 複数テストファイルを同時実行すると、ファイル A の `mock.module("@/shared/lib/foo", ...)` がファイル B の実 import を上書きし、`Export named 'X' not found` エラーやハングを引き起こす。対策: (1) モック対象モジュールの**全 export をモックに含める**（使わない関数もスタブで返す）。(2) `package.json` の `test` スクリプトでディレクトリ別に分離実行（`bun test __tests__/unit/lib && bun test __tests__/unit/api && ...`）。特に `@/shared/db/enums`, `@/shared/lib/errors/server`, `@/shared/lib/crypto`, `@/shared/lib/route-responses`, `@/shared/lib/constants` は複数テストでモックされるため全 export 必須。単独実行（`bun test <file>`）では問題なし

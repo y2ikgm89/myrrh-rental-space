@@ -21,6 +21,7 @@ paths:
 ## Cleanup
 
 - **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/how-to/**` / `bunfig.toml` / `.vscode/launch.json`
+- **`package.json#packageManager` (Bun version) 更新時は `.github/workflows/*.yml` の `bun-version: "X.Y.Z"` も同期必須** — 9+ 箇所 drift で silent runtime difference（`mock.module` 動作差異 / `bun:test` 挙動差）を起こす。canonical 検出 grep: `grep -nE 'bun-version|packageManager' .github/workflows/*.yml package.json`。実例: 2026-05-10 で 9 箇所 1.3.12 → 1.3.13 sync（commit `754e9c2e`）
 - **ファイル削除時の dangling ref 検出範囲は `docs/` 全域 + `.claude/` + `AGENTS.md` + `CLAUDE.md` 必須** — 検出時は「削除 + dangling ref 修正」を同一 commit に統合
 
 ## テスト配置

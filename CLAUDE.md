@@ -99,6 +99,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ### 検証
 
 - **作業中**: `bun run type-check` / **完了前**: `bun run validate` / **コミット前**: `bun run validate && bun run build`
+- **完遂判定は `test:unit` + `test:integration` 両走必須** — unit pass のみで「完了」宣言は危険、Phase 0 rename / migration drift 等で integration fixture が drift しがち（実例: 2026-05-10 で navigation / homepage-settings fixture が unit pass + integration 22 fail）
 - **依存パッチ/マイナー更新後は validate 必須** — eslint-plugin-react-hooks 等のパッチで新ルール追加 = 実質破壊的変更
 - **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。CI で `test:unit` + `test:integration` + E2E をフル実行。`test:unit` / `test:integration` は per-directory バッチ（`bun test __tests__/unit` 簡略化は `mock.module` 干渉で偽陽性）
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン
