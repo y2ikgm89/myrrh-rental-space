@@ -75,13 +75,21 @@ Phase 2 で 5 高優先 domain に新規 unit test を追加。15-25 test 目標
 
 未カバー: tags fetch path（141-151）。
 
-## 既知の pre-existing fail（Phase 2 対象外）
+## Pre-existing fail の解消（commit `cf8bea60`）
 
-`bun run test:unit` 実行時に `__tests__/unit/lib/validations/space.test.ts` で **13 fail** が出るが、これは `spaceFormSchema` の test fixture が migration `20260507163006_space_facilities_to_object_array` に未追従の **pre-existing bug**。
+Phase 2 完了時に積み残していた **13 + 11 件の pre-existing fail** をフォローアップで全件解消し、`bun run test:unit` を完全 exit 0 状態にした。
 
-切り分け: `git stash -u && bun test __tests__/unit/lib/validations/space.test.ts` で Phase 2 変更を退避しても同様に 13 fail。
+| カテゴリ                      | 件数 | 修正対象                                                                                          | 原因                                                                            |
+| ----------------------------- | ---: | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| facilities migration drift    |   13 | `__tests__/unit/lib/validations/space.test.ts`                                                    | `VALID_SPACE_INPUT.facilities` が `string[]` のまま → `{ name, iconName }[]` 化 |
+| `noopener,noreferrer` 冗長    |    2 | `__tests__/unit/admin-preview-routing.test.ts`                                                    | `external-link-rel.md` SSoT に追従 (`noreferrer` 単独)                          |
+| Dialog mock 欠落              |    1 | `__tests__/unit/components/admin/auto-section-form.test.tsx`                                      | `@/admin/components/ui` mock object に `Dialog*` 追加                           |
+| CSV 列数 drift                |    1 | `__tests__/unit/api/admin-export-customers-route.test.ts`                                         | 22 列 → 23 列（`customerType` 追加、commit `6a52d093`）                         |
+| `cacheLife()` config 未マッチ |    8 | `__tests__/unit/api/cron-reservation-reminder.test.ts`                                            | `isFeatureEnabled` mock 追加（`'use cache'` chain 回避）                        |
+| Portable Text Phase 1/2 drift |    6 | `navigation/commands.test.ts`, `sections/registry.test.ts`, `sections/value-props-schema.test.ts` | `string` → `PortableTextSpan[]` 化                                              |
+| SubmitButton 直書き           |    1 | `GoogleBusinessProfileSection.tsx`                                                                | `<Button type="submit">` → `<SubmitButton>`                                     |
 
-修正対象外（別 PR / Phase 3 で対応）。
+**完了状態**: `bun run validate` exit 0 / `bun run test:unit` exit 0 / fail 0 件。
 
 ## 計測方針
 
