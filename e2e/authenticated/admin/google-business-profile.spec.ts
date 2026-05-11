@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
  * callback redirect 後の query 処理** を検証する。
  *
  * シナリオ:
- *   1. `/admin/settings/api` で「カレンダー」タブに GBP セクションが表示される
+ *   1. `/admin/settings/integrations` で「カレンダー」タブに GBP セクションが表示される
  *   2. 未連携状態の Badge / 「Google で連携」 SubmitButton が見える
  *   3. `gbp_success=1` query 付きで開くと URL が clean up される
  *      （toast 確認は sonner の portal layer 検証で代替）
@@ -26,7 +26,7 @@ import { test, expect } from "@playwright/test";
  * + integration test で担保（Phase 2 完了済み）。
  */
 
-const API_SETTINGS_PATH = "/admin/settings/api?tab=calendar";
+const API_SETTINGS_PATH = "/admin/settings/integrations?tab=calendar";
 
 test.describe("Google Business Profile 連携 - smoke", () => {
   test("GBP セクションが「カレンダー」タブに表示される", async ({ page }) => {

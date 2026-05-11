@@ -26,7 +26,7 @@ import {
   buildLocationPayload,
   formatGbpError,
 } from "./helpers";
-import { withGbpApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { getGbpAuthState } from "@/shared/domain/google-business-profile/settings";
 import { syncLocationStub } from "./stub";
 import type { GbpSyncInput, GbpSyncResult } from "./types";
@@ -121,7 +121,7 @@ export async function syncLocationToGbp(
       payload as unknown as mybusinessbusinessinformation_v1.Schema$Location;
     const resourceName = location.googleBusinessPlaceId;
 
-    await withGbpApiRetry(() =>
+    await withGoogleApiRetry(() =>
       client.locations.patch({
         name: resourceName,
         updateMask,

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (errorParam || !code) {
       return NextResponse.redirect(
         new URL(
-          `/admin/settings/api?gbp_error=${encodeURIComponent(errorParam ?? "missing_code")}`,
+          `/admin/settings/integrations?gbp_error=${encodeURIComponent(errorParam ?? "missing_code")}`,
           request.url,
         ),
       );
@@ -63,7 +63,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const firstAccount = accounts[0];
     if (!firstAccount) {
       return NextResponse.redirect(
-        new URL("/admin/settings/api?gbp_error=no_accounts_found", request.url),
+        new URL(
+          "/admin/settings/integrations?gbp_error=no_accounts_found",
+          request.url,
+        ),
       );
     }
 
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     return NextResponse.redirect(
-      new URL("/admin/settings/api?gbp_success=true", request.url),
+      new URL("/admin/settings/integrations?gbp_success=true", request.url),
     );
   } catch (caughtError) {
     unstable_rethrow(caughtError);
@@ -86,7 +89,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       context: { operation: "gbpOauthCallback" },
     });
     return NextResponse.redirect(
-      new URL("/admin/settings/api?gbp_error=callback_failed", request.url),
+      new URL(
+        "/admin/settings/integrations?gbp_error=callback_failed",
+        request.url,
+      ),
     );
   }
 }

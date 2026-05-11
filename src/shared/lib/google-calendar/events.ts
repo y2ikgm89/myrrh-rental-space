@@ -12,7 +12,7 @@ import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types"
 import type { CalendarEventParams, CalendarEventResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { getServiceAccountClient } from "./service-account";
 import { getOAuthClient } from "./oauth";
 

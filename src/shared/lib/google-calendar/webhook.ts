@@ -20,7 +20,7 @@ import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types"
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { getServiceAccountClient } from "./service-account";
 
 const WEBHOOK_RENEWAL_THRESHOLD_DAYS = 2;

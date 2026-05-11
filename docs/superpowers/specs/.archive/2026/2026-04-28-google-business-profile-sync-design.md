@@ -1,5 +1,7 @@
 # Google Business Profile Sync — Design Spec (MEO Phase 2)
 
+> **⚠️ Archive note (2026-05-11)**: 本 spec の `withGbpApiRetry` / `retry.ts` への参照は archive 当時の設計。**現実装は `@/shared/lib/google-api/retry.ts` に統合され、`withGoogleApiRetry` 単一 SSoT で運用中**。新規実装時は `external-api-retry-patterns.md` を参照。
+
 **日付**: 2026-04-28
 **種別**: 機能追加 + 外部 API 統合
 **ステータス**: 設計中

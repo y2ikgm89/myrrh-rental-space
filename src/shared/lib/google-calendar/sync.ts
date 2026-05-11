@@ -11,7 +11,7 @@ import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-querie
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarChange, SyncChangesResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { getServiceAccountClient } from "./service-account";
 
 /**

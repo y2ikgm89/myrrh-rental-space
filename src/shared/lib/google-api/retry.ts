@@ -1,17 +1,24 @@
 /**
- * Google Business Profile API 呼び出しの exponential backoff リトライヘルパー
+ * Google API 共通 exponential backoff リトライヘルパー（SSoT）
  *
- * Google 公式推奨:
+ * googleapis SDK (Calendar / Business Profile / Drive 等) と
+ * `@google-analytics/data` 等の周辺クライアントに共通で適用する。
+ *
+ * ## Google 公式準拠
  * - 429 (rate limit) / 500 (internal error) / 503 (unavailable) は
- *   exponential backoff + jitter で再試行する。
- * - 403 でも `reason` が `rateLimitExceeded` / `userRateLimitExceeded` / `quotaExceeded`
- *   の場合は 429 と機能的に同等で、同じく exponential backoff で再試行する
- *   （公式: "rateLimitExceeded errors can return either 403 or 429 error codes—
- *    currently they are functionally similar and should be responded to in the same way"）
- * - それ以外の 400 / 401 / 403 / 404 / 410 は即時失敗扱い（回復不能 or 意味が異なる）。
+ *   exponential backoff + jitter で再試行
+ * - 403 でも `reason` が `rateLimitExceeded` / `userRateLimitExceeded` /
+ *   `quotaExceeded` の場合は 429 と機能的に同等で同じく再試行
+ *   （公式: "rateLimitExceeded errors can return either 403 or 429 error codes
+ *    —functionally similar and should be responded to in the same way"）
+ * - それ以外の 400 / 401 / 403 / 404 / 410 は即時失敗（回復不能 or 意味が異なる）
+ * - ネットワーク層の一時エラー (`ECONNRESET` 等) も再試行対象
  *
+ * @see https://developers.google.com/calendar/api/guides/errors
+ * @see https://developers.google.com/calendar/api/guides/quota
  * @see https://developers.google.com/my-business/content/basic-setup
  * @see https://cloud.google.com/apis/design/errors#retrying_errors
+ * @module shared/lib/google-api/retry
  */
 
 import "server-only";
@@ -80,7 +87,7 @@ function extractSystemErrorCode(error: unknown): string | null {
  * { error: { code: 403, message: "...", errors: [{ domain: "usageLimits", reason: "rateLimitExceeded", ... }] } }
  * ```
  */
-export function extractGbpFirstErrorReason(error: unknown): string | null {
+export function extractFirstErrorReason(error: unknown): string | null {
   if (!error || typeof error !== "object") return null;
   const err = error as {
     response?: {
@@ -106,12 +113,12 @@ export function extractGbpFirstErrorReason(error: unknown): string | null {
  * 2. HTTP status が 403 かつ reason が usageLimits 系 → retry（公式推奨）
  * 3. system error code が一時的な network エラー → retry
  */
-export function isRetryableGbpApiError(error: unknown): boolean {
+export function isRetryableGoogleApiError(error: unknown): boolean {
   const status = extractStatusCode(error);
   if (status !== null && RETRYABLE_STATUS_CODES.has(status)) return true;
 
   if (status === 403) {
-    const reason = extractGbpFirstErrorReason(error);
+    const reason = extractFirstErrorReason(error);
     if (reason !== null && RETRYABLE_403_REASONS.has(reason)) return true;
   }
 
@@ -139,16 +146,16 @@ export type RetryOptions = {
 };
 
 /**
- * Google Business Profile API 呼び出しを exponential backoff retry でラップする。
+ * Google API 呼び出しを exponential backoff retry でラップする。
  *
  * @example
  * ```ts
- * const response = await withGbpApiRetry(() =>
- *   client.accounts.locations.patch({ name, requestBody: payload }),
+ * const response = await withGoogleApiRetry(() =>
+ *   client.events.insert({ calendarId, requestBody: event }),
  * );
  * ```
  */
-export async function withGbpApiRetry<T>(
+export async function withGoogleApiRetry<T>(
   fn: () => Promise<T>,
   options?: RetryOptions,
 ): Promise<T> {
@@ -161,7 +168,7 @@ export async function withGbpApiRetry<T>(
       if (attempt >= maxRetries) throw error;
 
       const retryable =
-        isRetryableGbpApiError(error) ||
+        isRetryableGoogleApiError(error) ||
         (options?.shouldRetry?.(error) ?? false);
       if (!retryable) throw error;
 
@@ -170,5 +177,5 @@ export async function withGbpApiRetry<T>(
   }
 
   // Unreachable
-  throw new Error("withGbpApiRetry: retry loop exited unexpectedly");
+  throw new Error("withGoogleApiRetry: retry loop exited unexpectedly");
 }

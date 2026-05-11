@@ -1,37 +1,43 @@
 /**
- * Google Business Profile retry wrapper ユニットテスト
+ * Google API 共通 retry wrapper ユニットテスト
  *
- * 公式推奨「403 usageLimits は 429 と機能的に同等で exponential backoff 再試行」
+ * Google Calendar / Business Profile / Analytics 等の googleapis SDK
+ * 全般で共有する `withGoogleApiRetry` の挙動を検証する。
+ *
+ * 公式推奨（https://developers.google.com/calendar/api/guides/errors）の
+ * 「403 usageLimits は 429 と機能的に同等で exponential backoff 再試行」
  * が正しく実装されていることを検証する。
  */
 
 import { describe, test, expect } from "bun:test";
 import {
-  isRetryableGbpApiError,
-  withGbpApiRetry,
-} from "@/shared/lib/google-business-profile/retry";
+  isRetryableGoogleApiError,
+  withGoogleApiRetry,
+} from "@/shared/lib/google-api/retry";
 
-describe("isRetryableGbpApiError", () => {
+describe("isRetryableGoogleApiError", () => {
   describe("HTTP status ベースの retry 判定", () => {
     test("429 は retry 対象", () => {
-      expect(isRetryableGbpApiError({ code: 429 })).toBe(true);
-      expect(isRetryableGbpApiError({ status: 429 })).toBe(true);
-      expect(isRetryableGbpApiError({ response: { status: 429 } })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 429 })).toBe(true);
+      expect(isRetryableGoogleApiError({ status: 429 })).toBe(true);
+      expect(isRetryableGoogleApiError({ response: { status: 429 } })).toBe(
+        true,
+      );
     });
 
     test("500 は retry 対象", () => {
-      expect(isRetryableGbpApiError({ code: 500 })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 500 })).toBe(true);
     });
 
     test("503 は retry 対象", () => {
-      expect(isRetryableGbpApiError({ code: 503 })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: 503 })).toBe(true);
     });
 
     test("400 / 401 / 404 / 410 は即時失敗", () => {
-      expect(isRetryableGbpApiError({ code: 400 })).toBe(false);
-      expect(isRetryableGbpApiError({ code: 401 })).toBe(false);
-      expect(isRetryableGbpApiError({ code: 404 })).toBe(false);
-      expect(isRetryableGbpApiError({ code: 410 })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: 400 })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: 401 })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: 404 })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: 410 })).toBe(false);
     });
   });
 
@@ -41,7 +47,7 @@ describe("isRetryableGbpApiError", () => {
         code: 403,
         errors: [{ domain: "usageLimits", reason: "rateLimitExceeded" }],
       };
-      expect(isRetryableGbpApiError(error)).toBe(true);
+      expect(isRetryableGoogleApiError(error)).toBe(true);
     });
 
     test("403 + userRateLimitExceeded は retry 対象", () => {
@@ -49,7 +55,7 @@ describe("isRetryableGbpApiError", () => {
         code: 403,
         errors: [{ domain: "usageLimits", reason: "userRateLimitExceeded" }],
       };
-      expect(isRetryableGbpApiError(error)).toBe(true);
+      expect(isRetryableGoogleApiError(error)).toBe(true);
     });
 
     test("403 + quotaExceeded は retry 対象", () => {
@@ -57,7 +63,7 @@ describe("isRetryableGbpApiError", () => {
         code: 403,
         errors: [{ domain: "usageLimits", reason: "quotaExceeded" }],
       };
-      expect(isRetryableGbpApiError(error)).toBe(true);
+      expect(isRetryableGoogleApiError(error)).toBe(true);
     });
 
     test("GaxiosError 形式（response.data.error.errors 配列）でも抽出できる", () => {
@@ -72,7 +78,7 @@ describe("isRetryableGbpApiError", () => {
           },
         },
       };
-      expect(isRetryableGbpApiError(error)).toBe(true);
+      expect(isRetryableGoogleApiError(error)).toBe(true);
     });
 
     test("403 + forbidden（認可エラー）は retry 対象外", () => {
@@ -80,7 +86,7 @@ describe("isRetryableGbpApiError", () => {
         code: 403,
         errors: [{ domain: "global", reason: "forbidden" }],
       };
-      expect(isRetryableGbpApiError(error)).toBe(false);
+      expect(isRetryableGoogleApiError(error)).toBe(false);
     });
 
     test("403 + 不明な reason は retry 対象外", () => {
@@ -88,46 +94,46 @@ describe("isRetryableGbpApiError", () => {
         code: 403,
         errors: [{ domain: "global", reason: "someUnknownReason" }],
       };
-      expect(isRetryableGbpApiError(error)).toBe(false);
+      expect(isRetryableGoogleApiError(error)).toBe(false);
     });
 
     test("403 で reason が欠落している場合は retry 対象外", () => {
       const error = { code: 403 };
-      expect(isRetryableGbpApiError(error)).toBe(false);
+      expect(isRetryableGoogleApiError(error)).toBe(false);
     });
   });
 
   describe("ネットワーク層エラー", () => {
     test("ECONNRESET / ETIMEDOUT / EAI_AGAIN / ENOTFOUND / ECONNREFUSED は retry 対象", () => {
-      expect(isRetryableGbpApiError({ code: "ECONNRESET" })).toBe(true);
-      expect(isRetryableGbpApiError({ code: "ETIMEDOUT" })).toBe(true);
-      expect(isRetryableGbpApiError({ code: "EAI_AGAIN" })).toBe(true);
-      expect(isRetryableGbpApiError({ code: "ENOTFOUND" })).toBe(true);
-      expect(isRetryableGbpApiError({ code: "ECONNREFUSED" })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: "ECONNRESET" })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: "ETIMEDOUT" })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: "EAI_AGAIN" })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: "ENOTFOUND" })).toBe(true);
+      expect(isRetryableGoogleApiError({ code: "ECONNREFUSED" })).toBe(true);
     });
 
     test("不明な system code は retry 対象外", () => {
-      expect(isRetryableGbpApiError({ code: "EACCES" })).toBe(false);
+      expect(isRetryableGoogleApiError({ code: "EACCES" })).toBe(false);
     });
   });
 
   describe("エッジケース", () => {
     test("null / undefined は retry 対象外", () => {
-      expect(isRetryableGbpApiError(null)).toBe(false);
-      expect(isRetryableGbpApiError(undefined)).toBe(false);
+      expect(isRetryableGoogleApiError(null)).toBe(false);
+      expect(isRetryableGoogleApiError(undefined)).toBe(false);
     });
 
     test("primitive は retry 対象外", () => {
-      expect(isRetryableGbpApiError("error")).toBe(false);
-      expect(isRetryableGbpApiError(123)).toBe(false);
+      expect(isRetryableGoogleApiError("error")).toBe(false);
+      expect(isRetryableGoogleApiError(123)).toBe(false);
     });
   });
 });
 
-describe("withGbpApiRetry", () => {
+describe("withGoogleApiRetry", () => {
   test("成功時は即座に結果を返す", async () => {
     let calls = 0;
-    const result = await withGbpApiRetry(async () => {
+    const result = await withGoogleApiRetry(async () => {
       calls++;
       return "ok";
     });
@@ -138,7 +144,7 @@ describe("withGbpApiRetry", () => {
   test("retry 対象でないエラーは即座にスロー（retry なし）", async () => {
     let calls = 0;
     await expect(
-      withGbpApiRetry(async () => {
+      withGoogleApiRetry(async () => {
         calls++;
         throw { code: 404, message: "Not Found" };
       }),
@@ -148,7 +154,7 @@ describe("withGbpApiRetry", () => {
 
   test("403 rateLimitExceeded は retry される", async () => {
     let calls = 0;
-    const result = await withGbpApiRetry(
+    const result = await withGoogleApiRetry(
       async () => {
         calls++;
         if (calls < 2) {
@@ -168,7 +174,7 @@ describe("withGbpApiRetry", () => {
   test("maxRetries を超えたら最後のエラーをスロー", async () => {
     let calls = 0;
     await expect(
-      withGbpApiRetry(
+      withGoogleApiRetry(
         async () => {
           calls++;
           throw { code: 503, message: "Service Unavailable" };
@@ -182,7 +188,7 @@ describe("withGbpApiRetry", () => {
 
   test("shouldRetry option で追加の retry 条件を注入できる", async () => {
     let calls = 0;
-    const result = await withGbpApiRetry(
+    const result = await withGoogleApiRetry(
       async () => {
         calls++;
         if (calls < 2) throw { code: 418 };

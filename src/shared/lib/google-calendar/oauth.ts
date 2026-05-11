@@ -13,7 +13,7 @@ import { updateGoogleOAuthAccountTokens } from "@/shared/domain/auth/commands";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarConnectionTestResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 
 /**
  * OAuth連携されている管理者のGoogle Calendar APIクライアントを取得

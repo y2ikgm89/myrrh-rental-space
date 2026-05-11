@@ -14,7 +14,7 @@ import {
 import type { CalendarConnectionTestResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { parseServiceAccountCredentials } from "./service-account";
 
 /**

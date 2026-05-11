@@ -1,5 +1,7 @@
 # Google Business Profile Sync Implementation Plan (MEO Phase 2)
 
+> **⚠️ Archive note (2026-05-11)**: 本 plan 内の `withGbpApiRetry` / `extractGbpFirstErrorReason` / `isRetryableGbpApiError` / `src/shared/lib/google-business-profile/retry.ts` への参照は archive 当時の設計。**現実装は `@/shared/lib/google-api/retry.ts` に統合され、`withGoogleApiRetry` 単一 SSoT で運用中**。新規実装時は `external-api-retry-patterns.md` を参照。
+
 > **In Progress: 2026-04-29** — 15 commits implemented on worktree `feature/google-business-profile-sync`. validate + build all succeeded. Next: smoke test (`GBP_STUB_MODE=true`) + main `--no-ff` merge + Google Cloud Console application.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

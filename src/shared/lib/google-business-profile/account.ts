@@ -9,7 +9,7 @@ import "server-only";
 
 import { google } from "googleapis";
 
-import { withGbpApiRetry } from "./retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 
 export type GbpAccount = {
   readonly accountId: string;
@@ -29,7 +29,7 @@ export async function listGbpAccounts(
     auth: oauth2Client,
   });
 
-  const response = await withGbpApiRetry(() => client.accounts.list({}));
+  const response = await withGoogleApiRetry(() => client.accounts.list({}));
   const accounts = response.data.accounts ?? [];
 
   return accounts.map((acc) => ({
