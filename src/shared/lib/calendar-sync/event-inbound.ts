@@ -21,7 +21,7 @@ import { logger } from "@/shared/lib/logger";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import { getServiceAccountClient } from "@/shared/lib/google-calendar/service-account";
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";
-import { withGoogleApiRetry } from "@/shared/lib/google-calendar/retry";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { upsertEventFromCalendar } from "@/shared/domain/events/commands";
 import { isAppGeneratedCalendarEvent } from "./loop-prevention";
 
