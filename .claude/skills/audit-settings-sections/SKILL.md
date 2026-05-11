@@ -9,6 +9,21 @@ paths:
 
 管理画面の設定セクション（`settings/_components/sections/`）を `admin-ui-patterns.md` に照らして監査する。
 
+## 設定ページ構成（2026-05-11 再編後）
+
+8 カード構成（ドメイン軸フラット、業界標準準拠）:
+
+1. `/admin/settings/features` — 機能モジュール ON/OFF
+2. `/admin/settings/site` — サイト基本（一般 / SEO / 投稿）
+3. `/admin/settings/appearance` — サイトの見た目（ヘッダー / フッター / サイドバー / レイアウト / ナビゲーション / お知らせバー）
+4. `/admin/settings/business` — 事業者情報 / 営業時間 / 予約
+5. `/admin/settings/billing` — Stripe 決済 / 割引 / 消費税
+6. `/admin/settings/notifications` — メール送信元 / 通知チャネル
+7. `/admin/settings/integrations` — Resend / Turnstile / Cloudflare / Google Maps / カレンダー / Instagram / カスタム
+8. `/admin/settings/system` — メンテナンス / Cookie / 権限
+
+`NavigationManager` / `AnnouncementBarManager` は `settings/appearance/_components/{navigation,announcement-bar}/` 配下に同居。
+
 ## チェック項目
 
 以下を各セクションファイルに対して確認し、違反をリスト出力する。
@@ -26,13 +41,13 @@ grep -rn "ヒント\|補足\|Tips" src/app/\(admin\)/admin/\(dashboard\)/setting
 
 ### 2. 導線リンク
 
-- HeaderSection / FooterSection の CardDescription に `/admin/settings/navigation` へのリンクがあるか
-- ナビゲーション管理ページの description に `/admin/settings/site?tab=layout` へのリンクがあるか
-- 関連する設定ページ間の相互導線が漏れていないか
+- 同一ページ内のタブ間導線は「『X』タブで編集できます」のテキスト案内のみ（`<Link>` 不要）
+- 別ページへの導線（例: appearance → features 等）は `<Link href="/admin/settings/X">` で記述
+- 旧 URL（`/admin/settings/navigation` / `/announcement-bar` / `/notify` / `/api`）への参照が残っていないか
 
 ```bash
-# 導線リンクの存在確認
-grep -rn "settings/navigation\|settings/site" src/app/\(admin\)/admin/\(dashboard\)/settings/ --include="*.tsx" | grep -i "link\|href"
+# 旧 URL 残存検出（ゼロが正常）
+grep -rn "/admin/settings/\(notify\|api\|navigation\|announcement-bar\)" src/ --include="*.tsx" --include="*.ts"
 ```
 
 ### 3. フォームパターン
@@ -46,7 +61,7 @@ grep -rn "settings/navigation\|settings/site" src/app/\(admin\)/admin/\(dashboar
 # useFormAction 未使用のセクションを検出
 for f in src/app/\(admin\)/admin/\(dashboard\)/settings/_components/sections/*Section.tsx; do
   if ! grep -q "useFormAction" "$f" 2>/dev/null; then
-    echo "⚠️  useFormAction 未使用: $(basename "$f")"
+    echo "useFormAction 未使用: $(basename "$f")"
   fi
 done
 ```

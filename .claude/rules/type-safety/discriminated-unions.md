@@ -114,3 +114,23 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
 ```
 
 **判定基準**: `keyof typeof X` を strict literal union として export したい（特定の id のみ受け付ける関数 signature 等）→ `as const satisfies` 維持 + test 側で必要に応じて広い型へ narrow。一般的な `string` key access が中心 → `: Record<string, T>` widening を選択。Phase 1（2026-05-05 PAGE_TEMPLATES）で後者に切替えた事例あり（`PageTemplateId` export を削除）。
+
+## typedRoutes + dynamic query: string literal union で列挙
+
+Next.js 16 `typedRoutes: true` 環境で `?tab=X` 等の query を含む `Link href` prop の型注釈は、template literal type ではなく **literal union** で列挙する。`Route<string>` 型は template literal から推論できないため `` `/admin/settings/${T}?tab=${string}` `` は型エラーになる。
+
+```typescript
+// NG: typedRoutes 非互換（Route<string> に推論されない）
+readonly href: `/admin/settings/${"billing" | "integrations"}?tab=${string}`;
+
+// OK: literal union で全列挙
+readonly href:
+  | "/admin/settings/integrations?tab=resend"
+  | "/admin/settings/integrations?tab=turnstile"
+  | "/admin/settings/integrations?tab=calendar"
+  | "/admin/settings/billing?tab=payment";
+```
+
+参照実装: `IntegrationHealthAlertClient.tsx` の `href` フィールド型（2026-05-11 settings 再編で 4 統合の deep link 用に追加）。
+
+**tab `value` 同期規律**: `?tab=X` 形式の deep link を新規追加するときは、page.tsx の `tabs[].value` と grep で同期確認する。`grep -rn 'tab=' src/ --include="*.ts" --include="*.tsx"` で list-up し、各 query 値が対応する page.tsx の `value` literal に存在するかチェック。drift があると link で開いてもデフォルトタブにフォールバックして silent UX bug になる。

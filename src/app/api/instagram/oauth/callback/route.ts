@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
  */
 function redirectToSettings(params: { error?: string; success?: string }) {
   const baseUrl = getBaseUrl();
-  const settingsUrl = new URL("/admin/settings/api", baseUrl);
+  const settingsUrl = new URL("/admin/settings/integrations", baseUrl);
   settingsUrl.searchParams.set("tab", "instagram");
 
   if (params.error) {

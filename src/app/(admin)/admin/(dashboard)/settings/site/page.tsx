@@ -1,8 +1,9 @@
 /**
- * サイト設定ページ
+ * サイト基本設定ページ
  *
- * 一般設定・SEO設定・レイアウトをタブで切り替え
- * ナビゲーションとお知らせバーは独立ページに分離
+ * 一般設定（基本情報 + 連絡先）・SEO・投稿（パーマリンク）。
+ * レイアウト / ヘッダー / フッター / サイドバー / ナビゲーション / お知らせバーは
+ * /admin/settings/appearance に集約済み。
  *
  * Next.js 16 PPR対応:
  * - 静的シェル: ローディングUI
@@ -21,29 +22,17 @@ import {
   RobotsTxtSection,
   PermalinkSection,
 } from "../_components/sections";
-import { LayoutSection } from "../_components/sections/LayoutSection";
-import { HeaderSection } from "../_components/sections/HeaderSection";
-import { FooterSection } from "../_components/sections/FooterSection";
-import { SidebarSection } from "../_components/sections/SidebarSection";
 import type { ReactElement } from "react";
 
-/**
- * 動的コンテンツ: サイト設定
- */
 async function SiteSettingsContent(): Promise<ReactElement> {
   await connection();
   const settings = await getSettings();
 
   if (!settings) {
     return (
-      <SettingsLayout
-        title="サイト設定"
-        description="一般設定・SEO・レイアウト・投稿"
-      >
-        <div className="text-center py-8 text-muted-foreground">
-          設定を読み込めませんでした
-        </div>
-      </SettingsLayout>
+      <div className="text-center py-8 text-muted-foreground">
+        設定を読み込めませんでした
+      </div>
     );
   }
 
@@ -69,61 +58,38 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       ),
     },
     {
-      value: "layout",
-      label: "レイアウト",
-      content: (
-        <div className="space-y-6">
-          <HeaderSection settings={settings} />
-          <FooterSection settings={settings} />
-          <SidebarSection settings={settings} />
-          <LayoutSection settings={settings} />
-        </div>
-      ),
-    },
-    {
       value: "post",
       label: "投稿",
       content: <PermalinkSection settings={settings} />,
     },
   ];
 
-  return (
-    <SettingsLayout
-      title="サイト設定"
-      description="一般設定・SEO・レイアウト・投稿"
-    >
-      <SettingsTabs tabs={tabs} defaultTab="general" />
-    </SettingsLayout>
-  );
+  return <SettingsTabs tabs={tabs} defaultTab="general" />;
 }
 
-/**
- * ローディングUI
- */
 function SiteSettingsLoading(): ReactElement {
   return (
-    <SettingsLayout
-      title="サイト設定"
-      description="一般設定・SEO・レイアウト・投稿"
-    >
-      <div className="animate-pulse space-y-6">
-        <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
-          <div className="h-8 w-16 bg-muted-foreground/30 rounded-md" />
-          <div className="h-8 w-12 bg-muted rounded-md" />
-          <div className="h-8 w-20 bg-muted rounded-md" />
-          <div className="h-8 w-16 bg-muted rounded-md" />
-        </div>
-        <div className="h-48 bg-muted rounded" />
-        <div className="h-48 bg-muted rounded" />
+    <div className="animate-pulse space-y-6">
+      <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
+        <div className="h-8 w-16 bg-muted-foreground/30 rounded-md" />
+        <div className="h-8 w-12 bg-muted rounded-md" />
+        <div className="h-8 w-16 bg-muted rounded-md" />
       </div>
-    </SettingsLayout>
+      <div className="h-48 bg-muted rounded" />
+      <div className="h-48 bg-muted rounded" />
+    </div>
   );
 }
 
 export default async function SiteSettingsPage(): Promise<ReactElement> {
   return (
-    <Suspense fallback={<SiteSettingsLoading />}>
-      <SiteSettingsContent />
-    </Suspense>
+    <SettingsLayout
+      title="サイト基本"
+      description="一般設定・連絡先・SEO・投稿"
+    >
+      <Suspense fallback={<SiteSettingsLoading />}>
+        <SiteSettingsContent />
+      </Suspense>
+    </SettingsLayout>
   );
 }

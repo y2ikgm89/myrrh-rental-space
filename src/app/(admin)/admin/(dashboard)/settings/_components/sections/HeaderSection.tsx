@@ -6,7 +6,6 @@
  * ヘッダーのスクロール動作と背景モードを設定
  */
 
-import Link from "next/link";
 import { useWatch } from "react-hook-form";
 import {
   Card,
@@ -124,15 +123,7 @@ export function HeaderSection({ settings }: HeaderSectionProps) {
           <CardHeader>
             <CardTitle>ヘッダー設定</CardTitle>
             <CardDescription>
-              ヘッダーのスクロール時の動作と背景モードを設定します。
-              メニュー項目は
-              <Link
-                href="/admin/settings/navigation"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                ナビゲーション管理
-              </Link>
-              で編集できます。
+              ヘッダーのスクロール時の動作と背景モードを設定します。メニュー項目は「ナビゲーション」タブで編集できます。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

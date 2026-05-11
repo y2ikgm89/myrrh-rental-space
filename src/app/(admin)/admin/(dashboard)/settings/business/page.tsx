@@ -1,7 +1,8 @@
 /**
  * ビジネス設定ページ
  *
- * 事業者情報・営業時間・予約設定をタブで切り替え
+ * 事業者情報・営業時間・予約設定。
+ * 割引 / 消費税 / Stripe 決済は /admin/settings/billing に集約済み。
  *
  * Next.js 16 PPR対応:
  * - 静的シェル: ローディングUI
@@ -10,43 +11,25 @@
 
 import { Suspense } from "react";
 import { connection } from "next/server";
-import {
-  getSettings,
-  getDiscountSettings,
-  getTaxSettings,
-} from "@/admin/queries/settings";
+import { getSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
   BusinessInfoSection,
   BusinessHoursSection,
   ReservationSection,
-  DiscountSection,
-  TaxSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
-/**
- * 動的コンテンツ: ビジネス設定
- */
 async function BusinessSettingsContent(): Promise<ReactElement> {
   await connection();
-  const [settings, discountSettings, taxSettings] = await Promise.all([
-    getSettings(),
-    getDiscountSettings(),
-    getTaxSettings(),
-  ]);
+  const settings = await getSettings();
 
   if (!settings) {
     return (
-      <SettingsLayout
-        title="ビジネス設定"
-        description="事業者情報・営業時間・予約・割引・消費税の設定"
-      >
-        <div className="text-center py-8 text-muted-foreground">
-          設定を読み込めませんでした
-        </div>
-      </SettingsLayout>
+      <div className="text-center py-8 text-muted-foreground">
+        設定を読み込めませんでした
+      </div>
     );
   }
 
@@ -66,53 +49,33 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
       label: "予約",
       content: <ReservationSection settings={settings} />,
     },
-    {
-      value: "discount",
-      label: "割引",
-      content: <DiscountSection settings={discountSettings} />,
-    },
-    {
-      value: "tax",
-      label: "消費税",
-      content: <TaxSection settings={taxSettings} />,
-    },
   ];
 
-  return (
-    <SettingsLayout
-      title="ビジネス設定"
-      description="事業者情報・営業時間・予約・割引・消費税の設定"
-    >
-      <SettingsTabs tabs={tabs} defaultTab="info" />
-    </SettingsLayout>
-  );
+  return <SettingsTabs tabs={tabs} defaultTab="info" />;
 }
 
-/**
- * ローディングUI
- */
 function BusinessSettingsLoading(): ReactElement {
   return (
-    <SettingsLayout
-      title="ビジネス設定"
-      description="事業者情報・営業時間・予約・割引・消費税・MEO設定"
-    >
-      <div className="animate-pulse space-y-6">
-        <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
-          <div className="h-8 w-20 bg-muted-foreground/30 rounded-md" />
-          <div className="h-8 w-16 bg-muted rounded-md" />
-          <div className="h-8 w-12 bg-muted rounded-md" />
-        </div>
-        <div className="h-48 bg-muted rounded" />
+    <div className="animate-pulse space-y-6">
+      <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
+        <div className="h-8 w-20 bg-muted-foreground/30 rounded-md" />
+        <div className="h-8 w-16 bg-muted rounded-md" />
+        <div className="h-8 w-12 bg-muted rounded-md" />
       </div>
-    </SettingsLayout>
+      <div className="h-48 bg-muted rounded" />
+    </div>
   );
 }
 
 export default async function BusinessSettingsPage(): Promise<ReactElement> {
   return (
-    <Suspense fallback={<BusinessSettingsLoading />}>
-      <BusinessSettingsContent />
-    </Suspense>
+    <SettingsLayout
+      title="ビジネス設定"
+      description="事業者情報・営業時間・予約の設定"
+    >
+      <Suspense fallback={<BusinessSettingsLoading />}>
+        <BusinessSettingsContent />
+      </Suspense>
+    </SettingsLayout>
   );
 }

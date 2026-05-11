@@ -1,8 +1,8 @@
 /**
  * 外部連携設定ページ
  *
- * 各外部サービスAPIキーをタブで切り替え
- * Next.js 16 PPR対応
+ * 各外部サービス API キーをタブで切り替え
+ * 旧 /api からリネーム
  */
 
 import { Suspense } from "react";
@@ -33,10 +33,7 @@ import {
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
-/**
- * 動的コンテンツ: API設定
- */
-async function ApiSettingsContent(): Promise<ReactElement> {
+async function IntegrationsSettingsContent(): Promise<ReactElement> {
   await connection();
   const [
     resendConfig,
@@ -63,13 +60,11 @@ async function ApiSettingsContent(): Promise<ReactElement> {
     : null;
 
   const tabs = [
-    // メール
     {
       value: "resend",
       label: "Resend",
       content: <ResendSection config={resendConfig} />,
     },
-    // Cloudflare系
     {
       value: "turnstile",
       label: "Turnstile",
@@ -80,7 +75,6 @@ async function ApiSettingsContent(): Promise<ReactElement> {
       label: "Cloudflare",
       content: <CloudflareSection config={cloudflareConfig} />,
     },
-    // Google系
     {
       value: "google-maps",
       label: "Google Maps",
@@ -105,13 +99,11 @@ async function ApiSettingsContent(): Promise<ReactElement> {
           },
         ]
       : []),
-    // SNS
     {
       value: "instagram",
       label: "Instagram",
       content: <InstagramSection config={instagramConfig} />,
     },
-    // 拡張
     {
       value: "custom",
       label: "カスタム",
@@ -131,10 +123,7 @@ async function ApiSettingsContent(): Promise<ReactElement> {
   );
 }
 
-/**
- * ローディングUI
- */
-function ApiSettingsLoading(): ReactElement {
+function IntegrationsSettingsLoading(): ReactElement {
   return (
     <div className="space-y-6">
       <div className="mb-4">
@@ -156,14 +145,14 @@ function ApiSettingsLoading(): ReactElement {
   );
 }
 
-export default async function ApiSettingsPage(): Promise<ReactElement> {
+export default async function IntegrationsSettingsPage(): Promise<ReactElement> {
   return (
     <SettingsLayout
       title="外部連携"
-      description="外部サービスとの連携に必要なAPIキーを管理します"
+      description="外部サービスとの連携に必要な API キーを管理します"
     >
-      <Suspense fallback={<ApiSettingsLoading />}>
-        <ApiSettingsContent />
+      <Suspense fallback={<IntegrationsSettingsLoading />}>
+        <IntegrationsSettingsContent />
       </Suspense>
     </SettingsLayout>
   );

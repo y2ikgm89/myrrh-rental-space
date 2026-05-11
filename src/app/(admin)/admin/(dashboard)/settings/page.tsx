@@ -3,6 +3,10 @@
  *
  * カテゴリカード一覧を表示
  * 各カテゴリをクリックすると詳細ページへ遷移
+ *
+ * 並びは「セットアップ順」に従う:
+ *   機能モジュール → サイト基本 → 見た目 → ビジネス → 課金・決済 →
+ *   メール・通知 → 外部連携 → システム
  */
 
 import { Suspense } from "react";
@@ -12,69 +16,96 @@ import {
   IconBell,
   IconKey,
   IconSettings,
-  IconNavigation,
-  IconSpeakerphone,
+  IconPalette,
+  IconCreditCard,
   IconToggleLeft,
 } from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
 import { IntegrationHealthAlert } from "../_components/IntegrationHealthAlert";
+
 const SETTINGS_CATEGORIES: SettingsCardProps[] = [
   {
-    title: "サイト設定",
-    description: "サイトの基本情報、SEO、レイアウトを設定",
+    title: "機能モジュール",
+    description: "スペース・予約・イベント・ブログ等の機能 ON/OFF を切り替え",
+    href: "/admin/settings/features",
+    icon: IconToggleLeft,
+    items: [
+      "スペース",
+      "予約",
+      "イベント",
+      "ブログ",
+      "お知らせ",
+      "FAQ",
+      "アクセス",
+      "お問い合わせ",
+      "レビュー",
+    ],
+  },
+  {
+    title: "サイト基本",
+    description: "一般設定・連絡先・SEO・投稿のパーマリンク",
     href: "/admin/settings/site",
     icon: IconWorld,
-    items: ["一般", "SEO", "レイアウト"],
+    items: ["一般", "SEO", "投稿"],
   },
   {
-    title: "ナビゲーション",
-    description: "ヘッダー・フッターのメニューとSNSリンクを管理",
-    href: "/admin/settings/navigation",
-    icon: IconNavigation,
-    items: ["デスクトップ", "モバイル", "フッター", "SNS"],
-  },
-  {
-    title: "お知らせバー",
-    description: "サイト上部のお知らせバーを管理",
-    href: "/admin/settings/announcement-bar",
-    icon: IconSpeakerphone,
-    items: ["お知らせ一覧", "カルーセル設定"],
+    title: "サイトの見た目",
+    description:
+      "ヘッダー・フッター・サイドバー・レイアウト・ナビゲーション・お知らせバー",
+    href: "/admin/settings/appearance",
+    icon: IconPalette,
+    items: [
+      "ヘッダー",
+      "フッター",
+      "サイドバー",
+      "レイアウト",
+      "ナビゲーション",
+      "お知らせバー",
+    ],
   },
   {
     title: "ビジネス設定",
-    description: "事業者情報、営業時間、予約設定を管理",
+    description: "事業者情報・営業時間・予約",
     href: "/admin/settings/business",
     icon: IconBuilding,
     items: ["事業者情報", "営業時間", "予約"],
   },
   {
-    title: "通知・決済",
-    description: "メール通知、オンライン決済を設定",
-    href: "/admin/settings/notify",
+    title: "課金・決済",
+    description: "Stripe オンライン決済・割引・消費税",
+    href: "/admin/settings/billing",
+    icon: IconCreditCard,
+    items: ["決済", "割引", "消費税"],
+  },
+  {
+    title: "メール・通知",
+    description: "メール送信元と管理者通知チャネル",
+    href: "/admin/settings/notifications",
     icon: IconBell,
-    items: ["メール", "決済 (Stripe)"],
+    items: ["メール", "通知"],
   },
   {
     title: "外部連携",
-    description: "外部サービスのAPIキーを管理",
-    href: "/admin/settings/api",
+    description: "外部サービスの API キーと OAuth 連携",
+    href: "/admin/settings/integrations",
     icon: IconKey,
-    items: ["Resend", "Cloudflare", "Google", "Instagram"],
+    items: [
+      "Resend",
+      "Turnstile",
+      "Cloudflare",
+      "Google Maps",
+      "Google カレンダー",
+      "Instagram",
+      "カスタム",
+    ],
   },
   {
     title: "システム管理",
-    description: "メンテナンス、Cookie同意、権限を管理",
+    description: "メンテナンス・Cookie・権限",
     href: "/admin/settings/system",
     icon: IconSettings,
     items: ["メンテナンス", "Cookie", "権限"],
-  },
-  {
-    title: "機能モジュール",
-    description: "イベント・ブログ・ニュース・FAQ 等の機能 ON/OFF を切り替え",
-    href: "/admin/settings/features",
-    icon: IconToggleLeft,
-    items: ["スペース", "予約", "イベント", "ブログ", "FAQ", "レビュー"],
   },
 ];
 

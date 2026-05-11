@@ -14,18 +14,22 @@ const INTEGRATIONS: ReadonlyArray<
   {
     key: "resend",
     label: "Resend（メール送信）",
-    href: "/admin/settings/notify",
+    href: "/admin/settings/integrations?tab=resend",
   },
-  { key: "stripe", label: "Stripe（決済）", href: "/admin/settings/api" },
+  {
+    key: "stripe",
+    label: "Stripe（決済）",
+    href: "/admin/settings/billing?tab=payment",
+  },
   {
     key: "googleCalendar",
     label: "Google Calendar（予約同期）",
-    href: "/admin/settings/api",
+    href: "/admin/settings/integrations?tab=calendar",
   },
   {
     key: "turnstile",
     label: "Cloudflare Turnstile（フォーム保護）",
-    href: "/admin/settings/api",
+    href: "/admin/settings/integrations?tab=turnstile",
   },
 ];
 

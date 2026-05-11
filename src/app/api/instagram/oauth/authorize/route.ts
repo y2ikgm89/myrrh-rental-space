@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const redirectUri = serverEnv.INSTAGRAM_REDIRECT_URI;
 
   if (!clientId || !redirectUri) {
-    const settingsUrl = new URL("/admin/settings/api", getBaseUrl());
+    const settingsUrl = new URL("/admin/settings/integrations", getBaseUrl());
     settingsUrl.searchParams.set("tab", "instagram");
     settingsUrl.searchParams.set(
       "error",

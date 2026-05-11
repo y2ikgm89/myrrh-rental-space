@@ -12,7 +12,11 @@ const noopSubscribe = () => () => {};
 export type IntegrationHealthAlertItem = {
   readonly key: string;
   readonly label: string;
-  readonly href: "/admin/settings/notify" | "/admin/settings/api";
+  readonly href:
+    | "/admin/settings/integrations?tab=resend"
+    | "/admin/settings/integrations?tab=turnstile"
+    | "/admin/settings/integrations?tab=calendar"
+    | "/admin/settings/billing?tab=payment";
 };
 
 type Props = {

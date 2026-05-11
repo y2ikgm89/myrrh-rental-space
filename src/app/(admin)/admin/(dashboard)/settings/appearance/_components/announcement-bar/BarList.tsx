@@ -95,9 +95,8 @@ export function BarList({
                           編集
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="destructive-ghost"
                           size="sm"
-                          className="text-destructive hover:text-destructive"
                           onClick={() => onDelete(bar.id)}
                           disabled={isPending}
                         >
