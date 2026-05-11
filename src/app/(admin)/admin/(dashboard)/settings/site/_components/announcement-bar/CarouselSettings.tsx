@@ -46,6 +46,24 @@ export function CarouselSettingsPanel({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* プレビュー */}
+          <div className="space-y-2">
+            <Label>プレビュー</Label>
+            <div className="rounded-lg border bg-gradient-to-br from-muted to-muted/50 p-4">
+              <DesignPreview
+                message="サンプルお知らせメッセージ"
+                linkText="詳細はこちら"
+                designStyle={settings.announcementBarDesignStyle}
+                bgColor={settings.announcementBarBgColor || null}
+                textColor={settings.announcementBarTextColor || null}
+                stripeColor={settings.announcementBarStripeColor || null}
+                stripeAnimation={settings.announcementBarStripeAnimation}
+                gradientAnimation={settings.announcementBarGradientAnimation}
+                glassAnimation={settings.announcementBarGlassAnimation}
+              />
+            </div>
+          </div>
+
           {/* デザインスタイル */}
           <div className="space-y-2">
             <Label htmlFor="designStyle">デザインスタイル</Label>
@@ -78,24 +96,6 @@ export function CarouselSettingsPanel({
                 )?.description
               }
             </p>
-          </div>
-
-          {/* プレビュー */}
-          <div className="space-y-2">
-            <Label>プレビュー</Label>
-            <div className="rounded-lg border bg-gradient-to-br from-muted to-muted/50 p-4">
-              <DesignPreview
-                message="サンプルお知らせメッセージ"
-                linkText="詳細はこちら"
-                designStyle={settings.announcementBarDesignStyle}
-                bgColor={settings.announcementBarBgColor || null}
-                textColor={settings.announcementBarTextColor || null}
-                stripeColor={settings.announcementBarStripeColor || null}
-                stripeAnimation={settings.announcementBarStripeAnimation}
-                gradientAnimation={settings.announcementBarGradientAnimation}
-                glassAnimation={settings.announcementBarGlassAnimation}
-              />
-            </div>
           </div>
 
           {/* 共通カラー設定 */}
@@ -272,6 +272,15 @@ export function CarouselSettingsPanel({
               </div>
             </div>
           )}
+
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              isPending={isPending}
+              onClick={onSave}
+              label="デザイン設定を保存"
+              pendingLabel="保存中..."
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -463,12 +472,14 @@ export function CarouselSettingsPanel({
             />
           </div>
 
-          <SubmitButton
-            isPending={isPending}
-            onClick={onSave}
-            label="デザイン・カルーセル設定を保存"
-            pendingLabel="保存中..."
-          />
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              isPending={isPending}
+              onClick={onSave}
+              label="カルーセル設定を保存"
+              pendingLabel="保存中..."
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
