@@ -3,11 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconCheck, IconTrash } from "@tabler/icons-react";
-import {
-  markNotificationAsRead,
-  deleteNotification,
-} from "@/admin/actions/notification";
+import { markNotificationAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   NOTIFICATION_TYPE_LABELS,
@@ -19,7 +15,6 @@ import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import {
   Badge,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -30,6 +25,7 @@ import {
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 import { useNotificationPolling } from "../../_components/NotificationPollingProvider";
+import { NotificationActionCell } from "./NotificationActionCell";
 
 type NotificationTableProps = {
   notifications: SerializedAdminNotificationData[];
@@ -37,7 +33,7 @@ type NotificationTableProps = {
 
 export function NotificationTable({ notifications }: NotificationTableProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const { refresh } = useNotificationPolling();
 
   if (notifications.length === 0) {
@@ -51,16 +47,6 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
   const handleMarkAsRead = (id: string) => {
     startTransition(async () => {
       const result = await markNotificationAsRead(id);
-      if (!isMutationError(result)) {
-        router.refresh();
-        refresh();
-      }
-    });
-  };
-
-  const handleDelete = (id: string) => {
-    startTransition(async () => {
-      const result = await deleteNotification(id);
       if (!isMutationError(result)) {
         router.refresh();
         refresh();
@@ -147,32 +133,10 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
                     {formatDateTimeShort(notification.createdAt)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      {!notification.isRead && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          disabled={isPending}
-                          onClick={() => handleMarkAsRead(notification.id)}
-                          aria-label="既読にする"
-                        >
-                          <IconCheck className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        disabled={isPending}
-                        onClick={() => handleDelete(notification.id)}
-                        aria-label="削除"
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <NotificationActionCell
+                      id={notification.id}
+                      isRead={notification.isRead}
+                    />
                   </TableCell>
                 </TableRow>
               );

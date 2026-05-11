@@ -1,13 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { IconPencil, IconTrash } from "@tabler/icons-react";
 import {
   Badge,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -15,45 +7,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/admin/components/ui";
-import { isMutationError } from "@/shared/lib/mutation-result";
-import { logger } from "@/shared/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
-import { deleteTerms } from "@/admin/actions/terms";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
+import { TermsActionCell } from "./TermsActionCell";
 
 interface TermsTableProps {
   readonly items: AdminTermsListItem[];
 }
 
 export function TermsTable({ items }: TermsTableProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  function handleDelete(id: string, title: string) {
-    if (
-      !window.confirm(
-        `「${title}」を削除しますか？\n（同意記録は保持されます）`,
-      )
-    ) {
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const result = await deleteTerms(id);
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-        toast.success("規約を削除しました");
-        router.refresh();
-      } catch (error) {
-        logger.error("規約削除エラー", { error: getErrorMessage(error) });
-        toast.error("削除中にエラーが発生しました");
-      }
-    });
-  }
-
   if (items.length === 0) {
     return (
       <div className="rounded-lg border bg-card p-12 text-center">
@@ -76,7 +38,7 @@ export function TermsTable({ items }: TermsTableProps) {
               <TableHead>状態</TableHead>
               <TableHead>同意必須</TableHead>
               <TableHead className="text-right">同意数</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead>操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -120,25 +82,8 @@ export function TermsTable({ items }: TermsTableProps) {
                 <TableCell className="text-right tabular-nums">
                   {item.agreementsCount}
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button asChild size="sm" variant="ghost">
-                      <Link href={`/admin/terms/${item.id}/edit`}>
-                        <IconPencil className="h-4 w-4" />
-                        <span className="sr-only">編集</span>
-                      </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(item.id, item.title)}
-                      disabled={isPending}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <IconTrash className="h-4 w-4" />
-                      <span className="sr-only">削除</span>
-                    </Button>
-                  </div>
+                <TableCell>
+                  <TermsActionCell id={item.id} title={item.title} />
                 </TableCell>
               </TableRow>
             ))}
