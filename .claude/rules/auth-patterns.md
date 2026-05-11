@@ -28,7 +28,7 @@ paths:
 
 3. **直接的な role アクセス禁止**
    - `session.user.role` を直接比較しない
-   - `getAdminSessionUser(session)` / `getCustomerSessionUser(session)` を使用（→ `auth-patterns/sessions-and-roles.md`）
+   - `getAdminSessionUser(session)` / `getCustomerSessionUser(session)` を使用（→ `auth-patterns/sessions.md`）
 
 4. **`cache()` の誤用禁止**
    - Server Actions 内では `getAdminSession()` / `getCustomerSession()` を使用（`cache()` 不使用）
@@ -70,7 +70,7 @@ paths:
 
 - **`databaseHooks.user.create.after` はソーシャルログイン時に FK 制約違反** — トランザクション内で実行されるため外部テーブルへの FK 参照が失敗する（Issue #7260, #4614）。`ensureCustomerLinked` のようなアプリ層での遅延紐づけを使用（→ `auth-patterns/customer-social.md`）
 - **`prisma migrate dev` は非対話環境でブロック** — `prisma migrate diff --script` + `prisma db execute` + `prisma migrate resolve --applied` で代替（→ `prisma-patterns/migrations.md`）
-- **セッション作成で `invalid input syntax for type uuid` エラー** — `advanced.database.generateId: "uuid"` が未設定。Better Auth のデフォルト ID 生成はランダム文字列で、DB の `@db.Uuid` 制約に違反する（→ `auth-patterns/sessions-and-roles.md`）
+- **セッション作成で `invalid input syntax for type uuid` エラー** — `advanced.database.generateId: "uuid"` が未設定。Better Auth のデフォルト ID 生成はランダム文字列で、DB の `@db.Uuid` 制約に違反する（→ `auth-patterns/sessions.md`）
 - **`'use cache'` 関数に Zod スキーマを引数で渡すと `Cannot access safeParse on the server` エラー** — `'use cache'` の引数は React シリアライゼーションを通るため、Zod スキーマ等の関数を含むオブジェクトは渡せない。DB フェッチのみをキャッシュし、バリデーションはキャッシュ境界外で行う
 - **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる

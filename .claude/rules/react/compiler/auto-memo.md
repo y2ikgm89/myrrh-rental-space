@@ -79,7 +79,7 @@ const handleMove = (e: React.MouseEvent) => {
 ```
 
 **ルール**: `ref` を参照するイベントハンドラでは `useCallback` を使わずプレーン関数で定義する。
-GSAP アニメーション系のイベントハンドラで特に頻出（→ `gsap-patterns.md` パターン C）。
+GSAP アニメーション系のイベントハンドラで特に頻出（→ `frontend/gsap/matchmedia/events-and-stagger.md` §パターン C）。
 
 ## useEffectEvent — コールバックを deps から除外
 
