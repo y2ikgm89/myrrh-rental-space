@@ -39,6 +39,9 @@ export const analyticsFormSchema = z.object({
     .string()
     .max(50, { error: "50文字以内で入力してください" }),
   gaPropertyId: z.string().max(20, { error: "20文字以内で入力してください" }),
+  microsoftClarityId: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
 });
 
 export type AnalyticsFormInput = z.infer<typeof analyticsFormSchema>;

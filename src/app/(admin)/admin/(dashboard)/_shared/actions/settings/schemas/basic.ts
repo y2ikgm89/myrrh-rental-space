@@ -208,6 +208,7 @@ export const analyticsSettingsSchema = z.object({
   googleAnalyticsId: z.string().max(50).nullable(),
   googleTagManagerId: z.string().max(50).nullable(),
   gaPropertyId: z.string().max(20).nullable(),
+  microsoftClarityId: z.string().max(50).nullable(),
 });
 
 export type AnalyticsSettingsInput = z.infer<typeof analyticsSettingsSchema>;

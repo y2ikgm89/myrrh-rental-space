@@ -34,6 +34,7 @@ export type AnalyticsConfig = {
   googleSearchConsoleId: string | null;
   bingWebmasterToolsId: string | null;
   gaPropertyId: string | null;
+  microsoftClarityId: string | null;
 };
 
 const FALLBACK_LAYOUT_CONFIG: LayoutConfig = {
@@ -51,6 +52,7 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
     googleSearchConsoleId: null,
     bingWebmasterToolsId: null,
     gaPropertyId: null,
+    microsoftClarityId: null,
   };
 }
 
@@ -96,6 +98,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
           googleSearchConsoleId: true,
           bingWebmasterToolsId: true,
           gaPropertyId: true,
+          microsoftClarityId: true,
         },
       }),
     fallback: null,
@@ -115,6 +118,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
     googleSearchConsoleId: settings.googleSearchConsoleId ?? null,
     bingWebmasterToolsId: settings.bingWebmasterToolsId ?? null,
     gaPropertyId: settings.gaPropertyId ?? null,
+    microsoftClarityId: settings.microsoftClarityId ?? null,
   };
 }
 

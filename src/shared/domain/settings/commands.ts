@@ -49,6 +49,7 @@ export type AnalyticsSettingsInput = {
   googleAnalyticsId: string | null;
   googleTagManagerId: string | null;
   gaPropertyId: string | null;
+  microsoftClarityId: string | null;
 };
 
 export type SearchVerificationInput = {

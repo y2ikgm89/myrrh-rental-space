@@ -57,6 +57,7 @@ const seoSettingsSchema = z.object({
   googleSearchConsoleId: z.string().max(100).nullable(),
   bingWebmasterToolsId: z.string().max(100).nullable(),
   gaPropertyId: z.string().max(20).nullable(),
+  microsoftClarityId: z.string().max(50).nullable(),
 });
 
 // =============================================================================
@@ -93,6 +94,7 @@ const VALID_SEO_SETTINGS_INPUT = {
   googleSearchConsoleId: null,
   bingWebmasterToolsId: null,
   gaPropertyId: null,
+  microsoftClarityId: null,
 };
 
 // =============================================================================
@@ -396,6 +398,7 @@ describe("Settings Basic Admin Action Integration", () => {
           googleSearchConsoleId: null,
           bingWebmasterToolsId: null,
           gaPropertyId: null,
+          microsoftClarityId: null,
         });
         expect(result.success).toBe(true);
       });

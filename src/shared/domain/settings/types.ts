@@ -67,6 +67,7 @@ export type SettingsData = {
   googleSearchConsoleId: string | null;
   bingWebmasterToolsId: string | null;
   gaPropertyId: string | null;
+  microsoftClarityId: string | null;
   defaultTimeSlot: number;
   minReservationDuration: number;
   maxReservationDuration: number;

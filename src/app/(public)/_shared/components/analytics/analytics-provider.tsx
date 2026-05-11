@@ -9,6 +9,7 @@
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/third-party-libraries
  */
 
+import Script from "next/script";
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
 import { useCookieConsent } from "@/public/components/cookie-consent-banner";
 import type { AnalyticsConfig } from "@/shared/lib/analytics/config";
@@ -20,12 +21,62 @@ interface AnalyticsProviderProps {
 }
 
 /**
+ * Microsoft Clarity 公式 inline loader（GA4/GTM と並行動作）
+ * @see https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-setup
+ */
+function ClarityScript({
+  projectId,
+  nonce,
+}: {
+  projectId: string;
+  nonce?: string | null;
+}) {
+  const inline = `
+(function(c,l,a,r,i,t,y){
+  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+})(window, document, "clarity", "script", "${projectId}");
+`.trim();
+
+  const scriptProps: {
+    id: string;
+    strategy: "afterInteractive";
+    nonce?: string;
+  } = {
+    id: "ms-clarity",
+    strategy: "afterInteractive",
+  };
+  if (nonce != null) scriptProps.nonce = nonce;
+
+  return (
+    <Script
+      {...scriptProps}
+      // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml -- Microsoft Clarity 公式 inline loader（静的文字列 + ID は Zod max(50) 検証済）
+      dangerouslySetInnerHTML={{ __html: inline }}
+    />
+  );
+}
+
+function GaScript({ gaId, nonce }: { gaId: string; nonce?: string | null }) {
+  const props: { gaId: string; nonce?: string } = { gaId };
+  if (nonce != null) props.nonce = nonce;
+  return <GoogleAnalytics {...props} />;
+}
+
+function GtmScript({ gtmId, nonce }: { gtmId: string; nonce?: string | null }) {
+  const props: { gtmId: string; nonce?: string } = { gtmId };
+  if (nonce != null) props.nonce = nonce;
+  return <GoogleTagManager {...props} />;
+}
+
+/**
  * Analytics Provider
  *
  * - Cookie同意が 'accepted' の場合のみスクリプトを出力
  * - analyticsType が 'ga4' の場合: GoogleAnalytics を出力
  * - analyticsType が 'gtm' の場合: GoogleTagManager を出力
- * - それ以外の場合: 何も出力しない
+ * - microsoftClarityId が設定されている場合: Clarity を並行出力（GA4/GTM とは独立）
  */
 export function AnalyticsProvider({ config, nonce }: AnalyticsProviderProps) {
   const consentStatus = useCookieConsent();
@@ -35,28 +86,29 @@ export function AnalyticsProvider({ config, nonce }: AnalyticsProviderProps) {
     return null;
   }
 
-  // 無効の場合は何も出力しない
-  if (!config.analyticsType) {
+  const isGa4 =
+    config.analyticsType === AnalyticsType.ga4 && config.googleAnalyticsId;
+  const isGtm =
+    config.analyticsType === AnalyticsType.gtm && config.googleTagManagerId;
+  const hasClarity = Boolean(config.microsoftClarityId);
+
+  if (!isGa4 && !isGtm && !hasClarity) {
     return null;
   }
 
-  // GA4の場合
-  if (config.analyticsType === AnalyticsType.ga4 && config.googleAnalyticsId) {
-    const gaProps: { gaId: string; nonce?: string } = {
-      gaId: config.googleAnalyticsId,
-    };
-    if (nonce != null) gaProps.nonce = nonce;
-    return <GoogleAnalytics {...gaProps} />;
-  }
+  const nonceProp = nonce != null ? { nonce } : {};
 
-  // GTMの場合
-  if (config.analyticsType === AnalyticsType.gtm && config.googleTagManagerId) {
-    const gtmProps: { gtmId: string; nonce?: string } = {
-      gtmId: config.googleTagManagerId,
-    };
-    if (nonce != null) gtmProps.nonce = nonce;
-    return <GoogleTagManager {...gtmProps} />;
-  }
-
-  return null;
+  return (
+    <>
+      {isGa4 && config.googleAnalyticsId && (
+        <GaScript gaId={config.googleAnalyticsId} {...nonceProp} />
+      )}
+      {isGtm && config.googleTagManagerId && (
+        <GtmScript gtmId={config.googleTagManagerId} {...nonceProp} />
+      )}
+      {config.microsoftClarityId && (
+        <ClarityScript projectId={config.microsoftClarityId} {...nonceProp} />
+      )}
+    </>
+  );
 }

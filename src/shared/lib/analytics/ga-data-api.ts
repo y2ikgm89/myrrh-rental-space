@@ -22,6 +22,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
+import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // =============================================================================
@@ -116,27 +117,31 @@ export async function getAnalyticsStats(
   }
 
   try {
-    // 基本統計の取得
-    const [basicResponse] = await client.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      metrics: [
-        { name: "screenPageViews" },
-        { name: "totalUsers" },
-        { name: "sessions" },
-        { name: "averageSessionDuration" },
-      ],
-    });
+    // 基本統計の取得（429 / 500 / 503 + 403 usageLimits は exponential backoff retry）
+    const [basicResponse] = await withGoogleApiRetry(() =>
+      client.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        metrics: [
+          { name: "screenPageViews" },
+          { name: "totalUsers" },
+          { name: "sessions" },
+          { name: "averageSessionDuration" },
+        ],
+      }),
+    );
 
     // 人気ページTop5
-    const [pagesResponse] = await client.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
-      metrics: [{ name: "screenPageViews" }],
-      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-      limit: 5,
-    });
+    const [pagesResponse] = await withGoogleApiRetry(() =>
+      client.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
+        metrics: [{ name: "screenPageViews" }],
+        orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+        limit: 5,
+      }),
+    );
 
     const basicRow = basicResponse.rows?.[0];
 

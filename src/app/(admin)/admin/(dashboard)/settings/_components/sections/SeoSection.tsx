@@ -205,6 +205,7 @@ function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
         googleAnalyticsId: emptyToNull(data.googleAnalyticsId),
         googleTagManagerId: emptyToNull(data.googleTagManagerId),
         gaPropertyId: emptyToNull(data.gaPropertyId),
+        microsoftClarityId: emptyToNull(data.microsoftClarityId),
       }),
     {
       defaultValues: {
@@ -212,6 +213,7 @@ function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
         googleAnalyticsId: settings.googleAnalyticsId || "",
         googleTagManagerId: settings.googleTagManagerId || "",
         gaPropertyId: settings.gaPropertyId || "",
+        microsoftClarityId: settings.microsoftClarityId || "",
       },
       refresh: true,
       successMessage: "Analytics設定を保存しました",
@@ -323,6 +325,30 @@ function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
                     GA4管理画面 &gt; プロパティ設定 &gt;
                     プロパティIDから取得（数値のみ）。
                     ダッシュボードでのアクセス解析表示に必要です。
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="microsoftClarityId"
+              render={({ field }) => (
+                <FormItem className="pt-2 border-t">
+                  <FormLabel>Microsoft Clarity プロジェクトID</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="abcd1234ef"
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Microsoft
+                    Clarity（無料・GDPR対応）のヒートマップ・セッション録画を有効化します。
+                    Clarity管理画面 &gt; Settings &gt; Setup &gt; Project
+                    IDから取得。GA4/GTM とは独立して並行動作します。
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

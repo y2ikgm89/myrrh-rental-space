@@ -1182,6 +1182,7 @@ model Settings {
   googleSearchConsoleId String? // GSC verification meta tag
   bingWebmasterToolsId  String? // Bing verification meta tag
   gaPropertyId          String? // GA4 Property ID for Data API
+  microsoftClarityId    String? // Microsoft Clarity Project ID（ヒートマップ・セッション録画、GA4/GTM と独立）
 
   // Reservation Settings（常に有効な整数。未設定行は DB default で埋めたうえで NOT NULL）
   defaultTimeSlot                  Int     @default(60)

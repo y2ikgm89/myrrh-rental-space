@@ -30,6 +30,7 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
     googleSearchConsoleId: null,
     bingWebmasterToolsId: null,
     gaPropertyId: null,
+    microsoftClarityId: null,
   };
 }
 
