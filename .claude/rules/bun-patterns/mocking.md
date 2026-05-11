@@ -76,6 +76,11 @@ expect(spy).toHaveBeenCalled();
 expect(spy).toHaveBeenCalledWith("error message");
 ```
 
+## fetch / setTimeout の spyOn パターン
+
+- **`typeof fetch` mock は `as unknown as typeof globalThis.fetch` キャスト helper 必須** — `spyOn(globalThis, "fetch").mockImplementation(async () => Response)` だと TS2345（`preconnect` プロパティ欠落）。test ファイル内に `function asFetchImpl(impl: () => Promise<Response>): typeof globalThis.fetch { return impl as unknown as typeof globalThis.fetch; }` を定義して `mockImplementation(asFetchImpl(async () => ...))` で呼ぶ。参照実装: `__tests__/unit/lib/cloudflare.test.ts`
+- **retry/backoff test は `spyOn(globalThis, "setTimeout").mockImplementation(((fn) => { fn(); return 0; }) as unknown as typeof setTimeout)` で sleep スキップ** — `INITIAL_BACKOFF_MS * 2^attempt` の 1s+2s+4s が test 実行時間に直撃するため。`afterEach` で `mockRestore()` 必須。参照実装: `__tests__/unit/lib/cloudflare.test.ts`
+
 ## モックリセット
 
 ```typescript
