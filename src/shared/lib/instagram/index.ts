@@ -1,17 +1,26 @@
 /**
  * Instagram API Utilities
  *
- * Instagram Graph API / Basic Display API を使用した機能群
- * トークン管理、フィード取得、oEmbed取得などのユーティリティ
+ * Instagram Graph API / Basic Display API を使用した機能群。
+ * トークン管理、フィード取得、oEmbed取得などのユーティリティ。
+ *
+ * ## 設計方針
+ * - `InstagramApiError`（→ `./retry`）で構造化エラーを throw
+ * - read / refresh 系は `withInstagramApiRetry` で 429 / 5xx / Graph API transient code を retry
+ * - `exchangeCodeForToken` は authorization code が 1 回限り消費のため retry なし
+ * - レスポンスは全て Zod safeParse で検証
  *
  * @module shared/lib/instagram
  */
+
+import "server-only";
 
 import { z } from "zod";
 import type { ApiKeyTestResult } from "@/shared/types/api-keys";
 import { isValidInstagramToken } from "@/shared/lib/validations/instagram";
 import { maskApiKey } from "@/shared/lib/api-keys";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { InstagramApiError, withInstagramApiRetry } from "./retry";
 
 // =============================================================================
 // Zod Schemas for API Responses
@@ -130,6 +139,45 @@ const INSTAGRAM_OEMBED_API =
 const INSTAGRAM_OAUTH_BASE = "https://api.instagram.com/oauth";
 
 // =============================================================================
+// Core fetch helper（構造化エラー throw + Zod 検証）
+// =============================================================================
+
+/**
+ * Instagram Graph API に対する fetch を構造化エラー対応で実行する。
+ *
+ * - 非 OK レスポンスは `InstagramApiError` を throw（status / graphApiCode / type を保持）
+ * - 成功時は Zod schema で response を検証
+ *
+ * `withInstagramApiRetry` でラップして使用する。
+ */
+async function callInstagramApi<T>(
+  url: string,
+  init: RequestInit | undefined,
+  schema: z.ZodType<T>,
+): Promise<T> {
+  const response = await fetch(url, init);
+
+  if (!response.ok) {
+    const rawError: unknown = await response.json().catch(() => null);
+    const parsed = InstagramApiErrorSchema.safeParse(rawError);
+    const graphError = parsed.success ? parsed.data.error : undefined;
+    throw new InstagramApiError(
+      response.status,
+      graphError?.code ?? null,
+      graphError?.type ?? null,
+      graphError?.message ?? `Instagram API error: ${response.status}`,
+    );
+  }
+
+  const rawData: unknown = await response.json();
+  const result = schema.safeParse(rawData);
+  if (!result.success) {
+    throw new Error(`Invalid Instagram API response: ${result.error.message}`);
+  }
+  return result.data;
+}
+
+// =============================================================================
 // Feed Functions
 // =============================================================================
 
@@ -154,28 +202,11 @@ export async function fetchInstagramFeed(
   url.searchParams.set("limit", String(clampedLimit));
   url.searchParams.set("access_token", accessToken);
 
-  const response = await fetch(url.toString());
+  const data = await withInstagramApiRetry(() =>
+    callInstagramApi(url.toString(), undefined, InstagramApiFeedResponseSchema),
+  );
 
-  if (!response.ok) {
-    const errorResult = InstagramApiErrorSchema.safeParse(
-      await response.json(),
-    );
-    const errorMessage = errorResult.success
-      ? errorResult.data.error?.message
-      : undefined;
-    throw new Error(errorMessage || `Instagram API error: ${response.status}`);
-  }
-
-  const jsonData: unknown = await response.json();
-  const parseResult = InstagramApiFeedResponseSchema.safeParse(jsonData);
-
-  if (!parseResult.success) {
-    throw new Error(
-      `Invalid Instagram API response: ${parseResult.error.message}`,
-    );
-  }
-
-  return parseResult.data.data.map((item) =>
+  return data.data.map((item) =>
     omitUndefined({
       id: item.id,
       caption: item.caption,
@@ -208,33 +239,20 @@ export async function fetchInstagramOembed(
   url.searchParams.set("access_token", accessToken);
   url.searchParams.set("omitscript", "true"); // クライアント側でscriptを制御
 
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const errorResult = InstagramApiErrorSchema.safeParse(
-      await response.json(),
-    );
-    const errorMessage = errorResult.success
-      ? errorResult.data.error?.message
-      : undefined;
-    throw new Error(errorMessage || `oEmbed API error: ${response.status}`);
-  }
-
-  const jsonData: unknown = await response.json();
-  const parseResult = InstagramOembedApiResponseSchema.safeParse(jsonData);
-
-  if (!parseResult.success) {
-    throw new Error(
-      `Invalid oEmbed API response: ${parseResult.error.message}`,
-    );
-  }
+  const data = await withInstagramApiRetry(() =>
+    callInstagramApi(
+      url.toString(),
+      undefined,
+      InstagramOembedApiResponseSchema,
+    ),
+  );
 
   return omitUndefined({
-    html: parseResult.data.html,
-    width: parseResult.data.width,
-    height: parseResult.data.height,
-    authorName: parseResult.data.author_name,
-    providerName: parseResult.data.provider_name,
+    html: data.html,
+    width: data.width,
+    height: data.height,
+    authorName: data.author_name,
+    providerName: data.provider_name,
   });
 }
 
@@ -244,6 +262,8 @@ export async function fetchInstagramOembed(
 
 /**
  * 認証コードを短期トークンに交換
+ *
+ * **注意**: authorization code は 1 回限り消費されるため retry しない。
  *
  * @param code - OAuth認証コード
  * @param clientId - Instagram App ID
@@ -257,44 +277,27 @@ export async function exchangeCodeForToken(
   clientSecret: string,
   redirectUri: string,
 ): Promise<{ accessToken: string; userId: string }> {
-  const response = await fetch(`${INSTAGRAM_OAUTH_BASE}/access_token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+  const data = await callInstagramApi(
+    `${INSTAGRAM_OAUTH_BASE}/access_token`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
+        code,
+      }),
     },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: "authorization_code",
-      redirect_uri: redirectUri,
-      code,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorResult = InstagramApiErrorSchema.safeParse(
-      await response.json(),
-    );
-    const errorMessage = errorResult.success
-      ? errorResult.data.error?.message
-      : undefined;
-    throw new Error(
-      errorMessage || `Token exchange failed: ${response.status}`,
-    );
-  }
-
-  const jsonData: unknown = await response.json();
-  const parseResult = ExchangeTokenResponseSchema.safeParse(jsonData);
-
-  if (!parseResult.success) {
-    throw new Error(
-      `Invalid token exchange response: ${parseResult.error.message}`,
-    );
-  }
+    ExchangeTokenResponseSchema,
+  );
 
   return {
-    accessToken: parseResult.data.access_token,
-    userId: String(parseResult.data.user_id),
+    accessToken: data.access_token,
+    userId: String(data.user_id),
   };
 }
 
@@ -314,32 +317,13 @@ export async function exchangeForLongLivedToken(
   url.searchParams.set("client_secret", clientSecret);
   url.searchParams.set("access_token", shortLivedToken);
 
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const errorResult = InstagramApiErrorSchema.safeParse(
-      await response.json(),
-    );
-    const errorMessage = errorResult.success
-      ? errorResult.data.error?.message
-      : undefined;
-    throw new Error(
-      errorMessage || `Long-lived token exchange failed: ${response.status}`,
-    );
-  }
-
-  const jsonData: unknown = await response.json();
-  const parseResult = LongLivedTokenResponseSchema.safeParse(jsonData);
-
-  if (!parseResult.success) {
-    throw new Error(
-      `Invalid long-lived token response: ${parseResult.error.message}`,
-    );
-  }
+  const data = await withInstagramApiRetry(() =>
+    callInstagramApi(url.toString(), undefined, LongLivedTokenResponseSchema),
+  );
 
   return {
-    accessToken: parseResult.data.access_token,
-    expiresIn: parseResult.data.expires_in, // 秒単位（通常60日）
+    accessToken: data.access_token,
+    expiresIn: data.expires_in, // 秒単位（通常60日）
   };
 }
 
@@ -356,30 +340,13 @@ export async function refreshLongLivedToken(
   url.searchParams.set("grant_type", "ig_refresh_token");
   url.searchParams.set("access_token", longLivedToken);
 
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const errorResult = InstagramApiErrorSchema.safeParse(
-      await response.json(),
-    );
-    const errorMessage = errorResult.success
-      ? errorResult.data.error?.message
-      : undefined;
-    throw new Error(errorMessage || `Token refresh failed: ${response.status}`);
-  }
-
-  const jsonData: unknown = await response.json();
-  const parseResult = LongLivedTokenResponseSchema.safeParse(jsonData);
-
-  if (!parseResult.success) {
-    throw new Error(
-      `Invalid token refresh response: ${parseResult.error.message}`,
-    );
-  }
+  const data = await withInstagramApiRetry(() =>
+    callInstagramApi(url.toString(), undefined, LongLivedTokenResponseSchema),
+  );
 
   return {
-    accessToken: parseResult.data.access_token,
-    expiresIn: parseResult.data.expires_in,
+    accessToken: data.access_token,
+    expiresIn: data.expires_in,
   };
 }
 
@@ -400,32 +367,15 @@ export async function fetchInstagramUserInfo(
   url.searchParams.set("fields", "id,username,account_type,media_count");
   url.searchParams.set("access_token", accessToken);
 
-  const response = await fetch(url.toString());
-
-  if (!response.ok) {
-    const errorResult = InstagramApiErrorSchema.safeParse(
-      await response.json(),
-    );
-    const errorMessage = errorResult.success
-      ? errorResult.data.error?.message
-      : undefined;
-    throw new Error(
-      errorMessage || `IconUser info fetch failed: ${response.status}`,
-    );
-  }
-
-  const jsonData: unknown = await response.json();
-  const parseResult = InstagramApiUserResponseSchema.safeParse(jsonData);
-
-  if (!parseResult.success) {
-    throw new Error(`Invalid user info response: ${parseResult.error.message}`);
-  }
+  const data = await withInstagramApiRetry(() =>
+    callInstagramApi(url.toString(), undefined, InstagramApiUserResponseSchema),
+  );
 
   return omitUndefined({
-    id: parseResult.data.id,
-    username: parseResult.data.username,
-    accountType: parseResult.data.account_type,
-    mediaCount: parseResult.data.media_count,
+    id: data.id,
+    username: data.username,
+    accountType: data.account_type,
+    mediaCount: data.media_count,
   });
 }
 
@@ -463,6 +413,15 @@ export async function testInstagramConnection(
       },
     };
   } catch (error) {
+    // Graph API error code 190 = OAUTH_ACCESS_TOKEN_INVALID
+    if (error instanceof InstagramApiError && error.graphApiCode === 190) {
+      return {
+        success: false,
+        error:
+          "アクセストークンが無効です。トークンの有効期限が切れている可能性があります",
+      };
+    }
+
     const message =
       error instanceof Error ? error.message : "接続テストに失敗しました";
 
@@ -517,3 +476,6 @@ export function shouldRefreshToken(expiresAt: Date): boolean {
   const daysRemaining = getTokenExpiryDays(expiresAt);
   return daysRemaining <= 7;
 }
+
+// Re-export 構造化エラー（外部 consumer 用）
+export { InstagramApiError, withInstagramApiRetry };
