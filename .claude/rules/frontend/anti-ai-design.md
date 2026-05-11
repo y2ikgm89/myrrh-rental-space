@@ -74,7 +74,7 @@ paths:
 
 ## 参照
 
-- `.claude/rules/project-design-config.md` — プロジェクト固有デザイン値
+- `.claude/rules/frontend/project-design-config.md` — プロジェクト固有デザイン値
 - `(public*)/_styles/public*.css` — テーマ変数
 - `(public*)/_shared/lib/animations.ts` — DURATION / EASE / STAGGER / PARALLAX 定数
 - `(public*)/_shared/components/animations/` — SplitText, ParallaxImage, MagneticButton, ScrollReveal

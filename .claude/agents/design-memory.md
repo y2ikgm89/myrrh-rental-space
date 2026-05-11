@@ -23,7 +23,7 @@ design rules manually: `.claude/rules/frontend/anti-ai-design.md`, `.claude/rule
 
 1. **Always consult memory first**: Read your `MEMORY.md` and relevant topic files before making any design recommendation
 2. **Analyze the request**: Understand what design decision is needed
-3. **Read current design files**: Check `src/app/(public)/_styles/public.css` for current theme values, `.claude/rules/project-design-config.md` for brand config
+3. **Read current design files**: Check `src/app/(public)/_styles/public.css` for current theme values, `.claude/rules/frontend/project-design-config.md` for brand config
 4. **Provide recommendations** grounded in existing brand decisions
 5. **Record new decisions** in your memory for future sessions
 

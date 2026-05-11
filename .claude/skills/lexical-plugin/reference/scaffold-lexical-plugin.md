@@ -26,7 +26,7 @@ Lexical エディタ用のカスタムプラグインを作成する際のコピ
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ImagePlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/YouTubePlugin.tsx`
 
-**補足**: プラグインは `LexicalEditor` 内の **`InspectorSidebarProvider`** 配下で動く。**キーボードショートカットでパネル開閉に触れる場合**は `KeyboardShortcutsPlugin` の **Ctrl+Shift+0** ハンドラと衝突しないようにする（別モディファイア組み合わせを検討）。インスペクター状態が必要なら `useInspectorSidebar()` を参照（`lexical-patterns.md`「ブロック設定パネル」）。**メインシェルのレイアウト**（`editor-layout-constants`、DraggableBlock フォーク）を変える変更は同ファイルの **「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」** を必ず読んでから行う。
+**補足**: プラグインは `LexicalEditor` 内の **`InspectorSidebarProvider`** 配下で動く。**キーボードショートカットでパネル開閉に触れる場合**は `KeyboardShortcutsPlugin` の **Ctrl+Shift+0** ハンドラと衝突しないようにする（別モディファイア組み合わせを検討）。インスペクター状態が必要なら `useInspectorSidebar()` を参照（`.claude/rules/frontend/lexical/core.md` §ブロック設定パネル）。**メインシェルのレイアウト**（`editor-layout-constants`、DraggableBlock フォーク）を変える変更は `.claude/rules/frontend/lexical/toolbar-layout.md` の **「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」** を必ず読んでから行う。
 
 ### 3. プラグインファイル作成
 

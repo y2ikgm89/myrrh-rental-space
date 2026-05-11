@@ -93,7 +93,7 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
 | 二重オフセット   | ドラッグメニュー／ターゲットラインに **`left-*` + `transform` の二重**が再発していないか                                                                                                                              |
 | プレースホルダー | `ContentEditable` に `placeholder` を渡しているか。プレースホルダー DOM に **`text-base` / `leading-relaxed` / `lg:text-lg`** 等、本文 `EDITOR_PROSE_CLASSES` と揃える意図があるか（兄弟描画のため `prose` 継承なし） |
 
-詳細は `lexical-patterns.md` の「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」。
+詳細は `.claude/rules/frontend/lexical/toolbar-layout.md` の「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」。
 
 ### 6b. `insert-items.ts` / 挿入プラグイン（高シグナル）
 
