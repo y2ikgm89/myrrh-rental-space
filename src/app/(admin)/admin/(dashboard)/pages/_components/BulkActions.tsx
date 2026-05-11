@@ -105,11 +105,10 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
         </Button>
 
         <Button
-          variant="outline"
+          variant="destructive"
           size="sm"
           onClick={handleBulkDelete}
           disabled={isPending}
-          className="text-destructive hover:text-destructive"
         >
           {isPending ? (
             <IconLoader2 className="h-4 w-4 animate-spin mr-1" />

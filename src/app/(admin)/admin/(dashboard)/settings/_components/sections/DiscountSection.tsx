@@ -203,11 +203,11 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                       </div>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="destructive-ghost"
                         size="sm"
                         onClick={() => remove(index)}
                         disabled={isPending || fields.length <= 1}
-                        className="text-destructive hover:text-destructive"
+                        aria-label="ルールを削除"
                       >
                         <IconTrash className="h-4 w-4" />
                       </Button>

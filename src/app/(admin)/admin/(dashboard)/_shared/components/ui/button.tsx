@@ -25,6 +25,10 @@ const buttonVariants = tv({
         "shadow-sm hover:shadow-md",
         "hover:bg-destructive/90 hover:-translate-y-px",
       ],
+      "destructive-ghost": [
+        "text-destructive bg-transparent",
+        "hover:bg-destructive/10 hover:text-destructive",
+      ],
       outline: [
         "border border-input bg-background",
         "shadow-sm hover:shadow-md",

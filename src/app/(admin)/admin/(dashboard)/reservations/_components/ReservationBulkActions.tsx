@@ -105,11 +105,10 @@ export function ReservationBulkActions({
         </Button>
 
         <Button
-          variant="outline"
+          variant="destructive"
           size="sm"
           onClick={handleBulkCancel}
           disabled={isPending}
-          className="text-destructive hover:text-destructive"
         >
           {isPending ? (
             <IconLoader2 className="mr-1 h-4 w-4 animate-spin" />

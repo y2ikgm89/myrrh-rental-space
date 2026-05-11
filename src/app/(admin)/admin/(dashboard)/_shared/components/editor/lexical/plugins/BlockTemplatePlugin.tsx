@@ -138,7 +138,7 @@ function SaveTemplateDialog({
   const handleSave = () => {
     if (!name.trim()) return;
 
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const selection = $getSelection();
       let serializedNodes: SerializedLexicalNode[] = [];
 
@@ -382,7 +382,7 @@ function InsertTemplateDialog({
                   </button>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="icon"
                     className="h-7 w-7 opacity-0 group-hover:opacity-100"
                     onClick={() => handleDelete(template.id)}
@@ -392,7 +392,7 @@ function InsertTemplateDialog({
                     {deletingId === template.id ? (
                       <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <IconTrash className="h-3.5 w-3.5 text-destructive" />
+                      <IconTrash className="h-3.5 w-3.5" />
                     )}
                   </Button>
                 </div>

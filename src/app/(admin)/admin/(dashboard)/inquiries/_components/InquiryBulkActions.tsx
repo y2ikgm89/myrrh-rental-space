@@ -111,11 +111,10 @@ export function InquiryBulkActions({
           </DropdownMenu>
 
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
             onClick={() => setDeleteOpen(true)}
             disabled={isPending}
-            className="text-destructive hover:text-destructive"
           >
             {isPending ? (
               <IconLoader2 className="h-4 w-4 animate-spin mr-1" />

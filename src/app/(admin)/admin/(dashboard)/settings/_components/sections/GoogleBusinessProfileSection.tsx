@@ -68,7 +68,7 @@ export function GoogleBusinessProfileSection({
     params.delete("gbp_success");
     params.delete("gbp_error");
     const next = params.toString();
-    router.replace(`/admin/settings/api${next ? `?${next}` : ""}`);
+    router.replace(`/admin/settings/integrations${next ? `?${next}` : ""}`);
   }, [successFlag, errorFlag, router, searchParams]);
 
   const handleRevoke = async () => {

@@ -223,12 +223,12 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
               {backgroundImageUrl && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="destructive-ghost"
                   size="sm"
                   onClick={() => setBackgroundImageUrl("")}
                   aria-label="背景画像を削除"
                 >
-                  <IconTrash className="h-4 w-4 text-destructive" />
+                  <IconTrash className="h-4 w-4" />
                 </Button>
               )}
             </div>

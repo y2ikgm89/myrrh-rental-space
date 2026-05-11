@@ -110,11 +110,10 @@ export function NewsBulkActions({
           </Button>
 
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
             onClick={() => setDeleteOpen(true)}
             disabled={isPending}
-            className="text-destructive hover:text-destructive"
           >
             <IconTrash className="mr-1 h-4 w-4" />
             一括削除

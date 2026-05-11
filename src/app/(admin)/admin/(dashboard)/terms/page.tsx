@@ -31,7 +31,7 @@ export default async function AdminTermsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="destructive" size="sm">
             <Link href="/admin/terms/trash">
               <IconTrash className="mr-2 h-4 w-4" />
               ゴミ箱

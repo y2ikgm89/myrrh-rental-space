@@ -40,12 +40,7 @@ export function TaxonomyDeleteDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="text-destructive hover:text-destructive"
-        >
+        <Button type="button" variant="destructive" size="sm">
           <IconTrash className="mr-2 h-4 w-4" />
           削除
         </Button>

@@ -131,9 +131,8 @@ export function PostEditor({
         <DialogTrigger asChild>
           <Button
             type="button"
-            variant="ghost"
+            variant="destructive-ghost"
             size="sm"
-            className="text-destructive hover:text-destructive"
             disabled={editor.isPending}
           >
             削除

@@ -15,7 +15,7 @@ import {
   IconLoader2,
   IconAlertTriangle,
 } from "@tabler/icons-react";
-import { Button } from "@/admin/components/ui";
+import { Button, buttonVariants } from "@/admin/components/ui";
 import {
   Dialog,
   DialogContent,
@@ -123,7 +123,7 @@ export function DeletedPagesDialog() {
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="destructive" size="sm">
             <IconTrash className="h-4 w-4 mr-1" />
             ゴミ箱
           </Button>
@@ -177,11 +177,10 @@ export function DeletedPagesDialog() {
                             復元
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="destructive"
                             size="sm"
                             onClick={() => setConfirmSlug(page.slug)}
                             disabled={isPending}
-                            className="text-destructive hover:text-destructive"
                           >
                             <IconTrash className="h-4 w-4 mr-1" />
                             完全削除
@@ -218,7 +217,7 @@ export function DeletedPagesDialog() {
             <AlertDialogAction
               onClick={() => confirmSlug && handlePermanentDelete(confirmSlug)}
               disabled={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
             >
               {isPending ? (
                 <>

@@ -41,7 +41,7 @@ export function FaqCategoryListView({ categories }: FaqCategoryListViewProps) {
               ページSEO
             </Link>
           </Button>
-          <Button asChild type="button" variant="outline">
+          <Button asChild type="button" variant="destructive">
             <Link href="/admin/faq/trash">
               <IconTrash className="mr-1 h-4 w-4" aria-hidden="true" />
               ゴミ箱

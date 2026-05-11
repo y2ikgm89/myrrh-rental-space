@@ -183,12 +183,12 @@ export function TestimonialItemInspectorPanel({
                 {avatarUrl && (
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="sm"
                     className="w-full"
                     onClick={handleAvatarClear}
                   >
-                    <IconTrash className="mr-2 h-4 w-4 text-destructive" />
+                    <IconTrash className="mr-2 h-4 w-4" />
                     削除
                   </Button>
                 )}

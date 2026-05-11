@@ -187,11 +187,11 @@ export function CommentThread({
               {onDelete && thread.status !== "DELETED" && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="destructive"
                   size="sm"
                   onClick={handleDelete}
                   disabled={isDeletePending}
-                  className="gap-1 text-destructive hover:text-destructive"
+                  className="gap-1"
                 >
                   <IconTrash className="h-3 w-3" />
                   削除
