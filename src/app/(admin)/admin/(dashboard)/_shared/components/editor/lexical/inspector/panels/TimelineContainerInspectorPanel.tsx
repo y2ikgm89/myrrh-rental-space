@@ -66,7 +66,7 @@ export function TimelineContainerInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isTimelineContainerNode);
 
-  const { direction, color } = editor.getEditorState().read(() => ({
+  const { direction, color } = editor.read(() => ({
     direction: $getState(node, timelineDirectionState),
     color: $getState(node, timelineColorState),
   }));

@@ -118,7 +118,7 @@ function FloatingBlockSelectionToolbar({
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
-      editor.getEditorState().read(() => updateFloatingToolbar());
+      editor.read(() => updateFloatingToolbar());
     };
 
     window.addEventListener("resize", update);
@@ -132,7 +132,7 @@ function FloatingBlockSelectionToolbar({
 
   // 選択変更時にポジション更新
   useEffect(() => {
-    editor.getEditorState().read(() => updateFloatingToolbar());
+    editor.read(() => updateFloatingToolbar());
 
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
@@ -152,7 +152,7 @@ function FloatingBlockSelectionToolbar({
   const handleGroup = () => {
     // 選択中のブロックキーを先にスナップショット（dialog にフォーカスが移ると選択が失われる）
     const keys: string[] = [];
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       for (const node of $getSelectionBlockNodes()) {
         keys.push(node.getKey());
       }
@@ -166,7 +166,7 @@ function FloatingBlockSelectionToolbar({
     // ボタンフォーカスで選択が失われる可能性があるため、現在の選択から
     // 祖先 Group キーを先にスナップショットして targetNodeKey として渡す
     let groupKey: string | undefined;
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
       const group = $findMatchingParent(
@@ -236,7 +236,7 @@ function useFloatingBlockSelectionToolbar(
   const [canUngroup, setCanUngroup] = useState(false);
 
   const updatePopup = useEffectEvent(() => {
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       if (editor.isComposing()) {
         setIsMultiBlock(false);
         setCanUngroup(false);

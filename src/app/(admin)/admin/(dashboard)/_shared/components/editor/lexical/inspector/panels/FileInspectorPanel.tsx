@@ -41,16 +41,16 @@ export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
   const updateNode = useNodeUpdater(nodeKey, $isFileNode);
 
   const [url, setUrl] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileUrlState)),
+    editor.read(() => $getState(node, fileUrlState)),
   );
   const [fileName, setFileName] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileNameState)),
+    editor.read(() => $getState(node, fileNameState)),
   );
   const [fileSize, setFileSize] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileSizeState)),
+    editor.read(() => $getState(node, fileSizeState)),
   );
   const [mime, setMime] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileMimeState)),
+    editor.read(() => $getState(node, fileMimeState)),
   );
 
   useEffect(() => {

@@ -66,7 +66,7 @@ export type NodeUpdater<T extends LexicalNode> = (node: T) => void;
  * function ButtonInspectorPanel({ nodeKey, node }: Props) {
  *   const updateNode = useNodeUpdater(nodeKey, $isButtonNode)
  *
- *   const text = editor.getEditorState().read(() => $getState(node, buttonTextState))
+ *   const text = editor.read(() => $getState(node, buttonTextState))
  *
  *   const handleTextChange = (value: string) =>
  *     updateNode((n) => { $setState(n, buttonTextState, value) })

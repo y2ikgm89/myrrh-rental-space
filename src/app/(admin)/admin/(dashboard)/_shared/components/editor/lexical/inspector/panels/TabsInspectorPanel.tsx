@@ -80,7 +80,7 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
     tabsFixedWidth,
     tabsColor,
     tabItems,
-  } = editor.getEditorState().read(() => {
+  } = editor.read(() => {
     const active = $getState(node, activeIndexState);
     const style = $getState(node, tabsStyleState);
     const size = $getState(node, tabsSizeState);

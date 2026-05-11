@@ -38,7 +38,7 @@ export function PricingFeatureInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isPricingFeatureNode);
 
-  const { included } = editor.getEditorState().read(() => ({
+  const { included } = editor.read(() => ({
     included: $getState(node, featureIncludedState),
   }));
 

@@ -43,7 +43,7 @@ export function CaptionBoxInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isCaptionBoxNode);
 
-  const { currentStyle, currentColor } = editor.getEditorState().read(() => ({
+  const { currentStyle, currentColor } = editor.read(() => ({
     currentStyle: $getState(node, captionBoxStyleState),
     currentColor: $getState(node, captionBoxColorState),
   }));

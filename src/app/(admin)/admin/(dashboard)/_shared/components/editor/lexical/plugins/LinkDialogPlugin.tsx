@@ -43,7 +43,7 @@ export function LinkDialogPlugin({ isOpen, onClose }: LinkDialogPluginProps) {
   useEffect(() => {
     if (!isOpen) return;
 
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
 

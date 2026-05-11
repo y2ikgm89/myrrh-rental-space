@@ -23,7 +23,13 @@ import { InspectorSection } from "../InspectorSection";
 import { ColorSwatchPicker } from "../ColorSwatchPicker";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Label } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/cn";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/admin/components/ui/select";
 
 // =============================================================================
 // Constants
@@ -55,7 +61,7 @@ export function GroupInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isGroupNode);
 
-  const { currentStyle, currentColor } = editor.getEditorState().read(() => ({
+  const { currentStyle, currentColor } = editor.read(() => ({
     currentStyle: $getState(node, groupStyleState),
     currentColor: $getState(node, groupColorState),
   }));
@@ -78,34 +84,34 @@ export function GroupInspectorPanel({
             keyof typeof GROUP_STYLE_CATEGORIES,
             readonly GroupStyle[],
           ][]
-        ).map(([category, styles]) => (
-          <div key={category} className="space-y-1.5">
-            <Label className="text-xs">{CATEGORY_LABELS[category]}</Label>
-            <div className="grid grid-cols-5 gap-1">
-              {styles.map((style) => (
-                <button
-                  key={style}
-                  type="button"
-                  title={GROUP_STYLE_LABELS[style]}
-                  onClick={() => handleStyleChange(style)}
-                  className={cn(
-                    "h-8 rounded border text-xs leading-tight transition-shadow",
-                    currentStyle === style
-                      ? "ring-2 ring-ring ring-offset-1"
-                      : "hover:ring-1 hover:ring-border",
-                  )}
-                  aria-label={GROUP_STYLE_LABELS[style]}
-                  aria-pressed={currentStyle === style}
-                >
-                  <span
-                    className="flex h-full w-full items-center justify-center rounded-sm"
-                    data-group-style={style}
-                  />
-                </button>
-              ))}
+        ).map(([category, styles]) => {
+          const activeInCategory = styles.includes(currentStyle)
+            ? currentStyle
+            : undefined;
+          return (
+            <div key={category} className="space-y-1">
+              <Label className="text-xs">{CATEGORY_LABELS[category]}</Label>
+              <Select
+                value={activeInCategory ?? ""}
+                onValueChange={handleStyleChange}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent>
+                  {styles.map((style) => (
+                    <SelectItem key={style} value={style}>
+                      {GROUP_STYLE_LABELS[style]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        ))}
+          );
+        })}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          複数の効果を重ねたい場合は、グループの中にさらにグループを入れてください。
+        </p>
       </InspectorSection>
 
       <InspectorSection title="カラー">

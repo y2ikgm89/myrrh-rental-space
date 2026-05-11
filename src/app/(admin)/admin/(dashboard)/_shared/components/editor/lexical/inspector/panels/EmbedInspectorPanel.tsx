@@ -31,7 +31,7 @@ export function EmbedInspectorPanel<T extends LexicalNode>({
 }: EmbedInspectorPanelProps<T>) {
   const [editor] = useLexicalComposerContext();
 
-  const id = editor.getEditorState().read(() => $getState(node, idState));
+  const id = editor.read(() => $getState(node, idState));
   const url = buildUrl(id);
 
   return (

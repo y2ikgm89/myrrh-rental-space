@@ -43,7 +43,7 @@ export function GalleryItemInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isGalleryItemNode);
 
-  const { src, alt, caption } = editor.getEditorState().read(() => ({
+  const { src, alt, caption } = editor.read(() => ({
     src: $getState(node, galleryItemSrcState),
     alt: $getState(node, galleryItemAltState),
     caption: $getState(node, galleryItemCaptionState),

@@ -73,7 +73,7 @@ export function TestimonialContainerInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isTestimonialContainerNode);
 
-  const { layout, columns, accentColor } = editor.getEditorState().read(() => ({
+  const { layout, columns, accentColor } = editor.read(() => ({
     layout: $getState(node, testimonialLayoutState),
     columns: $getState(node, testimonialColumnsState),
     accentColor: $getState(node, testimonialAccentColorState),

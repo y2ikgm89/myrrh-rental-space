@@ -222,7 +222,7 @@ export function KeyboardShortcutsPlugin({
           event.preventDefault();
           // 選択中のブロックキーを先にスナップショット（dialog フォーカスで選択が失われる）
           const keys: string[] = [];
-          editor.getEditorState().read(() => {
+          editor.read(() => {
             for (const node of $getSelectionBlockNodes()) {
               keys.push(node.getKey());
             }

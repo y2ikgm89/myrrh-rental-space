@@ -125,7 +125,7 @@ function FindIconReplacePanel({
       };
     }
 
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const root = $getRoot();
       const textNodes = getAllTextNodes(root);
       const matches = findMatches(textNodes, searchText, caseSensitive);

@@ -34,10 +34,10 @@ export function TooltipInspectorPanel({
   const updateNode = useNodeUpdater(nodeKey, $isTooltipNode);
 
   const [baseText, setBaseText] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, tooltipBaseTextState)),
+    editor.read(() => $getState(node, tooltipBaseTextState)),
   );
   const [tooltipText, setTooltipText] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, tooltipTextState)),
+    editor.read(() => $getState(node, tooltipTextState)),
   );
 
   useEffect(() => {

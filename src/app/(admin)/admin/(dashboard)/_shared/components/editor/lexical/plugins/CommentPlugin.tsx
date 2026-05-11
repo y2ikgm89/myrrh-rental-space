@@ -72,7 +72,7 @@ export function generateMarkId(): string {
 function getSelectedText(editor: LexicalEditor): string {
   let selectedText = "";
 
-  editor.getEditorState().read(() => {
+  editor.read(() => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
       selectedText = selection.getTextContent();
@@ -265,7 +265,7 @@ export function CommentPlugin({ onMarkClick }: CommentPluginProps) {
             const element = editor.getElementByKey(nodeKey);
             if (element) {
               const listener = () => {
-                editor.getEditorState().read(() => {
+                editor.read(() => {
                   const node = $getNodeByKey(nodeKey);
                   if ($isMarkNode(node)) {
                     const ids = node.getIDs();

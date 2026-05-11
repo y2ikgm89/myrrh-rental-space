@@ -60,7 +60,7 @@ export const LAYOUT_INSERT_ITEMS: readonly InsertItem[] = [
       // ダイアログにフォーカスが移ると選択が失われるため、開く前に現在の
       // ブロックキーをスナップショットする（他の経路 — FT / Keyboard — と同じ設計）
       const keys: string[] = [];
-      editor.getEditorState().read(() => {
+      editor.read(() => {
         for (const node of $getSelectionBlockNodes()) {
           keys.push(node.getKey());
         }

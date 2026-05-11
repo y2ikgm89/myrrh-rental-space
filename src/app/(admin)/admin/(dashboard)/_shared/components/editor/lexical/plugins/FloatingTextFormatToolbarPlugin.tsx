@@ -171,7 +171,7 @@ function FloatingToolbar({
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
-      editor.getEditorState().read(() => updateFloatingToolbar());
+      editor.read(() => updateFloatingToolbar());
     };
 
     window.addEventListener("resize", update);
@@ -185,7 +185,7 @@ function FloatingToolbar({
 
   // 選択変更・エディタ更新時のポジション更新
   useEffect(() => {
-    editor.getEditorState().read(() => updateFloatingToolbar());
+    editor.read(() => updateFloatingToolbar());
 
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
@@ -339,7 +339,7 @@ function useFloatingToolbar(
     useState<string>("#000000");
 
   const updatePopup = useEffectEvent(() => {
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       if (editor.isComposing()) {
         return;
       }

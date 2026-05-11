@@ -57,7 +57,7 @@ export function GalleryContainerInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isGalleryContainerNode);
 
-  const { columns, galleryStyle } = editor.getEditorState().read(() => ({
+  const { columns, galleryStyle } = editor.read(() => ({
     columns: $getState(node, galleryColumnsState),
     galleryStyle: $getState(node, galleryStyleState),
   }));

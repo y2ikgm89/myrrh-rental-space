@@ -42,13 +42,13 @@ export function AudioInspectorPanel({
   const updateNode = useNodeUpdater(nodeKey, $isAudioNode);
 
   const [url, setUrl] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, audioUrlState)),
+    editor.read(() => $getState(node, audioUrlState)),
   );
   const [title, setTitle] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, audioTitleState)),
+    editor.read(() => $getState(node, audioTitleState)),
   );
   const [artist, setArtist] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, audioArtistState)),
+    editor.read(() => $getState(node, audioArtistState)),
   );
 
   useEffect(() => {

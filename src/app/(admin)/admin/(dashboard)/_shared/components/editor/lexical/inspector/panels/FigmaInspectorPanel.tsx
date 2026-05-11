@@ -41,10 +41,10 @@ export function FigmaInspectorPanel({
   const updateNode = useNodeUpdater(nodeKey, $isFigmaNode);
 
   const [embedUrl, setEmbedUrl] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, figmaEmbedUrlState)),
+    editor.read(() => $getState(node, figmaEmbedUrlState)),
   );
   const [label, setLabel] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, figmaLabelState)),
+    editor.read(() => $getState(node, figmaLabelState)),
   );
 
   useEffect(() => {

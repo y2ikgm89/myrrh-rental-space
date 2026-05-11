@@ -121,7 +121,7 @@ export function MarkdownExportPlugin() {
   const [markdown, setMarkdown] = useState<string | null>(null);
 
   const handleExport = () => {
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const md = $convertToMarkdownString(EDITOR_TRANSFORMERS);
       setMarkdown(md);
     });

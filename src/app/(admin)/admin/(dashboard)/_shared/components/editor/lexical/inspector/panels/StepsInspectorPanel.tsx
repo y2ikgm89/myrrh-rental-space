@@ -84,7 +84,7 @@ export function StepsInspectorPanel({
     stepsFill,
     stepsColor,
     stepItems,
-  } = editor.getEditorState().read(() => {
+  } = editor.read(() => {
     const style = $getState(node, stepsStyleState);
     const label = $getState(node, stepsLabelState);
     const shape = $getState(node, stepsShapeState);

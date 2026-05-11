@@ -39,7 +39,7 @@ export function TimelineItemInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isTimelineItemNode);
 
-  const { year, label } = editor.getEditorState().read(() => ({
+  const { year, label } = editor.read(() => ({
     year: $getState(node, timelineYearState),
     label: $getState(node, timelineLabelState),
   }));

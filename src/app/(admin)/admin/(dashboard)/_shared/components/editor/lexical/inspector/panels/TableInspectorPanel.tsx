@@ -78,7 +78,7 @@ export function TableInspectorPanel({
     borderWidth,
     htmlAnchor,
     cssClass,
-  } = editor.getEditorState().read(() => ({
+  } = editor.read(() => ({
     tableStyle: $getState(node, tableStyleState),
     hasHeader: $getState(node, tableHasHeaderState),
     hasFooter: $getState(node, tableHasFooterState),

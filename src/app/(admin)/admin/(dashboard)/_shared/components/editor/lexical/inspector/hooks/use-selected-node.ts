@@ -84,7 +84,7 @@ export function useSelectedNode(): SelectedNodeInfo {
    * 選択状態を読み取り、インスペクター対象ノードを特定する
    */
   const updateSelectedNode = useEffectEvent(() => {
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const selection = $getSelection();
 
       // NodeSelection: DecoratorNode（Button, Image等）が選択された場合

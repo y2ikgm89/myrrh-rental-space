@@ -39,7 +39,7 @@ export function MapEmbedInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isMapEmbedNode);
 
-  const { embedUrl, label } = editor.getEditorState().read(() => ({
+  const { embedUrl, label } = editor.read(() => ({
     embedUrl: $getState(node, embedUrlState),
     label: $getState(node, mapLabelState),
   }));

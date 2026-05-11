@@ -30,10 +30,10 @@ export function RubyInspectorPanel({ nodeKey, node }: RubyInspectorPanelProps) {
   const updateNode = useNodeUpdater(nodeKey, $isRubyNode);
 
   const [baseText, setBaseText] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, rubyBaseTextState)),
+    editor.read(() => $getState(node, rubyBaseTextState)),
   );
   const [rubyText, setRubyText] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, rubyTextState)),
+    editor.read(() => $getState(node, rubyTextState)),
   );
 
   useEffect(() => {

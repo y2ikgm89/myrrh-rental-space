@@ -46,7 +46,7 @@ const CONTENT_TYPE_LABELS: Record<SpotifyContentType, string> = {
 export function SpotifyInspectorPanel({ node }: SpotifyInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
 
-  const { embedUrl, contentType } = editor.getEditorState().read(() => ({
+  const { embedUrl, contentType } = editor.read(() => ({
     embedUrl: $getState(node, spotifyEmbedUrlState),
     contentType: $getState(node, spotifyContentTypeState),
   }));

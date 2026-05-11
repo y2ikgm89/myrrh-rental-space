@@ -43,6 +43,7 @@ import {
 
 export type PresetTextColor =
   | "black"
+  | "white"
   | "red"
   | "blue"
   | "green"
@@ -60,6 +61,7 @@ type TextColorConfig = {
 
 const PRESET_TEXT_COLORS = new Set<PresetTextColor>([
   "black",
+  "white",
   "red",
   "blue",
   "green",
@@ -74,6 +76,7 @@ const PRESET_TEXT_COLORS = new Set<PresetTextColor>([
  */
 export const TEXT_COLORS: Record<PresetTextColor, TextColorConfig> = {
   black: { label: "黒", value: "#000000" },
+  white: { label: "白", value: "#ffffff" },
   red: { label: "赤", value: "#ef4444" },
   blue: { label: "青", value: "#3b82f6" },
   green: { label: "緑", value: "#22c55e" },
@@ -175,9 +178,13 @@ export function useTextColor() {
           "inherit",
         );
         setTextColor(getTextColorFromStyle(color));
-        // カスタム色の場合は値を保存
+        // カスタム色の場合は hex 形式（#RRGGBB）に正規化して保存
+        // <input type="color"> は #RRGGBB のみ受け付けるため rgb()/rgba() は変換必須
         if (color && color !== "inherit" && color !== "transparent") {
-          setCurrentColorValue(color);
+          const normalized = color.startsWith("rgb") ? rgbToHex(color) : color;
+          if (normalized && /^#[0-9a-f]{6}$/i.test(normalized)) {
+            setCurrentColorValue(normalized);
+          }
         }
       }
     };
@@ -301,24 +308,31 @@ function TextColorMenu({
         );
       })}
       <DropdownMenuSeparator />
-      <div className="flex items-center gap-2 px-2 py-1.5">
+      <DropdownMenuItem
+        onSelect={(e) => e.preventDefault()}
+        className="flex items-center justify-between gap-2"
+      >
         <label
           htmlFor="custom-text-color"
-          className="flex items-center gap-2 text-sm"
+          className="flex flex-1 cursor-pointer items-center gap-2 text-sm"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <input
             type="color"
             id="custom-text-color"
             value={currentColorValue}
             onChange={onCustomColorChange}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             className="h-6 w-6 cursor-pointer rounded border-0 p-0"
           />
           <span>カスタム</span>
         </label>
         {textColor === "custom" && (
-          <IconCheck className="ml-auto h-4 w-4 text-primary" />
+          <IconCheck className="h-4 w-4 text-primary" />
         )}
-      </div>
+      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
         onClick={() => onColorSelect("none")}

@@ -183,7 +183,7 @@ export function TableActionMenuPlugin({
     if (!anchorElem) return;
 
     const updateMenu = () => {
-      editor.getEditorState().read(() => {
+      editor.read(() => {
         const cellNode = getSelectedCellNode();
         if (!cellNode) {
           setMenuPosition(null);

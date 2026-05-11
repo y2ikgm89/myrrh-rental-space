@@ -43,7 +43,7 @@ export function PullQuoteInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isPullQuoteNode);
 
-  const { quoteStyle, quoteColor } = editor.getEditorState().read(() => ({
+  const { quoteStyle, quoteColor } = editor.read(() => ({
     quoteStyle: $getState(node, quoteStyleState),
     quoteColor: $getState(node, pullQuoteColorState),
   }));

@@ -302,7 +302,7 @@ function getCurrentIndex(keysLength: number) {
   return Math.floor(keysLength / 2);
 }
 function getTopLevelNodeKeys(editor: LexicalEditor): string[] {
-  return editor.getEditorState().read(() => $getRoot().getChildrenKeys());
+  return editor.read(() => $getRoot().getChildrenKeys());
 }
 function getCollapsedMargins(elem: HTMLElement) {
   const getMargin = (
@@ -340,7 +340,7 @@ function getBlockElement(
   const anchorElementRect = anchorElem.getBoundingClientRect();
   const topLevelNodeKeys = getTopLevelNodeKeys(editor);
   let blockElem: HTMLElement | null = null;
-  editor.getEditorState().read(() => {
+  editor.read(() => {
     if (useEdgeAsDefault) {
       const firstKey = topLevelNodeKeys[0];
       const lastKey = topLevelNodeKeys[topLevelNodeKeys.length - 1];

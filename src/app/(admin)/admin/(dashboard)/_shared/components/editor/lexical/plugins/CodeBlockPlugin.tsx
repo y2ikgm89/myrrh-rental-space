@@ -67,7 +67,7 @@ function CodeToolbar({
   };
 
   const handleCopy = () => {
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const node = $getNodeByKey(codeNode.key);
       if ($isCodeNode(node)) {
         const text = node.getTextContent();

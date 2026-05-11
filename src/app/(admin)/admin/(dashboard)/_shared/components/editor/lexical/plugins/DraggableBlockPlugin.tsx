@@ -107,7 +107,7 @@ export function DraggableBlockPlugin({
     e.stopPropagation();
     const blockElem = currentBlockElemRef.current;
     if (!blockElem) return;
-    editor.getEditorState().read(() => {
+    editor.read(() => {
       const node = $getNearestNodeFromDOMNode(blockElem);
       if (!node) return;
       setMenu({
