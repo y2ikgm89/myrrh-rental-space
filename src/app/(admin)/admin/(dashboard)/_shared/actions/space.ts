@@ -4,7 +4,6 @@ import { z } from "zod";
 import { updateTag } from "next/cache";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeSpaceCache } from "@/shared/lib/cloudflare";
@@ -44,17 +43,20 @@ function revalidateSpaces(...ids: string[]): void {
   }
 }
 
-async function buildSpaceCommandInput(data: SpaceFormData) {
-  const descriptionHtml = await renderEditorStateToHtmlLazy(
-    data.descriptionJson,
-  );
+function buildSpaceCommandInput(data: SpaceFormData) {
+  const descriptionHtml = data.descriptionHtml;
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
   const descriptionJson = JSON.parse(
     data.descriptionJson,
   ) as Prisma.InputJsonValue;
 
-  const { descriptionJson: _drop, ...rest } = data;
-  void _drop;
+  const {
+    descriptionJson: _dropJson,
+    descriptionHtml: _dropHtml,
+    ...rest
+  } = data;
+  void _dropJson;
+  void _dropHtml;
   return omitUndefined({
     ...rest,
     descriptionJson,

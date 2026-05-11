@@ -243,8 +243,12 @@ export function usePostEditor({
     if (!post) return;
     core.startTransition(async () => {
       try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(
+          bodyData.contentJson,
+        );
         const result = await updatePostBody(post.id, {
           contentJson: bodyData.contentJson,
+          contentHtml,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -307,11 +311,15 @@ export function usePostEditor({
       const settingsPayload = toSettingsSubmitPayload(settingsData);
 
       try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(
+          bodyData.contentJson,
+        );
         const result = await createPost({
           title: settingsPayload.title,
           slug: settingsPayload.slug,
           excerpt: settingsPayload.excerpt,
           contentJson: bodyData.contentJson,
+          contentHtml,
           thumbnailUrl: settingsPayload.thumbnailUrl,
           categoryId: settingsPayload.categoryId,
           tags: settingsPayload.tags,

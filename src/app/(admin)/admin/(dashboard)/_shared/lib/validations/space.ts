@@ -76,6 +76,8 @@ export const spaceFormBaseSchema = z
       .min(1, { error: "名前を入力してください" })
       .max(100, { error: "名前は100文字以内で入力してください" }),
     descriptionJson: lexicalJsonSchema,
+    /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
+    descriptionHtml: z.string(),
     addressDetail: z
       .string()
       .max(500, { error: "所在地補足は500文字以内で入力してください" })
@@ -165,6 +167,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   slug: "",
   name: "",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+  descriptionHtml: "",
   addressDetail: "",
   capacity: 10,
   area: null,

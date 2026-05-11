@@ -22,6 +22,7 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   slug: "test-space",
   name: "テストスペース",
   descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+  descriptionHtml: "<p>テスト本文</p>",
   addressDetail: "3F",
   capacity: 10,
   area: 50,

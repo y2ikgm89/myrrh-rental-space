@@ -180,3 +180,11 @@ function renderIconSvgInto(host: HTMLElement, iconName: string): void {
 **curation 外は silent no-op**: `getCuratedIconComponent(name)` が undefined を返したら icon は埋め込まれず、`<li>` 内の paragraph テキストのみが残る。既存 DB に lucide / simple-icons 名が残っている場合の自然 fallback として機能する。
 
 **他の icon library で同 pattern を使う場合**: lucide-react / heroicons 等も React component を export するため動作するが、本プロジェクトは **Tabler 単一ライブラリ統一**（CLAUDE.md「アイコンライブラリは `@tabler/icons-react`」）。新規 Lexical Node でアイコン埋め込みが必要な場合は curation 経由（または curation 外を許容するなら `dynamic-tabler-icon` の `Reflect.get` pattern）を使う。
+
+## Inspector / Dialog プレビュー UI の data-attribute セット付与
+
+Inspector / Dialog のプレビュー DOM で `[data-X-style="Y"]` (variant) のみ付与すると `[data-X]` (base) の padding / margin / border-radius が適用されず装飾が壊れる silent bug。**base 属性と variant 属性は必ずセット付与**。
+
+NG: `<span data-group-style={style} />`（base 不在で kakko corner / stitch outline-offset 等が枠外） / OK: `<div data-group="true" data-group-style={style} {...(color !== "default" && { "data-color": color })}>{label}</div>`
+
+**対象ノード（要 base+variant セット）**: Group / Steps / Tabs / FeatureIconList / Callout 等。新規ノードでプレビュー UI 実装時は `lexical-content.css` のセレクタ構造を確認してから DOM を組む。公開本文では `createDOM` / `exportDOM` が両属性を出すため発生せず、Inspector / Dialog の **DOM 再現**でのみ顕在化する。

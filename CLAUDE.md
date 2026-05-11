@@ -56,11 +56,12 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **server-only / Node-only SDK 統合は `import "server-only"` 必須** — `ical-generator` / `resend` / `googleapis` / `stripe` 等（→ `server-only-patterns.md`）
 - **Cloud Run probe endpoint (`/api/live` / `/api/health`) は `proxy.ts` rate-limit 除外必須** — probe IP `unknown` 合算で 429 → コンテナ kill 連鎖の silent bug（→ `ops/deployment-patterns.md`）
 - **管理画面向け preview は第 3 root layout `(preview)/`**— `ManagedPageSections` を `_shared/components/pages/` に抽出。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
+- **Next.js 16 Server Action / RSC は `react-server` condition** — `react.createContext` 未定義 + `react-dom/server` は明示的 throw（`'react-dom/server is not supported in React Server Components'`）。Lexical 等 React/DOM 依存処理は **client (browser) で完結** させ、Server Action は事前 render 済み `contentHtml` を input で受け取る設計に統一（→ `frontend/lexical/conventions.md` §28 / `prisma-patterns/lexical-storage.md`）
 
 ### Validation / Domain
 
 - **`executeAdminMutationResult` の監査ログは fire-and-forget 必須** — 実行順序契約 `execute → await afterSuccess → fireAndForget(logAction)` を破ると cache invalidation スキップ regression（→ `server-actions/implementation.md`）
-- **外部 API 統合は SSoT ヘルパー経由必須** — `sendEmail()` / `withGoogleApiRetry()` / `validateTurnstile()` / `uploadFile()` / `deleteFile()`。直接 SDK 呼び出しは接続テスト / OAuth 初期化のみ例外
+- **外部 API 統合は SSoT ヘルパー経由必須** — `sendEmail()` / `withGoogleApiRetry()` / `withInstagramApiRetry()` / `validateTurnstile()` / `uploadFile()` / `deleteFile()`。直接 SDK 呼び出しは接続テスト / OAuth 初期化のみ例外
 - **配列 uniqueness は Zod スキーマ層で契約** — UI 層の Set dedup 禁止（→ `zod-patterns/array-uniqueness.md`）
 - **管理ユーザー操作（招待・作成・ロール変更・削除）は階層制御の 2 層防御** — UI `getInvitableRoles(actorRole)` + domain command `canInviteRole()` / `canModifyUser()` の `DomainError("FORBIDDEN")`
 - **ドメインコマンドの actor 引数は `{ id: string; role: Role }` オブジェクト** — 単独 `actorUserId: string` 禁止

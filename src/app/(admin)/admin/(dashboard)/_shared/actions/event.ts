@@ -3,7 +3,6 @@
 import { z } from "zod";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -34,20 +33,26 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 const idSchema = z.string().uuid({ error: "イベントIDが不正です" });
 
 /**
- * EventFormInput (Lexical JSON 文字列) → EventCommandInput (Prisma InputJsonValue + HTML cache + plain text)
- * Space の buildSpaceCommandInput と同じ変換責務。
+ * EventFormInput (Lexical JSON + 事前 render 済み HTML) → EventCommandInput
+ * (Prisma InputJsonValue + HTML cache + plain text)
+ *
+ * client が `renderEditorStateJsonToHtmlClient` で事前 render した HTML を受け取り、
+ * 派生 plain text を server-side で計算する（Lexical を server で実行しない設計）。
  */
-async function buildEventCommandInput(data: EventFormInput) {
-  const descriptionHtml = await renderEditorStateToHtmlLazy(
-    data.descriptionJson,
-  );
+function buildEventCommandInput(data: EventFormInput) {
+  const descriptionHtml = data.descriptionHtml;
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
   const descriptionJson = JSON.parse(
     data.descriptionJson,
   ) as Prisma.InputJsonValue;
 
-  const { descriptionJson: _drop, ...rest } = data;
-  void _drop;
+  const {
+    descriptionJson: _dropJson,
+    descriptionHtml: _dropHtml,
+    ...rest
+  } = data;
+  void _dropJson;
+  void _dropHtml;
   return omitUndefined({
     ...rest,
     descriptionJson,

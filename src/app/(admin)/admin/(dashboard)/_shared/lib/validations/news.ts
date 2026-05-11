@@ -31,6 +31,7 @@ export const createNewsSchema = z.object({
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内で入力してください" }),
   contentJson: lexicalJsonSchema,
+  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type CreateNewsInput = z.infer<typeof createNewsSchema>;
@@ -40,6 +41,7 @@ export type CreateNewsInput = z.infer<typeof createNewsSchema>;
  */
 export const updateNewsBodySchema = z.object({
   contentJson: lexicalJsonSchema,
+  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type UpdateNewsBodyInput = z.infer<typeof updateNewsBodySchema>;

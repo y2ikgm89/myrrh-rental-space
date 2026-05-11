@@ -2,11 +2,17 @@
  * EditorState JSON → HTML（クライアント専用）
  *
  * @description
- * `MobileEditorFallback` 等で、未保存の `contentJson` を読み取り専用プレビューに反映する。
- * サーバー版 `headless-renderer.ts` と同等のノード／テーマを使い、`logError` は使わない（client 安全）。
+ * `MobileEditorFallback` 等で未保存の `contentJson` を読み取り専用プレビューに反映する。
+ *
+ * Lexical 0.44 公式 headless パターン (`withDOM`) を経由する:
+ * browser 環境では既存 `window` を再利用するため no-op に近いが、SSR や workers での
+ * 互換性を担保する。サーバー側 `headless-renderer.ts` と同じ initialization 経路で
+ * 揃えることで、`$generateHtmlFromNodes` および `react-dom/server` (Button /
+ * FeatureIconList / InlineIcon の `exportDOM` 内) が一貫した DOM コンテキストで動作する。
  */
 
 import { createHeadlessEditor } from "@lexical/headless";
+import { withDOM } from "@lexical/headless/dom";
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { EDITOR_NODES } from "../config/nodes";
 import { editorTheme } from "../theme";
@@ -25,24 +31,26 @@ export function renderEditorStateJsonToHtmlClient(
   }
 
   try {
-    const editor = createHeadlessEditor({
-      namespace: "MobilePreviewHeadless",
-      theme: editorTheme,
-      nodes: [...EDITOR_NODES],
-      onError: (error: Error) => {
-        logger.error("Headless Lexical preview error", {
-          error: error.message,
-        });
-      },
-    });
+    return withDOM(() => {
+      const editor = createHeadlessEditor({
+        namespace: "MobilePreviewHeadless",
+        theme: editorTheme,
+        nodes: [...EDITOR_NODES],
+        onError: (error: Error) => {
+          logger.error("Headless Lexical preview error", {
+            error: error.message,
+          });
+        },
+      });
 
-    const editorState = editor.parseEditorState(trimmed);
-    editor.setEditorState(editorState);
-    let html = "";
-    editor.getEditorState().read(() => {
-      html = $generateHtmlFromNodes(editor, null);
+      const editorState = editor.parseEditorState(trimmed);
+      editor.setEditorState(editorState);
+      let html = "";
+      editor.read(() => {
+        html = $generateHtmlFromNodes(editor, null);
+      });
+      return html;
     });
-    return html;
   } catch (error) {
     logger.error("Failed to render editor JSON to HTML for mobile preview", {
       error: error instanceof Error ? error.message : String(error),

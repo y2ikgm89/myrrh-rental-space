@@ -17,6 +17,8 @@ export const eventFormBaseSchema = z.object({
     .max(100, { error: "スラッグは100文字以内です" }),
   /** Lexical EditorState JSON 文字列（UI: LazyLexicalEditor） */
   descriptionJson: lexicalJsonSchema,
+  /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
+  descriptionHtml: z.string(),
   thumbnailUrl: z.string().nullable().optional(),
   // `local: true` は `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）
   // と full ISO（Z 付き）の両方を許容する Zod 4 公式オプション。

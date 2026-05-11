@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { Button, SubmitButton } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks";
 import { createEvent, updateEvent } from "@/admin/actions/event";
+import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { eventFormSchema } from "@/shared/lib/validations/event";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
@@ -62,10 +63,14 @@ export function EventForm({
   const { form, isPending, onSubmit } = useFormAction(
     eventFormSchema,
     async (data) => {
+      const descriptionHtml = renderEditorStateJsonToHtmlClient(
+        data.descriptionJson,
+      );
+      const payload = { ...data, descriptionHtml };
       if (isEdit) {
-        return updateEvent(event.id, data);
+        return updateEvent(event.id, payload);
       }
-      return createEvent(data);
+      return createEvent(payload);
     },
     {
       redirectTo: "/admin/events",
@@ -77,6 +82,7 @@ export function EventForm({
             title: event.title,
             slug: event.slug,
             descriptionJson: serializeDescriptionJson(event.descriptionJson),
+            descriptionHtml: "",
             thumbnailUrl: event.thumbnailUrl,
             startTime: formatDateTimeLocalInJst(event.startTime),
             endTime: formatDateTimeLocalInJst(event.endTime),
@@ -95,6 +101,7 @@ export function EventForm({
             title: "",
             slug: "",
             descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+            descriptionHtml: "",
             thumbnailUrl: null,
             startTime: "",
             endTime: "",

@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import type { TermsFormInput } from "@/shared/lib/validations/terms";
 
 interface SlugOnly {
@@ -25,11 +24,10 @@ async function ensureSlugAvailable(
   }
 }
 
-async function buildContent(input: TermsFormInput) {
-  const contentHtml = await renderEditorStateToHtmlLazy(input.contentJson);
+function buildContent(input: TermsFormInput) {
   return {
     contentJson: JSON.parse(input.contentJson) as Prisma.InputJsonValue,
-    contentHtml,
+    contentHtml: input.contentHtml,
   };
 }
 
@@ -41,7 +39,7 @@ export async function createTermsCommand(
 ): Promise<SlugOnly> {
   await ensureSlugAvailable(input.slug);
 
-  const { contentJson, contentHtml } = await buildContent(input);
+  const { contentJson, contentHtml } = buildContent(input);
 
   const created = await prisma.termsDocument.create({
     data: {
@@ -83,7 +81,7 @@ export async function updateTermsCommand(
     await ensureSlugAvailable(input.slug, id);
   }
 
-  const { contentJson, contentHtml } = await buildContent(input);
+  const { contentJson, contentHtml } = buildContent(input);
 
   // 公開状態が false → true に変わった場合のみ publishedAt を更新
   // 既に公開済みなら publishedAt を保持、未公開化なら null

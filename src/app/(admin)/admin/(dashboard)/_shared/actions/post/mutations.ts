@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createPostSchema,
   updatePostBodySchema,
@@ -32,9 +31,6 @@ export async function createPost(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = await renderEditorStateToHtmlLazy(
-    parsed.data.contentJson,
-  );
   let createdPostSlug: string | null = null;
 
   return executeAdminMutationResult({
@@ -44,7 +40,6 @@ export async function createPost(
       const result = await postCommands.createPost(
         omitUndefined({
           ...parsed.data,
-          contentHtml,
           authorId: user.id,
         }),
       );
@@ -78,9 +73,6 @@ export async function updatePostBody(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = await renderEditorStateToHtmlLazy(
-    parsed.data.contentJson,
-  );
   let updatedPost: { oldSlug: string; slug: string } | null = null;
 
   return executeAdminMutationResult({
@@ -90,7 +82,7 @@ export async function updatePostBody(
     execute: async () => {
       updatedPost = await postCommands.updatePostBody(validatedId.data, {
         contentJson: parsed.data.contentJson,
-        contentHtml,
+        contentHtml: parsed.data.contentHtml,
       });
       return null;
     },

@@ -34,6 +34,7 @@ import {
 import { submitSpaceFormAction } from "@/admin/actions/space-form-submit";
 import { SPACE_FORM_ACTION_INITIAL_STATE } from "@/admin/actions/space-form-submit-types";
 import { spaceFormDataToFormData } from "@/admin/lib/space-form-data-codec";
+import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
@@ -191,7 +192,13 @@ export function SpaceEditForm({
     clientNonceRef.current += 1;
     const nonce = clientNonceRef.current;
     void form.handleSubmit((data) => {
-      const payload = spaceEditFormDataToSpaceFormPayload(data);
+      const descriptionHtml = renderEditorStateJsonToHtmlClient(
+        data.descriptionJson,
+      );
+      const payload = spaceEditFormDataToSpaceFormPayload(
+        data,
+        descriptionHtml,
+      );
       const fd = spaceFormDataToFormData(payload, {
         intent: mode === "create" ? "create" : "update",
         ...(mode === "edit" && space !== undefined

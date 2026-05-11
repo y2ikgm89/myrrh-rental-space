@@ -40,6 +40,7 @@ export const createPostSchema = z
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
     contentJson: lexicalJsonSchema,
+    contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
@@ -53,6 +54,7 @@ export type CreatePostInput = z.infer<typeof createPostSchema>;
  */
 export const updatePostBodySchema = z.object({
   contentJson: lexicalJsonSchema,
+  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type UpdatePostBodyInput = z.infer<typeof updatePostBodySchema>;

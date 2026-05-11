@@ -53,12 +53,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// renderEditorStateToHtmlLazy は Lexical 依存重量級 → mock
-mock.module("@/admin/lib/lazy-renderer", () => ({
-  renderEditorStateToHtmlLazy: (json: string) =>
-    Promise.resolve(`<p>${json}</p>`),
-}));
-
 const {
   createTermsCommand,
   updateTermsCommand,
@@ -72,6 +66,7 @@ const VALID_INPUT = {
   slug: "privacy-policy",
   title: "プライバシーポリシー",
   contentJson: '{"root":{"type":"root","children":[]}}',
+  contentHtml: "<p>テスト規約</p>",
   isPublished: true,
   requiredAtReservation: false,
   requiredAtInquiry: false,

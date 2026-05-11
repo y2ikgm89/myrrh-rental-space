@@ -80,6 +80,8 @@ export const termsFormSchema = z.object({
   slug: slugSchema,
   title: titleSchema,
   contentJson: lexicalJsonSchema,
+  /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
+  contentHtml: z.string(),
   isPublished: z.boolean(),
   requiredAtReservation: z.boolean(),
   requiredAtInquiry: z.boolean(),

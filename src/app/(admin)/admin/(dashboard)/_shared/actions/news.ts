@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createNews as createNewsCommand,
   createNewsBackup as createNewsBackupCommand,
@@ -63,9 +62,6 @@ export async function createNews(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = await renderEditorStateToHtmlLazy(
-    parsed.data.contentJson,
-  );
   let createdNewsSlug: string | null = null;
 
   return executeAdminMutationResult({
@@ -74,7 +70,6 @@ export async function createNews(
     execute: async () => {
       const result = await createNewsCommand({
         ...parsed.data,
-        contentHtml,
       });
       createdNewsSlug = result.slug;
       return { id: result.id };
@@ -104,9 +99,6 @@ export async function updateNewsBody(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = await renderEditorStateToHtmlLazy(
-    parsed.data.contentJson,
-  );
   let updatedNews: { oldSlug: string; slug: string } | null = null;
 
   return executeAdminMutationResult({
@@ -116,7 +108,7 @@ export async function updateNewsBody(
     execute: async () => {
       updatedNews = await updateNewsBodyCommand(validatedId.data, {
         contentJson: parsed.data.contentJson,
-        contentHtml,
+        contentHtml: parsed.data.contentHtml,
       });
       return null;
     },

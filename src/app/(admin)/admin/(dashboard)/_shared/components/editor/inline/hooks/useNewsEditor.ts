@@ -187,8 +187,12 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     if (!news) return;
     core.startTransition(async () => {
       try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(
+          bodyData.contentJson,
+        );
         const result = await updateNewsBody(news.id, {
           contentJson: bodyData.contentJson,
+          contentHtml,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -249,10 +253,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       const settingsData = settingsForm.getValues();
 
       try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(
+          bodyData.contentJson,
+        );
         const result = await createNews({
           slug: settingsData.slug,
           title: settingsData.title,
           contentJson: bodyData.contentJson,
+          contentHtml,
         });
 
         if (isMutationError(result)) {

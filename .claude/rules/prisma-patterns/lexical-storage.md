@@ -40,38 +40,65 @@ descriptionPlainText String    @db.Text  // stripHtmlToText(html, 200) 派生
 - **RHF 連携**: `register("xxxJson")` ではなく `useController({ control, name: "xxxJson" })` + `<LazyLexicalEditor contentJson={field.value} onChange={field.onChange} />`。編集初期値は `typeof v === "string" ? v : JSON.stringify(v ?? JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON))` で文字列化
 - **Zod スキーマ**: `xxxJson: lexicalJsonSchema`、`defaultValues` には `EMPTY_LEXICAL_EDITOR_STATE_JSON` を渡す
 
-## Server Actions での保存パターン
+## Client-side HTML rendering pattern (Next.js 16 公式準拠)
 
-Editor の `onChange` は JSON 文字列を返す。Server Actions で `renderEditorStateToHtmlLazy()` を使い HTML を生成し、DB に同時保存する:
+**Lexical の HTML 生成は必ず client (browser) で実行する**。Server Action から呼ばない。理由は `react-server` condition との非互換 — 詳細は `frontend/lexical/conventions.md` §禁止事項 28。
+
+### Client (form submit handler)
 
 ```typescript
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
+import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 
-export async function updatePost(id: string, data: PostInput) {
-  // contentJson（プライマリ）と contentHtml（キャッシュ）を同時保存
-  const contentJson = JSON.parse(data.contentJson) as Prisma.InputJsonObject;
-  const contentHtml = await renderEditorStateToHtmlLazy(data.contentJson);
+const onSubmitBody = (bodyData: PostBodyFormData) => {
+  startTransition(async () => {
+    // browser で render（withDOM が既存 window を再利用、Lexical の Node + react-dom/server も問題なく動作）
+    const contentHtml = renderEditorStateJsonToHtmlClient(bodyData.contentJson);
+    const result = await updatePostBody(post.id, {
+      contentJson: bodyData.contentJson,
+      contentHtml, // ← 事前 render 済み HTML を送る
+    });
+  });
+};
+```
 
-  await prisma.post.update({
-    where: { id },
-    data: { contentJson, contentHtml },
+### Server Action (event / space は plain text 派生も server で計算)
+
+```typescript
+// Server Action は contentHtml を input から受け取るだけ
+export async function updatePostBody(id: string, input: UpdatePostBodyInput) {
+  const parsed = updatePostBodySchema.safeParse(input); // contentHtml: z.string()
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "post",
+    action: "update",
+    resourceId: id,
+    execute: async () => {
+      await postCommands.updatePostBody(id, {
+        contentJson: parsed.data.contentJson,
+        contentHtml: parsed.data.contentHtml, // ← そのまま保存
+      });
+    },
+    // ...
   });
 }
 ```
 
-## lazy-renderer が必須な理由
-
-`renderEditorStateToHtml` は Lexical headless editor を使用する。Server Actions でトップレベル import するとビルド時に `createContext is not a function` エラーが発生する。
-`lazy-renderer.ts` の動的 import パターンが必須:
+### Zod 入力スキーマ
 
 ```typescript
-// NG: トップレベル import（ビルドエラー）
-import { renderEditorStateToHtml } from "@/admin/components/editor/lexical/preview/headless-renderer";
-
-// OK: lazy-renderer 経由の動的 import
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
-const html = await renderEditorStateToHtmlLazy(jsonString);
+export const updatePostBodySchema = z.object({
+  contentJson: lexicalJsonSchema,
+  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
+});
 ```
+
+### 削除済（2026-05-11）
+
+- `src/app/(admin)/admin/(dashboard)/_shared/lib/lazy-renderer.ts`
+- `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/preview/headless-renderer.ts`
+
+これらの server-side rendering helper は Next.js 16 の `react-server` condition と本質的に非互換のため復活禁止。`render-editor-state-to-html-client.ts` を唯一の canonical renderer として保持する（browser only）。
 
 ## 公開表示でのレンダリング
 

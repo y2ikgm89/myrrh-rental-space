@@ -85,11 +85,13 @@ export type SpaceEditFormData = z.infer<typeof spaceEditFormSchema>;
  */
 export function spaceEditFormDataToSpaceFormPayload(
   data: SpaceEditFormData,
+  descriptionHtml: string,
 ): SpaceFormData {
   return {
     slug: data.slug,
     name: data.name,
     descriptionJson: data.descriptionJson,
+    descriptionHtml,
     addressDetail: data.addressDetail || undefined,
     capacity: data.capacity,
     hourlyPrice: data.hourlyPrice,

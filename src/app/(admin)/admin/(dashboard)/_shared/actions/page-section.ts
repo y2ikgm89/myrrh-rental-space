@@ -3,7 +3,6 @@
 import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -63,12 +62,14 @@ export async function updatePageSection(
     return createValidationMutationError(parsed.error);
   }
 
+  // client-side `renderEditorStateJsonToHtmlClient` で事前生成された HTML を使用。
+  // - contentJson === undefined: 本文未更新 → contentHtml も undefined
+  // - contentJson === "" → null: 明示クリア → contentHtml も null（client が null 送信）
+  // - contentJson === "<json>": 本文更新 → contentHtml も同時送信
   const contentHtml =
     parsed.data.contentJson === undefined
       ? undefined
-      : parsed.data.contentJson
-        ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
-        : null;
+      : (parsed.data.contentHtml ?? null);
 
   return executeAdminMutationResult({
     resource: "page",

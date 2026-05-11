@@ -278,6 +278,12 @@ export const updateSectionContentSchema = z.strictObject({
     .string()
     .max(500000, { error: "コンテンツは500,000文字以内です" })
     .optional(),
+  /**
+   * クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML。
+   * `contentJson` が指定されている場合は同時に提供する。
+   * `contentJson === null` での明示クリア時は `null` を渡す。
+   */
+  contentHtml: z.string().nullable().optional(),
 });
 
 export const updateSectionSchema = updateSectionContentSchema.extend({

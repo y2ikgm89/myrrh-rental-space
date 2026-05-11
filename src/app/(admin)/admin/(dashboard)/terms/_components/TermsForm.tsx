@@ -6,6 +6,7 @@ import { useController, useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { tryConvertHtmlStringToLexicalJsonString } from "@/admin/components/editor/lexical/html-to-lexical-json";
+import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import {
   Button,
   Card,
@@ -82,6 +83,7 @@ export function TermsForm({
       slug: initial?.slug ?? "",
       title: initial?.title ?? "",
       contentJson: initialContentJson,
+      contentHtml: "",
       isPublished: initial?.isPublished ?? false,
       requiredAtReservation: initial?.requiredAtReservation ?? false,
       requiredAtInquiry: initial?.requiredAtInquiry ?? false,
@@ -99,10 +101,12 @@ export function TermsForm({
   function onSubmit(data: TermsFormInput) {
     startTransition(async () => {
       try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(data.contentJson);
+        const payload = { ...data, contentHtml };
         const result =
           mode === "edit" && initial?.id
-            ? await updateTerms(initial.id, data)
-            : await createTerms(data);
+            ? await updateTerms(initial.id, payload)
+            : await createTerms(payload);
 
         if (isMutationError(result)) {
           toast.error(result.error);
