@@ -35,9 +35,11 @@ import {
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-  AnnouncementBarType,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums/guards";
+import {
+  portableTextSpanSchema,
+  spansToPlainText,
+} from "@/shared/lib/portable-text";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { BarList } from "./BarList";
 import { BarDialog, DeleteDialog } from "./BarDialog";
@@ -52,12 +54,18 @@ import {
 // Form Schema
 // =============================================================================
 
+// RHF input 型を required 化するため、form 用は `.default()` を持たない direct array。
+// 参照: NavigationItem rich label の `navFormSchema.label` 同パターン
 const barFormSchema = z.object({
   message: z
-    .string()
-    .min(1, { error: "メッセージは必須です" })
-    .max(200, { error: "メッセージは200文字以内" }),
-  type: z.enum(AnnouncementBarType),
+    .array(portableTextSpanSchema)
+    .max(30, { error: "Span は30件以内です" })
+    .refine((spans) => spansToPlainText(spans).trim().length > 0, {
+      error: "メッセージにテキストを 1 文字以上含めてください",
+    })
+    .refine((spans) => spansToPlainText(spans).length <= 200, {
+      error: "メッセージは200文字以内で入力してください",
+    }),
   linkUrl: z
     .string()
     .url({ error: "有効なURLを入力してください" })
@@ -148,8 +156,7 @@ export function AnnouncementBarManager({
   } = useForm<BarFormData>({
     resolver: standardSchemaResolver(barFormSchema),
     defaultValues: {
-      message: "",
-      type: AnnouncementBarType.info,
+      message: [],
       linkUrl: "",
       linkText: "",
       isActive: true,
@@ -170,9 +177,6 @@ export function AnnouncementBarManager({
       setEditingBar(bar);
       reset({
         message: bar.message,
-        type: isValidAnnouncementBarType(bar.type)
-          ? bar.type
-          : AnnouncementBarType.info,
         linkUrl: bar.linkUrl || "",
         linkText: bar.linkText || "",
         isActive: bar.isActive,
@@ -183,8 +187,7 @@ export function AnnouncementBarManager({
     } else {
       setEditingBar(null);
       reset({
-        message: "",
-        type: AnnouncementBarType.info,
+        message: [],
         linkUrl: "",
         linkText: "",
         isActive: true,
@@ -201,7 +204,6 @@ export function AnnouncementBarManager({
     startTransition(async () => {
       const input: AnnouncementBarInput = {
         message: data.message,
-        type: data.type,
         linkUrl: data.linkUrl || null,
         linkText: data.linkText || null,
         bgColor: null,

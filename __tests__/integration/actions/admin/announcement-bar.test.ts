@@ -4,21 +4,29 @@
  * source of truth:
  * - src/shared/domain/settings/announcement-bar.ts
  *
- * 注: write action は thin adapter 化したため、
- *     domain schema + 型構造を直接テストする
+ * message は Sanity Portable Text 互換の PortableTextSpan[]
+ * （span / iconInline の discriminated union）として保存・編集される。
  */
 
 import { describe, test, expect } from "bun:test";
-import { AnnouncementBarType } from "@generated/prisma/enums";
 import {
   announcementBarInputSchema as announcementBarSchema,
+  parseAnnouncementBarMessage,
   type AnnouncementBarData,
 } from "@/shared/domain/settings/announcement-bar";
+import {
+  createSpan,
+  createInlineIcon,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 
-// 有効なお知らせバー作成データ
+const SAMPLE_MESSAGE: PortableTextSpan[] = [
+  createInlineIcon("IconSparkles"),
+  createSpan("現在キャンペーン実施中です！"),
+];
+
 const VALID_ANNOUNCEMENT_INPUT = {
-  message: "現在キャンペーン実施中です！",
-  type: AnnouncementBarType.promo,
+  message: SAMPLE_MESSAGE,
   linkUrl: "https://example.com/campaign",
   linkText: "詳しくはこちら",
   bgColor: "#FF5733",
@@ -39,26 +47,16 @@ describe("AnnouncementBar Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("最小限のデータでもバリデーション通過", () => {
+      test("最小限のデータ（テキスト span のみ）でもバリデーション通過", () => {
         const result = announcementBarSchema.safeParse({
-          message: "テストメッセージ",
+          message: [createSpan("テストメッセージ")],
         });
         expect(result.success).toBe(true);
-      });
-
-      test("typeのデフォルトはinfo", () => {
-        const result = announcementBarSchema.safeParse({
-          message: "テスト",
-        });
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.type).toBe("info");
-        }
       });
 
       test("isActiveのデフォルトはtrue", () => {
         const result = announcementBarSchema.safeParse({
-          message: "テスト",
+          message: [createSpan("テスト")],
         });
         expect(result.success).toBe(true);
         if (result.success) {
@@ -68,7 +66,7 @@ describe("AnnouncementBar Admin Action Integration", () => {
 
       test("priorityのデフォルトは0", () => {
         const result = announcementBarSchema.safeParse({
-          message: "テスト",
+          message: [createSpan("テスト")],
         });
         expect(result.success).toBe(true);
         if (result.success) {
@@ -120,67 +118,74 @@ describe("AnnouncementBar Admin Action Integration", () => {
       });
     });
 
-    describe("message", () => {
-      test("空のメッセージはエラー", () => {
+    describe("message (PortableTextSpan[])", () => {
+      test("テキスト span のみで OK", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
-          message: "",
+          message: [createSpan("お知らせ")],
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("テキスト + inline icon 混在で OK", () => {
+        const result = announcementBarSchema.safeParse({
+          ...VALID_ANNOUNCEMENT_INPUT,
+          message: [
+            createInlineIcon("IconInfoCircle"),
+            createSpan("メンテナンス情報"),
+            createInlineIcon("IconSparkles"),
+          ],
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("空配列はエラー（テキスト 1 文字以上必須）", () => {
+        const result = announcementBarSchema.safeParse({
+          ...VALID_ANNOUNCEMENT_INPUT,
+          message: [],
         });
         expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("メッセージは必須");
-        }
       });
 
-      test("200文字のメッセージはOK", () => {
+      test("icon-only（テキスト span ゼロ）はエラー（NN/g 準拠）", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
-          message: "あ".repeat(200),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("201文字のメッセージはエラー", () => {
-        const result = announcementBarSchema.safeParse({
-          ...VALID_ANNOUNCEMENT_INPUT,
-          message: "あ".repeat(201),
+          message: [createInlineIcon("IconSparkles")],
         });
         expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("200文字以内");
-        }
       });
-    });
 
-    describe("type", () => {
-      test("infoは許可", () => {
+      test("テキスト合計 200 文字までは OK", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
-          type: "info",
+          message: [createSpan("x".repeat(200))],
         });
         expect(result.success).toBe(true);
       });
 
-      test("warningは許可", () => {
+      test("テキスト合計 201 文字以上はエラー", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
-          type: "warning",
+          message: [createSpan("x".repeat(201))],
         });
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
 
-      test("promoは許可", () => {
+      test("無効な icon 名（pattern 不一致）はエラー", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
-          type: "promo",
+          message: [
+            { _key: "k1", _type: "iconInline", name: "invalid-icon" },
+            createSpan("テスト"),
+          ],
         });
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
 
-      test("無効なタイプはエラー", () => {
+      test("_key 欠落の span はエラー", () => {
         const result = announcementBarSchema.safeParse({
           ...VALID_ANNOUNCEMENT_INPUT,
-          type: "error",
+          message: [{ _type: "span", text: "テスト" }],
         });
         expect(result.success).toBe(false);
       });
@@ -360,12 +365,41 @@ describe("AnnouncementBar Admin Action Integration", () => {
     });
   });
 
+  describe("parseAnnouncementBarMessage 読み取り防御", () => {
+    test("有効な spans 配列はそのまま narrow", () => {
+      const spans: PortableTextSpan[] = [
+        createInlineIcon("IconInfoCircle"),
+        createSpan("テスト"),
+      ];
+      const parsed = parseAnnouncementBarMessage(spans);
+      expect(parsed).toHaveLength(2);
+      expect(parsed[0]?._type).toBe("iconInline");
+      expect(parsed[1]?._type).toBe("span");
+    });
+
+    test("不正な型は空配列にフォールバック", () => {
+      expect(parseAnnouncementBarMessage("旧 plain text")).toEqual([]);
+      expect(parseAnnouncementBarMessage(null)).toEqual([]);
+      expect(parseAnnouncementBarMessage(undefined)).toEqual([]);
+      expect(parseAnnouncementBarMessage({})).toEqual([]);
+    });
+
+    test("不正な span 要素を含む配列も空配列にフォールバック（strict）", () => {
+      const parsed = parseAnnouncementBarMessage([
+        { _type: "unknown", text: "x" },
+      ]);
+      expect(parsed).toEqual([]);
+    });
+  });
+
   describe("AnnouncementBarData型テスト", () => {
     test("AnnouncementBarData型の構造", () => {
       const bar: AnnouncementBarData = {
         id: "550e8400-e29b-41d4-a716-446655440000",
-        message: "キャンペーン実施中",
-        type: AnnouncementBarType.promo,
+        message: [
+          createInlineIcon("IconSparkles"),
+          createSpan("キャンペーン実施中"),
+        ],
         linkUrl: "https://example.com",
         linkText: "詳しくはこちら",
         bgColor: "#ff5733",
@@ -378,33 +412,33 @@ describe("AnnouncementBar Admin Action Integration", () => {
         updatedAt: new Date(),
       };
 
-      expect(bar.message).toBe("キャンペーン実施中");
-      expect(bar.type).toBe("promo");
+      expect(bar.message).toHaveLength(2);
+      expect(bar.message[0]?._type).toBe("iconInline");
       expect(bar.priority).toBe(10);
     });
   });
 
   describe("境界値テスト", () => {
-    test("メッセージ 1文字（最小値）", () => {
+    test("メッセージテキスト 1文字（最小値）", () => {
       const result = announcementBarSchema.safeParse({
         ...VALID_ANNOUNCEMENT_INPUT,
-        message: "x",
+        message: [createSpan("x")],
       });
       expect(result.success).toBe(true);
     });
 
-    test("メッセージ 200文字（境界）", () => {
+    test("メッセージテキスト 200文字（境界）", () => {
       const result = announcementBarSchema.safeParse({
         ...VALID_ANNOUNCEMENT_INPUT,
-        message: "x".repeat(200),
+        message: [createSpan("x".repeat(200))],
       });
       expect(result.success).toBe(true);
     });
 
-    test("メッセージ 201文字（境界超過）", () => {
+    test("メッセージテキスト 201文字（境界超過）", () => {
       const result = announcementBarSchema.safeParse({
         ...VALID_ANNOUNCEMENT_INPUT,
-        message: "x".repeat(201),
+        message: [createSpan("x".repeat(201))],
       });
       expect(result.success).toBe(false);
     });

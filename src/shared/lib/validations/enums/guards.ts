@@ -19,7 +19,6 @@ import {
   MediaType,
   MediaUsage,
   CouponType,
-  AnnouncementBarType,
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
@@ -61,9 +60,6 @@ const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction));
 const VALID_MEDIA_TYPES = new Set<string>(Object.values(MediaType));
 const VALID_MEDIA_USAGES = new Set<string>(Object.values(MediaUsage));
 const VALID_COUPON_TYPES = new Set<string>(Object.values(CouponType));
-const VALID_ANNOUNCEMENT_BAR_TYPES = new Set<string>(
-  Object.values(AnnouncementBarType),
-);
 const VALID_DISCOUNT_TYPES = new Set<string>(Object.values(DiscountType));
 const VALID_DURATION_DISCOUNT_OVERRIDES = new Set<string>(
   Object.values(DurationDiscountOverride),
@@ -173,12 +169,6 @@ export function isValidMediaUsage(value: unknown): value is MediaUsage {
 
 export function isValidCouponType(value: unknown): value is CouponType {
   return typeof value === "string" && VALID_COUPON_TYPES.has(value);
-}
-
-export function isValidAnnouncementBarType(
-  value: unknown,
-): value is AnnouncementBarType {
-  return typeof value === "string" && VALID_ANNOUNCEMENT_BAR_TYPES.has(value);
 }
 
 export function isValidDiscountType(value: unknown): value is DiscountType {

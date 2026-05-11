@@ -1,78 +1,53 @@
 import type { CSSProperties } from "react";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
-import type { CarouselSettings, AnnouncementBarItem } from "./types";
+import type { CarouselSettings } from "./types";
 
-interface TypeStyle {
-  bg: string;
-  text: string;
-  hover: string;
-  gradient: string;
-  hex: string;
-}
-
-const DEFAULT_TYPE: TypeStyle = {
+/**
+ * 全バー共通のデフォルトカラー（Trust Blue 系 info トーン）。
+ * バーごとの色分けは廃止し、デザイン設定の `bgColor` / `textColor` が
+ * カスタム指定された場合のみ上書きされる。
+ */
+const DEFAULT_STYLE = {
   bg: "bg-info",
   text: "text-info-foreground",
   hover: "hover:text-info-foreground/80",
   gradient: "from-info to-info/80",
   hex: "#2563eb",
-};
-
-const TYPE_STYLES: Record<string, TypeStyle> = {
-  info: DEFAULT_TYPE,
-  warning: {
-    bg: "bg-warning",
-    text: "text-warning-foreground",
-    hover: "hover:text-warning-foreground/80",
-    gradient: "from-warning to-warning/80",
-    hex: "#f59e0b",
-  },
-  promo: {
-    bg: "bg-success",
-    text: "text-success-foreground",
-    hover: "hover:text-success-foreground/80",
-    gradient: "from-success to-success/80",
-    hex: "#15803d",
-  },
-};
-
-function getTypeStyle(type: string): TypeStyle {
-  return TYPE_STYLES[type] ?? DEFAULT_TYPE;
-}
+} as const;
 
 interface DesignStyleConfig {
   container: string;
-  containerWithBg: (type: string) => string;
+  containerWithBg: string;
   border?: string;
 }
 
 const DESIGN_STYLES: Record<AnnouncementBarDesignStyle, DesignStyleConfig> = {
   solid: {
     container: "",
-    containerWithBg: (type) => getTypeStyle(type).bg,
+    containerWithBg: DEFAULT_STYLE.bg,
   },
   gradient: {
     container: "bg-gradient-to-r",
-    containerWithBg: (type) => getTypeStyle(type).gradient,
+    containerWithBg: DEFAULT_STYLE.gradient,
   },
   outlined: {
     container: "bg-transparent border-y",
-    containerWithBg: () => "",
+    containerWithBg: "",
     border: "border-current",
   },
   glass: {
     container: "backdrop-blur-md bg-card/10 border-y border-card/20",
-    containerWithBg: () => "",
+    containerWithBg: "",
   },
   minimal: {
     container: "bg-transparent border-b",
-    containerWithBg: () => "",
+    containerWithBg: "",
     border: "border-current/30",
   },
   striped: {
     container: "",
-    containerWithBg: (type) => getTypeStyle(type).bg,
+    containerWithBg: DEFAULT_STYLE.bg,
   },
 };
 
@@ -91,11 +66,7 @@ export interface BarStyles {
   hasCustomText: boolean;
 }
 
-export function computeBarStyles(
-  settings: CarouselSettings,
-  bar: AnnouncementBarItem,
-): BarStyles {
-  const typeStyle = getTypeStyle(bar.type);
+export function computeBarStyles(settings: CarouselSettings): BarStyles {
   const design = settings.designStyle;
   const config = DESIGN_STYLES[design];
   const hasCustomBg = !!settings.bgColor;
@@ -106,7 +77,7 @@ export function computeBarStyles(
   if (settings.textColor) style.color = settings.textColor;
 
   if (design === AnnouncementBarDesignStyle.striped) {
-    const baseHex = settings.bgColor ?? typeStyle.hex;
+    const baseHex = settings.bgColor ?? DEFAULT_STYLE.hex;
     const stripe = settings.stripeColor ?? adjustBrightness(baseHex, 20);
     style = {
       ...style,
@@ -145,9 +116,9 @@ export function computeBarStyles(
     "relative flex items-center justify-center px-4 py-2 text-sm",
     settings.sticky && "sticky top-0 z-41",
     config.container,
-    !hasCustomBg && config.containerWithBg(bar.type),
+    !hasCustomBg && config.containerWithBg,
     config.border,
-    needsDefaultText && typeStyle.text,
+    needsDefaultText && DEFAULT_STYLE.text,
     !hasCustomText &&
       (design === AnnouncementBarDesignStyle.outlined ||
         design === AnnouncementBarDesignStyle.minimal) &&
@@ -157,7 +128,7 @@ export function computeBarStyles(
       "text-card",
   );
 
-  const linkHoverClass = !hasCustomText ? typeStyle.hover : "";
+  const linkHoverClass = !hasCustomText ? DEFAULT_STYLE.hover : "";
 
   return { className, style, linkHoverClass, hasCustomText };
 }

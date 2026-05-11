@@ -41,7 +41,6 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
       bars={bars.map((bar) => ({
         id: bar.id,
         message: bar.message,
-        type: bar.type,
         linkUrl: bar.linkUrl,
         linkText: bar.linkText,
         bgColor: bar.bgColor,

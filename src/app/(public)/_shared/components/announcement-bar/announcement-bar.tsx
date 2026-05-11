@@ -2,30 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconInfoCircle,
-  IconAlertTriangle,
-  IconSparkles,
-  IconX,
-  type TablerIcon,
-} from "@tabler/icons-react";
+import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
-
-/**
- * AnnouncementBar.type → 固定 icon マッピング SSoT。
- *
- * WCAG 1.4.1（色のみで情報を伝えない）+ Material Design / Stripe Dashboard 等の
- * Alert 標準パターン。color blindness 対応で必須。
- *
- * `SocialLink` の `platformIcons` と同じ「enum 別固定 icon」設計（ユーザー選択 UI 不要）。
- */
-const TYPE_ICONS: Record<string, TablerIcon> = {
-  info: IconInfoCircle,
-  warning: IconAlertTriangle,
-  promo: IconSparkles,
-};
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { isAppRoute } from "@/shared/lib/typed-routes";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import { useCarousel } from "./use-carousel";
@@ -107,13 +86,9 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
 
   if (visibleBars.length === 0 || !currentBar) return null;
 
-  const { className, style, linkHoverClass, hasCustomText } = computeBarStyles(
-    settings,
-    currentBar,
-  );
+  const { className, style, linkHoverClass, hasCustomText } =
+    computeBarStyles(settings);
   const showNav = total > 1;
-  // JSX 内 IIFE 禁止のため変数抽出（CLAUDE.md §クリティカルルール / `react/gotchas.md`）
-  const TypeIcon = TYPE_ICONS[currentBar.type];
 
   return (
     <div
@@ -166,10 +141,12 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           }
           onAnimationEnd={onAnimationEnd}
         >
-          {TypeIcon ? (
-            <TypeIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-          ) : null}
-          <span className="text-center">{currentBar.message}</span>
+          <span className="inline-flex items-center gap-1.5 text-center">
+            <PortableTextSpans
+              spans={currentBar.message}
+              iconClassName="h-4 w-4 shrink-0"
+            />
+          </span>
           {currentBar.linkUrl &&
             currentBar.linkText &&
             (isAppRoute(currentBar.linkUrl) ? (

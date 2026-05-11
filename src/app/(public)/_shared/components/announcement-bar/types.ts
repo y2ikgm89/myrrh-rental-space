@@ -2,11 +2,11 @@ import type {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
 } from "@/shared/lib/validations/enums/prisma-types";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 export interface AnnouncementBarItem {
   id: string;
-  message: string;
-  type: string;
+  message: PortableTextSpan[];
   linkUrl?: string | null;
   linkText?: string | null;
   bgColor?: string | null;

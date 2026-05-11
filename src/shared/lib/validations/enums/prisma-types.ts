@@ -38,7 +38,6 @@ export {
   LayoutWidth,
   PostStatus,
   CouponType,
-  AnnouncementBarType,
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,

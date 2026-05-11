@@ -11,16 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
-import { AnnouncementBarType } from "@/shared/lib/validations/enums/prisma-types";
-import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums/guards";
+import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
 import type { BarDialogProps, DeleteDialogProps } from "./types";
 
 export function BarDialog({
@@ -34,7 +28,10 @@ export function BarDialog({
   errors,
   onSubmit,
 }: Omit<BarDialogProps, "formValues">) {
-  const formValues = useWatch({ control });
+  // useWatch({ control }) は DeepPartial 化されるため、name 指定で required 型のまま取得
+  // (PortableTextInlineEditor / Switch の prop が DeepPartial と非互換)
+  const messageSpans = useWatch({ control, name: "message" });
+  const isActive = useWatch({ control, name: "isActive" });
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -53,12 +50,22 @@ export function BarDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="message">メッセージ *</Label>
-              <Input
+              <PortableTextInlineEditor
                 id="message"
-                {...register("message")}
-                placeholder="お知らせのメッセージを入力"
+                aria-label="お知らせメッセージ"
+                value={messageSpans}
+                onChange={(spans) =>
+                  setValue("message", spans, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
                 disabled={isPending}
               />
+              <p className="text-xs text-muted-foreground">
+                テキスト入力中に <code>/icon</code>{" "}
+                と打つとアイコンを挿入できます。
+              </p>
               {errors.message && (
                 <p className="text-sm text-destructive">
                   {errors.message.message}
@@ -66,40 +73,7 @@ export function BarDialog({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="type">タイプ</Label>
-              <Select
-                {...(formValues.type !== undefined && {
-                  value: formValues.type,
-                })}
-                onValueChange={(value) => {
-                  if (isValidAnnouncementBarType(value)) {
-                    setValue("type", value);
-                  }
-                }}
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={AnnouncementBarType.info}>
-                    お知らせ（青）
-                  </SelectItem>
-                  <SelectItem value={AnnouncementBarType.warning}>
-                    重要（黄）
-                  </SelectItem>
-                  <SelectItem value={AnnouncementBarType.promo}>
-                    キャンペーン（緑）
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                ※ 色は「デザイン・カルーセル設定」で統一設定できます
-              </p>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="priority">優先度</Label>
               <Input
                 id="priority"
@@ -178,7 +152,7 @@ export function BarDialog({
             </div>
             <Switch
               id="isActive"
-              checked={formValues.isActive ?? false}
+              checked={isActive}
               onCheckedChange={(checked) => setValue("isActive", checked)}
               disabled={isPending}
             />

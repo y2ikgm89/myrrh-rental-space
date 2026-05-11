@@ -5,11 +5,11 @@ import type {
   Control,
 } from "react-hook-form";
 import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-bar";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-  type AnnouncementBarType,
 } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
@@ -89,8 +89,7 @@ export function isValidHexColor(value: string | null | undefined): boolean {
 // =============================================================================
 
 export type BarFormData = {
-  message: string;
-  type: AnnouncementBarType;
+  message: PortableTextSpan[];
   linkUrl: string;
   linkText: string;
   isActive: boolean;

@@ -3,10 +3,10 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-  AnnouncementBarType,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
@@ -16,13 +16,29 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import {
+  createSpanArraySchema,
+  portableTextSpanSchema,
+  spansToPlainText,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 
+/**
+ * DB の Json 列から読み出した message を防御的に PortableTextSpan[] に narrow。
+ * 不正形式（手動編集 / 旧データ）は空配列にフォールバック。
+ */
+export function parseAnnouncementBarMessage(
+  value: unknown,
+): PortableTextSpan[] {
+  const result = z.array(portableTextSpanSchema).safeParse(value);
+  return result.success ? result.data : [];
+}
+
 export type AnnouncementBarData = {
   id: string;
-  message: string;
-  type: AnnouncementBarType;
+  message: PortableTextSpan[];
   linkUrl: string | null;
   linkText: string | null;
   bgColor: string | null;
@@ -85,7 +101,6 @@ export type AnnouncementBarCarouselSettingsInput = z.infer<
 const announcementBarSelect = {
   id: true,
   message: true,
-  type: true,
   linkUrl: true,
   linkText: true,
   bgColor: true,
@@ -97,6 +112,29 @@ const announcementBarSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+type AnnouncementBarSelectRow = Prisma.AnnouncementBarGetPayload<{
+  select: typeof announcementBarSelect;
+}>;
+
+function shapeAnnouncementBarRow(
+  row: AnnouncementBarSelectRow,
+): AnnouncementBarData {
+  return {
+    id: row.id,
+    message: parseAnnouncementBarMessage(row.message),
+    linkUrl: row.linkUrl,
+    linkText: row.linkText,
+    bgColor: row.bgColor,
+    textColor: row.textColor,
+    isActive: row.isActive,
+    priority: row.priority,
+    startAt: row.startAt,
+    endAt: row.endAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
 
 const defaultCarouselSettings: AnnouncementBarCarouselSettings = {
   announcementBarAnimation: AnnouncementBarAnimation.fade,
@@ -116,11 +154,18 @@ const defaultCarouselSettings: AnnouncementBarCarouselSettings = {
 };
 
 export const announcementBarInputSchema = z.object({
-  message: z
-    .string()
-    .min(1, { error: "メッセージは必須です" })
-    .max(200, { error: "メッセージは200文字以内で入力してください" }),
-  type: z.enum(AnnouncementBarType).default(AnnouncementBarType.info),
+  /**
+   * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在、最大 30 span）。
+   * 空配列 / 純アイコン構成は UI 層が許容するが、ここではプレーン文字列ベースで
+   * 1 文字以上必須を契約（icon-only モード = メッセージ意味不在は NN/g 準拠で拒否）。
+   */
+  message: createSpanArraySchema({ maxSpans: 30 })
+    .refine((spans) => spansToPlainText(spans).trim().length > 0, {
+      error: "メッセージにテキストを 1 文字以上含めてください",
+    })
+    .refine((spans) => spansToPlainText(spans).length <= 200, {
+      error: "メッセージは200文字以内で入力してください",
+    }),
   linkUrl: z
     .string()
     .url({ error: "有効なURLを入力してください" })
@@ -170,8 +215,10 @@ export type AnnouncementBarInput = z.infer<typeof announcementBarInputSchema>;
 
 function normalizeAnnouncementBarInput(data: AnnouncementBarInput) {
   return {
-    message: data.message,
-    type: data.type,
+    // PortableTextSpan[] を Prisma の Json 列に渡すための SDK 境界 cast
+    // (type-safety.md §許可例外 #2: Prisma JSON 型)
+    message:
+      data.message satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue,
     linkUrl: data.linkUrl || null,
     linkText: data.linkText || null,
     bgColor: data.bgColor || null,
@@ -208,7 +255,7 @@ export async function getAnnouncementBars(): Promise<
     operationName: "getAnnouncementBars",
   });
 
-  return toPlainArray(items);
+  return toPlainArray(items.map(shapeAnnouncementBarRow));
 }
 
 export async function getAnnouncementBarById(
@@ -218,19 +265,19 @@ export async function getAnnouncementBarById(
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
   cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
 
-  return toPlainObject(
-    await safeFetch({
-      fetch: () =>
-        prisma.announcementBar.findUnique({
-          where: { id },
-          select: announcementBarSelect,
-        }),
-      fallback: null,
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      operationName: "getAnnouncementBarById",
-    }),
-  );
+  const row = await safeFetch({
+    fetch: () =>
+      prisma.announcementBar.findUnique({
+        where: { id },
+        select: announcementBarSelect,
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getAnnouncementBarById",
+  });
+
+  return row === null ? null : toPlainObject(shapeAnnouncementBarRow(row));
 }
 
 export async function getActiveAnnouncementBars(): Promise<
@@ -253,7 +300,7 @@ export async function getActiveAnnouncementBars(): Promise<
     operationName: "getActiveAnnouncementBars",
   });
 
-  return toPlainArray(items);
+  return toPlainArray(items.map(shapeAnnouncementBarRow));
 }
 
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettings> {

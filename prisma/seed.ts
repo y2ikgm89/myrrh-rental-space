@@ -41,6 +41,7 @@ import {
   buildParagraphHtml,
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
+import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -2704,36 +2705,52 @@ async function seedNavigation() {
 async function seedAnnouncementBar() {
   const announcements = [
     {
-      message: "【お知らせ】年末年始の営業日程を掲載しました",
-      type: "info" as const,
+      probe: "年末年始の営業日程を掲載しました",
+      message: [
+        createInlineIcon("IconInfoCircle"),
+        createSpan("年末年始の営業日程を掲載しました"),
+      ],
       linkUrl: "/news",
       linkText: "詳細を見る",
       priority: 0,
     },
     {
-      message: "オープン記念！今月末まで全スペース20%OFF",
-      type: "promo" as const,
+      probe: "オープン記念！今月末まで全スペース20%OFF",
+      message: [
+        createInlineIcon("IconSparkles"),
+        createSpan("オープン記念!今月末まで全スペース20%OFF"),
+      ],
       linkUrl: "/spaces",
       linkText: "スペースを見る",
       priority: 1,
     },
     {
-      message: "1月15日（水）は設備点検のため休館いたします",
-      type: "warning" as const,
+      probe: "1月15日（水）は設備点検のため休館いたします",
+      message: [
+        createInlineIcon("IconAlertTriangle"),
+        createSpan("1月15日(水)は設備点検のため休館いたします"),
+      ],
       priority: 2,
       isActive: false,
     },
   ];
 
   for (const announcement of announcements) {
+    // idempotency: 同 probe 文字列を含む span 配列があるか JSONB path で判定
     const existing = await prisma.announcementBar.findFirst({
-      where: { message: announcement.message },
+      where: {
+        message: {
+          path: ["1", "text"],
+          string_contains: announcement.probe.slice(0, 12),
+        },
+      },
     });
 
     if (!existing) {
-      await prisma.announcementBar.create({ data: announcement });
+      const { probe: _probe, ...data } = announcement;
+      await prisma.announcementBar.create({ data });
       console.log(
-        `✅ Created announcement: ${announcement.message.slice(0, 30)}...`,
+        `✅ Created announcement: ${announcement.probe.slice(0, 30)}...`,
       );
     }
   }

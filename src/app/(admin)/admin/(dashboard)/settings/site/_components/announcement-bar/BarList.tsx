@@ -14,25 +14,9 @@ import {
   TableHeader,
   TableRow,
   Switch,
-  Badge,
 } from "@/admin/components/ui";
+import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import type { BarListProps } from "./types";
-
-function TypeBadge({ type }: { type: string }) {
-  const defaultBadge = {
-    label: "お知らせ",
-    className: "bg-primary/10 text-primary",
-  };
-  const config: Record<string, { label: string; className: string }> = {
-    info: defaultBadge,
-    warning: { label: "重要", className: "bg-warning/10 text-warning" },
-    promo: { label: "キャンペーン", className: "bg-success/10 text-success" },
-  };
-
-  const { label, className } = config[type] ?? defaultBadge;
-
-  return <Badge className={className}>{label}</Badge>;
-}
 
 export function BarList({
   bars,
@@ -62,7 +46,6 @@ export function BarList({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[80px]">状態</TableHead>
-                  <TableHead className="w-[100px]">タイプ</TableHead>
                   <TableHead>メッセージ</TableHead>
                   <TableHead className="w-[80px]">優先度</TableHead>
                   <TableHead className="w-[150px]">表示期間</TableHead>
@@ -79,11 +62,13 @@ export function BarList({
                         disabled={isPending}
                       />
                     </TableCell>
-                    <TableCell>
-                      <TypeBadge type={bar.type} />
-                    </TableCell>
                     <TableCell className="max-w-[300px] truncate">
-                      {bar.message}
+                      <span className="inline-flex items-center gap-1.5">
+                        <PortableTextSpans
+                          spans={bar.message}
+                          iconClassName="h-4 w-4"
+                        />
+                      </span>
                     </TableCell>
                     <TableCell>{bar.priority}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">

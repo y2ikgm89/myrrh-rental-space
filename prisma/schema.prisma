@@ -103,12 +103,6 @@ enum CouponType {
 
 // --- 新規 Enum（String → Enum 変換） ---
 
-enum AnnouncementBarType {
-  info
-  warning
-  promo
-}
-
 enum DiscountType {
   none
   percentage
@@ -760,19 +754,20 @@ model NewsVersion {
 }
 
 model AnnouncementBar {
-  id        String              @id @default(uuid()) @db.Uuid
-  message   String              @db.VarChar(200)
-  type      AnnouncementBarType @default(info)
+  id        String    @id @default(uuid()) @db.Uuid
+  /// Sanity Portable Text 互換の inline span 配列。`{_key,_type:"span",text}` と
+  /// `{_key,_type:"iconInline",name}` の discriminated union を順次配置する。
+  message   Json      @default("[]")
   linkUrl   String?
   linkText  String?
   bgColor   String? // カスタム背景色 (hex)
   textColor String? // カスタム文字色 (hex)
-  isActive  Boolean             @default(true)
-  priority  Int                 @default(0)
+  isActive  Boolean   @default(true)
+  priority  Int       @default(0)
   startAt   DateTime?
   endAt     DateTime?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([isActive, priority])
   @@index([startAt, endAt])
