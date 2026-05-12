@@ -111,7 +111,27 @@ export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
 > ジェネリック制約 `T extends object` によりキーが `keyof T` に限定されるため型安全。
 > 呼び出し側で `Object.keys(obj) as ConfigKey[]` と書くことは禁止。`keysOf(obj)` を使う。
 
-### 5. `standardSchemaResolver` 境界変換（`auto-section-form.tsx` の RHF 呼び出しのみ）
+### 5. RHF `Path<T>` / `UseFormSetValue<FieldValues>` 境界（generic invariance への対処）
+
+React Hook Form の `Path<T>` は `T extends FieldValues` のフォーム型から **静的な string literal union** を導出する型関数。ジェネリック関数の本体内では `T` が unbound のため `"contentWidth"` が `Path<T>` の member であることを TS が証明できない（既知の TS limitation）。同様に `Control<T>` / `UseFormSetValue<T>` は invariant のため、複数フォーム型（Post / News 等）で 1 つの connected component を共有する場合に `UseFormSetValue<FieldValues>` への widening が必要。**`as Path<T>` / `as UseFormSetValue<FieldValues> | undefined` は本境界のみで許可**:
+
+```typescript
+// OK: Pure Component + Connected ラッパーで限定する
+export function LayoutFieldsConnected<T extends FieldValues>({
+  control,
+  setValue,
+}: Props<T>) {
+  const contentWidthPath = "contentWidth" as Path<T>;
+  const v = useWatch({ control, name: contentWidthPath });
+  (setValue as UseFormSetValue<FieldValues> | undefined)?.("contentWidth", v);
+}
+```
+
+参照実装: `LayoutFields.tsx` の `LayoutFieldsConnected`、`use-public-form.ts` の `form.setError(field as Path<TInput>, ...)`（`field in currentValues` で existence 検証済み + `Object.entries(fieldErrors)` の `string` key を RHF Path に narrow）。
+
+**ルール**: 本境界の外（Section / Inspector / 単一フォーム型 Component 内）では generic にせず concrete form type を直接使い、`Path<T>` cast を発生させない。Connected wrapper を新規追加する場合は本セクションに参照実装を追記する。
+
+### 6. `standardSchemaResolver` 境界変換（`auto-section-form.tsx` の RHF 呼び出しのみ）
 
 RHF の `standardSchemaResolver` は `StandardSchemaV1<FieldValues>` を要求するが、動的セクション定義の `configSchema` は `z.ZodType<unknown>` として保持される（`sectionConfigSchemas` マップから取得）。`configSchema` は全て `z.object({...})` で定義されるため実行時は安全だが、TypeScript の invariance のため `as unknown as z.ZodObject<Record<string, z.ZodType>>` で橋渡しする。単一フォームへの適用であり Pure Component + Connected wrapper への分離は過剰なため、境界ヘルパーとして本ファイル内で完結する例外として許容する。
 

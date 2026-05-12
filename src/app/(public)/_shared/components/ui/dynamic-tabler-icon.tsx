@@ -23,7 +23,7 @@ export async function DynamicTablerIcon({
   "aria-hidden": ariaHidden,
 }: DynamicTablerIconProps): Promise<ReactElement | null> {
   const icons = await import("@tabler/icons-react");
-  const maybeIcon = Reflect.get(icons as Record<string, unknown>, iconName);
+  const maybeIcon: unknown = Reflect.get(icons, iconName);
   if (!isIconComponent(maybeIcon)) return null;
   const props: IconProps = {
     ...(className !== undefined && { className }),

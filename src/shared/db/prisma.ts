@@ -15,14 +15,8 @@ import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { serverEnv } from "@/shared/lib/env/server";
-import {
-  PrismaClient,
-  type Space as PrismaSpace,
-  type Reservation as PrismaReservation,
-  type Customer as PrismaCustomer,
-  type Settings as PrismaSettings,
-  type Coupon as PrismaCoupon,
-} from "@generated/prisma/client";
+import { PrismaClient } from "@generated/prisma/client";
+import type * as PrismaModels from "@generated/prisma/client";
 import type { Decimal } from "@prisma/client/runtime/client";
 
 import { createAppPrismaClient } from "./create-app-prisma-client";
@@ -41,11 +35,11 @@ type ConvertDecimalFields<T> = {
 };
 
 /** Decimal → number 変換済みの型エイリアス */
-export type Space = ConvertDecimalFields<PrismaSpace>;
-export type Reservation = ConvertDecimalFields<PrismaReservation>;
-export type Customer = ConvertDecimalFields<PrismaCustomer>;
-export type Settings = ConvertDecimalFields<PrismaSettings>;
-export type Coupon = ConvertDecimalFields<PrismaCoupon>;
+export type Space = ConvertDecimalFields<PrismaModels.Space>;
+export type Reservation = ConvertDecimalFields<PrismaModels.Reservation>;
+export type Customer = ConvertDecimalFields<PrismaModels.Customer>;
+export type Settings = ConvertDecimalFields<PrismaModels.Settings>;
+export type Coupon = ConvertDecimalFields<PrismaModels.Coupon>;
 
 // ---------------------------------------------------------------------------
 // Singleton: pg Pool + PrismaClient
