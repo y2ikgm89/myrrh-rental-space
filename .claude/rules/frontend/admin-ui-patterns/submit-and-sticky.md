@@ -101,3 +101,38 @@ import { SubmitButton } from "@/admin/components/ui";
 業界標準: WordPress Gutenberg / Notion / Linear / Stripe Dashboard と同等パターン。
 
 参照実装: `pages/[slug]/edit/_components/{PageEditor,SectionListSidebar}.tsx`
+
+## Card 内部 scroll パターン（可変高さ大要素を外枠で clip）
+
+月カレンダー (6 週 × 140px = 840px) / 長尺リスト / 大きな grid を `<div className="flex h-full flex-col rounded-lg border bg-card">` の card 内に配置する場合、**子要素合計高さが viewport 利用可能領域を超えると card の rounded border からセルがはみ出す** silent bug が発生する（overflow デフォルト `visible`）。実例: `(dashboard)/reservations/calendar/page.tsx` が `h-[calc(100vh-8rem)]` で固定高さの container を作るが、MonthView の 6 週分セルがそれを超え、外枠の `rounded-lg border` 越しに最終週がはみ出していた（2026-05-12 修正）。
+
+**canonical fix（Google Calendar / Outlook / Notion Calendar と同パターン）**:
+
+```tsx
+// NG: 外枠は固定高、子は overflow visible → セル合計が container 高を超えると外枠からはみ出す
+<div className="flex h-full flex-col rounded-lg border bg-card">
+  <div className="grid grid-cols-7 border-b">...</div>  {/* header */}
+  <div className="flex flex-1 flex-col">              {/* これだとはみ出す */}
+    {rows.map(...)}
+  </div>
+</div>
+
+// OK: 外枠 overflow-hidden + ヘッダー shrink-0 + body min-h-0 + overflow-y-auto
+<div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+  <div className="grid shrink-0 grid-cols-7 border-b">...</div>
+  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+    {rows.map(...)}
+  </div>
+</div>
+```
+
+**ポイント**:
+
+1. **外枠 `overflow-hidden`** — rounded border 内に子要素を clip、border-radius を維持
+2. **ヘッダー `shrink-0`** — flex shrink を防ぎヘッダー高さを保持（曜日ラベルや列ヘッダー）
+3. **body `min-h-0`** — flexbox 子要素の default `min-height: auto` を上書きして縦縮小を許可（これがないと flex-1 が viewport 高さを超えて広がり overflow-y-auto が無効化）
+4. **body `flex-1 overflow-y-auto`** — 残り高さを取って内部スクロール
+
+**判定基準**: ① card 外枠が `h-full` / 固定高で制約あり ② 子要素の合計高さが可変かつ viewport を超え得る（カレンダー / 大量行リスト / 大きな grid） ③ rounded border を視覚的に維持したい → 3 条件すべて満たすなら本パターン適用。
+
+参照実装: `reservations/_components/calendar/views/MonthView.tsx`（2026-05-12）

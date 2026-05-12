@@ -4,6 +4,10 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCalendar,
+  IconCalendarMonth,
+  IconCalendarWeek,
+  IconCalendarTime,
+  IconBuildingStore,
 } from "@tabler/icons-react";
 import {
   Button,
@@ -14,12 +18,25 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { formatDateLabel } from "@/admin/lib/calendar";
+import type { CalendarView } from "@/admin/lib/calendar";
 import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
+import { cn } from "@/shared/lib/cn";
 import type { CalendarState } from "./hooks/use-calendar-state";
 
 interface CalendarToolbarProps {
   state: CalendarState;
 }
+
+const VIEW_OPTIONS: ReadonlyArray<{
+  value: CalendarView;
+  label: string;
+  Icon: typeof IconCalendarMonth;
+}> = [
+  { value: "month", label: "月", Icon: IconCalendarMonth },
+  { value: "week", label: "週", Icon: IconCalendarWeek },
+  { value: "day", label: "日", Icon: IconCalendarTime },
+  { value: "resource", label: "スペース別", Icon: IconBuildingStore },
+];
 
 export function CalendarToolbar({ state }: CalendarToolbarProps) {
   const {
@@ -37,63 +54,86 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
   } = state;
 
   const dateLabel = formatDateLabel(currentDate, view);
+  // resource ビュー時は spaceId フィルターは無効（全スペースを列として表示するため）
+  const spaceFilterDisabled = view === "resource";
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-      {/* 左: ビュー切替 */}
-      <div className="flex gap-1">
-        <Button
-          variant={view === "month" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setView("month")}
-        >
-          月
-        </Button>
-        <Button
-          variant={view === "week" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setView("week")}
-        >
-          週
-        </Button>
-        <Button
-          variant={view === "day" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setView("day")}
-        >
-          日
-        </Button>
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-xs xl:flex-nowrap xl:gap-4">
+      {/* 左: ビュー切替（セグメンテッドコントロール） */}
+      <div
+        role="group"
+        aria-label="表示モード"
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-muted p-1"
+      >
+        {VIEW_OPTIONS.map(({ value, label, Icon }) => {
+          const isActive = view === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => setView(value)}
+              className={cn(
+                "inline-flex min-h-11 items-center gap-1.5 rounded px-3 text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                isActive
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* 中央: 日付ナビゲーション */}
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={goPrevious}>
-          <IconChevronLeft className="h-4 w-4" />
+      <div className="flex items-center gap-2 xl:flex-1 xl:justify-center">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={goPrevious}
+          aria-label="前へ"
+        >
+          <IconChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        <Button variant="outline" size="sm" onClick={goToday}>
+          <IconCalendar className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          今日
         </Button>
         <Button
           variant="outline"
-          size="sm"
-          onClick={goToday}
-          className="min-w-[80px]"
+          size="icon"
+          onClick={goNext}
+          aria-label="次へ"
         >
-          <IconCalendar className="mr-2 h-4 w-4" />
-          今日
+          <IconChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Button variant="outline" size="icon" onClick={goNext}>
-          <IconChevronRight className="h-4 w-4" />
-        </Button>
-        <span className="ml-2 min-w-[160px] text-center text-lg font-semibold">
+        <span
+          aria-live="polite"
+          className="ml-1 min-w-[10rem] text-center text-base font-semibold text-foreground tabular-nums"
+        >
           {dateLabel}
         </span>
       </div>
 
       {/* 右: フィルター */}
-      <div className="flex gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <Select
           value={spaceId ?? "all"}
           onValueChange={(v) => setSpaceFilter(v === "all" ? null : v)}
+          disabled={spaceFilterDisabled}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger
+            className="w-40"
+            aria-label="スペースで絞り込み"
+            title={
+              spaceFilterDisabled
+                ? "スペース別ビューでは全スペースが表示されます"
+                : undefined
+            }
+          >
             <SelectValue placeholder="スペース" />
           </SelectTrigger>
           <SelectContent>
@@ -112,7 +152,7 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
             setStatusFilter(getReservationStatusFilterOrAll(v))
           }
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="ステータスで絞り込み">
             <SelectValue placeholder="ステータス" />
           </SelectTrigger>
           <SelectContent>

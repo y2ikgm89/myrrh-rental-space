@@ -25,33 +25,25 @@ export function MonthView({
   onDayClick,
 }: MonthViewProps) {
   const weekdays = getWeekdayHeaders();
-
-  // 月のキーを生成（月が変わると展開状態がリセットされる）
   const monthKey = format(dateRange.start, "yyyy-MM");
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
-  // 週単位にグループ化（React Compilerが自動メモ化）
   const weeks: Date[][] = [];
   const { displayDates } = dateRange;
   for (let i = 0; i < displayDates.length; i += 7) {
     weeks.push(displayDates.slice(i, i + 7));
   }
 
-  // 日別イベント取得
-  const getEventsForDay = (day: Date) => {
-    return events
+  const getEventsForDay = (day: Date) =>
+    events
       .filter((e) => isSameDay(new Date(e.startTime), day))
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  };
 
   const handleDayClick = (day: Date) => {
-    if (onDayClick) {
-      onDayClick(day);
-    }
+    if (onDayClick) onDayClick(day);
   };
 
   const toggleExpandDay = (dayId: string) => {
-    // 月キーを含めることで、月が変わると自動的にリセット
     const fullKey = `${monthKey}-${dayId}`;
     setExpandedDay((prev) => (prev === fullKey ? null : fullKey));
   };
@@ -59,14 +51,14 @@ export function MonthView({
   const isExpanded = (dayId: string) => expandedDay === `${monthKey}-${dayId}`;
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-card">
-      {/* 曜日ヘッダー */}
-      <div className="grid grid-cols-7 border-b bg-muted/50">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+      {/* 曜日ヘッダー (上部固定) */}
+      <div className="grid shrink-0 grid-cols-7 border-b bg-muted/40">
         {weekdays.map((day, index) => (
           <div
             key={day}
             className={cn(
-              "border-r p-2 text-center text-sm font-medium last:border-r-0",
+              "border-r p-2 text-center text-sm font-semibold last:border-r-0",
               getWeekdayColorClass(index),
             )}
           >
@@ -75,8 +67,8 @@ export function MonthView({
         ))}
       </div>
 
-      {/* 日付グリッド */}
-      <div className="flex flex-1 flex-col">
+      {/* 日付グリッド (内部縦スクロール — 6週分が viewport 高を超えても card 外枠ははみ出さない) */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {weeks.map((week) => {
           const firstDay = week[0];
           if (!firstDay) return null;
@@ -94,30 +86,44 @@ export function MonthView({
                   : dayEvents.slice(0, MAX_VISIBLE_EVENTS);
                 const hiddenCount = dayEvents.length - MAX_VISIBLE_EVENTS;
                 const isCurrentMonth = isSameMonth(day, currentDate);
+                const todayCell = isToday(day);
 
                 return (
                   <div
                     key={dayId}
                     className={cn(
-                      "relative flex min-h-[100px] flex-col border-r p-1 last:border-r-0",
-                      !isCurrentMonth && "bg-muted/50",
-                      isToday(day) && "bg-primary/5",
+                      "relative flex min-h-[140px] flex-col gap-1 border-r p-1.5 last:border-r-0 transition-colors",
+                      !isCurrentMonth && "bg-muted/30",
+                      todayCell && "bg-primary/5",
                     )}
                   >
-                    {/* 日付ラベル */}
-                    <button
-                      type="button"
-                      className={cn(
-                        "mb-1 flex h-6 w-6 items-center justify-center rounded-full text-sm transition-colors hover:bg-accent",
-                        !isCurrentMonth && "text-muted-foreground",
-                        isToday(day) &&
-                          "bg-primary text-primary-foreground hover:bg-primary/90",
-                        getWeekdayColorClass(dayIndex),
+                    {/* 日付ラベル + 件数バッジ */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        aria-label={`${format(day, "yyyy年M月d日")} を日表示で開く`}
+                        className={cn(
+                          "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-semibold tabular-nums transition-colors",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                          "hover:bg-accent",
+                          !isCurrentMonth && "text-muted-foreground",
+                          todayCell &&
+                            "bg-primary text-primary-foreground hover:bg-primary/90",
+                          !todayCell && getWeekdayColorClass(dayIndex),
+                        )}
+                        onClick={() => handleDayClick(day)}
+                      >
+                        {format(day, "d")}
+                      </button>
+                      {dayEvents.length > 0 && (
+                        <span
+                          aria-label={`${dayEvents.length} 件の予約`}
+                          className="rounded-full bg-muted px-1.5 py-0.5 text-[0.625rem] font-medium tabular-nums text-muted-foreground"
+                        >
+                          {dayEvents.length}
+                        </span>
                       )}
-                      onClick={() => handleDayClick(day)}
-                    >
-                      {format(day, "d")}
-                    </button>
+                    </div>
 
                     {/* イベント一覧 */}
                     <div className="flex-1 overflow-hidden">
@@ -129,22 +135,20 @@ export function MonthView({
                         />
                       ))}
 
-                      {/* 「他N件」ボタン */}
                       {hiddenCount > 0 && !dayExpanded && (
                         <button
                           type="button"
-                          className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-xs text-primary hover:bg-accent"
+                          className="mt-0.5 inline-flex min-h-6 w-full items-center rounded px-1.5 py-0.5 text-left text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={() => toggleExpandDay(dayId)}
                         >
-                          他 {hiddenCount} 件
+                          + 他 {hiddenCount} 件
                         </button>
                       )}
 
-                      {/* 折りたたみボタン */}
                       {dayExpanded && hiddenCount > 0 && (
                         <button
                           type="button"
-                          className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-xs text-primary hover:bg-accent"
+                          className="mt-0.5 inline-flex min-h-6 w-full items-center rounded px-1.5 py-0.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={() => toggleExpandDay(dayId)}
                         >
                           折りたたむ

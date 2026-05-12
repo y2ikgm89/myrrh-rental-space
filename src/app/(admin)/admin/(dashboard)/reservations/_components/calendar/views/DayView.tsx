@@ -10,7 +10,7 @@ import {
   DEFAULT_BUSINESS_HOURS,
   PIXELS_PER_HOUR,
 } from "@/admin/lib/calendar";
-import type { CalendarEvent } from "@/admin/lib/calendar";
+import type { CalendarEvent, PositionedEvent } from "@/admin/lib/calendar";
 import { EventCell } from "../EventCell";
 import { TimeColumn } from "./TimeColumn";
 
@@ -20,58 +20,81 @@ interface DayViewProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
+/** 重複時の 1 サブカラム最小幅 */
+const SUBCOLUMN_MIN_PX = 120;
+/** 重複なし時の最小幅 (1 日カラム) */
+const DAY_COLUMN_MIN_PX = 320;
+
+function maxConcurrentColumns(positioned: PositionedEvent[]): number {
+  if (positioned.length === 0) return 1;
+  const minWidthPct = positioned.reduce(
+    (min, e) => Math.min(min, e.position.width),
+    100,
+  );
+  return Math.max(1, Math.round(100 / Math.max(minWidthPct + 1, 1)));
+}
+
 export function DayView({ date, events, onEventClick }: DayViewProps) {
-  // React Compilerが自動メモ化
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
-
-  // イベント配置計算（React Compilerが自動メモ化）
   const positionedEvents = layoutOverlappingEvents(events);
-
   const gridHeight = timeSlots.length * PIXELS_PER_HOUR;
   const dayOfWeek = date.getDay();
 
+  const maxCols = maxConcurrentColumns(positionedEvents);
+  const dayColumnMinWidth = Math.max(
+    DAY_COLUMN_MIN_PX,
+    maxCols * SUBCOLUMN_MIN_PX,
+  );
+
   return (
     <div className="flex h-full flex-col rounded-lg border bg-card">
-      {/* ヘッダー */}
-      <div className="grid grid-cols-[60px_1fr] border-b bg-muted/50">
-        <div className="border-r p-2" />
-        <div className={cn("p-4 text-center", isToday(date) && "bg-primary/5")}>
+      {/* 日付ヘッダー */}
+      <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+        <div className="flex items-baseline gap-3">
+          <div
+            className={cn(
+              "text-2xl font-bold tabular-nums",
+              isToday(date) && "text-primary",
+            )}
+          >
+            {format(date, "M月d日", { locale: ja })}
+          </div>
           <div
             className={cn(
               "text-sm font-medium",
               getWeekdayColorClass(dayOfWeek),
             )}
           >
-            {format(date, "E", { locale: ja })}
+            ({format(date, "E", { locale: ja })})
           </div>
-          <div
-            className={cn(
-              "mt-1 inline-flex h-10 w-10 items-center justify-center text-2xl",
-              isToday(date) &&
-                "rounded-full bg-primary text-primary-foreground",
-            )}
-          >
-            {format(date, "d")}
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {format(date, "yyyy年M月", { locale: ja })}
-          </div>
+          {isToday(date) && (
+            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+              今日
+            </span>
+          )}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {events.length} 件の予約
         </div>
       </div>
 
       {/* グリッド */}
       <div className="flex-1 overflow-auto">
         <div
-          className="relative grid grid-cols-[60px_1fr]"
-          style={{ height: `${gridHeight}px` }}
+          className="grid"
+          style={{
+            gridTemplateColumns: `60px minmax(${dayColumnMinWidth}px, 1fr)`,
+            height: `${gridHeight}px`,
+          }}
         >
-          <TimeColumn timeSlots={timeSlots} />
+          <div className="sticky left-0 z-10 border-r bg-card">
+            <TimeColumn timeSlots={timeSlots} />
+          </div>
 
-          {/* 日列 */}
           <div className={cn("relative", isToday(date) && "bg-primary/5")}>
-            {/* 背景グリッド */}
+            {/* 時間帯の罫線 */}
             {timeSlots.map((time) => (
-              <div key={time} className="h-[60px] border-b" />
+              <div key={time} className="h-[60px] border-b last:border-b-0" />
             ))}
 
             {/* イベント */}
@@ -88,10 +111,10 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
         </div>
       </div>
 
-      {/* イベントがない場合 */}
+      {/* 空状態 */}
       {events.length === 0 && (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">この日の予約はありません</p>
+        <div className="border-t bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+          この日の予約はありません
         </div>
       )}
     </div>

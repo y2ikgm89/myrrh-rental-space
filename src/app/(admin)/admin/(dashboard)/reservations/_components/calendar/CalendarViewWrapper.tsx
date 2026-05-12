@@ -6,6 +6,7 @@ import { CalendarToolbar } from "./CalendarToolbar";
 import { MonthView } from "./views/MonthView";
 import { WeekView } from "./views/WeekView";
 import { DayView } from "./views/DayView";
+import { ResourceView } from "./views/ResourceView";
 import { EventDetailDialog } from "./EventDetailDialog";
 import type { CalendarEvent, SpaceOption } from "@/admin/lib/calendar";
 
@@ -30,12 +31,8 @@ export function CalendarViewWrapper({
 
   const { view, currentDate, dateRange, goToDate } = state;
 
-  // 楽観的更新されたイベントをフィルタリング（useCalendarStateのフィルター条件を適用済み）
-  // state.eventsはすでにフィルター済みなので、optimisticEventsも同じイベントIDでフィルタリング
-  const filteredOptimisticEvents = optimisticEvents;
-
   return (
-    <div className="flex h-full flex-col space-y-4">
+    <div className="flex h-full flex-col gap-4">
       <CalendarToolbar state={state} />
 
       <div className="min-h-0 flex-1">
@@ -43,7 +40,7 @@ export function CalendarViewWrapper({
           <MonthView
             dateRange={dateRange}
             currentDate={currentDate}
-            events={filteredOptimisticEvents}
+            events={optimisticEvents}
             onEventClick={handleEventClick}
             onDayClick={goToDate}
           />
@@ -51,14 +48,22 @@ export function CalendarViewWrapper({
         {view === "week" && (
           <WeekView
             dateRange={dateRange}
-            events={filteredOptimisticEvents}
+            events={optimisticEvents}
             onEventClick={handleEventClick}
           />
         )}
         {view === "day" && (
           <DayView
             date={currentDate}
-            events={filteredOptimisticEvents}
+            events={optimisticEvents}
+            onEventClick={handleEventClick}
+          />
+        )}
+        {view === "resource" && (
+          <ResourceView
+            date={currentDate}
+            events={optimisticEvents}
+            spaces={state.spaces}
             onEventClick={handleEventClick}
           />
         )}

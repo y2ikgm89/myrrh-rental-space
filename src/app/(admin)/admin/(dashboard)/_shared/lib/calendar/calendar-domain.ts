@@ -49,7 +49,8 @@ export function getCalendarDateRange(
       end = endOfWeek(date, { weekStartsOn: 0 });
       break;
     }
-    case "day": {
+    case "day":
+    case "resource": {
       start = startOfDay(date);
       end = endOfDay(date);
       break;
@@ -71,6 +72,7 @@ export function navigateNext(date: Date, view: CalendarView): Date {
     case "week":
       return addWeeks(date, 1);
     case "day":
+    case "resource":
       return addDays(date, 1);
   }
 }
@@ -85,6 +87,7 @@ export function navigatePrevious(date: Date, view: CalendarView): Date {
     case "week":
       return subWeeks(date, 1);
     case "day":
+    case "resource":
       return subDays(date, 1);
   }
 }
@@ -239,22 +242,28 @@ export function getEventsForDay(
 }
 
 /**
- * ステータス別色クラスを取得
+ * ステータス別色クラスを取得（カレンダーイベント用）
+ *
+ * デザイン方針:
+ * - 左 border は意味色（強）— 一目でステータス識別可能
+ * - 背景は意味色の弱い tint — 読みやすさ優先
+ * - テキストは foreground 系 — 小さいセル内でもコントラスト確保（WCAG 1.4.3 AA）
+ * - CANCELLED は opacity 落として控えめに（取消線は EventCell 内で個別適用）
  */
 export function getStatusColorClass(status: string): string {
   switch (status) {
     case "PENDING":
-      return "bg-warning/10 border-l-warning text-warning-foreground";
+      return "bg-warning/15 border-l-warning text-foreground hover:bg-warning/25";
     case "CONFIRMED":
-      return "bg-success/10 border-l-success text-success";
+      return "bg-success/15 border-l-success text-foreground hover:bg-success/25";
     case "COMPLETED":
-      return "bg-muted border-l-muted-foreground text-muted-foreground";
+      return "bg-muted border-l-muted-foreground text-foreground hover:bg-muted/80";
     case "NO_SHOW":
-      return "bg-destructive/10 border-l-destructive text-destructive";
+      return "bg-destructive/15 border-l-destructive text-foreground hover:bg-destructive/25";
     case "CANCELLED":
-      return "bg-muted border-l-muted-foreground text-muted-foreground line-through";
+      return "bg-muted/40 border-l-muted-foreground text-muted-foreground hover:bg-muted/60";
     default:
-      return "bg-info/10 border-l-info text-info";
+      return "bg-info/15 border-l-info text-foreground hover:bg-info/25";
   }
 }
 
@@ -296,6 +305,7 @@ export function formatDateLabel(date: Date, view: CalendarView): string {
       return `${format(weekStart, "M月d日", { locale: ja })} - ${format(weekEnd, "M月d日", { locale: ja })}`;
     }
     case "day":
+    case "resource":
       return format(date, "yyyy年M月d日 (E)", { locale: ja });
   }
 }

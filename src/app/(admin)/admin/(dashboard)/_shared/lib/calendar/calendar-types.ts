@@ -2,10 +2,18 @@ import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-ty
 
 /**
  * カレンダービュータイプ
+ *
+ * - month/week/day: 標準的な時間軸カレンダー
+ * - resource: スペース別ビュー (1日 × スペース列) — Cal.com / FullCalendar resourceTimeGrid / Google Calendar Resource 標準パターン
  */
-export type CalendarView = "month" | "week" | "day";
+export type CalendarView = "month" | "week" | "day" | "resource";
 
-const CALENDAR_VIEWS: readonly CalendarView[] = ["month", "week", "day"];
+const CALENDAR_VIEWS: readonly CalendarView[] = [
+  "month",
+  "week",
+  "day",
+  "resource",
+];
 
 /**
  * CalendarViewのSet（O(1) lookup用）
