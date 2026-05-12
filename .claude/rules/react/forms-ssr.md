@@ -168,3 +168,32 @@ useEffect(() => {
 ## 単一行 contenteditable は `flex items-center` 必須
 
 - **`<div contenteditable aria-multiline="false">` は `flex min-h-11 items-center` 必須** — `<input>` は UA stylesheet で text を vertical center するが、contenteditable `<div>` はブロック要素で text が top 揃えになる視覚的不一致（`<input>` 慣習からの silent bug）。`aria-multiline="true"`（複数行）は top 揃えが正解（複数 paragraph 配置）。`PortableTextInlineEditor` の className `flex min-h-11 w-full items-center rounded-md ...` が canonical 参照実装（commit `e797f6eb`、2026-05-10）
+
+---
+
+## JSX Element + HTML entity の whitespace 解釈で hydration mismatch
+
+`<PortableTextSpans /> &rarr;` のように JSX React Element の直後に space + HTML entity（`&rarr;` / `&nbsp;` / `&amp;` 等）を直接書くと、SSR と CSR で whitespace 解釈が異なり hydration mismatch が発生（React 19 + Next.js 16 で頻発）。
+
+```tsx
+// NG: React は `{" →"}` を期待、SSR は `→` を出力 → hydration mismatch
+<Link>
+  <PortableTextSpans spans={config.viewAllText} /> &rarr;
+</Link>
+
+// OK: JSX expression で whitespace 明示 + 装飾矢印は aria-hidden
+<Link>
+  <PortableTextSpans spans={config.viewAllText} />
+  <span aria-hidden="true">{" →"}</span>
+</Link>
+```
+
+**判定基準**: React Element（`<Component />`）または `{expression}` の**直後**に space + HTML entity を書いている箇所。プレーン text 同士 (`hello &amp; world`) は問題ない。
+
+**検出 grep**:
+
+```bash
+grep -rnE '/> &[a-z]+;' src/app/\(public\)/
+```
+
+**修正パターン**: 装飾要素は `<span aria-hidden="true">{" arrow"}</span>` で screen reader skip + JSX expression で whitespace 明示。参照実装: `space-list-simple-view.tsx` / `news-list-simple-view.tsx` / `post-list-simple-view.tsx` / `FaqListSection.tsx` の「{viewAllText} → 」リンク（2026-05-12 一括修正）

@@ -70,3 +70,51 @@ responsive reset（`md:[...:0]` 等）したい値は **inline style ではな�
 - 色・spacing 等は `@theme` にトークン定義して静的クラス使用
 
 検出 grep: ``grep -rnE 'className=\{[^}]*`[^`]*\[\$\{' src/``
+
+---
+
+## Tailwind v4 + Turbopack で新規 arbitrary value / responsive variant が HMR 未生成
+
+`md:w-64` / `md:grid-cols-[220px_1fr]` / `gap-y-10` / `space-y-10` / `py-7` / `min-h-[2.6em]` / `min-h-12` 等を**新規追加**すると、computed style で `0px` 等 fallback 値が返り CSS に出力されない silent bug。既存 file で利用済みの class は OK、新規 combo class（特に `md:` variant + arbitrary value の組み合わせ）のみ scan に拾われない。**`@theme` 内の新規 CSS variable も同様に反映されない**（既存 variable は OK、新規 `--space-card-image-width` 等の追加分のみ未反映）。
+
+### 検出
+
+`getComputedStyle(el).XXX` で期待値が出ない、または以下の test snippet:
+
+```javascript
+const test = document.createElement("div");
+test.style.position = "absolute";
+test.style.visibility = "hidden";
+document.body.appendChild(test);
+test.className = "md:w-64"; // ← 新規 combo class
+console.log(getComputedStyle(test).width); // "0px" なら未生成
+```
+
+### 回避策
+
+| 優先度       | 方法                                    | 適用条件                                        |
+| ------------ | --------------------------------------- | ----------------------------------------------- |
+| **第一推奨** | `@layer utilities` 内の custom utility  | 複雑な responsive 値 / 1 component 専用の固有値 |
+| **第二推奨** | dev server 再起動（`Ctrl+C → bun dev`） | 標準 Tailwind utility に戻す場合の最終手段      |
+| **避ける**   | inline `style={{}}` で responsive 表現  | media query 困難、SSR mismatch リスク           |
+
+**`@layer utilities` 内 custom utility 例**（SpaceCard 4:3 grid の参照実装）:
+
+```css
+@layer utilities {
+  .space-card-grid {
+    grid-template-columns: 7.5rem 1fr;
+  }
+  @media (min-width: 48rem) {
+    .space-card-grid {
+      grid-template-columns: 16rem 1fr;
+    }
+  }
+}
+```
+
+```tsx
+<Link className="space-card-grid grid items-start gap-4 ...">
+```
+
+この pattern は CSS の通常 HMR で確実に走り、`@theme` の token rebuild に依存しない。Smashing Magazine / Tailwind Plus 公式の `@layer utilities` 追加 method と整合。実例: 2026-05-12 セッションで `md:grid-cols-[220px_1fr]` / `md:w-64` / `gap-y-10` / `--space-card-image-width` 等が連続 HMR 未反映で `.space-card-grid` custom utility に移行
