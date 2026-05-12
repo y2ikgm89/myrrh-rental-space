@@ -29,7 +29,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
   }
 
   return (
-    <ScrollRevealGroup className="divide-y border-y border-border divide-border">
+    <ScrollRevealGroup className="divide-y divide-divider">
       {items.map((item) => (
         <Link
           key={item.id}

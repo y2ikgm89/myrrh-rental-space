@@ -14,6 +14,7 @@ paths:
 - **サーバーエラー表示は `<div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">` に統一** — 素の `<p className="text-sm text-destructive">` は a11y 不足（`role="alert"` 欠落）かつ視認性不足
 - **管理画面ページタイトルは `text-2xl font-bold tracking-tight text-foreground` に統一** — ログインページのモバイル表示含む。`text-xl font-semibold` は禁止
 - **OGP/SNS シェアプレビューは `max-w-lg` で制約** — `aspect-[1200/630]` が親幅に追従するため、制約なしだとプレビューが巨大になる。`max-w-lg`（512px）を外側ラッパーに適用。`PageSeoForm.tsx` で設定
+- **`items-stretch` + ImageFrame `aspect-[*]` は CSS conflict** — CSS `aspect-ratio` は `height: auto` のときのみ適用される仕様。grid `items-stretch` で子要素 height が cell に合わせて明示設定されると aspect-ratio が無視され、`<ImageFrame aspect="landscape">` の 4:3 制約が機能しない。`object-cover` で「accidentally working」状態（画像が content height に追従、aspect 崩れ）になりやすい silent bug。**意図的な fixed aspect は `items-start`** で、`items-stretch` は明示的に「画像を content と揃える」意図のときのみ（aspect 制約を撤廃して `className="h-full"` で stretch）。検出: `getComputedStyle(imgFrame).aspectRatio === "auto"` で aspect 無効化を確認。参照実装: `space-list/space-card.tsx` horizontal layout（2026-05-12 で items-stretch ⇄ items-start を試行錯誤、最終的に business 判断で items-stretch 採用）
 - **公開 Badge と管理 Badge の variant 型は異なる** — 公開 `"default"|"success"|"warning"|"info"`、管理 shadcn/ui `"secondary"|"outline"|"destructive"` 等。共有 `enums/helpers.ts` の `*_BADGE_VARIANTS` は管理用。公開ページでは `Record<Enum, BadgeVariant>` をコンポーネント内に定義する
 - **RHF `defaultValues` は Zod スキーマの全フィールドを宣言必須** — 省略すると `useWatch` の初期値が `undefined` になり条件分岐が壊れる。`z.literal(true)` フィールド（`agreeToTerms` 等）は `defaultValues` に含めない（型が `true` のため `false` を渡せない）
 - **`useFormAction.onSuccess` は `(data, form) => void` 契約** — hook 戻り値の `form` を action callback 内で closure 参照すると `react-hooks/immutability` 違反（公式: "Return values and arguments to Hooks are immutable"）。`onSuccess: (_data, form) => form.setValue(...)` で callback 引数から受け取る。参照実装: `GoogleMapsSection.tsx` / `TurnstileSection.tsx`
@@ -135,8 +136,8 @@ paths:
 - **`Post.thumbnailUrl` は `String` 非 nullable（空文字列あり得る）** — フォールバック必須
 - **公開ページのアクションボタンに `rounded-full` 禁止** — Editorial Magazine はシャープエッジが基本
 - **リスト `.map` 内の個別 `<ScrollReveal delay={i*0.08}>` wrap は anti-pattern** — `ScrollRevealGroup` に集約
-- **Structured list の canonical border/divider pattern** — `divide-y border-y border-border divide-border`
-- **news archive は `<ul>/<li>` ではなく `<div className="divide-y border-y ...">`** — event-list と同形
+- **Structured list の canonical hairline pattern** — `divide-y divide-divider`（editorial 専用 token、外枠 `border-y border-border` は使わない）。`divide-border` 復活禁止 — `--color-border` は visible card / form / input 境界専用で、構造化リストには **常に `divide-divider`**（`--color-divider: oklch(0.92 0.005 60)` — NYTimes / Medium / Kinfolk Journal 標準値準拠の warm hairline）。外枠 `border-y` は editorial flow を分断するため不採用、リスト全体は親 `SectionWrapper` の padding で囲む（→ `tailwind-patterns/theme-tokens/semantic-tokens.md` §editorial hairline divider）
+- **news archive は `<ul>/<li>` ではなく `<div className="divide-y divide-divider">`** — event-list / space-grid / news-archive と同形
 
 ## 公開ページ実装 SSoT
 

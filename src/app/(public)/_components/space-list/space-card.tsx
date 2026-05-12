@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IconMapPin, IconStar } from "@tabler/icons-react";
+import { IconArrowRight, IconMapPin, IconStar } from "@tabler/icons-react";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
@@ -20,6 +20,11 @@ interface SpaceCardProps {
   readonly locationName?: string | undefined;
   readonly averageRating?: number | undefined;
   readonly reviewCount?: number | undefined;
+  /**
+   * "grid"（default）: 画像上・テキスト下の縦カード。SpaceShowcase / 関連スペース等で使用。
+   * "horizontal": 画像左・テキスト右の横長カード。/spaces 一覧の SpaceGrid で使用。
+   */
+  readonly layout?: "grid" | "horizontal";
 }
 
 /**
@@ -42,6 +47,7 @@ export async function SpaceCard({
   locationName,
   averageRating,
   reviewCount,
+  layout = "grid",
 }: SpaceCardProps) {
   // imageUrls はスキーマで重複禁止が保証されている（mainImageUrl との重複も禁止）
   const allImages = imageUrls ? [mainImageUrl, ...imageUrls] : [mainImageUrl];
@@ -57,6 +63,90 @@ export async function SpaceCard({
           "/h",
         )
       : null;
+
+  if (layout === "horizontal") {
+    return (
+      <Link
+        href={`/spaces/${slug}`}
+        className="group flex items-start gap-4 py-6 md:gap-8 md:py-10"
+      >
+        <ImageFrame
+          src={mainImageUrl}
+          alt={name}
+          fill
+          aspect="landscape"
+          sizes="(min-width: 768px) 16rem, 8rem"
+          className="w-32 shrink-0 md:w-64"
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div>
+            {categoryName ? (
+              <p className="text-xs uppercase tracking-[0.18em] text-accent">
+                {categoryName}
+              </p>
+            ) : null}
+            <h3 className="mt-1 font-heading text-lg font-light tracking-tight md:text-xl">
+              {name}
+            </h3>
+            {description ? (
+              <p className="mt-2 hidden min-h-12 line-clamp-2 text-sm leading-relaxed text-muted-foreground md:block">
+                {description}
+              </p>
+            ) : (
+              <div
+                className="mt-2 hidden min-h-12 md:block"
+                aria-hidden="true"
+              />
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground md:mt-3">
+              {locationName ? (
+                <span className="flex items-center gap-1">
+                  <IconMapPin
+                    className="h-3.5 w-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  {locationName}
+                </span>
+              ) : null}
+              {capacity != null ? <span>{capacity}名</span> : null}
+              {area != null ? <span>{area}㎡</span> : null}
+              {reviewCount != null &&
+              reviewCount > 0 &&
+              averageRating != null ? (
+                <span className="flex items-center gap-0.5">
+                  <IconStar
+                    className="h-3.5 w-3.5 text-rating"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  />
+                  <span className="text-rating">
+                    {averageRating.toFixed(1)}
+                  </span>
+                  <span>({reviewCount})</span>
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="mt-3 flex items-end justify-between gap-3 md:mt-4">
+            {hourlyPriceLabel ? (
+              <p className="font-heading text-base text-accent md:text-lg">
+                {hourlyPriceLabel}
+              </p>
+            ) : (
+              <span />
+            )}
+            <span className="flex items-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
+              詳細
+              <IconArrowRight
+                className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </span>
+          </div>
+        </div>
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -85,7 +175,7 @@ export async function SpaceCard({
       {/* Content */}
       <div className="p-4 sm:p-5">
         {categoryName ? (
-          <p className="text-[0.625rem] uppercase tracking-[0.18em] text-accent">
+          <p className="text-xs uppercase tracking-[0.18em] text-accent">
             {categoryName}
           </p>
         ) : null}

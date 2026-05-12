@@ -353,7 +353,7 @@ function LocationChapter({
               Hours / 営業時間
             </p>
           </div>
-          <dl className="divide-y divide-border border-b border-border">
+          <dl className="divide-y divide-divider">
             {hoursDisplay.map((h) => (
               <div
                 key={h.microdataContent}

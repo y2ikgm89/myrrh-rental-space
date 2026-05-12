@@ -63,7 +63,7 @@ export async function RelatedEvents({
       <Container variant="narrow">
         <Stack gap="lg">
           <Heading level={2}>他のイベント</Heading>
-          <div className="divide-y border-y border-border divide-border">
+          <div className="divide-y divide-divider">
             {cards.map((event) => (
               <EventCard key={event.id} variant="list" event={event} />
             ))}

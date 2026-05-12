@@ -49,7 +49,7 @@ export function EventListView({ events }: EventListViewProps) {
             </p>
           </div>
         ) : (
-          <ScrollRevealGroup className="divide-y border-y border-border divide-border">
+          <ScrollRevealGroup className="divide-y divide-divider">
             {monthEvents.map((event) => (
               <EventCard
                 key={event.id}

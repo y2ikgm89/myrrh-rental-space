@@ -142,7 +142,7 @@ function DayEventList({
   readonly nowMs: number;
 }) {
   return (
-    <div className="divide-y divide-border">
+    <div className="divide-y divide-divider">
       {events.map((event) => (
         <EventCard
           key={event.id}

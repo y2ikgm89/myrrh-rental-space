@@ -58,7 +58,7 @@ interface FaqListSectionProps {
 
 const VARIANT_STYLES = {
   default: {
-    container: "divide-y divide-border",
+    container: "divide-y divide-divider",
     item: "py-4 first:pt-0 last:pb-0",
     summary:
       "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
@@ -72,7 +72,7 @@ const VARIANT_STYLES = {
     marker: true,
   },
   minimal: {
-    container: "divide-y divide-border/50",
+    container: "divide-y divide-divider/60",
     item: "py-4 first:pt-0 last:pb-0",
     summary:
       "flex w-full cursor-pointer items-center justify-between gap-4 text-left text-sm font-light md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden",
@@ -261,7 +261,7 @@ export function FaqListSection({
                     )}
                   </header>
 
-                  <div className="divide-y divide-border">
+                  <div className="divide-y divide-divider">
                     {category.items.map((item, itemIndex) => (
                       <FaqAccordionItem
                         key={item.id}
@@ -329,7 +329,8 @@ export function FaqListSection({
                   href={toAppRoute(config.viewAllUrl)}
                   className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <PortableTextSpans spans={config.viewAllText} /> &rarr;
+                  <PortableTextSpans spans={config.viewAllText} />
+                  <span aria-hidden="true">{" →"}</span>
                   <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
                 </Link>
               </div>

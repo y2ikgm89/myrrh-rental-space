@@ -40,9 +40,9 @@ interface ValuePropsSectionProps {
 
 /** 項目数 → grid columns class */
 const GRID_COLS: Record<2 | 3 | 4, string> = {
-  2: "grid-cols-2 divide-x divide-border",
-  3: "grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0",
-  4: "grid-cols-2 divide-x divide-y divide-border md:grid-cols-4 md:divide-y-0",
+  2: "grid-cols-2 divide-x divide-divider",
+  3: "grid-cols-1 divide-y divide-divider md:grid-cols-3 md:divide-x md:divide-y-0",
+  4: "grid-cols-2 divide-x divide-y divide-divider md:grid-cols-4 md:divide-y-0",
 };
 
 const CONTAINER_MAX_WIDTH: Record<LayoutContainerWidth, string> = {
@@ -92,7 +92,11 @@ export function ValuePropsSection({
 
   const grid = (
     <div
-      className={cn("mx-auto grid divide-border", maxWidthClass, gridColsClass)}
+      className={cn(
+        "mx-auto grid divide-divider",
+        maxWidthClass,
+        gridColsClass,
+      )}
     >
       {config.items.map((item) => {
         const iconElement =

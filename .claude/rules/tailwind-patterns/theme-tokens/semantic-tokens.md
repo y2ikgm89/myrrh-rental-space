@@ -53,11 +53,24 @@ paths:
 
 **公開ページ固有トークン**（管理画面に存在しないもの）:
 
-| トークン               | Tailwind クラス     | 用途                          |
-| ---------------------- | ------------------- | ----------------------------- |
-| `--color-surface`      | `bg-surface`        | カードより薄い背景            |
-| `--color-accent`       | `text-accent`       | ブロンズ（CTA・ラベル・価格） |
-| `--color-accent-light` | `text-accent-light` | ホバー時ブロンズ              |
+| トークン               | Tailwind クラス     | 用途                                                                                      |
+| ---------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| `--color-surface`      | `bg-surface`        | カードより薄い背景                                                                        |
+| `--color-accent`       | `text-accent`       | ブロンズ（CTA・ラベル・価格）                                                             |
+| `--color-accent-light` | `text-accent-light` | ホバー時ブロンズ                                                                          |
+| `--color-divider`      | `divide-divider`    | **editorial hairline divider 専用**（構造化リストの内部区切り）。card border には使わない |
+
+### editorial hairline divider（`--color-divider`）
+
+`--color-border` (`oklch(0.85 0.015 60)`) は warm tone + 高 chroma で visible な card / form / input 境界用。構造化リスト（`SpaceGrid` / `news-archive-list` / `event-list-view` / `FaqListSection` 等）の内部区切りには NYTimes / Medium / Kinfolk Journal 業界標準準拠の極薄 hairline `--color-divider: oklch(0.92 0.005 60)` を使う。
+
+| 用途                                        | 正解                      | 禁止                                                                       |
+| ------------------------------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| 構造化リスト内部区切り                      | `divide-y divide-divider` | `divide-y divide-border` / `divide-y border-y border-border divide-border` |
+| card / form / input 境界                    | `border border-border`    | `border border-divider`                                                    |
+| article footer 等の visible block separator | `border-y border-border`  | `border-y border-divider`（薄すぎて分断意図が伝わらない）                  |
+
+editorial flow では構造化リストの外枠（`border-y`）は **不採用**。リストの境界は親 `SectionWrapper` の padding で囲む（Kinfolk Journal / NYTimes article list 公式パターン）。
 
 **公開ページ固有のユーティリティクラス**（`@layer utilities` に定義）:
 

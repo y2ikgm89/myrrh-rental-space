@@ -38,7 +38,7 @@ export default async function TermsListPage() {
             現在公開中の規約はありません。
           </p>
         ) : (
-          <ul className="divide-y border-y border-border">
+          <ul className="divide-y divide-divider">
             {items.map((item) => (
               <li key={item.id} className="py-6">
                 <Link
