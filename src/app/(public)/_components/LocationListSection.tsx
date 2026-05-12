@@ -256,7 +256,7 @@ function LocationChapter({
           <div className="pt-1">
             <Link
               href={`/access/${location.slug}` as Route<string>}
-              className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex min-h-11 items-center text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               詳細を見る
             </Link>
@@ -303,7 +303,7 @@ function LocationChapter({
               href={mapsHref}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-foreground"
+              className="group inline-flex min-h-11 items-center gap-2 text-xs uppercase tracking-[0.18em] text-foreground"
             >
               <IconMapPin className="h-4 w-4 text-accent" aria-hidden="true" />
               <span className="border-b border-foreground pb-0.5 transition-opacity group-hover:opacity-60">
@@ -533,7 +533,7 @@ function GlobalContactBlock({
               <a
                 itemProp="telephone"
                 href={`tel:${businessInfo.phone}`}
-                className="font-heading text-2xl font-light italic text-foreground transition-opacity hover:opacity-60 md:text-3xl"
+                className="inline-flex min-h-11 items-center font-heading text-2xl font-light italic text-foreground transition-opacity hover:opacity-60 md:text-3xl"
               >
                 {businessInfo.phone}
               </a>
@@ -550,7 +550,7 @@ function GlobalContactBlock({
               <a
                 itemProp="email"
                 href={`mailto:${businessInfo.email}`}
-                className="break-all border-b border-foreground pb-0.5 text-foreground transition-opacity hover:opacity-60"
+                className="inline-flex min-h-11 items-center break-all border-b border-foreground pb-0.5 text-foreground transition-opacity hover:opacity-60"
               >
                 {businessInfo.email}
               </a>
