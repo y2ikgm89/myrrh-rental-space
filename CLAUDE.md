@@ -69,9 +69,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Turnstile 配置基準** — 未認証公開フォーム必須、認証済みでも予約・決済等の高リスク操作は許容、参照系は不要
 - **datetime-local 入力は `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst`（`@/shared/lib/date-format`）経由必須** — `new Date(localStr)` / `format(d, "yyyy-MM-dd'T'HH:mm")` は tz 依存で 9 時間ずれる silent bug。schema は `z.string().datetime({ local: true })`、command 層で UTC 変換（→ `ssot-singletons.md` §日時フォーマット）
 - **Section schema の canonical は `definitions/<type>/schema.ts`** — `validations/section.ts` の同名 export はレガシー重複で drift 済み。全 schema は `safeParse({})` 成立必須（required field に必ず `.default()`）— `createTypedConfigGetterFromSchema` の fallback 契約（→ `ssot-singletons.md` §Section schema 重複）
-- **`PortableTextSpan[]` / `PortableTextBlock[]` の JSX truthy gate 禁止** — 空配列 `[]` も truthy。`{config.field && ...}` ではなく `{config.field.length > 0 && ...}` で gate。sectionLabel default 値（"Events" 等）と outer OR 判定の組み合わせで「ラベル単独残り」silent bug を起こす（→ `frontend/sections.md` §sectionLabel 単独 render 禁止）
-
-詳細（datetime-local / Mutually exclusive boolean / 配列 uniqueness 等）: `zod-patterns/validation-schemas.md` / `implementation-patterns.md`
+- **`PortableTextSpan[]` / `PortableTextBlock[]` の JSX truthy gate 禁止** — 空配列 `[]` も truthy。`.length > 0` で gate（→ `frontend/sections.md` §sectionLabel 単独 render 禁止）
 
 ### UI / UX（プロジェクト全体に適用される最重要のみ）
 
@@ -101,7 +99,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ### 検証
 
 - **作業中**: `bun run type-check` / **完了前**: `bun run validate` / **コミット前**: `bun run validate && bun run build`
-- **完遂判定は `test:unit` + `test:integration` 両走必須** — unit pass のみで「完了」宣言は危険、Phase 0 rename / migration drift 等で integration fixture が drift しがち（実例: 2026-05-10 で navigation / homepage-settings fixture が unit pass + integration 22 fail）
+- **完遂判定は `test:unit` + `test:integration` 両走必須** — unit pass のみで「完了」宣言は危険、Phase 0 rename / migration drift 等で integration fixture が drift しがち
 - **依存パッチ/マイナー更新後は validate 必須** — eslint-plugin-react-hooks 等のパッチで新ルール追加 = 実質破壊的変更
 - **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。CI で `test:unit` + `test:integration` + E2E をフル実行。`test:unit` / `test:integration` は per-directory バッチ（`bun test __tests__/unit` 簡略化は `mock.module` 干渉で偽陽性）
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン

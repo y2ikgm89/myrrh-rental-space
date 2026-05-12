@@ -1,12 +1,10 @@
 ---
-description: Claude Code harness 固有パターン — Import Alias / shadcn/ui / Route Handler (PPR) / Claude Code 設定
+description: Claude Code harness 固有パターン — 公式仕様 5 層構造 / Subagent dispatch 規律 / context budget / Edit-Write race 等の harness gotchas
 paths:
-  - src/**
   - .claude/**
-  - tsconfig.json
 ---
 
-# Claude Code Patterns — Import Alias / shadcn / Route Handler / Harness
+# Claude Code Patterns — Harness 固有規律
 
 ## Claude Code 公式準拠の原則（最重要）
 
@@ -86,26 +84,6 @@ paths:
 公式仕様で表現できない明確な必要性がある場合のみ、本ファイル内に「例外」セクションを追加して正当化を明記する（現状: 例外なし）。
 
 ---
-
-## Import Alias
-
-- **内部モジュールの `import { X as Y }` 禁止** — 名前衝突は namespace import（`import * as settingsCommands from "..."`）で解決。`settingsCommands.updateTaxSettings()` のように呼び出す
-- **許容される alias**: 第三者ライブラリの primitive リネームのみ（`Command as CommandPrimitive`、`Toaster as SonnerToaster`）
-- **パススルーラッパー関数禁止** — 何も追加しない `async function X() { return XQuery(); }` は削除。直接 import して使う
-- **barrel export の不要な型リネーム禁止** — `export type { FooInput as Foo }` は消費者がいない場合は削除。元の名前でそのまま export する
-- **`utils.ts` は非推奨 re-export barrel** — FormData ヘルパーは `@/shared/lib/form-data`、`generateSlug` は `@/shared/lib/slug` が正本。`utils.ts` に新規 import・新関数追加禁止。`cn` は `@/shared/lib/cn`、日付フォーマットは `@/shared/lib/date-format`、`withRetry` は `@/shared/lib/action-helpers`
-
-## shadcn/ui コンポーネント
-
-- **`import * as React from "react"` 禁止** — shadcn/ui 再生成時に混入する。`import type { ComponentProps } from "react"` 等の個別 import に変換。`React.ComponentProps` → `ComponentProps`、`React.HTMLAttributes` → `HTMLAttributes`
-- **`<SelectItem value="">` 禁止** — Radix UI Select は空文字列をプレースホルダー表示用に予約しており、`value=""` はランタイムエラー。nullable 選択にはセンチネル値パターンを使用: `const NONE_VALUE = "__none__"` → `<SelectItem value={NONE_VALUE}>なし</SelectItem>` → `onValueChange` で `value === NONE_VALUE ? null : value` にマップ
-- **個別 `@radix-ui/react-*` パッケージ禁止 — `radix-ui ^1.4.x` 集約のみ** — `import { Dialog as DialogPrimitive } from "radix-ui"` で namespace import（`import * as DialogPrimitive from "@radix-ui/react-dialog"` は廃止形式、再導入禁止）。`Slot` は v1 で構造変更済 — `import { Slot as SlotPrimitive } from "radix-ui"` + 本文 `<SlotPrimitive.Slot ...>` で書き換え（トップレベル `Slot` export なし）。20 file 移行は 2026-05-06 commit `a94835e1` で完了
-
-## Route Handler（PPR 環境）
-
-- **Route Handler の catch ブロックに `unstable_rethrow(error)` 必須** — PPR (`cacheComponents: true`) 環境では Route Handler GET のプリレンダリング時に `request.headers` アクセスで bail out エラーがスローされる。catch で握り潰すと `logError` が ERROR 出力しビルドログにノイズ。`unstable_rethrow(error)` を catch 先頭に配置して Next.js 内部エラーを再スロー
-
-- **`export const dynamic = 'force-dynamic'` は PPR 環境で使用不可** — `cacheComponents: true` と Route Segment Config は非互換（ビルドエラー）。公式: 「全ページがデフォルトで動的のため不要」
 
 ## Claude Code 設定
 
