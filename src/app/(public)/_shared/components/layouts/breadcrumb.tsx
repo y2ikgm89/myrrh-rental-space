@@ -37,12 +37,15 @@ export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
             <Link
               href="/"
               className={cn(
-                "hover:text-foreground",
-                isSmall ? "py-0" : "px-1 py-1",
+                "inline-flex min-h-11 items-center hover:text-foreground",
+                isSmall ? "px-2" : "px-3",
               )}
               aria-label="ホーム"
             >
-              <IconHome className={isSmall ? "h-3.5 w-3.5" : "h-4 w-4"} />
+              <IconHome
+                className={isSmall ? "h-3.5 w-3.5" : "h-4 w-4"}
+                aria-hidden="true"
+              />
             </Link>
           </li>
           {items.map((item, i) => (
@@ -54,8 +57,8 @@ export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
                 <Link
                   href={toAppRoute(item.href)}
                   className={cn(
-                    "hover:text-foreground",
-                    isSmall ? "py-0" : "px-1 py-1",
+                    "inline-flex min-h-11 items-center hover:text-foreground",
+                    isSmall ? "px-2" : "px-3",
                   )}
                 >
                   {item.label}
