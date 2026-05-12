@@ -56,7 +56,7 @@ function Input({
       type={type}
       className={cn(
         // Base
-        "flex h-9 w-full rounded-md border border-input bg-card px-3 py-1.5 text-base md:text-sm",
+        "flex h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-base md:text-sm",
         // Shadow & transition
         "shadow-sm transition-all duration-200 ease-out",
         // File input
