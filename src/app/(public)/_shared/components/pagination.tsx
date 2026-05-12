@@ -40,6 +40,12 @@ interface PaginationProps {
   preservedQuery?: Readonly<Record<string, string | undefined>>;
 }
 
+// WCAG 2.5.5 Enhanced — `min-h-11` で 44px ヒットエリア確保
+const PAGE_LINK_BASE =
+  "inline-flex min-h-11 min-w-11 items-center justify-center border px-3 py-2 text-sm transition-colors";
+const PAGE_LINK_INACTIVE =
+  "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground";
+
 export function Pagination({
   currentPage,
   totalPages,
@@ -68,7 +74,7 @@ export function Pagination({
       {currentPage > 1 && (
         <Link
           href={toAppRoute(getHref(currentPage - 1))}
-          className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+          className={cn(PAGE_LINK_BASE, PAGE_LINK_INACTIVE)}
         >
           前へ
         </Link>
@@ -78,7 +84,7 @@ export function Pagination({
         <>
           <Link
             href={toAppRoute(getHref(1))}
-            className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+            className={cn(PAGE_LINK_BASE, PAGE_LINK_INACTIVE)}
           >
             1
           </Link>
@@ -95,10 +101,10 @@ export function Pagination({
           key={page}
           href={toAppRoute(getHref(page))}
           className={cn(
-            "border px-3 py-2 text-sm transition-colors",
+            PAGE_LINK_BASE,
             page === currentPage
               ? "border-accent bg-accent text-accent-foreground"
-              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+              : PAGE_LINK_INACTIVE,
           )}
           aria-current={page === currentPage ? "page" : undefined}
         >
@@ -115,7 +121,7 @@ export function Pagination({
           )}
           <Link
             href={toAppRoute(getHref(totalPages))}
-            className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+            className={cn(PAGE_LINK_BASE, PAGE_LINK_INACTIVE)}
           >
             {totalPages}
           </Link>
@@ -125,7 +131,7 @@ export function Pagination({
       {currentPage < totalPages && (
         <Link
           href={toAppRoute(getHref(currentPage + 1))}
-          className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+          className={cn(PAGE_LINK_BASE, PAGE_LINK_INACTIVE)}
         >
           次へ
         </Link>

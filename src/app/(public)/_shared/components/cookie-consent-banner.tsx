@@ -159,14 +159,14 @@ export function CookieConsentBanner({
             <button
               type="button"
               onClick={handleReject}
-              className="inline-flex items-center justify-center border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {rejectText || DEFAULT_REJECT_TEXT}
             </button>
             <button
               type="button"
               onClick={handleAccept}
-              className="inline-flex items-center justify-center bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {acceptText || DEFAULT_ACCEPT_TEXT}
             </button>
