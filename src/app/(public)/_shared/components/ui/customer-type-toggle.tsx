@@ -36,7 +36,7 @@ export function CustomerTypeToggle({
           disabled={disabled}
           onClick={() => onChange(CustomerType.PERSONAL)}
           className={cn(
-            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
+            "flex min-h-11 items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
             value === CustomerType.PERSONAL
               ? "border-accent bg-accent/5 text-foreground"
               : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
@@ -53,7 +53,7 @@ export function CustomerTypeToggle({
           disabled={disabled}
           onClick={() => onChange(CustomerType.CORPORATE)}
           className={cn(
-            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
+            "flex min-h-11 items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
             value === CustomerType.CORPORATE
               ? "border-accent bg-accent/5 text-foreground"
               : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",

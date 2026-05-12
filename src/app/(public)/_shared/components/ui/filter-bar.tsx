@@ -108,7 +108,7 @@ export function FilterBar({
           onClick={handleReset}
           disabled={!hasActiveFilter}
           aria-label="フィルタを初期状態に戻す"
-          className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
+          className="inline-flex min-h-11 items-center px-2 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
         >
           リセット
         </button>
