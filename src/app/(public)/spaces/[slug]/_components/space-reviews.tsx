@@ -81,7 +81,7 @@ export async function SpaceReviews({ spaceId }: SpaceReviewsProps) {
             </p>
             {review.replyBody ? (
               <div className="mt-4 border-l-2 border-accent pl-4">
-                <p className="mb-2 text-[0.7rem] uppercase tracking-[0.18em] text-accent">
+                <p className="mb-2 text-[0.6875rem] uppercase tracking-[0.18em] text-accent">
                   店舗からの返信
                 </p>
                 <p className="whitespace-pre-wrap text-sm text-muted-foreground">

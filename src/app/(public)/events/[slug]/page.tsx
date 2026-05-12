@@ -348,7 +348,7 @@ function InfoCell({ icon, label, children }: InfoCellProps): ReactElement {
     <div className="flex items-start gap-3 bg-background p-4 sm:p-5">
       <span className="mt-0.5 shrink-0 text-accent">{icon}</span>
       <div className="min-w-0 space-y-1">
-        <dt className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <dt className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </dt>
         <dd className="text-sm leading-relaxed text-foreground">{children}</dd>

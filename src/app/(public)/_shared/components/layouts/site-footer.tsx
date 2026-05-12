@@ -140,7 +140,7 @@ const CONTACT_LINK_CLASS =
   "text-foreground transition-colors hover:underline hover:underline-offset-4 focus-visible:underline focus-visible:underline-offset-4 focus-visible:outline-none";
 
 const HEADING_CLASS =
-  "text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground";
+  "text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground";
 
 export async function Footer(): Promise<ReactElement> {
   const [info, footerNav, footerSettings, socialLinks, footerTerms] =
@@ -349,7 +349,7 @@ export async function Footer(): Promise<ReactElement> {
               ))}
             </nav>
           )}
-          <p className="text-center text-[0.6rem] tracking-[0.18em] text-muted-foreground">
+          <p className="text-center text-[0.6875rem] tracking-[0.18em] text-muted-foreground">
             &copy; <CopyrightYear /> {info.name}. All rights reserved.
           </p>
         </div>

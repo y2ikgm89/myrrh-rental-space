@@ -445,7 +445,7 @@ export function SpacesCarousel({
                           )}
                         >
                           {space.categoryName ? (
-                            <span className="text-[0.6rem] uppercase tracking-[0.18em] text-accent-foreground/70">
+                            <span className="text-[0.6875rem] uppercase tracking-[0.18em] text-accent-foreground/70">
                               {space.categoryName}
                             </span>
                           ) : null}
@@ -501,7 +501,7 @@ export function SpacesCarousel({
         {activeSpace ? (
           <div className="mx-auto mt-8 max-w-2xl text-center md:mt-14">
             {activeSpace.categoryName ? (
-              <span className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
                 {activeSpace.categoryName}
               </span>
             ) : null}
@@ -537,7 +537,7 @@ export function SpacesCarousel({
             </div>
             <Link
               href="/spaces"
-              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
+              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
             >
               すべてのスペースを見る
               <IconArrowRight className="h-3 w-3" aria-hidden="true" />
