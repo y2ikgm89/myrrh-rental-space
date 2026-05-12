@@ -28,7 +28,7 @@ export function PageHero({ config }: PageHeroProps): ReactElement | null {
       return <CompactHero {...rest} />;
     }
     case "minimal": {
-      const { variant: _v, ...rest } = hero;
+      const { variant: _v, layout: _l, ...rest } = hero;
       return <MinimalHero {...rest} />;
     }
     default:

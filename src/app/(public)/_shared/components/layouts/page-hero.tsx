@@ -25,15 +25,7 @@ interface PageHeroCompactProps {
   readonly breadcrumb?: ReactNode;
 }
 
-interface PageHeroMinimalProps {
-  readonly variant: "minimal";
-  readonly title: string;
-}
-
-type PageHeroProps =
-  | PageHeroEditorialProps
-  | PageHeroCompactProps
-  | PageHeroMinimalProps;
+type PageHeroProps = PageHeroEditorialProps | PageHeroCompactProps;
 
 export function PageHero(props: PageHeroProps) {
   if (props.variant === "editorial") {
@@ -70,23 +62,15 @@ export function PageHero(props: PageHeroProps) {
     );
   }
 
-  if (props.variant === "compact") {
-    return (
-      <section className="bg-surface py-[var(--spacing-block)]">
-        <Container>
-          <Stack gap="sm">
-            {props.breadcrumb}
-            <Heading level={1}>{props.title}</Heading>
-          </Stack>
-        </Container>
-      </section>
-    );
-  }
-
-  // minimal
+  // compact
   return (
-    <Container className="py-8 md:py-12">
-      <Heading level={1}>{props.title}</Heading>
-    </Container>
+    <section className="bg-surface py-[var(--spacing-block)]">
+      <Container>
+        <Stack gap="sm">
+          {props.breadcrumb}
+          <Heading level={1}>{props.title}</Heading>
+        </Stack>
+      </Container>
+    </section>
   );
 }

@@ -48,3 +48,15 @@ paths:
 - **判定基準**: 送出側が `spansToPlainText(config.x)` / `blocksToPlainText(config.x)` で derive + 受取側が `prop = "デフォルト"` の default arg を持つ場合。空配列 `[]` 入力 → empty string → empty button / heading / aria-label の silent bug
 - **実例**: 2026-05-13 `ContactFormSection.submitLabel`（`PublicInquiryFormCard` の `submitLabel = "送信する"` default が DB `section.config` に `submitButtonText` key 不在のとき発火せず、ボタン中身が空白で描画。Phase 3 で `string → PortableTextSpan[]` 化した時点で潜在化、seed 既存 config 不更新原則と組合せて顕在化）
 - **検出 grep**: `grep -rnE 'submitLabel=\{[a-zA-Z]+\}|aria-label=\{spansToPlainText|title=\{spansToPlainText' src/app/\(public\)` で derive 値を default 持ち prop に直接渡している箇所を列挙
+
+## システムページ hero の canonical は `hero` section type
+
+「他システムページと揃える」判断時、**`hero` section type の `StandardHeroSection variant="minimal"`** が canonical（faq / contact / about 等が使用、`DEFAULT_PAGE_SECTIONS.faq` / `.contact` 参照）。
+
+- **中央寄せ Container** + 両端 gold-line eyebrow (`SectionLabel`) + `text-page-hero` h1 + SplitText
+- gradient bg (`from-surface via-background to-background`)
+
+`page-hero` section type の `MinimalHero` は **別実装**（Page.pageHero、ホーム editorial 系の 1 variant）— **左寄せ** + uppercase eyebrow (gold-line なし) + plain h1。
+
+- **判定手順**: `default-page-sections.ts` で他システムページが使う section type を実測してから migration target を決める。コンポーネント名の「minimal」類似で判断すると hero variant 誤選択の cascade（実例: 2026-05-13 login hero migration で `MinimalHero` を target にして左寄せ silent UX bug → `StandardHeroSection variant="minimal"` に再 migration）
+- **静的 page から canonical hero を呼ぶ**: `getHeroConfig({...overrides})` + `DEFAULT_SECTION_STYLE` で薄い wrapper SC を作る（`login/_components/login-hero.tsx` 参照実装）。`createSpan()` factory は module-level 定数で評価（→ `react/forms-ssr.md` §PPR + `crypto.randomUUID()` / 非決定値）

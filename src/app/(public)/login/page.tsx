@@ -4,8 +4,8 @@ import type { SearchParams } from "nuqs/server";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
-import { PageHero } from "@/public/components/layouts/page-hero";
 import { getRequiredTermsAtSignup } from "@/shared/domain/terms/queries";
+import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";
 
@@ -37,7 +37,7 @@ export default async function LoginPage({
 
   return (
     <>
-      <PageHero variant="minimal" title="ログイン" />
+      <LoginHero />
 
       <Container variant="narrow">
         <Stack gap="lg" className="mx-auto max-w-sm pb-[var(--spacing-block)]">

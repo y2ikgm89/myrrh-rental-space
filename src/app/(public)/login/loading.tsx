@@ -1,12 +1,12 @@
 import type { ReactElement } from "react";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
-import { PageHero } from "@/public/components/layouts/page-hero";
+import { LoginHero } from "./_components/login-hero";
 
 export default function LoginLoading(): ReactElement {
   return (
     <>
-      <PageHero variant="minimal" title="ログイン" />
+      <LoginHero />
 
       <Container variant="narrow">
         <Stack

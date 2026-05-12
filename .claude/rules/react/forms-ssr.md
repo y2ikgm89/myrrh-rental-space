@@ -35,6 +35,33 @@ export default async function Page() {
 
 ---
 
+## PPR + `crypto.randomUUID()` / 非決定値 — 同じ制約系列
+
+`cacheComponents: true` 環境では SC render body 内の **同期非決定値**全般が制約対象。`new Date()` と同じく `crypto.randomUUID()` も対象で、`createSpan()` / `createBlock()` 等の `crypto.randomUUID()` を内部呼び出しする factory helper も SC body で呼べない:
+
+```
+Route "/login" used `crypto.randomUUID()` before accessing uncached data
+```
+
+**canonical fix**: factory 呼び出しを **module-level 定数**に lift。module init で 1 回だけ評価され render body に入らない。`editorialSplitHeroDefaults` (`EditorialSplitHero.tsx`) が参照実装。
+
+```tsx
+// NG: SC render body で createSpan() を呼ぶ
+export default function LoginPage() {
+  return <Hero title={[createSpan("ログイン")]} />; // ← PPR error
+}
+
+// OK: module-level 定数化
+const LOGIN_HERO_TITLE = [createSpan("ログイン")];
+export default function LoginPage() {
+  return <Hero title={LOGIN_HERO_TITLE} />;
+}
+```
+
+**適用範囲**: 静的に決定できる Portable Text / ID 等を SC で使う場合。動的データに依存する場合は `await connection()` ルートを取る（`new Date()` と同じ判断基準）。複数 SC で同じ static hero を共有する場合は薄い wrapper SC に抽出（`login/_components/login-hero.tsx` 参照実装、2026-05-13 確立）。
+
+---
+
 ## Adjusting State Directly During Render（prop → state 同期の公式推奨）
 
 `useEffect(() => setState(prop), [prop])` は `react-hooks/set-state-in-effect` 違反かつ二重レンダー。
