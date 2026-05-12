@@ -44,7 +44,7 @@ export function PublishSwitch<TData = unknown>({
   };
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-1 py-2">
       <Switch
         checked={isPublished}
         onCheckedChange={handleChange}

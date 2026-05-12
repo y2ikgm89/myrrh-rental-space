@@ -25,7 +25,7 @@ const TAB_ITEMS: { value: AdminSpaceManagementTab; label: string }[] = [
 ];
 
 const tabTriggerClass = cn(
-  "inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200",
+  "inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-all duration-200",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
   "hover:bg-background/50",
 );
