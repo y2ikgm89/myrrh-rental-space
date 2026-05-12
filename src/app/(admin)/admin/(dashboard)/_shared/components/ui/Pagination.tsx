@@ -176,6 +176,7 @@ export function Pagination({
           <Button
             variant="outline"
             size="sm"
+            className="min-w-11"
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage <= 1 || isPending}
             aria-label="前のページへ移動"
@@ -216,6 +217,7 @@ export function Pagination({
           <Button
             variant="outline"
             size="sm"
+            className="min-w-11"
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage >= totalPages || isPending}
             aria-label="次のページへ移動"

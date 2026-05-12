@@ -37,7 +37,7 @@ export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
             <Link
               href="/"
               className={cn(
-                "inline-flex min-h-11 items-center hover:text-foreground",
+                "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center hover:text-foreground",
                 isSmall ? "px-2" : "px-3",
               )}
               aria-label="ホーム"
@@ -57,7 +57,7 @@ export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
                 <Link
                   href={toAppRoute(item.href)}
                   className={cn(
-                    "inline-flex min-h-11 items-center hover:text-foreground",
+                    "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center hover:text-foreground",
                     isSmall ? "px-2" : "px-3",
                   )}
                 >
