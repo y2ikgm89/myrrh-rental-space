@@ -47,15 +47,14 @@ export function TopBar({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={toggleSidebar}
-            className="h-9 w-9 p-0"
             aria-label="メニューを開く"
           >
-            <IconMenu2 className="h-5 w-5" />
+            <IconMenu2 className="h-5 w-5" aria-hidden="true" />
           </Button>
         )}
-        <Link href="/admin" className="flex items-center">
+        <Link href="/admin" className="flex min-h-11 items-center">
           {branding}
         </Link>
         {searchTrigger}
@@ -67,7 +66,7 @@ export function TopBar({
         <Link
           href="/"
           target="_blank"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 hidden sm:block"
+          className="hidden min-h-11 items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground sm:inline-flex"
         >
           サイトを表示
         </Link>

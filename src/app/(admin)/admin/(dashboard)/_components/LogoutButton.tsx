@@ -23,7 +23,7 @@ export function LogoutButton(): ReactElement {
     <button
       type="button"
       onClick={handleLogout}
-      className="text-sm text-muted-foreground hover:text-foreground"
+      className="inline-flex min-h-11 items-center px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
     >
       ログアウト
     </button>
