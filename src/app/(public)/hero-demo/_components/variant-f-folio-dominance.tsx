@@ -18,10 +18,10 @@ export function VariantFFolioDominance() {
       {/* Masthead with large folio number */}
       <div className="px-6 pt-12 pb-6">
         <div className="flex items-center justify-between">
-          <p className="text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
             Spring 2026
           </p>
-          <p className="text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
             Volume One
           </p>
         </div>

@@ -16,7 +16,7 @@ export function VariantDVerticalGallery() {
     <section className="bg-background">
       {/* Text hero */}
       <div className="px-6 pt-14 pb-10">
-        <p className="mb-6 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-6 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           {COPY.label}
         </p>
         <h1 className="text-hero font-heading font-light leading-[1.08] tracking-tight">
@@ -52,10 +52,10 @@ export function VariantDVerticalGallery() {
                 />
               </div>
               <figcaption className="flex items-center justify-between px-6 py-4">
-                <span className="text-[0.55rem] uppercase tracking-[0.18em] text-accent tabular-nums">
+                <span className="text-[0.6875rem] uppercase tracking-[0.18em] text-accent tabular-nums">
                   Plate {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="max-w-[60%] truncate text-[0.55rem] uppercase tracking-[0.15em] text-muted-foreground">
+                <span className="max-w-[60%] truncate text-[0.6875rem] uppercase tracking-[0.15em] text-muted-foreground">
                   {img.alt}
                 </span>
               </figcaption>

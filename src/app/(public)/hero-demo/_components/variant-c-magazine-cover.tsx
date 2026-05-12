@@ -17,20 +17,20 @@ export function VariantCMagazineCover() {
     <section className="flex flex-col bg-background">
       {/* Masthead band */}
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <p className="text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           Issue 01
         </p>
-        <p className="text-[0.6rem] uppercase tracking-[0.2em] text-accent font-heading italic">
+        <p className="text-[0.6875rem] uppercase tracking-[0.2em] text-accent font-heading italic">
           Myrrh
         </p>
-        <p className="text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           Spring 2026
         </p>
       </div>
 
       {/* Centered title */}
       <div className="px-8 pt-12 pb-10 text-center">
-        <p className="mb-6 text-[0.55rem] uppercase tracking-[0.25em] text-muted-foreground">
+        <p className="mb-6 text-[0.6875rem] uppercase tracking-[0.25em] text-muted-foreground">
           A Journal of Quiet Spaces
         </p>
         <h1 className="text-hero font-heading font-light italic leading-[1.02] tracking-[-0.02em]">
@@ -65,7 +65,7 @@ export function VariantCMagazineCover() {
         >
           {COPY.buttonText}
         </Button>
-        <p className="mt-4 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mt-4 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           Photography — Myrrh Studio, 2026
         </p>
       </div>

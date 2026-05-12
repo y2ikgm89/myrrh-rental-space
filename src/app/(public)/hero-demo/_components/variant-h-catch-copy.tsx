@@ -18,17 +18,17 @@ export function VariantHCatchCopy() {
     <section className="flex min-h-[95svh] flex-col bg-background">
       {/* Top band: small English meta */}
       <div className="flex items-center justify-between px-6 pt-6">
-        <p className="text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           Volume One
         </p>
-        <p className="text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           Spring 2026
         </p>
       </div>
 
       {/* Japanese catch copy — dominant */}
       <div className="px-6 pt-12">
-        <p className="mb-4 text-[0.6rem] uppercase tracking-[0.25em] text-accent">
+        <p className="mb-4 text-[0.6875rem] uppercase tracking-[0.25em] text-accent">
           — Myrrh Rental Space
         </p>
         <h1
@@ -76,7 +76,7 @@ export function VariantHCatchCopy() {
 
       {/* Scroll indicator — SWELL convention */}
       <div className="flex items-center justify-center gap-3 pb-8">
-        <span className="text-[0.5rem] uppercase tracking-[0.3em] text-muted-foreground">
+        <span className="text-[0.6875rem] uppercase tracking-[0.3em] text-muted-foreground">
           Scroll
         </span>
         <div className="h-8 w-px bg-foreground/30" aria-hidden="true" />

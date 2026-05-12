@@ -17,7 +17,7 @@ export function VariantIWarmWellness() {
   return (
     <section className="relative bg-surface px-6 py-16">
       {/* Top eyebrow — bronze */}
-      <p className="mb-2 text-[0.55rem] uppercase tracking-[0.25em] text-accent">
+      <p className="mb-2 text-[0.6875rem] uppercase tracking-[0.25em] text-accent">
         Vol. 01 — Spring 2026
       </p>
 

@@ -30,7 +30,7 @@ export function VariantJHeroPair() {
 
       {/* Bottom: text block */}
       <div className="px-6 pt-10 pb-14">
-        <p className="mb-6 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-6 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           {COPY.label}
         </p>
 

@@ -44,7 +44,7 @@ export default function HeroDemoPage() {
         aria-label="バリアント切替"
       >
         <div className="mx-auto flex max-w-md items-center gap-2 overflow-x-auto px-4 py-3 md:max-w-[420px]">
-          <span className="shrink-0 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="shrink-0 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
             Variant
           </span>
           {VARIANTS.map((v) => (
@@ -68,7 +68,7 @@ export default function HeroDemoPage() {
 
       {/* Intro (shown only at top, scrolls away) */}
       <header className="mx-auto max-w-md border-x border-border bg-background px-6 py-8 md:max-w-[420px]">
-        <p className="mb-2 text-[0.55rem] uppercase tracking-[0.18em] text-accent">
+        <p className="mb-2 text-[0.6875rem] uppercase tracking-[0.18em] text-accent">
           Hero Section Demo
         </p>
         <h1 className="mb-3 font-heading text-2xl font-light leading-tight">
@@ -94,13 +94,13 @@ export default function HeroDemoPage() {
           className="mx-auto max-w-md border-x border-t border-border bg-card px-6 py-10 md:max-w-[420px]"
           aria-label="デザインの解説"
         >
-          <p className="mb-2 text-[0.55rem] uppercase tracking-[0.18em] text-accent">
+          <p className="mb-2 text-[0.6875rem] uppercase tracking-[0.18em] text-accent">
             Variant {active.toUpperCase()}
           </p>
           <h2 className="mb-2 font-heading text-2xl font-light leading-tight">
             {meta.name}
           </h2>
-          <p className="mb-5 text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="mb-5 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
             {meta.tagline}
           </p>
           <p className="mb-8 text-sm leading-[1.9] text-muted-foreground">
@@ -109,7 +109,7 @@ export default function HeroDemoPage() {
 
           <div className="grid grid-cols-2 gap-6 border-t border-border pt-6">
             <div>
-              <p className="mb-3 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-3 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
                 Pros
               </p>
               <ul className="space-y-2 text-xs leading-[1.7] text-foreground">
@@ -124,7 +124,7 @@ export default function HeroDemoPage() {
               </ul>
             </div>
             <div>
-              <p className="mb-3 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-3 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
                 Cons
               </p>
               <ul className="space-y-2 text-xs leading-[1.7] text-muted-foreground">

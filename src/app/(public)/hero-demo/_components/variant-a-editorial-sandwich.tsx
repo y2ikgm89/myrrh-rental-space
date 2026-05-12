@@ -16,7 +16,7 @@ export function VariantAEditorialSandwich() {
     <section className="bg-background">
       {/* Lead: label + title + divider */}
       <div className="px-6 pt-14 pb-8">
-        <p className="mb-6 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-6 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           {COPY.label}
         </p>
         <h1 className="text-hero font-heading font-light leading-[1.08] tracking-tight">

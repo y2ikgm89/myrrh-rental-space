@@ -14,7 +14,7 @@ export function VariantEHorizontalPeek() {
     <section className="bg-background">
       {/* Text hero */}
       <div className="px-6 pt-14 pb-8">
-        <p className="mb-6 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-6 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
           {COPY.label}
         </p>
         <h1 className="text-hero font-heading font-light leading-[1.08] tracking-tight">
@@ -47,7 +47,7 @@ export function VariantEHorizontalPeek() {
                 priority={i === 0}
               />
               <span
-                className="absolute top-4 left-4 z-10 text-[0.55rem] uppercase tracking-[0.18em] tabular-nums text-background/80"
+                className="absolute top-4 left-4 z-10 text-[0.6875rem] uppercase tracking-[0.18em] tabular-nums text-background/80"
                 aria-hidden="true"
               >
                 {String(i + 1).padStart(2, "0")}

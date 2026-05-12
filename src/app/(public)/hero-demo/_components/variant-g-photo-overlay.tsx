@@ -86,11 +86,11 @@ export function VariantGPhotoOverlay() {
 
       {/* Top overlay: label + numbered pagination */}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 pt-6">
-        <p className="text-[0.55rem] uppercase tracking-[0.18em] text-background/90">
+        <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-background/90">
           {COPY.label}
         </p>
         <p
-          className="text-[0.55rem] uppercase tracking-[0.18em] tabular-nums text-background/90"
+          className="text-[0.6875rem] uppercase tracking-[0.18em] tabular-nums text-background/90"
           aria-hidden="true"
         >
           {String(active + 1).padStart(2, "0")}
