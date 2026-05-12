@@ -1,6 +1,7 @@
 # Clean-Break Refactor C5 Implementation Plan
 
-> **In Progress: 2026-04-29** — Waiting on dispatch schedule for Phase C5b/C5c/C5a/C5d. Each phase is designed to complete via a single implementer dispatch.
+> **Snapshot: 2026-04-29**
+> **Completed: 2026-04-29** — All 4 phases (C5a/C5b/C5c/C5d) integrated into main via commits `8b9e9188` (C5a Phase 3) / `87f0c2b0` (ADR 0025 subagent-dispatch-template) / `2ad4a9a0` (zod-patterns barrel-index) / `50dfd85c` (tailwind-patterns barrel-index) / `64dcc622` (policy-docs-sync cleanup) and follow-up ADR 0026 / config-optimization.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

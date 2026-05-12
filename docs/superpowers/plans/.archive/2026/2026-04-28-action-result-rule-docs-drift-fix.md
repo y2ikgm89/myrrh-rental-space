@@ -1,6 +1,7 @@
 # ActionResult / createSuccess / createFailure rule docs drift resolution Implementation Plan
 
-> **In Progress: 2026-04-29** — Waiting on a single commit to resolve helper/type/import drift across 8 files under `.claude/rules/`. No `src/` implementation changes, no ADR needed.
+> **Snapshot: 2026-04-29**
+> **Completed: 2026-04-29** — Resolved in commit `199994fe docs(rules): createSuccess/createFailure drift を MutationResult/createMutationError に統一` (single-commit batch update across 8 rule docs).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

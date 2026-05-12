@@ -1,6 +1,7 @@
 # Terms Management Clean-Break Rebuild
 
 > **Snapshot: 2026-05-02** — Pre-launch clean-break rebuild with no backwards compatibility.
+> **Completed: 2026-05-05** — Terms rebuild closeout integrated into main; related WCAG / admin-table / lexical-storage / publish SSoT commits (`f9f803ba` / `f1d2d6b1` / `1116a1dd` / `fe7f6a09` / `b25b82a3`).
 
 ## Goal
 
