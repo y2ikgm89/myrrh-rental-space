@@ -41,7 +41,7 @@ const styles = tv({
     ],
     nav: "flex-1 overflow-y-auto px-3 py-4",
     navItem: [
-      "flex items-center gap-3 rounded-md px-3 py-2.5 text-sidebar-text-muted cursor-pointer",
+      "flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sidebar-text-muted cursor-pointer",
       "transition-all duration-200 ease-out",
       "hover:bg-sidebar-nav-hover hover:text-sidebar-text",
     ],
@@ -167,17 +167,19 @@ export function ResponsiveSidebar({ items, userInfo }: ResponsiveSidebarProps) {
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={closeSidebar}
           className={classes.closeButton()}
           aria-label="メニューを閉じる"
         >
-          <IconX className="h-5 w-5" />
+          <IconX className="h-5 w-5" aria-hidden="true" />
         </Button>
 
         {/* ロゴ */}
         <div className={classes.logo()}>
-          <Link href="/admin">管理画面</Link>
+          <Link href="/admin" className="inline-flex min-h-11 items-center">
+            管理画面
+          </Link>
         </div>
 
         {/* ナビゲーション */}
