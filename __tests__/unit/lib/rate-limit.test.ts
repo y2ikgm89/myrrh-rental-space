@@ -10,83 +10,83 @@ import {
 } from "@/shared/lib/rate-limit";
 
 describe("createRateLimiter", () => {
-  test("制限内のリクエストは許可される", () => {
+  test("制限内のリクエストは許可される", async () => {
     const limiter = createRateLimiter({
       interval: 60_000,
       maxRequests: 3,
     });
 
-    const result1 = limiter.check("192.168.1.1");
+    const result1 = await limiter.check("192.168.1.1");
     expect(result1.success).toBe(true);
     expect(result1.remaining).toBe(2);
 
-    const result2 = limiter.check("192.168.1.1");
+    const result2 = await limiter.check("192.168.1.1");
     expect(result2.success).toBe(true);
     expect(result2.remaining).toBe(1);
 
-    const result3 = limiter.check("192.168.1.1");
+    const result3 = await limiter.check("192.168.1.1");
     expect(result3.success).toBe(true);
     expect(result3.remaining).toBe(0);
   });
 
-  test("制限超過時はブロックされる", () => {
+  test("制限超過時はブロックされる", async () => {
     const limiter = createRateLimiter({
       interval: 60_000,
       maxRequests: 2,
     });
 
-    limiter.check("10.0.0.1");
-    limiter.check("10.0.0.1");
+    await limiter.check("10.0.0.1");
+    await limiter.check("10.0.0.1");
 
-    const result = limiter.check("10.0.0.1");
+    const result = await limiter.check("10.0.0.1");
     expect(result.success).toBe(false);
     expect(result.remaining).toBe(0);
     expect(result.reset).toBeGreaterThan(Date.now());
   });
 
-  test("異なるトークンは独立してカウントされる", () => {
+  test("異なるトークンは独立してカウントされる", async () => {
     const limiter = createRateLimiter({
       interval: 60_000,
       maxRequests: 1,
     });
 
-    const result1 = limiter.check("ip-a");
+    const result1 = await limiter.check("ip-a");
     expect(result1.success).toBe(true);
 
     // 異なるIPは制限されない
-    const result2 = limiter.check("ip-b");
+    const result2 = await limiter.check("ip-b");
     expect(result2.success).toBe(true);
 
     // 元のIPは制限される
-    const result3 = limiter.check("ip-a");
+    const result3 = await limiter.check("ip-a");
     expect(result3.success).toBe(false);
   });
 
-  test("reset()でトークンの制限がリセットされる", () => {
+  test("reset()でトークンの制限がリセットされる", async () => {
     const limiter = createRateLimiter({
       interval: 60_000,
       maxRequests: 1,
     });
 
-    limiter.check("reset-test");
-    const blocked = limiter.check("reset-test");
+    await limiter.check("reset-test");
+    const blocked = await limiter.check("reset-test");
     expect(blocked.success).toBe(false);
 
-    limiter.reset("reset-test");
+    await limiter.reset("reset-test");
 
-    const afterReset = limiter.check("reset-test");
+    const afterReset = await limiter.check("reset-test");
     expect(afterReset.success).toBe(true);
     expect(afterReset.remaining).toBe(0);
   });
 
-  test("reset時刻が未来に設定される", () => {
+  test("reset時刻が未来に設定される", async () => {
     const limiter = createRateLimiter({
       interval: 30_000,
       maxRequests: 5,
     });
 
     const now = Date.now();
-    const result = limiter.check("time-test");
+    const result = await limiter.check("time-test");
     expect(result.reset).toBeGreaterThanOrEqual(now + 30_000);
   });
 });
@@ -128,15 +128,15 @@ describe("getClientIp", () => {
 });
 
 describe("checkRateLimit", () => {
-  test("/api/auth mutation パスは authMutationRateLimiter を使用する", () => {
-    const result = checkRateLimit("/api/auth/sign-in", "check-auth-ip");
+  test("/api/auth mutation パスは authMutationRateLimiter を使用する", async () => {
+    const result = await checkRateLimit("/api/auth/sign-in", "check-auth-ip");
     expect(result.success).toBe(true);
     // authMutationRateLimiter は maxRequests: 20
     expect(result.remaining).toBe(19);
   });
 
-  test("/api/admin/login-tokens パスはトークン用リミッターを使用する", () => {
-    const result = checkRateLimit(
+  test("/api/admin/login-tokens パスはトークン用リミッターを使用する", async () => {
+    const result = await checkRateLimit(
       "/api/admin/login-tokens/verify",
       "check-token-ip",
     );
@@ -145,8 +145,8 @@ describe("checkRateLimit", () => {
     expect(result.remaining).toBe(29);
   });
 
-  test("その他のAPIパスはデフォルトリミッターを使用する", () => {
-    const result = checkRateLimit("/api/spaces", "check-default-ip");
+  test("その他のAPIパスはデフォルトリミッターを使用する", async () => {
+    const result = await checkRateLimit("/api/spaces", "check-default-ip");
     expect(result.success).toBe(true);
     // デフォルトリミッターは maxRequests: 100
     expect(result.remaining).toBe(99);

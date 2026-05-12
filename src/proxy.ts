@@ -166,7 +166,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       !isProbeOrInfraEndpoint
     ) {
       const clientIp = getClientIp(req);
-      const rateLimitResult = checkRateLimit(pathname, clientIp);
+      const rateLimitResult = await checkRateLimit(pathname, clientIp);
 
       if (!rateLimitResult.success) {
         return NextResponse.json(
