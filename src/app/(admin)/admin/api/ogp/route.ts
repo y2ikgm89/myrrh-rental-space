@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   }
 
   const { url } = parsed.data;
-  if (!isUrlSafe(url)) {
+  if (!(await isUrlSafe(url))) {
     return jsonError("無効なURLです");
   }
 

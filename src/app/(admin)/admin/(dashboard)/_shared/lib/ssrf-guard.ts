@@ -1,5 +1,7 @@
 import "server-only";
 
+import { lookup } from "node:dns/promises";
+
 /**
  * プライベートIPアドレスかどうかをチェック
  * SSRF脆弱性対策として、内部ネットワークへのリクエストを禁止
@@ -78,12 +80,13 @@ export function isPrivateOrReservedHost(hostname: string): boolean {
 }
 
 /**
- * URLが安全かどうかを検証
- * - HTTP/HTTPSのみ許可
- * - プライベート/予約アドレスへのアクセスを禁止
- * - 標準ポート（80, 443, 8080, 8443）以外を禁止
+ * URL の同期的事前検証（protocol / hostname / port のみ）。
+ *
+ * 単独使用は **不十分** — DNS rebinding 攻撃を防げない（hostname が public IP に
+ * 解決されると判定して通過させた後、実 fetch 時に再 DNS lookup で private IP に
+ * すり替えられる可能性）。`isUrlSafe()` の前段ガードとして使用する。
  */
-export function isUrlSafe(urlString: string): boolean {
+export function isUrlSafeSync(urlString: string): boolean {
   try {
     const url = new URL(urlString);
 
@@ -92,7 +95,7 @@ export function isUrlSafe(urlString: string): boolean {
       return false;
     }
 
-    // プライベート/予約アドレスへのアクセスを禁止
+    // プライベート/予約アドレスへのアクセスを禁止（hostname 文字列レベル）
     if (isPrivateOrReservedHost(url.hostname)) {
       return false;
     }
@@ -108,6 +111,37 @@ export function isUrlSafe(urlString: string): boolean {
     }
 
     return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * URL が安全かどうかを検証（DNS rebinding 対策含む完全版）。
+ *
+ * 検査順序:
+ * 1. {@link isUrlSafeSync} で protocol / hostname literal / port を事前判定
+ * 2. DNS lookup（`node:dns/promises`）で hostname → IP を解決
+ * 3. 解決された IP が private / reserved range に該当しないか再判定
+ *
+ * これにより `evil.example.com → 169.254.169.254` の DNS rebinding 攻撃を遮断する。
+ * DNS lookup 失敗時は fail-closed（不安全とみなす）。
+ *
+ * **注意**: 完全な DNS rebinding 対策には IP を pin した fetch（`undici` dispatcher
+ * 経由）が必要だが、Node native fetch では TLS SNI / certificate validation との
+ * 兼ね合いで困難。OGP プレビュー用途では 1) admin 認証必須 2) timeout 10s
+ * 3) この pre-check で実運用上のリスクを大幅に低減できる。
+ */
+export async function isUrlSafe(urlString: string): Promise<boolean> {
+  if (!isUrlSafeSync(urlString)) {
+    return false;
+  }
+
+  try {
+    const url = new URL(urlString);
+    // hostname が既に IPv4/IPv6 リテラルなら lookup は冗長だが、family 一貫性のため通す
+    const { address } = await lookup(url.hostname);
+    return !isPrivateOrReservedHost(address);
   } catch {
     return false;
   }
