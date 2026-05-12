@@ -152,3 +152,31 @@ await updateCustomerStats(tx, customerId, "increment");
 - **silent leak**: `getPublicPage(slug)` が `where: { isPublished: true, isActive: true }` を持つのに `getPageSeo(slug)` が `{ slug }` だけ → draft 本文は 404 でも metadata（OGP / `<meta>` tag）は公開ページに流出
 - **対処**: 全 helper に同 filter を伝播。新規 SEO/metadata query 追加時は対応する content query の `where` を grep + 同期
 - **実例**: 2026-05-07 修正、`isPublished: true, isActive: true` を `getPageSeo` に追加
+
+### 7. boolean state update に「DB 読込反転」action 禁止
+
+```typescript
+// NG: SELECT → flip → UPDATE は race window + ロジック分散
+export async function toggleXxxActive(id: string) {
+  const cur = await prisma.xxx.findUnique({
+    where: { id },
+    select: { isActive: true },
+  });
+  await prisma.xxx.update({
+    where: { id },
+    data: { isActive: !cur.isActive },
+  });
+}
+
+// OK: UI 側が `!current` 計算、domain は単一 UPDATE
+// 業界標準: Stripe / Shopify Admin / GitHub API
+export async function updateXxxActive(id: string, isActive: boolean) {
+  await prisma.xxx.update({ where: { id }, data: { isActive } });
+}
+```
+
+- **canonical 命名**: `update<Resource>Published(id, isPublished)` / `update<Resource>Active(id, isActive)`
+- `PublishSwitch.onToggle: (id, bool) => Promise<MutationResult<T>>` 契約と整合（`frontend/admin-ui-patterns.md` §Gotchas 参照）
+- 9 resource 統一済: Space / Location / Page / FAQ / News / Terms / Review (Published) + Coupon / SpaceCategory (Active)
+- **FK 紐づきガード**: 非アクティブ化で参照整合性が壊れる resource（`SpaceCategory._count.spaces > 0` 等）は domain command 内で `DomainError("CONFLICT")` early throw（`updateSpaceCategoryActive` が参照実装）
+- ActionDropdown 経由の旧「公開/非公開にする」「有効化/無効化」menu は PublishSwitch 配線時に削除（責務単一化）

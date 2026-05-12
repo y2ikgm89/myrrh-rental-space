@@ -47,7 +47,7 @@ paths:
 
 ## Gotchas
 
-- **`PublishSwitch.onToggle` は `(id, checked: boolean)` 必須** — 既存の「DB を読んで反転」パターンは非互換。`executeAdminMutationResult` で boolean を直接受け取り `data: { isActive }` で set
+- **`PublishSwitch.onToggle` は `(id, bool) => Promise<MutationResult<T>>` 必須** — canonical action 名は `update<Resource>Published(id, isPublished)` / `update<Resource>Active(id, isActive)`（Stripe / Shopify Admin / GitHub API 命名と整合、race-free な単一 UPDATE）。**9 resource 統一済**: Space / Location / Page / FAQ / News / Terms / Review (Published) + Coupon / SpaceCategory (Active)。`PublishSwitch` は label custom（`label={{ published, unpublished }}`）で `isActive` 系にも再利用可能。`toggleXxx*`（DB 読込反転型）復活禁止
 - **tailwind-variants 複数スロット合成時の `text-*` 競合** — `${base()} ${variant()}` で同一要素に 2 つの `text-*` が適用されると CSS 生成順次第でどちらが勝つか不定。動的色は子要素に直接 `text-*` を明示
 - **Tabler アイコンの `currentColor`** — アイコン色を動的切替したい場合、呼び出し元で `<span className={isActive ? "text-sidebar-text" : ""}>` でラップ
 - **`bg-overlay` に opacity modifier 禁止** — `--color-overlay: oklch(0 0 0 / 0.6)` はアルファ値が組み込み済み。`bg-overlay/30` 等は機能しない
