@@ -131,7 +131,7 @@ interface FilterDropdownProps {
 }
 
 const TRIGGER_CLASS =
-  "group relative inline-flex items-center gap-2 pb-2 text-base tracking-wide text-foreground transition-colors focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100";
+  "group relative inline-flex min-h-11 items-center gap-2 pb-2 text-base tracking-wide text-foreground transition-colors focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100";
 
 function FilterDropdown({
   label,

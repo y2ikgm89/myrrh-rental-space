@@ -70,13 +70,13 @@ export function SocialLinks({ links }: SocialLinksProps): ReactElement | null {
             target="_blank"
             rel="noreferrer"
             className={cn(
-              "text-muted-foreground transition-colors hover:text-foreground",
+              "inline-flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground",
               visibility,
             )}
             aria-label={label}
           >
             {Icon ? (
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" aria-hidden="true" />
             ) : (
               <span className="text-xs">{label}</span>
             )}
