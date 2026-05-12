@@ -65,7 +65,7 @@ export function SiteBrand({
     <Link
       href="/"
       aria-label={`${brand.siteName} — ホームへ戻る`}
-      className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="inline-flex min-h-11 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       {...navigateProps}
     >
       {shouldShowLogo && brand.logoUrl ? (

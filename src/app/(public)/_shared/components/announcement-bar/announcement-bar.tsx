@@ -121,7 +121,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           type="button"
           onClick={goPrev}
           className={cn(
-            "absolute left-2 rounded-full p-1 transition-colors",
+            "absolute left-2 rounded-full p-2 transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="前のお知らせ"
@@ -194,7 +194,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           type="button"
           onClick={goNext}
           className={cn(
-            "absolute right-6 rounded-full p-1 transition-colors",
+            "absolute right-6 rounded-full p-2 transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="次のお知らせ"
@@ -208,7 +208,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         type="button"
         onClick={() => dismissBar(currentBar.id)}
         className={cn(
-          "absolute right-2 rounded-full p-1 transition-colors",
+          "absolute right-2 rounded-full p-2 transition-colors",
           !hasCustomText && "hover:bg-foreground/10",
         )}
         aria-label="閉じる"

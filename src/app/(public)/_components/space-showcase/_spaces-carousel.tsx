@@ -537,7 +537,7 @@ export function SpacesCarousel({
             </div>
             <Link
               href="/spaces"
-              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
+              className="mt-3 inline-flex min-h-11 items-center gap-1 px-3 py-1.5 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
             >
               すべてのスペースを見る
               <IconArrowRight className="h-3 w-3" aria-hidden="true" />
