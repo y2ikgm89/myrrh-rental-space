@@ -34,29 +34,32 @@ interface Props {
 export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
   const featured = spaces[0];
   const remaining = spaces.slice(1);
+  const hasTitle = config.title.length > 0;
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-12 flex items-end justify-between md:mb-20">
-        <div>
-          <ScrollReveal>
-            {config.sectionLabel ? (
-              <SectionLabel>{config.sectionLabel}</SectionLabel>
-            ) : null}
-            <div className="mt-4" style={getTitleStyle(style)}>
-              <Heading
-                level={2}
-                className={cn(getTitleClasses(style), "tracking-tight")}
-              >
-                <PortableTextSpans spans={config.title} />
-              </Heading>
-            </div>
-          </ScrollReveal>
+      {hasTitle && (
+        <div className="mb-12 flex items-end justify-between md:mb-20">
+          <div>
+            <ScrollReveal>
+              {config.sectionLabel ? (
+                <SectionLabel>{config.sectionLabel}</SectionLabel>
+              ) : null}
+              <div className="mt-4" style={getTitleStyle(style)}>
+                <Heading
+                  level={2}
+                  className={cn(getTitleClasses(style), "tracking-tight")}
+                >
+                  <PortableTextSpans spans={config.title} />
+                </Heading>
+              </div>
+            </ScrollReveal>
+          </div>
+          <div className="mb-3 hidden flex-1 md:block">
+            <div className="ml-12 h-px bg-border" aria-hidden="true" />
+          </div>
         </div>
-        <div className="mb-3 hidden flex-1 md:block">
-          <div className="ml-12 h-px bg-border" aria-hidden="true" />
-        </div>
-      </div>
+      )}
 
       {featured ? (
         <ScrollReveal>

@@ -62,7 +62,7 @@ export function MapSection({
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      {config.title && (
+      {config.title.length > 0 && (
         <div className="mb-8 text-center md:mb-12">
           <ScrollReveal>
             {config.sectionLabel && (

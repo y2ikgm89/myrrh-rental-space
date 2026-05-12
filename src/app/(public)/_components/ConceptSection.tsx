@@ -52,36 +52,46 @@ export function ConceptSection({
   const layout = parseConceptLayout(config.contentLayout);
   const isStacked = layout === "stacked";
 
+  const hasHeading = heading.length > 0;
+  const hasBody = body.length > 0;
+
   const textBlock = (
     <div className={cn(alignClass, isStacked && "text-center")}>
-      <ScrollReveal>
-        {config.sectionLabel && (
+      {config.sectionLabel && (hasHeading || hasBody) && (
+        <ScrollReveal>
           <SectionLabel>{config.sectionLabel}</SectionLabel>
-        )}
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
-      <div className="mt-6" style={getTitleStyle(style)}>
-        <Heading
-          level={2}
-          className={cn(getTitleClasses(style), "leading-[1.1] tracking-tight")}
-        >
-          <SplitText>
-            <PortableTextSpans spans={heading} />
-          </SplitText>
-        </Heading>
-      </div>
-
-      <ScrollReveal delay={0.2}>
-        <div
-          className={cn(
-            "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-4",
-            isStacked && "mx-auto max-w-2xl",
-          )}
-          style={getTextStyle(style)}
-        >
-          <PortableText blocks={body} />
+      {hasHeading && (
+        <div className="mt-6" style={getTitleStyle(style)}>
+          <Heading
+            level={2}
+            className={cn(
+              getTitleClasses(style),
+              "leading-[1.1] tracking-tight",
+            )}
+          >
+            <SplitText>
+              <PortableTextSpans spans={heading} />
+            </SplitText>
+          </Heading>
         </div>
-      </ScrollReveal>
+      )}
+
+      {hasBody && (
+        <ScrollReveal delay={0.2}>
+          <div
+            className={cn(
+              "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-4",
+              isStacked && "mx-auto max-w-2xl",
+            )}
+            style={getTextStyle(style)}
+          >
+            <PortableText blocks={body} />
+          </div>
+        </ScrollReveal>
+      )}
     </div>
   );
 

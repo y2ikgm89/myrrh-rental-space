@@ -129,13 +129,13 @@ export function GallerySection({
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      {config.title && (
+      {config.title.length > 0 && (
         <div className="mb-10 text-center md:mb-14">
-          <ScrollReveal>
-            {config.sectionLabel && (
+          {config.sectionLabel && (
+            <ScrollReveal>
               <SectionLabel>{config.sectionLabel}</SectionLabel>
-            )}
-          </ScrollReveal>
+            </ScrollReveal>
+          )}
           <div style={getTitleStyle(style)}>
             <Heading
               level={2}

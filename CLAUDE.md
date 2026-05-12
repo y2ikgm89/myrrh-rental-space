@@ -69,6 +69,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Turnstile 配置基準** — 未認証公開フォーム必須、認証済みでも予約・決済等の高リスク操作は許容、参照系は不要
 - **datetime-local 入力は `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst`（`@/shared/lib/date-format`）経由必須** — `new Date(localStr)` / `format(d, "yyyy-MM-dd'T'HH:mm")` は tz 依存で 9 時間ずれる silent bug。schema は `z.string().datetime({ local: true })`、command 層で UTC 変換（→ `ssot-singletons.md` §日時フォーマット）
 - **Section schema の canonical は `definitions/<type>/schema.ts`** — `validations/section.ts` の同名 export はレガシー重複で drift 済み。全 schema は `safeParse({})` 成立必須（required field に必ず `.default()`）— `createTypedConfigGetterFromSchema` の fallback 契約（→ `ssot-singletons.md` §Section schema 重複）
+- **`PortableTextSpan[]` / `PortableTextBlock[]` の JSX truthy gate 禁止** — 空配列 `[]` も truthy。`{config.field && ...}` ではなく `{config.field.length > 0 && ...}` で gate。sectionLabel default 値（"Events" 等）と outer OR 判定の組み合わせで「ラベル単独残り」silent bug を起こす（→ `frontend/sections.md` §sectionLabel 単独 render 禁止）
 
 詳細（datetime-local / Mutually exclusive boolean / 配列 uniqueness 等）: `zod-patterns/validation-schemas.md` / `implementation-patterns.md`
 

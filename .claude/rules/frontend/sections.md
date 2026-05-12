@@ -32,3 +32,19 @@ paths:
 
 - **公開ページのセクション高さは `svh` 単位を使用** — `vh` は iOS Safari のアドレスバー問題がある。`min-h-[*svh]` を使用し、`h-[*vh]` は禁止。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]`、ダイアログの `max-h-[85vh]`、`min-h-screen`（ページ全体）
 - **ヒーロー高さはセマンティックプリセット + カスタム** — `sm/md/lg/full/custom` の 5 段階。custom 時は `heightCustom`（svh 数値）をインラインスタイルで適用。ユーザーに px / vh を直接入力させない（Squarespace / Payload CMS 方式）
+
+## sectionLabel 単独 render 禁止
+
+- **`sectionLabel` は title / description / その他コンテンツが存在する場合のみ表示**（業界標準 editorial pattern — Kinfolk / Cereal / NYT Magazine）。「ラベルのみ」は意味のない装飾になる
+- **outer 判定に `config.sectionLabel ||` を含めない** — schema default（例: `event-calendar` の `sectionLabel: "Events"`）が truthy で sectionLabel-only でも outer 通過、`<ScrollReveal>` の inline style 残骸（`opacity: 1; transform: translate(0px, 0px);`）と共に label のみが残る silent bug
+- **canonical pattern**: 各 section で `const hasTitle = config.title.length > 0;` 等を計算し、`const showSectionLabel = Boolean(config.sectionLabel) && (hasTitle || hasDescription || hasButtons);` で gate、または header block 全体を `{hasTitle && <div>...<SectionLabel/>...<Heading/>...</div>}` で囲む
+- **PortableText[] フィールドの空判定は `.length > 0` 必須**（空配列 `[]` は JSX で truthy） — `{config.title && ...}` ではなく `{config.title.length > 0 && ...}`。Phase 0〜4 で string → PortableText 化したフィールドの旧 gate が silent break する典型箇所（→ `ssot-singletons.md` §Portable Text 禁止事項）
+- **canonical 適用済み 18 file**: `EventCalendarSection` / `LocationListSection` / `ConceptSection` / `CTASection` / `EmbedSection` / `FaqListSection` / `InstagramSection` / `GallerySection` / `MapSection` / `TestimonialSection` / `ReservationFormSection` / `SpaceListSection` / `ContactFormSection` / `features/_features-{grid,numbered-editorial,numbered-steps}` / `space-showcase/_spaces-{grid,carousel}` / `{post,news,space}-list-simple-view` / `StandardHeroSection` 全 5 variant。新規 section 追加時は本パターン踏襲必須
+
+## PortableText derive → component prop default 非発火
+
+- **`spansToPlainText(spans)` / `blocksToPlainText(blocks)` で derive した空文字列を component prop に明示渡しすると、受取側の default arg は発火しない** — JSX 仕様で default arg は `undefined` 時のみ適用、`""` 明示渡しは default を skip する silent bug
+- **canonical pattern**: 条件スプレッド `{...(value.length > 0 && { value })}`（`exactOptionalPropertyTypes` 互換）で空時は prop 自体を渡さず受取側 default に委ねる。または call site で `value || "fallback"` を計算
+- **判定基準**: 送出側が `spansToPlainText(config.x)` / `blocksToPlainText(config.x)` で derive + 受取側が `prop = "デフォルト"` の default arg を持つ場合。空配列 `[]` 入力 → empty string → empty button / heading / aria-label の silent bug
+- **実例**: 2026-05-13 `ContactFormSection.submitLabel`（`PublicInquiryFormCard` の `submitLabel = "送信する"` default が DB `section.config` に `submitButtonText` key 不在のとき発火せず、ボタン中身が空白で描画。Phase 3 で `string → PortableTextSpan[]` 化した時点で潜在化、seed 既存 config 不更新原則と組合せて顕在化）
+- **検出 grep**: `grep -rnE 'submitLabel=\{[a-zA-Z]+\}|aria-label=\{spansToPlainText|title=\{spansToPlainText' src/app/\(public\)` で derive 値を default 持ち prop に直接渡している箇所を列挙

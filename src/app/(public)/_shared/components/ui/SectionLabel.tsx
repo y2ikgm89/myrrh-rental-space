@@ -19,7 +19,7 @@ export function SectionLabel({
   return (
     <span
       className={cn(
-        "gold-line pl-1 text-eyebrow uppercase text-accent",
+        "gold-line px-1 text-eyebrow uppercase text-accent",
         className,
       )}
     >

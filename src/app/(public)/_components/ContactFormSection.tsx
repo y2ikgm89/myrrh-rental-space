@@ -45,6 +45,9 @@ export function ContactFormSection({
 }: ContactFormSectionProps): ReactElement {
   const variant = config.variant;
   const submitLabel = spansToPlainText(config.submitButtonText);
+  const hasTitle = config.title.length > 0;
+  const hasDescription = config.description.length > 0;
+  const hasHeaderContent = hasTitle || hasDescription;
 
   const formCard = (
     <ScrollReveal delay={variant === "split" ? 0.3 : 0.2}>
@@ -52,7 +55,7 @@ export function ContactFormSection({
         mode="live"
         turnstileSiteKey={turnstileSiteKey}
         requiredTerms={requiredTerms}
-        submitLabel={submitLabel}
+        {...(submitLabel.length > 0 && { submitLabel })}
       />
     </ScrollReveal>
   );
@@ -65,22 +68,27 @@ export function ContactFormSection({
           <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
             {formCard}
             <aside className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
-              {config.sectionLabel ? (
+              {config.sectionLabel && hasHeaderContent ? (
                 <ScrollReveal>
                   <SectionLabel>{config.sectionLabel}</SectionLabel>
                 </ScrollReveal>
               ) : null}
-              <div style={getTitleStyle(style)}>
-                <Heading
-                  level={2}
-                  className={cn("mt-4 tracking-tight", getTitleClasses(style))}
-                >
-                  <SplitText>
-                    <PortableTextSpans spans={config.title} />
-                  </SplitText>
-                </Heading>
-              </div>
-              {config.description.length > 0 ? (
+              {hasTitle && (
+                <div style={getTitleStyle(style)}>
+                  <Heading
+                    level={2}
+                    className={cn(
+                      "mt-4 tracking-tight",
+                      getTitleClasses(style),
+                    )}
+                  >
+                    <SplitText>
+                      <PortableTextSpans spans={config.title} />
+                    </SplitText>
+                  </Heading>
+                </div>
+              )}
+              {hasDescription ? (
                 <ScrollReveal delay={0.2}>
                   <div
                     className="mt-4 text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
@@ -108,33 +116,37 @@ export function ContactFormSection({
   return (
     <SectionWrapper style={style} layout={config.layout}>
       <div className="mx-auto max-w-2xl">
-        <div className="mb-10 text-center md:mb-14">
-          {config.sectionLabel ? (
-            <ScrollReveal>
-              <SectionLabel>{config.sectionLabel}</SectionLabel>
-            </ScrollReveal>
-          ) : null}
-          <div style={getTitleStyle(style)}>
-            <Heading
-              level={2}
-              className={cn("mt-4 tracking-tight", getTitleClasses(style))}
-            >
-              <SplitText>
-                <PortableTextSpans spans={config.title} />
-              </SplitText>
-            </Heading>
-          </div>
-          {config.description.length > 0 ? (
-            <ScrollReveal delay={0.2}>
-              <div
-                className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
-                style={getTextStyle(style)}
-              >
-                <PortableText blocks={config.description} />
+        {hasHeaderContent && (
+          <div className="mb-10 text-center md:mb-14">
+            {config.sectionLabel ? (
+              <ScrollReveal>
+                <SectionLabel>{config.sectionLabel}</SectionLabel>
+              </ScrollReveal>
+            ) : null}
+            {hasTitle && (
+              <div style={getTitleStyle(style)}>
+                <Heading
+                  level={2}
+                  className={cn("mt-4 tracking-tight", getTitleClasses(style))}
+                >
+                  <SplitText>
+                    <PortableTextSpans spans={config.title} />
+                  </SplitText>
+                </Heading>
               </div>
-            </ScrollReveal>
-          ) : null}
-        </div>
+            )}
+            {hasDescription ? (
+              <ScrollReveal delay={0.2}>
+                <div
+                  className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"
+                  style={getTextStyle(style)}
+                >
+                  <PortableText blocks={config.description} />
+                </div>
+              </ScrollReveal>
+            ) : null}
+          </div>
+        )}
 
         {formCard}
       </div>

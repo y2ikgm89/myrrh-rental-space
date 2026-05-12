@@ -96,26 +96,29 @@ export function NewsListSimpleView({
   if (news.length === 0) return <></>;
 
   const isCard = config.displayLayout === "card";
+  const hasTitle = config.title.length > 0;
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-10 text-center md:mb-14">
-        <ScrollReveal>
+      {hasTitle && (
+        <div className="mb-10 text-center md:mb-14">
           {config.sectionLabel && (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
+            <ScrollReveal>
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            </ScrollReveal>
           )}
-        </ScrollReveal>
-        <div className="mt-4" style={getTitleStyle(style)}>
-          <Heading
-            level={2}
-            className={cn(getTitleClasses(style), "tracking-tight")}
-          >
-            <SplitText>
-              <PortableTextSpans spans={config.title} />
-            </SplitText>
-          </Heading>
+          <div className="mt-4" style={getTitleStyle(style)}>
+            <Heading
+              level={2}
+              className={cn(getTitleClasses(style), "tracking-tight")}
+            >
+              <SplitText>
+                <PortableTextSpans spans={config.title} />
+              </SplitText>
+            </Heading>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         ref={listRef}

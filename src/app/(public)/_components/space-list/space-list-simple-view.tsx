@@ -101,25 +101,29 @@ export function SpaceListSimpleView({
       ? "flex flex-col gap-4"
       : cn("@container grid gap-6", getCardGridColsClass(colKey));
 
+  const hasTitle = config.title.length > 0;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-12 text-center md:mb-16">
-        <ScrollReveal>
+      {hasTitle && (
+        <div className="mb-12 text-center md:mb-16">
           {config.sectionLabel && (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
+            <ScrollReveal>
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            </ScrollReveal>
           )}
-        </ScrollReveal>
-        <div className="mt-4" style={getTitleStyle(style)}>
-          <Heading
-            level={2}
-            className={cn("tracking-tight", getTitleClasses(style))}
-          >
-            <SplitText>
-              <PortableTextSpans spans={config.title} />
-            </SplitText>
-          </Heading>
+          <div className="mt-4" style={getTitleStyle(style)}>
+            <Heading
+              level={2}
+              className={cn("tracking-tight", getTitleClasses(style))}
+            >
+              <SplitText>
+                <PortableTextSpans spans={config.title} />
+              </SplitText>
+            </Heading>
+          </div>
         </div>
-      </div>
+      )}
 
       <div ref={gridRef} className={layoutClass}>
         {spaces.map((space) => (

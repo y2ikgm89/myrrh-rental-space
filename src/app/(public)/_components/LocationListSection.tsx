@@ -611,22 +611,20 @@ export function LocationListSection({
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      {(config.sectionLabel || config.title) && (
+      {config.title.length > 0 && (
         <div className="mb-8 text-center md:mb-12">
           <ScrollReveal>
             {config.sectionLabel && (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
-            {config.title && (
-              <div style={getTitleStyle(style)}>
-                <Heading
-                  level={2}
-                  className={cn("mt-4 tracking-tight", getTitleClasses(style))}
-                >
-                  <PortableTextSpans spans={config.title} />
-                </Heading>
-              </div>
-            )}
+            <div style={getTitleStyle(style)}>
+              <Heading
+                level={2}
+                className={cn("mt-4 tracking-tight", getTitleClasses(style))}
+              >
+                <PortableTextSpans spans={config.title} />
+              </Heading>
+            </div>
           </ScrollReveal>
         </div>
       )}

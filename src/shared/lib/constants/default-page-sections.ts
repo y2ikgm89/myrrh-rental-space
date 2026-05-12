@@ -34,6 +34,7 @@ export function createDefaultCustomPageSections(
       type: "hero",
       title: null,
       config: {
+        sectionLabel: pageTitle,
         title: pageTitle,
         subtitle: description ?? "",
         variant: "minimal",
@@ -344,8 +345,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "About",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "About" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "会社概要",
+          },
         ],
         subtitle: block(
           "ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース。",
@@ -393,8 +399,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "FAQ",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "FAQ" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "よくある質問",
+          },
         ],
         subtitle: block(
           "ご不明点がございましたら、まずはこちらをご確認ください。",
@@ -443,11 +454,12 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "Contact",
         title: [
           {
             _key: crypto.randomUUID(),
             _type: "span" as const,
-            text: "Contact",
+            text: "お問い合わせ",
           },
         ],
         subtitle: block(
@@ -480,8 +492,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "Access",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "Access" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "アクセス",
+          },
         ],
         subtitle: block("最寄り駅・駐車場・営業時間をご案内します。"),
         variant: "minimal",
@@ -548,8 +565,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "News",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "News" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "お知らせ",
+          },
         ],
         subtitle: block("お知らせ・最新情報をお届けします。"),
         variant: "minimal",
@@ -580,8 +602,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "Blog",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "Blog" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "ブログ",
+          },
         ],
         subtitle: block("最新のお知らせやお役立ち情報をお届けします。"),
         variant: "minimal",
@@ -612,11 +639,12 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "Reserve",
         title: [
           {
             _key: crypto.randomUUID(),
             _type: "span" as const,
-            text: "Reserve",
+            text: "予約",
           },
         ],
         subtitle: block(
@@ -648,8 +676,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "Events",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "Events" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "イベント",
+          },
         ],
         subtitle: block("開催予定のイベント・ワークショップ情報"),
         variant: "minimal",
@@ -673,8 +706,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       type: "hero",
       title: null,
       config: {
+        sectionLabel: "Spaces",
         title: [
-          { _key: crypto.randomUUID(), _type: "span" as const, text: "Spaces" },
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "スペース一覧",
+          },
         ],
         subtitle: block("ご利用可能なレンタルスペースをお探しください。"),
         variant: "minimal",

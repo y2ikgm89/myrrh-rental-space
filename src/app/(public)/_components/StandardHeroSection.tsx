@@ -24,6 +24,7 @@ import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { cn } from "@/shared/lib/cn";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   DURATION,
   EASE,
@@ -37,7 +38,6 @@ import { spansToPlainText } from "@/shared/lib/portable-text";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import {
-  getTitleClasses,
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/section-style-helpers";
@@ -176,6 +176,11 @@ export function StandardHeroSection({
     : undefined;
   const primaryButton = config.buttons.find((b) => b.variant === "primary");
   const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
+  const hasTitle = config.title.length > 0;
+  const hasSubtitle = config.subtitle.length > 0;
+  const hasButtons = Boolean(primaryButton ?? secondaryButton);
+  const hasOtherContent = hasTitle || hasSubtitle || hasButtons;
+  const showSectionLabel = Boolean(config.sectionLabel) && hasOtherContent;
 
   // =========================================================================
   // Minimal: bottom-aligned, gradient bg, left-aligned
@@ -193,15 +198,20 @@ export function StandardHeroSection({
           aria-hidden="true"
         />
 
-        <Container className="relative w-full !max-w-6xl">
-          {config.title && (
-            <div style={getTitleStyle(style)}>
+        <Container className="relative w-full !max-w-6xl text-center">
+          {showSectionLabel && (
+            <ScrollReveal delay={0.15}>
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            </ScrollReveal>
+          )}
+          {hasTitle && (
+            <div
+              className={cn(showSectionLabel && "mt-4")}
+              style={getTitleStyle(style)}
+            >
               <Heading
                 level={1}
-                className={cn(
-                  getTitleClasses(style),
-                  "uppercase tracking-tight",
-                )}
+                className={cn("text-page-hero tracking-tight")}
               >
                 <SplitText trigger={false} delay={0.3}>
                   <PortableTextSpans spans={config.title} />
@@ -209,10 +219,10 @@ export function StandardHeroSection({
               </Heading>
             </div>
           )}
-          {config.subtitle.length > 0 && (
+          {hasSubtitle && (
             <ScrollReveal delay={0.5}>
               <div
-                className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
+                className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
                 style={getTextStyle(style)}
               >
                 <PortableText blocks={config.subtitle} />
@@ -224,7 +234,7 @@ export function StandardHeroSection({
               <HeroButtons
                 primary={primaryButton}
                 secondary={secondaryButton}
-                className="mt-6 flex flex-wrap items-center gap-4 md:mt-10"
+                className="mt-6 flex flex-wrap items-center justify-center gap-4 md:mt-10"
               />
             </ScrollReveal>
           )}
@@ -252,14 +262,19 @@ export function StandardHeroSection({
           className="relative z-10 mx-auto flex min-h-full max-w-6xl flex-col items-center px-[var(--container-padding)] md:flex-row"
         >
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
-            {config.title && (
-              <div style={getTitleStyle(style)}>
+            {showSectionLabel && (
+              <ScrollReveal delay={0.15}>
+                <SectionLabel>{config.sectionLabel}</SectionLabel>
+              </ScrollReveal>
+            )}
+            {hasTitle && (
+              <div
+                className={cn(showSectionLabel && "mt-4")}
+                style={getTitleStyle(style)}
+              >
                 <Heading
                   level={1}
-                  className={cn(
-                    getTitleClasses(style),
-                    "leading-tight tracking-tight",
-                  )}
+                  className={cn("text-page-hero leading-tight tracking-tight")}
                 >
                   <SplitText trigger={false} delay={0.3}>
                     <PortableTextSpans spans={config.title} />
@@ -267,7 +282,7 @@ export function StandardHeroSection({
                 </Heading>
               </div>
             )}
-            {config.subtitle.length > 0 && (
+            {hasSubtitle && (
               <ScrollReveal delay={0.2}>
                 <div
                   className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
@@ -277,7 +292,7 @@ export function StandardHeroSection({
                 </div>
               </ScrollReveal>
             )}
-            {(primaryButton ?? secondaryButton) && (
+            {hasButtons && (
               <ScrollReveal delay={0.3}>
                 <HeroButtons
                   primary={primaryButton}
@@ -361,14 +376,19 @@ export function StandardHeroSection({
         ref={contentRef}
         className="relative z-10 px-[var(--container-padding)] text-center"
       >
-        {config.title && (
-          <div style={getTitleStyle(style)}>
+        {showSectionLabel && (
+          <ScrollReveal delay={0.15}>
+            <SectionLabel>{config.sectionLabel}</SectionLabel>
+          </ScrollReveal>
+        )}
+        {hasTitle && (
+          <div
+            className={cn(showSectionLabel && "mt-4")}
+            style={getTitleStyle(style)}
+          >
             <Heading
               level={1}
-              className={cn(
-                getTitleClasses(style),
-                "leading-tight tracking-tight",
-              )}
+              className={cn("text-page-hero leading-tight tracking-tight")}
             >
               <SplitText trigger={false} delay={0.3}>
                 <PortableTextSpans spans={config.title} />
@@ -377,7 +397,7 @@ export function StandardHeroSection({
           </div>
         )}
 
-        {config.subtitle.length > 0 && (
+        {hasSubtitle && (
           <ScrollReveal delay={0.2}>
             <div
               className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
@@ -388,7 +408,7 @@ export function StandardHeroSection({
           </ScrollReveal>
         )}
 
-        {(primaryButton ?? secondaryButton) && (
+        {hasButtons && (
           <ScrollReveal delay={0.3}>
             <HeroButtons
               primary={primaryButton}

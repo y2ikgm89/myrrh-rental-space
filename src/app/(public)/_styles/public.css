@@ -77,6 +77,12 @@
   --text-h1--letter-spacing: -0.02em;
   --text-h1--font-weight: 300;
 
+  /* page-hero — internal page hero h1 (36→56px) — Japanese 見出しに最適化 */
+  --text-page-hero: clamp(2.25rem, 1.75rem + 2vw, 3.5rem);
+  --text-page-hero--line-height: 1.15;
+  --text-page-hero--letter-spacing: -0.02em;
+  --text-page-hero--font-weight: 300;
+
   /* h2 — major section heading (24→32px) */
   --text-h2: clamp(1.5rem, 1.25rem + 1.15vw, 2rem);
   --text-h2--line-height: 1.25;
@@ -623,21 +629,30 @@
     }
   }
 
-  /* アクセントライン — セクションラベル装飾 */
+  /* アクセントライン — セクションラベル装飾（両端） */
   .gold-line {
     position: relative;
     display: inline-block;
   }
 
-  .gold-line::before {
+  .gold-line::before,
+  .gold-line::after {
     content: "";
     position: absolute;
     top: 50%;
-    left: -2.5rem;
-    transform: translateY(-50%);
     width: 2rem;
     height: 1px;
+    transform: translateY(-50%);
+  }
+
+  .gold-line::before {
+    left: -2.5rem;
     background: linear-gradient(90deg, transparent, var(--color-accent));
+  }
+
+  .gold-line::after {
+    right: -2.5rem;
+    background: linear-gradient(90deg, var(--color-accent), transparent);
   }
 
   .grain-texture {

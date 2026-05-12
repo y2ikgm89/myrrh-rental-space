@@ -55,19 +55,21 @@ export function EventCalendarSection({
     );
   }
 
+  const hasTitle = config.title.length > 0;
+  const hasDescription = config.description.length > 0;
+  const showHeader = hasTitle || hasDescription;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
       <div className="mx-auto max-w-5xl">
-        {(config.sectionLabel ||
-          config.title.length > 0 ||
-          config.description.length > 0) && (
+        {showHeader && (
           <div className="mb-10 text-center md:mb-14">
             {config.sectionLabel && (
               <ScrollReveal>
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               </ScrollReveal>
             )}
-            {config.title.length > 0 && (
+            {hasTitle && (
               <div style={getTitleStyle(style)}>
                 <Heading
                   level={2}
@@ -79,7 +81,7 @@ export function EventCalendarSection({
                 </Heading>
               </div>
             )}
-            {config.description.length > 0 && (
+            {hasDescription && (
               <ScrollReveal delay={0.2}>
                 <div
                   className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3"

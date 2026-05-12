@@ -16,6 +16,12 @@ const variantOptions = [
 ] as const;
 
 export const heroConfigSchema = z.object({
+  sectionLabel: field.text("セクションラベル", {
+    default: "",
+    maxLength: 50,
+    subGroup: "text",
+    helpText: "見出しの上に表示される英語ラベル（例: Spaces / Events）",
+  }),
   title: field.portableTextInline("見出し", { subGroup: "text" }),
   subtitle: field.portableTextBlock("サブ見出し", {
     subGroup: "text",

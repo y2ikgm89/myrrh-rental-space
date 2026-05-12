@@ -38,18 +38,19 @@ OKLCH 形式。Luxury White × Bronze。
 
 ### スケール（`src/app/(public)/_styles/public.css`）
 
-| トークン           | 値                                         | 推定サイズ | 用途                                 |
-| ------------------ | ------------------------------------------ | ---------- | ------------------------------------ |
-| `--text-hero`      | `clamp(3rem, 2rem + 4.5vw, 5rem)`          | 48 → 80 px | Hero セクション専用（homepage のみ） |
-| `--text-h1`        | `clamp(1.875rem, 1.5rem + 1.75vw, 2.5rem)` | 30 → 40 px | ページメインタイトル                 |
-| `--text-h2`        | `clamp(1.5rem, 1.25rem + 1.15vw, 2rem)`    | 24 → 32 px | セクション見出し                     |
-| `--text-h3`        | `clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem)`  | 20 → 24 px | サブセクション・カード見出し         |
-| `--text-h4`        | `1.125rem`                                 | 18 px 固定 | ラベル的見出し                       |
-| `--text-pullquote` | `clamp(1.5rem, 1.25rem + 1.15vw, 2rem)`    | 24 → 32 px | 記事中の強調引用                     |
-| `--text-body`      | `1rem`                                     | 16 px      | 本文                                 |
-| `--text-small`     | `0.875rem`                                 | 14 px      | メタ情報                             |
-| `--text-eyebrow`   | `0.6875rem` + `tracking-[0.18em]`          | 11 px      | セクションラベル（uppercase）        |
-| `--text-label`     | `0.6875rem`                                | 11 px      | フォームラベル                       |
+| トークン           | 値                                         | 推定サイズ | 用途                                                                     |
+| ------------------ | ------------------------------------------ | ---------- | ------------------------------------------------------------------------ |
+| `--text-hero`      | `clamp(3rem, 2rem + 4.5vw, 5rem)`          | 48 → 80 px | Hero セクション専用（homepage のみ）                                     |
+| `--text-page-hero` | `clamp(2.25rem, 1.75rem + 2vw, 3.5rem)`    | 36 → 56 px | 内部ページ hero h1（StandardHeroSection 全 variant、日本語見出し最適化） |
+| `--text-h1`        | `clamp(1.875rem, 1.5rem + 1.75vw, 2.5rem)` | 30 → 40 px | ページメインタイトル                                                     |
+| `--text-h2`        | `clamp(1.5rem, 1.25rem + 1.15vw, 2rem)`    | 24 → 32 px | セクション見出し                                                         |
+| `--text-h3`        | `clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem)`  | 20 → 24 px | サブセクション・カード見出し                                             |
+| `--text-h4`        | `1.125rem`                                 | 18 px 固定 | ラベル的見出し                                                           |
+| `--text-pullquote` | `clamp(1.5rem, 1.25rem + 1.15vw, 2rem)`    | 24 → 32 px | 記事中の強調引用                                                         |
+| `--text-body`      | `1rem`                                     | 16 px      | 本文                                                                     |
+| `--text-small`     | `0.875rem`                                 | 14 px      | メタ情報                                                                 |
+| `--text-eyebrow`   | `0.6875rem` + `tracking-[0.18em]`          | 11 px      | セクションラベル（uppercase）                                            |
+| `--text-label`     | `0.6875rem`                                | 11 px      | フォームラベル                                                           |
 
 ### 参考サイト
 

@@ -216,23 +216,29 @@ export function FaqListSection({
     <>
       <SectionWrapper style={style} layout={config.layout}>
         <div className={cn("mx-auto", containerWidth)}>
-          <div className="mb-10 text-center md:mb-14">
-            <ScrollReveal>
+          {config.title.length > 0 && (
+            <div className="mb-10 text-center md:mb-14">
               {config.sectionLabel && (
-                <SectionLabel>{config.sectionLabel}</SectionLabel>
+                <ScrollReveal>
+                  <SectionLabel>{config.sectionLabel}</SectionLabel>
+                </ScrollReveal>
               )}
-            </ScrollReveal>
-            <div style={getTitleStyle(style)}>
-              <Heading
-                level={2}
-                className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
-              >
-                <SplitText>
-                  <PortableTextSpans spans={config.title} />
-                </SplitText>
-              </Heading>
+              <div style={getTitleStyle(style)}>
+                <Heading
+                  level={2}
+                  className={cn(
+                    "mt-4",
+                    getTitleClasses(style),
+                    "tracking-tight",
+                  )}
+                >
+                  <SplitText>
+                    <PortableTextSpans spans={config.title} />
+                  </SplitText>
+                </Heading>
+              </div>
             </div>
-          </div>
+          )}
 
           {useCategoryMode ? (
             <div ref={listRef} className="space-y-16">

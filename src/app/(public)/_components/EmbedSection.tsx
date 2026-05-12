@@ -56,7 +56,7 @@ export function EmbedSection({
   return (
     <SectionWrapper style={style} layout={config.layout} skipContainer>
       <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
-        {config.title && (
+        {config.title.length > 0 && (
           <div className="mb-8 text-center md:mb-12">
             <ScrollReveal>
               {config.sectionLabel && (

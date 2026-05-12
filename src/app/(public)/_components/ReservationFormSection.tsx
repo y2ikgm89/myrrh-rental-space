@@ -91,10 +91,9 @@ export async function ReservationFormSection({
       ? candidateSpaceId
       : undefined;
 
-  const hasHeader =
-    Boolean(config.sectionLabel) ||
-    Boolean(config.title) ||
-    Boolean(config.description);
+  const hasTitle = config.title.length > 0;
+  const hasDescription = config.description.length > 0;
+  const hasHeader = hasTitle || hasDescription;
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
@@ -105,7 +104,7 @@ export async function ReservationFormSection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             </ScrollReveal>
           )}
-          {config.title && (
+          {hasTitle && (
             <div className="mt-4" style={getTitleStyle(style)}>
               <Heading
                 level={2}
@@ -117,7 +116,7 @@ export async function ReservationFormSection({
               </Heading>
             </div>
           )}
-          {config.description.length > 0 && (
+          {hasDescription && (
             <div className="mt-3 text-sm text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3">
               <PortableText blocks={config.description} />
             </div>

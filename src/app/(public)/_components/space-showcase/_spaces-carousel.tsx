@@ -351,23 +351,27 @@ export function SpacesCarousel({
     }
   }
 
+  const hasTitle = config.title.length > 0;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-12 text-center md:mb-16">
-        <ScrollReveal>
-          {config.sectionLabel ? (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
-          ) : null}
-          <div className="mt-4" style={getTitleStyle(style)}>
-            <Heading
-              level={2}
-              className={cn(getTitleClasses(style), "tracking-tight")}
-            >
-              <PortableTextSpans spans={config.title} />
-            </Heading>
-          </div>
-        </ScrollReveal>
-      </div>
+      {hasTitle && (
+        <div className="mb-12 text-center md:mb-16">
+          <ScrollReveal>
+            {config.sectionLabel ? (
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            ) : null}
+            <div className="mt-4" style={getTitleStyle(style)}>
+              <Heading
+                level={2}
+                className={cn(getTitleClasses(style), "tracking-tight")}
+              >
+                <PortableTextSpans spans={config.title} />
+              </Heading>
+            </div>
+          </ScrollReveal>
+        </div>
+      )}
       <div
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}

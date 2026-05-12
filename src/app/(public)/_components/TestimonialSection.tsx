@@ -112,25 +112,29 @@ export function TestimonialSection({
 
   if (config.items.length === 0) return <></>;
 
+  const hasTitle = config.title.length > 0;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-12 text-center md:mb-16">
-        <ScrollReveal>
+      {hasTitle && (
+        <div className="mb-12 text-center md:mb-16">
           {config.sectionLabel && (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
+            <ScrollReveal>
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            </ScrollReveal>
           )}
-        </ScrollReveal>
-        <div style={getTitleStyle(style)}>
-          <Heading
-            level={2}
-            className={cn("mt-4 tracking-tight", getTitleClasses(style))}
-          >
-            <SplitText>
-              <PortableTextSpans spans={config.title} />
-            </SplitText>
-          </Heading>
+          <div style={getTitleStyle(style)}>
+            <Heading
+              level={2}
+              className={cn("mt-4 tracking-tight", getTitleClasses(style))}
+            >
+              <SplitText>
+                <PortableTextSpans spans={config.title} />
+              </SplitText>
+            </Heading>
+          </div>
         </div>
-      </div>
+      )}
 
       <div ref={gridRef} className={LAYOUT_CLASS[config.displayLayout]}>
         <div

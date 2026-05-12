@@ -103,6 +103,9 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
     ? { backgroundColor: config.backgroundColor }
     : undefined;
 
+  const hasTitle = config.title.length > 0;
+  const hasDescription = config.description.length > 0;
+
   // split: 2-column layout (text left, buttons right)
   if (variant === "split") {
     return (
@@ -113,22 +116,24 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
       >
         <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
           <div className="flex-1">
-            <ScrollReveal>
-              {config.sectionLabel && (
+            {config.sectionLabel && (hasTitle || hasDescription) && (
+              <ScrollReveal>
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
-              )}
-            </ScrollReveal>
-            <div style={getTitleStyle(style)}>
-              <Heading
-                level={2}
-                className={cn("mt-6 tracking-tight", getTitleClasses(style))}
-              >
-                <SplitText>
-                  <PortableTextSpans spans={config.title} />
-                </SplitText>
-              </Heading>
-            </div>
-            {config.description.length > 0 && (
+              </ScrollReveal>
+            )}
+            {hasTitle && (
+              <div style={getTitleStyle(style)}>
+                <Heading
+                  level={2}
+                  className={cn("mt-6 tracking-tight", getTitleClasses(style))}
+                >
+                  <SplitText>
+                    <PortableTextSpans spans={config.title} />
+                  </SplitText>
+                </Heading>
+              </div>
+            )}
+            {hasDescription && (
               <ScrollReveal delay={0.2}>
                 <div
                   className="mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
@@ -159,24 +164,26 @@ export function CTASection({ config, style }: CTASectionProps): ReactElement {
       {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
     >
       <div className="text-center">
-        <ScrollReveal>
-          {config.sectionLabel && (
+        {config.sectionLabel && (hasTitle || hasDescription) && (
+          <ScrollReveal>
             <SectionLabel>{config.sectionLabel}</SectionLabel>
-          )}
-        </ScrollReveal>
+          </ScrollReveal>
+        )}
 
-        <div style={getTitleStyle(style)}>
-          <Heading
-            level={2}
-            className={cn("mt-6 tracking-tight", getTitleClasses(style))}
-          >
-            <SplitText>
-              <PortableTextSpans spans={config.title} />
-            </SplitText>
-          </Heading>
-        </div>
+        {hasTitle && (
+          <div style={getTitleStyle(style)}>
+            <Heading
+              level={2}
+              className={cn("mt-6 tracking-tight", getTitleClasses(style))}
+            >
+              <SplitText>
+                <PortableTextSpans spans={config.title} />
+              </SplitText>
+            </Heading>
+          </div>
+        )}
 
-        {config.description.length > 0 && (
+        {hasDescription && (
           <ScrollReveal delay={0.2}>
             <div
               className="mx-auto mt-8 max-w-lg text-sm leading-[2] text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3"

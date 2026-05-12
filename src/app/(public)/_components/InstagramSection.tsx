@@ -39,21 +39,23 @@ export function InstagramSection({
 
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-10 text-center md:mb-14">
-        <ScrollReveal>
+      {config.title.length > 0 && (
+        <div className="mb-10 text-center md:mb-14">
           {config.sectionLabel && (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
+            <ScrollReveal>
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            </ScrollReveal>
           )}
-        </ScrollReveal>
-        <div style={getTitleStyle(style)}>
-          <Heading
-            level={2}
-            className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
-          >
-            <PortableTextSpans spans={config.title} />
-          </Heading>
+          <div style={getTitleStyle(style)}>
+            <Heading
+              level={2}
+              className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
+            >
+              <PortableTextSpans spans={config.title} />
+            </Heading>
+          </div>
         </div>
-      </div>
+      )}
 
       {displayPosts.length === 0 ? (
         <ScrollReveal>

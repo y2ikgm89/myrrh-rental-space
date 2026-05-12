@@ -87,29 +87,27 @@ export function SpaceListSection({
 }: SpaceListSectionProps): ReactElement {
   if (mode.kind === "catalog") {
     const hasFilters = mode.categoryId !== null || mode.locationId !== null;
-    const hasHeader = Boolean(config.sectionLabel) || Boolean(config.title);
+    const hasTitle = config.title.length > 0;
 
     return (
       <SectionWrapper style={style} layout={config.layout}>
-        {hasHeader && (
+        {hasTitle && (
           <div className="mb-10 text-center md:mb-14">
             {config.sectionLabel && (
               <ScrollReveal>
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               </ScrollReveal>
             )}
-            {config.title && (
-              <div className="mt-4" style={getTitleStyle(style)}>
-                <Heading
-                  level={2}
-                  className={cn("tracking-tight", getTitleClasses(style))}
-                >
-                  <SplitText>
-                    <PortableTextSpans spans={config.title} />
-                  </SplitText>
-                </Heading>
-              </div>
-            )}
+            <div className="mt-4" style={getTitleStyle(style)}>
+              <Heading
+                level={2}
+                className={cn("tracking-tight", getTitleClasses(style))}
+              >
+                <SplitText>
+                  <PortableTextSpans spans={config.title} />
+                </SplitText>
+              </Heading>
+            </div>
           </div>
         )}
 

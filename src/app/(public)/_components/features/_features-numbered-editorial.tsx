@@ -74,23 +74,27 @@ export function FeaturesNumberedEditorial({
   const items = config.items;
   if (items.length === 0) return null;
 
+  const hasTitle = config.title.length > 0;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-16 max-w-2xl md:mb-24">
-        <ScrollReveal>
-          {config.sectionLabel ? (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
-          ) : null}
-          <div style={getTitleStyle(style)}>
-            <Heading
-              level={2}
-              className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
-            >
-              <PortableTextSpans spans={config.title} />
-            </Heading>
-          </div>
-        </ScrollReveal>
-      </div>
+      {hasTitle && (
+        <div className="mb-16 max-w-2xl md:mb-24">
+          <ScrollReveal>
+            {config.sectionLabel ? (
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            ) : null}
+            <div style={getTitleStyle(style)}>
+              <Heading
+                level={2}
+                className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
+              >
+                <PortableTextSpans spans={config.title} />
+              </Heading>
+            </div>
+          </ScrollReveal>
+        </div>
+      )}
 
       <div ref={gridRef}>
         {items.map((feature, index) => (

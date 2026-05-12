@@ -29,23 +29,27 @@ export function FeaturesNumberedSteps({
 }: Props): ReactElement | null {
   if (config.items.length === 0) return null;
 
+  const hasTitle = config.title.length > 0;
+
   return (
     <SectionWrapper style={style} layout={config.layout}>
-      <div className="mb-12 text-center md:mb-16">
-        <ScrollReveal>
-          {config.sectionLabel ? (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
-          ) : null}
-          <div className="mt-4" style={getTitleStyle(style)}>
-            <Heading
-              level={2}
-              className={cn(getTitleClasses(style), "tracking-tight")}
-            >
-              <PortableTextSpans spans={config.title} />
-            </Heading>
-          </div>
-        </ScrollReveal>
-      </div>
+      {hasTitle && (
+        <div className="mb-12 text-center md:mb-16">
+          <ScrollReveal>
+            {config.sectionLabel ? (
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            ) : null}
+            <div className="mt-4" style={getTitleStyle(style)}>
+              <Heading
+                level={2}
+                className={cn(getTitleClasses(style), "tracking-tight")}
+              >
+                <PortableTextSpans spans={config.title} />
+              </Heading>
+            </div>
+          </ScrollReveal>
+        </div>
+      )}
 
       <ScrollRevealGroup className="grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 md:gap-12">
         {config.items.map((step, i) => (
