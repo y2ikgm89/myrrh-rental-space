@@ -305,13 +305,13 @@ export function ReservationDetail({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-t border-border">
         <Link
           href="/mypage"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           予約一覧に戻る
         </Link>
         <Link
           href={`/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           この予約について問い合わせる
         </Link>

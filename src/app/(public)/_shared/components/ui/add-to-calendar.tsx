@@ -48,7 +48,7 @@ export function AddToCalendar({
             href={urls.google}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
           >
             <IconBrandGoogle className="h-4 w-4" aria-hidden="true" />
             <span>Google Calendar</span>
@@ -59,7 +59,7 @@ export function AddToCalendar({
             href={urls.outlookWeb}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
           >
             <OutlookLogo className="h-4 w-4" aria-hidden="true" />
             <span>Outlook</span>
@@ -70,7 +70,7 @@ export function AddToCalendar({
             <a
               href={urls.ics}
               download
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
             >
               <IconCalendarPlus className="h-4 w-4" aria-hidden="true" />
               <span>iCal / Apple (.ics)</span>
