@@ -61,21 +61,21 @@ const VARIANT_STYLES = {
     container: "divide-y divide-divider",
     item: "py-4 first:pt-0 last:pb-0",
     summary:
-      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
+      "flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 py-2 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,
   },
   bordered: {
     container: "space-y-3",
     item: "border border-border p-4 transition-colors duration-200",
     summary:
-      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
+      "flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 py-2 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,
   },
   minimal: {
     container: "divide-y divide-divider/60",
     item: "py-4 first:pt-0 last:pb-0",
     summary:
-      "flex w-full cursor-pointer items-center justify-between gap-4 text-left text-sm font-light md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden",
+      "flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 py-2 text-left text-sm font-light md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: false,
   },
 } as const;
