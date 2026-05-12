@@ -54,6 +54,8 @@ async function NotificationListSection({ searchParams }: PageProps) {
         currentPage={data.page}
         totalPages={data.totalPages}
         total={data.total}
+        perPage={params.perPage}
+        defaultPerPage={20}
       />
     </>
   );

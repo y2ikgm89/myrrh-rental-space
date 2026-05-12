@@ -30,9 +30,11 @@ async function CategoryList() {
       <CategoryTable categories={result.categories} />
       <Pagination
         pageUrlKey="catPage"
+        perPageUrlKey="catPerPage"
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.catPerPage}
       />
     </>
   );

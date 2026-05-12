@@ -21,6 +21,14 @@ paths:
 
 ## ページネーションコンポーネント
 
+共通コンポーネント `Pagination` (`@/admin/components/ui/Pagination`) を使用（Carbon Design 準拠、range text + perPage Select + Prev/番号/Next の 3 ゾーン）。required props は `currentPage` / `totalPages` / `total` / `perPage` の 4 つ（`perPage` は表示テキスト `start-end / 全 N 件` 算出に必須）。
+
+**タブ系ページ（prefix 付き URL キー）の落とし穴**:
+
+`SpaceTabContent` / `ReviewTabContent` 等が `adminSpaceSearchParamsCache` 経由で `rvPage` / `spPage` / `catPage` / `locPage` を読む場合、`<Pagination>` には対応する `pageUrlKey` + `perPageUrlKey` を**必ずペアで**渡す。片方欠落で書込先（デフォルト `?page=N`）と読込元（`?rvPage=N` 等）が drift する silent bug（実例: 2026-05-12 `ReviewTabContent.tsx` で `pageUrlKey="rvPage"` 欠落を発見・修正）。
+
+**`defaultPerPage` の妥当性チェック**: 共通デフォルトは 10。例外として `pages` / `faq` / `notifications` は 20、`media` は 24（`perPageOptions={[24, 48, 96]}` も併用）。`<Pagination defaultPerPage={N}>` の値は対応する nuqs parser (`parseAsPerPage.withDefault(N)` 相当) と必ず一致させる（不一致だと初回ロード時に Select の active option が外れる）。
+
 ページネーションは必ず `<nav>` 要素にアクセシビリティ属性を付与する:
 
 ```tsx

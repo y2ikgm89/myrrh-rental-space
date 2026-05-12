@@ -45,9 +45,12 @@ async function ReviewList() {
     <>
       <ReviewTable reviews={result.reviews} />
       <Pagination
+        pageUrlKey="rvPage"
+        perPageUrlKey="rvPerPage"
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={rvPerPage}
       />
     </>
   );

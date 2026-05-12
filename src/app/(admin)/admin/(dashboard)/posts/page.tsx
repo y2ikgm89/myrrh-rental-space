@@ -78,6 +78,7 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );
@@ -138,6 +139,7 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );

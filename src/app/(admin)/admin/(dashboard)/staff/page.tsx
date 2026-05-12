@@ -76,6 +76,7 @@ async function StaffList({ searchParams }: PageProps) {
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );

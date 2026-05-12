@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateReservationStatus } from "@/admin/actions/reservation";
@@ -41,40 +41,32 @@ export function useEventActions({ events }: UseEventActionsOptions) {
     events,
     eventsReducer,
   );
-  const [selectedEvent, setSelectedEventState] = useOptimistic<
-    CalendarEvent | null,
-    CalendarEvent | null
-  >(null, (_, newEvent) => newEvent);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const selectedEvent =
+    selectedEventId !== null
+      ? (optimisticEvents.find((e) => e.id === selectedEventId) ?? null)
+      : null;
 
   const handleEventClick = (event: CalendarEvent) => {
-    // 楽観的更新されたイベントを取得
-    const optimisticEvent = optimisticEvents.find((e) => e.id === event.id);
-    setSelectedEventState(optimisticEvent || event);
+    setSelectedEventId(event.id);
   };
 
   const handleCloseDialog = () => {
-    setSelectedEventState(null);
+    setSelectedEventId(null);
   };
 
   const handleStatusChange = async (
     eventId: string,
     newStatus: ReservationStatus,
   ) => {
-    // 重複実行を防止
     if (isPending) return;
 
     startTransition(async () => {
-      // 楽観的にUIを更新
       setOptimisticEvents({
         type: "UPDATE_STATUS",
         eventId,
         newStatus,
       });
-
-      // 選択中のイベントも楽観的に更新
-      if (selectedEvent?.id === eventId) {
-        setSelectedEventState({ ...selectedEvent, status: newStatus });
-      }
 
       const result = await updateReservationStatus(eventId, newStatus);
       if (isMutationError(result)) {
@@ -85,7 +77,7 @@ export function useEventActions({ events }: UseEventActionsOptions) {
 
       toast.success("ステータスを更新しました");
       router.refresh();
-      setSelectedEventState(null);
+      setSelectedEventId(null);
     });
   };
 

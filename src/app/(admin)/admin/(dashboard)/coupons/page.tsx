@@ -56,6 +56,7 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );

@@ -48,6 +48,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );

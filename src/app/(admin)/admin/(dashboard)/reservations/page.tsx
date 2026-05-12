@@ -53,6 +53,7 @@ async function ReservationList({
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );

@@ -2,7 +2,8 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
-import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
+import { EventStatus } from "@generated/prisma/client";
+import type { EventTabFilter } from "@/shared/lib/nuqs";
 
 const eventListSelect = {
   id: true,
@@ -37,7 +38,8 @@ const eventDetailSelect = {
 
 interface GetEventsOptions {
   search?: string;
-  status?: string;
+  status?: EventStatus;
+  tab?: EventTabFilter;
   dateFrom?: string;
   dateTo?: string;
   page?: number;
@@ -46,20 +48,75 @@ interface GetEventsOptions {
   sortOrder?: "asc" | "desc";
 }
 
+/**
+ * タブ別の where 句を生成する。
+ * - open: PUBLISHED かつ endTime >= now（開催前・開催中）
+ * - past: PUBLISHED かつ endTime < now、または ARCHIVED
+ * - draft: DRAFT
+ * - cancelled: CANCELLED
+ * - all: 制約なし（呼び出し側の status フィルタに委譲）
+ */
+function buildTabWhere(tab: EventTabFilter, now: Date): Prisma.EventWhereInput {
+  switch (tab) {
+    case "open":
+      return { status: EventStatus.PUBLISHED, endTime: { gte: now } };
+    case "past":
+      return {
+        OR: [
+          { status: EventStatus.PUBLISHED, endTime: { lt: now } },
+          { status: EventStatus.ARCHIVED },
+        ],
+      };
+    case "draft":
+      return { status: EventStatus.DRAFT };
+    case "cancelled":
+      return { status: EventStatus.CANCELLED };
+    case "all":
+      return {};
+  }
+}
+
+/** タブ別のデフォルトソート（URL に sortBy/sortOrder が指定されていない場合の初期値） */
+function getDefaultSort(tab: EventTabFilter): {
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+} {
+  switch (tab) {
+    case "open":
+      return { sortBy: "startTime", sortOrder: "asc" };
+    case "past":
+      return { sortBy: "endTime", sortOrder: "desc" };
+    case "draft":
+      return { sortBy: "updatedAt", sortOrder: "desc" };
+    case "cancelled":
+      return { sortBy: "startTime", sortOrder: "desc" };
+    case "all":
+      return { sortBy: "startTime", sortOrder: "desc" };
+  }
+}
+
 export async function getEvents(options: GetEventsOptions = {}) {
   const {
     search = "",
-    status = "",
+    status,
+    tab = "all",
     dateFrom = "",
     dateTo = "",
     page = 1,
     perPage = 10,
-    sortBy = "startTime",
-    sortOrder = "desc",
+    sortBy,
+    sortOrder,
   } = options;
+
+  const now = new Date();
+  const tabWhere = buildTabWhere(tab, now);
+  const defaults = getDefaultSort(tab);
+  const effectiveSortBy = sortBy ?? defaults.sortBy;
+  const effectiveSortOrder = sortOrder ?? defaults.sortOrder;
 
   const where: Prisma.EventWhereInput = {
     deletedAt: null,
+    ...tabWhere,
     ...(search
       ? {
           OR: [
@@ -70,13 +127,14 @@ export async function getEvents(options: GetEventsOptions = {}) {
           ],
         }
       : {}),
-    ...(isValidEventStatus(status) ? { status } : {}),
+    // status Select は tab="all" でのみ有効（他タブは tab が status を上書きするため UI で非表示）
+    ...(tab === "all" && status ? { status } : {}),
     ...(dateFrom ? { startTime: { gte: new Date(dateFrom) } } : {}),
     ...(dateTo ? { endTime: { lte: new Date(dateTo) } } : {}),
   };
 
   const orderBy: Prisma.EventOrderByWithRelationInput = {
-    [sortBy]: sortOrder,
+    [effectiveSortBy]: effectiveSortOrder,
   };
 
   const [events, totalCount] = await Promise.all([

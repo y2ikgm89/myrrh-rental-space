@@ -9,12 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { adminEventSearchParamsParsers } from "@/shared/lib/nuqs";
+import {
+  adminEventSearchParamsParsers,
+  EVENT_STATUS_FILTER_ALL,
+  isEventStatusFilter,
+} from "@/shared/lib/nuqs";
 import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
 
 const EVENT_STATUS_OPTIONS = [
-  { value: "ALL", label: "すべてのステータス" },
+  { value: EVENT_STATUS_FILTER_ALL, label: "すべてのステータス" },
   ...entriesOf(EVENT_STATUS_LABELS).map(([value, label]) => ({
     value,
     label,
@@ -61,28 +65,31 @@ export function EventFilters() {
           }
         />
       </div>
-      <div className="w-full sm:w-[180px]">
-        <Select
-          value={params.status || "ALL"}
-          onValueChange={(value) =>
-            void setParams({
-              status: value === "ALL" ? null : value,
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="ステータス" />
-          </SelectTrigger>
-          <SelectContent>
-            {EVENT_STATUS_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {params.tab === "all" && (
+        <div className="w-full sm:w-[180px]">
+          <Select
+            value={params.status}
+            onValueChange={(value) => {
+              if (!isEventStatusFilter(value)) return;
+              void setParams({
+                status: value === EVENT_STATUS_FILTER_ALL ? null : value,
+                page: 1,
+              });
+            }}
+          >
+            <SelectTrigger aria-label="イベントステータスで絞り込み">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {EVENT_STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

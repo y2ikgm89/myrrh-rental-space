@@ -65,4 +65,6 @@ paths:
    - `SortableColumnHeader` でソート可能カラムを定義
 4. テーブルの `<TableHeader>` を `<*TableHeader />` に置換
 
+**Gotcha**: `sortBy` parser の `as const` tuple に新値を追加したら、対応する `<*TableHeader>` 内の `*SortBy` literal union も**同 commit で同期必須**。type-check で TS2322 検出可だが、parser PR と Header PR を分けると silent stale を許す。canonical: parser 拡張時は `grep -rn "type [A-Z][A-Za-z]*SortBy = " src/app/\\(admin\\)` で対応 Header を grep + 同時更新。実例: 2026-05-12 セッションで `eventSortByValues` に `endTime` / `updatedAt` 追加 → `EventTableHeader.tsx` の `EventSortBy` union 同期漏れで 1 round 余分発生
+
 **参照実装**: `ReservationTableHeader.tsx`, `PostTableHeader.tsx`, `StaffTableHeader.tsx`, `CustomerTableHeader.tsx`（nullable 列 + tie-breaker 版）

@@ -41,6 +41,7 @@ async function AuditLogList({ searchParams }: PageProps) {
         currentPage={logs.page}
         totalPages={logs.totalPages}
         total={logs.total}
+        perPage={params.perPage}
       />
     </>
   );

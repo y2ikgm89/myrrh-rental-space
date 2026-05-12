@@ -3,11 +3,14 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { getEvents } from "@/shared/domain/events/admin-queries";
-import { loadAdminEventSearchParams } from "@/shared/lib/nuqs";
-import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
+import {
+  EVENT_STATUS_FILTER_ALL,
+  loadAdminEventSearchParams,
+} from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { EventFilters } from "./_components/EventFilters";
 import { EventTable } from "./_components/EventTable";
+import { EventTabs } from "./_components/EventTabs";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import type { Metadata } from "next";
@@ -25,12 +28,15 @@ type PageProps = {
 async function EventList({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const params = await loadAdminEventSearchParams(searchParams);
-  const status = isValidEventStatus(params.status) ? params.status : undefined;
+  // parser が EventStatusFilter に narrow 済。"ALL" のときは status フィルタなし
+  const status =
+    params.status === EVENT_STATUS_FILTER_ALL ? undefined : params.status;
 
   const result = await getEvents(
     omitUndefined({
       search: params.search || undefined,
-      status: status ?? undefined,
+      status,
+      tab: params.tab,
       dateFrom: params.dateFrom || undefined,
       dateTo: params.dateTo || undefined,
       page: params.page,
@@ -47,12 +53,15 @@ async function EventList({ searchParams }: { searchParams: SearchParams }) {
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.perPage}
       />
     </>
   );
 }
 
 export default async function EventsPage({ searchParams }: PageProps) {
+  const params = await loadAdminEventSearchParams(searchParams);
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -73,11 +82,14 @@ export default async function EventsPage({ searchParams }: PageProps) {
         </Button>
       </div>
 
+      {/* タブ（時間軸 + ステータスで分類） */}
+      <EventTabs activeTab={params.tab} />
+
       {/* フィルター */}
       <EventFilters />
 
       {/* テーブル */}
-      <Suspense fallback={<LoadingState />}>
+      <Suspense key={params.tab} fallback={<LoadingState />}>
         <EventList searchParams={searchParams} />
       </Suspense>
     </div>

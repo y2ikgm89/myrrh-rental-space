@@ -5,7 +5,12 @@ import { adminEventSearchParamsParsers } from "@/shared/lib/nuqs";
 import { CheckboxCell, SortableColumnHeader } from "@/admin/components/table";
 import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
-type EventSortBy = "startTime" | "createdAt" | "title";
+type EventSortBy =
+  | "startTime"
+  | "endTime"
+  | "createdAt"
+  | "updatedAt"
+  | "title";
 
 type EventTableHeaderProps = {
   allSelected: boolean;

@@ -31,9 +31,11 @@ async function LocationList() {
       <LocationTable locations={result.locations} />
       <Pagination
         pageUrlKey="locPage"
+        perPageUrlKey="locPerPage"
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.locPerPage}
       />
     </>
   );

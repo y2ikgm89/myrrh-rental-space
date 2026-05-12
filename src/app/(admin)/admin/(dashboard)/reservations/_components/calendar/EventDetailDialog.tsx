@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   Button,
   Select,
   SelectContent,
@@ -61,6 +62,9 @@ export function EventDetailDialog({
             <span>{event?.title}</span>
             {event && <ReservationStatusBadge status={event.status} />}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            予約の詳細情報を確認し、ステータスを変更できます
+          </DialogDescription>
         </DialogHeader>
 
         {event && (

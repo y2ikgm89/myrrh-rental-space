@@ -168,6 +168,8 @@ export function PageListTable({
         currentPage={currentPage}
         totalPages={totalPages}
         total={total}
+        perPage={perPage}
+        defaultPerPage={20}
       />
 
       <BulkActions

@@ -62,9 +62,11 @@ async function SpaceList() {
       <SpaceTable spaces={result.spaces} />
       <Pagination
         pageUrlKey="spPage"
+        perPageUrlKey="spPerPage"
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
+        perPage={params.spPerPage}
       />
     </>
   );

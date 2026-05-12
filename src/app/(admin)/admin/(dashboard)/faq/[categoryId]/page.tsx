@@ -107,7 +107,13 @@ async function CategoryDetailContent({
         totalItems={total}
       />
 
-      <Pagination currentPage={page} totalPages={totalPages} total={total} />
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        total={total}
+        perPage={params.perPage}
+        defaultPerPage={20}
+      />
     </div>
   );
 }

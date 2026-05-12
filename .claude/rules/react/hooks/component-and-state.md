@@ -161,3 +161,30 @@ const date = useWatch({ control: form.control, name: "date" });
 ```
 
 **例外**: `handleSubmit` コールバック内、`trigger()` 後の条件判定等、イベントハンドラ内での使用は安全。
+
+## useOptimistic — UI 選択状態と楽観的サーバー状態の分離
+
+`useOptimistic` setter は React 19 公式仕様で **`startTransition` または action 内のみ** 呼出可能。純粋な UI クリックハンドラ（サーバーアクションを伴わない選択状態の更新等）から setter を呼ぶと `An optimistic state update occurred outside a transition or action` warning が発生する。
+
+```typescript
+// NG: 選択 dialog の表示状態を useOptimistic で管理 → click handler が transition 外で setter 呼出
+const [selectedEvent, setSelectedEvent] = useOptimistic<
+  Event | null,
+  Event | null
+>(null, (_, next) => next);
+const handleClick = (event: Event) => {
+  setSelectedEvent(event); // warning: outside transition
+};
+
+// OK: UI 選択状態は useState で id を保持、選択中 entity は optimisticArray から派生
+const [selectedId, setSelectedId] = useState<string | null>(null);
+const selected =
+  selectedId !== null
+    ? (optimisticEvents.find((e) => e.id === selectedId) ?? null)
+    : null;
+const handleClick = (event: Event) => setSelectedId(event.id);
+```
+
+**判定基準**: 「純粋な UI 選択状態」（dialog 表示対象 / focused row 等）は `useState`、「サーバー mutation の楽観的 preview」は `useOptimistic`。両者を 1 つの `useOptimistic` にまとめると click handler の transition 外呼出 warning + 二重 state 管理（status 楽観更新を per-state に手動同期する必要）の二重不利益が発生する。**派生設計に分離**すれば status 楽観更新も `optimisticArray` 経由で自動反映され二重 state も解消する。
+
+参照実装: `reservations/_components/calendar/hooks/use-event-actions.ts`（2026-05-12 修正、`selectedEvent` を `useOptimistic` から `useState<id> + derive` に clean break）

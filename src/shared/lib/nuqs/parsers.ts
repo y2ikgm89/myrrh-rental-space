@@ -14,6 +14,7 @@ import {
 import {
   CouponType,
   CustomerType,
+  EventStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
   createParser,
@@ -649,11 +650,49 @@ export const adminSpaceSearchParamsCache = createSearchParamsCache(
 // 管理画面: イベント
 // ============================================================
 
-const eventSortByValues = ["startTime", "createdAt", "title"] as const;
+const eventSortByValues = [
+  "startTime",
+  "endTime",
+  "createdAt",
+  "updatedAt",
+  "title",
+] as const;
+
+/** 管理画面 イベント一覧のタブ（時間軸 + ステータスで絞り込み） */
+export const eventTabFilterValues = [
+  "open",
+  "past",
+  "draft",
+  "cancelled",
+  "all",
+] as const;
+export type EventTabFilter = (typeof eventTabFilterValues)[number];
+const eventTabFilterSet = new Set<string>(eventTabFilterValues);
+export function isEventTabFilter(value: string): value is EventTabFilter {
+  return eventTabFilterSet.has(value);
+}
+
+/** タブ "all" のときのみ表示する status Select の sentinel + 列挙 */
+export const EVENT_STATUS_FILTER_ALL = "ALL" as const;
+const eventStatusFilterValues = [
+  EVENT_STATUS_FILTER_ALL,
+  EventStatus.DRAFT,
+  EventStatus.PUBLISHED,
+  EventStatus.CANCELLED,
+  EventStatus.ARCHIVED,
+] as const;
+export type EventStatusFilter = (typeof eventStatusFilterValues)[number];
+const eventStatusFilterSet = new Set<string>(eventStatusFilterValues);
+export function isEventStatusFilter(value: string): value is EventStatusFilter {
+  return eventStatusFilterSet.has(value);
+}
 
 export const adminEventSearchParamsParsers = {
   search: parseAsQuery,
-  status: parseAsString.withDefault(""),
+  status: parseAsStringLiteral(eventStatusFilterValues).withDefault(
+    EVENT_STATUS_FILTER_ALL,
+  ),
+  tab: parseAsStringLiteral(eventTabFilterValues).withDefault("open"),
   page: parseAsPage,
   perPage: parseAsPerPage,
   sortBy: parseAsStringLiteral(eventSortByValues).withDefault("startTime"),

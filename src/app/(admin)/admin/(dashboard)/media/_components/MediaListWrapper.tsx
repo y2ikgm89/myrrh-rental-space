@@ -60,13 +60,14 @@ export async function MediaListWrapper({ searchParams }: Props) {
         <MediaTable items={result.items} />
       )}
 
-      {result.totalPages > 1 && (
-        <Pagination
-          currentPage={result.page}
-          totalPages={result.totalPages}
-          total={result.total}
-        />
-      )}
+      <Pagination
+        currentPage={result.page}
+        totalPages={result.totalPages}
+        total={result.total}
+        perPage={searchParams.perPage}
+        perPageOptions={[24, 48, 96]}
+        defaultPerPage={24}
+      />
     </div>
   );
 }
