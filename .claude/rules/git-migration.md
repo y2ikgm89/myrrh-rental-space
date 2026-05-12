@@ -20,6 +20,9 @@ paths:
 
 ## Cleanup
 
+- **`git mv` は HEAD 内容を staging に置く（working-tree の Edit は無視）** — Edit 直後の `git mv` は pre-Edit 状態を commit する silent bug。対処: (A) Edit を先に commit してから mv、または (B) mv 後に `git add <new-path>` で working tree を再 stage（実例: 2026-05-13 plan archive 移動で Completed marker Edit が staging されず follow-up commit で fix）
+- **`git branch -D` block (`block-dangerous-bash.sh` rule 9) の安全な bypass** — commits が main / remote / reflog で保存されているケース (merged-to-main with stale upstream / WIP with reflog backup) は `git update-ref -d refs/heads/<branch>` で等価操作。reflog 90 日復元可
+- **Stale dependabot PR 判定** — `package.json` 現バージョン vs PR target で obsolete 検出（例: main `@lexical/*` 0.44 vs PR 0.40→0.41 = obsolete）。canonical cleanup: `gh pr close <num> --delete-branch --comment "..."` で PR close + remote branch 削除。dependabot は次回 schedule で最新版 PR を再作成
 - **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/how-to/**` / `bunfig.toml` / `.vscode/launch.json`
 - **`package.json#packageManager` (Bun version) 更新時は `.github/workflows/*.yml` の `bun-version: "X.Y.Z"` も同期必須** — 9+ 箇所 drift で silent runtime difference（`mock.module` 動作差異 / `bun:test` 挙動差）を起こす。canonical 検出 grep: `grep -nE 'bun-version|packageManager' .github/workflows/*.yml package.json`。実例: 2026-05-10 で 9 箇所 1.3.12 → 1.3.13 sync（commit `754e9c2e`）
 - **ファイル削除時の dangling ref 検出範囲は `docs/` 全域 + `.claude/` + `AGENTS.md` + `CLAUDE.md` 必須** — 検出時は「削除 + dangling ref 修正」を同一 commit に統合

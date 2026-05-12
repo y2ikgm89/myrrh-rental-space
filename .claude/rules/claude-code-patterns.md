@@ -76,6 +76,7 @@ paths:
 - [ ] **rule**: `paths:` frontmatter あり（常時ロード禁止）
 - [ ] **skill**: SKILL.md 500 行未満、`description` + `when_to_use` 合算 1,536 文字以下、reference は `reference/*.md` に分割。frontmatter は上記 skill 公式フィールド表のキーのみ
 - [ ] **agent**: frontmatter は上記 sub-agent 公式フィールド表のキーのみ。独自フィールド導入禁止
+- [ ] **agent `memory: project` 宣言時**: `.claude/agent-memory/<name>/` 実体を必ず作成。drift 時 memory auto-load が silent fail し session 跨ぎで learning を持ち越せない。検出: `grep -l '^memory: project' .claude/agents/*.md` の name 集合 vs `ls .claude/agent-memory/` を比較、整合化は frontmatter 削除 (未使用) または stub `MEMORY.md` 作成 (利用予定) で
 - [ ] **新カテゴリ作成時**: ドメイン分類（Prisma / React / Tailwind / Auth / Server Actions 等）に統合できないか先検討。メタ分類（gotchas / patterns / etc.）の新ディレクトリ作成は禁止
 - [ ] **常時ロード rule 追加禁止** — 全 rule は `paths:` 必須
 

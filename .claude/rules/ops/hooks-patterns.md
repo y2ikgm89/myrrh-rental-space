@@ -176,6 +176,10 @@ grep -L 'stop_hook_active' .claude/hooks/type-check-on-stop.sh && echo "⚠️ g
 grep -rE 'hookEventName.*:' .claude/hooks/ | grep -vE '(UserPromptSubmit|PostToolUse|PreToolUse|SessionStart)'
 ```
 
+## State 注入 hook の sync 規律
+
+- **`session-start.sh` 等の project state 注入 hook は plan format 変更と sync 必須** — `PLANS_DIR` パス + status marker grep pattern (`> **In Progress:` / `> **Snapshot:` + `> **Completed:`) は CLAUDE.md handoff memory spec に追従。drift 検出: `echo '{}' | bash .claude/hooks/session-start.sh` で「進行中の計画 (なし)」が出るが実態存在するなら pattern drift の silent bug（PLANS_DIR / grep / 両方）。実例: 2026-05-13 で `docs/plans` (不在) vs 実態 `docs/superpowers/plans/` + 旧 `^**ステータス**:` pattern を修正
+
 ## 関連ドキュメント
 
 - 公式: `code.claude.com/docs/en/hooks` / `.../hooks-guide`
