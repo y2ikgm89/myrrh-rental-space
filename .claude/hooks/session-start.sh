@@ -8,18 +8,33 @@
 
 set -euo pipefail
 
-PLANS_DIR="$CLAUDE_PROJECT_DIR/docs/plans"
+: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+PLANS_DIR="$CLAUDE_PROJECT_DIR/docs/superpowers/plans"
 
 INPUT=$(cat 2>/dev/null || echo '{}')
 SOURCE=$(printf '%s' "$INPUT" | jq -r '.source // "startup"' 2>/dev/null || echo "startup")
 
 # --- 共通: 進行中の計画 ---
+# 検出パターン: `> **In Progress:` マーカーあり、または `> **Snapshot:` あり + `> **Completed:` なし
+# (CLAUDE.md「セッション跨ぎ大規模 plan は handoff memory 必須」§ 完了マーカー仕様)
 echo '=== 進行中の計画 ==='
-if ! grep -rlE '^\*\*ステータス\*\*: *(実装中|設計承認済み)' "$PLANS_DIR" 2>/dev/null \
-    | grep -vE '(README|CLAUDE)' \
-    | head -5; then
-  echo '(なし)'
+FOUND=0
+if [ -d "$PLANS_DIR" ]; then
+  for f in "$PLANS_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    case "$(basename "$f")" in README*|CLAUDE*) continue ;; esac
+    if grep -qE '^>\s*\*\*In Progress:' "$f" 2>/dev/null; then
+      echo "${f#"$CLAUDE_PROJECT_DIR/"}"
+      FOUND=$((FOUND + 1))
+    elif grep -qE '^>\s*\*\*Snapshot:' "$f" 2>/dev/null && ! grep -qE '^>\s*\*\*Completed:' "$f" 2>/dev/null; then
+      echo "${f#"$CLAUDE_PROJECT_DIR/"}"
+      FOUND=$((FOUND + 1))
+    fi
+    [ "$FOUND" -ge 5 ] && break
+  done
 fi
+[ "$FOUND" -eq 0 ] && echo '(なし)'
 
 # --- compact 専用: 圧縮後の state 再注入 ---
 if [ "$SOURCE" = "compact" ]; then
