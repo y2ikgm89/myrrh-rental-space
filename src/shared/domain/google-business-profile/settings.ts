@@ -30,21 +30,17 @@ const GBP_AUTH_PURPOSE = "api-key";
 type EncryptedAuthEnvelope = { readonly encrypted: string };
 
 function isEncryptedEnvelope(value: unknown): value is EncryptedAuthEnvelope {
-  return (
-    isRecord(value) &&
-    typeof (value as { encrypted?: unknown }).encrypted === "string"
-  );
+  return isRecord(value) && typeof value["encrypted"] === "string";
 }
 
 function isGbpAuthState(value: unknown): value is GbpAuthState {
   if (!isRecord(value)) return false;
-  const v = value as Record<string, unknown>;
   return (
-    typeof v["accessToken"] === "string" &&
-    typeof v["refreshToken"] === "string" &&
-    typeof v["expiresAt"] === "number" &&
-    typeof v["accountId"] === "string" &&
-    typeof v["accountName"] === "string"
+    typeof value["accessToken"] === "string" &&
+    typeof value["refreshToken"] === "string" &&
+    typeof value["expiresAt"] === "number" &&
+    typeof value["accountId"] === "string" &&
+    typeof value["accountName"] === "string"
   );
 }
 

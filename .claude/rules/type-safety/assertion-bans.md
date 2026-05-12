@@ -143,3 +143,23 @@ const keys = keysOf(config)
 const tab = isValidTab(params.tab) ? params.tab : 'default'
 onValueChange={(value) => { if (isValidDiscountType(value)) setType(value) }}
 ```
+
+## 監査 grep（型アサーション横断検出）
+
+```bash
+# `as Type` 全体（shadcn primitive rename 等を含む、要精査）
+grep -rnE '\bas\s+[A-Z][a-zA-Z0-9_]*(\[\]|<[^>]+>)?\b' src/
+
+# `as any` / `as unknown as` / `@ts-ignore` 系（最優先で潰す対象）
+grep -rnE '\bas\s+any\b|\bas\s+unknown\s+as\b|@ts-(ignore|expect-error|nocheck)' src/
+
+# `Object.keys() as T[]` パターン（keysOf() 置換対象）
+grep -rnE 'Object\.keys\([^)]+\)\s+as\s+' src/
+
+# isRecord narrowing 直後の冗長 `as Record<string, unknown>`
+grep -rn 'as Record<string, unknown>' src/
+```
+
+## Gotchas
+
+- **同名 enum / Prisma 名前空間の重複 import が `as` rename を強制する silent debt** — 例: `EventStatus` を `@generated/prisma/enums`（直）と `@/shared/lib/validations/enums/prisma-types`（gateway）の両方から import すると TS2300（重複宣言）になり、回避策として `EventStatus as EventStatusEnum` rename が混入する。本来は gateway 経由（`enums/prisma-types`）に統一すれば rename 不要。**`as` rename を見つけたら同名 import の存在を grep で先に確認**してから rename 除去を試みる（rename 単体を消すと TS2300 が顕在化して silent debt の根を発見できる）。2026-05-12 `events/commands.ts` で実遭遇

@@ -1,10 +1,7 @@
 import "server-only";
 
 import { prisma, type Coupon } from "@/shared/db/prisma";
-import {
-  Prisma as PrismaNamespace,
-  type Prisma,
-} from "@generated/prisma/client";
+import { Prisma } from "@generated/prisma/client";
 import type {
   CouponData,
   CouponDetailData,
@@ -17,11 +14,11 @@ import type { CouponType } from "@generated/prisma/enums";
 import { toPlainObject } from "@/shared/lib/serialize";
 
 const SORT_COLUMN_MAP = {
-  code: PrismaNamespace.raw('"code"'),
-  name: PrismaNamespace.raw('"name"'),
-  createdAt: PrismaNamespace.raw('"createdAt"'),
-  validFrom: PrismaNamespace.raw('"validFrom"'),
-  usageCount: PrismaNamespace.raw('"usageCount"'),
+  code: Prisma.raw('"code"'),
+  name: Prisma.raw('"name"'),
+  createdAt: Prisma.raw('"createdAt"'),
+  validFrom: Prisma.raw('"validFrom"'),
+  usageCount: Prisma.raw('"usageCount"'),
 } satisfies Record<NonNullable<CouponPagination["sortBy"]>, Prisma.Sql>;
 
 const couponDateFormatter = new Intl.DateTimeFormat("ja-JP", {
@@ -141,42 +138,38 @@ function buildRawCouponWhere(filters: CouponFilters): Prisma.Sql {
   const clauses: Prisma.Sql[] = [];
 
   if (filters.status === "limitReached") {
-    clauses.push(PrismaNamespace.sql`"isActive" = true`);
-    clauses.push(PrismaNamespace.sql`"usageLimit" IS NOT NULL`);
-    clauses.push(PrismaNamespace.sql`"usageCount" >= "usageLimit"`);
-    clauses.push(PrismaNamespace.sql`"validFrom" <= ${now}`);
-    clauses.push(
-      PrismaNamespace.sql`("validUntil" IS NULL OR "validUntil" >= ${now})`,
-    );
+    clauses.push(Prisma.sql`"isActive" = true`);
+    clauses.push(Prisma.sql`"usageLimit" IS NOT NULL`);
+    clauses.push(Prisma.sql`"usageCount" >= "usageLimit"`);
+    clauses.push(Prisma.sql`"validFrom" <= ${now}`);
+    clauses.push(Prisma.sql`("validUntil" IS NULL OR "validUntil" >= ${now})`);
   }
 
   if (filters.status === "active") {
-    clauses.push(PrismaNamespace.sql`"isActive" = true`);
-    clauses.push(PrismaNamespace.sql`"validFrom" <= ${now}`);
+    clauses.push(Prisma.sql`"isActive" = true`);
+    clauses.push(Prisma.sql`"validFrom" <= ${now}`);
+    clauses.push(Prisma.sql`("validUntil" IS NULL OR "validUntil" >= ${now})`);
     clauses.push(
-      PrismaNamespace.sql`("validUntil" IS NULL OR "validUntil" >= ${now})`,
-    );
-    clauses.push(
-      PrismaNamespace.sql`("usageLimit" IS NULL OR "usageCount" < "usageLimit")`,
+      Prisma.sql`("usageLimit" IS NULL OR "usageCount" < "usageLimit")`,
     );
   }
 
   if (filters.type) {
-    clauses.push(PrismaNamespace.sql`"type" = ${filters.type}`);
+    clauses.push(Prisma.sql`"type" = ${filters.type}`);
   }
 
   if (filters.search) {
     const pattern = `%${filters.search}%`;
     clauses.push(
-      PrismaNamespace.sql`("code" ILIKE ${pattern} OR "name" ILIKE ${pattern})`,
+      Prisma.sql`("code" ILIKE ${pattern} OR "name" ILIKE ${pattern})`,
     );
   }
 
   if (clauses.length === 0) {
-    return PrismaNamespace.empty;
+    return Prisma.empty;
   }
 
-  return PrismaNamespace.sql`WHERE ${PrismaNamespace.join(clauses, " AND ")}`;
+  return Prisma.sql`WHERE ${Prisma.join(clauses, " AND ")}`;
 }
 
 export async function getCoupons(
@@ -197,9 +190,7 @@ export async function getCoupons(
     const whereSql = buildRawCouponWhere(filters);
     const sortColumn = SORT_COLUMN_MAP[sortBy];
     const sortDirection =
-      sortOrder === "asc"
-        ? PrismaNamespace.raw("ASC")
-        : PrismaNamespace.raw("DESC");
+      sortOrder === "asc" ? Prisma.raw("ASC") : Prisma.raw("DESC");
     const countResult = await prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count
       FROM "Coupon"

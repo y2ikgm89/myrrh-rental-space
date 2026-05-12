@@ -2,7 +2,6 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
-import { EventStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   sendEventCancelledToAllParticipants,
@@ -17,7 +16,7 @@ import {
   buildParagraphHtml,
 } from "@/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
-import { EventStatus as EventStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -42,7 +41,7 @@ export interface EventCommandInput {
   addressDetail?: string | null;
   locationId?: string | null;
   spaceId?: string | null;
-  status: (typeof EventStatusEnum)[keyof typeof EventStatusEnum];
+  status: (typeof EventStatus)[keyof typeof EventStatus];
   registrationOpen?: boolean;
 }
 

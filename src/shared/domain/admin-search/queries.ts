@@ -6,6 +6,7 @@ import type {
   SearchResultItem,
 } from "@/admin/components/command-palette/types";
 import type { Resource } from "@/admin/lib/admin-resources";
+import { keysOf } from "@/shared/lib/serialize";
 
 const SEARCH_LIMIT_PER_RESOURCE = 5;
 
@@ -214,10 +215,7 @@ async function searchLocations(query: string): Promise<SearchResultItem[]> {
   }));
 }
 
-const SEARCH_BY_RESOURCE: Record<
-  string,
-  (q: string) => Promise<SearchResultItem[]>
-> = {
+const SEARCH_BY_RESOURCE = {
   space: searchSpaces,
   customer: searchCustomers,
   reservation: searchReservations,
@@ -229,18 +227,26 @@ const SEARCH_BY_RESOURCE: Record<
   faq: searchFaqItems,
   coupon: searchCoupons,
   location: searchLocations,
-};
+} satisfies Partial<
+  Record<Resource, (q: string) => Promise<SearchResultItem[]>>
+>;
+
+type SearchableResource = keyof typeof SEARCH_BY_RESOURCE;
+
+function isSearchableResource(
+  resource: Resource,
+): resource is SearchableResource {
+  return resource in SEARCH_BY_RESOURCE;
+}
 
 export async function searchByResource(
   resource: Resource,
   query: string,
 ): Promise<SearchResultGroup> {
-  const handler = SEARCH_BY_RESOURCE[resource];
-  if (!handler) return { resource, items: [] };
-  const items = await handler(query);
+  if (!isSearchableResource(resource)) return { resource, items: [] };
+  const items = await SEARCH_BY_RESOURCE[resource](query);
   return { resource, items };
 }
 
-export const SEARCHABLE_RESOURCES = Object.keys(
-  SEARCH_BY_RESOURCE,
-) as Resource[];
+export const SEARCHABLE_RESOURCES: readonly Resource[] =
+  keysOf(SEARCH_BY_RESOURCE);

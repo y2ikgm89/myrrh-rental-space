@@ -20,6 +20,20 @@ interface SignupTermsCookiePayload {
   readonly exp: number;
 }
 
+function isSignupTermsCookiePayload(
+  value: unknown,
+): value is SignupTermsCookiePayload {
+  if (!value || typeof value !== "object") return false;
+  if (!("termsIds" in value) || !("exp" in value)) return false;
+  const termsIds = (value as { termsIds: unknown }).termsIds;
+  const exp = (value as { exp: unknown }).exp;
+  return (
+    Array.isArray(termsIds) &&
+    termsIds.every((t) => typeof t === "string") &&
+    typeof exp === "number"
+  );
+}
+
 function getSecret(): string {
   const secret = process.env["BETTER_AUTH_SECRET"];
   if (!secret || secret.length < 32) {
@@ -75,17 +89,8 @@ export function decodeSignupTermsCookie(value: string): readonly string[] {
   try {
     const json = base64UrlDecode(encoded).toString("utf-8");
     const parsed: unknown = JSON.parse(json);
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !("termsIds" in parsed) ||
-      !("exp" in parsed) ||
-      !Array.isArray((parsed as SignupTermsCookiePayload).termsIds) ||
-      typeof (parsed as SignupTermsCookiePayload).exp !== "number"
-    ) {
-      return [];
-    }
-    payload = parsed as SignupTermsCookiePayload;
+    if (!isSignupTermsCookiePayload(parsed)) return [];
+    payload = parsed;
   } catch {
     return [];
   }
