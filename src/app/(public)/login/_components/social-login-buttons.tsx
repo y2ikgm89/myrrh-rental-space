@@ -119,7 +119,10 @@ export function SocialLoginButtons({
           {requiredTerms.map((term) => {
             const isChecked = agreedIds.includes(term.id);
             return (
-              <label key={term.id} className="flex items-start gap-3">
+              <label
+                key={term.id}
+                className="flex min-h-11 items-start gap-3 py-1"
+              >
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 border-border accent-accent"

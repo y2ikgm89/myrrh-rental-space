@@ -211,7 +211,10 @@ export function CustomerStep({
             {requiredTerms.map((term) => {
               const isChecked = agreedTermsIds?.includes(term.id) ?? false;
               return (
-                <label key={term.id} className="flex items-start gap-3">
+                <label
+                  key={term.id}
+                  className="flex min-h-11 items-start gap-3 py-1"
+                >
                   <input
                     type="checkbox"
                     className="mt-0.5 h-4 w-4 border-border accent-accent"
