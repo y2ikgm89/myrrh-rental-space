@@ -83,7 +83,7 @@ export function DragHandle({ className, disabled }: DragHandleProps) {
   return (
     <div
       className={cn(
-        "flex h-8 w-8 cursor-grab items-center justify-center rounded text-muted-foreground transition-colors",
+        "flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground transition-colors",
         "hover:bg-muted hover:text-foreground",
         "active:cursor-grabbing",
         disabled && "cursor-not-allowed opacity-50",
