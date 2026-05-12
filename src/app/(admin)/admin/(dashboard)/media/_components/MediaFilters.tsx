@@ -118,7 +118,7 @@ export function MediaFilters() {
               type="button"
               onClick={() => void setParams({ view: "grid" })}
               className={cn(
-                "p-2",
+                "inline-flex h-11 w-11 items-center justify-center p-2",
                 params.view === "grid"
                   ? "bg-primary text-primary-foreground"
                   : "bg-background hover:bg-muted",
@@ -131,7 +131,7 @@ export function MediaFilters() {
               type="button"
               onClick={() => void setParams({ view: "list" })}
               className={cn(
-                "p-2",
+                "inline-flex h-11 w-11 items-center justify-center p-2",
                 params.view === "list"
                   ? "bg-primary text-primary-foreground"
                   : "bg-background hover:bg-muted",
