@@ -94,7 +94,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
           setPickerYear(year);
           setIsEditingYear(false);
         }}
-        className="group relative text-xl font-light tracking-wide text-foreground transition-colors hover:text-foreground md:text-2xl"
+        className="group relative inline-flex min-h-11 items-center text-xl font-light tracking-wide text-foreground transition-colors hover:text-foreground md:text-2xl"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -145,7 +145,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
               <button
                 type="button"
                 onClick={startYearEdit}
-                className="text-lg font-light text-foreground transition-colors hover:text-foreground"
+                className="inline-flex min-h-11 items-center px-3 text-lg font-light text-foreground transition-colors hover:text-foreground"
                 aria-label="年を直接入力"
                 title="クリックで年を入力"
               >
@@ -172,7 +172,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
                   type="button"
                   onClick={() => handleMonthSelect(i)}
                   className={cn(
-                    "py-2 text-sm transition-colors",
+                    "inline-flex min-h-11 items-center justify-center px-2 text-sm transition-colors",
                     isCurrent
                       ? "bg-accent font-medium text-accent-foreground"
                       : "text-foreground hover:bg-surface",
