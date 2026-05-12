@@ -11,7 +11,8 @@ const dropdownMenuContentVariants = tv({
 });
 
 const dropdownMenuItemVariants = tv({
-  base: "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors duration-200 focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
+  // WCAG 2.5.5 Enhanced — min-h-11 で 44px ヒットエリア確保（pointer / touch 両対応）
+  base: "relative flex min-h-11 cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-2 text-sm outline-none transition-colors duration-200 focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
 });
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
