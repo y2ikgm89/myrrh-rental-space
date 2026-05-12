@@ -42,7 +42,7 @@ export function NotificationBell({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label={
             unreadCount > 0
               ? `通知（未読${unreadCount > 99 ? "99件以上" : `${String(unreadCount)}件`}）`
