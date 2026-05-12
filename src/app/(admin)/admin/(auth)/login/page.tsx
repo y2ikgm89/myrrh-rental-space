@@ -15,6 +15,7 @@ import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { LoginForm } from "./LoginForm";
 import { CopyrightYear } from "./CopyrightYear";
+import { DevLoginButton } from "./DevLoginButton";
 import type { ReactElement } from "react";
 
 export const metadata: Metadata = {
@@ -134,6 +135,7 @@ export default async function LoginPage(): Promise<ReactElement> {
               </p>
             </div>
             <LoginForm />
+            {process.env["NODE_ENV"] !== "production" && <DevLoginButton />}
           </div>
 
           {/* フッター */}

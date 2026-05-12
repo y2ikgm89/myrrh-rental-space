@@ -120,6 +120,12 @@ function handleAdminLoginGate(
   req: NextRequest,
   pathname: string,
 ): NextResponse {
+  // 開発環境では Admin Gate をバイパス（generate-login-url.ts 不要にする）。
+  // `=== "development"` 厳密判定で staging / production を確実に除外。
+  if (serverEnv.NODE_ENV === "development") {
+    return createResponse(req, pathname);
+  }
+
   const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
 
   // gate cookie がある → 通過（timing-safe comparison for defensive consistency）

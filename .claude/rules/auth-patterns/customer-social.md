@@ -190,3 +190,4 @@ await signIn.email({
 ## マイページ開発確認（dev login）
 
 - `/login` ページに `NODE_ENV !== "production"` でのみ表示される「テスト顧客でログイン」ボタンあり（`dev-login-action.ts`）。Better Auth の `signUpEmail` / `signInEmail` で `dev-customer@example.com` セッションを作成し、`ensureCustomerLinked` が Customer を自動生成
+- **管理画面側も対称化済（2026-05-12）** — `/admin/login` に `process.env["NODE_ENV"] !== "production"` でのみ表示される「SUPER_ADMIN でログイン」ボタン（`(admin)/admin/(auth)/login/{DevLoginButton.tsx,dev-login-credentials.ts}`）。seed `superadmin@example.com` / `superadmin123` 前提（user 自動作成なし — `signUpEmail` は admin-auth で role: CUSTOMER デフォルトのため不採用）。`proxy.ts` の Admin Gate dev bypass（`handleAdminLoginGate` 冒頭 `serverEnv.NODE_ENV === "development"` short-circuit）と組み合わせ、`localhost:3000/admin/login` 直アクセス → 1 クリック login が成立。staging / production には `=== "development"` 厳密判定で確実に伝播しない
