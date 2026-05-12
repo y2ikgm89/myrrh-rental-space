@@ -133,3 +133,16 @@ grep -rnE 'text-\[10px\]' src/app/\(public\)/ --include="*.tsx"
 grep -rnE 'tracking-\[0\.[0-9]+em\]' src/app/\(public\)/ --include="*.tsx" \
   | grep -vE '(0\.08em|0\.12em|0\.18em|0\.01em|0\.02em|hero-demo|spaces-design-demo)'
 ```
+
+---
+
+## Playwright MCP 実測でしか検出できない違反パターン
+
+static grep + class 確認では検出不可、`getBoundingClientRect()` で初めて顕在化する違反種別:
+
+- **flex shrink で width 潰れ**: `h-11 w-11` 指定でも flex parent 内で `shrink-0` 無しなら 39-42px に縮小（実例: TopBar の `<Button size="icon">` / breadcrumb item / admin Pagination prev/next button / calendar-month-nav chevron / NotificationBell）。Button primitive base に `shrink-0` 追加が canonical fix
+- **Content driven width**: `<Button size="sm">` (`h-11 px-3`) は height ✓ だが width は content 依存。icon-only mode (mobile + sm:hidden text) で `min-w-11` 無しなら 40-42px。`className="min-w-11"` 個別指定が必要
+- **CheckboxCell `<input>` 計測**: Playwright は `<input type="checkbox">` 自体を 16×16 計測する（native size）。`<label>` wrapper の `min-h-11 min-w-11` で 44×44 hit area 確保は WCAG 規律準拠 — **false positive として skip**
+- **Switch primitive (Radix / shadcn)**: visual switch 20×36 (Apple HIG / Material 3 / shadcn 標準サイズ)。Switch 自体は維持し PublishSwitch wrapper で 44×44 hit area + WCAG 2.5.5 Spacing exception 適用範囲。Playwright が違反検出しても primitive レベル修正不要
+- **Playwright MCP 操作順序**: `browser_resize` → `browser_navigate` の順で viewport reflow 確実。逆順だと初回 render が古い viewport で行われ、resize 後の measurement に影響することがある
+- **検証範囲判定**: footer の inline text link (24-28px) は editorial 業界標準範囲 (Kinfolk / Cereal pattern) として WCAG Inline 例外可、`<input>` / Switch primitive は User Agent Control 例外可。実装修正対象は **outer interactive (Button / Link / icon button / Card overlay action / Tab / DragHandle)** のみが canonical
