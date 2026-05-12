@@ -54,7 +54,7 @@ mock.module("@generated/prisma/enums", () => ({
 
 import {
   createReviewCommand,
-  toggleReviewPublishedCommand,
+  updateReviewPublishedCommand,
   deleteReviewCommand,
   replyToReviewCommand,
   deleteReviewReplyCommand,
@@ -264,7 +264,7 @@ describe("createReviewCommand", () => {
   });
 });
 
-describe("toggleReviewPublishedCommand", () => {
+describe("updateReviewPublishedCommand", () => {
   beforeEach(() => {
     mockSpaceReviewFindUnique.mockReset();
     mockSpaceReviewUpdate.mockReset();
@@ -280,7 +280,7 @@ describe("toggleReviewPublishedCommand", () => {
         space: { slug: SPACE_SLUG },
       });
 
-      const result = await toggleReviewPublishedCommand(REVIEW_ID, true);
+      const result = await updateReviewPublishedCommand(REVIEW_ID, true);
 
       expect(result).toEqual({ spaceId: SPACE_ID, spaceSlug: SPACE_SLUG });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledTimes(1);
@@ -293,7 +293,7 @@ describe("toggleReviewPublishedCommand", () => {
         space: { slug: SPACE_SLUG },
       });
 
-      const result = await toggleReviewPublishedCommand(REVIEW_ID, false);
+      const result = await updateReviewPublishedCommand(REVIEW_ID, false);
 
       expect(result).toEqual({ spaceId: SPACE_ID, spaceSlug: SPACE_SLUG });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
@@ -309,7 +309,7 @@ describe("toggleReviewPublishedCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue(null);
 
       await expect(
-        toggleReviewPublishedCommand("non-existent", true),
+        updateReviewPublishedCommand("non-existent", true),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "レビューが見つかりません",
@@ -320,7 +320,7 @@ describe("toggleReviewPublishedCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue(null);
 
       await expect(
-        toggleReviewPublishedCommand("non-existent", true),
+        updateReviewPublishedCommand("non-existent", true),
       ).rejects.toThrow(DomainError);
 
       expect(mockSpaceReviewUpdate).not.toHaveBeenCalled();

@@ -224,11 +224,11 @@ export async function restorePageCommand(slug: string): Promise<void> {
   });
 }
 
-export async function togglePagePublishedCommand(
+export async function updatePagePublishedCommand(
   slug: string,
+  isPublished: boolean,
 ): Promise<{ isPublished: boolean }> {
-  const page = await ensurePageExists(slug);
-  const isPublished = !page.isPublished;
+  await ensurePageExists(slug);
 
   await prisma.page.update({
     where: { slug },
@@ -241,9 +241,9 @@ export async function togglePagePublishedCommand(
   return { isPublished };
 }
 
-export async function bulkTogglePagePublishedCommand(
+export async function bulkUpdatePagePublishedCommand(
   slugs: string[],
-  publish: boolean,
+  isPublished: boolean,
 ): Promise<void> {
   if (slugs.length === 0) {
     throw new DomainError("対象ページが選択されていません", "VALIDATION");
@@ -255,8 +255,8 @@ export async function bulkTogglePagePublishedCommand(
       isActive: true,
     },
     data: {
-      isPublished: publish,
-      publishedAt: publish ? new Date() : null,
+      isPublished,
+      publishedAt: isPublished ? new Date() : null,
     },
   });
 }

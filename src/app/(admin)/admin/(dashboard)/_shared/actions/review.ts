@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
-  toggleReviewPublishedCommand,
+  updateReviewPublishedCommand,
   deleteReviewCommand,
   replyToReviewCommand,
   deleteReviewReplyCommand,
@@ -21,7 +21,7 @@ const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
 
 type ReviewTarget = { spaceId: string; spaceSlug: string };
 
-export async function toggleReviewVisibility(
+export async function updateReviewPublished(
   id: string,
   isPublished: boolean,
 ): Promise<MutationResult<ReviewTarget>> {
@@ -35,7 +35,7 @@ export async function toggleReviewVisibility(
     action: "update",
     resourceId: validated.data,
     execute: async () =>
-      toggleReviewPublishedCommand(validated.data, isPublished),
+      updateReviewPublishedCommand(validated.data, isPublished),
     afterSuccess: (target) => {
       invalidateReviewCaches(target.spaceId, target.spaceSlug);
     },

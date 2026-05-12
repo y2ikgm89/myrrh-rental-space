@@ -144,7 +144,7 @@ export async function updateLocation(
   return { id, slug: data.slug };
 }
 
-export async function toggleLocationPublish(
+export async function updateLocationPublished(
   id: string,
   isPublished: boolean,
 ): Promise<{ id: string; isPublished: boolean }> {

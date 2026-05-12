@@ -67,8 +67,8 @@ import {
   deletePageCommand,
   deletePagePermanentlyCommand,
   restorePageCommand,
-  togglePagePublishedCommand,
-  bulkTogglePagePublishedCommand,
+  updatePagePublishedCommand,
+  bulkUpdatePagePublishedCommand,
   bulkDeletePagesCommand,
   updatePageSeoCommand,
 } from "@/shared/domain/pages/commands";
@@ -714,34 +714,32 @@ describe("restorePageCommand", () => {
 });
 
 // =============================================================================
-// togglePagePublishedCommand
+// updatePagePublishedCommand
 // =============================================================================
 
-describe("togglePagePublishedCommand", () => {
+describe("updatePagePublishedCommand", () => {
   beforeEach(() => {
     mockPageFindUnique.mockReset();
     mockPageUpdate.mockReset();
-    mockPageFindUnique.mockResolvedValue(EXISTING_PAGE); // isPublished: false
+    mockPageFindUnique.mockResolvedValue(EXISTING_PAGE);
     mockPageUpdate.mockResolvedValue({ id: "page-1", slug: PAGE_SLUG });
   });
 
   describe("正常系", () => {
-    test("非公開ページをトグルすると公開状態になる", async () => {
-      const result = await togglePagePublishedCommand(PAGE_SLUG);
+    test("isPublished: true を渡すと公開状態になる", async () => {
+      const result = await updatePagePublishedCommand(PAGE_SLUG, true);
 
       expect(result).toEqual({ isPublished: true });
     });
 
-    test("公開ページをトグルすると非公開状態になる", async () => {
-      mockPageFindUnique.mockResolvedValue(EXISTING_PAGE_PUBLISHED);
-
-      const result = await togglePagePublishedCommand(PAGE_SLUG);
+    test("isPublished: false を渡すと非公開状態になる", async () => {
+      const result = await updatePagePublishedCommand(PAGE_SLUG, false);
 
       expect(result).toEqual({ isPublished: false });
     });
 
     test("公開時に publishedAt が設定される", async () => {
-      await togglePagePublishedCommand(PAGE_SLUG);
+      await updatePagePublishedCommand(PAGE_SLUG, true);
 
       expect(mockPageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -753,9 +751,7 @@ describe("togglePagePublishedCommand", () => {
     });
 
     test("非公開時に publishedAt が null になる", async () => {
-      mockPageFindUnique.mockResolvedValue(EXISTING_PAGE_PUBLISHED);
-
-      await togglePagePublishedCommand(PAGE_SLUG);
+      await updatePagePublishedCommand(PAGE_SLUG, false);
 
       expect(mockPageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -767,7 +763,7 @@ describe("togglePagePublishedCommand", () => {
     });
 
     test("update が正しい where 条件で呼ばれる", async () => {
-      await togglePagePublishedCommand(PAGE_SLUG);
+      await updatePagePublishedCommand(PAGE_SLUG, true);
 
       expect(mockPageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -781,18 +777,18 @@ describe("togglePagePublishedCommand", () => {
     test("ページが存在しない場合 NOT_FOUND エラーをスローする", async () => {
       mockPageFindUnique.mockResolvedValue(null);
 
-      await expect(togglePagePublishedCommand(PAGE_SLUG)).rejects.toMatchObject(
-        {
-          code: "NOT_FOUND",
-          message: "ページが見つかりません",
-        },
-      );
+      await expect(
+        updatePagePublishedCommand(PAGE_SLUG, true),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "ページが見つかりません",
+      });
     });
 
     test("ページが存在しない場合は update が呼ばれない", async () => {
       mockPageFindUnique.mockResolvedValue(null);
 
-      await expect(togglePagePublishedCommand(PAGE_SLUG)).rejects.toThrow(
+      await expect(updatePagePublishedCommand(PAGE_SLUG, true)).rejects.toThrow(
         DomainError,
       );
 
@@ -802,10 +798,10 @@ describe("togglePagePublishedCommand", () => {
 });
 
 // =============================================================================
-// bulkTogglePagePublishedCommand
+// bulkUpdatePagePublishedCommand
 // =============================================================================
 
-describe("bulkTogglePagePublishedCommand", () => {
+describe("bulkUpdatePagePublishedCommand", () => {
   beforeEach(() => {
     mockPageUpdateMany.mockReset();
     mockPageUpdateMany.mockResolvedValue({ count: 2 });
@@ -813,13 +809,13 @@ describe("bulkTogglePagePublishedCommand", () => {
 
   describe("正常系", () => {
     test("複数ページを一括公開できる", async () => {
-      await bulkTogglePagePublishedCommand(["page-a", "page-b"], true);
+      await bulkUpdatePagePublishedCommand(["page-a", "page-b"], true);
 
       expect(mockPageUpdateMany).toHaveBeenCalledTimes(1);
     });
 
     test("一括公開時に publishedAt が設定される", async () => {
-      await bulkTogglePagePublishedCommand(["page-a", "page-b"], true);
+      await bulkUpdatePagePublishedCommand(["page-a", "page-b"], true);
 
       expect(mockPageUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -832,7 +828,7 @@ describe("bulkTogglePagePublishedCommand", () => {
     });
 
     test("一括非公開時に publishedAt が null になる", async () => {
-      await bulkTogglePagePublishedCommand(["page-a", "page-b"], false);
+      await bulkUpdatePagePublishedCommand(["page-a", "page-b"], false);
 
       expect(mockPageUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -845,7 +841,7 @@ describe("bulkTogglePagePublishedCommand", () => {
     });
 
     test("updateMany が isActive: true の条件で呼ばれる", async () => {
-      await bulkTogglePagePublishedCommand(["page-a"], true);
+      await bulkUpdatePagePublishedCommand(["page-a"], true);
 
       expect(mockPageUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -858,7 +854,7 @@ describe("bulkTogglePagePublishedCommand", () => {
 
     test("スラッグリストが where の slug.in に渡される", async () => {
       const slugs = ["page-a", "page-b"];
-      await bulkTogglePagePublishedCommand(slugs, true);
+      await bulkUpdatePagePublishedCommand(slugs, true);
 
       expect(mockPageUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -873,7 +869,7 @@ describe("bulkTogglePagePublishedCommand", () => {
   describe("異常系", () => {
     test("空配列を渡すと VALIDATION エラーをスローする", async () => {
       await expect(
-        bulkTogglePagePublishedCommand([], true),
+        bulkUpdatePagePublishedCommand([], true),
       ).rejects.toMatchObject({
         code: "VALIDATION",
         message: "対象ページが選択されていません",
@@ -881,7 +877,7 @@ describe("bulkTogglePagePublishedCommand", () => {
     });
 
     test("空配列の場合は updateMany が呼ばれない", async () => {
-      await expect(bulkTogglePagePublishedCommand([], false)).rejects.toThrow(
+      await expect(bulkUpdatePagePublishedCommand([], false)).rejects.toThrow(
         DomainError,
       );
 

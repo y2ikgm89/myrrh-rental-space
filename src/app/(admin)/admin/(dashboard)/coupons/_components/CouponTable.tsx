@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  PublishSwitch,
   Table,
   TableBody,
   TableCell,
@@ -15,6 +16,7 @@ import {
   ClickableTableRow,
   stopRowClick,
 } from "@/admin/components/table";
+import { updateCouponActive } from "@/admin/actions/coupon";
 import { CouponTypeBadge, CouponStatusBadge } from "./CouponStatusBadge";
 import { CouponActionCell } from "./CouponActionCell";
 import { CouponBulkActions } from "./CouponBulkActions";
@@ -105,6 +107,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                   利用数
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">有効期間</TableHead>
+                <TableHead className="text-center">有効</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -149,12 +152,17 @@ export function CouponTable({ coupons }: CouponTableProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell onClick={stopRowClick}>
-                    <CouponActionCell
-                      couponId={coupon.id}
-                      couponName={coupon.name}
-                      isActive={coupon.isActive}
+                  <TableCell className="text-center" onClick={stopRowClick}>
+                    <PublishSwitch
+                      id={coupon.id}
+                      isPublished={coupon.isActive}
+                      onToggle={updateCouponActive}
+                      resourceLabel={`${coupon.name} の有効状態`}
+                      label={{ published: "有効", unpublished: "無効" }}
                     />
+                  </TableCell>
+                  <TableCell onClick={stopRowClick}>
+                    <CouponActionCell couponId={coupon.id} />
                   </TableCell>
                 </ClickableTableRow>
               ))}

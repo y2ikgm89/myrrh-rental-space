@@ -1,5 +1,6 @@
 import {
   Badge,
+  PublishSwitch,
   Table,
   TableBody,
   TableCell,
@@ -9,6 +10,7 @@ import {
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
+import { updateSpaceCategoryActive } from "@/admin/actions/space-category";
 import { CategoryActionCell } from "./CategoryActionCell";
 import type { SpaceCategoryWithStats } from "@/shared/lib/validations/space-category";
 
@@ -89,11 +91,16 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                   <Badge variant="secondary">{category._count.spaces}件</Badge>
                 </TableCell>
                 <TableCell className="text-center whitespace-nowrap">
-                  {category.isActive ? (
-                    <Badge variant="default">アクティブ</Badge>
-                  ) : (
-                    <Badge variant="secondary">非アクティブ</Badge>
-                  )}
+                  <PublishSwitch
+                    id={category.id}
+                    isPublished={category.isActive}
+                    onToggle={updateSpaceCategoryActive}
+                    resourceLabel={`${category.name} の有効状態`}
+                    label={{
+                      published: "アクティブ",
+                      unpublished: "非アクティブ",
+                    }}
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <CategoryActionCell category={category} />

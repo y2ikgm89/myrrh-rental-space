@@ -5,7 +5,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import type {
   CreateFaqItemResult,
   FaqItemCommandInput,
-  ToggleFaqItemPublishedResult,
+  UpdateFaqItemPublishedResult,
 } from "@/shared/domain/faq/types";
 
 async function ensureFaqCategoryExists(id: string): Promise<void> {
@@ -164,19 +164,18 @@ export async function reorderFaqItems(
   });
 }
 
-export async function toggleFaqItemPublished(
+export async function updateFaqItemPublished(
   id: string,
-): Promise<ToggleFaqItemPublishedResult> {
+  isPublished: boolean,
+): Promise<UpdateFaqItemPublishedResult> {
   const item = await prisma.faqItem.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, isPublished: true },
+    select: { id: true },
   });
 
   if (!item) {
     throw new DomainError("質問が見つかりません", "NOT_FOUND");
   }
-
-  const isPublished = !item.isPublished;
 
   await prisma.faqItem.update({
     where: { id, deletedAt: null },

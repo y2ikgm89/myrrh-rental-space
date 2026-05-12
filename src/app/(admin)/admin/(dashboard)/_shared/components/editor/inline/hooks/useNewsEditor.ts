@@ -23,8 +23,7 @@ import {
   updateNewsBody,
   updateNewsSettings,
   deleteNews,
-  publishNews,
-  unpublishNews,
+  updateNewsPublished,
 } from "@/admin/actions/news";
 import { createPreviewHandlers } from "@/admin/hooks";
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
@@ -305,13 +304,13 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const handlePublish = () => {
     if (!news || core.isPending) return;
     core.startTransition(async () => {
-      const result = await publishNews(news.id);
+      const result = await updateNewsPublished(news.id, true);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
 
-      toast.success(`公開しました（バージョン ${result.version}）`);
+      toast.success("公開しました");
       settingsForm.setValue("isPublished", true);
       router.refresh();
     });
@@ -320,7 +319,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const handleUnpublish = () => {
     if (!news || core.isPending) return;
     core.startTransition(async () => {
-      const result = await unpublishNews(news.id);
+      const result = await updateNewsPublished(news.id, false);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;

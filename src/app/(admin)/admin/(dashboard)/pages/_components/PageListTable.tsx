@@ -13,14 +13,15 @@
 import { useState } from "react";
 import {
   Badge,
+  PublishSwitch,
   Table,
   TableBody,
   TableCell,
   TableRow,
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { PageStatusBadge } from "@/admin/components/status-badges";
 import { Pagination } from "@/admin/components/ui/Pagination";
+import { updatePagePublished } from "@/admin/actions/page";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PageData } from "@/shared/domain/pages/types";
 import { PageActions } from "./PageActions";
@@ -127,7 +128,16 @@ export function PageListTable({
                       )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <PageStatusBadge isPublished={page.isPublished} />
+                      {page.isSystemPage && isHomepage ? (
+                        <Badge variant="success">公開中</Badge>
+                      ) : (
+                        <PublishSwitch
+                          id={page.slug}
+                          isPublished={page.isPublished}
+                          onToggle={updatePagePublished}
+                          resourceLabel={`${page.title} の公開状態`}
+                        />
+                      )}
                     </TableCell>
                     <TableCell className="font-medium">{page.title}</TableCell>
                     <TableCell className="hidden md:table-cell">

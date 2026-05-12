@@ -19,7 +19,7 @@ import {
 } from "@/admin/components/ui";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { updateSpacePublish } from "@/admin/actions/space";
+import { updateSpacePublished } from "@/admin/actions/space";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
@@ -77,7 +77,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
 
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
-      const result = await updateSpacePublish(space.id, checked);
+      const result = await updateSpacePublished(space.id, checked);
       if (!isMutationError(result)) {
         router.refresh();
       } else {

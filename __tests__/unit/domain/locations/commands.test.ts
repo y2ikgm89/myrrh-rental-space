@@ -39,7 +39,7 @@ mock.module("@/shared/db/prisma", () => ({
 import {
   createLocation,
   updateLocation,
-  toggleLocationPublish,
+  updateLocationPublished,
   updateLocationOrder,
   deleteLocation,
   hardDeleteLocation,
@@ -319,10 +319,10 @@ describe("updateLocation", () => {
 });
 
 // =============================================================================
-// toggleLocationPublish
+// updateLocationPublished
 // =============================================================================
 
-describe("toggleLocationPublish", () => {
+describe("updateLocationPublished", () => {
   beforeEach(() => {
     mockLocationFindUnique.mockReset();
     mockLocationUpdate.mockReset();
@@ -334,7 +334,7 @@ describe("toggleLocationPublish", () => {
     test("場所を公開状態に切り替えると id と isPublished を返す", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
 
-      const result = await toggleLocationPublish(LOCATION_ID, true);
+      const result = await updateLocationPublished(LOCATION_ID, true);
 
       expect(result).toEqual({ id: LOCATION_ID, isPublished: true });
     });
@@ -342,7 +342,7 @@ describe("toggleLocationPublish", () => {
     test("場所を非公開状態に切り替えると isPublished: false を返す", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
 
-      const result = await toggleLocationPublish(LOCATION_ID, false);
+      const result = await updateLocationPublished(LOCATION_ID, false);
 
       expect(result).toEqual({ id: LOCATION_ID, isPublished: false });
     });
@@ -350,7 +350,7 @@ describe("toggleLocationPublish", () => {
     test("公開切り替え時に update が正しいデータで呼ばれる", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
 
-      await toggleLocationPublish(LOCATION_ID, true);
+      await updateLocationPublished(LOCATION_ID, true);
 
       expect(mockLocationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -366,7 +366,7 @@ describe("toggleLocationPublish", () => {
       mockLocationFindUnique.mockResolvedValue(null);
 
       await expect(
-        toggleLocationPublish("non-existent", true),
+        updateLocationPublished("non-existent", true),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "場所が見つかりません",
@@ -376,9 +376,9 @@ describe("toggleLocationPublish", () => {
     test("存在しない場合は update が呼ばれない", async () => {
       mockLocationFindUnique.mockResolvedValue(null);
 
-      await expect(toggleLocationPublish("non-existent", true)).rejects.toThrow(
-        DomainError,
-      );
+      await expect(
+        updateLocationPublished("non-existent", true),
+      ).rejects.toThrow(DomainError);
 
       expect(mockLocationUpdate).not.toHaveBeenCalled();
     });

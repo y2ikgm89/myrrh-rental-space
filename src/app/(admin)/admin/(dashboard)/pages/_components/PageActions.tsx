@@ -22,7 +22,7 @@ import {
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { deletePage, togglePagePublished } from "@/admin/actions/page";
+import { deletePage, updatePagePublished } from "@/admin/actions/page";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getPagePreviewHref } from "@/shared/lib/preview-routes";
@@ -50,7 +50,7 @@ export function PageActions({
 
   const handleTogglePublished = () => {
     startTransition(async () => {
-      const result = await togglePagePublished(slug);
+      const result = await updatePagePublished(slug, !isPublished);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;

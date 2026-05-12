@@ -22,8 +22,8 @@ import {
   permanentlyDeleteFaqItem as permanentlyDeleteFaqItemCommand,
   reorderFaqItems as reorderFaqItemsCommand,
   restoreFaqItem as restoreFaqItemCommand,
-  toggleFaqItemPublished as toggleFaqItemPublishedCommand,
   updateFaqItem as updateFaqItemCommand,
+  updateFaqItemPublished as updateFaqItemPublishedCommand,
 } from "@/shared/domain/faq/item-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -254,8 +254,9 @@ export async function reorderFaqItems(
   });
 }
 
-export async function toggleFaqItemPublished(
+export async function updateFaqItemPublished(
   id: string,
+  isPublished: boolean,
 ): Promise<MutationResult<{ isPublished: boolean }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
@@ -266,7 +267,8 @@ export async function toggleFaqItemPublished(
     resource: "faq",
     action: "update",
     resourceId: validated.data,
-    execute: async () => toggleFaqItemPublishedCommand(validated.data),
+    execute: async () =>
+      updateFaqItemPublishedCommand(validated.data, isPublished),
     afterSuccess: () => {
       invalidateFaqCaches();
       purgeFaqCaches();

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { Badge } from "@/admin/components/ui/badge";
-import { togglePagePublished } from "@/admin/actions/page";
+import { updatePagePublished } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
@@ -25,7 +25,7 @@ export function PublishToggle({ slug, isPublished }: PublishToggleProps) {
 
   const handleToggle = () => {
     startTransition(async () => {
-      const result = await togglePagePublished(slug);
+      const result = await updatePagePublished(slug, !isPublished);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;

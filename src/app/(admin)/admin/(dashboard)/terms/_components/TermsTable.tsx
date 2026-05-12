@@ -1,5 +1,6 @@
 import {
   Badge,
+  PublishSwitch,
   Table,
   TableBody,
   TableCell,
@@ -9,6 +10,7 @@ import {
 } from "@/admin/components/ui";
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
+import { updateTermsPublished } from "@/admin/actions/terms";
 import { TermsActionCell } from "./TermsActionCell";
 
 interface TermsTableProps {
@@ -54,11 +56,13 @@ export function TermsTable({ items }: TermsTableProps) {
                   {item.slug}
                 </TableCell>
                 <TableCell>
-                  {item.isPublished ? (
-                    <Badge>公開中</Badge>
-                  ) : (
-                    <Badge variant="outline">下書き</Badge>
-                  )}
+                  <PublishSwitch
+                    id={item.id}
+                    isPublished={item.isPublished}
+                    onToggle={updateTermsPublished}
+                    resourceLabel={`${item.title} の公開状態`}
+                    label={{ published: "公開中", unpublished: "下書き" }}
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">

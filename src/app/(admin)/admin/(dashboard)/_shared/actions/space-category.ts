@@ -11,6 +11,7 @@ import {
   deleteSpaceCategory as deleteSpaceCategoryCommand,
   hardDeleteSpaceCategory as hardDeleteSpaceCategoryCommand,
   updateSpaceCategory as updateSpaceCategoryCommand,
+  updateSpaceCategoryActive as updateSpaceCategoryActiveCommand,
   updateSpaceCategoryOrder as updateSpaceCategoryOrderCommand,
 } from "@/shared/domain/space-categories/commands";
 import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
@@ -109,6 +110,27 @@ export async function deleteSpaceCategory(
       updateTag(CACHE_TAGS.SPACE_CATEGORIES);
     },
     resolveAuditResourceId: (result) => result.id,
+  });
+}
+
+export async function updateSpaceCategoryActive(
+  id: string,
+  isActive: boolean,
+): Promise<MutationResult<{ id: string; isActive: boolean }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "spaceCategory",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () =>
+      updateSpaceCategoryActiveCommand(validated.data, isActive),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACE_CATEGORIES);
+    },
   });
 }
 

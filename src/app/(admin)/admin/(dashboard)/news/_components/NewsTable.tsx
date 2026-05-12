@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  PublishSwitch,
   Table,
   TableBody,
   TableCell,
@@ -10,12 +11,12 @@ import {
   TableRow,
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { NewsStatusBadge } from "@/admin/components/status-badges";
 import {
   CheckboxCell,
   ClickableTableRow,
   stopRowClick,
 } from "@/admin/components/table";
+import { updateNewsPublished } from "@/admin/actions/news";
 import { NewsActionCell } from "./NewsActionCell";
 import { NewsBulkActions } from "./NewsBulkActions";
 import type { NewsListItem } from "@/shared/domain/news/types";
@@ -97,8 +98,16 @@ export function NewsTable({ news }: NewsTableProps) {
                       aria-label={`${item.title} を選択`}
                     />
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <NewsStatusBadge isPublished={item.isPublished} />
+                  <TableCell
+                    className="whitespace-nowrap"
+                    onClick={stopRowClick}
+                  >
+                    <PublishSwitch
+                      id={item.id}
+                      isPublished={item.isPublished}
+                      onToggle={updateNewsPublished}
+                      resourceLabel={`${item.title} の公開状態`}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="max-w-xs truncate font-medium">

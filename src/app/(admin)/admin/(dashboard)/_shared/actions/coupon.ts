@@ -9,8 +9,8 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createCoupon as createCouponCommand,
   deleteCoupon as deleteCouponCommand,
-  toggleCouponActive as toggleCouponActiveCommand,
   updateCoupon as updateCouponCommand,
+  updateCouponActive as updateCouponActiveCommand,
 } from "@/shared/domain/coupons/commands";
 import {
   couponFormSchema,
@@ -88,8 +88,9 @@ export async function deleteCoupon(id: string): Promise<MutationResult> {
   });
 }
 
-export async function toggleCouponActive(
+export async function updateCouponActive(
   id: string,
+  isActive: boolean,
 ): Promise<MutationResult<{ isActive: boolean }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
@@ -100,7 +101,7 @@ export async function toggleCouponActive(
     resource: "coupon",
     action: "update",
     resourceId: validated.data,
-    execute: async () => toggleCouponActiveCommand(validated.data),
+    execute: async () => updateCouponActiveCommand(validated.data, isActive),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.COUPONS);
       updateTag(getCacheTag.coupons.detail(validated.data));

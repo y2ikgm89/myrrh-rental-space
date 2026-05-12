@@ -115,6 +115,40 @@ export async function updateTermsCommand(
 }
 
 /**
+ * 規約の公開状態を直接更新（PublishSwitch 用）
+ *
+ * 公開化時は publishedAt を新規発行、非公開化時は null にクリアする。
+ * 既に公開済みなら publishedAt を保持する（updateTermsCommand と整合）。
+ */
+export async function updateTermsPublishedCommand(
+  id: string,
+  isPublished: boolean,
+): Promise<SlugOnly & { isPublished: boolean }> {
+  const existing = await prisma.termsDocument.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, slug: true, isPublished: true, publishedAt: true },
+  });
+  if (!existing) {
+    throw new DomainError("規約が見つかりません", "NOT_FOUND");
+  }
+
+  const publishedAt = (() => {
+    if (!isPublished) return null;
+    if (existing.isPublished && existing.publishedAt)
+      return existing.publishedAt;
+    return new Date();
+  })();
+
+  const updated = await prisma.termsDocument.update({
+    where: { id },
+    data: { isPublished, publishedAt },
+    select: { id: true, slug: true },
+  });
+
+  return { ...updated, isPublished };
+}
+
+/**
  * 規約削除（ソフトデリート）
  */
 export async function softDeleteTermsCommand(id: string): Promise<SlugOnly> {

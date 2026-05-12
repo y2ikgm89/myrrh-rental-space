@@ -107,6 +107,6 @@ export type CreateFaqItemResult = {
   id: string;
 };
 
-export type ToggleFaqItemPublishedResult = {
+export type UpdateFaqItemPublishedResult = {
   isPublished: boolean;
 };

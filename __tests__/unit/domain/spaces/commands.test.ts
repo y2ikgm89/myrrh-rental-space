@@ -80,9 +80,8 @@ mock.module("@/shared/lib/validations/enums/helpers", () => ({
 import {
   createSpaceCommand,
   updateSpaceCommand,
-  updateSpacePublishCommand,
+  updateSpacePublishedCommand,
   deleteSpaceCommand,
-  toggleSpacePublishedCommand,
 } from "@/shared/domain/spaces/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -402,10 +401,10 @@ describe("updateSpaceCommand", () => {
 });
 
 // =============================================================================
-// updateSpacePublishCommand
+// updateSpacePublishedCommand
 // =============================================================================
 
-describe("updateSpacePublishCommand", () => {
+describe("updateSpacePublishedCommand", () => {
   beforeEach(() => {
     mockSpaceFindUnique.mockReset();
     mockSpaceUpdate.mockReset();
@@ -415,9 +414,10 @@ describe("updateSpacePublishCommand", () => {
   });
 
   describe("正常系", () => {
-    test("スペースを公開状態に変更できる", async () => {
-      await updateSpacePublishCommand(SPACE_ID, true);
+    test("スペースを公開状態に変更し戻り値を返す", async () => {
+      const result = await updateSpacePublishedCommand(SPACE_ID, true);
 
+      expect(result).toEqual({ isPublished: true });
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -427,9 +427,10 @@ describe("updateSpacePublishCommand", () => {
       );
     });
 
-    test("スペースを非公開状態に変更できる", async () => {
-      await updateSpacePublishCommand(SPACE_ID, false);
+    test("スペースを非公開状態に変更し戻り値を返す", async () => {
+      const result = await updateSpacePublishedCommand(SPACE_ID, false);
 
+      expect(result).toEqual({ isPublished: false });
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -441,7 +442,7 @@ describe("updateSpacePublishCommand", () => {
     });
 
     test("公開時に publishedAt が設定される", async () => {
-      await updateSpacePublishCommand(SPACE_ID, true);
+      await updateSpacePublishedCommand(SPACE_ID, true);
 
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -459,7 +460,7 @@ describe("updateSpacePublishCommand", () => {
       mockSpaceFindUnique.mockResolvedValue(null);
 
       await expect(
-        updateSpacePublishCommand(SPACE_ID, true),
+        updateSpacePublishedCommand(SPACE_ID, true),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "スペースが見つかりません",
@@ -470,7 +471,7 @@ describe("updateSpacePublishCommand", () => {
       mockSpaceFindUnique.mockResolvedValue(null);
 
       await expect(
-        updateSpacePublishCommand("non-existent", true),
+        updateSpacePublishedCommand("non-existent", true),
       ).rejects.toThrow(DomainError);
 
       expect(mockSpaceUpdate).not.toHaveBeenCalled();
@@ -556,116 +557,6 @@ describe("deleteSpaceCommand", () => {
       mockSpaceFindUnique.mockResolvedValue(null);
 
       await expect(deleteSpaceCommand("non-existent")).rejects.toThrow(
-        DomainError,
-      );
-
-      expect(mockSpaceUpdate).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// =============================================================================
-// toggleSpacePublishedCommand
-// =============================================================================
-
-describe("toggleSpacePublishedCommand", () => {
-  beforeEach(() => {
-    mockSpaceFindUnique.mockReset();
-    mockSpaceUpdate.mockReset();
-
-    mockSpaceFindUnique.mockResolvedValue({
-      id: SPACE_ID,
-      isPublished: false,
-    });
-    mockSpaceUpdate.mockResolvedValue({ id: SPACE_ID });
-  });
-
-  describe("正常系", () => {
-    test("非公開スペースをトグルすると公開状態になる", async () => {
-      mockSpaceFindUnique.mockResolvedValue({
-        id: SPACE_ID,
-        isPublished: false,
-      });
-
-      const result = await toggleSpacePublishedCommand(SPACE_ID);
-
-      expect(result).toEqual({ isPublished: true });
-    });
-
-    test("公開スペースをトグルすると非公開状態になる", async () => {
-      mockSpaceFindUnique.mockResolvedValue({
-        id: SPACE_ID,
-        isPublished: true,
-      });
-
-      const result = await toggleSpacePublishedCommand(SPACE_ID);
-
-      expect(result).toEqual({ isPublished: false });
-    });
-
-    test("公開時に publishedAt が設定される", async () => {
-      mockSpaceFindUnique.mockResolvedValue({
-        id: SPACE_ID,
-        isPublished: false,
-      });
-
-      await toggleSpacePublishedCommand(SPACE_ID);
-
-      expect(mockSpaceUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            isPublished: true,
-            publishedAt: expect.any(Date),
-          }),
-        }),
-      );
-    });
-
-    test("非公開時に publishedAt が null になる", async () => {
-      mockSpaceFindUnique.mockResolvedValue({
-        id: SPACE_ID,
-        isPublished: true,
-      });
-
-      await toggleSpacePublishedCommand(SPACE_ID);
-
-      expect(mockSpaceUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            isPublished: false,
-            publishedAt: null,
-          }),
-        }),
-      );
-    });
-
-    test("update が正しい where 条件で呼ばれる", async () => {
-      await toggleSpacePublishedCommand(SPACE_ID);
-
-      expect(mockSpaceUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: SPACE_ID },
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("スペースが存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockSpaceFindUnique.mockResolvedValue(null);
-
-      await expect(toggleSpacePublishedCommand(SPACE_ID)).rejects.toMatchObject(
-        {
-          code: "NOT_FOUND",
-          message: "スペースが見つかりません",
-        },
-      );
-    });
-
-    test("存在しないスペースでは update が呼ばれない", async () => {
-      mockSpaceFindUnique.mockResolvedValue(null);
-
-      await expect(toggleSpacePublishedCommand("non-existent")).rejects.toThrow(
         DomainError,
       );
 

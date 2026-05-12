@@ -11,9 +11,9 @@ import {
   createLocation as createLocationCommand,
   deleteLocation as deleteLocationCommand,
   hardDeleteLocation as hardDeleteLocationCommand,
-  toggleLocationPublish as toggleLocationPublishCommand,
   updateLocation as updateLocationCommand,
   updateLocationOrder as updateLocationOrderCommand,
+  updateLocationPublished as updateLocationPublishedCommand,
 } from "@/shared/domain/locations/commands";
 import { syncLocationToGbpCommand } from "@/shared/domain/locations/gbp-sync-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -93,7 +93,7 @@ export async function updateLocation(
   });
 }
 
-export async function toggleLocationPublish(
+export async function updateLocationPublished(
   id: string,
   isPublished: boolean,
 ): Promise<MutationResult<{ id: string; isPublished: boolean }>> {
@@ -107,7 +107,7 @@ export async function toggleLocationPublish(
     action: "publish",
     resourceId: parsed.data.id,
     execute: async () =>
-      toggleLocationPublishCommand(parsed.data.id, parsed.data.isPublished),
+      updateLocationPublishedCommand(parsed.data.id, parsed.data.isPublished),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },

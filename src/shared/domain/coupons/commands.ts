@@ -117,12 +117,13 @@ export async function deleteCoupon(id: string): Promise<void> {
   });
 }
 
-export async function toggleCouponActive(
+export async function updateCouponActive(
   id: string,
+  isActive: boolean,
 ): Promise<{ isActive: boolean }> {
   const coupon = await prisma.coupon.findUnique({
     where: { id },
-    select: { id: true, isActive: true },
+    select: { id: true },
   });
 
   if (!coupon) {
@@ -131,7 +132,7 @@ export async function toggleCouponActive(
 
   const updated = await prisma.coupon.update({
     where: { id },
-    data: { isActive: !coupon.isActive },
+    data: { isActive },
     select: { isActive: true },
   });
 

@@ -14,7 +14,7 @@ import {
   PublishSwitch,
 } from "@/admin/components/ui";
 import { CheckboxCell, stopRowClick } from "@/admin/components/table";
-import { updateSpacePublish } from "@/admin/actions/space";
+import { updateSpacePublished } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { SpaceActionCell } from "./SpaceActionCell";
@@ -140,7 +140,7 @@ export function SpaceTableDesktop({
                   <PublishSwitch
                     id={space.id}
                     isPublished={space.isPublished}
-                    onToggle={updateSpacePublish}
+                    onToggle={updateSpacePublished}
                     resourceLabel={`${space.name} の公開状態`}
                   />
                 </TableCell>

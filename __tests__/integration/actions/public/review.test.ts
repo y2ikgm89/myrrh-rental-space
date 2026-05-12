@@ -81,7 +81,7 @@ const mockCreateReviewCommand = mock(() =>
 
 mock.module("@/shared/domain/reviews/commands", () => ({
   createReviewCommand: mockCreateReviewCommand,
-  toggleReviewPublishedCommand: mock(() =>
+  updateReviewPublishedCommand: mock(() =>
     Promise.resolve({ spaceId: "space-001" }),
   ),
   deleteReviewCommand: mock(() => Promise.resolve({ spaceId: "space-001" })),

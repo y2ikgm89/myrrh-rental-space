@@ -9,7 +9,7 @@ import {
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { deleteFaqItem, toggleFaqItemPublished } from "@/admin/actions/faq";
+import { deleteFaqItem, updateFaqItemPublished } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 type FaqItemActionCellProps = {
@@ -31,7 +31,7 @@ export function FaqItemActionCell({
 
   const handleTogglePublished = () => {
     startTransition(async () => {
-      const result = await toggleFaqItemPublished(id);
+      const result = await updateFaqItemPublished(id, !isPublished);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;

@@ -7,11 +7,12 @@ import {
   TableHeader,
   TableRow,
   Badge,
+  PublishSwitch,
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import { updateReviewPublished } from "@/admin/actions/review";
 import { ReviewActionCell } from "./ReviewActionCell";
-import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
 // Types
@@ -96,19 +97,21 @@ export function ReviewTable({ reviews }: ReviewTableProps) {
                   {formatDateTimeShort(review.createdAt)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  <Badge variant={review.isPublished ? "success" : "secondary"}>
-                    {getPublishLabel(review.isPublished)}
-                  </Badge>
-                  {review.replyBody !== null ? (
-                    <Badge variant="outline" className="ml-2">
-                      返信済み
-                    </Badge>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <PublishSwitch
+                      id={review.id}
+                      isPublished={review.isPublished}
+                      onToggle={updateReviewPublished}
+                      resourceLabel={`${review.space.name} のレビュー公開状態`}
+                    />
+                    {review.replyBody !== null ? (
+                      <Badge variant="outline">返信済み</Badge>
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <ReviewActionCell
                     reviewId={review.id}
-                    isPublished={review.isPublished}
                     replyBody={review.replyBody}
                   />
                 </TableCell>

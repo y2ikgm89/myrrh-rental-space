@@ -163,7 +163,7 @@ import {
   updateFaqItem,
   deleteFaqItem,
   reorderFaqItems,
-  toggleFaqItemPublished,
+  updateFaqItemPublished,
 } from "@/shared/domain/faq/item-commands";
 import {
   voteFaqItemHelpful,
@@ -860,46 +860,32 @@ describe("reorderFaqItems", () => {
 });
 
 // =============================================================================
-// toggleFaqItemPublished
+// updateFaqItemPublished
 // =============================================================================
 
-describe("toggleFaqItemPublished", () => {
+describe("updateFaqItemPublished", () => {
   beforeEach(() => {
     mockFaqItemFindFirst.mockReset();
     mockFaqItemUpdate.mockReset();
+    mockFaqItemFindFirst.mockResolvedValue({ id: ITEM_ID });
     mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
   });
 
   describe("正常系", () => {
-    test("未公開の質問をトグルすると isPublished: true を返す", async () => {
-      mockFaqItemFindFirst.mockResolvedValue({
-        id: ITEM_ID,
-        isPublished: false,
-      });
-
-      const result = await toggleFaqItemPublished(ITEM_ID);
+    test("isPublished: true を渡すと公開状態を返す", async () => {
+      const result = await updateFaqItemPublished(ITEM_ID, true);
 
       expect(result).toEqual({ isPublished: true });
     });
 
-    test("公開済みの質問をトグルすると isPublished: false を返す", async () => {
-      mockFaqItemFindFirst.mockResolvedValue({
-        id: ITEM_ID,
-        isPublished: true,
-      });
-
-      const result = await toggleFaqItemPublished(ITEM_ID);
+    test("isPublished: false を渡すと非公開状態を返す", async () => {
+      const result = await updateFaqItemPublished(ITEM_ID, false);
 
       expect(result).toEqual({ isPublished: false });
     });
 
-    test("公開にトグルすると publishedAt が設定される", async () => {
-      mockFaqItemFindFirst.mockResolvedValue({
-        id: ITEM_ID,
-        isPublished: false,
-      });
-
-      await toggleFaqItemPublished(ITEM_ID);
+    test("公開化時に publishedAt が設定される", async () => {
+      await updateFaqItemPublished(ITEM_ID, true);
 
       expect(mockFaqItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -911,13 +897,8 @@ describe("toggleFaqItemPublished", () => {
       );
     });
 
-    test("非公開にトグルすると publishedAt が null になる", async () => {
-      mockFaqItemFindFirst.mockResolvedValue({
-        id: ITEM_ID,
-        isPublished: true,
-      });
-
-      await toggleFaqItemPublished(ITEM_ID);
+    test("非公開化時に publishedAt が null になる", async () => {
+      await updateFaqItemPublished(ITEM_ID, false);
 
       expect(mockFaqItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -930,12 +911,7 @@ describe("toggleFaqItemPublished", () => {
     });
 
     test("update が正しい ID で呼ばれる", async () => {
-      mockFaqItemFindFirst.mockResolvedValue({
-        id: ITEM_ID,
-        isPublished: false,
-      });
-
-      await toggleFaqItemPublished(ITEM_ID);
+      await updateFaqItemPublished(ITEM_ID, true);
 
       expect(mockFaqItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -950,7 +926,7 @@ describe("toggleFaqItemPublished", () => {
       mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(
-        toggleFaqItemPublished("non-existent"),
+        updateFaqItemPublished("non-existent", true),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "質問が見つかりません",
@@ -960,9 +936,9 @@ describe("toggleFaqItemPublished", () => {
     test("質問が見つからない場合 update が呼ばれない", async () => {
       mockFaqItemFindFirst.mockResolvedValue(null);
 
-      await expect(toggleFaqItemPublished("non-existent")).rejects.toThrow(
-        DomainError,
-      );
+      await expect(
+        updateFaqItemPublished("non-existent", true),
+      ).rejects.toThrow(DomainError);
       expect(mockFaqItemUpdate).not.toHaveBeenCalled();
     });
   });

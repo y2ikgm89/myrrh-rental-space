@@ -14,6 +14,7 @@ import {
   restoreTermsCommand,
   softDeleteTermsCommand,
   updateTermsCommand,
+  updateTermsPublishedCommand,
 } from "@/shared/domain/terms/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
@@ -85,6 +86,21 @@ export async function hardDeleteTerms(
     execute: async () => hardDeleteTermsCommand(id),
     afterSuccess: () => {
       invalidateTermsCaches();
+    },
+  });
+}
+
+export async function updateTermsPublished(
+  id: string,
+  isPublished: boolean,
+): Promise<MutationResult<{ id: string; slug: string; isPublished: boolean }>> {
+  return executeAdminMutationResult({
+    resource: "terms",
+    action: "publish",
+    resourceId: id,
+    execute: async () => updateTermsPublishedCommand(id, isPublished),
+    afterSuccess: (data) => {
+      invalidateTermsCaches(data.slug);
     },
   });
 }

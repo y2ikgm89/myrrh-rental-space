@@ -15,8 +15,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Badge,
   Checkbox,
+  PublishSwitch,
   Table,
   TableBody,
   TableCell,
@@ -40,7 +40,7 @@ import {
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { SortableColumnHeader, stopRowClick } from "@/admin/components/table";
-import { reorderFaqItems } from "@/admin/actions/faq";
+import { reorderFaqItems, updateFaqItemPublished } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import { useQueryStates } from "nuqs";
@@ -49,7 +49,6 @@ import {
   type AdminFaqItemSortBy,
 } from "@/shared/lib/nuqs";
 import type { FaqItemWithCategory } from "@/shared/domain/faq/types";
-import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 import { FaqItemActionCell } from "./FaqItemActionCell";
 import { FaqBulkActions } from "./FaqBulkActions";
 
@@ -126,10 +125,14 @@ function SortableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="hidden md:table-cell" onClick={() => onEdit(item)}>
-        <Badge variant={item.isPublished ? "default" : "secondary"}>
-          {getPublishLabel(item.isPublished, "draft")}
-        </Badge>
+      <TableCell className="hidden md:table-cell" onClick={stopRowClick}>
+        <PublishSwitch
+          id={item.id}
+          isPublished={item.isPublished}
+          onToggle={updateFaqItemPublished}
+          resourceLabel={`${item.question} の公開状態`}
+          label={{ published: "公開中", unpublished: "下書き" }}
+        />
       </TableCell>
       <TableCell
         className="hidden text-right text-muted-foreground lg:table-cell tabular-nums"

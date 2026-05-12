@@ -13,11 +13,11 @@ import {
   deletePageCommand,
   deletePagePermanentlyCommand,
   restorePageCommand,
-  togglePagePublishedCommand,
   updatePageCommand,
+  updatePagePublishedCommand,
   updatePageSeoCommand,
   bulkDeletePagesCommand,
-  bulkTogglePagePublishedCommand,
+  bulkUpdatePagePublishedCommand,
 } from "@/shared/domain/pages/commands";
 import { getPageIdBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import {
@@ -156,14 +156,15 @@ export async function restorePage(slug: string): Promise<MutationResult> {
   });
 }
 
-export async function togglePagePublished(
+export async function updatePagePublished(
   slug: string,
+  isPublished: boolean,
 ): Promise<MutationResult<{ isPublished: boolean }>> {
   return executeAdminMutationResult({
     resource: "page",
     action: "publish",
     resourceId: slug,
-    execute: async () => togglePagePublishedCommand(slug),
+    execute: async () => updatePagePublishedCommand(slug, isPublished),
     afterSuccess: () => {
       invalidatePageTags(slug);
       purgePageCaches(slug);
@@ -171,16 +172,16 @@ export async function togglePagePublished(
   });
 }
 
-export async function bulkTogglePagePublished(
+export async function bulkUpdatePagePublished(
   slugs: string[],
-  publish: boolean,
+  isPublished: boolean,
 ): Promise<MutationResult<{ count: number; isPublished: boolean }>> {
   return executeAdminMutationResult({
     resource: "page",
     action: "publish",
     execute: async () => {
-      await bulkTogglePagePublishedCommand(slugs, publish);
-      return { count: slugs.length, isPublished: publish };
+      await bulkUpdatePagePublishedCommand(slugs, isPublished);
+      return { count: slugs.length, isPublished };
     },
     afterSuccess: () => {
       invalidatePageTags(...slugs);

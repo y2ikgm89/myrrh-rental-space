@@ -9,7 +9,7 @@ type CouponType = (typeof CouponType)[keyof typeof CouponType];
 
 // Prisma モック関数（mock.module より先に定義）
 const mockCouponFindUnique = mock<
-  () => Promise<{ id: string; code: string; isActive: boolean } | null>
+  () => Promise<{ id: string; code: string; isActive?: boolean } | null>
 >(() => Promise.resolve(null));
 
 const mockCouponFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
@@ -60,7 +60,7 @@ import {
   createCoupon,
   updateCoupon,
   deleteCoupon,
-  toggleCouponActive,
+  updateCouponActive,
   incrementCouponUsage,
   decrementCouponUsage,
 } from "@/shared/domain/coupons/commands";
@@ -375,23 +375,22 @@ describe("coupons/commands", () => {
   });
 
   // =============================================================================
-  // toggleCouponActive
+  // updateCouponActive
   // =============================================================================
 
-  describe("toggleCouponActive", () => {
+  describe("updateCouponActive", () => {
     describe("正常系", () => {
-      test("アクティブなクーポンを非アクティブにできる", async () => {
+      test("isActive: false を渡すと非アクティブにできる", async () => {
         mockCouponFindUnique.mockResolvedValueOnce({
           id: COUPON_ID,
           code: "SUMMER2024",
-          isActive: true,
         });
         mockCouponUpdate.mockResolvedValueOnce({
           id: COUPON_ID,
           isActive: false,
         });
 
-        const result = await toggleCouponActive(COUPON_ID);
+        const result = await updateCouponActive(COUPON_ID, false);
 
         expect(result).toEqual({ isActive: false });
         expect(mockCouponUpdate).toHaveBeenCalledWith(
@@ -402,18 +401,17 @@ describe("coupons/commands", () => {
         );
       });
 
-      test("非アクティブなクーポンをアクティブにできる", async () => {
+      test("isActive: true を渡すとアクティブにできる", async () => {
         mockCouponFindUnique.mockResolvedValueOnce({
           id: COUPON_ID,
           code: "SUMMER2024",
-          isActive: false,
         });
         mockCouponUpdate.mockResolvedValueOnce({
           id: COUPON_ID,
           isActive: true,
         });
 
-        const result = await toggleCouponActive(COUPON_ID);
+        const result = await updateCouponActive(COUPON_ID, true);
 
         expect(result).toEqual({ isActive: true });
         expect(mockCouponUpdate).toHaveBeenCalledWith(
@@ -428,10 +426,12 @@ describe("coupons/commands", () => {
       test("存在しない ID で NOT_FOUND エラーをスローする", async () => {
         mockCouponFindUnique.mockResolvedValueOnce(null);
 
-        await expect(toggleCouponActive(COUPON_ID)).rejects.toMatchObject({
-          code: "NOT_FOUND",
-          message: "クーポンが見つかりません",
-        });
+        await expect(updateCouponActive(COUPON_ID, true)).rejects.toMatchObject(
+          {
+            code: "NOT_FOUND",
+            message: "クーポンが見つかりません",
+          },
+        );
 
         expect(mockCouponUpdate).not.toHaveBeenCalled();
       });

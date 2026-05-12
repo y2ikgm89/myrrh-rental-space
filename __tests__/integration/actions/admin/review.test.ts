@@ -5,7 +5,7 @@
  *
  * モック方針:
  * - executeAdminMutationResult: @/admin/lib/admin-action をモック（認証バイパス）
- * - toggleReviewPublishedCommand / deleteReviewCommand: domain コマンドをモック
+ * - updateReviewPublishedCommand / deleteReviewCommand: domain コマンドをモック
  * - createValidationMutationError: action-helpers をモック
  * - updateTag: next/cache をモック
  */
@@ -55,7 +55,7 @@ mock.module("@/admin/lib/admin-action", () => ({
 }));
 
 // domain コマンドのモック
-const mockToggleReviewPublishedCommand = mock(() =>
+const mockUpdateReviewPublishedCommand = mock(() =>
   Promise.resolve({ spaceId: "space-001" }),
 );
 const mockDeleteReviewCommand = mock(() =>
@@ -94,7 +94,7 @@ const mockDeleteReviewReplyCommand = mock(() =>
 );
 
 mock.module("@/shared/domain/reviews/commands", () => ({
-  toggleReviewPublishedCommand: mockToggleReviewPublishedCommand,
+  updateReviewPublishedCommand: mockUpdateReviewPublishedCommand,
   deleteReviewCommand: mockDeleteReviewCommand,
   replyToReviewCommand: mockReplyToReviewCommand,
   deleteReviewReplyCommand: mockDeleteReviewReplyCommand,
@@ -137,48 +137,48 @@ const INVALID_UUIDS = [
 // テスト本体
 // =============================================================================
 
-describe("toggleReviewVisibility", () => {
+describe("updateReviewPublished", () => {
   beforeEach(() => {
-    mockToggleReviewPublishedCommand.mockClear();
+    mockUpdateReviewPublishedCommand.mockClear();
     mockUpdateTag.mockClear();
-    mockToggleReviewPublishedCommand.mockImplementation(() =>
+    mockUpdateReviewPublishedCommand.mockImplementation(() =>
       Promise.resolve({ spaceId: "space-001" }),
     );
   });
 
   describe("正常系", () => {
     test("有効な UUID と isPublished=true で公開に変更できる", async () => {
-      const { toggleReviewVisibility } =
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await toggleReviewVisibility(VALID_UUID, true);
+      const result = await updateReviewPublished(VALID_UUID, true);
 
       expect(result).not.toHaveProperty("error");
-      expect(mockToggleReviewPublishedCommand).toHaveBeenCalledTimes(1);
-      expect(mockToggleReviewPublishedCommand).toHaveBeenCalledWith(
+      expect(mockUpdateReviewPublishedCommand).toHaveBeenCalledTimes(1);
+      expect(mockUpdateReviewPublishedCommand).toHaveBeenCalledWith(
         VALID_UUID,
         true,
       );
     });
 
     test("有効な UUID と isPublished=false で非公開に変更できる", async () => {
-      const { toggleReviewVisibility } =
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await toggleReviewVisibility(VALID_UUID, false);
+      const result = await updateReviewPublished(VALID_UUID, false);
 
       expect(result).not.toHaveProperty("error");
-      expect(mockToggleReviewPublishedCommand).toHaveBeenCalledWith(
+      expect(mockUpdateReviewPublishedCommand).toHaveBeenCalledWith(
         VALID_UUID,
         false,
       );
     });
 
     test("成功後に REVIEWS キャッシュが無効化される", async () => {
-      const { toggleReviewVisibility } =
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await toggleReviewVisibility(VALID_UUID, true);
+      await updateReviewPublished(VALID_UUID, true);
 
       const calledTags = (
         mockUpdateTag.mock.calls as unknown as [string][]
@@ -191,14 +191,14 @@ describe("toggleReviewVisibility", () => {
     });
 
     test("spaceId がある場合、スペース別レビューキャッシュも無効化される", async () => {
-      mockToggleReviewPublishedCommand.mockImplementation(() =>
+      mockUpdateReviewPublishedCommand.mockImplementation(() =>
         Promise.resolve({ spaceId: "space-abc" }),
       );
 
-      const { toggleReviewVisibility } =
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await toggleReviewVisibility(VALID_UUID, true);
+      await updateReviewPublished(VALID_UUID, true);
 
       // REVIEWS + reviews.space(spaceId) + reviews.stats(spaceId) の 3 タグが無効化される
       expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(3);
@@ -209,38 +209,38 @@ describe("toggleReviewVisibility", () => {
     test.each(INVALID_UUIDS)(
       "不正な UUID '%s' のとき fieldErrors を含むエラーを返す",
       async (invalidId) => {
-        const { toggleReviewVisibility } =
+        const { updateReviewPublished } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-        const result = await toggleReviewVisibility(invalidId, true);
+        const result = await updateReviewPublished(invalidId, true);
 
         expect(result).toHaveProperty("error");
         expect(result).toHaveProperty("fieldErrors");
       },
     );
 
-    test("バリデーション失敗時は toggleReviewPublishedCommand が呼ばれない", async () => {
-      const { toggleReviewVisibility } =
+    test("バリデーション失敗時は updateReviewPublishedCommand が呼ばれない", async () => {
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await toggleReviewVisibility("invalid-uuid", true);
+      await updateReviewPublished("invalid-uuid", true);
 
-      expect(mockToggleReviewPublishedCommand).not.toHaveBeenCalled();
+      expect(mockUpdateReviewPublishedCommand).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: DomainError", () => {
     test("レビューが見つからない場合はエラーを返す", async () => {
-      mockToggleReviewPublishedCommand.mockImplementation(() =>
+      mockUpdateReviewPublishedCommand.mockImplementation(() =>
         Promise.reject(
           new DomainError("レビューが見つかりません", "NOT_FOUND"),
         ),
       );
 
-      const { toggleReviewVisibility } =
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await toggleReviewVisibility(VALID_UUID, true);
+      const result = await updateReviewPublished(VALID_UUID, true);
 
       expect(result).toHaveProperty("error");
       const errorResult = result as { error: string };
@@ -248,14 +248,14 @@ describe("toggleReviewVisibility", () => {
     });
 
     test("DomainError 以外のエラーは再スローされる", async () => {
-      mockToggleReviewPublishedCommand.mockImplementation(() =>
+      mockUpdateReviewPublishedCommand.mockImplementation(() =>
         Promise.reject(new Error("予期しないDBエラー")),
       );
 
-      const { toggleReviewVisibility } =
+      const { updateReviewPublished } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await expect(toggleReviewVisibility(VALID_UUID, true)).rejects.toThrow(
+      await expect(updateReviewPublished(VALID_UUID, true)).rejects.toThrow(
         "予期しないDBエラー",
       );
     });

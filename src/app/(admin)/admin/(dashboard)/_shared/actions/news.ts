@@ -208,61 +208,39 @@ export async function deleteNews(id: string): Promise<MutationResult> {
   });
 }
 
-export async function publishNews(
+export async function updateNewsPublished(
   id: string,
-): Promise<MutationResult<{ version: number }>> {
+  isPublished: boolean,
+): Promise<MutationResult<{ isPublished: boolean }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);
   }
 
-  let publishedNews: { slug: string; version: number } | null = null;
+  let affectedSlug: string | null = null;
 
   return executeAdminMutationResult({
     resource: "news",
     action: "publish",
     resourceId: validated.data,
     execute: async (user) => {
-      publishedNews = await publishNewsCommand(validated.data, user.id);
-      return { version: publishedNews.version };
+      if (isPublished) {
+        const result = await publishNewsCommand(validated.data, user.id);
+        affectedSlug = result.slug;
+      } else {
+        const result = await unpublishNewsCommand(validated.data);
+        affectedSlug = result.slug;
+      }
+      return { isPublished };
     },
     afterSuccess: () => {
-      if (!publishedNews) {
+      if (!affectedSlug) {
         return;
       }
 
       invalidateNewsCollectionCaches();
-      updateTag(getCacheTag.news.detail(publishedNews.slug));
-      purgeNewsCaches(publishedNews.slug);
-    },
-  });
-}
-
-export async function unpublishNews(id: string): Promise<MutationResult> {
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationMutationError(validated.error);
-  }
-
-  let unpublishedNewsSlug: string | null = null;
-
-  return executeAdminMutationResult({
-    resource: "news",
-    action: "publish",
-    resourceId: validated.data,
-    execute: async () => {
-      const result = await unpublishNewsCommand(validated.data);
-      unpublishedNewsSlug = result.slug;
-      return null;
-    },
-    afterSuccess: () => {
-      if (!unpublishedNewsSlug) {
-        return;
-      }
-
-      invalidateNewsCollectionCaches();
-      updateTag(getCacheTag.news.detail(unpublishedNewsSlug));
-      purgeNewsCaches(unpublishedNewsSlug);
+      updateTag(getCacheTag.news.detail(affectedSlug));
+      purgeNewsCaches(affectedSlug);
     },
   });
 }

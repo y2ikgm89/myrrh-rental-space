@@ -17,7 +17,7 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
-import { bulkTogglePagePublished, bulkDeletePages } from "@/admin/actions/page";
+import { bulkUpdatePagePublished, bulkDeletePages } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 interface BulkActionsProps {
@@ -33,7 +33,7 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
 
   const handleBulkPublish = (publish: boolean) => {
     startTransition(async () => {
-      const result = await bulkTogglePagePublished(selectedSlugs, publish);
+      const result = await bulkUpdatePagePublished(selectedSlugs, publish);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;

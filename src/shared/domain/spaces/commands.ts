@@ -175,10 +175,10 @@ export async function updateSpaceCommand(
   });
 }
 
-export async function updateSpacePublishCommand(
+export async function updateSpacePublishedCommand(
   id: string,
   isPublished: boolean,
-): Promise<void> {
+): Promise<{ isPublished: boolean }> {
   await ensureSpaceExists(id);
 
   await prisma.space.update({
@@ -188,6 +188,8 @@ export async function updateSpacePublishCommand(
       publishedAt: isPublished ? new Date() : null,
     },
   });
+
+  return { isPublished };
 }
 
 export async function deleteSpaceCommand(id: string): Promise<void> {
@@ -221,31 +223,6 @@ export async function deleteSpaceCommand(id: string): Promise<void> {
       isPublished: false,
     },
   });
-}
-
-export async function toggleSpacePublishedCommand(
-  id: string,
-): Promise<{ isPublished: boolean }> {
-  const space = await prisma.space.findUnique({
-    where: { id },
-    select: { id: true, isPublished: true },
-  });
-
-  if (!space) {
-    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
-  }
-
-  const isPublished = !space.isPublished;
-
-  await prisma.space.update({
-    where: { id },
-    data: {
-      isPublished,
-      publishedAt: isPublished ? new Date() : null,
-    },
-  });
-
-  return { isPublished };
 }
 
 /**

@@ -16,9 +16,8 @@ import {
   createSpaceCommand,
   deleteSpaceCommand,
   duplicateSpaceCommand,
-  toggleSpacePublishedCommand,
   updateSpaceCommand,
-  updateSpacePublishCommand,
+  updateSpacePublishedCommand,
 } from "@/shared/domain/spaces/commands";
 import {
   spaceFormSchema,
@@ -114,10 +113,10 @@ export async function updateSpace(
   });
 }
 
-export async function updateSpacePublish(
+export async function updateSpacePublished(
   id: string,
   isPublished: boolean,
-): Promise<MutationResult> {
+): Promise<MutationResult<{ isPublished: boolean }>> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
@@ -125,10 +124,7 @@ export async function updateSpacePublish(
     resource: "space",
     action: "publish",
     resourceId: parsed.data,
-    execute: async () => {
-      await updateSpacePublishCommand(parsed.data, isPublished);
-      return null;
-    },
+    execute: async () => updateSpacePublishedCommand(parsed.data, isPublished),
     afterSuccess: () => {
       revalidateSpaces(parsed.data);
     },
@@ -145,26 +141,6 @@ export async function deleteSpace(id: string): Promise<MutationResult> {
     resourceId: parsed.data,
     execute: async () => {
       await deleteSpaceCommand(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      revalidateSpaces(parsed.data);
-    },
-  });
-}
-
-export async function toggleSpacePublished(
-  id: string,
-): Promise<MutationResult> {
-  const parsed = idSchema.safeParse(id);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
-
-  return executeAdminMutationResult({
-    resource: "space",
-    action: "publish",
-    resourceId: parsed.data,
-    execute: async () => {
-      await toggleSpacePublishedCommand(parsed.data);
       return null;
     },
     afterSuccess: () => {

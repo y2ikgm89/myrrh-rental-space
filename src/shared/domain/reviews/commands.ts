@@ -85,7 +85,7 @@ export async function createReviewCommand(input: CreateReviewInput) {
   };
 }
 
-export async function toggleReviewPublishedCommand(
+export async function updateReviewPublishedCommand(
   id: string,
   isPublished: boolean,
 ): Promise<{ spaceId: string; spaceSlug: string }> {

@@ -116,6 +116,39 @@ export async function deleteSpaceCategory(id: string): Promise<{ id: string }> {
   return { id };
 }
 
+export async function updateSpaceCategoryActive(
+  id: string,
+  isActive: boolean,
+): Promise<{ id: string; isActive: boolean }> {
+  const category = await prisma.spaceCategory.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: { spaces: true },
+      },
+    },
+  });
+
+  if (!category) {
+    throw new DomainError("カテゴリーが見つかりません", "NOT_FOUND");
+  }
+
+  // 非アクティブ化時はスペース紐づきを確認（公開ページから silent に消える事故を防ぐ）
+  if (!isActive && category._count.spaces > 0) {
+    throw new DomainError(
+      `このカテゴリーには${category._count.spaces}件のスペースが紐づいています。先にスペースのカテゴリーを変更してください。`,
+      "CONFLICT",
+    );
+  }
+
+  await prisma.spaceCategory.update({
+    where: { id },
+    data: { isActive },
+  });
+
+  return { id, isActive };
+}
+
 export async function hardDeleteSpaceCategory(
   id: string,
 ): Promise<{ id: string }> {

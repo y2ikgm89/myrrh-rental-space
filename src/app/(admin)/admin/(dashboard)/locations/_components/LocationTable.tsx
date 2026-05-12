@@ -9,7 +9,7 @@ import {
   TableRow,
   PublishSwitch,
 } from "@/admin/components/ui";
-import { toggleLocationPublish } from "@/admin/actions/location";
+import { updateLocationPublished } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { LocationActionCell } from "./LocationActionCell";
@@ -125,7 +125,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                   <PublishSwitch
                     id={location.id}
                     isPublished={location.isPublished}
-                    onToggle={toggleLocationPublish}
+                    onToggle={updateLocationPublished}
                     resourceLabel={`${location.name} の公開状態`}
                   />
                 </TableCell>

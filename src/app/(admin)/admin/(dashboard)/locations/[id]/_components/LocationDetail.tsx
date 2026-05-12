@@ -14,7 +14,7 @@ import {
 } from "@/admin/components/ui";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { toggleLocationPublish } from "@/admin/actions/location";
+import { updateLocationPublished } from "@/admin/actions/location";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
@@ -30,7 +30,7 @@ export function LocationDetail({ location }: LocationDetailProps) {
 
   const handlePublishChange = async (checked: boolean) => {
     startTransition(async () => {
-      const result = await toggleLocationPublish(location.id, checked);
+      const result = await updateLocationPublished(location.id, checked);
       if (!isMutationError(result)) {
         router.refresh();
       } else {
