@@ -48,7 +48,7 @@ export function PostCategoryFilter({
             onClick={() => handleFilter(null)}
             aria-pressed={!activeCategory}
             className={cn(
-              "px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
+              "inline-flex min-h-11 items-center px-5 py-2 text-[0.6875rem] uppercase tracking-[0.18em] transition-all duration-300",
               !activeCategory
                 ? "bg-accent text-accent-foreground"
                 : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
@@ -64,7 +64,7 @@ export function PostCategoryFilter({
               onClick={() => handleFilter(cat.slug)}
               aria-pressed={activeCategory === cat.slug}
               className={cn(
-                "px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
+                "inline-flex min-h-11 items-center px-5 py-2 text-[0.6875rem] uppercase tracking-[0.18em] transition-all duration-300",
                 activeCategory === cat.slug
                   ? "bg-accent text-accent-foreground"
                   : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",

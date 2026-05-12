@@ -90,7 +90,7 @@ export function IntegrationHealthAlertClient({
             <li key={integration.key}>
               <Link
                 href={integration.href}
-                className="text-foreground underline underline-offset-4 hover:text-accent"
+                className="inline-flex min-h-11 items-center text-foreground underline underline-offset-4 hover:text-accent"
               >
                 {integration.label}
               </Link>
