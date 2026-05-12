@@ -64,11 +64,11 @@ export default function PublicNotFound() {
               </Button>
             </Stack>
 
-            <div className="w-full max-w-2xl pt-8">
+            <div className="@container w-full max-w-2xl pt-8">
               <h2 className="mb-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 よく訪問されるページ
               </h2>
-              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @md:grid-cols-3">
                 {POPULAR_DESTINATIONS.map((destination) => (
                   <li key={destination.href}>
                     <Link
