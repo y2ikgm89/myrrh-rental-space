@@ -636,6 +636,7 @@ describe("architecture boundaries", () => {
     expect(source).not.toContain("experimental: { typedRoutes");
   });
 
+  // 全 app route file fs traverse + regex で 5s default timeout を超えるため 30s に延長
   test("cacheComponents 有効時は route segment config export を残さない", () => {
     const nextConfigSource = readFileSync(NEXT_CONFIG_FILE, "utf8");
     expect(nextConfigSource).toContain("cacheComponents: true");
@@ -646,7 +647,7 @@ describe("architecture boundaries", () => {
     );
 
     expect(offenders).toEqual([]);
-  });
+  }, 30000);
 
   test("next.config.ts の Cache-Control catch-all は先に定義し、個別 no-store を後勝ちにする", () => {
     const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
