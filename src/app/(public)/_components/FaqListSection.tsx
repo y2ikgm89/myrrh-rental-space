@@ -249,7 +249,7 @@ export function FaqListSection({
                   className="space-y-6"
                 >
                   <header className="border-b border-border pb-3">
-                    <h3
+                    <h2
                       id={`faq-category-${category.id}`}
                       className="flex items-center gap-3 font-heading text-xl font-light tracking-[0.02em] text-foreground md:text-2xl"
                     >
@@ -259,7 +259,7 @@ export function FaqListSection({
                         </span>
                       )}
                       {category.name}
-                    </h3>
+                    </h2>
                     {category.description && (
                       <p className="mt-2 text-sm text-muted-foreground">
                         {category.description}
@@ -328,7 +328,7 @@ export function FaqListSection({
             </div>
           )}
 
-          {config.showViewAllLink && (
+          {config.showViewAllLink && config.viewAllText.length > 0 && (
             <ScrollReveal delay={0.2}>
               <div className="mt-8 text-center">
                 <Link

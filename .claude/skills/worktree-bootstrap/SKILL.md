@@ -1,13 +1,15 @@
 ---
 name: worktree-bootstrap
-description: Use when explicitly creating an isolated git worktree. Automates env file copy, Prisma generated copy, and main DB drift detection.
+description: Bootstrap an isolated git worktree with env copy, Prisma generated copy, and main DB drift detection. Invoke after deciding to use a worktree per the decision matrix in .claude/rules/git-migration.md §Worktree 採否判定.
 disable-model-invocation: true
 argument-hint: "<branch-name-kebab-case>"
 ---
 
 # worktree-bootstrap
 
-隔離 worktree を 1 コマンドで完全セットアップするスキル。
+隔離 worktree を 1 コマンドで完全セットアップする SKILL。
+
+**採否判定（worktree を使うべきか）**は `.claude/rules/git-migration.md` §Worktree 採否判定 を参照。本 SKILL は採用決定後のセットアップ自動化を担当。
 
 ## 背景
 
@@ -48,6 +50,6 @@ bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh review-reply
 
 ## 関連
 
-- `.claude/rules/ops/deployment-patterns.md` §Worktree — DB drift 対処法・env コピー手法の詳細
-- `.claude/rules/claude-code-patterns.md` — subagent-driven-development 実行時の worktree 前提条件
-- `superpowers:using-git-worktrees` — worktree 運用の一般論（本スキルはプロジェクト固有の自動化）
+- `.claude/rules/git-migration.md` — Worktree 採否判定 / worktree merge / DB drift / 未追跡 migration 対処（canonical SSoT）
+- `.claude/rules/claude-code-patterns.md` — subagent-driven-development 規律 / `PostToolUse:Agent` hook の検証パターン
+- `superpowers:using-git-worktrees` — worktree 運用の一般論（本 SKILL はプロジェクト固有自動化）

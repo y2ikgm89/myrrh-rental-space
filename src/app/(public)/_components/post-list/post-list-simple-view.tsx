@@ -177,7 +177,7 @@ export function PostListSimpleView({
         ))}
       </div>
 
-      {config.showViewAllLink && (
+      {config.showViewAllLink && config.viewAllText.length > 0 && (
         <ScrollReveal delay={0.2}>
           <div className="mt-10 text-center">
             <Link

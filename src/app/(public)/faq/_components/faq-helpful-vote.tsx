@@ -127,7 +127,7 @@ export function FaqHelpfulVote({
           disabled={voted !== null}
           onClick={() => handleVote("helpful")}
           aria-pressed={voted === "helpful"}
-          aria-label="役に立った"
+          aria-label={`役に立った（${helpful}票）`}
           className={cn(
             "inline-flex min-h-11 items-center gap-1.5 border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground transition hover:border-foreground/30 hover:text-foreground disabled:cursor-not-allowed",
             voted === "helpful" &&
@@ -142,7 +142,7 @@ export function FaqHelpfulVote({
           disabled={voted !== null}
           onClick={() => handleVote("not-helpful")}
           aria-pressed={voted === "not-helpful"}
-          aria-label="役に立たなかった"
+          aria-label={`役に立たなかった（${notHelpful}票）`}
           className={cn(
             "inline-flex min-h-11 items-center gap-1.5 border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground transition hover:border-foreground/30 hover:text-foreground disabled:cursor-not-allowed",
             voted === "not-helpful" &&

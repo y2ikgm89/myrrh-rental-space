@@ -24,9 +24,9 @@ export function SidebarPostList({
 
   return (
     <div>
-      <h3 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
-      </h3>
+      </h2>
       <ul className={isStacked ? "space-y-7" : "space-y-5"}>
         {posts.map((post, index) => (
           <li key={post.id}>

@@ -54,7 +54,7 @@ function CTAButtons({
             : "flex-col items-center",
         )}
       >
-        {primaryButton && (
+        {primaryButton && primaryButton.label.length > 0 && (
           <MagneticButton
             href={primaryButton.url}
             strength={0.35}

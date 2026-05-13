@@ -134,8 +134,10 @@ function InfoSection({
   readonly label: string;
   readonly children: ReactElement;
 }) {
+  // role="group" は WCAG: <dl> 直下の <div> 子要素を grouping element として
+  // 許可するための必須属性（dlitem audit）。
   return (
-    <div className="flex gap-3">
+    <div role="group" className="flex gap-3">
       <div className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground">
         <Icon className="h-4 w-4" />
       </div>

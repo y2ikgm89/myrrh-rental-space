@@ -167,7 +167,7 @@ export function NewsListSimpleView({
         )}
       </div>
 
-      {config.showViewAllLink && (
+      {config.showViewAllLink && config.viewAllText.length > 0 && (
         <ScrollReveal delay={0.2}>
           <div className="mt-8 text-center">
             <Link

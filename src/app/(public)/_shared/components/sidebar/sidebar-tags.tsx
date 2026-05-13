@@ -9,9 +9,9 @@ interface SidebarTagsProps {
 export function SidebarTags({ tags }: SidebarTagsProps): ReactElement {
   return (
     <div>
-      <h3 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
         Tags
-      </h3>
+      </h2>
       <div className="flex flex-wrap gap-2">
         {tags.map((tag) => (
           <Link

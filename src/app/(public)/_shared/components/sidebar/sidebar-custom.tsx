@@ -13,9 +13,9 @@ const SIDEBAR_CTA_CLASS =
 export function SidebarCustom({ widget }: SidebarCustomProps): ReactElement {
   return (
     <div>
-      <h3 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
         {widget.title}
-      </h3>
+      </h2>
       {widget.description ? (
         <p className="text-sm text-muted-foreground">{widget.description}</p>
       ) : null}

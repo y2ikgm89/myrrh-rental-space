@@ -11,9 +11,9 @@ export function SidebarCategories({
 }: SidebarCategoriesProps): ReactElement {
   return (
     <div>
-      <h3 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
         Categories
-      </h3>
+      </h2>
       <ul className="space-y-3">
         {categories.map((cat) => (
           <li key={cat.id}>
