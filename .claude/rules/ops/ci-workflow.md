@@ -102,7 +102,7 @@ e2e-tests:
 
 1. `gh workflow run ci.yml --ref <branch> -f update_visual_baseline=true` で起動
 2. CI が `bunx playwright test --project=chromium-visual --update-snapshots` を実行
-3. 生成された `e2e/visual/**/*-snapshots/` を `peter-evans/create-pull-request@v6` が **別 branch (`ci/visual-baseline-<run_id>`) に push + 自動 PR 作成**
+3. 生成された `e2e/visual/**/*-snapshots/` を `peter-evans/create-pull-request@v8` が **別 branch (`ci/visual-baseline-<run_id>`) に push + 自動 PR 作成**
 4. PR で required status checks (5 essential) を通過 → 人間レビュー → merge
 5. baseline diff は PR の `Files changed` で binary diff としても確認可能
 
@@ -113,7 +113,7 @@ e2e-tests:
 - 重い job を main push で auto-run する設計（baseline 自動再生成は破壊的変更時に baseline を silent 上書きする risk）
 - Visual baseline をローカルで生成して commit（CI と font rendering 不一致で必ず fail）
 - `update_visual_baseline=true` の `workflow_dispatch` を main branch 以外で起動（auto-PR の base branch ミスマッチ）
-- **main へ直接 push (`git push origin HEAD:${{ github.ref_name }}`) する旧パターン** — branch protection の required status checks (`GH006: protected branch hook declined`) で reject される。peter-evans/create-pull-request@v6 で PR 化必須
+- **main へ直接 push (`git push origin HEAD:${{ github.ref_name }}`) する旧パターン** — branch protection の required status checks (`GH006: protected branch hook declined`) で reject される。peter-evans/create-pull-request@v8 で PR 化必須
 - branch protection の `bypass_actors` に `github-actions[bot]` を追加する迂回案（「bot は無検証」の運用リスク、PR ベースの方が clean）
 
 **Visual baseline auto-PR pattern**（2026-05-13 commit `e09f5691` の branch protection 適用後に確立）:
@@ -138,7 +138,7 @@ e2e-tests:
 
 - name: Create PR for regenerated baseline
   if: steps.stage-baseline.outputs.has_changes == 'true'
-  uses: peter-evans/create-pull-request@v6
+  uses: peter-evans/create-pull-request@v8
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
     branch: ci/visual-baseline-${{ github.run_id }}
@@ -155,7 +155,7 @@ e2e-tests:
     delete-branch: true
 ```
 
-**業界 reference**: Playwright 公式 docs / Chromatic (Storybook visual SaaS) / Percy (BrowserStack) は全て同 pattern。`peter-evans/create-pull-request@v6` は GitHub Marketplace verified action（typescript-eslint / shadcn-ui / Next.js 等で広く採用）。
+**業界 reference**: Playwright 公式 docs / Chromatic (Storybook visual SaaS) / Percy (BrowserStack) は全て同 pattern。`peter-evans/create-pull-request@v8` は GitHub Marketplace verified action（typescript-eslint / shadcn-ui / Next.js 等で広く採用）。
 
 **Repo settings prerequisite (`can_approve_pull_request_reviews=true`)**: GitHub の新セキュリティデフォルト (2023〜) で workflow からの PR 作成は **デフォルト禁止**。`GITHUB_TOKEN` を使う auto-PR workflow は以下の repo setting が必要:
 
@@ -171,7 +171,7 @@ gh api repos/<owner>/<repo>/actions/permissions/workflow \
   -F can_approve_pull_request_reviews=true
 ```
 
-未有効化だと `##[error]GitHub Actions is not permitted to create or approve pull requests.` で peter-evans/create-pull-request@v6 が **branch push まで成功・PR 作成のみ fail** する silent UX bug。`default_workflow_permissions: read` は維持 (write 不要、各 workflow の `permissions:` 明示が SSoT、最小権限原則)。実例: 2026-05-13 run 25811846393 → 25812303256 で発覚 + 設定変更で復旧。
+未有効化だと `##[error]GitHub Actions is not permitted to create or approve pull requests.` で peter-evans/create-pull-request@v8 が **branch push まで成功・PR 作成のみ fail** する silent UX bug。`default_workflow_permissions: read` は維持 (write 不要、各 workflow の `permissions:` 明示が SSoT、最小権限原則)。実例: 2026-05-13 run 25811846393 → 25812303256 で発覚 + 設定変更で復旧。
 
 ## 5. CodeQL は Default setup に統一（Advanced workflow 不要）
 
@@ -323,16 +323,32 @@ gh api repos/<owner>/<repo>/branches/main/protection \
 
 実例: 2026-05-13 commit `e09f5691` で `.github/branch-protection.json` 配置 + 5 essential checks 登録（過去 30+ run failure → 完全 green 化セッションの締めくくり）。
 
-## 11. Actions deprecation 警告は warn のみで放置可
+## 11. Actions は Node 24 対応版に統一（最新 major version）
 
-GitHub-hosted runner の Node.js 20 deprecation 警告（2026-06 強制 Node 24 化、2026-09 Node 20 削除）:
+GitHub-hosted runner の Node.js 20 deprecation（2026-06 強制 Node 24 化、2026-09 Node 20 削除）は **全 upstream actions が Node 24 対応 major version をリリース済**（2026-04 時点）。warn 放置ではなく **最新 major version に upgrade が canonical**:
 
+| Action                            | 旧 (Node 20) | 新 (Node 24) | Breaking change                                                |
+| --------------------------------- | ------------ | ------------ | -------------------------------------------------------------- |
+| `actions/checkout`                | `@v4`        | **`@v6`**    | v6: persist-credentials を `$RUNNER_` 格納（runner v2.329.0+） |
+| `actions/upload-artifact`         | `@v4`        | **`@v7`**    | v7: ESM 移行 + 任意 `archive: false` で direct upload          |
+| `actions/cache`                   | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                              |
+| `peter-evans/create-pull-request` | `@v6`        | **`@v8`**    | input 互換、runner v2.327.1+ 必須                              |
+| `oven-sh/setup-bun`               | `@v2`        | `@v2` (現行) | major version 据置                                             |
+| `preactjs/compressed-size-action` | `@v2`        | `@v2` (現行) | major version 据置                                             |
+
+GitHub-hosted `ubuntu-latest` は常に最新 runner のため runner version 制約は自動充足。`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 強制 opt-in は不要（最新 actions が default で Node 24）。
+
+**監査 grep**:
+
+```bash
+# 旧 major version 残存確認（ゼロが正常）
+grep -rnE 'uses: (actions/(checkout|upload-artifact)|peter-evans/create-pull-request)@v[0-9]+' .github/workflows/ \
+  | grep -vE 'checkout@v6|upload-artifact@v7|create-pull-request@v8'
 ```
-Node.js 20 actions are deprecated. The following actions are running on Node.js 20
-and may not work as expected: actions/checkout@v4, actions/upload-artifact@v4.
-```
 
-`actions/checkout@v4` / `actions/upload-artifact@v4` は upstream で Node 24 対応版が出るまで warn のまま運用する。`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` を env に追加する選択もあるが、互換性確認が必要なため自動 opt-in は推奨しない。
+**Action 最新版の確認 SSoT**: `curl -s "https://api.github.com/repos/<owner>/<repo>/releases/latest" | jq -r .tag_name`。
+
+**禁止**: deprecation warning を「warn のまま放置」する旧運用（2026-05-13 まで rule docs に書かれていたが、upstream が既に Node 24 対応版をリリース済の状態では誤り。最新 major version への upgrade が公式推奨）。
 
 ## 12. 監査 grep（ワークフロー一括検査）
 
