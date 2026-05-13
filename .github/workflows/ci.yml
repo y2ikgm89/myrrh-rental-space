@@ -30,10 +30,12 @@ on:
         required: false
         default: false
 
-# 同一ブランチ・同一ワークフローで進行中の run があれば cancel。
+# 同一ブランチ・同一イベントタイプで進行中の run があれば cancel。
+# event_name を group に含めることで workflow_dispatch (手動 trigger) と push (auto)
+# が独立 group となり、互いに cancel し合わない（race condition 回避）。
 # main / develop 以外では PR push のたびに前 run を捨てる。
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
 
 env:
