@@ -327,23 +327,27 @@ gh api repos/<owner>/<repo>/branches/main/protection \
 
 GitHub-hosted runner の Node.js 20 deprecation（2026-06 強制 Node 24 化、2026-09 Node 20 削除）は **全 upstream actions が Node 24 対応 major version をリリース済**（2026-04 時点）。warn 放置ではなく **最新 major version に upgrade が canonical**:
 
-| Action                            | 旧 (Node 20) | 新 (Node 24) | Breaking change                                                |
-| --------------------------------- | ------------ | ------------ | -------------------------------------------------------------- |
-| `actions/checkout`                | `@v4`        | **`@v6`**    | v6: persist-credentials を `$RUNNER_` 格納（runner v2.329.0+） |
-| `actions/upload-artifact`         | `@v4`        | **`@v7`**    | v7: ESM 移行 + 任意 `archive: false` で direct upload          |
-| `actions/cache`                   | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                              |
-| `peter-evans/create-pull-request` | `@v6`        | **`@v8`**    | input 互換、runner v2.327.1+ 必須                              |
-| `oven-sh/setup-bun`               | `@v2`        | `@v2` (現行) | major version 据置                                             |
-| `preactjs/compressed-size-action` | `@v2`        | `@v2` (現行) | major version 据置                                             |
+| Action                             | 旧 (Node 20) | 新 (Node 24) | Breaking change                                                                |
+| ---------------------------------- | ------------ | ------------ | ------------------------------------------------------------------------------ |
+| `actions/checkout`                 | `@v4`        | **`@v6`**    | v6: persist-credentials を `$RUNNER_` 格納（runner v2.329.0+）                 |
+| `actions/upload-artifact`          | `@v4`        | **`@v7`**    | v7: ESM 移行 + 任意 `archive: false` で direct upload                          |
+| `actions/cache`                    | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                                              |
+| `actions/dependency-review-action` | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                                              |
+| `actions/labeler`                  | `@v5`        | **`@v6`**    | input 互換（config 形式は v5 で確立、`changed-files-labels-limit` 新規 input） |
+| `actions/stale`                    | `@v9`        | **`@v10`**   | input 互換、runner v2.327.1+ 必須                                              |
+| `peter-evans/create-pull-request`  | `@v6`        | **`@v8`**    | input 互換、runner v2.327.1+ 必須                                              |
+| `oven-sh/setup-bun`                | `@v2`        | `@v2` (現行) | major version 据置                                                             |
+| `preactjs/compressed-size-action`  | `@v2`        | `@v2` (現行) | major version 据置                                                             |
+| `rhysd/actionlint`                 | bash dl      | bash dl      | curl で latest を取得（version pin なし）                                      |
 
 GitHub-hosted `ubuntu-latest` は常に最新 runner のため runner version 制約は自動充足。`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 強制 opt-in は不要（最新 actions が default で Node 24）。
 
-**監査 grep**:
+**監査 grep**（**全 workflow ファイルを横断**で確認、`ci.yml` のみではない）:
 
 ```bash
-# 旧 major version 残存確認（ゼロが正常）
-grep -rnE 'uses: (actions/(checkout|upload-artifact)|peter-evans/create-pull-request)@v[0-9]+' .github/workflows/ \
-  | grep -vE 'checkout@v6|upload-artifact@v7|create-pull-request@v8'
+# 旧 major version 残存確認（ゼロが正常） — 全 7 種類 + 全 workflow file
+grep -rnE 'uses: (actions/(checkout|upload-artifact|cache|dependency-review-action|labeler|stale)|peter-evans/create-pull-request)@v[0-9]+' .github/workflows/ \
+  | grep -vE 'checkout@v6|upload-artifact@v7|cache@v5|dependency-review-action@v5|labeler@v6|stale@v10|create-pull-request@v8'
 ```
 
 **Action 最新版の確認 SSoT**: `curl -s "https://api.github.com/repos/<owner>/<repo>/releases/latest" | jq -r .tag_name`。

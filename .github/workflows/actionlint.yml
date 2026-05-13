@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # rhysd/actionlint: GitHub Actions workflow の lint（syntax + expression + shellcheck）
       # 公式: https://github.com/rhysd/actionlint
