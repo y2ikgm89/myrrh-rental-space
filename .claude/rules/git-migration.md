@@ -67,6 +67,25 @@ paths:
 - **memory file（`~/.claude/projects/<slug>/memory/*.md`）の連続 Edit は auto-format race で失敗する** — `Edit` 直後に別 Edit は「File has been modified since read」エラー。1 件ずつ順次完了を確認
 - **handoff memo の「commit `<SHA>` で完了」記述は新セッション開始時に `git show <SHA>` で実在検証必須** — 前セッションの commit 漏れで該当 SHA が main に存在しないことあり
 
+## Push 戦略（main 直接 vs feature branch + PR）
+
+公式 GitHub Flow / Trunk-based Development は **feature branch + PR** が canonical。main 直接 push（admin bypass）は限定例外として運用する。判断基準:
+
+| 変更タイプ                                                             | 推奨ワークフロー                      | 理由                                                                    |
+| ---------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| **Workflow / build / runtime 影響**（actions upgrade, env, schema 等） | main 直接 + 即 push                   | CI で動作 verify 必須、複数まとめると「どの変更が壊したか」切り分け不能 |
+| **Hotfix**（production 緊急 fix）                                      | main 直接 + 即 push                   | 反映の速度優先                                                          |
+| **Rule docs / コメント / 静的 codify のみ**                            | feature branch + 1 PR で squash merge | CI 動作検証不要、複数 codify を 1 commit に集約して history clean       |
+| **通常開発**（feature / refactor / bug fix）                           | feature branch + PR（GitHub Flow）    | review + CI + branch protection の正規フロー                            |
+
+**複数領域跨ぎ + workflow 含む** 場合は **workflow 先行 push + verify → codify 後追い一括** の 2 段階で feedback loop を最短化。実例: 2026-05-13 セッションで Actions upgrade (`cdbcd892`) を先行 push + CI verify → 抜け漏れ修正 (`1315cc39`) + rule codify (`dcaa8834`, `fa49b02b`) と small batch push を多用したが、後半 3 件は 1 PR にまとめて squash merge できた（CI 動作検証不要のため）。
+
+**禁止**:
+
+- main 直接 push を「通常開発」に常用する（admin bypass が習慣化、branch protection の意義が形骸化）
+- codify-only commit を個別 push する（CI minute 浪費 + main history noise）
+- workflow / schema / env 変更を feature branch に閉じ込めて CI verify を遅延させる（merge 後に破綻発覚 → revert コスト）
+
 ## Worktree merge
 
 - **diverged worktree branch の merge は `--no-ff` 推奨**（FF 不可時） — `git rev-list --count main..feature/X` が N、逆が M（>0）で diverged の場合、rebase より `--no-ff` merge + conflict 解決の方が history が明示的（merge commit が「並行開発の境界」を示す）。Linear history の `--ff-only` は **diverge していない場合**の規律
