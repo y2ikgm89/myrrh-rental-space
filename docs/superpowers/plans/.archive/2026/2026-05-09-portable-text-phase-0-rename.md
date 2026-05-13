@@ -1,5 +1,8 @@
 # Portable Text Phase 0: 既存 ButtonLabelToken を Portable Text に rename — Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-09** — Implemented in commit `70587873 refactor(portable-text): rename ButtonLabelToken→PortableTextSpan SSoT (Phase 0 Task 2-4)` + supporting commits `72dd37a6` / `d09a4916` / `1cfa6135`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 既存 `ButtonLabelToken[]` モデル（`buttons[].label` + `NavigationItem.label`）を Sanity Portable Text 公式仕様準拠の `PortableTextSpan[]` に clean break で rename する。

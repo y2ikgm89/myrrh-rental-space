@@ -1,5 +1,8 @@
 # Admin Page Editor Redesign Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-08** — Master-detail UI + semantic field groups + Section CRUD/reorder + PageHero moved into Section table integrated into main.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Spec:** `docs/superpowers/specs/2026-05-02-admin-page-editor-redesign-design.md`

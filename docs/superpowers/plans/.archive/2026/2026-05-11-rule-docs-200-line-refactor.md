@@ -1,5 +1,8 @@
 # Rule Docs 200-Line Refactor Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-12** — 26-file refactor 完遂（commits `4648d765` / `6761d7a9` / 関連シリーズ）。現状残り 3 ファイル (`external-api-retry-patterns.md` 219 / `react/forms-ssr.md` 226 / `ssot-singletons.md` 204) はいずれも plan が認める Pattern C（200–250 行は `Leave as-is + document rationale`）の許容範囲内で目標達成。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reduce all `.claude/rules/**/*.md` files exceeding 200 lines to under 200 lines each, by splitting into path-scoped sub-rules or trimming dense bullets into semantic sub-bullets, while preserving 100% of the existing rule content (no semantic loss).

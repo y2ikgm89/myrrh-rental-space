@@ -1,5 +1,8 @@
 # Admin Page Editor Phase 2 Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-08** — Phase 2A buttons unification + 2B image metadata + 2C dynamic select integrated into main (Section.config migrations 2026-05-07/05-08).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to implement task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Spec:** `docs/superpowers/specs/2026-05-02-admin-page-editor-phase2-design.md`

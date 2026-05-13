@@ -1,5 +1,8 @@
 # Portable Text Phase 1: Section 見出し系を PortableTextSpan[] に統一 — Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-09** — Implemented in commit `8facddd7 refactor(db): migrate Section heading fields string→PortableTextSpan[] (Phase 1 Task 2)`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 20 Section 定義の見出し系フィールド（`title` / `heading` / `tagline` / `label` / `overviewHeadline` / `globalContactHeadline`）を `string` から `PortableTextSpan[]` に clean break で移行し、公開描画にアイコンを inline 配置可能にする。

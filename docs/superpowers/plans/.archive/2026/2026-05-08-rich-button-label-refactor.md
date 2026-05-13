@@ -1,5 +1,8 @@
 # Rich Button Label Refactor Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-09** — Superseded by Portable Text Phase 0 (commit `70587873 refactor(portable-text): rename ButtonLabelToken→PortableTextSpan SSoT`); Sanity Portable Text 互換 token 配列で実現。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** ボタンラベルを Sanity Portable Text 互換の token 配列に置換し、テキストの任意位置（左・中・右）にアイコンを挿入できる管理画面 UI と公開描画を提供する。後方互換性なし、`iconName` フィールド完全廃止。

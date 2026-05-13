@@ -1,5 +1,8 @@
 # Drop Space.access Column — Multi-Location SSoT Cleanup Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-01** — Implemented in commit `6d1cb716 refactor(space): drop Space.access column — inherit access info from Location SSoT`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Remove `Space.access` column entirely. Per-location access info (transit + parking) is already SSoT on `Location.accessLines` / `Location.parkingInfo` (migrated 2026-05-01). Public space detail page inherits parent Location's access info, matching Booking.com / WeWork / schema.org `LocalBusiness` industry standard.

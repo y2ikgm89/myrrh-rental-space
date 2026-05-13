@@ -1,5 +1,8 @@
 # Portable Text Phase 2: items[] 内見出しを PortableTextSpan[] に統一 — Implementation Plan
 
+> **Snapshot: 2026-05-13** — Implementation completed, archived as historical reference.
+> **Completed: 2026-05-09** — Implemented in commit `2e7591c9 refactor(db): migrate Section items[] heading fields to PortableTextSpan[] (Phase 2 Task 1)`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Section の `items[]` array 内見出しフィールド 5 件 (features.items[].title / testimonial.items[].authorName, authorTitle / faq-list.items[].question / value-props.items[].title) を `string` → `PortableTextSpan[]` に clean break で移行。
