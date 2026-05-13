@@ -3,8 +3,8 @@
     "collect": {
       "numberOfRuns": 1,
       "startServerCommand": "bun run lhci:start-server",
-      "startServerReadyPattern": "Ready in",
-      "startServerReadyTimeout": 120000,
+      "startServerReadyPattern": "(Ready in|started server)",
+      "startServerReadyTimeout": 300000,
       "url": [
         "http://localhost:3000/",
         "http://localhost:3000/spaces",
