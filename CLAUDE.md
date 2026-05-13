@@ -80,6 +80,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **arbitrary sizing は @theme token で参照** — `--hero-min-height(-lg|-xl)` / `--modal-max-height` / `--prose-narrow|medium` 等。3 回以上使用で @theme 昇格
 - **ハードコードカラー禁止 / `text-[10px]` 禁止 / 画像 overlay 12px 以上** — セマンティックトークン + WCAG 文字サイズ最小値（→ `frontend/accessibility/touch-text.md` / `images-text.md`）
 - **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須**
+- **`loading.tsx` は実 UI レイアウト反映必須 / spinner-only 禁止** — `Skeleton` primitive 経由（`@/public/components/design-system/skeleton` / `@/admin/components/ui`）、admin form/editor/detail は `FormLoading` / `EditorLoading` / `DetailLoading` SSoT を 1 行 re-export（→ `frontend/loading-skeleton.md`）
 - **Multiple Root Layouts で `app/not-found.tsx` 禁止** — `app/global-not-found.tsx` + `experimental.globalNotFound: true`
 - **公開サインインは Better Auth Client API `signIn.email({ callbackURL })`** — Server Action 経由は Router Cache 未更新の silent bug
 - **`*_GRID_COLS_MAP` は全て Container Queries variants** — viewport breakpoint (`md:`/`lg:`) 復活禁止
