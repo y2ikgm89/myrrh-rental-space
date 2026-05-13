@@ -157,6 +157,22 @@ e2e-tests:
 
 **業界 reference**: Playwright 公式 docs / Chromatic (Storybook visual SaaS) / Percy (BrowserStack) は全て同 pattern。`peter-evans/create-pull-request@v6` は GitHub Marketplace verified action（typescript-eslint / shadcn-ui / Next.js 等で広く採用）。
 
+**Repo settings prerequisite (`can_approve_pull_request_reviews=true`)**: GitHub の新セキュリティデフォルト (2023〜) で workflow からの PR 作成は **デフォルト禁止**。`GITHUB_TOKEN` を使う auto-PR workflow は以下の repo setting が必要:
+
+```bash
+# 確認
+gh api repos/<owner>/<repo>/actions/permissions/workflow
+# → {"default_workflow_permissions":"read","can_approve_pull_request_reviews":false}
+
+# 有効化 (PR 作成のみ許可、default_workflow_permissions は read のまま維持)
+gh api repos/<owner>/<repo>/actions/permissions/workflow \
+  -X PUT \
+  -f default_workflow_permissions=read \
+  -F can_approve_pull_request_reviews=true
+```
+
+未有効化だと `##[error]GitHub Actions is not permitted to create or approve pull requests.` で peter-evans/create-pull-request@v6 が **branch push まで成功・PR 作成のみ fail** する silent UX bug。`default_workflow_permissions: read` は維持 (write 不要、各 workflow の `permissions:` 明示が SSoT、最小権限原則)。実例: 2026-05-13 run 25811846393 → 25812303256 で発覚 + 設定変更で復旧。
+
 ## 5. CodeQL は Default setup に統一（Advanced workflow 不要）
 
 `.github/workflows/codeql.yml` を手動メンテする Advanced setup は GitHub が runner / query 更新を自動追従しない上、private repo + 個人アカウントでは Code scanning settings 未有効化で「`Code scanning is not enabled for this repository`」エラーで毎 push fail する。
