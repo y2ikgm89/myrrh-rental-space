@@ -135,7 +135,10 @@ export default async function LoginPage(): Promise<ReactElement> {
               </p>
             </div>
             <LoginForm />
-            {process.env["NODE_ENV"] !== "production" && <DevLoginButton />}
+            {(process.env["NODE_ENV"] !== "production" ||
+              process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && (
+              <DevLoginButton />
+            )}
           </div>
 
           {/* フッター */}

@@ -19,6 +19,10 @@ export const clientEnv = createEnv({
 
     // Google Analytics (optional)
     NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
+
+    // E2E test opt-in (CI only) — production build でも DevLoginButton を表示する。
+    // staging / production には絶対伝播させない (login bypass risk)。
+    NEXT_PUBLIC_ENABLE_E2E_LOGIN: z.string().optional(),
   },
   runtimeEnv: {
     NEXT_PUBLIC_BASE_URL: process.env["NEXT_PUBLIC_BASE_URL"],
@@ -26,6 +30,7 @@ export const clientEnv = createEnv({
     NEXT_PUBLIC_TURNSTILE_SITE_KEY:
       process.env["NEXT_PUBLIC_TURNSTILE_SITE_KEY"],
     NEXT_PUBLIC_GA_MEASUREMENT_ID: process.env["NEXT_PUBLIC_GA_MEASUREMENT_ID"],
+    NEXT_PUBLIC_ENABLE_E2E_LOGIN: process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）
   skipValidation: !!process.env["SKIP_ENV_VALIDATION"],

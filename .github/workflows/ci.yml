@@ -223,12 +223,35 @@ jobs:
 
       - name: Build application
         run: bun run build:skip-env
+        env:
+          # NEXT_PUBLIC_* は build 時に static replace されるため build step で渡す。
+          # E2E 専用 opt-in: DevLoginButton を production build でも表示し、
+          # setup-customer / setup-admin が dev login ボタンをクリックできるようにする。
+          # staging / production には絶対伝播させない（login bypass risk）。
+          NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          SKIP_ENV_VALIDATION: "true"
 
       - name: Run E2E tests
         run: bunx playwright test
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
+          # webServer が next start で起動する際の runtime env。
+          NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          # production build を `next start` で動かすため validateProductionEnv の
+          # 要求 env を埋める（lhci-start.ts と同方針）。
+          ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          CRON_SECRET: "test-cron-secret-for-ci-e2e-strict-0123456789ab"
+          ADMIN_LOGIN_TOKEN: "test-admin-login-token-for-ci-e2e-strict-0123456789ab"
+          R2_ACCOUNT_ID: "test-r2-account"
+          R2_ACCESS_KEY_ID: "test-r2-access-key"
+          R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
+          R2_BUCKET_NAME: "test-r2-bucket"
+          R2_PUBLIC_URL: "https://example.com"
+          RESEND_API_KEY: "re_test_placeholder_for_ci_e2e_only"
+          STRIPE_SECRET_KEY: "sk_test_placeholder_for_ci_e2e_only"
+          GOOGLE_CLIENT_ID: "test-google-client-id.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-e2e"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -461,6 +484,8 @@ jobs:
 
       - name: Build application
         run: bun run build:skip-env
+        env:
+          SKIP_ENV_VALIDATION: "true"
 
       # Playwright 公式の visual regression:
       # - baseline が存在すれば diff 検証
@@ -477,6 +502,20 @@ jobs:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           PLAYWRIGHT_VISUAL: "1"
+          # production build を `next start` で動かすため validateProductionEnv の
+          # 要求 env を埋める（webServer は playwright.config.ts の分岐により CI で next start）。
+          ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          CRON_SECRET: "test-cron-secret-for-ci-visual-strict-0123456789ab"
+          ADMIN_LOGIN_TOKEN: "test-admin-login-token-for-ci-visual-strict-0123456789ab"
+          R2_ACCOUNT_ID: "test-r2-account"
+          R2_ACCESS_KEY_ID: "test-r2-access-key"
+          R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
+          R2_BUCKET_NAME: "test-r2-bucket"
+          R2_PUBLIC_URL: "https://example.com"
+          RESEND_API_KEY: "re_test_placeholder_for_ci_visual_only"
+          STRIPE_SECRET_KEY: "sk_test_placeholder_for_ci_visual_only"
+          GOOGLE_CLIENT_ID: "test-google-client-id.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-visual"
 
       - name: Upload Playwright visual diff report
         uses: actions/upload-artifact@v4

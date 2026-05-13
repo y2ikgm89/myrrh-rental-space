@@ -60,7 +60,10 @@ export default async function LoginPage({
               title: t.title,
             }))}
           />
-          {process.env["NODE_ENV"] !== "production" && <DevLoginButton />}
+          {(process.env["NODE_ENV"] !== "production" ||
+            process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && (
+            <DevLoginButton />
+          )}
         </Stack>
       </Container>
     </>

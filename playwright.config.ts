@@ -105,11 +105,19 @@ export default defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
+  /* webServer:
+   * - ローカル: `bun run dev` (Turbopack HMR、開発と同等の環境で spec を反復実行)
+   * - CI: `bun run start` (production build artifact を起動。dev mode の Turbopack
+   *   initial compile による spec timeout / runner CPU 枯渇を回避し安定化)
+   *
+   * production build でも DevLoginButton を CI で表示するため
+   * `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` を build + start 両方に伝播させる。
+   * staging / production には絶対に伝播させない (login bypass risk)。
+   */
   webServer: {
-    command: "bun run dev",
+    command: process.env["CI"] ? "bun run start" : "bun run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env["CI"],
-    timeout: 120 * 1000,
+    timeout: 180 * 1000,
   },
 });
