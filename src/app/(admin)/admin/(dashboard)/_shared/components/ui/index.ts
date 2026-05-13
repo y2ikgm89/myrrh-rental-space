@@ -203,3 +203,6 @@ export {
   CommandShortcut,
   CommandSeparator,
 } from "./command";
+
+// Skeleton
+export { Skeleton } from "./skeleton";

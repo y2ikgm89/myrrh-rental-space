@@ -1,21 +1,54 @@
+/**
+ * /about ローディング — page-hero + concept sections (text + image alternating)
+ */
+
 import { Container } from "@/public/components/design-system/container";
+import { Skeleton } from "@/public/components/design-system/skeleton";
 
 export default function AboutLoading() {
   return (
-    <main id="main-content">
+    <main id="main-content" aria-busy="true">
+      {/* Page hero */}
+      <section className="border-b border-border bg-gradient-to-b from-surface via-background to-background py-[var(--space-xl)]">
+        <Container>
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
+            <Skeleton className="h-3 w-16" variant="text" />
+            <Skeleton className="h-10 w-48 md:h-12 md:w-72" />
+            <Skeleton className="h-4 w-80 max-w-md" variant="text" />
+          </div>
+        </Container>
+      </section>
+
       <Container>
-        <div className="space-y-10 py-[var(--space-lg)]">
-          {/* Hero placeholder */}
-          <div className="mx-auto h-10 w-48 animate-pulse bg-surface" />
-          {/* Section placeholders */}
-          {Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className="space-y-4">
-              <div className="h-8 w-40 animate-pulse bg-surface" />
-              <div className="h-4 w-full animate-pulse bg-surface" />
-              <div className="h-4 w-5/6 animate-pulse bg-surface" />
-              <div className="h-4 w-2/3 animate-pulse bg-surface" />
+        <div className="space-y-[var(--space-lg)] py-[var(--space-lg)]">
+          {/* Concept section 1: text + image */}
+          <div className="grid gap-8 md:grid-cols-2 md:gap-12 md:items-center">
+            <div className="space-y-4">
+              <Skeleton className="h-3 w-20" variant="text" />
+              <Skeleton className="h-8 w-3/4" variant="text" />
+              <div className="space-y-2 pt-2">
+                <Skeleton className="h-4 w-full" variant="text" />
+                <Skeleton className="h-4 w-11/12" variant="text" />
+                <Skeleton className="h-4 w-4/5" variant="text" />
+                <Skeleton className="h-4 w-5/6" variant="text" />
+              </div>
             </div>
-          ))}
+            <Skeleton className="aspect-[4/3] w-full" />
+          </div>
+
+          {/* Concept section 2: image + text (reversed) */}
+          <div className="grid gap-8 md:grid-cols-2 md:gap-12 md:items-center">
+            <Skeleton className="aspect-[4/3] w-full md:order-2" />
+            <div className="space-y-4 md:order-1">
+              <Skeleton className="h-3 w-20" variant="text" />
+              <Skeleton className="h-8 w-3/4" variant="text" />
+              <div className="space-y-2 pt-2">
+                <Skeleton className="h-4 w-full" variant="text" />
+                <Skeleton className="h-4 w-11/12" variant="text" />
+                <Skeleton className="h-4 w-4/5" variant="text" />
+              </div>
+            </div>
+          </div>
         </div>
       </Container>
     </main>

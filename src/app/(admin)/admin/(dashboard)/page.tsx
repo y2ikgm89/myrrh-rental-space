@@ -19,13 +19,18 @@ import { AnalyticsCard } from "./_components/AnalyticsCard";
 import { StatsCardsSkeleton } from "./_components/skeletons/StatsCardsSkeleton";
 import { TodayReservationsSkeleton } from "./_components/skeletons/TodayReservationsSkeleton";
 import { RecentItemsSkeleton } from "./_components/skeletons/RecentItemsSkeleton";
+import { Skeleton } from "@/admin/components/ui";
 
 function ChartSkeleton() {
-  return <div className="h-80 animate-pulse rounded-lg bg-muted" />;
+  return <Skeleton className="h-80 w-full rounded-lg" />;
 }
 
 function NotificationsSkeleton() {
-  return <div className="h-64 animate-pulse rounded-lg bg-muted" />;
+  return <Skeleton className="h-64 w-full rounded-lg" />;
+}
+
+function AnalyticsSkeleton() {
+  return <Skeleton className="h-64 w-full rounded-lg" />;
 }
 
 export const metadata: Metadata = {
@@ -35,11 +40,11 @@ export const metadata: Metadata = {
 function DashboardHeaderSkeleton() {
   return (
     <div className="flex items-center justify-between">
-      <div>
-        <div className="h-8 w-40 animate-pulse rounded bg-muted mb-1" />
-        <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-40" variant="text" />
+        <Skeleton className="h-5 w-48" variant="text" />
       </div>
-      <div className="h-10 w-32 animate-pulse rounded bg-muted" />
+      <Skeleton className="h-11 w-32" />
     </div>
   );
 }
@@ -68,9 +73,7 @@ export default async function AdminDashboard(): Promise<ReactElement> {
       </Suspense>
 
       {/* アクセス解析: 外部API（Google Analytics）で最も遅い */}
-      <Suspense
-        fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}
-      >
+      <Suspense fallback={<AnalyticsSkeleton />}>
         <AnalyticsCard />
       </Suspense>
 

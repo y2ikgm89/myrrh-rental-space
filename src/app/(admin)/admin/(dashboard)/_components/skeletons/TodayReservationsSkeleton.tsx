@@ -3,23 +3,23 @@
  */
 
 import { Card, CardContent, CardHeader } from "@/admin/components/ui/card";
+import { Skeleton } from "@/admin/components/ui";
 
 export function TodayReservationsSkeleton() {
   return (
     <Card>
       <CardHeader>
-        <div className="h-6 w-24 animate-pulse rounded bg-muted" />
-        <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+        <Skeleton className="h-6 w-32" variant="text" />
+        <Skeleton className="h-4 w-40" variant="text" />
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            // eslint-disable-next-line @eslint-react/no-array-index-key
+          {Array.from({ length: 3 }, (_, i) => (
             <div key={i} className="flex items-center gap-4">
-              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-              <div className="h-5 w-16 animate-pulse rounded bg-muted" />
+              <Skeleton className="h-4 w-24" variant="text" />
+              <Skeleton className="h-4 w-32" variant="text" />
+              <Skeleton className="h-4 w-20" variant="text" />
+              <Skeleton className="h-5 w-16 rounded-full" />
             </div>
           ))}
         </div>
