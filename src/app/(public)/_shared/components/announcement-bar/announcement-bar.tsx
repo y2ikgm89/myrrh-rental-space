@@ -90,6 +90,15 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
     computeBarStyles(settings);
   const showNav = total > 1;
 
+  // CTA リンク用の派生値（typedoc の narrowing を JSX 外で確定させる）
+  const linkUrl = currentBar.linkUrl;
+  const linkText = currentBar.linkText;
+  const isExternalLink = linkUrl != null && linkUrl.startsWith("http");
+  const linkClassName = cn(
+    "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
+    linkHoverClass,
+  );
+
   return (
     <div
       ref={containerRef}
@@ -147,35 +156,20 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
               iconClassName="h-4 w-4 shrink-0"
             />
           </span>
-          {currentBar.linkUrl &&
-            currentBar.linkText &&
-            (isAppRoute(currentBar.linkUrl) ? (
-              <Link
-                href={currentBar.linkUrl}
-                className={cn(
-                  "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
-                  linkHoverClass,
-                )}
-              >
-                {currentBar.linkText}
+          {linkUrl != null &&
+            linkText != null &&
+            (isAppRoute(linkUrl) ? (
+              <Link href={linkUrl} className={linkClassName}>
+                {linkText}
               </Link>
             ) : (
               <a
-                href={currentBar.linkUrl}
-                className={cn(
-                  "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
-                  linkHoverClass,
-                )}
-                target={
-                  currentBar.linkUrl.startsWith("http") ? "_blank" : undefined
-                }
-                rel={
-                  currentBar.linkUrl.startsWith("http")
-                    ? "noreferrer"
-                    : undefined
-                }
+                href={linkUrl}
+                className={linkClassName}
+                target={isExternalLink ? "_blank" : undefined}
+                rel={isExternalLink ? "noreferrer" : undefined}
               >
-                {currentBar.linkText}
+                {linkText}
               </a>
             ))}
         </div>
