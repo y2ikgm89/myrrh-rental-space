@@ -437,11 +437,15 @@ jobs:
     # opt-in 実行条件:
     # - PR に `visual-regression` ラベルが付与された（labeled イベント含む）
     # - workflow_dispatch で run_visual=true 指定（baseline 比較）
-    # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + commit）
+    # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + auto-PR）
     # baseline regeneration は意図的な workflow_dispatch でのみ実行する（main push
     # 自動 regeneration は破壊的変更時に baseline を silent 上書きする risk のため廃止）。
+    # 再生成 baseline は main へ直接 push せず別 branch + auto-PR を作成し、
+    # branch protection の required status checks を通過させてから merge する
+    # （Playwright / Chromatic / Percy 業界標準パターン）。
     permissions:
-      contents: write # baseline commit 用
+      contents: write # auto-PR 用 branch push
+      pull-requests: write # auto-PR 作成
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'visual-regression')) ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.run_visual == 'true' || github.event.inputs.update_visual_baseline == 'true'))
@@ -529,29 +533,69 @@ jobs:
             e2e/visual/**/*-snapshots/
           retention-days: 30
 
-      # baseline 再生成成功時、生成された snapshot を main に commit する。
-      # 再生成は意図的な操作のため push back は safe。
-      - name: Commit regenerated visual baseline
+      # baseline 再生成成功時、生成された snapshot を別 branch にステージし PR を作成する。
+      # 業界標準パターン（Playwright docs / Chromatic / Percy / peter-evans/create-pull-request
+      # は GitHub Marketplace verified action）。Branch protection の required status checks
+      # を通過させてから main に merge することで「未検証 baseline の silent 上書き」を防ぐ。
+      - name: Stage regenerated visual baseline
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baseline == 'true' && success()
+        id: stage-baseline
         shell: bash
         run: |
           shopt -s globstar nullglob
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # bash globstar で **/*-snapshots/ をディレクトリ展開する。
-          # null glob で snapshot dir が無くても fail しない。
+          # bash globstar で **/*-snapshots/ をディレクトリ展開（null glob で 0 件でも fail しない）
           baseline_dirs=(e2e/visual/**/*-snapshots/)
           if [ ${#baseline_dirs[@]} -eq 0 ]; then
             echo "[visual baseline] no -snapshots/ directories found"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # git add 対象を明示。peter-evans/create-pull-request@v6 が diff 検出 + commit + push を担当
           git add "${baseline_dirs[@]}"
           if git diff --cached --quiet; then
             echo "[visual baseline] no changes to commit"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "ci(visual): regenerate visual baseline (run ${{ github.run_id }} by ${{ github.actor }})"
-            git push origin HEAD:${{ github.ref_name }}
+            echo "[visual baseline] changes detected, will create PR"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Create PR for regenerated baseline
+        if: steps.stage-baseline.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ci/visual-baseline-${{ github.run_id }}
+          base: ${{ github.ref_name }}
+          commit-message: "ci(visual): regenerate visual baseline (run ${{ github.run_id }})"
+          title: "ci(visual): regenerate visual baseline"
+          body: |
+            ## Visual baseline regeneration
+
+            **Trigger**: workflow_dispatch (`update_visual_baseline=true`)
+            **Actor**: @${{ github.actor }}
+            **Run**: [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            **Base branch**: `${{ github.ref_name }}`
+
+            ## Review checklist
+
+            - [ ] `e2e/visual/**/*-snapshots/` の diff が **意図したデザイン変更** に対応している
+            - [ ] CI Ubuntu runner の font rendering 起因の noise diff ではない
+            - [ ] Required status checks 全て green
+            - [ ] 関連する production code 変更が main に merge 済み（baseline 先行は禁止）
+
+            ## Auto-generated note
+
+            この PR は CI が自動生成しました。Playwright `--update-snapshots` で再生成された baseline を
+            branch protection の required status checks 経由で merge するため、main に直接 push せず PR 化しています。
+
+            🤖 Generated with [peter-evans/create-pull-request@v6](https://github.com/peter-evans/create-pull-request)
+          labels: |
+            visual-baseline
+            automated
+          author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          delete-branch: true
 
   docs:
     name: Generate API Docs

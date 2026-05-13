@@ -85,7 +85,7 @@ workflow_dispatch:
   inputs:
     run_e2e: { type: boolean, default: false }
     run_visual: { type: boolean, default: false } # baseline 比較
-    update_visual_baseline: { type: boolean, default: false } # baseline 再生成 + commit back
+    update_visual_baseline: { type: boolean, default: false } # baseline 再生成 + auto-PR
     run_lighthouse: { type: boolean, default: false }
 ```
 
@@ -102,16 +102,60 @@ e2e-tests:
 
 1. `gh workflow run ci.yml --ref <branch> -f update_visual_baseline=true` で起動
 2. CI が `bunx playwright test --project=chromium-visual --update-snapshots` を実行
-3. 生成された `e2e/visual/**/*-snapshots/` を job 内で自動 commit + push back to current branch
-4. baseline diff は次回 PR の `Files changed` で review 可能
+3. 生成された `e2e/visual/**/*-snapshots/` を `peter-evans/create-pull-request@v6` が **別 branch (`ci/visual-baseline-<run_id>`) に push + 自動 PR 作成**
+4. PR で required status checks (5 essential) を通過 → 人間レビュー → merge
+5. baseline diff は PR の `Files changed` で binary diff としても確認可能
 
-`permissions: contents: write` を当該 job に明示必要（自動 push 用）。
+`permissions: { contents: write, pull-requests: write }` を当該 job に明示必要。
 
 **禁止**:
 
 - 重い job を main push で auto-run する設計（baseline 自動再生成は破壊的変更時に baseline を silent 上書きする risk）
 - Visual baseline をローカルで生成して commit（CI と font rendering 不一致で必ず fail）
-- `update_visual_baseline=true` の `workflow_dispatch` を main branch 以外で起動（auto-commit 先のミスマッチ）
+- `update_visual_baseline=true` の `workflow_dispatch` を main branch 以外で起動（auto-PR の base branch ミスマッチ）
+- **main へ直接 push (`git push origin HEAD:${{ github.ref_name }}`) する旧パターン** — branch protection の required status checks (`GH006: protected branch hook declined`) で reject される。peter-evans/create-pull-request@v6 で PR 化必須
+- branch protection の `bypass_actors` に `github-actions[bot]` を追加する迂回案（「bot は無検証」の運用リスク、PR ベースの方が clean）
+
+**Visual baseline auto-PR pattern**（2026-05-13 commit `e09f5691` の branch protection 適用後に確立）:
+
+```yaml
+- name: Stage regenerated visual baseline
+  if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baseline == 'true' && success()
+  id: stage-baseline
+  shell: bash
+  run: |
+    shopt -s globstar nullglob
+    baseline_dirs=(e2e/visual/**/*-snapshots/)
+    if [ ${#baseline_dirs[@]} -eq 0 ]; then
+      echo "has_changes=false" >> "$GITHUB_OUTPUT"; exit 0
+    fi
+    git add "${baseline_dirs[@]}"
+    if git diff --cached --quiet; then
+      echo "has_changes=false" >> "$GITHUB_OUTPUT"
+    else
+      echo "has_changes=true" >> "$GITHUB_OUTPUT"
+    fi
+
+- name: Create PR for regenerated baseline
+  if: steps.stage-baseline.outputs.has_changes == 'true'
+  uses: peter-evans/create-pull-request@v6
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    branch: ci/visual-baseline-${{ github.run_id }}
+    base: ${{ github.ref_name }}
+    commit-message: "ci(visual): regenerate visual baseline (run ${{ github.run_id }})"
+    title: "ci(visual): regenerate visual baseline"
+    body: |
+      ## Visual baseline regeneration
+      **Run**: #${{ github.run_id }} / **Actor**: @${{ github.actor }}
+      Review checklist 込みの auto-generated PR
+    labels: |
+      visual-baseline
+      automated
+    delete-branch: true
+```
+
+**業界 reference**: Playwright 公式 docs / Chromatic (Storybook visual SaaS) / Percy (BrowserStack) は全て同 pattern。`peter-evans/create-pull-request@v6` は GitHub Marketplace verified action（typescript-eslint / shadcn-ui / Next.js 等で広く採用）。
 
 ## 5. CodeQL は Default setup に統一（Advanced workflow 不要）
 
