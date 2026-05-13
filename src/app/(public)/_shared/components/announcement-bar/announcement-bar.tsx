@@ -94,9 +94,16 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
   const linkUrl = currentBar.linkUrl;
   const linkText = currentBar.linkText;
   const isExternalLink = linkUrl != null && linkUrl.startsWith("http");
+  // hasCustomText が false (= default style) なら明示的に text-white を当てて
+  // Lighthouse の OKLCH → sRGB conversion 罠を回避 (親 inherit ではなく直接適用)。
   const linkClassName = cn(
     "ml-1 whitespace-nowrap underline underline-offset-2 transition-colors",
+    !hasCustomText && "text-white",
     linkHoverClass,
+  );
+  const messageSpanClassName = cn(
+    "inline-flex items-center gap-1.5 text-center",
+    !hasCustomText && "text-white",
   );
 
   return (
@@ -150,7 +157,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           }
           onAnimationEnd={onAnimationEnd}
         >
-          <span className="inline-flex items-center gap-1.5 text-center">
+          <span className={messageSpanClassName}>
             <PortableTextSpans
               spans={currentBar.message}
               iconClassName="h-4 w-4 shrink-0"
@@ -182,13 +189,15 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         </span>
       )}
 
-      {/* Next arrow — WCAG 2.5.5 Enhanced 44×44px hit area */}
+      {/* Next arrow — WCAG 2.5.5 Enhanced 44×44px hit area
+       * Dismiss button が right-2 を占めるため right-14 で重なり回避（partially
+       * obscured 違反防止）。 */}
       {settings.showArrows && showNav && (
         <button
           type="button"
           onClick={goNext}
           className={cn(
-            "absolute right-2 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
+            "absolute right-14 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="次のお知らせ"
@@ -197,12 +206,12 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         </button>
       )}
 
-      {/* Dismiss */}
+      {/* Dismiss — WCAG 2.5.5 Enhanced 44×44px hit area */}
       <button
         type="button"
         onClick={() => dismissBar(currentBar.id)}
         className={cn(
-          "absolute right-2 rounded-full p-2 transition-colors",
+          "absolute right-2 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
           !hasCustomText && "hover:bg-foreground/10",
         )}
         aria-label="閉じる"

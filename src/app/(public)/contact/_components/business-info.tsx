@@ -125,6 +125,11 @@ function parseBusinessHoursForDisplay(
 // Sub-components
 // =============================================================================
 
+/**
+ * `<dt>` と `<dd>` を `<dl>` の直接子として配置するため Fragment で返す
+ * (axe-core dlitem rule: dt/dd は dl の direct children でなければならない)。
+ * icon は装飾的なので dt 内に aria-hidden で配置。
+ */
 function InfoSection({
   icon: Icon,
   label,
@@ -134,20 +139,19 @@ function InfoSection({
   readonly label: string;
   readonly children: ReactElement;
 }) {
-  // role="group" は WCAG: <dl> 直下の <div> 子要素を grouping element として
-  // 許可するための必須属性（dlitem audit）。
   return (
-    <div role="group" className="flex gap-3">
-      <div className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <dt className="text-eyebrow uppercase text-muted-foreground">
-          {label}
-        </dt>
-        <dd className="mt-1 text-sm text-foreground">{children}</dd>
-      </div>
-    </div>
+    <>
+      <dt className="flex items-center gap-3 text-eyebrow uppercase text-muted-foreground">
+        <span
+          className="flex h-5 w-5 shrink-0 items-center justify-center"
+          aria-hidden="true"
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <span>{label}</span>
+      </dt>
+      <dd className="ml-8 mt-1 text-sm text-foreground">{children}</dd>
+    </>
   );
 }
 
