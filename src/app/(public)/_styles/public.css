@@ -30,8 +30,11 @@
   --color-input: oklch(0.85 0.015 60);
   --color-ring: oklch(0.62 0.07 60);
 
-  --color-accent: oklch(0.62 0.07 60);
-  --color-accent-light: oklch(0.68 0.06 60);
+  /* oklch(0.5 0.08 60) ≈ #8d6745 で bg-background (oklch 0.985) 上の text contrast
+   * を WCAG AA 4.5:1 以上に保証 (旧 0.62 では contrast 3.54 不足)。Bronze brand
+   * identity は維持しつつアクセシビリティ準拠 (2026-05-13 a11y root cause fix)。 */
+  --color-accent: oklch(0.5 0.08 60);
+  --color-accent-light: oklch(0.62 0.07 60);
   --color-accent-foreground: oklch(0.985 0 0);
 
   --color-card: oklch(0.96 0.008 60);
