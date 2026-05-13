@@ -136,6 +136,10 @@ grep -rnE 'tracking-\[0\.[0-9]+em\]' src/app/\(public\)/ --include="*.tsx" \
 
 ---
 
+## `target-size` partially obscured 罠（隣接 button overlap）
+
+44×44px hit area を個別に確保していても、`right-2` + `right-2` 等で**隣接要素と位置が重なる**と Lighthouse / axe-core は「Target has insufficient size because it is partially obscured」と判定して target-size violation を出す。canonical: 隣接 button は 44px 以上の間隔で分離（`right-2` (dismiss 44px) + `right-14` (next arrow 44px) で 44px clear space）。実例: 2026-05-13 AnnouncementBar で next arrow / dismiss が両方 `right-2` で重なり全 5 公開 page で target-size 0 違反、`right-14` + `right-2` 分離で解消（commit `77b2eaef`）。
+
 ## Playwright MCP 実測でしか検出できない違反パターン
 
 static grep + class 確認では検出不可、`getBoundingClientRect()` で初めて顕在化する違反種別:

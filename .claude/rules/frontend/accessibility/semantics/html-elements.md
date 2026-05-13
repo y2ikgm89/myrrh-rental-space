@@ -125,6 +125,38 @@ paths:
 
 参照実装: `src/app/(admin)/admin/(dashboard)/media/_components/MediaGrid.tsx`（Card Overlay）、`src/app/(public)/reservation/_components/space-selector.tsx`（`role="radio"` + 内部 button）
 
+## `<dl>` 直接子は `<dt>` / `<dd>` のみ（axe-core dlitem 4.10）
+
+`<dl>` 内に `<div>` 子要素を置くと dlitem violation。`role="group"` 追加でも一部の audit version では不十分（axe-core 4.10 は dl の **direct children** のみ valid）。canonical: 各 entry を Fragment で `<dt>` `<dd>` を `<dl>` 直下に flat 化、icon は `<dt>` 内 `aria-hidden` span:
+
+```tsx
+// NG: <dl> > <div> > <dt>/<dd> で dlitem 違反継続 (role="group" でも)
+<dl>
+  {entries.map((e) => (
+    <div key={e.id} className="flex gap-3">
+      <Icon /> <dt>{e.label}</dt> <dd>{e.content}</dd>
+    </div>
+  ))}
+</dl>;
+
+// OK: Fragment で <dt>/<dd> を <dl> 直下に flat 化
+function InfoSection({ icon: Icon, label, children }) {
+  return (
+    <>
+      <dt className="flex items-center gap-3">
+        <span aria-hidden="true">
+          <Icon />
+        </span>
+        <span>{label}</span>
+      </dt>
+      <dd className="ml-8 mt-1">{children}</dd>
+    </>
+  );
+}
+```
+
+実例: 2026-05-13 `/contact` business-info.tsx で 7 件 dlitem 違反を Fragment 化で解消（commit `77b2eaef`）。
+
 ## ナビゲーション vs タブの WAI-ARIA 区別
 
 ページ遷移は **tab パターンではない**。`role="tab"` は同一ページ内で `tabpanel` を切り替える（=URL は変わらない）インタラクション専用:

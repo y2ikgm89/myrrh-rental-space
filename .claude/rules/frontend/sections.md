@@ -41,6 +41,26 @@ paths:
 - **PortableText[] フィールドの空判定は `.length > 0` 必須**（空配列 `[]` は JSX で truthy） — `{config.title && ...}` ではなく `{config.title.length > 0 && ...}`。Phase 0〜4 で string → PortableText 化したフィールドの旧 gate が silent break する典型箇所（→ `ssot-singletons.md` §Portable Text 禁止事項）
 - **canonical 適用済み 18 file**: `EventCalendarSection` / `LocationListSection` / `ConceptSection` / `CTASection` / `EmbedSection` / `FaqListSection` / `InstagramSection` / `GallerySection` / `MapSection` / `TestimonialSection` / `ReservationFormSection` / `SpaceListSection` / `ContactFormSection` / `features/_features-{grid,numbered-editorial,numbered-steps}` / `space-showcase/_spaces-{grid,carousel}` / `{post,news,space}-list-simple-view` / `StandardHeroSection` 全 5 variant。新規 section 追加時は本パターン踏襲必須
 
+## PortableTextSpan[] / Block[] 空配列で link/button text 不在 → link-name violation
+
+`<Button label={[]} />` / `<MagneticButton label={[]} />` / `<Link><PortableTextSpans spans={[]} /></Link>` は **button/link text が empty** になり WCAG 4.1.2 (link-name / button-name) 違反 + Lighthouse a11y score 引き下げ。`PortableTextSpan[]` の空配列は JSX truthy gate (`label !== undefined` 等) で常時 true のため `<PortableTextSpans spans={[]} />` 経路に進んで何も render しない silent bug。**`.length > 0` で明示 gate が必須**:
+
+```tsx
+// Button primitive 内部 (button.tsx / magnetic-button.tsx)
+const content =
+  "label" in props && props.label !== undefined && props.label.length > 0 ? (
+    <PortableTextSpans spans={props.label} />
+  ) : (
+    props.children
+  );
+
+// 呼び出し側で gate (CTASection / FaqListSection / *-list-simple-view 等)
+{primaryButton && primaryButton.label.length > 0 && <MagneticButton ... />}
+{config.showViewAllLink && config.viewAllText.length > 0 && <Link>...<PortableTextSpans spans={config.viewAllText} /></Link>}
+```
+
+§sectionLabel 単独 render 禁止 と同根の Portable Text 空配列 truthy gate 罠。viewAllText / label / primaryButton.label 等の任意 `PortableTextSpan[]` フィールドは link / button text source として参照するなら必ず `.length > 0` gate を併設。実例: 2026-05-13 homepage `<a href="/spaces">` link-name violation を Button / MagneticButton 内 gate + 5 呼び出し元 gate で根本解決（commit `e5938818`）。
+
 ## PortableText derive → component prop default 非発火
 
 - **`spansToPlainText(spans)` / `blocksToPlainText(blocks)` で derive した空文字列を component prop に明示渡しすると、受取側の default arg は発火しない** — JSX 仕様で default arg は `undefined` 時のみ適用、`""` 明示渡しは default を skip する silent bug

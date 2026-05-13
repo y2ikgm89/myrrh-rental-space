@@ -20,11 +20,18 @@ Kinfolk / Cereal 誌を参考にした雑誌的レイアウト。大量の余白
 
 OKLCH 形式。Luxury White × Bronze。
 
-| ロール   | 配分 | 値                                   | メモ                            |
-| -------- | ---- | ------------------------------------ | ------------------------------- |
-| Dominant | 70 % | `oklch(0.985 0.005 60)` Warm White   | ページ背景                      |
-| Support  | 20 % | `oklch(0.96 0.008 60)` Light Surface | カード・セクション背景          |
-| Accent   | 10 % | `oklch(0.62 0.07 60)` Soft Bronze    | ラベル・CTA・価格のみ（≤ 15 %） |
+| ロール   | 配分 | 値                                    | メモ                            |
+| -------- | ---- | ------------------------------------- | ------------------------------- |
+| Dominant | 70 % | `oklch(0.985 0.005 60)` Warm White    | ページ背景                      |
+| Support  | 20 % | `oklch(0.96 0.008 60)` Light Surface  | カード・セクション背景          |
+| Accent   | 10 % | `oklch(0.5 0.08 60)` Bronze (WCAG AA) | ラベル・CTA・価格のみ（≤ 15 %） |
+
+**accent lightness は bg-background contrast 4.5:1 (WCAG AA) を保証**:
+
+- ✅ `oklch(0.5 0.08 60)` (≈ #8d6745) — bg `oklch(0.985)` に対し contrast 5.2:1
+- ❌ `oklch(0.62 0.07 60)` (≈ #a67c5b) — contrast 3.54、WCAG AA 不達
+
+旧 0.62 値は `--color-accent-light` として hover / decorative 用に保持。`text-accent` 経由の text color はすべて新 0.5 を経由する設計（実例: 2026-05-13 `/spaces` `/posts` `/contact` の color-contrast 8 件解消、commit `e5938818`）。
 
 ## タイポグラフィ
 
