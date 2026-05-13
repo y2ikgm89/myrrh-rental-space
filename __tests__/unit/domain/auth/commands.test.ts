@@ -8,7 +8,16 @@ const mockAccountUpdate = mock<() => Promise<void>>(() =>
   Promise.resolve(undefined),
 );
 
+const mockEncryptOAuthToken = mock<(value: string) => string>(
+  (value: string) => `encrypted:${value}`,
+);
+
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/crypto", () => ({
+  encryptOAuthToken: mockEncryptOAuthToken,
+  isEncrypted: mock<(value: string) => boolean>(() => false),
+}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -42,6 +51,10 @@ describe("updateGoogleOAuthAccountTokens", () => {
   beforeEach(() => {
     mockAccountUpdate.mockReset();
     mockAccountUpdate.mockResolvedValue(undefined);
+    mockEncryptOAuthToken.mockReset();
+    mockEncryptOAuthToken.mockImplementation(
+      (value: string) => `encrypted:${value}`,
+    );
   });
 
   describe("正常系", () => {
@@ -56,7 +69,7 @@ describe("updateGoogleOAuthAccountTokens", () => {
         expect.objectContaining({
           where: { id: ACCOUNT_ID },
           data: expect.objectContaining({
-            accessToken: ACCESS_TOKEN,
+            accessToken: `encrypted:${ACCESS_TOKEN}`,
           }),
         }),
       );
@@ -72,8 +85,8 @@ describe("updateGoogleOAuthAccountTokens", () => {
       expect(mockAccountUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            accessToken: ACCESS_TOKEN,
-            refreshToken: REFRESH_TOKEN,
+            accessToken: `encrypted:${ACCESS_TOKEN}`,
+            refreshToken: `encrypted:${REFRESH_TOKEN}`,
           }),
         }),
       );
@@ -89,7 +102,7 @@ describe("updateGoogleOAuthAccountTokens", () => {
       expect(mockAccountUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            accessToken: ACCESS_TOKEN,
+            accessToken: `encrypted:${ACCESS_TOKEN}`,
             accessTokenExpiresAt: new Date(EXPIRY_DATE),
           }),
         }),
@@ -108,8 +121,8 @@ describe("updateGoogleOAuthAccountTokens", () => {
         expect.objectContaining({
           where: { id: ACCOUNT_ID },
           data: expect.objectContaining({
-            accessToken: ACCESS_TOKEN,
-            refreshToken: REFRESH_TOKEN,
+            accessToken: `encrypted:${ACCESS_TOKEN}`,
+            refreshToken: `encrypted:${REFRESH_TOKEN}`,
             accessTokenExpiresAt: new Date(EXPIRY_DATE),
           }),
         }),

@@ -490,7 +490,7 @@ describe("reorderInstagramPosts", () => {
 
       await expect(reorderInstagramPosts(ids)).resolves.toBeUndefined();
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockInstagramPostUpdate).toHaveBeenCalledTimes(3);
     });
 
     test("1件の投稿でも並び替えできる", async () => {
@@ -505,7 +505,7 @@ describe("reorderInstagramPosts", () => {
         message: "並び順のIDリストが必要です",
       });
 
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockInstagramPostUpdate).not.toHaveBeenCalled();
     });
   });
 });

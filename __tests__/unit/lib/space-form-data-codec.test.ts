@@ -21,6 +21,7 @@ function minimalValidSpaceFormPayload() {
     slug: "demo-space",
     name: "デモスペース",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+    descriptionHtml: "",
     addressDetail: "",
     capacity: 10,
     area: null,

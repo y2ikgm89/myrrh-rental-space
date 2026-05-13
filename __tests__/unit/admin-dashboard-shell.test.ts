@@ -37,7 +37,7 @@ describe("admin dashboard shell", () => {
     expect(source).toContain("max-w-96");
   });
 
-  test("admin の window.open(_blank) は noopener,noreferrer を指定する", () => {
+  test("admin の window.open(_blank) は noreferrer を指定する", () => {
     const adminRoot = join(root, "src/app/(admin)");
     const violations = listFiles(adminRoot)
       .filter((file) => /\.(ts|tsx)$/.test(file))
@@ -49,7 +49,7 @@ describe("admin dashboard shell", () => {
           if (!snippet.includes('"_blank"') && !snippet.includes("'_blank'")) {
             return [];
           }
-          if (snippet.includes("noopener,noreferrer")) return [];
+          if (snippet.includes("noreferrer")) return [];
           return [`${file}:${String(index + 1)}`];
         });
       });

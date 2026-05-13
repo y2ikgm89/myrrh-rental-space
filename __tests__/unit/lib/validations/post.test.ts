@@ -20,6 +20,7 @@ describe("createPostSchema", () => {
     slug: "sample-post",
     excerpt: "記事の抜粋です",
     contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+    contentHtml: "<p>投稿記事本文</p>",
     thumbnailUrl: "https://example.com/image.jpg",
     categoryId: "123e4567-e89b-12d3-a456-426614174000",
     tags: [
@@ -138,6 +139,7 @@ describe("updatePostBodySchema", () => {
   test("有効な Lexical JSON でバリデーションに成功する", () => {
     const result = updatePostBodySchema.safeParse({
       contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "<p>投稿本文</p>",
     });
     expect(result.success).toBe(true);
   });

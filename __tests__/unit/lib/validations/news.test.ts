@@ -74,6 +74,7 @@ describe("createNewsSchema", () => {
       slug: "sample-news",
       title: "サンプルニュース",
       contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "<p>サンプルニュース本文</p>",
     };
 
     const result = createNewsSchema.safeParse(validData);
@@ -123,6 +124,7 @@ describe("updateNewsBodySchema", () => {
   test("有効な Lexical JSON でバリデーションに成功する", () => {
     const result = updateNewsBodySchema.safeParse({
       contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "<p>ニュース本文</p>",
     });
     expect(result.success).toBe(true);
   });
