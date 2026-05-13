@@ -65,18 +65,29 @@ concurrency:
 
 毎 push で重い test job を実行すると runner minute 浪費 + maintenance 負債が蓄積する。Stripe / Vercel / Linear / Shopify 公式 CI と同じ **"fast PR feedback + heavy jobs on demand"** pattern を採用:
 
-| 分類                               | Job                               | trigger                                          |
-| ---------------------------------- | --------------------------------- | ------------------------------------------------ |
-| **Required** (毎 push 実行)        | `dependency-audit` (bun audit)    | push + PR                                        |
-|                                    | `lint-and-typecheck`              | push + PR                                        |
-|                                    | `unit-tests` (per-file isolation) | push + PR                                        |
-|                                    | `build` (env validation)          | push (main/develop) + PR                         |
-|                                    | `bundle-analysis` (Turbopack)     | push (main/develop) + PR                         |
-| **Opt-in** (label / dispatch のみ) | `e2e-tests`                       | PR `e2e` label / workflow_dispatch               |
-|                                    | `visual-regression`               | PR `visual-regression` label / workflow_dispatch |
-|                                    | `lighthouse-ci`                   | PR `lighthouse` label / workflow_dispatch        |
-| **PR comment only**                | `bundle-size-diff`                | PR のみ                                          |
-| **main only**                      | `docs` (typedoc)                  | main push                                        |
+| 分類                               | Job                               | trigger                                                                                            |
+| ---------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Required** (毎 push 実行)        | `dependency-audit` (bun audit)    | push + PR                                                                                          |
+|                                    | `lint-and-typecheck`              | push + PR                                                                                          |
+|                                    | `unit-tests` (per-file isolation) | push + PR                                                                                          |
+|                                    | `build` (env validation)          | push (main/develop) + PR                                                                           |
+|                                    | `bundle-analysis` (Turbopack)     | push (main/develop) + PR                                                                           |
+| **Opt-in** (label / dispatch のみ) | `e2e-tests`                       | PR `e2e` label / `workflow_dispatch run_e2e=true`                                                  |
+|                                    | `visual-regression`               | PR `visual-regression` label / `workflow_dispatch run_visual=true` / `update_visual_baseline=true` |
+|                                    | `lighthouse-ci`                   | PR `lighthouse` label / `workflow_dispatch run_lighthouse=true`                                    |
+| **PR comment only**                | `bundle-size-diff`                | PR のみ                                                                                            |
+| **main only**                      | `docs` (typedoc)                  | main push                                                                                          |
+
+**workflow_dispatch inputs SSoT**（`workflow_dispatch.inputs.*`）:
+
+```yaml
+workflow_dispatch:
+  inputs:
+    run_e2e: { type: boolean, default: false }
+    run_visual: { type: boolean, default: false } # baseline 比較
+    update_visual_baseline: { type: boolean, default: false } # baseline 再生成 + commit back
+    run_lighthouse: { type: boolean, default: false }
+```
 
 **Opt-in 条件式 canonical**:
 
@@ -84,10 +95,23 @@ concurrency:
 e2e-tests:
   if: |
     (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e')) ||
-    github.event_name == 'workflow_dispatch'
+    (github.event_name == 'workflow_dispatch' && github.event.inputs.run_e2e == 'true')
 ```
 
-**禁止**: 重い job を main push で auto-run する設計（baseline 自動再生成は破壊的変更時に baseline を silent 上書きする risk）。Visual Regression の baseline regeneration は **明示的な `workflow_dispatch` + `run_visual=true`** のみ。
+**Visual baseline 再生成 SSoT**（CI Ubuntu runner と font rendering を一致させるため CI 上で生成が canonical、ローカル Windows / macOS 生成は CI で必ず diff 出る）:
+
+1. `gh workflow run ci.yml --ref <branch> -f update_visual_baseline=true` で起動
+2. CI が `bunx playwright test --project=chromium-visual --update-snapshots` を実行
+3. 生成された `e2e/visual/**/*-snapshots/` を job 内で自動 commit + push back to current branch
+4. baseline diff は次回 PR の `Files changed` で review 可能
+
+`permissions: contents: write` を当該 job に明示必要（自動 push 用）。
+
+**禁止**:
+
+- 重い job を main push で auto-run する設計（baseline 自動再生成は破壊的変更時に baseline を silent 上書きする risk）
+- Visual baseline をローカルで生成して commit（CI と font rendering 不一致で必ず fail）
+- `update_visual_baseline=true` の `workflow_dispatch` を main branch 以外で起動（auto-commit 先のミスマッチ）
 
 ## 5. CodeQL は Default setup に統一（Advanced workflow 不要）
 
