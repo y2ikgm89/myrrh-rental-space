@@ -60,7 +60,28 @@ function getConfiguredMediaSource(): string | null {
   }
 }
 
-function buildCsp(nonce: string, pathname: string): string {
+/**
+ * localhost / 127.0.0.1 への HTTP 接続では HSTS / upgrade-insecure-requests を
+ * skip する。これらは HTTPS 前提の directive で、HTTP-only な localhost に対して
+ * 適用すると Chrome が HTTPS への redirect を強制し certificate warning page
+ * (CHROME_INTERSTITIAL_ERROR) で navigation が fail する（Lighthouse / E2E が
+ * 必ず broken になる silent bug）。
+ */
+function isLocalhostRequest(req: NextRequest): boolean {
+  const host = req.headers.get("host") ?? "";
+  return (
+    host.startsWith("localhost:") ||
+    host === "localhost" ||
+    host.startsWith("127.0.0.1:") ||
+    host === "127.0.0.1"
+  );
+}
+
+function buildCsp(
+  nonce: string,
+  pathname: string,
+  isLocalhost: boolean,
+): string {
   const isDev = serverEnv.NODE_ENV === "development";
   const mediaSource = getConfiguredMediaSource();
   return `
@@ -75,14 +96,21 @@ function buildCsp(nonce: string, pathname: string): string {
     base-uri 'self';
     form-action 'self';
     frame-ancestors ${resolveFrameAncestors(pathname)};
-    upgrade-insecure-requests;
+    ${isLocalhost ? "" : "upgrade-insecure-requests;"}
   `
     .replace(/\s{2,}/g, " ")
     .trim();
 }
 
-function applySecurityHeaders(headers: Headers, csp: string): void {
+function applySecurityHeaders(
+  headers: Headers,
+  csp: string,
+  isLocalhost: boolean,
+): void {
   for (const [key, value] of SECURITY_HEADERS) {
+    // HSTS は HTTPS 前提の directive。localhost (HTTP-only) に対して付与すると
+    // Chrome が HTTPS upgrade を強制し interstitial error が発生する。
+    if (key === "Strict-Transport-Security" && isLocalhost) continue;
     headers.set(key, value);
   }
   headers.set("Content-Security-Policy", csp);
@@ -90,7 +118,8 @@ function applySecurityHeaders(headers: Headers, csp: string): void {
 
 function createResponse(req: NextRequest, pathname: string): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const cspValue = buildCsp(nonce, pathname);
+  const isLocalhost = isLocalhostRequest(req);
+  const cspValue = buildCsp(nonce, pathname, isLocalhost);
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-pathname", pathname);
@@ -100,7 +129,7 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
     request: { headers: requestHeaders },
   });
   response.headers.set("x-pathname", pathname);
-  applySecurityHeaders(response.headers, cspValue);
+  applySecurityHeaders(response.headers, cspValue, isLocalhost);
   return response;
 }
 
