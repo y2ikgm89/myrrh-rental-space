@@ -245,6 +245,24 @@ Required (毎 push 実行) job が完走するように pass-rate を確保し�
 
 opt-in job（E2E / Visual / Lighthouse）を required にすると、label を付け忘れた PR が永遠に merge できない silent UX bug になるため **required 登録禁止**。
 
+**Branch Protection IaC 化（`gh api` SSoT 適用）**:
+
+```bash
+# 1. .github/branch-protection.json に required_status_checks + strict + restrictions を JSON 化
+# 2. PUT で適用 (idempotent、再実行で同一状態に収束)
+gh api repos/<owner>/<repo>/branches/main/protection \
+  -X PUT --input .github/branch-protection.json
+```
+
+**規律**:
+
+- `contexts:` の値は workflow `name:` と **完全一致** 必須（括弧・空白・記号含め literal match、`Dependency Audit (bun audit)` 等）。drift すると required が無効化（check 未受信扱い）し silent に PR が merge 可能になる
+- 個人 repo は `enforce_admins: false`（緊急 hotfix で admin bypass を残す、組織 repo は別判断）
+- 設定確認: `gh api repos/<owner>/<repo>/branches/main/protection 2>&1 | head -10` で **raw 出力** を確認（`gh: Branch not protected` 等の stderr が混入するため `python3 -c "import json,sys; json.load(sys.stdin)"` の前に必ず raw 確認）
+- opt-in job（E2E / Visual / Lighthouse）を `contexts:` に含めない（label 付け忘れた PR が永遠に merge 不能になる silent UX bug）
+
+実例: 2026-05-13 commit `e09f5691` で `.github/branch-protection.json` 配置 + 5 essential checks 登録（過去 30+ run failure → 完全 green 化セッションの締めくくり）。
+
 ## 11. Actions deprecation 警告は warn のみで放置可
 
 GitHub-hosted runner の Node.js 20 deprecation 警告（2026-06 強制 Node 24 化、2026-09 Node 20 削除）:
