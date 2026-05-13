@@ -67,6 +67,7 @@ paths:
 - **GitHub Actions Node 20 deprecation warning は warn のみで放置可** — `actions/checkout@v4` / `actions/upload-artifact@v4` が Node 20 で動作中、2026-06 強制 Node 24 化 / 2026-09 Node 20 削除予定。upstream の Node 24 対応版が出るまで warn のまま運用。`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 強制 opt-in は互換性確認後のみ
 - **`gh run watch <id> --exit-status` は failed run でも exit 0 で返ることがある** — watcher 自体は「run の終了を検知」したら exit 0 する実装、conclusion は別 query 必須。完了通知後は `gh run view <id> --json conclusion,jobs --jq` で per-job conclusion 確認 → 真の失敗 job のみ詳細を取る
 - **`gh run rerun <id> --failed` は success / skipped job を触らない** — opt-in label で skip された job (`e2e-tests` 等) は rerun でも skip のまま。billing 失敗で `not started` 扱いの job のみが再実行対象になる
+- **`/goal` Stop hook condition が物理 I/O 完了待ちと衝突する** — test execution / CI run 完了を condition に含めると、その物理待ち（30+ 分）中に Stop hook が「未達」を返し続け agent が無駄に応答する破綻状態に陥る。canonical 対処: ① condition に「実装 + push 完了」までで切り、CI verify は次セッションに分割 ② `gh run watch --run_in_background:true` は harness-tracked notification で auto-wake するため polling 不要 ③ 永続発火を観測したら `/goal clear` で early release（仕様: `that's only for clearing a goal early` 経路）。実例: 2026-05-13 「E2E / Visual / Lighthouse の test 自体の broken を修正」goal で Stop hook 永続ループ → ユーザー clear で解除
 
 ## Tailwind v4 / Turbopack HMR
 

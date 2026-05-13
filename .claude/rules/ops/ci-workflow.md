@@ -275,7 +275,161 @@ grep -rnE "contains\(github\.event\.pull_request\.labels\.\*\.name" .github/work
 grep -n 'NEXT_PUBLIC_BASE_URL' .github/workflows/ci.yml | head -3
 ```
 
-## 13. 参考
+## 14. CI 専用 host-aware security headers（HSTS / CSP localhost skip）
+
+localhost / 127.0.0.1 への接続で `Strict-Transport-Security` header と CSP `upgrade-insecure-requests` directive を **skip 必須**。これらは HTTPS 前提の directive で、HTTP-only な localhost に対して適用すると Chrome (Lighthouse / E2E Playwright) が HTTPS への redirect を強制 → certificate warning interstitial (`CHROME_INTERSTITIAL_ERROR`) → navigation が必ず fail する silent bug。
+
+```typescript
+// src/proxy.ts
+function isLocalhostRequest(req: NextRequest): boolean {
+  const host = req.headers.get("host") ?? "";
+  return (
+    host.startsWith("localhost:") ||
+    host === "localhost" ||
+    host.startsWith("127.0.0.1:") ||
+    host === "127.0.0.1"
+  );
+}
+
+function applySecurityHeaders(
+  headers: Headers,
+  csp: string,
+  isLocalhost: boolean,
+): void {
+  for (const [key, value] of SECURITY_HEADERS) {
+    if (key === "Strict-Transport-Security" && isLocalhost) continue;
+    headers.set(key, value);
+  }
+  headers.set("Content-Security-Policy", csp);
+}
+
+function buildCsp(
+  nonce: string,
+  pathname: string,
+  isLocalhost: boolean,
+): string {
+  // ... directives ...
+  // upgrade-insecure-requests は localhost で omit
+  return `... ${isLocalhost ? "" : "upgrade-insecure-requests;"}`;
+}
+```
+
+参照実装: `src/proxy.ts` (commit `cb56bdbc`)。本番 hostname では従来通り HSTS + upgrade-insecure-requests を付与（HTTPS 強制で security 維持）。
+
+## 15. Lighthouse CI 起動 timeout SSoT
+
+`.lighthouserc.json` で:
+
+```json
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "bun run lhci:start-server",
+      "startServerReadyPattern": "(Ready in|started server)",
+      "startServerReadyTimeout": 300000
+    }
+  }
+}
+```
+
+- `startServerReadyTimeout: 120000` (default) では CI cold build + start が間に合わず、server 起動前に Lighthouse が navigate → `chrome-error://chromewebdata/` (connection refused) → CHROME_INTERSTITIAL_ERROR で fail
+- **300000 (5 分)** が canonical（build ~60s + start ~10s + 余裕）
+- `startServerReadyPattern` は **regex** で `(Ready in|started server)` — next dev (Turbopack) と next start (production) 両方の output に対応
+
+`scripts/lhci-start.ts` が `bun run build:skip-env` + `bun x next start` を child spawn する設計。env fallback で `validateProductionEnv` の要求 env を埋める（ENCRYPTION*KEY / R2*\* / CRON_SECRET 等）。
+
+## 16. Playwright webServer の CI / local 分岐 + E2E 用 opt-in env
+
+```typescript
+// playwright.config.ts
+webServer: {
+  command: process.env["CI"] ? "bun run start" : "bun run dev",
+  url: "http://localhost:3000",
+  reuseExistingServer: !process.env["CI"],
+  timeout: 180 * 1000,
+}
+```
+
+- ローカル: `bun run dev` (Turbopack HMR、開発と同等の環境で spec を反復実行)
+- CI: `bun run start` (production build artifact を起動。dev mode の Turbopack initial compile による spec timeout / runner CPU 枯渇を回避)
+- timeout: 180s (production build cold start + dependencies init 込み)
+
+**dev mode を CI で使うと runner lost communication になる**（過去 30+ run 連続 failure の主因）— Turbopack initial compile × 大量 spec `page.goto()` 並行で資源枯渇。
+
+### `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` opt-in pattern
+
+production build でも `DevLoginButton` を表示するため `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` を build + runtime 両方に伝播:
+
+```yaml
+# .github/workflows/ci.yml (E2E job)
+- name: Build application
+  run: bun run build:skip-env
+  env:
+    NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+    SKIP_ENV_VALIDATION: "true"
+
+- name: Run E2E tests
+  run: bunx playwright test
+  env:
+    CI: true
+    NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+    # production build を `next start` で動かすため validateProductionEnv の要求 env を埋める
+    ENCRYPTION_KEY: "..."
+    R2_*: "..."
+```
+
+```tsx
+// page.tsx の DevLoginButton render gate
+{
+  (process.env["NODE_ENV"] !== "production" ||
+    process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && <DevLoginButton />;
+}
+```
+
+**禁止**: `NEXT_PUBLIC_ENABLE_E2E_LOGIN` を staging / production に伝播（login bypass risk）。CI workflow に閉じた opt-in。
+
+## 17. workflow_dispatch ↔ push 独立 concurrency group
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+```
+
+`event_name` を group に含めないと、main で in-progress な workflow_dispatch run が main push trigger によって cancel される race condition が発生する（実例: run 25784115856 / 25784189083 が pending 中に cancel）。
+
+## 18. bash glob 展開規律（Actions step 内）
+
+GitHub Actions の default shell `bash --noprofile --norc -eo pipefail {0}` は **globstar OFF**。`'e2e/**/*-snapshots/'` のような `**` glob は **literal 解釈**されて silent fail する:
+
+```yaml
+# NG: git add 'e2e/**/*-snapshots/' || true
+#     ↓ ** literal で展開されず、`git diff --cached --quiet` が true → commit skip
+# OK: shopt -s globstar nullglob で明示展開
+- name: Commit baseline
+  shell: bash
+  run: |
+    shopt -s globstar nullglob
+    baseline_dirs=(e2e/visual/**/*-snapshots/)
+    if [ ${#baseline_dirs[@]} -eq 0 ]; then exit 0; fi
+    git add "${baseline_dirs[@]}"
+```
+
+`nullglob` で配列が空になっても fail しない。
+
+## 19. gh CLI: job 単体 log を run 完了前に取得
+
+```bash
+# NG: run 全体完了まで block する（30+ 分待ち）
+gh run view --log-failed --job <job-id>
+
+# OK: gh api 直叩きで job 完了即 fetch 可能
+gh api repos/<owner>/<repo>/actions/jobs/<job-id>/logs
+```
+
+run 内の 1 job だけ早期 debug したい時の canonical（例: E2E in_progress 中に Lighthouse fail の log を見たい）。
+
+## 20. 参考
 
 - [oven-sh/setup-bun](https://github.com/oven-sh/setup-bun) — `bun-version-file` 公式機能
 - [Bun test mocks](https://bun.com/docs/test/mocks) — `mock.module()` live binding 仕様
