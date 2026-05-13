@@ -9,8 +9,23 @@ on:
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
     inputs:
+      run_e2e:
+        description: "Run E2E tests"
+        type: boolean
+        required: false
+        default: false
       run_visual:
-        description: "Run visual regression tests"
+        description: "Run visual regression tests (with --update-snapshots to regenerate baseline)"
+        type: boolean
+        required: false
+        default: false
+      update_visual_baseline:
+        description: "Regenerate visual baseline (commit to repo after success)"
+        type: boolean
+        required: false
+        default: false
+      run_lighthouse:
+        description: "Run Lighthouse CI"
         type: boolean
         required: false
         default: false
@@ -151,7 +166,7 @@ jobs:
     # post-deploy-smoke skill (HTTP smoke) と Cloud Run staging で代替。
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e')) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_e2e == 'true')
     services:
       postgres:
         image: postgres:16
@@ -340,7 +355,7 @@ jobs:
     # - workflow_dispatch で手動実行時
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'lighthouse')) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_lighthouse == 'true')
     services:
       postgres:
         image: postgres:16
@@ -394,15 +409,17 @@ jobs:
   visual-regression:
     name: Visual Regression (opt-in)
     runs-on: ubuntu-latest
-    # opt-in 実行条件（E2E と同じ pattern に統一）:
+    # opt-in 実行条件:
     # - PR に `visual-regression` ラベルが付与された（labeled イベント含む）
-    # - workflow_dispatch で run_visual=true 指定
-    # baseline regeneration が必要なら手動で workflow_dispatch + run_visual=true を
-    # 実行する（main push 自動 regeneration は破壊的変更時に意図せず baseline を
-    # 更新する silent risk があるため廃止）。
+    # - workflow_dispatch で run_visual=true 指定（baseline 比較）
+    # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + commit）
+    # baseline regeneration は意図的な workflow_dispatch でのみ実行する（main push
+    # 自動 regeneration は破壊的変更時に baseline を silent 上書きする risk のため廃止）。
+    permissions:
+      contents: write # baseline commit 用
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'visual-regression')) ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_visual == 'true')
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.run_visual == 'true' || github.event.inputs.update_visual_baseline == 'true'))
     services:
       postgres:
         image: postgres:16
@@ -447,9 +464,15 @@ jobs:
 
       # Playwright 公式の visual regression:
       # - baseline が存在すれば diff 検証
-      # - 初回 / baseline 変更時は --update-snapshots で artifact として生成
+      # - update_visual_baseline=true で --update-snapshots を渡して baseline を再生成
+      #   （CI Ubuntu runner と本番の font rendering が一致するため CI 上で baseline 生成が canonical）
       - name: Run visual regression tests
-        run: bunx playwright test --project=chromium-visual
+        run: |
+          if [ "${{ github.event.inputs.update_visual_baseline }}" = "true" ]; then
+            bunx playwright test --project=chromium-visual --update-snapshots
+          else
+            bunx playwright test --project=chromium-visual
+          fi
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
@@ -464,6 +487,21 @@ jobs:
             playwright-report/
             e2e/visual/**/*-snapshots/
           retention-days: 30
+
+      # baseline 再生成成功時、生成された snapshot を main に commit する。
+      # 再生成は意図的な操作のため push back は safe。
+      - name: Commit regenerated visual baseline
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baseline == 'true' && success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'e2e/visual/**/*-snapshots/' || true
+          if git diff --cached --quiet; then
+            echo "[visual baseline] no changes to commit"
+          else
+            git commit -m "ci(visual): regenerate visual baseline (run ${{ github.run_id }} by ${{ github.actor }})"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
 
   docs:
     name: Generate API Docs
