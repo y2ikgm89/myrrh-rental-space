@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "next": true,
+  "playwright": {
+    "config": "playwright.config.ts",
+    "entry": ["e2e/**/*.spec.ts", "e2e/fixtures/**/*.ts", "playwright/**/*.ts"]
+  },
+  "prisma": true,
+  "entry": [
+    "scripts/**/*.{ts,mjs}",
+    "__tests__/**/*.test.{ts,tsx}",
+    "__tests__/mocks/**/*.ts",
+    "src/shared/emails/*.tsx"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "__tests__/**/*.{ts,tsx}",
+    "e2e/**/*.ts",
+    "prisma/**/*.ts",
+    "scripts/**/*.{ts,mjs}"
+  ],
+  "ignore": [
+    "src/shared/types/**",
+    "src/shared/lib/validations/enums/prisma-types.ts",
+    "src/shared/lib/sections/definitions/*/index.ts"
+  ]
+}
