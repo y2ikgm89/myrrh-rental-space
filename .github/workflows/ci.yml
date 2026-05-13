@@ -531,10 +531,19 @@ jobs:
       # 再生成は意図的な操作のため push back は safe。
       - name: Commit regenerated visual baseline
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baseline == 'true' && success()
+        shell: bash
         run: |
+          shopt -s globstar nullglob
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add 'e2e/visual/**/*-snapshots/' || true
+          # bash globstar で **/*-snapshots/ をディレクトリ展開する。
+          # null glob で snapshot dir が無くても fail しない。
+          baseline_dirs=(e2e/visual/**/*-snapshots/)
+          if [ ${#baseline_dirs[@]} -eq 0 ]; then
+            echo "[visual baseline] no -snapshots/ directories found"
+            exit 0
+          fi
+          git add "${baseline_dirs[@]}"
           if git diff --cached --quiet; then
             echo "[visual baseline] no changes to commit"
           else
