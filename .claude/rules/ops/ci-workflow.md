@@ -173,6 +173,20 @@ gh api repos/<owner>/<repo>/actions/permissions/workflow \
 
 未有効化だと `##[error]GitHub Actions is not permitted to create or approve pull requests.` で peter-evans/create-pull-request@v8 が **branch push まで成功・PR 作成のみ fail** する silent UX bug。`default_workflow_permissions: read` は維持 (write 不要、各 workflow の `permissions:` 明示が SSoT、最小権限原則)。実例: 2026-05-13 run 25811846393 → 25812303256 で発覚 + 設定変更で復旧。
 
+**`GITHUB_TOKEN` で作成された PR は workflow を triggered しない（GitHub 公式無限ループ防止仕様）**: peter-evans/create-pull-request@v8 で生成された PR は `pull_request opened` event を発火しないため、required status checks が **未走行で branch protection が永久 block** する silent UX bug ([公式 docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow))。
+
+**Workaround SSoT**: `gh pr update-branch <num>` を実行すると `synchronize` event が発火して CI workflow が起動 + base branch との BEHIND も同時解消。完全自動化したい場合は ① PAT (Personal Access Token) を `token:` に渡す ② `actions/create-github-app-token@v2` で GitHub App token 生成（公式推奨、PAT より securer）。
+
+```bash
+# auto-PR 生成後の標準 verify フロー
+gh pr view <num> --json mergeStateStatus   # BEHIND / BLOCKED / UNSTABLE / CLEAN
+gh pr update-branch <num>                  # synchronize event 発火 + base へ rebase
+gh pr checks <num>                          # required 5 checks の green 確認
+gh pr merge <num> --squash --delete-branch  # 業界標準 squash merge (Chromatic / Percy pattern)
+```
+
+`mergeStateStatus` 値の意味: `BEHIND`（base が進んでいる）/ `BLOCKED`（required checks 未完）/ `UNSTABLE`（required pass + optional fail）/ `CLEAN`（全 green）。`UNSTABLE` でも required pass なら merge 可能（branch protection は required のみ評価）。実例: 2026-05-13 PR #25（baseline 再生成）で `mergeStateStatus: UNSTABLE` を確認 → `gh pr merge 25 --squash --delete-branch` で main 取り込み完遂。
+
 ## 5. CodeQL は Default setup に統一（Advanced workflow 不要）
 
 `.github/workflows/codeql.yml` を手動メンテする Advanced setup は GitHub が runner / query 更新を自動追従しない上、private repo + 個人アカウントでは Code scanning settings 未有効化で「`Code scanning is not enabled for this repository`」エラーで毎 push fail する。
