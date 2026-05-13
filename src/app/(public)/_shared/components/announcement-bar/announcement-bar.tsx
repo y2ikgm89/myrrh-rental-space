@@ -124,13 +124,13 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           </div>
         )}
 
-      {/* Prev arrow */}
+      {/* Prev arrow — WCAG 2.5.5 Enhanced 44×44px hit area */}
       {settings.showArrows && showNav && (
         <button
           type="button"
           onClick={goPrev}
           className={cn(
-            "absolute left-2 rounded-full p-2 transition-colors",
+            "absolute left-2 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="前のお知らせ"
@@ -182,13 +182,13 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         </span>
       )}
 
-      {/* Next arrow */}
+      {/* Next arrow — WCAG 2.5.5 Enhanced 44×44px hit area */}
       {settings.showArrows && showNav && (
         <button
           type="button"
           onClick={goNext}
           className={cn(
-            "absolute right-6 rounded-full p-2 transition-colors",
+            "absolute right-2 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="次のお知らせ"

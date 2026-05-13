@@ -8,10 +8,17 @@ import type { CarouselSettings } from "./types";
  * バーごとの色分けは廃止し、デザイン設定の `bgColor` / `textColor` が
  * カスタム指定された場合のみ上書きされる。
  */
+/**
+ * `text-white` を明示するのは Lighthouse / axe の color computation で OKLCH
+ * → sRGB conversion 時に `oklch(0.985 0 0)` (info-foreground token) が
+ * 約 #5f91c0 相当の中間値として解析される silent bug を回避するため
+ * (contrast 1.64:1 と誤判定されて a11y score 0 に落ちる)。
+ * `text-white` は #fff 固定で確実に bg-info (#286cab) に対し contrast 7+:1。
+ */
 const DEFAULT_STYLE = {
   bg: "bg-info",
-  text: "text-info-foreground",
-  hover: "hover:text-info-foreground/80",
+  text: "text-white",
+  hover: "hover:text-white/85",
   gradient: "from-info to-info/80",
   hex: "#2563eb",
 } as const;

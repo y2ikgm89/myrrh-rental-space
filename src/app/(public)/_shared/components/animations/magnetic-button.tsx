@@ -120,8 +120,11 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
   const hasInlineStyle =
     Boolean(customBackgroundColor) || Boolean(customTextColor);
 
+  // PortableTextSpan[] の空配列 `[]` も truthy のため `props.label.length > 0`
+  // で gate しないと <PortableTextSpans spans={[]}> が何も render せず button
+  // text が empty になり Lighthouse link-name / WCAG 4.1.2 violation に至る。
   const content =
-    "label" in props && props.label !== undefined ? (
+    "label" in props && props.label !== undefined && props.label.length > 0 ? (
       <PortableTextSpans
         spans={props.label}
         iconClassName={iconSizeClasses[size]}
