@@ -73,7 +73,7 @@ bun run start        # 本番サーバー起動
 bun test <path>                        # 単一ファイル（日常開発の主入口）
 bun test --watch <path>                # ウォッチモード（単一ファイル指定必須）
 bun test --coverage <path>             # カバレッジ参考値（単発、CI ゲートなし）
-bun run test:unit                      # 全単体テスト（per-directory batch）
+bun run test:unit                      # 全単体テスト（per-file isolation via scripts/run-tests.mjs）
 bun run test:integration               # 全統合テスト
 bun run test:all                       # 単体 + 統合
 

@@ -131,7 +131,70 @@ export function LayoutFieldsConnected<T extends FieldValues>({
 
 **ルール**: 本境界の外（Section / Inspector / 単一フォーム型 Component 内）では generic にせず concrete form type を直接使い、`Path<T>` cast を発生させない。Connected wrapper を新規追加する場合は本セクションに参照実装を追記する。
 
-### 6. `standardSchemaResolver` 境界変換（`auto-section-form.tsx` の RHF 呼び出しのみ）
+### 6. JSX 内 repeated property access の defensive narrowing（typedoc / tsc control-flow analysis 差）
+
+JSX 内で同一 nullable property を **複数回 read** する場合、TypeScript の control-flow narrowing が文脈境界で失われ、`tsc --noEmit` では pass するのに **CI typedoc では `TS2339` (Property X does not exist on type 'never')** が出る silent CI bug が起きる。typedoc は内部で別 TS checker を呼ぶため、tsc と control-flow analysis の挙動が一致しない可能性あり（typedoc / tsc version mismatch、外部 type 推論 cache の差）。
+
+```tsx
+// NG: JSX 内で 3 回 access → typedoc が後段の startsWith() で narrow 失敗
+{
+  currentBar.linkUrl &&
+    currentBar.linkText &&
+    (isAppRoute(currentBar.linkUrl) ? (
+      <Link href={currentBar.linkUrl}>{currentBar.linkText}</Link>
+    ) : (
+      <a
+        href={currentBar.linkUrl}
+        target={currentBar.linkUrl.startsWith("http") ? "_blank" : undefined}
+        rel={currentBar.linkUrl.startsWith("http") ? "noreferrer" : undefined}
+      >
+        {currentBar.linkText}
+      </a>
+    ));
+}
+```
+
+**対処**: JSX 外で **outer const 抽出** + derived 値も const 化。JSX 内では narrow 済み変数のみ参照する:
+
+```tsx
+// JSX 外（return 直前）で narrowing を確定
+const linkUrl = currentBar.linkUrl;
+const linkText = currentBar.linkText;
+const isExternalLink = linkUrl != null && linkUrl.startsWith("http");
+const linkClassName = cn(/* ... */);
+
+// JSX 内では narrow 済み変数のみ
+{
+  linkUrl != null &&
+    linkText != null &&
+    (isAppRoute(linkUrl) ? (
+      <Link href={linkUrl} className={linkClassName}>
+        {linkText}
+      </Link>
+    ) : (
+      <a
+        href={linkUrl}
+        className={linkClassName}
+        target={isExternalLink ? "_blank" : undefined}
+        rel={isExternalLink ? "noreferrer" : undefined}
+      >
+        {linkText}
+      </a>
+    ));
+}
+```
+
+**判定基準**:
+
+- 同一 nullable property を JSX 内で **2 回以上** read する
+- read のうち少なくとも 1 つが method call (`.startsWith()` / `.toLowerCase()` 等)
+- 上記 2 条件が揃ったら **必ず outer const 抽出**（tsc local で pass しても CI typedoc で fail する preemptive 防御）
+
+**禁止**: JSX 内 IIFE (`{(() => { const x = ...; return ...; })()}`) で narrow を作る — `@eslint-react/unsupported-syntax` 違反。必ず JSX 外で抽出する（→ `react/gotchas.md` §JSX 内の IIFE 禁止）。
+
+参照実装: `src/app/(public)/_shared/components/announcement-bar/announcement-bar.tsx` の `linkUrl` / `linkText` / `isExternalLink` 抽出（2026-05-13 typedoc TS2339 修正）。
+
+### 7. `standardSchemaResolver` 境界変換（`auto-section-form.tsx` の RHF 呼び出しのみ）
 
 RHF の `standardSchemaResolver` は `StandardSchemaV1<FieldValues>` を要求するが、動的セクション定義の `configSchema` は `z.ZodType<unknown>` として保持される（`sectionConfigSchemas` マップから取得）。`configSchema` は全て `z.object({...})` で定義されるため実行時は安全だが、TypeScript の invariance のため `as unknown as z.ZodObject<Record<string, z.ZodType>>` で橋渡しする。単一フォームへの適用であり Pure Component + Connected wrapper への分離は過剰なため、境界ヘルパーとして本ファイル内で完結する例外として許容する。
 

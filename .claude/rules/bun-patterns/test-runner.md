@@ -165,15 +165,36 @@ bun test --watch __tests__/unit/lib/crypto.test.ts   # TDD watch（単一ファ�
 bun test --bail=1 <file>                             # 最初の失敗で停止
 bun test --test-name-pattern "暗号化"                 # 名前フィルター
 
-# per-directory batch（フル実行時のみ）
-bun run test:unit          # 全 unit（package.json の && チェーン）
-bun run test:integration   # 全 integration
-bun run test:all           # unit + integration（sequential。mock.module 干渉防止で並列化禁止）
+# per-file isolation（フル実行時 / CI 必須）
+bun run test:unit          # 全 unit を scripts/run-tests.mjs 経由で per-file 実行
+bun run test:integration   # 全 integration を per-file 実行
+bun run test:all           # unit + integration（sequential）
 ```
 
 - **禁止**: `bun run test` / `bun run test:watch` / `bun run test:coverage` は廃止
 - **禁止**: `bun test __tests__/unit`（親ディレクトリ指定）/ `bun test --watch`（パス未指定）は再帰実行で `mock.module` 干渉を誘発
+- **禁止**: `package.json` の `test:unit` / `test:integration` を per-directory `&&` チェーンに戻す（mock.module 干渉が再発する SSoT 違反）
 - **テスト実行ポリシー**: 毎回全走させる必要なし。lefthook pre-push + CI が担保（`CLAUDE.md` §検証）
+
+## per-file isolation runner（`scripts/run-tests.mjs`）
+
+bun:test の `mock.module()` は process-global に **live binding** を残す公式仕様（[Bun docs §Module Mocking](https://bun.com/docs/test/mocks)）。同一 `bun test` 起動で複数 \*.test.ts を走らせると、先行 file の `mock.module("@/shared/lib/foo", ...)` が後続 file の実 import を上書きし、`Export named 'X' not found` / 偽陽性 fail / 同名モジュール mock の re-bind 不能を引き起こす。
+
+per-directory `&&` チェーンでも 1 ディレクトリ内に複数 _.test.ts があれば干渉する（過去 30 run 連続 CI failure の主因、78 件規模の偽陽性 fail）。`scripts/run-tests.mjs` で各 _.test.ts を **独立した bun サブプロセス**で順次起動し、干渉を物理的に排除する:
+
+```bash
+bun scripts/run-tests.mjs __tests__/unit         # 全 *.test.ts を再帰探索 → 個別起動
+bun scripts/run-tests.mjs __tests__/integration
+bun scripts/run-tests.mjs __tests__/unit __tests__/integration  # 複数 dir 連結
+```
+
+実装は Node ESM (`node:fs` + `node:child_process.spawnSync`) で書かれ Bun が実行する。各 file の pass/fail を `[run-tests] (N/M) PASS path` で出力、最後に集計（`done: X passed, Y failed in Zs`）+ failed file 一覧を表示。1 file でも fail すれば exit 1。
+
+**ローカル実行コスト**: 1 file あたり ~700-1000ms (bun startup + Prisma client init) × 200+ files → 全 unit 約 4 分。CI ubuntu-latest では並列化なしで完走可能。
+
+**禁止**: 同じ目的を `vitest --isolate` 等で代替（プロジェクトは Vitest 不使用、Bun runner SSoT）。
+
+詳細は `.claude/rules/bun-patterns/mocking.md` §mock.module の live binding 仕様 を参照。
 
 ## カバレッジ
 

@@ -1,13 +1,41 @@
 ---
-description: Git ワークフロー / Migration / Worktree プロセスルール
+description: Git ワークフロー / Migration / Worktree プロセスルール（採否判定 SSoT）
 paths:
   - "prisma/migrations/**"
   - "prisma/schema.prisma"
   - ".github/workflows/**"
   - ".serena/memories/**"
+  - "docs/superpowers/plans/**"
+  - "docs/superpowers/specs/**"
 ---
 
 # Git / Migration / Worktree プロセス
+
+## Worktree 採否判定（SSoT）
+
+> 採用決定後の bootstrap は `.claude/skills/worktree-bootstrap/SKILL.md`（1 コマンドで `.env` + `generated/` コピー + DB drift 検知）。
+
+### ✅ 使う場面
+
+- **セッション跨ぎ Phase 分割 plan** — `docs/superpowers/plans/**` の Phase A → B → C 構造、handoff memo 規約（`MEMORY.md` index + 6 点セット）が worktree path 前提
+- **Subagent 並列 dispatch** — Agent tool `isolation: "worktree"` で implementer を controller 作業から隔離（context isolation + file race 回避）
+- **Destructive migration を含む実験** — 共有 dev Postgres の WIP を main から隔離。適用後は該当 worktree から dev server 再起動（他 worktree dev server が古い code + 新 schema で `PrismaClientKnownRequestError: The column ... does not exist` → 白画面の silent bug）
+- **dev server を別ブランチで常駐させたまま並列実験** — port 3000 占有を避ける（既起動検出は `Another next dev server is already running` で exit 1、3001 fallback あり）
+
+### ❌ 使わない場面（main 直接編集が efficient）
+
+- **1-commit で完結する refactor / fix** — worktree path 初回 Read で worktree 内 `.claude/rules/**/*.md` が再 auto-load され、main 側と合わせて 2 セット注入で context 倍消費（2026-05-06 Phase 3 で worktree を途中放棄 → main 直接 commit に切替えて完遂）
+- **Frontmatter / config のみの変更** — context overhead に見合わない
+- **型エラー fix 等 10 分未満の短時間タスク**
+- **Schema 変更前の準備作業** — 先に main で migrate + `migrate resolve --applied` → 後に worktree 作成（共有 dev DB drift 連鎖防止）
+
+**判定基準**: 3 条件全成立で main 直接編集 — ① 単一 commit で完結する scope ② migration なし ③ 中間状態で `type-check` broken でも許容。1 つでも偽なら worktree 採用。
+
+### Subagent との連携
+
+- Controller が `Agent` tool dispatch 時に `isolation: "worktree"` を渡せば implementer が独立 workspace で実装する（公式 sub-agent frontmatter `isolation: worktree` と同等）。手動 bootstrap 不要
+- Phase 分割 plan を `subagent-driven-development` skill で実行する場合、controller 側で先に `worktree-bootstrap` SKILL で worktree を切り、implementer に worktree path を渡す
+- 完了検証は worktree 内で直接 `git status --short` + `git diff --stat HEAD`（`PostToolUse:Agent` hook の snapshot は main 基準で subagent 成果が見えない）
 
 ## Migration / Prisma
 
@@ -24,7 +52,7 @@ paths:
 - **`git branch -D` block (`block-dangerous-bash.sh` rule 9) の安全な bypass** — commits が main / remote / reflog で保存されているケース (merged-to-main with stale upstream / WIP with reflog backup) は `git update-ref -d refs/heads/<branch>` で等価操作。reflog 90 日復元可
 - **Stale dependabot PR 判定** — `package.json` 現バージョン vs PR target で obsolete 検出（例: main `@lexical/*` 0.44 vs PR 0.40→0.41 = obsolete）。canonical cleanup: `gh pr close <num> --delete-branch --comment "..."` で PR close + remote branch 削除。dependabot は次回 schedule で最新版 PR を再作成
 - **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/how-to/**` / `bunfig.toml` / `.vscode/launch.json`
-- **`package.json#packageManager` (Bun version) 更新時は `.github/workflows/*.yml` の `bun-version: "X.Y.Z"` も同期必須** — 9+ 箇所 drift で silent runtime difference（`mock.module` 動作差異 / `bun:test` 挙動差）を起こす。canonical 検出 grep: `grep -nE 'bun-version|packageManager' .github/workflows/*.yml package.json`。実例: 2026-05-10 で 9 箇所 1.3.12 → 1.3.13 sync（commit `754e9c2e`）
+- **`package.json#packageManager` (Bun version) は CI workflow の SSoT** — `.github/workflows/*.yml` は `bun-version-file: package.json`（`oven-sh/setup-bun@v2` 公式機能）を使用し、`bun-version: "X.Y.Z"` の hardcode は禁止。`package.json#packageManager` 更新時に workflow 側の同期作業は不要（2026-05-13 で 9 箇所 hardcode → SSoT 化済、commit `508929ae`）。canonical 監査 grep: `grep -rnE 'bun-version: "' .github/workflows/` がゼロ件を保つこと。drift 復活防止は `.claude/rules/ops/ci-workflow.md` §2
 - **ファイル削除時の dangling ref 検出範囲は `docs/` 全域 + `.claude/` + `AGENTS.md` + `CLAUDE.md` 必須** — 検出時は「削除 + dangling ref 修正」を同一 commit に統合
 
 ## テスト配置

@@ -134,6 +134,28 @@ beforeEach(() => {
 | `vi.mocked(fn)`              | 型は `mock<T>()` で付与          |                                      |
 | `vi.importMock('module')`    | 未サポート                       | `mock.module()` を使う               |
 
+## mock.module の live binding 仕様（最重要）
+
+`mock.module()` は ES module / CommonJS 両方を差し替える際 **live binding** で実装されている（[Bun docs §Module Mocking](https://bun.com/docs/test/mocks)）。つまり同一 `bun test` 起動内では:
+
+1. file A が `mock.module("@/shared/lib/foo", () => ({ bar: mockBar }))` を呼ぶ
+2. file B が `import { bar } from "@/shared/lib/foo"` を実行する
+3. file B から見える `bar` は **file A のモック実装**（A が `mock.restore()` を呼ぶまで居座る）
+
+`afterEach(() => mock.restore())` は **module cache を復元するが、`bun test` プロセスの module evaluation 順序自体は変えられない** — 後続 file が import 時点で既にモック適用済みの状態を取得する場合、復元前に bind 済みのため revert 不能。
+
+これが per-directory `&&` チェーン (`bun test __tests__/unit/lib && bun test __tests__/unit/api`) で部分緩和されても、**1 ディレクトリに複数 \*.test.ts** があれば干渉する根本原因。
+
+**唯一の安定解**: 各 \*.test.ts を **独立した bun サブプロセス**で起動する per-file isolation runner（`scripts/run-tests.mjs`）。process boundary が module cache を物理的に分離するため、`mock.module` の live binding は他 file に届かない。
+
+詳細は `.claude/rules/bun-patterns/test-runner.md` §per-file isolation runner を参照。
+
+**運用ルール**:
+
+- 単独 file 内では `afterEach(() => mock.restore())` で復元（同 file 内 test 間の干渉を防ぐ）
+- 複数 file 同時実行は **必ず** per-file isolation runner 経由（`bun run test:unit` / `test:integration`）
+- `bun test __tests__/unit` 等の親ディレクトリ指定は **絶対禁止**（再帰実行で全 file が同一 process）
+
 ## Server Actions テスト
 
 Server Actions の統合テスト（依存差し替え + アクション直呼び）は `bun-patterns/server-actions-tests.md` を参照。

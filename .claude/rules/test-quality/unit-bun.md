@@ -182,3 +182,54 @@ describe("commandName", () => {
 ## 統合テストのインライン Zod スキーマは手動保守
 
 `__tests__/integration/actions/admin/*.test.ts` は Server Actions 内の Zod スキーマを**再現**したインライン定義を持つ（import ではない）。実ソースのスキーマ分割・リネーム時は、このインラインコピーも並行更新する。更新漏れはテスト通過のまま非整合を残すサイレントバグになる。
+
+## fixture drift 検出（schema / 実装変更追従漏れの canonical pattern）
+
+`bun run test:unit` / `test:integration` を per-file isolation runner で全走させると **fixture drift** が顕在化する。drift は本質的に 3 種類:
+
+### A. Schema 必須化追従漏れ（最頻出）
+
+実装側 schema (`src/.../validations/<entity>.ts`) で新フィールドが **required** (= `.default()` なし or `z.string().min(1)`) になると、test fixture（`VALID_XXX_INPUT` 等）に該当 field を追加するまで `safeParse` が失敗する。実例（2026-05-13 セッション）:
+
+- `descriptionHtml: ""` が `spaceFormSchema` / `eventFormSchema` に required 追加 → `space.test.ts` 28 件 fail + `space-form-data-codec.test.ts` / `event.test.ts` も連鎖 fail
+- `contentHtml: "<p>...</p>"` が `createNewsSchema` / `createPostSchema` / `updateNewsBodySchema` / `updatePostBodySchema` に required → `news.test.ts` / `post.test.ts` 多数 fail
+
+**検出**: 単独 `bun test <file>` で再現する真の drift。**per-file isolation でも fail = mock 干渉ではない真の bug**。
+
+**対処**:
+
+1. schema を Read（`src/shared/lib/validations/<entity>.ts` or `definitions/<type>/schema.ts`）
+2. test fixture の `VALID_XXX_INPUT` 定数に新 field を追加（同一値の `descriptionHtml: ""` / `contentHtml: "<p>...</p>"` 等）
+3. spread されている各 inline input（`{ ...VALID_INPUT, ... }`）も自動継承するが、**spread していない minimal payload 単独定義**は個別追加必須
+4. `replace_all` で `descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,\n          locationId: VALID_UUID,` のような共通 indent を持つ minimal input を一括 fix 可能
+
+### B. 実装変更による mock 戻り値・引数差分
+
+実装側で内部処理が変わると test の `toHaveBeenCalledWith` 期待値が drift する。実例:
+
+- `updateGoogleOAuthAccountTokens` が `encryptOAuthToken()` で平文 token を暗号化するように変更 → test は `accessToken: ACCESS_TOKEN` を期待していたが実態は `encrypted:ACCESS_TOKEN` を受け取る
+- `reorderInstagramPosts` が `prisma.$transaction` を撤廃して `prisma.instagramPost.update` 直接呼び出しに変更 → test は `mockTransaction` の呼び出し回数を期待していたが実態は `mockInstagramPostUpdate` を 3 回呼ぶ
+
+**対処**:
+
+1. 実装側 (`src/shared/domain/<entity>/commands.ts`) を Read で確認
+2. test 内に `mock.module("@/shared/lib/crypto", () => ({ encryptOAuthToken: mockEncryptOAuthToken, ... }))` 等を追加して暗号化の boundary を mock 化
+3. 期待値を `accessToken: \`encrypted:${ACCESS_TOKEN}\``等の実装 trace 値に書き換える、または`expect.stringMatching(/^encrypted:/)` で柔軟に検証
+4. `mockTransaction` → `mockInstagramPostUpdate` のように **呼び出される実 API** に期待値を寄せる
+
+### C. SSoT rule 違反期待値（test が古い regulation を期待）
+
+実装側は正しい SSoT に従っているが、test の方が古い regulation を期待しているパターン。実例:
+
+- `frontend/external-link-rel.md` SSoT が「`noopener,noreferrer` 併記禁止、`noreferrer` 単独使用」だが、`admin-dashboard-shell.test.ts` が `snippet.includes("noopener,noreferrer")` を期待 → 実コードは正しく `noreferrer` 単独使用、test 側が SSoT 違反期待値
+
+**対処**: test を SSoT に追従（`snippet.includes("noreferrer")`）。実装側を test に合わせる方向の修正は禁止（SSoT 違反の再導入になる）。
+
+### drift 検出 → 修正の bulk pattern
+
+1. `bun run test:unit > /tmp/unit.log 2>&1; grep "^\\(fail\\)" /tmp/unit.log | head -50` で fail 一覧取得
+2. 同種 drift（同 schema / 同 boundary）は **1 subagent に bundle dispatch** で並列修正（per-file isolation runner で独立検証可能）
+3. subagent への dispatch prompt に「schema 側変更禁止 / fixture 側のみ追従」を明記
+4. 完了後 controller が `git diff --stat` で全 file 修正の実在検証 + `bun run test:unit` 再走で 0 fail 確認
+
+詳細は `.claude/rules/ops/ci-workflow.md` §6 Test job は per-file isolation 必須 + `subagent-dispatch-template` SKILL を参照。
