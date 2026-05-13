@@ -429,7 +429,33 @@ gh api repos/<owner>/<repo>/actions/jobs/<job-id>/logs
 
 run 内の 1 job だけ早期 debug したい時の canonical（例: E2E in_progress 中に Lighthouse fail の log を見たい）。
 
-## 20. 参考
+## 20. Lighthouse audit detail を run 完了前に取得
+
+`temporary-public-storage` upload URL を経由して run 全体完了を待たず audit detail を抽出可能（`gh run view --log-failed --job` は run 全体完了まで block する制約を回避）:
+
+```bash
+# 1. job 単体 log から report URL を取得 (job 完了後すぐ)
+gh api repos/<owner>/<repo>/actions/jobs/<job-id>/logs | grep "Open the report"
+# → https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/...
+
+# 2. JSON 抽出 + a11y audit detail 解析
+curl -s <report-url> | python3 -c "
+import sys, re, json
+html = sys.stdin.read()
+m = re.search(r'window\.__LIGHTHOUSE_JSON__ = ({.*?});', html, re.DOTALL)
+d = json.loads(m.group(1))
+print(f'a11y={d[\"categories\"][\"accessibility\"][\"score\"]}')
+a11y_ids = {a['id'] for a in d['categories']['accessibility']['auditRefs']}
+for aid, audit in d['audits'].items():
+  if aid in a11y_ids and audit.get('score') is not None and audit['score'] < 1:
+    for item in audit.get('details', {}).get('items', [])[:3]:
+      print(f\"{aid}: {item.get('node', {}).get('selector', '')[:100]}\")
+"
+```
+
+failing audit の `selector` / `snippet` / `explanation` を取得して production code 側で fix する canonical workflow。実例: 2026-05-13 a11y root-cause fix で全 5 公開 page の audit detail を CI run 完了前に取得 → production code 修正 → 完全 green 達成。
+
+## 21. 参考
 
 - [oven-sh/setup-bun](https://github.com/oven-sh/setup-bun) — `bun-version-file` 公式機能
 - [Bun test mocks](https://bun.com/docs/test/mocks) — `mock.module()` live binding 仕様
