@@ -19,7 +19,7 @@
 | 検証           | Zod 4                              | `error:` パラメータ、native enum                                    |
 | エディタ       | Lexical                            | NodeState API、Portable Text 直列化                                 |
 | E2E            | Playwright                         | storage state auth                                                  |
-| a11y           | @axe-core/playwright               | WCAG 2.1 AA 自動検証                                                |
+| a11y           | @axe-core/playwright               | WCAG 2.1 AA 自動検証 + 2.5.5 Enhanced (AAA) touch target 規約       |
 | Perf 監視      | Lighthouse CI                      | `.lighthouseci/budget.json` で granular gate                        |
 
 ## アーキテクチャ概要
@@ -71,7 +71,7 @@ cp .env.example .env.local
 
 # DB 起動 + migrate + seed
 docker compose up -d db
-bunx --bun prisma migrate deploy
+bunx --bun prisma migrate dev
 bun run db:seed
 
 # 開発サーバー
@@ -146,7 +146,7 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 - [`CLAUDE.md`](./CLAUDE.md) — Claude Code 向けプロジェクト指示
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
 - [`SECURITY.md`](./SECURITY.md) — 脆弱性報告 policy・対応 SLA
-- [`docs/`](./docs/) — Diátaxis 構成のドキュメント（`explanation/` / `how-to/` / `reference/`）
+- [`docs/`](./docs/) — Diátaxis 構成のドキュメント（`explanation/` 設計・なぜ / `how-to/` 手順）。ライブラリ API は公式 docs を直接参照
 - [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md) — Codex / Claude Code 正本配置
 
 ## ライセンス

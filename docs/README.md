@@ -4,7 +4,7 @@
 
 ## 構造（Diátaxis）
 
-このドキュメントは [Diátaxis](https://diataxis.fr/) フレームワークに準拠する。「なぜ」「手順」を分離し、読者の目的別に配置する。
+このドキュメントは [Diátaxis](https://diataxis.fr/) フレームワークの **explanation / how-to** 軸に準拠する（reference 軸は公式 docs / project rules に委譲）。
 
 ```
 docs/
@@ -15,7 +15,7 @@ docs/
 └── templates/      # ドキュメントテンプレート
 ```
 
-**ライブラリ API リファレンスは公式 docs を直接参照**（Diátaxis: reference）。project 固有のパターン・規約は `.claude/rules/**`（Claude Code）と `.agents/skills/**`（Codex）が SSoT。
+**Diátaxis: reference は意図的に未配置**。ライブラリ API は公式 docs を直接参照、project 固有のパターン・規約は `.claude/rules/**`（Claude Code）と `.agents/skills/**`（Codex）が SSoT（`docs/reference/` 再導入禁止 — `CLAUDE.md` §md ドキュメント規律 参照）。
 
 ## クイックリンク
 

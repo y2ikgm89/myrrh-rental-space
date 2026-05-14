@@ -149,8 +149,12 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## md ドキュメント規律
 
-- **バージョン値の md 内ハードコード禁止** — SSoT は `package.json` + `bun.lock`。`Next.js 16.2.6` 等の minor バージョン記述は `bun update` で drift
-- **「最終更新: YYYY-MM-DD」マーカー禁止** — 手動メンテで drift する dead marker、履歴は git log SSoT
-- **`.archive/` ディレクトリ再導入禁止** — 完了済 plan/spec は削除し `git log --all --diff-filter=D -- <path>` で辿る
-- **`docs/reference/` 再導入禁止** — library API reference は公式 docs を直接参照、project pattern は `.claude/rules/**`（Claude Code）/ `.agents/skills/**`（Codex）が SSoT
-- **`docs/how-to/` はインフラ・デプロイ手順のみ** — DB migration / auth / Lexical 等の実装手順は rule docs / skills に集約
+`*.md` 編集時に詳細は path-scoped rule で auto-load:
+
+- **記述スタイル**（CommonMark 0.31.2 + GFM + markdownlint 主要ルール）→ `.claude/rules/markdown-style.md`
+- **Frontmatter スキーマ**（Memory / Rule / Subagent / Skill / Hook の 5 層）→ `.claude/rules/claude-code-patterns.md` §公式が定義する 5 層
+
+要点（drift 防止の最重要のみ、詳細は rule 参照）:
+
+- バージョン値・「最終更新: YYYY-MM-DD」マーカー・`.archive/` ディレクトリ・`docs/reference/` 再導入禁止
+- `docs/how-to/` はインフラ・デプロイ手順のみ（実装手順は rule docs / skills に集約）

@@ -164,6 +164,37 @@ bun run e2e
 | `docs_researcher`   | OpenAI / framework 一次情報確認        |
 | `test_verifier`     | 対象テスト / validate の実行と結果要約 |
 
+## Markdown Documentation Discipline
+
+`AGENTS.md` / `.agents/skills/**` / `docs/**` / その他 `*.md` 編集時は以下に従う。Codex 側に path-scoped auto-load 機構はないため、md 編集時は手動でこのセクションを参照する。
+
+### Style (CommonMark 0.31.2 + GFM + markdownlint)
+
+- 公式仕様 [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/) + [GitHub Flavored Markdown](https://github.github.com/gfm/) に準拠する
+- 主要 [markdownlint](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md) ルール:
+  - h1 (`#`) は 1 ファイル 1 個のみ (`MD025`)、レベルスキップ禁止 (`MD001`)、開始は h1 (`MD041`)
+  - コードフェンスに言語タグ必須 (`MD040`、例: \`\`\`bash / \`\`\`typescript / \`\`\`text)
+  - bare URL は `<>` で囲むか `[label](url)` 形式 (`MD034`)
+  - 行末空白禁止 (`MD009`)、複数連続空行禁止 (`MD012`)
+  - bullet list は `-` 固定 (`MD004`)、ordered list は `1.` 連続 (`MD029`)
+  - GFM テーブル構文 (column 数一致 / align 記号統一)
+  - LF 改行統一 (`.gitattributes` で強制)
+  - 装飾目的の絵文字禁止 (state 表現の `✅` / `❌` 等は許容)
+
+### Drift 防止 (プロジェクト固有)
+
+- バージョン値の md 内ハードコード禁止 (SSoT は `package.json` + `bun.lock`)
+- 「最終更新: YYYY-MM-DD」マーカー禁止 (履歴は `git log` SSoT)
+- `.archive/` ディレクトリ再導入禁止 (削除して `git log --diff-filter=D` で辿る)
+- `docs/reference/` 再導入禁止 (library API は公式 docs を直接参照、project pattern は `.agents/skills/**` SSoT)
+- `docs/how-to/` はインフラ・デプロイ手順のみ
+
+### Frontmatter スキーマ
+
+- `.agents/skills/<name>/SKILL.md` — `name` / `description` のみ
+- `.codex/agents/*.toml` — `name` / `description` / `developer_instructions` 必須
+- `AGENTS.md` 本体 — frontmatter なし (plain markdown)
+
 ## Delivery Checklist
 
 1. 不要な後方互換コード・デッドコードを残していない。
@@ -177,4 +208,4 @@ bun run e2e
 
 - `docs/explanation/ai-instructions.md`: Codex / Claude Code の正本配置
 - `docs/explanation/content-managed-pages.md`: 固定デザイン + 型付きコンテンツ編集の方針
-- `docs/README.md`: ドキュメント全体構造（Diátaxis: explanation / how-to / reference）
+- `docs/README.md`: ドキュメント全体構造（Diátaxis: explanation / how-to）。reference 軸は公式 docs / project rules に委譲

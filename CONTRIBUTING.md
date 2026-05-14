@@ -22,7 +22,7 @@ cp .env.example .env.local
 # 必要な env var を設定: DATABASE_URL, BETTER_AUTH_SECRET, ENCRYPTION_KEY, etc.
 
 # DB マイグレーション適用 + seed
-bunx --bun prisma migrate deploy
+bunx --bun prisma migrate dev
 bun run db:seed
 
 # 開発サーバー起動
@@ -38,15 +38,17 @@ bun dev
 
 ## ブランチ戦略
 
+**Trunk-based development + continuous deployment** を採用しています。
+
 ```
-main     ← 本番反映
-develop  ← staging 反映
-feature/*, fix/*, chore/*  ← PR ベースで develop にマージ
+main                       ← 本番反映（Cloud Run へ自動 deploy）
+feature/*, fix/*, chore/*  ← PR ベースで main にマージ
 ```
 
-- `main` / `develop` への直接 push は禁止（branch protection で enforced）
-- feature ブランチは `develop` 起点で作成
+- `main` への直接 push は禁止（[`.github/branch-protection.json`](./.github/branch-protection.json) で required status checks 5 種を gate）
+- feature ブランチは `main` 起点で作成
 - **破壊的変更**は PR description に明記し CODEOWNERS レビュー必須
+- 短命 feature branch を意識（large stack を避け、merge 後即削除）
 
 ## コミット規約
 

@@ -1,0 +1,50 @@
+# Auto-detect text files; ensure LF line endings cross-platform
+* text=auto eol=lf
+
+# Documentation: enforce LF (CLAUDE.md / AGENTS.md / docs / rules / skills 一貫性)
+*.md text eol=lf
+*.mdx text eol=lf
+
+# Configuration: enforce LF (Windows ↔ Unix CRLF drift 防止)
+*.json text eol=lf
+*.json5 text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+
+# Source code: enforce LF
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.sql text eol=lf
+
+# Shell / scripts: enforce LF (Bash 実行で CRLF だと bad interpreter)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows-specific: keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary (no diff, no eol normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.pdf binary
+*.zip binary
