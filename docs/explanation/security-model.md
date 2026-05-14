@@ -1,7 +1,5 @@
 # セキュリティモデル
 
-最終更新: 2026-04-29
-
 このプロジェクトのセキュリティ設計の「なぜ」を説明する。具体的な保護対策の手順は [`../how-to/harden-protection.md`](../how-to/harden-protection.md) を参照。
 
 ## 多層防御
@@ -82,7 +80,7 @@ session: {
 }
 ```
 
-詳細チェックリストは [`../how-to/better-auth-checklist.md`](../how-to/better-auth-checklist.md) を参照。
+詳細は `.claude/rules/auth-patterns/sessions.md`（Claude Code）と `.agents/skills/auth-rbac-change/SKILL.md`（Codex）を参照。
 
 ## 入力境界の設計
 
@@ -213,7 +211,6 @@ console.log(
 ## 関連
 
 - [`../how-to/harden-protection.md`](../how-to/harden-protection.md) — Turnstile / レート制限 / Cloud Run の設定手順
-- [`../how-to/better-auth-checklist.md`](../how-to/better-auth-checklist.md) — Better Auth 公式準拠チェック
 - [`../how-to/deploy.md`](../how-to/deploy.md) — IAM / Secret Manager / デプロイ
-- `.claude/rules/security/*` — Claude Code 用の path-scoped セキュリティルール
+- `.claude/rules/auth-patterns/**` — Claude Code 用の path-scoped 認証・セキュリティルール
 - `.agents/skills/auth-rbac-change/` — Codex 用の認証変更ワークフロー

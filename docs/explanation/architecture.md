@@ -1,7 +1,5 @@
 # システムアーキテクチャ
 
-最終更新: 2026-05-08
-
 ## 概要
 
 このプロジェクトは Next.js 16 App Router を基盤にした、公開サイトと管理画面を同居させたレンタルスペース運営システムです。UI は route group 単位で完全分離し、業務ロジックは `src/shared/domain/*`、インフラは `src/shared/lib/*` / `src/shared/db/*` に閉じ込めます。
@@ -114,7 +112,7 @@ graph TB
 
 ### スクロール・演出（Lenis / GSAP）
 
-- スムーススクロールは `LenisProvider` で提供（`src/app/(public)/layout.tsx`）。GSAP・ScrollTrigger 連携は [`reference/gsap.md`](../reference/gsap.md) とページ近傍の実装を参照。
+- スムーススクロールは `LenisProvider` で提供（`src/app/(public)/layout.tsx`）。GSAP・ScrollTrigger 連携は [GSAP 公式 docs](https://gsap.com/docs/v3/) とページ近傍の実装、および Claude Code 作業時は `.claude/rules/frontend/gsap/*.md`（path-scoped で auto-load）を参照。
 - 演出コストが高い処理はページ・セクション単位で読み込みを抑える。
 
 ### Preview
