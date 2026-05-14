@@ -33,6 +33,13 @@ OKLCH 形式。Luxury White × Bronze。
 
 旧 0.62 値は `--color-accent-light` として hover / decorative 用に保持。`text-accent` 経由の text color はすべて新 0.5 を経由する設計（実例: 2026-05-13 `/spaces` `/posts` `/contact` の color-contrast 8 件解消、commit `e5938818`）。
 
+**`muted-foreground` の WCAG AA 達成ライン**:
+
+- ✅ `oklch(0.40 0.02 60)` (≈ #7a716a) — bg `oklch(0.985)` に対し contrast 5.4:1
+- ❌ `oklch(0.45 0.02 60)` (≈ #918881) — contrast 3.32、WCAG AA 不達
+
+旧 0.45 値は `<time>` 等 small text (<18pt) で axe-public-pages.spec.ts violation の root cause だった。`text-muted-foreground` 経由の secondary text は全 page で同 0.40 値を経由する（実例: 2026-05-15 `/news` archive list の color-contrast violation 解消、PR #31 commit `5895c4f6`）。shadcn/ui `--muted-foreground` の AA 達成ラインと同等。
+
 ## タイポグラフィ
 
 - Serif heading: Cormorant Garamond（欧文 Hero/H1/H2）

@@ -85,3 +85,39 @@ desktop で overlay しない split レイアウト（text が右カラム white
 ```
 
 参照実装: `_components/homepage/hero-section.tsx` の label / h1、`hero-demo/_components/variant-k-photo-overlay-landscape.tsx`
+
+---
+
+## image overlay text の axe-definitive contrast（solid scrim パターン）
+
+3 層可読性保証 (gradient scrim + paint-order + text-shadow) は visual には強力だが、axe-core が **gradient ancestor** や **image fallback bg** で `bgGradient` / `bgOverlap` incomplete を発火し、**production build で computed bg を確定取得した瞬間に violation に昇格する silent bug** がある。photo credit / image attribution 等 axe-definitive 保証が必要な editorial overlay には **solid `bg-foreground` scrim** を使う。
+
+```tsx
+// NG: text-background/80 + text-shadow → image 未 load 時に card-bg (#f6f1ed) 上で
+// contrast 1.06:1 偽陽性 flake (axe scan のタイミング次第で violation 昇格)
+<span
+  className="absolute text-[0.625rem] text-background/80"
+  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
+>
+  Photography — ...
+</span>
+
+// OK: solid bg-foreground scrim → image load 状態非依存 13.4:1 確定保証
+// (Instagram / Pinterest の image attribution / Apple HIG / Material Design 公式
+// photo overlay pattern 準拠)
+<span
+  className="absolute inline-flex items-center rounded-sm bg-foreground px-2 py-0.5
+             text-[0.625rem] uppercase tracking-[0.15em] text-background"
+>
+  Photography — ...
+</span>
+```
+
+**alpha scrim (`bg-foreground/70` 等) 不採用の理由**: axe は semi-transparent と判定して parent image を walk するため `bgGradient` incomplete を継続発火 (実測)。axe-definitive 保証には alpha = 1 の solid bg が必要。
+
+**判定基準**:
+
+- 視覚的 prominence > axe-definitive 確実性 → 3 層防御 (Hero title 等)
+- axe-definitive 確実性 > 視覚的 prominence → solid scrim (photo credit / attribution 等)
+
+実例: 2026-05-15 PR #32 で EditorialSplitHero photo credit を `text-background/80 + text-shadow` → solid `bg-foreground` に置換、CI 2 run 連続で発生していた flake を解消。
