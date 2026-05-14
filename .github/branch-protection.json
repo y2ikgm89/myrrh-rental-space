@@ -5,6 +5,7 @@
       "Dependency Audit (bun audit)",
       "Lint & Type Check",
       "Unit Tests",
+      "Smoke E2E (critical path)",
       "Build (env validation)",
       "Bundle Analysis (Turbopack)"
     ]
