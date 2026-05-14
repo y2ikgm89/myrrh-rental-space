@@ -40,8 +40,9 @@ setup("authenticate as customer", async ({ page }) => {
   await expect(devLoginButton).toBeVisible();
   await devLoginButton.click();
 
-  // /mypage への遷移を待つ（dev login action が成功すると router.push）
-  await page.waitForURL("**/mypage", { timeout: 15000 });
+  // `expect(page).toHaveURL` polling は App Router の soft / hard navigation
+  // 両方で動作する canonical pattern（→ `test-quality/e2e.md` §App Router Gotchas）。
+  await expect(page).toHaveURL(/\/mypage(\?|$|\/)/, { timeout: 15000 });
 
   // session cookie が確定したことを確認
   await expect(page.locator("main")).toBeVisible();

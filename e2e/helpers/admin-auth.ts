@@ -57,6 +57,10 @@ export async function signInAsAdmin(page: Page): Promise<void> {
   // `<DevLoginButton>`「SUPER_ADMIN でログイン」も同 page に render され、
   // partial match だと strict mode violation で fail する。
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await page.waitForURL(urls.adminDashboard, { timeout: 15000 });
+  // `expect(page).toHaveURL` polling は App Router の soft / hard navigation
+  // 両方で動作する canonical pattern（→ `test-quality/e2e.md` §App Router Gotchas）。
+  // `page.waitForURL` の default `waitUntil: "load"` は soft navigation で
+  // load event 不発火のため timeout する silent UX bug。
+  await expect(page).toHaveURL(urls.adminDashboard, { timeout: 15000 });
   await expect(page.getByRole("main")).toBeVisible();
 }
