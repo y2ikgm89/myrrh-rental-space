@@ -54,7 +54,21 @@ export default defineConfig({
     },
 
     /* ===================================================================
-     * 未認証 project: 認証フロー自体のテスト + 公開ページ smoke
+     * Smoke project: 毎 push 実行する critical-path ゲート (< 3 分)
+     * `e2e/smoke/*.smoke.spec.ts` のみを実行、未認証 / shared web server
+     * dependencies: [] (setup-customer / setup-admin 不要)
+     *
+     * 業界標準: Stripe / Vercel / Linear / Shopify の "fast PR feedback smoke" pattern。
+     * 広域 E2E (chromium project) は label opt-in、本 project のみ branch protection required。
+     * =================================================================== */
+    {
+      name: "chromium-smoke",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /e2e\/smoke\/.*\.smoke\.spec\.ts/,
+    },
+
+    /* ===================================================================
+     * 未認証 project: 認証フロー自体のテスト + 公開ページ広域カバレッジ
      * =================================================================== */
     {
       name: "chromium",
@@ -63,6 +77,7 @@ export default defineConfig({
         /e2e\/auth\/.*\.setup\.ts/,
         /e2e\/authenticated\/.*/,
         /e2e\/visual\/.*/,
+        /e2e\/smoke\/.*/,
       ],
     },
 

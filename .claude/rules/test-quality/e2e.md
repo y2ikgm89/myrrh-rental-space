@@ -9,6 +9,53 @@ paths:
 
 > 基本構造 + 認証 + 条件付き skip + path verify + 待機パターン + レスポンシブ + UI モード + Next.js App Router 互換 Gotchas。
 
+## Smoke vs 広域 E2E の責務分離（最重要）
+
+業界標準（Stripe / Vercel / Linear / Shopify）に倣い、E2E spec を 2 層に分離する:
+
+| 層            | 場所                               | trigger                                 | 目的                                                                             |
+| ------------- | ---------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------- |
+| **Smoke E2E** | `e2e/smoke/*.smoke.spec.ts`        | 毎 push（required）                     | critical path ゲート: 5xx / 404 / redirect loop / WCAG critical 違反のみ即時検出 |
+| **広域 E2E**  | `e2e/{public,authenticated,a11y}/` | PR `e2e` label opt-in                   | 機能カバレッジ・回帰検出。seed 前提でユーザーストーリーを再現                    |
+| **Visual**    | `e2e/visual/`                      | PR `visual-regression` label / dispatch | screenshot baseline 比較                                                         |
+
+### Smoke spec の規律（厳格）
+
+- **空 DB で 200 OK で描画される URL のみ対象** — 認証必須 / seed データ必須 page は smoke に含めない
+- **test 数 ≤ 10、実行時間 < 3 分** — 超過した場合は smoke の意義（fast PR feedback）が崩壊
+- **failure rate ~0% 目標** — flake / seed drift 由来の偽陽性禁止、smoke fail = 本質 regression のみ
+- **assertion は smoke level に絞る** — `expect(response.status()).toBe(200)` + `expect(page.locator("main")).toBeVisible()` + メタ要素確認程度。複雑な機能フローは広域 E2E へ
+- **seed dependency 禁止** — `test.skip(true, "データがありません")` パターン全面禁止、smoke で skip が出る spec は smoke 失格
+- **Playwright project**: `chromium-smoke`（`playwright.config.ts`）、`testMatch: /e2e\/smoke\/.*\.smoke\.spec\.ts/`
+- **CI**: workflow の `smoke-e2e` job が `bunx playwright test --project=chromium-smoke` を毎 push 実行、branch protection required status checks に含める
+
+参照実装: `e2e/smoke/homepage.smoke.spec.ts` / `auth.smoke.spec.ts` / `spaces.smoke.spec.ts` / `reservation.smoke.spec.ts` / `a11y.smoke.spec.ts`
+
+### 広域 E2E の defensive skip 禁止
+
+```typescript
+// NG: seed 状態依存の runtime skip — spec 機能不全の温床
+const articles = page.locator("article");
+if ((await articles.count()) === 0) {
+  test.skip(true, "ブログ記事が存在しません"); // ← 禁止
+  return;
+}
+
+// OK: seed.ts で固定の test fixture を用意し直接 URL で検証
+import { urls } from "../fixtures";
+test("ブログ記事詳細ページが描画される", async ({ page }) => {
+  await page.goto(`${urls.posts}/test-published-post`); // seed で必ず存在
+  await expect(page.locator("article h1")).toBeVisible();
+});
+```
+
+**判定基準**:
+
+- 「seed にデータがあれば検証する」spec は実テストとして機能していない（CI で skip だけ積み上がる）
+- 必要 seed が存在しない場合は **`prisma/seed.ts` を拡張**（dev customer に固定 reservation を seed する等）、または **unit/integration test に降格**（Zod schema / Server Action テスト）
+- 1 ファイルで 5 件以上の `test.skip(true, ...)` がある spec は削除候補
+- 監査 grep: `grep -rcE 'test\.skip\(true' e2e/ | awk -F: '{ if ($2 > 5) print }'`
+
 ## 基本構造
 
 ```typescript

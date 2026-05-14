@@ -16,11 +16,20 @@ paths:
 
 ## テスト分類
 
-| 種類        | フレームワーク | 場所                     | 用途                 |
-| ----------- | -------------- | ------------------------ | -------------------- |
-| Unit        | Bun Test       | `__tests__/unit/`        | 関数・ユーティリティ |
-| Integration | Bun Test       | `__tests__/integration/` | Server Actions・API  |
-| E2E         | Playwright     | `e2e/`                   | ユーザーフロー       |
+| 種類          | フレームワーク | 場所                               | CI trigger                              | 用途                                             |
+| ------------- | -------------- | ---------------------------------- | --------------------------------------- | ------------------------------------------------ |
+| Unit          | Bun Test       | `__tests__/unit/`                  | 毎 push（required）                     | 関数・ユーティリティ                             |
+| Integration   | Bun Test       | `__tests__/integration/`           | 毎 push（required）                     | Server Actions・API                              |
+| **Smoke E2E** | Playwright     | `e2e/smoke/*.smoke.spec.ts`        | **毎 push（required）**                 | **critical path ゲート（< 3 分、10 test 以内）** |
+| 広域 E2E      | Playwright     | `e2e/{public,authenticated,a11y}/` | PR `e2e` ラベル opt-in                  | 機能カバレッジ・回帰検出                         |
+| Visual        | Playwright     | `e2e/visual/`                      | PR `visual-regression` label / dispatch | screenshot baseline 比較                         |
+
+### Smoke vs 広域 E2E の責務分離（業界標準）
+
+Stripe / Vercel / Linear / Shopify は **"fast PR feedback smoke + heavy jobs on demand"** pattern を採用:
+
+- **Smoke**: 毎 push で 5xx / 404 / redirect loop / WCAG critical 違反のみ検出。実行時間 < 3 分、test 数 ≤ 10、failure rate ~0% 目標。**seed 依存禁止**（defensive skip 不要、空 DB でも fallback 描画される URL のみ対象）
+- **広域 E2E**: 機能カバレッジ。PR ラベル opt-in で実行コスト最適化。seed 依存可、ただし下記「defensive skip 禁止」規律に従う
 
 ## 禁止事項
 
@@ -45,6 +54,18 @@ paths:
    - `vi.restoreAllMocks()` → `mockFn.mockReset()`
    - `vi.mock()` → `mock.module()`
    - `vi.fn()` → `mock()`
+
+6. **E2E spec の defensive skip 禁止**
+   - `test.skip(true, "データがありません")` / `test.skip(true, "ボタンが見つからない")` のような **seed 状態依存の runtime skip は禁止**
+   - 必要 seed が無いなら **seed 拡充で解消**（`prisma/seed.ts` に意図的な fixture を追加）、または **spec を unit/integration に降格**（form validation の Zod schema test 等）
+   - skip 数が test 数の 30% を超える spec ファイルは「実テストとして機能していない」signal、削除候補
+   - 例外: viewport 依存（mobile only / desktop only）の意図的 skip は `test.describe.configure({ mode: "serial" })` + `test.skip(({ viewport }) => ...)` 等の **構造的 skip** で表現する
+   - 監査 grep: `grep -rcE 'test\.skip\(true' e2e/ | awk -F: '{ if ($2 > 5) print }'`（1 ファイル 5 件超は要 review）
+
+7. **Smoke spec の seed 依存禁止**
+   - `e2e/smoke/*.smoke.spec.ts` は **空 DB でも 200 OK で fallback 描画される URL のみ対象**
+   - 認証必須 page / seed データ必須 page（顧客予約履歴 / 決済済み reservation 等）は smoke では検証しない（広域 E2E 側で seed 前提でカバー）
+   - smoke の失敗は本質的な regression のみ表す契約 — flake / seed drift 起因の偽陽性禁止
 
 ## Section schema test contract（`safeParse({})` 成立 + default assert）
 
