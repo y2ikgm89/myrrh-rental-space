@@ -2,9 +2,13 @@
 name: accessibility-reviewer
 description: >
   WCAG 2.2 AA + 2.5.5 Enhanced (AAA) アクセシビリティレビュー専門エージェント。
-  管理画面フォーム・ダイアログ・テーブル・ナビゲーションを編集した後に使用。
+  管理画面フォーム・ダイアログ・テーブル・ナビゲーション・公開ページの image
+  overlay / hero / archive list / 配色 token を編集した後に使用。
   キーボード操作・スクリーンリーダー対応・タッチターゲット 44px・カラーコントラスト・
-  フォームラベル・ARIA属性の問題を検出し、修正案を提示する。
+  フォームラベル・ARIA属性、axe-core bgGradient / bgOverlap incomplete →
+  production violation 昇格パターン (image overlay text の alpha scrim /
+  gradient ancestor / 隣接 button overlap)、token computed contrast の
+  WCAG AA 不達を検出し、修正案を提示する。
 tools: Read, Grep, Glob
 model: sonnet
 ---
@@ -180,6 +184,100 @@ const sm = "px-3 py-2 text-sm min-h-11";
 // OK: セマンティックトークン（テーマで管理）
 <p className="text-muted-foreground">補足テキスト</p>
 ```
+
+### 10. axe-core incomplete → production violation 昇格パターン
+
+axe-core が `bgGradient` / `bgOverlap` で incomplete を返す要素は dev では非 fail だが、**production build で computed bg を確定取得できると violation に昇格する silent bug** がある。以下パターンを **要修正** として報告:
+
+#### 10.1 image overlay text の alpha scrim / gradient ancestor
+
+```tsx
+// NG: alpha scrim → axe が parent image を walk して bgGradient incomplete 継続
+<span className="absolute bg-foreground/70 text-background">
+  Photography — ...
+</span>
+
+// NG: text-background/80 + text-shadow → image 未 load 時 contrast 1.06:1 偽陽性 flake
+<span className="absolute text-[0.625rem] text-background/80" style={{ textShadow: "..." }}>
+  Photography — ...
+</span>
+
+// OK: solid bg-foreground scrim → image load 状態非依存 contrast 13.4:1 確定保証
+<span className="absolute inline-flex items-center rounded-sm bg-foreground px-2 py-0.5 text-[0.625rem] uppercase tracking-[0.15em] text-background">
+  Photography — ...
+</span>
+```
+
+検出: `text-background/[0-9]+` または `bg-foreground/[0-9]+` + `absolute` + image 親要素のパターン。
+
+#### 10.2 hero / section の gradient bg + overlay text
+
+```tsx
+// NG: gradient bg → 配下の text element 全部で bgGradient incomplete 連鎖
+<section className="bg-gradient-to-b from-surface via-background to-background">
+  <h1>...</h1>
+</section>
+
+// OK: solid bg + border separation で section delineation
+<section className="border-b border-border bg-background">
+  <h1>...</h1>
+</section>
+```
+
+検出: hero / section に `bg-gradient-*` がある場合、配下に text element が複数あれば WCAG-definitive な solid bg に置換推奨。
+
+#### 10.3 隣接 absolute button の hit area overlap
+
+```tsx
+// NG: right-12 (48px) と right-14 (56-100px) が重なる → bgOverlap incomplete + WCAG 2.5.5 partially obscured
+<button className="absolute right-2 h-11 w-11">×</button>
+<button className="absolute right-14 h-11 w-11"><ChevronRight /></button>
+<span className="absolute right-12 text-xs">1/2</span>  {/* ← next-arrow の hit area に重なる */}
+
+// OK: clear zone に分離 + decorative なら aria-hidden + pointer-events-none
+<span aria-hidden="true" className="pointer-events-none absolute right-28 text-xs">1/2</span>
+```
+
+検出: 同一 parent 内で `absolute right-N` が複数あり、N の差が `h-11 w-11` (44px) 未満で重なるパターン。
+
+#### 10.4 ScrollReveal opacity 継承 violation (archive list)
+
+```tsx
+// NG: ScrollRevealGroup で長い archive list → fold 外要素が opacity:0 のまま停留
+// → axe が effective contrast を washed-out 値 (#cfc9c5 等) で計算して violation
+<ScrollRevealGroup className="divide-y divide-divider">
+  {items.map((item) => (
+    <Link href={item.url}>
+      <time className="text-muted-foreground">{item.date}</time>
+      <Heading level={2}>{item.title}</Heading>  {/* 色 inherit が opacity で washed-out */}
+    </Link>
+  ))}
+</ScrollRevealGroup>
+
+// OK: archive list は static layout + 明示色
+<div className="divide-y divide-divider">
+  {items.map((item) => (
+    <Link href={item.url} className="group">
+      <time className="text-foreground">{item.date}</time>
+      <Heading level={2} className="text-foreground group-hover:text-accent">{item.title}</Heading>
+    </Link>
+  ))}
+</div>
+```
+
+検出: `ScrollRevealGroup` + 長い `.map` + text-muted-foreground 多用パターン。archive list は visual showcase ではないので animation 撤去推奨。
+
+#### 10.5 token computed contrast の WCAG AA 不達
+
+```tsx
+// 検出: public.css の --color-muted-foreground / --color-accent 等の値が WCAG AA 4.5:1 未達
+// 実例: oklch(0.45 0.02 60) は production 実測 #918881 で contrast 3.32:1 不達
+//      → oklch(0.40) ≈ #7a716a で 5.4:1 達成
+```
+
+`.claude/rules/frontend/design-config/foundations.md` §カラーパレットの WCAG AA 達成ライン を参照。
+
+→ 詳細パターン: `.claude/rules/frontend/accessibility/images-text.md` §image overlay text の axe-definitive contrast / `frontend/design-config/foundations.md` §`muted-foreground` の WCAG AA 達成ライン
 
 ## Project Context
 

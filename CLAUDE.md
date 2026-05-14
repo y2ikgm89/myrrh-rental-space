@@ -78,7 +78,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **全 interactive 要素は WCAG 2.5.5 Enhanced (AAA) 準拠 44×44 CSS px 必須** — Button 全 size で `min-h-11` 以上、checkbox/radio は wrapper で 44px ヒットエリア確保
 - **カードグリッドは Container Queries、マクロレイアウトは viewport breakpoint** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。管理 dashboard は named container `@container/main`
 - **arbitrary sizing は @theme token で参照** — `--hero-min-height(-lg|-xl)` / `--modal-max-height` / `--prose-narrow|medium` 等。3 回以上使用で @theme 昇格
-- **ハードコードカラー禁止 / `text-[10px]` 禁止 / 画像 overlay 12px 以上** — セマンティックトークン + WCAG 文字サイズ最小値（→ `frontend/accessibility/touch-text.md` / `images-text.md`）
+- **ハードコードカラー禁止 / `text-[10px]` 禁止 / 画像 overlay 12px 以上 + axe-core 検証対象は solid scrim 必須** — alpha scrim は parent walk で `bgGradient` incomplete → production violation 昇格 silent bug（→ `frontend/accessibility/touch-text.md` / `images-text.md`）
 - **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須**
 - **`loading.tsx` は実 UI レイアウト反映必須 / spinner-only 禁止** — `Skeleton` primitive 経由（`@/public/components/design-system/skeleton` / `@/admin/components/ui`）、admin form/editor/detail は `FormLoading` / `EditorLoading` / `DetailLoading` SSoT を 1 行 re-export（→ `frontend/loading-skeleton.md`）
 - **Multiple Root Layouts で `app/not-found.tsx` 禁止** — `app/global-not-found.tsx` + `experimental.globalNotFound: true`

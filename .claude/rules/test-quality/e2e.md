@@ -31,6 +31,21 @@ paths:
 
 参照実装: `e2e/smoke/homepage.smoke.spec.ts` / `auth.smoke.spec.ts` / `spaces.smoke.spec.ts` / `reservation.smoke.spec.ts` / `a11y.smoke.spec.ts`
 
+### 公開ページ UI 編集後の a11y 事前検証（broad E2E flake 予防）
+
+公開ページ (`src/app/(public*)/**`) の hero / image overlay / archive list / 配色 token (`public.css` の `--color-*`) を編集した後は、commit 前に **`audit-a11y` skill** で Playwright MCP axe-core 実機検証を推奨。
+
+**理由**: CI 広域 E2E は **opt-in** (`e2e` label、1h20m+) のため、a11y violation が main merge 後の別 PR でしか発覚しないリスクがある。`audit-a11y` は dev server に対し axe-core scan + incomplete 検出 (production violation 昇格リスク判定) + HMR fresh fetch 検証を 1 セッションで実行する canonical workflow。
+
+**典型的な未然発見可能 flake**:
+
+- `bgGradient` incomplete (hero gradient bg + 配下 text element) → production で violation 昇格
+- `bgOverlap` incomplete (隣接 absolute button hit area 重なり)
+- `bgImage` incomplete (image overlay text の alpha scrim / image load timing 偽陽性)
+- token computed contrast の WCAG AA 不達 (`--color-muted-foreground` / `--color-accent` の oklch 値)
+
+実例: 2026-05-15 PR #31/#32 で photo credit flake (1.06:1) / muted-foreground WCAG 不達 (3.32:1) / hero gradient bgGradient incomplete を編集セッション内で発見できず、main merge 後に別 PR で対応した反省から導入。詳細は `.claude/skills/audit-a11y/SKILL.md`、検出パターンの canonical fix は `.claude/rules/frontend/accessibility/images-text.md` §image overlay text の axe-definitive contrast / `frontend/design-config/foundations.md` §カラーパレット (WCAG AA 達成ライン)。
+
 ### 広域 E2E の defensive skip 禁止
 
 ```typescript
