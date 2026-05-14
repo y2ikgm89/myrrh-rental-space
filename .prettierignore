@@ -5,5 +5,3 @@ build/
 node_modules/
 bun.lock
 .worktrees/
-docs/reference/codex-rules/admin-inline-editor-patterns.md
-docs/reference/codex-rules/lexical-patterns.md

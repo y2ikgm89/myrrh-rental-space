@@ -332,9 +332,9 @@ function LexicalInvalidContentJsonNotice() {
           </code>{" "}
           を渡してください。DB に古い形式が残る場合は{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-foreground">
-            docs/how-to/fix-legacy-lexical-rows.md
+            .claude/rules/prisma-patterns/lexical-storage.md
           </code>{" "}
-          を参照してください。
+          §レガシー行の一括修正 を参照してください。
         </p>
       </div>
     </div>

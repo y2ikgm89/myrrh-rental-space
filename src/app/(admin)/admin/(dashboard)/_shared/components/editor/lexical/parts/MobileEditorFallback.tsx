@@ -52,9 +52,9 @@ export function MobileEditorFallback({
             </code>{" "}
             を渡すか、{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-foreground">
-              docs/how-to/fix-legacy-lexical-rows.md
+              .claude/rules/prisma-patterns/lexical-storage.md
             </code>{" "}
-            に従ってデータを修正してください。
+            §レガシー行の一括修正 に従ってデータを修正してください。
           </p>
         </div>
       ) : previewHtml ? (
