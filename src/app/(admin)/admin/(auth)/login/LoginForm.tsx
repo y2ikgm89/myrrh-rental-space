@@ -86,13 +86,18 @@ export function LoginForm(): ReactElement {
     const { email: validatedEmail, password: validatedPassword } =
       parsedCredentials.data;
 
-    // Better Auth 公式推奨: fetchOptions.onSuccess / onError でハンドリング。
-    // result.error のみでは HTTP 429 等が Promise サイレントに処理されてしまう。
+    // Better Auth 公式推奨: `callbackURL` で hard navigation + `fetchOptions.onSuccess`
+    // で副作用（localStorage 保存）。`router.push` ベースの soft navigation は
+    // App Router で `load` event を発火せず、Playwright `page.waitForURL` が timeout
+    // する silent bug を起こす（→ `test-quality/e2e.md` §App Router soft navigation Gotcha）。
+    // `callbackURL` 指定で Better Auth が Set-Cookie + Location header の hard redirect
+    // を発行し、Router Cache + server session が自動同期される。
     // https://better-auth.com/docs/concepts/client#error-handling
     try {
       await signIn.email({
         email: validatedEmail,
         password: validatedPassword,
+        callbackURL: "/admin",
         fetchOptions: {
           onSuccess: () => {
             if (rememberMe) {
@@ -100,7 +105,8 @@ export function LoginForm(): ReactElement {
             } else {
               localStorage.removeItem(STORAGE_KEY);
             }
-            router.push("/admin");
+            // `callbackURL` が hard navigation で /admin に redirect する。
+            // Router Cache 同期のため refresh のみ残す（push は callbackURL に委譲）。
             router.refresh();
           },
           onError: (ctx) => {
