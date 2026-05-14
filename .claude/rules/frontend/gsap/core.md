@@ -56,7 +56,7 @@ paths:
 | `@/public/components/animations/parallax-image.tsx`      | scrub パララックス画像（パターン A-1 の実装例）                              |
 | `@/public/components/animations/magnetic-button.tsx`     | マウス追従マグネットボタン（パターン C の実装例）                            |
 
-> **詳細リファレンス**: `docs/reference/gsap.md`
+> **公式 GSAP リファレンス**: [gsap.com/docs/v3](https://gsap.com/docs/v3/) / [ScrollTrigger](https://gsap.com/docs/v3/Plugins/ScrollTrigger/) / [Accessibility](https://gsap.com/resources/a11y)
 
 ## Gotchas
 

@@ -113,9 +113,9 @@ paths:
 
 - **50+ 行・複数 describe block の範囲削除は Edit tool より Python regex.sub が信頼性高い** — Edit は old_string の正確マッチを要求。`python3 -c "import re; ...; pattern = re.compile(r'<start_marker>.*?<end_marker>', re.DOTALL); new_text, count = pattern.subn('', text); ..."` で範囲指定削除する方が安全 + 1 回で済む。判定基準: ① 削除範囲が 50 行超 ② 開始・終了の独自 marker あり ③ 単一 file 単一 block
 
-## plan archive
+## plan cleanup
 
-- **完了済み plan / spec は `docs/superpowers/{plans,specs}/.archive/<year>/` 配下に保管** — 各 archive file 冒頭に `> **Snapshot: YYYY-MM-DD** — Implementation completed, archived as historical reference.` 追記。判定: ① plan 内 commit SHA が main で実在 ② plan の最終 task 完了済 ③ 実装が main に存在
+- **完了済み plan / spec は削除する** — `docs/superpowers/{plans,specs}/` 配下から該当 file を削除し、履歴は `git log --all --diff-filter=D -- docs/superpowers/<plans|specs>/<file>` で辿る。`.archive/` ディレクトリは廃止済（git history を SSoT とする方針）。判定: ① plan 内 commit SHA が main で実在 ② plan の最終 task 完了済 ③ 実装が main に存在
 
 ## Section + Variant SC dispatcher パターン
 

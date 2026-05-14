@@ -232,4 +232,4 @@ describe("commandName", () => {
 3. subagent への dispatch prompt に「schema 側変更禁止 / fixture 側のみ追従」を明記
 4. 完了後 controller が `git diff --stat` で全 file 修正の実在検証 + `bun run test:unit` 再走で 0 fail 確認
 
-詳細は `.claude/rules/ops/ci-workflow.md` §6 Test job は per-file isolation 必須 + `subagent-dispatch-template` SKILL を参照。
+詳細は `.claude/rules/ops/ci-workflow.md` §5 Test job は per-file isolation 必須 + `subagent-dispatch-template` SKILL を参照。

@@ -80,4 +80,3 @@ paths:
 - `(public*)/_shared/components/animations/` — SplitText, ParallaxImage, MagneticButton, ScrollReveal
 - `.claude/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル
 - `.claude/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
-- `docs/reference/micro-interactions.md` — マイクロインタラクション標準
