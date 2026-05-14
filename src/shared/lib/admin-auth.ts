@@ -89,6 +89,13 @@ async function logAuthEvent(
 const appUrl = serverEnv.BETTER_AUTH_URL ?? getAppUrl();
 
 function createAdminAuth() {
+  // CI E2E (production build + http://localhost) で Better Auth が cookie に
+  // `Secure` flag を強制付与すると、HTTPS でない localhost に cookie が set されず
+  // session 確立失敗 → /admin navigation timeout の silent UX bug。
+  // `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` の opt-in 環境でのみ secure cookie を無効化する
+  // （staging / production には build env 不在のため絶対伝播しない）。
+  const isE2EOptIn = process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1";
+
   return betterAuth({
     baseURL: appUrl,
     database: createBetterAuthDatabaseAdapter(),
@@ -98,6 +105,7 @@ function createAdminAuth() {
         // DB スキーマが @db.Uuid のため、全モデルで UUID を生成
         generateId: "uuid",
       },
+      ...(isE2EOptIn && { useSecureCookies: false }),
     },
     session: {
       expiresIn: SESSION_CONFIG.expiresIn,

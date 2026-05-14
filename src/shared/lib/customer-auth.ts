@@ -55,6 +55,13 @@ function createCustomerAuth() {
       : {}),
   };
 
+  // CI E2E (production build + http://localhost) で Better Auth が cookie に
+  // `Secure` flag を強制付与すると、HTTPS でない localhost に cookie が set されず
+  // session 確立失敗 → /mypage navigation timeout の silent UX bug を引き起こす。
+  // `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` の opt-in 環境でのみ secure cookie を無効化する
+  // （staging / production には build env 不在のため絶対伝播しない）。
+  const isE2EOptIn = process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1";
+
   return betterAuth({
     baseURL: appUrl,
     basePath: "/api/customer-auth",
@@ -64,6 +71,7 @@ function createCustomerAuth() {
         generateId: "uuid",
       },
       cookiePrefix: "customer-auth",
+      ...(isE2EOptIn && { useSecureCookies: false }),
     },
     session: {
       expiresIn: SESSION_CONFIG.expiresIn,
@@ -74,10 +82,10 @@ function createCustomerAuth() {
       },
     },
     emailAndPassword: {
-      // 開発環境のみ有効（dev-login-action 用）
-      // staging で `NODE_ENV=production` 設定時にも誤って enable しないよう、
-      // 明示的に `=== "development"` を採用（`!== "production"` は staging で true になり得る）
-      enabled: serverEnv.NODE_ENV === "development",
+      // 開発環境 + CI E2E opt-in（dev-login-action 用）。
+      // staging / production には build env 不在で false 評価される。
+      // `=== "development"` を採用して staging の `NODE_ENV=production` 誤検知を防ぐ。
+      enabled: serverEnv.NODE_ENV === "development" || isE2EOptIn,
     },
     ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
     account: {
