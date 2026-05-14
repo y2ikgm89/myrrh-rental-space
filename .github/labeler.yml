@@ -119,8 +119,8 @@ documentation:
           - "docs/**"
           - "CLAUDE.md"
           - "README.md"
-          - "CONTRIBUTING.md"
-          - "SECURITY.md"
+          - ".github/CONTRIBUTING.md"
+          - ".github/SECURITY.md"
           - "CHANGELOG.md"
 
 claude-rules:
@@ -137,7 +137,7 @@ claude-rules:
 security:
   - changed-files:
       - any-glob-to-any-file:
-          - "SECURITY.md"
+          - ".github/SECURITY.md"
           - "src/shared/lib/crypto.ts"
           - "src/proxy.ts"
           - "src/shared/lib/env/**"

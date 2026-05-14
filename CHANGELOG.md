@@ -31,4 +31,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
 - [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
 - [`docs/`](./docs/) — Diátaxis 構成のドキュメント
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — コミット規約詳細
+- [`.github/CONTRIBUTING.md`](./.github/CONTRIBUTING.md) — コミット規約詳細

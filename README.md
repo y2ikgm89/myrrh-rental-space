@@ -144,8 +144,8 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 
 - [`AGENTS.md`](./AGENTS.md) — Codex 向けプロジェクト指示
 - [`CLAUDE.md`](./CLAUDE.md) — Claude Code 向けプロジェクト指示
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
-- [`SECURITY.md`](./SECURITY.md) — 脆弱性報告 policy・対応 SLA
+- [`.github/CONTRIBUTING.md`](./.github/CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
+- [`.github/SECURITY.md`](./.github/SECURITY.md) — 脆弱性報告 policy・対応 SLA
 - [`docs/`](./docs/) — Diátaxis 構成のドキュメント（`explanation/` 設計・なぜ / `how-to/` 手順）。ライブラリ API は公式 docs を直接参照
 - [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md) — Codex / Claude Code 正本配置
 
