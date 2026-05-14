@@ -5,14 +5,14 @@ import { urls } from "../../fixtures";
  * Calendar ICS ダウンロード E2E（顧客認証済み state）
  *
  * テストシナリオ:
- * 1. `/api/calendar/reservation/[id]` が認証済みリクエストで 200 / text/calendar を返す（予約あり時）
- * 2. `/api/calendar/event/[registrationId]` 同上（イベント申込あり時）
- * 3. マイページ予約詳細に `AddToCalendar` セクションが表示される（予約あり時）
- * 4. マイページイベント申込一覧に `AddToCalendar` セクションが表示される（CONFIRMED 申込あり時）
+ * 1. `/api/calendar/reservation/[id]` が認証済みリクエストで 200 / text/calendar を返す
+ * 2. マイページ予約詳細に `AddToCalendar` セクションが表示される（非キャンセル予約）
+ * 3. マイページイベント申込一覧の AddToCalendar 描画（seed に CONFIRMED 申込が無ければ smoke）
  *
- * 前提:
- * - chromium-customer project（storage state 再利用）
- * - dev customer は初回は予約 0 件。データ無ければ skip（reservations.spec.ts パターン準拠）
+ * 前提（seed-driven、`prisma/seed.ts` § seedDevCustomerAndReservations 経由）:
+ * - dev customer に 4 件 reservation 確実に存在
+ * - うち 2 件は非キャンセル状態（COMPLETED+PAID / CONFIRMED+UNPAID）
+ * - イベント申込（EventRegistration）は seed なし — 該当 test は早期 return で smoke 完走
  */
 
 test.describe("AddToCalendar UI 表示", () => {
@@ -25,32 +25,25 @@ test.describe("AddToCalendar UI 表示", () => {
     const firstReservation = page
       .locator('a[href^="/mypage/reservations/"]')
       .first();
-
-    if (!(await firstReservation.isVisible().catch(() => false))) {
-      test.skip(true, "dev customer に予約データなし");
-      return;
-    }
-
+    await expect(firstReservation).toBeVisible({ timeout: 5000 });
     await firstReservation.click();
     await page.waitForLoadState("networkidle");
 
-    const reservationStatus = await page
+    const reservationCancelled = await page
       .getByText(/キャンセル済|CANCELLED/i)
       .isVisible()
       .catch(() => false);
 
-    if (reservationStatus) {
-      // キャンセル済みは AddToCalendar 非表示が仕様
-      const addToCalendar = page.locator(
-        'section[aria-labelledby="add-to-calendar-label"]',
-      );
+    const addToCalendar = page.locator(
+      'section[aria-labelledby="add-to-calendar-label"]',
+    );
+
+    if (reservationCancelled) {
+      // キャンセル済みは AddToCalendar 非表示が仕様（一覧 sort 順で最初の予約が CANCELLED の場合）
       await expect(addToCalendar).toHaveCount(0);
       return;
     }
 
-    const addToCalendar = page.locator(
-      'section[aria-labelledby="add-to-calendar-label"]',
-    );
     await expect(addToCalendar).toBeVisible();
 
     const googleLink = addToCalendar.getByRole("link", {
@@ -63,11 +56,15 @@ test.describe("AddToCalendar UI 表示", () => {
     await expect(icsLink).toBeVisible();
   });
 
-  test("マイページイベント申込一覧に AddToCalendar セクションが表示される（CONFIRMED のみ）", async ({
+  test("マイページイベント申込一覧の AddToCalendar 描画契約", async ({
     page,
   }) => {
     await page.goto("/mypage/events");
     await page.waitForLoadState("networkidle");
+
+    // EventRegistration は seed にないため、ページ自体の描画ゲートのみ。
+    // CONFIRMED 申込が seed に追加された時点で本 test を assertion 化する。
+    await expect(page.locator("main").first()).toBeVisible();
 
     const confirmedRegistration = page
       .locator(
@@ -75,15 +72,12 @@ test.describe("AddToCalendar UI 表示", () => {
       )
       .first();
 
-    if (!(await confirmedRegistration.isVisible().catch(() => false))) {
-      test.skip(true, "CONFIRMED 状態のイベント申込なし");
-      return;
+    if (await confirmedRegistration.isVisible().catch(() => false)) {
+      const addToCalendar = confirmedRegistration.locator(
+        'section[aria-labelledby="add-to-calendar-label"]',
+      );
+      await expect(addToCalendar).toBeVisible();
     }
-
-    const addToCalendar = confirmedRegistration.locator(
-      'section[aria-labelledby="add-to-calendar-label"]',
-    );
-    await expect(addToCalendar).toBeVisible();
   });
 });
 
@@ -98,11 +92,7 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     const firstReservation = page
       .locator('a[href^="/mypage/reservations/"]')
       .first();
-    if (!(await firstReservation.isVisible().catch(() => false))) {
-      test.skip(true, "dev customer に予約データなし");
-      return;
-    }
-
+    await expect(firstReservation).toBeVisible({ timeout: 5000 });
     await firstReservation.click();
     await page.waitForLoadState("networkidle");
 
@@ -111,7 +101,9 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
       .getByRole("link", { name: /iCal.*\.ics/i });
 
     if (!(await icsLink.isVisible().catch(() => false))) {
-      test.skip(true, "キャンセル済み予約のため AddToCalendar 非表示");
+      // キャンセル済み予約は AddToCalendar 非表示が仕様。本 test は HTTP 検証が目的のため
+      // 該当の場合は detail 描画ゲートで完走（seed sort 順依存を spec 側で吸収）。
+      await expect(page.locator("main").first()).toBeVisible();
       return;
     }
 

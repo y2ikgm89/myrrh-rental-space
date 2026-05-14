@@ -53,7 +53,10 @@ export async function signInAsAdmin(page: Page): Promise<void> {
   await gotoAdminLogin(page);
   await page.locator("input#email").fill(adminCredentials.email);
   await page.locator("input#password").fill(adminCredentials.password);
-  await page.getByRole("button", { name: "ログイン" }).click();
+  // `exact: true` 必須 — `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` 環境 (CI / dev) では
+  // `<DevLoginButton>`「SUPER_ADMIN でログイン」も同 page に render され、
+  // partial match だと strict mode violation で fail する。
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await page.waitForURL(urls.adminDashboard, { timeout: 15000 });
   await expect(page.getByRole("main")).toBeVisible();
 }
