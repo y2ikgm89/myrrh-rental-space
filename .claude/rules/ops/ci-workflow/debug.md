@@ -101,9 +101,12 @@ grep -rnE "contains\(github\.event\.pull_request\.labels\.\*\.name" .github/work
 # NEXT_PUBLIC_BASE_URL が workflow-global env にあるか
 grep -n 'NEXT_PUBLIC_BASE_URL' .github/workflows/ci.yml | head -3
 
-# 旧 major version 残存確認（全 7 種類 + 全 workflow file）
-grep -rnE 'uses: (actions/(checkout|upload-artifact|cache|dependency-review-action|labeler|stale)|peter-evans/create-pull-request)@v[0-9]+' .github/workflows/ \
-  | grep -vE 'checkout@v6|upload-artifact@v7|cache@v5|dependency-review-action@v5|labeler@v6|stale@v10|create-pull-request@v8'
+# 旧 major version 残存確認（全 6 種類 + 全 workflow file）
+grep -rnE 'uses: (actions/(checkout|upload-artifact|cache|labeler|stale)|peter-evans/create-pull-request)@v[0-9]+' .github/workflows/ \
+  | grep -vE 'checkout@v6|upload-artifact@v7|cache@v5|labeler@v6|stale@v10|create-pull-request@v8'
+
+# dependency-review-action 残存確認（採用禁止: ci-workflow.md §10 参照、ゼロ件が正常）
+grep -rn 'dependency-review-action' .github/workflows/ 2>/dev/null && echo "DRIFT: dependency-review-action 採用禁止"
 ```
 
 ## bash glob 展開規律（Actions step 内）
