@@ -2,13 +2,11 @@
 
 ## Supported Versions
 
-このプロジェクトは **main / develop** ブランチのみがセキュリティサポート対象です。
-リリースタグを使った固定バージョン運用は行っていません。
+このプロジェクトは **trunk-based development + continuous deployment** を採用しており、`main` ブランチの最新コミットのみがセキュリティサポート対象です。リリースタグを使った固定バージョン運用は行っていません。
 
 | Branch                       | Supported |
 | ---------------------------- | :-------: |
 | main                         |    ✅     |
-| develop                      |    ✅     |
 | その他 feature / PR branches |    ❌     |
 
 ## 脆弱性の報告方法
@@ -22,7 +20,7 @@
 2. 詳細（再現手順・影響範囲・PoC）を記入
 3. Coordinated disclosure に沿って修正後に公開
 
-GitHub 公式ガイド: https://docs.github.com/en/code-security/security-advisories
+GitHub 公式ガイド: <https://docs.github.com/en/code-security/security-advisories>
 
 ### 報告に含めるべき情報
 
@@ -46,8 +44,9 @@ GitHub 公式ガイド: https://docs.github.com/en/code-security/security-adviso
 本プロジェクトでは以下の自動化を運用しています:
 
 - **Renovate**: `.github/renovate.json5` で package grouping + auto-merge patch + 脆弱性即時更新
-- **CodeQL**: `.github/workflows/codeql.yml` で PR + 週次 full scan（security-extended）
-- **bun audit**: `.github/workflows/ci.yml` の `dependency-audit` job で毎 PR 実行
+- **CodeQL**: GitHub Code Scanning **Default setup**（Repo Settings → Security → Code scanning）で有効化。`default` query suite (OWASP Top 10 含む) を runner / クエリ自動更新で常時実行。`.github/workflows/codeql.yml` は **意図的に未配置**（Advanced setup の手動メンテは drift 源、`.claude/rules/ops/ci-workflow.md` §4 参照）
+- **Dependency Review**: `.github/workflows/dependency-review.yml` で PR 時に脆弱な依存追加をブロック
+- **bun audit**: `.github/workflows/ci.yml` の `Dependency Audit (bun audit)` job で毎 PR 実行（`--prod --severity=high`）
 - **Better Auth**: 認証・セッション管理を外部ライブラリで委譲
 - **Turnstile**: 全公開フォームに Cloudflare Turnstile CAPTCHA
 - **CSP nonce**: `src/proxy.ts` でリクエストごと nonce 生成

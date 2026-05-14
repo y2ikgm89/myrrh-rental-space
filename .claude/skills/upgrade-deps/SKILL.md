@@ -1,6 +1,7 @@
 ---
 name: upgrade-deps
 description: 依存関係のアップグレード。bun outdated で確認 → semver 範囲内更新 → メジャー/マイナーアップグレード → validate → lint エラー修正 → build 検証の一連フロー。「依存関係を更新して」「パッケージをアップグレードして」場面で使用。
+when_to_use: 「依存関係を更新して」「パッケージをアップグレードして」「最新化して」と依頼されたとき。
 paths:
   - package.json
   - bun.lock

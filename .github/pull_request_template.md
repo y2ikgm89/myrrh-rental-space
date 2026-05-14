@@ -19,7 +19,7 @@
 
 ## 関連 Issue / Plan
 
-<!-- Closes #123 / docs/plans/YYYY-MM-DD-*.md -->
+<!-- Closes #123 / docs/superpowers/plans/YYYY-MM-DD-*.md -->
 
 ## 実装詳細
 

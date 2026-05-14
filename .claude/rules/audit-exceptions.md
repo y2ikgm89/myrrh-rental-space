@@ -21,7 +21,6 @@ paths:
 grep `(legacy|Legacy|//.*旧|//.*互換|@deprecated)` で hit するが**違反として報告しない**パターン:
 
 - `reEncryptLegacyOAuthToken` / `legacy plaintext token` (`shared/domain/auth/`) — Better Auth at-rest encryption migration helper（`auth-patterns.md` §OAuth token encryption）
-- `fix-legacy-lexical-rows.md` への docs ref — docs filename 自体が legacy 命名で削除不可
 - `legacy データ` / `legacy object format` — defensive parser の historical data 自己修復 transform
 - `S3 互換 API` (`env/server.ts`) — Cloudflare R2 機能説明
 - `React Compiler 互換` / `FieldValues と互換` / `直接互換` — 設計説明

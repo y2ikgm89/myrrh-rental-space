@@ -59,4 +59,6 @@ paths:
 
 ## 参考
 
-> **詳細リファレンス（モック詳細実装・Bun ランタイム API）**: `docs/reference/bun-test.md`
+- [Bun Test 公式](https://bun.com/docs/cli/test) — モック / アサーション / Bun ランタイム固有 API
+- `.claude/rules/bun-patterns/mocking.md` — mock.module / spyOn / live binding
+- `.claude/rules/bun-patterns/test-runner.md` — per-file isolation runner / DOM / Symbol.dispose

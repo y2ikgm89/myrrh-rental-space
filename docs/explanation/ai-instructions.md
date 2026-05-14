@@ -1,7 +1,5 @@
 # AI Agent Instructions
 
-最終更新: 2026-05-08
-
 このリポジトリは Codex / Claude Code の 2 つの AI エージェントを併用する。両者の正本は完全に分離し、一方を他方にミラーしない。後方互換のための同期スクリプトや mirror 用 CI job は持たない。
 
 ## Codex の正本
@@ -59,13 +57,15 @@ Claude Code 公式の配置 (`code.claude.com/docs/en/{memory,sub-agents,skills,
 
 両 AI から参照する非エージェント専用ドキュメントは `docs/` に集約する。AI 専用ディレクトリ名（`claude-rules` のような別名）は使わない。
 
-| パス                | 内容                             |
-| ------------------- | -------------------------------- |
-| `docs/explanation/` | 設計の「なぜ」                   |
-| `docs/how-to/`      | 手順                             |
-| `docs/reference/`   | API・ランタイムの事実記述        |
-| `docs/superpowers/` | plan / spec ドラフト・アーカイブ |
-| `docs/templates/`   | doc / plan の雛形                |
+| パス                | 内容                       |
+| ------------------- | -------------------------- |
+| `docs/explanation/` | 設計の「なぜ」             |
+| `docs/how-to/`      | 手順                       |
+| `docs/guides/`      | 機能セットアップ運用ガイド |
+| `docs/superpowers/` | plan / spec ドラフト       |
+| `docs/templates/`   | doc / plan の雛形          |
+
+ライブラリ API リファレンス（GSAP / React / Bun 等）は公式 docs を直接参照する。プロジェクト固有のパターン・規約は `.claude/rules/**`（Claude Code）/ `.agents/skills/**`（Codex）が SSoT。
 
 ## 相互参照禁止のルール
 
@@ -74,7 +74,7 @@ Claude Code 公式の配置 (`code.claude.com/docs/en/{memory,sub-agents,skills,
 - `.claude/rules` と Codex 資産を同期しない
 - Codex 用 skill を `.claude/skills` へ置かない
 - Codex 用 agent を `.claude/agents` へ置かない
-- どちらの AI からも参照する内容は `docs/reference/` または `docs/explanation/` に置く
+- どちらの AI からも参照する project 共通内容は `docs/explanation/` または `docs/how-to/` / `docs/guides/` に置く
 
 ## メンテナンス基準
 

@@ -1,6 +1,7 @@
 ---
 name: frontend-design
 description: 公開ページの新規 UI や大幅なリデザイン前に使う。ブランド、anti-AI、再利用方針を短い design brief に落としてから実装する。
+when_to_use: 公開ページの新規 UI 追加・大幅リデザイン・配色やタイポグラフィの方針変更の前に。実装着手前の brief 整理が目的。
 paths:
   - src/app/(public)/**/*.tsx
   - src/app/(public)/**/*.css
@@ -90,7 +91,7 @@ Design Brief 作成時にレスポンシブ挙動を決める場合、**Containe
 - `src/app/(public)/layout.tsx` に新しい effect provider や scroll provider を直接積まない
 - **nuqs 以外**の URL state 用 Context を public root に足さない。既存の **`NuqsAdapter`**（nuqs）は維持前提（二重ラップも禁止）。`.claude/rules/nuqs-patterns.md`
 - 公開 UI のために `@/shared/db/prisma` や新規 `public/_shared/actions` を足さない
-- 履歴資料の `docs/superpowers/plans/.archive/*` を現行ルールとして引用しない
+- 完了済み plan（`git log --all --diff-filter=D -- docs/superpowers/plans/<file>` で辿れる削除済 file）を現行ルールとして引用しない
 - 永続化が必要な判断を hidden state に置かず、ドキュメントに残す
 
 ## Done

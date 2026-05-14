@@ -14,7 +14,7 @@ paths:
 > - **Outer/Inner Component Split + thin dispatcher 削除 + useReducer + startTransition + form.getValues 非リアクティブ** — `react/hooks/component-and-state.md`
 > - **useSyncExternalStore + 楽観的 local state + signature-based dismissable persistence** — `react/hooks/external-store.md`
 
-> **詳細リファレンス（React 19.2 新 API / Compiler 制限事項）**: `docs/reference/react-api.md`
+> **公式 React 19.2 API**: [react.dev](https://react.dev/) / [React 19 Release](https://react.dev/blog/2024/12/05/react-19) / [React Compiler 1.0](https://react.dev/blog/2025/10/07/react-compiler-1)
 
 ## フックから UI 要素を返すパターン（headless UI）
 

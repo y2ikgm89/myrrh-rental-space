@@ -1,7 +1,7 @@
 # Docker設定ガイド
 
-> Next.js 16 + Bun 1.3.x + Prisma 7 WASM の本番 Docker 構成。
-> デプロイ手順は [`deployment.md`](./deployment.md) を参照。`.claude/rules/deployment-patterns.md` は Claude Code 用 legacy reference として残置するが、Codex 作業では参照しない。
+> Next.js + Bun + Prisma 7 WASM の本番 Docker 構成。
+> デプロイ手順は [`deploy.md`](./deploy.md) を参照。詳細パターンは Claude Code 用 path-scoped rule `.claude/rules/ops/deployment/dockerfile.md` を参照（Codex 作業では参照しない）。
 
 ---
 
@@ -166,8 +166,4 @@ COPY --from=deps /app/generated ./generated
 - [Next.js Docker Deployment](https://nextjs.org/docs/app/getting-started/deploying#docker)
 - [Bun Docker Guide](https://bun.sh/guides/ecosystem/docker)
 - [Cloud Run Documentation](https://cloud.google.com/run/docs)
-- [`.claude/rules/deployment-patterns.md`](../../.claude/rules/deployment-patterns.md) - Claude Code 用 legacy reference。Codex 作業では参照しない
-
----
-
-最終更新: 2026-03-29
+- [`.claude/rules/ops/deployment-patterns.md`](../../.claude/rules/ops/deployment-patterns.md) — Claude Code 用 path-scoped rule（Codex 作業では参照しない）

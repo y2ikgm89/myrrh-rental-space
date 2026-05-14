@@ -1,6 +1,7 @@
 ---
 name: worktree-bootstrap
 description: Bootstrap an isolated git worktree with env copy, Prisma generated copy, and main DB drift detection. Invoke after deciding to use a worktree per the decision matrix in .claude/rules/git-migration.md §Worktree 採否判定.
+when_to_use: git worktree 採用判定後（git-migration.md の Worktree 採否判定マトリックス）に bootstrap が必要なとき。
 disable-model-invocation: true
 argument-hint: "<branch-name-kebab-case>"
 ---

@@ -4,6 +4,7 @@ description: >
   管理画面の Server Action ファイルをフルスキャフォールドで生成する。
   executeAdminMutationResult パターンに準拠した CRUD アクションと Zod スキーマを一括作成する。
   新しいリソース（モデル）を管理画面に追加する際に使用。
+when_to_use: 新規モデルの管理画面 CRUD 用 Server Action ファイル一式を executeAdminMutationResult パターンで一括生成するとき。
 argument-hint: <resource-name>
 ---
 

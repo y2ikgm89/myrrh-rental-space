@@ -3,6 +3,7 @@ name: create-admin-page
 description: >
   管理画面の CRUD ページ一式を admin-ui-patterns.md 準拠でスキャフォールド生成する。
   新しいリソース（モデル）を管理画面に追加する際に使用。
+when_to_use: 新規モデルに対応する管理画面 CRUD ページ（一覧・編集・新規作成）を一括生成するとき。
 argument-hint: <resource-name-camelCase>
 ---
 

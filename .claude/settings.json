@@ -20,6 +20,7 @@
     ]
   },
   "enableAllProjectMcpServers": true,
+  "skillListingBudgetFraction": 0.025,
   "hooks": {
     "SessionStart": [
       {

@@ -1,7 +1,5 @@
 # Google Business Profile 連携セットアップガイド
 
-> ADR 0027 — `Google Business Profile sync` 採択に伴う運用ガイド
-
 管理画面で更新した拠点情報を Google Business Profile (GBP) に自動同期する機能のセットアップ手順。
 API 申請承認待ち期間中でも実装動作確認可能な **Stub mode** を含む。
 

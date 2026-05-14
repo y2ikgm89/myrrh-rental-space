@@ -2,7 +2,7 @@
 
 > このドキュメントは採用技術の **「なぜ」** を説明する（Diátaxis: explanation）。
 >
-> **バージョンの SSoT**: リポジトリルートの [`AGENTS.md`](../../AGENTS.md#tech-stack) と [`bun.lock`](../../bun.lock)。`package.json` の semver だけでは確定版が分からない。
+> **バージョンの SSoT**: リポジトリルートの [`package.json`](../../package.json)（semver 範囲）と [`bun.lock`](../../bun.lock)（解決済み確定版）。採用機能の列挙は [`AGENTS.md`](../../AGENTS.md#tech-stack)。
 
 ## Prisma generated output
 
@@ -47,7 +47,12 @@
 
 ## TypeScript / ランタイム制約
 
-- TypeScript の RC vs 安定版方針: [`typescript-version-policy.md`](./typescript-version-policy.md)
 - Prisma は Bun runtime で使用するが、Edge Runtime 対応は前提にしない
 - **Three.js / PixiJS** は未使用（削除済み）。再導入しない
 - 管理画面は Lexical と Better Auth を中心にした Node/Bun runtime 前提
+
+## TypeScript バージョン方針
+
+- `tsconfig` の `erasableSyntaxOnly` / `verbatimModuleSyntax` など TS 6 前提の設定は現行の major に追従する。
+- メジャー・アップデート時は [TypeScript Release Notes](https://devblogs.microsoft.com/typescript/) と [Next.js の TypeScript 範囲](https://nextjs.org/docs/app/building-your-application/configuring/typescript) を確認 → `bun add -d typescript@...` で更新 → `bun run validate && bun run test:all && bun run build` を通す。
+- セマバー範囲内の更新は `bun update` でよい。作業後は `bun run validate` を必ず通す。Codex は `AGENTS.md` + `.agents/skills/project-validation`、Claude Code は `.claude/skills/upgrade-deps` が入口。

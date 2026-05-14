@@ -11,7 +11,7 @@ root = "./__tests__"
 # タイムアウト設定（5秒）
 timeout = 5000
 
-# Coverage は設定しない（ADR 0010 / ADR 0014）。
+# Coverage は設定しない。
 # per-directory batch 実行のため複数プロセス間で lcov が上書きされ、
 # `mock.module()` の干渉で各プロセスの計測結果も不正確になる。
 # 必要時は `bun test --coverage <specific-file>` を単発で実行し参考値として扱う。

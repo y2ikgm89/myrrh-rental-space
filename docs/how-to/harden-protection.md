@@ -1,7 +1,5 @@
 # 保護対策の設定
 
-最終更新: 2026-04-29
-
 DDoS / レート制限 / Bot 保護を実装・運用する手順。設計の「なぜ」は [`../explanation/security-model.md`](../explanation/security-model.md) を参照。
 
 ## 1. Cloudflare DDoS 保護

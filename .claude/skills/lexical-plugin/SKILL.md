@@ -1,6 +1,7 @@
 ---
 name: lexical-plugin
 description: 管理画面の Lexical に新しい plugin を追加するときに使う。dialog、command、listener のどれで実装するかを決め、editor への統合まで揃える。既存実装の監査や deprecated API 除去が主目的なら audit-lexical を使う。
+when_to_use: 管理画面の Lexical エディタに新規 plugin（dialog / command listener / decorator）を追加するとき。
 paths:
   - src/**/lexical/plugins/*Plugin.tsx
 ---

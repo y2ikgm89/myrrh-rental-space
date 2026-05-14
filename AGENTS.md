@@ -12,7 +12,7 @@
 - `.codex/rules/*.rules` はサンドボックス外コマンドの承認ルール専用。公式上 experimental なので、`prefix_rule` の `pattern` / `decision` / `justification` / `match` / `not_match` だけでコマンド方針を表し、コーディング規約は置かない。
 - `.codex/hooks.json` は空設定にする。hooks は公式上 experimental かつ Windows support が一時無効なので、検証強制は `lefthook` / CI / このファイルの delivery checklist で担保する。
 - `.claude/*` は残置された Claude Code 用資産として扱う。Codex 作業では参照・同期・正本扱いしない。
-- ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/explanation/*`、`docs/how-to/*`、`docs/reference/*` の Codex 向け導線から読む。
+- ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/explanation/*`、`docs/how-to/*`、`docs/guides/*` の Codex 向け導線から読む。ライブラリ API リファレンスは公式 docs を直接参照する。
 - Codex 資産（`AGENTS.md` / `.agents/skills` / `.codex/agents` / `.codex/rules` / `.codex/hooks.json`）を変更する場合は `codex-instruction-maintenance` と `project-validation` の手順を使い、AGENTS.md には恒久的な全体制約だけを置く。
 
 ## Project Overview
@@ -25,18 +25,20 @@
 
 ### Tech Stack
 
-下記バージョンは `package.json` / `bun.lock` で現在解決されている実ランタイムに合わせる。
+**確定バージョンの SSoT は [`package.json`](./package.json) + [`bun.lock`](./bun.lock)**（バージョン値をここに複製しない — drift の温床）。主要技術と採用機能:
 
-| 技術         | バージョン | 備考                                         |
-| ------------ | ---------- | -------------------------------------------- |
-| Next.js      | 16.2.6     | `'use cache'`, `updateTag`, PPR 対応         |
-| React        | 19.2.6     | React Compiler 1.0, `useEffectEvent`         |
-| TypeScript   | 6.0.3      | `target: es2025`, `erasableSyntaxOnly`       |
-| Bun          | 1.3.13     | `bun:test`, `packageManager` と一致          |
-| Prisma       | 7.8.0      | WASM, mapped enums                           |
-| Better Auth  | 1.6.10     | RBAC, Google/LINE OAuth（`bun.lock` 解決版） |
-| Tailwind CSS | 4.3.0      | CSS-first, `@theme`                          |
-| Zod          | 4.4.3      | `{ error: }` パラメータ                      |
+| 技術           | 採用機能                                                          |
+| -------------- | ----------------------------------------------------------------- |
+| Next.js        | `'use cache'`, `updateTag`, PPR (cacheComponents)                 |
+| React 19       | React Compiler 1.0, `useEffectEvent`, `use(Context)`              |
+| TypeScript 6   | `target: es2025`, `erasableSyntaxOnly`, `verbatimModuleSyntax`    |
+| Bun            | `bun:test`, `packageManager` 経由でバージョン固定                 |
+| Prisma 7       | WASM client engine, mapped enums                                  |
+| Better Auth    | dual instance (adminAuth / customerAuth), RBAC, Google/LINE OAuth |
+| Tailwind CSS 4 | CSS-first, `@theme`, container queries                            |
+| Zod 4          | `{ error: }` パラメータ, `z.registry<FieldMeta>()`                |
+
+採用理由・トレードオフは [`docs/explanation/tech-stack.md`](./docs/explanation/tech-stack.md)。
 
 ### Project Structure
 
@@ -162,6 +164,37 @@ bun run e2e
 | `docs_researcher`   | OpenAI / framework 一次情報確認        |
 | `test_verifier`     | 対象テスト / validate の実行と結果要約 |
 
+## Markdown Documentation Discipline
+
+`AGENTS.md` / `.agents/skills/**` / `docs/**` / その他 `*.md` 編集時は以下に従う。Codex 側に path-scoped auto-load 機構はないため、md 編集時は手動でこのセクションを参照する。
+
+### Style (CommonMark 0.31.2 + GFM + markdownlint)
+
+- 公式仕様 [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/) + [GitHub Flavored Markdown](https://github.github.com/gfm/) に準拠する
+- 主要 [markdownlint](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md) ルール:
+  - h1 (`#`) は 1 ファイル 1 個のみ (`MD025`)、レベルスキップ禁止 (`MD001`)、開始は h1 (`MD041`)
+  - コードフェンスに言語タグ必須 (`MD040`、例: \`\`\`bash / \`\`\`typescript / \`\`\`text)
+  - bare URL は `<>` で囲むか `[label](url)` 形式 (`MD034`)
+  - 行末空白禁止 (`MD009`)、複数連続空行禁止 (`MD012`)
+  - bullet list は `-` 固定 (`MD004`)、ordered list は `1.` 連続 (`MD029`)
+  - GFM テーブル構文 (column 数一致 / align 記号統一)
+  - LF 改行統一 (`.gitattributes` で強制)
+  - 装飾目的の絵文字禁止 (state 表現の `✅` / `❌` 等は許容)
+
+### Drift 防止 (プロジェクト固有)
+
+- バージョン値の md 内ハードコード禁止 (SSoT は `package.json` + `bun.lock`)
+- 「最終更新: YYYY-MM-DD」マーカー禁止 (履歴は `git log` SSoT)
+- `.archive/` ディレクトリ再導入禁止 (削除して `git log --diff-filter=D` で辿る)
+- `docs/reference/` 再導入禁止 (library API は公式 docs を直接参照、project pattern は `.agents/skills/**` SSoT)
+- `docs/how-to/` はインフラ・デプロイ手順のみ
+
+### Frontmatter スキーマ
+
+- `.agents/skills/<name>/SKILL.md` — `name` / `description` のみ
+- `.codex/agents/*.toml` — `name` / `description` / `developer_instructions` 必須
+- `AGENTS.md` 本体 — frontmatter なし (plain markdown)
+
 ## Delivery Checklist
 
 1. 不要な後方互換コード・デッドコードを残していない。
@@ -175,4 +208,4 @@ bun run e2e
 
 - `docs/explanation/ai-instructions.md`: Codex / Claude Code の正本配置
 - `docs/explanation/content-managed-pages.md`: 固定デザイン + 型付きコンテンツ編集の方針
-- `docs/README.md`: ドキュメント全体構造（Diátaxis: explanation / how-to / reference）
+- `docs/README.md`: ドキュメント全体構造（Diátaxis: explanation / how-to）。reference 軸は公式 docs / project rules に委譲
