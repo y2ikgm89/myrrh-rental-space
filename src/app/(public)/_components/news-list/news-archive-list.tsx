@@ -1,8 +1,20 @@
-"use client";
+/**
+ * NewsList (archive variant) — お知らせ一覧の長い順次リスト。
+ *
+ * **a11y design notes** (2026-05-15):
+ * - ScrollRevealGroup は使用しない。長い archive list で fold 外要素が
+ *   opacity:0 のまま残ると、axe-core が opacity 継承を考慮して effective
+ *   contrast (foreground × parent opacity) を washed-out 色で計算し
+ *   color-contrast violation を発火する (axe-public-pages.spec.ts /news fail
+ *   の root cause)。visual showcase ではなく text 主体の archive のため
+ *   editorial animation は不要 — Kinfolk Journal / NYTimes archive 準拠。
+ * - `<time>` と `<h2>` には明示的 `text-foreground` を base state に設定し、
+ *   inheritance を経由せず WCAG AA 4.5:1 を保証。hover で accent に遷移して
+ *   discovery hint を提供。
+ */
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -29,28 +41,28 @@ export function NewsList({ items }: NewsListProps): ReactElement {
   }
 
   return (
-    <ScrollRevealGroup className="divide-y divide-divider">
+    <div className="divide-y divide-divider">
       {items.map((item) => (
         <Link
           key={item.id}
           href={toAppRoute(item.url)}
-          className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/30 md:gap-6 md:py-6"
+          className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/10 md:gap-6 md:py-6"
         >
           <time
             dateTime={item.publishedAt ?? undefined}
-            className="shrink-0 text-xs text-muted-foreground md:text-sm"
+            className="shrink-0 text-xs text-foreground md:text-sm"
           >
             {formatSerializedDate(item.publishedAt)}
           </time>
 
           <Heading
             level={2}
-            className="!text-sm font-medium transition-colors group-hover:text-foreground md:!text-base"
+            className="!text-sm font-medium text-foreground transition-colors group-hover:text-accent md:!text-base"
           >
             {item.title}
           </Heading>
         </Link>
       ))}
-    </ScrollRevealGroup>
+    </div>
   );
 }

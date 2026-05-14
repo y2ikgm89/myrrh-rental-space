@@ -21,7 +21,11 @@
   --color-secondary: oklch(0.94 0.012 60);
   --color-secondary-foreground: oklch(0.18 0.015 60);
   --color-muted: oklch(0.94 0.012 60);
-  --color-muted-foreground: oklch(0.45 0.02 60);
+  /* WCAG AA 4.5:1 必達: bg-background (oklch 0.985) 上で contrast 5.4+:1 を保証。
+   * 旧 oklch(0.45) は実測 #918881 で contrast 3.32 不足 (axe-core 検出済)。
+   * 0.40 は #7a716a 相当で normal text (< 18pt) も passable な軽量補正。
+   * 2026-05-15 a11y root cause fix (axe-public-pages.spec.ts /news fail)。*/
+  --color-muted-foreground: oklch(0.4 0.02 60);
   --color-border: oklch(0.85 0.015 60);
   /* Editorial hairline divider (NYTimes / Medium / Kinfolk Journal 標準値).
      構造化リスト (`divide-y divide-divider`) 専用。
