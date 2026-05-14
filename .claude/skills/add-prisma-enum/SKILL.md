@@ -7,6 +7,7 @@ description: >
   domain types + queries + commands → Server Actions + 公開フォーム →
   管理 UI + seed + テスト。新しい enum 型（`Role` / `ReservationStatus` 等）
   を追加する際に使用。
+when_to_use: 新しい Prisma enum 型を追加するとき。enum 値の追加・リネーム・削除や Prisma 以外の型 alias 操作は対象外。
 argument-hint: <EnumName> <Value1> <Value2> [<Value3> ...] [--model=<ModelName>] [--field=<fieldName>]
 ---
 

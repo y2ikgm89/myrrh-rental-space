@@ -4,6 +4,7 @@ description: >
   Prisma スキーマ変更後にマイグレーションを生成・実行する。
   schema.prisma の差分を確認し、マイグレーション名を提案、`migrate dev` を実行しクライアントを再生成する。
   prisma/schema.prisma を編集した直後に使用。
+when_to_use: prisma/schema.prisma を編集してマイグレーションを生成・適用するとき。
 paths:
   - prisma/schema.prisma
 argument-hint: "[migration-name]"

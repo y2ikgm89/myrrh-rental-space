@@ -1,6 +1,7 @@
 ---
 name: verify-subagent-report
-description: Use immediately after dispatching an implementer subagent via Agent tool. Independently verifies reported commit SHA / file changes / test results against actual git state to detect report fabrication.
+description: implementer subagent (Agent tool) の dispatch 完了直後に、commit SHA / file changes / test results を git state で独立検証して report 捏造を検出する。
+when_to_use: implementer subagent dispatch の完了報告を受けた直後（commit 前）。
 ---
 
 # verify-subagent-report

@@ -1,6 +1,7 @@
 ---
 name: lexical-node
 description: 管理画面の Lexical に新しいノード型を追加するときに使う。NodeState API、JSON/DOM 往復、editor 登録までを一連で揃える。既存 node の監査や deprecated API 除去が主目的なら audit-lexical を使う。
+when_to_use: 管理画面の Lexical エディタに新規 node 型（custom block / element / decorator）を追加するとき。既存 node の修正・監査は対象外。
 paths:
   - src/**/lexical/nodes/**
 ---

@@ -87,7 +87,7 @@ scan_dir ".serena/memories" 3
 - `削除済み: ...` / `移動: ... → ...`
 - コードブロック内の Before/After 対比
 - マイグレーション履歴（`Supabase→R2 移行で...` 等）
-- 完了済み plan（`docs/superpowers/plans/.archive/` 配下）の原文
+- 完了済み plan（git log で辿れる削除済 file）の原文
 
 memory file を読んで **自然文として stale ref を残す意図** が見えたら skip する。
 
@@ -95,7 +95,7 @@ memory file を読んで **自然文として stale ref を残す意図** が見
 
 - CLAUDE.md §調査・監査（Serena memory staleness の既知 silent bug）
 - MEMORY.md（Claude Code memory index）
-- `.serena/memories/` 配下の現状参照系（`project_overview.md` / `architecture-analysis.md` 等）は大規模マイグレーション後の同期更新が最も漏れやすい
+- Serena memory（gitignored、Serena MCP 利用時のみ local 生成）の `project_overview.md` 系 / analysis snapshot ファイルは大規模マイグレーション後の同期更新が最も漏れやすい
 
 ## 過去の検出事例
 

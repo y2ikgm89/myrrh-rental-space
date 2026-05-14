@@ -1,6 +1,7 @@
 ---
 name: post-deploy-smoke
-description: Use when Cloud Run deploy completes (Cloud Build green) or before merging deploy-affecting PRs to main. Runs HTTP smoke checks against the deployed service - probe endpoints (/api/live, /api/health), main public pages (/, /spaces, /events, /posts, /news, /faq, /access, /contact), Better Auth session endpoints, robots.txt, sitemap.xml, and feed.xml - to detect silent regressions (5xx, unexpected 404, redirect loops, broken probes) before they reach customers. Distinct from debug-cloud-run (which is for post-incident analysis); this skill runs proactively after every deploy.
+description: Cloud Run deploy 完了直後または deploy-affecting PR の main merge 前に、HTTP smoke check で silent regression（5xx / 404 / redirect loop / broken probe）を検出する。debug-cloud-run は post-incident、本 skill は proactive。
+when_to_use: Cloud Run deploy 完了直後（Cloud Build green）、または deploy 影響のある PR を main にマージする前。
 ---
 
 # Post-Deploy Smoke Test

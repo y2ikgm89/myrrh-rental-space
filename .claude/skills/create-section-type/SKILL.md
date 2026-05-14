@@ -1,6 +1,7 @@
 ---
 name: create-section-type
 description: Use when explicitly adding a new section type. Scaffolds schema.ts, metadata.ts, public component stub, and registry entry.
+when_to_use: 新しい Section type を Dynamic Section Architecture に追加するとき。明示的にユーザが invoke した場合のみ実行。
 disable-model-invocation: true
 argument-hint: "<type-name-kebab-case>"
 ---

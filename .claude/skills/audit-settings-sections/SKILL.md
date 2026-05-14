@@ -1,6 +1,7 @@
 ---
 name: audit-settings-sections
 description: 管理画面の設定セクション（settings/_components/sections/）の品質を監査する。ヒント折りたたみ・導線リンク・フォームパターン・SubmitButton 配置を一括チェック。新しい設定セクション追加後や定期メンテ時に使用。
+when_to_use: 新しい設定セクション追加後、または月次定期メンテ時。管理画面 settings の UI 品質を横断確認するとき。
 paths:
   - src/app/(admin)/admin/(dashboard)/settings/_components/sections/**
 ---

@@ -1,6 +1,7 @@
 ---
 name: parallax-section
 description: 公開ページのスクロール演出セクションを追加するときに使う。GSAP、effect level、reduced motion、モバイル縮退を前提に実装する。
+when_to_use: 公開ページに GSAP ベースの parallax / scroll-driven animation セクションを追加するとき。
 paths:
   - src/app/(public)/**/*.tsx
 ---
@@ -65,7 +66,7 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "scroll animation perform
 - Three.js / PixiJS / WebGL は未使用（削除済み）。再導入しない
 - **nuqs 以外**の URL 同期用 Context / Provider を public root に足さない。既存の **`NuqsAdapter`** は維持前提（二重ラップも禁止）。詳細は `.claude/rules/nuqs-patterns.md`
 - z-index、effect level、WebGL context 管理を local rule から逸脱させない
-- 履歴資料の `docs/superpowers/plans/.archive/*` を実装ルールとして扱わない
+- 完了済み plan（`git log --all --diff-filter=D -- docs/superpowers/plans/<file>` で辿れる削除済 file）を実装ルールとして扱わない
 
 ## Done
 

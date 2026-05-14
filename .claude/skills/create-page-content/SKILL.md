@@ -4,6 +4,7 @@ description: >
   公開ページをスキャフォールド生成する（Dynamic Section Architecture）。
   Page レコード + DEFAULT_PAGE_SECTIONS エントリ + page.tsx テンプレート。
   新規公開ページ追加時に使用。
+when_to_use: 公開サイトに新規ページを追加するとき。Page レコード + DEFAULT_PAGE_SECTIONS + page.tsx を一括 scaffold する。
 argument-hint: <page-slug-kebab-case>
 ---
 
