@@ -12,7 +12,14 @@ import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
 export async function ensureDevUserAction(): Promise<
   { success: true } | { success: false; error: string }
 > {
-  if (process.env["NODE_ENV"] === "production") {
+  // CI E2E は production build + `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` opt-in で
+  // DevLoginButton を表示する pattern（→ `auth-patterns/customer-social.md`）。
+  // server action 側も同 opt-in を尊重しないと「ボタンは出るが押しても失敗」する
+  // silent UX bug。staging / production には絶対伝播しない（build env 限定）。
+  if (
+    process.env["NODE_ENV"] === "production" &&
+    process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] !== "1"
+  ) {
     return { success: false, error: "本番環境では利用できません" };
   }
 

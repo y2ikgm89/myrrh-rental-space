@@ -1860,6 +1860,125 @@ async function seedReservations() {
 }
 
 // =============================================================================
+// Dev Customer + Reservations（E2E critical path 用、authenticated customer 系 spec の
+// stripe-payment / reservation-flow / reservation-cancel-flow が defensive skip せず
+// 実際の予約データに対して assertion できるようにする）
+// =============================================================================
+
+async function seedDevCustomerAndReservations() {
+  const DEV_EMAIL = "dev-customer@example.com";
+  const DEV_PASSWORD = "dev-password-12345";
+  const DEV_NAME = "開発テスト";
+
+  // 1) User + credential account（Better Auth 互換）
+  await createOrUpdateUserWithCredential({
+    email: DEV_EMAIL,
+    password: DEV_PASSWORD,
+    name: DEV_NAME,
+    role: Role.CUSTOMER,
+  });
+  const user = await prisma.user.findUnique({
+    where: { email: DEV_EMAIL },
+    select: { id: true },
+  });
+  if (!user) {
+    console.log("⚠️ Dev customer user not found after upsert. Skipping.");
+    return;
+  }
+
+  // 2) Customer を upsert（mypage layout の `ensureCustomerLinked` と互換）
+  const customer = await prisma.customer.upsert({
+    where: { email: DEV_EMAIL },
+    update: { userId: user.id },
+    create: {
+      userId: user.id,
+      email: DEV_EMAIL,
+      lastName: "開発",
+      firstName: "テスト",
+      phoneNumber: "090-0000-0000",
+      customerType: CustomerType.PERSONAL,
+      status: "REGULAR",
+    },
+  });
+
+  // 3) 予約 4 件（status × paymentStatus の主要カバレッジ）
+  const space = await prisma.space.findFirst({
+    where: { isActive: true, isPublished: true },
+    select: { id: true, hourlyPrice: true, name: true },
+  });
+  if (!space) {
+    console.log(
+      `⚠️ No active space found for dev customer reservations. Skipping.`,
+    );
+    return;
+  }
+
+  const now = new Date();
+  const reservations = [
+    {
+      daysOffset: -30,
+      status: "COMPLETED" as const,
+      paymentStatus: "PAID" as const,
+      notes: "[E2E] 過去・決済済み予約（stripe-payment 「決済済み」 UI）",
+    },
+    {
+      daysOffset: 7,
+      status: "CONFIRMED" as const,
+      paymentStatus: "UNPAID" as const,
+      notes: "[E2E] 未来・未決済予約（stripe-payment 「決済する」 UI）",
+    },
+    {
+      daysOffset: 14,
+      status: "PENDING" as const,
+      paymentStatus: "UNPAID" as const,
+      notes: "[E2E] 承認待ち予約（reservation-cancel-flow 起点）",
+    },
+    {
+      daysOffset: -60,
+      status: "CANCELLED" as const,
+      paymentStatus: "REFUNDED" as const,
+      notes: "[E2E] 過去・キャンセル予約（refund 表示）",
+    },
+  ];
+
+  let created = 0;
+  for (const r of reservations) {
+    const start = new Date(now);
+    start.setDate(start.getDate() + r.daysOffset);
+    start.setHours(10, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(12, 0, 0, 0);
+
+    // idempotent: same-marker reservation がいれば skip
+    const existing = await prisma.reservation.findFirst({
+      where: { customerId: customer.id, notes: r.notes },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    const basePrice = Number(space.hourlyPrice) * 2;
+    await prisma.reservation.create({
+      data: {
+        spaceId: space.id,
+        customerId: customer.id,
+        startTime: start,
+        endTime: end,
+        status: r.status,
+        paymentStatus: r.paymentStatus,
+        basePrice: new Prisma.Decimal(basePrice),
+        totalPrice: new Prisma.Decimal(basePrice),
+        notes: r.notes,
+      },
+    });
+    created++;
+  }
+
+  console.log(
+    `✅ Seeded dev customer (${DEV_EMAIL}) + ${created.toString()} reservation(s)`,
+  );
+}
+
+// =============================================================================
 // News
 // =============================================================================
 
@@ -4216,6 +4335,7 @@ async function seedAll(email: string, password: string, name: string) {
 
   // Phase 5: 予約（クーポン適用例含む）
   await seedReservations();
+  await seedDevCustomerAndReservations();
 
   // Phase 6: コンテンツ
   await seedNews();
@@ -4298,6 +4418,7 @@ async function seedDemo() {
 
   // 予約
   await seedReservations();
+  await seedDevCustomerAndReservations();
 
   // イベント
   await seedEvents();
