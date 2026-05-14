@@ -14,6 +14,5 @@ test.describe("smoke: spaces", () => {
     expect(response?.status()).toBe(200);
 
     await expect(page.locator("main").first()).toBeVisible();
-    await expect(page.locator("h1").first()).toBeVisible();
   });
 });

@@ -14,8 +14,8 @@ test.describe("smoke: homepage", () => {
     const response = await page.goto(urls.home);
     expect(response?.status()).toBe(200);
 
-    const main = page.locator("main");
-    await expect(main).toBeVisible();
+    // <main> は SkipLink ターゲット + nested SC で 2 個 render される構成のため .first()
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("ヘッダー + フッターが描画される", async ({ page }) => {
