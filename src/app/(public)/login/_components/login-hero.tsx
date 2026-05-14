@@ -4,7 +4,7 @@
  * 他システムページ (faq / contact 等) と canonical 一致させる:
  * `hero` section type + `variant: "minimal"` → StandardHeroSection minimal variant。
  * 両端 gold-line eyebrow (`SectionLabel`) + 中央寄せ Container + `text-page-hero` h1
- * + gradient bg (from-surface via-background to-background) + SplitText animation。
+ * + solid bg-background + border-b border-border separation + SplitText animation。
  *
  * PortableTextSpan の `_key` (`crypto.randomUUID()`) は module init で 1 回だけ評価される。
  * SC render body で `createSpan()` を呼ぶと PPR (`cacheComponents: true`) で

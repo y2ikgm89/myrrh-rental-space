@@ -182,9 +182,15 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         </div>
       </div>
 
-      {/* Indicator */}
+      {/* Indicator — Next arrow が right-14 (56-100px from right) を占めるため
+       * right-28 (112px) に配置して overlap を回避 (axe color-contrast bgOverlap)。
+       * カルーセル位置は aria-live message 切替で伝達されるため aria-hidden で
+       * AT redundancy 排除。decorative のため pointer-events-none。 */}
       {settings.showIndicator && showNav && (
-        <span className="absolute right-12 text-xs">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-28 text-xs"
+        >
           {currentIndex + 1}/{total}
         </span>
       )}

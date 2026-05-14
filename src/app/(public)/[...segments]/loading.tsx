@@ -12,7 +12,7 @@ export default function SegmentsLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero placeholder */}
-      <section className="border-b border-border bg-gradient-to-b from-surface via-background to-background py-[var(--space-xl)]">
+      <section className="border-b border-border bg-background py-[var(--space-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-24" variant="text" />

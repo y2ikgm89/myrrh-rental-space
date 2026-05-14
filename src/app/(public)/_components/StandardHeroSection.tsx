@@ -183,21 +183,23 @@ export function StandardHeroSection({
   const showSectionLabel = Boolean(config.sectionLabel) && hasOtherContent;
 
   // =========================================================================
-  // Minimal: bottom-aligned, gradient bg, left-aligned
+  // Minimal: bottom-aligned, solid background, center-aligned
   // Used by system pages (DB-driven hero sections)
+  //
+  // 旧 `bg-gradient-to-b from-surface via-background to-background` 廃止。
+  // axe-core が gradient ancestor を bgGradient incomplete で評価できず、
+  // production build で violation に昇格する silent bug の root cause。
+  // 代替: `bg-background` (body bg と同色) + `border-b border-border` で
+  // editorial separation を表現。WCAG AA 全 text token (accent / muted-fg /
+  // foreground) が definitively passable な solid bg を保証。
   // =========================================================================
   if (useMinimalLayout) {
     return (
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex items-end overflow-hidden pb-6 pt-[calc(var(--header-height)+1rem)] md:pb-10 md:pt-[calc(var(--header-height)+1.5rem)]"
+        className="relative flex items-end overflow-hidden border-b border-border bg-background pb-6 pt-[calc(var(--header-height)+1rem)] md:pb-10 md:pt-[calc(var(--header-height)+1.5rem)]"
       >
-        <div
-          className="absolute inset-0 bg-gradient-to-b from-surface via-background to-background"
-          aria-hidden="true"
-        />
-
         <Container className="relative w-full !max-w-6xl text-center">
           {showSectionLabel && (
             <ScrollReveal delay={0.15}>
