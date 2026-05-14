@@ -141,5 +141,3 @@ security:
           - "src/shared/lib/crypto.ts"
           - "src/proxy.ts"
           - "src/shared/lib/env/**"
-          - ".github/workflows/codeql.yml"
-          - ".github/workflows/dependency-review.yml"

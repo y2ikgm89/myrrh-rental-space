@@ -119,7 +119,7 @@ GitHub-hosted runner の Node.js 20 deprecation（2026-06 強制 Node 24 化、2
 | `actions/checkout`                 | `@v4`        | **`@v6`**    | v6: persist-credentials を `$RUNNER_` 格納（runner v2.329.0+）                 |
 | `actions/upload-artifact`          | `@v4`        | **`@v7`**    | v7: ESM 移行 + 任意 `archive: false` で direct upload                          |
 | `actions/cache`                    | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                                              |
-| `actions/dependency-review-action` | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                                              |
+| `actions/dependency-review-action` | `@v4`        | **未採用**   | Dependency Graph 機能依存 + bun audit と機能重複（§10 参照）                   |
 | `actions/labeler`                  | `@v5`        | **`@v6`**    | input 互換（config 形式は v5 で確立、`changed-files-labels-limit` 新規 input） |
 | `actions/stale`                    | `@v9`        | **`@v10`**   | input 互換、runner v2.327.1+ 必須                                              |
 | `peter-evans/create-pull-request`  | `@v6`        | **`@v8`**    | input 互換、runner v2.327.1+ 必須                                              |
@@ -186,33 +186,20 @@ function applySecurityHeaders(
 
 `bundle-analysis` job が動くからと `bundle-size-diff` で setup-bun を省略するのは silent drift。両 job とも setup-bun を入れる。
 
-## 10. `actions/dependency-review-action@v5` の license 指定 2 つの silent bug
+## 10. `actions/dependency-review-action` は採用しない（bun audit + Dependency Graph 制約）
 
-### 10.1. `allow-licenses` と `deny-licenses` は **排他的**
+### 10.1. 採用しない理由（3 連 silent bug + 機能重複）
 
-`@v5` で破壊的変更：両方同時指定すると `You cannot specify both allow-licenses and deny-licenses` で必ず fail。**どちらか一方のみ**を選ぶ:
+`actions/dependency-review-action@v5` は本プロジェクトでは **採用しない**。導入を試みた際に判明した silent bug は以下 3 連:
 
-| 方式             | 用途                                   | 採否                                            |
-| ---------------- | -------------------------------------- | ----------------------------------------------- |
-| `allow-licenses` | 厳格な whitelist（許可リストのみ通過） | 新規 OSS license が出るたび追加が必要、保守重い |
-| `deny-licenses`  | blacklist（禁止以外は通過）            | **本プロジェクト採用** — Stripe / Vercel と同等 |
+1. **Dependency Graph 機能依存** — `Dependency review is not supported on this repository. Please ensure that Dependency graph is enabled` で必ず fail。private repo + 個人アカウントでは default で無効、Settings → Security → Dependency graph を手動 Enable 必要。**runner / build とは別レイヤーの GitHub repo setting に依存** = workflow file だけでは self-contained に動かせない（reproducibility 損失）
+2. **`allow-licenses` と `deny-licenses` は排他的** — `@v5` で破壊的変更：両方同時指定すると `You cannot specify both allow-licenses and deny-licenses` で fail
+3. **license list は comma-separated 単一行のみ** — YAML literal block (`|`) は leading whitespace が SPDX 識別子に混入し `Invalid license(s) in <field>: MIT` で fail
 
-新規 license が untracked のまま増え続けるリスクを取って、商用組込 incompatible な AGPL / GPL のみ deny する deny-licenses 方式が業界標準。
+これら 3 つを全て解消しても、**`bun audit --prod --severity=high`（ci.yml `dependency-audit` job）が全依存の脆弱性 scan を毎 PR 実行**しており機能重複。`Renovate` も auto-patch + 脆弱性即時更新で license 情報込みの PR を自動生成する。
 
-### 10.2. license list は **comma-separated 単一行** のみ canonical
+### 10.2. 規律
 
-YAML literal block scalar (`|`) で newline-separated にすると **leading whitespace が SPDX 識別子に混入**し `Invalid license(s) in deny-licenses: AGPL-3.0-only` で fail する silent bug:
-
-```yaml
-# OK: comma-separated 単一行（公式 README canonical）
-deny-licenses: AGPL-1.0-only, AGPL-3.0-only, GPL-3.0-only
-
-# NG: YAML literal block + indent は parse 失敗
-# deny-licenses: |
-#   AGPL-3.0-only
-#   GPL-3.0-only
-# → "  AGPL-3.0-only" として parse される（leading 2 space 残存）
-# → SPDX validator が reject
-```
-
-新規 PR 作成時に毎回 fail で気付くケースが多い（required 登録不可で silent）。`@v3` 系で動いていた literal block 形式は **`@v5` で回帰失敗**するため migration 時に注意。
+- **`.github/workflows/dependency-review.yml` 再追加禁止** — 上記 3 連 silent bug + bun audit 重複のため
+- **license violation の検知** — `Renovate` PR で license 情報を確認 + 人間 review で担保（AGPL/GPL 系 package を実プロジェクトで使うことは現実的にほぼない）
+- **将来再評価する場合** — Dependency Graph を有効化済 + bun audit と異なる役割（PR diff 限定 review）が明確になったタイミングで導入検討。再導入時は §10.1 の 3 silent bug を全て解消した状態で 1 commit に集約
