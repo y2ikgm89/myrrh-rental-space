@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     # PR に `visual-regression` ラベルが付与されると visual-regression job が起動
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
@@ -33,10 +33,10 @@ on:
 # 同一ブランチ・同一イベントタイプで進行中の run があれば cancel。
 # event_name を group に含めることで workflow_dispatch (手動 trigger) と push (auto)
 # が独立 group となり、互いに cancel し合わない（race condition 回避）。
-# main / develop 以外では PR push のたびに前 run を捨てる。
+# main は履歴保持のため cancel しない、feature branch は PR push のたびに前 run を捨てる。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   # GitHub-hosted runner の Node デフォルト heap (~2GB) は大規模 monorepo の
@@ -164,7 +164,7 @@ jobs:
     # 等の業界標準パターン）。
     # - PR に `e2e` ラベル付与時 (labeled イベント含む)
     # - workflow_dispatch で手動実行時
-    # main / develop への push では実行しない。本番デプロイ前検証は
+    # main への push では実行しない。本番デプロイ前検証は
     # post-deploy-smoke skill (HTTP smoke) と Cloud Run staging で代替。
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e')) ||
@@ -269,7 +269,7 @@ jobs:
     needs: [lint-and-typecheck]
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -317,6 +317,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # preactjs/compressed-size-action は内部で `bun install --frozen-lockfile`
+      # を呼ぶため、setup-bun を先に実行して PATH に bun を通す必要がある
+      # （未設定だと "Unable to locate executable file: bun" で fail）
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       # preactjs/compressed-size-action:
       # base と head で build を実行し、指定 pattern のファイルサイズを gzip で比較
       # 参照: https://github.com/preactjs/compressed-size-action
@@ -334,10 +342,10 @@ jobs:
     name: Bundle Analysis (Turbopack)
     runs-on: ubuntu-latest
     needs: [lint-and-typecheck]
-    # PR とメインブランチ push のみで実行（フィーチャーブランチ push はスキップ）
+    # PR と main push のみで実行（feature branch push はスキップ）
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout
         uses: actions/checkout@v6

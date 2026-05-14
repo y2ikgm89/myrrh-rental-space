@@ -5,7 +5,7 @@ name: Dependency Review
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,37 +19,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # actions/dependency-review-action@v5 の allow-licenses / deny-licenses は
+      # **comma-separated** 単一行が canonical。YAML literal block (`|`) の
+      # newline-separated は leading whitespace が SPDX 識別子に混入し
+      # `Invalid license(s) in allow-licenses: MIT` で必ず fail する silent bug
       - name: Review dependencies
         uses: actions/dependency-review-action@v5
         with:
           # 脆弱性 severity 閾値: moderate 以上でブロック
           fail-on-severity: moderate
-          # 禁止ライセンス（AGPL 等は商用不可）
-          deny-licenses: |
-            AGPL-1.0-only
-            AGPL-1.0-or-later
-            AGPL-3.0-only
-            AGPL-3.0-or-later
-            GPL-1.0-only
-            GPL-1.0-or-later
-            GPL-2.0-only
-            GPL-3.0-only
-            GPL-3.0-or-later
-          # 許可ライセンス
-          allow-licenses: |
-            MIT
-            Apache-2.0
-            BSD-2-Clause
-            BSD-3-Clause
-            ISC
-            0BSD
-            CC0-1.0
-            CC-BY-4.0
-            Unlicense
-            WTFPL
-            BlueOak-1.0.0
-            Python-2.0
-          # 開発依存は lighter scrutiny（dev 依存のみの脆弱性は warning）
+          # 禁止ライセンス（AGPL / GPL は商用不可、SPDX identifier list）
+          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, GPL-1.0-only, GPL-1.0-or-later, GPL-2.0-only, GPL-3.0-only, GPL-3.0-or-later
+          # 許可ライセンス（OSI / 商用利用可の SPDX identifier list）
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, CC0-1.0, CC-BY-4.0, Unlicense, WTFPL, BlueOak-1.0.0, Python-2.0
+          # PR に summary comment を post（vulnerability-check は default で有効）
           comment-summary-in-pr: true
           warn-only: false
-          # vulnerability-check は default で有効

@@ -55,12 +55,12 @@ env:
 
 ## 3. `concurrency` で旧 run を cancel（event_name 込み）
 
-feature branch / PR の連続 push で旧 run が queue を占拠する問題を防ぐ。**main / develop では履歴保持のため無効化**。`event_name` を group に含めないと、main で in-progress な workflow_dispatch run が main push trigger によって cancel される race condition が発生する:
+feature branch / PR の連続 push で旧 run が queue を占拠する問題を防ぐ。**main では履歴保持のため無効化**（trunk-based development、develop ブランチは未使用）。`event_name` を group に含めないと、main で in-progress な workflow_dispatch run が main push trigger によって cancel される race condition が発生する:
 
 ```yaml
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 ```
 
 ## 4. CodeQL は Default setup に統一（Advanced workflow 不要）
@@ -163,3 +163,44 @@ function applySecurityHeaders(
 ```
 
 参照実装: `src/proxy.ts` (commit `cb56bdbc`)。本番 hostname では従来通り HSTS + upgrade-insecure-requests を付与（HTTPS 強制で security 維持）。
+
+## 9. `preactjs/compressed-size-action` は setup-bun 必須（PATH 漏れ silent bug）
+
+`preactjs/compressed-size-action@v2` は **base / head の双方で `bun install --frozen-lockfile` を内部実行**する（`package.json#packageManager` を読み取って `bun` を選択）。job 定義に `oven-sh/setup-bun@v2` step が無いと `##[error]Unable to locate executable file: bun.` で必ず fail する。
+
+```yaml
+# OK: setup-bun を先に走らせて PATH に bun を通す
+- uses: actions/checkout@v6
+- uses: oven-sh/setup-bun@v2
+  with:
+    bun-version-file: package.json
+- uses: preactjs/compressed-size-action@v2
+  with:
+    repo-token: ${{ secrets.GITHUB_TOKEN }}
+    build-script: "build:skip-env"
+
+# NG: bun が無い環境で compressed-size-action が install を試みて即 fail
+- uses: actions/checkout@v6
+- uses: preactjs/compressed-size-action@v2
+```
+
+`bundle-analysis` job が動くからと `bundle-size-diff` で setup-bun を省略するのは silent drift。両 job とも setup-bun を入れる。
+
+## 10. `actions/dependency-review-action` の license list は **comma-separated 単一行** のみ canonical
+
+`allow-licenses` / `deny-licenses` は **comma-separated 単一行**で指定する。YAML literal block scalar (`|`) で newline-separated にすると **leading whitespace が SPDX 識別子に混入**し `Invalid license(s) in allow-licenses: MIT` で必ず fail する silent bug:
+
+```yaml
+# OK: comma-separated 単一行（公式 README canonical）
+allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
+deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only
+
+# NG: YAML literal block + indent は parse 失敗
+# allow-licenses: |
+#   MIT
+#   Apache-2.0
+# → "  MIT" として parse される（leading 2 space 残存）
+# → SPDX validator が reject → "Invalid license(s) in allow-licenses: MIT"
+```
+
+`@v5` の SPDX validator は厳格化されており、`@v3` 系で動いていた literal block 形式は**回帰失敗**する。新規 PR 作成時に毎回 fail で気付くケースが多い（required 登録不可）。

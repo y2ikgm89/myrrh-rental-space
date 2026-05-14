@@ -19,8 +19,8 @@ paths:
 | **Required** (毎 push 実行)        | `dependency-audit` (bun audit)    | push + PR                                                                                          |
 |                                    | `lint-and-typecheck`              | push + PR                                                                                          |
 |                                    | `unit-tests` (per-file isolation) | push + PR                                                                                          |
-|                                    | `build` (env validation)          | push (main/develop) + PR                                                                           |
-|                                    | `bundle-analysis` (Turbopack)     | push (main/develop) + PR                                                                           |
+|                                    | `build` (env validation)          | push (main) + PR                                                                                   |
+|                                    | `bundle-analysis` (Turbopack)     | push (main) + PR                                                                                   |
 | **Opt-in** (label / dispatch のみ) | `e2e-tests`                       | PR `e2e` label / `workflow_dispatch run_e2e=true`                                                  |
 |                                    | `visual-regression`               | PR `visual-regression` label / `workflow_dispatch run_visual=true` / `update_visual_baseline=true` |
 |                                    | `lighthouse-ci`                   | PR `lighthouse` label / `workflow_dispatch run_lighthouse=true`                                    |
