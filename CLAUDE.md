@@ -103,7 +103,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **作業中**: `bun run type-check` / **完了前**: `bun run validate` / **コミット前**: `bun run validate && bun run build`
 - **完遂判定は `test:unit` + `test:integration` 両走必須** — unit pass のみで「完了」宣言は危険、Phase 0 rename / migration drift 等で integration fixture が drift しがち
 - **依存パッチ/マイナー更新後は validate 必須** — eslint-plugin-react-hooks 等のパッチで新ルール追加 = 実質破壊的変更
-- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。フル実行は `bun run test:unit` / `test:integration`（`scripts/run-tests.mjs` 経由 per-file isolation runner）。E2E は PR `e2e` label 付与時のみ opt-in 実行（→ `ops/ci-workflow/job-strategy.md` §Required vs Opt-in job 分離）。`bun test __tests__/unit` の親ディレクトリ指定は `mock.module` 干渉で偽陽性のため禁止
+- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。フル実行は `bun run test:unit` / `test:integration`（`scripts/run-tests.mjs` 経由 per-file isolation runner）。E2E は 2 層分離: `e2e/smoke/*.smoke.spec.ts` (chromium-smoke project) は毎 push で `smoke-e2e` job が required 実行、広域 E2E (`e2e/{public,authenticated,a11y}/`) は PR `e2e` label opt-in（→ `test-quality/e2e.md` §Smoke vs 広域 E2E の責務分離 + `ops/ci-workflow/job-strategy.md` §Required vs Opt-in job 分離）。`bun test __tests__/unit` の親ディレクトリ指定は `mock.module` 干渉で偽陽性のため禁止
+- **E2E spec の defensive skip 禁止** — `test.skip(true, "データがありません")` パターンは「実テストとして機能していない」signal。seed 拡充で解消するか unit/integration に降格（→ `test-quality/e2e.md` §広域 E2E の defensive skip 禁止）
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン
 
 詳細: `.claude/rules/test-quality.md` / `.claude/rules/bun-patterns.md`

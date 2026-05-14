@@ -19,13 +19,22 @@ paths:
 | **Required** (毎 push 実行)        | `dependency-audit` (bun audit)    | push + PR                                                                                          |
 |                                    | `lint-and-typecheck`              | push + PR                                                                                          |
 |                                    | `unit-tests` (per-file isolation) | push + PR                                                                                          |
+|                                    | **`smoke-e2e` (critical path)**   | **push + PR**                                                                                      |
 |                                    | `build` (env validation)          | push (main) + PR                                                                                   |
 |                                    | `bundle-analysis` (Turbopack)     | push (main) + PR                                                                                   |
-| **Opt-in** (label / dispatch のみ) | `e2e-tests`                       | PR `e2e` label / `workflow_dispatch run_e2e=true`                                                  |
+| **Opt-in** (label / dispatch のみ) | `e2e-tests` (広域)                | PR `e2e` label / `workflow_dispatch run_e2e=true`                                                  |
 |                                    | `visual-regression`               | PR `visual-regression` label / `workflow_dispatch run_visual=true` / `update_visual_baseline=true` |
 |                                    | `lighthouse-ci`                   | PR `lighthouse` label / `workflow_dispatch run_lighthouse=true`                                    |
 | **PR comment only**                | `bundle-size-diff`                | PR のみ                                                                                            |
 | **main only**                      | `docs` (typedoc)                  | main push                                                                                          |
+
+### smoke-e2e job の SLA
+
+- **実行時間 < 5 分** （build + start + 10 test 完走、Playwright browser cache hit 時）
+- **test 数 ≤ 10** — 超過した場合は smoke の意義（fast PR feedback）が崩壊
+- **failure rate ~0% 目標** — `e2e/smoke/*.smoke.spec.ts` は seed dependency 禁止（空 DB で fallback 描画される URL のみ）
+- **`bunx playwright test --project=chromium-smoke`** で `chromium-smoke` project のみ実行（`playwright.config.ts` で `testMatch: /e2e\/smoke\/.*\.smoke\.spec\.ts/` を指定）
+- **広域 E2E (`e2e-tests` job) との関係**: critical path は smoke が、機能カバレッジは広域 E2E が責務分担。両者の test は重複させない（→ `test-quality/e2e.md` §Smoke vs 広域 E2E の責務分離）
 
 **workflow_dispatch inputs SSoT**:
 
@@ -149,6 +158,7 @@ Required (毎 push 実行) job が完走するように pass-rate を確保し�
 - `Dependency Audit (bun audit)`
 - `Lint & Type Check`
 - `Unit Tests`
+- `Smoke E2E (critical path)`
 - `Build (env validation)`
 - `Bundle Analysis (Turbopack)`
 

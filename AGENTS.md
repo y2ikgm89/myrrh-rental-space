@@ -84,13 +84,27 @@ bun run test:all
 bun test <path>
 bun run validate
 bun run validate && bun run build
-bun run e2e
+bunx playwright test --project=chromium-smoke   # smoke E2E (毎 push CI required)
+bun run e2e                                       # 広域 E2E（label opt-in CI、ローカル全走）
 ```
 
 - 作業完了前の最低ライン: `bun run validate`
 - PR / release / commit 前: `bun run validate && bun run build`
 - 変更範囲が明確な場合は、先に `bun test <path>` や対象 E2E を実行する。
 - テスト全走は CI と `lefthook` pre-push に委ねる。毎回の手動全走は不要。
+
+### Test strategy（業界標準 4 層）
+
+| 層            | 場所                               | CI trigger                               | 用途                                      |
+| ------------- | ---------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| Unit          | `__tests__/unit/`                  | 毎 push（required）                      | 関数・ユーティリティ・型ガード            |
+| Integration   | `__tests__/integration/`           | 毎 push（required）                      | Server Actions・API・domain command       |
+| **Smoke E2E** | `e2e/smoke/*.smoke.spec.ts`        | **毎 push（required、`smoke-e2e` job）** | critical path ゲート（< 3 分、≤ 10 test） |
+| 広域 E2E      | `e2e/{public,authenticated,a11y}/` | PR `e2e` label opt-in                    | 機能カバレッジ・回帰検出                  |
+
+**Smoke の規律**: 空 DB でも 200 OK で fallback 描画される URL のみ対象。`test.skip(true, ...)` 全面禁止。詳細は `.claude/rules/test-quality/e2e.md` §Smoke vs 広域 E2E の責務分離 を参照。
+
+**広域 E2E の規律**: defensive skip (`test.skip(true, "データがありません")`) 禁止。seed 拡充で解消するか unit/integration に降格。
 
 ## Required Coding Rules
 

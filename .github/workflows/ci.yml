@@ -157,11 +157,105 @@ jobs:
       - name: Run integration tests (per-file isolation)
         run: bun run test:integration
 
+  smoke-e2e:
+    name: Smoke E2E (critical path)
+    runs-on: ubuntu-latest
+    # 毎 push 実行する critical path smoke。`chromium-smoke` project
+    # (`e2e/smoke/*.smoke.spec.ts`) のみ実行。10 test / 3 分以内完走を SLA とする。
+    # 業界標準: Stripe / Vercel / Linear / Shopify の "fast PR feedback smoke" pattern。
+    # 広域 E2E (`e2e-tests` job) は label opt-in 維持、本 job のみ
+    # branch protection required status checks に含める。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium --with-deps
+
+      - name: Install Playwright system deps (cache hit path)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      - name: Generate Prisma client
+        run: bunx --bun prisma generate
+
+      - name: Run database migrations
+        run: bunx --bun prisma migrate deploy
+
+      - name: Seed test database
+        run: bunx --bun prisma db seed
+
+      - name: Build application
+        run: bun run build:skip-env
+        env:
+          NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          SKIP_ENV_VALIDATION: "true"
+
+      - name: Run smoke E2E tests
+        run: bunx playwright test --project=chromium-smoke
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
+          ADMIN_LOGIN_TOKEN: "test-admin-login-token-for-ci-smoke-strict-0123456789ab"
+          R2_ACCOUNT_ID: "test-r2-account"
+          R2_ACCESS_KEY_ID: "test-r2-access-key"
+          R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
+          R2_BUCKET_NAME: "test-r2-bucket"
+          R2_PUBLIC_URL: "https://example.com"
+          RESEND_API_KEY: "re_test_placeholder_for_ci_smoke_only"
+          STRIPE_SECRET_KEY: "sk_test_placeholder_for_ci_smoke_only"
+          GOOGLE_CLIENT_ID: "test-google-client-id.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-smoke"
+
+      - name: Upload smoke Playwright report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-smoke-report-${{ github.event.pull_request.number || github.sha }}
+          path: playwright-report/
+          retention-days: 14
+
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    # E2E は重く maintenance コストが高いため opt-in 実行（Stripe / Vercel / Linear
-    # 等の業界標準パターン）。
+    # 広域 E2E は重く maintenance コストが高いため opt-in 実行（Stripe / Vercel / Linear
+    # 等の業界標準パターン）。critical path は `smoke-e2e` job が毎 push でカバー。
     # - PR に `e2e` ラベル付与時 (labeled イベント含む)
     # - workflow_dispatch で手動実行時
     # main への push では実行しない。本番デプロイ前検証は
