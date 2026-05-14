@@ -31,7 +31,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 公開コンテンツ: `/posts`（ブログ）・`/news`・`/spaces`・`/events`・`/faq`。RSS: `/feed.xml`。
 
 詳細: `.claude/rules/project-structure.md` / `.claude/rules/frontend/project-design-config.md`（path-scoped で auto-load）。
-技術スタックの実バージョン: `package.json` + `bun.lock` (SSoT)、コア依存の列挙は [AGENTS.md](AGENTS.md#tech-stack)。
+技術スタックの実バージョン SSoT: [`package.json`](package.json) + [`bun.lock`](bun.lock)。採用機能の列挙は [`AGENTS.md`](AGENTS.md#tech-stack)。
 
 ---
 
@@ -95,7 +95,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 > - 調査・監査・公式準拠 verification → `.claude/rules/research-audit.md`（agents/skills 編集時）
 > - 実装パターン → `.claude/rules/implementation-patterns.md`（domain/actions/prisma 編集時）
 > - Git / Migration → `.claude/rules/git-migration.md`（migrations/workflows 編集時）
-> - **CI ワークフロー → `.claude/rules/ops/ci-workflow.md`（`.github/workflows/**`/`package.json`/`scripts/run-tests.mjs` 編集時）\*\*
+> - **CI ワークフロー → `.claude/rules/ops/ci-workflow.md`（+ `ci-workflow/{job-strategy,testing-perf,debug}.md` sub-rules）（`.github/workflows/**`/`package.json`/`scripts/run-tests.mjs` 編集時）\*\*
 > - Subagent dispatch → `.claude/skills/subagent-dispatch-template/SKILL.md`
 
 ### 検証
@@ -103,7 +103,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **作業中**: `bun run type-check` / **完了前**: `bun run validate` / **コミット前**: `bun run validate && bun run build`
 - **完遂判定は `test:unit` + `test:integration` 両走必須** — unit pass のみで「完了」宣言は危険、Phase 0 rename / migration drift 等で integration fixture が drift しがち
 - **依存パッチ/マイナー更新後は validate 必須** — eslint-plugin-react-hooks 等のパッチで新ルール追加 = 実質破壊的変更
-- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。フル実行は `bun run test:unit` / `test:integration`（`scripts/run-tests.mjs` 経由 per-file isolation runner）。E2E は PR `e2e` label 付与時のみ opt-in 実行（→ `ops/ci-workflow.md` §4 Required vs Opt-in）。`bun test __tests__/unit` の親ディレクトリ指定は `mock.module` 干渉で偽陽性のため禁止
+- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。フル実行は `bun run test:unit` / `test:integration`（`scripts/run-tests.mjs` 経由 per-file isolation runner）。E2E は PR `e2e` label 付与時のみ opt-in 実行（→ `ops/ci-workflow/job-strategy.md` §Required vs Opt-in job 分離）。`bun test __tests__/unit` の親ディレクトリ指定は `mock.module` 干渉で偽陽性のため禁止
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン
 
 詳細: `.claude/rules/test-quality.md` / `.claude/rules/bun-patterns.md`
@@ -144,3 +144,13 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **独自分類の新設禁止** — barrel index / process barrel / gotchas メタ分類 / ADR system 等は撤回済み（再導入禁止）
 - **常時ロード rule（`paths:` なし）はゼロ維持** — 全 rule docs は path-scoped frontmatter 必須
 - 詳細・撤回済みパターン・正しい構造化方針は `.claude/rules/claude-code-patterns.md`（`.claude/**` 編集時に auto-load）
+
+---
+
+## md ドキュメント規律
+
+- **バージョン値の md 内ハードコード禁止** — SSoT は `package.json` + `bun.lock`。`Next.js 16.2.6` 等の minor バージョン記述は `bun update` で drift
+- **「最終更新: YYYY-MM-DD」マーカー禁止** — 手動メンテで drift する dead marker、履歴は git log SSoT
+- **`.archive/` ディレクトリ再導入禁止** — 完了済 plan/spec は削除し `git log --all --diff-filter=D -- <path>` で辿る
+- **`docs/reference/` 再導入禁止** — library API reference は公式 docs を直接参照、project pattern は `.claude/rules/**`（Claude Code）/ `.agents/skills/**`（Codex）が SSoT
+- **`docs/how-to/` はインフラ・デプロイ手順のみ** — DB migration / auth / Lexical 等の実装手順は rule docs / skills に集約

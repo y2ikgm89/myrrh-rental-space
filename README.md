@@ -4,21 +4,23 @@
 
 ## 技術スタック
 
-| カテゴリ       | 技術                               | バージョン | 備考                                             |
-| -------------- | ---------------------------------- | ---------- | ------------------------------------------------ |
-| フレームワーク | Next.js App Router + Turbopack     | 16.2.4     | PPR (`cacheComponents: true`), React Compiler    |
-| UI             | React                              | 19.2.5     | Compiler 1.0 自動メモ化、`use()` / Activity 対応 |
-| 言語           | TypeScript                         | 6.0.3      | `erasableSyntaxOnly`, `verbatimModuleSyntax`     |
-| ランタイム     | Bun                                | 1.3.13     | パッケージ管理 + test runner                     |
-| ORM            | Prisma (`prisma-client` generator) | 7.7.0      | ESM, Turbopack 対応, browser entry               |
-| 認証           | Better Auth (dual instance)        | 1.6.5      | adminAuth / customerAuth、Google/LINE OAuth      |
-| 決済           | Stripe                             | latest     | Checkout + Webhook                               |
-| スタイリング   | Tailwind CSS (CSS-first)           | 4.2.3      | `@theme`, semantic tokens                        |
-| 検証           | Zod                                | 4.3.6      | `error:` パラメータ、native enum                 |
-| エディタ       | Lexical                            | 0.43.0     | NodeState API                                    |
-| E2E            | Playwright                         | 1.59.1     | storage state auth, 694 tests                    |
-| a11y           | @axe-core/playwright               | 4.11.2     | WCAG 2.1 AA 自動検証                             |
-| Perf 監視      | Lighthouse CI                      | 0.15.1     | budget.json で granular gate                     |
+確定バージョンの SSoT は [`package.json`](./package.json) + [`bun.lock`](./bun.lock)。採用判断・トレードオフは [`docs/explanation/tech-stack.md`](./docs/explanation/tech-stack.md) を参照。
+
+| カテゴリ       | 技術                               | 主機能                                                              |
+| -------------- | ---------------------------------- | ------------------------------------------------------------------- |
+| フレームワーク | Next.js App Router + Turbopack     | PPR (`cacheComponents: true`), React Compiler 1.0                   |
+| UI             | React 19                           | Compiler 自動メモ化、`use()`, Activity                              |
+| 言語           | TypeScript 6                       | `erasableSyntaxOnly`, `verbatimModuleSyntax`                        |
+| ランタイム     | Bun                                | パッケージ管理 + test runner、`packageManager` 経由でバージョン固定 |
+| ORM            | Prisma (`prisma-client` generator) | ESM, Turbopack 対応, browser entry                                  |
+| 認証           | Better Auth (dual instance)        | adminAuth / customerAuth、Google/LINE OAuth                         |
+| 決済           | Stripe                             | Checkout + Webhook                                                  |
+| スタイリング   | Tailwind CSS (CSS-first)           | `@theme`, semantic tokens                                           |
+| 検証           | Zod 4                              | `error:` パラメータ、native enum                                    |
+| エディタ       | Lexical                            | NodeState API、Portable Text 直列化                                 |
+| E2E            | Playwright                         | storage state auth                                                  |
+| a11y           | @axe-core/playwright               | WCAG 2.1 AA 自動検証                                                |
+| Perf 監視      | Lighthouse CI                      | `.lighthouseci/budget.json` で granular gate                        |
 
 ## アーキテクチャ概要
 
@@ -27,10 +29,11 @@ src/
 ├── app/
 │   ├── (public)/          # 公開ページ（Editorial Magazine テーマ）
 │   ├── (admin)/           # 管理画面（Swiss Industrial テーマ）
+│   ├── (preview)/         # 管理画面向けプレビュー（ManagedPageSections 共有）
 │   └── api/               # 公開 API / auth / cron / webhooks
 ├── shared/
 │   ├── db/                # Prisma singleton, Better Auth adapter
-│   ├── domain/            # 業務コマンド・クエリ（27 ドメイン）
+│   ├── domain/            # 業務コマンド・クエリ
 │   └── lib/
 │       ├── validations/enums/prisma-types.ts  # client-safe Prisma gateway
 │       ├── {admin,customer}-auth.ts           # dual auth instance
@@ -45,13 +48,13 @@ src/
 - **Prisma gateway**: app 層は `@/shared/lib/validations/enums/prisma-types`（browser entry 由来、type-only）経由でのみ Prisma 型にアクセス。runtime 値は `shared/db/` / `shared/domain/` のみ直接 import 可
 - **`executeAdminMutationResult`**: 管理 write 系 Server Actions は認証・権限・監査ログを一括処理
 
-Codex 作業の正本は [`AGENTS.md`](./AGENTS.md) と [`.agents/skills/`](./.agents/skills/) です。詳細な配置方針は [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md) を参照してください。
+Codex 作業の正本は [`AGENTS.md`](./AGENTS.md) と [`.agents/skills/`](./.agents/skills/) です。Claude Code 作業の正本は [`CLAUDE.md`](./CLAUDE.md) と [`.claude/`](./.claude/) です。両ツールの境界は [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md)。
 
 ## セットアップ
 
 ### 前提条件
 
-- **Bun** 1.3.13+
+- **Bun** — `package.json#packageManager` で固定。ローカルは `bun upgrade` で同バージョンに合わせる
 - **Node.js** 20+（CLI ツール向け）
 - **PostgreSQL** 16（Docker 推奨）
 - **Git** 2.40+
@@ -90,15 +93,15 @@ bun run dev
 
 ### テスト
 
-| コマンド                   | 説明                                           |
-| -------------------------- | ---------------------------------------------- |
-| `bun run test:all`         | 単体 + 統合テスト（per-directory batch）       |
-| `bun run test:unit`        | 単体のみ                                       |
-| `bun run test:integration` | 統合のみ                                       |
-| `bun test <path>`          | 単一ファイル（日常開発はこれで十分、ADR 0014） |
-| `bun run e2e`              | Playwright E2E（全 project）                   |
-| `bun run e2e:ui`           | Playwright UI モード                           |
-| `bun run lhci`             | Lighthouse CI（perf/a11y/SEO/best-practices）  |
+| コマンド                   | 説明                                          |
+| -------------------------- | --------------------------------------------- |
+| `bun run test:all`         | 単体 + 統合テスト（per-file isolation）       |
+| `bun run test:unit`        | 単体のみ                                      |
+| `bun run test:integration` | 統合のみ                                      |
+| `bun test <path>`          | 単一ファイル（日常開発はこれで十分）          |
+| `bun run e2e`              | Playwright E2E（全 project）                  |
+| `bun run e2e:ui`           | Playwright UI モード                          |
+| `bun run lhci`             | Lighthouse CI（perf/a11y/SEO/best-practices） |
 
 ### DB
 
@@ -119,56 +122,32 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual --update-snap
 PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 ```
 
-## CI 品質ゲート（11 jobs）
+## CI 品質ゲート
 
-全 PR は以下の自動チェックを通過する必要があります：
+全 PR は GitHub Actions で自動チェックされます。詳細仕様と opt-in label のリストは [`.claude/rules/ops/ci-workflow.md`](./.claude/rules/ops/ci-workflow.md)（path-scoped rule）を参照。Required / Opt-in の区分けは Stripe / Vercel 公式 CI と同じ "fast PR feedback + heavy jobs on demand" pattern。
 
-| Job                  | 内容                                               | Blocking |
-| -------------------- | -------------------------------------------------- | :------: |
-| `lint-and-typecheck` | Prettier format check + ESLint + `tsc --noEmit`    |    ✅    |
-| `unit-tests`         | Bun test (per-directory batch) + integration tests |    ✅    |
-| `e2e-tests`          | Playwright（694 tests、全 project、browser cache） |    ✅    |
-| `build`              | env validation ありの本番ビルド                    |    ✅    |
-| `dependency-audit`   | `bun audit` + artifact 保存                        | ⚠️ warn  |
-| `bundle-analysis`    | Turbopack `next experimental-analyze` artifact     |    ✅    |
-| `lighthouse-ci`      | perf / a11y / SEO / best-practices + budget.json   |    ✅    |
-| `visual-regression`  | Playwright `toHaveScreenshot`                      |  opt-in  |
-| `codeql`             | GitHub Advanced Security（security-extended）      |    ✅    |
-| `actionlint`         | GitHub Actions workflow YAML lint                  |    ✅    |
-| `docs`               | API ドキュメント生成（main のみ）                  |   main   |
+## 実装ハードルール
 
-## 実装ハードルール（抜粋）
-
-詳細は [`AGENTS.md`](./AGENTS.md) 参照。主要ルール：
-
-- **型アサーション（`as`）禁止** — 型ガード / `satisfies` / Zod `safeParse` を使用
-- **`useCallback` / `useMemo` / `memo` 禁止** — React Compiler 1.0 が自動メモ化
-- **配列 uniqueness はスキーマ層で契約** — Zod `.refine()` で重複拒否、UI 層 Set dedup 禁止
-- **ハードコードカラー禁止** — セマンティックトークン必須
-- **`className` テンプレートリテラル禁止** — `cn()` を使用
-- **Turnstile 配置基準** — 未認証公開フォームは必須
-- **app 層からの Prisma 直 import 禁止** — `@/shared/lib/validations/enums/prisma-types` gateway 経由
-- **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須**
+ハードルールの SSoT は [`AGENTS.md`](./AGENTS.md)（Codex 用）と [`CLAUDE.md`](./CLAUDE.md)（Claude Code 用）です。本 README には複製しません（drift 防止）。
 
 ## 開発フロー
 
-1. 大規模変更は `docs/plans/YYYY-MM-DD-*.md` に計画を作成
+1. 大規模変更は [`docs/superpowers/plans/`](./docs/superpowers/plans/) に計画書を作成
 2. feature ブランチで実装
 3. `bun run validate && bun run build` で最終検証
 4. PR 作成（[`.github/pull_request_template.md`](./.github/pull_request_template.md) を埋める）
-5. CI 11 jobs を通過
+5. CI 必須 jobs を通過
 6. CODEOWNERS レビュー
 7. マージ
 
 ## ドキュメント
 
 - [`AGENTS.md`](./AGENTS.md) — Codex 向けプロジェクト指示
+- [`CLAUDE.md`](./CLAUDE.md) — Claude Code 向けプロジェクト指示
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
 - [`SECURITY.md`](./SECURITY.md) — 脆弱性報告 policy・対応 SLA
-- [`.agents/skills/`](./.agents/skills/) — Codex ネイティブの反復作業 skill
 - [`docs/`](./docs/) — Diátaxis 構成のドキュメント（`explanation/` / `how-to/` / `reference/`）
 - [`docs/explanation/ai-instructions.md`](./docs/explanation/ai-instructions.md) — Codex / Claude Code 正本配置
-- [`docs/superpowers/plans/`](./docs/superpowers/plans/) — 進行中プランのみ（完了は `.archive/` または git history）
 
 ## ライセンス
 

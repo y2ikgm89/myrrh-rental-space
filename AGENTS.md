@@ -12,7 +12,7 @@
 - `.codex/rules/*.rules` はサンドボックス外コマンドの承認ルール専用。公式上 experimental なので、`prefix_rule` の `pattern` / `decision` / `justification` / `match` / `not_match` だけでコマンド方針を表し、コーディング規約は置かない。
 - `.codex/hooks.json` は空設定にする。hooks は公式上 experimental かつ Windows support が一時無効なので、検証強制は `lefthook` / CI / このファイルの delivery checklist で担保する。
 - `.claude/*` は残置された Claude Code 用資産として扱う。Codex 作業では参照・同期・正本扱いしない。
-- ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/explanation/*`、`docs/how-to/*`、`docs/reference/*` の Codex 向け導線から読む。
+- ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/explanation/*`、`docs/how-to/*`、`docs/guides/*` の Codex 向け導線から読む。ライブラリ API リファレンスは公式 docs を直接参照する。
 - Codex 資産（`AGENTS.md` / `.agents/skills` / `.codex/agents` / `.codex/rules` / `.codex/hooks.json`）を変更する場合は `codex-instruction-maintenance` と `project-validation` の手順を使い、AGENTS.md には恒久的な全体制約だけを置く。
 
 ## Project Overview
@@ -25,18 +25,20 @@
 
 ### Tech Stack
 
-下記バージョンは `package.json` / `bun.lock` で現在解決されている実ランタイムに合わせる。
+**確定バージョンの SSoT は [`package.json`](./package.json) + [`bun.lock`](./bun.lock)**（バージョン値をここに複製しない — drift の温床）。主要技術と採用機能:
 
-| 技術         | バージョン | 備考                                         |
-| ------------ | ---------- | -------------------------------------------- |
-| Next.js      | 16.2.6     | `'use cache'`, `updateTag`, PPR 対応         |
-| React        | 19.2.6     | React Compiler 1.0, `useEffectEvent`         |
-| TypeScript   | 6.0.3      | `target: es2025`, `erasableSyntaxOnly`       |
-| Bun          | 1.3.13     | `bun:test`, `packageManager` と一致          |
-| Prisma       | 7.8.0      | WASM, mapped enums                           |
-| Better Auth  | 1.6.10     | RBAC, Google/LINE OAuth（`bun.lock` 解決版） |
-| Tailwind CSS | 4.3.0      | CSS-first, `@theme`                          |
-| Zod          | 4.4.3      | `{ error: }` パラメータ                      |
+| 技術           | 採用機能                                                          |
+| -------------- | ----------------------------------------------------------------- |
+| Next.js        | `'use cache'`, `updateTag`, PPR (cacheComponents)                 |
+| React 19       | React Compiler 1.0, `useEffectEvent`, `use(Context)`              |
+| TypeScript 6   | `target: es2025`, `erasableSyntaxOnly`, `verbatimModuleSyntax`    |
+| Bun            | `bun:test`, `packageManager` 経由でバージョン固定                 |
+| Prisma 7       | WASM client engine, mapped enums                                  |
+| Better Auth    | dual instance (adminAuth / customerAuth), RBAC, Google/LINE OAuth |
+| Tailwind CSS 4 | CSS-first, `@theme`, container queries                            |
+| Zod 4          | `{ error: }` パラメータ, `z.registry<FieldMeta>()`                |
+
+採用理由・トレードオフは [`docs/explanation/tech-stack.md`](./docs/explanation/tech-stack.md)。
 
 ### Project Structure
 
