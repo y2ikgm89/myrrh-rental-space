@@ -1973,8 +1973,79 @@ async function seedDevCustomerAndReservations() {
     created++;
   }
 
+  // 4) Review を COMPLETED+PAID 予約に upsert（reservationId @unique を起点に idempotent）
+  const completedReservation = await prisma.reservation.findFirst({
+    where: {
+      customerId: customer.id,
+      status: "COMPLETED",
+      notes: { contains: "[E2E] 過去・決済済み" },
+    },
+    select: { id: true, spaceId: true },
+  });
+  if (completedReservation) {
+    await prisma.spaceReview.upsert({
+      where: { reservationId: completedReservation.id },
+      update: {},
+      create: {
+        reservationId: completedReservation.id,
+        spaceId: completedReservation.spaceId,
+        customerId: customer.id,
+        rating: 5,
+        title: "[E2E] レビュー検証用",
+        comment:
+          "E2E spec の seed-driven review assertion 用の dev customer review。",
+        isPublished: true,
+      },
+    });
+  }
+
+  // 5) Inquiry を 2 件 seed（NEW + RESOLVED、customerId 紐付け）
+  const inquiryFixtures = [
+    {
+      subject: "[E2E] dev customer の新規お問い合わせ",
+      message: "E2E spec で /mypage/inquiries の一覧表示を検証する用 fixture。",
+      status: "NEW" as const,
+      replyMessage: undefined as string | undefined,
+    },
+    {
+      subject: "[E2E] dev customer の解決済お問い合わせ",
+      message:
+        "E2E spec で RESOLVED 表示と replyMessage を検証する用 fixture。",
+      status: "RESOLVED" as const,
+      replyMessage:
+        "ご返信ありがとうございました。引き続きよろしくお願いします。",
+    },
+  ];
+  let inquiryCreated = 0;
+  for (const fixture of inquiryFixtures) {
+    const existingInquiry = await prisma.inquiry.findFirst({
+      where: { customerId: customer.id, subject: fixture.subject },
+      select: { id: true },
+    });
+    if (existingInquiry) continue;
+
+    await prisma.inquiry.create({
+      data: {
+        customerId: customer.id,
+        name: `${customer.lastName} ${customer.firstName}`,
+        email: customer.email,
+        customerType: CustomerType.PERSONAL,
+        subject: fixture.subject,
+        message: fixture.message,
+        status: fixture.status,
+        ...(fixture.replyMessage !== undefined
+          ? {
+              replyMessage: fixture.replyMessage,
+              repliedAt: new Date(),
+            }
+          : {}),
+      },
+    });
+    inquiryCreated++;
+  }
+
   console.log(
-    `✅ Seeded dev customer (${DEV_EMAIL}) + ${created.toString()} reservation(s)`,
+    `✅ Seeded dev customer (${DEV_EMAIL}) + ${created.toString()} reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
   );
 }
 

@@ -5,14 +5,14 @@ import { urls } from "../../fixtures";
  * マイページ - お問い合わせ履歴 E2E（顧客認証済み state）
  *
  * テストシナリオ:
- * 1. お問い合わせ一覧ページの表示
+ * 1. お問い合わせ一覧ページの表示（seed-driven、最低 2 件）
  * 2. お問い合わせ詳細ページへのナビゲーション
- * 3. 管理者返信 (replyMessage) がある場合の表示
+ * 3. 管理者返信 (replyMessage) または未返信表示の択一
  * 4. 投稿日時のフォーマット
  *
- * 前提:
+ * 前提（seed-driven、`prisma/seed.ts` § seedDevCustomerAndReservations 経由）:
+ * - dev customer に NEW + RESOLVED の 2 件 inquiry が確実に存在
  * - chromium-customer project で実行
- * - dev customer がお問い合わせを送信済みである前提（データ無ければ skip）
  */
 
 test.describe("お問い合わせ履歴 - 一覧ページ", () => {
@@ -24,55 +24,32 @@ test.describe("お問い合わせ履歴 - 一覧ページ", () => {
   test("お問い合わせ一覧ページが認証済みで表示される", async ({ page }) => {
     expect(page.url()).not.toMatch(/\/login/);
     expect(page.url()).toContain("/mypage/inquiries");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
-  test("お問い合わせ一覧 or 空状態のいずれかが描画される", async ({ page }) => {
-    const hasInquiryCard = await page
-      .locator('article, a[href^="/mypage/inquiries/"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasEmptyState = await page
-      .getByText(/お問い合わせはありません|まだお問い合わせ|履歴がありません/i)
-      .isVisible()
-      .catch(() => false);
-
-    expect(hasInquiryCard || hasEmptyState).toBeTruthy();
+  test("seed の inquiry 一覧（最低 2 件）が描画される", async ({ page }) => {
+    // seed-driven: dev customer に NEW + RESOLVED が必ずある。空なら seed regression。
+    const inquiryCard = page.locator('a[href^="/mypage/inquiries/"]').first();
+    await expect(inquiryCard).toBeVisible({ timeout: 5000 });
   });
 });
 
 test.describe("お問い合わせ履歴 - 詳細ページ", () => {
-  test("お問い合わせ詳細ページに遷移できる", async ({ page }) => {
+  test("お問い合わせ詳細ページに遷移できる + 投稿日時が表示される", async ({
+    page,
+  }) => {
     await page.goto(urls.mypageInquiries);
     await page.waitForLoadState("networkidle");
 
     const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
-    if (!(await detailLink.isVisible().catch(() => false))) {
-      test.skip(true, "お問い合わせがありません");
-      return;
-    }
-
+    await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
     await page.waitForLoadState("networkidle");
 
     expect(page.url()).toMatch(/\/mypage\/inquiries\/[^/]+$/);
-    await expect(page.locator("main")).toBeVisible();
-  });
+    await expect(page.locator("main").first()).toBeVisible();
 
-  test("詳細ページに投稿日時が表示される", async ({ page }) => {
-    await page.goto(urls.mypageInquiries);
-    await page.waitForLoadState("networkidle");
-
-    const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
-    if (!(await detailLink.isVisible().catch(() => false))) {
-      test.skip(true, "お問い合わせなし");
-      return;
-    }
-    await detailLink.click();
-    await page.waitForLoadState("networkidle");
-
-    // YYYY/MM/DD or YYYY年M月 形式
+    // YYYY/MM/DD or YYYY年M月 形式の日付
     const hasDate = await page
       .locator("text=/\\d{4}[年/-]\\d{1,2}/")
       .first()
@@ -81,21 +58,18 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
     expect(hasDate).toBeTruthy();
   });
 
-  test("管理者返信があれば「返信」セクションまたは replyMessage が表示される（任意）", async ({
+  test("管理者返信セクション or 未返信表示の択一が成立する", async ({
     page,
   }) => {
     await page.goto(urls.mypageInquiries);
     await page.waitForLoadState("networkidle");
 
     const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
-    if (!(await detailLink.isVisible().catch(() => false))) {
-      test.skip(true, "お問い合わせなし");
-      return;
-    }
+    await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
     await page.waitForLoadState("networkidle");
 
-    // 返信セクション or 「未返信」メッセージ
+    // 返信セクション or 「未返信」メッセージ（一覧 sort 順で最初が NEW か RESOLVED かは仕様依存）
     const hasReplySection = await page
       .getByText(/管理者からの返信|店舗からの返信|返信内容/i)
       .first()
@@ -107,7 +81,6 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
       .isVisible()
       .catch(() => false);
 
-    // どちらか一方の state が成立
     expect(hasReplySection || hasNoReply).toBeTruthy();
   });
 });
