@@ -76,7 +76,7 @@ export { default } from "../../_shared/components/EditorLoading";
 
 `PageLayout variant="content"` + `Container` 配下で以下の順で配置:
 
-1. **Page hero placeholder** — `<section className="border-b border-border bg-gradient-to-b from-surface via-background to-background py-[var(--space-xl)]">` で `StandardHeroSection variant="minimal"` を模倣
+1. **Page hero placeholder** — `<section className="border-b border-border bg-background py-[var(--space-xl)]">` で `StandardHeroSection variant="minimal"` を模倣（旧 `bg-gradient-to-b from-surface via-background to-background` は axe-core が bgGradient incomplete で評価できず production build で violation 昇格する silent bug のため solid `bg-background` + border separation に統一、2026-05-14）
 2. **本文セクション** — Container 内に `space-y-* py-[var(--space-lg)]` で複数 skeleton を縦積み
 
 詳細ページ (posts / news / events / spaces / access) は ArticleLayout 反映:
