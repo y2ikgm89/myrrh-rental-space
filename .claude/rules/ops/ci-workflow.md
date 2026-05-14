@@ -186,21 +186,33 @@ function applySecurityHeaders(
 
 `bundle-analysis` job が動くからと `bundle-size-diff` で setup-bun を省略するのは silent drift。両 job とも setup-bun を入れる。
 
-## 10. `actions/dependency-review-action` の license list は **comma-separated 単一行** のみ canonical
+## 10. `actions/dependency-review-action@v5` の license 指定 2 つの silent bug
 
-`allow-licenses` / `deny-licenses` は **comma-separated 単一行**で指定する。YAML literal block scalar (`|`) で newline-separated にすると **leading whitespace が SPDX 識別子に混入**し `Invalid license(s) in allow-licenses: MIT` で必ず fail する silent bug:
+### 10.1. `allow-licenses` と `deny-licenses` は **排他的**
+
+`@v5` で破壊的変更：両方同時指定すると `You cannot specify both allow-licenses and deny-licenses` で必ず fail。**どちらか一方のみ**を選ぶ:
+
+| 方式             | 用途                                   | 採否                                            |
+| ---------------- | -------------------------------------- | ----------------------------------------------- |
+| `allow-licenses` | 厳格な whitelist（許可リストのみ通過） | 新規 OSS license が出るたび追加が必要、保守重い |
+| `deny-licenses`  | blacklist（禁止以外は通過）            | **本プロジェクト採用** — Stripe / Vercel と同等 |
+
+新規 license が untracked のまま増え続けるリスクを取って、商用組込 incompatible な AGPL / GPL のみ deny する deny-licenses 方式が業界標準。
+
+### 10.2. license list は **comma-separated 単一行** のみ canonical
+
+YAML literal block scalar (`|`) で newline-separated にすると **leading whitespace が SPDX 識別子に混入**し `Invalid license(s) in deny-licenses: AGPL-3.0-only` で fail する silent bug:
 
 ```yaml
 # OK: comma-separated 単一行（公式 README canonical）
-allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
-deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only
+deny-licenses: AGPL-1.0-only, AGPL-3.0-only, GPL-3.0-only
 
 # NG: YAML literal block + indent は parse 失敗
-# allow-licenses: |
-#   MIT
-#   Apache-2.0
-# → "  MIT" として parse される（leading 2 space 残存）
-# → SPDX validator が reject → "Invalid license(s) in allow-licenses: MIT"
+# deny-licenses: |
+#   AGPL-3.0-only
+#   GPL-3.0-only
+# → "  AGPL-3.0-only" として parse される（leading 2 space 残存）
+# → SPDX validator が reject
 ```
 
-`@v5` の SPDX validator は厳格化されており、`@v3` 系で動いていた literal block 形式は**回帰失敗**する。新規 PR 作成時に毎回 fail で気付くケースが多い（required 登録不可）。
+新規 PR 作成時に毎回 fail で気付くケースが多い（required 登録不可で silent）。`@v3` 系で動いていた literal block 形式は **`@v5` で回帰失敗**するため migration 時に注意。
