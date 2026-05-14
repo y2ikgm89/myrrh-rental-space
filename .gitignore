@@ -1,83 +1,95 @@
-# Dependencies
-node_modules/
+# =============================================================================
+#  Myrrh Rental Space — .gitignore
+#  Stack: Next.js 16 + Bun 1.3 + Prisma 7 + Cloud Run + Playwright + Better Auth
+#  Reference: https://nextjs.org/docs/app/getting-started/installation
+# =============================================================================
 
-# Next.js
-.next/
-out/
-build/
-dist/
+# ─── Dependencies ────────────────────────────────────────────────────────────
+/node_modules
+/.pnp
+.pnp.*
+
+# ─── Build output ────────────────────────────────────────────────────────────
+/.next/
+/out/
+/build/
+/dist/
+*.tsbuildinfo
 next-env.d.ts
 
-# Bun
+# ─── Runtime caches ──────────────────────────────────────────────────────────
 .bun/
-
-# Turbopack
 .turbo/
+.cache/
 
-# Environment variables
-.env
-.env*.local
-
-# TypeScript
-*.tsbuildinfo
-
-# Prisma (generated)
-generated/
+# ─── Prisma (deps stage で再生成) ────────────────────────────────────────────
+/generated/
 !prisma/migrations/.gitkeep
 
-# Testing
-coverage/
-test-results/
-playwright-report/
-playwright/.cache/
-playwright/.auth/
+# ─── Environment variables ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ─── Testing / Coverage ──────────────────────────────────────────────────────
+/coverage/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/playwright/.auth/
 .nyc_output
 
-# Lighthouse CI artifacts
-.lighthouseci/
+# ─── Lighthouse CI (artifacts; budget.json のみ tracked) ─────────────────────
+/.lighthouseci/
+!/.lighthouseci/budget.json
 
-# IDE
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/settings.json
 .idea/
+.cursor/
 
-# Local memory / scratch
-.remember/
-
-# OS
+# ─── OS noise ────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *~
 *.swp
 *.swo
+mintty.*.png
+nul
 
-# Python
-__pycache__/
-*.pyc
-
-# Debug logs
+# ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 lerna-debug.log*
+*storybook.log
 
-# Temporary files
+# ─── Temporary / Sensitive ───────────────────────────────────────────────────
 *.tmp
 *.temp
 *.pem
+*.key
+*.crt
 
-# Vercel
-.vercel
+# ─── Python (hooks) ──────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
 
-# TypeDoc generated API docs
-docs/api/
-
-# Playwright MCP screenshots
+# ─── AI / Tooling local state ────────────────────────────────────────────────
+.remember/
 .playwright-mcp/
+.serena/
+.claire/
+.worktrees/
+.superpowers/
 
-# Claude Code local files
+# ─── Claude Code local state ─────────────────────────────────────────────────
 .claude/logs/
 .claude/state/
 .claude/memory/
@@ -86,15 +98,12 @@ docs/api/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 tmpclaude-*-cwd
-nul
 
-# mintty screenshots
-mintty.*.png
+# ─── Vendor deploy artifacts ─────────────────────────────────────────────────
+.vercel/
 
-# Serena MCP tool files
-.serena/
-.worktrees
-.claire
+# ─── Generated API docs (TypeDoc) ────────────────────────────────────────────
+docs/api/
 
-# Section Architecture Phase B: migration audit log (ephemeral, regenerated on run)
+# ─── Section Architecture Phase B: migration audit log (ephemeral) ───────────
 prisma/migrations/section-design-migration-log.json

@@ -1,27 +1,34 @@
-# Dependencies
-node_modules
+# =============================================================================
+#  .dockerignore
+#  Docker ビルドコンテキストから除外。`generated/` は deps ステージで再生成。
+#  Reference: .claude/rules/ops/deployment/secrets-and-ignore.md
+# =============================================================================
 
-# Build outputs
+# Dependencies / Build output
+node_modules
 .next
 out
 build
 dist
 
-# Prisma generated (deps stage で再生成するため除外)
+# Prisma (deps ステージで再生成)
 generated
 
 # Source control
 .git
 .gitignore
+.gitattributes
 .worktrees/
 
 # Environment
 .env
 .env.*
+!.env.example
 
 # IDE
 .vscode
 .idea
+.cursor
 *.swp
 *.swo
 
@@ -29,7 +36,7 @@ generated
 docs/
 *.md
 
-# Docker
+# Docker / Compose (image 内には不要)
 Dockerfile
 docker-compose*.yml
 
@@ -39,19 +46,30 @@ __mocks__
 e2e/
 coverage
 playwright.config.ts
+playwright/
 playwright-report/
+test-results/
+.lighthouseci/
 
 # CI/CD
 .github
 cloudbuild.yaml
 
-# AI / Tools
+# AI / Tooling
 .claude/
 .serena/
+.claire/
+.remember/
+.superpowers/
+.playwright-mcp/
+.agents/
+.codex/
+.cursor/
+.devcontainer/
 
 # Misc
 *.log
 .DS_Store
 Thumbs.db
 nul
-.codex*
+mintty.*.png

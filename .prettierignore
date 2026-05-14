@@ -1,7 +1,41 @@
+# =============================================================================
+#  .prettierignore
+#  Prettier 整形対象外。生成物・キャッシュ・サードパーティ・ephemeral 出力。
+# =============================================================================
+
+# Dependencies / Build output
+node_modules/
 generated/
 .next/
 out/
 build/
-node_modules/
+dist/
+
+# Lock files
 bun.lock
+
+# Test / Coverage artifacts
+coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+playwright/.auth/
+
+# Tooling artifacts
+.lighthouseci/
+.playwright-mcp/
+.turbo/
+.bun/
+
+# AI / Local state
+.remember/
+.serena/
+.claire/
 .worktrees/
+.superpowers/
+.claude/logs/
+.claude/state/
+.claude/memory/
+
+# Generated docs
+docs/api/

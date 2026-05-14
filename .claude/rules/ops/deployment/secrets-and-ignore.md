@@ -12,34 +12,95 @@ paths:
 
 ## .dockerignore
 
-Docker ビルドコンテキストから除外。**`generated` を含める**（deps ステージで再生成するため）:
+Docker ビルドコンテキストから除外。**`generated` を含める**（deps ステージで再生成するため）。テスト系・AI 系・IDE 系・dev container 系を網羅除外:
 
-```
+```text
+# Dependencies / Build output
 node_modules
 .next
-generated    # deps ステージで再生成
+out
+build
+dist
+
+# Prisma (deps ステージで再生成)
+generated
+
+# Source control
 .git
+.gitignore
+.gitattributes
+.worktrees/
+
+# Environment
 .env
 .env.*
+!.env.example
+
+# Documentation
 docs/
 *.md
+
+# Testing
 __tests__
+__mocks__
 e2e/
+coverage
+playwright/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# CI/CD
+.github
+cloudbuild.yaml
+
+# AI / Tooling
 .claude/
 .serena/
+.claire/
+.remember/
+.superpowers/
+.playwright-mcp/
+.agents/
+.codex/
+.cursor/
+.devcontainer/
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
+nul
 ```
 
 ## .gcloudignore
 
-Cloud Build ソースアップロードから除外。`#!include:.gitignore` で .gitignore を継承:
+Cloud Build ソースアップロードから除外。`#!include:.gitignore` で .gitignore を継承し、tests / docs / AI tooling を追加除外:
 
-```
+```text
 #!include:.gitignore
 docs/
 __tests__/
+__mocks__/
 e2e/
+coverage/
+playwright.config.ts
+playwright/
+playwright-report/
+test-results/
+.lighthouseci/
 .claude/
 .serena/
+.claire/
+.remember/
+.superpowers/
+.playwright-mcp/
+.agents/
+.codex/
+.cursor/
+.devcontainer/
+.vscode/
+.github/
 *.md
 *.log
 ```
