@@ -6,7 +6,7 @@
  * ゴミ箱に移動されたページの一覧表示・復元・完全削除
  */
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -75,21 +75,32 @@ export function DeletedPagesDialog() {
   const [isPending, startTransition] = useTransition();
   const [confirmSlug, setConfirmSlug] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      startTransition(() => setIsLoading(true));
-      fetchDeletedPages()
-        .then(setPages)
-        .catch((error: unknown) => {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "削除済みページの取得に失敗しました";
-          toast.error(message);
-        })
-        .finally(() => startTransition(() => setIsLoading(false)));
-    }
-  }, [isOpen]);
+  /**
+   * React 19 推奨: ユーザー操作起点のデータ取得は useEffect ではなく
+   * イベントハンドラ内で startTransition により実行する。
+   *
+   * 旧パターン: useEffect([isOpen]) でダイアログ開閉に依存した暗黙的データ取得
+   * Rule: react/hooks/component-and-state.md §startTransition
+   */
+  const handleOpenChange = (next: boolean) => {
+    setIsOpen(next);
+    if (!next) return;
+    setIsLoading(true);
+    startTransition(async () => {
+      try {
+        const data = await fetchDeletedPages();
+        setPages(data);
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "削除済みページの取得に失敗しました";
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    });
+  };
 
   const handleRestore = (slug: string) => {
     startTransition(async () => {
@@ -121,7 +132,7 @@ export function DeletedPagesDialog() {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button variant="destructive" size="sm">
             <IconTrash className="h-4 w-4 mr-1" />
