@@ -38,7 +38,6 @@ import {
   type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
   type PermalinkSettingsInput,
-  type HeaderSettingsInput,
   type FooterSettingsInput,
   type FeatureModulesSettingsInput,
 } from "./schemas";
@@ -201,25 +200,34 @@ export async function updatePermalinkSettings(
   });
 }
 
+/**
+ * ヘッダー設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateHeaderSettings(
-  data: HeaderSettingsInput,
-): Promise<MutationResult> {
-  const parsed = headerSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateHeaderSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    headerSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateHeaderSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-    },
-  });
+  );
 }
 
 export async function updateFooterSettings(
