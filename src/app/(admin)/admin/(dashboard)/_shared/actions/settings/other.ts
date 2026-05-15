@@ -36,7 +36,6 @@ import {
   footerSettingsSchema,
   featureModulesSettingsSchema,
   type AnnouncementBarCarouselSettingsInput,
-  type FooterSettingsInput,
   type FeatureModulesSettingsInput,
 } from "./schemas";
 
@@ -246,26 +245,35 @@ export async function updateHeaderSettings(
   );
 }
 
+/**
+ * フッター設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateFooterSettings(
-  data: FooterSettingsInput,
-): Promise<MutationResult> {
-  const parsed = footerSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateFooterSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    footerSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateFooterSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+          updateTag(CACHE_TAGS.SOCIAL_LINKS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-      updateTag(CACHE_TAGS.SOCIAL_LINKS);
-    },
-  });
+  );
 }
 
 /**
