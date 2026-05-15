@@ -23,6 +23,7 @@ export const TURNSTILE_ACTIONS = {
   mypage_account_delete: "mypage-account-delete",
   admin_password_reset_request: "admin-password-reset-request",
   admin_password_reset: "admin-password-reset",
+  customer_signup_terms: "customer-signup-terms",
 } as const;
 
 export type TurnstileAction =
