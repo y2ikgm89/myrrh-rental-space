@@ -52,8 +52,23 @@ const IconPickerField = dynamic(
     })),
   { ssr: false },
 );
-import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
-import { PortableTextBlockEditor } from "@/admin/components/portable-text/block-editor/PortableTextBlockEditor";
+// PortableText editor は contenteditable + DOM walker + IconPickerDialog 統合で
+// 重い (~200+ 行 × 2)。`field.portableTextInline` / `field.portableTextBlock`
+// を使う section のみで load されるよう dynamic import 化。
+const PortableTextInlineEditor = dynamic(
+  () =>
+    import("@/admin/components/portable-text/inline-editor/PortableTextInlineEditor").then(
+      (mod) => ({ default: mod.PortableTextInlineEditor }),
+    ),
+  { ssr: false },
+);
+const PortableTextBlockEditor = dynamic(
+  () =>
+    import("@/admin/components/portable-text/block-editor/PortableTextBlockEditor").then(
+      (mod) => ({ default: mod.PortableTextBlockEditor }),
+    ),
+  { ssr: false },
+);
 import {
   createBlockArraySchema,
   createSpanArraySchema,
