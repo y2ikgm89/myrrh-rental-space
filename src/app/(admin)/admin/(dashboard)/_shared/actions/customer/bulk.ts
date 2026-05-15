@@ -22,12 +22,15 @@ const bulkInputSchema = z.object({
   ids: z
     .array(z.string().uuid({ error: "顧客IDが不正です" }))
     .min(1, { error: "1件以上選択してください" })
-    .max(100, { error: "一度に処理できるのは100件までです" }),
+    .max(100, { error: "一度に処理できるのは100件までです" })
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: "重複した顧客IDが含まれています",
+    }),
 });
 
 function invalidateCustomerCachesForIds(ids: string[]): void {
   updateTag(CACHE_TAGS.CUSTOMERS);
-  for (const id of [...new Set(ids)]) {
+  for (const id of ids) {
     updateTag(getCacheTag.customers.detail(id));
   }
 }

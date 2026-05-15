@@ -4,6 +4,7 @@ import type { FocusEvent, ReactElement } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
+import { z } from "zod";
 import { useFormAction } from "@/admin/hooks";
 import { updateCustomer } from "@/admin/actions/customer";
 import { customerFormSchema } from "@/shared/lib/validations/customer";
@@ -123,8 +124,10 @@ export function CustomerEditForm({
         setEmailConflict(false);
         return;
       }
-      const data = (await response.json()) as { available?: boolean };
-      setEmailConflict(data.available === false);
+      const parsed = z
+        .object({ available: z.boolean().optional() })
+        .safeParse(await response.json());
+      setEmailConflict(parsed.success && parsed.data.available === false);
     } catch {
       // 重複チェック失敗は silent — 送信時の UNIQUE 制約で最終検証
       setEmailConflict(false);
