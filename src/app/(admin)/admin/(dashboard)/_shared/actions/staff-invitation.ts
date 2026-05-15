@@ -1,13 +1,14 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   createInvitationSchema,
   setupPasswordSchema,
-  type CreateInvitationInput,
   type SetupPasswordInput,
 } from "@/shared/lib/validations/staff-invitation";
 import {
@@ -17,30 +18,36 @@ import {
   setupPassword as setupPasswordCommand,
 } from "@/shared/domain/staff-invitations/commands";
 import { isDomainError } from "@/shared/domain/domain-error";
-import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const invitationIdSchema = z.string().uuid({ error: "招待IDが不正です" });
 
 export async function sendInvitation(
-  input: CreateInvitationInput,
-): Promise<MutationResult<InvitationData>> {
-  const parsed = createInvitationSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "user",
-    action: "create",
-    execute: async (user) =>
-      sendInvitationCommand(parsed.data, { id: user.id, role: user.role }),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.STAFF);
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    createInvitationSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "user",
+        action: "create",
+        execute: async (user) =>
+          sendInvitationCommand(data, { id: user.id, role: user.role }),
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.STAFF);
+        },
+        resolveAuditResourceId: (invitation) => invitation.id,
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    resolveAuditResourceId: (invitation) => invitation.id,
-  });
+  );
 }
 
 export async function setupPassword(

@@ -1,18 +1,25 @@
 "use client";
 
 /**
- * スタッフ招待フォーム
+ * スタッフ招待フォーム — Phase 1 Task 6 conform 移行。
  *
- * メールアドレスを入力して招待メールを送信
- * スタッフ自身がパスワードを設定するフロー
+ * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
+ * への clean break 移行。`sendInvitation` Server Action は
+ * `(prev, formData)` SubmissionResult signature。
  *
- * ロール選択肢は `invitableRoles` prop（呼び出し側が現在ユーザーの階層から決定）に従う。
+ * ロール選択肢は `invitableRoles` prop（呼び出し側が現在ユーザーの階層から決定）。
  * サーバー側でも `canInviteRole()` で defense-in-depth チェックを行う。
  */
 
-import { useState } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useWatch } from "react-hook-form";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/admin/components/ui/button";
 import { SubmitButton } from "@/admin/components/ui";
 import { Input } from "@/admin/components/ui/input";
@@ -24,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-import { useFormAction } from "@/admin/hooks";
 import { sendInvitation } from "@/admin/actions/staff-invitation";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/admin-roles";
 import { createInvitationSchema } from "@/shared/lib/validations/staff-invitation";
@@ -32,7 +38,6 @@ import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 招待フォームが受け付けるロール（createInvitationSchema の INVITABLE_ROLES と一致）。
- * `invitableRoles` prop はこのサブセットで渡される（actor 階層による更なるフィルタ）。
  */
 type InvitableRole = "ADMIN" | "EDITOR" | "VIEWER";
 
@@ -53,7 +58,6 @@ type Props = {
 
 export function InviteForm({ invitableRoles }: Props) {
   const router = useRouter();
-  const [success, setSuccess] = useState(false);
 
   // 安全側の狭窄: invitableRoles は既に actor 階層でフィルタされているが、schema の枠で絞る
   const safeRoles = invitableRoles.filter(isInvitableRole);
@@ -62,40 +66,45 @@ export function InviteForm({ invitableRoles }: Props) {
     ? "EDITOR"
     : (safeRoles[0] ?? "VIEWER");
 
-  const { form, isPending, onSubmit } = useFormAction(
-    createInvitationSchema,
-    async (data) =>
-      sendInvitation({
-        email: data.email,
-        name: data.name || undefined,
-        role: data.role,
-      }),
-    {
-      successMessage: "招待メールを送信しました",
-      defaultValues: {
-        email: "",
-        name: "",
-        role: defaultRole,
-      },
-      onSuccess: () => {
-        setSuccess(true);
-        form.reset();
-        setTimeout(() => {
-          router.push("/admin/staff");
-          router.refresh();
-        }, 3000);
-      },
-    },
+  const [lastResult, action, isPending] = useActionState(
+    sendInvitation,
+    undefined,
   );
 
-  const {
-    register,
-    setValue,
-    control,
-    formState: { errors },
-  } = form;
+  const [form, fields] = useForm({
+    id: "staff-invite",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: createInvitationSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      email: "",
+      name: "",
+      role: defaultRole,
+    },
+  });
 
-  const currentRole = useWatch({ control, name: "role" });
+  const roleControl = useInputControl(fields.role);
+  const currentRole =
+    roleControl.value && isInvitableRole(roleControl.value)
+      ? roleControl.value
+      : defaultRole;
+
+  // `lastResult.initialValue === null` が conform v1 の resetForm: true 成功 signal。
+  // success state を局所 useState で複製せず、render 中に直接 derive する
+  // (eslint-react/set-state-in-effect 違反回避)。
+  const success = lastResult?.initialValue === null;
+
+  useEffect(() => {
+    if (!success) return undefined;
+    const timeout = setTimeout(() => {
+      router.push("/admin/staff");
+      router.refresh();
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [success, router]);
 
   if (success) {
     return (
@@ -131,8 +140,10 @@ export function InviteForm({ invitableRoles }: Props) {
     );
   }
 
+  const formErrors = form.errors;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form {...getFormProps(form)} action={action} className="space-y-6">
       <div className="rounded-md bg-info/10 p-4 text-sm text-info">
         <p className="font-medium">招待フローについて</p>
         <p className="mt-1">
@@ -143,66 +154,71 @@ export function InviteForm({ invitableRoles }: Props) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="email">メールアドレス *</Label>
+          <Label htmlFor={fields.email.id}>メールアドレス *</Label>
           <Input
-            id="email"
-            type="email"
+            {...getInputProps(fields.email, { type: "email" })}
             autoComplete="email"
-            {...register("email")}
             placeholder="staff@example.com"
-            aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? "email-error" : undefined}
+            disabled={isPending}
           />
-          {errors.email && (
+          {fields.email.errors && (
             <p
-              id="email-error"
+              id={fields.email.errorId}
               role="alert"
               className="text-xs text-destructive"
             >
-              {errors.email.message}
+              {fields.email.errors.join(", ")}
             </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="name">名前（任意）</Label>
+          <Label htmlFor={fields.name.id}>名前（任意）</Label>
           <Input
-            id="name"
+            {...getInputProps(fields.name, { type: "text" })}
             autoComplete="name"
-            {...register("name")}
             placeholder="山田 太郎"
-            aria-invalid={!!errors.name}
-            aria-describedby={errors.name ? "name-error" : "name-hint"}
+            disabled={isPending}
+            aria-describedby={
+              fields.name.errors
+                ? fields.name.errorId
+                : `${fields.name.id}-hint`
+            }
           />
-          <p id="name-hint" className="text-xs text-muted-foreground">
+          <p
+            id={`${fields.name.id}-hint`}
+            className="text-xs text-muted-foreground"
+          >
             未入力の場合、メールアドレスから自動生成されます
           </p>
-          {errors.name && (
+          {fields.name.errors && (
             <p
-              id="name-error"
+              id={fields.name.errorId}
               role="alert"
               className="text-xs text-destructive"
             >
-              {errors.name.message}
+              {fields.name.errors.join(", ")}
             </p>
           )}
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="role">ロール *</Label>
+        <Label htmlFor={fields.role.id}>ロール *</Label>
         <Select
           value={currentRole}
           onValueChange={(value) => {
             if (isInvitableRole(value)) {
-              setValue("role", value);
+              roleControl.change(value);
             }
           }}
+          disabled={isPending}
         >
           <SelectTrigger
-            id="role"
+            id={fields.role.id}
             className="w-full md:w-1/2"
-            aria-describedby="role-description"
+            aria-describedby={`${fields.role.id}-description`}
+            onBlur={roleControl.blur}
           >
             <SelectValue placeholder="ロールを選択" />
           </SelectTrigger>
@@ -214,15 +230,29 @@ export function InviteForm({ invitableRoles }: Props) {
             ))}
           </SelectContent>
         </Select>
-        <p id="role-description" className="text-xs text-muted-foreground">
+        <input type="hidden" name={fields.role.name} value={currentRole} />
+        <p
+          id={`${fields.role.id}-description`}
+          className="text-xs text-muted-foreground"
+        >
           {ROLE_DESCRIPTIONS[currentRole]}
         </p>
-        {errors.role && (
+        {fields.role.errors && (
           <p role="alert" className="text-xs text-destructive">
-            {errors.role.message}
+            {fields.role.errors.join(", ")}
           </p>
         )}
       </div>
+
+      {formErrors && formErrors.length > 0 && (
+        <div
+          id={form.errorId}
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {formErrors.join(", ")}
+        </div>
+      )}
 
       <div className="flex gap-4">
         <SubmitButton
