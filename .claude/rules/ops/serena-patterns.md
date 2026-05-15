@@ -65,14 +65,14 @@ Serena を主導にすると **rule auto-load が動かない silent bug** + **E
 
 `.serena/project.yml` で以下を設定済:
 
-- `read_only_memory_patterns`: 主要 architecture memory（agent 上書き防止）
+- `read_only_memory_patterns`: `design-system`（agent 上書き防止）
 - `ignored_memory_patterns`: `_archive/.*` / dated snapshot（`list_memories` 出力から除外）
 
 ## Onboarding
 
-`.serena/project.yml` で `added_modes: [no-onboarding]` を設定済。既存 16 memory + `MEMORY.md` index を活用する。
+`.serena/project.yml` で `added_modes: [no-onboarding]` を設定済。2026-05-15 cleanup 後の active memory は `design-system.md` + `MEMORY.md` index のみ。
 
-新しい architecture が定着したら **user が手動** で `.serena/memories/<topic>.md` を編集 + `MEMORY.md` index に 1 行追記する。
+新しい architecture が定着した場合は **まず `.claude/rules/**/\*.md` に rule docs として codify\*\*。Serena memory への二重化は SSoT 違反のため、原則 user 明示要求時のみ追加。
 
 ## Staleness 監査
 
