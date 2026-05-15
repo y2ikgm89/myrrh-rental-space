@@ -11,7 +11,7 @@ import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
 import { Prose } from "@/public/components/design-system/prose";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
-import { LayoutWidth } from "@/shared/types/prisma";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 const TOC_MIN_H2 = 2;
 const TERMS_CONTENT_WIDTH = LayoutWidth.MD;

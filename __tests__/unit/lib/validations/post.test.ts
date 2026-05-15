@@ -8,7 +8,7 @@ import {
   postCategorySchema,
   postTagSchema,
 } from "@/admin/lib/validations/post";
-import { LayoutWidth } from "@/shared/types/prisma";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { PostStatus } from "@generated/prisma/enums";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 

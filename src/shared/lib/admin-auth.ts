@@ -25,7 +25,7 @@ import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter
 import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
-import { isDashboardRole } from "./admin-roles";
+import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
 import { isRecord, omitUndefined } from "./serialize";
 import {
@@ -332,11 +332,11 @@ export const getCurrentAdminUser = cache(
   },
 );
 
-/** 管理者権限チェック */
+/** 管理者権限チェック（ADMIN または SUPER_ADMIN） */
 export const isAdmin = cache(
   async (requestHeaders?: Headers): Promise<boolean> => {
     const user = await getCurrentAdminUser(requestHeaders);
-    return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
+    return user !== undefined && isAdminOrHigherRole(user.role);
   },
 );
 

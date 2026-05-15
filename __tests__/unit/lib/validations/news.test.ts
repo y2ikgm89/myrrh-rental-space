@@ -7,7 +7,7 @@ import {
   newsBodyFormSchema,
   newsSettingsFormSchema,
 } from "@/admin/lib/validations/news";
-import { LayoutWidth } from "@/shared/types/prisma";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const VALID_LEXICAL_JSON = EMPTY_LEXICAL_EDITOR_STATE_JSON;

@@ -35,6 +35,31 @@ export function isDashboardRole(role: Role): role is DashboardRole {
 }
 
 /**
+ * 管理者相当ロール（ADMIN / SUPER_ADMIN）の SSoT
+ *
+ * EDITOR / VIEWER を除外して「全機能アクセス可能な上位管理者」を表す。
+ * `isAdmin()` 等の権限ガードで Role 直比較を回避するために使用。
+ */
+export const ADMIN_OR_HIGHER_ROLES = [
+  Role.SUPER_ADMIN,
+  Role.ADMIN,
+] as const satisfies readonly DashboardRole[];
+
+export type AdminOrHigherRole = (typeof ADMIN_OR_HIGHER_ROLES)[number];
+
+const ADMIN_OR_HIGHER_ROLE_SET = new Set<Role>(ADMIN_OR_HIGHER_ROLES);
+
+/**
+ * `role` が ADMIN または SUPER_ADMIN かを判定する型ガード
+ *
+ * `role === Role.ADMIN || role === Role.SUPER_ADMIN` の冗長記述を排し、
+ * 新規上位ロール追加時の修正点を ADMIN_OR_HIGHER_ROLES 1 箇所に集約する。
+ */
+export function isAdminOrHigherRole(role: Role): role is AdminOrHigherRole {
+  return ADMIN_OR_HIGHER_ROLE_SET.has(role);
+}
+
+/**
  * ロール階層制御マップ
  *
  * 「誰が誰を招待・作成・ロール変更できるか」の正。

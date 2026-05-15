@@ -4,7 +4,7 @@
  * ContentWidth → CSS className + style を解決する Single Source of Truth
  */
 
-import { LayoutWidth } from "@/shared/types/prisma";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import type { CSSProperties } from "react";
 import type { ContentWidth } from "@/shared/types/layout";
 
