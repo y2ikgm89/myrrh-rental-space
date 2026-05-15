@@ -46,9 +46,12 @@ function hrefForTab(
 
 /**
  * スペース管理のタブナビゲーション。
- * nuqs ではなく `Link` + `URLSearchParams` で `tab` を切り替える（フルナビで RSC がアクティブタブのみ再取得）。
- * 各タブ内のフィルタは `adminSpaceSearchParamsParsers`（nuqs）とキーを共有する。
- * アクションボタンはページヘッダー（page.tsx）に配置。
+ *
+ * WAI-ARIA APG: ページ遷移は `role="tab"` ではなく `nav` + `aria-current="page"`
+ * パターンを採用（accessibility/semantics/html-elements.md §nav vs tab WAI-ARIA 区別）。
+ * `nuqs` ではなく `Link` + `URLSearchParams` で `tab` を切り替える（フルナビで RSC が
+ * アクティブタブのみ再取得）。各タブ内のフィルタは `adminSpaceSearchParamsParsers`
+ * （nuqs）とキーを共有する。アクションボタンはページヘッダー（page.tsx）に配置。
  */
 export function SpaceManagementTabs({
   activeTab,
@@ -58,30 +61,32 @@ export function SpaceManagementTabs({
 
   return (
     <div className="w-full">
-      <div
-        className="mb-2 inline-flex h-10 w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground scrollbar-hide"
-        role="tablist"
-      >
-        {TAB_ITEMS.map(({ value, label }) => (
-          <Link
-            key={value}
-            href={hrefForTab(value, searchParams)}
-            scroll={false}
-            prefetch={false}
-            role="tab"
-            aria-selected={activeTab === value}
-            className={cn(
-              tabTriggerClass,
-              activeTab === value &&
-                "bg-background text-foreground shadow-sm hover:bg-background",
-            )}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <nav aria-label="スペース管理ナビゲーション" className="mb-2">
+        <ul className="inline-flex h-10 w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground scrollbar-hide">
+          {TAB_ITEMS.map(({ value, label }) => {
+            const isActive = activeTab === value;
+            return (
+              <li key={value}>
+                <Link
+                  href={hrefForTab(value, searchParams)}
+                  scroll={false}
+                  prefetch={false}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    tabTriggerClass,
+                    isActive &&
+                      "bg-background text-foreground shadow-sm hover:bg-background",
+                  )}
+                >
+                  {label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
-      <div role="tabpanel">{children}</div>
+      <div>{children}</div>
     </div>
   );
 }
