@@ -21,7 +21,6 @@ import {
   createCommand,
   mergeRegister,
   type LexicalCommand,
-  type LexicalEditor,
 } from "lexical";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
@@ -72,7 +71,7 @@ export const INSERT_CALLOUT_COMMAND: LexicalCommand<InsertCalloutPayload> =
 /**
  * 矢印キーでCallout境界を脱出
  */
-function $onEscape(editor: LexicalEditor, direction: "up" | "down"): boolean {
+function $onEscape(direction: "up" | "down"): boolean {
   const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
     return false;
@@ -152,12 +151,12 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
       // 矢印キーリスナー
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
-        () => $onEscape(editor, "up"),
+        () => $onEscape("up"),
         COMMAND_PRIORITY_LOW,
       ),
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
-        () => $onEscape(editor, "down"),
+        () => $onEscape("down"),
         COMMAND_PRIORITY_LOW,
       ),
 

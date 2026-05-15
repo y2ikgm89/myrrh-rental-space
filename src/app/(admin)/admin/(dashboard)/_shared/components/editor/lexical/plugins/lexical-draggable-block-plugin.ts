@@ -503,6 +503,10 @@ function useDraggableBlockMenu(
   const isDraggingBlockRef = useRef(false);
   const [draggableBlockElem, setDraggableBlockElemState] =
     useState<HTMLElement | null>(null);
+  // React Compiler 1.0 との二重メモ化（意図的例外）。
+  // onElementChanged prop の参照同一性要求が upstream で残っているため。
+  // @lexical/react 次回 upgrade 時に upstream の DraggableBlockPlugin_EXPERIMENTAL と
+  // 差分マージし、useCallback が upstream で除去されていれば本フォークも追随削除する。
   const setDraggableBlockElem = useCallback(
     (elem: HTMLElement | null) => {
       setDraggableBlockElemState(elem);
