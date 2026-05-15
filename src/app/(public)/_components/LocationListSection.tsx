@@ -10,7 +10,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import type { Route } from "next";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   IconArrowDown,
   IconExternalLink,
@@ -255,7 +255,7 @@ function LocationChapter({
         {location.slug !== "main-location" && (
           <div className="pt-1">
             <Link
-              href={`/access/${location.slug}` as Route<string>}
+              href={toAppRoute(`/access/${location.slug}`)}
               className="inline-flex min-h-11 items-center text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               詳細を見る
