@@ -40,12 +40,52 @@ paths:
 
 ## 新 fields / env (v2.1.141+)
 
-- **`terminalSequence`** — `additionalContext` 等の universal field。`/dev/tty` 書き込みの安全代替。OSC `0`/`1`/`2`/`9`/`99`/`777` + BEL のみ allowlist
+- **`terminalSequence`** — `additionalContext` 等の universal field。`/dev/tty` 書き込みの安全代替。OSC `0`/`1`/`2`/`9`/`99`/`777` + BEL のみ allowlist。**Notification hook で採用済**（下記 §Notification hook 公式 terminalSequence パターン）
 - **`effort`** — common input field（tool-use context 内）。`level: "low" | "medium" | "high" | "xhigh" | "max"`
 - **`CLAUDE_EFFORT`** env — Bash + hook commands 内で現在の effort level を参照
 - **`CLAUDE_ENV_FILE`** env — `SessionStart` / `Setup` / `CwdChanged` / `FileChanged` hooks の persistent environment
 
-これらは現状プロジェクト未使用。採用時は本セクションを更新する。
+`effort` / `CLAUDE_EFFORT` / `CLAUDE_ENV_FILE` は現状プロジェクト未使用。採用時は本セクションを更新する。
+
+## Notification hook 公式 terminalSequence パターン
+
+公式 (`code.claude.com/docs/en/hooks#notification`):
+
+> Hooks run without a controlling terminal, so writing escape sequences directly to `/dev/tty` fails. Instead, return the escape sequence in the `terminalSequence` field and Claude Code emits it for you through its own terminal write path. This is race-free, works inside tmux and GNU screen, and works on Windows where there is no `/dev/tty`.
+
+### 採用パターン（subprocess spawn なし / cross-platform）
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+INPUT=$(cat)
+TITLE="Claude Code"
+BODY=$(printf '%s' "$INPUT" | jq -r '.message // "Needs your attention"')
+
+# OSC 9 (Windows Terminal / iTerm2 / ConEmu / WezTerm) + OSC 777 (urxvt / Ghostty / Warp) + BEL
+SEQ=$(printf '\033]9;%s: %s\007\033]777;notify;%s;%s\007\007' "$TITLE" "$BODY" "$TITLE" "$BODY")
+
+jq -nc --arg seq "$SEQ" '{terminalSequence: $seq}'
+```
+
+### Notification の matcher（公式 notification_type）
+
+| matcher 値             | 発火条件                                |
+| ---------------------- | --------------------------------------- |
+| `permission_prompt`    | tool permission を user に確認するとき  |
+| `idle_prompt`          | user input を待つ idle 状態に入ったとき |
+| `auth_success`         | 認証成功時                              |
+| `elicitation_dialog`   | MCP elicitation dialog 表示時           |
+| `elicitation_complete` | elicitation 完了時                      |
+| `elicitation_response` | elicitation 応答時                      |
+
+本プロジェクトは `permission_prompt|idle_prompt` のみ採用（`auth_success` / `elicitation_*` は不要のため除外し process spawn 削減）。
+
+### 禁止パターン
+
+- **PowerShell / osascript / notify-send で subprocess spawn**（旧仕様）— hook 起動毎の process 起動コスト + race condition + platform 限定。`terminalSequence` で公式 cross-platform 経路に統一
+- **`/dev/tty` 直接書き込み** — hook は controlling terminal なしで実行されるため fail（公式仕様）
+- **`OSC 8` (hyperlink) / `OSC 52` (clipboard write) / `OSC 1337`** — 公式 security allowlist 外で reject される
 
 ## イベント → stdout 流入の可否（最重要）
 
