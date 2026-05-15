@@ -42,7 +42,16 @@ import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
-import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
+// IconPickerField は Tabler 100+ icons + IconPickerDialog を含む heavy chain (~300+ KB)。
+// 全 section schema の中で field.icon() を使うのは features / value-props / NavigationItem
+// 等の少数のため、dynamic import で初期 bundle から外して on-demand load にする。
+const IconPickerField = dynamic(
+  () =>
+    import("@/admin/components/icon-picker/IconPickerField").then((mod) => ({
+      default: mod.IconPickerField,
+    })),
+  { ssr: false },
+);
 import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
 import { PortableTextBlockEditor } from "@/admin/components/portable-text/block-editor/PortableTextBlockEditor";
 import {
