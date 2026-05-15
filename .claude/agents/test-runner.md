@@ -26,8 +26,8 @@ bun test --watch <file>                              # TDD watch (single file on
 bun test __tests__/integration/<file>
 
 # Full batch runs (use package.json scripts — parent-dir `bun test` is banned)
-bun run test:unit         # all unit via scripts/run-tests.mjs (per-file isolation, mock.module safe)
-bun run test:integration  # all integration via scripts/run-tests.mjs (per-file isolation)
+bun run test:unit         # all unit via scripts/run-tests.ts (per-file isolation, mock.module safe)
+bun run test:integration  # all integration via scripts/run-tests.ts (per-file isolation)
 bun run test:all          # unit + integration
 
 # Playwright – e2e

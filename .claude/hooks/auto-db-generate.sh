@@ -6,6 +6,8 @@
 # スクリプト側でコマンドパターン検査は省略。tool_response.stdout で migrate 成功を確認する。
 
 set -euo pipefail
+# 手動テスト時の fallback（hooks-patterns.md §Windows (MINGW64) 固有の注意）
+: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
 INPUT=$(cat)
 STDOUT=$(printf '%s' "$INPUT" | jq -r '.tool_response.stdout // .stdout // empty' 2>/dev/null || echo "")

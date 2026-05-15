@@ -32,7 +32,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.sh"],
             "statusMessage": "進行中タスクを確認中..."
           }
         ]
@@ -43,7 +44,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/inject-current-date.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/inject-current-date.sh"
+            ],
             "timeout": 5,
             "statusMessage": "現在日付を注入中..."
           }
@@ -56,7 +60,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous-bash.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/block-dangerous-bash.sh"
+            ],
             "timeout": 10,
             "statusMessage": "危険コマンドを検査中..."
           }
@@ -67,7 +74,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sensitive-files.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/block-sensitive-files.sh"
+            ],
             "timeout": 10,
             "statusMessage": "機密ファイルを検査中..."
           }
@@ -80,25 +90,31 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/prettier-format.sh"],
             "async": true,
             "statusMessage": "Prettier 実行中..."
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-fix.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/eslint-fix.sh"],
             "async": true,
             "statusMessage": "ESLint --fix 実行中..."
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/schema-change-guard.sh"
+            ],
             "timeout": 30,
             "statusMessage": "Prisma generate 実行中..."
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pattern-guard.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern-guard.sh"],
             "timeout": 10,
             "statusMessage": "パターン検査中..."
           }
@@ -110,28 +126,38 @@
           {
             "type": "command",
             "if": "Bash(mv *)",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/detect-empty-route-dirs.sh"
+            ],
             "timeout": 10,
             "statusMessage": "空ルートディレクトリを検査中..."
           },
           {
             "type": "command",
             "if": "Bash(rm *)",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/detect-empty-route-dirs.sh"
+            ],
             "timeout": 10,
             "statusMessage": "空ルートディレクトリを検査中..."
           },
           {
             "type": "command",
             "if": "Bash(git mv *)",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/detect-empty-route-dirs.sh"
+            ],
             "timeout": 10,
             "statusMessage": "空ルートディレクトリを検査中..."
           },
           {
             "type": "command",
             "if": "Bash(bunx --bun prisma migrate *)",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-db-generate.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/auto-db-generate.sh"],
             "timeout": 30,
             "statusMessage": "prisma generate 実行中..."
           }
@@ -142,7 +168,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-subagent-git-snapshot.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/post-subagent-git-snapshot.sh"
+            ],
             "timeout": 10,
             "statusMessage": "Subagent 完了後の git state をキャプチャ中..."
           }
@@ -154,7 +183,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notification.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/notification.sh"],
             "statusMessage": "通知を送信中..."
           }
         ]
@@ -165,7 +195,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/type-check-on-stop.sh",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/type-check-on-stop.sh"
+            ],
             "asyncRewake": true,
             "timeout": 300,
             "statusMessage": "背景で型チェック中..."

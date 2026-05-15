@@ -29,8 +29,8 @@ bun run type-check          # TypeScript compiler check
 bun run lint                # ESLint
 bun run validate            # type-check + lint in parallel (preferred for quick checks)
 bun run build               # Full production build
-bun run test:unit           # Unit tests via scripts/run-tests.mjs (per-file isolation, mock.module safe)
-bun run test:integration    # Integration tests via scripts/run-tests.mjs (per-file isolation)
+bun run test:unit           # Unit tests via scripts/run-tests.ts (per-file isolation, mock.module safe)
+bun run test:integration    # Integration tests via scripts/run-tests.ts (per-file isolation)
 bun run test:all            # Unit + integration (full manual run)
 bun run validate && bun run build  # Pre-PR full check
 ```

@@ -54,9 +54,11 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **内部 helper には `import "server-only"` を、Server Action endpoint には `"use server"` を使い分け** — 認証なし helper を `"use server"` 公開すると Cache-layer DoS の security 経路
 - **server-only 定数を Client Component から import 禁止** — client-safe ファイルに分離（`admin-roles.ts` / `admin-resources.ts`）
 - **server-only / Node-only SDK 統合は `import "server-only"` 必須** — `ical-generator` / `resend` / `googleapis` / `stripe` 等（→ `server-only-patterns.md`）
+- **`scripts/**`/`prisma/seed.ts`/`package.json` `db:\*`は Bun runtime native +`bunx --bun prisma`必須** —`Bun.file`/`Bun.write`/`Bun.spawnSync`/`Bun.Glob` 採用、`node:fs`/`node:child_process`/`dotenv`/`prisma`直接呼び出し（Node shebang で`.env` auto-load 不発の silent bug）禁止。`.ts` 拡張子直接実行（`.mjs` 新規作成禁止）、`@types/bun`+ tsconfig`types: ["node", "bun"]`（→ `bun-patterns.md`）
 - **Cloud Run probe endpoint (`/api/live` / `/api/health`) は `proxy.ts` rate-limit 除外必須** — probe IP `unknown` 合算で 429 → コンテナ kill 連鎖の silent bug（→ `ops/deployment-patterns.md`）
 - **管理画面向け preview は第 3 root layout `(preview)/`**— `ManagedPageSections` を `_shared/components/pages/` に抽出。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
 - **Next.js 16 Server Action / RSC は `react-server` condition** — `react.createContext` 未定義 + `react-dom/server` は明示的 throw（`'react-dom/server is not supported in React Server Components'`）。Lexical 等 React/DOM 依存処理は **client (browser) で完結** させ、Server Action は事前 render 済み `contentHtml` を input で受け取る設計に統一（→ `frontend/lexical/conventions.md` §28 / `prisma-patterns/lexical-storage.md`）
+- **Serena MCP は LSP-backed symbol query 専用** — `find_symbol` / `find_referencing_symbols` / `get_symbols_overview` / `rename_symbol` のみ使い、Read / Edit / Grep / Glob は Claude Code native を canonical 経路として維持（`.claude/rules/**` path-scoped auto-load 設計の互換性確保）。`write_memory` は user 明示要求時のみ、`.claude/rules/**` SSoT との二重化を回避（→ `ops/serena-patterns.md` / SSoT: `.serena/project.yml`）
 
 ### Validation / Domain
 
@@ -95,7 +97,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 > - 調査・監査・公式準拠 verification → `.claude/rules/research-audit.md`（agents/skills 編集時）
 > - 実装パターン → `.claude/rules/implementation-patterns.md`（domain/actions/prisma 編集時）
 > - Git / Migration → `.claude/rules/git-migration.md`（migrations/workflows 編集時）
-> - **CI ワークフロー → `.claude/rules/ops/ci-workflow.md`（+ `ci-workflow/{job-strategy,testing-perf,debug}.md` sub-rules）（`.github/workflows/**`/`package.json`/`scripts/run-tests.mjs` 編集時）\*\*
+> - **CI ワークフロー → `.claude/rules/ops/ci-workflow.md`（+ `ci-workflow/{job-strategy,testing-perf,debug}.md` sub-rules）（`.github/workflows/**`/`package.json`/`scripts/run-tests.ts` 編集時）\*\*
 > - Subagent dispatch → `.claude/skills/subagent-dispatch-template/SKILL.md`
 
 ### 検証
@@ -103,7 +105,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **作業中**: `bun run type-check` / **完了前**: `bun run validate` / **コミット前**: `bun run validate && bun run build`
 - **完遂判定は `test:unit` + `test:integration` 両走必須** — unit pass のみで「完了」宣言は危険、Phase 0 rename / migration drift 等で integration fixture が drift しがち
 - **依存パッチ/マイナー更新後は validate 必須** — eslint-plugin-react-hooks 等のパッチで新ルール追加 = 実質破壊的変更
-- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。フル実行は `bun run test:unit` / `test:integration`（`scripts/run-tests.mjs` 経由 per-file isolation runner）。E2E は 2 層分離: `e2e/smoke/*.smoke.spec.ts` (chromium-smoke project) は毎 push で `smoke-e2e` job が required 実行、広域 E2E (`e2e/{public,authenticated,a11y}/`) は PR `e2e` label opt-in（→ `test-quality/e2e.md` §Smoke vs 広域 E2E の責務分離 + `ops/ci-workflow/job-strategy.md` §Required vs Opt-in job 分離）。`bun test __tests__/unit` の親ディレクトリ指定は `mock.module` 干渉で偽陽性のため禁止
+- **テスト実行ポリシー** — ローカルは関連 1〜数ファイルのみ `bun test <path>`。フル実行は `bun run test:unit` / `test:integration`（`scripts/run-tests.ts` 経由 per-file isolation runner）。E2E は 2 層分離: `e2e/smoke/*.smoke.spec.ts` (chromium-smoke project) は毎 push で `smoke-e2e` job が required 実行、広域 E2E (`e2e/{public,authenticated,a11y}/`) は PR `e2e` label opt-in（→ `test-quality/e2e.md` §Smoke vs 広域 E2E の責務分離 + `ops/ci-workflow/job-strategy.md` §Required vs Opt-in job 分離）。`bun test __tests__/unit` の親ディレクトリ指定は `mock.module` 干渉で偽陽性のため禁止
 - **E2E spec の defensive skip 禁止** — `test.skip(true, "データがありません")` パターンは「実テストとして機能していない」signal。seed 拡充で解消するか unit/integration に降格（→ `test-quality/e2e.md` §広域 E2E の defensive skip 禁止）
 - **大規模監査の前提** — `bun run validate` exit 0 なら compiler/linter 基準クリーン
 
@@ -117,6 +119,13 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **密結合タスクは 1 implementer にバンドル**
 - **handoff memo の "pre-existing fail" 主張は実 test で再現確認してから信じる** — 別セッションで解決済みのことがある（memo 駆動で深追い禁止）
 
+### Worktree 規律（要点）
+
+- **公式 `claude --worktree <name>` が canonical 経路** — `.claude/worktrees/<name>/` に作成、`.worktreeinclude` で gitignored を自動 copy、終了時 changes なしで自動 cleanup（→ `.claude/rules/git-migration.md` §Worktree）
+- **Subagent 隔離は `isolation: worktree` frontmatter or `Agent` tool option** — 公式 sub-agent 仕様、temporary worktree + 変更なしで自動 cleanup。手動 bootstrap 不要
+- **`worktree.baseRef: "head"` / `cleanupPeriodDays: 14`** — `.claude/settings.json` に設定済み。local HEAD（未 push WIP 含む）ベース + 孤児 14 日掃除
+- **手動 bootstrap は legacy fallback のみ** — `bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh <branch>` / cleanup は `cleanup.sh <branch> [--force]`。dev server を main で常駐維持 / IDE 直接 open 等の例外用途
+
 ---
 
 ## ワークフロー
@@ -127,6 +136,61 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 - **セッション跨ぎ大規模 plan は handoff memory 必須** — `~/.claude/projects/<slug>/memory/project_<phase>-handoff.md` に ①plan 場所 ②worktree 場所 ③commit SHA ④残 chunk ⑤次セッション起動コマンド ⑥**関連だが Phase 対象外の WIP（未コミット rule docs / 未追跡 migration 等）の有無**の 6 点セット + `MEMORY.md` 一行 index。完了マーカーは `> **Snapshot: YYYY-MM-DD**` + `> **Completed: YYYY-MM-DD**` 併記。次セッション開始時は handoff memo に頼らず `git status --short` + `bunx --bun prisma migrate status` で独立検証
+
+---
+
+## 自動完遂ポリシー（事故防止 多層 gate）
+
+タスクが論理的完了点に達した時点で、ユーザー確認なしで commit → push → PR → CI → squash merge → ローカル sync まで完遂する。default が自動進行であり、「進めて」「OK」等の明示承認は **不要**。事故防止のため下記 9 gate を順次通過、いずれか fail で停止してユーザー報告。
+
+### 完遂トリガー（全て満たす場合のみ自動進行）
+
+- 直前ターンで実装 / 修正 / refactor タスクが論理的完了点に到達
+- `git status --short` で当該タスク起因の未 commit 変更が存在
+- 「途中保存」「コミットしないで」「step by step で」等の明示中断指示がない
+- 下記「停止例外」のいずれにも該当しない
+- 質問のみ / 調査のみ / planning のみ / 単一 file の typo 修正のみのターンは completion ではない（自動進行対象外）
+
+### 自動進行 9 gate
+
+| Gate             | 内容                                                                                                             | fail 時                                    |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| 1. branch        | `main` 直編集なら新 feature branch (`<type>/<topic>`) を切ってから再着手                                         | 自動切替（gate なし）                      |
+| 2. 例外          | 下記「停止例外」のいずれかに該当しないか scan                                                                    | 停止 → ユーザー確認                        |
+| 3. 検証          | `bun run validate && bun run build` exit 0                                                                       | 停止 → 原因究明                            |
+| 4. commit        | 明示ファイル指定で `git add` → Conventional Commits + Co-Authored-By trailer（lefthook pre-commit + commit-msg） | 停止 → hook 出力確認                       |
+| 5. push          | `git push -u origin <branch>`（lefthook pre-push: type-check + arch-boundaries）                                 | 停止 → hook 出力確認                       |
+| 6. PR            | `gh pr create --base main --title <70 字以内> --body <Summary + Test plan>`                                      | 停止 → エラー報告                          |
+| 7. CI            | `gh pr checks --watch --interval 30` で required check 全 pass 待ち                                              | root cause fix → 再 push → 再 watch を反復 |
+| 8. merge         | `gh pr merge --squash --delete-branch`                                                                           | 停止 → エラー報告                          |
+| 9. ローカル sync | `git checkout main && git pull --ff-only`、gone branch あれば `/commit-commands:clean_gone`                      | 停止 → 競合は手動解決                      |
+
+### 停止例外（自動進行を中止しユーザー確認）
+
+- `prisma/schema.prisma` の breaking change（`DROP COLUMN` / 型 narrowing / 既存列の required 化 / table rename）
+- `.env*` 編集 / 新規環境変数の追加 / 既存 env 値の変更
+- `bun.lock` の予期せぬ変更（`package.json` 同時更新でない場合）
+- 10 file 超 / 1000 行超 / `prisma/migrations/*.sql` を含む大規模変更（段階 commit 分割を提案）
+- `git status` に当該タスクと無関係な untracked / modified file（並行作業の signal — 責務分離判断）
+- destructive 操作（`git reset --hard` / `prisma migrate reset` / branch delete / `--no-verify` / hook bypass / required job skip / branch protection bypass）
+- 機密情報（API key / token / credential / Stripe / OAuth secret）の混入疑い
+- 単独 / バッチ test fail を伴う変更（`bun run test:unit` / `test:integration` の事前確認は実装ターンで完了している前提）
+- 過去 60 分以内に PR を 3 件以上自動 merge 済み（暴走 detect → cool down、ユーザー判断）
+- ユーザーが調査・相談・brainstorming を継続中（直前メッセージが質問 / 議論で「実装してください」が明示されていない）
+
+### override
+
+- 「コミットしないで」「自動で進めないで」「step by step」「PR 作らないで」等の明示指示があるターンは停止
+- 一時的に停止したい場合: 「次の commit は手動でやりたい」と 1 行宣言すれば以降そのセッションは停止
+- 明示承認（「進めて」「OK」「マージまで」）は **不要** — default が自動進行
+
+### 事故防止 infra（既存）
+
+- **lefthook** — pre-commit (eslint --fix + prettier + `scripts/check-protected-files.sh`) / pre-push (`bun run type-check` + `architecture-boundaries.test.ts`) / commit-msg (`scripts/check-commit-msg.sh` で Conventional Commits 強制)
+- **`block-dangerous-bash.sh`** — `git push --force` / `rm -rf` / `chmod` を Bash tool 経路で deny
+- **GitHub branch protection** — `main` 直接 push 禁止 + required checks 設定（前提）
+- **Stop hook `type-check-on-stop.sh`** — 背景型チェックで silent regression 検出
+- **完遂報告は最終 1 メッセージ** — PR URL + merge SHA + 解消した root cause を簡潔に列挙
 
 ---
 

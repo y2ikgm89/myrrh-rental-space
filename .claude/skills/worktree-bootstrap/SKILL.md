@@ -1,56 +1,79 @@
 ---
 name: worktree-bootstrap
-description: Bootstrap an isolated git worktree with env copy, Prisma generated copy, and main DB drift detection. Invoke after deciding to use a worktree per the decision matrix in .claude/rules/git-migration.md §Worktree 採否判定.
-when_to_use: git worktree 採用判定後（git-migration.md の Worktree 採否判定マトリックス）に bootstrap が必要なとき。
+description: Bootstrap an isolated git worktree for parallel Claude sessions or manual feature isolation. Prefer the official `claude --worktree <name>` route (auto applies `.worktreeinclude`, auto cleanup on exit) — this skill is the manual fallback for cases where `--worktree` is not applicable (legacy `.worktrees/` location, dev server kept on main, IDE-driven workflow).
+when_to_use: "公式 `claude --worktree <name>` が使えない場面（dev server を main で常駐維持 / VS Code 等から手動で開きたい / `--worktree` の trust dialog が未 accept）で worktree を手動で bootstrap するとき。subagent 隔離なら frontmatter `isolation: worktree` を優先。"
 disable-model-invocation: true
 argument-hint: "<branch-name-kebab-case>"
 ---
 
 # worktree-bootstrap
 
-隔離 worktree を 1 コマンドで完全セットアップする SKILL。
+隔離 worktree を 1 コマンドで完全セットアップする SKILL（**legacy manual fallback**）。
 
-**採否判定（worktree を使うべきか）**は `.claude/rules/git-migration.md` §Worktree 採否判定 を参照。本 SKILL は採用決定後のセットアップ自動化を担当。
+## 公式 canonical 経路（推奨）
 
-## 背景
+**まず公式 `claude --worktree` を検討すること**。本 SKILL は fallback 用途。
 
-このプロジェクトでは worktree 作成に複数の手動ステップが必要:
+```bash
+# 新規 worktree + Claude セッション同時起動
+claude --worktree feature-name
+# → .claude/worktrees/feature-name/ に作成
+# → .worktreeinclude にマッチする gitignored を auto copy
+# → 終了時に changes なしなら worktree + branch 自動削除（公式 cleanup）
 
-1. `git worktree add -b feature/<name> .worktrees/<name> HEAD`
-2. `.env` / `.env.local` を worktree にコピー（PreToolUse Edit/Write ブロックを bypass するため `python3 shutil.copy2` 経由）
-3. `generated/` を worktree にコピー（`robocopy generated <worktree>/generated`）
-4. main の未コミット migration を検出 → ドリフト回避のため WIP スナップショット commit
-5. worktree 内で `bun run type-check` 実行で動作確認
+# PR レビュー専用 worktree
+claude --worktree "#1234"
+# → pull/1234/head fetch + .claude/worktrees/pr-1234/
 
-これを手動で実行すると漏れが発生しやすく、特にステップ 4（DB drift）は見落としやすい。
+# Subagent 隔離（agent frontmatter or Agent tool）
+# isolation: worktree → temporary worktree、変更なしで自動 cleanup
+```
+
+公式機能は `.worktreeinclude` / `worktree.baseRef: "head"` / `cleanupPeriodDays: 14` 設定済み（`.claude/settings.json`）で動く。**手動 bootstrap は以下のケースのみ**:
+
+- dev server を main で常駐させたまま手動で別 worktree を切りたい
+- subagent dispatch 以外で外部ツール（VS Code 等）から直接開きたい
+- `--worktree` で trust dialog がまだ accept されていない初回セットアップ
+- legacy `.worktrees/` location（公式 `.claude/worktrees/` ではない）を維持したい
+
+採否判定の SSoT は `.claude/rules/git-migration.md` §Worktree（公式仕様準拠 SSoT）。
 
 ## 使用方法
 
 ```bash
+# 作成
 bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh <branch-name>
-```
 
-例:
-
-```bash
+# 例
 bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh review-reply
-# → .worktrees/review-reply/ が作成され、feature/review-reply ブランチで切り出される
+# → .worktrees/review-reply/ + feature/review-reply ブランチ
+
+# クリーンアップ
+bash .claude/skills/worktree-bootstrap/scripts/cleanup.sh <branch-name> [--force]
 ```
 
-## 処理フロー
+## bootstrap.sh の処理フロー
 
-1. **引数検証**: ブランチ名必須
-2. **Drift 検知**:
-   - `git status --short | wc -l` で未コミット数を取得
-   - `git status --short | grep "prisma/migrations/"` で未追跡 migration を検出
-   - 未追跡 migration あり → 既にローカル Postgres 適用済みの可能性が高い → WIP snapshot の実施確認
-3. **Worktree 作成**: `git worktree add -b feature/<name> .worktrees/<name> HEAD`
-4. **Env ファイルコピー**: `python3 -c "import shutil; shutil.copy2('.env', '.worktrees/<name>/.env')"` （PreToolUse bypass）
-5. **Generated コピー**: robocopy（Windows）または `shutil.copytree`
-6. **完了レポート**: worktree パス・ブランチ名・ベース commit SHA を表示
+1. **引数検証** — branch 名 kebab-case 必須
+2. **drift 検知**:
+   - `git status --short | wc -l` で未コミット数
+   - 未追跡 migration があれば WIP snapshot commit を提案（共有 dev DB drift 回避）
+3. **worktree 作成** — `git worktree add -b feature/<name> .worktrees/<name> HEAD`
+4. **`.worktreeinclude` 適用** — 同ファイルのパターンに沿って `.env*` / `generated/` / `playwright/.auth/` を Python で copy（PreToolUse hook の `.env` 編集 block を bypass）
+5. **完了レポート** — path / branch / base SHA を表示
+
+## cleanup.sh の処理フロー
+
+1. **対象探索** — `.worktrees/<name>` と `.claude/worktrees/<name>` 両方を探す
+2. **未コミット変更チェック** — あれば exit 1（`--force` で強制）
+3. **未 push commit チェック** — upstream 比較 or main merged 判定 → 必要なら確認 prompt
+4. **`git worktree remove`** + **`git worktree prune`** — 公式 cleanup
+5. **branch 削除** — main にマージ済みなら自動 `branch -d`、そうでなければ保持
 
 ## 関連
 
-- `.claude/rules/git-migration.md` — Worktree 採否判定 / worktree merge / DB drift / 未追跡 migration 対処（canonical SSoT）
-- `.claude/rules/claude-code-patterns.md` — subagent-driven-development 規律 / `PostToolUse:Agent` hook の検証パターン
-- `superpowers:using-git-worktrees` — worktree 運用の一般論（本 SKILL はプロジェクト固有自動化）
+- `.claude/rules/git-migration.md` §Worktree — 採否判定 / 公式機能の active 設定 / Subagent 連携（canonical SSoT）
+- `.worktreeinclude` — gitignored ファイルの自動 copy 対象（公式 [Copy gitignored files into worktrees](https://code.claude.com/docs/en/worktrees#copy-gitignored-files-into-worktrees)）
+- `.claude/settings.json` の `worktree.baseRef` / `cleanupPeriodDays` — 公式 [Worktree settings](https://code.claude.com/docs/en/worktrees#start-claude-in-a-worktree)
+- `superpowers:using-git-worktrees` — worktree 運用の一般論
+- `.claude/skills/subagent-dispatch-template/SKILL.md` — sub-agent dispatch 時の `isolation: worktree` 規律

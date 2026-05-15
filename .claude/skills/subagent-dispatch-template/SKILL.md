@@ -25,6 +25,39 @@ when_to_use: subagent-driven-development skill 実行時、または Agent tool 
 📋 **JSDoc / コメント規律** — JSDoc / コメントに "Phase X.Y" / "refactor from Y" / "後継 UI" 等のタスク・フロー参照を含めない。
 ```
 
+## Worktree 隔離（公式 `isolation: worktree`）
+
+implementer を main から file-system レベルで隔離したい場合は **公式 `isolation` フィールドを `Agent` tool option として渡す**（手動 bootstrap 不要）:
+
+```ts
+// Agent tool 呼び出し例
+Agent({
+  description: "...",
+  subagent_type: "...",
+  isolation: "worktree", // ← 公式 sub-agent frontmatter フィールド
+  prompt: "...",
+});
+```
+
+- **temporary worktree を切り、変更なしで自動 cleanup**（[公式仕様](https://code.claude.com/docs/en/sub-agents#supported-frontmatter-fields)）
+- `.worktreeinclude` のパターンで `.env*` / `generated/` / `playwright/.auth/` が auto copy される
+- `worktree.baseRef: "head"`（`.claude/settings.json`）により local HEAD（未 push WIP 含む）ベースで作成
+- 孤児化した worktree は `cleanupPeriodDays: 14` で自動掃除（uncommitted/untracked/unpushed なし時）
+
+**使用する場面**:
+
+- destructive migration 実験 / 共有 dev DB へ影響を与えうる変更
+- 同一 file を controller も並行編集する可能性のある parallel implementer
+- PR レビュー目的の implementer（→ controller 側で `claude --worktree "#PR-num"` も検討）
+
+**使わない場面**:
+
+- 単純な lint fix / format only / config 変更
+- read-only 調査 (Explore subagent)
+- 1 file 編集の短時間タスク
+
+`Agent` tool option を使わず手動 bootstrap が必要なケースは `.claude/skills/worktree-bootstrap/SKILL.md`。採否判定の SSoT は `.claude/rules/git-migration.md` §Worktree。
+
 ### 完了報告フォーマット
 
 implementer に以下のフォーマットで報告させる:

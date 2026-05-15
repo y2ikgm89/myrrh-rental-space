@@ -1,0 +1,23 @@
+# Claude Code worktree への自動 copy 対象（公式 .worktreeinclude）
+# Reference: https://code.claude.com/docs/en/worktrees#copy-gitignored-files-into-worktrees
+#
+# .gitignore syntax で記述。`.gitignore` で ignore されているファイル/ディレクトリのみ
+# が copy 対象になる（tracked ファイルは複製されない）。
+#
+# 適用契機:
+#   - claude --worktree <name>
+#   - サブエージェントの isolation: worktree
+#   - デスクトップアプリの並列セッション
+
+# ─── 環境変数（Better Auth / Cloud SQL / Stripe / GCal / Resend など） ───
+.env
+.env.local
+.env.test
+.env.development
+.env.production
+
+# ─── Prisma 生成物（client / 型）── worktree 内で再 generate を省略 ───
+/generated/
+
+# ─── Playwright 認証 storage state（E2E） ─────────────────────────────────
+/playwright/.auth/

@@ -161,12 +161,89 @@ matcher で分離する方法もあるが、単一スクリプト内で分岐し
 }
 ```
 
+## Hook command 形式（Exec form + 明示インタプリタが公式正規）
+
+Claude Code 公式（`code.claude.com/docs/en/hooks#exec-form-vs-shell-form`）の Windows 制約:
+
+> On Windows, exec form requires `command` to resolve to a real executable such as a `.exe`. `.cmd` / `.bat` / `.sh` shims are not executables and cannot be spawned without a shell.
+
+つまり Windows では `.sh` を `command` に直接置くと `CreateProcess` が **`EFTYPE: inappropriate file type or format, uv_spawn`** で fail する。公式正規パターンは **`command: "bash"` + `args: ["<path>"]`** でインタプリタを明示する:
+
+```json
+// ✅ OK: 公式正規パターン（cross-platform、Windows/macOS/Linux 同一動作）
+{
+  "type": "command",
+  "command": "bash",
+  "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/foo.sh"]
+}
+
+// ❌ NG: Windows で EFTYPE エラー（.sh を直接 spawn 不可）
+{
+  "type": "command",
+  "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/foo.sh",
+  "args": []
+}
+
+// ❌ NG: Shell form（旧仕様、quoting fragile）
+{
+  "type": "command",
+  "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/foo.sh"
+}
+```
+
+**`command: "bash" + args` パターンの利点**:
+
+1. **`bash` は Windows の Git Bash / WSL / Linux / macOS で同名 binary として常時利用可能** — `CreateProcess` / `posix_spawn` 両環境で実行可能
+2. **`args` 配列で argument boundaries が明確** — special character pass-through、shell tokenization なし
+3. **`${CLAUDE_PROJECT_DIR}` placeholder を Claude Code が直接 replace** — bash variable expansion とは別 layer、quoting issue ゼロ
+4. **shebang `#!/usr/bin/env bash` は bash 内部で解釈** — bash が `.sh` を読み込む経路で POSIX 仕様準拠
+
+**他のインタプリタ採用パターン**（公式 example 通り、cross-platform 動作保証）:
+
+```json
+// Node script — node.exe は Windows でも .exe binary
+{ "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/format.js"] }
+
+// Python script
+{ "command": "python3", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/foo.py"] }
+
+// Bun script
+{ "command": "bun", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/foo.ts"] }
+```
+
+**禁止**:
+
+- `command` に `.sh` / `.cmd` / `.bat` を直接書く（Windows で EFTYPE）
+- Shell form (`bash "$CLAUDE_PROJECT_DIR/..."`) への復活（quoting fragile）
+
+**監査 grep**:
+
+```bash
+# .sh / .cmd / .bat を command に直接書いている entry を検出
+python3 -c "
+import json
+d = json.load(open('.claude/settings.json', encoding='utf-8'))
+for sec, entries in d['hooks'].items():
+  for entry in entries:
+    for h in entry['hooks']:
+      cmd = h.get('command', '')
+      if cmd.endswith(('.sh', '.cmd', '.bat')):
+        print(f'EFTYPE risk: {sec} - {cmd}')
+"
+```
+
 ## Windows (MINGW64) 固有の注意
 
-- `$CLAUDE_PROJECT_DIR` には Windows 形式のパス（`G:\workspace\...`）が入る。bash hook では `cd "$CLAUDE_PROJECT_DIR"` で問題なく扱えるが、正規表現マッチでは MINGW 形式（`/g/workspace/...`）に正規化が必要（`block-dangerous-bash.sh` 参照）
-- `set -euo pipefail` + `$CLAUDE_PROJECT_DIR` 直接参照は unset 時に unbound variable で fail する。手動テストや fallback 対応のため `: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"` を先頭に置く
-- `jq` は GnuWin32 / MSYS2 経由で必須（欠落時 silent fail を避けるため `command -v jq` で確認）
-- `PYTHONUTF8=1` を `.claude/settings.json` env に設定済み（CP932 ロケール問題の恒久対策。Hookify plugin の json 読み込み対策含む）
+- **`${CLAUDE_PROJECT_DIR}` placeholder** には Windows 形式のパス（`G:\workspace\...`）が exec form 経由で expand される。bash hook では `cd "$CLAUDE_PROJECT_DIR"` で問題なく扱えるが、正規表現マッチでは MINGW 形式（`/g/workspace/...`）に正規化が必要（`block-dangerous-bash.sh` 参照）
+- **`set -euo pipefail` + `$CLAUDE_PROJECT_DIR` 直接参照は unset 時に unbound variable で fail**。手動テスト（`echo '{}' | bash hook.sh`）や fallback 対応のため `: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"` を先頭に置く。**全 hook 統一適用済**（2026-05-15 監査）
+- **`jq` は GnuWin32 / MSYS2 経由で必須**（欠落時 silent fail を避けるため `command -v jq` で確認）
+- **`PYTHONUTF8=1`** を `.claude/settings.json` env に設定済み（CP932 ロケール問題の恒久対策。Hookify plugin の json 読み込み対策含む）
+- **新規 hook 作成手順**（chmod / executable bit 不要 — bash 経由起動のため）:
+  1. `.claude/hooks/<name>.sh` を `#!/usr/bin/env bash` shebang で作成
+  2. `set -euo pipefail` + `: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"` fallback を冒頭に
+  3. `.claude/settings.json` に **`command: "bash"` + `args: ["${CLAUDE_PROJECT_DIR}/.claude/hooks/<name>.sh"]`** で登録（公式正規パターン）
+  4. `echo '{...}' | bash .claude/hooks/<name>.sh` で手動 smoke test
+  5. `python3 -c "import json; json.load(open('.claude/settings.json', encoding='utf-8'))"` で JSON validation
 
 ## 設定ファイル配置と優先順位
 
@@ -212,6 +289,40 @@ grep -L 'stop_hook_active' .claude/hooks/type-check-on-stop.sh && echo "⚠️ g
 # additionalContext の hookEventName typo
 grep -rE 'hookEventName.*:' .claude/hooks/ | grep -vE '(UserPromptSubmit|PostToolUse|PreToolUse|SessionStart)'
 ```
+
+## Edit drift 予防（PostToolUse 自動整形の対象選定）
+
+PostToolUse の自動 format hook（`prettier-format.sh` / `eslint-fix.sh` 等）は Edit/Write 直後にファイル内容を書き換えるため、**直後の Edit で `old_string` が drift する Edit エラーの主因**。Markdown 系は特にインラインコード周辺の空白詰め・bold/italic の正規化で頻発する。
+
+### Markdown / YAML を除外する設計
+
+```bash
+# .claude/hooks/prettier-format.sh
+[[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx|css|json)$ ]] || exit 0
+#                                              ^^^^^ md / yaml / yml は含めない
+```
+
+**フォールバック**: lefthook `pre-commit:prettier-fix` job（`lefthook.yml`）が staged Markdown / YAML を commit 時に一括整形する設計。Edit エラー予防とコード品質の両立。
+
+### 対象選定の判断基準
+
+| 拡張子           | PostToolUse 自動整形 | pre-commit 整形 | 根拠                                                                            |
+| ---------------- | -------------------- | --------------- | ------------------------------------------------------------------------------- |
+| `.ts` / `.tsx`   | ✅ 有                | ✅              | Edit 後の構文 fix が必須（trailing comma 等）、drift リスクは型エラーで早期検出 |
+| `.js` / `.jsx`   | ✅ 有                | ✅              | 同上                                                                            |
+| `.json`          | ✅ 有                | ✅              | 機械可読性、drift リスク低い                                                    |
+| `.css`           | ✅ 有                | ✅              | 機械可読性                                                                      |
+| `.md`            | ❌ **除外**          | ✅              | インラインコード周辺空白詰めで Edit drift 頻発                                  |
+| `.yml` / `.yaml` | ❌ **除外**          | ✅              | quote 形式変更で drift                                                          |
+
+**禁止**: PostToolUse `prettier-format.sh` の正規表現に `md` / `yml` / `yaml` を復活させる（Edit drift 再発）。
+
+### Edit エラー発生時の対処（運用 fallback）
+
+1. **`String to replace not found`**: 直前に PostToolUse hook が走った可能性 → Read で実体再確認 → 再 Edit
+2. **2 回連続失敗**: Write で全面書き換えに切替（Edit より高コストだがコスト的に合理的）
+3. **`File has not been read yet`**: 同一会話内で初 Read が必須（Edit ツール仕様）
+4. **`security_reminder_hook.py` false positive**: 同内容を `Write` で書き出すと bypass 可能（hook は Edit に強反応、Write はスルー傾向）
 
 ## State 注入 hook の sync 規律
 

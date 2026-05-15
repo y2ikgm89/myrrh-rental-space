@@ -146,7 +146,7 @@ beforeEach(() => {
 
 これが per-directory `&&` チェーン (`bun test __tests__/unit/lib && bun test __tests__/unit/api`) で部分緩和されても、**1 ディレクトリに複数 \*.test.ts** があれば干渉する根本原因。
 
-**唯一の安定解**: 各 \*.test.ts を **独立した bun サブプロセス**で起動する per-file isolation runner（`scripts/run-tests.mjs`）。process boundary が module cache を物理的に分離するため、`mock.module` の live binding は他 file に届かない。
+**唯一の安定解**: 各 \*.test.ts を **独立した bun サブプロセス**で起動する per-file isolation runner（`scripts/run-tests.ts`）。process boundary が module cache を物理的に分離するため、`mock.module` の live binding は他 file に届かない。
 
 詳細は `.claude/rules/bun-patterns/test-runner.md` §per-file isolation runner を参照。
 

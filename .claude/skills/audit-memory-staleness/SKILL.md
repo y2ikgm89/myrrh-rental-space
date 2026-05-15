@@ -58,6 +58,7 @@ scan_dir ".serena/memories" 3
 
 > MINGW64 の `()` 含みパス（`src/app/(admin)/...` 等）は grep 側で文字クラス `[A-Za-z0-9_./\-]` に該当しないため自動的に除外される。明示的な除外処理は不要。
 > dated snapshot ファイル（filename に日付 / header に `Snapshot:` 等）は意図的履歴として自動スキップする。新しい research/analysis ドキュメントを書くときは冒頭に `> **Snapshot: YYYY-MM-DD**` を入れると、将来の staleness audit で誤検出を防げる。
+> Serena 側でも同じ pattern を `.serena/project.yml` の `ignored_memory_patterns` で `list_memories` 出力から除外しているため、両者は整合している（`.claude/rules/ops/serena-patterns.md` SSoT）。
 
 ### 2. 検出結果の分類
 
