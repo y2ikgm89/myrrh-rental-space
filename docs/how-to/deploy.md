@@ -182,9 +182,9 @@ Cloud Build は以下を順に実行:
 
 | Stage     | Base                     | 内容                                                                             |
 | --------- | ------------------------ | -------------------------------------------------------------------------------- |
-| `deps`    | `oven/bun:1.3.12-alpine` | 依存インストール + Prisma generate                                               |
-| `builder` | `oven/bun:1.3.12-alpine` | validate + next build                                                            |
-| `runner`  | `oven/bun:1.3.12-alpine` | standalone output + 非 root ユーザー、`HOSTNAME=0.0.0.0`、PORT は Cloud Run 注入 |
+| `deps`    | `oven/bun:1.3.14-alpine` | 依存インストール + Prisma generate                                               |
+| `builder` | `oven/bun:1.3.14-alpine` | validate + next build                                                            |
+| `runner`  | `oven/bun:1.3.14-alpine` | standalone output + 非 root ユーザー、`HOSTNAME=0.0.0.0`、PORT は Cloud Run 注入 |
 
 - Bun ランタイム: Cold Start が Node.js より高速
 - `openssl` 不要: Prisma 7 `engineType = "client"` は WASM ベース

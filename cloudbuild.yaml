@@ -63,7 +63,7 @@ steps:
       - docker pull ${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:cache || true
 
   # Step 2: Run unit tests (DB不要のテストのみ)
-  - name: "oven/bun:1.3.12"
+  - name: "oven/bun:1.3.14"
     id: test
     waitFor: ["-"]
     entrypoint: sh
