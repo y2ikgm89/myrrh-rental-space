@@ -7,8 +7,45 @@ paths:
 
 # Claude Code Hooks パターンルール
 
-> 出典: `code.claude.com/docs/en/hooks` および `.../hooks-guide`（公式仕様）
+> 出典: `code.claude.com/docs/en/hooks`（v2.1.141+）および `.../hooks-guide`
 > プロジェクト hooks の実装 SSoT。編集時に自動ロードされる。
+
+## 公式イベント一覧（v2.1.141+ 30 events）
+
+プロジェクトで実使用 → 詳細セクション参照。未使用 → 公式 docs 参照。新規 hook 追加時は本表を canonical 比較対象とする。
+
+| カテゴリ                 | プロジェクト使用中                   | プロジェクト未使用（公式参照）                                                                      |
+| ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Session lifecycle        | `SessionStart`                       | `Setup` / `SessionEnd`                                                                              |
+| Per-turn                 | `UserPromptSubmit` / `Stop`          | `UserPromptExpansion` / `StopFailure`                                                               |
+| Tool execution           | `PreToolUse` / `PostToolUse`         | `PostToolUseFailure` / `PostToolBatch` / `PermissionRequest` / `PermissionDenied`                   |
+| Agent/Task               | `PostToolUse matcher: Agent`（代替） | `SubagentStart` / `SubagentStop` / `TaskCreated` / `TaskCompleted` / `TeammateIdle`                 |
+| File/Config/Compact      | —                                    | `FileChanged` / `ConfigChange` / `CwdChanged` / `InstructionsLoaded` / `PreCompact` / `PostCompact` |
+| Notification/Elicitation | `Notification`                       | `Elicitation` / `ElicitationResult`                                                                 |
+| Worktree                 | —                                    | `WorktreeCreate` / `WorktreeRemove`                                                                 |
+
+**新規追加判断**: 未使用 events の採用は context cost と便益のトレードオフを記述したうえで `.claude/settings.json` に書く。`InstructionsLoaded` は path-scoped rule の debug 用途で有用候補（実装した場合は `additionalContext` 不可・ログ専用）。
+
+## Handler types（5 種類）
+
+| type       | 用途                               | プロジェクト使用  |
+| ---------- | ---------------------------------- | ----------------- |
+| `command`  | shell command（stdin/stdout 経由） | ✅ 全 hook で使用 |
+| `http`     | HTTP POST request                  | ❌                |
+| `mcp_tool` | MCP server tool call               | ❌                |
+| `prompt`   | Claude model evaluation            | ❌                |
+| `agent`    | Subagent with tool access          | ❌                |
+
+`command` 以外は MCP / 外部システム連携時のみ。詳細は公式 docs。
+
+## 新 fields / env (v2.1.141+)
+
+- **`terminalSequence`** — `additionalContext` 等の universal field。`/dev/tty` 書き込みの安全代替。OSC `0`/`1`/`2`/`9`/`99`/`777` + BEL のみ allowlist
+- **`effort`** — common input field（tool-use context 内）。`level: "low" | "medium" | "high" | "xhigh" | "max"`
+- **`CLAUDE_EFFORT`** env — Bash + hook commands 内で現在の effort level を参照
+- **`CLAUDE_ENV_FILE`** env — `SessionStart` / `Setup` / `CwdChanged` / `FileChanged` hooks の persistent environment
+
+これらは現状プロジェクト未使用。採用時は本セクションを更新する。
 
 ## イベント → stdout 流入の可否（最重要）
 
@@ -29,9 +66,9 @@ paths:
 | `2`    | Blocking           | stdout 無視、stderr → エラーメッセージ。block 可能イベントのみ有効 |
 | その他 | 非 Blocking エラー | stderr 先頭行のみ表示、action 続行                                 |
 
-**block 可能イベント**: `PreToolUse` / `UserPromptSubmit` / `Stop` / `SubagentStop` / `PreCompact` / `PermissionRequest` 等
+**block 可能イベント (exit 2 で action 阻止)**: `PreToolUse` / `PermissionRequest` / `UserPromptSubmit` / `UserPromptExpansion` / `Stop` / `SubagentStop` / `TeammateIdle` / `TaskCreated` / `TaskCompleted` / `ConfigChange` / `PreCompact` / `PostToolBatch` / `Elicitation` / `ElicitationResult` / `WorktreeCreate`
 
-**block 不可イベント**（既に発生済み・進行中）: `PostToolUse` / `Notification` / `SessionStart` / `SessionEnd` / `CwdChanged` / `FileChanged` / `PostCompact` 等
+**block 不可イベント**（既に発生済み・進行中）: `PostToolUse` / `PostToolUseFailure` / `StopFailure` / `PostCompact` / `Notification` / `SubagentStart` / `SessionStart` / `Setup` / `SessionEnd` / `CwdChanged` / `FileChanged` / `WorktreeRemove` / `InstructionsLoaded`
 
 **禁止**: exit 2 + JSON stdout の混在。Claude は exit 2 のとき stdout を無視する。
 
@@ -184,4 +221,5 @@ grep -rE 'hookEventName.*:' .claude/hooks/ | grep -vE '(UserPromptSubmit|PostToo
 
 - 公式: `code.claude.com/docs/en/hooks` / `.../hooks-guide`
 - プロジェクト: `.claude/settings.json`（SSoT）、各 `.claude/hooks/*.sh`
+- 公式仕様 drift 検出: `/audit-claude-config` SKILL（`.claude/skills/audit-claude-config/`）— 手動 invoke のみ、context 常時消費ゼロ
 - ADR: 不要（公式仕様に準拠するのみ、プロジェクト独自厳格化なし）

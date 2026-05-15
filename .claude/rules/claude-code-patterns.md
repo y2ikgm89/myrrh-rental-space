@@ -80,6 +80,10 @@ paths:
 - [ ] **新カテゴリ作成時**: ドメイン分類（Prisma / React / Tailwind / Auth / Server Actions 等）に統合できないか先検討。メタ分類（gotchas / patterns / etc.）の新ディレクトリ作成は禁止
 - [ ] **常時ロード rule 追加禁止** — 全 rule は `paths:` 必須
 
+### 自動 drift 監査
+
+本チェックリスト全項目を実行可能化した SKILL: `/audit-claude-config`（`.claude/skills/audit-claude-config/SKILL.md`）。`disable-model-invocation: true` で常時 context 消費ゼロ、手動 invoke 時のみ Phase 1 (local grep) + Phase 2 (公式 spec WebFetch + diff) を実行する。Claude Code 本体バージョン更新時 (`claude --version` で v2.1.X 上昇確認時) / `.claude/{rules,agents,skills,hooks}/**` 大規模変更後 / 月次定期で実行する想定。
+
 ### 例外申請
 
 公式仕様で表現できない明確な必要性がある場合のみ、本ファイル内に「例外」セクションを追加して正当化を明記する（現状: 例外なし）。
