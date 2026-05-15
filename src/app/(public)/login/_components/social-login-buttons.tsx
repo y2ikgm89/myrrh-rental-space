@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { signIn } from "@/shared/lib/customer-auth-client";
 import { cn } from "@/shared/lib/cn";
 import { Stack } from "@/public/components/design-system/stack";
@@ -9,6 +9,11 @@ import {
   GoogleLogo,
   LineLogo,
 } from "@/public/components/ui/social-provider-logos";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { setSignupTermsAgreementCookie } from "./signup-terms-action";
 
 /* ------------------------------------------------------------------ */
@@ -25,6 +30,7 @@ export interface SignupTermItem {
 
 interface SocialLoginButtonsProps {
   readonly requiredTerms?: readonly SignupTermItem[];
+  readonly turnstileSiteKey: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -45,10 +51,13 @@ function toUserMessage(raw: string): string {
 
 export function SocialLoginButtons({
   requiredTerms = [],
-}: SocialLoginButtonsProps = {}) {
+  turnstileSiteKey,
+}: SocialLoginButtonsProps) {
   const [pending, setPending] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [agreedIds, setAgreedIds] = useState<readonly string[]>([]);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const allTermsAgreed =
     requiredTerms.length === 0 ||
@@ -64,16 +73,23 @@ export function SocialLoginButtons({
     setPending(provider);
     setError(null);
 
-    // 規約同意を signed cookie に保存（OAuth callback まで保持）
-    if (requiredTerms.length > 0) {
-      const result = await setSignupTermsAgreementCookie({
-        termsIds: agreedIds,
-      });
-      if (isMutationError(result)) {
-        setError(result.error);
-        setPending(null);
-        return;
-      }
+    if (turnstileSiteKey && !turnstileToken) {
+      setError("セキュリティ検証を完了してください。");
+      setPending(null);
+      return;
+    }
+
+    // 規約同意を signed cookie に保存 + Turnstile 検証（OAuth callback まで保持）
+    const result = await setSignupTermsAgreementCookie({
+      termsIds: agreedIds,
+      ...(turnstileToken && { turnstileToken }),
+    });
+    if (isMutationError(result)) {
+      setError(result.error);
+      setPending(null);
+      turnstileRef.current?.reset();
+      setTurnstileToken("");
+      return;
     }
 
     void signIn.social({
@@ -98,7 +114,10 @@ export function SocialLoginButtons({
     });
   };
 
-  const disabled = pending !== null || !allTermsAgreed;
+  const disabled =
+    pending !== null ||
+    !allTermsAgreed ||
+    (turnstileSiteKey !== null && !turnstileToken);
 
   return (
     <Stack gap="lg">
@@ -146,6 +165,15 @@ export function SocialLoginButtons({
           })}
         </div>
       )}
+
+      <TurnstileWidget
+        ref={turnstileRef}
+        siteKey={turnstileSiteKey}
+        action={TURNSTILE_ACTIONS.customer_signup_terms}
+        onVerify={setTurnstileToken}
+        onExpire={() => setTurnstileToken("")}
+        onError={() => setTurnstileToken("")}
+      />
 
       {/* Google — 公式ブランドガイドライン: 白背景 + カラーロゴ + Roboto テキスト */}
       <button
