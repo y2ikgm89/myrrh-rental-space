@@ -37,7 +37,6 @@ import {
   featureModulesSettingsSchema,
   type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
-  type PermalinkSettingsInput,
   type FooterSettingsInput,
   type FeatureModulesSettingsInput,
 } from "./schemas";
@@ -177,27 +176,36 @@ export async function updateAnnouncementBarCarouselSettings(
   });
 }
 
+/**
+ * パーマリンク設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updatePermalinkSettings(
-  data: PermalinkSettingsInput,
-): Promise<MutationResult> {
-  const parsed = permalinkSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updatePermalinkSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    permalinkSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updatePermalinkSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.PERMALINK);
+          updateTag(CACHE_TAGS.POSTS);
+          updateTag(CACHE_TAGS.SIDEBAR_DATA);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.PERMALINK);
-      updateTag(CACHE_TAGS.POSTS);
-      updateTag(CACHE_TAGS.SIDEBAR_DATA);
-    },
-  });
+  );
 }
 
 /**
