@@ -1,15 +1,26 @@
 "use client";
 
 /**
- * リストページ用SEO設定フォーム
+ * リストページ用SEO設定フォーム — Phase 1 Task 6 conform 移行。
  *
- * ブログ一覧・お知らせ一覧など、リストページのSEO/OGP設定を編集するフォーム
- * Pageテーブルに保存されたSEO設定を更新
+ * ブログ一覧・お知らせ一覧など、リストページのSEO/OGP設定を編集するフォーム。
+ * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
+ * への clean break 移行。`updatePageSeo` は `slug` を bind で部分適用。
  */
 
 import Image from "next/image";
-import { useWatch } from "react-hook-form";
+import { useActionState, useEffect } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  getTextareaProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { IconPhotoPlus } from "@tabler/icons-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Card,
@@ -25,7 +36,6 @@ import {
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/page";
-import { useFormAction } from "@/admin/hooks/useFormAction";
 
 interface SeoData {
   title: string;
@@ -44,44 +54,55 @@ interface ListPageSeoFormProps {
 }
 
 export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
-  const { form, isPending, onSubmit } = useFormAction(
-    updatePageSeoSchema,
-    (data) => updatePageSeo(slug, data),
-    {
-      defaultValues: {
-        title: seoData.title,
-        metaDescription: seoData.metaDescription || "",
-        metaKeywords: seoData.metaKeywords || "",
-        ogpTitle: seoData.ogpTitle || "",
-        ogpDescription: seoData.ogpDescription || "",
-        ogpImageUrl: seoData.ogpImageUrl || "",
-      },
-      successMessage: "SEO設定を更新しました",
-      refresh: true,
-    },
+  const router = useRouter();
+  const boundAction = updatePageSeo.bind(null, slug);
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
   );
 
-  const {
-    register,
-    setValue,
-    control,
-    formState: { errors },
-  } = form;
+  const [form, fields] = useForm({
+    id: `list-page-seo-${slug}`,
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: updatePageSeoSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      title: seoData.title,
+      metaDescription: seoData.metaDescription || "",
+      metaKeywords: seoData.metaKeywords || "",
+      ogpTitle: seoData.ogpTitle || "",
+      ogpDescription: seoData.ogpDescription || "",
+      ogpImageUrl: seoData.ogpImageUrl || "",
+    },
+  });
 
-  const ogpImageUrl = useWatch({ control, name: "ogpImageUrl" });
+  const ogpImageUrlControl = useInputControl(fields.ogpImageUrl);
+  const ogpImageUrl = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
     defaultUsage: "GENERAL",
     onSelect: (media) => {
       const selected = media[0];
       if (selected) {
-        setValue("ogpImageUrl", selected.url);
+        ogpImageUrlControl.change(selected.url);
       }
     },
   });
 
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("SEO設定を更新しました");
+      router.refresh();
+    }
+  }, [lastResult, router]);
+
+  const formErrors = form.errors;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form {...getFormProps(form)} action={action} className="space-y-6">
       {/* 基本情報 */}
       <Card>
         <CardHeader>
@@ -92,26 +113,28 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">ページタイトル *</Label>
+            <Label htmlFor={fields.title.id}>ページタイトル *</Label>
             <Input
-              id="title"
-              {...register("title")}
+              {...getInputProps(fields.title, { type: "text" })}
               placeholder="ページタイトル"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
               検索結果やブラウザタブに表示されるタイトル（推奨: 30-60文字）
             </p>
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
+            {fields.title.errors && (
+              <p id={fields.title.errorId} className="text-sm text-destructive">
+                {fields.title.errors.join(", ")}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="metaDescription">メタディスクリプション</Label>
+            <Label htmlFor={fields.metaDescription.id}>
+              メタディスクリプション
+            </Label>
             <Textarea
-              id="metaDescription"
-              {...register("metaDescription")}
+              {...getTextareaProps(fields.metaDescription)}
               placeholder="ページの説明文を入力..."
               rows={3}
               disabled={isPending}
@@ -119,27 +142,32 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
             <p className="text-xs text-muted-foreground">
               検索結果に表示される説明文（推奨: 120-160文字）
             </p>
-            {errors.metaDescription && (
-              <p className="text-sm text-destructive">
-                {errors.metaDescription.message}
+            {fields.metaDescription.errors && (
+              <p
+                id={fields.metaDescription.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.metaDescription.errors.join(", ")}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="metaKeywords">メタキーワード</Label>
+            <Label htmlFor={fields.metaKeywords.id}>メタキーワード</Label>
             <Input
-              id="metaKeywords"
-              {...register("metaKeywords")}
+              {...getInputProps(fields.metaKeywords, { type: "text" })}
               placeholder="キーワード1, キーワード2, キーワード3"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
               カンマ区切りでキーワードを入力（SEO効果は限定的）
             </p>
-            {errors.metaKeywords && (
-              <p className="text-sm text-destructive">
-                {errors.metaKeywords.message}
+            {fields.metaKeywords.errors && (
+              <p
+                id={fields.metaKeywords.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.metaKeywords.errors.join(", ")}
               </p>
             )}
           </div>
@@ -154,38 +182,42 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ogpTitle">OGPタイトル</Label>
+            <Label htmlFor={fields.ogpTitle.id}>OGPタイトル</Label>
             <Input
-              id="ogpTitle"
-              {...register("ogpTitle")}
+              {...getInputProps(fields.ogpTitle, { type: "text" })}
               placeholder="SNSシェア用タイトル（空欄時はページタイトルを使用）"
               disabled={isPending}
             />
-            {errors.ogpTitle && (
-              <p className="text-sm text-destructive">
-                {errors.ogpTitle.message}
+            {fields.ogpTitle.errors && (
+              <p
+                id={fields.ogpTitle.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.ogpTitle.errors.join(", ")}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ogpDescription">OGP説明文</Label>
+            <Label htmlFor={fields.ogpDescription.id}>OGP説明文</Label>
             <Textarea
-              id="ogpDescription"
-              {...register("ogpDescription")}
+              {...getTextareaProps(fields.ogpDescription)}
               placeholder="SNSシェア用説明文（空欄時はメタディスクリプションを使用）"
               rows={2}
               disabled={isPending}
             />
-            {errors.ogpDescription && (
-              <p className="text-sm text-destructive">
-                {errors.ogpDescription.message}
+            {fields.ogpDescription.errors && (
+              <p
+                id={fields.ogpDescription.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.ogpDescription.errors.join(", ")}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ogpImageUrl">OGP画像</Label>
+            <Label htmlFor={fields.ogpImageUrl.id}>OGP画像</Label>
             <div className="flex items-start gap-3">
               {ogpImageUrl ? (
                 <div className="relative h-20 w-36 shrink-0 overflow-hidden rounded-lg border">
@@ -206,6 +238,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
+                  id={fields.ogpImageUrl.id}
                   onClick={() => ogpPicker.openPicker()}
                   disabled={isPending}
                 >
@@ -221,7 +254,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setValue("ogpImageUrl", "")}
+                      onClick={() => ogpImageUrlControl.change("")}
                       disabled={isPending}
                     >
                       削除
@@ -230,17 +263,32 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                 )}
               </div>
             </div>
+            <input
+              type="hidden"
+              name={fields.ogpImageUrl.name}
+              value={ogpImageUrl}
+            />
             <p className="text-xs text-muted-foreground">
               推奨サイズ: 1200x630px
             </p>
-            {errors.ogpImageUrl && (
+            {fields.ogpImageUrl.errors && (
               <p className="text-sm text-destructive">
-                {errors.ogpImageUrl.message}
+                {fields.ogpImageUrl.errors.join(", ")}
               </p>
             )}
           </div>
         </CardContent>
       </Card>
+
+      {formErrors && formErrors.length > 0 && (
+        <div
+          id={form.errorId}
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {formErrors.join(", ")}
+        </div>
+      )}
 
       {/* 送信ボタン */}
       <div className="flex justify-end">
