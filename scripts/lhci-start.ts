@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * Lighthouse CI 用の本番相当サーバー起動スクリプト。
  *
@@ -6,33 +7,14 @@
  * 開発用の `next dev` では同チェックがスキップされるため、この問題は LHCI やローカルの
  * `next start` 検証時にのみ顕在化する。
  *
- * 処理内容:
- * 1. `.env` → `.env.local` の順で読み込み（後者が優先）
- * 2. まだ欠けている本番ゲート用変数だけ、ローカル/LHCI 専用のダミーを埋める
- * 3. `build:skip-env` の後 `next start`（子プロセスへ環境を引き継ぐ）
+ * 公式準拠（bun.com/docs）:
+ * - Bun runtime は `.env` → `.env.{NODE_ENV}` → `.env.local` の順で auto-load（`.env.local` が最優先）
+ * - `Bun.spawnSync([...], options)` の primary form（配列引数）採用
+ * - `env: { ...process.env, ... }` でサブプロセスに env 継承
  *
  * ダミー値は実サービスに接続しない前提のプレースホルダであり、本番デプロイには使わないこと。
  */
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { config as loadEnv } from "dotenv";
 
-/**
- * リポジトリ標準の env ファイルを読み込む。
- * `.env.local` で `.env` を上書きできるようにする。
- */
-function loadDotenvFiles(): void {
-  if (existsSync(".env")) {
-    loadEnv({ path: ".env" });
-  }
-  if (existsSync(".env.local")) {
-    loadEnv({ path: ".env.local", override: true });
-  }
-}
-
-/**
- * `validateProductionEnv` が要求するキーのうち、未設定のものだけダミーで埋める。
- */
 function applyLhciProductionFallbacks(): void {
   const hex64 = "0".repeat(64);
   /** serverEnv の z.string().min(32) を満たすプレースホルダ */
@@ -59,23 +41,22 @@ function applyLhciProductionFallbacks(): void {
   }
 }
 
-loadDotenvFiles();
 applyLhciProductionFallbacks();
 
-const build = spawnSync("bun", ["run", "build:skip-env"], {
-  stdio: "inherit",
-  shell: true,
+const build = Bun.spawnSync(["bun", "run", "build:skip-env"], {
+  stdout: "inherit",
+  stderr: "inherit",
   env: process.env,
 });
 
-if (build.status !== 0 && build.status !== null) {
-  process.exit(build.status);
+if (!build.success) {
+  process.exit(build.exitCode);
 }
 
-const start = spawnSync("bun", ["x", "next", "start"], {
-  stdio: "inherit",
-  shell: true,
+const start = Bun.spawnSync(["bunx", "--bun", "next", "start"], {
+  stdout: "inherit",
+  stderr: "inherit",
   env: process.env,
 });
 
-process.exit(start.status ?? 1);
+process.exit(start.exitCode);

@@ -4,7 +4,7 @@
 # standalone の server.js は Node API 互換のため Bun でそのまま起動可能
 # https://bun.sh/guides/ecosystem/docker
 
-FROM oven/bun:1.3.12-alpine AS base
+FROM oven/bun:1.3.13-alpine AS base
 WORKDIR /app
 
 # --- Stage 1: Dependencies ---

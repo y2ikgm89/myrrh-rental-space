@@ -17,7 +17,7 @@
  *   bun prisma/seed.ts --all admin@example.com mypassword123
  */
 
-import "dotenv/config";
+// Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PrismaClient,

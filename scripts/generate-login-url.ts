@@ -13,7 +13,7 @@
  *   - 新スタッフへのログインURL発行
  */
 
-import "dotenv/config";
+// Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
