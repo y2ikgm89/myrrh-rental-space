@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
-import { Prisma } from "@generated/prisma/client";
+import { isPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
 import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
@@ -68,12 +68,15 @@ export type SocialLinkInput = z.infer<typeof socialLinkInputSchema>;
 export type SocialLinkOrderInput = z.infer<typeof socialLinkOrderInputSchema>;
 
 function normalizeNavigationItemInput(data: NavigationItemInput) {
+  // PortableTextSpan[] discriminated union を Prisma の Json 列に渡す境界。
+  // Zod が runtime 検証済みのため `isPrismaInputJsonValue` で型 narrow するだけで十分。
+  if (!isPrismaInputJsonValue(data.label)) {
+    throw new DomainError("ナビゲーションラベルが不正です", "VALIDATION");
+  }
   return {
     ...data,
     parentId: data.parentId ?? null,
-    // PortableTextSpan[] を Prisma の Json 列に渡すための SDK 境界 cast
-    // (type-safety.md §許可例外 #2: Prisma JSON 型)
-    label: data.label satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue,
+    label: data.label,
   };
 }
 

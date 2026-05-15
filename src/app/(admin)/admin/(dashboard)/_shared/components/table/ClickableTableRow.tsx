@@ -1,16 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { Route } from "next";
 import type { ComponentPropsWithRef, KeyboardEvent } from "react";
 import { TableRow } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 
 type ClickableTableRowProps = Omit<
   ComponentPropsWithRef<typeof TableRow>,
   "onClick" | "onKeyDown" | "tabIndex" | "role"
 > & {
-  /** 遷移先 URL（`router.push()` に渡される）。内部で Route<string> にキャストして使用 */
+  /** 遷移先 URL（`router.push()` に渡される）。`toAppRoute()` で `Route<string>` に narrow */
   readonly href: string;
   /** スクリーンリーダー向けの行ラベル */
   readonly "aria-label": string;
@@ -37,15 +37,13 @@ export function ClickableTableRow({
   const router = useRouter();
 
   const handleClick = () => {
-    // Next.js typedRoutes 境界: 外部から受け取った string を Route<string> として扱う
-    // （DOM event target での as 使用と同等の library boundary cast）
-    router.push(href as Route<string>);
+    router.push(toAppRoute(href));
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTableRowElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      router.push(href as Route<string>);
+      router.push(toAppRoute(href));
     }
   };
 

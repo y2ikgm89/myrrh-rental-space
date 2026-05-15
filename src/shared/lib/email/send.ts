@@ -20,6 +20,7 @@ import {
   normalizeError,
 } from "../errors/server";
 import { getFromAddress, getResendClient, isEmailEnabled } from "./client";
+import { CreateEmailOptionsSchema } from "./schemas";
 import type { EmailResult } from "./types";
 
 /** Resend 公式が retry を推奨するエラー名（429 / 500 系） */
@@ -75,11 +76,11 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 
   // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
   // `Omit<U, "from">` + spread does not round-trip back to the original union under
-  // `exactOptionalPropertyTypes: true`, so cast at the SDK boundary (Prisma.InputJsonObject と同じ pattern).
-  const fullPayload = {
+  // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
+  const fullPayload = CreateEmailOptionsSchema.parse({
     ...payload,
     from: getFromAddress(),
-  } as CreateEmailOptions;
+  });
 
   const errorContext = {
     ...context,
