@@ -38,7 +38,7 @@ base (oven/bun:1.3.x-alpine)
 
 ```dockerfile
 # syntax=docker.io/docker/dockerfile:1
-FROM oven/bun:1.3.14-alpine AS base
+FROM oven/bun:1.3.13-alpine AS base
 WORKDIR /app
 # ... deps, builder-base, builder ...
 
@@ -64,7 +64,7 @@ CMD ["bun", "server.js"]
 | 項目                 | 詳細                                                                                                             |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **ビルド・実行**     | Bun + `bun.lock`（[Bun Docker ガイド](https://bun.sh/guides/ecosystem/docker)）。`CMD ["bun", "server.js"]`      |
-| **ベース**           | `oven/bun:1.3.14-alpine`（`base` を builder / runner で共有）                                                    |
+| **ベース**           | `oven/bun:1.3.13-alpine`（`base` を builder / runner で共有）                                                    |
 | **libc6-compat**     | Alpine でのネイティブ互換。deps + runner                                                                         |
 | **Prisma generate**  | deps ステージ。出力先: `generated/prisma/`                                                                       |
 | **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須                                         |
