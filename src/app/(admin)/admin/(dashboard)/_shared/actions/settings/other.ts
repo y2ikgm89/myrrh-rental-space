@@ -35,7 +35,6 @@ import {
   headerSettingsSchema,
   footerSettingsSchema,
   featureModulesSettingsSchema,
-  type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
   type FooterSettingsInput,
   type FeatureModulesSettingsInput,
@@ -108,26 +107,35 @@ export async function updateCookieConsentSettings(
   );
 }
 
+/**
+ * 予約設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateReservationSettings(
-  data: ReservationSettingsInput,
-): Promise<MutationResult> {
-  const parsed = reservationSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateReservationSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    reservationSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateReservationSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+          updateTag(CACHE_TAGS.TERMS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
-      updateTag(CACHE_TAGS.TERMS);
-    },
-  });
+  );
 }
 
 export async function updateSidebarSettings(

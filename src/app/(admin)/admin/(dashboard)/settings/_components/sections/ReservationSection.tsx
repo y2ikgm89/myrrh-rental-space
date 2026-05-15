@@ -1,11 +1,21 @@
 "use client";
 
 /**
- * 予約設定セクション
+ * 予約設定セクション (Phase 1 Task 5 conform 移行)
  *
  * 予約時間単位、最小/最大予約時間、キャンセル/変更期限の設定
  */
 
+import { useEffect, useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   Card,
@@ -13,12 +23,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
   Input,
   Select,
   SelectContent,
@@ -27,7 +31,6 @@ import {
   SelectValue,
   SubmitButton,
 } from "@/admin/components/ui";
-import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateReservationSettings } from "@/admin/actions/settings";
 import { reservationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
 import type { SettingsData } from "@/shared/domain/settings/types";
@@ -47,190 +50,228 @@ const DEADLINE_OPTIONS = [
 ];
 
 export function ReservationSection({ settings }: ReservationSectionProps) {
-  const { form, isPending, onSubmit } = useFormAction(
-    reservationFormSchema,
-    (data) =>
-      updateReservationSettings({
-        defaultTimeSlot: data.defaultTimeSlot,
-        minReservationDuration: data.minReservationDuration,
-        maxReservationDuration: data.maxReservationDuration,
-        cancellationDeadlineHours: data.cancellationDeadlineHours,
-        modificationDeadlineHours: data.modificationDeadlineHours,
-      }),
-    {
-      defaultValues: {
-        defaultTimeSlot: settings.defaultTimeSlot,
-        minReservationDuration: settings.minReservationDuration,
-        maxReservationDuration: settings.maxReservationDuration,
-        cancellationDeadlineHours: settings.cancellationDeadlineHours,
-        modificationDeadlineHours: settings.modificationDeadlineHours,
-      },
-      refresh: true,
-      successMessage: "予約設定を保存しました",
+  const router = useRouter();
+  const [lastResult, action, isPending] = useActionState(
+    updateReservationSettings,
+    undefined,
+  );
+  const [form, fields] = useForm({
+    id: "reservation-settings",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: reservationFormSchema });
     },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      defaultTimeSlot: String(settings.defaultTimeSlot),
+      minReservationDuration: String(settings.minReservationDuration),
+      maxReservationDuration: String(settings.maxReservationDuration),
+      cancellationDeadlineHours: String(settings.cancellationDeadlineHours),
+      modificationDeadlineHours: String(settings.modificationDeadlineHours),
+    },
+  });
+
+  const cancellationDeadline = useInputControl(
+    fields.cancellationDeadlineHours,
+  );
+  const modificationDeadline = useInputControl(
+    fields.modificationDeadlineHours,
   );
 
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("予約設定を保存しました");
+      router.refresh();
+    }
+  }, [lastResult, router]);
+
+  const formErrors = form.errors;
+
   return (
-    <Form {...form}>
-      <form onSubmit={onSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>予約設定</CardTitle>
-            <CardDescription>
-              予約に関する基本設定を行います。規約の必須設定は利用規約管理で行えます
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="defaultTimeSlot"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>予約時間単位（分）</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(e.target.valueAsNumber || 60)
-                        }
-                        type="number"
-                        min={15}
-                        max={240}
-                        step={15}
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">15〜240分</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
+    <form {...getFormProps(form)} action={action}>
+      <Card>
+        <CardHeader>
+          <CardTitle>予約設定</CardTitle>
+          <CardDescription>
+            予約に関する基本設定を行います。規約の必須設定は利用規約管理で行えます
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.defaultTimeSlot.id}
+              >
+                予約時間単位（分）
+              </label>
+              <Input
+                {...getInputProps(fields.defaultTimeSlot, { type: "number" })}
+                min={15}
+                max={240}
+                step={15}
+                disabled={isPending}
               />
-              <FormField
-                control={form.control}
-                name="minReservationDuration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>最小予約時間（分）</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(e.target.valueAsNumber || 60)
-                        }
-                        type="number"
-                        min={15}
-                        max={480}
-                        step={15}
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      予約可能な最短時間
-                    </p>
-                    <FormMessage />
-                  </FormItem>
+              <p className="text-xs text-muted-foreground">15〜240分</p>
+              {fields.defaultTimeSlot.errors &&
+                fields.defaultTimeSlot.errors.length > 0 && (
+                  <p
+                    id={fields.defaultTimeSlot.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.defaultTimeSlot.errors.join(", ")}
+                  </p>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="maxReservationDuration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>最大予約時間（分）</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(e.target.valueAsNumber || 480)
-                        }
-                        type="number"
-                        min={60}
-                        max={1440}
-                        step={30}
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      予約可能な最長時間（最大24時間）
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.minReservationDuration.id}
+              >
+                最小予約時間（分）
+              </label>
+              <Input
+                {...getInputProps(fields.minReservationDuration, {
+                  type: "number",
+                })}
+                min={15}
+                max={480}
+                step={15}
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                予約可能な最短時間
+              </p>
+              {fields.minReservationDuration.errors &&
+                fields.minReservationDuration.errors.length > 0 && (
+                  <p
+                    id={fields.minReservationDuration.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.minReservationDuration.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.maxReservationDuration.id}
+              >
+                最大予約時間（分）
+              </label>
+              <Input
+                {...getInputProps(fields.maxReservationDuration, {
+                  type: "number",
+                })}
+                min={60}
+                max={1440}
+                step={30}
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                予約可能な最長時間（最大24時間）
+              </p>
+              {fields.maxReservationDuration.errors &&
+                fields.maxReservationDuration.errors.length > 0 && (
+                  <p
+                    id={fields.maxReservationDuration.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.maxReservationDuration.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="cancellationDeadlineHours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      キャンセル期限（予約開始の何時間前まで）
-                    </FormLabel>
-                    <Select
-                      value={String(field.value)}
-                      onValueChange={(v) => field.onChange(Number(v))}
-                      disabled={isPending}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {DEADLINE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="modificationDeadlineHours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>変更期限（予約開始の何時間前まで）</FormLabel>
-                    <Select
-                      value={String(field.value)}
-                      onValueChange={(v) => field.onChange(Number(v))}
-                      disabled={isPending}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {DEADLINE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.cancellationDeadlineHours.id}
+              >
+                キャンセル期限（予約開始の何時間前まで）
+              </label>
+              <Select
+                value={cancellationDeadline.value ?? ""}
+                onValueChange={(v) => cancellationDeadline.change(v)}
+                disabled={isPending}
+              >
+                <SelectTrigger
+                  id={fields.cancellationDeadlineHours.id}
+                  className="w-full"
+                  onBlur={cancellationDeadline.blur}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEADLINE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                type="hidden"
+                name={fields.cancellationDeadlineHours.name}
+                value={cancellationDeadline.value ?? ""}
               />
             </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.modificationDeadlineHours.id}
+              >
+                変更期限（予約開始の何時間前まで）
+              </label>
+              <Select
+                value={modificationDeadline.value ?? ""}
+                onValueChange={(v) => modificationDeadline.change(v)}
+                disabled={isPending}
+              >
+                <SelectTrigger
+                  id={fields.modificationDeadlineHours.id}
+                  className="w-full"
+                  onBlur={modificationDeadline.blur}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEADLINE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                type="hidden"
+                name={fields.modificationDeadlineHours.name}
+                value={modificationDeadline.value ?? ""}
+              />
+            </div>
+          </div>
 
-            <div className="flex justify-end pt-2">
-              <SubmitButton
-                isPending={isPending}
-                label="予約設定を保存"
-                disabled={!form.formState.isDirty}
-              />
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
             </div>
-          </CardContent>
-        </Card>
-      </form>
-    </Form>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              isPending={isPending}
+              label="予約設定を保存"
+              pendingLabel="保存中..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </form>
   );
 }
