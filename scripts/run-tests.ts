@@ -66,7 +66,7 @@ for (const arg of args) {
 }
 files.sort();
 
-console.log(
+console.info(
   `[run-tests] ${files.length} test files (isolation: per-file bun subprocess)`,
 );
 
@@ -83,7 +83,7 @@ for (let i = 0; i < files.length; i++) {
   const ms = Math.round(performance.now() - t0);
   const ord = `(${i + 1}/${files.length})`;
   if (proc.success) {
-    console.log(`[run-tests] ${ord} PASS ${file} (${ms}ms)`);
+    console.info(`[run-tests] ${ord} PASS ${file} (${ms}ms)`);
   } else {
     failures.push({ file, exitCode: proc.exitCode, ms });
     console.error(
@@ -94,7 +94,7 @@ for (let i = 0; i < files.length; i++) {
 
 const totalMs = Math.round(performance.now() - t0All);
 const passed = files.length - failures.length;
-console.log(
+console.info(
   `\n[run-tests] done: ${passed} passed, ${failures.length} failed in ${(totalMs / 1000).toFixed(1)}s`,
 );
 
