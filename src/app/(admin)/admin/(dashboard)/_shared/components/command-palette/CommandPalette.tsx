@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { Route } from "next";
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +10,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/admin/components/ui/command";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { useCommandPalette } from "./CommandPaletteProvider";
 
 export function CommandPalette() {
@@ -29,7 +29,7 @@ export function CommandPalette() {
 
   const navigateTo = (href: string) => {
     setOpen(false);
-    router.push(href as Route<string>);
+    router.push(toAppRoute(href));
   };
 
   return (

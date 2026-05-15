@@ -1,6 +1,5 @@
 "use server";
 
-import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 
@@ -20,6 +19,7 @@ import {
 import type { GbpSyncResult } from "@/shared/lib/google-business-profile";
 import type { ToggleLocationGbpSyncResult } from "@/shared/domain/locations/gbp-sync-commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 
 /**
  * GBP OAuth フローを開始する。
@@ -31,8 +31,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 export async function initiateGbpAuth(): Promise<void> {
   await verifyAdminSession();
   const url = getGbpAuthorizeUrl("");
-  // Next.js typedRoutes 境界: 外部 OAuth URL を Route<string> として扱う
-  redirect(url as Route<string>);
+  redirect(toAppRoute(url));
 }
 
 /**
