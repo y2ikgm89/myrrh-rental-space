@@ -94,13 +94,11 @@ ignored_memory_patterns:
 
 # list of regex patterns which, when matched, mark a memory entry as read‑only.
 # Extends the list from the global configuration, merging the two lists.
+# 2026-05-15 cleanup: stale dated snapshot memory を全削除し、残るは design-system のみ。
+# 設計判断・実装パターンは .claude/rules/** が SSoT のため、Serena memory に
+# 過去状態を蓄積する役割は終了。新規追加時は SSoT 二重化を避ける。
 read_only_memory_patterns:
-- "architecture/.*"
-- "admin-architecture-comprehensive-analysis"
-- "admin-layer-architecture"
 - "design-system"
-- "reservation-customer-system"
-- "section-system-research"
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
@@ -130,15 +128,17 @@ initial_prompt: |
   ## Memory ポリシー
 
   - `read_memory` は **現タスクに直接関連するもののみ**（公式 read_memory 注記準拠）。
-    例: 公開ページ UI 作業 → `design-system`、admin CRUD 作業 → `admin-layer-architecture`
+    現在 active な memory は `design-system` のみ（公開ページ UI / typography / OKLCH 等）。
+    その他のドメインは `.claude/rules/**` の path-scoped auto-load を一次経路とする。
   - `write_memory` は **user 明示要求時のみ**。`.claude/rules/**` が SSoT のため二重化を避ける
   - `_archive/` / dated snapshot は `ignored_memory_patterns` で自動除外
-  - 主要 architecture memory は `read_only_memory_patterns` で agent 上書きを防止
+  - `design-system` は `read_only_memory_patterns` で agent 上書きを防止
 
   ## Onboarding
 
-  既に完了済み（16 memory + MEMORY.md index）。`no-onboarding` mode で自動起動を停止。
-  新しい architecture が定着したら user が手動で `.serena/memories/<topic>.md` を編集する。
+  `no-onboarding` mode で自動起動を停止。2026-05-15 cleanup で stale memory 15 件削除済、
+  残るは `design-system.md` + `MEMORY.md` index のみ。新しい architecture が定着したら
+  まず `.claude/rules/**` に rule docs として codify、Serena memory への二重化は SSoT 違反。
 
 # list of mode names that are to be activated by default, overriding the setting in the global configuration.
 # The full set of modes to be activated is base_modes (from global config) + default_modes + added_modes.

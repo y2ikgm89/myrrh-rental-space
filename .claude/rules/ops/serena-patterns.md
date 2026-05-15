@@ -47,13 +47,11 @@ Serena を主導にすると **rule auto-load が動かない silent bug** + **E
 
 ### read_memory の判定
 
-| タスク                   | 推奨 memory                                                              |
-| ------------------------ | ------------------------------------------------------------------------ |
-| 公開ページ UI / デザイン | `design-system`                                                          |
-| Admin CRUD 設計          | `admin-layer-architecture` / `admin-architecture-comprehensive-analysis` |
-| 予約システム改修         | `reservation-customer-system`                                            |
-| Section 関連改修         | `section-system-research`                                                |
-| Lexical エディタ拡張     | `lexical/node-implementation-patterns`                                   |
+| タスク                   | 推奨 memory                                          |
+| ------------------------ | ---------------------------------------------------- |
+| 公開ページ UI / デザイン | `design-system`（reference URLs / OKLCH / clamp 表） |
+
+その他のドメイン（Admin / 予約 / Section / Lexical 等）は `.claude/rules/**/*.md` の path-scoped auto-load を一次経路とする。2026-05-15 cleanup で過去 Snapshot 系 memory（admin-architecture / reservation-customer-system / section-system-research / lexical/node-\* 等 15 件）は全削除済 — `.claude/rules/**` が SSoT、Serena memory への二重化は drift の温床。
 
 無関係 memory を読まない（context 浪費）。
 
@@ -67,14 +65,14 @@ Serena を主導にすると **rule auto-load が動かない silent bug** + **E
 
 `.serena/project.yml` で以下を設定済:
 
-- `read_only_memory_patterns`: 主要 architecture memory（agent 上書き防止）
+- `read_only_memory_patterns`: `design-system`（agent 上書き防止）
 - `ignored_memory_patterns`: `_archive/.*` / dated snapshot（`list_memories` 出力から除外）
 
 ## Onboarding
 
-`.serena/project.yml` で `added_modes: [no-onboarding]` を設定済。既存 16 memory + `MEMORY.md` index を活用する。
+`.serena/project.yml` で `added_modes: [no-onboarding]` を設定済。2026-05-15 cleanup 後の active memory は `design-system.md` + `MEMORY.md` index のみ。
 
-新しい architecture が定着したら **user が手動** で `.serena/memories/<topic>.md` を編集 + `MEMORY.md` index に 1 行追記する。
+新しい architecture が定着した場合は **まず `.claude/rules/**/\*.md` に rule docs として codify\*\*。Serena memory への二重化は SSoT 違反のため、原則 user 明示要求時のみ追加。
 
 ## Staleness 監査
 
