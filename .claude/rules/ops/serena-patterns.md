@@ -47,13 +47,11 @@ Serena を主導にすると **rule auto-load が動かない silent bug** + **E
 
 ### read_memory の判定
 
-| タスク                   | 推奨 memory                                                              |
-| ------------------------ | ------------------------------------------------------------------------ |
-| 公開ページ UI / デザイン | `design-system`                                                          |
-| Admin CRUD 設計          | `admin-layer-architecture` / `admin-architecture-comprehensive-analysis` |
-| 予約システム改修         | `reservation-customer-system`                                            |
-| Section 関連改修         | `section-system-research`                                                |
-| Lexical エディタ拡張     | `lexical/node-implementation-patterns`                                   |
+| タスク                   | 推奨 memory                                          |
+| ------------------------ | ---------------------------------------------------- |
+| 公開ページ UI / デザイン | `design-system`（reference URLs / OKLCH / clamp 表） |
+
+その他のドメイン（Admin / 予約 / Section / Lexical 等）は `.claude/rules/**/*.md` の path-scoped auto-load を一次経路とする。2026-05-15 cleanup で過去 Snapshot 系 memory（admin-architecture / reservation-customer-system / section-system-research / lexical/node-\* 等 15 件）は全削除済 — `.claude/rules/**` が SSoT、Serena memory への二重化は drift の温床。
 
 無関係 memory を読まない（context 浪費）。
 
