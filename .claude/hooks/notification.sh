@@ -1,32 +1,35 @@
 #!/usr/bin/env bash
-# Notification hook: Windows バルーン通知（PowerShell 組み込み、追加モジュール不要）
-# Claude Code が通知を送りたい時（長時間タスク完了・入力待ち）に発火
+# Notification hook: 公式 terminalSequence パターン採用 (Claude Code v2.1.141+)
+#
+# 出典: https://code.claude.com/docs/en/hooks#notification
+#
+# 公式設計:
+# - Hooks は controlling terminal なしで実行されるため /dev/tty 書き込みは fail
+# - 代替として terminalSequence field に escape sequence を返すと
+#   Claude Code が自身の terminal write path で emit する
+# - race-free + tmux/screen 内動作 + Windows (/dev/tty 不在) 対応
+#
+# Escape sequence allowlist (公式 security):
+# - OSC 0/1/2: window/icon title
+# - OSC 9: iTerm2 / ConEmu / Windows Terminal / WezTerm notifications (Toast / Action Center)
+# - OSC 99: Kitty notifications
+# - OSC 777: urxvt / Ghostty / Warp notifications
+# - BEL: 普遍的な attention signal
+#
+# 本実装は OSC 9 + OSC 777 + BEL を併用し、modern terminal の互換性最大化。
 
 set -euo pipefail
+: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
 INPUT=$(cat)
+TITLE="Claude Code"
+BODY=$(printf '%s' "$INPUT" | jq -r '.message // "Needs your attention"' 2>/dev/null || echo "Needs your attention")
 
-# stdin JSON から message を取得（特殊文字を除去してPowerShell埋め込みを安全にする）
-MESSAGE=$(printf '%s' "$INPUT" | jq -r '.message // "入力を待機しています"' 2>/dev/null \
-  | tr -d "'\"\`\$\n\r" \
-  | cut -c1-150 \
-  || echo "入力を待機しています")
+# Concatenated escape sequences (各 terminal は解釈できる sequence のみ反応):
+# - OSC 9 "<title>: <body>": Windows Terminal / iTerm2 / ConEmu / WezTerm
+# - OSC 777 "notify;<title>;<body>": urxvt / Ghostty / Warp
+# - 末尾 BEL: notification API 非対応 terminal の fallback attention
+SEQ=$(printf '\033]9;%s: %s\007\033]777;notify;%s;%s\007\007' "$TITLE" "$BODY" "$TITLE" "$BODY")
 
-# Windows balloon notification（NotifyIcon - Windows 10/11 組み込み）
-# 非ブロッキング: & でバックグラウンド実行 → hook はすぐ exit 0 を返す
-powershell.exe -NonInteractive -WindowStyle Hidden -Command "
-  try {
-    Add-Type -AssemblyName System.Windows.Forms
-    \$n = New-Object System.Windows.Forms.NotifyIcon
-    \$n.Icon = [System.Drawing.SystemIcons]::Information
-    \$n.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-    \$n.BalloonTipTitle = 'Claude Code'
-    \$n.BalloonTipText = '${MESSAGE}'
-    \$n.Visible = \$true
-    \$n.ShowBalloonTip(8000)
-    Start-Sleep -Seconds 9
-    \$n.Dispose()
-  } catch { }
-" 2>/dev/null &
-
+jq -nc --arg seq "$SEQ" '{terminalSequence: $seq}'
 exit 0

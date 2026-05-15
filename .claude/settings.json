@@ -180,11 +180,13 @@
     ],
     "Notification": [
       {
+        "matcher": "permission_prompt|idle_prompt",
         "hooks": [
           {
             "type": "command",
             "command": "bash",
             "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/notification.sh"],
+            "timeout": 5,
             "statusMessage": "通知を送信中..."
           }
         ]
