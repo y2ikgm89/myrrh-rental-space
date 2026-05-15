@@ -5,6 +5,7 @@ import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { getRequiredTermsAtSignup } from "@/shared/domain/terms/queries";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";
@@ -22,7 +23,10 @@ export default async function LoginPage({
   const user = await getCurrentCustomerUser();
   if (user) redirect("/mypage");
 
-  const requiredTerms = await getRequiredTermsAtSignup();
+  const [requiredTerms, turnstileSiteKey] = await Promise.all([
+    getRequiredTermsAtSignup(),
+    getTurnstileSiteKey(),
+  ]);
 
   const params = await searchParams;
   const errorType =
@@ -59,6 +63,7 @@ export default async function LoginPage({
               slug: t.slug,
               title: t.title,
             }))}
+            turnstileSiteKey={turnstileSiteKey}
           />
           {(process.env["NODE_ENV"] !== "production" ||
             process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && (
