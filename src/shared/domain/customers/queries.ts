@@ -13,7 +13,8 @@ import type {
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
-import type { CustomerWhereInput } from "@/shared/types/prisma";
+
+type CustomerWhereInput = Prisma.CustomerWhereInput;
 
 function buildCustomerOrderBy(
   sortBy: CustomerSortBy,

@@ -4,7 +4,9 @@ import { InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import type { InquiryWhereInput } from "@/shared/types/prisma";
+import type { Prisma } from "@generated/prisma/client";
+
+type InquiryWhereInput = Prisma.InquiryWhereInput;
 import type {
   GetInquiriesResult,
   InquiryFilters,

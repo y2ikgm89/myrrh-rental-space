@@ -19,7 +19,11 @@ import {
 } from "@/admin/components/ui";
 import { formatDateLabel } from "@/admin/lib/calendar";
 import type { CalendarView } from "@/admin/lib/calendar";
-import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
+import {
+  getReservationStatusFilterOrAll,
+  RESERVATION_STATUS_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
 import type { CalendarState } from "./hooks/use-calendar-state";
 
@@ -157,11 +161,21 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">すべて</SelectItem>
-            <SelectItem value="PENDING">保留中</SelectItem>
-            <SelectItem value="CONFIRMED">確認済み</SelectItem>
-            <SelectItem value="COMPLETED">完了</SelectItem>
-            <SelectItem value="NO_SHOW">無断キャンセル</SelectItem>
-            <SelectItem value="CANCELLED">キャンセル</SelectItem>
+            <SelectItem value={ReservationStatus.PENDING}>
+              {RESERVATION_STATUS_LABELS[ReservationStatus.PENDING]}
+            </SelectItem>
+            <SelectItem value={ReservationStatus.CONFIRMED}>
+              {RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED]}
+            </SelectItem>
+            <SelectItem value={ReservationStatus.COMPLETED}>
+              {RESERVATION_STATUS_LABELS[ReservationStatus.COMPLETED]}
+            </SelectItem>
+            <SelectItem value={ReservationStatus.NO_SHOW}>
+              {RESERVATION_STATUS_LABELS[ReservationStatus.NO_SHOW]}
+            </SelectItem>
+            <SelectItem value={ReservationStatus.CANCELLED}>
+              {RESERVATION_STATUS_LABELS[ReservationStatus.CANCELLED]}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>

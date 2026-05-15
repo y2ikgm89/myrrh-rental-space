@@ -36,6 +36,7 @@ import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
   PAYMENT_STATUS_LABELS,
+  RESERVATION_STATUS_LABELS,
   CANCELLED_BY,
   CANCELLED_BY_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
@@ -174,9 +175,15 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
                 <SelectValue placeholder="ステータスを変更" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PENDING">保留中に変更</SelectItem>
-                <SelectItem value="CONFIRMED">確認済みに変更</SelectItem>
-                <SelectItem value="CANCELLED">キャンセルに変更</SelectItem>
+                <SelectItem value={ReservationStatus.PENDING}>
+                  {RESERVATION_STATUS_LABELS[ReservationStatus.PENDING]}に変更
+                </SelectItem>
+                <SelectItem value={ReservationStatus.CONFIRMED}>
+                  {RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED]}に変更
+                </SelectItem>
+                <SelectItem value={ReservationStatus.CANCELLED}>
+                  {RESERVATION_STATUS_LABELS[ReservationStatus.CANCELLED]}に変更
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

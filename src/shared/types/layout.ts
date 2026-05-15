@@ -4,7 +4,7 @@
  * admin/public両方で使用するレイアウト設定の型
  */
 
-import type { LayoutWidth } from "@/shared/types/prisma";
+import type { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 /** サイト全体のレイアウト設定 */
 export type LayoutConfig = {

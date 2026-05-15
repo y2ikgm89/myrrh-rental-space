@@ -10,7 +10,7 @@
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
 import { PostStatus } from "@generated/prisma/enums";
-import { LayoutWidth } from "@/shared/types/prisma";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 // post.ts 内で定義されているスキーマを再現
 const createPostSchema = z.object({

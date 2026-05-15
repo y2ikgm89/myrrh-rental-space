@@ -4,7 +4,7 @@ import { Breadcrumb } from "./breadcrumb";
 import { BlogLayout } from "./blog-layout";
 import { SiteCTA } from "./site-cta";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
-import type { LayoutWidth } from "@/shared/types/prisma";
+import type { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
 
 interface BreadcrumbItem {

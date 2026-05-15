@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
-import { LayoutWidth } from "@/shared/types/prisma";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedTermsList } from "@/shared/domain/terms/queries";

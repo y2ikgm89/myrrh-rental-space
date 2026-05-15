@@ -2,7 +2,9 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { isValidPostStatus } from "@/shared/lib/validations/enums/guards";
-import type { PostWhereInput } from "@/shared/types/prisma";
+import type { Prisma } from "@generated/prisma/client";
+
+type PostWhereInput = Prisma.PostWhereInput;
 import type {
   GetPostsResult,
   PostCategoryData,
