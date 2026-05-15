@@ -1,14 +1,26 @@
 "use server";
 
+/**
+ * 顧客 Server Actions
+ *
+ * Phase 1 Task 6 で `createCustomer` / `updateCustomer` を conform
+ * `useActionState` 統合経路 (`(prev, formData) => SubmissionResult`) に
+ * clean break 移行。認証・権限・監査ログは `executeAdminMutationResult` SSoT
+ * に委譲する。
+ *
+ * status / notes / soft-delete / merge 系は input ベースで残置 (form 不使用)。
+ */
+
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   customerFormSchema,
   updateCustomerNotesSchema,
   updateCustomerStatusSchema,
-  type CustomerFormInput,
 } from "@/shared/lib/validations/customer";
 import {
   createCustomer as createCustomerCommand,
@@ -22,27 +34,72 @@ import {
 import { searchCustomers } from "@/shared/domain/customers/queries";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const idSchema = z.string().uuid({ error: "顧客IDが不正です" });
 
+/**
+ * 顧客新規作成 — conform `useActionState` 統合経路。
+ *
+ * 成功時は `submission.reply({ resetForm: true })` で `{ initialValue: null }`
+ * を返し、client 側で `router.push("/admin/customers")` にリダイレクトする。
+ */
 export async function createCustomer(
-  input: CustomerFormInput,
-): Promise<MutationResult<{ id: string }>> {
-  const parsed = customerFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, customerFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "customer",
+      action: "create",
+      execute: async () => createCustomerCommand(data),
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.CUSTOMERS);
+      },
+      resolveAuditResourceId: (data) => data.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
+}
 
-  return executeAdminMutationResult({
-    resource: "customer",
-    action: "create",
-    execute: async () => createCustomerCommand(parsed.data),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.CUSTOMERS);
-    },
-    resolveAuditResourceId: (result) => result.id,
+/**
+ * 顧客更新 — conform `useActionState` 統合経路。
+ *
+ * `customerId` は `Function.prototype.bind` で部分適用する想定:
+ *   `useActionState(updateCustomer.bind(null, customer.id), undefined)`
+ */
+export async function updateCustomer(
+  customerId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, customerFormSchema, async (data) => {
+    const idValid = idSchema.safeParse(customerId);
+    if (!idValid.success) {
+      return { ok: false, error: "顧客IDが不正です" };
+    }
+    const result = await executeAdminMutationResult({
+      resource: "customer",
+      action: "update",
+      resourceId: idValid.data,
+      execute: async () => {
+        await updateCustomerCommand(idValid.data, data);
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.CUSTOMERS);
+        updateTag(getCacheTag.customers.detail(idValid.data));
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
@@ -113,35 +170,6 @@ export async function toggleCustomerActive(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validated.data));
-    },
-  });
-}
-
-export async function updateCustomer(
-  id: string,
-  input: CustomerFormInput,
-): Promise<MutationResult> {
-  const validatedId = idSchema.safeParse(id);
-  if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
-  }
-
-  const parsed = customerFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "customer",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async () => {
-      await updateCustomerCommand(validatedId.data, parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.CUSTOMERS);
-      updateTag(getCacheTag.customers.detail(validatedId.data));
     },
   });
 }

@@ -1,10 +1,26 @@
 "use client";
 
-import type { ReactElement } from "react";
+/**
+ * 顧客新規作成フォーム — Phase 1 Task 6 conform 移行。
+ *
+ * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
+ * への clean break 移行。Switch / Select は `useInputControl` で hidden input
+ * と sync する公式パターン (https://conform.guide/api/react/useInputControl)。
+ * カナ自動入力は `useKanaInput` 互換 (内部 state → 同 name の controlled input)。
+ */
+
+import { useActionState, useEffect, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { useWatch } from "react-hook-form";
-import { useFormAction } from "@/admin/hooks";
+import {
+  getFormProps,
+  getInputProps,
+  getTextareaProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { createCustomer } from "@/admin/actions/customer";
+import { useKanaInput } from "@/admin/hooks";
 import { customerFormSchema } from "@/shared/lib/validations/customer";
 import {
   Button,
@@ -20,85 +36,83 @@ import {
   Textarea,
   SubmitButton,
 } from "@/admin/components/ui";
-import { useKanaInput } from "@/admin/hooks";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { CUSTOMER_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
+import { toast } from "sonner";
 
 export function CustomerForm(): ReactElement {
   const router = useRouter();
-
-  const { form, isPending, onSubmit } = useFormAction(
-    customerFormSchema,
-    (data) => createCustomer(data),
-    {
-      redirectTo: "/admin/customers",
-      successMessage: "顧客を作成しました",
-    },
+  const [lastResult, action, isPending] = useActionState(
+    createCustomer,
+    undefined,
   );
-
-  const {
-    register,
-    setValue,
-    formState: { errors },
-  } = form;
-
-  const customerType = useWatch({
-    control: form.control,
-    name: "customerType",
+  const [form, fields] = useForm({
+    id: "customer-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: customerFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      customerType: CustomerType.PERSONAL,
+      marketingOptIn: "",
+      phoneContactOptIn: "on",
+    },
   });
 
-  const watchedPrefecture = useWatch({
-    control: form.control,
-    name: "prefecture",
-  });
+  const customerTypeControl = useInputControl(fields.customerType);
+  const prefectureControl = useInputControl(fields.prefecture);
+  const marketingOptInControl = useInputControl(fields.marketingOptIn);
+  const phoneContactOptInControl = useInputControl(fields.phoneContactOptIn);
 
-  const watchedMarketingOptIn = useWatch({
-    control: form.control,
-    name: "marketingOptIn",
-  });
-
-  const watchedPhoneContactOptIn = useWatch({
-    control: form.control,
-    name: "phoneContactOptIn",
-  });
+  const customerType = customerTypeControl.value ?? CustomerType.PERSONAL;
+  const prefecture = prefectureControl.value ?? "";
+  const marketingOptIn = marketingOptInControl.value === "on";
+  const phoneContactOptIn = phoneContactOptInControl.value === "on";
 
   function handleCustomerTypeChange(value: string) {
     if (!isValidCustomerType(value)) return;
-    setValue("customerType", value, { shouldDirty: true });
-    if (value === CustomerType.PERSONAL) {
-      setValue("companyName", "");
-      form.clearErrors("companyName");
-    }
+    customerTypeControl.change(value);
   }
 
   function handlePrefectureChange(value: string) {
     if (!isPrefecture(value)) return;
-    setValue("prefecture", value, { shouldDirty: true });
+    prefectureControl.change(value);
   }
 
-  // IME 自動カナ入力
-  const lastNameKanaInput = useKanaInput({
-    onKanaChange: (kana) => setValue("lastNameKana", kana),
-  });
-  const firstNameKanaInput = useKanaInput({
-    onKanaChange: (kana) => setValue("firstNameKana", kana),
-  });
+  // IME 自動カナ入力 — `useKanaInput` 内部 state を kana input の value に bind し、
+  // conform field の name を hidden input ではなく直接 visible input に付与する。
+  const lastNameKanaInput = useKanaInput({});
+  const firstNameKanaInput = useKanaInput({});
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("顧客を作成しました");
+      router.push("/admin/customers");
+    }
+  }, [lastResult, router]);
+
+  const formErrors = form.errors;
 
   return (
-    <form onSubmit={onSubmit}>
+    <form {...getFormProps(form)} action={action}>
       <Card className="p-6">
         <div className="space-y-6">
           {/* 区分 */}
           <div className="space-y-2">
-            <Label htmlFor="customerType">区分</Label>
+            <Label htmlFor={fields.customerType.id}>区分</Label>
             <Select
-              value={customerType ?? CustomerType.PERSONAL}
+              value={customerType}
               onValueChange={handleCustomerTypeChange}
             >
-              <SelectTrigger id="customerType">
+              <SelectTrigger
+                id={fields.customerType.id}
+                onBlur={customerTypeControl.blur}
+              >
                 <SelectValue placeholder="区分を選択" />
               </SelectTrigger>
               <SelectContent>
@@ -109,22 +123,31 @@ export function CustomerForm(): ReactElement {
                 ))}
               </SelectContent>
             </Select>
+            <input
+              type="hidden"
+              name={fields.customerType.name}
+              value={customerType}
+            />
+            {fields.customerType.errors && (
+              <p
+                id={fields.customerType.errorId}
+                className="text-xs text-destructive"
+              >
+                {fields.customerType.errors.join(", ")}
+              </p>
+            )}
           </div>
 
           {/* 氏名 */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="lastName">
+              <Label htmlFor={fields.lastName.id}>
                 姓 <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="lastName"
-                {...register("lastName")}
+                {...getInputProps(fields.lastName, { type: "text" })}
                 placeholder="山田"
-                aria-invalid={!!errors.lastName}
-                aria-describedby={
-                  errors.lastName ? "lastName-error" : undefined
-                }
+                disabled={isPending}
                 onCompositionStart={
                   lastNameKanaInput.inputProps.onCompositionStart
                 }
@@ -134,24 +157,23 @@ export function CustomerForm(): ReactElement {
                 onCompositionEnd={lastNameKanaInput.inputProps.onCompositionEnd}
                 onInput={lastNameKanaInput.inputProps.onInput}
               />
-              {errors.lastName && (
-                <p id="lastName-error" className="text-xs text-destructive">
-                  {errors.lastName.message}
+              {fields.lastName.errors && (
+                <p
+                  id={fields.lastName.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.lastName.errors.join(", ")}
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="firstName">
+              <Label htmlFor={fields.firstName.id}>
                 名 <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="firstName"
-                {...register("firstName")}
+                {...getInputProps(fields.firstName, { type: "text" })}
                 placeholder="太郎"
-                aria-invalid={!!errors.firstName}
-                aria-describedby={
-                  errors.firstName ? "firstName-error" : undefined
-                }
+                disabled={isPending}
                 onCompositionStart={
                   firstNameKanaInput.inputProps.onCompositionStart
                 }
@@ -163,9 +185,12 @@ export function CustomerForm(): ReactElement {
                 }
                 onInput={firstNameKanaInput.inputProps.onInput}
               />
-              {errors.firstName && (
-                <p id="firstName-error" className="text-xs text-destructive">
-                  {errors.firstName.message}
+              {fields.firstName.errors && (
+                <p
+                  id={fields.firstName.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.firstName.errors.join(", ")}
                 </p>
               )}
             </div>
@@ -174,55 +199,72 @@ export function CustomerForm(): ReactElement {
           {/* カナ（リアルタイム自動入力） */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="lastNameKana">
+              <Label htmlFor={fields.lastNameKana.id}>
                 セイ
                 <span className="text-xs text-muted-foreground ml-2">
                   （自動入力）
                 </span>
               </Label>
               <Input
-                id="lastNameKana"
-                name="lastNameKana"
+                id={fields.lastNameKana.id}
+                name={fields.lastNameKana.name}
                 placeholder="ヤマダ"
                 value={lastNameKanaInput.kana}
                 onChange={(e) => lastNameKanaInput.setKana(e.target.value)}
+                disabled={isPending}
               />
+              {fields.lastNameKana.errors && (
+                <p
+                  id={fields.lastNameKana.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.lastNameKana.errors.join(", ")}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="firstNameKana">
+              <Label htmlFor={fields.firstNameKana.id}>
                 メイ
                 <span className="text-xs text-muted-foreground ml-2">
                   （自動入力）
                 </span>
               </Label>
               <Input
-                id="firstNameKana"
-                name="firstNameKana"
+                id={fields.firstNameKana.id}
+                name={fields.firstNameKana.name}
                 placeholder="タロウ"
                 value={firstNameKanaInput.kana}
                 onChange={(e) => firstNameKanaInput.setKana(e.target.value)}
+                disabled={isPending}
               />
+              {fields.firstNameKana.errors && (
+                <p
+                  id={fields.firstNameKana.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.firstNameKana.errors.join(", ")}
+                </p>
+              )}
             </div>
           </div>
 
           {/* 会社名・団体名（法人時のみ表示） */}
           {customerType === CustomerType.CORPORATE && (
             <div className="space-y-2">
-              <Label htmlFor="companyName">
+              <Label htmlFor={fields.companyName.id}>
                 会社名・団体名 <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="companyName"
-                {...register("companyName")}
+                {...getInputProps(fields.companyName, { type: "text" })}
                 placeholder="株式会社〇〇"
-                aria-invalid={!!errors.companyName}
-                aria-describedby={
-                  errors.companyName ? "companyName-error" : undefined
-                }
+                disabled={isPending}
               />
-              {errors.companyName && (
-                <p id="companyName-error" className="text-xs text-destructive">
-                  {errors.companyName.message}
+              {fields.companyName.errors && (
+                <p
+                  id={fields.companyName.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.companyName.errors.join(", ")}
                 </p>
               )}
             </div>
@@ -230,40 +272,36 @@ export function CustomerForm(): ReactElement {
 
           {/* メールアドレス */}
           <div className="space-y-2">
-            <Label htmlFor="email">
+            <Label htmlFor={fields.email.id}>
               メールアドレス <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="email"
-              type="email"
-              {...register("email")}
+              {...getInputProps(fields.email, { type: "email" })}
+              autoComplete="email"
               placeholder="example@example.com"
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? "email-error" : undefined}
+              disabled={isPending}
             />
-            {errors.email && (
-              <p id="email-error" className="text-xs text-destructive">
-                {errors.email.message}
+            {fields.email.errors && (
+              <p id={fields.email.errorId} className="text-xs text-destructive">
+                {fields.email.errors.join(", ")}
               </p>
             )}
           </div>
 
           {/* 電話番号 */}
           <div className="space-y-2">
-            <Label htmlFor="phoneNumber">電話番号</Label>
+            <Label htmlFor={fields.phoneNumber.id}>電話番号</Label>
             <Input
-              id="phoneNumber"
-              type="tel"
-              {...register("phoneNumber")}
+              {...getInputProps(fields.phoneNumber, { type: "tel" })}
               placeholder="090-1234-5678"
-              aria-invalid={!!errors.phoneNumber}
-              aria-describedby={
-                errors.phoneNumber ? "phoneNumber-error" : undefined
-              }
+              disabled={isPending}
             />
-            {errors.phoneNumber && (
-              <p id="phoneNumber-error" className="text-xs text-destructive">
-                {errors.phoneNumber.message}
+            {fields.phoneNumber.errors && (
+              <p
+                id={fields.phoneNumber.errorId}
+                className="text-xs text-destructive"
+              >
+                {fields.phoneNumber.errors.join(", ")}
               </p>
             )}
           </div>
@@ -272,106 +310,109 @@ export function CustomerForm(): ReactElement {
           <fieldset className="space-y-4 rounded-lg border p-4">
             <legend className="px-1 text-sm font-medium">住所</legend>
             <div className="space-y-2">
-              <Label htmlFor="postalCode">郵便番号</Label>
+              <Label htmlFor={fields.postalCode.id}>郵便番号</Label>
               <Input
-                id="postalCode"
-                {...register("postalCode")}
+                {...getInputProps(fields.postalCode, { type: "text" })}
                 placeholder="123-4567"
                 inputMode="numeric"
                 autoComplete="postal-code"
                 maxLength={8}
                 className="max-w-[10rem]"
-                aria-invalid={!!errors.postalCode}
-                aria-describedby={
-                  errors.postalCode ? "postalCode-error" : undefined
-                }
+                disabled={isPending}
               />
-              {errors.postalCode && (
-                <p id="postalCode-error" className="text-xs text-destructive">
-                  {errors.postalCode.message}
+              {fields.postalCode.errors && (
+                <p
+                  id={fields.postalCode.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.postalCode.errors.join(", ")}
                 </p>
               )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
               <div className="space-y-2">
-                <Label htmlFor="prefecture">都道府県</Label>
+                <Label htmlFor={fields.prefecture.id}>都道府県</Label>
                 <Select
-                  {...(watchedPrefecture ? { value: watchedPrefecture } : {})}
+                  {...(prefecture ? { value: prefecture } : {})}
                   onValueChange={handlePrefectureChange}
                 >
-                  <SelectTrigger id="prefecture">
+                  <SelectTrigger
+                    id={fields.prefecture.id}
+                    onBlur={prefectureControl.blur}
+                  >
                     <SelectValue placeholder="選択してください" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PREFECTURES.map((prefecture) => (
-                      <SelectItem key={prefecture} value={prefecture}>
-                        {prefecture}
+                    {PREFECTURES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.prefecture && (
+                <input
+                  type="hidden"
+                  name={fields.prefecture.name}
+                  value={prefecture}
+                />
+                {fields.prefecture.errors && (
                   <p className="text-xs text-destructive">
-                    {errors.prefecture.message}
+                    {fields.prefecture.errors.join(", ")}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">市区町村</Label>
+                <Label htmlFor={fields.city.id}>市区町村</Label>
                 <Input
-                  id="city"
-                  {...register("city")}
+                  {...getInputProps(fields.city, { type: "text" })}
                   placeholder="渋谷区"
                   autoComplete="address-level2"
-                  aria-invalid={!!errors.city}
-                  aria-describedby={errors.city ? "city-error" : undefined}
+                  disabled={isPending}
                 />
-                {errors.city && (
-                  <p id="city-error" className="text-xs text-destructive">
-                    {errors.city.message}
+                {fields.city.errors && (
+                  <p
+                    id={fields.city.errorId}
+                    className="text-xs text-destructive"
+                  >
+                    {fields.city.errors.join(", ")}
                   </p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="streetAddress">町名・番地</Label>
+              <Label htmlFor={fields.streetAddress.id}>町名・番地</Label>
               <Input
-                id="streetAddress"
-                {...register("streetAddress")}
+                {...getInputProps(fields.streetAddress, { type: "text" })}
                 placeholder="神宮前1-1-1"
                 autoComplete="address-line1"
-                aria-invalid={!!errors.streetAddress}
-                aria-describedby={
-                  errors.streetAddress ? "streetAddress-error" : undefined
-                }
+                disabled={isPending}
               />
-              {errors.streetAddress && (
+              {fields.streetAddress.errors && (
                 <p
-                  id="streetAddress-error"
+                  id={fields.streetAddress.errorId}
                   className="text-xs text-destructive"
                 >
-                  {errors.streetAddress.message}
+                  {fields.streetAddress.errors.join(", ")}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="building">建物名・部屋番号</Label>
+              <Label htmlFor={fields.building.id}>建物名・部屋番号</Label>
               <Input
-                id="building"
-                {...register("building")}
+                {...getInputProps(fields.building, { type: "text" })}
                 placeholder="サンプルビル 2F"
                 autoComplete="address-line2"
-                aria-invalid={!!errors.building}
-                aria-describedby={
-                  errors.building ? "building-error" : undefined
-                }
+                disabled={isPending}
               />
-              {errors.building && (
-                <p id="building-error" className="text-xs text-destructive">
-                  {errors.building.message}
+              {fields.building.errors && (
+                <p
+                  id={fields.building.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.building.errors.join(", ")}
                 </p>
               )}
             </div>
@@ -382,7 +423,10 @@ export function CustomerForm(): ReactElement {
             <legend className="px-1 text-sm font-medium">連絡可否</legend>
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <Label htmlFor="marketingOptIn" className="cursor-pointer">
+                <Label
+                  htmlFor={fields.marketingOptIn.id}
+                  className="cursor-pointer"
+                >
                   メルマガ・キャンペーン受信
                 </Label>
                 <p className="text-xs text-muted-foreground">
@@ -390,16 +434,26 @@ export function CustomerForm(): ReactElement {
                 </p>
               </div>
               <Switch
-                id="marketingOptIn"
-                checked={watchedMarketingOptIn ?? false}
+                id={fields.marketingOptIn.id}
+                checked={marketingOptIn}
                 onCheckedChange={(checked) =>
-                  setValue("marketingOptIn", checked, { shouldDirty: true })
+                  marketingOptInControl.change(checked ? "on" : "")
                 }
+                onBlur={marketingOptInControl.blur}
+                disabled={isPending}
+              />
+              <input
+                type="hidden"
+                name={fields.marketingOptIn.name}
+                value={marketingOptIn ? "on" : ""}
               />
             </div>
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <Label htmlFor="phoneContactOptIn" className="cursor-pointer">
+                <Label
+                  htmlFor={fields.phoneContactOptIn.id}
+                  className="cursor-pointer"
+                >
                   電話連絡
                 </Label>
                 <p className="text-xs text-muted-foreground">
@@ -407,32 +461,47 @@ export function CustomerForm(): ReactElement {
                 </p>
               </div>
               <Switch
-                id="phoneContactOptIn"
-                checked={watchedPhoneContactOptIn ?? true}
+                id={fields.phoneContactOptIn.id}
+                checked={phoneContactOptIn}
                 onCheckedChange={(checked) =>
-                  setValue("phoneContactOptIn", checked, { shouldDirty: true })
+                  phoneContactOptInControl.change(checked ? "on" : "")
                 }
+                onBlur={phoneContactOptInControl.blur}
+                disabled={isPending}
+              />
+              <input
+                type="hidden"
+                name={fields.phoneContactOptIn.name}
+                value={phoneContactOptIn ? "on" : ""}
               />
             </div>
           </fieldset>
 
           {/* メモ */}
           <div className="space-y-2">
-            <Label htmlFor="notes">メモ</Label>
+            <Label htmlFor={fields.notes.id}>メモ</Label>
             <Textarea
-              id="notes"
-              {...register("notes")}
+              {...getTextareaProps(fields.notes)}
               placeholder="顧客に関するメモ..."
               rows={4}
-              aria-invalid={!!errors.notes}
-              aria-describedby={errors.notes ? "notes-error" : undefined}
+              disabled={isPending}
             />
-            {errors.notes && (
-              <p id="notes-error" className="text-xs text-destructive">
-                {errors.notes.message}
+            {fields.notes.errors && (
+              <p id={fields.notes.errorId} className="text-xs text-destructive">
+                {fields.notes.errors.join(", ")}
               </p>
             )}
           </div>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
 
           {/* 送信ボタン */}
           <div className="flex justify-end gap-3">
