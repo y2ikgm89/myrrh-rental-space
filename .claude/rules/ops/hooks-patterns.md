@@ -79,7 +79,7 @@ jq -nc --arg seq "$SEQ" '{terminalSequence: $seq}'
 | `elicitation_complete` | elicitation 完了時                      |
 | `elicitation_response` | elicitation 応答時                      |
 
-本プロジェクトは `permission_prompt|idle_prompt` のみ採用（`auth_success` / `elicitation_*` は不要）。
+本プロジェクトは `permission_prompt|idle_prompt` のみ採用（`auth_success` / `elicitation_*` は不要のため除外し process spawn 削減）。
 
 ### 禁止パターン
 
