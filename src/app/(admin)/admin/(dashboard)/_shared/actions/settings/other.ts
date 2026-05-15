@@ -12,9 +12,12 @@
  */
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import * as announcementBarCommands from "@/shared/domain/settings/announcement-bar";
 import * as settingsCommands from "@/shared/domain/settings/commands";
@@ -32,78 +35,106 @@ import {
   headerSettingsSchema,
   footerSettingsSchema,
   featureModulesSettingsSchema,
-  type MaintenanceSettingsInput,
-  type CookieConsentSettingsInput,
-  type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
-  type PermalinkSettingsInput,
-  type HeaderSettingsInput,
-  type FooterSettingsInput,
   type FeatureModulesSettingsInput,
 } from "./schemas";
 
+/**
+ * メンテナンス設定の更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 5 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ * 認証・権限・監査ログは `executeAdminMutationResult` SSoT に委譲する。
+ */
 export async function updateMaintenanceSettings(
-  data: MaintenanceSettingsInput,
-): Promise<MutationResult> {
-  const parsed = maintenanceSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateMaintenanceSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    maintenanceSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateMaintenanceSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-    },
-  });
+  );
 }
 
+/**
+ * Cookie 同意設定の更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 5 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateCookieConsentSettings(
-  data: CookieConsentSettingsInput,
-): Promise<MutationResult> {
-  const parsed = cookieConsentSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateCookieConsentSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    cookieConsentSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateCookieConsentSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.COOKIE_CONSENT);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.COOKIE_CONSENT);
-    },
-  });
+  );
 }
 
+/**
+ * 予約設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateReservationSettings(
-  data: ReservationSettingsInput,
-): Promise<MutationResult> {
-  const parsed = reservationSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateReservationSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    reservationSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateReservationSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+          updateTag(CACHE_TAGS.TERMS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
-      updateTag(CACHE_TAGS.TERMS);
-    },
-  });
+  );
 }
 
 export async function updateSidebarSettings(
@@ -152,70 +183,97 @@ export async function updateAnnouncementBarCarouselSettings(
   });
 }
 
+/**
+ * パーマリンク設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updatePermalinkSettings(
-  data: PermalinkSettingsInput,
-): Promise<MutationResult> {
-  const parsed = permalinkSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updatePermalinkSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    permalinkSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updatePermalinkSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.PERMALINK);
+          updateTag(CACHE_TAGS.POSTS);
+          updateTag(CACHE_TAGS.SIDEBAR_DATA);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.PERMALINK);
-      updateTag(CACHE_TAGS.POSTS);
-      updateTag(CACHE_TAGS.SIDEBAR_DATA);
-    },
-  });
+  );
 }
 
+/**
+ * ヘッダー設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateHeaderSettings(
-  data: HeaderSettingsInput,
-): Promise<MutationResult> {
-  const parsed = headerSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateHeaderSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    headerSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateHeaderSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-    },
-  });
+  );
 }
 
+/**
+ * フッター設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateFooterSettings(
-  data: FooterSettingsInput,
-): Promise<MutationResult> {
-  const parsed = footerSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateFooterSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    footerSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateFooterSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+          updateTag(CACHE_TAGS.SOCIAL_LINKS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-      updateTag(CACHE_TAGS.SOCIAL_LINKS);
-    },
-  });
+  );
 }
 
 /**

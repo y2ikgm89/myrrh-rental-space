@@ -1,12 +1,23 @@
 "use client";
 
 /**
- * メンテナンス設定セクション
+ * メンテナンス設定セクション (Phase 1 Task 5 conform PoC)
  *
- * メンテナンスモードの有効/無効、メッセージ設定
+ * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react) への
+ * clean break 移行。Switch は `useInputControl` で hidden input と sync する公式パターン
+ * (https://conform.guide/api/react/useInputControl)。
  */
 
-import { useWatch } from "react-hook-form";
+import { useEffect, useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  getFormProps,
+  getTextareaProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { cn } from "@/shared/lib/cn";
 import {
   Card,
@@ -14,19 +25,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
   SubmitButton,
   Switch,
   Textarea,
 } from "@/admin/components/ui";
-import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateMaintenanceSettings } from "@/admin/actions/settings";
-import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
 import { maintenanceFormSchema } from "@/admin/actions/settings/schemas/form-schemas-brand-contact";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -36,114 +39,141 @@ interface MaintenanceSectionProps {
 }
 
 export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
-  const { form, isPending, onSubmit } = useFormAction(
-    maintenanceFormSchema,
-    (data) =>
-      updateMaintenanceSettings({
-        maintenanceMode: data.maintenanceMode,
-        maintenanceMessage: emptyToNull(data.maintenanceMessage),
-      }),
-    {
-      defaultValues: {
-        maintenanceMode: settings.maintenanceMode,
-        maintenanceMessage: settings.maintenanceMessage || "",
-      },
-      refresh: true,
-      successMessage: "メンテナンス設定を保存しました",
-    },
+  const router = useRouter();
+  const [lastResult, action, isPending] = useActionState(
+    updateMaintenanceSettings,
+    undefined,
   );
-
-  const maintenanceMode = useWatch({
-    control: form.control,
-    name: "maintenanceMode",
+  const [form, fields] = useForm({
+    id: "maintenance-settings",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: maintenanceFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      maintenanceMode: settings.maintenanceMode ? "on" : "",
+      maintenanceMessage: settings.maintenanceMessage ?? "",
+    },
   });
 
+  const maintenanceMode = useInputControl(fields.maintenanceMode);
+  const isActive = maintenanceMode.value === "on";
+
+  // Conform 公式仕様: resetForm: true の reply は `{ initialValue: null }` のみを返す
+  // (intent: "reset" は submit intent ではないため status は undefined)
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("メンテナンス設定を保存しました");
+      router.refresh();
+    }
+  }, [lastResult, router]);
+
+  const formErrors = form.errors;
+  const maintenanceMessageErrors = fields.maintenanceMessage.errors;
+
   return (
-    <Form {...form}>
-      <form onSubmit={onSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>メンテナンス設定</CardTitle>
-            <CardDescription>
-              サイトのメンテナンスモードを設定します
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="maintenanceMode"
-              render={({ field }) => (
-                <FormItem>
-                  <div
-                    className={cn(
-                      "flex items-center justify-between rounded-lg border p-4",
-                      field.value && "border-destructive bg-destructive/5",
-                    )}
-                  >
-                    <div className="space-y-0.5">
-                      <FormLabel className="font-medium">
-                        メンテナンスモード
-                      </FormLabel>
-                      <p className="text-xs text-muted-foreground">
-                        有効にすると、公開ページにメンテナンス画面が表示されます
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {maintenanceMode && (
-              <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
-                <p className="text-sm font-medium text-destructive">
-                  メンテナンスモードが有効です
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  公開ページにアクセスするとメンテナンス画面が表示されます。
-                  管理画面は引き続き利用可能です。
-                </p>
-              </div>
+    <form {...getFormProps(form)} action={action}>
+      <Card>
+        <CardHeader>
+          <CardTitle>メンテナンス設定</CardTitle>
+          <CardDescription>
+            サイトのメンテナンスモードを設定します
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div
+            className={cn(
+              "flex items-center justify-between rounded-lg border p-4",
+              isActive && "border-destructive bg-destructive/5",
             )}
-
-            <FormField
-              control={form.control}
-              name="maintenanceMessage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>メンテナンスメッセージ</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder={`現在メンテナンス中です。\n\nご不便をおかけして申し訳ございません。\nメンテナンス完了までしばらくお待ちください。`}
-                      rows={5}
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    メンテナンス画面に表示するメッセージ
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end pt-2">
-              <SubmitButton
-                isPending={isPending}
-                label="メンテナンス設定を保存"
-                disabled={!form.formState.isDirty}
-              />
+          >
+            <div className="space-y-0.5">
+              <label
+                className="text-sm font-medium"
+                htmlFor={fields.maintenanceMode.id}
+              >
+                メンテナンスモード
+              </label>
+              <p className="text-xs text-muted-foreground">
+                有効にすると、公開ページにメンテナンス画面が表示されます
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </form>
-    </Form>
+            <Switch
+              id={fields.maintenanceMode.id}
+              checked={isActive}
+              onCheckedChange={(checked) =>
+                maintenanceMode.change(checked ? "on" : "")
+              }
+              onBlur={maintenanceMode.blur}
+              disabled={isPending}
+            />
+            <input
+              type="hidden"
+              name={fields.maintenanceMode.name}
+              value={isActive ? "on" : ""}
+            />
+          </div>
+
+          {isActive && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
+              <p className="text-sm font-medium text-destructive">
+                メンテナンスモードが有効です
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                公開ページにアクセスするとメンテナンス画面が表示されます。
+                管理画面は引き続き利用可能です。
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label
+              className="block text-sm font-medium text-foreground"
+              htmlFor={fields.maintenanceMessage.id}
+            >
+              メンテナンスメッセージ
+            </label>
+            <Textarea
+              {...getTextareaProps(fields.maintenanceMessage)}
+              placeholder={`現在メンテナンス中です。\n\nご不便をおかけして申し訳ございません。\nメンテナンス完了までしばらくお待ちください。`}
+              rows={5}
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              メンテナンス画面に表示するメッセージ
+            </p>
+            {maintenanceMessageErrors &&
+              maintenanceMessageErrors.length > 0 && (
+                <p
+                  id={fields.maintenanceMessage.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {maintenanceMessageErrors.join(", ")}
+                </p>
+              )}
+          </div>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              isPending={isPending}
+              label="メンテナンス設定を保存"
+              pendingLabel="保存中..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </form>
   );
 }

@@ -1,31 +1,33 @@
 "use client";
 
 /**
- * メール設定セクション
+ * メール設定セクション (Phase 1 Task 5 conform 移行)
  *
  * 送信者情報、返信先、通知先メールアドレスの設定
  */
 
+import { useEffect, useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import type { FieldMetadata } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
   Input,
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
-import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateEmailSettings } from "@/admin/actions/settings";
-import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
 import { emailFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -34,173 +36,208 @@ interface EmailSectionProps {
   settings: Serialized<SettingsData>;
 }
 
-export function EmailSection({ settings }: EmailSectionProps) {
-  const { form, isPending, onSubmit } = useFormAction(
-    emailFormSchema,
-    (data) =>
-      updateEmailSettings({
-        senderEmail: emptyToNull(data.senderEmail),
-        senderName: emptyToNull(data.senderName),
-        replyToEmail: emptyToNull(data.replyToEmail),
-        sendReservationConfirmationEmail: data.sendReservationConfirmationEmail,
-        sendAdminNotificationEmail: data.sendAdminNotificationEmail,
-        notificationEmailAddresses: emptyToNull(
-          data.notificationEmailAddresses,
-        ),
-      }),
-    {
-      defaultValues: {
-        senderEmail: settings.senderEmail || "",
-        senderName: settings.senderName || "",
-        replyToEmail: settings.replyToEmail || "",
-        sendReservationConfirmationEmail:
-          settings.sendReservationConfirmationEmail,
-        sendAdminNotificationEmail: settings.sendAdminNotificationEmail,
-        notificationEmailAddresses: settings.notificationEmailAddresses || "",
-      },
-      refresh: true,
-      successMessage: "メール設定を更新しました",
-    },
+type EmailSwitchProps = {
+  field: FieldMetadata<boolean>;
+  label: string;
+  disabled: boolean;
+};
+
+function EmailSwitch({ field, label, disabled }: EmailSwitchProps) {
+  const control = useInputControl(field);
+  const isOn = control.value === "on";
+  return (
+    <div className="flex items-center gap-2">
+      <Switch
+        id={field.id}
+        checked={isOn}
+        onCheckedChange={(checked) => control.change(checked ? "on" : "")}
+        onBlur={control.blur}
+        disabled={disabled}
+      />
+      <label className="text-sm font-medium" htmlFor={field.id}>
+        {label}
+      </label>
+      <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
+    </div>
   );
+}
+
+export function EmailSection({ settings }: EmailSectionProps) {
+  const router = useRouter();
+  const [lastResult, action, isPending] = useActionState(
+    updateEmailSettings,
+    undefined,
+  );
+  const [form, fields] = useForm({
+    id: "email-settings",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: emailFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      senderEmail: settings.senderEmail ?? "",
+      senderName: settings.senderName ?? "",
+      replyToEmail: settings.replyToEmail ?? "",
+      sendReservationConfirmationEmail:
+        settings.sendReservationConfirmationEmail ? "on" : "",
+      sendAdminNotificationEmail: settings.sendAdminNotificationEmail
+        ? "on"
+        : "",
+      notificationEmailAddresses: settings.notificationEmailAddresses ?? "",
+    },
+  });
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("メール設定を更新しました");
+      router.refresh();
+    }
+  }, [lastResult, router]);
+
+  const formErrors = form.errors;
 
   return (
-    <Form {...form}>
-      <form onSubmit={onSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>メール設定</CardTitle>
-            <CardDescription>メール送信に関する設定を行います</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="senderEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>送信元メールアドレス</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="noreply@example.com"
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+    <form {...getFormProps(form)} action={action}>
+      <Card>
+        <CardHeader>
+          <CardTitle>メール設定</CardTitle>
+          <CardDescription>メール送信に関する設定を行います</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.senderEmail.id}
+              >
+                送信元メールアドレス
+              </label>
+              <Input
+                {...getInputProps(fields.senderEmail, { type: "email" })}
+                placeholder="noreply@example.com"
+                disabled={isPending}
               />
-              <FormField
-                control={form.control}
-                name="senderName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>送信者名</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Myrrh Rental Space"
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              {fields.senderEmail.errors &&
+                fields.senderEmail.errors.length > 0 && (
+                  <p
+                    id={fields.senderEmail.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.senderEmail.errors.join(", ")}
+                  </p>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="replyToEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>返信先メールアドレス</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="info@example.com"
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.senderName.id}
+              >
+                送信者名
+              </label>
+              <Input
+                {...getInputProps(fields.senderName, { type: "text" })}
+                placeholder="Myrrh Rental Space"
+                disabled={isPending}
+              />
+              {fields.senderName.errors &&
+                fields.senderName.errors.length > 0 && (
+                  <p
+                    id={fields.senderName.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.senderName.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.replyToEmail.id}
+              >
+                返信先メールアドレス
+              </label>
+              <Input
+                {...getInputProps(fields.replyToEmail, { type: "email" })}
+                placeholder="info@example.com"
+                disabled={isPending}
+              />
+              {fields.replyToEmail.errors &&
+                fields.replyToEmail.errors.length > 0 && (
+                  <p
+                    id={fields.replyToEmail.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.replyToEmail.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="notificationEmailAddresses"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>通知先メールアドレス</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="admin1@example.com, admin2@example.com"
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    カンマ区切りで複数指定可能。予約・お問い合わせの通知を受け取るアドレス
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="space-y-1.5">
+            <label
+              className="block text-sm font-medium text-foreground"
+              htmlFor={fields.notificationEmailAddresses.id}
+            >
+              通知先メールアドレス
+            </label>
+            <Input
+              {...getInputProps(fields.notificationEmailAddresses, {
+                type: "text",
+              })}
+              placeholder="admin1@example.com, admin2@example.com"
+              disabled={isPending}
             />
+            <p className="text-xs text-muted-foreground">
+              カンマ区切りで複数指定可能。予約・お問い合わせの通知を受け取るアドレス
+            </p>
+            {fields.notificationEmailAddresses.errors &&
+              fields.notificationEmailAddresses.errors.length > 0 && (
+                <p
+                  id={fields.notificationEmailAddresses.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.notificationEmailAddresses.errors.join(", ")}
+                </p>
+              )}
+          </div>
 
-            <fieldset className="rounded-lg border p-4 space-y-4">
-              <legend className="px-1 text-sm font-medium">送信設定</legend>
-              <div className="flex flex-wrap gap-6">
-                <FormField
-                  control={form.control}
-                  name="sendReservationConfirmationEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-2">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                        <FormLabel>予約確認メールを送信</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sendAdminNotificationEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-2">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                        <FormLabel>管理者通知メールを送信</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </fieldset>
-
-            <div className="flex justify-end pt-2">
-              <SubmitButton
-                isPending={isPending}
-                label="メール設定を保存"
-                disabled={!form.formState.isDirty}
+          <fieldset className="rounded-lg border p-4 space-y-4">
+            <legend className="px-1 text-sm font-medium">送信設定</legend>
+            <div className="flex flex-wrap gap-6">
+              <EmailSwitch
+                field={fields.sendReservationConfirmationEmail}
+                label="予約確認メールを送信"
+                disabled={isPending}
+              />
+              <EmailSwitch
+                field={fields.sendAdminNotificationEmail}
+                label="管理者通知メールを送信"
+                disabled={isPending}
               />
             </div>
-          </CardContent>
-        </Card>
-      </form>
-    </Form>
+          </fieldset>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              isPending={isPending}
+              label="メール設定を保存"
+              pendingLabel="保存中..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </form>
   );
 }
