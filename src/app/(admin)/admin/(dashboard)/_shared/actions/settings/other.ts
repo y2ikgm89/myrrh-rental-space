@@ -35,7 +35,6 @@ import {
   headerSettingsSchema,
   footerSettingsSchema,
   featureModulesSettingsSchema,
-  type CookieConsentSettingsInput,
   type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
   type PermalinkSettingsInput,
@@ -78,25 +77,37 @@ export async function updateMaintenanceSettings(
   );
 }
 
+/**
+ * Cookie 同意設定の更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 5 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateCookieConsentSettings(
-  data: CookieConsentSettingsInput,
-): Promise<MutationResult> {
-  const parsed = cookieConsentSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateCookieConsentSettings(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    cookieConsentSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateCookieConsentSettings(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.COOKIE_CONSENT);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.COOKIE_CONSENT);
-    },
-  });
+  );
 }
 
 export async function updateReservationSettings(
