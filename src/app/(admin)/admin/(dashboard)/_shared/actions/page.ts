@@ -1,12 +1,15 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgePageCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createPageCommand,
@@ -27,7 +30,6 @@ import {
   updatePageSeoSchema,
   type CreatePageInput,
   type UpdatePageInput,
-  type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
 
 function purgePageCaches(...slugs: string[]): void {
@@ -212,31 +214,33 @@ export async function bulkDeletePages(
 
 export async function updatePageSeo(
   slug: string,
-  input: UpdatePageSeoInput,
-): Promise<MutationResult> {
-  const parsed = updatePageSeoSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "page",
-    action: "update",
-    checkResourceAccess: true,
-    resolveResourceId: () => getPageIdBySlugQuery(slug),
-    resolveAuditResourceId: () => slug,
-    execute: async () => {
-      const definition = getSystemPageDefinition(slug);
-      await updatePageSeoCommand(slug, {
-        ...parsed.data,
-        title: parsed.data.title || definition?.title || slug,
-      });
-      return null;
-    },
-    afterSuccess: () => {
-      invalidatePageTags(slug);
-      invalidatePageSeoTags(slug);
-      purgePageCaches(slug);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, updatePageSeoSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "page",
+      action: "update",
+      checkResourceAccess: true,
+      resolveResourceId: () => getPageIdBySlugQuery(slug),
+      resolveAuditResourceId: () => slug,
+      execute: async () => {
+        const definition = getSystemPageDefinition(slug);
+        await updatePageSeoCommand(slug, {
+          ...data,
+          title: data.title || definition?.title || slug,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        invalidatePageTags(slug);
+        invalidatePageSeoTags(slug);
+        purgePageCaches(slug);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkRole } from "@/admin/lib/action-auth";
@@ -8,8 +9,6 @@ import { logRoleChange } from "@/admin/lib/audit";
 import {
   createUserSchema,
   updateUserSchema,
-  type CreateUserInput,
-  type UpdateUserInput,
 } from "@/shared/lib/validations/user";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -20,12 +19,14 @@ import {
 } from "@/shared/domain/users/commands";
 import { isDomainError } from "@/shared/domain/domain-error";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   logError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "ユーザーIDが不正です" });
@@ -35,54 +36,57 @@ const updateRoleSchema = z.object({
 });
 
 export async function createUser(
-  input: CreateUserInput,
-): Promise<MutationResult<{ id: string }>> {
-  const parsed = createUserSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "user",
-    action: "create",
-    execute: async (user) =>
-      createUserCommand(parsed.data, { id: user.id, role: user.role }),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.STAFF);
-    },
-    resolveAuditResourceId: (result) => result.id,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, createUserSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "user",
+      action: "create",
+      execute: async (user) =>
+        createUserCommand(data, { id: user.id, role: user.role }),
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.STAFF);
+      },
+      resolveAuditResourceId: (result) => result.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
 export async function updateUser(
-  id: string,
-  input: UpdateUserInput,
-): Promise<MutationResult> {
-  const validatedId = idSchema.safeParse(id);
-  if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
-  }
-
-  const parsed = updateUserSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "user",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async (user) => {
-      await updateUserCommand(validatedId.data, parsed.data, {
-        id: user.id,
-        role: user.role,
-      });
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.STAFF);
-      updateTag(getCacheTag.staff.detail(validatedId.data));
-    },
+  userId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, updateUserSchema, async (data) => {
+    const idValid = idSchema.safeParse(userId);
+    if (!idValid.success) {
+      return { ok: false, error: "ユーザーIDが不正です" };
+    }
+    const result = await executeAdminMutationResult({
+      resource: "user",
+      action: "update",
+      resourceId: idValid.data,
+      execute: async (user) => {
+        await updateUserCommand(idValid.data, data, {
+          id: user.id,
+          role: user.role,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.STAFF);
+        updateTag(getCacheTag.staff.detail(idValid.data));
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 

@@ -1,14 +1,25 @@
 "use client";
 
 /**
- * スタッフ（User）作成・編集フォーム
+ * スタッフ（User）作成・編集フォーム — Phase 1 Task 6 conform 移行。
+ *
+ * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
+ * への clean break 移行。`updateUser` は `user.id` を bind で部分適用。
  *
  * ロール選択肢は `editableRoles` prop に従う（呼び出し側が階層から決定）。
  * サーバー側でも `canInviteRole()` / `canModifyUser()` で defense-in-depth チェック。
  */
 
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useWatch } from "react-hook-form";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
+import { toast } from "sonner";
 import { Button } from "@/admin/components/ui/button";
 import { SubmitButton } from "@/admin/components/ui";
 import { Input } from "@/admin/components/ui/input";
@@ -20,15 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-import { useFormAction } from "@/admin/hooks";
 import { createUser, updateUser } from "@/admin/actions/user";
 import {
   createUserSchema,
   updateUserSchema,
 } from "@/shared/lib/validations/user";
 import type { UserData } from "@/shared/domain/users/types";
-import { isMutationError } from "@/shared/lib/mutation-result";
-import type { MutationResult } from "@/shared/lib/mutation-result";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
   DASHBOARD_ROLES,
@@ -77,100 +85,97 @@ export function UserForm({ mode, user, editableRoles }: Props) {
       ? Role.EDITOR
       : (editableDashboardRoles[0] ?? Role.VIEWER));
 
-  const { form, isPending, onSubmit } = useFormAction(
-    isEdit ? updateUserSchema : createUserSchema,
-    async (data): Promise<MutationResult<null>> => {
-      if (isEdit) {
-        return updateUser(user.id, {
-          email: data.email,
-          name: data.name,
-          role: data.role,
-          password: data.password || undefined,
-        });
-      }
-      const result = await createUser({
-        email: data.email,
-        name: data.name,
-        role: data.role,
-        password: data.password ?? "",
-      });
-      return isMutationError(result) ? result : null;
-    },
-    {
-      redirectTo: isEdit ? `/admin/staff/${user.id}` : "/admin/staff",
-      refresh: true,
-      defaultValues: isEdit
-        ? {
-            email: user.email,
-            password: "",
-            name: user.name || "",
-            role: defaultRole,
-          }
-        : {
-            email: "",
-            password: "",
-            name: "",
-            role: defaultRole,
-          },
-    },
+  const schema = isEdit ? updateUserSchema : createUserSchema;
+  const boundAction = isEdit ? updateUser.bind(null, user.id) : createUser;
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
   );
 
-  const {
-    register,
-    setValue,
-    control,
-    formState: { errors },
-  } = form;
+  const [form, fields] = useForm({
+    id: isEdit ? `user-edit-${user.id}` : "user-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: isEdit
+      ? {
+          email: user.email,
+          password: "",
+          name: user.name || "",
+          role: defaultRole,
+        }
+      : {
+          email: "",
+          password: "",
+          name: "",
+          role: defaultRole,
+        },
+  });
 
-  const currentRole = useWatch({ control, name: "role" });
+  const roleControl = useInputControl(fields.role);
+  const currentRole =
+    roleControl.value && isDashboardRoleValue(roleControl.value)
+      ? roleControl.value
+      : defaultRole;
+
   // 対象ユーザーが自分より上位の場合、ロール変更は不可（UI でも読み取り専用化）
   const roleLocked =
     isEdit &&
     currentUserRole !== undefined &&
     !editableDashboardRoles.includes(currentUserRole);
 
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success(
+        isEdit ? "ユーザーを更新しました" : "ユーザーを作成しました",
+      );
+      router.push(isEdit ? `/admin/staff/${user.id}` : "/admin/staff");
+      router.refresh();
+    }
+  }, [lastResult, router, isEdit, user]);
+
+  const formErrors = form.errors;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form {...getFormProps(form)} action={action} className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">名前 *</Label>
+          <Label htmlFor={fields.name.id}>名前 *</Label>
           <Input
-            id="name"
+            {...getInputProps(fields.name, { type: "text" })}
             autoComplete="name"
-            {...register("name")}
             placeholder="山田 太郎"
-            aria-invalid={!!errors.name}
-            aria-describedby={errors.name ? "name-error" : undefined}
+            disabled={isPending}
           />
-          {errors.name && (
+          {fields.name.errors && (
             <p
-              id="name-error"
+              id={fields.name.errorId}
               role="alert"
               className="text-xs text-destructive"
             >
-              {errors.name.message}
+              {fields.name.errors.join(", ")}
             </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">メールアドレス *</Label>
+          <Label htmlFor={fields.email.id}>メールアドレス *</Label>
           <Input
-            id="email"
-            type="email"
+            {...getInputProps(fields.email, { type: "email" })}
             autoComplete="email"
-            {...register("email")}
             placeholder="example@example.com"
-            aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? "email-error" : undefined}
+            disabled={isPending}
           />
-          {errors.email && (
+          {fields.email.errors && (
             <p
-              id="email-error"
+              id={fields.email.errorId}
               role="alert"
               className="text-xs text-destructive"
             >
-              {errors.email.message}
+              {fields.email.errors.join(", ")}
             </p>
           )}
         </div>
@@ -178,41 +183,42 @@ export function UserForm({ mode, user, editableRoles }: Props) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="password">
+          <Label htmlFor={fields.password.id}>
             パスワード {isEdit ? "(変更する場合のみ入力)" : "*"}
           </Label>
           <Input
-            id="password"
-            type="password"
-            autoComplete={isEdit ? "new-password" : "new-password"}
-            {...register("password")}
+            {...getInputProps(fields.password, { type: "password" })}
+            autoComplete="new-password"
             placeholder={isEdit ? "変更しない場合は空欄" : "8文字以上"}
-            aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? "password-error" : undefined}
+            disabled={isPending}
           />
-          {errors.password && (
+          {fields.password.errors && (
             <p
-              id="password-error"
+              id={fields.password.errorId}
               role="alert"
               className="text-xs text-destructive"
             >
-              {errors.password.message}
+              {fields.password.errors.join(", ")}
             </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="role">ロール *</Label>
+          <Label htmlFor={fields.role.id}>ロール *</Label>
           <Select
             value={currentRole}
             onValueChange={(value) => {
               if (isDashboardRoleValue(value)) {
-                setValue("role", value);
+                roleControl.change(value);
               }
             }}
-            disabled={roleLocked}
+            disabled={roleLocked || isPending}
           >
-            <SelectTrigger id="role" aria-describedby="role-description">
+            <SelectTrigger
+              id={fields.role.id}
+              aria-describedby={`${fields.role.id}-description`}
+              onBlur={roleControl.blur}
+            >
               <SelectValue placeholder="ロールを選択" />
             </SelectTrigger>
             <SelectContent>
@@ -227,25 +233,38 @@ export function UserForm({ mode, user, editableRoles }: Props) {
               ))}
             </SelectContent>
           </Select>
-          <p id="role-description" className="text-xs text-muted-foreground">
+          <input type="hidden" name={fields.role.name} value={currentRole} />
+          <p
+            id={`${fields.role.id}-description`}
+            className="text-xs text-muted-foreground"
+          >
             {roleLocked
               ? "このユーザーのロールを変更する権限がありません"
               : ROLE_DESCRIPTIONS[currentRole]}
           </p>
-          {errors.role && (
+          {fields.role.errors && (
             <p role="alert" className="text-xs text-destructive">
-              {errors.role.message}
+              {fields.role.errors.join(", ")}
             </p>
           )}
         </div>
       </div>
+
+      {formErrors && formErrors.length > 0 && (
+        <div
+          id={form.errorId}
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {formErrors.join(", ")}
+        </div>
+      )}
 
       <div className="flex gap-4">
         <SubmitButton
           isPending={isPending}
           label={isEdit ? "更新" : "作成"}
           pendingLabel={isEdit ? "更新中..." : "作成中..."}
-          {...(isEdit && { disabled: !form.formState.isDirty })}
         />
         <Button
           type="button"
