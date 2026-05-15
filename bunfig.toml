@@ -1,5 +1,17 @@
-# Bun設定ファイル
-# https://bun.sh/docs/runtime/bunfig
+# Bun 設定ファイル
+# https://bun.com/docs/runtime/bunfig
+#
+# Bun 1.3.x 公式仕様準拠。詳細運用は .claude/rules/bun-patterns.md。
+#
+# - install: `bun install --frozen-lockfile` (CI) / `bun install` (local) でデフォルト動作
+# - run: package.json scripts は `bunx --bun <bin>` で bun runtime を明示
+# - scripts: scripts/* は .ts native + Bun runtime API (Bun.spawn / Bun.file / Bun.Glob)
+
+[run]
+# Bun 1.3.14 新機能: 親プロセス死亡時に子孫プロセスを再帰的に SIGKILL。
+# CI runner 異常終了 / lefthook hook 中断 / Playwright webServer 残留の hung process を防ぐ。
+# Linux / macOS のみ有効（Windows は no-op）。
+noOrphans = true
 
 [test]
 # テストファイルのプリロード（DOM 環境 + グローバル設定）
@@ -8,10 +20,10 @@ preload = ["./__tests__/setup-dom.ts", "./__tests__/setup.ts"]
 # E2E テスト（Playwright）を除外
 root = "./__tests__"
 
-# タイムアウト設定（5秒）
+# タイムアウト設定（5 秒）
 timeout = 5000
 
 # Coverage は設定しない。
-# per-directory batch 実行のため複数プロセス間で lcov が上書きされ、
-# `mock.module()` の干渉で各プロセスの計測結果も不正確になる。
+# per-file isolation runner (scripts/run-tests.ts) が複数プロセスを順次起動するため
+# lcov が上書きされ、mock.module() の干渉で計測値も不正確になる。
 # 必要時は `bun test --coverage <specific-file>` を単発で実行し参考値として扱う。

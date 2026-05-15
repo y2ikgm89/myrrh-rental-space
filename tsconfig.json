@@ -4,8 +4,9 @@
     "lib": ["dom", "esnext"],
     "skipLibCheck": true,
     "noEmit": true,
-    // TS 6.0: デフォルト [] — @types/node を明示して Node.js グローバル型を有効化
-    "types": ["node"],
+    // TS 6.0: デフォルト [] — Node.js + Bun runtime グローバル型を明示有効化
+    // Bun は Node 互換 runtime のため両方併用 OK（公式 docs §TypeScript）
+    "types": ["node", "bun"],
     // ── Strict type-checking ──────────────────────────────────────────────
     // Next.js が未指定だと false を注入するため明示必須
     "strict": true,
