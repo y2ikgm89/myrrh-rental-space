@@ -10,31 +10,37 @@
  */
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import type { MutationResult } from "@/shared/lib/mutation-result";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import * as settingsCommands from "@/shared/domain/settings/commands";
 
-import { taxSettingsSchema, type TaxSettingsInput } from "./schemas";
+import { taxSettingsSchema } from "./schemas";
 
+/**
+ * 消費税設定の更新 — conform `useActionState` 統合経路。
+ */
 export async function updateTaxSettings(
-  input: TaxSettingsInput,
-): Promise<MutationResult> {
-  const parsed = taxSettingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateTaxSettings(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, taxSettingsSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await settingsCommands.updateTaxSettings(data);
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
