@@ -84,7 +84,11 @@ __pycache__/
 # ─── AI / Tooling local state ────────────────────────────────────────────────
 .remember/
 .playwright-mcp/
-.serena/
+# Serena MCP: project.yml と memories は commit、cache / logs / local 上書きは ignore
+# https://oraios.github.io/serena/02-usage/040_workflow.html
+.serena/cache/
+.serena/logs/
+.serena/project.local.yml
 .claire/
 .worktrees/
 .superpowers/
