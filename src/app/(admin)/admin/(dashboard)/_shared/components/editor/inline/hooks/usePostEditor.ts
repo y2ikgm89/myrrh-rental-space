@@ -142,7 +142,6 @@ function toSettingsSubmitPayload(formData: PostSettingsFormData) {
 }
 
 function toPreviewData(
-  bodyData: PostBodyFormData,
   settingsData: PostSettingsFormData,
   categories: CategoryOption[],
   contentHtml: string,
@@ -432,7 +431,6 @@ export function usePostEditor({
         bodyValues.contentJson,
       );
       const previewData = toPreviewData(
-        bodyValues,
         settingsValues,
         categories,
         contentHtml,

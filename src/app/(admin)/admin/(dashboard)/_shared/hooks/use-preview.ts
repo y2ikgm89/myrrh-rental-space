@@ -63,15 +63,10 @@ export function savePreviewData(
 /**
  * プレビューページを新しいタブで開く
  *
- * @param contentType - コンテンツタイプ
  * @param identifier - スラッグまたは識別子
  * @param basePath - プレビューページのベースパス（例: '/posts'）
  */
-export function openPreview(
-  contentType: ContentType,
-  identifier: string,
-  basePath: string,
-): void {
+export function openPreview(identifier: string, basePath: string): void {
   const url = getContentPreviewHref(basePath, identifier);
   openExternalTab(url);
 }
@@ -127,7 +122,7 @@ export function createPreviewHandlers<T extends ContentType>(contentType: T) {
   };
 
   const open = (identifier: string, basePath: string) => {
-    openPreview(contentType, identifier, basePath);
+    openPreview(identifier, basePath);
   };
 
   const clear = (identifier: string) => {

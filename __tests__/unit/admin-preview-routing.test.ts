@@ -15,7 +15,7 @@ describe("preview routing", () => {
   });
 
   test("投稿 preview は dedicated route を開く", () => {
-    openPreview("post", "hello-world", "/posts");
+    openPreview("hello-world", "/posts");
 
     expect(openSpy).toHaveBeenCalledWith(
       "/posts/preview/hello-world",
@@ -25,7 +25,7 @@ describe("preview routing", () => {
   });
 
   test("ニュース preview は dedicated route を開く", () => {
-    openPreview("news", "release-note", "/news");
+    openPreview("release-note", "/news");
 
     expect(openSpy).toHaveBeenCalledWith(
       "/news/preview/release-note",
