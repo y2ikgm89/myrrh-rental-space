@@ -121,7 +121,7 @@ bun test --bail=1 __tests__/unit/lib/crypto.test.ts   # fail fast
 bun test --test-name-pattern "encryption"             # 名前フィルター
 
 # per-file isolation runner（フル実行時 / CI 必須）
-bun run test:unit          # scripts/run-tests.mjs 経由で全 *.test.ts を独立 process 実行
+bun run test:unit          # scripts/run-tests.ts 経由で全 *.test.ts を独立 process 実行
 bun run test:integration   # 同上（integration）
 bun run test:all           # unit + integration
 

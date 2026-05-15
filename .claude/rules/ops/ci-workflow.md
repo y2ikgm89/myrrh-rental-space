@@ -3,7 +3,7 @@ description: GitHub Actions CI ワークフローの SSoT 規律（Node heap / b
 paths:
   - .github/workflows/**
   - package.json
-  - scripts/run-tests.mjs
+  - scripts/run-tests.ts
 ---
 
 # GitHub Actions CI ワークフローパターン
@@ -78,7 +78,7 @@ concurrency:
 
 ## 5. Test job は per-file isolation 必須
 
-bun:test の `mock.module()` は **live binding を残す**公式仕様のため、複数 `*.test.ts` を同一 `bun test` 起動で実行すると干渉する（[Bun docs](https://bun.com/docs/test/mocks)）。`bun run test:unit` / `test:integration` は per-file isolation runner（`scripts/run-tests.mjs`）経由必須:
+bun:test の `mock.module()` は **live binding を残す**公式仕様のため、複数 `*.test.ts` を同一 `bun test` 起動で実行すると干渉する（[Bun docs](https://bun.com/docs/test/mocks)）。`bun run test:unit` / `test:integration` は per-file isolation runner（`scripts/run-tests.ts`）経由必須:
 
 ```yaml
 - name: Run unit tests (per-file isolation)

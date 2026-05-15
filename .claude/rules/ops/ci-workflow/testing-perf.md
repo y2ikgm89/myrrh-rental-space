@@ -5,7 +5,7 @@ paths:
   - playwright.config.ts
   - .lighthouserc.json
   - scripts/lhci-start.ts
-  - scripts/run-tests.mjs
+  - scripts/run-tests.ts
 ---
 
 # CI Testing & Performance — Lighthouse / Playwright

@@ -3,7 +3,7 @@ description: CI failure の gh CLI デバッグパターン / GitHub Actions bil
 paths:
   - .github/workflows/**
   - package.json
-  - scripts/run-tests.mjs
+  - scripts/run-tests.ts
 ---
 
 # CI Debug & Operations — gh CLI / Billing / 監査 grep

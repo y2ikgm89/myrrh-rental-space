@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
-# worktree-bootstrap: 隔離 worktree 作成の完全自動化
+# worktree-bootstrap: 隔離 worktree 作成（legacy manual fallback）
+#
+# NOTE: 公式 `claude --worktree <name>` が canonical 経路。本スクリプトは以下のケースで使用:
+#   - dev server を main で常駐させたまま手動で別 worktree を切りたい
+#   - subagent dispatch 以外で外部ツール（VS Code 等）から直接開きたい
+#   - `--worktree` で trust dialog がまだ accept されていない初回セットアップ
+#
+# 公式機能と重複する以下を本スクリプトは自前実装（公式 --worktree 経路では不要）:
+#   - .env / generated/ コピー（公式は .worktreeinclude で自動）
+#   - WIP snapshot commit（公式は worktree.baseRef: "head" で取込み）
 #
 # Usage:
 #   bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh <branch-name>
 #
 # Steps:
-#   1. main の未コミット migration を検出 → DB drift 回避のため WIP snapshot commit
+#   1. main の状態確認（uncommitted / 未追跡 migration 検出）
 #   2. git worktree add -b feature/<branch> .worktrees/<branch> HEAD
-#   3. .env / .env.local を python3 shutil.copy2 経由でコピー（PreToolUse bypass）
-#   4. generated/ を worktree にコピー（robocopy または python shutil.copytree）
-#   5. 完了レポート出力
+#   3. .worktreeinclude に沿って .env / generated/ を copy
+#   4. 完了レポート（パス / branch / base SHA）
 
 set -euo pipefail
 
@@ -18,6 +26,8 @@ BRANCH="${1:-}"
 if [ -z "$BRANCH" ]; then
   echo "Usage: $0 <branch-name>" >&2
   echo "       ブランチ名（kebab-case）は必須" >&2
+  echo "" >&2
+  echo "Hint: 公式の \`claude --worktree <name>\` を使うと .worktreeinclude が自動適用される。" >&2
   exit 1
 fi
 
@@ -39,11 +49,13 @@ FULL_BRANCH="feature/$BRANCH"
 
 if [ -d "$WORKTREE_DIR" ]; then
   echo "Error: $WORKTREE_DIR は既に存在します" >&2
+  echo "       cleanup: bash .claude/skills/worktree-bootstrap/scripts/cleanup.sh $BRANCH" >&2
   exit 1
 fi
 
 if git rev-parse --verify "$FULL_BRANCH" >/dev/null 2>&1; then
   echo "Error: ブランチ $FULL_BRANCH は既に存在します" >&2
+  echo "       既存 branch を使う場合: git worktree add $WORKTREE_DIR $FULL_BRANCH" >&2
   exit 1
 fi
 
@@ -82,41 +94,59 @@ echo "📁 worktree を作成中: $WORKTREE_DIR"
 git worktree add -b "$FULL_BRANCH" "$WORKTREE_DIR" HEAD
 BASE_SHA=$(git -C "$WORKTREE_DIR" rev-parse --short HEAD)
 
-# ---- Step 3: env ファイルコピー（PreToolUse bypass のため python3 経由） ----
+# ---- Step 3: .worktreeinclude に沿って gitignored ファイルを copy ----
 echo ""
-echo "🔐 環境変数ファイルをコピー中..."
-python3 <<PYTHON
-import os, shutil
-src_root = "$REPO_ROOT"
-dst_root = os.path.join(src_root, "$WORKTREE_DIR")
-for name in [".env", ".env.local"]:
-    src = os.path.join(src_root, name)
-    if os.path.exists(src):
-        shutil.copy2(src, os.path.join(dst_root, name))
-        print(f"   ✓ {name}")
-    else:
-        print(f"   - {name} (存在しないためスキップ)")
-PYTHON
+echo "🔐 .worktreeinclude のパターンを適用中..."
+INCLUDE_FILE="$REPO_ROOT/.worktreeinclude"
 
-# ---- Step 4: generated/ コピー ----
-echo ""
-echo "🧬 generated/ をコピー中..."
-if [ -d generated ]; then
-  if command -v robocopy >/dev/null 2>&1; then
-    # Windows: robocopy は成功でも exit 1 を返すため || true で吸収
-    robocopy generated "$WORKTREE_DIR/generated" /E /XF nul /NFL /NDL /NJH /NJS /NC /NS >/dev/null 2>&1 || true
-  else
-    python3 <<PYTHON
-import shutil
-shutil.copytree("$REPO_ROOT/generated", "$REPO_ROOT/$WORKTREE_DIR/generated", dirs_exist_ok=True)
-PYTHON
-  fi
-  echo "   ✓ generated/"
+if [ ! -f "$INCLUDE_FILE" ]; then
+  echo "   ⚠️  .worktreeinclude が見つかりません。コピー処理をスキップします。"
+  echo "      公式仕様: https://code.claude.com/docs/en/worktrees#copy-gitignored-files-into-worktrees"
 else
-  echo "   - generated/ (存在しないためスキップ — bun run db:generate が必要)"
+  python3 - "$REPO_ROOT" "$WORKTREE_DIR" "$INCLUDE_FILE" <<'PYTHON'
+import os
+import shutil
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+worktree_dir = repo_root / sys.argv[2]
+include_file = Path(sys.argv[3])
+
+patterns: list[str] = []
+for line in include_file.read_text(encoding="utf-8").splitlines():
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    patterns.append(line)
+
+copied = 0
+skipped = 0
+
+for pattern in patterns:
+    # leading slash → リポジトリ root 基準
+    target = pattern.lstrip("/")
+    src = repo_root / target
+    dst = worktree_dir / target
+
+    if not src.exists():
+        print(f"   - {pattern} (source 不在)")
+        skipped += 1
+        continue
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+    else:
+        shutil.copy2(src, dst)
+    print(f"   ✓ {pattern}")
+    copied += 1
+
+print(f"   copied={copied} skipped={skipped}")
+PYTHON
 fi
 
-# ---- Step 5: 完了レポート ----
+# ---- Step 4: 完了レポート ----
 echo ""
 echo "✅ worktree 準備完了"
 echo ""
@@ -126,7 +156,10 @@ echo "   Base:   $BASE_SHA"
 echo ""
 echo "次のステップ:"
 echo "   cd $WORKTREE_DIR"
-echo "   bun run type-check           # 環境確認"
-echo "   bunx --bun prisma migrate dev --name <migration-name>   # 必要なら"
+echo "   bun run type-check                                          # 環境確認"
+echo "   bunx --bun prisma migrate dev --name <migration-name>       # 必要なら"
+echo ""
+echo "完了後のクリーンアップ:"
+echo "   bash .claude/skills/worktree-bootstrap/scripts/cleanup.sh $BRANCH"
 
 exit 0

@@ -6,6 +6,8 @@
 # generate 完了を待つ。失敗しても exit 0（情報提示のみ）。
 
 set -euo pipefail
+# 手動テスト時の fallback（hooks-patterns.md §Windows (MINGW64) 固有の注意）
+: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
 INPUT=$(cat)
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")

@@ -2,6 +2,8 @@
 # PostToolUse hook: Run ESLint --fix on edited TypeScript/TSX files
 
 set -euo pipefail
+# 手動テスト時の fallback（hooks-patterns.md §Windows (MINGW64) 固有の注意）
+: "${CLAUDE_PROJECT_DIR:=$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
 INPUT=$(cat)
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")

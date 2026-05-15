@@ -12,7 +12,7 @@ paths:
 ## 3-stage multi-stage build
 
 ```dockerfile
-FROM oven/bun:1.3.12-alpine AS base   # 共通ベース（package.json packageManager と一致）
+FROM oven/bun:1.3.13-alpine AS base   # 共通ベース（package.json packageManager と一致、Bun 1.3.14 は Lexical TDZ regression のため見送り）
 FROM base AS deps                      # 依存 + Prisma generate
 FROM base AS builder                   # validate + build
 FROM base AS runner                    # standalone output + 非root

@@ -11,16 +11,45 @@ paths:
 
 # Git / Migration / Worktree プロセス
 
-## Worktree 採否判定（SSoT）
+## Worktree（公式仕様準拠 SSoT）
 
-> 採用決定後の bootstrap は `.claude/skills/worktree-bootstrap/SKILL.md`（1 コマンドで `.env` + `generated/` コピー + DB drift 検知）。
+> 出典: [Claude Code Worktrees](https://code.claude.com/docs/en/worktrees) / [git-worktree(1)](https://git-scm.com/docs/git-worktree)
+> 採用決定後の bootstrap は `.claude/skills/worktree-bootstrap/SKILL.md`。**公式 `claude --worktree` が canonical 経路**、手動 `git worktree add` は legacy fallback。
+
+### 公式機能の active 設定
+
+| 設定                                 | 場所                    | 値       | 目的                                                                                                                                         |
+| ------------------------------------ | ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.worktreeinclude`                   | リポジトリ root         | -        | gitignored ファイル（`.env*` / `generated/` / `playwright/.auth/`）を自動 copy                                                               |
+| `worktree.baseRef`                   | `.claude/settings.json` | `"head"` | local HEAD（未 push commit + WIP 含む）ベースで worktree 作成。default の `"fresh"`（`origin/HEAD`）だと in-progress feature branch が消える |
+| `cleanupPeriodDays`                  | `.claude/settings.json` | `14`     | 孤児化した subagent worktree を 14 日後に自動掃除（uncommitted/untracked/unpushed なしの場合のみ）                                           |
+| `.gitignore` で `.claude/worktrees/` | `.gitignore`            | ignored  | 公式 default の worktree 配置を tracked にしない                                                                                             |
+| `.gitignore` で `.worktrees/`        | `.gitignore`            | ignored  | legacy manual bootstrap location（後方互換）                                                                                                 |
+
+### Canonical 動線（公式 `--worktree` 経路）
+
+```bash
+# 1. 新規 worktree + Claude セッション起動（CLI）
+claude --worktree feature-name
+#   → .claude/worktrees/feature-name/ に作成、branch 名 worktree-feature-name
+#   → .worktreeinclude にマッチする gitignored を自動 copy
+#   → 終了時に changes なしなら worktree + branch 自動削除
+
+# 2. PR ベース worktree（レビュー用）
+claude --worktree "#1234"
+#   → pull/1234/head を fetch、.claude/worktrees/pr-1234/ に作成
+
+# 3. セッション中に Claude に依頼
+#   「ワークツリーで作業して」→ Claude が EnterWorktree tool で作成
+```
 
 ### ✅ 使う場面
 
+- **Subagent 並列 dispatch** — sub-agent frontmatter または `Agent` tool に `isolation: "worktree"` を渡すと **temporary worktree** が公式に切られる（変更なしなら自動 cleanup、`cleanupPeriodDays` で孤児掃除）
 - **セッション跨ぎ Phase 分割 plan** — `docs/superpowers/plans/**` の Phase A → B → C 構造、handoff memo 規約（`MEMORY.md` index + 6 点セット）が worktree path 前提
-- **Subagent 並列 dispatch** — Agent tool `isolation: "worktree"` で implementer を controller 作業から隔離（context isolation + file race 回避）
 - **Destructive migration を含む実験** — 共有 dev Postgres の WIP を main から隔離。適用後は該当 worktree から dev server 再起動（他 worktree dev server が古い code + 新 schema で `PrismaClientKnownRequestError: The column ... does not exist` → 白画面の silent bug）
 - **dev server を別ブランチで常駐させたまま並列実験** — port 3000 占有を避ける（既起動検出は `Another next dev server is already running` で exit 1、3001 fallback あり）
+- **PR レビュー** — `claude --worktree "#PR-num"` で fetch + 隔離環境を 1 コマンド構築
 
 ### ❌ 使わない場面（main 直接編集が efficient）
 
@@ -33,9 +62,22 @@ paths:
 
 ### Subagent との連携
 
-- Controller が `Agent` tool dispatch 時に `isolation: "worktree"` を渡せば implementer が独立 workspace で実装する（公式 sub-agent frontmatter `isolation: worktree` と同等）。手動 bootstrap 不要
-- Phase 分割 plan を `subagent-driven-development` skill で実行する場合、controller 側で先に `worktree-bootstrap` SKILL で worktree を切り、implementer に worktree path を渡す
+- **`isolation: worktree` は公式 sub-agent frontmatter フィールド** — temporary worktree を切り、変更なしで自動 cleanup（[公式仕様](https://code.claude.com/docs/en/sub-agents#supported-frontmatter-fields)）
+- Controller が `Agent` tool dispatch 時に `isolation: "worktree"` を渡せば implementer が独立 workspace で実装する。手動 bootstrap 不要
+- Phase 分割 plan を `subagent-driven-development` skill で実行する場合、controller 側で先に `claude --worktree <name>` または `worktree-bootstrap` SKILL で worktree を切り、implementer に worktree path を渡す
 - 完了検証は worktree 内で直接 `git status --short` + `git diff --stat HEAD`（`PostToolUse:Agent` hook の snapshot は main 基準で subagent 成果が見えない）
+
+### Cleanup（公式仕様）
+
+- **`--worktree` セッション終了時** — uncommitted/untracked/unpushed なしなら worktree + branch を自動削除。named session は prompt
+- **subagent worktree** — 完了時に変更なしなら自動 cleanup、変更ありは保持
+- **孤児 worktree** — `cleanupPeriodDays` 経過後の startup sweep で自動掃除（uncommitted/untracked/unpushed なし時のみ）
+- **手動 cleanup** — `bash .claude/skills/worktree-bootstrap/scripts/cleanup.sh <branch>` または `git worktree remove <path> && git worktree prune`
+- **`-p` 非対話モード** — auto cleanup なし。明示的に `git worktree remove` する
+
+### bootstrap.sh（legacy manual fallback）
+
+`claude --worktree` が使えない場面（例: dev server を main で常駐維持、subagent でなく手動で隔離）では `bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh <branch>` を使う。配置は `.worktrees/<branch>/`（公式 default `.claude/worktrees/` とは別 location で legacy）。
 
 ## Migration / Prisma
 
