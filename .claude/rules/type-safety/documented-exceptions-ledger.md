@@ -16,8 +16,6 @@ paths:
 | ------------------------------------------------------------------------------------------------ | :-----------------------: | ----------------------------------------------------------- | :-----------------------------: | ----------------------------------------------------------------------------------------- |
 | `src/shared/db/prisma.ts`                                                                        |            53             | `globalThis as unknown as GlobalStore`                      |            §SDK境界             | Next.js 公式推奨 dev singleton pattern (HMR safe)                                         |
 | `src/shared/lib/r2/client.ts`                                                                    |            23             | `globalThis as unknown as GlobalStore`                      |            §SDK境界             | 同上 (R2 S3Client singleton)                                                              |
-| `src/shared/lib/google-business-profile/location-sync.ts`                                        |            121            | `as unknown as Schema$Location`                             |           §2 SDK 境界           | googleapis SDK の dynamic-typed Schema との境界 cast                                      |
-| `src/shared/lib/email/send.ts`                                                                   |            82             | `as CreateEmailOptions`                                     |           §2 SDK 境界           | Resend discriminated union の `Omit<U, "from">` round-trip 不可                           |
 | `src/shared/lib/serialize.ts`                                                                    |            486            | `as OmitUndefined<T>`                                       |       §4 internal helper        | `Object.fromEntries` 型 widening を `omitUndefined` 内部で吸収                            |
 | `src/shared/lib/validations/section.ts`                                                          |            251            | `as SectionConfig`                                          |        §3 union widening        | `validateSectionConfig` 内部のみ、戻り値型注釈で union widening 関数内閉じ込め            |
 | `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/LayoutFields.tsx` |          176-177          | `as Path<T>`                                                |    §5 RHF generic invariance    | `Path<T>` は static literal union のため generic body で証明不可 (TS limitation)          |
@@ -35,7 +33,7 @@ paths:
 **`grep -rE "\bas [A-Z]" --include="*.ts" --include="*.tsx" src` の hit 件数**:
 
 - ~75 件 (`as const` / `as unknown` 除外後 ~5-10 件)
-- うち上記 ledger の **15 件は全て documented exceptions** (`assertion-bans.md` §1-7 + typedRoutes patterns)
+- うち上記 ledger の **13 件は全て documented exceptions** (`assertion-bans.md` §1-7 + typedRoutes patterns)
 - import alias (`{ X as Y }`) は型 cast ではないため対象外
 
 **実質違反の数**: **0 件**。`as` cast 軸 audit は本 ledger を参照して「documented exceptions 外 0 件 → 型安全 A」と判定する。

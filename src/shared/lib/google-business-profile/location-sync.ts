@@ -8,8 +8,6 @@
 
 import "server-only";
 
-import type { mybusinessbusinessinformation_v1 } from "googleapis";
-
 import { prisma } from "@/shared/db/prisma";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
@@ -28,6 +26,7 @@ import {
 } from "./helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { getGbpAuthState } from "@/shared/domain/google-business-profile/settings";
+import { LocationSchema } from "./schemas";
 import { syncLocationStub } from "./stub";
 import type { GbpSyncInput, GbpSyncResult } from "./types";
 
@@ -113,12 +112,10 @@ export async function syncLocationToGbp(
     });
     const updateMask = buildGbpFieldMask(payload);
 
-    // googleapis SDK boundary cast — `Schema$Location` は `string | null` を要求するが
-    // domain payload は `string | undefined` を返す（pure helper の型契約）。
-    // SDK は実行時に undefined / null / 欠落のいずれも同等扱いするため、
-    // `Prisma.InputJsonValue` / `CreateEmailOptions` と同列の library boundary cast を許容。
-    const requestBody =
-      payload as unknown as mybusinessbusinessinformation_v1.Schema$Location;
+    // googleapis SDK 境界。`Schema$Location` は `string | null` を要求するが domain payload は
+    // `string | undefined` を返す（pure helper の型契約）。SDK は実行時に undefined / null /
+    // 欠落のいずれも同等扱いするため、Zod 4 公式 `z.custom<T>` で型を narrow する。
+    const requestBody = LocationSchema.parse(payload);
     const resourceName = location.googleBusinessPlaceId;
 
     await withGoogleApiRetry(() =>
