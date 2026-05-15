@@ -7,6 +7,7 @@ description: >
   Reports only high-confidence issues with file:line references and fix suggestions.
 tools: Read, Grep, Glob
 model: sonnet
+effort: high
 memory: project
 ---
 

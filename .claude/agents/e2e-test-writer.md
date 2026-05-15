@@ -6,6 +6,7 @@ description: >
   Playwright テストファイルを生成する。
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
+effort: medium
 ---
 
 # E2E Test Writer

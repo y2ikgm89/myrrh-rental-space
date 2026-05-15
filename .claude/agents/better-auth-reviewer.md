@@ -7,6 +7,7 @@ description: >
   RBAC・social auth callback・session 漏洩パターンを検出し、修正案を提示する。
 tools: Read, Grep, Glob, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
+effort: high
 ---
 
 あなたは Better Auth 1.x の専門家です。Myrrh Rental Space プロジェクトは

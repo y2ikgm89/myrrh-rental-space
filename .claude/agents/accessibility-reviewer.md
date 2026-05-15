@@ -11,6 +11,7 @@ description: >
   WCAG AA 不達を検出し、修正案を提示する。
 tools: Read, Grep, Glob
 model: sonnet
+effort: high
 ---
 
 You are an accessibility specialist for the Myrrh Rental Space project (Next.js 16 / React 19 / Radix UI / shadcn / Tailwind 4).

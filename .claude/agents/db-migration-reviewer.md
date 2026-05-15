@@ -7,6 +7,7 @@ description: >
   data migration steps, and seed compatibility. Returns SAFE / REVIEW NEEDED / BREAKING.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: medium
 ---
 
 You are a Prisma migration safety reviewer for the Myrrh Rental Space project.

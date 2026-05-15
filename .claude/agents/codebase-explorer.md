@@ -7,6 +7,7 @@ description: >
   Remembers file locations and patterns across sessions for faster lookups.
 tools: Read, Grep, Glob, LS
 model: haiku
+effort: low
 memory: project
 ---
 

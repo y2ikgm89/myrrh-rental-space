@@ -52,14 +52,58 @@ paths:
 | `user-invocable`           | -    | boolean                                                                    |
 | `allowed-tools`            | -    | 許可ツールリスト                                                           |
 | `argument-hint`            | -    | argument 形式ヒント                                                        |
-| `arguments`                | -    | argument 定義                                                              |
+| `arguments`                | -    | named positional argument リスト（`$name` substitution に対応）            |
 | `model`                    | -    | sub-agent と同様                                                           |
 | `effort`                   | -    | sub-agent と同様                                                           |
-| `context`                  | -    | `fork`                                                                     |
-| `agent`                    | -    | 起動 sub-agent 型                                                          |
+| `context`                  | -    | `fork`（forked subagent context で実行）                                   |
+| `agent`                    | -    | 起動 sub-agent 型（`Explore` / `Plan` / `general-purpose` / custom）       |
 | `hooks`                    | -    | lifecycle hooks                                                            |
 | `paths`                    | -    | glob patterns — path-specific skill activation                             |
 | `shell`                    | -    | `bash` / `powershell`                                                      |
+
+#### Skill string substitution
+
+| 変数                   | 説明                                                              |
+| ---------------------- | ----------------------------------------------------------------- |
+| `$ARGUMENTS`           | 全引数（無いと `ARGUMENTS: <value>` が末尾に append される）      |
+| `$ARGUMENTS[N]` / `$N` | N 番目の引数（0-based）                                           |
+| `$name`                | `arguments:` で宣言した named positional 引数                     |
+| `${CLAUDE_SESSION_ID}` | 現セッション ID                                                   |
+| `${CLAUDE_EFFORT}`     | 現 effort level (`low`/`medium`/`high`/`xhigh`/`max`)             |
+| `${CLAUDE_SKILL_DIR}`  | SKILL.md ディレクトリ（plugin/personal/project 一貫の path 解決） |
+
+#### Skill content lifecycle（重要）
+
+- skill invoke 後、SKILL.md content は **session 全体に残る** (per-turn re-read 不要、recurring token cost)
+- auto-compaction で **5000 token/skill** 維持、合計 **25000 token budget**（最近 invoke した skill から fill）
+- 古い skill は compaction 後に context から完全 drop されることがある（必要なら re-invoke）
+- → SKILL.md は短く保つ（500 行未満、reference は別ファイル）。長文の "do/why" 解説より standing instructions として書く
+
+#### Settings 主要 field（`code.claude.com/docs/en/settings`）
+
+context cost / 動作に直結する top-level field のみ抜粋。詳細は公式参照。
+
+| Field                        | 用途                                                              | 本プロジェクト                      |
+| ---------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
+| `env`                        | 全 session 共通環境変数                                           | `PYTHONUTF8=1` 等                   |
+| `permissions.allow/ask/deny` | tool 許可ルール                                                   | bun run / mcp 等を allow            |
+| `hooks`                      | lifecycle hooks                                                   | 設定済                              |
+| `worktree.baseRef`           | `head` / `main` — worktree 作成時の base                          | `head` (未 push WIP 含)             |
+| `cleanupPeriodDays`          | session 削除日数                                                  | `14`                                |
+| `enableAllProjectMcpServers` | `.mcp.json` の MCP 自動承認                                       | `true`                              |
+| `skillListingBudgetFraction` | skill description 予算 (context %)                                | `0.015` (default 0.01)              |
+| `maxSkillDescriptionChars`   | per-skill description 上限                                        | default 1536                        |
+| `skillOverrides`             | per-skill 表示状態 (`on`/`name-only`/`user-invocable-only`/`off`) | (未設定)                            |
+| `disableSkillShellExecution` | skill 内 `` !`cmd` `` を無効化                                    | (未設定 / false)                    |
+| `autoMemoryEnabled`          | auto memory 有効化                                                | default true                        |
+| `autoMemoryDirectory`        | auto memory 配置先 override                                       | (未設定 / `~/.claude/projects/...`) |
+| `claudeMdExcludes`           | 親 CLAUDE.md skip glob                                            | (未設定)                            |
+| `effortLevel`                | session 全体の effort                                             | (未設定 / inherit)                  |
+| `attribution.commit/pr`      | git commit/PR co-author 設定                                      | (未設定 / 手動 trailer)             |
+| `plansDirectory`             | plan file 配置先                                                  | `docs/superpowers/plans`            |
+| `outputStyle`                | system prompt 調整                                                | (未設定)                            |
+| `respectGitignore`           | `@` file picker が gitignore 考慮                                 | default true                        |
+| `defaultShell`               | `!` command shell                                                 | default bash                        |
 
 ### 撤回済み独自パターン（再導入禁止）
 

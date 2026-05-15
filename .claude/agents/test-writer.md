@@ -6,6 +6,7 @@ description: >
   bun:test ファイルを生成する。Vitest との混同に注意（このプロジェクトは Bun Test を使用）。
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
+effort: medium
 memory: project
 ---
 

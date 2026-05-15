@@ -20,7 +20,12 @@
     ]
   },
   "enableAllProjectMcpServers": true,
-  "skillListingBudgetFraction": 0.025,
+  "skillListingBudgetFraction": 0.015,
+  "plansDirectory": "docs/superpowers/plans",
+  "worktree": {
+    "baseRef": "head"
+  },
+  "cleanupPeriodDays": 14,
   "hooks": {
     "SessionStart": [
       {

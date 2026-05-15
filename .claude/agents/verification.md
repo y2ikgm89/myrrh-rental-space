@@ -8,6 +8,7 @@ description: >
   error patterns and their fixes across sessions.
 tools: Bash, Read, Grep, Glob
 model: sonnet
+effort: medium
 ---
 
 You are a build verification specialist for the Myrrh Rental Space project.

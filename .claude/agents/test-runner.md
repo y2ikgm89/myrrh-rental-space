@@ -7,6 +7,7 @@ description: >
   More targeted than the verification agent (which covers type-check/lint/build).
 tools: Bash, Read, Grep, Glob
 model: sonnet
+effort: medium
 ---
 
 You are a test analysis specialist for the Myrrh Rental Space project.

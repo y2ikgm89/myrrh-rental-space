@@ -8,6 +8,7 @@ description: >
   Zod 4 validation, and applicable `.claude/rules/**/*.md` (path-scoped where frontmatter says so). Catches violations before they reach CI.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: high
 memory: project
 ---
 
