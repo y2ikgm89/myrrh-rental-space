@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -10,11 +11,17 @@ import {
   type PostTagInput,
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import * as categoryCommands from "@/shared/domain/posts/category-commands";
 import * as tagCommands from "@/shared/domain/posts/tag-commands";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
+import {
+  categoryFormSchema,
+  tagFormSchema,
+} from "../../../posts/taxonomy/_components/taxonomy-schema";
 import {
   invalidatePostCategoryCaches,
   invalidatePostTagCaches,
@@ -197,5 +204,91 @@ export async function deletePostTag(id: string): Promise<MutationResult> {
     afterSuccess: () => {
       updateTag(CACHE_TAGS.POST_TAGS);
     },
+  });
+}
+
+// =============================================================================
+// Conform `useActionState` 用 Server Actions (Phase 1 Task 6)
+//
+// TaxonomyEditor (post categories / tags edit page) を conform に移行するための
+// 新 signature `(prev, formData) => SubmissionResult`。CategoryManager /
+// TagManager dialog form (RHF) はそのまま legacy `(input)` を使用し、Phase 1
+// Task 7 で順次 conform 化する。
+// =============================================================================
+
+export async function updatePostCategoryAction(
+  categoryId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, categoryFormSchema, async (data) => {
+    const idValid = idSchema.safeParse(categoryId);
+    if (!idValid.success) {
+      return { ok: false, error: "カテゴリIDが不正です" };
+    }
+
+    const result = await executeAdminMutationResult({
+      resource: "post",
+      action: "update",
+      resourceId: idValid.data,
+      execute: async () => {
+        await categoryCommands.updatePostCategory(idValid.data, {
+          name: data.name,
+          slug: data.slug,
+          description: data.description ? data.description : null,
+          order: data.order,
+          metaTitle: data.metaTitle ? data.metaTitle : null,
+          metaDescription: data.metaDescription ? data.metaDescription : null,
+          ogpImageUrl: data.ogpImageUrl ? data.ogpImageUrl : null,
+        });
+        return null;
+      },
+      afterSuccess: async () => {
+        await invalidatePostCategoryCaches();
+        await purgePostArchive();
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
+}
+
+export async function updatePostTagAction(
+  tagId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, tagFormSchema, async (data) => {
+    const idValid = idSchema.safeParse(tagId);
+    if (!idValid.success) {
+      return { ok: false, error: "タグIDが不正です" };
+    }
+
+    const result = await executeAdminMutationResult({
+      resource: "post",
+      action: "update",
+      resourceId: idValid.data,
+      execute: async () => {
+        await tagCommands.updatePostTag(idValid.data, {
+          name: data.name,
+          slug: data.slug,
+          description: data.description ? data.description : null,
+          metaTitle: data.metaTitle ? data.metaTitle : null,
+          metaDescription: data.metaDescription ? data.metaDescription : null,
+          ogpImageUrl: data.ogpImageUrl ? data.ogpImageUrl : null,
+        });
+        return null;
+      },
+      afterSuccess: async () => {
+        await invalidatePostTagCaches();
+        await purgePostArchive();
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
