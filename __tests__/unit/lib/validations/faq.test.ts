@@ -8,8 +8,6 @@ import { describe, test, expect } from "bun:test";
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
-  defaultFaqCategoryFormValues,
-  defaultFaqItemFormValues,
 } from "@/admin/lib/validations/faq";
 
 // 有効なFAQカテゴリデータ
@@ -321,27 +319,7 @@ describe("faqItemFormSchema", () => {
   });
 });
 
-describe("defaultFaqCategoryFormValues", () => {
-  test("デフォルト値が正しく定義されている", () => {
-    expect(defaultFaqCategoryFormValues).toEqual({
-      name: "",
-      slug: "",
-      description: null,
-      iconEmoji: null,
-      order: 0,
-      isActive: true,
-    });
-  });
-});
-
-describe("defaultFaqItemFormValues", () => {
-  test("デフォルト値が正しく定義されている", () => {
-    expect(defaultFaqItemFormValues).toEqual({
-      categoryId: "",
-      question: "",
-      answer: "",
-      order: 0,
-      isPublished: true,
-    });
-  });
-});
+// 旧 defaultFaqCategoryFormValues / defaultFaqItemFormValues は Phase 1 Task 6
+// conform 移行 (PR for FAQ dialogs) で削除済。新 Dialog は parent component 内で
+// inline defaultValue を持つ（mode 別 sub-component に分離されているため定数化
+// のメリットがない）。

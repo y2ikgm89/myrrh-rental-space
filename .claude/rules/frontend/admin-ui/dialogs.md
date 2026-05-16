@@ -209,7 +209,7 @@ useEffect(() => {
 参照実装:
 
 - Variant A: `space-categories/_components/CreateCategoryDialog.tsx` / `CategoryActionCell.tsx` + `CategoryForm.tsx` (PR #64, 2026-05-16)
-- Variant B: `FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` / `FaqCategoryDetailView.tsx` (Phase 1 Task 7 で conform 化予定)
+- Variant B: `faq/_components/FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` + 親 `FaqCategoryDetailView.tsx` / `FaqCategoryListView.tsx` / `FaqCategoryActionCell.tsx` (PR #70, 2026-05-16) — create / edit を別 sub-component に分離し独立 `useActionState` を持つ、parent が `editingItem` / `category` state を保持し undefined で create mode を選択する master-detail pattern
 
 ### controlled / uncontrolled 両対応（空状態からの起動）
 
