@@ -36,7 +36,6 @@ import {
   footerSettingsSchema,
   featureModulesSettingsSchema,
   type AnnouncementBarCarouselSettingsInput,
-  type FeatureModulesSettingsInput,
 } from "./schemas";
 
 /**
@@ -277,38 +276,48 @@ export async function updateFooterSettings(
 }
 
 /**
- * Feature Module ON/OFF map を更新する。
+ * Feature Module ON/OFF map を更新する — conform `useActionState` 統合経路。
  *
  * 影響範囲: 公開ページ 404 ガード（page.tsx）/ navigation prune /
  * sitemap prune / SectionRenderer skip / cron 早期 return。
  * cache invalidation は影響範囲に応じて広範囲に実行する必要がある。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateFeatureModulesSettings(
-  data: FeatureModulesSettingsInput,
-): Promise<MutationResult> {
-  const parsed = featureModulesSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateFeatureModulesCommand(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    featureModulesSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await settingsCommands.updateFeatureModulesCommand(data);
+          return null;
+        },
+        afterSuccess: () => {
+          // FEATURE_MODULES SSoT 自体
+          updateTag(CACHE_TAGS.FEATURE_MODULES);
+          // Phase 3 で feature filter を埋め込んだ全 consumer を invalidate
+          updateTag(CACHE_TAGS.NAVIGATION);
+          updateTag(CACHE_TAGS.PAGE_SECTIONS);
+          updateTag(CACHE_TAGS.SECTIONS);
+          // sitemap 生成は dynamic で feature filter を毎回読むため明示
+          // invalidate 不要だが、Cloud CDN にキャッシュされている可能性が
+          // あるため明示する
+          updateTag(CACHE_TAGS.PAGES);
+          updateTag(CACHE_TAGS.REVIEWS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      // FEATURE_MODULES SSoT 自体
-      updateTag(CACHE_TAGS.FEATURE_MODULES);
-      // Phase 3 で feature filter を埋め込んだ全 consumer を invalidate
-      updateTag(CACHE_TAGS.NAVIGATION);
-      updateTag(CACHE_TAGS.PAGE_SECTIONS);
-      updateTag(CACHE_TAGS.SECTIONS);
-      // sitemap 生成は dynamic で feature filter を毎回読むため明示 invalidate 不要だが、
-      // Cloud CDN にキャッシュされている可能性があるため明示する
-      updateTag(CACHE_TAGS.PAGES);
-      updateTag(CACHE_TAGS.REVIEWS);
-    },
-  });
+  );
 }
