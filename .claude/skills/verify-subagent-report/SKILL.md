@@ -118,11 +118,10 @@ agent 報告と一致しないファイルは revert されている可能性が
 
 ```bash
 # 分割後に期待される新規 sub-component 参照
-grep -rn "import.*\\(TaxonomyFormFields\\|EventBasicFields\\|SidebarWidgetCard\\)" src/
+grep -rn "import.*\\(EventBasicFields\\|SidebarWidgetCard\\)" src/
 
 # 分割前の旧 symbol が消えているか
 grep -rn "const SortableWidgetItem" src/   # Sidebar 旧 inline 定義
-grep -rn "function CategoryFormFields" src/app/\\(admin\\)/admin/\\(dashboard\\)/posts/taxonomy/_components/TaxonomyEditor.tsx
 ```
 
 **重要**: `system-reminder` の「X was modified by linter」は edit 時点の snapshot を表示するケースがあり stale しうる。旧内容が表示されても、実体が何かは `grep` / `Read` で直接確認する。
