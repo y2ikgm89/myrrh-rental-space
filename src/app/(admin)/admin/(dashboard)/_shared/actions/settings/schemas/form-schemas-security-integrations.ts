@@ -7,7 +7,13 @@ import {
   DiscountCombinationMode,
   InstagramFeedLayout,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { SUPPORTED_CURRENCY_VALUES } from "@/admin/lib/stripe-shared";
+import {
+  SUPPORTED_CURRENCY_VALUES,
+  isValidPublishableKey,
+  isValidSecretKey,
+  isValidWebhookSecret,
+  keysHaveMatchingMode,
+} from "@/admin/lib/stripe-shared";
 
 // =============================================================================
 // Site > Security > Turnstile
@@ -76,14 +82,49 @@ export type DiscountFormInput = z.infer<typeof discountFormSchema>;
 // Integrations > Stripe
 // =============================================================================
 
-export const stripeFormSchema = z.object({
-  stripeEnabled: z.boolean(),
-  stripeTestMode: z.boolean(),
-  stripePublishableKey: z.string(),
-  stripeSecretKey: z.string(),
-  stripeWebhookSecret: z.string(),
-  stripeCurrency: z.enum(SUPPORTED_CURRENCY_VALUES),
-});
+export const stripeFormSchema = z
+  .object({
+    stripeEnabled: z.boolean(),
+    stripeTestMode: z.boolean(),
+    stripePublishableKey: z
+      .string()
+      .max(200, { error: "公開可能キーは200文字以内で入力してください" })
+      .refine((val) => !val || isValidPublishableKey(val), {
+        error: "公開可能キーは pk_test_ または pk_live_ で始まる必要があります",
+      }),
+    stripeSecretKey: z
+      .string()
+      .max(200, { error: "シークレットキーは200文字以内で入力してください" })
+      .refine((val) => !val || isValidSecretKey(val), {
+        error:
+          "シークレットキーは sk_test_ または sk_live_ で始まる必要があります",
+      }),
+    stripeWebhookSecret: z
+      .string()
+      .max(200, {
+        error: "Webhookシークレットは200文字以内で入力してください",
+      })
+      .refine((val) => !val || isValidWebhookSecret(val), {
+        error: "Webhookシークレットは whsec_ で始まる必要があります",
+      }),
+    stripeCurrency: z.enum(SUPPORTED_CURRENCY_VALUES),
+  })
+  .refine(
+    (data) => {
+      if (data.stripePublishableKey && data.stripeSecretKey) {
+        return keysHaveMatchingMode(
+          data.stripePublishableKey,
+          data.stripeSecretKey,
+        );
+      }
+      return true;
+    },
+    {
+      error:
+        "公開可能キーとシークレットキーのモード（test/live）が一致していません",
+      path: ["stripeSecretKey"],
+    },
+  );
 
 export type StripeFormInput = z.infer<typeof stripeFormSchema>;
 
