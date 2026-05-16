@@ -1,21 +1,34 @@
 "use client";
 
 /**
- * 新規ページ作成ダイアログ
+ * 新規ページ作成ダイアログ — Phase 1 Task 6 conform 移行 (Variant A)
  *
  * - タイトルからスラッグ自動生成
  * - リアルタイムスラッグ検証（debounce 500ms）
+ *
+ * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
+ * clean break 移行。Dialog open state は本 component 内で `useState` 管理
+ * (Variant A、PR #64 SpaceCategory pattern と同型)、controlled 親 prop も
+ * オプショナル対応。success 検知 → close + navigate は render 中 sync
+ * (`previousLastResult` 比較)、副作用 (`toast` / `router.push`) は useEffect。
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useWatch } from "react-hook-form";
-import { z } from "zod";
 import {
-  IconPlus,
-  IconLoader2,
+  getFormProps,
+  getInputProps,
+  getTextareaProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
+import { toast } from "sonner";
+import {
   IconCircleCheck,
   IconCircleX,
+  IconLoader2,
+  IconPlus,
 } from "@tabler/icons-react";
 import { Button, SubmitButton } from "@/admin/components/ui";
 import {
@@ -31,25 +44,7 @@ import { Label } from "@/admin/components/ui/label";
 import { Textarea } from "@/admin/components/ui/textarea";
 import { createPage } from "@/admin/actions/page";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
-import { useFormAction } from "@/admin/hooks/useFormAction";
-
-const formSchema = z.object({
-  slug: z
-    .string()
-    .min(1, { error: "スラッグは必須です" })
-    .max(100, { error: "スラッグは100文字以内です" })
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-      error: "半角英数字とハイフンのみ使用可能",
-    }),
-  title: z
-    .string()
-    .min(1, { error: "タイトルは必須です" })
-    .max(200, { error: "タイトルは200文字以内です" }),
-  description: z
-    .string()
-    .max(500, { error: "説明は500文字以内です" })
-    .optional(),
-});
+import { createPageSchema } from "@/shared/lib/validations/page";
 
 /**
  * タイトルからスラッグを自動生成
@@ -110,56 +105,81 @@ export function CreatePageDialog({
     controlledOnOpenChange?.(open);
   };
   const shouldShowTrigger = showTrigger ?? !isControlled;
+
   const [isManualSlug, setIsManualSlug] = useState(false);
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const [slugMessage, setSlugMessage] = useState("");
   const slugCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 送信時の slug を capture して、success 後の router.push に使う
+  // (form.reset 後 fields.slug.value が "" にクリアされるため)
+  const submittedSlugRef = useRef<string>("");
 
-  const { form, isPending, onSubmit } = useFormAction(
-    formSchema,
-    (data) =>
-      createPage({
-        slug: data.slug,
-        title: data.title,
-        description: data.description,
-        isPublished: false,
-      }),
-    {
-      defaultValues: {
-        slug: "",
-        title: "",
-        description: "",
-      },
-      successMessage: "ページを作成しました",
-      errorMessage: "ページの作成に失敗しました",
-      disableToast: false,
-      onSuccess: (result) => {
-        setIsOpen(false);
-        form.reset();
-        router.push(`/admin/pages/${result.slug}`);
-      },
-    },
+  const [lastResult, formAction, isPending] = useActionState(
+    createPage,
+    undefined,
   );
 
-  const {
-    register,
-    control,
-    setValue,
-    formState: { errors },
-  } = form;
+  const [form, fields] = useForm({
+    id: "create-page-form",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: createPageSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      slug: "",
+      title: "",
+      description: "",
+    },
+  });
 
-  const title = useWatch({ control, name: "title" });
-  const slug = useWatch({ control, name: "slug" });
+  const titleControl = useInputControl(fields.title);
+  const slugControl = useInputControl(fields.slug);
+
+  const title = titleControl.value ?? "";
+  const slug = slugControl.value ?? "";
+
+  // 送信前に slug を ref に capture（resetForm で消える前に保存）
+  const wrappedFormAction = (formData: FormData) => {
+    const slugValue = formData.get("slug");
+    if (typeof slugValue === "string") {
+      submittedSlugRef.current = slugValue;
+    }
+    return formAction(formData);
+  };
+
+  const isSuccess = lastResult?.initialValue === null;
+
+  // render 中 sync: success 検知 → Dialog close
+  const [previousLastResult, setPreviousLastResult] = useState(lastResult);
+  if (lastResult !== previousLastResult) {
+    setPreviousLastResult(lastResult);
+    if (isSuccess) {
+      setIsOpen(false);
+    }
+  }
+
+  // 副作用: success → toast + navigate
+  useEffect(() => {
+    if (isSuccess && submittedSlugRef.current) {
+      toast.success("ページを作成しました");
+      router.push(`/admin/pages/${submittedSlugRef.current}`);
+    }
+  }, [isSuccess, router]);
 
   // タイトル変更時にスラッグ自動生成
   useEffect(() => {
     if (!isManualSlug && title) {
       const generated = generateSlugFromTitle(title);
-      if (generated) {
-        setValue("slug", generated, { shouldValidate: true });
+      if (generated && generated !== slug) {
+        slugControl.change(generated);
       }
     }
-  }, [title, isManualSlug, setValue]);
+    // slugControl は毎レンダー新参照のため deps から除外
+    // (slugControl.change 経由の更新のみが副作用、value 読みは不要)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, isManualSlug]);
 
   // スラッグ変更時にリアルタイム検証（debounce 500ms）
   useEffect(() => {
@@ -168,7 +188,6 @@ export function CreatePageDialog({
     }
 
     if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-      // 無効なスラッグの場合は即座にリセット（0ms タイマーで同期 setState を回避）
       slugCheckRef.current = setTimeout(() => {
         setSlugStatus("idle");
         setSlugMessage("");
@@ -178,7 +197,6 @@ export function CreatePageDialog({
       };
     }
 
-    // checking 状態を即座に設定し、500ms debounce で実際の検証を実行
     slugCheckRef.current = setTimeout(() => {
       setSlugStatus("checking");
       void fetchSlugAvailability(slug).then((result) => {
@@ -202,12 +220,13 @@ export function CreatePageDialog({
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      form.reset();
       setIsManualSlug(false);
       setSlugStatus("idle");
       setSlugMessage("");
     }
   };
+
+  const formErrors = form.errors;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -228,37 +247,43 @@ export function CreatePageDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form
+          {...getFormProps(form)}
+          action={wrappedFormAction}
+          className="space-y-4"
+        >
           <div className="space-y-2">
-            <Label htmlFor="title">
+            <Label htmlFor={fields.title.id}>
               タイトル <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="title"
+              {...getInputProps(fields.title, { type: "text" })}
               placeholder="ページタイトル"
-              {...register("title")}
               disabled={isPending}
             />
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
+            {fields.title.errors && (
+              <p id={fields.title.errorId} className="text-sm text-destructive">
+                {fields.title.errors.join(", ")}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">
+            <Label htmlFor={fields.slug.id}>
               スラッグ <span className="text-destructive">*</span>
             </Label>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">/</span>
               <div className="relative flex-1">
                 <Input
-                  id="slug"
+                  {...getInputProps(fields.slug, { type: "text" })}
                   placeholder="about-us"
-                  {...register("slug", {
-                    onChange: () => setIsManualSlug(true),
-                  })}
                   disabled={isPending}
                   className="pr-8"
+                  onChange={(e) => {
+                    setIsManualSlug(true);
+                    slugControl.change(e.target.value);
+                  }}
                 />
                 {/* スラッグ検証ステータス */}
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -274,8 +299,10 @@ export function CreatePageDialog({
                 </div>
               </div>
             </div>
-            {errors.slug && (
-              <p className="text-sm text-destructive">{errors.slug.message}</p>
+            {fields.slug.errors && (
+              <p id={fields.slug.errorId} className="text-sm text-destructive">
+                {fields.slug.errors.join(", ")}
+              </p>
             )}
             {slugStatus === "unavailable" && slugMessage && (
               <p className="text-sm text-destructive">{slugMessage}</p>
@@ -287,20 +314,32 @@ export function CreatePageDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">説明（オプション）</Label>
+            <Label htmlFor={fields.description.id}>説明（オプション）</Label>
             <Textarea
-              id="description"
+              {...getTextareaProps(fields.description)}
               placeholder="ページの説明"
-              {...register("description")}
-              disabled={isPending}
               rows={2}
+              disabled={isPending}
             />
-            {errors.description && (
-              <p className="text-sm text-destructive">
-                {errors.description.message}
+            {fields.description.errors && (
+              <p
+                id={fields.description.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.description.errors.join(", ")}
               </p>
             )}
           </div>
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
 
           <div className="flex justify-end gap-3">
             <Button
