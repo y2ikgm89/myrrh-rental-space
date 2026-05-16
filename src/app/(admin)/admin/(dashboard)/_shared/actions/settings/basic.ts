@@ -22,17 +22,18 @@ import {
   updateSearchVerification as updateSearchVerificationCommand,
 } from "@/shared/domain/settings/commands";
 
-import {
-  metaSettingsSchema,
-  analyticsSettingsSchema,
-  searchVerificationSchema,
-  type MetaSettingsInput,
-  type AnalyticsSettingsInput,
-  type SearchVerificationInput,
-} from "./schemas";
 import { basicInfoFormSchema } from "./schemas/form-schemas-brand-contact";
 import { layoutFormSchema } from "./schemas/form-schemas-privacy-appearance";
-import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  metaFormSchema,
+  analyticsFormSchema,
+  searchVerificationFormSchema,
+} from "./schemas/form-schemas-seo-analytics";
+import {
+  AnalyticsType,
+  LayoutWidth,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { isValidAnalyticsType } from "@/shared/lib/validations/enums/guards";
 
 function emptyToNull(value: string | undefined): string | null {
   if (value === undefined) return null;
@@ -122,65 +123,105 @@ export async function updateLayoutSettings(
   });
 }
 
+/**
+ * メタ情報設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ */
 export async function updateMetaSettings(
-  data: MetaSettingsInput,
-): Promise<MutationResult> {
-  const parsed = metaSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateMetaSettingsCommand(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.SEO_SETTINGS);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, metaFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await updateMetaSettingsCommand({
+          defaultMetaDescription: emptyToNull(data.defaultMetaDescription),
+          defaultMetaKeywords: emptyToNull(data.defaultMetaKeywords),
+          defaultOgpTitle: emptyToNull(data.defaultOgpTitle),
+          defaultOgpDescription: emptyToNull(data.defaultOgpDescription),
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.SEO_SETTINGS);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
+/**
+ * Analytics 設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ *
+ * analyticsType: フォームでは "none" を含む union (conform 経由) で受け、
+ * domain command 渡し時に "none" → null に変換。
+ */
 export async function updateAnalyticsSettings(
-  data: AnalyticsSettingsInput,
-): Promise<MutationResult> {
-  const parsed = analyticsSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateAnalyticsSettingsCommand(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.ANALYTICS_CONFIG);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, analyticsFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await updateAnalyticsSettingsCommand({
+          analyticsType:
+            data.analyticsType !== "none" &&
+            isValidAnalyticsType(data.analyticsType)
+              ? (data.analyticsType as AnalyticsType)
+              : null,
+          googleAnalyticsId: emptyToNull(data.googleAnalyticsId),
+          googleTagManagerId: emptyToNull(data.googleTagManagerId),
+          gaPropertyId: emptyToNull(data.gaPropertyId),
+          microsoftClarityId: emptyToNull(data.microsoftClarityId),
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.ANALYTICS_CONFIG);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
+/**
+ * 検索エンジン検証設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ */
 export async function updateSearchVerification(
-  data: SearchVerificationInput,
-): Promise<MutationResult> {
-  const parsed = searchVerificationSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateSearchVerificationCommand(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    searchVerificationFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateSearchVerificationCommand({
+            googleSearchConsoleId: emptyToNull(data.googleSearchConsoleId),
+            bingWebmasterToolsId: emptyToNull(data.bingWebmasterToolsId),
+          });
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.SEO_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.SEO_SETTINGS);
-    },
-  });
+  );
 }
