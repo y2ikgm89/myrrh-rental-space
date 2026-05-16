@@ -216,11 +216,11 @@ const [testPending, startTestTransition] = useTransition();
 
 ## 非適用の例外（form 不要 / 構造が大きく異なる場合）
 
-- **CRUD テーブル** (`CustomApiKeysSection` / `ICalFeedSection`) — 1 レコード CRUD ではなく行ごとに編集
+- **CRUD テーブル** (`CustomApiKeysSection` / `ICalFeedSection` / `SidebarSection` — widget CRUD list) — 1 レコード CRUD ではなく行ごとに dialog 編集、`useFormAction` 不使用パターンのため migration 対象外
 - **読み取り専用 UI** (`PermissionsSection`) — form 不要
 - **Lexical エディタ** (`RobotsTxtSection`) — エディタ統合特殊
-- **複雑なネスト配列** (`BusinessHoursSection` — 曜日 × 時間帯) — Phase 1 Task 7 で conform `form.insert/remove` に migration 予定
-- **スペース作成・編集フォーム** (`SpaceEditForm`) — DnD・メディアピッカー・複数 `useFieldArray` 等のため、現在は RHF + `useActionState` + `FormData` hybrid。Phase 1 Task 7 で conform 完全化予定
+- **複雑なネスト配列** (`BusinessHoursSection` — 曜日 × 時間帯) — Phase 1 Task 8 で conform `form.insert/remove` に migration 予定（参照実装: `DiscountSection` PR #84 で 1 次元 `useFieldArray` → `form.insert/remove` の clean break 移行を確立）
+- **スペース作成・編集フォーム** (`SpaceEditForm`) — DnD・メディアピッカー・複数 `useFieldArray` 等のため、現在は RHF + `useActionState` + `FormData` hybrid。Phase 1 Task 8 で conform 完全化予定
 
 ## 禁止事項
 

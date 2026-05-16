@@ -11,7 +11,7 @@ paths:
 
 # 管理画面フォーム・ページ構造パターン (conform canonical)
 
-> Phase 1 Task 4-6 で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン。RHF + `useFormAction` は legacy (Task 8 で削除予定)、新規利用禁止。
+> Phase 1 Task 4-7 で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン (settings sections 17/17 + Dialog 内 form taxonomy managers 完了)。RHF + `useFormAction` は legacy (Task 8 で削除予定)、新規利用禁止。動的配列は `form.insert/remove` (DiscountSection PR #84 が canonical 参照実装)。
 
 > 詳細サブルール（path-scoped auto-load）:
 >
