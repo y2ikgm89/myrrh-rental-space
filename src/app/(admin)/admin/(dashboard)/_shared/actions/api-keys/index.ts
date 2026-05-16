@@ -11,16 +11,15 @@ import {
   testTurnstileConnection,
 } from "@/admin/lib/api-keys";
 import {
-  cloudflareSettingsSchema,
   customApiKeySchema,
   turnstileSettingsSchema,
-  type CloudflareSettingsInput,
   type CustomApiKeyInput,
   type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
 import {
   resendFormSchema,
   googleMapsFormSchema,
+  cloudflareFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -254,23 +253,42 @@ export async function clearGoogleMapsKeys(): Promise<MutationResult> {
   });
 }
 
+/**
+ * Cloudflare 設定更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateCloudflareSettings(
-  input: CloudflareSettingsInput,
-): Promise<MutationResult> {
-  const parsed = cloudflareSettingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateCloudflareSettingsCommand(omitUndefined(parsed.data));
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    cloudflareFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateCloudflareSettingsCommand({
+            cloudflareZoneId: data.cloudflareZoneId
+              ? data.cloudflareZoneId
+              : null,
+            cloudflareApiToken: data.cloudflareApiToken
+              ? data.cloudflareApiToken
+              : null,
+          });
+          return null;
+        },
+        afterSuccess: refreshSettingsCache,
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: refreshSettingsCache,
-  });
+  );
 }
 
 export async function testCloudflareConnectionAction(
