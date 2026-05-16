@@ -12,14 +12,13 @@ import {
 } from "@/admin/lib/api-keys";
 import {
   customApiKeySchema,
-  turnstileSettingsSchema,
   type CustomApiKeyInput,
-  type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
 import {
   resendFormSchema,
   googleMapsFormSchema,
   cloudflareFormSchema,
+  turnstileFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -119,22 +118,37 @@ export async function clearResendKeys(): Promise<MutationResult> {
   });
 }
 
+/**
+ * Turnstile 設定更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateTurnstileSettings(
-  input: TurnstileSettingsInput,
-): Promise<MutationResult> {
-  const parsed = turnstileSettingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateTurnstileSettingsCommand(omitUndefined(parsed.data));
-      return null;
-    },
-    afterSuccess: refreshSettingsCache,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, turnstileFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await updateTurnstileSettingsCommand({
+          turnstileSiteKey: data.turnstileSiteKey
+            ? data.turnstileSiteKey
+            : null,
+          turnstileSecretKey: data.turnstileSecretKey
+            ? data.turnstileSecretKey
+            : null,
+        });
+        return null;
+      },
+      afterSuccess: refreshSettingsCache,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
