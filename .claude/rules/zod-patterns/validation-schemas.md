@@ -28,20 +28,43 @@ export const slugParamSchema = z
 export const idParamSchema = z.string().min(1).max(100);
 ```
 
-## React Hook Form 連携
+## conform 連携 (canonical)
+
+Phase 1 Task 4-6 で確立した conform 1.19 + Zod 4 + Server Action 統合 SSoT。新規 form は本パターン必須:
 
 ```typescript
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+"use client";
+import { useActionState } from "react";
+import { useForm } from "@conform-to/react";
+import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4"; // Zod 4 専用 subpath
+import { postFormSchema } from "@/shared/lib/validations/post";
 
-// フォーム用スキーマ（空文字許可・文字列型）を resolver に渡す
-const form = useForm<PostFormData>({
-  resolver: zodResolver(postFormSchema),
-  defaultValues: { title: "", slug: "" },
-});
+export function PostForm({ defaultValue }: Props) {
+  const [lastResult, action] = useActionState(savePostAction, undefined);
+  const [form, fields] = useForm({
+    id: "post-form",
+    constraint: getZodConstraint(postFormSchema),
+    lastResult,
+    defaultValue,
+    onValidate: ({ formData }) => parseWithZod(formData, { schema: postFormSchema }),
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+  return <form id={form.id} onSubmit={form.onSubmit} action={action}>...</form>;
+}
 ```
 
-**注意**: React Hook Form に渡すスキーマはフォーム用（空文字許可・文字列型）。Server Action 側で改めてサーバー用スキーマで検証する二段構成。
+Server Action 側は `parseWithZod({ formData, schema })` で **同一 schema** を再実行し、client / server の二段検証は不要（schema 1 元化が conform の優位点）。`executeAdminMutationResult` との統合は `executeConformMutation` SSoT helper（`@/shared/lib/forms/conform-action`）経由。
+
+**conform 採用基準**: 全 admin / public 新規 form は本パターン必須。`zodResolver` / `useForm` from `react-hook-form` / `standardSchemaResolver` は **Phase 1 Task 7-8 で削除予定** のため新規利用禁止。残存 RHF 利用 (auto-section-form / LayoutFields / inline editor side panel 等) は Task 7 で順次 conform 化。
+
+### 残存 RHF (Phase 1 Task 7-8 移行対象、新規利用禁止)
+
+```typescript
+// 残存 RHF 編集時の参照のみ — 新規 form では使用しない
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+```
 
 ## Zod 4 新機能
 

@@ -64,7 +64,7 @@ rm -rf .next && bun dev
 | -------------------------------- | --------------------------- | ------------------------ |
 | `comment-panel/CommentPanel.tsx` | `actions/editor-comment.ts` | editor-comment.ts 編集時 |
 
-> Server Action を import する Client Component は他にも多数存在する（`useFormAction` フック経由等）。
+> Server Action を import する Client Component は他にも多数存在する（conform `useActionState(serverAction, undefined)` 経由 / 残存 RHF の `useFormAction` フック経由 / 等）。
 > いずれも同様のエラーが発生し得るが、対処は同じ。
 
 ## 禁止事項

@@ -21,22 +21,37 @@ Dialog 型 CRUD・多選択肢ダイアログ・Radix Dialog の a11y 要件を�
 | リッチエディタ（Lexical）使用           | なし   | あり       |
 | 親エンティティの context 内で完結するか | する   | しない     |
 
-### canonical pattern（`useFormAction` + Radix Dialog controlled）
+### canonical pattern (conform `useActionState` + Radix Dialog controlled)
 
-Radix Dialog の close-after-async-submit 公式パターンを `useFormAction` と組み合わせる:
+Phase 1 Task 4-6 で確立した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる:
 
 ```tsx
-// 1. 共用 Dialog コンポーネント（create/edit mode prop で切替）
+// 1. 共用 Dialog コンポーネント (create/edit mode prop で切替)
+"use client";
+import { useActionState, useEffect } from "react";
+import { useForm } from "@conform-to/react";
+import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
+
 export function FooDialog({ open, onOpenChange, mode, foo }: Props) {
-  const { form, isPending, onSubmit } = useFormAction(
-    fooSchema,
-    (data) => (mode === "create" ? createFoo(data) : updateFoo(foo!.id, data)),
-    {
-      refresh: true, // 成功後 router.refresh()
-      onSuccess: () => onOpenChange(false), // Dialog を閉じる
-      defaultValues: mode === "edit" && foo ? { ...foo } : defaultFooValues,
-    },
-  );
+  const action =
+    mode === "create" ? createFooAction : updateFooAction.bind(null, foo!.id);
+  const [lastResult, formAction] = useActionState(action, undefined);
+
+  const [form, fields] = useForm({
+    id: `foo-${mode}`,
+    constraint: getZodConstraint(fooSchema),
+    lastResult,
+    defaultValue: mode === "edit" && foo ? { ...foo } : defaultFooValues,
+    onValidate: ({ formData }) => parseWithZod(formData, { schema: fooSchema }),
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  // success → dialog close を render 中 derive (set-state-in-effect 違反回避)
+  useEffect(() => {
+    if (lastResult?.initialValue === null) onOpenChange(false);
+  }, [lastResult, onOpenChange]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -45,7 +60,9 @@ export function FooDialog({ open, onOpenChange, mode, foo }: Props) {
           <DialogDescription>...</DialogDescription>
           {/* a11y 必須 */}
         </DialogHeader>
-        <form onSubmit={onSubmit}>...</form>
+        <form id={form.id} onSubmit={form.onSubmit} action={formAction}>
+          ...
+        </form>
       </DialogContent>
     </Dialog>
   );
