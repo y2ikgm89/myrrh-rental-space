@@ -13,14 +13,15 @@ import {
 import {
   cloudflareSettingsSchema,
   customApiKeySchema,
-  googleMapsSettingsSchema,
   turnstileSettingsSchema,
   type CloudflareSettingsInput,
   type CustomApiKeyInput,
-  type GoogleMapsSettingsInput,
   type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
-import { resendFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
+import {
+  resendFormSchema,
+  googleMapsFormSchema,
+} from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -181,23 +182,39 @@ export async function clearTurnstileKeys(): Promise<MutationResult> {
   });
 }
 
+/**
+ * Google Maps 設定更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateGoogleMapsSettings(
-  input: GoogleMapsSettingsInput,
-): Promise<MutationResult> {
-  const parsed = googleMapsSettingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateGoogleMapsSettingsCommand(omitUndefined(parsed.data));
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    googleMapsFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateGoogleMapsSettingsCommand({
+            googleMapsApiKey: data.googleMapsApiKey
+              ? data.googleMapsApiKey
+              : null,
+          });
+          return null;
+        },
+        afterSuccess: refreshSettingsCache,
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: refreshSettingsCache,
-  });
+  );
 }
 
 export async function testGoogleMapsConnectionAction(
