@@ -1,18 +1,24 @@
 "use client";
 
 /**
- * CategoryManager - カテゴリ管理コンポーネント
+ * CategoryManager — カテゴリ管理コンポーネント (Phase 1 Task 7 conform 移行)
  *
- * @description nuqs対応、検索機能付き、D&D並べ替え対応
+ * @description nuqs対応、検索機能付き、D&D並べ替え対応。
+ * Dialog 内 form は conform `useActionState` + `useForm` (Variant A:
+ * Dialog 開閉は親で管理、form は Dialog 内で独立 mount)。
  */
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { z } from "zod";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { IconX, IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
+import {
+  getFormProps,
+  getInputProps,
+  getTextareaProps,
+  useForm,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
   Card,
@@ -52,36 +58,16 @@ import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
-  createPostCategory,
-  updatePostCategory,
+  createPostCategoryAction,
+  updatePostCategoryAction,
   deletePostCategory,
   updatePostCategoryOrder,
 } from "@/admin/actions/post/taxonomy";
+import { categoryFormSchema } from "./taxonomy-schema";
 import type { PostCategoryData } from "@/shared/domain/posts/types";
-import type { PostCategoryInput } from "@/admin/lib/validations/post";
 import { cn } from "@/shared/lib/cn";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { useCategoryFilters } from "../_hooks/use-taxonomy-filters";
-
-// =============================================================================
-// Types & Schemas
-// =============================================================================
-
-const categoryFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, { error: "カテゴリ名は必須です" })
-    .max(50, { error: "カテゴリ名は50文字以内" }),
-  slug: z
-    .string()
-    .min(1, { error: "スラッグは必須です" })
-    .max(50)
-    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
-  description: z.string().max(200).optional(),
-  order: z.number().int().min(0),
-});
-
-type CategoryFormData = z.infer<typeof categoryFormSchema>;
 
 async function fetchPostCategories(): Promise<PostCategoryData[]> {
   return fetchAdminJson("/admin/api/post-categories");
@@ -92,10 +78,10 @@ async function fetchPostCategories(): Promise<PostCategoryData[]> {
 // =============================================================================
 
 type SortableCategoryRowProps = {
-  category: PostCategoryData;
-  onEdit: (category: PostCategoryData) => void;
-  onDelete: (id: string) => void;
-  isPending: boolean;
+  readonly category: PostCategoryData;
+  readonly onEdit: (category: PostCategoryData) => void;
+  readonly onDelete: (id: string) => void;
+  readonly isPending: boolean;
 };
 
 function SortableCategoryRow({
@@ -181,11 +167,191 @@ function SortableCategoryRow({
 }
 
 // =============================================================================
+// Category Form Dialog (Create / Edit)
+// =============================================================================
+
+type CategoryFormDialogProps = {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly editingCategory: PostCategoryData | null;
+  readonly defaultOrder: number;
+  readonly onSuccess: () => Promise<void>;
+};
+
+function CategoryFormDialog({
+  open,
+  onOpenChange,
+  editingCategory,
+  defaultOrder,
+  onSuccess,
+}: CategoryFormDialogProps) {
+  const isEdit = editingCategory !== null;
+  // bind editingCategory.id for update; create action takes (prev, formData) directly
+  const boundAction = isEdit
+    ? updatePostCategoryAction.bind(null, editingCategory.id)
+    : createPostCategoryAction;
+
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
+  );
+
+  const [form, fields] = useForm({
+    id: isEdit ? `category-edit-${editingCategory.id}` : "category-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: categoryFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      name: editingCategory?.name ?? "",
+      slug: editingCategory?.slug ?? "",
+      description: editingCategory?.description ?? "",
+      order: String(editingCategory?.order ?? defaultOrder),
+    },
+  });
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success(
+        isEdit ? "カテゴリを更新しました" : "カテゴリを作成しました",
+      );
+      onOpenChange(false);
+      void onSuccess();
+    }
+  }, [lastResult, isEdit, onOpenChange, onSuccess]);
+
+  // 名前 → スラッグ自動生成（uncontrolled input の current value から計算）
+  const handleGenerateSlug = () => {
+    const nameInput = document.getElementById(
+      fields.name.id,
+    ) as HTMLInputElement | null;
+    const slugInput = document.getElementById(
+      fields.slug.id,
+    ) as HTMLInputElement | null;
+    if (!nameInput || !slugInput) return;
+    const name = nameInput.value;
+    if (!name) return;
+    const slug = name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50);
+    slugInput.value = slug;
+    slugInput.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form {...getFormProps(form)} action={action}>
+          <DialogHeader>
+            <DialogTitle>
+              {isEdit ? "カテゴリー編集" : "カテゴリー作成"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor={fields.name.id}>カテゴリー名</Label>
+              <Input
+                {...getInputProps(fields.name, { type: "text" })}
+                placeholder="カテゴリー名"
+                disabled={isPending}
+              />
+              {fields.name.errors && (
+                <p
+                  id={fields.name.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.name.errors.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={fields.slug.id}>スラッグ</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleGenerateSlug}
+                  disabled={isPending}
+                >
+                  名前から生成
+                </Button>
+              </div>
+              <Input
+                {...getInputProps(fields.slug, { type: "text" })}
+                placeholder="category-slug"
+                disabled={isPending}
+              />
+              {fields.slug.errors && (
+                <p
+                  id={fields.slug.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.slug.errors.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={fields.description.id}>説明</Label>
+              <Textarea
+                {...getTextareaProps(fields.description)}
+                placeholder="カテゴリーの説明"
+                rows={2}
+                disabled={isPending}
+              />
+              {fields.description.errors && (
+                <p
+                  id={fields.description.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.description.errors.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <input
+              type="hidden"
+              name={fields.order.name}
+              value={String(editingCategory?.order ?? defaultOrder)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              キャンセル
+            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={isEdit ? "更新" : "作成"}
+              pendingLabel={isEdit ? "更新中..." : "作成中..."}
+            />
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
 type CategoryManagerProps = {
-  initialCategories: PostCategoryData[];
+  readonly initialCategories: PostCategoryData[];
 };
 
 export function CategoryManager({ initialCategories }: CategoryManagerProps) {
@@ -206,7 +372,6 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   // Filtered Categories
   const filteredCategories = (() => {
     if (!filterParams.search) return categories;
-
     const searchLower = filterParams.search.toLowerCase();
     return categories.filter(
       (cat) =>
@@ -225,70 +390,20 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     }),
   );
 
-  // Form
-  const form = useForm<CategoryFormData, unknown, CategoryFormData>({
-    resolver: standardSchemaResolver(categoryFormSchema),
-    defaultValues: { name: "", slug: "", description: "", order: 0 },
-  });
-
   const openCreateDialog = () => {
     setEditingCategory(null);
-    form.reset({
-      name: "",
-      slug: "",
-      description: "",
-      order: categories.length,
-    });
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (category: PostCategoryData) => {
     setEditingCategory(category);
-    form.reset({
-      name: category.name,
-      slug: category.slug,
-      description: category.description ?? "",
-      order: category.order,
-    });
     setIsDialogOpen(true);
   };
 
-  const onSubmit = (data: CategoryFormData) => {
-    startTransition(async () => {
-      const payload: PostCategoryInput = {
-        name: data.name,
-        slug: data.slug,
-        description: data.description || null,
-        order: data.order,
-      };
-
-      if (editingCategory) {
-        const result = await updatePostCategory(editingCategory.id, payload);
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-
-        toast.success("カテゴリを更新しました");
-        const newCategories = await fetchPostCategories();
-        startTransition(() => {
-          setIsDialogOpen(false);
-          setCategories(newCategories);
-        });
-      } else {
-        const result = await createPostCategory(payload);
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-
-        toast.success("カテゴリを作成しました");
-        const newCategories = await fetchPostCategories();
-        startTransition(() => {
-          setIsDialogOpen(false);
-          setCategories(newCategories);
-        });
-      }
+  const refreshCategories = async () => {
+    const newCategories = await fetchPostCategories();
+    startTransition(() => {
+      setCategories(newCategories);
     });
   };
 
@@ -299,12 +414,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         toast.error(result.error);
         return;
       }
-
       toast.success("カテゴリを削除しました");
-      const newCategories = await fetchPostCategories();
-      startTransition(() => {
-        setCategories(newCategories);
-      });
+      await refreshCategories();
     });
   };
 
@@ -329,28 +440,9 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       const result = await updatePostCategoryOrder(updates);
       if (isMutationError(result)) {
         toast.error(result.error);
-        const newCategories = await fetchPostCategories();
-        startTransition(() => {
-          setCategories(newCategories);
-        });
+        await refreshCategories();
       }
     });
-  };
-
-  const generateSlug = () => {
-    const name = form.getValues("name");
-    if (name) {
-      const slug = name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 50);
-      form.setValue("slug", slug);
-    }
   };
 
   const hasFilters = filterParams.search !== "";
@@ -377,7 +469,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
             </div>
             {hasFilters && (
               <Button variant="ghost" size="sm" onClick={resetFilters}>
-                <IconX className="mr-1 h-4 w-4" />
+                <IconX className="mr-1 h-4 w-4" aria-hidden="true" />
                 リセット
               </Button>
             )}
@@ -443,86 +535,16 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         </CardContent>
       </Card>
 
-      {/* カテゴリ作成/編集ダイアログ */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>
-                {editingCategory ? "カテゴリー編集" : "カテゴリー作成"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="category-name">カテゴリー名</Label>
-                <Input
-                  id="category-name"
-                  {...form.register("name")}
-                  placeholder="カテゴリー名"
-                  disabled={isPending}
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="category-slug">スラッグ</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={generateSlug}
-                    disabled={isPending}
-                  >
-                    名前から生成
-                  </Button>
-                </div>
-                <Input
-                  id="category-slug"
-                  {...form.register("slug")}
-                  placeholder="category-slug"
-                  disabled={isPending}
-                />
-                {form.formState.errors.slug && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.slug.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category-description">説明</Label>
-                <Textarea
-                  id="category-description"
-                  {...form.register("description")}
-                  placeholder="カテゴリーの説明"
-                  rows={2}
-                  disabled={isPending}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                disabled={isPending}
-              >
-                キャンセル
-              </Button>
-              <SubmitButton
-                isPending={isPending}
-                label={editingCategory ? "更新" : "作成"}
-                pendingLabel={editingCategory ? "更新中..." : "作成中..."}
-              />
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* カテゴリ作成/編集ダイアログ — 開いている時のみ mount で defaultValue を確実に反映 */}
+      {isDialogOpen && (
+        <CategoryFormDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          editingCategory={editingCategory}
+          defaultOrder={categories.length}
+          onSuccess={refreshCategories}
+        />
+      )}
     </>
   );
 }

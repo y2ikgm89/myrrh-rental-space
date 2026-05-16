@@ -208,13 +208,82 @@ export async function deletePostTag(id: string): Promise<MutationResult> {
 }
 
 // =============================================================================
-// Conform `useActionState` 用 Server Actions (Phase 1 Task 6)
+// Conform `useActionState` 用 Server Actions (Phase 1 Task 6-7)
 //
-// TaxonomyEditor (post categories / tags edit page) を conform に移行するための
-// 新 signature `(prev, formData) => SubmissionResult`。CategoryManager /
-// TagManager dialog form (RHF) はそのまま legacy `(input)` を使用し、Phase 1
-// Task 7 で順次 conform 化する。
+// `(prev, formData) => SubmissionResult` signature。TaxonomyEditor (edit page)
+// と CategoryManager / TagManager (dialog form) の両方で利用される。
 // =============================================================================
+
+/**
+ * カテゴリ作成 — conform `useActionState` 統合経路 (Phase 1 Task 7)。
+ *
+ * CategoryManager dialog form 用。dialog では SEO フィールド (metaTitle 等) は
+ * 入力されないため optional 扱い、null 化して domain command に渡す。
+ */
+export async function createPostCategoryAction(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, categoryFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "post",
+      action: "create",
+      execute: async () =>
+        categoryCommands.createPostCategory({
+          name: data.name,
+          slug: data.slug,
+          description: data.description ? data.description : null,
+          order: data.order,
+          metaTitle: data.metaTitle ? data.metaTitle : null,
+          metaDescription: data.metaDescription ? data.metaDescription : null,
+          ogpImageUrl: data.ogpImageUrl ? data.ogpImageUrl : null,
+        }),
+      afterSuccess: async () => {
+        await invalidatePostCategoryCaches();
+        await purgePostArchive();
+      },
+      resolveAuditResourceId: (result) => result.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
+}
+
+/**
+ * タグ作成 — conform `useActionState` 統合経路 (Phase 1 Task 7)。
+ *
+ * TagManager dialog form 用。
+ */
+export async function createPostTagAction(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, tagFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "post",
+      action: "create",
+      execute: async () =>
+        tagCommands.createPostTag({
+          name: data.name,
+          slug: data.slug,
+          description: data.description ? data.description : null,
+          metaTitle: data.metaTitle ? data.metaTitle : null,
+          metaDescription: data.metaDescription ? data.metaDescription : null,
+          ogpImageUrl: data.ogpImageUrl ? data.ogpImageUrl : null,
+        }),
+      afterSuccess: async () => {
+        await invalidatePostTagCaches();
+      },
+      resolveAuditResourceId: (result) => result.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
+}
 
 export async function updatePostCategoryAction(
   categoryId: string,
