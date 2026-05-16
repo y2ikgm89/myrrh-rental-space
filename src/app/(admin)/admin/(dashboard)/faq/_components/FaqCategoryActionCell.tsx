@@ -64,7 +64,6 @@ export function FaqCategoryActionCell({
       <FaqCategoryDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        mode="edit"
         category={category}
       />
       <DeleteConfirmDialog

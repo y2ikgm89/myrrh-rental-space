@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -26,19 +27,18 @@ import {
   updateFaqItemPublished as updateFaqItemPublishedCommand,
 } from "@/shared/domain/faq/item-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeFaqCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { omitUndefined } from "@/shared/lib/serialize";
 import {
   bulkFaqItemIdsSchema,
   bulkMoveFaqItemsSchema,
   faqCategoryFormSchema,
   faqItemFormSchema,
-  type FaqCategoryFormInput,
-  type FaqItemFormInput,
 } from "@/admin/lib/validations/faq";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
@@ -61,55 +61,79 @@ function purgeFaqCaches(): void {
 }
 
 export async function createFaqCategory(
-  data: FaqCategoryFormInput,
-): Promise<MutationResult<{ id: string }>> {
-  const parsed = faqCategoryFormSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "faq",
-    action: "create",
-    execute: async () => createFaqCategoryCommand(omitUndefined(parsed.data)),
-    afterSuccess: () => {
-      invalidateFaqCaches();
-      purgeFaqCaches();
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    faqCategoryFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "faq",
+        action: "create",
+        execute: async () =>
+          createFaqCategoryCommand({
+            name: data.name,
+            slug: data.slug,
+            description: data.description ? data.description : null,
+            iconEmoji: data.iconEmoji ? data.iconEmoji : null,
+            order: data.order,
+            isActive: data.isActive,
+          }),
+        afterSuccess: () => {
+          invalidateFaqCaches();
+          purgeFaqCaches();
+        },
+        resolveAuditResourceId: (created) => created.id,
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    resolveAuditResourceId: (result) => result.id,
-  });
+  );
 }
 
 export async function updateFaqCategory(
-  id: string,
-  data: FaqCategoryFormInput,
-): Promise<MutationResult> {
-  const validatedId = idSchema.safeParse(id);
-  if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
-  }
+  categoryId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    faqCategoryFormSchema,
+    async (data) => {
+      const idValid = idSchema.safeParse(categoryId);
+      if (!idValid.success) {
+        return { ok: false, error: "カテゴリIDが不正です" };
+      }
 
-  const parsed = faqCategoryFormSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "faq",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async () => {
-      await updateFaqCategoryCommand(
-        validatedId.data,
-        omitUndefined(parsed.data),
-      );
-      return null;
+      const result = await executeAdminMutationResult({
+        resource: "faq",
+        action: "update",
+        resourceId: idValid.data,
+        execute: async () => {
+          await updateFaqCategoryCommand(idValid.data, {
+            name: data.name,
+            slug: data.slug,
+            description: data.description ? data.description : null,
+            iconEmoji: data.iconEmoji ? data.iconEmoji : null,
+            order: data.order,
+            isActive: data.isActive,
+          });
+          return null;
+        },
+        afterSuccess: () => {
+          invalidateFaqCaches();
+          purgeFaqCaches();
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      invalidateFaqCaches();
-      purgeFaqCaches();
-    },
-  });
+  );
 }
 
 export async function deleteFaqCategory(id: string): Promise<MutationResult> {
@@ -156,51 +180,68 @@ export async function reorderFaqCategories(
 }
 
 export async function createFaqItem(
-  data: FaqItemFormInput,
-): Promise<MutationResult<{ id: string }>> {
-  const parsed = faqItemFormSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "faq",
-    action: "create",
-    execute: async () => createFaqItemCommand(omitUndefined(parsed.data)),
-    afterSuccess: () => {
-      invalidateFaqCaches();
-      purgeFaqCaches();
-    },
-    resolveAuditResourceId: (result) => result.id,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, faqItemFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "faq",
+      action: "create",
+      execute: async () =>
+        createFaqItemCommand({
+          categoryId: data.categoryId,
+          question: data.question,
+          answer: data.answer,
+          order: data.order,
+          isPublished: data.isPublished,
+        }),
+      afterSuccess: () => {
+        invalidateFaqCaches();
+        purgeFaqCaches();
+      },
+      resolveAuditResourceId: (created) => created.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
 export async function updateFaqItem(
-  id: string,
-  data: FaqItemFormInput,
-): Promise<MutationResult> {
-  const validatedId = idSchema.safeParse(id);
-  if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
-  }
+  itemId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, faqItemFormSchema, async (data) => {
+    const idValid = idSchema.safeParse(itemId);
+    if (!idValid.success) {
+      return { ok: false, error: "FAQ項目IDが不正です" };
+    }
 
-  const parsed = faqItemFormSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "faq",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async () => {
-      await updateFaqItemCommand(validatedId.data, omitUndefined(parsed.data));
-      return null;
-    },
-    afterSuccess: () => {
-      invalidateFaqCaches();
-      purgeFaqCaches();
-    },
+    const result = await executeAdminMutationResult({
+      resource: "faq",
+      action: "update",
+      resourceId: idValid.data,
+      execute: async () => {
+        await updateFaqItemCommand(idValid.data, {
+          categoryId: data.categoryId,
+          question: data.question,
+          answer: data.answer,
+          order: data.order,
+          isPublished: data.isPublished,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        invalidateFaqCaches();
+        purgeFaqCaches();
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 

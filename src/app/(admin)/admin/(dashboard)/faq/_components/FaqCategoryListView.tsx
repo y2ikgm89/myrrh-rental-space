@@ -59,11 +59,7 @@ export function FaqCategoryListView({ categories }: FaqCategoryListViewProps) {
         onCreate={() => setCreateOpen(true)}
       />
 
-      <FaqCategoryDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        mode="create"
-      />
+      <FaqCategoryDialog open={createOpen} onOpenChange={setCreateOpen} />
     </>
   );
 }

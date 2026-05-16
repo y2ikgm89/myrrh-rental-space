@@ -1,7 +1,12 @@
 /**
  * FAQ Validation Schemas
  *
- * FaqCategory と FaqItem の Zod バリデーションスキーマ
+ * FaqCategory と FaqItem の Zod バリデーションスキーマ。
+ * `@conform-to/zod/v4` の `parseWithZod` は `z.number()` / `z.boolean()` に対し
+ * FormData 文字列を自動 coerce する（"on"→true / ""→false / "5"→5）ため、
+ * schema 側で `.coerce.*` を使う必要はない（使うと input 型が `unknown` 化して
+ * `useInputControl` の `Value extends string` 制約に違反する）。
+ * - nullable 文字列は空文字許容（"" → null 変換は Server Action executor で実施）
  */
 
 import { z } from "zod";
@@ -32,20 +37,11 @@ export const faqCategoryFormSchema = z.object({
     .max(8, { error: "アイコンは1文字の絵文字を入力してください" })
     .nullable()
     .optional(),
-  order: z.number().int().min(0),
-  isActive: z.boolean(),
+  order: z.number().int().min(0).default(0),
+  isActive: z.boolean().default(false),
 });
 
 export type FaqCategoryFormInput = z.infer<typeof faqCategoryFormSchema>;
-
-export const defaultFaqCategoryFormValues: FaqCategoryFormInput = {
-  name: "",
-  slug: "",
-  description: null,
-  iconEmoji: null,
-  order: 0,
-  isActive: true,
-};
 
 // ============================================================================
 // Bulk operations schemas
@@ -79,16 +75,8 @@ export const faqItemFormSchema = z.object({
     .string()
     .min(1, { error: "回答を入力してください" })
     .max(5000, { error: "回答は5000文字以内で入力してください" }),
-  order: z.number().int().min(0),
-  isPublished: z.boolean(),
+  order: z.number().int().min(0).default(0),
+  isPublished: z.boolean().default(false),
 });
 
 export type FaqItemFormInput = z.infer<typeof faqItemFormSchema>;
-
-export const defaultFaqItemFormValues: FaqItemFormInput = {
-  categoryId: "",
-  question: "",
-  answer: "",
-  order: 0,
-  isPublished: true,
-};

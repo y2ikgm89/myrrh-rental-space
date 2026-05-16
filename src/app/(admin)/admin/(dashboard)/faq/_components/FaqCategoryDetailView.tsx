@@ -113,7 +113,6 @@ export function FaqCategoryDetailView({
       <FaqItemDialog
         open={itemDialogOpen}
         onOpenChange={setItemDialogOpen}
-        mode={editingItem ? "edit" : "create"}
         categoryId={category.id}
         {...(editingItem && { item: editingItem })}
       />
@@ -121,7 +120,6 @@ export function FaqCategoryDetailView({
       <FaqCategoryDialog
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
-        mode="edit"
         category={category}
       />
     </>
