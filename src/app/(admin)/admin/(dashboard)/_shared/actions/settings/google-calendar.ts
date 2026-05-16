@@ -46,11 +46,12 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 
 import {
   googleCalendarConnectionTestSchema,
-  twoWaySyncSettingsSchema,
   type GoogleCalendarConnectionTestInput,
-  type TwoWaySyncSettingsInput,
 } from "./schemas";
-import { googleCalendarFormSchema } from "./schemas/form-schemas-security-integrations";
+import {
+  googleCalendarFormSchema,
+  twoWaySyncFormSchema,
+} from "./schemas/form-schemas-security-integrations";
 
 function invalidateCalendarSyncCache(): void {
   updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
@@ -206,25 +207,36 @@ export async function disconnectGoogleCalendarOAuth(): Promise<MutationResult> {
   });
 }
 
+/**
+ * 双方向同期設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ *
+ * `useFormAction` (RHF) から `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateTwoWaySyncSettings(
-  data: TwoWaySyncSettingsInput,
-): Promise<MutationResult> {
-  const parsed = twoWaySyncSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateTwoWaySyncSettingsCommand(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    twoWaySyncFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateTwoWaySyncSettingsCommand(data);
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
-  });
+  );
 }
 
 export async function setupCalendarWebhook(): Promise<
