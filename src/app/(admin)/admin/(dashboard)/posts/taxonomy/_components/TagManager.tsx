@@ -1,18 +1,19 @@
 "use client";
 
 /**
- * TagManager - タグ管理コンポーネント
+ * TagManager — タグ管理コンポーネント (Phase 1 Task 7 conform 移行)
  *
- * @description nuqs対応、検索・ソート・フィルター機能付き
+ * @description nuqs対応、検索・ソート・フィルター機能付き。
+ * Dialog 内 form は conform `useActionState` + `useForm` (Variant A:
+ * Dialog 開閉は親で管理、form は Dialog 内で独立 mount)。
  */
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { z } from "zod";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { IconX, IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
   Card,
@@ -39,36 +40,15 @@ import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { SortableTableHead } from "@/admin/components/SortableTableHead";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
-  createPostTag,
-  updatePostTag,
+  createPostTagAction,
+  updatePostTagAction,
   deletePostTag,
 } from "@/admin/actions/post/taxonomy";
+import { tagFormSchema } from "./taxonomy-schema";
 import type { PostTagData } from "@/shared/domain/posts/types";
-import type { PostTagInput } from "@/admin/lib/validations/post";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { useTagFilters } from "../_hooks/use-taxonomy-filters";
 import type { PostTaxonomySortField } from "@/shared/lib/nuqs";
-
-// =============================================================================
-// Types & Schemas
-// =============================================================================
-
-type TagFormData = {
-  name: string;
-  slug: string;
-};
-
-const tagFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, { error: "タグ名は必須です" })
-    .max(50, { error: "タグ名は50文字以内" }),
-  slug: z
-    .string()
-    .min(1, { error: "スラッグは必須です" })
-    .max(50)
-    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
-}) satisfies z.ZodType<TagFormData>;
 
 async function fetchPostTags(): Promise<PostTagData[]> {
   return fetchAdminJson("/admin/api/post-tags");
@@ -79,10 +59,10 @@ async function fetchPostTags(): Promise<PostTagData[]> {
 // =============================================================================
 
 type TagRowProps = {
-  tag: PostTagData;
-  onEdit: (tag: PostTagData) => void;
-  onDelete: (id: string) => void;
-  isPending: boolean;
+  readonly tag: PostTagData;
+  readonly onEdit: (tag: PostTagData) => void;
+  readonly onDelete: (id: string) => void;
+  readonly isPending: boolean;
 };
 
 function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
@@ -118,7 +98,7 @@ function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
             aria-label={`${tag.name}タグのSEO設定`}
           >
             <Link href={`/admin/posts/tags/${tag.id}`}>
-              <IconSettings className="h-4 w-4" />
+              <IconSettings className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
           <Button
@@ -147,11 +127,157 @@ function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
 }
 
 // =============================================================================
+// Tag Form Dialog (Create / Edit)
+// =============================================================================
+
+type TagFormDialogProps = {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly editingTag: PostTagData | null;
+  readonly onSuccess: () => Promise<void>;
+};
+
+function TagFormDialog({
+  open,
+  onOpenChange,
+  editingTag,
+  onSuccess,
+}: TagFormDialogProps) {
+  const isEdit = editingTag !== null;
+  const boundAction = isEdit
+    ? updatePostTagAction.bind(null, editingTag.id)
+    : createPostTagAction;
+
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
+  );
+
+  const [form, fields] = useForm({
+    id: isEdit ? `tag-edit-${editingTag.id}` : "tag-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: tagFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      name: editingTag?.name ?? "",
+      slug: editingTag?.slug ?? "",
+    },
+  });
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success(isEdit ? "タグを更新しました" : "タグを作成しました");
+      onOpenChange(false);
+      void onSuccess();
+    }
+  }, [lastResult, isEdit, onOpenChange, onSuccess]);
+
+  const handleGenerateSlug = () => {
+    const nameInput = document.getElementById(
+      fields.name.id,
+    ) as HTMLInputElement | null;
+    const slugInput = document.getElementById(
+      fields.slug.id,
+    ) as HTMLInputElement | null;
+    if (!nameInput || !slugInput) return;
+    const name = nameInput.value;
+    if (!name) return;
+    const slug = name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50);
+    slugInput.value = slug;
+    slugInput.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form {...getFormProps(form)} action={action}>
+          <DialogHeader>
+            <DialogTitle>{isEdit ? "タグ編集" : "タグ作成"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor={fields.name.id}>タグ名</Label>
+              <Input
+                {...getInputProps(fields.name, { type: "text" })}
+                placeholder="タグ名"
+                disabled={isPending}
+              />
+              {fields.name.errors && (
+                <p
+                  id={fields.name.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.name.errors.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={fields.slug.id}>スラッグ</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleGenerateSlug}
+                  disabled={isPending}
+                >
+                  名前から生成
+                </Button>
+              </div>
+              <Input
+                {...getInputProps(fields.slug, { type: "text" })}
+                placeholder="tag-slug"
+                disabled={isPending}
+              />
+              {fields.slug.errors && (
+                <p
+                  id={fields.slug.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.slug.errors.join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              キャンセル
+            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={isEdit ? "更新" : "作成"}
+              pendingLabel={isEdit ? "更新中..." : "作成中..."}
+            />
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
 type TagManagerProps = {
-  initialTags: PostTagData[];
+  readonly initialTags: PostTagData[];
 };
 
 export function TagManager({ initialTags }: TagManagerProps) {
@@ -173,7 +299,6 @@ export function TagManager({ initialTags }: TagManagerProps) {
   const filteredTags = (() => {
     let result = [...tags];
 
-    // Search filter
     if (filterParams.search) {
       const searchLower = filterParams.search.toLowerCase();
       result = result.filter(
@@ -183,12 +308,10 @@ export function TagManager({ initialTags }: TagManagerProps) {
       );
     }
 
-    // Unused only filter
     if (filterParams.unusedOnly) {
       result = result.filter((tag) => tag._count.posts === 0);
     }
 
-    // Sort
     result.sort((a, b) => {
       let comparison = 0;
       switch (filterParams.sortBy) {
@@ -209,56 +332,20 @@ export function TagManager({ initialTags }: TagManagerProps) {
     return result;
   })();
 
-  // Form
-  const form = useForm<TagFormData>({
-    resolver: standardSchemaResolver(tagFormSchema),
-    defaultValues: { name: "", slug: "" },
-  });
-
   const openCreateDialog = () => {
     setEditingTag(null);
-    form.reset({ name: "", slug: "" });
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (tag: PostTagData) => {
     setEditingTag(tag);
-    form.reset({ name: tag.name, slug: tag.slug });
     setIsDialogOpen(true);
   };
 
-  const onSubmit = (data: TagFormData) => {
-    startTransition(async () => {
-      const payload: PostTagInput = { name: data.name, slug: data.slug };
-
-      if (editingTag) {
-        const result = await updatePostTag(editingTag.id, payload);
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-
-        toast.success("タグを更新しました");
-        const newTags = await fetchPostTags();
-        startTransition(() => {
-          setIsDialogOpen(false);
-          setTags(newTags);
-        });
-        return;
-      }
-
-      const result = await createPostTag(payload);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("タグを作成しました");
-      const newTags = await fetchPostTags();
-      startTransition(() => {
-        setIsDialogOpen(false);
-        setTags(newTags);
-      });
+  const refreshTags = async () => {
+    const newTags = await fetchPostTags();
+    startTransition(() => {
+      setTags(newTags);
     });
   };
 
@@ -269,29 +356,9 @@ export function TagManager({ initialTags }: TagManagerProps) {
         toast.error(result.error);
         return;
       }
-
       toast.success("タグを削除しました");
-      const newTags = await fetchPostTags();
-      startTransition(() => {
-        setTags(newTags);
-      });
+      await refreshTags();
     });
-  };
-
-  const generateSlug = () => {
-    const name = form.getValues("name");
-    if (name) {
-      const slug = name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 50);
-      form.setValue("slug", slug);
-    }
   };
 
   const hasFilters =
@@ -310,7 +377,6 @@ export function TagManager({ initialTags }: TagManagerProps) {
         <CardContent className="space-y-4">
           {/* フィルター */}
           <div className="flex flex-wrap items-center gap-4">
-            {/* 検索 */}
             <div className="flex-1 min-w-[200px]">
               <Input
                 type="search"
@@ -322,7 +388,6 @@ export function TagManager({ initialTags }: TagManagerProps) {
               />
             </div>
 
-            {/* 未使用のみ */}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="unused-only"
@@ -334,23 +399,20 @@ export function TagManager({ initialTags }: TagManagerProps) {
               </Label>
             </div>
 
-            {/* リセット */}
             {hasFilters && (
               <Button variant="ghost" size="sm" onClick={resetFilters}>
-                <IconX className="mr-1 h-4 w-4" />
+                <IconX className="mr-1 h-4 w-4" aria-hidden="true" />
                 リセット
               </Button>
             )}
           </div>
 
-          {/* 結果件数 */}
           <div className="text-sm text-muted-foreground">
             {filteredTags.length === tags.length
               ? `${tags.length}件のタグ`
               : `${filteredTags.length}件 / ${tags.length}件のタグ`}
           </div>
 
-          {/* テーブル */}
           {tags.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               タグがありません
@@ -409,73 +471,15 @@ export function TagManager({ initialTags }: TagManagerProps) {
         </CardContent>
       </Card>
 
-      {/* タグ作成/編集ダイアログ */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>{editingTag ? "タグ編集" : "タグ作成"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="tag-name">タグ名</Label>
-                <Input
-                  id="tag-name"
-                  {...form.register("name")}
-                  placeholder="タグ名"
-                  disabled={isPending}
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="tag-slug">スラッグ</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={generateSlug}
-                    disabled={isPending}
-                  >
-                    名前から生成
-                  </Button>
-                </div>
-                <Input
-                  id="tag-slug"
-                  {...form.register("slug")}
-                  placeholder="tag-slug"
-                  disabled={isPending}
-                />
-                {form.formState.errors.slug && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.slug.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                disabled={isPending}
-              >
-                キャンセル
-              </Button>
-              <SubmitButton
-                isPending={isPending}
-                label={editingTag ? "更新" : "作成"}
-                pendingLabel={editingTag ? "更新中..." : "作成中..."}
-              />
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* タグ作成/編集ダイアログ — 開いている時のみ mount で defaultValue を確実に反映 */}
+      {isDialogOpen && (
+        <TagFormDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          editingTag={editingTag}
+          onSuccess={refreshTags}
+        />
+      )}
     </>
   );
 }
