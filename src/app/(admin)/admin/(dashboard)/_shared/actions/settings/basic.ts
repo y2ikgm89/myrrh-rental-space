@@ -23,16 +23,16 @@ import {
 } from "@/shared/domain/settings/commands";
 
 import {
-  layoutSettingsSchema,
   metaSettingsSchema,
   analyticsSettingsSchema,
   searchVerificationSchema,
-  type LayoutSettingsInput,
   type MetaSettingsInput,
   type AnalyticsSettingsInput,
   type SearchVerificationInput,
 } from "./schemas";
 import { basicInfoFormSchema } from "./schemas/form-schemas-brand-contact";
+import { layoutFormSchema } from "./schemas/form-schemas-privacy-appearance";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 function emptyToNull(value: string | undefined): string | null {
   if (value === undefined) return null;
@@ -80,24 +80,45 @@ export async function updateBasicInfo(
   });
 }
 
+/**
+ * レイアウト設定更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ * containerWidth / contentWidth は LayoutWidth enum、custom 値は
+ * string で受け取り CUSTOM の場合のみ parseInt して domain に渡す。
+ */
 export async function updateLayoutSettings(
-  data: LayoutSettingsInput,
-): Promise<MutationResult> {
-  const parsed = layoutSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateLayoutSettingsCommand(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, layoutFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await updateLayoutSettingsCommand({
+          containerWidth: data.containerWidth,
+          containerWidthCustom:
+            data.containerWidth === LayoutWidth.CUSTOM
+              ? parseInt(data.containerWidthCustom, 10) || null
+              : null,
+          contentWidth: data.contentWidth,
+          contentWidthCustom:
+            data.contentWidth === LayoutWidth.CUSTOM
+              ? parseInt(data.contentWidthCustom, 10) || null
+              : null,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
