@@ -9,13 +9,14 @@ paths:
 
 # FormData / MutationResult / 公開データ / redirect cast
 
-> 複雑管理フォームの `useActionState` + `FormData` codec / `isMutationError` 判定 / `'use cache'` + `safeFetch` + `toPlainObject` 公開取得 / Server Action `redirect()` の `typedRoutes` cast。
+> conform `useActionState` + `parseWithZod` canonical / 複雑フォームの FormData codec (Task 7 移行中) / `isMutationError` 判定 / `'use cache'` + `safeFetch` + `toPlainObject` 公開取得 / Server Action `redirect()` の `typedRoutes` cast。
 
-## 複雑な管理フォームと `FormData`（`useActionState`）
+## 管理フォームの canonical (conform)
 
-- **既定**: クライアントは `useFormAction` 経由でオブジェクトを渡し、Server Action が `zod.safeParse` してから `executeAdminMutationResult` する。
-- **例外**（DnD・`useFieldArray`・メディアピッカー等）: `.claude/rules/frontend/admin-ui-patterns.md` の「useFormAction 非適用の例外」に従う。クライアントで検証済みペイロードを **`FormData`** に載せ、**`useActionState(fn, initialState)`** の `fn(prev, formData)` で受け取り、共有コーデックでオブジェクト化して **同一の Zod スキーマでサーバー再検証**したうえで、既存の `createX` / `updateX`（`executeAdminMutationResult`）を呼ぶ。
-- **参照実装**: `submitSpaceFormAction`（`@/admin/actions/space-form-submit`）、`space-form-data-codec.ts`、`SpaceEditForm.tsx`。
+- **canonical** (Phase 1 Task 4-6 で確立): React 19 `useActionState(fn, undefined)` + conform `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`) + `executeConformMutation` SSoT helper (`@/shared/lib/forms/conform-action`)。Server Action は `(prev, formData) => SubmissionResult` signature、id 必要時は `Function.prototype.bind` で部分適用 (`updateX.bind(null, entity.id)`)。
+- **`useFormAction` (RHF) は legacy** — 新規利用禁止 (Task 8 で `react-hook-form` / `@hookform/resolvers` を `package.json` から削除予定)。既存 RHF 残存 form の編集時は同 commit 内で conform に置換する。
+- **`useActionState` + `FormData` codec (RHF + 手動 codec hybrid)**: `SpaceEditForm` のような DnD・`useFieldArray`・メディアピッカーを伴う複雑 form の Phase 1 Task 7 移行**中間状態**。最終形は conform `form.insert/remove/reorder` API + dnd-kit + MediaPicker bridge (useInputControl) で完全 conform 化。新規同種 form を作る場合は中間状態を踏襲せず最初から conform で書く（Task 7 で codify される pattern に従う）。
+- **参照実装** (PR #61-#62 conform canonical): `MaintenanceSection` / `CustomerForm` / `CustomerEditForm` / `CouponForm` / `PageSeoForm` / `UserForm` / `InviteForm`。中間状態 (RHF + FormData): `submitSpaceFormAction` (`@/admin/actions/space-form-submit`)、`space-form-data-codec.ts`、`SpaceEditForm.tsx`（Task 7 で完全 conform 化予定）。
 
 ## MutationResult 型と isMutationError
 

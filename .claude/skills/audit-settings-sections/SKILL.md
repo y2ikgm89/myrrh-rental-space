@@ -51,18 +51,22 @@ grep -rn "ヒント\|補足\|Tips" src/app/\(admin\)/admin/\(dashboard\)/setting
 grep -rn "/admin/settings/\(notify\|api\|navigation\|announcement-bar\)" src/ --include="*.tsx" --include="*.ts"
 ```
 
-### 3. フォームパターン
+### 3. フォームパターン (conform canonical)
 
-- `useFormAction` を使用しているか（useState + 手動 onChange は禁止）
+- conform `useActionState` + `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`) を使用しているか
+  (`useState` + 手動 `onChange` 禁止、`useFormAction` (RHF) は legacy で新規利用禁止)
 - `SubmitButton` を使用しているか（インライン isPending パターン禁止）
-- SubmitButton が `<div className="flex justify-end ...">` でラップされているか
-- `disabled={!form.formState.isDirty}` があるか
+- `SubmitButton` が `<div className="flex justify-end ...">` でラップされているか
+- `useActionState` の `isPending` を `SubmitButton` の `isPending` prop に渡しているか
 
 ```bash
-# useFormAction 未使用のセクションを検出
+# conform 未採用 (legacy useFormAction 残存) セクションを検出
 for f in src/app/\(admin\)/admin/\(dashboard\)/settings/_components/sections/*Section.tsx; do
-  if ! grep -q "useFormAction" "$f" 2>/dev/null; then
-    echo "useFormAction 未使用: $(basename "$f")"
+  if ! grep -q "useActionState\|useForm" "$f" 2>/dev/null; then
+    echo "conform 未採用: $(basename "$f")"
+  fi
+  if grep -q "useFormAction" "$f" 2>/dev/null; then
+    echo "legacy useFormAction 残存: $(basename "$f")  → Task 6-8 で conform 化対象"
   fi
 done
 ```
@@ -80,6 +84,7 @@ done
 
 ## 例外（チェック対象外）
 
-- `CustomApiKeysSection` / `ICalFeedSection` — CRUD テーブル型（useFormAction 非適用）
+- `CustomApiKeysSection` / `ICalFeedSection` — CRUD テーブル型（行ごとの編集、form 不要）
 - `PermissionsSection` — 読み取り専用 UI
 - `RobotsTxtSection` — Lexical エディタ型
+- `BusinessHoursSection` — 複雑なネスト配列（曜日 × 時間帯）、Phase 1 Task 7 で conform `form.insert/remove` に migration 予定
