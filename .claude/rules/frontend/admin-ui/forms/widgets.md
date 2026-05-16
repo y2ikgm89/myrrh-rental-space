@@ -131,6 +131,50 @@ function MyComplexField({
 - `focus-visible:ring-destructive`（base `ring-ring` を上書き、destructive context の keyboard 経路でも伝達）
 - `active:bg-destructive/15`（base `active:scale-[0.98]` と組み合わせ押下感）
 
+## Color picker — 2 input sync (conform `useInputControl`)
+
+`<input type="color">` (visual swatch) と text `<Input>` (hex 入力) を併置する color picker は、**同 `name` を 2 input に register 禁止** (FormData が配列化、`parseWithZod` が最初の値のみ取得して silent bug)。canonical: **単一 `useInputControl` で共通 state にバインド** + hidden input で送信値確定:
+
+```tsx
+import { useInputControl } from "@conform-to/react";
+
+const colorControl = useInputControl(fields.color);
+const colorValue = colorControl.value ?? "";
+
+<>
+  <input type="hidden" name={fields.color.name} value={colorValue} />
+  <div className="flex items-center gap-2">
+    <input
+      id={fields.color.id}
+      type="color"
+      value={colorValue || "#000000"}
+      onChange={(e) => colorControl.change(e.target.value)}
+      onBlur={colorControl.blur}
+      disabled={isPending}
+      aria-label="カラーピッカー"
+      className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background p-1"
+    />
+    <Input
+      type="text"
+      value={colorValue}
+      onChange={(e) => colorControl.change(e.target.value)}
+      onBlur={colorControl.blur}
+      placeholder="#3B82F6"
+      className="flex-1"
+      disabled={isPending}
+      aria-label="カラーコード"
+    />
+  </div>
+</>;
+```
+
+**ルール**:
+
+- `getInputProps(fields.color)` を使わず `value` / `onChange` を手動 wire — `getInputProps` は `name` を生成するため 2 input に展開すると FormData 重複
+- `<input type="color">` の `value` は `"#000000"` フォールバック必須 (空文字列は HTML 仕様で reject されコンソール warning 発火)
+- 視覚的には swatch / text の 2 input、論理的には 1 form field — Stripe Dashboard / Linear / Sanity Studio の業界標準パターン
+- 参照実装: `space-categories/_components/CategoryForm.tsx` (PR #64, 2026-05-16)
+
 ## 画像 picker UI のアスペクト比別配置
 
 - **大きい画像（cover / logo / OGP / 幅 200px+）**: 画像下にボタン横並び（業界全社標準: WordPress / Stripe / Notion / Webflow / Sanity）

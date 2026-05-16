@@ -23,67 +23,193 @@ Dialog 型 CRUD・多選択肢ダイアログ・Radix Dialog の a11y 要件を�
 
 ### canonical pattern (conform `useActionState` + Radix Dialog controlled)
 
-Phase 1 Task 4-6 で確立した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる:
+Phase 1 Task 4-6 で確立した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる。**Dialog open state の管理場所で 2 つの canonical variant を持つ** — どちらも「success 検知 → close」を **render 中 sync** (React 公式 ["You Might Not Need an Effect" §Adjusting State Directly During Render](https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes)) で表現し、副作用 (`toast` / `router.refresh`) のみ `useEffect` で分離する規律は同一。
+
+#### Variant A: Dialog open state を child component (FooDialog) 内で管理
+
+`useActionState` と同コンポーネント内で open state を管理する場合、success 時の `setIsOpen(false)` は **必ず render 中 sync** で呼ぶ。`useEffect` 内 `setIsOpen(false)` は `react-hooks/set-state-in-effect` + `@eslint-react/set-state-in-effect` で error。
 
 ```tsx
-// 1. 共用 Dialog コンポーネント (create/edit mode prop で切替)
 "use client";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useForm } from "@conform-to/react";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-export function FooDialog({ open, onOpenChange, mode, foo }: Props) {
-  const action =
-    mode === "create" ? createFooAction : updateFooAction.bind(null, foo!.id);
-  const [lastResult, formAction] = useActionState(action, undefined);
+export function CreateFooDialog() {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [lastResult, formAction, isPending] = useActionState(
+    createFooAction,
+    undefined,
+  );
 
-  const [form, fields] = useForm({
-    id: `foo-${mode}`,
-    constraint: getZodConstraint(fooSchema),
-    lastResult,
-    defaultValue: mode === "edit" && foo ? { ...foo } : defaultFooValues,
-    onValidate: ({ formData }) => parseWithZod(formData, { schema: fooSchema }),
-    shouldValidate: "onBlur",
-    shouldRevalidate: "onInput",
-  });
+  // success → close を render 中 sync (set-state-in-effect 違反回避、
+  // 公式「Adjusting State During Render」パターン)
+  const [previousLastResult, setPreviousLastResult] = useState(lastResult);
+  if (lastResult !== previousLastResult) {
+    setPreviousLastResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      setIsOpen(false);
+    }
+  }
 
-  // success → dialog close を render 中 derive (set-state-in-effect 違反回避)
+  // 副作用のみ effect で分離 (toast / router.refresh は setState ではない)
   useEffect(() => {
-    if (lastResult?.initialValue === null) onOpenChange(false);
-  }, [lastResult, onOpenChange]);
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("作成しました");
+      router.refresh();
+    }
+  }, [lastResult, router]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "作成" : "編集"}</DialogTitle>
-          <DialogDescription>...</DialogDescription>
-          {/* a11y 必須 */}
+          <DialogTitle>作成</DialogTitle>
         </DialogHeader>
-        <form id={form.id} onSubmit={form.onSubmit} action={formAction}>
-          ...
-        </form>
+        <FooForm
+          isPending={isPending}
+          lastResult={lastResult}
+          formAction={formAction}
+          formId="foo-create-form"
+        />
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setIsOpen(false)}
+            disabled={isPending}
+          >
+            キャンセル
+          </Button>
+          <SubmitButton
+            form="foo-create-form"
+            isPending={isPending}
+            label="作成"
+          />
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+```
 
-// 2. 親コンポーネントで編集対象 state + open state を管理
+**子 form (FooForm.tsx)** は parent の `useActionState` を受け取り `<form>` 要素だけ持つ。`SubmitButton` は dialog footer に外置きで `form={formId}` で external connect:
+
+```tsx
+"use client";
+import type { SubmissionResult } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
+
+type FooFormProps = {
+  readonly foo?: Foo;
+  readonly isPending: boolean;
+  readonly lastResult: SubmissionResult | undefined;
+  readonly formAction: (formData: FormData) => void;
+  readonly formId: string;
+};
+
+export function FooForm({
+  foo,
+  isPending,
+  lastResult,
+  formAction,
+  formId,
+}: FooFormProps) {
+  const [form, fields] = useForm({
+    id: formId,
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: fooSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: foo ? { ...foo } : defaultFooValues,
+  });
+  return (
+    <form {...getFormProps(form)} action={formAction} className="space-y-4">
+      {/* fields ... */}
+    </form>
+  );
+}
+```
+
+#### Variant B: Dialog open state を parent component で管理 (controlled)
+
+list / table から行アクション経由で開く Dialog (`*ActionCell` 等) は parent が `editingFoo` + `open` state を持ち、child Dialog に `open` / `onOpenChange` を渡す。child 内で `onOpenChange(false)` を呼ぶ場合も **render 中 sync** を採用する (ESLint は callback prop 経由 setState を detect しないが、本質的に effect 内 setState は React 公式 anti-pattern のため統一):
+
+```tsx
+// parent (FooActionCell.tsx) — 編集対象 + open state を管理
 const [editingFoo, setEditingFoo] = useState<Foo | null>(null);
 const [open, setOpen] = useState(false);
 const handleEdit = (foo: Foo) => {
   setEditingFoo(foo);
   setOpen(true);
 };
-const handleAdd = () => {
-  setEditingFoo(null);
-  setOpen(true);
-};
+return (
+  <>
+    <Button onClick={() => handleEdit(foo)}>編集</Button>
+    {editingFoo && (
+      <FooDialog open={open} onOpenChange={setOpen} foo={editingFoo} />
+    )}
+  </>
+);
+
+// child (FooDialog.tsx) — onOpenChange を render 中 sync で呼ぶ
+export function FooDialog({ open, onOpenChange, foo }: Props) {
+  const boundAction = updateFooAction.bind(null, foo.id);
+  const [lastResult, formAction, isPending] = useActionState(
+    boundAction,
+    undefined,
+  );
+
+  const [previousLastResult, setPreviousLastResult] = useState(lastResult);
+  if (lastResult !== previousLastResult) {
+    setPreviousLastResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      onOpenChange(false);
+    }
+  }
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("保存しました");
+    }
+  }, [lastResult]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>{/* ... */}</DialogContent>
+    </Dialog>
+  );
+}
+```
+
+#### 禁止パターン
+
+```tsx
+// NG: 同コンポーネント内 useState の setter を useEffect 内で呼ぶ
+// → react-hooks/set-state-in-effect + @eslint-react/set-state-in-effect で error
+useEffect(() => {
+  if (lastResult?.initialValue === null) setIsOpen(false);
+}, [lastResult]);
+
+// NG: parent の onOpenChange を useEffect 内で呼ぶ
+// (ESLint は callback prop 経由 setState を detect しないため lint パスするが、
+// 本質的に effect 内 setState で React 公式 anti-pattern — render 中 sync を採用)
+useEffect(() => {
+  if (lastResult?.initialValue === null) onOpenChange(false);
+}, [lastResult, onOpenChange]);
 ```
 
 `DialogTitle` / `DialogDescription` は Radix の a11y 要件で必須（未配置は WCAG 4.1.2 違反）。省略したい場合は `VisuallyHidden` でラップする。
 
-参照実装: `FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` / `FaqCategoryDetailView.tsx`
+参照実装:
+
+- Variant A: `space-categories/_components/CreateCategoryDialog.tsx` / `CategoryActionCell.tsx` + `CategoryForm.tsx` (PR #64, 2026-05-16)
+- Variant B: `FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` / `FaqCategoryDetailView.tsx` (Phase 1 Task 7 で conform 化予定)
 
 ### controlled / uncontrolled 両対応（空状態からの起動）
 
