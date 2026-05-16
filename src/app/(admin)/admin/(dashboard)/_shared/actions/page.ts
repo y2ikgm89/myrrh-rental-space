@@ -28,7 +28,6 @@ import {
   getSystemPageDefinition,
   updatePageSchema,
   updatePageSeoSchema,
-  type CreatePageInput,
   type UpdatePageInput,
 } from "@/shared/lib/validations/page";
 
@@ -80,29 +79,37 @@ export async function updatePage(
   });
 }
 
+/**
+ * 新規 page 作成 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function createPage(
-  input: CreatePageInput,
-): Promise<MutationResult<{ slug: string }>> {
-  const parsed = createPageSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, createPageSchema, async (data) => {
+    let createdSlug = "";
 
-  let createdSlug = "";
-
-  return executeAdminMutationResult({
-    resource: "page",
-    action: "create",
-    execute: async () => {
-      const result = await createPageCommand(parsed.data);
-      createdSlug = result.slug;
-      return result;
-    },
-    afterSuccess: () => {
-      invalidatePageTags(createdSlug);
-      purgePageCaches(createdSlug);
-    },
-    resolveAuditResourceId: (result) => result.slug,
+    const result = await executeAdminMutationResult({
+      resource: "page",
+      action: "create",
+      execute: async () => {
+        const created = await createPageCommand(data);
+        createdSlug = created.slug;
+        return created;
+      },
+      afterSuccess: () => {
+        invalidatePageTags(createdSlug);
+        purgePageCaches(createdSlug);
+      },
+      resolveAuditResourceId: (created) => created.slug,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 

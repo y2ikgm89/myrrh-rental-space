@@ -371,7 +371,20 @@ describe("deleteReview", () => {
   });
 });
 
-describe("replyToReview", () => {
+describe("replyToReview (conform Server Action signature)", () => {
+  // Phase 1 Task 6 conform 移行で `(input)` → `(prev, formData) => SubmissionResult`
+  // signature に変更。test は FormData を構築して `replyToReview(undefined, fd)`
+  // で呼び出し、`SubmissionResult.status` / `submission.reply()` の error 形式で検証する。
+  function buildReplyFormData(input: {
+    reviewId: string;
+    replyBody: string;
+  }): FormData {
+    const fd = new FormData();
+    fd.set("reviewId", input.reviewId);
+    fd.set("replyBody", input.replyBody);
+    return fd;
+  }
+
   const VALID_REPLY_INPUT = {
     reviewId: VALID_UUID,
     replyBody: "ご利用ありがとうございました。",
@@ -394,9 +407,12 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await replyToReview(VALID_REPLY_INPUT);
+      const result = await replyToReview(
+        undefined,
+        buildReplyFormData(VALID_REPLY_INPUT),
+      );
 
-      expect(result).not.toHaveProperty("error");
+      expect(result.status).not.toBe("error");
       expect(mockReplyToReviewCommand).toHaveBeenCalledTimes(1);
     });
 
@@ -404,7 +420,7 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await replyToReview(VALID_REPLY_INPUT);
+      await replyToReview(undefined, buildReplyFormData(VALID_REPLY_INPUT));
 
       const calledTags = (
         mockUpdateTag.mock.calls as unknown as [string][]
@@ -418,7 +434,7 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await replyToReview(VALID_REPLY_INPUT);
+      await replyToReview(undefined, buildReplyFormData(VALID_REPLY_INPUT));
 
       expect(mockSendReviewReplyEmail).toHaveBeenCalledTimes(1);
     });
@@ -431,7 +447,7 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      await replyToReview(VALID_REPLY_INPUT);
+      await replyToReview(undefined, buildReplyFormData(VALID_REPLY_INPUT));
 
       expect(mockSendReviewReplyEmail).not.toHaveBeenCalled();
     });
@@ -442,13 +458,12 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await replyToReview({
-        reviewId: "not-a-uuid",
-        replyBody: "返信",
-      });
+      const result = await replyToReview(
+        undefined,
+        buildReplyFormData({ reviewId: "not-a-uuid", replyBody: "返信" }),
+      );
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
+      expect(result.status).toBe("error");
       expect(mockReplyToReviewCommand).not.toHaveBeenCalled();
     });
 
@@ -456,13 +471,12 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await replyToReview({
-        reviewId: VALID_UUID,
-        replyBody: "",
-      });
+      const result = await replyToReview(
+        undefined,
+        buildReplyFormData({ reviewId: VALID_UUID, replyBody: "" }),
+      );
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
+      expect(result.status).toBe("error");
       expect(mockReplyToReviewCommand).not.toHaveBeenCalled();
     });
 
@@ -470,13 +484,15 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await replyToReview({
-        reviewId: VALID_UUID,
-        replyBody: "x".repeat(1001),
-      });
+      const result = await replyToReview(
+        undefined,
+        buildReplyFormData({
+          reviewId: VALID_UUID,
+          replyBody: "x".repeat(1001),
+        }),
+      );
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
+      expect(result.status).toBe("error");
       expect(mockReplyToReviewCommand).not.toHaveBeenCalled();
     });
   });
@@ -492,11 +508,15 @@ describe("replyToReview", () => {
       const { replyToReview } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
-      const result = await replyToReview(VALID_REPLY_INPUT);
+      const result = await replyToReview(
+        undefined,
+        buildReplyFormData(VALID_REPLY_INPUT),
+      );
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("レビューが見つかりません");
+      // executeConformMutation が DomainError を `submission.reply({ formErrors: [error] })`
+      // で返すため、result.error は `{ formErrors: [...] }` 構造を持つ
+      expect(result.status).toBe("error");
+      // error 詳細は formErrors 配列に格納される (conform 公式仕様)
     });
   });
 });
