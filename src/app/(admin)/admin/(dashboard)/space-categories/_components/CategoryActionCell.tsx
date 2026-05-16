@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -23,10 +23,7 @@ import {
   deleteSpaceCategory,
 } from "@/admin/actions/space-category";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type {
-  SpaceCategoryFormInput,
-  SpaceCategoryWithStats,
-} from "@/shared/lib/validations/space-category";
+import type { SpaceCategoryWithStats } from "@/shared/lib/validations/space-category";
 import { CategoryForm } from "./CategoryForm";
 
 type CategoryActionCellProps = {
@@ -37,29 +34,39 @@ export function CategoryActionCell({ category }: CategoryActionCellProps) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isEditPending, startEditTransition] = useTransition();
   const [isDeletePending, startDeleteTransition] = useTransition();
 
+  const boundUpdate = updateSpaceCategory.bind(null, category.id);
+  const [lastResult, formAction, isEditPending] = useActionState(
+    boundUpdate,
+    undefined,
+  );
+
+  const formId = `space-category-edit-form-${category.id}`;
   const hasSpaces = category._count.spaces > 0;
 
-  const handleEditSubmit = (data: SpaceCategoryFormInput) => {
-    startEditTransition(async () => {
-      const result = await updateSpaceCategory(category.id, data);
-      if (!isMutationError(result)) {
-        toast.success("保存しました");
-        setIsEditOpen(false);
-        router.refresh();
-      } else {
-        toast.error(result.error);
-      }
-    });
-  };
+  // success を render 中 derive + close を render 中 sync で表現
+  // (set-state-in-effect 違反回避、公式「Adjusting State During Render」パターン)
+  const [previousLastResult, setPreviousLastResult] = useState(lastResult);
+  if (lastResult !== previousLastResult) {
+    setPreviousLastResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      setIsEditOpen(false);
+    }
+  }
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success("保存しました");
+      router.refresh();
+    }
+  }, [lastResult, router]);
 
   const handleDelete = () => {
     startDeleteTransition(async () => {
       const result = await deleteSpaceCategory(category.id);
       if (!isMutationError(result)) {
-        toast.success("保存しました");
+        toast.success("削除しました");
         router.refresh();
       } else {
         toast.error(result.error);
@@ -93,7 +100,9 @@ export function CategoryActionCell({ category }: CategoryActionCellProps) {
           <CategoryForm
             category={category}
             isPending={isEditPending}
-            onSubmit={handleEditSubmit}
+            lastResult={lastResult}
+            formAction={formAction}
+            formId={formId}
           />
           <DialogFooter>
             <Button
@@ -105,7 +114,7 @@ export function CategoryActionCell({ category }: CategoryActionCellProps) {
               キャンセル
             </Button>
             <SubmitButton
-              form="category-form"
+              form={formId}
               isPending={isEditPending}
               label="更新"
               pendingLabel="更新中..."

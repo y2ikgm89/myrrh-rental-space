@@ -26,7 +26,7 @@ export const spaceCategoryFormSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
-  sortOrder: z.number().int().min(0).default(0),
+  sortOrder: z.coerce.number().int().min(0).default(0),
 });
 
 export type SpaceCategoryFormInput = z.input<typeof spaceCategoryFormSchema>;
