@@ -1,8 +1,10 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   addInstagramPost as addInstagramPostCommand,
   disconnectInstagram as disconnectInstagramCommand,
@@ -14,12 +16,12 @@ import {
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import {
-  instagramSettingsSchema,
   instagramTokenSchema,
   instagramPostUrlSchema,
-  type InstagramSettingsInput,
 } from "@/shared/lib/validations/instagram";
+import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { testInstagramConnection } from "@/shared/lib/instagram";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -34,25 +36,44 @@ function invalidateInstagramCaches(): void {
   updateTag(CACHE_TAGS.INSTAGRAM_FEED);
 }
 
+/**
+ * Instagram フィード表示設定更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
 export async function updateInstagramSettings(
-  data: InstagramSettingsInput,
-): Promise<MutationResult> {
-  const parsed = instagramSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateInstagramSettingsCommand(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    instagramFeedFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateInstagramSettingsCommand({
+            feedEnabled: data.feedEnabled,
+            feedLayout: data.feedLayout,
+            feedColumns: data.feedColumns,
+            feedMaxItems: data.feedMaxItems,
+            showCaption: data.showCaption,
+            showViewAll: data.showViewAll,
+          });
+          return null;
+        },
+        afterSuccess: () => {
+          invalidateInstagramCaches();
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      invalidateInstagramCaches();
-    },
-  });
+  );
 }
 
 export async function saveManualToken(
