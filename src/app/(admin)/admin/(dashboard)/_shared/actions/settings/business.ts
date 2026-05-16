@@ -21,12 +21,11 @@ import {
 } from "@/shared/domain/settings/commands";
 
 import {
-  businessInfoSchema,
   contactInfoFormSchema,
   businessHoursSettingsSchema,
-  type BusinessInfoInput,
   type BusinessHoursSettingsInput,
 } from "./schemas";
+import { businessInfoFormSchema } from "./schemas/form-schemas-brand-contact";
 
 /**
  * `""` → `null` 変換 helper（conform `parseWithZod` 経由の FormData では
@@ -39,25 +38,48 @@ function emptyToNull(value: string | undefined): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/**
+ * 事業者情報更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ * 7 文字列 + 1 日付 + 1 textarea + 2 Select を 1 保存単位で扱う。
+ */
 export async function updateBusinessInfo(
-  data: BusinessInfoInput,
-): Promise<MutationResult> {
-  const parsed = businessInfoSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateBusinessInfoCommand(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    businessInfoFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateBusinessInfoCommand({
+            businessName: emptyToNull(data.businessName),
+            businessNameKana: emptyToNull(data.businessNameKana),
+            representativeName: emptyToNull(data.representativeName),
+            businessType: emptyToNull(data.businessType),
+            industryType: emptyToNull(data.industryType),
+            establishedDate: data.establishedDate || null,
+            registrationNumber: emptyToNull(data.registrationNumber),
+            invoiceNumber: emptyToNull(data.invoiceNumber),
+            businessDescription: emptyToNull(data.businessDescription),
+          });
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
-    },
-  });
+  );
 }
 
 /**
