@@ -46,36 +46,57 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 
 import {
   googleCalendarConnectionTestSchema,
-  googleCalendarSettingsSchema,
   type GoogleCalendarConnectionTestInput,
-  type GoogleCalendarSettingsInput,
 } from "./schemas";
-import { twoWaySyncFormSchema } from "./schemas/form-schemas-security-integrations";
+import {
+  googleCalendarFormSchema,
+  twoWaySyncFormSchema,
+} from "./schemas/form-schemas-security-integrations";
 
 function invalidateCalendarSyncCache(): void {
   updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
   updateTag(CACHE_TAGS.RESERVATIONS);
 }
 
+/**
+ * Google Calendar 設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ *
+ * `useFormAction` (RHF) から `useActionState` + `useForm` (conform) に clean break 移行。
+ * 空文字列フィールドは null 化して domain command に渡す。
+ */
 export async function updateGoogleCalendarSettings(
-  data: GoogleCalendarSettingsInput,
-): Promise<MutationResult> {
-  const parsed = googleCalendarSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateGoogleCalendarSettingsCommand(parsed.data);
-      return null;
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    googleCalendarFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "update",
+        execute: async () => {
+          await updateGoogleCalendarSettingsCommand({
+            googleCalendarEnabled: data.googleCalendarEnabled,
+            googleCalendarId: data.googleCalendarId || null,
+            serviceAccountJson: data.serviceAccountJson || null,
+            icalAttachmentEnabled: data.icalAttachmentEnabled,
+            addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
+            googleCalendarMeetEnabled: data.googleCalendarMeetEnabled,
+            googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
+          });
+          return null;
+        },
+        afterSuccess: () => {
+          updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
-  });
+  );
 }
 
 export async function testGoogleCalendarConnectionAction(
