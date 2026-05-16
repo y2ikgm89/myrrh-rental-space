@@ -133,10 +133,12 @@ export async function fetchOgpPreview(url: string) {
 
 `'use server'` は次の用途に限定:
 
-- フォーム送信（`<form action={...}>`）
-- `useFormAction` / `useActionState` 経由の mutation
+- フォーム送信（`<form action={...}>`、conform `getFormProps(form)` 経由）
+- `useActionState(fn, undefined)` 経由の mutation (React 19 canonical、Server Action は `(prev, formData) => SubmissionResult` signature)
 - Client Component からの mutation 呼び出し（RPC）
 - キャッシュ無効化を伴う write 操作（`updateTag` は Server Action 内のみ可能）
+
+`useFormAction` (RHF) 経由の mutation は legacy で新規利用禁止 (Task 8 で削除予定)。
 
 読み取り操作で「server-side state（DB / cookie / headers）を読むだけ」なら Route Handler。
 

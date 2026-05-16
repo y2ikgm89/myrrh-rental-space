@@ -9,52 +9,66 @@ paths:
   - src/app/(admin)/**/_shared/actions/**
 ---
 
-# 管理画面フォーム・ページ構造パターン
+# 管理画面フォーム・ページ構造パターン (conform canonical)
 
-> Server Action 認証 + AdminDetailLayout / InlineEditorShell の使い分け + サブルール一覧。
+> Phase 1 Task 4-6 で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン。RHF + `useFormAction` は legacy (Task 8 で削除予定)、新規利用禁止。
 
 > 詳細サブルール（path-scoped auto-load）:
 >
 > - **詳細・編集・新規作成ページ標準構造** — `frontend/admin-ui/forms/page-structure.md`
 > - **2 カラム + 参照表示 + Relation FK + 親子 FK カスケード** — `frontend/admin-ui/forms/two-column-and-relations.md`
 > - **ToggleGroup / aria 注入 / FormDescription / Destructive / 画像 picker / fieldset / Input adornment** — `frontend/admin-ui/forms/widgets.md`
-> - **設定セクション useFormAction パターン** — `frontend/admin-ui/forms/settings-sections.md`
+> - **設定セクション conform `useActionState` パターン** — `frontend/admin-ui/forms/settings-sections.md`
 
-## Server Actions の認証パターン
+## Server Actions の認証パターン (conform canonical)
 
-管理画面の書き込み系 Server Actions は `executeAdminMutationResult` を使用（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:
+管理画面の書き込み系 Server Actions は **`(prev, formData) => SubmissionResult` signature** で `executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:
 
 ```typescript
+import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import type { MutationResult } from "@/shared/lib/mutation-result";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
-// OK: executeAdminMutationResult パターン
+// OK: conform + executeAdminMutationResult パターン
 export async function createItem(
-  input: ItemInput,
-): Promise<MutationResult<{ id: string }>> {
-  const parsed = schema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
-
-  return executeAdminMutationResult({
-    resource: "item",
-    action: "create",
-    execute: async () => createItemCommand(parsed.data),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.ITEMS);
-    },
-    resolveAuditResourceId: (data) => data.id,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, itemFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "item",
+      action: "create",
+      execute: async () => createItemCommand(data),
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.ITEMS);
+      },
+      resolveAuditResourceId: (data) => data.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
-// NG: 直接 checkPermission（executeAdminMutationResult を使う）
-export async function createItem(
-  input: ItemInput,
-): Promise<MutationResult<{ id: string }>> {
-  const auth = await checkPermission("item", "create");
-  if (!auth.success) return auth.error;
-  // ...
+// OK: id 必要な update は bind で部分適用
+export async function updateItem(
+  itemId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, itemFormSchema, async (data) => {
+    // ... executeAdminMutationResult ...
+  });
 }
+
+// Client: const action = updateItem.bind(null, item.id);
+// const [lastResult, formAction, isPending] = useActionState(action, undefined);
+
+// NG: 直接 checkPermission（executeAdminMutationResult を使う）
+// NG: useFormAction + (input: ItemInput) signature (legacy、Task 8 で削除)
+// NG: Server Action 内 parseWithZod 直接呼び出し（executeConformMutation 経由必須）
 ```
 
 詳細は `auth-patterns/admin-actions.md` を参照。

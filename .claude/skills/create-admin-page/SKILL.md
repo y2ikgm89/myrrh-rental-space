@@ -31,10 +31,14 @@ argument-hint: <resource-name-camelCase>
 5. **既存 Server Action**: `_shared/actions/` に既存ファイルがあるか確認
 6. **ルートパス**: `/admin/<resources>` のパス（複数形が一般的）
 
-### フォームパターン（標準と例外）
+### フォームパターン (conform canonical)
 
-- **標準**: `useFormAction` + react-hook-form + `standardSchemaResolver`（`admin-ui-patterns.md`）
-- **例外が必要なとき**（DnD・複数 `useFieldArray`・メディアピッカー等で `FormData` 経路が有利な場合）: `admin-ui-patterns.md` の「**useFormAction 非適用の例外**」を読み、参照実装として `SpaceEditForm` / `submitSpaceFormAction` / `@/admin/lib/space-form-data-codec` を踏襲する
+- **標準** (Phase 1 Task 4-6 で確立): React 19 `useActionState` + conform `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`)。Server Action は `(prev, formData) => SubmissionResult` signature、`executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ
+- **`useFormAction` (RHF) は legacy** — 新規 admin form では使用禁止。Phase 1 Task 8 で `react-hook-form` / `@hookform/resolvers` を `package.json` から削除予定。既存 RHF 残存 form の編集時は同じ commit 内で conform に置換
+- **複雑 form** (Phase 1 Task 7 移行中): DnD・`useFieldArray`・MediaPicker・Lexical 統合は conform `form.insert/remove/reorder` + useInputControl bridge + hidden input pattern に統一予定。現在の移行中参照: `SpaceEditForm` (RHF + `useActionState` + `FormData` hybrid、Task 7 で conform に置換予定)
+- **参照実装** (PR #61-#62、admin form 16 件 migration 済):
+  - **simple** (settings sections): `MaintenanceSection` / `CookieConsentSection` / `NotificationSection` / `HeaderSection` / `PermalinkSection` / `ReservationSection` / `EmailSection` / `FooterSection` / `TaxSection`
+  - **medium**: `CustomerForm` (create) / `CustomerEditForm` (edit + email blur + bind) / `CouponForm` (create/edit 統合 + conditional UI) / `PageSeoForm` + `ListPageSeoForm` (MediaPicker bridge) / `UserForm` (schema mode 切替) / `InviteForm` (derived success state + delayed redirect)
 
 ## 生成ファイル構成
 

@@ -119,7 +119,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - サイドバーナビホバー: `hover:bg-sidebar-nav-hover` (not `hover:bg-white/5`)
 - ページネーション: `<nav aria-label="...">` not bare `<div>`, `void setPage()` for Promise
 - 型 re-export 禁止: `@/admin/types/server-actions` から直接使用
-- **フォーム**: `.claude/rules/frontend/admin-ui-patterns.md` の「useFormAction 非適用の例外」と整合するか。複雑フォームの参照は `SpaceEditForm`（`useActionState` + `FormData` + `submitSpaceFormAction`）。標準 CRUD は `useFormAction`。`useFormStatus` で pending を取らない（`SubmitButton` + `isPending` prop）
+- **フォーム** (Phase 1 Task 4-6 で確立した conform canonical): 新規 admin form は React 19 `useActionState` + conform `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`) + `executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ。Server Action は `(prev, formData) => SubmissionResult` signature、id 必要時は `bind` で部分適用。`useFormAction` (RHF) は legacy で新規利用禁止 (Task 8 で `react-hook-form` / `@hookform/resolvers` を `package.json` から削除予定)、既存 RHF 残存 form の編集時は同じ commit 内で conform に置換する。`useFormStatus` で pending を取らない（`SubmitButton` + `useActionState` 第 3 戻り値 `isPending` を prop で渡す）。参照実装: `CustomerForm` / `CustomerEditForm` / `CouponForm` / `PageSeoForm` / `UserForm` / `InviteForm`
 
 **`src/app/(admin)/**/lexical/**`**:
 
