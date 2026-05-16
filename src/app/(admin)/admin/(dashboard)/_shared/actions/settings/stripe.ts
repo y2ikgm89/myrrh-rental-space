@@ -7,14 +7,12 @@
  */
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import * as stripeLib from "@/admin/lib/stripe";
-import {
-  stripeSettingsSchema,
-  type StripeSettingsInput,
-} from "@/admin/lib/validations/stripe";
+import { stripeFormSchema } from "./schemas/form-schemas-security-integrations";
 import { DomainError } from "@/shared/domain/domain-error";
 import * as settingsCommands from "@/shared/domain/settings/commands";
 import {
@@ -23,34 +21,48 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import type { MutationResult } from "@/shared/lib/mutation-result";
-import { omitUndefined } from "@/shared/lib/serialize";
+import {
+  isMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Actions
 // =============================================================================
 
 /**
- * Stripe設定を更新
+ * Stripe設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ *
+ * `useFormAction` (RHF) から `useActionState` + `useForm` (conform) に clean break 移行。
+ * 空文字列フィールドは null 化して domain command に渡す。
  */
 export async function updateStripeSettings(
-  data: StripeSettingsInput,
-): Promise<MutationResult> {
-  const parsed = stripeSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateStripeSettings(omitUndefined(parsed.data));
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, stripeFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await settingsCommands.updateStripeSettings({
+          stripeEnabled: data.stripeEnabled,
+          stripeTestMode: data.stripeTestMode,
+          stripePublishableKey: data.stripePublishableKey || null,
+          stripeSecretKey: data.stripeSecretKey || null,
+          stripeWebhookSecret: data.stripeWebhookSecret || null,
+          stripeCurrency: data.stripeCurrency,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
