@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -13,15 +14,16 @@ import {
   cloudflareSettingsSchema,
   customApiKeySchema,
   googleMapsSettingsSchema,
-  resendSettingsSchema,
   turnstileSettingsSchema,
   type CloudflareSettingsInput,
   type CustomApiKeyInput,
   type GoogleMapsSettingsInput,
-  type ResendSettingsInput,
   type TurnstileSettingsInput,
 } from "@/admin/lib/validations/api-keys";
+import { resendFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   addCustomApiKey as addCustomApiKeyCommand,
@@ -49,22 +51,34 @@ function refreshSettingsCache(): void {
   updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
 }
 
+/**
+ * Resend 設定更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ * 空文字は domain command 渡し前に null 化（クリア operation は `clearResendKeys`
+ * を使うが、空フィールド送信で実質クリアにならないよう "" → null 変換のみ）。
+ */
 export async function updateResendSettings(
-  input: ResendSettingsInput,
-): Promise<MutationResult> {
-  const parsed = resendSettingsSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateResendSettingsCommand(omitUndefined(parsed.data));
-      return null;
-    },
-    afterSuccess: refreshSettingsCache,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, resendFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await updateResendSettingsCommand({
+          resendApiKey: data.resendApiKey ? data.resendApiKey : null,
+        });
+        return null;
+      },
+      afterSuccess: refreshSettingsCache,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
