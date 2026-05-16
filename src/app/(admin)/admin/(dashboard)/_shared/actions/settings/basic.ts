@@ -7,9 +7,12 @@
  */
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   updateBasicInfo as updateBasicInfoCommand,
@@ -20,36 +23,60 @@ import {
 } from "@/shared/domain/settings/commands";
 
 import {
-  basicInfoSchema,
   layoutSettingsSchema,
   metaSettingsSchema,
   analyticsSettingsSchema,
   searchVerificationSchema,
-  type BasicInfoInput,
   type LayoutSettingsInput,
   type MetaSettingsInput,
   type AnalyticsSettingsInput,
   type SearchVerificationInput,
 } from "./schemas";
+import { basicInfoFormSchema } from "./schemas/form-schemas-brand-contact";
 
+function emptyToNull(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+/**
+ * 基本情報更新 — conform `useActionState` 統合経路。
+ *
+ * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ * テキスト 3 件 + MediaPicker 4 件 + Switch 2 件を 1 保存単位で扱う。
+ */
 export async function updateBasicInfo(
-  data: BasicInfoInput,
-): Promise<MutationResult> {
-  const parsed = basicInfoSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await updateBasicInfoCommand(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-    },
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, basicInfoFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await updateBasicInfoCommand({
+          siteName: emptyToNull(data.siteName),
+          siteDescription: emptyToNull(data.siteDescription),
+          faviconUrl: emptyToNull(data.faviconUrl),
+          defaultOgpImageUrl: emptyToNull(data.defaultOgpImageUrl),
+          headerLogoUrl: emptyToNull(data.headerLogoUrl),
+          footerLogoUrl: emptyToNull(data.footerLogoUrl),
+          footerCopyright: emptyToNull(data.footerCopyright),
+          useHeaderLogo: data.useHeaderLogo,
+          useFooterLogo: data.useFooterLogo,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
 
