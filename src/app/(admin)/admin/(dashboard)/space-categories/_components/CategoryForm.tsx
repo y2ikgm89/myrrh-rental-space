@@ -1,136 +1,193 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+/**
+ * SpaceCategory form — Phase 1 Task 6 conform 移行。
+ *
+ * Dialog 内 conform 化 PoC。`useForm` (@conform-to/react) を内側に持ち、
+ * parent dialog から `lastResult` / `formAction` / `formId` / `isPending` を
+ * 受け取る。`SubmitButton` は parent dialog footer に置かれ `form={formId}` で
+ * connect する。
+ *
+ * - icon は `IconPickerField` + `useInputControl` で hidden input sync。
+ * - color は `<input type="color">` と `<Input type="text">` の 2 入力を
+ *   `useInputControl` で共通 state にバインドし、hidden input で送信値を確定。
+ * - sortOrder は `z.coerce.number()` で FormData string を受ける。
+ */
+
+import type { SubmissionResult } from "@conform-to/react";
+import {
+  getFormProps,
+  getInputProps,
+  getTextareaProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { Input, Textarea, Label } from "@/admin/components/ui";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import {
   spaceCategoryFormSchema,
-  defaultSpaceCategoryFormValues,
-  type SpaceCategoryFormInput,
   type SpaceCategoryWithStats,
 } from "@/shared/lib/validations/space-category";
 
 type CategoryFormProps = {
-  category?: SpaceCategoryWithStats;
-  isPending: boolean;
-  onSubmit: (data: SpaceCategoryFormInput) => void;
+  readonly category?: SpaceCategoryWithStats;
+  readonly isPending: boolean;
+  readonly lastResult: SubmissionResult | undefined;
+  readonly formAction: (formData: FormData) => void;
+  readonly formId: string;
 };
 
 export function CategoryForm({
   category,
   isPending,
-  onSubmit,
+  lastResult,
+  formAction,
+  formId,
 }: CategoryFormProps) {
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    formState: { errors },
-  } = useForm<SpaceCategoryFormInput>({
-    resolver: standardSchemaResolver(spaceCategoryFormSchema),
-    defaultValues: category
+  const [form, fields] = useForm({
+    id: formId,
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: spaceCategoryFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: category
       ? {
           name: category.name,
           description: category.description ?? "",
           icon: category.icon ?? "",
           color: category.color ?? "",
-          sortOrder: category.sortOrder,
+          sortOrder: String(category.sortOrder),
         }
-      : defaultSpaceCategoryFormValues,
+      : {
+          name: "",
+          description: "",
+          icon: "",
+          color: "",
+          sortOrder: "0",
+        },
   });
 
-  const iconValue = useWatch({ control, name: "icon" });
+  const iconControl = useInputControl(fields.icon);
+  const colorControl = useInputControl(fields.color);
+  const iconValue = iconControl.value ?? "";
+  const colorValue = colorControl.value ?? "";
+  const formErrors = form.errors;
 
   return (
-    <form
-      id="category-form"
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4"
-    >
+    <form {...getFormProps(form)} action={formAction} className="space-y-4">
+      <input type="hidden" name={fields.icon.name} value={iconValue} />
+      <input type="hidden" name={fields.color.name} value={colorValue} />
+
       <div className="space-y-2">
-        <Label htmlFor="name">カテゴリー名 *</Label>
+        <Label htmlFor={fields.name.id}>カテゴリー名 *</Label>
         <Input
-          id="name"
-          {...register("name")}
+          {...getInputProps(fields.name, { type: "text" })}
           placeholder="例: 会議室"
           disabled={isPending}
         />
-        {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
+        {fields.name.errors && (
+          <p id={fields.name.errorId} className="text-sm text-destructive">
+            {fields.name.errors.join(", ")}
+          </p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">説明</Label>
+        <Label htmlFor={fields.description.id}>説明</Label>
         <Textarea
-          id="description"
-          {...register("description")}
+          {...getTextareaProps(fields.description)}
           placeholder="カテゴリーの説明（オプション）"
           rows={3}
           disabled={isPending}
         />
-        {errors.description && (
-          <p className="text-sm text-destructive">
-            {errors.description.message}
+        {fields.description.errors && (
+          <p
+            id={fields.description.errorId}
+            className="text-sm text-destructive"
+          >
+            {fields.description.errors.join(", ")}
           </p>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="icon">アイコン</Label>
+          <Label htmlFor={fields.icon.id}>アイコン</Label>
           <IconPickerField
-            id="icon"
-            value={iconValue ?? ""}
-            onChange={(name) => setValue("icon", name, { shouldDirty: true })}
+            id={fields.icon.id}
+            value={iconValue}
+            onChange={(name) => iconControl.change(name)}
             disabled={isPending}
           />
-          {errors.icon && (
-            <p className="text-sm text-destructive">{errors.icon.message}</p>
+          {fields.icon.errors && (
+            <p id={fields.icon.errorId} className="text-sm text-destructive">
+              {fields.icon.errors.join(", ")}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="color">色</Label>
+          <Label htmlFor={fields.color.id}>色</Label>
           <div className="flex items-center gap-2">
-            <Input
-              id="color"
+            <input
+              id={fields.color.id}
               type="color"
-              {...register("color")}
-              className="h-10 w-16 cursor-pointer p-1"
+              value={colorValue || "#000000"}
+              onChange={(e) => colorControl.change(e.target.value)}
+              onBlur={colorControl.blur}
               disabled={isPending}
+              aria-label="カラーピッカー"
+              className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background p-1"
             />
             <Input
-              {...register("color")}
+              type="text"
+              value={colorValue}
+              onChange={(e) => colorControl.change(e.target.value)}
+              onBlur={colorControl.blur}
               placeholder="#3B82F6"
               className="flex-1"
               disabled={isPending}
+              aria-label="カラーコード"
             />
           </div>
-          {errors.color && (
-            <p className="text-sm text-destructive">{errors.color.message}</p>
+          {fields.color.errors && (
+            <p id={fields.color.errorId} className="text-sm text-destructive">
+              {fields.color.errors.join(", ")}
+            </p>
           )}
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="sortOrder">並び順</Label>
+        <Label htmlFor={fields.sortOrder.id}>並び順</Label>
         <Input
-          id="sortOrder"
-          type="number"
-          {...register("sortOrder", { valueAsNumber: true })}
+          {...getInputProps(fields.sortOrder, { type: "number" })}
           placeholder="0"
+          min={0}
           disabled={isPending}
         />
         <p className="text-xs text-muted-foreground">
           小さい数字が先に表示されます
         </p>
-        {errors.sortOrder && (
-          <p className="text-sm text-destructive">{errors.sortOrder.message}</p>
+        {fields.sortOrder.errors && (
+          <p id={fields.sortOrder.errorId} className="text-sm text-destructive">
+            {fields.sortOrder.errors.join(", ")}
+          </p>
         )}
       </div>
+
+      {formErrors && formErrors.length > 0 && (
+        <div
+          id={form.errorId}
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {formErrors.join(", ")}
+        </div>
+      )}
     </form>
   );
 }
