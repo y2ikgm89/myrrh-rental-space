@@ -1,5 +1,5 @@
 ---
-description: 型アサーション (`as`) / 非null アサーション (`!`) 禁止 + 限定許可例外（DOM event / Prisma JSON / SectionConfig / serialize ヘルパー / conform generic invariance）+ 禁止パターン代替
+description: 型アサーション (`as`) / 非null アサーション (`!`) 禁止 + 限定許可例外（DOM event / Prisma JSON helper / SectionConfig / serialize ヘルパー / typedRoutes / conform generic invariance / JSX defensive narrowing）+ 禁止パターン代替
 paths:
   - src/**/*.ts
   - src/**/*.tsx
@@ -7,7 +7,7 @@ paths:
 
 # 型アサーション / 非null アサーション禁止
 
-> `as` キャスト・`!` 非null アサーションは原則禁止。許可例外は 5 ケース限定 + 禁止パターン → 代替手段マッピング。
+> `as` キャスト・`!` 非null アサーションは原則禁止。許可例外は 7 種類限定 + 禁止パターン → 代替手段マッピング。
 
 ## 非null アサーション (`!`) の代替パターン
 
@@ -33,7 +33,7 @@ if (!uniform) return;
 uniform.value = 42;
 ```
 
-## `as` の許可例外（限定的）
+## `as` の許可例外（7 種類限定）
 
 ### 1. DOM event target
 
@@ -43,7 +43,25 @@ const input = event.target as HTMLInputElement;
 const value = input.value;
 ```
 
-### 2. Prisma JSON 型（`Prisma.InputJsonObject` / `Prisma.InputJsonValue`）
+### 2. Prisma JSON 型 — helper 強制 + Prisma.InputJsonObject data field のみ許容
+
+`as Prisma.InputJsonValue` cast は **禁止**（2026-05-17 PR #109 で 12 cast → 0 構造解消済）。`@/shared/db/prisma-input-json` の `asPrismaInputJsonValue(value, msg)` / `parsePrismaInputJson(json, msg)` / `clonePrismaInputJson(value, msg)` helper 経由で `isPrismaInputJsonValue` type guard + `DomainError("VALIDATION")` throw による runtime narrow を強制する:
+
+```typescript
+// NG: cast による型逃がし
+await prisma.event.update({
+  data: { contentJson: value as Prisma.InputJsonValue },
+});
+
+// OK: helper 経由で runtime 検証
+import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
+
+await prisma.event.update({
+  data: { contentJson: asPrismaInputJsonValue(value, "本文の形式が不正です") },
+});
+```
+
+`as Prisma.InputJsonObject` は **オブジェクト型を要求する Prisma data field** に限定して許容（Prisma 型システム制約により JSON literal を inline する場合に必要）:
 
 ```typescript
 // OK: Prisma API の型制約（InputJsonObject はオブジェクト型を要求）
@@ -52,7 +70,7 @@ await prisma.settings.update({
 });
 ```
 
-**SDK 境界 cast の `satisfies + as` 最小化パターン**: `as A as B` の double cast は不格好。先行の `satisfies` で shape を検証してから単一 `as` で SDK 型に narrow する:
+`as Prisma.InputJsonArray` は **`satisfies + as` 最小化パターン**で shape 検証を先行させる。`as A as B` の double cast は禁止:
 
 ```typescript
 // NG: double cast（shape 未検証の二段 escape hatch）
@@ -61,7 +79,7 @@ const label =
 
 // OK: satisfies で shape 検証 + 単一 as で SDK 境界
 const label =
-  data.label satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue;
+  data.label satisfies ReadonlyArray<unknown> as Prisma.InputJsonArray;
 ```
 
 参照実装: `@/shared/domain/navigation/commands.ts` の `normalizeNavigationItemInput`（`PortableTextSpan[]` 配列を Prisma の Json 列に渡す境界 cast）。discriminated union の span 配列が `Prisma.InputJsonValue` と直接 assignable でないため必要。
@@ -111,27 +129,59 @@ export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
 > ジェネリック制約 `T extends object` によりキーが `keyof T` に限定されるため型安全。
 > 呼び出し側で `Object.keys(obj) as ConfigKey[]` と書くことは禁止。`keysOf(obj)` を使う。
 
-### 5. RHF `Path<T>` / `UseFormSetValue<FieldValues>` 境界（generic invariance への対処）
+### 5. SDK 境界 Zod typed schema（`z.custom<T>` SSoT 内部のみ）
 
-React Hook Form の `Path<T>` は `T extends FieldValues` のフォーム型から **静的な string literal union** を導出する型関数。ジェネリック関数の本体内では `T` が unbound のため `"contentWidth"` が `Path<T>` の member であることを TS が証明できない（既知の TS limitation）。同様に `Control<T>` / `UseFormSetValue<T>` は invariant のため、複数フォーム型（Post / News 等）で 1 つの connected component を共有する場合に `UseFormSetValue<FieldValues>` への widening が必要。**`as Path<T>` / `as UseFormSetValue<FieldValues> | undefined` は本境界のみで許可**:
+Node-only SDK（`googleapis` / `resend` 等）の generated 型は internal implementation 詳細（`null` vs `undefined` の round-trip 問題、discriminated union variant 復元不能等）を含むため、Zod 4 公式 `z.custom<T>` パターン（[zod.dev/api#custom](https://zod.dev/api#custom)）で **SSoT helper 内部のみ** に cast を閉じ込める:
 
 ```typescript
-// OK: Pure Component + Connected ラッパーで限定する
-export function LayoutFieldsConnected<T extends FieldValues>({
-  control,
-  setValue,
-}: Props<T>) {
-  const contentWidthPath = "contentWidth" as Path<T>;
-  const v = useWatch({ control, name: contentWidthPath });
-  (setValue as UseFormSetValue<FieldValues> | undefined)?.("contentWidth", v);
+// @/shared/lib/google-business-profile/schemas.ts（唯一の許可場所）
+import "server-only";
+import type { mybusinessbusinessinformation_v1 } from "googleapis";
+import { z } from "zod";
+import { isRecord } from "@/shared/lib/serialize";
+
+export const LocationSchema =
+  z.custom<mybusinessbusinessinformation_v1.Schema$Location>(
+    isRecord,
+    "Expected a Google Business Profile Schema$Location object",
+  );
+
+// 呼び出し側（as 不要）
+const requestBody = LocationSchema.parse(payload);
+await client.locations.patch({ requestBody, ... });
+```
+
+同パターン: `@/shared/lib/email/schemas.ts` (`CreateEmailOptionsSchema` for Resend), `@/shared/lib/routes/to-app-route.ts` (`Route<string>` for Next.js typedRoutes)。
+
+**ルール**: 呼び出し側で `as unknown as Schema$Location` / `as CreateEmailOptions` / `as Route<string>` の cast を新規に書くことは禁止。SSoT helper を `.parse()` / `.safeParse()` で経由する。新規 SDK 統合時は `<service>/schemas.ts` に同パターンで追加する。
+
+### 6. conform `FieldMetadata<T>` generic invariance 境界
+
+conform の `FieldMetadata<T, FormShape, FormError>` は **invariant** な type parameter を持つため、複数フォーム型で 1 つの connected component を共有する場合や、動的 schema（22 種の Section type に対応する `AutoSectionForm` 等）で渡す場合に、TS の generic 制約だけで型情報を維持できない（公式仕様の限界）。**Pure Component + Connected wrapper パターン**で cast を境界 1 箇所に閉じ込める:
+
+```typescript
+// OK: Pure Component（cast なし）+ Connected wrapper（境界 cast）
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
+
+export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
+  fields,
+}: {
+  fields: Record<string, FieldMetadata<unknown, TForm, string[]>>;
+}) {
+  // generic invariance 境界 cast
+  const contentWidthField = fields["contentWidth"] as unknown as FieldMetadata<
+    string | null | undefined
+  >;
+  const control = useInputControl(contentWidthField);
+  // ...
 }
 ```
 
-参照実装: `LayoutFields.tsx` の `LayoutFieldsConnected`、`use-public-form.ts` の `form.setError(field as Path<TInput>, ...)`（`field in currentValues` で existence 検証済み + `Object.entries(fieldErrors)` の `string` key を RHF Path に narrow）。
+**ルール**: `as FieldMetadata<...>` cast は ① **動的 schema を Pure Component 越境で渡す Connected wrapper の内部** ② **`AutoSectionForm` / `AutoArrayField` / `Auto*Field` 系の auto-fields registry** に限定。Section / 単一フォーム型 Component 内では concrete schema 型を直接使い cast を発生させない。
 
-**ルール**: 本境界の外（Section / Inspector / 単一フォーム型 Component 内）では generic にせず concrete form type を直接使い、`Path<T>` cast を発生させない。Connected wrapper を新規追加する場合は本セクションに参照実装を追記する。
+参照実装: `LayoutFields.tsx` の `LayoutFieldsConnected`、`auto-section-form.tsx` の `DefaultValue<>` widening、`AutoArrayField.tsx` の `getFieldList()` / `getFieldset()` メソッド narrow、`Auto{Boolean,Select,Group}Field.tsx` の `useInputControl` 境界。
 
-### 6. JSX 内 repeated property access の defensive narrowing（typedoc / tsc control-flow analysis 差）
+### 7. JSX 内 repeated property access の defensive narrowing（typedoc / tsc control-flow analysis 差）
 
 JSX 内で同一 nullable property を **複数回 read** する場合、TypeScript の control-flow narrowing が文脈境界で失われ、`tsc --noEmit` では pass するのに **CI typedoc では `TS2339` (Property X does not exist on type 'never')** が出る silent CI bug が起きる。typedoc は内部で別 TS checker を呼ぶため、tsc と control-flow analysis の挙動が一致しない可能性あり（typedoc / tsc version mismatch、外部 type 推論 cache の差）。
 
@@ -196,13 +246,17 @@ const linkClassName = cn(/* ... */);
 
 ## 禁止パターンと代替手段
 
-| 禁止パターン                        | 代替                                      |
-| ----------------------------------- | ----------------------------------------- |
-| `Object.keys(obj) as ConfigKey[]`   | `keysOf(obj)`（`@/shared/lib/serialize`） |
-| `value as DiscountType`             | `isValidDiscountType(value)` 型ガード     |
-| `value as 'asc' \| 'desc'`          | Set-based 型ガード + if 文                |
-| `{ ... } as Record<K, V>`           | `satisfies` キーワード                    |
-| `value as SomeType`（Zod parse 後） | `safeParse` + `result.data` を直接使用    |
+| 禁止パターン                          | 代替                                                                                |
+| ------------------------------------- | ----------------------------------------------------------------------------------- |
+| `Object.keys(obj) as ConfigKey[]`     | `keysOf(obj)`（`@/shared/lib/serialize`）                                           |
+| `value as DiscountType`               | `isValidDiscountType(value)` 型ガード                                               |
+| `value as 'asc' \| 'desc'`            | Set-based 型ガード + if 文                                                          |
+| `{ ... } as Record<K, V>`             | `satisfies` キーワード                                                              |
+| `value as SomeType`（Zod parse 後）   | `safeParse` + `result.data` を直接使用                                              |
+| `value as Prisma.InputJsonValue`      | `asPrismaInputJsonValue(value, msg)`（`@/shared/db/prisma-input-json`）             |
+| `value as Route<string>`              | `toAppRoute(value)` / `safeToAppRoute(value)`（`@/shared/lib/routes/to-app-route`） |
+| `value as unknown as Schema$Location` | `LocationSchema.parse(value)`（`@/shared/lib/google-business-profile/schemas`）     |
+| `value as CreateEmailOptions`         | `CreateEmailOptionsSchema.parse(value)`（`@/shared/lib/email/schemas`）             |
 
 ```typescript
 // NG: 型アサーション
@@ -230,7 +284,15 @@ grep -rnE 'Object\.keys\([^)]+\)\s+as\s+' src/
 
 # isRecord narrowing 直後の冗長 `as Record<string, unknown>`
 grep -rn 'as Record<string, unknown>' src/
+
+# §2 Prisma.InputJsonValue cast の構造解消検証（コメント外 0 件期待）
+grep -rnE '\bas\s+Prisma\.InputJsonValue\b' src/ | grep -v '^[^:]*:[^:]*:\s*\*\|^[^:]*:[^:]*:\s*//'
+
+# §5 SDK 境界 cast の helper 強制検証（schemas.ts / to-app-route.ts 内部以外 0 件期待）
+grep -rnE 'as\s+unknown\s+as\s+Schema\$Location|as\s+CreateEmailOptions\b|as\s+Route<string>' src/
 ```
+
+`architecture-boundaries.test.ts` が src/ 横断で gate を担保する（コメント除外で実体 cast のみ検出）。
 
 ## Gotchas
 

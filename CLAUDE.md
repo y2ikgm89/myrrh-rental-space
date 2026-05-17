@@ -41,7 +41,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ### 型・コード品質
 
-- **型アサーション（`as`）禁止** — 型ガード・`satisfies`・Zod `safeParse` を使う（→ `type-safety.md`）
+- **型アサーション（`as`）禁止** — 型ガード・`satisfies`・Zod `safeParse` を使う。許可例外 7 種類（DOM event target / Prisma helper 経由 / SectionConfig union widening / serialize helper / Zod `z.custom<T>` SDK 境界 (`asPrismaInputJsonValue` / `toAppRoute` / `LocationSchema.parse` / `CreateEmailOptionsSchema.parse`) / conform `FieldMetadata<T>` generic invariance / JSX defensive narrowing）のみ、新規 cast 追加禁止。詳細 → `type-safety/assertion-bans.md`
 - **`useCallback`/`useMemo`/`memo` 禁止** — React Compiler 1.0 が自動メモ化（→ `react/compiler.md`）
 - **ハードコードカラー禁止** — セマンティックトークン必須（→ `tailwind-patterns/theme-tokens.md`）
 - **`className` テンプレートリテラル・文字列内改行禁止** — `cn()`（`@/shared/lib/cn`）使用

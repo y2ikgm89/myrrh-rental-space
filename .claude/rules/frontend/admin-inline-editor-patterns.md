@@ -71,7 +71,7 @@ type BasicInfoFieldsProps = {
 
 ## `LayoutFields` の `FieldMetadata<...>` 境界 cast
 
-`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。`as unknown as FieldMetadata<string | null | undefined>` cast は documented exception §5 conform generic invariance (`type-safety/documented-exceptions-ledger.md`) で管理。
+`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。`as unknown as FieldMetadata<string | null | undefined>` cast は `type-safety/assertion-bans.md` §6 conform `FieldMetadata<T>` generic invariance の permanent exception で管理。
 
 ## `exactOptionalPropertyTypes` と `disabled`
 
@@ -135,12 +135,12 @@ const validateSettings = (): PostSettingsFormData | null => {
 
 ## 関連ドキュメント
 
-| 内容                                               | 参照                                                |
-| -------------------------------------------------- | --------------------------------------------------- |
-| Lexical 本文・ブロック                             | `lexical/core.md`                                   |
-| Lexical contentJson client-side rendering          | `prisma-patterns/lexical-storage.md`                |
-| 管理 UI 全般                                       | `admin-ui-patterns.md`                              |
-| conform canonical pattern                          | `frontend/admin-ui/forms.md`                        |
-| In-place preprocess pattern                        | `server-actions/implementation/forms-and-public.md` |
-| Server Actions                                     | `server-actions/use-cache.md`                       |
-| documented exception §5 conform generic invariance | `type-safety/documented-exceptions-ledger.md`       |
+| 内容                                              | 参照                                                |
+| ------------------------------------------------- | --------------------------------------------------- |
+| Lexical 本文・ブロック                            | `lexical/core.md`                                   |
+| Lexical contentJson client-side rendering         | `prisma-patterns/lexical-storage.md`                |
+| 管理 UI 全般                                      | `admin-ui-patterns.md`                              |
+| conform canonical pattern                         | `frontend/admin-ui/forms.md`                        |
+| In-place preprocess pattern                       | `server-actions/implementation/forms-and-public.md` |
+| Server Actions                                    | `server-actions/use-cache.md`                       |
+| permanent exception §6 conform generic invariance | `type-safety/assertion-bans.md` §6                  |
