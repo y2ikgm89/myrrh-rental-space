@@ -90,37 +90,52 @@ News 側 (`src/app/(admin)/admin/(dashboard)/_shared/lib/validations/news.ts`) �
 
 **Task 2 着手時の drift リスク**: `postSettingsFormSchema` の field 型を string → preprocess に変更すると既存 test fixture (`{ tags: "" }` 等) が drift する。Task 2 は schema 修正 + test fixture 更新を同一 commit で行うことが必須 (test-quality/unit-bun.md §fixture drift 検出 pattern A: Schema 必須化追従漏れの典型例)。
 
-## Phase 3-B Chunk 分割推奨 (更新)
+## Phase 3-B Chunk 分割推奨 (修正済 — 2026-05-17 二次 audit)
 
-spec の Task 1-10 を以下に分割推奨:
+spec / `.claude/rules/server-actions/implementation/forms-and-public.md` §In-place schema preprocess pattern を再 review した結果、**Task 2 (schema preprocess) を単独 chunk で実行すると build broken になる**ことが確認された。理由: `z.preprocess` を `postBodyFormSchema` / `postSettingsFormSchema` に追加すると `z.input<typeof schema>` の field 型が `unknown` 化し、既存 `usePostEditor.ts` / `useNewsEditor.ts` の `useForm<PostBodyFormData>({ resolver: standardSchemaResolver(postBodyFormSchema) })` が型エラーで build 失敗する。
 
-| Chunk | Task     | 内容                                                                                     |      build pass      |                       PR 数                        |
-| ----- | -------- | ---------------------------------------------------------------------------------------- | :------------------: | :------------------------------------------------: |
-| 1     | Task 1   | inventory 作成 (本 doc)                                                                  |          ✅          |                       本 PR                        |
-| 2     | Task 2   | post + news schema in-place preprocess + 既存 test fixture 同時更新                      |          ✅          |                         1                          |
-| 3a    | Task 3-4 | 6 Server Action conform 化 + content-types/types.ts interface refactor                   |   ❌ build broken    |                     1 (bundle)                     |
-| 3b    | Task 5   | 12 side-panel component bundle refactor                                                  | ❌ build broken 継続 |               (3a 内に統合 or 別 PR)               |
-| 3c    | Task 6-7 | SettingsDialog + content-types/{post,news}.tsx + usePostEditor / useNewsEditor dual form |  ✅ build pass 復帰  | 1 (build broken 中間 commit + controller 最終統合) |
-| 4     | Task 8   | form.tsx 削除 + 残存 RHF audit                                                           |          ✅          |                         1                          |
-| 5     | Task 9   | rule docs 更新                                                                           |          ✅          |                         1                          |
-| 6     | Task 10  | Phase 3-C handoff memo + spec の Task 10 削除 (代替済)                                   |          ✅          |                   1 (memo only)                    |
+このため Task 2 は **Task 7 (dual form conform 化) と同一 commit で bundle する必要がある** (forms-and-public.md SSoT 明示)。修正後の Chunk 分割:
 
-**合計 PR 数**: 6 件 (Chunk 1-6)、または Chunk 3a + 3b + 3c を 1 bundle PR にまとめて 4 件。
+| Chunk | Task     | 内容                                                                                                                                                                                                                    |                   build pass                    |                       PR 数                        |
+| ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------: | :------------------------------------------------: |
+| 1     | Task 1   | inventory 作成 (本 doc)                                                                                                                                                                                                 |                       ✅                        |                       本 PR                        |
+| 2     | Task 2-7 | post + news schema preprocess + 既存 test fixture 更新 + 6 Server Action conform 化 + content-types/types.ts + 12 side-panel + SettingsDialog + content-types/{post,news}.tsx + usePostEditor / useNewsEditor dual form | build broken 中間 commit + 最終 build pass 復帰 | 1 (build broken 中間 commit + controller 最終統合) |
+| 3     | Task 8   | form.tsx 削除 + 残存 RHF audit                                                                                                                                                                                          |                       ✅                        |                         1                          |
+| 4     | Task 9   | rule docs 更新                                                                                                                                                                                                          |                       ✅                        |                         1                          |
+| 5     | Task 10  | Phase 3-C handoff memo + spec の Task 10 削除 (代替済)                                                                                                                                                                  |                       ✅                        |                   1 (memo only)                    |
+
+**合計 PR 数**: 5 件 (Chunk 1-5)。
+
+**重要 (旧 Chunk 分割からの変更)**: 旧版では Chunk 2 (Task 2 単独) / Chunk 3a (Task 3-4) / Chunk 3b (Task 5) / Chunk 3c (Task 6-7) と分割していたが、**Task 2 の preprocess 追加が RHF 側 build を即座に壊す**ため Chunk 2-3 を **Chunk 2 (Task 2-7 bundle)** に統合。次セッションでは focused session で Task 2-7 を 1 implementer に bundle dispatch (CLAUDE.md §1-commit BREAKING plan 実行時規律) するのが canonical。
 
 ## Next 着手手順
 
 ```bash
 # 本 PR (Chunk 1 / inventory) merge 後
 git checkout main && git pull --ff-only
-git checkout -b feat/phase-3b-task-2-schema
+git checkout -b feat/phase-3b-task-2-7-bundle
 
-# Task 2 着手: 既存 form schema を in-place preprocess 化
-# 参照 file:
-# - src/app/(admin)/admin/(dashboard)/_shared/lib/validations/post.ts
-# - src/app/(admin)/admin/(dashboard)/_shared/lib/validations/news.ts
+# Chunk 2 (Task 2-7 bundle) 着手: focused session で 1 implementer に bundle dispatch
+# 中間 commit は build broken 状態を許容、最終 commit で build pass 復帰
+# 参照 file (Task 2 起点):
+# - src/app/(admin)/admin/(dashboard)/_shared/lib/validations/post.ts (preprocess 追加)
+# - src/app/(admin)/admin/(dashboard)/_shared/lib/validations/news.ts (preprocess 追加)
 # - __tests__/unit/lib/validations/post.test.ts (drift 同時更新)
 # - __tests__/unit/lib/validations/news.test.ts (drift 同時更新)
+# 参照 file (Task 3-7 cascade):
+# - src/app/(admin)/admin/(dashboard)/_shared/actions/post/mutations.ts (Server Action conform 化)
+# - src/app/(admin)/admin/(dashboard)/_shared/actions/news.ts (同上)
+# - .../inline/content-types/types.ts (SidePanelInjectedProps を FieldMetadata ベースに)
+# - .../inline/side-panel/*.tsx (12 件 bundle)
+# - .../inline/SettingsDialog.tsx + content-types/{post,news}.tsx
+# - .../inline/hooks/usePostEditor.ts + useNewsEditor.ts + shared/use-editor-core.ts
+# 参照 rule docs:
 # - .claude/rules/server-actions/implementation/forms-and-public.md §In-place schema preprocess pattern
+# - .claude/rules/frontend/admin-ui/forms.md §Server Actions の認証パターン (conform canonical)
+
+# Task 7 完了時点で必ず:
+bun run validate && bun run build
+# exit 0 確認後 commit + push + PR
 ```
 
 ## 関連 spec / handoff
