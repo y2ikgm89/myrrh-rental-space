@@ -7,90 +7,140 @@ paths:
 
 # 管理画面インラインコンテンツエディタ（Post / News）
 
-> 対象: メタデータ用 **UnifiedSidePanel** と **`content-types/*`**（本文編集は別系統の [Lexical エディタ](./lexical/core.md)）。
+> 対象: メタデータ用 **SettingsDialog** と **`content-types/*`**（本文編集は別系統の [Lexical エディタ](./lexical/core.md)）。
 >
-> **重要 (Phase 1 Task 8 全完了後の残存 RHF 移行対象)**: 本 editor は React Hook Form (`useForm` / `useWatch` / `Control<T>` / `useFormSetValue<T>`) ベースで実装されており、別 phase で conform `useActionState` + `useForm` + `parseWithZod` に置換予定（Phase 1 Task 4-8 で大型 form の conform 移行は完了済、本 inline editor side-panel / auto-section-form のみ Phase 1 外として残存）。本 rule docs は **別 phase 移行完了までの残存編集時の規律** として維持。新規 form は本パターン採用禁止、conform canonical を使用（→ `frontend/admin-ui/forms.md` / `zod-patterns/validation-schemas.md`）。
+> **canonical (Phase 3-B 完了後の現状)**: 本 editor は **conform `useForm` + Zod 4 + Lexical client-side rendering** ベースで実装されている (Phase 3-A: `auto-section-form` PR #107 / Phase 3-B Task 2-7: PR #120 / Task 8: PR #121 / Phase 3-C: PR #122)。`react-hook-form` / `@hookform/resolvers` は `package.json` から削除済 (Phase 3-C)。新規実装も conform 統一。バージョン SSoT は `package.json` + `bun.lock`。
 
-## 公式準拠の前提 (残存 RHF 利用箇所向け、別 phase 移行完了まで)
+## 公式準拠の前提
 
-- [React Hook Form](https://react-hook-form.com/) — 値の購読はコンポーネント内では **`useWatch`** を優先（`watch()` 禁止は `react/compiler.md`）。別 phase で conform `useInputControl` / `fields.X.value` に置換予定
-- [React 19](https://react.dev/) / React Compiler — 手動メモ化の追加は外部ライブラリ要件がある場合のみ
-- 型は **フォームデータ型**（`FieldValues` を拡張した Zod `infer`）と一致させ、`exactOptionalPropertyTypes` 下で `disabled: undefined` を余計に渡さない
+- [conform](https://conform.guide/) — `@conform-to/react` の `useForm` / `FieldMetadata` / `useInputControl` / `getInputProps` / `getTextareaProps`、`@conform-to/zod/v4` の `parseWithZod` / `getZodConstraint`
+- [Zod 4](https://zod.dev/) — schema 定義、in-place preprocess pattern (FormData transit + object literal test 両対応)
+- [React 19](https://react.dev/) / React Compiler — 手動メモ化禁止 (派生計算は browser で auto-memo)
+- [Lexical](https://lexical.dev/) — `contentJson` (primary) + `contentHtml` (cache)、HTML 生成は **必ず browser** で `renderEditorStateJsonToHtmlClient` を呼ぶ (`react-server` condition 非互換のため Server Action での render 禁止 → `prisma-patterns/lexical-storage.md`)
 
 ## ディレクトリ正本
 
-| 領域           | パス（エイリアス例）                                                                                                                                         |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| シェル・パネル | `…/editor/inline/UnifiedSidePanel.tsx`, `SidePanelShell.tsx`, `InlineEditorShell.tsx`                                                                        |
-| 型・定数       | `…/editor/inline/content-types/types.ts`（`ContentTypeConfig`, `SidePanelDefinition`, `PostSidePanelExtra`, `NewsSidePanelExtra`, `spreadOptionalDisabled`） |
-| 設定（実装）   | `…/content-types/post.tsx`, `news.tsx`（**`"use client"`** — `render` で JSX を返す）                                                                        |
-| 共有フィールド | `…/editor/inline/side-panel/*.tsx`                                                                                                                           |
-| ページ         | `posts/_components/PostEditor.tsx`, `news/_components/NewsEditor.tsx`                                                                                        |
+| 領域           | パス                                                                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| シェル・パネル | `…/editor/inline/SettingsDialog.tsx`, `InlineEditorShell.tsx`, `EditorHeader.tsx`                                                                                    |
+| 型・定数       | `…/editor/inline/content-types/types.ts` (`SidePanelInjectedProps` / `SidePanelDefinition` / `PostSidePanelExtra` / `NewsSidePanelExtra` / `spreadOptionalDisabled`) |
+| 設定 (実装)    | `…/content-types/post.tsx`, `news.tsx` (**`"use client"`** — `render(ctx)` で JSX を返す)                                                                            |
+| 共有フィールド | `…/editor/inline/side-panel/*.tsx` (12 component)                                                                                                                    |
+| Hooks          | `…/editor/inline/hooks/{usePostEditor,useNewsEditor}.ts` + `hooks/shared/use-editor-core.ts` + `hooks/use-content-width-styles.ts`                                   |
+| ページ         | `posts/_components/PostEditor.tsx`, `news/_components/NewsEditor.tsx`                                                                                                |
 
-## サイドパネル設計（現行・後方互換なし）
+## サイドパネル設計
 
 ### 採用パターン
 
 - **`SidePanelDefinition<TForm, TExtra>`** — `tabs[].sections[]` は **`render: (ctx) => ReactNode`**
-- **コンテキスト**: `ctx = SidePanelInjectedProps<TForm> & TExtra`（RHF の `register` / `control` / `errors` / `setValue` / **`getValues`（必須）** + 種別固有の `extra`）
-- **`UnifiedSidePanel`** — **`extraProps: TExtra` は必須**（空でも呼び出し側で `satisfies` 等により型を固定）
-- **`ContentTypeConfig`** — 第 5 ジェネリクス **`TSideExtra`**（未使用は `Record<string, never>`）
+- **コンテキスト**: `ctx = SidePanelInjectedProps<TForm> & TExtra`
+  - `fields: Required<{[K in keyof TForm]: FieldMetadata<TForm[K], TForm, string[]>}>` — conform per-field metadata
+  - `form: FormMetadata<TForm, string[]>` — `form.update({name, value})` 等の操作
+  - `disabled?: boolean`
+- **`SettingsDialog`** — **`injected: { fields, form, disabled }`** + **`extraProps: TExtra`** を受け取り、`buildRenderContext` で各セクションへ合成
+- **`extraProps`** — 種別固有 (`PostSidePanelExtra` / `NewsSidePanelExtra` 等)
 
-### 禁止パターン（再導入しない）
+### 禁止パターン
 
-- `SectionDefinition` + **`component: ComponentType<…>`** + **`props` スプレッド** でのセクション登録
-- サイドパネル用の **`ComponentType<any>`** 一覧（型安全の放棄）
-- `extraProps` / `getValues` の省略（型と実行時の両方で不整合になる）
+- RHF 系の `register / control / setValue / errors / getValues` を新規 component で受け取る (Phase 3-B で完全撤廃済)
+- `ComponentType<any>` ベースのセクション登録 (型安全の放棄、過去の design で禁止済)
+- `extraProps` の省略 (型と実行時両方で不整合)
 
 ## Post / News の型分離
 
 - **`PostSidePanelExtra`** — `categories`, `availableTags`, `onCreateCategory`, `onCreateTag`, `statusValue`, `onStatusChange`
 - **`NewsSidePanelExtra`** — `isPublishedValue`, `onIsPublishedChange`
-- エディターでは `const extra = { … } satisfies PostSidePanelExtra`（または News）を推奨
+- エディター側で `const extra = { … } satisfies PostSidePanelExtra` (または News) で型を固定
+
+## conform fields の sub-component 流用
+
+side-panel component は `FieldMetadata<T>` を per-field に受け取る:
+
+```tsx
+type BasicInfoFieldsProps = {
+  titleField: FieldMetadata<string>;
+  slugField: FieldMetadata<string>;
+  excerptField: FieldMetadata<string | undefined>;
+  onAutoGenerateSlug: () => void; // 親で title から slug を生成 + form.update を呼ぶ
+  disabled?: boolean;
+};
+```
+
+`onAutoGenerateSlug` のような派生処理は親 (`content-types/post.tsx` 等) で `ctx.form.update({ name: ctx.fields.slug.name, value: generateSlug(titleValue) })` を実行し、callback として渡す。
+
+## `LayoutFields` の `FieldMetadata<...>` 境界 cast
+
+`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。`as unknown as FieldMetadata<string | null | undefined>` cast は documented exception §5 conform generic invariance (`type-safety/documented-exceptions-ledger.md`) で管理。
 
 ## `exactOptionalPropertyTypes` と `disabled`
 
 - セクション内に `disabled={ctx.disabled}` のように **`undefined` を明示プロップで渡さない**
-- 共通ヘルパー: **`spreadOptionalDisabled(ctx)`**（`content-types/types.ts`）
+- 共通ヘルパー: **`spreadOptionalDisabled(ctx)`** (`content-types/types.ts`)
 
-## `LayoutFields` のみ `any` 境界（意図的）
+## Lexical contentJson 派生 contentHtml 計算
 
-- RHF の **`Control` / `UseFormRegister` はジェネリクス不変**のため、Post と News を 1 つの厳密ジェネリクスに束ねると `Path<T>` / `useWatch` が破綻する
-- **`LayoutFields`** だけ **`SidePanelSectionProps` + `eslint-disable @typescript-eslint/no-explicit-any`**（1 ファイル・コメント必須）
-- **他の `side-panel` コンポーネント**は **`render` 内で `<XxxFields<PostFormData>>` 等、具体フォーム型を付ける**（`any` の拡大禁止）
+本文 (Lexical) は軽量 `useState` で contentJson を管理、submit handler 内で `renderEditorStateJsonToHtmlClient(contentJson)` を **browser 側** で実行して contentHtml を派生 (React Compiler 自動メモ化、`useMemo` 不要):
+
+```tsx
+const onSubmitBody = () => {
+  if (!post) return;
+  core.startTransition(async () => {
+    const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+    const result = await updatePostBody(post.id, { contentJson, contentHtml });
+    // ...
+  });
+};
+```
+
+詳細: `prisma-patterns/lexical-storage.md` §Client-side HTML rendering pattern。
+
+## 設定フォーム imperative validation pattern
+
+SettingsDialog は `<form>` 要素を持たないため、save button から imperative に validate する canonical pattern:
+
+```tsx
+const validateSettings = (): PostSettingsFormData | null => {
+  const formData = new FormData();
+  for (const [key, field] of Object.entries(settingsFields)) {
+    const fieldValue = field.value;
+    if (Array.isArray(fieldValue)) {
+      formData.append(key, JSON.stringify(fieldValue));
+    } else if (typeof fieldValue === "boolean") {
+      if (fieldValue) formData.append(key, "on");
+    } else if (fieldValue != null) {
+      formData.append(key, String(fieldValue));
+    }
+  }
+  const submission = parseWithZod(formData, { schema: postSettingsFormSchema });
+  if (submission.status !== "success") {
+    toast.error("入力内容に誤りがあります");
+    return null;
+  }
+  return submission.value;
+};
+```
 
 ## 新規コンテンツ種別を追加するとき
 
-1. `content-types/types.ts` に **`*SidePanelExtra`** 型と `ContentTypeConfig<…, …, …, …, TSideExtra>` を定義できるよう第 5 引数を使う
-2. **`content-types/<id>.tsx`** で `post.tsx` / `news.tsx` を手本に **`sidePanel.tabs[].sections[].render`** を記述（余剰プロパティで `UnifiedPublishFields` 等に丸ごと `ctx` を渡さない）
-3. エディタで **`UnifiedSidePanel`** に **`config={…Config.sidePanel}`** と **`extraProps satisfies …`** を渡す
-4. バリデーションスキーマに、レイアウト UI が触るキー（Post/News では `contentWidth`, `contentWidthCustom`）を **Zod で明示**し、`toSubmitPayload` では **Prisma モデルに存在するキーだけ**送る（DB に無い列はフォームに置かない）
+1. `content-types/types.ts` に **`*SidePanelExtra`** 型を追加
+2. **`content-types/<id>.tsx`** で `post.tsx` / `news.tsx` を手本に **`sidePanel.tabs[].sections[].render(ctx)`** を記述 (各 side-panel component に `ctx.fields.X` / `ctx.form` を渡す、`spreadOptionalDisabled(ctx)` 適用)
+3. エディター側で **`SettingsDialog`** に **`config={...settingsPanel}`** と **`injected={{ fields, form, disabled }}`** + **`extraProps satisfies …`** を渡す
+4. 設定 form schema は conform 互換の **in-place preprocess pattern** で定義 (`@/admin/lib/validations/<entity>.ts` に追加、`tags` は JSON.stringify transit、`contentWidth` は string ↔ enum、`isPublished` は checkbox "on" ↔ boolean、`publishedAt` は datetime-local など)
+5. Hook (`use<Entity>Editor`) は本文を useState + 設定を conform `useForm` で管理 (`usePostEditor.ts` / `useNewsEditor.ts` 参照)
 
 ## `ContentTypeId` と固定ページ
 
-- インライン `content-types` の `ContentTypeId` は **`post` / `news` のみ**。固定ページのレイアウト（`showSidebar` 等）は **`@/shared/lib/validations/page`** とページ編集 UI が正本。将来インラインに載せる場合は `content-types/<id>.tsx` を追加し **`ContentTypeId` ユニオンを拡張**する
-
-## 設定ダイアログの公式送信パターン（Terms / 将来の単一フォームエディタ）
-
-Terms のように `content-types` 拡張を使わない単一 RHF フォームエディタで **Lexical 本文編集 + 設定ダイアログ** を持つものは、設定 UI を Radix `<Dialog>` 直接埋め込みで実装する。Radix 公式の async form submission パターンに準拠すること:
-
-- `<DialogContent>` 直下を **`<form onSubmit={handleSubmit(onSubmit)}>`** でラップする（`onClick={handleSave}` のみでは Enter 送信が効かず non-idiomatic）
-- 保存ボタンは **`type="submit"`**、閉じる/キャンセルは `type="button"` + `onOpenChange` でクローズ
-- `onSubmit` 成功パスで **`reset(data)` + `setIsSettingsDialogOpen(false)`** を呼び dirty 状態クリア + ダイアログクローズ
-- **`<DialogTitle>` + `<DialogDescription>`** 必須（WAI-ARIA）
-- Tabs 内にバージョン管理など非送信アクションを混在させる場合、それらのボタンには **`type="button"` を明示**（暗黙 submit 防止）
-- 参照実装: `terms/_components/TermsInlineEditor.tsx`
-
-> **注**: FAQ 項目は Lexical エディタを廃止し、`FaqItemForm` + `AdminDetailLayout` + `<Textarea>` + `useFormAction` の標準管理フォームパターン（`FaqCategoryForm` 同型）に統一済み。本セクションの対象外。
+- インライン `content-types` の `ContentTypeId` は **`post` / `news` のみ**。固定ページのレイアウト (`showSidebar` 等) は **`@/shared/lib/validations/page`** とページ編集 UI が正本。
 
 ## 関連ドキュメント
 
-| 内容                   | 参照                          |
-| ---------------------- | ----------------------------- |
-| Lexical 本文・ブロック | `lexical/core.md`             |
-| 管理 UI 全般           | `admin-ui-patterns.md`        |
-| Server Actions         | `server-actions/use-cache.md` |
-
-## 履歴計画書について
-
-旧 `docs/plans/059-unified-editor-sidepanel.md` / `071-unified-content-editor.md` は設計変遷の記録として存在していたが、clean-break 原則により削除済み。過去の設計経緯は `git log --all --diff-filter=D -- docs/plans/059-* docs/plans/071-*` で辿る。現行の型名・ファイル名は **本ファイルとソース** を正とする。
+| 内容                                               | 参照                                                |
+| -------------------------------------------------- | --------------------------------------------------- |
+| Lexical 本文・ブロック                             | `lexical/core.md`                                   |
+| Lexical contentJson client-side rendering          | `prisma-patterns/lexical-storage.md`                |
+| 管理 UI 全般                                       | `admin-ui-patterns.md`                              |
+| conform canonical pattern                          | `frontend/admin-ui/forms.md`                        |
+| In-place preprocess pattern                        | `server-actions/implementation/forms-and-public.md` |
+| Server Actions                                     | `server-actions/use-cache.md`                       |
+| documented exception §5 conform generic invariance | `type-safety/documented-exceptions-ledger.md`       |
