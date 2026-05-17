@@ -31,7 +31,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **Type safety** (`.claude/rules/type-safety.md`):
 
-- **No `as` type assertions** (except DOM event targets, Prisma generated code, SectionConfig union widening with comment)
+- **No `as` type assertions** except the 7 permanent exceptions documented in `type-safety/assertion-bans.md` §1-7 (DOM event target / Prisma helper-routed / SectionConfig union widening / serialize helper / SDK boundary via `z.custom<T>` / conform `FieldMetadata<T>` generic invariance / JSX defensive narrowing). New `as Prisma.InputJsonValue` / `as Route<string>` / `as unknown as Schema$Location` / `as CreateEmailOptions` are all forbidden — use `asPrismaInputJsonValue()` / `toAppRoute()` / `LocationSchema.parse()` / `CreateEmailOptionsSchema.parse()` SSoT helpers instead
 - **`noUncheckedIndexedAccess` is enabled**: Array/Record index access returns `T | undefined`. Direct `.property` access without a guard (`if (!item) return`, `?.`, `?? default`) is a compile error.
 - **`keysOf(obj)`** instead of `Object.keys(obj) as T[]`
 
@@ -133,7 +133,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - Read `.claude/rules/frontend/admin-inline-editor-patterns.md`
 - Side panel: **`SidePanelDefinition` + `render(ctx)`**; **`extraProps` and `getValues` required** on `UnifiedSidePanel`
 - Do not reintroduce **`component` + `props` + `ComponentType<any>`** section registry for the metadata panel
-- Only **`LayoutFields`** may use the documented **`any` + eslint-disable** escape (RHF generic invariance); do not expand `any` elsewhere in `side-panel/`
+- Only **`LayoutFieldsConnected` / `AutoSectionForm` / `AutoArrayField` / `Auto{Boolean,Select,Group}Field`** may use the **`as unknown as FieldMetadata<...>`** boundary cast (permanent exception §6 conform `FieldMetadata<T>` generic invariance, `type-safety/assertion-bans.md`); do not introduce new cast points elsewhere in `side-panel/` or `auto-fields/`
 
 **`src/app/(public\*)/**/seo/**`or`**/layouts/**`**:
 

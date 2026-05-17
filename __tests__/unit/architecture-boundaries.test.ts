@@ -1703,6 +1703,69 @@ describe("architecture boundaries", () => {
     }
   });
 
+  test("react-hook-form / @hookform は src/ から import されていない（Phase 3-C 完遂後の不可逆規律）", () => {
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = sourceFiles
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return /from\s+["']react-hook-form["']|from\s+["']@hookform\//u.test(
+          source,
+        );
+      })
+      .map((file) => relative(ROOT, file));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
+    // §5 SDK 境界 cast の helper 強制 (assertion-bans.md §5)
+    // - LocationSchema.parse (googleapis Schema$Location)
+    // - CreateEmailOptionsSchema.parse (resend CreateEmailOptions)
+    // - toAppRoute / safeToAppRoute (Next.js Route<string>)
+    // SSoT helper 内部の z.custom<T> 1 箇所だけが許可、caller 側 cast は 0 件必須
+    const ALLOWED_HELPER_FILES = [
+      join(SRC_ROOT, "shared", "lib", "google-business-profile", "schemas.ts"),
+      join(SRC_ROOT, "shared", "lib", "email", "schemas.ts"),
+      join(SRC_ROOT, "shared", "lib", "routes", "to-app-route.ts"),
+    ];
+    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
+      (file) => !ALLOWED_HELPER_FILES.includes(file),
+    );
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+unknown\s+as\s+Schema\$Location\b|\bas\s+CreateEmailOptions\b|\bas\s+Route<string>/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("Phase 1 Prisma JSON cast は asPrismaInputJsonValue helper 経由（as Prisma.InputJsonValue 0 件）", () => {
+    // §2 Prisma JSON 型 — `as Prisma.InputJsonValue` は禁止
+    // helper: asPrismaInputJsonValue / parsePrismaInputJson / clonePrismaInputJson (@/shared/db/prisma-input-json)
+    // `as Prisma.InputJsonObject` (data field) と `satisfies + as Prisma.InputJsonArray` (navigation token) のみ許容
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+Prisma\.InputJsonValue\b/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("type-safety ledger は廃止済（assertion-bans.md §1-7 の permanent exception に統合）", () => {
+    // 2026-05-18 削除: documented-exceptions-ledger.md は Phase 1 完遂 (SDK / Prisma JSON / Route cast 構造解消)
+    // + Phase 3-C 完遂 (RHF 完全削除) に伴い、assertion-bans.md §1-7 で permanent exception を直接定義する形に一本化
+    const ledgerFile = join(
+      ROOT,
+      ".claude",
+      "rules",
+      "type-safety",
+      "documented-exceptions-ledger.md",
+    );
+
+    expect(existsSync(ledgerFile)).toBe(false);
+  });
+
   test("Phase 4 で PortableTextBlock[] 化済の long-form フィールドは schema で string を受け付けない", async () => {
     const { validateSectionConfig } =
       await import("@/shared/lib/validations/section");
