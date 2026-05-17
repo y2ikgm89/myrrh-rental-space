@@ -1,11 +1,4 @@
-import type {
-  UseFormRegister,
-  UseFormSetValue,
-  FieldErrors,
-  Control,
-} from "react-hook-form";
 import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-bar";
-import type { PortableTextSpan } from "@/shared/lib/portable-text";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   AnnouncementBarAnimation,
@@ -88,16 +81,6 @@ export function isValidHexColor(value: string | null | undefined): boolean {
 // Types
 // =============================================================================
 
-export type BarFormData = {
-  message: PortableTextSpan[];
-  linkUrl: string;
-  linkText: string;
-  isActive: boolean;
-  priority: number;
-  startAt: string;
-  endAt: string;
-};
-
 export type CarouselSettings = {
   announcementBarAnimation: AnnouncementBarAnimation;
   announcementBarDuration: number;
@@ -126,19 +109,6 @@ export type BarListProps = {
   onCreate: () => void;
   onToggleActive: (id: string) => void;
   onDelete: (id: string) => void;
-};
-
-export type BarDialogProps = {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  editingBar: Serialized<AnnouncementBarData> | null;
-  isPending: boolean;
-  register: UseFormRegister<BarFormData>;
-  setValue: UseFormSetValue<BarFormData>;
-  control: Control<BarFormData>;
-  errors: FieldErrors<BarFormData>;
-  formValues: BarFormData;
-  onSubmit: (e: React.FormEvent) => void;
 };
 
 export type CarouselSettingsProps = {
