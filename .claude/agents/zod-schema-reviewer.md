@@ -246,4 +246,4 @@ Zod 4 の挙動で不明な点があれば必ず `context7` で `/colinhacks/zod
 - `.claude/rules/zod-patterns/` — Zod 4 パターンの正本（validation-schemas / array-uniqueness / error-formatting / metadata-registry / enum-and-literals）
 - `src/shared/lib/validations/` — 共通スキーマ
 - `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/` — admin スキーマ
-- Zod docs: https://zod.dev/
+- Zod docs: <https://zod.dev/>

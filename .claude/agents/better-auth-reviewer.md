@@ -301,4 +301,4 @@ Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
 - `src/shared/lib/customer-auth.ts` — customer インスタンス定義
 - `src/shared/domain/customers/link.ts` — `ensureCustomerLinked`
 - `.claude/rules/auth-patterns.md` — 全体的な auth 規約
-- Better Auth docs: https://www.better-auth.com/docs
+- Better Auth docs: <https://www.better-auth.com/docs>
