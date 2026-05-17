@@ -1,8 +1,9 @@
 "use client";
 
+import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useWatch } from "react-hook-form";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { IconCalendar } from "@tabler/icons-react";
 import {
   Button,
@@ -22,123 +23,167 @@ import {
   SelectionBox,
   SubmitButton,
 } from "@/admin/components/ui";
-import {
-  adminReservationSchema,
-  type AdminReservationInput,
-} from "@/admin/lib/validations/admin-reservation";
-import { createAdminReservation } from "@/admin/actions/reservation";
-import { useFormAction } from "@/admin/hooks/useFormAction";
+import { createReservationAction } from "@/admin/actions/reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { CustomerSelector } from "./CustomerSelector";
 import {
-  convertFieldErrors,
   RESERVATION_STATUS_OPTIONS,
   TIME_OPTIONS,
   type SpaceOption,
   type SelectedCustomer,
   type NewCustomerData,
 } from "./reservation-form-helpers";
-
-// =============================================================================
-// Types
-// =============================================================================
+import { createReservationFormSchema } from "./reservation-form-schema";
 
 type ReservationFormProps = {
   spaces: SpaceOption[];
 };
 
-// =============================================================================
-// Main Component
-// =============================================================================
+const EMPTY_NEW_CUSTOMER: NewCustomerData = {
+  lastName: "",
+  firstName: "",
+  email: "",
+};
 
 export function ReservationForm({ spaces }: ReservationFormProps) {
   const router = useRouter();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
-  // CustomerSelector用の状態
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [selectedCustomer, setSelectedCustomer] =
     useState<SelectedCustomer | null>(null);
+  const [newCustomerData, setNewCustomerData] =
+    useState<NewCustomerData>(EMPTY_NEW_CUSTOMER);
 
-  const { form, isPending, onSubmit } = useFormAction(
-    adminReservationSchema,
-    (data: AdminReservationInput) =>
-      createAdminReservation({ ...data, totalPrice: manualPrice }),
-    {
-      defaultValues: {
-        status: ReservationStatus.CONFIRMED,
-        sendEmail: true,
-      },
-      successMessage: "予約を作成しました",
-      onSuccess: (data) => {
-        router.push(`/admin/reservations/${data.id}`);
-      },
-    },
+  const [spaceId, setSpaceId] = useState<string>("");
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
+  const [status, setStatus] = useState<ReservationStatus>(
+    ReservationStatus.CONFIRMED,
+  );
+  const [sendEmail, setSendEmail] = useState<boolean>(true);
+
+  const [lastResult, action, isPending] = useActionState(
+    createReservationAction,
+    undefined,
   );
 
-  const {
-    register,
-    formState: { errors },
-    setValue,
-    control,
-  } = form;
+  const [form, fields] = useForm({
+    id: "reservation-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: createReservationFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
 
-  const spaceId = useWatch({ control, name: "spaceId" });
-  const date = useWatch({ control, name: "date" });
-  const startTime = useWatch({ control, name: "startTime" });
-  const endTime = useWatch({ control, name: "endTime" });
-  const status = useWatch({ control, name: "status" });
-  const sendEmail = useWatch({ control, name: "sendEmail" });
+  const customerFields = fields.customerData.getFieldset();
 
-  // CustomerSelector ハンドラー
   const handleSelectCustomer = (customer: SelectedCustomer | null) => {
     setSelectedCustomer(customer);
-    setValue("customerId", customer?.id);
-    if (customer) {
-      setValue("customerData", undefined);
-    }
   };
 
   const handleNewCustomerData = (data: NewCustomerData | null) => {
-    setValue("customerData", data ?? undefined);
-    if (data) {
-      setValue("customerId", undefined);
-    }
+    setNewCustomerData(data ?? EMPTY_NEW_CUSTOMER);
   };
 
   const handleToggleNewCustomer = (isNew: boolean) => {
     setIsNewCustomer(isNew);
     if (isNew) {
-      setValue("customerId", undefined);
       setSelectedCustomer(null);
     } else {
-      setValue("customerData", undefined);
+      setNewCustomerData(EMPTY_NEW_CUSTOMER);
     }
   };
 
-  // 選択されたスペース情報
   const selectedSpace = spaces.find((s) => s.id === spaceId);
 
-  // 料金自動計算
   const calculatedPrice = (() => {
     if (!selectedSpace || !startTime || !endTime) return null;
-    try {
-      const start = new Date(`${date || "2000-01-01"}T${startTime}`);
-      const end = new Date(`${date || "2000-01-01"}T${endTime}`);
-      if (end <= start) return null;
-      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return selectedSpace.hourlyPrice * hours;
-    } catch {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
       return null;
     }
+    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    return selectedSpace.hourlyPrice * hours;
   })();
 
   const displayPrice = manualPrice ?? calculatedPrice;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form {...getFormProps(form)} action={action} className="space-y-6">
+      {/* Mode + customerId hidden inputs */}
+      <input
+        type="hidden"
+        name={fields.mode.name}
+        value={isNewCustomer ? "new" : "existing"}
+      />
+      <input
+        type="hidden"
+        name={fields.customerId.name}
+        value={selectedCustomer?.id ?? ""}
+      />
+      {/* CustomerData nested hidden inputs (new customer mode) */}
+      {isNewCustomer && (
+        <>
+          <input
+            type="hidden"
+            name={customerFields.lastName.name}
+            value={newCustomerData.lastName}
+          />
+          <input
+            type="hidden"
+            name={customerFields.firstName.name}
+            value={newCustomerData.firstName}
+          />
+          <input
+            type="hidden"
+            name={customerFields.email.name}
+            value={newCustomerData.email}
+          />
+          <input
+            type="hidden"
+            name={customerFields.companyName.name}
+            value={newCustomerData.companyName ?? ""}
+          />
+          <input
+            type="hidden"
+            name={customerFields.phoneNumber.name}
+            value={newCustomerData.phoneNumber ?? ""}
+          />
+        </>
+      )}
+      {/* totalPrice hidden input (manual override) */}
+      <input
+        type="hidden"
+        name={fields.totalPrice.name}
+        value={manualPrice ?? ""}
+      />
+      {/* spaceId / startTime / endTime / status / sendEmail hidden inputs */}
+      <input type="hidden" name={fields.spaceId.name} value={spaceId} />
+      <input type="hidden" name={fields.startTime.name} value={startTime} />
+      <input type="hidden" name={fields.endTime.name} value={endTime} />
+      <input type="hidden" name={fields.status.name} value={status} />
+      <input
+        type="hidden"
+        name={fields.sendEmail.name}
+        value={sendEmail ? "on" : ""}
+      />
+
+      {form.errors && form.errors.length > 0 && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          {form.errors.join(", ")}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 左カラム: 予約情報（スペース・日時・料金） */}
         <Card>
@@ -146,12 +191,11 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
             <CardTitle>予約情報</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* スペース選択 */}
             <div className="space-y-2">
               <Label htmlFor="spaceId">スペース *</Label>
               <Select
-                value={spaceId || ""}
-                onValueChange={(value) => setValue("spaceId", value)}
+                value={spaceId}
+                onValueChange={setSpaceId}
                 disabled={isPending}
               >
                 <SelectTrigger id="spaceId">
@@ -165,40 +209,45 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.spaceId && (
-                <p className="text-sm text-destructive">
-                  {errors.spaceId.message}
+              {fields.spaceId.errors && (
+                <p
+                  id={fields.spaceId.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.spaceId.errors.join(", ")}
                 </p>
               )}
             </div>
 
-            {/* 日付 */}
             <div className="space-y-2">
-              <Label htmlFor="date">日付 *</Label>
+              <Label htmlFor={fields.date.id}>日付 *</Label>
               <div className="relative">
                 <Input
-                  id="date"
-                  type="date"
-                  {...register("date")}
+                  {...getInputProps(fields.date, { type: "date" })}
                   disabled={isPending}
                   className="pr-10"
                 />
-                <IconCalendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <IconCalendar
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
               </div>
-              {errors.date && (
-                <p className="text-sm text-destructive">
-                  {errors.date.message}
+              {fields.date.errors && (
+                <p
+                  id={fields.date.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.date.errors.join(", ")}
                 </p>
               )}
             </div>
 
-            {/* 開始・終了時間 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startTime">開始時間 *</Label>
                 <Select
-                  value={startTime || ""}
-                  onValueChange={(value) => setValue("startTime", value)}
+                  value={startTime}
+                  onValueChange={setStartTime}
                   disabled={isPending}
                 >
                   <SelectTrigger id="startTime">
@@ -212,9 +261,12 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.startTime && (
-                  <p className="text-sm text-destructive">
-                    {errors.startTime.message}
+                {fields.startTime.errors && (
+                  <p
+                    id={fields.startTime.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.startTime.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -222,8 +274,8 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="endTime">終了時間 *</Label>
                 <Select
-                  value={endTime || ""}
-                  onValueChange={(value) => setValue("endTime", value)}
+                  value={endTime}
+                  onValueChange={setEndTime}
                   disabled={isPending}
                 >
                   <SelectTrigger id="endTime">
@@ -237,15 +289,17 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.endTime && (
-                  <p className="text-sm text-destructive">
-                    {errors.endTime.message}
+                {fields.endTime.errors && (
+                  <p
+                    id={fields.endTime.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.endTime.errors.join(", ")}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* 料金表示 */}
             {displayPrice !== null ? (
               <div className="space-y-1">
                 <div className="text-2xl font-bold">
@@ -265,7 +319,6 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
               </p>
             )}
 
-            {/* 手動料金調整 */}
             <div className="space-y-2">
               <Label htmlFor="manualPrice">手動で料金を調整</Label>
               <Input
@@ -285,19 +338,19 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
               </p>
             </div>
 
-            {/* クーポン */}
             <div className="space-y-2">
-              <Label htmlFor="couponCode">クーポンコード</Label>
+              <Label htmlFor={fields.couponCode.id}>クーポンコード</Label>
               <Input
-                id="couponCode"
-                type="text"
-                {...register("couponCode")}
+                {...getInputProps(fields.couponCode, { type: "text" })}
                 placeholder="クーポンコードを入力（任意）"
                 disabled={isPending}
               />
-              {errors.couponCode && (
-                <p className="text-sm text-destructive">
-                  {errors.couponCode.message}
+              {fields.couponCode.errors && (
+                <p
+                  id={fields.couponCode.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.couponCode.errors.join(", ")}
                 </p>
               )}
             </div>
@@ -306,7 +359,6 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
 
         {/* 右カラム: 顧客情報 + 追加設定 */}
         <div className="space-y-6">
-          {/* 顧客情報 */}
           <Card>
             <CardHeader>
               <CardTitle>顧客情報</CardTitle>
@@ -318,12 +370,25 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 onNewCustomerData={handleNewCustomerData}
                 isNewCustomer={isNewCustomer}
                 onToggleNewCustomer={handleToggleNewCustomer}
-                errors={convertFieldErrors(errors.customerData)}
+                errors={{
+                  lastName: customerFields.lastName.errors,
+                  firstName: customerFields.firstName.errors,
+                  email: customerFields.email.errors,
+                  phoneNumber: customerFields.phoneNumber.errors,
+                  companyName: customerFields.companyName.errors,
+                }}
               />
+              {fields.customerId.errors && (
+                <p
+                  id={fields.customerId.errorId}
+                  className="mt-2 text-sm text-destructive"
+                >
+                  {fields.customerId.errors.join(", ")}
+                </p>
+              )}
             </CardContent>
           </Card>
 
-          {/* 追加設定 */}
           <Card>
             <CardHeader>
               <CardTitle>追加設定</CardTitle>
@@ -333,10 +398,9 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 <Label>予約ステータス</Label>
                 <SelectionBox
                   options={RESERVATION_STATUS_OPTIONS}
-                  value={status ?? ReservationStatus.CONFIRMED}
+                  value={status}
                   onChange={(value) => {
-                    if (isValidReservationStatus(value))
-                      setValue("status", value);
+                    if (isValidReservationStatus(value)) setStatus(value);
                   }}
                   columns={2}
                   disabled={isPending}
@@ -345,20 +409,30 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 <p className="text-sm text-muted-foreground">
                   電話予約の場合は「確定」を推奨します
                 </p>
+                {fields.status.errors && (
+                  <p
+                    id={fields.status.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.status.errors.join(", ")}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">メモ</Label>
+                <Label htmlFor={fields.notes.id}>メモ</Label>
                 <Textarea
-                  id="notes"
-                  {...register("notes")}
+                  {...getInputProps(fields.notes, { type: "text" })}
                   placeholder="例: 電話予約、紹介（山田様）"
                   disabled={isPending}
                   rows={3}
                 />
-                {errors.notes && (
-                  <p className="text-sm text-destructive">
-                    {errors.notes.message}
+                {fields.notes.errors && (
+                  <p
+                    id={fields.notes.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.notes.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -367,9 +441,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                 <Checkbox
                   id="sendEmail"
                   checked={sendEmail}
-                  onCheckedChange={(checked) =>
-                    setValue("sendEmail", checked === true)
-                  }
+                  onCheckedChange={(checked) => setSendEmail(checked === true)}
                   disabled={isPending}
                 />
                 <Label htmlFor="sendEmail" className="cursor-pointer">
@@ -381,7 +453,6 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
         </div>
       </div>
 
-      {/* ボタン */}
       <div className="flex justify-end gap-4">
         <Button
           type="button"
