@@ -1,6 +1,9 @@
 "use client";
 
-import { useWatch, type UseFormReturn } from "react-hook-form";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
   Input,
@@ -20,104 +23,157 @@ import {
 } from "@/admin/components/ui";
 import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import {
+  createNavigationItemAction,
+  updateNavigationItemAction,
+  createSocialLinkAction,
+  updateSocialLinkAction,
+} from "@/admin/actions/navigation";
+import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidSocialPlatform } from "@/shared/lib/validations/enums/guards";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 import type { Serialized } from "@/shared/lib/serialize";
+import { navFormSchema, socialFormSchema } from "./nav-form-schema";
 import type {
-  NavFormData,
-  SocialFormData,
   NavigationItemData,
   SocialLinkData,
+  SocialFormDefaults,
 } from "./types";
 import { platformLabels, platformIcons } from "./types";
 
 // =============================================================================
-// Navigation Dialog Component
+// NavigationFormDialog (Phase 1 Task 8.2 — conform Variant A)
 // =============================================================================
 
-type NavigationDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  form: UseFormReturn<NavFormData>;
-  editingItem: NavigationItemData | null;
-  isPending: boolean;
-  navIsExternal: boolean;
-  navIsActive: boolean;
-  navParentId: string | null;
-  parentOptions: NavigationItemData[];
-  onSubmit: (data: NavFormData) => void;
+type NavigationFormDialogProps = {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly editingItem: NavigationItemData | null;
+  readonly defaultType: NavigationType;
+  readonly defaultOrder: number;
+  readonly parentOptions: NavigationItemData[];
+  readonly onSuccess: () => Promise<void>;
 };
 
-export function NavigationDialog({
+export function NavigationFormDialog({
   open,
   onOpenChange,
-  form,
   editingItem,
-  isPending,
-  navIsExternal,
-  navIsActive,
-  navParentId,
+  defaultType,
+  defaultOrder,
   parentOptions,
-  onSubmit,
-}: NavigationDialogProps) {
-  const navLabel = useWatch({ control: form.control, name: "label" });
+  onSuccess,
+}: NavigationFormDialogProps) {
+  const isEdit = editingItem !== null;
+  const boundAction = isEdit
+    ? updateNavigationItemAction.bind(null, editingItem.id)
+    : createNavigationItemAction;
+
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
+  );
+
+  // PortableText spans を local state + hidden input で transit (Pattern B)
+  const [labelSpans, setLabelSpans] = useState<PortableTextSpan[]>(
+    editingItem?.label ?? [],
+  );
+
+  const initialType = editingItem?.type ?? defaultType;
+  const initialParentId = editingItem?.parentId ?? "none";
+  const initialIsExternal = editingItem?.isExternal ?? false;
+  const initialIsActive = editingItem?.isActive ?? true;
+
+  const [parentId, setParentId] = useState<string>(initialParentId);
+  const [isExternal, setIsExternal] = useState<boolean>(initialIsExternal);
+  const [isActive, setIsActive] = useState<boolean>(initialIsActive);
+
+  const [form, fields] = useForm({
+    id: isEdit ? `nav-edit-${editingItem.id}` : "nav-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: navFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      url: editingItem?.url ?? "",
+    },
+  });
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success(
+        isEdit
+          ? "ナビゲーションを更新しました"
+          : "ナビゲーションを作成しました",
+      );
+      onOpenChange(false);
+      void onSuccess();
+    }
+  }, [lastResult, isEdit, onOpenChange, onSuccess]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form {...getFormProps(form)} action={action}>
           <DialogHeader>
             <DialogTitle>
-              {editingItem ? "メニュー編集" : "メニュー追加"}
+              {isEdit ? "メニュー編集" : "メニュー追加"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Label (PortableText) */}
             <div className="space-y-2">
               <Label htmlFor="nav-label">ラベル</Label>
               <PortableTextInlineEditor
                 id="nav-label"
-                value={navLabel ?? []}
-                onChange={(spans) =>
-                  form.setValue("label", spans, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
+                value={labelSpans}
+                onChange={setLabelSpans}
                 disabled={isPending}
                 aria-label="メニューラベル"
+              />
+              <input
+                type="hidden"
+                name={fields.label.name}
+                value={JSON.stringify(labelSpans)}
               />
               <p className="text-xs text-muted-foreground">
                 テキストにアイコンを混在できます。アイコンは「アイコン挿入」ボタンから追加してください。
               </p>
-              {form.formState.errors.label && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.label.message}
+              {fields.label.errors && (
+                <p
+                  id={fields.label.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.label.errors.join(", ")}
                 </p>
               )}
             </div>
 
+            {/* URL */}
             <div className="space-y-2">
-              <Label htmlFor="nav-url">URL</Label>
+              <Label htmlFor={fields.url.id}>URL</Label>
               <Input
-                id="nav-url"
-                {...form.register("url")}
+                {...getInputProps(fields.url, { type: "text" })}
                 placeholder="/about"
                 disabled={isPending}
               />
-              {form.formState.errors.url && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.url.message}
+              {fields.url.errors && (
+                <p id={fields.url.errorId} className="text-sm text-destructive">
+                  {fields.url.errors.join(", ")}
                 </p>
               )}
             </div>
 
+            {/* Parent */}
             <div className="space-y-2">
               <Label htmlFor="nav-parentId">
                 親メニュー（サブメニューの場合）
               </Label>
               <Select
-                value={navParentId || "none"}
-                onValueChange={(value) =>
-                  form.setValue("parentId", value === "none" ? null : value)
-                }
+                value={parentId || "none"}
+                onValueChange={(value) => setParentId(value)}
                 disabled={isPending}
               >
                 <SelectTrigger>
@@ -132,34 +188,55 @@ export function NavigationDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <input
+                type="hidden"
+                name={fields.parentId.name}
+                value={parentId}
+              />
               <p className="text-xs text-muted-foreground">
                 サブメニューにする場合は親メニューを選択してください
               </p>
             </div>
 
+            {/* isExternal */}
             <div className="flex items-center justify-between">
               <Label htmlFor="nav-isExternal">外部リンク</Label>
               <Switch
                 id="nav-isExternal"
-                checked={navIsExternal}
-                onCheckedChange={(checked) =>
-                  form.setValue("isExternal", checked)
-                }
+                checked={isExternal}
+                onCheckedChange={setIsExternal}
                 disabled={isPending}
+              />
+              <input
+                type="hidden"
+                name={fields.isExternal.name}
+                value={isExternal ? "on" : ""}
               />
             </div>
 
+            {/* isActive */}
             <div className="flex items-center justify-between">
               <Label htmlFor="nav-isActive">有効</Label>
               <Switch
                 id="nav-isActive"
-                checked={navIsActive}
-                onCheckedChange={(checked) =>
-                  form.setValue("isActive", checked)
-                }
+                checked={isActive}
+                onCheckedChange={setIsActive}
                 disabled={isPending}
               />
+              <input
+                type="hidden"
+                name={fields.isActive.name}
+                value={isActive ? "on" : ""}
+              />
             </div>
+
+            {/* Hidden: type / order */}
+            <input type="hidden" name={fields.type.name} value={initialType} />
+            <input
+              type="hidden"
+              name={fields.order.name}
+              value={String(editingItem?.order ?? defaultOrder)}
+            />
           </div>
           <DialogFooter>
             <Button
@@ -172,8 +249,8 @@ export function NavigationDialog({
             </Button>
             <SubmitButton
               isPending={isPending}
-              label={editingItem ? "更新" : "作成"}
-              pendingLabel={editingItem ? "更新中..." : "作成中..."}
+              label={isEdit ? "更新" : "作成"}
+              pendingLabel={isEdit ? "更新中..." : "作成中..."}
             />
           </DialogFooter>
         </form>
@@ -183,51 +260,89 @@ export function NavigationDialog({
 }
 
 // =============================================================================
-// Social Link Dialog Component
+// SocialLinkFormDialog (Phase 1 Task 8.2 — conform Variant A)
 // =============================================================================
 
-type SocialLinkDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  form: UseFormReturn<SocialFormData>;
-  editingLink: Serialized<SocialLinkData> | null;
-  isPending: boolean;
-  socialPlatform: SocialFormData["platform"];
-  socialIsActive: boolean;
-  socialShowOnDesktop: boolean;
-  socialShowOnMobile: boolean;
-  onSubmit: (data: SocialFormData) => void;
+type SocialLinkFormDialogProps = {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly editingLink: Serialized<SocialLinkData> | null;
+  readonly defaultOrder: number;
+  readonly onSuccess: () => Promise<void>;
 };
 
-export function SocialLinkDialog({
+export function SocialLinkFormDialog({
   open,
   onOpenChange,
-  form,
   editingLink,
-  isPending,
-  socialPlatform,
-  socialIsActive,
-  socialShowOnDesktop,
-  socialShowOnMobile,
-  onSubmit,
-}: SocialLinkDialogProps) {
+  defaultOrder,
+  onSuccess,
+}: SocialLinkFormDialogProps) {
+  const isEdit = editingLink !== null;
+  const boundAction = isEdit
+    ? updateSocialLinkAction.bind(null, editingLink.id)
+    : createSocialLinkAction;
+
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
+  );
+
+  const initialPlatform: SocialFormDefaults["platform"] =
+    editingLink?.platform ?? "TWITTER";
+  const [platform, setPlatform] =
+    useState<SocialFormDefaults["platform"]>(initialPlatform);
+  const [isActive, setIsActive] = useState<boolean>(
+    editingLink?.isActive ?? true,
+  );
+  const [showOnDesktop, setShowOnDesktop] = useState<boolean>(
+    editingLink?.showOnDesktop ?? true,
+  );
+  const [showOnMobile, setShowOnMobile] = useState<boolean>(
+    editingLink?.showOnMobile ?? true,
+  );
+
+  const [form, fields] = useForm({
+    id: isEdit ? `social-edit-${editingLink.id}` : "social-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: socialFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      url: editingLink?.url ?? "",
+    },
+  });
+
+  useEffect(() => {
+    if (lastResult && lastResult.initialValue === null) {
+      toast.success(
+        isEdit ? "SNSリンクを更新しました" : "SNSリンクを作成しました",
+      );
+      onOpenChange(false);
+      void onSuccess();
+    }
+  }, [lastResult, isEdit, onOpenChange, onSuccess]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form {...getFormProps(form)} action={action}>
           <DialogHeader>
             <DialogTitle>
-              {editingLink ? "SNSリンク編集" : "SNSリンク追加"}
+              {isEdit ? "SNSリンク編集" : "SNSリンク追加"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Platform */}
             <div className="space-y-2">
               <Label htmlFor="social-platform">プラットフォーム</Label>
               <Select
-                value={socialPlatform}
+                value={platform}
                 onValueChange={(value) => {
                   if (isValidSocialPlatform(value)) {
-                    form.setValue("platform", value);
+                    setPlatform(value);
                   }
                 }}
                 disabled={isPending}
@@ -252,60 +367,83 @@ export function SocialLinkDialog({
                   })}
                 </SelectContent>
               </Select>
+              <input
+                type="hidden"
+                name={fields.platform.name}
+                value={platform}
+              />
             </div>
 
+            {/* URL */}
             <div className="space-y-2">
-              <Label htmlFor="social-url">URL</Label>
+              <Label htmlFor={fields.url.id}>URL</Label>
               <Input
-                id="social-url"
-                {...form.register("url")}
+                {...getInputProps(fields.url, { type: "url" })}
                 placeholder="https://twitter.com/..."
                 disabled={isPending}
               />
-              {form.formState.errors.url && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.url.message}
+              {fields.url.errors && (
+                <p id={fields.url.errorId} className="text-sm text-destructive">
+                  {fields.url.errors.join(", ")}
                 </p>
               )}
             </div>
 
+            {/* isActive */}
             <div className="flex items-center justify-between">
               <Label htmlFor="social-isActive">有効</Label>
               <Switch
                 id="social-isActive"
-                checked={socialIsActive}
-                onCheckedChange={(checked) =>
-                  form.setValue("isActive", checked)
-                }
+                checked={isActive}
+                onCheckedChange={setIsActive}
                 disabled={isPending}
+              />
+              <input
+                type="hidden"
+                name={fields.isActive.name}
+                value={isActive ? "on" : ""}
               />
             </div>
 
+            {/* Display Settings */}
             <div className="rounded-lg border p-4 space-y-4">
               <p className="text-sm font-medium">表示設定</p>
               <div className="flex items-center justify-between">
                 <Label htmlFor="social-showOnDesktop">デスクトップで表示</Label>
                 <Switch
                   id="social-showOnDesktop"
-                  checked={socialShowOnDesktop}
-                  onCheckedChange={(checked) =>
-                    form.setValue("showOnDesktop", checked)
-                  }
+                  checked={showOnDesktop}
+                  onCheckedChange={setShowOnDesktop}
                   disabled={isPending}
+                />
+                <input
+                  type="hidden"
+                  name={fields.showOnDesktop.name}
+                  value={showOnDesktop ? "on" : ""}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="social-showOnMobile">モバイルで表示</Label>
                 <Switch
                   id="social-showOnMobile"
-                  checked={socialShowOnMobile}
-                  onCheckedChange={(checked) =>
-                    form.setValue("showOnMobile", checked)
-                  }
+                  checked={showOnMobile}
+                  onCheckedChange={setShowOnMobile}
                   disabled={isPending}
+                />
+                <input
+                  type="hidden"
+                  name={fields.showOnMobile.name}
+                  value={showOnMobile ? "on" : ""}
                 />
               </div>
             </div>
+
+            {/* Hidden: order */}
+            <input
+              type="hidden"
+              name={fields.order.name}
+              value={String(editingLink?.order ?? defaultOrder)}
+            />
           </div>
           <DialogFooter>
             <Button
@@ -318,8 +456,8 @@ export function SocialLinkDialog({
             </Button>
             <SubmitButton
               isPending={isPending}
-              label={editingLink ? "更新" : "作成"}
-              pendingLabel={editingLink ? "更新中..." : "作成中..."}
+              label={isEdit ? "更新" : "作成"}
+              pendingLabel={isEdit ? "更新中..." : "作成中..."}
             />
           </DialogFooter>
         </form>
