@@ -3,46 +3,40 @@
 /**
  * サムネイル画像フィールド
  *
- * 投稿記事用のサムネイル画像設定
- * OGP画像はOGPFieldsで管理
+ * conform `FieldMetadata` ベース。投稿記事用のサムネイル画像設定。
+ * OGP画像はOGPFieldsで管理。
  */
 
 import Image from "next/image";
 import { IconPhotoPlus } from "@tabler/icons-react";
-import type { FieldErrors, UseFormSetValue, Control } from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
 import { Button, Label } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
-import type { PostSettingsFormData } from "@/admin/lib/validations/post";
 
 type ImageFieldsProps = {
-  errors: FieldErrors<PostSettingsFormData>;
-  setValue: UseFormSetValue<PostSettingsFormData>;
-  control: Control<PostSettingsFormData>;
+  thumbnailUrlField: FieldMetadata<string>;
   disabled?: boolean;
 };
 
-export function ImageFields({
-  errors,
-  setValue,
-  control,
-  disabled,
-}: ImageFieldsProps) {
-  const thumbnailUrl = useWatch({ control, name: "thumbnailUrl" }) ?? "";
+export function ImageFields({ thumbnailUrlField, disabled }: ImageFieldsProps) {
+  const errorMessage = thumbnailUrlField.errors?.[0];
+  const control = useInputControl(thumbnailUrlField);
+  const thumbnailUrl = typeof control.value === "string" ? control.value : "";
 
   const thumbnailPicker = useSingleMediaPicker({
     defaultUsage: "POST",
     onSelect: (media) => {
       const selected = media[0];
       if (selected) {
-        setValue("thumbnailUrl", selected.url);
+        control.change(selected.url);
       }
     },
   });
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="thumbnailUrl">サムネイル</Label>
+      <Label htmlFor={thumbnailUrlField.id}>サムネイル</Label>
+      <input type="hidden" name={thumbnailUrlField.name} value={thumbnailUrl} />
       <div className="flex items-start gap-3">
         {thumbnailUrl ? (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border">
@@ -76,10 +70,8 @@ export function ImageFields({
           )}
         </div>
       </div>
-      {errors.thumbnailUrl && (
-        <p className="text-sm text-destructive">
-          {errors.thumbnailUrl.message}
-        </p>
+      {errorMessage && (
+        <p className="text-sm text-destructive">{errorMessage}</p>
       )}
 
       {thumbnailPicker.mediaPickerDialog}

@@ -6,6 +6,37 @@ import {
 } from "@/shared/lib/validations/seo";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
+const contentWidthFormSchema = z.preprocess((v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  if (typeof v === "string") {
+    return v in LayoutWidth ? v : null;
+  }
+  return null;
+}, z.enum(LayoutWidth).nullable().optional());
+
+const contentWidthCustomFormSchema = z.preprocess((v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}, z.number().int().min(320).max(1920).nullable().optional());
+
+const publishedAtFormSchema = z
+  .string()
+  .datetime({ local: true })
+  .or(z.literal(""))
+  .nullable()
+  .optional();
+
+const isPublishedFormSchema = z.preprocess((v) => {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") return v === "on" || v === "true";
+  return false;
+}, z.boolean().default(false));
+
 // =============================================================================
 // News Schemas
 // =============================================================================
@@ -72,15 +103,25 @@ export type UpdateNewsSettingsInput = z.infer<typeof updateNewsSettingsSchema>;
 
 /**
  * お知らせ 本文フォームスキーマ（クライアント）
+ *
+ * Lexical contentJson + 派生 contentHtml。本文編集時に hidden input で transit、
+ * submit handler 側で `renderEditorStateJsonToHtmlClient(contentJson)` 経由で
+ * contentHtml を派生してから Server Action へ送信する。
  */
 export const newsBodyFormSchema = z.object({
-  contentJson: z.string().min(1, { error: "本文は必須です" }),
+  contentJson: lexicalJsonSchema,
+  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type NewsBodyFormData = z.infer<typeof newsBodyFormSchema>;
 
 /**
  * お知らせ 設定フォームスキーマ（クライアント — SettingsDialog 専用）
+ *
+ * conform `parseWithZod`（FormData 経路）と既存テスト（object literal 経路）両対応の
+ * in-place preprocess pattern。isPublished は checkbox value "on"/"true" を boolean に
+ * 変換、contentWidth / contentWidthCustom / publishedAt は string ↔ enum / number /
+ * datetime 変換。
  */
 export const newsSettingsFormSchema = z
   .object({
@@ -89,11 +130,11 @@ export const newsSettingsFormSchema = z
       .string()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
-    isPublished: z.boolean(),
-    publishedAt: z.string().optional(),
-    contentWidth: z.string().optional(),
-    contentWidthCustom: z.string().optional(),
+    isPublished: isPublishedFormSchema,
+    publishedAt: publishedAtFormSchema,
+    contentWidth: contentWidthFormSchema,
+    contentWidthCustom: contentWidthCustomFormSchema,
   })
   .extend(seoOgpFieldsFormSchema.shape);
 
-export type NewsSettingsFormData = z.infer<typeof newsSettingsFormSchema>;
+export type NewsSettingsFormData = z.input<typeof newsSettingsFormSchema>;

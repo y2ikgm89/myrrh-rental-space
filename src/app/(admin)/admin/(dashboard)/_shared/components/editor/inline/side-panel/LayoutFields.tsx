@@ -3,28 +3,20 @@
 /**
  * レイアウト設定フィールド（インライン Post / News 用）
  *
- * コンテンツ幅の個別設定のみ。ブログ記事・お知らせに `showSidebar` カラムは無いため
- * 当 UI では扱わない。
+ * conform `FieldMetadata` ベース。コンテンツ幅の個別設定のみ。
  *
- * ## RHF 7.72 型境界の設計判断
+ * ## conform 0.10+ generic invariance 境界
  *
- * Control<T> が invariant になったため、異なるフォーム型（NewsFormData / PostFormData）で
- * 1つのコンポーネントを共有する公式パターンは存在しない（RHF ドキュメント確認済み）。
- *
- * 採用パターン: **Pure Component + Connected ラッパー**
- * - LayoutFields: RHF に一切依存しない Pure Component（値と callback のみ）
- * - LayoutFieldsConnected: RHF の型ブリッジ。Path<T> キャストは RHF の Path 型が
- *   ジェネリック T からリテラル文字列を解決できない既知制限への対処。
- *   `as never` や `as Control<any>` ではなく `as Path<T>` で意図を明示する。
+ * `FieldMetadata<T>` は invariant のため、Pure Component に値・error 文字列・
+ * callback のみを渡し、Connected ラッパーで型ブリッジする。`as FieldMetadata<...>`
+ * cast は `assertion-bans.md` §5 conform generic invariance の例外区分。
  */
 
-import type {
-  FieldErrors,
-  FieldValues,
-  Path,
-  UseFormSetValue,
-} from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import {
+  useInputControl,
+  type FieldMetadata,
+  type FormMetadata,
+} from "@conform-to/react";
 import {
   Input,
   Label,
@@ -34,10 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import type { SidePanelSectionProps } from "../types";
 
 // =============================================================================
-// Pure Component（RHF 非依存）
+// Pure Component（conform 非依存）
 // =============================================================================
 
 interface ContentWidthOption {
@@ -61,15 +52,21 @@ const CONTENT_WIDTH_OPTIONS: readonly ContentWidthOption[] = [
 
 export function LayoutFields({
   contentWidth,
-  contentWidthCustomProps,
+  contentWidthCustomValue,
+  contentWidthCustomName,
+  contentWidthCustomId,
   contentWidthCustomError,
   onContentWidthChange,
+  onContentWidthCustomChange,
   disabled,
 }: {
   contentWidth: string;
-  contentWidthCustomProps: Record<string, unknown> | undefined;
+  contentWidthCustomValue: string;
+  contentWidthCustomName: string;
+  contentWidthCustomId: string;
   contentWidthCustomError: string | undefined;
   onContentWidthChange: (width: string | undefined) => void;
+  onContentWidthCustomChange: (value: string) => void;
   disabled: boolean | undefined;
 }) {
   return (
@@ -108,13 +105,15 @@ export function LayoutFields({
 
       {contentWidth === "CUSTOM" && (
         <div className="space-y-2">
-          <Label htmlFor="contentWidthCustom">カスタム幅 (px)</Label>
+          <Label htmlFor={contentWidthCustomId}>カスタム幅 (px)</Label>
           <Input
-            id="contentWidthCustom"
+            id={contentWidthCustomId}
+            name={contentWidthCustomName}
             type="number"
-            min="320"
-            max="1920"
-            {...contentWidthCustomProps}
+            min={320}
+            max={1920}
+            value={contentWidthCustomValue}
+            onChange={(e) => onContentWidthCustomChange(e.target.value)}
             placeholder="例: 900"
             disabled={disabled}
           />
@@ -133,70 +132,70 @@ export function LayoutFields({
 }
 
 // =============================================================================
-// Connected ラッパー（RHF 型ブリッジ）
+// Connected ラッパー（conform 型ブリッジ）
 // =============================================================================
 
 /**
- * FieldErrors から安全にメッセージを取り出すヘルパー
+ * LayoutFieldsConnected — conform 接続ラッパー
  *
- * ジェネリック `T` の `FieldErrors<T>` は文字列キーでのインデックスアクセスを
- * 型レベルで解決できないため、既定の `FieldErrors`（= `FieldErrors<FieldValues>`）
- * を受け取り、`unknown` 経由で runtime に narrowing する（`as` 型アサーション不使用）。
+ * `FieldMetadata<T>` の generic invariance を Pure Component に Pure 値で
+ * 透過する。`as FieldMetadata<...>` cast は `assertion-bans.md` §5 conform
+ * generic invariance の例外区分。
  */
-function getErrorMessage(
-  errors: FieldErrors,
-  name: string,
-): string | undefined {
-  const entry: unknown = errors[name];
-  if (
-    entry !== null &&
-    typeof entry === "object" &&
-    "message" in entry &&
-    typeof entry.message === "string"
-  ) {
-    return entry.message;
-  }
-  return undefined;
-}
-
-/**
- * LayoutFieldsConnected — RHF 接続ラッパー
- *
- * render callback からコンポーネントとしてレンダリングされるため hooks が使える。
- * Path<T> キャストは RHF の既知の TypeScript 制限への対処:
- * ジェネリック T に対して文字列リテラルが有効なパスであることを型レベルで証明できない。
- */
-export function LayoutFieldsConnected<T extends FieldValues>({
-  control,
-  register,
-  errors,
-  setValue,
+export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
+  fields,
+  form,
   disabled,
-}: Omit<SidePanelSectionProps<T>, "getValues">) {
-  const contentWidthPath = "contentWidth" as Path<T>;
-  const contentWidthCustomPath = "contentWidthCustom" as Path<T>;
+}: {
+  fields: Record<string, FieldMetadata<unknown, TForm, string[]>>;
+  form: FormMetadata<TForm, string[]>;
+  disabled?: boolean;
+}) {
+  // generic invariance 境界 cast (§5 conform generic invariance、ledger 登録済)
+  const contentWidthField = fields["contentWidth"] as unknown as FieldMetadata<
+    string | null | undefined
+  >;
+  const contentWidthCustomField = fields[
+    "contentWidthCustom"
+  ] as unknown as FieldMetadata<number | null | undefined>;
+
+  const contentWidthControl = useInputControl(contentWidthField);
+  const contentWidthCustomControl = useInputControl(contentWidthCustomField);
 
   const contentWidth =
-    useWatch({ control, name: contentWidthPath }) ?? "DEFAULT";
+    typeof contentWidthControl.value === "string" && contentWidthControl.value
+      ? contentWidthControl.value
+      : "DEFAULT";
+
+  const contentWidthCustomValue =
+    typeof contentWidthCustomControl.value === "string"
+      ? contentWidthCustomControl.value
+      : "";
 
   return (
-    <LayoutFields
-      contentWidth={String(contentWidth)}
-      contentWidthCustomProps={{ ...register(contentWidthCustomPath) }}
-      contentWidthCustomError={getErrorMessage(errors, "contentWidthCustom")}
-      onContentWidthChange={(width) => {
-        (setValue as UseFormSetValue<FieldValues> | undefined)?.(
-          "contentWidth",
-          width,
-        );
-        if (width !== "CUSTOM") {
-          (setValue as UseFormSetValue<FieldValues> | undefined)?.(
-            "contentWidthCustom",
-            undefined,
-          );
+    <>
+      <input
+        type="hidden"
+        name={contentWidthField.name}
+        value={contentWidth === "DEFAULT" ? "" : contentWidth}
+      />
+      <LayoutFields
+        contentWidth={contentWidth}
+        contentWidthCustomValue={contentWidthCustomValue}
+        contentWidthCustomName={contentWidthCustomField.name}
+        contentWidthCustomId={contentWidthCustomField.id}
+        contentWidthCustomError={contentWidthCustomField.errors?.[0]}
+        onContentWidthChange={(width) => {
+          contentWidthControl.change(width ?? "");
+          if (width !== "CUSTOM") {
+            contentWidthCustomControl.change("");
+          }
+        }}
+        onContentWidthCustomChange={(value) =>
+          contentWidthCustomControl.change(value)
         }
-      }}
-      disabled={disabled}
-    />
+        disabled={disabled}
+      />
+    </>
   );
 }

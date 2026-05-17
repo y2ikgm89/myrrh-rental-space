@@ -4,18 +4,13 @@
  * 記事設定ダイアログ
  *
  * Lexical エディタの本文編集とは独立した「記事設定」を Radix Dialog で表示する。
- * フォーム状態は呼び出し元（usePostEditor / useNewsEditor）の独立した RHF
- * インスタンスで管理し、ダイアログ内の保存/キャンセルでのみ更新・破棄する。
- *
- * 公式準拠:
- * - Radix UI Dialog（フォーカストラップ・Escape クローズ・aria-* 自動付与）
- * - shadcn/ui Dialog プリミティブ（DialogHeader / DialogFooter）
- * - tailwind-variants によるタブグリッド計算
+ * conform `FieldMetadata` + `FormMetadata` ベースの settingsForm から `injected`
+ * (`fields` / `form` / `disabled`) を受け取り、各セクションへ render context を
+ * 合成して渡す。
  */
 
 import { useLayoutEffect, useState } from "react";
 import { tv } from "tailwind-variants";
-import type { FieldValues } from "react-hook-form";
 import {
   Button,
   Card,
@@ -73,7 +68,7 @@ const styles = tv({
 // =============================================================================
 
 function buildRenderContext<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown>,
 >(
   injected: SidePanelInjectedProps<TForm>,
@@ -90,7 +85,7 @@ function buildRenderContext<
 // =============================================================================
 
 export type SettingsDialogProps<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown> = Record<string, never>,
 > = {
   /** ダイアログ開閉状態 */
@@ -99,7 +94,7 @@ export type SettingsDialogProps<
   onOpenChange: (open: boolean) => void;
   /** 設定タブ・セクション定義 */
   config: SidePanelDefinition<TForm, TExtra>;
-  /** RHF 注入プロパティ（settingsForm から） */
+  /** conform 注入プロパティ（settingsForm から） */
   injected: SidePanelInjectedProps<TForm>;
   /** コンテンツ種別固有の追加データ */
   extraProps: TExtra;
@@ -114,7 +109,7 @@ export type SettingsDialogProps<
 };
 
 export function SettingsDialog<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown> = Record<string, never>,
 >({
   open,

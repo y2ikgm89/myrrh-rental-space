@@ -3,11 +3,11 @@
 /**
  * 統一公開設定フィールド
  *
- * status方式（PostStatus enum）とisPublished方式（boolean）の両方に対応
- * controlTypeで切り替え
+ * conform `FieldMetadata` ベース。status方式（PostStatus enum）と isPublished 方式
+ * （boolean）の両方に対応。`controlType` で切り替え。
  */
 
-import type { FieldValues, Path } from "react-hook-form";
+import { getInputProps, type FieldMetadata } from "@conform-to/react";
 import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { POST_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import {
@@ -20,8 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { getFieldError, getErrorMessage } from "../types";
-import type { FieldComponentProps } from "../content-types/types";
 
 /** コンテンツ種別に応じた公開制御方式の型 */
 type PublishControlType = "status" | "isPublished";
@@ -40,38 +38,32 @@ function isPostStatus(value: string): value is PostStatus {
   return VALID_STATUSES.has(value);
 }
 
-type UnifiedPublishFieldsProps<T extends FieldValues> =
-  FieldComponentProps<T> & {
-    /** 公開方式 */
-    controlType: PublishControlType;
-    /** フィールド名マッピング */
-    fields: {
-      publishedAt: Path<T>;
-      status?: Path<T>;
-      isPublished?: Path<T>;
-    };
-    /** status方式の場合の現在値 */
-    statusValue?: PostStatus;
-    /** status変更時のコールバック */
-    onStatusChange?: (value: PostStatus) => void;
-    /** isPublished方式の場合の現在値 */
-    isPublishedValue?: boolean;
-    /** isPublished変更時のコールバック */
-    onIsPublishedChange?: (value: boolean) => void;
-  };
+type UnifiedPublishFieldsProps = {
+  /** 公開方式 */
+  controlType: PublishControlType;
+  /** 公開日時 field */
+  publishedAtField: FieldMetadata<string | null | undefined>;
+  /** status方式の場合の現在値 */
+  statusValue?: PostStatus;
+  /** status変更時のコールバック */
+  onStatusChange?: (value: PostStatus) => void;
+  /** isPublished方式の場合の現在値 */
+  isPublishedValue?: boolean;
+  /** isPublished変更時のコールバック */
+  onIsPublishedChange?: (value: boolean) => void;
+  disabled?: boolean;
+};
 
-export function UnifiedPublishFields<T extends FieldValues>({
-  register,
-  errors,
-  disabled,
+export function UnifiedPublishFields({
   controlType,
-  fields,
+  publishedAtField,
   statusValue,
   onStatusChange,
   isPublishedValue,
   onIsPublishedChange,
-}: UnifiedPublishFieldsProps<T>) {
-  const publishedAtError = getFieldError(errors, fields.publishedAt);
+  disabled,
+}: UnifiedPublishFieldsProps) {
+  const publishedAtError = publishedAtField.errors?.[0];
 
   return (
     <div className="space-y-4">
@@ -123,17 +115,13 @@ export function UnifiedPublishFields<T extends FieldValues>({
         )}
 
       <div className="space-y-2">
-        <Label htmlFor="publishedAt">公開日時</Label>
+        <Label htmlFor={publishedAtField.id}>公開日時</Label>
         <Input
-          id="publishedAt"
-          type="datetime-local"
-          {...register(fields.publishedAt)}
+          {...getInputProps(publishedAtField, { type: "datetime-local" })}
           disabled={disabled}
         />
         {publishedAtError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(publishedAtError)}
-          </p>
+          <p className="text-sm text-destructive">{publishedAtError}</p>
         )}
         <p className="text-xs text-muted-foreground">
           空欄の場合、公開時の日時が設定されます

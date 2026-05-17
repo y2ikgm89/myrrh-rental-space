@@ -3,15 +3,12 @@
 /**
  * カテゴリ選択フィールド
  *
- * 機能:
- * - 既存カテゴリからの選択
- * - 新規カテゴリのインライン作成（オプション）
+ * conform `FieldMetadata` ベース。既存カテゴリからの選択 + 新規カテゴリのインライン作成。
  */
 
 import { useState } from "react";
-import type { FieldPathByValue, FieldValues } from "react-hook-form";
-import { useController } from "react-hook-form";
 import { IconPlus } from "@tabler/icons-react";
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
 import {
   Label,
   Select,
@@ -27,23 +24,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/admin/components/ui";
-import { getFieldError, getErrorMessage } from "../types";
-import type { FieldComponentProps } from "../content-types/types";
 import { generateSlug } from "@/shared/lib/slug";
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * Select.Item は空文字列を value として許可しないため、
- * 「なし」選択用の特別な値を定義
- */
 const SELECT_NONE_VALUE = "__none__";
-
-// =============================================================================
-// Types
-// =============================================================================
 
 export type CategoryOption = {
   id: string;
@@ -51,47 +34,33 @@ export type CategoryOption = {
   slug?: string;
 };
 
-type CategoryFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
-  /** フィールド名マッピング */
-  fields: {
-    categoryId: FieldPathByValue<T, string | null | undefined>;
-  };
+type CategoryFieldsProps = {
+  categoryIdField: FieldMetadata<string | null | undefined>;
   /** カテゴリオプション */
-  categories: CategoryOption[];
-  /** ラベル */
+  categories: readonly CategoryOption[];
   label?: string;
-  /** プレースホルダー */
   placeholder?: string;
-  /** オプション: なしを選択可能にするか */
+  /** なしを選択可能にするか */
   allowEmpty?: boolean;
-  /** なしのラベル */
   emptyLabel?: string;
   /** 新規カテゴリ作成時のコールバック（設定すると作成ボタンが表示される） */
   onCreateCategory?: (name: string) => Promise<CategoryOption | null>;
+  disabled?: boolean;
 };
 
-// =============================================================================
-// Component
-// =============================================================================
-
-export function CategoryFields<T extends FieldValues>({
-  control,
-  errors,
-  disabled,
-  fields,
+export function CategoryFields({
+  categoryIdField,
   categories,
   label = "カテゴリ",
   placeholder = "カテゴリを選択",
   allowEmpty = false,
   emptyLabel = "なし",
   onCreateCategory,
-}: CategoryFieldsProps<T>) {
-  const categoryField = useController({ control, name: fields.categoryId });
-  const categoryId =
-    typeof categoryField.field.value === "string"
-      ? categoryField.field.value
-      : "";
-  const categoryError = getFieldError(errors, fields.categoryId);
+  disabled,
+}: CategoryFieldsProps) {
+  const control = useInputControl(categoryIdField);
+  const categoryId = typeof control.value === "string" ? control.value : "";
+  const categoryError = categoryIdField.errors?.[0];
 
   // 新規作成ダイアログ
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -108,7 +77,7 @@ export function CategoryFields<T extends FieldValues>({
     try {
       const newCategory = await onCreateCategory(newCategoryName.trim());
       if (newCategory) {
-        categoryField.field.onChange(newCategory.id);
+        control.change(newCategory.id);
         setIsDialogOpen(false);
         setNewCategoryName("");
       }
@@ -129,14 +98,15 @@ export function CategoryFields<T extends FieldValues>({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={fields.categoryId}>{label}</Label>
+      <Label htmlFor={categoryIdField.id}>{label}</Label>
+      <input type="hidden" name={categoryIdField.name} value={categoryId} />
 
       <div className="flex gap-2">
         <Select
           value={categoryId || (allowEmpty ? SELECT_NONE_VALUE : "")}
           onValueChange={(value) => {
             const newValue = value === SELECT_NONE_VALUE ? "" : value;
-            categoryField.field.onChange(newValue);
+            control.change(newValue);
           }}
           {...(disabled !== undefined && { disabled })}
         >
@@ -155,7 +125,6 @@ export function CategoryFields<T extends FieldValues>({
           </SelectContent>
         </Select>
 
-        {/* 新規作成ボタン */}
         {onCreateCategory && (
           <Button
             type="button"
@@ -171,12 +140,9 @@ export function CategoryFields<T extends FieldValues>({
       </div>
 
       {categoryError && (
-        <p className="text-sm text-destructive">
-          {getErrorMessage(categoryError)}
-        </p>
+        <p className="text-sm text-destructive">{categoryError}</p>
       )}
 
-      {/* 新規作成ダイアログ */}
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>

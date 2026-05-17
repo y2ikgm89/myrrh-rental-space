@@ -1,53 +1,41 @@
 "use client";
 
 /**
- * タグ入力フィールド
+ * タグ入力フィールド（News 用、シンプルなテキスト入力）
  *
- * カンマ区切りのタグ入力
+ * conform `FieldMetadata` ベース。
  */
 
-import type { FieldValues, Path } from "react-hook-form";
+import { getInputProps, type FieldMetadata } from "@conform-to/react";
 import { Input, Label } from "@/admin/components/ui";
-import { getFieldError, getErrorMessage } from "../types";
-import type { FieldComponentProps } from "../content-types/types";
 
-type TagFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
-  /** フィールド名マッピング */
-  fields: {
-    tags: Path<T>;
-  };
-  /** ラベル */
+type TagFieldsProps = {
+  tagsField: FieldMetadata<string | undefined>;
   label?: string;
-  /** プレースホルダー */
   placeholder?: string;
-  /** ヘルプテキスト */
   helpText?: string;
+  disabled?: boolean;
 };
 
-export function TagFields<T extends FieldValues>({
-  register,
-  errors,
-  disabled,
-  fields,
+export function TagFields({
+  tagsField,
   label = "タグ",
   placeholder = "タグ1, タグ2, タグ3",
   helpText = "カンマ区切りで入力",
-}: TagFieldsProps<T>) {
-  const tagsError = getFieldError(errors, fields.tags);
+  disabled,
+}: TagFieldsProps) {
+  const tagsError = tagsField.errors?.[0];
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={fields.tags}>{label}</Label>
+      <Label htmlFor={tagsField.id}>{label}</Label>
       <Input
-        id={fields.tags}
-        {...register(fields.tags)}
+        {...getInputProps(tagsField, { type: "text" })}
         placeholder={placeholder}
         disabled={disabled}
       />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-      {tagsError && (
-        <p className="text-sm text-destructive">{getErrorMessage(tagsError)}</p>
-      )}
+      {tagsError && <p className="text-sm text-destructive">{tagsError}</p>}
     </div>
   );
 }

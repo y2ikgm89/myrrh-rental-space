@@ -17,6 +17,44 @@ const tagsSchema = z
   })
   .default([]);
 
+const tagsFormSchema = z.preprocess((v) => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v.length > 0) {
+    try {
+      const parsed: unknown = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}, tagsSchema);
+
+const contentWidthFormSchema = z.preprocess((v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  if (typeof v === "string") {
+    return v in LayoutWidth ? v : null;
+  }
+  return null;
+}, z.enum(LayoutWidth).nullable().optional());
+
+const contentWidthCustomFormSchema = z.preprocess((v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}, z.number().int().min(320).max(1920).nullable().optional());
+
+const publishedAtFormSchema = z
+  .string()
+  .datetime({ local: true })
+  .or(z.literal(""))
+  .nullable()
+  .optional();
+
 // =============================================================================
 // Post Schemas
 // =============================================================================
@@ -98,15 +136,24 @@ export type UpdatePostSettingsInput = z.infer<typeof updatePostSettingsSchema>;
 
 /**
  * 投稿記事 本文フォームスキーマ（クライアント）
+ *
+ * Lexical contentJson + 派生 contentHtml。本文編集時に hidden input で transit、
+ * submit handler 側で `renderEditorStateJsonToHtmlClient(contentJson)` 経由で
+ * contentHtml を派生してから Server Action へ送信する。
  */
 export const postBodyFormSchema = z.object({
-  contentJson: z.string().min(1, { error: "本文は必須です" }),
+  contentJson: lexicalJsonSchema,
+  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type PostBodyFormData = z.infer<typeof postBodyFormSchema>;
 
 /**
  * 投稿記事 設定フォームスキーマ（クライアント — SettingsDialog 専用）
+ *
+ * conform `parseWithZod`（FormData 経路）と既存テスト（object literal 経路）両対応の
+ * in-place preprocess pattern。tags は JSON.stringify transit、contentWidth /
+ * contentWidthCustom / publishedAt は string ↔ enum / number / datetime 変換。
  */
 export const postSettingsFormSchema = z
   .object({
@@ -124,16 +171,16 @@ export const postSettingsFormSchema = z
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
-    categoryId: z.string().min(1, { error: "カテゴリを選択してください" }),
-    tags: z.string().optional(),
+    categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
+    tags: tagsFormSchema,
     status: z.enum(PostStatus),
-    publishedAt: z.string().optional(),
-    contentWidth: z.string().optional(),
-    contentWidthCustom: z.string().optional(),
+    publishedAt: publishedAtFormSchema,
+    contentWidth: contentWidthFormSchema,
+    contentWidthCustom: contentWidthCustomFormSchema,
   })
   .extend(seoOgpFieldsFormSchema.shape);
 
-export type PostSettingsFormData = z.infer<typeof postSettingsFormSchema>;
+export type PostSettingsFormData = z.input<typeof postSettingsFormSchema>;
 
 // =============================================================================
 // Post Category Schemas

@@ -3,48 +3,31 @@
  *
  * 記事設定（メタデータ・分類・SEO 等）は SettingsDialog で表示する。
  * 本ファイルはダイアログのタブ・セクション・render コンテキストの型を提供する。
+ *
+ * conform `FieldMetadata` + `FormMetadata` ベースに統一済。RHF (`UseFormRegister` /
+ * `Control` / `UseFormSetValue` / `UseFormGetValues` / `FieldErrors`) は撤廃。
  */
 
+import type { FieldMetadata, FormMetadata } from "@conform-to/react";
 import type { ReactNode } from "react";
-import type {
-  FieldValues,
-  UseFormRegister,
-  Control,
-  FieldErrors,
-  UseFormSetValue,
-  UseFormGetValues,
-} from "react-hook-form";
 import type { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
-
-// =============================================================================
-// フィールドコンポーネントの Props 型
-// =============================================================================
-
-/**
- * 汎用フィールドコンポーネント Props
- */
-export type FieldComponentProps<T extends FieldValues> = {
-  register: UseFormRegister<T>;
-  control: Control<T>;
-  errors: FieldErrors<T>;
-  setValue: UseFormSetValue<T>;
-  getValues?: UseFormGetValues<T>;
-  disabled?: boolean;
-};
 
 // =============================================================================
 // サイドパネル設定（コンテンツ種別ごとに TForm / TExtra を束ねる）
 // =============================================================================
 
 /**
- * サイドパネルが RHF に注入する共通プロパティ（getValues は必須）
+ * サイドパネルが conform フォームから受け取る共通プロパティ。
+ *
+ * `fields` は per-field `FieldMetadata`、`form` は form 全体の操作（`update` /
+ * `insert` / `remove` 等）。`SettingsDialog` の `buildRenderContext` で extra と
+ * 合成して各 side-panel component に渡す。
  */
-export type SidePanelInjectedProps<T extends FieldValues> = {
-  register: UseFormRegister<T>;
-  control: Control<T>;
-  errors: FieldErrors<T>;
-  setValue: UseFormSetValue<T>;
-  getValues: UseFormGetValues<T>;
+export type SidePanelInjectedProps<TForm extends Record<string, unknown>> = {
+  fields: Required<{
+    [K in keyof TForm]: FieldMetadata<TForm[K], TForm, string[]>;
+  }>;
+  form: FormMetadata<TForm, string[]>;
   disabled?: boolean;
 };
 
@@ -88,15 +71,15 @@ export type NewsSidePanelExtra = {
 };
 
 /**
- * セクション `render` に渡すコンテキスト（RHF + コンテンツ種別固有の extra）
+ * セクション `render` に渡すコンテキスト（conform fields/form + コンテンツ種別固有の extra）
  */
 export type SidePanelRenderContext<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown>,
 > = SidePanelInjectedProps<TForm> & TExtra;
 
 export type SidePanelSectionDefinition<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown>,
 > = {
   title: string;
@@ -104,7 +87,7 @@ export type SidePanelSectionDefinition<
 };
 
 export type SidePanelTabDefinition<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown>,
 > = {
   id: string;
@@ -116,7 +99,7 @@ export type SidePanelTabDefinition<
  * サイドパネル設定（タブ配下は `render(ctx)` で型安全に記述）
  */
 export type SidePanelDefinition<
-  TForm extends FieldValues,
+  TForm extends Record<string, unknown>,
   TExtra extends Record<string, unknown> = Record<string, never>,
 > = {
   title: string;

@@ -1,103 +1,89 @@
 "use client";
 
 /**
- * 基本情報フィールド
+ * 基本情報フィールド（投稿記事用）
  *
- * タイトル、スラッグ、抜粋の編集
- * 投稿記事用
+ * conform `FieldMetadata` ベース。タイトル + スラッグ + 抜粋。
+ * スラッグの自動生成は親フォームから渡される `onAutoGenerateSlug` callback で実行。
  */
 
-import type {
-  UseFormRegister,
-  UseFormGetValues,
-  UseFormSetValue,
-  FieldErrors,
-} from "react-hook-form";
-import { Input, Label, Textarea, Button } from "@/admin/components/ui";
-import type { PostEditorFormData } from "../types";
+import {
+  getInputProps,
+  getTextareaProps,
+  type FieldMetadata,
+} from "@conform-to/react";
+import { Button, Input, Label, Textarea } from "@/admin/components/ui";
 
 type BasicInfoFieldsProps = {
-  register: UseFormRegister<PostEditorFormData>;
-  getValues: UseFormGetValues<PostEditorFormData>;
-  setValue: UseFormSetValue<PostEditorFormData>;
-  errors: FieldErrors<PostEditorFormData>;
+  titleField: FieldMetadata<string>;
+  slugField: FieldMetadata<string>;
+  excerptField: FieldMetadata<string | undefined>;
+  /** 「自動生成」ボタンが押されたときの callback (親で title から slug を生成して form.update する) */
+  onAutoGenerateSlug: () => void;
+  /** スラッグの URL プレビュー (例: "article-slug") */
+  slugPreview?: string;
   disabled?: boolean;
 };
 
 export function BasicInfoFields({
-  register,
-  getValues,
-  setValue,
-  errors,
+  titleField,
+  slugField,
+  excerptField,
+  onAutoGenerateSlug,
+  slugPreview,
   disabled,
 }: BasicInfoFieldsProps) {
-  const generateSlug = () => {
-    const title = getValues("title");
-    if (title) {
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
-      setValue("slug", slug, { shouldDirty: true });
-    }
-  };
+  const titleError = titleField.errors?.[0];
+  const slugError = slugField.errors?.[0];
+  const excerptError = excerptField.errors?.[0];
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="title">タイトル</Label>
+        <Label htmlFor={titleField.id}>タイトル</Label>
         <Input
-          id="title"
-          {...register("title")}
+          {...getInputProps(titleField, { type: "text" })}
           placeholder="記事のタイトル"
           disabled={disabled}
         />
-        {errors.title && (
-          <p className="text-sm text-destructive">{errors.title.message}</p>
-        )}
+        {titleError && <p className="text-sm text-destructive">{titleError}</p>}
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="slug">スラッグ（URL）</Label>
+          <Label htmlFor={slugField.id}>スラッグ（URL）</Label>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={generateSlug}
+            onClick={onAutoGenerateSlug}
             disabled={disabled}
           >
             自動生成
           </Button>
         </div>
         <Input
-          id="slug"
-          {...register("slug")}
+          {...getInputProps(slugField, { type: "text" })}
           placeholder="article-slug"
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          URLに使用されます: /posts/{getValues("slug") || "article-slug"}
+          URLに使用されます: /posts/{slugPreview || "article-slug"}
         </p>
-        {errors.slug && (
-          <p className="text-sm text-destructive">{errors.slug.message}</p>
-        )}
+        {slugError && <p className="text-sm text-destructive">{slugError}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="excerpt">抜粋</Label>
+        <Label htmlFor={excerptField.id}>抜粋</Label>
         <Textarea
-          id="excerpt"
-          {...register("excerpt")}
+          {...getTextareaProps(excerptField)}
           placeholder="記事の抜粋（一覧ページに表示）"
           rows={3}
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">500文字以内</p>
-        {errors.excerpt && (
-          <p className="text-sm text-destructive">{errors.excerpt.message}</p>
+        {excerptError && (
+          <p className="text-sm text-destructive">{excerptError}</p>
         )}
       </div>
     </div>

@@ -3,39 +3,42 @@
 /**
  * SEO設定フィールド
  *
- * メタディスクリプション、メタキーワードの編集
- * フィールド名をpropsで受け取ることで完全な型安全性を確保
+ * conform `FieldMetadata` ベース。メタディスクリプション + メタキーワード。
  */
 
-import type { FieldValues } from "react-hook-form";
+import {
+  getInputProps,
+  getTextareaProps,
+  type FieldMetadata,
+} from "@conform-to/react";
 import { Input, Label, Textarea } from "@/admin/components/ui";
-import { getFieldError, getErrorMessage } from "../types";
-import type { SEOFieldsProps } from "../types";
 
-export function SEOFields<T extends FieldValues>({
-  register,
-  errors,
+type SEOFieldsProps = {
+  metaDescriptionField: FieldMetadata<string | undefined>;
+  metaKeywordsField: FieldMetadata<string | undefined>;
+  disabled?: boolean;
+};
+
+export function SEOFields({
+  metaDescriptionField,
+  metaKeywordsField,
   disabled,
-  fields,
-}: SEOFieldsProps<T>) {
-  const metaDescriptionError = getFieldError(errors, fields.metaDescription);
-  const metaKeywordsError = getFieldError(errors, fields.metaKeywords);
+}: SEOFieldsProps) {
+  const metaDescriptionError = metaDescriptionField.errors?.[0];
+  const metaKeywordsError = metaKeywordsField.errors?.[0];
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="metaDescription">メタディスクリプション</Label>
+        <Label htmlFor={metaDescriptionField.id}>メタディスクリプション</Label>
         <Textarea
-          id="metaDescription"
-          {...register(fields.metaDescription)}
+          {...getTextareaProps(metaDescriptionField)}
           placeholder="検索結果に表示される説明文（160文字以内推奨）"
           rows={3}
           disabled={disabled}
         />
         {metaDescriptionError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(metaDescriptionError)}
-          </p>
+          <p className="text-sm text-destructive">{metaDescriptionError}</p>
         )}
         <p className="text-xs text-muted-foreground">
           検索エンジンの結果ページに表示される説明文です
@@ -43,17 +46,14 @@ export function SEOFields<T extends FieldValues>({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="metaKeywords">メタキーワード</Label>
+        <Label htmlFor={metaKeywordsField.id}>メタキーワード</Label>
         <Input
-          id="metaKeywords"
-          {...register(fields.metaKeywords)}
+          {...getInputProps(metaKeywordsField, { type: "text" })}
           placeholder="キーワード1, キーワード2, キーワード3"
           disabled={disabled}
         />
         {metaKeywordsError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(metaKeywordsError)}
-          </p>
+          <p className="text-sm text-destructive">{metaKeywordsError}</p>
         )}
         <p className="text-xs text-muted-foreground">
           カンマ区切りでキーワードを入力

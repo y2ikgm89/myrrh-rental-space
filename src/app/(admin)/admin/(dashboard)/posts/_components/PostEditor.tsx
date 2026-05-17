@@ -41,7 +41,6 @@ import type {
 } from "@/shared/domain/posts/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { generateSlug } from "@/shared/lib/slug";
-import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { ContentWidth } from "@/shared/types";
 
 // =============================================================================
@@ -169,11 +168,21 @@ export function PostEditor({
   const displaySlug = `posts/${editor.slug}`;
 
   // コンテンツ幅（px）— エディタに渡すテキスト領域の幅
+  const contentWidthFieldValue = editor.settingsFields.contentWidth.value;
+  const contentWidthCustomFieldValue =
+    editor.settingsFields.contentWidthCustom.value;
   const contentWidthPx = useContentWidth({
-    control: editor.settingsForm.control,
-    widthFieldName: "contentWidth",
-    customFieldName: "contentWidthCustom",
-    fallback: fallbackContentWidth,
+    width:
+      typeof contentWidthFieldValue === "string"
+        ? contentWidthFieldValue
+        : null,
+    customPx:
+      typeof contentWidthCustomFieldValue === "string"
+        ? contentWidthCustomFieldValue
+        : contentWidthCustomFieldValue != null
+          ? String(contentWidthCustomFieldValue)
+          : null,
+    ...(fallbackContentWidth && { fallback: fallbackContentWidth }),
   });
 
   // SettingsDialog の extraProps
@@ -186,9 +195,7 @@ export function PostEditor({
     onCreateCategory: editor.handleCreateCategory,
     onCreateTag: editor.handleCreateTag,
     statusValue: editor.status,
-    onStatusChange: (value: PostStatus) => {
-      editor.settingsForm.setValue("status", value, { shouldDirty: true });
-    },
+    onStatusChange: editor.handleStatusChange,
   } satisfies PostSidePanelExtra;
 
   return (
@@ -250,11 +257,8 @@ export function PostEditor({
         }}
         config={postSettingsPanel}
         injected={{
-          register: editor.settingsForm.register,
-          control: editor.settingsForm.control,
-          errors: editor.settingsForm.formState.errors,
-          setValue: editor.settingsForm.setValue,
-          getValues: editor.settingsForm.getValues,
+          fields: editor.settingsFields,
+          form: editor.settingsForm,
           disabled: editor.isPending,
         }}
         extraProps={sidePanelExtraProps}

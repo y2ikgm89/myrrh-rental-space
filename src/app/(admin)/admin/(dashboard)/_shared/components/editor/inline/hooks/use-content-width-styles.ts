@@ -1,29 +1,18 @@
 /**
- * コンテンツ幅フック
+ * コンテンツ幅フック (conform 対応)
  *
- * React Hook Form 公式推奨の useWatch() + Path<T> で型安全なリアルタイム幅更新。
- * 解決済みピクセル値を返す（エディタの contentWidth prop にそのまま渡せる）。
+ * caller が現在の contentWidth (string) と contentWidthCustom (string)
+ * を渡すと、resolveWidthStyles で px 値を返す。実態は pure function。
  */
 
-import {
-  useWatch,
-  type Control,
-  type FieldValues,
-  type Path,
-} from "react-hook-form";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { ContentWidth } from "@/shared/types/layout";
 
-// =============================================================================
-// Types
-// =============================================================================
-
-type UseContentWidthOptions<T extends FieldValues> = {
-  control: Control<T, unknown, T>;
-  widthFieldName: Path<T>;
-  customFieldName: Path<T>;
+type UseContentWidthOptions = {
+  width: string | null | undefined;
+  customPx: string | null | undefined;
   fallback?: ContentWidth | undefined;
 };
 
@@ -32,30 +21,22 @@ const DEFAULT_FALLBACK: ContentWidth = {
   customPx: null,
 };
 
-// =============================================================================
-// Hook
-// =============================================================================
-
 /**
- * コンテンツ幅をピクセル値で返すフック
+ * コンテンツ幅をピクセル値で返す pure function。
  *
- * @returns コンテンツ幅（px）。FULL の場合は null。
+ * @returns コンテンツ幅 (px)。FULL の場合は null。
  */
-export function useContentWidth<T extends FieldValues>({
-  control,
-  widthFieldName,
-  customFieldName,
+export function useContentWidth({
+  width,
+  customPx,
   fallback = DEFAULT_FALLBACK,
-}: UseContentWidthOptions<T>): number | null {
-  const rawWidth = useWatch({ control, name: widthFieldName });
-  const rawCustom = useWatch({ control, name: customFieldName });
-
+}: UseContentWidthOptions): number | null {
   const effectiveWidth =
-    typeof rawWidth === "string" && isValidLayoutWidth(rawWidth)
-      ? rawWidth
+    typeof width === "string" && isValidLayoutWidth(width)
+      ? width
       : fallback.width;
 
-  const rawCustomStr = typeof rawCustom === "string" ? rawCustom : null;
+  const rawCustomStr = typeof customPx === "string" ? customPx : null;
   const parsedCustom = rawCustomStr ? parseInt(rawCustomStr, 10) : null;
   const effectiveCustomPx =
     parsedCustom !== null && !Number.isNaN(parsedCustom)

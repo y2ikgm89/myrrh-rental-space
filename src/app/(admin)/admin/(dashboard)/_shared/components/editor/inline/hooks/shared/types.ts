@@ -2,7 +2,6 @@
  * 共有エディター型定義
  */
 
-import type { UseFormReturn, FieldValues } from "react-hook-form";
 import type { AddCommentPayload } from "../../../lexical/types";
 
 // =============================================================================
@@ -22,17 +21,6 @@ export type TagOption = {
 };
 
 // =============================================================================
-// エディターコア設定
-// =============================================================================
-
-export type EditorCoreConfig<TFormData extends FieldValues> = {
-  /** react-hook-form インスタンス */
-  form: UseFormReturn<TFormData>;
-  /** リスト画面のパス（例: '/admin/posts'） */
-  listPath: string;
-};
-
-// =============================================================================
 // エディターコア戻り値
 // =============================================================================
 
@@ -41,18 +29,14 @@ export type EditorCoreReturn = {
   isPending: boolean;
   /** 非同期処理を開始するtransition */
   startTransition: (callback: () => void | Promise<void>) => void;
-  /** エディター変更フラグ */
-  hasEditorChanges: boolean;
-  /** エディター変更フラグのセッター */
-  setHasEditorChanges: (value: boolean) => void;
   /** 削除ダイアログ表示フラグ */
   isDeleteDialogOpen: boolean;
   /** 削除ダイアログ表示フラグのセッター */
   setIsDeleteDialogOpen: (value: boolean) => void;
   /** コメントパネル管理 */
   comments: CommentPanelReturn;
-  /** 戻るボタンハンドラー */
-  handleBack: () => Promise<void>;
+  /** 戻るボタンハンドラー（caller が isDirty を渡す） */
+  handleBack: (isDirty: boolean) => Promise<void>;
 };
 
 // =============================================================================
