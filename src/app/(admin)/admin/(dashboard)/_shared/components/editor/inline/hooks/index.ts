@@ -16,7 +16,6 @@ export {
   // 型定義
   type CategoryOption,
   type TagOption,
-  type EditorCoreConfig,
   type EditorCoreReturn,
   type CommentPanelReturn,
   // 変換関数
@@ -36,7 +35,4 @@ export {
   toFormNullableBoolean,
   // コアフック
   useEditorCore,
-  computeIsDirty,
-  createContentChangeHandler,
-  createResetHandler,
 } from "./shared";

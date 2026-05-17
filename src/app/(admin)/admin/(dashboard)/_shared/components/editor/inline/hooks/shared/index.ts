@@ -6,7 +6,6 @@
 export type {
   CategoryOption,
   TagOption,
-  EditorCoreConfig,
   EditorCoreReturn,
   CommentPanelReturn,
 } from "./types";
@@ -36,9 +35,4 @@ export {
 } from "./transforms";
 
 // コアフック
-export {
-  useEditorCore,
-  computeIsDirty,
-  createContentChangeHandler,
-  createResetHandler,
-} from "./use-editor-core";
+export { useEditorCore } from "./use-editor-core";

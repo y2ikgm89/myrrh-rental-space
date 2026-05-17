@@ -3,19 +3,18 @@
 /**
  * お知らせエディター専用フック
  *
- * 本文（contentJson）と設定（メタデータ・SEO 等）を独立した
- * RHF フォームとして管理し、保存も独立して実行する。
+ * 本文 (Lexical contentJson) は useState で軽量管理、設定 (メタデータ・SEO 等)
+ * は conform `useForm` で管理する。usePostEditor と同型構造で isPublished
+ * (boolean) を status の代わりに使う。
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { useForm, type DefaultValue } from "@conform-to/react";
+import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
-  newsBodyFormSchema,
   newsSettingsFormSchema,
-  type NewsBodyFormData,
   type NewsSettingsFormData,
 } from "@/admin/lib/validations/news";
 import {
@@ -45,26 +44,10 @@ import {
   toSubmitNumber,
 } from "./shared";
 
-// =============================================================================
-// Types
-// =============================================================================
-
 type UseNewsEditorOptions = {
   news?: NewsData | undefined;
   mode: "create" | "edit";
 };
-
-// =============================================================================
-// Transforms
-// =============================================================================
-
-function toBodyFormData(data?: NewsData): NewsBodyFormData {
-  return {
-    contentJson: data?.contentJson
-      ? JSON.stringify(data.contentJson)
-      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
-  };
-}
 
 function toSettingsFormData(data?: NewsData): NewsSettingsFormData {
   if (!data) {
@@ -73,8 +56,8 @@ function toSettingsFormData(data?: NewsData): NewsSettingsFormData {
       title: "",
       isPublished: false,
       publishedAt: "",
-      contentWidth: "",
-      contentWidthCustom: "",
+      contentWidth: null,
+      contentWidthCustom: null,
       metaDescription: "",
       metaKeywords: "",
       ogpTitle: "",
@@ -102,9 +85,19 @@ function toSettingsSubmitPayload(formData: NewsSettingsFormData) {
   return {
     slug: formData.slug,
     title: formData.title,
-    isPublished: formData.isPublished,
-    contentWidth: toSubmitContentWidth(formData.contentWidth),
-    contentWidthCustom: toSubmitNumber(formData.contentWidthCustom),
+    isPublished: Boolean(formData.isPublished),
+    contentWidth: toSubmitContentWidth(
+      typeof formData.contentWidth === "string"
+        ? formData.contentWidth
+        : undefined,
+    ),
+    contentWidthCustom: toSubmitNumber(
+      typeof formData.contentWidthCustom === "string"
+        ? formData.contentWidthCustom
+        : formData.contentWidthCustom != null
+          ? String(formData.contentWidthCustom)
+          : undefined,
+    ),
     metaDescription: toNullableString(formData.metaDescription),
     metaKeywords: toNullableString(formData.metaKeywords),
     ogpTitle: toNullableString(formData.ogpTitle),
@@ -121,76 +114,74 @@ function toPreviewData(
     title: settingsData.title || "無題",
     slug: settingsData.slug || "preview-new",
     contentHtml,
-    publishedAt: settingsData.publishedAt || null,
+    publishedAt:
+      typeof settingsData.publishedAt === "string"
+        ? settingsData.publishedAt || null
+        : null,
   };
 }
-
-// =============================================================================
-// Hook
-// =============================================================================
 
 export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const router = useRouter();
 
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
-  // プレビュー
   const { saveAndOpenPreview } = createPreviewHandlers("news");
 
-  // 本文フォーム
-  const bodyForm = useForm<NewsBodyFormData, unknown, NewsBodyFormData>({
-    resolver: standardSchemaResolver(newsBodyFormSchema),
-    defaultValues: toBodyFormData(news),
+  // 本文 (contentJson) — 軽量 useState 管理
+  const initialContentJson = news?.contentJson
+    ? JSON.stringify(news.contentJson)
+    : EMPTY_LEXICAL_EDITOR_STATE_JSON;
+
+  const [contentJson, setContentJson] = useState(initialContentJson);
+  const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
+  const [isPublishedValue, setIsPublishedValue] = useState<boolean>(
+    news?.isPublished ?? false,
+  );
+
+  const isBodyDirty = contentJson !== savedContentJson;
+
+  // 設定 — conform useForm
+  // documented exception §5 conform generic invariance:
+  // preprocess input 型は conform DefaultValue<T> の string-only 制約と非互換のため境界 cast。
+  const [settingsForm, settingsFields] = useForm<NewsSettingsFormData>({
+    id: "news-settings-form",
+    constraint: getZodConstraint(newsSettingsFormSchema),
+    defaultValue: toSettingsFormData(
+      news,
+    ) as unknown as DefaultValue<NewsSettingsFormData>,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: newsSettingsFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
   });
 
-  // 設定フォーム
-  const settingsForm = useForm<
-    NewsSettingsFormData,
-    unknown,
-    NewsSettingsFormData
-  >({
-    resolver: standardSchemaResolver(newsSettingsFormSchema),
-    defaultValues: toSettingsFormData(news),
-  });
-
-  // コアフック
-  const core = useEditorCore({
-    form: bodyForm,
-    listPath: "/admin/news",
-  });
-
-  // 監視値
-  const title =
-    useWatch({ control: settingsForm.control, name: "title" }) ?? "";
-  const slug = useWatch({ control: settingsForm.control, name: "slug" }) ?? "";
-  const isPublished =
-    useWatch({ control: settingsForm.control, name: "isPublished" }) ?? false;
-  const contentJson =
-    useWatch({ control: bodyForm.control, name: "contentJson" }) ??
-    EMPTY_LEXICAL_EDITOR_STATE_JSON;
-
-  const isBodyDirty = bodyForm.formState.isDirty || core.hasEditorChanges;
-  const isSettingsDirty = settingsForm.formState.isDirty;
+  const isSettingsDirty = settingsForm.dirty ?? false;
   const isDirty = isBodyDirty || isSettingsDirty;
 
-  // ==========================================================================
-  // Handlers
-  // ==========================================================================
+  const core = useEditorCore({ listPath: "/admin/news" });
+
+  const title =
+    typeof settingsFields.title.value === "string"
+      ? settingsFields.title.value
+      : "";
+  const slug =
+    typeof settingsFields.slug.value === "string"
+      ? settingsFields.slug.value
+      : "";
 
   const handleContentChange = (json: string) => {
-    bodyForm.setValue("contentJson", json, { shouldDirty: true });
-    core.setHasEditorChanges(true);
+    setContentJson(json);
   };
 
-  const onSubmitBody = (bodyData: NewsBodyFormData) => {
+  const onSubmitBody = () => {
     if (!news) return;
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(
-          bodyData.contentJson,
-        );
+        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updateNewsBody(news.id, {
-          contentJson: bodyData.contentJson,
+          contentJson,
           contentHtml,
         });
         if (isMutationError(result)) {
@@ -198,8 +189,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
           return;
         }
 
-        bodyForm.reset(bodyData);
-        core.setHasEditorChanges(false);
+        setSavedContentJson(contentJson);
         router.refresh();
         toast.success("本文を保存しました");
       } catch (error) {
@@ -211,8 +201,33 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     });
   };
 
-  const onSubmitSettings = (settingsData: NewsSettingsFormData) => {
+  const validateSettings = (): NewsSettingsFormData | null => {
+    const formData = new FormData();
+    for (const [key, field] of Object.entries(settingsFields)) {
+      const fieldValue = field.value;
+      if (Array.isArray(fieldValue)) {
+        formData.append(key, JSON.stringify(fieldValue));
+      } else if (typeof fieldValue === "boolean") {
+        if (fieldValue) formData.append(key, "on");
+      } else if (fieldValue != null) {
+        formData.append(key, String(fieldValue));
+      }
+    }
+    const submission = parseWithZod(formData, {
+      schema: newsSettingsFormSchema,
+    });
+    if (submission.status !== "success") {
+      toast.error("入力内容に誤りがあります");
+      return null;
+    }
+    return submission.value as unknown as NewsSettingsFormData;
+  };
+
+  const onSubmitSettings = () => {
     if (!news) return;
+    const settingsData = validateSettings();
+    if (!settingsData) return;
+
     core.startTransition(async () => {
       try {
         const payload = toSettingsSubmitPayload(settingsData);
@@ -222,7 +237,6 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
           return;
         }
 
-        settingsForm.reset(settingsData);
         setIsSettingsDialogOpen(false);
         router.refresh();
         toast.success("お知らせ設定を保存しました");
@@ -236,29 +250,19 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   };
 
   const onCreateBoth = () => {
+    const settingsData = validateSettings();
+    if (!settingsData) {
+      setIsSettingsDialogOpen(true);
+      return;
+    }
+
     core.startTransition(async () => {
-      const [bodyValid, settingsValid] = await Promise.all([
-        bodyForm.trigger(),
-        settingsForm.trigger(),
-      ]);
-
-      if (!bodyValid || !settingsValid) {
-        if (!settingsValid) setIsSettingsDialogOpen(true);
-        toast.error("入力内容に誤りがあります");
-        return;
-      }
-
-      const bodyData = bodyForm.getValues();
-      const settingsData = settingsForm.getValues();
-
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(
-          bodyData.contentJson,
-        );
+        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await createNews({
           slug: settingsData.slug,
           title: settingsData.title,
-          contentJson: bodyData.contentJson,
+          contentJson,
           contentHtml,
         });
 
@@ -284,16 +288,15 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       onCreateBoth();
       return;
     }
-    bodyForm.handleSubmit(onSubmitBody)();
+    onSubmitBody();
   };
 
   const handleSaveSettings = () => {
     if (core.isPending) return;
-    settingsForm.handleSubmit(onSubmitSettings)();
+    onSubmitSettings();
   };
 
   const closeSettingsDialog = () => {
-    settingsForm.reset(toSettingsFormData(news));
     setIsSettingsDialogOpen(false);
   };
 
@@ -311,7 +314,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       }
 
       toast.success("公開しました");
-      settingsForm.setValue("isPublished", true);
+      setIsPublishedValue(true);
       router.refresh();
     });
   };
@@ -326,7 +329,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       }
 
       toast.success("下書きに戻しました");
-      settingsForm.setValue("isPublished", false);
+      setIsPublishedValue(false);
       router.refresh();
     });
   };
@@ -354,14 +357,12 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
   const handlePreview = () => {
     try {
-      const bodyValues = bodyForm.getValues();
-      const settingsValues = settingsForm.getValues();
+      const settingsData = validateSettings();
+      if (!settingsData) return;
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(
-        bodyValues.contentJson,
-      );
-      const previewData = toPreviewData(settingsValues, contentHtml);
+      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+      const previewData = toPreviewData(settingsData, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/news");
     } catch (error) {
       logger.error("プレビュー生成中にエラーが発生しました", {
@@ -371,23 +372,29 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     }
   };
 
-  // ==========================================================================
-  // Return
-  // ==========================================================================
+  const handleBack = () => core.handleBack(isDirty);
+
+  const handleIsPublishedChange = (value: boolean) => {
+    setIsPublishedValue(value);
+    // conform form.update の value は string 想定のため checkbox value 形式に変換
+    settingsForm.update({
+      name: settingsFields.isPublished.name,
+      value: value ? "on" : "",
+    });
+  };
 
   return {
-    bodyForm,
     settingsForm,
+    settingsFields,
     isPending: core.isPending,
     isDirty,
     isBodyDirty,
     isSettingsDirty,
-    hasEditorChanges: core.hasEditorChanges,
 
     title,
     slug,
     contentJson,
-    isPublished,
+    isPublished: isPublishedValue,
 
     isSettingsDialogOpen,
     openSettingsDialog,
@@ -408,8 +415,9 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     handleUnpublish,
     handleDelete,
     handlePreview,
-    handleBack: core.handleBack,
+    handleBack,
     handleContentChange,
+    handleIsPublishedChange,
 
     isDeleteDialogOpen: core.isDeleteDialogOpen,
     setIsDeleteDialogOpen: core.setIsDeleteDialogOpen,

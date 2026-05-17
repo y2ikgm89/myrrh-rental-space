@@ -107,18 +107,26 @@ export function NewsEditor({
 
   const displaySlug = `news/${editor.slug}`;
 
+  const contentWidthFieldValue = editor.settingsFields.contentWidth.value;
+  const contentWidthCustomFieldValue =
+    editor.settingsFields.contentWidthCustom.value;
   const contentWidthPx = useContentWidth({
-    control: editor.settingsForm.control,
-    widthFieldName: "contentWidth",
-    customFieldName: "contentWidthCustom",
-    fallback: fallbackContentWidth,
+    width:
+      typeof contentWidthFieldValue === "string"
+        ? contentWidthFieldValue
+        : null,
+    customPx:
+      typeof contentWidthCustomFieldValue === "string"
+        ? contentWidthCustomFieldValue
+        : contentWidthCustomFieldValue != null
+          ? String(contentWidthCustomFieldValue)
+          : null,
+    ...(fallbackContentWidth && { fallback: fallbackContentWidth }),
   });
 
   const sidePanelExtraProps = {
     isPublishedValue: editor.isPublished,
-    onIsPublishedChange: (value: boolean) => {
-      editor.settingsForm.setValue("isPublished", value, { shouldDirty: true });
-    },
+    onIsPublishedChange: editor.handleIsPublishedChange,
   } satisfies NewsSidePanelExtra;
 
   return (
@@ -180,11 +188,8 @@ export function NewsEditor({
         }}
         config={newsSettingsPanel}
         injected={{
-          register: editor.settingsForm.register,
-          control: editor.settingsForm.control,
-          errors: editor.settingsForm.formState.errors,
-          setValue: editor.settingsForm.setValue,
-          getValues: editor.settingsForm.getValues,
+          fields: editor.settingsFields,
+          form: editor.settingsForm,
           disabled: editor.isPending,
         }}
         extraProps={sidePanelExtraProps}

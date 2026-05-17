@@ -3,24 +3,23 @@
 /**
  * 投稿エディター専用フック
  *
- * 本文（contentJson）と設定（メタデータ・分類・SEO 等）を独立した
- * RHF フォームとして管理し、保存も独立して実行する。
+ * 本文 (Lexical contentJson) は useState で軽量管理、設定 (メタデータ・分類・SEO 等)
+ * は conform `useForm` で管理する。保存はそれぞれ独立した Server Action 呼び出し:
  *
  * - 本文は EditorHeader の保存ボタンで `updatePostBody` を呼ぶ
+ *   (派生 contentHtml は `renderEditorStateJsonToHtmlClient` を browser 側で実行)
  * - 設定は SettingsDialog の保存ボタンで `updatePostSettings` を呼ぶ
- * - create モードでは保存時に両フォームを統合して `createPost` を呼ぶ
+ * - create モードでは保存時に両方を統合して `createPost` を呼ぶ
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { useForm, type DefaultValue } from "@conform-to/react";
+import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
-  postBodyFormSchema,
   postSettingsFormSchema,
-  type PostBodyFormData,
   type PostSettingsFormData,
 } from "@/admin/lib/validations/post";
 import {
@@ -40,24 +39,17 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { PostPreviewData } from "@/shared/types";
 
-// 共有ユーティリティ
 import {
   useEditorCore,
   toFormDateString,
   toFormString,
   toFormContentWidth,
   toFormNumberString,
-  toTagsString,
   toNullableString,
   toSubmitContentWidth,
   toSubmitNumber,
-  parseTagsString,
 } from "./shared";
 import type { CategoryOption, TagOption } from "./shared";
-
-// =============================================================================
-// Types
-// =============================================================================
 
 type UsePostEditorOptions = {
   post?: PostData | undefined;
@@ -70,18 +62,6 @@ type UsePostEditorOptions = {
   onCreateTag?: ((name: string) => Promise<TagOption | null>) | undefined;
 };
 
-// =============================================================================
-// Transforms
-// =============================================================================
-
-function toBodyFormData(data?: PostData): PostBodyFormData {
-  return {
-    contentJson: data?.contentJson
-      ? JSON.stringify(data.contentJson)
-      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
-  };
-}
-
 function toSettingsFormData(data?: PostData): PostSettingsFormData {
   if (!data) {
     return {
@@ -91,15 +71,15 @@ function toSettingsFormData(data?: PostData): PostSettingsFormData {
       thumbnailUrl: "",
       ogpImageUrl: "",
       categoryId: "",
-      tags: "",
+      tags: [],
       metaDescription: "",
       metaKeywords: "",
       ogpTitle: "",
       ogpDescription: "",
       status: PostStatus.DRAFT,
       publishedAt: "",
-      contentWidth: "",
-      contentWidthCustom: "",
+      contentWidth: null,
+      contentWidthCustom: null,
     };
   }
 
@@ -110,7 +90,7 @@ function toSettingsFormData(data?: PostData): PostSettingsFormData {
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: toFormString(data.ogpImageUrl),
     categoryId: data.categoryId,
-    tags: toTagsString(data.postTags?.map((t) => t.name)),
+    tags: (data.postTags ?? []).map((t) => t.id),
     metaDescription: toFormString(data.metaDescription),
     metaKeywords: toFormString(data.metaKeywords),
     ogpTitle: toFormString(data.ogpTitle),
@@ -130,14 +110,24 @@ function toSettingsSubmitPayload(formData: PostSettingsFormData) {
     thumbnailUrl: formData.thumbnailUrl,
     ogpImageUrl: toNullableString(formData.ogpImageUrl),
     categoryId: formData.categoryId,
-    tags: parseTagsString(formData.tags),
+    tags: Array.isArray(formData.tags) ? formData.tags : [],
     metaDescription: toNullableString(formData.metaDescription),
     metaKeywords: toNullableString(formData.metaKeywords),
     ogpTitle: toNullableString(formData.ogpTitle),
     ogpDescription: toNullableString(formData.ogpDescription),
     status: formData.status,
-    contentWidth: toSubmitContentWidth(formData.contentWidth),
-    contentWidthCustom: toSubmitNumber(formData.contentWidthCustom),
+    contentWidth: toSubmitContentWidth(
+      typeof formData.contentWidth === "string"
+        ? formData.contentWidth
+        : undefined,
+    ),
+    contentWidthCustom: toSubmitNumber(
+      typeof formData.contentWidthCustom === "string"
+        ? formData.contentWidthCustom
+        : formData.contentWidthCustom != null
+          ? String(formData.contentWidthCustom)
+          : undefined,
+    ),
   };
 }
 
@@ -146,7 +136,7 @@ function toPreviewData(
   categories: CategoryOption[],
   contentHtml: string,
 ): PostPreviewData {
-  const tags = parseTagsString(settingsData.tags);
+  const tags = Array.isArray(settingsData.tags) ? settingsData.tags : [];
   const selectedCategory = categories.find(
     (c) => c.id === settingsData.categoryId,
   );
@@ -166,10 +156,6 @@ function toPreviewData(
   };
 }
 
-// =============================================================================
-// Hook
-// =============================================================================
-
 export function usePostEditor({
   post,
   mode,
@@ -180,73 +166,69 @@ export function usePostEditor({
 }: UsePostEditorOptions) {
   const router = useRouter();
 
-  // カテゴリ/タグの状態管理
   const [categories, setCategories] =
     useState<CategoryOption[]>(initialCategories);
   const [tags, setTags] = useState<TagOption[]>(initialTags);
 
-  // 設定ダイアログ開閉
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
-  // プレビュー
   const { saveAndOpenPreview } = createPreviewHandlers("post");
 
-  // 本文フォーム（contentJson のみ）
-  const bodyForm = useForm<PostBodyFormData, unknown, PostBodyFormData>({
-    resolver: standardSchemaResolver(postBodyFormSchema),
-    defaultValues: toBodyFormData(post),
+  // 本文 (contentJson) — 軽量 useState 管理
+  const initialContentJson = post?.contentJson
+    ? JSON.stringify(post.contentJson)
+    : EMPTY_LEXICAL_EDITOR_STATE_JSON;
+
+  const [contentJson, setContentJson] = useState(initialContentJson);
+  const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
+  const [statusValue, setStatusValue] = useState<PostStatus>(
+    post?.status ?? PostStatus.DRAFT,
+  );
+
+  const isBodyDirty = contentJson !== savedContentJson;
+
+  // 設定 — conform useForm
+  // documented exception §5 conform generic invariance:
+  // preprocess input 型 (`tags: unknown` / `contentWidth: unknown`) は conform
+  // DefaultValue<T> の string-only 制約と非互換のため境界 cast。
+  const [settingsForm, settingsFields] = useForm<PostSettingsFormData>({
+    id: "post-settings-form",
+    constraint: getZodConstraint(postSettingsFormSchema),
+    defaultValue: toSettingsFormData(
+      post,
+    ) as unknown as DefaultValue<PostSettingsFormData>,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: postSettingsFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
   });
 
-  // 設定フォーム（メタデータ・分類・SEO/OGP・公開状態・レイアウト）
-  const settingsForm = useForm<
-    PostSettingsFormData,
-    unknown,
-    PostSettingsFormData
-  >({
-    resolver: standardSchemaResolver(postSettingsFormSchema),
-    defaultValues: toSettingsFormData(post),
-  });
-
-  // コアフック（dirty/transition は両フォームをまたぐので bodyForm を渡しつつ独自集計）
-  const core = useEditorCore({
-    form: bodyForm,
-    listPath: "/admin/posts",
-  });
-
-  // 監視値（EditorHeader の表示用）
-  const title =
-    useWatch({ control: settingsForm.control, name: "title" }) ?? "";
-  const slug = useWatch({ control: settingsForm.control, name: "slug" }) ?? "";
-  const status =
-    useWatch({ control: settingsForm.control, name: "status" }) ??
-    PostStatus.DRAFT;
-  const contentJson =
-    useWatch({ control: bodyForm.control, name: "contentJson" }) ??
-    EMPTY_LEXICAL_EDITOR_STATE_JSON;
-
-  // dirty 計算（本文・設定どちらかが dirty なら未保存扱い）
-  const isBodyDirty = bodyForm.formState.isDirty || core.hasEditorChanges;
-  const isSettingsDirty = settingsForm.formState.isDirty;
+  const isSettingsDirty = settingsForm.dirty ?? false;
   const isDirty = isBodyDirty || isSettingsDirty;
 
-  // ==========================================================================
-  // Handlers
-  // ==========================================================================
+  const core = useEditorCore({ listPath: "/admin/posts" });
+
+  const title =
+    typeof settingsFields.title.value === "string"
+      ? settingsFields.title.value
+      : "";
+  const slug =
+    typeof settingsFields.slug.value === "string"
+      ? settingsFields.slug.value
+      : "";
 
   const handleContentChange = (json: string) => {
-    bodyForm.setValue("contentJson", json, { shouldDirty: true });
-    core.setHasEditorChanges(true);
+    setContentJson(json);
   };
 
-  const onSubmitBody = (bodyData: PostBodyFormData) => {
+  const onSubmitBody = () => {
     if (!post) return;
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(
-          bodyData.contentJson,
-        );
+        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updatePostBody(post.id, {
-          contentJson: bodyData.contentJson,
+          contentJson,
           contentHtml,
         });
         if (isMutationError(result)) {
@@ -254,8 +236,7 @@ export function usePostEditor({
           return;
         }
 
-        bodyForm.reset(bodyData);
-        core.setHasEditorChanges(false);
+        setSavedContentJson(contentJson);
         router.refresh();
         toast.success("本文を保存しました");
       } catch (error) {
@@ -267,8 +248,32 @@ export function usePostEditor({
     });
   };
 
-  const onSubmitSettings = (settingsData: PostSettingsFormData) => {
+  // 設定フォームを imperative に validate (FormData を fields から組み立て)
+  const validateSettings = (): PostSettingsFormData | null => {
+    const formData = new FormData();
+    for (const [key, field] of Object.entries(settingsFields)) {
+      const fieldValue = field.value;
+      if (Array.isArray(fieldValue)) {
+        formData.append(key, JSON.stringify(fieldValue));
+      } else if (fieldValue != null) {
+        formData.append(key, String(fieldValue));
+      }
+    }
+    const submission = parseWithZod(formData, {
+      schema: postSettingsFormSchema,
+    });
+    if (submission.status !== "success") {
+      toast.error("入力内容に誤りがあります");
+      return null;
+    }
+    return submission.value as unknown as PostSettingsFormData;
+  };
+
+  const onSubmitSettings = () => {
     if (!post) return;
+    const settingsData = validateSettings();
+    if (!settingsData) return;
+
     core.startTransition(async () => {
       try {
         const payload = toSettingsSubmitPayload(settingsData);
@@ -278,7 +283,6 @@ export function usePostEditor({
           return;
         }
 
-        settingsForm.reset(settingsData);
         setIsSettingsDialogOpen(false);
         router.refresh();
         toast.success("記事設定を保存しました");
@@ -292,32 +296,21 @@ export function usePostEditor({
   };
 
   const onCreateBoth = () => {
+    const settingsData = validateSettings();
+    if (!settingsData) {
+      setIsSettingsDialogOpen(true);
+      return;
+    }
+
     core.startTransition(async () => {
-      // 両フォームを並行 validate
-      const [bodyValid, settingsValid] = await Promise.all([
-        bodyForm.trigger(),
-        settingsForm.trigger(),
-      ]);
-
-      if (!bodyValid || !settingsValid) {
-        if (!settingsValid) setIsSettingsDialogOpen(true);
-        toast.error("入力内容に誤りがあります");
-        return;
-      }
-
-      const bodyData = bodyForm.getValues();
-      const settingsData = settingsForm.getValues();
       const settingsPayload = toSettingsSubmitPayload(settingsData);
-
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(
-          bodyData.contentJson,
-        );
+        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await createPost({
           title: settingsPayload.title,
           slug: settingsPayload.slug,
           excerpt: settingsPayload.excerpt,
-          contentJson: bodyData.contentJson,
+          contentJson,
           contentHtml,
           thumbnailUrl: settingsPayload.thumbnailUrl,
           categoryId: settingsPayload.categoryId,
@@ -344,25 +337,21 @@ export function usePostEditor({
     });
   };
 
-  /** EditorHeader の保存ボタン: 本文保存（create モードでは新規作成） */
   const handleSave = () => {
     if (core.isPending) return;
     if (mode === "create") {
       onCreateBoth();
       return;
     }
-    bodyForm.handleSubmit(onSubmitBody)();
+    onSubmitBody();
   };
 
-  /** SettingsDialog の保存ボタン: 設定保存 */
   const handleSaveSettings = () => {
     if (core.isPending) return;
-    settingsForm.handleSubmit(onSubmitSettings)();
+    onSubmitSettings();
   };
 
-  /** SettingsDialog のキャンセル/閉じる: 設定フォームをリセット */
   const closeSettingsDialog = () => {
-    settingsForm.reset(toSettingsFormData(post));
     setIsSettingsDialogOpen(false);
   };
 
@@ -380,7 +369,7 @@ export function usePostEditor({
       }
 
       toast.success(`公開しました（バージョン ${result.version}）`);
-      settingsForm.setValue("status", PostStatus.PUBLISHED);
+      setStatusValue(PostStatus.PUBLISHED);
       router.refresh();
     });
   };
@@ -395,7 +384,7 @@ export function usePostEditor({
       }
 
       toast.success("下書きに戻しました");
-      settingsForm.setValue("status", PostStatus.DRAFT);
+      setStatusValue(PostStatus.DRAFT);
       router.refresh();
     });
   };
@@ -423,18 +412,12 @@ export function usePostEditor({
 
   const handlePreview = () => {
     try {
-      const bodyValues = bodyForm.getValues();
-      const settingsValues = settingsForm.getValues();
+      const settingsData = validateSettings();
+      if (!settingsData) return;
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(
-        bodyValues.contentJson,
-      );
-      const previewData = toPreviewData(
-        settingsValues,
-        categories,
-        contentHtml,
-      );
+      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+      const previewData = toPreviewData(settingsData, categories, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/posts");
     } catch (error) {
       logger.error("プレビュー生成中にエラーが発生しました", {
@@ -444,9 +427,12 @@ export function usePostEditor({
     }
   };
 
-  // ==========================================================================
-  // カテゴリ/タグ操作
-  // ==========================================================================
+  const handleBack = () => core.handleBack(isDirty);
+
+  const handleStatusChange = (value: PostStatus) => {
+    setStatusValue(value);
+    settingsForm.update({ name: settingsFields.status.name, value });
+  };
 
   const handleCreateCategory = async (name: string) => {
     if (!onCreateCategory) return null;
@@ -466,32 +452,23 @@ export function usePostEditor({
     return result;
   };
 
-  // ==========================================================================
-  // Return
-  // ==========================================================================
-
   return {
-    // フォーム
-    bodyForm,
     settingsForm,
+    settingsFields,
     isPending: core.isPending,
     isDirty,
     isBodyDirty,
     isSettingsDirty,
-    hasEditorChanges: core.hasEditorChanges,
 
-    // 監視値
     title,
     slug,
     contentJson,
-    status,
+    status: statusValue,
 
-    // 設定ダイアログ
     isSettingsDialogOpen,
     openSettingsDialog,
     closeSettingsDialog,
 
-    // コメントパネル
     isCommentsPanelOpen: core.comments.isOpen,
     toggleComments: core.comments.toggle,
     closeCommentsPanel: core.comments.close,
@@ -501,21 +478,19 @@ export function usePostEditor({
     handleAddComment: core.comments.handleAddComment,
     clearPendingComment: core.comments.clearPendingComment,
 
-    // ハンドラー
     handleSave,
     handleSaveSettings,
     handlePublish,
     handleUnpublish,
     handleDelete,
     handlePreview,
-    handleBack: core.handleBack,
+    handleBack,
     handleContentChange,
+    handleStatusChange,
 
-    // 削除ダイアログ
     isDeleteDialogOpen: core.isDeleteDialogOpen,
     setIsDeleteDialogOpen: core.setIsDeleteDialogOpen,
 
-    // カテゴリ/タグ
     categories,
     tags,
     handleCreateCategory,
