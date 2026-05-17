@@ -1,5 +1,8 @@
 # Phase 3-B: Inline Editor (Posts / News) RHF → conform 移行 Implementation Plan
 
+> **Snapshot: 2026-05-17**
+> **Completed: 2026-05-18** — Phase 3-B (Tasks 2-9) + Phase 3-C (`react-hook-form` / `@hookform/resolvers` 削除) を同セッション内で完遂。PR #120-#126 で main 反映済 (rule docs cleanup #124 / lint warnings 構造解消 #125 / src コメント Phase 言及 cleanup #126 含む)。Step 10 の handoff memo は同セッション完遂で不要化のため skip。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Posts / News エディタの inline editor (dual form `bodyForm` + `settingsForm` × 2 entity = 計 4 form インスタンス + 12 side-panel component) を React Hook Form (RHF) から conform + Zod に clean break で移行し、`package.json` から `react-hook-form` / `@hookform/resolvers` を削除する Phase 3-C を実行可能な状態にする。バージョン SSoT は `package.json` + `bun.lock`。
