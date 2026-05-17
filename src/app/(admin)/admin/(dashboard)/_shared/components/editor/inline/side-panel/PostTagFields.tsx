@@ -3,70 +3,75 @@
 /**
  * 投稿タグ入力フィールド
  *
- * TagInputコンポーネントをreact-hook-formと統合
- * フォームのカンマ区切り文字列と配列形式を変換
+ * conform `FieldMetadata` ベース。`TagInput` UI primitive + UUID 配列 transit (FormData
+ * 経由は JSON.stringify、schema preprocess で配列化、`@/admin/lib/validations/post`
+ * の `tagsFormSchema` 参照)。
  */
 
-import type { FieldPathByValue, FieldValues } from "react-hook-form";
-import { useController } from "react-hook-form";
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
 import { TagInput, type TagOption } from "./TagInput";
-import { getFieldError, getErrorMessage } from "../types";
-import type { FieldComponentProps } from "../content-types/types";
 
-type PostTagFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
-  /** フィールド名マッピング */
-  fields: {
-    tags: FieldPathByValue<T, string | null | undefined>;
-  };
+type PostTagFieldsProps = {
+  tagsField: FieldMetadata<string[]>;
   /** 利用可能なタグのリスト */
-  availableTags?: TagOption[];
+  availableTags?: readonly TagOption[];
   /** 新規タグ作成時のコールバック */
   onCreateTag?: (name: string) => Promise<TagOption | null>;
-  /** ラベル */
   label?: string;
-  /** プレースホルダー */
   placeholder?: string;
+  disabled?: boolean;
 };
 
-export function PostTagFields<T extends FieldValues>({
-  control,
-  errors,
-  disabled,
-  fields,
+function parseTagsValue(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string");
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((v): v is string => typeof v === "string");
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return [];
+}
+
+export function PostTagFields({
+  tagsField,
   availableTags = [],
   onCreateTag,
   label = "タグ",
   placeholder = "タグを入力...",
-}: PostTagFieldsProps<T>) {
-  const tagsField = useController({ control, name: fields.tags });
-  const rawTags: unknown = tagsField.field.value;
-  const tagsString = typeof rawTags === "string" ? rawTags : undefined;
-  const tagsError = getFieldError(errors, fields.tags);
+  disabled,
+}: PostTagFieldsProps) {
+  const control = useInputControl(tagsField);
+  const tagsArray = parseTagsValue(control.value);
+  const tagsError = tagsField.errors?.[0];
 
-  // カンマ区切り文字列を配列に変換
-  const tagsArray = tagsString
-    ? tagsString
-        .split(",")
-        .map((t: string) => t.trim())
-        .filter(Boolean)
-    : [];
-
-  // 配列をカンマ区切り文字列に変換してフォームに設定
   const handleChange = (newTags: string[]) => {
-    const newValue = newTags.join(", ");
-    tagsField.field.onChange(newValue);
+    control.change(JSON.stringify(newTags));
   };
 
   return (
-    <TagInput
-      value={tagsArray}
-      onChange={handleChange}
-      availableTags={availableTags}
-      {...(onCreateTag && { onCreateTag })}
-      label={label}
-      placeholder={placeholder}
-      {...(disabled !== undefined && { disabled })}
-      {...(tagsError && { error: getErrorMessage(tagsError) })}
-    />
+    <>
+      <input
+        type="hidden"
+        name={tagsField.name}
+        value={JSON.stringify(tagsArray)}
+      />
+      <TagInput
+        value={tagsArray}
+        onChange={handleChange}
+        availableTags={[...availableTags]}
+        {...(onCreateTag && { onCreateTag })}
+        label={label}
+        placeholder={placeholder}
+        {...(disabled !== undefined && { disabled })}
+        {...(tagsError && { error: tagsError })}
+      />
+    </>
   );
 }

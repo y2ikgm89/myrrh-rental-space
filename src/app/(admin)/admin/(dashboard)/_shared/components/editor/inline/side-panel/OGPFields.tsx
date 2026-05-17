@@ -3,42 +3,47 @@
 /**
  * OGP設定フィールド
  *
- * SNSシェア時の表示設定
- * OGP画像はメディアピッカーで選択
+ * conform `FieldMetadata` ベース。SNSシェア時の表示設定。OGP画像はメディアピッカーで選択。
  */
 
 import Image from "next/image";
 import { IconPhotoPlus } from "@tabler/icons-react";
-import type { FieldValues } from "react-hook-form";
-import { useController } from "react-hook-form";
+import {
+  getInputProps,
+  getTextareaProps,
+  useInputControl,
+  type FieldMetadata,
+} from "@conform-to/react";
 import { Button, Input, Label, Textarea } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
-import { getFieldError, getErrorMessage } from "../types";
-import type { OGPFieldsProps } from "../types";
 
-export function OGPFields<T extends FieldValues>({
-  register,
-  control,
-  errors,
+type OGPFieldsProps = {
+  ogpTitleField: FieldMetadata<string | undefined>;
+  ogpDescriptionField: FieldMetadata<string | undefined>;
+  ogpImageUrlField: FieldMetadata<string | null | undefined>;
+  disabled?: boolean;
+};
+
+export function OGPFields({
+  ogpTitleField,
+  ogpDescriptionField,
+  ogpImageUrlField,
   disabled,
-  fields,
-}: OGPFieldsProps<T>) {
-  const ogpTitleError = getFieldError(errors, fields.ogpTitle);
-  const ogpDescriptionError = getFieldError(errors, fields.ogpDescription);
-  const ogpImageUrlError = getFieldError(errors, fields.ogpImageUrl);
+}: OGPFieldsProps) {
+  const ogpTitleError = ogpTitleField.errors?.[0];
+  const ogpDescriptionError = ogpDescriptionField.errors?.[0];
+  const ogpImageUrlError = ogpImageUrlField.errors?.[0];
 
-  const ogpImageField = useController({ control, name: fields.ogpImageUrl });
+  const ogpImageControl = useInputControl(ogpImageUrlField);
   const ogpImageUrlStr =
-    typeof ogpImageField.field.value === "string"
-      ? ogpImageField.field.value
-      : "";
+    typeof ogpImageControl.value === "string" ? ogpImageControl.value : "";
 
   const ogpPicker = useSingleMediaPicker({
     defaultUsage: "POST",
     onSelect: (media) => {
       const selected = media[0];
       if (selected) {
-        ogpImageField.field.onChange(selected.url);
+        ogpImageControl.change(selected.url);
       }
     },
   });
@@ -46,38 +51,37 @@ export function OGPFields<T extends FieldValues>({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="ogpTitle">OGPタイトル</Label>
+        <Label htmlFor={ogpTitleField.id}>OGPタイトル</Label>
         <Input
-          id="ogpTitle"
-          {...register(fields.ogpTitle)}
+          {...getInputProps(ogpTitleField, { type: "text" })}
           placeholder="SNSシェア時のタイトル（100文字以内推奨）"
           disabled={disabled}
         />
         {ogpTitleError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(ogpTitleError)}
-          </p>
+          <p className="text-sm text-destructive">{ogpTitleError}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="ogpDescription">OGP説明文</Label>
+        <Label htmlFor={ogpDescriptionField.id}>OGP説明文</Label>
         <Textarea
-          id="ogpDescription"
-          {...register(fields.ogpDescription)}
+          {...getTextareaProps(ogpDescriptionField)}
           placeholder="SNSシェア時の説明文（200文字以内推奨）"
           rows={3}
           disabled={disabled}
         />
         {ogpDescriptionError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(ogpDescriptionError)}
-          </p>
+          <p className="text-sm text-destructive">{ogpDescriptionError}</p>
         )}
       </div>
 
       <div className="space-y-2">
         <Label>OGP画像</Label>
+        <input
+          type="hidden"
+          name={ogpImageUrlField.name}
+          value={ogpImageUrlStr}
+        />
         <div className="flex items-start gap-3">
           {ogpImageUrlStr ? (
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border">
@@ -112,9 +116,7 @@ export function OGPFields<T extends FieldValues>({
           </div>
         </div>
         {ogpImageUrlError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(ogpImageUrlError)}
-          </p>
+          <p className="text-sm text-destructive">{ogpImageUrlError}</p>
         )}
         <p className="text-xs text-muted-foreground">推奨サイズ: 1200x630px</p>
       </div>

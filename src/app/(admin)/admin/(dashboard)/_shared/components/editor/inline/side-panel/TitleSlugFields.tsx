@@ -3,116 +3,82 @@
 /**
  * タイトル・スラッグフィールド
  *
- * 汎用的なタイトルとスラッグの入力フィールド
- * スラッグの自動生成機能付き
+ * conform `FieldMetadata` ベース。汎用的なタイトルとスラッグの入力フィールド。
+ * スラッグの自動生成は親フォームから渡される `onAutoGenerateSlug` callback で実行。
  */
 
-import type { FieldPathByValue, FieldValues } from "react-hook-form";
-import { Input, Label, Button } from "@/admin/components/ui";
-import { getFieldError, getErrorMessage } from "../types";
-import type { FieldComponentProps } from "../content-types/types";
+import { getInputProps, type FieldMetadata } from "@conform-to/react";
+import { Button, Input, Label } from "@/admin/components/ui";
 
-type TitleSlugFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
-  /** フィールド名マッピング */
-  fields: {
-    title: FieldPathByValue<T, string | null | undefined>;
-    slug?: FieldPathByValue<T, string | null | undefined>;
-  };
-  /** スラッグフィールドを表示するか */
-  showSlug?: boolean;
-  /** スラッグのURLプレビューパス */
+type TitleSlugFieldsProps = {
+  titleField: FieldMetadata<string>;
+  /** slug 不要の場合は省略 */
+  slugField?: FieldMetadata<string>;
+  /** スラッグの URL プレビューパス */
   slugPreviewPath?: string;
+  /** スラッグの現在値（URL プレビュー表示用） */
+  slugPreviewValue?: string;
   /** タイトルのプレースホルダー */
   titlePlaceholder?: string;
   /** スラッグのプレースホルダー */
   slugPlaceholder?: string;
+  /** 「自動生成」ボタンが押されたときの callback */
+  onAutoGenerateSlug?: () => void;
+  disabled?: boolean;
 };
 
-export function TitleSlugFields<T extends FieldValues>({
-  register,
-  errors,
-  getValues,
-  disabled,
-  fields,
-  showSlug = true,
+export function TitleSlugFields({
+  titleField,
+  slugField,
   slugPreviewPath = "",
+  slugPreviewValue = "",
   titlePlaceholder = "タイトルを入力",
   slugPlaceholder = "url-slug",
-}: TitleSlugFieldsProps<T>) {
-  const titleError = getFieldError(errors, fields.title);
-  const slugError = fields.slug
-    ? getFieldError(errors, fields.slug)
-    : undefined;
-  const titleField = register(fields.title);
-  const slugField = fields.slug ? register(fields.slug) : undefined;
-
-  const generateSlug = () => {
-    if (!getValues || !slugField || !fields.slug) return;
-
-    const title = getValues(fields.title);
-    if (typeof title === "string" && title) {
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
-      slugField.onChange({
-        target: { name: slugField.name, value: slug },
-        type: "change",
-      });
-    }
-  };
-
-  const currentSlug = getValues && fields.slug ? getValues(fields.slug) : "";
+  onAutoGenerateSlug,
+  disabled,
+}: TitleSlugFieldsProps) {
+  const titleError = titleField.errors?.[0];
+  const slugError = slugField?.errors?.[0];
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor={fields.title}>タイトル</Label>
+        <Label htmlFor={titleField.id}>タイトル</Label>
         <Input
-          id={fields.title}
-          {...titleField}
+          {...getInputProps(titleField, { type: "text" })}
           placeholder={titlePlaceholder}
           disabled={disabled}
         />
-        {titleError && (
-          <p className="text-sm text-destructive">
-            {getErrorMessage(titleError)}
-          </p>
-        )}
+        {titleError && <p className="text-sm text-destructive">{titleError}</p>}
       </div>
 
-      {showSlug && fields.slug && (
+      {slugField && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor={fields.slug}>スラッグ（URL）</Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={generateSlug}
-              disabled={disabled}
-            >
-              自動生成
-            </Button>
+            <Label htmlFor={slugField.id}>スラッグ（URL）</Label>
+            {onAutoGenerateSlug && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onAutoGenerateSlug}
+                disabled={disabled}
+              >
+                自動生成
+              </Button>
+            )}
           </div>
           <Input
-            id={fields.slug}
-            {...slugField}
+            {...getInputProps(slugField, { type: "text" })}
             placeholder={slugPlaceholder}
             disabled={disabled}
           />
           {slugPreviewPath && (
             <p className="text-xs text-muted-foreground">
-              URL: {slugPreviewPath}/{currentSlug || slugPlaceholder}
+              URL: {slugPreviewPath}/{slugPreviewValue || slugPlaceholder}
             </p>
           )}
-          {slugError && (
-            <p className="text-sm text-destructive">
-              {getErrorMessage(slugError)}
-            </p>
-          )}
+          {slugError && <p className="text-sm text-destructive">{slugError}</p>}
         </div>
       )}
     </div>

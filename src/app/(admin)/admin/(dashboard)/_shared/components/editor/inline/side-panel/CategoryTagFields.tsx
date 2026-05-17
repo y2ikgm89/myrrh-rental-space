@@ -1,19 +1,17 @@
 "use client";
 
 /**
- * カテゴリ・タグフィールド
+ * カテゴリ・タグフィールド（投稿記事用 — シンプル合成版）
  *
- * カテゴリ選択とタグ入力
- * 投稿記事用
+ * conform `FieldMetadata` ベース。`CategoryFields` + `<Input>` (タグはカンマ区切り
+ * 文字列の簡易版、`PostTagFields` の TagInput UI を使わないケース向け)。
  */
 
-import type {
-  UseFormRegister,
-  UseFormSetValue,
-  FieldErrors,
-  Control,
-} from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import {
+  getInputProps,
+  useInputControl,
+  type FieldMetadata,
+} from "@conform-to/react";
 import {
   Input,
   Label,
@@ -23,36 +21,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import type { PostEditorFormData, PostCategoryOption } from "../types";
+
+export type CategoryOption = {
+  id: string;
+  name: string;
+};
 
 type CategoryTagFieldsProps = {
-  register: UseFormRegister<PostEditorFormData>;
-  control: Control<PostEditorFormData>;
-  setValue: UseFormSetValue<PostEditorFormData>;
-  errors: FieldErrors<PostEditorFormData>;
-  categories: PostCategoryOption[];
+  categoryIdField: FieldMetadata<string>;
+  tagsField: FieldMetadata<string | undefined>;
+  categories: readonly CategoryOption[];
   disabled?: boolean;
 };
 
 export function CategoryTagFields({
-  register,
-  control,
-  setValue,
-  errors,
+  categoryIdField,
+  tagsField,
   categories,
   disabled,
 }: CategoryTagFieldsProps) {
-  const categoryId = useWatch({ control, name: "categoryId" });
+  const categoryControl = useInputControl(categoryIdField);
+  const categoryId =
+    typeof categoryControl.value === "string" ? categoryControl.value : "";
+  const categoryError = categoryIdField.errors?.[0];
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="categoryId">カテゴリ</Label>
+        <Label htmlFor={categoryIdField.id}>カテゴリ</Label>
+        <input type="hidden" name={categoryIdField.name} value={categoryId} />
         <Select
           value={categoryId}
-          onValueChange={(value) =>
-            setValue("categoryId", value, { shouldDirty: true })
-          }
+          onValueChange={(value) => categoryControl.change(value)}
           {...(disabled !== undefined && { disabled })}
         >
           <SelectTrigger>
@@ -66,18 +66,15 @@ export function CategoryTagFields({
             ))}
           </SelectContent>
         </Select>
-        {errors.categoryId && (
-          <p className="text-sm text-destructive">
-            {errors.categoryId.message}
-          </p>
+        {categoryError && (
+          <p className="text-sm text-destructive">{categoryError}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="tags">タグ</Label>
+        <Label htmlFor={tagsField.id}>タグ</Label>
         <Input
-          id="tags"
-          {...register("tags")}
+          {...getInputProps(tagsField, { type: "text" })}
           placeholder="タグ1, タグ2, タグ3"
           disabled={disabled}
         />
