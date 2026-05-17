@@ -24,7 +24,7 @@ import {
   InlineEditorShell,
   SettingsDialog,
   useNewsEditor,
-  useContentWidth,
+  resolveContentWidthPx,
   newsSettingsPanel,
   type NewsSidePanelExtra,
 } from "@/admin/components/editor/inline";
@@ -110,7 +110,7 @@ export function NewsEditor({
   const contentWidthFieldValue = editor.settingsFields.contentWidth.value;
   const contentWidthCustomFieldValue =
     editor.settingsFields.contentWidthCustom.value;
-  const contentWidthPx = useContentWidth({
+  const contentWidthPx = resolveContentWidthPx({
     width:
       typeof contentWidthFieldValue === "string"
         ? contentWidthFieldValue

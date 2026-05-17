@@ -155,7 +155,6 @@ export const postSettingsPanel: SidePanelDefinition<
           render: (ctx) => (
             <LayoutFieldsConnected
               fields={ctx.fields}
-              form={ctx.form}
               {...spreadOptionalDisabled(ctx)}
             />
           ),
