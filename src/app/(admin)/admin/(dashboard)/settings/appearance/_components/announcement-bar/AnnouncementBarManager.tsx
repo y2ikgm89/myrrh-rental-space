@@ -1,10 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { z } from "zod";
-import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
 import { toast } from "sonner";
 import {
   Tabs,
@@ -14,15 +10,10 @@ import {
 } from "@/admin/components/ui";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
-  createAnnouncementBar,
-  updateAnnouncementBar,
   deleteAnnouncementBar,
   toggleAnnouncementBarActive,
 } from "@/admin/actions/announcement-bar";
-import type {
-  AnnouncementBarData,
-  AnnouncementBarInput,
-} from "@/shared/domain/settings/announcement-bar";
+import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   updateAnnouncementBarCarouselSettings,
@@ -36,46 +27,11 @@ import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
 } from "@/shared/lib/validations/enums/prisma-types";
-import {
-  portableTextSpanSchema,
-  spansToPlainText,
-} from "@/shared/lib/portable-text";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { BarList } from "./BarList";
-import { BarDialog, DeleteDialog } from "./BarDialog";
+import { BarFormDialog, DeleteDialog } from "./BarDialog";
 import { CarouselSettingsPanel } from "./CarouselSettings";
-import {
-  isValidHexColor,
-  type BarFormData,
-  type CarouselSettings,
-} from "./types";
-
-// =============================================================================
-// Form Schema
-// =============================================================================
-
-// RHF input 型を required 化するため、form 用は `.default()` を持たない direct array。
-// 参照: NavigationItem rich label の `navFormSchema.label` 同パターン
-const barFormSchema = z.object({
-  message: z
-    .array(portableTextSpanSchema)
-    .max(30, { error: "Span は30件以内です" })
-    .refine((spans) => spansToPlainText(spans).trim().length > 0, {
-      error: "メッセージにテキストを 1 文字以上含めてください",
-    })
-    .refine((spans) => spansToPlainText(spans).length <= 200, {
-      error: "メッセージは200文字以内で入力してください",
-    }),
-  linkUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .or(z.literal("")),
-  linkText: z.string().max(50, { error: "リンクテキストは50文字以内" }),
-  isActive: z.boolean(),
-  priority: z.number().int().min(0).max(100),
-  startAt: z.string(),
-  endAt: z.string(),
-}) satisfies z.ZodType<BarFormData>;
+import { isValidHexColor, type CarouselSettings } from "./types";
 
 // =============================================================================
 // Props
@@ -146,96 +102,15 @@ export function AnnouncementBarManager({
     }),
   );
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    control,
-    formState: { errors },
-  } = useForm<BarFormData>({
-    resolver: standardSchemaResolver(barFormSchema),
-    defaultValues: {
-      message: [],
-      linkUrl: "",
-      linkText: "",
-      isActive: true,
-      priority: 0,
-      startAt: "",
-      endAt: "",
-    },
-  });
-
   const loadBars = async () => {
     const result = await fetchAnnouncementBars();
     setBars(result.items);
   };
 
-  // Open dialog for create/edit
+  // Open dialog for create/edit (mount-on-open + Variant A: form は Dialog 内で独立 init)
   const openDialog = (bar?: Serialized<AnnouncementBarData>) => {
-    if (bar) {
-      setEditingBar(bar);
-      reset({
-        message: bar.message,
-        linkUrl: bar.linkUrl || "",
-        linkText: bar.linkText || "",
-        isActive: bar.isActive,
-        priority: bar.priority,
-        startAt: bar.startAt ? formatDateTimeLocalInJst(bar.startAt) : "",
-        endAt: bar.endAt ? formatDateTimeLocalInJst(bar.endAt) : "",
-      });
-    } else {
-      setEditingBar(null);
-      reset({
-        message: [],
-        linkUrl: "",
-        linkText: "",
-        isActive: true,
-        priority: 0,
-        startAt: "",
-        endAt: "",
-      });
-    }
+    setEditingBar(bar ?? null);
     setIsDialogOpen(true);
-  };
-
-  // Submit form
-  const onSubmit = (data: BarFormData) => {
-    startTransition(async () => {
-      const input: AnnouncementBarInput = {
-        message: data.message,
-        linkUrl: data.linkUrl || null,
-        linkText: data.linkText || null,
-        bgColor: null,
-        textColor: null,
-        isActive: data.isActive,
-        priority: data.priority,
-        startAt: data.startAt || null,
-        endAt: data.endAt || null,
-      };
-
-      if (editingBar) {
-        const result = await updateAnnouncementBar(editingBar.id, input);
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-
-        toast.success("お知らせバーを更新しました");
-        setIsDialogOpen(false);
-        loadBars();
-      } else {
-        const result = await createAnnouncementBar(input);
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-
-        toast.success("お知らせバーを作成しました");
-        setIsDialogOpen(false);
-        loadBars();
-      }
-    });
   };
 
   // Toggle active
@@ -353,17 +228,15 @@ export function AnnouncementBarManager({
         </TabsContent>
       </Tabs>
 
-      <BarDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        editingBar={editingBar}
-        isPending={isPending}
-        register={register}
-        setValue={setValue}
-        control={control}
-        errors={errors}
-        onSubmit={handleSubmit(onSubmit)}
-      />
+      {/* mount-on-open: Dialog 内 conform `useForm` の defaultValue を確実に反映 */}
+      {isDialogOpen && (
+        <BarFormDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          editingBar={editingBar}
+          onSuccess={loadBars}
+        />
+      )}
 
       <DeleteDialog
         isOpen={deleteDialogOpen}
