@@ -417,3 +417,35 @@ bunx playwright test --project=chromium-smoke
 - Task 9-10 は Task 8 完了後の最終 step
 - 各 PR は CLAUDE.md §自動完遂ポリシーに従い branch → validate → commit → push → PR → CI → squash merge → sync まで完遂
 - 8-10 日 estimated、Phase 1 全体で 10-11 PR
+
+---
+
+## Progress Snapshot (2026-05-17 update)
+
+> Phase ごとに段階的に merge 済。次セッションは下記 handoff memo を起点に再開する。
+
+### 完了済 (Task 4-7 大半 + Phase 2 + Phase 3-A)
+
+| Task        | 内容                                                                | 状態         | 関連 PR         |
+| ----------- | ------------------------------------------------------------------- | ------------ | --------------- |
+| Task 4      | conform 導入準備 + `executeConformMutation` SSoT 確立               | ✅ Completed | PR #61 era      |
+| Task 5      | conform simple form 移行 (settings sections 17/17)                  | ✅ Completed | PR #61-87       |
+| Task 6      | conform medium form 移行 (Dialog / Tab form)                        | ✅ Completed | PR #88-91       |
+| Task 7 部分 | conform complex form 移行 (Page 遷移 form 7 件 + auto-section-form) | ✅ Completed | PR #92-98, #107 |
+| (Phase 2)   | public forms 7 件 + `use-public-form.ts` 削除                       | ✅ Completed | PR #100-106     |
+| Phase 3-A   | auto-section-form + 4 auto-fields conform 化                        | ✅ Completed | PR #107         |
+
+### 残作業 (Phase 3-B + 3-C)
+
+| Phase                   | 内容                                                                                  | 状態                    |
+| ----------------------- | ------------------------------------------------------------------------------------- | ----------------------- |
+| Phase 3-B (Task 7 残り) | inline editor 21 file (4 hooks + 12 side-panel + SettingsDialog + form.tsx primitive) | **Pending — spec 必要** |
+| Phase 3-C (Task 8)      | `package.json` から `react-hook-form` / `@hookform/resolvers` 削除                    | 3-B 完了後              |
+| Task 1-3                | SDK / Prisma / Route ledger entries 構造解消                                          | 未着手 (RHF 移行と独立) |
+| Task 9-11               | ledger 削除 + rule docs 更新 + verification                                           | 全 form 移行完了後      |
+
+### 次セッション起点
+
+- **handoff memo**: `~/.claude/projects/G--workspace-work-website-customer-myrrh-rental-space/memory/project_type-safety-phase-3-handoff.md` を参照
+- **Phase 3-B 着手**: `writing-plans` skill で inline editor 専用 spec を作成 (本 plan の Task 7 を inline editor 専用に細分化)
+- 型 ledger は Phase 3-A 完了時点で **20 entry** に拡張済 (conform generic invariance §5 拡張)、`.claude/rules/type-safety/documented-exceptions-ledger.md` 参照
