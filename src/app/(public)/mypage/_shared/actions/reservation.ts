@@ -1,5 +1,6 @@
 "use server";
 
+import type { SubmissionResult } from "@conform-to/react";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
@@ -7,22 +8,19 @@ import {
   updateCustomerReservation,
 } from "@/shared/domain/reservations/customer-commands";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
-import {
-  customerReservationEditSchema,
-  type CustomerReservationEditInput,
-} from "@/shared/lib/validations/customer-reservation";
+import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
 import {
-  createValidationMutationError,
   checkActionRateLimit,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { DomainError } from "@/shared/domain/domain-error";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
@@ -103,62 +101,76 @@ export async function cancelReservationAction(
 }
 
 export async function updateReservationAction(
-  input: CustomerReservationEditInput,
-): Promise<MutationResult<null>> {
-  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
-  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    customerReservationEditSchema,
+    async (data) => {
+      const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+      if (!rateLimit.success) {
+        return { ok: false, error: "リクエストが多すぎます" };
+      }
 
-  const session = await getCustomerSession();
-  if (!session) return createMutationError("認証が必要です");
+      const session = await getCustomerSession();
+      if (!session) {
+        return { ok: false, error: "認証が必要です" };
+      }
 
-  const customer = await getCustomerByUserId(session.user.id);
-  if (!customer) return createMutationError("顧客情報が見つかりません");
+      const customer = await getCustomerByUserId(session.user.id);
+      if (!customer) {
+        return { ok: false, error: "顧客情報が見つかりません" };
+      }
 
-  const parsed = customerReservationEditSchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
+      const turnstile = await validateTurnstile({
+        token: data.turnstileToken,
+        expectedAction: TURNSTILE_ACTIONS.mypage_reservation_edit,
+      });
+      if (!turnstile.success) {
+        return { ok: false, error: turnstile.error };
+      }
 
-  const turnstile = await validateTurnstile({
-    token: parsed.data.turnstileToken,
-    expectedAction: TURNSTILE_ACTIONS.mypage_reservation_edit,
-  });
-  if (!turnstile.success) return createMutationError(turnstile.error);
+      try {
+        const settings = await getReservationDeadlineSettings();
+        const result = await updateCustomerReservation(
+          data.reservationId,
+          customer.id,
+          data,
+          settings.modificationDeadlineHours,
+        );
 
-  try {
-    const settings = await getReservationDeadlineSettings();
-    const result = await updateCustomerReservation(
-      parsed.data.reservationId,
-      customer.id,
-      parsed.data,
-      settings.modificationDeadlineHours,
-    );
+        if (!result.success) {
+          return { ok: false, error: result.error };
+        }
 
-    if (!result.success) return createMutationError(result.error);
+        invalidateReservationCaches(data.reservationId, customer.id, {
+          coupons: true,
+          notifications: true,
+        });
 
-    invalidateReservationCaches(parsed.data.reservationId, customer.id, {
-      coupons: true,
-      notifications: true,
-    });
+        fireAndForget(
+          createNotificationCommand({
+            type: NOTIFICATION_TYPE.RESERVATION_UPDATE,
+            title:
+              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_UPDATE],
+            message: `${customer.lastName}${customer.firstName}様が予約を変更しました`,
+            resourceType: "reservation",
+            resourceId: data.reservationId,
+          }),
+          {
+            operation: "createCustomerUpdateNotification",
+            category: ErrorCategory.DATABASE,
+          },
+        );
 
-    // Create admin notification (fire-and-forget)
-    fireAndForget(
-      createNotificationCommand({
-        type: NOTIFICATION_TYPE.RESERVATION_UPDATE,
-        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_UPDATE],
-        message: `${customer.lastName}${customer.firstName}様が予約を変更しました`,
-        resourceType: "reservation",
-        resourceId: parsed.data.reservationId,
-      }),
-      {
-        operation: "createCustomerUpdateNotification",
-        category: ErrorCategory.DATABASE,
-      },
-    );
-
-    return null;
-  } catch (error) {
-    if (error instanceof DomainError) {
-      return createMutationError(error.message);
-    }
-    throw error;
-  }
+        return { ok: true };
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
+      }
+    },
+  );
 }

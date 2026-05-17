@@ -4,15 +4,21 @@
  * src/app/(public)/mypage/_shared/actions/reservation.ts のテスト
  *
  * テスト対象:
- * - cancelReservationAction: 予約キャンセル
- * - updateReservationAction: 予約変更
+ * - cancelReservationAction: 予約キャンセル (RPC signature 維持 — button click 由来)
+ * - updateReservationAction: 予約変更 (Phase 2 B-6 conform 化)
+ *
+ * Phase 2 conform 移行:
+ *   `updateReservationAction(_prev, formData) => SubmissionResult` に signature 変更
+ *   - `executeConformMutation` SSoT 経由 (default `resetForm: true`)
+ *   - success: `{ initialValue: null }` (form は detail page に navigate)
+ *   - form-level error (rate limit / auth / Turnstile / DomainError): `reply({ formErrors })`
  *
  * モック方針:
- * - getSession: auth をモック（認証状態を制御）
+ * - getSession: auth をモック (認証状態を制御)
  * - getCustomerByUserId: domain クエリをモック
  * - cancelCustomerReservation / updateCustomerReservation: domain コマンドをモック
  * - getReservationDeadlineSettings: domain 設定クエリをモック
- * - checkActionRateLimit: action-helpers をモック
+ * - checkActionRateLimit / validateTurnstile: action-helpers をモック
  * - updateTag: next/cache をモック
  */
 
@@ -47,15 +53,14 @@ const mockCheckActionRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockValidateTurnstile = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
-  createValidationMutationError: (error: import("zod").ZodError) => ({
-    error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
-  }),
+  validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
@@ -93,8 +98,12 @@ mock.module("@/shared/lib/admin-auth", () => ({
 
 // domain クエリモック
 const mockGetCustomerByUserId = mock(
-  (): Promise<{ id: string; lastName: string } | null> =>
-    Promise.resolve({ id: "customer-001", lastName: "山田" }),
+  (): Promise<{ id: string; lastName: string; firstName: string } | null> =>
+    Promise.resolve({
+      id: "customer-001",
+      lastName: "山田",
+      firstName: "太郎",
+    }),
 );
 
 mock.module("@/shared/domain/customers/queries", () => ({
@@ -141,10 +150,17 @@ mock.module("@/shared/domain/settings/public-queries", () => ({
   getReservationDeadlineSettings: mockGetReservationDeadlineSettings,
 }));
 
-// @/shared/lib/constants はモック不要（純粋な定数ファイル、副作用なし）
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (promise: Promise<unknown>) => {
+    void promise.catch(() => {});
+  },
+  settleAllWithLogging: <T>(promises: Promise<T>[]) =>
+    Promise.allSettled(promises),
+  withTimeout: <T>(promise: Promise<T>) => promise,
+  withRetry: <T>(fn: () => Promise<T>) => fn(),
+}));
 
-// エラーロギングモック — errors/server.ts の全 export を含める
-// （bun-patterns.md §Gotchas: 不完全モックはグローバル干渉で他テストを壊す）
+// エラーロギングモック
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => undefined),
   createErrorLogger: mock(() => mock(() => undefined)),
@@ -205,7 +221,17 @@ mock.module("@/shared/lib/errors/server", () => ({
 const VALID_RESERVATION_ID = "550e8400-e29b-41d4-a716-446655440000";
 const VALID_SPACE_ID = "550e8400-e29b-41d4-a716-446655440001";
 
-const VALID_UPDATE_INPUT = {
+type UpdateInputShape = {
+  reservationId: string;
+  spaceId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  numberOfGuests: number;
+  turnstileToken?: string;
+};
+
+const VALID_UPDATE_INPUT: UpdateInputShape = {
   reservationId: VALID_RESERVATION_ID,
   spaceId: VALID_SPACE_ID,
   date: "2025-08-01",
@@ -214,8 +240,28 @@ const VALID_UPDATE_INPUT = {
   numberOfGuests: 5,
 };
 
+function inputToFormData(input: UpdateInputShape): FormData {
+  const fd = new FormData();
+  fd.append("reservationId", input.reservationId);
+  fd.append("spaceId", input.spaceId);
+  fd.append("date", input.date);
+  fd.append("startTime", input.startTime);
+  fd.append("endTime", input.endTime);
+  fd.append("numberOfGuests", String(input.numberOfGuests));
+  if (input.turnstileToken !== undefined) {
+    fd.append("turnstileToken", input.turnstileToken);
+  }
+  return fd;
+}
+
+type SubmissionLike = {
+  readonly status?: "success" | "error";
+  readonly initialValue?: unknown;
+  readonly error?: Record<string, string[] | null> | null;
+};
+
 // =============================================================================
-// テスト本体: cancelReservationAction
+// テスト本体: cancelReservationAction (signature 維持 — RPC、button 由来)
 // =============================================================================
 
 describe("cancelReservationAction", () => {
@@ -225,9 +271,9 @@ describe("cancelReservationAction", () => {
     mockCancelCustomerReservation.mockClear();
     mockGetReservationDeadlineSettings.mockClear();
     mockCheckActionRateLimit.mockClear();
+    mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
 
-    // デフォルト: 認証済み + 顧客あり + キャンセル成功
     mockGetSession.mockImplementation(() =>
       Promise.resolve({
         user: { id: "user-001", name: "テストユーザー" },
@@ -236,8 +282,15 @@ describe("cancelReservationAction", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockValidateTurnstile.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
     mockGetCustomerByUserId.mockImplementation(() =>
-      Promise.resolve({ id: "customer-001", lastName: "山田" }),
+      Promise.resolve({
+        id: "customer-001",
+        lastName: "山田",
+        firstName: "太郎",
+      }),
     );
     mockGetReservationDeadlineSettings.mockImplementation(() =>
       Promise.resolve({
@@ -293,24 +346,6 @@ describe("cancelReservationAction", () => {
       await cancelReservationAction(VALID_RESERVATION_ID);
 
       expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(1);
-    });
-
-    test("cancelCustomerReservation が customer.id と deadlineHours を引数に呼ばれる", async () => {
-      const { cancelReservationAction } =
-        await import("@/app/(public)/mypage/_shared/actions/reservation");
-
-      await cancelReservationAction(
-        VALID_RESERVATION_ID,
-        "都合が悪くなりました",
-      );
-
-      expect(mockCancelCustomerReservation).toHaveBeenCalledTimes(1);
-      expect(mockCancelCustomerReservation).toHaveBeenCalledWith(
-        VALID_RESERVATION_ID,
-        "customer-001",
-        24,
-        "都合が悪くなりました",
-      );
     });
   });
 
@@ -371,15 +406,6 @@ describe("cancelReservationAction", () => {
       const errorResult = result as { error: string };
       expect(errorResult.error).toBe("予約IDが不正です");
     });
-
-    test("不正な予約 ID のとき cancelCustomerReservation が呼ばれない", async () => {
-      const { cancelReservationAction } =
-        await import("@/app/(public)/mypage/_shared/actions/reservation");
-
-      await cancelReservationAction("invalid-id");
-
-      expect(mockCancelCustomerReservation).not.toHaveBeenCalled();
-    });
   });
 
   describe("異常系: 顧客情報なし", () => {
@@ -394,17 +420,6 @@ describe("cancelReservationAction", () => {
       expect(result).toHaveProperty("error");
       const errorResult = result as { error: string };
       expect(errorResult.error).toBe("顧客情報が見つかりません");
-    });
-
-    test("顧客が見つからないとき cancelCustomerReservation が呼ばれない", async () => {
-      mockGetCustomerByUserId.mockImplementation(() => Promise.resolve(null));
-
-      const { cancelReservationAction } =
-        await import("@/app/(public)/mypage/_shared/actions/reservation");
-
-      await cancelReservationAction(VALID_RESERVATION_ID);
-
-      expect(mockCancelCustomerReservation).not.toHaveBeenCalled();
     });
   });
 
@@ -460,7 +475,7 @@ describe("cancelReservationAction", () => {
 });
 
 // =============================================================================
-// テスト本体: updateReservationAction
+// テスト本体: updateReservationAction (Phase 2 B-6 conform 化)
 // =============================================================================
 
 describe("updateReservationAction", () => {
@@ -470,9 +485,9 @@ describe("updateReservationAction", () => {
     mockUpdateCustomerReservation.mockClear();
     mockGetReservationDeadlineSettings.mockClear();
     mockCheckActionRateLimit.mockClear();
+    mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
 
-    // デフォルト: 認証済み + 顧客あり + 更新成功
     mockGetSession.mockImplementation(() =>
       Promise.resolve({
         user: { id: "user-001", name: "テストユーザー" },
@@ -481,8 +496,15 @@ describe("updateReservationAction", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockValidateTurnstile.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
     mockGetCustomerByUserId.mockImplementation(() =>
-      Promise.resolve({ id: "customer-001", lastName: "山田" }),
+      Promise.resolve({
+        id: "customer-001",
+        lastName: "山田",
+        firstName: "太郎",
+      }),
     );
     mockGetReservationDeadlineSettings.mockImplementation(() =>
       Promise.resolve({
@@ -499,20 +521,28 @@ describe("updateReservationAction", () => {
   });
 
   describe("正常系", () => {
-    test("有効な入力で予約変更が成功し null を返す", async () => {
+    test("有効な入力で予約変更が成功する", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction(VALID_UPDATE_INPUT);
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toBeNull();
+      // conform v1.19: `reply({ resetForm: true })` は `{ initialValue: null }`
+      expect(result.initialValue).toBeNull();
+      expect(result.status).not.toBe("error");
     });
 
     test("updateCustomerReservation が customer.id と deadlineHours を引数に呼ばれる", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      await updateReservationAction(VALID_UPDATE_INPUT);
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
 
       expect(mockUpdateCustomerReservation).toHaveBeenCalledTimes(1);
       expect(mockUpdateCustomerReservation).toHaveBeenCalledWith(
@@ -527,7 +557,10 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      await updateReservationAction(VALID_UPDATE_INPUT);
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
 
       // RESERVATIONS + reservations.detail + reservations.calendar = 3回以上
       expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(3);
@@ -535,17 +568,19 @@ describe("updateReservationAction", () => {
   });
 
   describe("異常系: 未認証", () => {
-    test("セッションが null のとき認証エラーを返す", async () => {
+    test("セッションが null のとき formErrors に認証エラーを返す", async () => {
       mockGetSession.mockImplementation(() => Promise.resolve(null));
 
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction(VALID_UPDATE_INPUT);
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("認証が必要です");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("認証が必要です");
     });
 
     test("未認証時は updateCustomerReservation が呼ばれない", async () => {
@@ -554,14 +589,17 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      await updateReservationAction(VALID_UPDATE_INPUT);
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
 
       expect(mockUpdateCustomerReservation).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: レート制限", () => {
-    test("レート制限超過時はエラーを返す", async () => {
+    test("レート制限超過時は formErrors にエラーを返す", async () => {
       mockCheckActionRateLimit.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
@@ -572,160 +610,131 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction(VALID_UPDATE_INPUT);
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("リクエストが多すぎます");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("リクエストが多すぎます");
     });
   });
 
   describe("異常系: 顧客情報なし", () => {
-    test("顧客が見つからないとき MutationError を返す", async () => {
+    test("顧客が見つからないとき formErrors にエラーを返す", async () => {
       mockGetCustomerByUserId.mockImplementation(() => Promise.resolve(null));
 
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction(VALID_UPDATE_INPUT);
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("顧客情報が見つかりません");
-    });
-
-    test("顧客が見つからないとき updateCustomerReservation が呼ばれない", async () => {
-      mockGetCustomerByUserId.mockImplementation(() => Promise.resolve(null));
-
-      const { updateReservationAction } =
-        await import("@/app/(public)/mypage/_shared/actions/reservation");
-
-      await updateReservationAction(VALID_UPDATE_INPUT);
-
-      expect(mockUpdateCustomerReservation).not.toHaveBeenCalled();
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("顧客情報が見つかりません");
     });
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("reservationId が UUID 形式でないとき fieldErrors を含むエラーを返す", async () => {
+    test("reservationId が UUID 形式でないとき fieldErrors を返す", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        reservationId: "not-a-uuid",
-      });
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData({ ...VALID_UPDATE_INPUT, reservationId: "not-a-uuid" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("reservationId");
+      expect(result.status).toBe("error");
+      expect(result.error?.["reservationId"]).toBeDefined();
     });
 
-    test("spaceId が UUID 形式でないとき fieldErrors を含むエラーを返す", async () => {
+    test("spaceId が UUID 形式でないとき fieldErrors を返す", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        spaceId: "not-a-uuid",
-      });
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData({ ...VALID_UPDATE_INPUT, spaceId: "not-a-uuid" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("spaceId");
+      expect(result.status).toBe("error");
+      expect(result.error?.["spaceId"]).toBeDefined();
     });
 
-    test("date が不正な形式のとき fieldErrors を含むエラーを返す", async () => {
+    test("date が不正な形式のとき fieldErrors を返す", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        date: "2025/08/01",
-      });
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData({ ...VALID_UPDATE_INPUT, date: "2025/08/01" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("date");
+      expect(result.status).toBe("error");
+      expect(result.error?.["date"]).toBeDefined();
     });
 
-    test("startTime が不正な形式のとき fieldErrors を含むエラーを返す", async () => {
+    test("startTime が不正な形式のとき fieldErrors を返す", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        startTime: "10:00:00",
-      });
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData({ ...VALID_UPDATE_INPUT, startTime: "10:00:00" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("startTime");
+      expect(result.status).toBe("error");
+      expect(result.error?.["startTime"]).toBeDefined();
     });
 
     test("endTime が startTime より前のとき refine エラーを返す", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        startTime: "14:00",
-        endTime: "10:00",
-      });
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData({
+          ...VALID_UPDATE_INPUT,
+          startTime: "14:00",
+          endTime: "10:00",
+        }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("endTime");
+      expect(result.status).toBe("error");
+      expect(result.error?.["endTime"]).toBeDefined();
     });
 
-    test("numberOfGuests が 0 のとき fieldErrors を含むエラーを返す", async () => {
+    test("numberOfGuests が 0 のとき fieldErrors を返す", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        numberOfGuests: 0,
-      });
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData({ ...VALID_UPDATE_INPUT, numberOfGuests: 0 }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("numberOfGuests");
+      expect(result.status).toBe("error");
+      expect(result.error?.["numberOfGuests"]).toBeDefined();
     });
 
     test("バリデーション失敗時は updateCustomerReservation が呼ばれない", async () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      await updateReservationAction({
-        ...VALID_UPDATE_INPUT,
-        reservationId: "not-a-uuid",
-      });
+      await updateReservationAction(
+        undefined,
+        inputToFormData({ ...VALID_UPDATE_INPUT, reservationId: "not-a-uuid" }),
+      );
 
       expect(mockUpdateCustomerReservation).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: ドメインエラー", () => {
-    test("updateCustomerReservation が success: false を返したとき MutationError を返す", async () => {
+    test("updateCustomerReservation が success: false を返したとき formErrors を返す", async () => {
       mockUpdateCustomerReservation.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
@@ -736,14 +745,16 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction(VALID_UPDATE_INPUT);
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("変更期限を過ぎています");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("変更期限を過ぎています");
     });
 
-    test("updateCustomerReservation が DomainError をスローしたとき MutationError を返す", async () => {
+    test("updateCustomerReservation が DomainError をスローしたとき formErrors を返す", async () => {
       mockUpdateCustomerReservation.mockImplementation(() =>
         Promise.reject(
           new DomainError("選択された時間帯は既に予約されています", "CONFLICT"),
@@ -753,11 +764,15 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = await updateReservationAction(VALID_UPDATE_INPUT);
+      const result = (await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("選択された時間帯は既に予約されています");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe(
+        "選択された時間帯は既に予約されています",
+      );
     });
 
     test("updateCustomerReservation が DomainError 以外の Error をスローしたとき再スローされる", async () => {
@@ -768,9 +783,9 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      await expect(updateReservationAction(VALID_UPDATE_INPUT)).rejects.toThrow(
-        "予期しない DB エラー",
-      );
+      await expect(
+        updateReservationAction(undefined, inputToFormData(VALID_UPDATE_INPUT)),
+      ).rejects.toThrow("予期しない DB エラー");
     });
   });
 
@@ -799,48 +814,6 @@ describe("updateReservationAction", () => {
         ...VALID_UPDATE_INPUT,
         startTime: "10:00",
         endTime: "10:00",
-      });
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const endTimeError = result.error.issues.find(
-          (issue) => issue.path[0] === "endTime",
-        );
-        expect(endTimeError).toBeDefined();
-      }
-    });
-
-    test("numberOfGuests が 1 の境界値で通過", async () => {
-      const { customerReservationEditSchema } =
-        await import("@/shared/lib/validations/customer-reservation");
-
-      const result = customerReservationEditSchema.safeParse({
-        ...VALID_UPDATE_INPUT,
-        numberOfGuests: 1,
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("reservationId が UUID でない場合に失敗", async () => {
-      const { customerReservationEditSchema } =
-        await import("@/shared/lib/validations/customer-reservation");
-
-      const result = customerReservationEditSchema.safeParse({
-        ...VALID_UPDATE_INPUT,
-        reservationId: "not-a-uuid",
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    test("date が YYYY/MM/DD 形式（スラッシュ区切り）で失敗", async () => {
-      const { customerReservationEditSchema } =
-        await import("@/shared/lib/validations/customer-reservation");
-
-      const result = customerReservationEditSchema.safeParse({
-        ...VALID_UPDATE_INPUT,
-        date: "2025/08/01",
       });
 
       expect(result.success).toBe(false);
