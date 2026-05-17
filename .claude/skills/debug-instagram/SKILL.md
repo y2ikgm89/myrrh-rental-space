@@ -3,8 +3,9 @@ name: debug-instagram
 description: >
   Instagram フィード同期の診断スキル。トークン有効期限、cron 実行状況、DB 投稿数、CDN URL 疎通を
   一括チェック。「インスタが表示されない」「フィードが更新されない」場面で使用する。
-when_to_use: Instagram フィード表示・同期に問題が発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可。
+when_to_use: Instagram フィード表示・同期に問題が発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可、`/debug-instagram` slash command 経由のみ。
 disable-model-invocation: true
+user-invocable: true
 ---
 
 # Instagram デバッグ

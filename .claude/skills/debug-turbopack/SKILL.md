@@ -1,8 +1,9 @@
 ---
 name: debug-turbopack
 description: Turbopack HMR "module factory is not available" エラーの対処法。Next.js 16 開発中に 'use server' ↔ 'use client' のモジュール境界でHMRが失敗した場合の診断と回復手順を提供する
-when_to_use: Turbopack HMR エラーが発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可。
+when_to_use: Turbopack HMR エラーが発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可、`/debug-turbopack` slash command 経由のみ。
 disable-model-invocation: true
+user-invocable: true
 ---
 
 # Turbopack HMR エラー対処

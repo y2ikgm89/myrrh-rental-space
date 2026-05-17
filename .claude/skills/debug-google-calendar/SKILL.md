@@ -4,8 +4,9 @@ description: >
   Google Calendar 同期の診断スキル。OAuth トークン期限切れ、サービスアカウント設定ミス、
   双方向同期エラー、Webhook チャンネル失効、iCal フィード異常の特定と対処を行う。
   「カレンダーに予約が反映されない」「同期が止まった」場面で使用する。
-when_to_use: Google Calendar 同期に問題が発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可。
+when_to_use: Google Calendar 同期に問題が発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可、`/debug-google-calendar` slash command 経由のみ。
 disable-model-invocation: true
+user-invocable: true
 ---
 
 # Google Calendar デバッグ

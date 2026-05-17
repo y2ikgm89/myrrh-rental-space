@@ -3,8 +3,9 @@ name: debug-stripe
 description: >
   Stripe 決済設定・接続の診断スキル。Stripe キーの設定状況確認、接続テスト失敗の原因特定、
   Webhook 設定のチェックを行う。Stripe 関連のエラーや「決済が動かない」場面で使用する。
-when_to_use: Stripe 決済に問題が発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可。
+when_to_use: Stripe 決済に問題が発生したとき。開発者が状況判断して手動で起動する。AI による自動起動は不可、`/debug-stripe` slash command 経由のみ。
 disable-model-invocation: true
+user-invocable: true
 ---
 
 # Stripe デバッグ
