@@ -1,9 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useId } from "react";
-import { useFieldArray } from "react-hook-form";
+import { useActionState, useId, useState } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  type FieldMetadata,
+} from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
+import Link from "next/link";
 import { IconPhotoPlus } from "@tabler/icons-react";
 import {
   Button,
@@ -13,6 +19,7 @@ import {
   CardTitle,
   Checkbox,
   Input,
+  Label,
   Switch,
   Tabs,
   TabsList,
@@ -30,55 +37,45 @@ import {
   useSortable,
   verticalListSortingStrategy,
   toTranslate3d,
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage,
   SubmitButton,
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { BUSINESS_ATTRIBUTE_OPTIONS } from "@/shared/lib/business-attributes";
-import {
-  locationFormSchema,
-  defaultLocationFormValues,
-  type LocationFormInput,
-} from "@/shared/lib/validations/location";
+import { locationFormSchema } from "@/shared/lib/validations/location";
 import {
   parseBusinessAttributes,
   parseBusinessHours,
 } from "@/shared/lib/json-validators";
-import { createLocation, updateLocation } from "@/admin/actions/location";
+import {
+  createLocationAction,
+  updateLocationAction,
+} from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
-import { useFormAction } from "@/admin/hooks/useFormAction";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
-import { LocationMeoScoreCard } from "./LocationMeoScoreCard";
+import {
+  LocationMeoScoreCard,
+  type MeoScoreValues,
+  type GlobalsMeoFlags,
+} from "./LocationMeoScoreCard";
 import { LocationGbpSyncCard } from "./LocationGbpSyncCard";
-
-type GlobalsMeoFlags = {
-  businessName: boolean;
-  establishedDate: boolean;
-  socialLinks: boolean;
-};
 
 type LocationFormProps = {
   location?: LocationWithStats;
   mode: "create" | "edit";
   globals?: GlobalsMeoFlags;
-  /** GBP 同期機能のグローバル ON/OFF（Settings.googleBusinessProfileEnabled） */
   gbpEnabledGlobally?: boolean;
 };
 
-// =============================================================================
-// Drag Handle
-// =============================================================================
+const DEFAULT_GLOBALS: GlobalsMeoFlags = {
+  businessName: false,
+  establishedDate: false,
+  socialLinks: false,
+};
 
 function DragHandle({ className }: { className?: string }) {
   return (
@@ -108,15 +105,11 @@ function DragHandle({ className }: { className?: string }) {
   );
 }
 
-// =============================================================================
-// Sortable Image Item
-// =============================================================================
-
 type SortableImageItemProps = {
   id: string;
   url: string;
   index: number;
-  onRemove: (index: number) => void;
+  onRemove: () => void;
   disabled?: boolean;
 };
 
@@ -164,9 +157,9 @@ function SortableImageItem({
       <span className="flex-1 truncate text-sm">{url}</span>
       <Button
         type="button"
-        variant="outline"
+        variant="destructive"
         size="sm"
-        onClick={() => onRemove(index)}
+        onClick={onRemove}
         disabled={disabled}
       >
         削除
@@ -175,20 +168,18 @@ function SortableImageItem({
   );
 }
 
-// =============================================================================
-// Sortable Access Line Item
-// =============================================================================
-
 type SortableAccessLineItemProps = {
   id: string;
   index: number;
+  itemField: FieldMetadata<{ value: string } | undefined>;
   disabled?: boolean;
-  onRemove: (index: number) => void;
+  onRemove: () => void;
 };
 
 function SortableAccessLineItem({
   id,
   index,
+  itemField,
   disabled,
   onRemove,
 }: SortableAccessLineItemProps) {
@@ -206,6 +197,8 @@ function SortableAccessLineItem({
     transition,
   };
 
+  const itemFields = itemField.getFieldset();
+
   return (
     <div
       ref={setNodeRef}
@@ -218,26 +211,23 @@ function SortableAccessLineItem({
       <div {...attributes} {...listeners}>
         <DragHandle />
       </div>
-      <FormField
-        name={`accessLines.${index}.value`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormControl>
-              <Input
-                {...field}
-                placeholder="例: 東京メトロ「表参道駅」A1出口より徒歩5分"
-                disabled={disabled}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+      <div className="flex-1">
+        <Input
+          {...getInputProps(itemFields.value, { type: "text" })}
+          placeholder="例: 東京メトロ「表参道駅」A1出口より徒歩5分"
+          disabled={disabled}
+        />
+        {itemFields.value.errors && (
+          <p className="mt-1 text-sm text-destructive">
+            {itemFields.value.errors.join(", ")}
+          </p>
         )}
-      />
+      </div>
       <Button
         type="button"
-        variant="outline"
+        variant="destructive"
         size="sm"
-        onClick={() => onRemove(index)}
+        onClick={onRemove}
         disabled={disabled}
         aria-label={`経路 ${index + 1} を削除`}
       >
@@ -247,16 +237,114 @@ function SortableAccessLineItem({
   );
 }
 
-// =============================================================================
-// Access Lines Field (useFieldArray + dnd-kit)
-// =============================================================================
-
-function AccessLinesField({ disabled }: { disabled: boolean }) {
+export function LocationForm({
+  location,
+  mode,
+  globals = DEFAULT_GLOBALS,
+  gbpEnabledGlobally = false,
+}: LocationFormProps) {
   const dndContextId = useId();
-  const { fields, append, remove, move } = useFieldArray<
-    LocationFormInput,
-    "accessLines"
-  >({ name: "accessLines" });
+  const accessLinesDndContextId = useId();
+  const isEdit = mode === "edit";
+
+  const [name, setName] = useState<string>(location?.name ?? "");
+  const [description, setDescription] = useState<string>(
+    location?.description ?? "",
+  );
+  const [postalCode, setPostalCode] = useState<string>(
+    location?.postalCode ?? "",
+  );
+  const [prefecture, setPrefecture] = useState<string>(
+    location?.prefecture ?? "",
+  );
+  const [city, setCity] = useState<string>(location?.city ?? "");
+  const [phoneNumber, setPhoneNumber] = useState<string>(
+    location?.phoneNumber ?? "",
+  );
+  const [email, setEmail] = useState<string>(location?.email ?? "");
+  const [latitude, setLatitude] = useState<string>(
+    location?.latitude != null ? String(location.latitude) : "",
+  );
+  const [longitude, setLongitude] = useState<string>(
+    location?.longitude != null ? String(location.longitude) : "",
+  );
+  const [priceRange, setPriceRange] = useState<string>(
+    location?.priceRange ?? "",
+  );
+  const [paymentAccepted, setPaymentAccepted] = useState<string>(
+    location?.paymentAccepted ?? "",
+  );
+  const [googleBusinessPlaceId, setGoogleBusinessPlaceId] = useState<string>(
+    location?.googleBusinessPlaceId ?? "",
+  );
+
+  const [imageUrl, setImageUrl] = useState<string>(location?.imageUrl ?? "");
+  const [amenities, setAmenities] = useState<Record<string, boolean>>(
+    () => parseBusinessAttributes(location?.amenities) ?? {},
+  );
+  const [isPublished, setIsPublished] = useState<boolean>(
+    location?.isPublished ?? false,
+  );
+
+  const [businessHoursPayload] = useState<string>(() => {
+    const parsed = parseBusinessHours(location?.businessHours);
+    return parsed ? JSON.stringify(parsed) : "";
+  });
+  const [specialHolidaysPayload] = useState<string>(() => {
+    if (
+      location?.specialHolidays &&
+      Array.isArray(location.specialHolidays) &&
+      location.specialHolidays.length > 0
+    ) {
+      return JSON.stringify(location.specialHolidays);
+    }
+    return "";
+  });
+
+  const boundAction =
+    isEdit && location?.id
+      ? updateLocationAction.bind(null, location.id)
+      : createLocationAction;
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
+  );
+
+  const [form, fields] = useForm({
+    id: isEdit ? `location-edit-${location?.id ?? ""}` : "location-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: locationFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: location
+      ? {
+          slug: location.slug,
+          address: location.address,
+          streetAddress: location.streetAddress ?? "",
+          buildingName: location.buildingName ?? "",
+          accessLines: location.accessLines.map((value) => ({ value })),
+          parkingInfo: location.parkingInfo ?? "",
+          imageUrls: location.imageUrls.map((url) => ({ url })),
+          googleReviewUrl: location.googleReviewUrl ?? "",
+          sortOrder: String(location.sortOrder ?? 0),
+        }
+      : {
+          slug: "",
+          address: "",
+          streetAddress: "",
+          buildingName: "",
+          accessLines: [],
+          parkingInfo: "",
+          imageUrls: [],
+          googleReviewUrl: "",
+          sortOrder: "0",
+        },
+  });
+
+  const accessLinesList = fields.accessLines.getFieldList();
+  const imageUrlsList = fields.imageUrls.getFieldList();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -265,863 +353,793 @@ function AccessLinesField({ disabled }: { disabled: boolean }) {
     }),
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleAccessLineDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = fields.findIndex((f) => f.id === String(active.id));
-    const newIndex = fields.findIndex((f) => f.id === String(over.id));
-    if (oldIndex !== -1 && newIndex !== -1) move(oldIndex, newIndex);
+    const oldIndex = accessLinesList.findIndex(
+      (item) => item.key === String(active.id),
+    );
+    const newIndex = accessLinesList.findIndex(
+      (item) => item.key === String(over.id),
+    );
+    if (oldIndex !== -1 && newIndex !== -1) {
+      form.reorder({
+        name: fields.accessLines.name,
+        from: oldIndex,
+        to: newIndex,
+      });
+    }
   };
-
-  return (
-    <FormItem>
-      <FormLabel>アクセス</FormLabel>
-      <FormDescription>
-        最寄り駅・路線・徒歩分数等を 1 経路ずつ入力します。並べ替え可。
-      </FormDescription>
-      <div className="space-y-2">
-        <DndContext
-          id={dndContextId}
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={fields.map((f) => f.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {fields.map((field, index) => (
-              <SortableAccessLineItem
-                key={field.id}
-                id={field.id}
-                index={index}
-                disabled={disabled}
-                onRemove={remove}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => append({ value: "" })}
-          disabled={disabled || fields.length >= 20}
-        >
-          + 経路を追加
-        </Button>
-        {fields.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            まだ経路がありません。「+ 経路を追加」で 1 行目を追加してください。
-          </p>
-        )}
-      </div>
-    </FormItem>
-  );
-}
-
-// =============================================================================
-// Main Component
-// =============================================================================
-
-const DEFAULT_GLOBALS: GlobalsMeoFlags = {
-  businessName: false,
-  establishedDate: false,
-  socialLinks: false,
-};
-
-export function LocationForm({
-  location,
-  mode,
-  globals = DEFAULT_GLOBALS,
-  gbpEnabledGlobally = false,
-}: LocationFormProps) {
-  const router = useRouter();
-  // DndContext の id は SSR hydration mismatch 防止に必要
-  const dndContextId = useId();
-
-  const { form, isPending, onSubmit } = useFormAction(
-    locationFormSchema,
-    (data: LocationFormInput) => {
-      if (mode === "create") return createLocation(data);
-      if (!location) throw new Error("location is required for edit mode");
-      return updateLocation(location.id, data);
-    },
-    {
-      defaultValues: location
-        ? {
-            slug: location.slug,
-            name: location.name,
-            description: location.description ?? "",
-            address: location.address,
-            postalCode: location.postalCode ?? "",
-            prefecture: location.prefecture ?? "",
-            city: location.city ?? "",
-            streetAddress: location.streetAddress ?? "",
-            buildingName: location.buildingName ?? "",
-            accessLines: location.accessLines.map((value) => ({ value })),
-            parkingInfo: location.parkingInfo ?? "",
-            amenities: parseBusinessAttributes(location.amenities) ?? {},
-            imageUrl: location.imageUrl,
-            // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
-            imageUrls: location.imageUrls.map((url) => ({ url })),
-            businessHours: parseBusinessHours(location.businessHours),
-            specialHolidays: location.specialHolidays,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            googleBusinessPlaceId: location.googleBusinessPlaceId ?? "",
-            googleReviewUrl: location.googleReviewUrl ?? "",
-            priceRange: location.priceRange ?? "",
-            paymentAccepted: location.paymentAccepted ?? "",
-            phoneNumber: location.phoneNumber ?? "",
-            email: location.email ?? "",
-            sortOrder: location.sortOrder,
-            isPublished: location.isPublished,
-            isActive: location.isActive,
-          }
-        : defaultLocationFormValues,
-      onSuccess: (data) => {
-        if (mode === "create") {
-          router.push(`/admin/locations/${data.id}`);
-        } else {
-          router.push("/admin/spaces?tab=locations");
-        }
-      },
-    },
-  );
-
-  // useFieldArray で imageUrls を管理
-  // fields[].id は RHF が生成する安定した一意 ID — dnd-kit の SortableContext items に使用する
-  const { fields, append, remove, move } = useFieldArray({
-    control: form.control,
-    name: "imageUrls",
-  });
-
-  // D&D Sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
 
   const handleImageDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
-    // fields[].id（RHF 安定 ID）で oldIndex / newIndex を特定
-    const oldIndex = fields.findIndex((f) => f.id === String(active.id));
-    const newIndex = fields.findIndex((f) => f.id === String(over.id));
-
+    const oldIndex = imageUrlsList.findIndex(
+      (item) => item.key === String(active.id),
+    );
+    const newIndex = imageUrlsList.findIndex(
+      (item) => item.key === String(over.id),
+    );
     if (oldIndex !== -1 && newIndex !== -1) {
-      // useFieldArray の move() で並び替え（arrayMove 不要）
-      move(oldIndex, newIndex);
+      form.reorder({
+        name: fields.imageUrls.name,
+        from: oldIndex,
+        to: newIndex,
+      });
     }
   };
 
-  // Media pickers
   const mainImagePicker = useSingleMediaPicker({
     defaultUsage: "SPACE",
     onSelect: (media) => {
       const selected = media[0];
       if (selected) {
-        form.setValue("imageUrl", selected.url, { shouldValidate: true });
+        setImageUrl(selected.url);
       }
     },
   });
 
   const additionalImagesPicker = useMultipleMediaPicker({
     defaultUsage: "SPACE",
-    // fields.length はリアクティブ（useFieldArray が管理）
-    maxSelections: 10 - fields.length,
+    maxSelections: 10 - imageUrlsList.length,
     onSelect: (media) => {
-      if (media.length > 0) {
-        const remaining = 10 - fields.length;
-        append(media.slice(0, remaining).map((m) => ({ url: m.url })));
-      }
+      if (media.length === 0) return;
+      const remaining = 10 - imageUrlsList.length;
+      media.slice(0, remaining).forEach((m) => {
+        form.insert({
+          name: fields.imageUrls.name,
+          defaultValue: { url: m.url },
+        });
+      });
     },
   });
 
+  const meoValues: MeoScoreValues = {
+    name,
+    postalCode,
+    prefecture,
+    city,
+    phoneNumber,
+    email,
+    latitude: latitude === "" ? null : Number(latitude),
+    longitude: longitude === "" ? null : Number(longitude),
+    businessHours: businessHoursPayload !== "" ? businessHoursPayload : null,
+    priceRange,
+    description,
+    imageUrl,
+    googleBusinessPlaceId,
+    paymentAccepted,
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
-        <Tabs defaultValue="basic">
-          <TabsList>
-            <TabsTrigger value="basic">基本情報</TabsTrigger>
-            <TabsTrigger value="meo">MEO</TabsTrigger>
-          </TabsList>
+    <form {...getFormProps(form)} action={action} className="space-y-6">
+      {/* hidden inputs (controlled state → FormData) */}
+      <input type="hidden" name={fields.name.name} value={name} />
+      <input type="hidden" name={fields.description.name} value={description} />
+      <input type="hidden" name={fields.postalCode.name} value={postalCode} />
+      <input type="hidden" name={fields.prefecture.name} value={prefecture} />
+      <input type="hidden" name={fields.city.name} value={city} />
+      <input type="hidden" name={fields.phoneNumber.name} value={phoneNumber} />
+      <input type="hidden" name={fields.email.name} value={email} />
+      <input type="hidden" name={fields.latitude.name} value={latitude} />
+      <input type="hidden" name={fields.longitude.name} value={longitude} />
+      <input type="hidden" name={fields.priceRange.name} value={priceRange} />
+      <input
+        type="hidden"
+        name={fields.paymentAccepted.name}
+        value={paymentAccepted}
+      />
+      <input
+        type="hidden"
+        name={fields.googleBusinessPlaceId.name}
+        value={googleBusinessPlaceId}
+      />
+      <input type="hidden" name={fields.imageUrl.name} value={imageUrl} />
+      <input
+        type="hidden"
+        name={fields.isPublished.name}
+        value={isPublished ? "on" : ""}
+      />
+      <input type="hidden" name={fields.isActive.name} value="on" />
+      <input
+        type="hidden"
+        name={fields.businessHours.name}
+        value={businessHoursPayload}
+      />
+      <input
+        type="hidden"
+        name={fields.specialHolidays.name}
+        value={specialHolidaysPayload}
+      />
+      {BUSINESS_ATTRIBUTE_OPTIONS.map((attr) => (
+        <input
+          key={attr.key}
+          type="hidden"
+          name={`${fields.amenities.name}.${attr.key}`}
+          value={amenities[attr.key] ? "on" : ""}
+        />
+      ))}
 
-          {/* 基本情報タブ */}
-          <TabsContent
-            value="basic"
-            forceMount
-            className="mt-6 space-y-6 data-[state=inactive]:hidden"
-          >
-            {/* 基本情報 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>基本情報</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        場所名 <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="例: Myrrhビル"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+      {form.errors && form.errors.length > 0 && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          {form.errors.join(", ")}
+        </div>
+      )}
+
+      <Tabs defaultValue="basic">
+        <TabsList>
+          <TabsTrigger value="basic">基本情報</TabsTrigger>
+          <TabsTrigger value="meo">MEO</TabsTrigger>
+        </TabsList>
+
+        <TabsContent
+          value="basic"
+          forceMount
+          className="mt-6 space-y-6 data-[state=inactive]:hidden"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>基本情報</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="location-name">
+                  場所名 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="location-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="例: Myrrhビル"
+                  disabled={isPending}
                 />
+                {fields.name.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.name.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        スラッグ（URL 識別子）{" "}
-                        <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="honkan"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        公開 URL: <code>/access/{field.value || "slug"}</code>
-                        <br />
-                        小文字英数字とハイフンのみ。一度公開後の変更は SEO
-                        に影響します。
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor={fields.slug.id}>
+                  スラッグ（URL 識別子）{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  {...getInputProps(fields.slug, { type: "text" })}
+                  placeholder="honkan"
+                  disabled={isPending}
                 />
+                <p className="text-xs text-muted-foreground">
+                  公開 URL: <code>/access/{fields.slug.value || "slug"}</code>。
+                  小文字英数字とハイフンのみ。一度公開後の変更は SEO
+                  に影響します。
+                </p>
+                {fields.slug.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.slug.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>説明</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder="建物・施設の説明を入力..."
-                          rows={4}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="location-description">説明</Label>
+                <Textarea
+                  id="location-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="建物・施設の説明を入力..."
+                  rows={4}
+                  disabled={isPending}
                 />
+                {fields.description.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.description.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        住所 <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="例: 東京都渋谷区..."
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor={fields.address.id}>
+                  住所 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  {...getInputProps(fields.address, { type: "text" })}
+                  placeholder="例: 東京都渋谷区..."
+                  disabled={isPending}
                 />
+                {fields.address.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.address.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                {/* 住所詳細（構造化データ用） */}
-                <fieldset className="space-y-4 rounded-lg border p-4">
-                  <legend className="px-1 text-sm font-medium">
-                    住所詳細（構造化データ用）
-                  </legend>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="postalCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>郵便番号</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              placeholder="150-0001"
-                              disabled={isPending}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+              <fieldset className="space-y-4 rounded-lg border p-4">
+                <legend className="px-1 text-sm font-medium">
+                  住所詳細（構造化データ用）
+                </legend>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="location-postalCode">郵便番号</Label>
+                    <Input
+                      id="location-postalCode"
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      placeholder="150-0001"
+                      disabled={isPending}
                     />
-                    <FormField
-                      control={form.control}
-                      name="prefecture"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>都道府県</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              placeholder="東京都"
-                              disabled={isPending}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>市区町村</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              placeholder="渋谷区"
-                              disabled={isPending}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="streetAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>番地</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              placeholder="神宮前1-1-1"
-                              disabled={isPending}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="buildingName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>建物名・階</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            value={field.value ?? ""}
-                            placeholder="Myrrhビル 3F"
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {fields.postalCode.errors && (
+                      <p className="text-sm text-destructive">
+                        {fields.postalCode.errors.join(", ")}
+                      </p>
                     )}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    構造化住所は LocalBusiness JSON-LD
-                    で使用されます。上の「住所」は表示用、ここは検索エンジン用です。
-                  </p>
-                </fieldset>
-
-                <AccessLinesField disabled={isPending} />
-
-                <FormField
-                  control={form.control}
-                  name="parkingInfo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>駐車場案内</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder={`例: 専用駐車場 3台\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）`}
-                          rows={3}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        この拠点の駐車場情報。拠点ごとに設定できます。
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="sortOrder"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>並び順</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
-                          placeholder="0"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        数値が小さいほど先頭に表示されます
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* 画像設定 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>画像設定</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* メイン画像 */}
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        建物画像 <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <div className="flex items-start gap-4">
-                          {field.value ? (
-                            <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
-                              <Image
-                                src={field.value}
-                                alt="建物画像"
-                                fill
-                                sizes="96px"
-                                className="object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-dashed bg-muted">
-                              <IconPhotoPlus className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          )}
-                          <div className="flex-1 space-y-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => mainImagePicker.openPicker()}
-                              disabled={isPending}
-                            >
-                              <IconPhotoPlus className="mr-2 h-4 w-4" />
-                              画像を選択
-                            </Button>
-                            {field.value && (
-                              <p className="truncate text-sm text-muted-foreground">
-                                {field.value}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* 追加画像（useFieldArray で管理） */}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location-prefecture">都道府県</Label>
+                    <Input
+                      id="location-prefecture"
+                      value={prefecture}
+                      onChange={(e) => setPrefecture(e.target.value)}
+                      placeholder="東京都"
+                      disabled={isPending}
+                    />
+                    {fields.prefecture.errors && (
+                      <p className="text-sm text-destructive">
+                        {fields.prefecture.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="location-city">市区町村</Label>
+                    <Input
+                      id="location-city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="渋谷区"
+                      disabled={isPending}
+                    />
+                    {fields.city.errors && (
+                      <p className="text-sm text-destructive">
+                        {fields.city.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={fields.streetAddress.id}>番地</Label>
+                    <Input
+                      {...getInputProps(fields.streetAddress, {
+                        type: "text",
+                      })}
+                      placeholder="神宮前1-1-1"
+                      disabled={isPending}
+                    />
+                    {fields.streetAddress.errors && (
+                      <p className="text-sm text-destructive">
+                        {fields.streetAddress.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-medium leading-none">
-                    追加画像（最大10枚）
-                  </p>
+                  <Label htmlFor={fields.buildingName.id}>建物名・階</Label>
+                  <Input
+                    {...getInputProps(fields.buildingName, { type: "text" })}
+                    placeholder="Myrrhビル 3F"
+                    disabled={isPending}
+                  />
+                  {fields.buildingName.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.buildingName.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  構造化住所は LocalBusiness JSON-LD
+                  で使用されます。上の「住所」は表示用、ここは検索エンジン用です。
+                </p>
+              </fieldset>
+
+              {/* アクセス */}
+              <div className="space-y-2">
+                <Label>アクセス</Label>
+                <p className="text-sm text-muted-foreground">
+                  最寄り駅・路線・徒歩分数等を 1
+                  経路ずつ入力します。並べ替え可。
+                </p>
+                <div className="space-y-2">
+                  <DndContext
+                    id={accessLinesDndContextId}
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleAccessLineDragEnd}
+                  >
+                    <SortableContext
+                      items={accessLinesList.map((item) => item.key ?? "")}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {accessLinesList.map((item, index) => (
+                        <SortableAccessLineItem
+                          key={item.key}
+                          id={item.key ?? ""}
+                          index={index}
+                          itemField={item}
+                          disabled={isPending}
+                          onRemove={() => {
+                            form.remove({
+                              name: fields.accessLines.name,
+                              index,
+                            });
+                          }}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => additionalImagesPicker.openPicker()}
-                    disabled={isPending || fields.length >= 10}
+                    size="sm"
+                    onClick={() => {
+                      form.insert({
+                        name: fields.accessLines.name,
+                        defaultValue: { value: "" },
+                      });
+                    }}
+                    disabled={isPending || accessLinesList.length >= 20}
                   >
-                    <IconPhotoPlus className="mr-2 h-4 w-4" />
-                    画像を追加
+                    + 経路を追加
                   </Button>
-                  {fields.length > 0 && (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        {fields.length} / 10 枚選択中 ・
-                        ドラッグ&ドロップで順序を変更できます
-                      </p>
-                      <DndContext
-                        id={dndContextId}
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleImageDragEnd}
-                      >
-                        <SortableContext
-                          // fields[].id（RHF 安定 ID）を使用 — URL ではなく RHF 管理 ID
-                          items={fields.map((f) => f.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="mt-2 space-y-2">
-                            {fields.map((field, index) => (
-                              <SortableImageItem
-                                key={field.id}
-                                id={field.id}
-                                url={field.url}
-                                index={index}
-                                onRemove={remove}
-                                disabled={isPending}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    </>
+                  {accessLinesList.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      まだ経路がありません。「+ 経路を追加」で 1
+                      行目を追加してください。
+                    </p>
+                  )}
+                  {fields.accessLines.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.accessLines.errors.join(", ")}
+                    </p>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* 設備・サービス */}
-            <Card>
-              <CardHeader>
-                <CardTitle>設備・サービス</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <FormLabel>この拠点の設備</FormLabel>
-                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-                    {BUSINESS_ATTRIBUTE_OPTIONS.map((attr) => (
-                      <FormField
-                        key={attr.key}
-                        control={form.control}
-                        name={`amenities.${attr.key}`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <div className="flex items-center gap-2">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value || false}
-                                  onCheckedChange={(checked) =>
-                                    field.onChange(checked === true)
-                                  }
-                                  disabled={isPending}
-                                />
-                              </FormControl>
-                              <FormLabel className="cursor-pointer text-sm font-normal">
-                                {attr.label}
-                              </FormLabel>
-                            </div>
-                          </FormItem>
-                        )}
+              <div className="space-y-2">
+                <Label htmlFor={fields.parkingInfo.id}>駐車場案内</Label>
+                <Textarea
+                  {...getInputProps(fields.parkingInfo, { type: "text" })}
+                  placeholder={`例: 専用駐車場 3台\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）`}
+                  rows={3}
+                  disabled={isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  この拠点の駐車場情報。拠点ごとに設定できます。
+                </p>
+                {fields.parkingInfo.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.parkingInfo.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={fields.sortOrder.id}>並び順</Label>
+                <Input
+                  {...getInputProps(fields.sortOrder, { type: "number" })}
+                  placeholder="0"
+                  disabled={isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  数値が小さいほど先頭に表示されます
+                </p>
+                {fields.sortOrder.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.sortOrder.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>画像設定</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>
+                  建物画像 <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex items-start gap-4">
+                  {imageUrl ? (
+                    <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
+                      <Image
+                        src={imageUrl}
+                        alt="建物画像"
+                        fill
+                        sizes="96px"
+                        className="object-cover"
                       />
-                    ))}
+                    </div>
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-dashed bg-muted">
+                      <IconPhotoPlus
+                        aria-hidden="true"
+                        className="h-8 w-8 text-muted-foreground"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => mainImagePicker.openPicker()}
+                      disabled={isPending}
+                    >
+                      <IconPhotoPlus
+                        aria-hidden="true"
+                        className="mr-2 h-4 w-4"
+                      />
+                      画像を選択
+                    </Button>
+                    {imageUrl && (
+                      <p className="truncate text-sm text-muted-foreground">
+                        {imageUrl}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    拠点ごとに利用可能な設備を選択してください。
+                </div>
+                {fields.imageUrl.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.imageUrl.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium leading-none">
+                  追加画像（最大10枚）
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => additionalImagesPicker.openPicker()}
+                  disabled={isPending || imageUrlsList.length >= 10}
+                >
+                  <IconPhotoPlus aria-hidden="true" className="mr-2 h-4 w-4" />
+                  画像を追加
+                </Button>
+                {imageUrlsList.length > 0 && (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {imageUrlsList.length} / 10 枚選択中 ・
+                      ドラッグ&ドロップで順序を変更できます
+                    </p>
+                    <DndContext
+                      id={dndContextId}
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleImageDragEnd}
+                    >
+                      <SortableContext
+                        items={imageUrlsList.map((item) => item.key ?? "")}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="mt-2 space-y-2">
+                          {imageUrlsList.map((item, index) => {
+                            const itemFields = item.getFieldset();
+                            const url =
+                              typeof itemFields.url.value === "string"
+                                ? itemFields.url.value
+                                : "";
+                            return (
+                              <SortableImageItem
+                                key={item.key}
+                                id={item.key ?? ""}
+                                url={url}
+                                index={index}
+                                disabled={isPending}
+                                onRemove={() => {
+                                  form.remove({
+                                    name: fields.imageUrls.name,
+                                    index,
+                                  });
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </>
+                )}
+                {fields.imageUrls.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.imageUrls.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>設備・サービス</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label>この拠点の設備</Label>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                  {BUSINESS_ATTRIBUTE_OPTIONS.map((attr) => (
+                    <div key={attr.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`amenity-${attr.key}`}
+                        checked={amenities[attr.key] ?? false}
+                        onCheckedChange={(checked) => {
+                          setAmenities((prev) => ({
+                            ...prev,
+                            [attr.key]: checked === true,
+                          }));
+                        }}
+                        disabled={isPending}
+                      />
+                      <Label
+                        htmlFor={`amenity-${attr.key}`}
+                        className="cursor-pointer text-sm font-normal"
+                      >
+                        {attr.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  拠点ごとに利用可能な設備を選択してください。
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>公開設定</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-row items-center gap-4">
+                <Switch
+                  id="location-isPublished"
+                  checked={isPublished}
+                  onCheckedChange={setIsPublished}
+                  disabled={isPending}
+                />
+                <div>
+                  <Label
+                    htmlFor="location-isPublished"
+                    className="text-base font-medium"
+                  >
+                    {getPublishLabel(isPublished)}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isPublished
+                      ? "この場所は公開ページに表示されます"
+                      : "この場所は公開ページに表示されません"}
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* 公開設定 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>公開設定</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="isPublished"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-4">
-                      <FormControl>
-                        <Switch
-                          checked={field.value ?? false}
-                          onCheckedChange={field.onChange}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <div>
-                        <FormLabel className="text-base font-medium">
-                          {getPublishLabel(field.value ?? false)}
-                        </FormLabel>
-                        <FormDescription>
-                          {field.value
-                            ? "この場所は公開ページに表示されます"
-                            : "この場所は公開ページに表示されません"}
-                        </FormDescription>
-                      </div>
-                    </FormItem>
+        <TabsContent
+          value="meo"
+          forceMount
+          className="mt-6 space-y-6 data-[state=inactive]:hidden"
+        >
+          <LocationMeoScoreCard values={meoValues} globals={globals} />
+
+          {location ? (
+            <LocationGbpSyncCard
+              locationId={location.id}
+              googleBusinessPlaceId={location.googleBusinessPlaceId}
+              gbpSyncEnabled={location.gbpSyncEnabled}
+              gbpSyncedAt={location.gbpSyncedAt}
+              gbpSyncError={location.gbpSyncError}
+              gbpEnabledGlobally={gbpEnabledGlobally}
+            />
+          ) : null}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>MEO（ローカル検索最適化）</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="location-latitude">緯度</Label>
+                  <Input
+                    id="location-latitude"
+                    type="number"
+                    step="any"
+                    placeholder="35.6812"
+                    disabled={isPending}
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                  />
+                  {fields.latitude.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.latitude.errors.join(", ")}
+                    </p>
                   )}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* MEO タブ */}
-          <TabsContent
-            value="meo"
-            forceMount
-            className="mt-6 space-y-6 data-[state=inactive]:hidden"
-          >
-            <LocationMeoScoreCard control={form.control} globals={globals} />
-
-            {location ? (
-              <LocationGbpSyncCard
-                locationId={location.id}
-                googleBusinessPlaceId={location.googleBusinessPlaceId}
-                gbpSyncEnabled={location.gbpSyncEnabled}
-                gbpSyncedAt={location.gbpSyncedAt}
-                gbpSyncError={location.gbpSyncError}
-                gbpEnabledGlobally={gbpEnabledGlobally}
-              />
-            ) : null}
-
-            <Card>
-              <CardHeader>
-                <CardTitle>MEO（ローカル検索最適化）</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="latitude"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>緯度</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="any"
-                            placeholder="35.6812"
-                            disabled={isPending}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(
-                                val === "" ? null : parseFloat(val),
-                              );
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="longitude"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>経度</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="any"
-                            placeholder="139.7671"
-                            disabled={isPending}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(
-                                val === "" ? null : parseFloat(val),
-                              );
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>電話番号</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder="03-1234-5678"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-2">
+                  <Label htmlFor="location-longitude">経度</Label>
+                  <Input
+                    id="location-longitude"
+                    type="number"
+                    step="any"
+                    placeholder="139.7671"
+                    disabled={isPending}
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                  />
+                  {fields.longitude.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.longitude.errors.join(", ")}
+                    </p>
                   )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location-phoneNumber">電話番号</Label>
+                <Input
+                  id="location-phoneNumber"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="03-1234-5678"
+                  disabled={isPending}
                 />
+                {fields.phoneNumber.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.phoneNumber.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>メールアドレス</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          type="email"
-                          placeholder="info@example.com"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="location-email">メールアドレス</Label>
+                <Input
+                  id="location-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="info@example.com"
+                  disabled={isPending}
                 />
+                {fields.email.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.email.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="priceRange"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>価格帯</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder="¥1,000〜¥5,000/時間"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        例: ¥1,000〜¥5,000/時間（最大 100 文字）
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="location-priceRange">価格帯</Label>
+                <Input
+                  id="location-priceRange"
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(e.target.value)}
+                  placeholder="¥1,000〜¥5,000/時間"
+                  disabled={isPending}
                 />
+                <p className="text-xs text-muted-foreground">
+                  例: ¥1,000〜¥5,000/時間（最大 100 文字）
+                </p>
+                {fields.priceRange.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.priceRange.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="paymentAccepted"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>利用可能な決済方法</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder="現金, クレジットカード, 電子マネー"
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        現金, クレジットカード, 電子マネー, QRコード決済
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="location-paymentAccepted">
+                  利用可能な決済方法
+                </Label>
+                <Input
+                  id="location-paymentAccepted"
+                  value={paymentAccepted}
+                  onChange={(e) => setPaymentAccepted(e.target.value)}
+                  placeholder="現金, クレジットカード, 電子マネー"
+                  disabled={isPending}
                 />
+                <p className="text-xs text-muted-foreground">
+                  現金, クレジットカード, 電子マネー, QRコード決済
+                </p>
+                {fields.paymentAccepted.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.paymentAccepted.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="googleBusinessPlaceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Google Business Place ID</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder="ChIJ..."
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Google Maps Platform で確認できます（ChIJ...）
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="location-googleBusinessPlaceId">
+                  Google Business Place ID
+                </Label>
+                <Input
+                  id="location-googleBusinessPlaceId"
+                  value={googleBusinessPlaceId}
+                  onChange={(e) => setGoogleBusinessPlaceId(e.target.value)}
+                  placeholder="ChIJ..."
+                  disabled={isPending}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Google Maps Platform で確認できます（ChIJ...）
+                </p>
+                {fields.googleBusinessPlaceId.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.googleBusinessPlaceId.errors.join(", ")}
+                  </p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="googleReviewUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Google 口コミ URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder="https://g.page/r/..."
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        お客様に口コミ投稿を促すための URL
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor={fields.googleReviewUrl.id}>
+                  Google 口コミ URL
+                </Label>
+                <Input
+                  {...getInputProps(fields.googleReviewUrl, { type: "url" })}
+                  placeholder="https://g.page/r/..."
+                  disabled={isPending}
                 />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <p className="text-xs text-muted-foreground">
+                  お客様に口コミ投稿を促すための URL
+                </p>
+                {fields.googleReviewUrl.errors && (
+                  <p className="text-sm text-destructive">
+                    {fields.googleReviewUrl.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-        {/* ボタン */}
-        <div className="flex justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-            disabled={isPending}
-          >
-            キャンセル
-          </Button>
-          <SubmitButton
-            isPending={isPending}
-            label={mode === "create" ? "作成" : "更新"}
-            pendingLabel={mode === "create" ? "作成中..." : "更新中..."}
-            {...(mode === "edit" && { disabled: !form.formState.isDirty })}
-          />
-        </div>
+      <div className="flex justify-end gap-4">
+        <Button variant="outline" asChild>
+          <Link href="/admin/spaces?tab=locations">キャンセル</Link>
+        </Button>
+        <SubmitButton
+          isPending={isPending}
+          label={isEdit ? "更新" : "作成"}
+          pendingLabel={isEdit ? "更新中..." : "作成中..."}
+        />
+      </div>
 
-        {/* メディアピッカーダイアログ */}
-        {mainImagePicker.mediaPickerDialog}
-        {additionalImagesPicker.mediaPickerDialog}
-      </form>
-    </Form>
+      {mainImagePicker.mediaPickerDialog}
+      {additionalImagesPicker.mediaPickerDialog}
+    </form>
   );
 }

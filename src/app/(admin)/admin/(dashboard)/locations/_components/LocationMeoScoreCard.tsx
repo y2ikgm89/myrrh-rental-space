@@ -1,7 +1,5 @@
 "use client";
 
-import { useWatch } from "react-hook-form";
-import type { Control } from "react-hook-form";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import {
   Card,
@@ -10,20 +8,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/admin/components/ui";
-import type { LocationFormInput } from "@/shared/lib/validations/location";
 
 interface ScoreItem {
   label: string;
   isSet: boolean;
 }
 
-interface GlobalsMeoFlags {
+export interface GlobalsMeoFlags {
   businessName: boolean;
   establishedDate: boolean;
   socialLinks: boolean;
 }
 
-interface MeoScoreValues {
+export interface MeoScoreValues {
   name: string | undefined;
   postalCode: string | null | undefined;
   prefecture: string | null | undefined;
@@ -79,32 +76,15 @@ function calculateMeoScore(
 }
 
 interface LocationMeoScoreCardProps {
-  control: Control<LocationFormInput>;
+  values: MeoScoreValues;
   globals: GlobalsMeoFlags;
 }
 
 export function LocationMeoScoreCard({
-  control,
+  values,
   globals,
 }: LocationMeoScoreCardProps) {
-  const watched = useWatch({ control });
-  const scoreValues: MeoScoreValues = {
-    name: watched.name,
-    postalCode: watched.postalCode,
-    prefecture: watched.prefecture,
-    city: watched.city,
-    phoneNumber: watched.phoneNumber,
-    email: watched.email,
-    latitude: watched.latitude,
-    longitude: watched.longitude,
-    businessHours: watched.businessHours,
-    priceRange: watched.priceRange,
-    description: watched.description,
-    imageUrl: watched.imageUrl,
-    googleBusinessPlaceId: watched.googleBusinessPlaceId,
-    paymentAccepted: watched.paymentAccepted,
-  };
-  const { score, items, setCount } = calculateMeoScore(scoreValues, globals);
+  const { score, items, setCount } = calculateMeoScore(values, globals);
 
   const TOTAL = items.length;
   const radius = 60;
@@ -123,7 +103,6 @@ export function LocationMeoScoreCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-6">
-          {/* SVG circular progress */}
           <div className="shrink-0">
             <svg
               height={radius * 2}
@@ -131,7 +110,6 @@ export function LocationMeoScoreCard({
               viewBox={`0 0 ${radius * 2} ${radius * 2}`}
               aria-hidden="true"
             >
-              {/* Background circle */}
               <circle
                 stroke="currentColor"
                 className="text-muted"
@@ -141,7 +119,6 @@ export function LocationMeoScoreCard({
                 cx={radius}
                 cy={radius}
               />
-              {/* Progress circle */}
               <circle
                 stroke="currentColor"
                 className="text-primary"
@@ -192,7 +169,6 @@ export function LocationMeoScoreCard({
           </div>
         </div>
 
-        {/* チェックリスト */}
         <ul className="divide-y divide-border border-y border-border">
           {items.map((item) => (
             <li

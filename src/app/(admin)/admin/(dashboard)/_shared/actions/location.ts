@@ -1,12 +1,14 @@
 "use server";
 
+import type { SubmissionResult } from "@conform-to/react";
+import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import {
-  locationFormSchema,
-  type LocationFormInput,
-} from "@/shared/lib/validations/location";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import { locationFormSchema } from "@/shared/lib/validations/location";
 import {
   createLocation as createLocationCommand,
   deleteLocation as deleteLocationCommand,
@@ -38,59 +40,105 @@ const locationOrderSchema = z
     error: "同じIDを複数指定することはできません",
   });
 
-export async function createLocation(
-  input: LocationFormInput,
-): Promise<MutationResult<{ id: string; slug: string }>> {
-  const parsed = locationFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
+/**
+ * 管理画面 新規 Location 作成 — conform `useActionState` canonical (Phase 1 Task 8.6)
+ *
+ * `(prev, formData) => SubmissionResult` signature。
+ * 成功時は `redirect(/admin/locations/<id>)` で詳細ページに遷移、失敗時は `submission.reply()`。
+ */
+export async function createLocationAction(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  let createdId: string | null = null;
+
+  const submissionResult = await executeConformMutation(
+    formData,
+    locationFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "location",
+        action: "create",
+        execute: async () => createLocationCommand(data),
+        afterSuccess: (payload) => {
+          updateTag(CACHE_TAGS.LOCATIONS);
+          updateTag(getCacheTag.locations.detail(payload.slug));
+          fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
+            operation: "syncLocationToGbp",
+            category: ErrorCategory.EXTERNAL_API,
+          });
+        },
+        resolveAuditResourceId: (payload) => payload.id,
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      createdId = result.id;
+      return { ok: true };
+    },
+  );
+
+  if (createdId !== null) {
+    redirect(toAppRoute(`/admin/locations/${createdId}`));
   }
 
-  return executeAdminMutationResult({
-    resource: "location",
-    action: "create",
-    execute: async () => createLocationCommand(parsed.data),
-    afterSuccess: (data) => {
-      updateTag(CACHE_TAGS.LOCATIONS);
-      updateTag(getCacheTag.locations.detail(data.slug));
-      fireAndForget(syncLocationToGbpCommand({ locationId: data.id }), {
-        operation: "syncLocationToGbp",
-        category: ErrorCategory.EXTERNAL_API,
-      });
-    },
-    resolveAuditResourceId: (result) => result.id,
-  });
+  return submissionResult;
 }
 
-export async function updateLocation(
+/**
+ * 管理画面 Location 更新 — conform `useActionState` canonical
+ *
+ * id は `bind(null, location.id)` で部分適用。
+ * 成功時は `/admin/spaces?tab=locations` (既存挙動踏襲) に遷移。
+ */
+export async function updateLocationAction(
   id: string,
-  input: LocationFormInput,
-): Promise<MutationResult<{ id: string; slug: string }>> {
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
+    return {
+      status: "error",
+      error: { "": ["場所IDが不正です"] },
+    } satisfies SubmissionResult;
   }
+  const locationId = validatedId.data;
 
-  const parsed = locationFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
+  let success = false;
 
-  return executeAdminMutationResult({
-    resource: "location",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async () => updateLocationCommand(validatedId.data, parsed.data),
-    afterSuccess: (data) => {
-      updateTag(CACHE_TAGS.LOCATIONS);
-      updateTag(getCacheTag.locations.detail(data.slug));
-      fireAndForget(syncLocationToGbpCommand({ locationId: data.id }), {
-        operation: "syncLocationToGbp",
-        category: ErrorCategory.EXTERNAL_API,
+  const submissionResult = await executeConformMutation(
+    formData,
+    locationFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "location",
+        action: "update",
+        resourceId: locationId,
+        execute: async () => updateLocationCommand(locationId, data),
+        afterSuccess: (payload) => {
+          updateTag(CACHE_TAGS.LOCATIONS);
+          updateTag(getCacheTag.locations.detail(payload.slug));
+          fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
+            operation: "syncLocationToGbp",
+            category: ErrorCategory.EXTERNAL_API,
+          });
+        },
+        resolveAuditResourceId: (payload) => payload.id,
       });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      success = true;
+      return { ok: true };
     },
-    resolveAuditResourceId: (result) => result.id,
-  });
+  );
+
+  if (success) {
+    redirect(toAppRoute("/admin/spaces?tab=locations"));
+  }
+
+  return submissionResult;
 }
 
 export async function updateLocationPublished(
