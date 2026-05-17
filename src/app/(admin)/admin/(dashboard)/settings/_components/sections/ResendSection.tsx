@@ -9,7 +9,13 @@
  * `useTransition` を維持（PR #62-#71 settings 系 canonical pattern）。
  */
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useEffectEvent,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
@@ -86,15 +92,18 @@ export function ResendSection({ config }: ResendSectionProps) {
     }
   }
 
+  // useEffectEvent で useInputControl 参照を effect deps から除外
+  const handleSaveSuccess = useEffectEvent(() => {
+    toast.success("Resend設定を保存しました");
+    apiKeyControl.change("");
+    router.refresh();
+  });
+
   useEffect(() => {
     if (isSuccess) {
-      toast.success("Resend設定を保存しました");
-      apiKeyControl.change("");
-      router.refresh();
+      handleSaveSuccess();
     }
-    // apiKeyControl は毎レンダー新参照、`isSuccess` driven 副作用のみ
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuccess, router]);
+  }, [isSuccess]);
 
   const handleConnectionTest = () => {
     if (!apiKey) {

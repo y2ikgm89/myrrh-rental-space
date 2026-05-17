@@ -9,7 +9,13 @@
  * Zone ID と API Token の 2 入力に拡張。
  */
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useEffectEvent,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
@@ -89,15 +95,20 @@ export function CloudflareSection({ config }: Props) {
     }
   }
 
+  // useEffectEvent で useInputControl 参照を effect deps から除外
+  // (`react-hooks/exhaustive-deps` + `@eslint-react/exhaustive-deps` 同時解消)
+  const handleSaveSuccess = useEffectEvent(() => {
+    toast.success("Cloudflare設定を保存しました");
+    zoneIdControl.change("");
+    apiTokenControl.change("");
+    router.refresh();
+  });
+
   useEffect(() => {
     if (isSuccess) {
-      toast.success("Cloudflare設定を保存しました");
-      zoneIdControl.change("");
-      apiTokenControl.change("");
-      router.refresh();
+      handleSaveSuccess();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuccess, router]);
+  }, [isSuccess]);
 
   const handleConnectionTest = () => {
     const effectiveZoneId = zoneId || config.zoneId || "";

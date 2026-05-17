@@ -13,7 +13,13 @@
  * (`previousLastResult` 比較)、副作用 (`toast` / `router.push`) は useEffect。
  */
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   getFormProps,
@@ -168,17 +174,18 @@ export function CreatePageDialog({
     }
   }, [isSuccess, router]);
 
-  // タイトル変更時にスラッグ自動生成
-  useEffect(() => {
+  // タイトル変更時にスラッグ自動生成 (useEffectEvent で slugControl 参照を deps 除外)
+  const syncSlugFromTitle = useEffectEvent(() => {
     if (!isManualSlug && title) {
       const generated = generateSlugFromTitle(title);
       if (generated && generated !== slug) {
         slugControl.change(generated);
       }
     }
-    // slugControl は毎レンダー新参照のため deps から除外
-    // (slugControl.change 経由の更新のみが副作用、value 読みは不要)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    syncSlugFromTitle();
   }, [title, isManualSlug]);
 
   // スラッグ変更時にリアルタイム検証（debounce 500ms）
