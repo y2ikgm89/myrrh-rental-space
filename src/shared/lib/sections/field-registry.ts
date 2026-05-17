@@ -212,7 +212,14 @@ export const field = {
       });
   },
 
-  /** 数値入力（min / max バリデーション付き） */
+  /**
+   * 数値入力（min / max バリデーション付き）
+   *
+   * FormData transit (conform) / object literal (RHF / test) 両対応:
+   * - number 値はそのまま通過
+   * - string ("123" / "1.5") は Number() で coerce
+   * - undefined / "" / null は default 適用に委譲
+   */
   number(label: string, opts?: NumberOpts) {
     let base = z.number();
     if (opts?.min !== undefined) {
@@ -221,26 +228,45 @@ export const field = {
     if (opts?.max !== undefined) {
       base = base.max(opts.max);
     }
-    return base.default(opts?.default ?? 0).register(fieldRegistry, {
-      fieldType: "number",
-      label,
-      group: opts?.group ?? "content",
-      ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
-      ...(opts?.suffix !== undefined && { suffix: opts.suffix }),
-      ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
-      ...(opts?.leadingIcon !== undefined && {
-        leadingIcon: opts.leadingIcon,
-      }),
-      ...(opts?.trailingIcon !== undefined && {
-        trailingIcon: opts.trailingIcon,
-      }),
-    });
+    return z
+      .preprocess((v) => {
+        if (v === undefined || v === "" || v === null) return undefined;
+        if (typeof v === "number") return v;
+        const parsed = Number(v);
+        return Number.isFinite(parsed) ? parsed : v;
+      }, base)
+      .default(opts?.default ?? 0)
+      .register(fieldRegistry, {
+        fieldType: "number",
+        label,
+        group: opts?.group ?? "content",
+        ...(opts?.subGroup !== undefined && { subGroup: opts.subGroup }),
+        ...(opts?.suffix !== undefined && { suffix: opts.suffix }),
+        ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+        ...(opts?.leadingIcon !== undefined && {
+          leadingIcon: opts.leadingIcon,
+        }),
+        ...(opts?.trailingIcon !== undefined && {
+          trailingIcon: opts.trailingIcon,
+        }),
+      });
   },
 
-  /** チェックボックス / トグル */
+  /**
+   * チェックボックス / トグル
+   *
+   * FormData transit (conform) / object literal (RHF / test) 両対応:
+   * - boolean 値はそのまま通過
+   * - "on" / "true" → true、それ以外の string → false
+   * - undefined → default 適用に委譲
+   */
   boolean(label: string, opts?: BooleanOpts) {
     return z
-      .boolean()
+      .preprocess((v) => {
+        if (v === undefined) return undefined;
+        if (typeof v === "boolean") return v;
+        return v === "on" || v === "true";
+      }, z.boolean())
       .default(opts?.default ?? false)
       .register(fieldRegistry, {
         fieldType: "boolean",

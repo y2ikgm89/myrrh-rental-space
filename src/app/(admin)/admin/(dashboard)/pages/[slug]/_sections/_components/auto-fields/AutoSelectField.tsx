@@ -1,15 +1,16 @@
 "use client";
 
 /**
- * AutoSelectField — useController ベースの制御された Select
+ * AutoSelectField — conform useInputControl ベースの Select
  *
+ * Phase 3-A conform 移行: FieldMetadata + useInputControl + hidden input transit.
  * static options（schema 由来）と dynamic options（DB 由来）の両方をサポート。
  * dynamicOptions が渡された場合、先頭に「（指定なし）」エントリ + DB 値を options
  * として描画する（static options は使わない）。
  */
 
-import { z } from "zod";
-import { useController, type Control, type FieldValues } from "react-hook-form";
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import type { z } from "zod";
 import {
   Label,
   Select,
@@ -28,54 +29,51 @@ interface DynamicCategoryOption {
 }
 
 export function AutoSelectField({
-  fieldKey,
+  field,
   fieldId,
   label,
   placeholder,
   helpText,
   schema,
-  control,
   isPending,
   error,
   dynamicOptions,
 }: {
-  readonly fieldKey: string;
+  readonly field: FieldMetadata<unknown>;
   readonly fieldId: string;
   readonly label: string;
   readonly placeholder: string | undefined;
   readonly helpText: string | undefined;
   readonly schema: z.ZodType;
-  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly error: string | undefined;
   readonly dynamicOptions?: ReadonlyArray<DynamicCategoryOption>;
 }) {
-  const { field } = useController({ control, name: fieldKey });
+  // conform useInputControl は string ベース FieldMetadata を要求するため境界変換
+  const control = useInputControl(field as unknown as FieldMetadata<string>);
   const isDynamic = dynamicOptions !== undefined;
   const staticOptions = isDynamic ? [] : getSelectOptions(schema);
 
   // Radix Select は value="" を placeholder 用に予約しているため、空文字を
   // sentinel 値（DYNAMIC_NONE_VALUE）にマッピングする。dynamic mode 時のみ使用。
+  const rawValue = typeof control.value === "string" ? control.value : "";
   const selectValue =
-    isDynamic && field.value === ""
-      ? DYNAMIC_NONE_VALUE
-      : typeof field.value === "string"
-        ? field.value
-        : undefined;
+    isDynamic && rawValue === "" ? DYNAMIC_NONE_VALUE : rawValue;
 
   const handleValueChange = (value: string) => {
     if (isDynamic && value === DYNAMIC_NONE_VALUE) {
-      field.onChange("");
+      control.change("");
       return;
     }
-    field.onChange(value);
+    control.change(value);
   };
 
   return (
     <div className="space-y-2">
+      <input type="hidden" name={field.name} value={rawValue} />
       <Label htmlFor={fieldId}>{label}</Label>
       <Select
-        {...(selectValue !== undefined && { value: selectValue })}
+        {...(selectValue.length > 0 && { value: selectValue })}
         onValueChange={handleValueChange}
         disabled={isPending}
       >

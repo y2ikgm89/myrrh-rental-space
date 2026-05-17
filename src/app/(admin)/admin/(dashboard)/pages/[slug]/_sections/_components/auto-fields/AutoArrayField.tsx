@@ -1,65 +1,60 @@
 "use client";
 
 /**
- * AutoArrayField — useFieldArray ベースの配列フィールドリピーター
+ * AutoArrayField — conform getFieldList ベースの配列フィールドリピーター
+ *
+ * Phase 3-A conform 移行: FieldMetadata.getFieldList() で per-item アクセサを取得、
+ * form.insert/remove.getButtonProps で追加/削除を制御する。子フィールドのレンダリング
+ * は renderField prop で受け取り、auto-section-form の AutoFieldByType に委譲する。
  */
 
-import { useId } from "react";
-import {
-  useController,
-  useFieldArray,
-  type Control,
-  type FieldValues,
-  type UseFormRegister,
-} from "react-hook-form";
-import { z } from "zod";
-import {
-  Button,
-  Card,
-  CardContent,
-  Input,
-  Label,
-  Textarea,
-} from "@/admin/components/ui";
+import type { ReactNode } from "react";
+import type { z } from "zod";
+import type { FieldMetadata, FormMetadata } from "@conform-to/react";
+
+import { Button, Card, CardContent, Label } from "@/admin/components/ui";
+
+// 動的 schema 用の getButtonProps 境界変換型
+// (型 ledger §5/§7 と同列の generic invariance 対応)。
+// conform の Intent / FieldName は branded type のため、call site で
+// 名前と defaultValue を緩めた function signature にキャストする
+type InsertButtonGetter = (opts: {
+  name: string;
+  defaultValue?: Record<string, unknown>;
+}) => Record<string, unknown>;
+type RemoveButtonGetter = (opts: {
+  name: string;
+  index: number;
+}) => Record<string, unknown>;
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
-import { PortableTextInlineEditor } from "@/admin/components/portable-text/inline-editor/PortableTextInlineEditor";
-import { PortableTextBlockEditor } from "@/admin/components/portable-text/block-editor/PortableTextBlockEditor";
-import {
-  createBlockArraySchema,
-  createSpanArraySchema,
-} from "@/shared/lib/portable-text";
 import {
   getArrayConstraints,
   getArrayItemShape,
   extractFieldMetaDeep,
-  getSelectOptions,
 } from "../zod-introspection";
 import type { ArrayItemFieldInfo } from "../zod-introspection";
-import { AutoImageField } from "./AutoImageField";
 
 export function AutoArrayField({
-  fieldKey,
+  field,
+  form,
   label,
   helpText,
   schema,
-  control,
-  register,
   isPending,
+  renderField,
 }: {
-  readonly fieldKey: string;
+  readonly field: FieldMetadata<unknown>;
+  readonly form: FormMetadata<Record<string, unknown>>;
   readonly label: string;
   readonly helpText: string | undefined;
   readonly schema: z.ZodType;
-  readonly control: Control<FieldValues>;
-  readonly register: UseFormRegister<FieldValues>;
   readonly isPending: boolean;
+  readonly renderField: (
+    info: ArrayItemFieldInfo,
+    subField: FieldMetadata<unknown>,
+    defaultValue: unknown,
+  ) => ReactNode;
 }) {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: fieldKey,
-  });
-
   const itemShape = getArrayItemShape(schema);
   const itemFields: ArrayItemFieldInfo[] = itemShape
     ? Object.entries(itemShape).map(([k, s]) => ({
@@ -71,8 +66,14 @@ export function AutoArrayField({
 
   // schema 由来の min / max 制約（field.array({ min, max }) で登録されたもの）
   const { min, max } = getArrayConstraints(schema);
-  const canAdd = max === undefined || fields.length < max;
-  const canRemove = min === undefined || fields.length > min;
+
+  // conform: per-item アクセサ（各 item は FieldMetadata、getFieldset() で子フィールドを取得）
+  // 動的 schema 用の境界変換（getFieldList は FieldMetadata<T[]> 必須）
+  const items: ReadonlyArray<FieldMetadata<unknown>> = (
+    field as unknown as FieldMetadata<unknown[]>
+  ).getFieldList();
+  const canAdd = max === undefined || items.length < max;
+  const canRemove = min === undefined || items.length > min;
   const constraintHint = (() => {
     if (min !== undefined && max !== undefined) {
       return min === max ? `${min}件必須` : `${min}〜${max}件`;
@@ -83,17 +84,14 @@ export function AutoArrayField({
   })();
 
   // 新しいアイテムのデフォルト値を生成
+  // - boolean / number は空文字列で初期化 (schema preprocess が default 適用に委ねる)
+  // - portable-text 系は空配列
+  // - その他 string 系は空文字列
   const createEmptyItem = (): Record<string, unknown> => {
     const empty: Record<string, unknown> = {};
     for (const f of itemFields) {
       if (f.meta) {
         switch (f.meta.fieldType) {
-          case "boolean":
-            empty[f.key] = false;
-            break;
-          case "number":
-            empty[f.key] = 0;
-            break;
           case "portable-text-inline":
           case "portable-text-block":
             empty[f.key] = [];
@@ -123,7 +121,10 @@ export function AutoArrayField({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => append(createEmptyItem())}
+          {...(form.insert.getButtonProps as unknown as InsertButtonGetter)({
+            name: field.name,
+            defaultValue: createEmptyItem(),
+          })}
           disabled={isPending || !canAdd}
           aria-label={
             !canAdd && max !== undefined
@@ -136,346 +137,56 @@ export function AutoArrayField({
         </Button>
       </div>
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-      {fields.length === 0 && (
+      {items.length === 0 && (
         <div className="flex items-center justify-center py-8 border border-dashed rounded-lg">
           <p className="text-sm text-muted-foreground">
             アイテムが追加されていません
           </p>
         </div>
       )}
-      {fields.map((field, index) => (
-        <Card key={field.id}>
-          <CardContent className="pt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">#{index + 1}</p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => remove(index)}
-                disabled={isPending || !canRemove}
-                aria-label={
-                  !canRemove && min !== undefined
-                    ? `最低 ${min} 件必要なため削除できません`
-                    : undefined
-                }
-              >
-                <IconTrash className="h-3 w-3 text-destructive" />
-              </Button>
-            </div>
-            {itemFields.map((itemField) => (
-              <ArrayItemField
-                key={itemField.key}
-                parentKey={fieldKey}
-                index={index}
-                itemField={itemField}
-                register={register}
-                control={control}
-                isPending={isPending}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function ArrayItemField({
-  parentKey,
-  index,
-  itemField,
-  register,
-  control,
-  isPending,
-}: {
-  readonly parentKey: string;
-  readonly index: number;
-  readonly itemField: ArrayItemFieldInfo;
-  readonly register: UseFormRegister<FieldValues>;
-  readonly control: Control<FieldValues>;
-  readonly isPending: boolean;
-}) {
-  const fieldName = `${parentKey}.${index}.${itemField.key}`;
-  const meta = itemField.meta;
-  const itemLabel = meta?.label ?? itemField.key;
-  const fieldType = meta?.fieldType ?? "text";
-
-  if (fieldType === "textarea") {
-    return (
-      <div className="space-y-2">
-        <Label>{itemLabel}</Label>
-        <Textarea
-          {...register(fieldName)}
-          placeholder={meta?.placeholder}
-          rows={2}
-          disabled={isPending}
-        />
-      </div>
-    );
-  }
-
-  if (fieldType === "boolean") {
-    return (
-      <div className="flex items-center gap-2">
-        <input type="checkbox" {...register(fieldName)} disabled={isPending} />
-        <Label>{itemLabel}</Label>
-      </div>
-    );
-  }
-
-  if (fieldType === "number") {
-    return (
-      <div className="space-y-2">
-        <Label>{itemLabel}</Label>
-        <Input
-          type="number"
-          {...register(fieldName, { valueAsNumber: true })}
-          disabled={isPending}
-        />
-      </div>
-    );
-  }
-
-  if (fieldType === "image") {
-    return (
-      <ArrayItemImageField
-        fieldName={fieldName}
-        label={itemLabel}
-        helpText={meta?.helpText}
-        control={control}
-        isPending={isPending}
-      />
-    );
-  }
-
-  if (fieldType === "icon") {
-    return (
-      <ArrayItemIconField
-        fieldName={fieldName}
-        label={itemLabel}
-        helpText={meta?.helpText}
-        control={control}
-        isPending={isPending}
-      />
-    );
-  }
-
-  if (fieldType === "portable-text-inline") {
-    return (
-      <ArrayItemRichLabelField
-        fieldName={fieldName}
-        label={itemLabel}
-        helpText={meta?.helpText}
-        control={control}
-        isPending={isPending}
-      />
-    );
-  }
-
-  if (fieldType === "portable-text-block") {
-    return (
-      <ArrayItemRichBlocksField
-        fieldName={fieldName}
-        label={itemLabel}
-        helpText={meta?.helpText}
-        control={control}
-        isPending={isPending}
-      />
-    );
-  }
-
-  if (fieldType === "select") {
-    // 配列内アイテムの select は簡略化して Input にフォールバック
-    const options = getSelectOptions(itemField.schema);
-    if (options.length > 0) {
-      return (
-        <ArrayItemSelectField
-          fieldName={fieldName}
-          label={itemLabel}
-          options={options}
-          register={register}
-          isPending={isPending}
-        />
-      );
-    }
-  }
-
-  // text, url, color — テキスト入力
-  return (
-    <div className="space-y-2">
-      <Label>{itemLabel}</Label>
-      <Input
-        type={fieldType === "url" ? "url" : "text"}
-        {...register(fieldName)}
-        placeholder={meta?.placeholder}
-        disabled={isPending}
-        {...(meta?.leadingIcon !== undefined && {
-          leadingIcon: meta.leadingIcon,
-        })}
-        {...(meta?.trailingIcon !== undefined && {
-          trailingIcon: meta.trailingIcon,
-        })}
-      />
-    </div>
-  );
-}
-
-function ArrayItemImageField({
-  fieldName,
-  label,
-  helpText,
-  control,
-  isPending,
-}: {
-  readonly fieldName: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly control: Control<FieldValues>;
-  readonly isPending: boolean;
-}) {
-  const id = useId();
-  const { field } = useController({ control, name: fieldName });
-
-  return (
-    <AutoImageField
-      fieldId={id}
-      label={label}
-      value={typeof field.value === "string" ? field.value : undefined}
-      onSelect={(url) => field.onChange(url)}
-      {...(helpText !== undefined && { helpText })}
-      {...(isPending && { disabled: true })}
-    />
-  );
-}
-
-function ArrayItemIconField({
-  fieldName,
-  label,
-  helpText,
-  control,
-  isPending,
-}: {
-  readonly fieldName: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly control: Control<FieldValues>;
-  readonly isPending: boolean;
-}) {
-  const id = useId();
-  const { field } = useController({ control, name: fieldName });
-  const value = typeof field.value === "string" ? field.value : "";
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <IconPickerField
-        id={id}
-        value={value}
-        onChange={(name) => field.onChange(name)}
-        disabled={isPending}
-      />
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-    </div>
-  );
-}
-
-function ArrayItemRichLabelField({
-  fieldName,
-  label,
-  helpText,
-  control,
-  isPending,
-}: {
-  readonly fieldName: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly control: Control<FieldValues>;
-  readonly isPending: boolean;
-}) {
-  const id = useId();
-  const { field } = useController({ control, name: fieldName });
-  const parsed = createSpanArraySchema().safeParse(field.value);
-  const value = parsed.success ? parsed.data : [];
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <PortableTextInlineEditor
-        id={id}
-        value={value}
-        onChange={(tokens) => field.onChange(tokens)}
-        disabled={isPending}
-        aria-label={label}
-      />
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-    </div>
-  );
-}
-
-function ArrayItemRichBlocksField({
-  fieldName,
-  label,
-  helpText,
-  control,
-  isPending,
-}: {
-  readonly fieldName: string;
-  readonly label: string;
-  readonly helpText: string | undefined;
-  readonly control: Control<FieldValues>;
-  readonly isPending: boolean;
-}) {
-  const id = useId();
-  const { field } = useController({ control, name: fieldName });
-  const parsed = createBlockArraySchema().safeParse(field.value);
-  const value = parsed.success ? parsed.data : [];
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <PortableTextBlockEditor
-        id={id}
-        value={value}
-        onChange={(blocks) => field.onChange(blocks)}
-        disabled={isPending}
-        aria-label={label}
-      />
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
-    </div>
-  );
-}
-
-function ArrayItemSelectField({
-  fieldName,
-  label,
-  options,
-  register,
-  isPending,
-}: {
-  readonly fieldName: string;
-  readonly label: string;
-  readonly options: readonly string[];
-  readonly register: UseFormRegister<FieldValues>;
-  readonly isPending: boolean;
-}) {
-  const id = useId();
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        {...register(fieldName)}
-        disabled={isPending}
-        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      {items.map((itemField, index) => {
+        const itemFieldset = (
+          itemField as unknown as FieldMetadata<Record<string, unknown>>
+        ).getFieldset();
+        return (
+          <Card key={itemField.key}>
+            <CardContent className="pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">#{index + 1}</p>
+                <Button
+                  type="button"
+                  variant="destructive-ghost"
+                  size="sm"
+                  {...(
+                    form.remove.getButtonProps as unknown as RemoveButtonGetter
+                  )({
+                    name: field.name,
+                    index,
+                  })}
+                  disabled={isPending || !canRemove}
+                  aria-label={
+                    !canRemove && min !== undefined
+                      ? `最低 ${min} 件必要なため削除できません`
+                      : undefined
+                  }
+                >
+                  <IconTrash className="h-3 w-3" />
+                </Button>
+              </div>
+              {itemFields.map((itemFieldInfo) => {
+                if (!itemFieldInfo.meta) return null;
+                const subFieldMeta = itemFieldset[itemFieldInfo.key];
+                if (!subFieldMeta) return null;
+                return (
+                  <div key={itemFieldInfo.key}>
+                    {renderField(itemFieldInfo, subFieldMeta, undefined)}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

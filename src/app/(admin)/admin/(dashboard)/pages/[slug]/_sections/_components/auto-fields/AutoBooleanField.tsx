@@ -1,45 +1,46 @@
 "use client";
 
 /**
- * AutoBooleanField — useController ベースの制御された Switch
+ * AutoBooleanField — conform useInputControl ベースの Switch
  *
- * RHF の useController で状態を同期し、Switch の checked prop がリアクティブに更新される。
+ * Phase 3-A conform 移行: FieldMetadata + useInputControl + hidden input transit.
+ * boolean 値は "on" / "" 文字列で FormData 送信、schema 層の preprocess で boolean 化する。
  */
 
-import { useController, type Control, type FieldValues } from "react-hook-form";
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
 import { Label, Switch } from "@/admin/components/ui";
 
 interface AutoBooleanFieldProps {
-  readonly fieldKey: string;
+  readonly field: FieldMetadata<unknown>;
   readonly fieldId: string;
   readonly label: string;
   readonly helpText: string | undefined;
-  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly error: string | undefined;
 }
 
 export function AutoBooleanField({
-  fieldKey,
+  field,
   fieldId,
   label,
   helpText,
-  control,
   isPending,
   error,
 }: AutoBooleanFieldProps) {
-  const { field } = useController({
-    control,
-    name: fieldKey,
-  });
+  // conform useInputControl は string ベースの FieldMetadata を要求するため境界変換
+  // (型 ledger §5/§7 と同列の generic invariance 対応、動的 schema 用)
+  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const isOn = control.value === "on" || control.value === "true";
 
   return (
     <div className="space-y-1">
+      <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
       <div className="flex items-center gap-2">
         <Switch
           id={fieldId}
-          checked={field.value === true}
-          onCheckedChange={field.onChange}
+          checked={isOn}
+          onCheckedChange={(checked) => control.change(checked ? "on" : "")}
+          onBlur={control.blur}
           disabled={isPending}
         />
         <Label htmlFor={fieldId}>{label}</Label>
