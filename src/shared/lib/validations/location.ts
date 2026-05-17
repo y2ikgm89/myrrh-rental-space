@@ -121,26 +121,73 @@ export const locationFormBaseSchema = z.object({
     .max(1000, { error: "駐車場案内は1000文字以内で入力してください" })
     .nullable()
     .optional(),
-  amenities: z.record(z.string(), z.boolean()).default({}),
+  amenities: z
+    .record(
+      z.string(),
+      z.preprocess((value) => value === "on" || value === true, z.boolean()),
+    )
+    .default({}),
   imageUrl: z
     .string()
     .min(1, { error: "建物画像URLを入力してください" })
     .url({ error: "有効なURLを入力してください" }),
   imageUrls: imageUrlsSchema,
-  businessHours: businessHoursWeekSchema.nullable().optional(),
-  specialHolidays: z.array(z.string()).nullable().optional(),
-  // MEO フィールド
+  businessHours: z.preprocess((value) => {
+    if (typeof value === "string") {
+      if (value === "" || value === "null") return null;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+    return value;
+  }, businessHoursWeekSchema.nullable().optional()),
+  specialHolidays: z.preprocess((value) => {
+    if (typeof value === "string") {
+      if (value === "" || value === "null") return null;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+    return value;
+  }, z.array(z.string()).nullable().optional()),
+  // MEO フィールド (conform FormData transit 対応 preprocess)
   latitude: z
-    .number()
-    .min(-90, { error: "緯度は -90 以上である必要があります" })
-    .max(90, { error: "緯度は 90 以下である必要があります" })
-    .nullable()
+    .preprocess(
+      (value) =>
+        value === "" || value === null || value === undefined
+          ? null
+          : typeof value === "number"
+            ? value
+            : Number(value),
+      z.union([
+        z.null(),
+        z
+          .number()
+          .min(-90, { error: "緯度は -90 以上である必要があります" })
+          .max(90, { error: "緯度は 90 以下である必要があります" }),
+      ]),
+    )
     .optional(),
   longitude: z
-    .number()
-    .min(-180, { error: "経度は -180 以上である必要があります" })
-    .max(180, { error: "経度は 180 以下である必要があります" })
-    .nullable()
+    .preprocess(
+      (value) =>
+        value === "" || value === null || value === undefined
+          ? null
+          : typeof value === "number"
+            ? value
+            : Number(value),
+      z.union([
+        z.null(),
+        z
+          .number()
+          .min(-180, { error: "経度は -180 以上である必要があります" })
+          .max(180, { error: "経度は 180 以下である必要があります" }),
+      ]),
+    )
     .optional(),
   googleBusinessPlaceId: z
     .string()
@@ -174,9 +221,30 @@ export const locationFormBaseSchema = z.object({
     .email({ error: "有効なメールアドレスを入力してください" })
     .nullable()
     .optional(),
-  sortOrder: z.number().int().min(0).default(0),
-  isPublished: z.boolean().default(false),
-  isActive: z.boolean().default(true),
+  sortOrder: z
+    .preprocess(
+      (value) =>
+        value === "" || value === null || value === undefined
+          ? 0
+          : typeof value === "number"
+            ? value
+            : Number(value),
+      z.number().int().min(0, { error: "並び順は0以上で入力してください" }),
+    )
+    .default(0),
+  isPublished: z
+    .preprocess((value) => value === "on" || value === true, z.boolean())
+    .default(false),
+  isActive: z
+    .preprocess(
+      (value) =>
+        value === "on" ||
+        value === true ||
+        value === undefined ||
+        value === null,
+      z.boolean(),
+    )
+    .default(true),
 });
 
 export const locationFormSchema = locationFormBaseSchema
