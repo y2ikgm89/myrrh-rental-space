@@ -9,7 +9,13 @@
  * pattern を踏襲、Site Key + Secret Key の 2 入力。
  */
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useEffectEvent,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
@@ -89,14 +95,18 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
     }
   }
 
+  // useEffectEvent で useInputControl 参照を effect deps から除外
+  const handleSaveSuccess = useEffectEvent(() => {
+    toast.success("Turnstile設定を保存しました");
+    secretKeyControl.change("");
+    router.refresh();
+  });
+
   useEffect(() => {
     if (isSuccess) {
-      toast.success("Turnstile設定を保存しました");
-      secretKeyControl.change("");
-      router.refresh();
+      handleSaveSuccess();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuccess, router]);
+  }, [isSuccess]);
 
   const handleConnectionTest = () => {
     if (!siteKey || !secretKey) {
