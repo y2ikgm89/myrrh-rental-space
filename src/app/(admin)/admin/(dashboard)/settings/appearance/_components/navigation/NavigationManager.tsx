@@ -13,15 +13,12 @@ import {
   sortableKeyboardCoordinates,
 } from "@/admin/components/ui";
 import type { Serialized } from "@/shared/lib/serialize";
+import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import type { NavigationItemData, SocialLinkData } from "./types";
-import {
-  useNavigationForm,
-  useSocialForm,
-  flattenNavItems,
-} from "./hooks/use-navigation-form";
+import { flattenNavItems } from "./types";
 import { useNavigationHandlers } from "./hooks/useNavigationHandlers";
 import { NavigationList, SocialLinkList } from "./NavigationList";
-import { NavigationDialog, SocialLinkDialog } from "./NavigationDialog";
+import { NavigationFormDialog, SocialLinkFormDialog } from "./NavigationDialog";
 
 // =============================================================================
 // Props
@@ -54,6 +51,8 @@ export function NavigationManager({
   const [isNavDialogOpen, setIsNavDialogOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] =
     useState<NavigationItemData | null>(null);
+  const [navDefaultType, setNavDefaultType] =
+    useState<NavigationType>("HEADER_DESKTOP");
 
   // Social Links State
   const [socialLinks, setSocialLinks] =
@@ -80,17 +79,11 @@ export function NavigationManager({
     }),
   );
 
-  // Form Hooks
-  const navFormHook = useNavigationForm();
-  const socialFormHook = useSocialForm();
-
-  // All handlers via custom hook
+  // Handlers (D&D + delete only; form は Dialog 内 useActionState で完結)
   const {
     isPending,
+    loadData,
     getParentOptions,
-    openNavCreateDialog,
-    openNavEditDialog,
-    onNavSubmit,
     handleNavDelete,
     handleNavDragStart,
     handleNavDragMove,
@@ -98,9 +91,6 @@ export function NavigationManager({
     handleNavDragEnd,
     handleMakeChild,
     handleMakeRoot,
-    openSocialCreateDialog,
-    openSocialEditDialog,
-    onSocialSubmit,
     handleSocialDelete,
     handleSocialDragStart,
     handleSocialDragEnd,
@@ -110,10 +100,6 @@ export function NavigationManager({
       mobileItems,
       footerItems,
       socialLinks,
-      isNavDialogOpen,
-      editingNavItem,
-      isSocialDialogOpen,
-      editingSocialLink,
       dragOffsetX,
       activeItemId,
       overItemId,
@@ -124,20 +110,41 @@ export function NavigationManager({
       setMobileItems,
       setFooterItems,
       setSocialLinks,
-      setIsNavDialogOpen,
-      setEditingNavItem,
-      setIsSocialDialogOpen,
-      setEditingSocialLink,
       setDragOffsetX,
       setActiveItemId,
       setOverItemId,
       setActiveSocialId,
     },
-    {
-      navFormHook,
-      socialFormHook,
-    },
   );
+
+  // Dialog open helpers (mount-on-open + state init only)
+  const openNavCreateDialog = (type: NavigationType) => {
+    setEditingNavItem(null);
+    setNavDefaultType(type);
+    setIsNavDialogOpen(true);
+  };
+  const openNavEditDialog = (item: NavigationItemData) => {
+    setEditingNavItem(item);
+    setNavDefaultType(item.type);
+    setIsNavDialogOpen(true);
+  };
+  const openSocialCreateDialog = () => {
+    setEditingSocialLink(null);
+    setIsSocialDialogOpen(true);
+  };
+  const openSocialEditDialog = (link: Serialized<SocialLinkData>) => {
+    setEditingSocialLink(link);
+    setIsSocialDialogOpen(true);
+  };
+
+  // Default order for new items
+  const navDefaultOrder = flattenNavItems(
+    navDefaultType === "HEADER_DESKTOP"
+      ? desktopItems
+      : navDefaultType === "HEADER_MOBILE"
+        ? mobileItems
+        : footerItems,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -233,31 +240,28 @@ export function NavigationManager({
         </TabsContent>
       </Tabs>
 
-      <NavigationDialog
-        open={isNavDialogOpen}
-        onOpenChange={setIsNavDialogOpen}
-        form={navFormHook.form}
-        editingItem={editingNavItem}
-        isPending={isPending}
-        navIsExternal={navFormHook.navIsExternal}
-        navIsActive={navFormHook.navIsActive}
-        navParentId={navFormHook.navParentId}
-        parentOptions={getParentOptions(navFormHook.navType)}
-        onSubmit={onNavSubmit}
-      />
+      {/* mount-on-open: Dialog 内 conform `useForm` の defaultValue を確実に反映 */}
+      {isNavDialogOpen && (
+        <NavigationFormDialog
+          open={isNavDialogOpen}
+          onOpenChange={setIsNavDialogOpen}
+          editingItem={editingNavItem}
+          defaultType={navDefaultType}
+          defaultOrder={navDefaultOrder}
+          parentOptions={getParentOptions(navDefaultType)}
+          onSuccess={loadData}
+        />
+      )}
 
-      <SocialLinkDialog
-        open={isSocialDialogOpen}
-        onOpenChange={setIsSocialDialogOpen}
-        form={socialFormHook.form}
-        editingLink={editingSocialLink}
-        isPending={isPending}
-        socialPlatform={socialFormHook.socialPlatform}
-        socialIsActive={socialFormHook.socialIsActive}
-        socialShowOnDesktop={socialFormHook.socialShowOnDesktop}
-        socialShowOnMobile={socialFormHook.socialShowOnMobile}
-        onSubmit={onSocialSubmit}
-      />
+      {isSocialDialogOpen && (
+        <SocialLinkFormDialog
+          open={isSocialDialogOpen}
+          onOpenChange={setIsSocialDialogOpen}
+          editingLink={editingSocialLink}
+          defaultOrder={socialLinks.length}
+          onSuccess={loadData}
+        />
+      )}
     </div>
   );
 }

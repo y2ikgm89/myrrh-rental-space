@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { TablerIcon } from "@tabler/icons-react";
 import {
   IconBrandX,
@@ -9,81 +8,11 @@ import {
   IconBrandTiktok,
   IconExternalLink,
 } from "@tabler/icons-react";
-import type {
-  NavigationType,
-  SocialPlatform,
-} from "@/shared/lib/validations/enums/prisma-types";
-import {
-  portableTextSpanSchema,
-  spansToPlainText,
-  type PortableTextSpan,
-} from "@/shared/lib/portable-text";
+import type { SocialPlatform } from "@/shared/lib/validations/enums/prisma-types";
 import type {
   NavigationItemData,
   SocialLinkData,
 } from "@/shared/domain/navigation/queries";
-
-// =============================================================================
-// Navigation Form Types
-// =============================================================================
-
-export type NavFormData = {
-  type: NavigationType;
-  parentId: string | null;
-  label: PortableTextSpan[];
-  url: string;
-  isExternal: boolean;
-  order: number;
-  isActive: boolean;
-};
-
-export const navFormSchema = z.object({
-  type: z.enum(["HEADER_DESKTOP", "HEADER_MOBILE", "FOOTER"]),
-  parentId: z.string().nullable(),
-  label: z
-    .array(portableTextSpanSchema)
-    .max(50, { error: "Span は50件以内です" })
-    .refine((spans) => spansToPlainText(spans).trim().length > 0, {
-      error: "ラベルにテキストを 1 文字以上含めてください",
-    }),
-  url: z.string().min(1, { error: "URLは必須です" }),
-  isExternal: z.boolean(),
-  order: z.number().int().min(0),
-  isActive: z.boolean(),
-}) satisfies z.ZodType<NavFormData>;
-
-// =============================================================================
-// Social Link Form Types
-// =============================================================================
-
-export type SocialFormData = {
-  platform: SocialPlatform;
-  url: string;
-  order: number;
-  isActive: boolean;
-  showOnDesktop: boolean;
-  showOnMobile: boolean;
-};
-
-export const socialFormSchema = z.object({
-  platform: z.enum([
-    "TWITTER",
-    "FACEBOOK",
-    "INSTAGRAM",
-    "YOUTUBE",
-    "LINE",
-    "TIKTOK",
-    "OTHER",
-  ]),
-  url: z
-    .string()
-    .min(1, { error: "URLは必須です" })
-    .url({ error: "有効なURLを入力してください" }),
-  order: z.number().int().min(0),
-  isActive: z.boolean(),
-  showOnDesktop: z.boolean(),
-  showOnMobile: z.boolean(),
-}) satisfies z.ZodType<SocialFormData>;
 
 // =============================================================================
 // Constants
@@ -110,7 +39,15 @@ export const platformIcons: Record<SocialPlatform, TablerIcon> = {
 };
 
 // =============================================================================
-// Utility Types
+// Form Defaults (SocialLinkFormDialog の platform state 型)
+// =============================================================================
+
+export type SocialFormDefaults = {
+  platform: SocialPlatform;
+};
+
+// =============================================================================
+// Utility Types (D&D)
 // =============================================================================
 
 export type FlatNavigationItem = NavigationItemData & {
@@ -128,6 +65,22 @@ export function getProjectedDepth(offsetX: number, currentDepth: 0 | 1): 0 | 1 {
   const projectedPixels = currentDepth * INDENT_WIDTH + offsetX;
   const raw = Math.round(projectedPixels / INDENT_WIDTH);
   return Math.max(0, Math.min(1, raw)) === 1 ? 1 : 0;
+}
+
+/**
+ * Flatten hierarchical NavigationItemData[] into a flat list with depth annotations.
+ */
+export function flattenNavItems(
+  items: NavigationItemData[],
+): FlatNavigationItem[] {
+  const result: FlatNavigationItem[] = [];
+  for (const item of items) {
+    result.push({ ...item, isChild: false, depth: 0 });
+    for (const child of item.children) {
+      result.push({ ...child, isChild: true, depth: 1 });
+    }
+  }
+  return result;
 }
 
 /**
