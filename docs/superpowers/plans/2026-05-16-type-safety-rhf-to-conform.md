@@ -6,7 +6,7 @@
 
 **Architecture:** Zod 4 `z.ZodType<T>` で SDK / Prisma JSON / Route 境界の type narrowing、`@conform-to/react` + `@conform-to/zod` で admin/public 全 form を統一、`documented-exceptions-ledger.md` の eliminate 12 件は削除し permanent 3 件のみ残す。
 
-**Tech Stack:** Next.js 16.2.6 / React 19.2.6 / TypeScript 6.0.3 / Zod 4.4.3 / Prisma 7.8.0 / `@conform-to/react` + `@conform-to/zod` (新規) / Bun 1.3.13
+**Tech Stack** (採用機能の列挙のみ — バージョン値の SSoT は `package.json` + `bun.lock`): Next.js / React / TypeScript / Zod / Prisma / `@conform-to/react` + `@conform-to/zod` (新規) / Bun
 
 **Spec:** `docs/superpowers/specs/2026-05-16-type-safety-rhf-to-conform-design.md`
 

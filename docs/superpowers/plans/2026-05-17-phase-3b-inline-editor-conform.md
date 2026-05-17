@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Posts / News エディタの inline editor (dual form `bodyForm` + `settingsForm` × 2 entity = 計 4 form インスタンス + 12 side-panel component) を React Hook Form (RHF) から conform 1.19 + Zod 4 に clean break で移行し、`package.json` から `react-hook-form` / `@hookform/resolvers` を削除する Phase 3-C を実行可能な状態にする。
+**Goal:** Posts / News エディタの inline editor (dual form `bodyForm` + `settingsForm` × 2 entity = 計 4 form インスタンス + 12 side-panel component) を React Hook Form (RHF) から conform + Zod に clean break で移行し、`package.json` から `react-hook-form` / `@hookform/resolvers` を削除する Phase 3-C を実行可能な状態にする。バージョン SSoT は `package.json` + `bun.lock`。
 
 **Architecture:**
 
@@ -11,13 +11,13 @@
 - **SidePanelInjectedProps の clean break refactor** — `register / control / setValue / getValues / errors` の 5-prop RHF interface を conform `FieldMetadata<T>` + per-field 個別 prop の interface に置換。12 side-panel component の prop signature を全置換 (バックワード互換 wrapper 禁止)。
 - **Lexical contentJson 派生計算** — Task 8.3 TermsForm + Task 8.7 SpaceEditForm で確立した「hidden input + React Compiler 自動メモ化派生計算」パターンを `bodyForm` に適用。`useMemo` / `flushSync` 不要、submit handler 内で `renderEditorStateJsonToHtmlClient(bodyData.contentJson)` を呼んで `contentHtml` を派生。
 
-**Tech Stack:**
+**Tech Stack** (採用機能の列挙のみ — バージョン値の SSoT は `package.json` + `bun.lock`):
 
-- conform 1.19 (`@conform-to/react` / `@conform-to/zod/v4`)
-- Zod 4.3
-- React 19.2 + React Compiler 1.0
-- Next.js 16.2 (typedRoutes / Multiple Root Layouts)
-- Lexical 0.43 (contentJson primary + contentHtml cache、client-side rendering 必須 — Next.js 16 `react-server` condition 非互換)
+- conform (`@conform-to/react` / `@conform-to/zod/v4`)
+- Zod
+- React + React Compiler
+- Next.js (typedRoutes / Multiple Root Layouts)
+- Lexical (contentJson primary + contentHtml cache、client-side rendering 必須 — Next.js `react-server` condition 非互換)
 - 既存 SSoT helper: `executeConformMutation` (`@/shared/lib/forms/conform-action`) / `lexicalJsonSchema` (`@/shared/lib/validations/lexical`) / `renderEditorStateJsonToHtmlClient` (`@/admin/components/editor/lexical/preview/render-editor-state-to-html-client`) / `useFieldArray` 配列 uniqueness (`zod-patterns/array-uniqueness.md`)
 
 ---
@@ -1043,7 +1043,7 @@ git commit -m "chore(ui): RHF 依存 form.tsx primitive を削除 (Phase 3-B Tas
 
 Edit `admin-inline-editor-patterns.md`:
 
-- **重要 (Phase 3-B 完了後の現状)**: 本 editor は conform 1.19 + Zod 4 ベースで実装されている。新規実装も conform 統一 (RHF は完全削除済、Phase 3-C で package.json から react-hook-form / @hookform/resolvers 削除予定)
+- **重要 (Phase 3-B 完了後の現状)**: 本 editor は conform + Zod ベースで実装されている。新規実装も conform 統一 (RHF は完全削除済、Phase 3-C で package.json から react-hook-form / @hookform/resolvers 削除予定)。バージョン SSoT は `package.json` + `bun.lock`。
 - ディレクトリ正本表の `register / control / errors / setValue / getValues` を `FieldMetadata<T>` + `form.update / form.insert` に置換
 - 「公式準拠の前提」の RHF 言及を conform に置換 (`@conform-to/react` / `@conform-to/zod/v4`)
 - 「`LayoutFields` のみ `any` 境界」の節を「`LayoutFields` の `as FieldMetadata<number | null>` 境界」にリネーム (内容 invariance 維持)
