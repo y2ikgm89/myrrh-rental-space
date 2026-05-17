@@ -1,15 +1,20 @@
 "use server";
 
-import { z } from "zod";
+import type { SubmissionResult } from "@conform-to/react";
+import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
+import { z } from "zod";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { purgeSpaceCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import {
@@ -76,7 +81,7 @@ export async function createSpace(
     resource: "space",
     action: "create",
     execute: async () => {
-      const commandInput = await buildSpaceCommandInput(parsed.data);
+      const commandInput = buildSpaceCommandInput(parsed.data);
       return createSpaceCommand(commandInput);
     },
     afterSuccess: (result) => {
@@ -103,7 +108,7 @@ export async function updateSpace(
     action: "update",
     resourceId: parsedId.data,
     execute: async () => {
-      const commandInput = await buildSpaceCommandInput(parsed.data);
+      const commandInput = buildSpaceCommandInput(parsed.data);
       await updateSpaceCommand(parsedId.data, commandInput);
       return null;
     },
@@ -111,6 +116,103 @@ export async function updateSpace(
       revalidateSpaces(parsedId.data);
     },
   });
+}
+
+/**
+ * 管理画面 新規 Space 作成 — conform `useActionState` canonical (Phase 1 Task 8.7)
+ *
+ * `(prev, formData) => SubmissionResult` signature。
+ * 成功時は server-side `redirect(/admin/spaces/<id>)` で詳細ページに遷移、失敗時は `submission.reply()`。
+ */
+export async function createSpaceAction(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  let createdId: string | null = null;
+
+  const submissionResult = await executeConformMutation(
+    formData,
+    spaceFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "space",
+        action: "create",
+        execute: async () => {
+          const commandInput = buildSpaceCommandInput(data);
+          return createSpaceCommand(commandInput);
+        },
+        afterSuccess: (payload) => {
+          revalidateSpaces(payload.id);
+        },
+        resolveAuditResourceId: (payload) => payload.id,
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      createdId = result.id;
+      return { ok: true };
+    },
+  );
+
+  if (createdId !== null) {
+    redirect(toAppRoute(`/admin/spaces/${createdId}`));
+  }
+
+  return submissionResult;
+}
+
+/**
+ * 管理画面 Space 更新 — conform `useActionState` canonical (Phase 1 Task 8.7)
+ *
+ * id は `bind(null, space.id)` で部分適用。
+ * 成功時は server-side `redirect(/admin/spaces/<id>)` で詳細ページに遷移。
+ */
+export async function updateSpaceAction(
+  spaceId: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  const validatedId = idSchema.safeParse(spaceId);
+  if (!validatedId.success) {
+    return {
+      status: "error",
+      error: { "": ["スペースIDが不正です"] },
+    } satisfies SubmissionResult;
+  }
+  const id = validatedId.data;
+
+  let success = false;
+
+  const submissionResult = await executeConformMutation(
+    formData,
+    spaceFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "space",
+        action: "update",
+        resourceId: id,
+        execute: async () => {
+          const commandInput = buildSpaceCommandInput(data);
+          await updateSpaceCommand(id, commandInput);
+          return null;
+        },
+        afterSuccess: () => {
+          revalidateSpaces(id);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      success = true;
+      return { ok: true };
+    },
+  );
+
+  if (success) {
+    redirect(toAppRoute(`/admin/spaces/${id}`));
+  }
+
+  return submissionResult;
 }
 
 export async function updateSpacePublished(
