@@ -9,11 +9,11 @@ paths:
 
 > 対象: メタデータ用 **UnifiedSidePanel** と **`content-types/*`**（本文編集は別系統の [Lexical エディタ](./lexical/core.md)）。
 >
-> **重要 (Phase 1 Task 7 移行対象)**: 本 editor は React Hook Form (`useForm` / `useWatch` / `Control<T>` / `useFormSetValue<T>`) ベースで実装されており、Phase 1 Task 7 で conform `useActionState` + `useForm` + `parseWithZod` に置換予定。本 rule docs は **Task 7 移行完了までの残存編集時の規律** として維持。新規 form は本パターン採用禁止、conform canonical を使用（→ `frontend/admin-ui/forms.md` / `zod-patterns/validation-schemas.md`）。
+> **重要 (Phase 1 Task 8 全完了後の残存 RHF 移行対象)**: 本 editor は React Hook Form (`useForm` / `useWatch` / `Control<T>` / `useFormSetValue<T>`) ベースで実装されており、別 phase で conform `useActionState` + `useForm` + `parseWithZod` に置換予定（Phase 1 Task 4-8 で大型 form の conform 移行は完了済、本 inline editor side-panel / auto-section-form のみ Phase 1 外として残存）。本 rule docs は **別 phase 移行完了までの残存編集時の規律** として維持。新規 form は本パターン採用禁止、conform canonical を使用（→ `frontend/admin-ui/forms.md` / `zod-patterns/validation-schemas.md`）。
 
-## 公式準拠の前提 (残存 RHF 利用箇所向け、Task 7 移行完了まで)
+## 公式準拠の前提 (残存 RHF 利用箇所向け、別 phase 移行完了まで)
 
-- [React Hook Form](https://react-hook-form.com/) — 値の購読はコンポーネント内では **`useWatch`** を優先（`watch()` 禁止は `react/compiler.md`）。Task 7 で conform `useInputControl` / `fields.X.value` に置換予定
+- [React Hook Form](https://react-hook-form.com/) — 値の購読はコンポーネント内では **`useWatch`** を優先（`watch()` 禁止は `react/compiler.md`）。別 phase で conform `useInputControl` / `fields.X.value` に置換予定
 - [React 19](https://react.dev/) / React Compiler — 手動メモ化の追加は外部ライブラリ要件がある場合のみ
 - 型は **フォームデータ型**（`FieldValues` を拡張した Zod `infer`）と一致させ、`exactOptionalPropertyTypes` 下で `disabled: undefined` を余計に渡さない
 

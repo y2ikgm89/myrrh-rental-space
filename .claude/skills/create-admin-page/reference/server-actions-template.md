@@ -1,6 +1,6 @@
 # Server Actions テンプレート (conform canonical)
 
-`_shared/actions/<resources>.ts` の雛形。**Phase 1 Task 4-6 で確立した conform `useActionState` + `executeAdminMutationResult` 統合パターンが canonical**。詳細な scaffolding は `create-server-action` skill を使う。
+`_shared/actions/<resources>.ts` の雛形。**Phase 1 Task 4-8 で全完了した conform `useActionState` + `executeAdminMutationResult` 統合パターンが canonical**。詳細な scaffolding は `create-server-action` skill を使う。
 
 ```typescript
 "use server";
@@ -281,8 +281,8 @@ export function <Resource>Form({ <resource> }: Props): ReactElement {
 
 ## 禁止事項
 
-- **RHF (`react-hook-form` / `@hookform/resolvers`) 復活禁止** — Phase 1 Task 8 で削除予定
-- **`useFormAction` hook scaffold 禁止** — legacy hook、Task 8 で削除予定
+- **RHF (`react-hook-form` / `@hookform/resolvers`) 復活禁止** — Phase 1 Task 8 完了、別 phase で残存 (inline editor side-panel / auto-section-form のみ) 完全削除予定
+- **`useFormAction` hook scaffold 禁止** — legacy hook、別 phase で削除予定
 - **`standardSchemaResolver` 使用禁止** — `parseWithZod` (`@conform-to/zod/v4`) が canonical
 - **Server Action 内 `parseWithZod` 直接呼び出し禁止** — `executeConformMutation` SSoT helper 経由
 - **`@conform-to/zod` ルート import 禁止** — Zod v3 用、Zod 4 と非互換。`@conform-to/zod/v4` から `parseWithZod` を import する

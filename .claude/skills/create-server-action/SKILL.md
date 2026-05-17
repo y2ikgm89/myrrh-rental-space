@@ -2,7 +2,7 @@
 name: create-server-action
 description: >
   管理画面の Server Action ファイルをフルスキャフォールドで生成する。
-  Phase 1 Task 4-6 で確立した conform 1.19 + Zod 4 + executeAdminMutationResult
+  Phase 1 Task 4-8 で全完了した conform 1.19 + Zod 4 + executeAdminMutationResult
   統合パターン (`(prev, formData) => SubmissionResult`) で CRUD 一括作成する。
 when_to_use: 新規モデルの管理画面 CRUD 用 Server Action ファイル一式を conform `useActionState` + executeAdminMutationResult パターンで一括生成するとき。
 argument-hint: <resource-name>
@@ -232,8 +232,8 @@ export async function delete<ResourcePascal>(
 - **`executeAdminMutationResult` の `resource` / `action` は `permissions.ts` の定義と一致させる**
 - **`CACHE_TAGS.<NAME_UPPER>` が存在しない場合は `cache.ts` に追加してから `updateTag` を呼ぶ**
 - **conform Zod 4 専用 subpath**: `@conform-to/zod/v4` から `parseWithZod` を import する（`@conform-to/zod` ルートは Zod v3 用で Zod 4 と非互換）
-- **RHF (`react-hook-form` / `@hookform/resolvers`) は Phase 1 Task 8 で削除予定** — 新規 Server Action では絶対に scaffold しない
-- **`useFormAction` hook は legacy** — 既存利用箇所のみ残存、新規利用禁止（同じく Task 8 で削除予定）
+- **RHF (`react-hook-form` / `@hookform/resolvers`) は Phase 1 Task 8 完了、別 phase で削除予定** — 新規 Server Action では絶対に scaffold しない
+- **`useFormAction` hook は legacy** — 既存利用箇所のみ残存（inline editor side-panel / auto-section-form のみ）、新規利用禁止（別 phase で削除予定）
 - **conform helper SSoT**: `executeConformMutation` は `@/shared/lib/forms/conform-action` のみ。Server Action 内 `parseWithZod` 直接呼び出し禁止（認証・権限・監査ログを `executeAdminMutationResult` で一括処理する flow と整合）
 - **参照実装** (Phase 1 PR #59-#62 で確立した form 移行 16 件):
   - **simple (PR #61)**: 9 settings sections (`MaintenanceSection` / `CookieConsentSection` / `NotificationSection` / `HeaderSection` / `PermalinkSection` / `ReservationSection` / `EmailSection` / `FooterSection` / `TaxSection`)

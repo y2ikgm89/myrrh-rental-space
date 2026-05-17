@@ -1,5 +1,5 @@
 ---
-description: Rules of React + eslint-plugin-react-hooks 7.x 統合ルール表 + 残存 RHF 利用箇所向けの watch() 禁止 / useFieldArray + dnd-kit パターン (Phase 1 Task 8 で RHF 完全削除予定)
+description: Rules of React + eslint-plugin-react-hooks 7.x 統合ルール表 + 残存 RHF 利用箇所向けの watch() 禁止 / useFieldArray + dnd-kit パターン (Phase 1 Task 8 完了、RHF 完全削除は別 phase で予定)
 paths:
   - src/**/*.tsx
   - src/**/*.ts
@@ -10,7 +10,7 @@ paths:
 
 > Compiler 最適化条件 + react-hooks plugin 16 ルール表 + **残存 RHF 利用箇所向け** watch() 禁止 + useFieldArray + dnd-kit 安定 ID パターン。
 >
-> **重要**: 新規 form は conform `useActionState` + `useForm` + `parseWithZod` が canonical (→ `frontend/admin-ui/forms.md` / `frontend/admin-ui/forms/settings-sections.md`)。RHF (`react-hook-form` / `@hookform/resolvers`) は Phase 1 Task 8 で `package.json` から削除予定。本 rule docs の RHF section は **Task 7 移行完了までの残存 form 編集時の規律**として維持。
+> **重要**: 新規 form は conform `useActionState` + `useForm` + `parseWithZod` が canonical (→ `frontend/admin-ui/forms.md` / `frontend/admin-ui/forms/settings-sections.md`)。RHF (`react-hook-form` / `@hookform/resolvers`) は Phase 1 Task 4-8 全完了、残存は inline editor side-panel / auto-section-form のみ。別 phase で `package.json` から削除予定。本 rule docs の RHF section は **残存 form 編集時の規律**として維持。
 
 ## Rules of React（コンパイラが最適化できる条件）
 

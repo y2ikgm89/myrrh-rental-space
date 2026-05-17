@@ -23,7 +23,7 @@ Dialog 型 CRUD・多選択肢ダイアログ・Radix Dialog の a11y 要件を�
 
 ### canonical pattern (conform `useActionState` + Radix Dialog controlled)
 
-Phase 1 Task 4-7 で確立した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる。**Dialog open state の管理場所で 2 つの canonical variant を持つ** — どちらも「success 検知 → close」を **render 中 sync** (React 公式 ["You Might Not Need an Effect" §Adjusting State Directly During Render](https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes)) で表現し、副作用 (`toast` / `router.refresh`) のみ `useEffect` で分離する規律は同一。
+Phase 1 Task 4-8 で全完了した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる。**Dialog open state の管理場所で 2 つの canonical variant を持つ** — どちらも「success 検知 → close」を **render 中 sync** (React 公式 ["You Might Not Need an Effect" §Adjusting State Directly During Render](https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes)) で表現し、副作用 (`toast` / `router.refresh`) のみ `useEffect` で分離する規律は同一。
 
 #### Variant A: Dialog open state を child component (FooDialog) 内で管理
 
