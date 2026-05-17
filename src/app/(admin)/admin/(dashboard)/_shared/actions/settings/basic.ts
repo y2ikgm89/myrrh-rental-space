@@ -27,10 +27,7 @@ import {
   analyticsFormSchema,
   searchVerificationFormSchema,
 } from "./schemas/form-schemas-seo-analytics";
-import {
-  AnalyticsType,
-  LayoutWidth,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidAnalyticsType } from "@/shared/lib/validations/enums/guards";
 
 function emptyToNull(value: string | undefined): string | null {
@@ -168,10 +165,12 @@ export async function updateAnalyticsSettings(
       action: "update",
       execute: async () => {
         await updateAnalyticsSettingsCommand({
+          // isValidAnalyticsType は type guard `value is AnalyticsType` のため
+          // narrow 後の cast は不要
           analyticsType:
             data.analyticsType !== "none" &&
             isValidAnalyticsType(data.analyticsType)
-              ? (data.analyticsType as AnalyticsType)
+              ? data.analyticsType
               : null,
           googleAnalyticsId: emptyToNull(data.googleAnalyticsId),
           googleTagManagerId: emptyToNull(data.googleTagManagerId),

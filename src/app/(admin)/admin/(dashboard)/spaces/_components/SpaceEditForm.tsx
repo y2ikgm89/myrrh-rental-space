@@ -92,6 +92,14 @@ const SPACE_EDIT_TAB_VALUES = [
 
 type SpaceEditTabValue = (typeof SPACE_EDIT_TAB_VALUES)[number];
 
+const SPACE_EDIT_TAB_VALUE_SET: ReadonlySet<string> = new Set(
+  SPACE_EDIT_TAB_VALUES,
+);
+
+function isSpaceEditTabValue(value: string): value is SpaceEditTabValue {
+  return SPACE_EDIT_TAB_VALUE_SET.has(value);
+}
+
 const SPACE_EDIT_TAB_LABELS: Record<SpaceEditTabValue, string> = {
   basic: "基本情報",
   pricing: "料金設定",
@@ -471,8 +479,8 @@ export function SpaceEditForm({
   };
 
   const onTabChange = (value: string) => {
-    if (SPACE_EDIT_TAB_VALUES.some((tab) => tab === value)) {
-      void setActiveSection(value as SpaceEditTabValue);
+    if (isSpaceEditTabValue(value)) {
+      void setActiveSection(value);
     }
   };
 
