@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useWatch } from "react-hook-form";
+import { useActionState, useEffect, useRef } from "react";
+import type { ReactElement } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
-import { usePublicForm } from "@/public/hooks/use-public-form";
-import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  customerProfileSchema,
-  type CustomerProfileInput,
-} from "@/shared/lib/validations/customer-profile";
+import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { updateProfileAction } from "../../_shared/actions/profile";
 import {
@@ -35,6 +37,10 @@ interface ProfileFormProps {
   readonly turnstileSiteKey: string | null;
 }
 
+function isCustomerType(value: unknown): value is CustomerType {
+  return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -42,65 +48,88 @@ interface ProfileFormProps {
 export function ProfileForm({
   defaultValues,
   turnstileSiteKey,
-}: ProfileFormProps) {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
+}: ProfileFormProps): ReactElement {
   const turnstileRef = useRef<TurnstileInstance>(null);
 
-  const { form, isPending, onSubmit } = usePublicForm<CustomerProfileInput>(
-    customerProfileSchema,
-    async (data) => {
-      setErrorMessage(null);
-      setShowSuccess(false);
-      const result = await updateProfileAction(data);
-      if (isMutationError(result)) {
-        setErrorMessage(result.error);
-        turnstileRef.current?.reset();
-      } else {
-        setShowSuccess(true);
-        turnstileRef.current?.reset();
-      }
-      return result;
-    },
-    {
-      defaultValues: {
-        customerType: defaultValues.customerType,
-        lastName: defaultValues.lastName,
-        firstName: defaultValues.firstName,
-        companyName: defaultValues.companyName,
-        phoneNumber: defaultValues.phoneNumber,
-      },
-    },
+  const [lastResult, formAction, isPending] = useActionState(
+    updateProfileAction,
+    undefined,
   );
 
-  const customerType = useWatch({
-    control: form.control,
-    name: "customerType",
+  const [form, fields] = useForm({
+    id: "profile-form",
+    constraint: getZodConstraint(customerProfileSchema),
+    lastResult,
+    defaultValue: {
+      customerType: defaultValues.customerType,
+      lastName: defaultValues.lastName,
+      firstName: defaultValues.firstName,
+      companyName: defaultValues.companyName,
+      phoneNumber: defaultValues.phoneNumber,
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: customerProfileSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
   });
 
-  function handleCustomerTypeChange(type: CustomerType) {
-    form.setValue("customerType", type, { shouldDirty: true });
-    if (type === CustomerType.PERSONAL) {
-      form.setValue("companyName", "");
-      form.clearErrors("companyName");
+  const customerTypeControl = useInputControl(fields.customerType);
+  const turnstileTokenControl = useInputControl(fields.turnstileToken);
+
+  const customerTypeValue = customerTypeControl.value;
+  const customerType: CustomerType = isCustomerType(customerTypeValue)
+    ? customerTypeValue
+    : defaultValues.customerType;
+
+  // success / error 後の Turnstile widget DOM reset (副作用)
+  // Turnstile token は一度の検証で消費されるため、結果に関わらず reset
+  useEffect(() => {
+    if (lastResult !== undefined) {
+      turnstileRef.current?.reset();
+      turnstileTokenControl.change("");
     }
+  }, [lastResult, turnstileTokenControl]);
+
+  function handleCustomerTypeChange(type: CustomerType) {
+    customerTypeControl.change(type);
   }
 
   function handleTurnstileVerify(token: string) {
-    form.setValue("turnstileToken", token);
-  }
-  function handleTurnstileExpire() {
-    form.setValue("turnstileToken", "");
+    turnstileTokenControl.change(token);
   }
 
+  function handleTurnstileExpire() {
+    turnstileTokenControl.change("");
+  }
+
+  // success 検出: executeConformMutation の `resetForm: false` 指定で
+  // `submission.reply()` は `{ status: "success", initialValue, ... }` を返す
+  // (conform v1.19 submission.mjs:144、`reply({ resetForm: true })` の
+  // `{ initialValue: null }` とは区別される)
+  const showSuccess = lastResult?.status === "success";
+  const formErrorMessage =
+    form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      {errorMessage != null && (
+    <form {...getFormProps(form)} action={formAction} className="space-y-6">
+      <input
+        type="hidden"
+        name={fields.customerType.name}
+        value={customerType}
+      />
+      <input
+        type="hidden"
+        name={fields.turnstileToken.name}
+        value={turnstileTokenControl.value ?? ""}
+      />
+
+      {formErrorMessage !== null && (
         <div
           className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
-          {errorMessage}
+          {formErrorMessage}
         </div>
       )}
 
@@ -114,7 +143,7 @@ export function ProfileForm({
       )}
 
       <CustomerTypeToggle
-        value={customerType ?? CustomerType.PERSONAL}
+        value={customerType}
         onChange={handleCustomerTypeChange}
       />
 
@@ -123,10 +152,10 @@ export function ProfileForm({
           label="会社名・団体名"
           required
           autoComplete="organization"
-          {...form.register("companyName")}
-          {...(form.formState.errors.companyName?.message && {
-            error: form.formState.errors.companyName.message,
+          {...(fields.companyName.errors?.[0] !== undefined && {
+            error: fields.companyName.errors[0],
           })}
+          {...getInputProps(fields.companyName, { type: "text" })}
         />
       )}
 
@@ -135,19 +164,19 @@ export function ProfileForm({
           label="姓"
           required
           autoComplete="family-name"
-          {...form.register("lastName")}
-          {...(form.formState.errors.lastName?.message && {
-            error: form.formState.errors.lastName.message,
+          {...(fields.lastName.errors?.[0] !== undefined && {
+            error: fields.lastName.errors[0],
           })}
+          {...getInputProps(fields.lastName, { type: "text" })}
         />
         <Input
           label="名"
           required
           autoComplete="given-name"
-          {...form.register("firstName")}
-          {...(form.formState.errors.firstName?.message && {
-            error: form.formState.errors.firstName.message,
+          {...(fields.firstName.errors?.[0] !== undefined && {
+            error: fields.firstName.errors[0],
           })}
+          {...getInputProps(fields.firstName, { type: "text" })}
         />
       </div>
 
@@ -165,13 +194,12 @@ export function ProfileForm({
 
       <Input
         label="電話番号（任意）"
-        type="tel"
         autoComplete="tel"
         leadingIcon="IconPhone"
-        {...form.register("phoneNumber")}
-        {...(form.formState.errors.phoneNumber?.message && {
-          error: form.formState.errors.phoneNumber.message,
+        {...(fields.phoneNumber.errors?.[0] !== undefined && {
+          error: fields.phoneNumber.errors[0],
         })}
+        {...getInputProps(fields.phoneNumber, { type: "tel" })}
       />
 
       <TurnstileWidget

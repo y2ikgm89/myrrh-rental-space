@@ -3,14 +3,16 @@
  *
  * src/app/(public)/mypage/_shared/actions/profile.ts のテスト
  *
+ * Phase 2 conform 移行後:
+ *   signature: `(_prev: SubmissionResult | undefined, formData: FormData) => Promise<SubmissionResult>`
+ *   - `executeConformMutation(formData, schema, handler, { resetForm: false })` 経由
+ *   - success: `submission.reply()` → `{ status: "success", initialValue, ... }`
+ *     (submitted values 維持で profile UX を保持)
+ *   - field-level error: `submission.reply()` で field-level errors
+ *   - form-level error (rate limit / auth / Turnstile / DB error): `reply({ formErrors })`
+ *
  * テスト対象:
  * - updateProfileAction: プロフィール更新
- *
- * モック方針:
- * - getSession: auth をモック（認証状態を制御）
- * - updateCustomerProfileByUserId: domain コマンドをモック
- * - checkActionRateLimit: action-helpers をモック
- * - updateTag: next/cache をモック
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
@@ -43,15 +45,14 @@ const mockCheckActionRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockValidateTurnstile = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
-  createValidationMutationError: (error: import("zod").ZodError) => ({
-    error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
-  }),
+  validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
@@ -68,7 +69,7 @@ mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerProfileByUserId: mockUpdateCustomerProfileByUserId,
 }));
 
-// customer query mock（updateProfile は getCustomerByUserId でキャッシュタグ customerId を取得）
+// customer query mock
 const mockGetCustomerByUserId = mock(() =>
   Promise.resolve({ id: "customer-001" }),
 );
@@ -105,8 +106,6 @@ mock.module("@/shared/lib/admin-auth", () => ({
   DASHBOARD_ROLES: [],
 }));
 
-// @/shared/lib/constants はモック不要（純粋な定数ファイル、副作用なし）
-
 // エラーロギングモック
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => undefined),
@@ -130,10 +129,45 @@ mock.module("@/shared/lib/errors/server", () => ({
 // テストデータ
 // =============================================================================
 
-const VALID_INPUT = {
+type ProfileInputShape = {
+  customerType?: "PERSONAL" | "CORPORATE";
+  lastName: string;
+  firstName: string;
+  companyName?: string;
+  phoneNumber?: string;
+  turnstileToken?: string;
+};
+
+const VALID_INPUT: ProfileInputShape = {
+  customerType: "PERSONAL",
   lastName: "山田",
   firstName: "太郎",
   phoneNumber: "090-1234-5678",
+};
+
+function inputToFormData(input: ProfileInputShape): FormData {
+  const fd = new FormData();
+  if (input.customerType !== undefined) {
+    fd.append("customerType", input.customerType);
+  }
+  fd.append("lastName", input.lastName);
+  fd.append("firstName", input.firstName);
+  if (input.companyName !== undefined) {
+    fd.append("companyName", input.companyName);
+  }
+  if (input.phoneNumber !== undefined) {
+    fd.append("phoneNumber", input.phoneNumber);
+  }
+  if (input.turnstileToken !== undefined) {
+    fd.append("turnstileToken", input.turnstileToken);
+  }
+  return fd;
+}
+
+type SubmissionLike = {
+  readonly status?: "success" | "error";
+  readonly initialValue?: unknown;
+  readonly error?: Record<string, string[] | null> | null;
 };
 
 // =============================================================================
@@ -145,6 +179,7 @@ describe("updateProfileAction", () => {
     mockGetSession.mockClear();
     mockUpdateCustomerProfileByUserId.mockClear();
     mockCheckActionRateLimit.mockClear();
+    mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
 
     // デフォルト: 認証済み + レート制限なし + 更新成功
@@ -156,26 +191,35 @@ describe("updateProfileAction", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockValidateTurnstile.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
     mockUpdateCustomerProfileByUserId.mockImplementation(() =>
       Promise.resolve(),
     );
   });
 
   describe("正常系", () => {
-    test("有効な入力でプロフィール更新が成功し null を返す", async () => {
+    test("有効な入力でプロフィール更新が成功する (status: success)", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction(VALID_INPUT);
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toBeNull();
+      // resetForm: false 指定で `reply()` は `{ status: "success", initialValue, ... }`
+      // を返す (initialValue !== null で submitted values 維持)
+      expect(result.status).toBe("success");
+      expect(result.initialValue).not.toBeNull();
     });
 
     test("updateCustomerProfileByUserId が userId とパースデータを引数に呼ばれる", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction(VALID_INPUT);
+      await updateProfileAction(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledTimes(1);
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
@@ -194,7 +238,7 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction(VALID_INPUT);
+      await updateProfileAction(undefined, inputToFormData(VALID_INPUT));
 
       // CACHE_TAGS.CUSTOMERS + getCacheTag.customers.detail(id) の 2 回呼ばれる
       expect(mockUpdateTag).toHaveBeenCalledTimes(2);
@@ -205,34 +249,25 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction({
-        lastName: "田中",
-        firstName: "花子",
-      });
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData({
+          lastName: "田中",
+          firstName: "花子",
+        }),
+      )) as SubmissionLike;
 
-      expect(result).toBeNull();
-    });
-
-    test("phoneNumber が空文字列でも成功する", async () => {
-      const { updateProfileAction } =
-        await import("@/app/(public)/mypage/_shared/actions/profile");
-
-      const result = await updateProfileAction({
-        ...VALID_INPUT,
-        phoneNumber: "",
-      });
-
-      expect(result).toBeNull();
+      expect(result.status).toBe("success");
     });
 
     test("phoneNumber が空文字列のとき null として渡される", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction({
-        ...VALID_INPUT,
-        phoneNumber: "",
-      });
+      await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, phoneNumber: "" }),
+      );
 
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
         "user-001",
@@ -248,17 +283,19 @@ describe("updateProfileAction", () => {
   });
 
   describe("異常系: 未認証", () => {
-    test("セッションが null のとき認証エラーを返す", async () => {
+    test("セッションが null のとき formErrors に認証エラーを返す", async () => {
       mockGetSession.mockImplementation(() => Promise.resolve(null));
 
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction(VALID_INPUT);
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("認証が必要です");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("認証が必要です");
     });
 
     test("未認証時は updateCustomerProfileByUserId が呼ばれない", async () => {
@@ -267,14 +304,14 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction(VALID_INPUT);
+      await updateProfileAction(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockUpdateCustomerProfileByUserId).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: レート制限", () => {
-    test("レート制限超過時はエラーを返す", async () => {
+    test("レート制限超過時は formErrors にエラーを返す", async () => {
       mockCheckActionRateLimit.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
@@ -285,11 +322,13 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction(VALID_INPUT);
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("リクエストが多すぎます");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("リクエストが多すぎます");
     });
 
     test("レート制限超過時は updateCustomerProfileByUserId が呼ばれない", async () => {
@@ -303,77 +342,67 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction(VALID_INPUT);
+      await updateProfileAction(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockUpdateCustomerProfileByUserId).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("lastName が空文字列のとき fieldErrors を含むエラーを返す", async () => {
+    test("lastName が空文字列のとき fieldErrors を返す", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction({
-        ...VALID_INPUT,
-        lastName: "",
-      });
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("lastName");
+      expect(result.status).toBe("error");
+      expect(result.error?.["lastName"]).toBeDefined();
     });
 
-    test("firstName が空文字列のとき fieldErrors を含むエラーを返す", async () => {
+    test("firstName が空文字列のとき fieldErrors を返す", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction({
-        ...VALID_INPUT,
-        firstName: "",
-      });
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, firstName: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("firstName");
+      expect(result.status).toBe("error");
+      expect(result.error?.["firstName"]).toBeDefined();
     });
 
-    test("phoneNumber が 21 文字以上のとき fieldErrors を含むエラーを返す", async () => {
+    test("phoneNumber が 21 文字以上のとき fieldErrors を返す", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction({
-        ...VALID_INPUT,
-        phoneNumber: "0".repeat(21),
-      });
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, phoneNumber: "0".repeat(21) }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("phoneNumber");
+      expect(result.status).toBe("error");
+      expect(result.error?.["phoneNumber"]).toBeDefined();
     });
 
     test("バリデーション失敗時は updateCustomerProfileByUserId が呼ばれない", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction({ ...VALID_INPUT, lastName: "" });
+      await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "" }),
+      );
 
       expect(mockUpdateCustomerProfileByUserId).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: DB エラー", () => {
-    test("updateCustomerProfileByUserId がエラーをスローした場合 MutationError を返す", async () => {
+    test("updateCustomerProfileByUserId がエラーをスローした場合 formErrors を返す", async () => {
       mockUpdateCustomerProfileByUserId.mockImplementation(() =>
         Promise.reject(new Error("DB 接続エラー")),
       );
@@ -381,11 +410,13 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = await updateProfileAction(VALID_INPUT);
+      const result = (await updateProfileAction(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("プロフィールの更新に失敗しました");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("プロフィールの更新に失敗しました");
     });
 
     test("DB エラー時は updateTag が呼ばれない", async () => {
@@ -396,7 +427,7 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      await updateProfileAction(VALID_INPUT);
+      await updateProfileAction(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockUpdateTag).not.toHaveBeenCalled();
     });
@@ -422,7 +453,6 @@ describe("updateProfileAction", () => {
       const result = customerProfileSchema.safeParse({
         lastName: "田中",
         firstName: "花子",
-        // phoneNumber なし
       });
 
       expect(result.success).toBe(true);
@@ -446,7 +476,8 @@ describe("updateProfileAction", () => {
         await import("@/shared/lib/validations/customer-profile");
 
       const result = customerProfileSchema.safeParse({
-        ...VALID_INPUT,
+        lastName: "山田",
+        firstName: "太郎",
         phoneNumber: "0".repeat(20),
       });
 
@@ -458,7 +489,8 @@ describe("updateProfileAction", () => {
         await import("@/shared/lib/validations/customer-profile");
 
       const result = customerProfileSchema.safeParse({
-        ...VALID_INPUT,
+        lastName: "山田",
+        firstName: "太郎",
         phoneNumber: "0".repeat(21),
       });
 
@@ -470,17 +502,11 @@ describe("updateProfileAction", () => {
         await import("@/shared/lib/validations/customer-profile");
 
       const result = customerProfileSchema.safeParse({
-        ...VALID_INPUT,
         lastName: "",
+        firstName: "太郎",
       });
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const lastNameError = result.error.issues.find(
-          (issue) => issue.path[0] === "lastName",
-        );
-        expect(lastNameError).toBeDefined();
-      }
     });
 
     test("firstName が空文字列で失敗", async () => {
@@ -488,17 +514,11 @@ describe("updateProfileAction", () => {
         await import("@/shared/lib/validations/customer-profile");
 
       const result = customerProfileSchema.safeParse({
-        ...VALID_INPUT,
+        lastName: "山田",
         firstName: "",
       });
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const firstNameError = result.error.issues.find(
-          (issue) => issue.path[0] === "firstName",
-        );
-        expect(firstNameError).toBeDefined();
-      }
     });
   });
 });

@@ -44,6 +44,26 @@ export type ConformHandler<TInput> = (
 ) => Promise<ConformHandlerResult>;
 
 /**
+ * `executeConformMutation` のオプション。
+ */
+export type ExecuteConformMutationOptions = {
+  /**
+   * 成功時に form フィールド値を defaultValue に reset するか。
+   *
+   * - `true` (default): `submission.reply({ resetForm: true })` で
+   *   `{ initialValue: null }` を返し form を初期状態へ。settings sections
+   *   や dialog form 等、保存後に form を閉じる / 別ページに遷移する UX 向け。
+   * - `false`: `submission.reply()` で `{ status: "success", initialValue,
+   *   fields, error: null }` を返し submitted values を維持。profile-form 等、
+   *   inline で success メッセージを表示しつつ user が編集を続けられる UX 向け。
+   *
+   * conform v1.19 の `reply()` 挙動は `node_modules/@conform-to/dom/dist/submission.mjs`
+   * line 116-150 を参照。
+   */
+  readonly resetForm?: boolean;
+};
+
+/**
  * `useActionState(action, undefined)` 互換の Conform Server Action 実装 helper。
  *
  * @example
@@ -68,6 +88,7 @@ export async function executeConformMutation<TSchema extends z.ZodTypeAny>(
   formData: FormData,
   schema: TSchema,
   handler: ConformHandler<z.output<TSchema>>,
+  options?: ExecuteConformMutationOptions,
 ): Promise<SubmissionResult> {
   const submission = parseWithZod(formData, { schema });
 
@@ -81,5 +102,9 @@ export async function executeConformMutation<TSchema extends z.ZodTypeAny>(
     return submission.reply({ formErrors: [result.error] });
   }
 
-  return submission.reply({ resetForm: true });
+  // resetForm defaults to true (Phase 1 Task 4-8 の settings sections / dialog
+  // form の挙動を維持)。false 指定時は submitted values を維持して inline 表示
+  return options?.resetForm === false
+    ? submission.reply()
+    : submission.reply({ resetForm: true });
 }
