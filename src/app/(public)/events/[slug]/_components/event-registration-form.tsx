@@ -1,6 +1,14 @@
 "use client";
 
-import { useRef, useState, type ReactElement } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import type { ReactElement } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
 import { Heading } from "@/public/components/design-system/heading";
@@ -11,10 +19,8 @@ import {
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { usePublicForm } from "@/public/hooks/use-public-form";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { registerForEvent } from "@/public/actions/event-registration";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 interface EventRegistrationFormProps {
   readonly eventId: string;
@@ -28,36 +34,53 @@ export function EventRegistrationForm({
   remainingCapacity,
 }: EventRegistrationFormProps): ReactElement {
   const [submitted, setSubmitted] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const turnstileRef = useRef<TurnstileInstance>(null);
 
-  const { form, isPending, onSubmit } = usePublicForm(
-    publicEventRegistrationSchema,
-    async (data) => {
-      setErrorMessage(null);
-      const result = await registerForEvent(data);
-      if (isMutationError(result)) {
-        setErrorMessage(result.error);
-        turnstileRef.current?.reset();
-      } else {
-        setSubmitted(true);
-      }
-      return result;
-    },
-    {
-      defaultValues: {
-        eventId,
-        numberOfPeople: 1,
-      },
-    },
+  const [lastResult, formAction, isPending] = useActionState(
+    registerForEvent,
+    undefined,
   );
 
+  const [form, fields] = useForm({
+    id: "event-registration-form",
+    constraint: getZodConstraint(publicEventRegistrationSchema),
+    lastResult,
+    defaultValue: {
+      eventId,
+      numberOfPeople: 1,
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: publicEventRegistrationSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  const turnstileTokenControl = useInputControl(fields.turnstileToken);
+
+  // Render 中 state sync: 成功検出 (default `resetForm: true` → initialValue === null)
+  if (lastResult !== previousResult) {
+    setPreviousResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      setSubmitted(true);
+    }
+  }
+
+  // Turnstile DOM reset は副作用のため effect に残置
+  useEffect(() => {
+    if (lastResult?.status === "error") {
+      turnstileRef.current?.reset();
+      turnstileTokenControl.change("");
+    }
+  }, [lastResult, turnstileTokenControl]);
+
   function handleTurnstileVerify(token: string) {
-    form.setValue("turnstileToken", token);
+    turnstileTokenControl.change(token);
   }
 
   function handleTurnstileExpire() {
-    form.setValue("turnstileToken", "");
+    turnstileTokenControl.change("");
   }
 
   if (submitted) {
@@ -77,6 +100,9 @@ export function EventRegistrationForm({
     );
   }
 
+  const formErrorMessage =
+    form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
+
   return (
     <section aria-label="参加申込" className="space-y-4">
       <div className="space-y-1">
@@ -92,73 +118,70 @@ export function EventRegistrationForm({
       </div>
 
       <form
-        onSubmit={onSubmit}
+        {...getFormProps(form)}
+        action={formAction}
         className="space-y-6 border border-border p-6 sm:p-8"
       >
-        <input type="hidden" {...form.register("eventId")} />
-
-        <Input
-          id="reg-name"
-          label="お名前"
-          type="text"
-          required
-          placeholder="山田 太郎"
-          autoComplete="name"
-          {...(form.formState.errors.name?.message !== undefined && {
-            error: form.formState.errors.name.message,
-          })}
-          {...form.register("name")}
+        <input type="hidden" name={fields.eventId.name} value={eventId} />
+        <input
+          type="hidden"
+          name={fields.turnstileToken.name}
+          value={turnstileTokenControl.value ?? ""}
         />
 
         <Input
-          id="reg-email"
+          label="お名前"
+          required
+          placeholder="山田 太郎"
+          autoComplete="name"
+          {...(fields.name.errors?.[0] !== undefined && {
+            error: fields.name.errors[0],
+          })}
+          {...getInputProps(fields.name, { type: "text" })}
+        />
+
+        <Input
           label="メールアドレス"
-          type="email"
           required
           placeholder="mail@example.com"
           autoComplete="email"
           leadingIcon="IconMail"
-          {...(form.formState.errors.email?.message !== undefined && {
-            error: form.formState.errors.email.message,
+          {...(fields.email.errors?.[0] !== undefined && {
+            error: fields.email.errors[0],
           })}
-          {...form.register("email")}
+          {...getInputProps(fields.email, { type: "email" })}
         />
 
         <Input
-          id="reg-phone"
           label="電話番号（任意）"
-          type="tel"
           placeholder="090-1234-5678"
           autoComplete="tel"
           leadingIcon="IconPhone"
-          {...(form.formState.errors.phone?.message !== undefined && {
-            error: form.formState.errors.phone.message,
+          {...(fields.phone.errors?.[0] !== undefined && {
+            error: fields.phone.errors[0],
           })}
-          {...form.register("phone")}
+          {...getInputProps(fields.phone, { type: "tel" })}
         />
 
         <Input
-          id="reg-number"
           label="参加人数"
-          type="number"
           required
           min={1}
           max={remainingCapacity ?? 10}
-          {...(form.formState.errors.numberOfPeople?.message !== undefined && {
-            error: form.formState.errors.numberOfPeople.message,
+          {...(fields.numberOfPeople.errors?.[0] !== undefined && {
+            error: fields.numberOfPeople.errors[0],
           })}
-          {...form.register("numberOfPeople", { valueAsNumber: true })}
+          {...getInputProps(fields.numberOfPeople, { type: "number" })}
         />
 
         <Textarea
-          id="reg-note"
           label="備考（任意）"
           rows={3}
           placeholder="ご質問等あればご記入ください"
-          {...(form.formState.errors.note?.message !== undefined && {
-            error: form.formState.errors.note.message,
+          {...(fields.note.errors?.[0] !== undefined && {
+            error: fields.note.errors[0],
           })}
-          {...form.register("note")}
+          {...getInputProps(fields.note, { type: "text" })}
         />
 
         <TurnstileWidget
@@ -169,12 +192,12 @@ export function EventRegistrationForm({
           onExpire={handleTurnstileExpire}
         />
 
-        {errorMessage !== null && (
+        {formErrorMessage !== null && (
           <div
             className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             role="alert"
           >
-            {errorMessage}
+            {formErrorMessage}
           </div>
         )}
 
