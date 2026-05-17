@@ -11,7 +11,7 @@ paths:
 
 ## 例外項目
 
-- `LayoutFields.tsx` の `any` — `frontend/admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
+- `LayoutFields.tsx` の `as unknown as FieldMetadata<...>` 境界 cast — `type-safety/documented-exceptions-ledger.md` §5 conform generic invariance で明示許可 (`fields["contentWidth"] / ["contentWidthCustom"]` を Pure Component に渡すための境界変換)
 - `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
 - `select.tsx` の `required` — `frontend/project-design-config.md` で Radix 制約として除外
 - `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載

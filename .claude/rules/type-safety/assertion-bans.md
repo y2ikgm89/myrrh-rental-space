@@ -1,5 +1,5 @@
 ---
-description: 型アサーション (`as`) / 非null アサーション (`!`) 禁止 + 限定許可例外（DOM event / Prisma JSON / SectionConfig / serialize ヘルパー / standardSchemaResolver）+ 禁止パターン代替
+description: 型アサーション (`as`) / 非null アサーション (`!`) 禁止 + 限定許可例外（DOM event / Prisma JSON / SectionConfig / serialize ヘルパー / conform generic invariance）+ 禁止パターン代替
 paths:
   - src/**/*.ts
   - src/**/*.tsx
@@ -193,17 +193,6 @@ const linkClassName = cn(/* ... */);
 **禁止**: JSX 内 IIFE (`{(() => { const x = ...; return ...; })()}`) で narrow を作る — `@eslint-react/unsupported-syntax` 違反。必ず JSX 外で抽出する（→ `react/gotchas.md` §JSX 内の IIFE 禁止）。
 
 参照実装: `src/app/(public)/_shared/components/announcement-bar/announcement-bar.tsx` の `linkUrl` / `linkText` / `isExternalLink` 抽出（2026-05-13 typedoc TS2339 修正）。
-
-### 7. `standardSchemaResolver` 境界変換（`auto-section-form.tsx` の RHF 呼び出しのみ）
-
-RHF の `standardSchemaResolver` は `StandardSchemaV1<FieldValues>` を要求するが、動的セクション定義の `configSchema` は `z.ZodType<unknown>` として保持される（`sectionConfigSchemas` マップから取得）。`configSchema` は全て `z.object({...})` で定義されるため実行時は安全だが、TypeScript の invariance のため `as unknown as z.ZodObject<Record<string, z.ZodType>>` で橋渡しする。単一フォームへの適用であり Pure Component + Connected wrapper への分離は過剰なため、境界ヘルパーとして本ファイル内で完結する例外として許容する。
-
-```typescript
-// src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx
-resolver: standardSchemaResolver(
-  schema as unknown as z.ZodObject<Record<string, z.ZodType>>,
-),
-```
 
 ## 禁止パターンと代替手段
 

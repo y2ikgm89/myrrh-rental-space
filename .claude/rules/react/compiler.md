@@ -14,4 +14,4 @@ paths:
 > - **React 19 破壊的変更（forwardRef 廃止 / ComponentPropsWithRef）+ Context use() フック** — `react/compiler/react-19.md`
 > - **自動メモ化（useCallback / useMemo / React.memo 廃止）+ ref.current 衝突 + useEffectEvent** — `react/compiler/auto-memo.md`
 > - **'use no memo' / 'use memo' エスケープハッチ + 動的 component の static-components 回避** — `react/compiler/escape-hatches.md`
-> - **Rules of React + eslint-plugin-react-hooks ルール表 + RHF watch() 禁止 + useFieldArray + dnd-kit** — `react/compiler/rules-eslint-rhf.md`
+> - **Rules of React + eslint-plugin-react-hooks ルール表** — `react/compiler/rules-eslint.md`

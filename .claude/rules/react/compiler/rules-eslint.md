@@ -1,16 +1,16 @@
 ---
-description: Rules of React + eslint-plugin-react-hooks 7.x 統合ルール表 + 残存 RHF 利用箇所向けの watch() 禁止 / useFieldArray + dnd-kit パターン (Phase 1 Task 8 完了、RHF 完全削除は別 phase で予定)
+description: Rules of React + eslint-plugin-react-hooks 7.x 統合ルール表 (React Compiler 1.0 互換性条件)
 paths:
   - src/**/*.tsx
   - src/**/*.ts
   - eslint.config.mjs
 ---
 
-# Rules of React + ESLint + (残存) React Hook Form
+# Rules of React + ESLint
 
-> Compiler 最適化条件 + react-hooks plugin 16 ルール表 + **残存 RHF 利用箇所向け** watch() 禁止 + useFieldArray + dnd-kit 安定 ID パターン。
+> Compiler 最適化条件 + react-hooks plugin 16 ルール表。
 >
-> **重要**: 新規 form は conform `useActionState` + `useForm` + `parseWithZod` が canonical (→ `frontend/admin-ui/forms.md` / `frontend/admin-ui/forms/settings-sections.md`)。RHF (`react-hook-form` / `@hookform/resolvers`) は Phase 1 Task 4-8 全完了、残存は inline editor side-panel / auto-section-form のみ。別 phase で `package.json` から削除予定。本 rule docs の RHF section は **残存 form 編集時の規律**として維持。
+> Form 関連は conform `useActionState` + `useForm` + `parseWithZod` が canonical (→ `frontend/admin-ui/forms.md` / `frontend/admin-ui/forms/settings-sections.md`)。React Hook Form (`react-hook-form` / `@hookform/resolvers`) は `package.json` から完全削除済、新規利用不可。
 
 ## Rules of React（コンパイラが最適化できる条件）
 
@@ -77,93 +77,3 @@ React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-
 **太字**の 2 ルール（`incompatible-library`, `unsupported-syntax`）は `eslint-config-next` が warn に設定するため、`eslint.config.mjs` で明示的に error に昇格済み。
 
 **専門レビュー**: GSAP / Lenis / Lexical を含むファイル編集後は `react-compiler-reviewer` サブエージェントを使用。
-
-## React Hook Form — watch() 禁止
-
-`watch()` は使用禁止。代わりに `useWatch()` を使用:
-
-```typescript
-// NG: React Compiler でメモ化不可、フォーム全体が再レンダリング
-const { watch } = useForm();
-const value = watch("fieldName");
-
-// OK: コンポーネントレベルで再レンダリングを分離
-const { control } = useForm();
-const value = useWatch({ control, name: "fieldName" });
-
-// OK: 複数フィールドを同時監視
-const [firstName, lastName] = useWatch({
-  control,
-  name: ["firstName", "lastName"],
-});
-
-// OK: compute 関数で派生値を計算
-const isValid = useWatch({
-  control,
-  compute: (data) => Boolean(data.email && data.password),
-});
-```
-
-**理由:**
-
-- `watch` はフォームのルート（`useForm` を呼んだコンポーネント）全体を再レンダリングする
-- `useWatch` はサブコンポーネントレベルで再レンダリングを分離し、パフォーマンスを向上させる
-- React Compiler は `watch` の戻り値をメモ化できない
-
-## React Hook Form — useFieldArray + dnd-kit パターン
-
-配列フィールドは `useFieldArray` を使用する。`useState` や `form.setValue` + 手動配列操作は禁止:
-
-```typescript
-// NG: useState で配列を二重管理（RHF と同期がずれる）
-const [items, setItems] = useState<string[]>([]);
-
-// NG: useFieldArray に primitive 配列（動作しない）
-// useFieldArray は object[] 必須。string[] は受け付けない
-// schema: z.array(z.string()) → useFieldArray で NG
-
-// OK: object[] スキーマ + useFieldArray
-// schema: z.array(z.object({ url: z.string().url() }))
-const { fields, append, remove, move } = useFieldArray({
-  control: form.control,
-  name: "imageUrls", // 型: { url: string }[]
-});
-```
-
-**dnd-kit との統合（安定 ID パターン）**:
-
-```typescript
-// fields[].id は RHF が生成する安定した一意 ID — dnd-kit の SortableContext items に使用
-// NG: URL や index を dnd ID に使う（重複・不安定リスク）
-items={imageUrls.map((_, i) => `image-${i}`)}  // index → 並び替え後に壊れる
-items={imageUrls}                                // URL → 重複リスク
-
-// OK: fields[].id（RHF 管理、安定）
-items={fields.map((f) => f.id)}
-
-// OK: move() で並び替え（arrayMove 不要）
-const handleDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event
-  if (!over || active.id === over.id) return
-  const oldIndex = fields.findIndex((f) => f.id === String(active.id))
-  const newIndex = fields.findIndex((f) => f.id === String(over.id))
-  if (oldIndex !== -1 && newIndex !== -1) move(oldIndex, newIndex)
-}
-
-// OK: fields.length はリアクティブ（form.getValues() は非リアクティブなので禁止）
-maxSelections: 10 - fields.length                          // ✓ リアクティブ
-maxSelections: 10 - form.getValues('imageUrls').length     // ✗ 非リアクティブ
-```
-
-**スキーマ・フォーム・Server Action 間の変換**:
-
-```typescript
-// Zod スキーマ: useFieldArray のため object[]
-imageUrls: z.array(z.object({ url: z.string().url({ error: "..." }) }));
-
-// 編集時の初期値: DB の string[] → フォームの { url: string }[]
-imageUrls: location.imageUrls.map((url) => ({ url }));
-
-// Server Action: フォームの { url: string }[] → Prisma の string[]
-imageUrls: data.imageUrls.map((i) => i.url);
-```

@@ -33,9 +33,9 @@ argument-hint: <resource-name-camelCase>
 
 ### フォームパターン (conform canonical)
 
-- **標準** (Phase 1 Task 4-8 全完了): React 19 `useActionState` + conform `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`)。Server Action は `(prev, formData) => SubmissionResult` signature、`executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ
-- **`useFormAction` (RHF) は legacy** — 新規 admin form では使用禁止。別 phase で `react-hook-form` / `@hookform/resolvers` を `package.json` から削除予定。既存 RHF 残存 form（inline editor side-panel / auto-section-form のみ）の編集時は同じ commit 内で conform に置換
-- **複雑 form** (Phase 1 Task 8.6/8.7 で canonical 確立): DnD・動的配列・MediaPicker・Lexical 統合は ① conform `form.insert/remove/reorder` + dnd-kit + hidden input (LocationForm canonical) または ② useState array + 安定 key + hidden input append + schema preprocess (SpaceEditForm canonical、MediaPicker / IconPickerField 等 external state 連携時) のいずれかを採用。参照実装: `LocationForm` (PR #96) / `SpaceEditForm` (PR #98、5 tab monolithic 1700 行)
+- **標準**: React 19 `useActionState` + conform `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`)。Server Action は `(prev, formData) => SubmissionResult` signature、`executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ
+- **React Hook Form は `package.json` から完全削除済** — 新規利用不可
+- **複雑 form**: DnD・動的配列・MediaPicker・Lexical 統合は ① conform `form.insert/remove/reorder` + dnd-kit + hidden input (LocationForm canonical) または ② useState array + 安定 key + hidden input append + schema preprocess (SpaceEditForm canonical、MediaPicker / IconPickerField 等 external state 連携時) のいずれかを採用。参照実装: `LocationForm` / `SpaceEditForm` (5 tab monolithic 1700 行)
 - **参照実装** (PR #61-#62、admin form 16 件 migration 済):
   - **simple** (settings sections): `MaintenanceSection` / `CookieConsentSection` / `NotificationSection` / `HeaderSection` / `PermalinkSection` / `ReservationSection` / `EmailSection` / `FooterSection` / `TaxSection`
   - **medium**: `CustomerForm` (create) / `CustomerEditForm` (edit + email blur + bind) / `CouponForm` (create/edit 統合 + conditional UI) / `PageSeoForm` + `ListPageSeoForm` (MediaPicker bridge) / `UserForm` (schema mode 切替) / `InviteForm` (derived success state + delayed redirect)
