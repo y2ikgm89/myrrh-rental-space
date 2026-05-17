@@ -1,5 +1,6 @@
 "use server";
 
+import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -18,10 +19,14 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeNewsCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   createNewsSchema,
+  newsBodyFormSchema,
+  newsSettingsFormSchema,
   updateNewsBodySchema,
   updateNewsSettingsSchema,
   type CreateNewsInput,
@@ -52,6 +57,89 @@ function purgeNewsCaches(...slugs: Array<string | undefined>): void {
 function invalidateNewsCollectionCaches(): void {
   updateTag(CACHE_TAGS.NEWS);
   updateTag(CACHE_TAGS.SIDEBAR_DATA);
+}
+
+/**
+ * お知らせの本文（contentJson / 派生 contentHtml）のみを更新する conform 用 Server Action。
+ * `(prev, formData) => SubmissionResult` signature。id 必要のため呼び出し側で
+ * `bind(null, news.id)` 部分適用。
+ */
+export async function updateNewsBodyAction(
+  id: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, newsBodyFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "news",
+      action: "update",
+      resourceId: id,
+      execute: async () => {
+        const updated = await updateNewsBodyCommand(id, {
+          contentJson: data.contentJson,
+          contentHtml: data.contentHtml,
+        });
+        return updated;
+      },
+      afterSuccess: (updated) => {
+        invalidateNewsCollectionCaches();
+        updateTag(getCacheTag.news.detail(updated.slug));
+        purgeNewsCaches(updated.slug);
+      },
+    });
+    return isMutationError(result)
+      ? { ok: false, error: result.error }
+      : { ok: true };
+  });
+}
+
+/**
+ * お知らせの設定（メタデータ・公開状態・SEO/OGP・レイアウト）のみを更新する conform 用 Server Action。
+ */
+export async function updateNewsSettingsAction(
+  id: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    newsSettingsFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "news",
+        action: "update",
+        resourceId: id,
+        execute: async () => {
+          const updated = await updateNewsSettingsCommand(
+            id,
+            omitUndefined({
+              slug: data.slug,
+              title: data.title,
+              contentWidth: data.contentWidth ?? null,
+              contentWidthCustom: data.contentWidthCustom ?? null,
+              metaDescription: data.metaDescription,
+              metaKeywords: data.metaKeywords,
+              ogpTitle: data.ogpTitle,
+              ogpDescription: data.ogpDescription,
+              ogpImageUrl: data.ogpImageUrl,
+            }),
+          );
+          return updated;
+        },
+        afterSuccess: (updated) => {
+          invalidateNewsCollectionCaches();
+          updateTag(getCacheTag.news.detail(updated.oldSlug));
+          if (updated.slug !== updated.oldSlug) {
+            updateTag(getCacheTag.news.detail(updated.slug));
+          }
+          purgeNewsCaches(updated.oldSlug, updated.slug);
+        },
+      });
+      return isMutationError(result)
+        ? { ok: false, error: result.error }
+        : { ok: true };
+    },
+  );
 }
 
 export async function createNews(

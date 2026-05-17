@@ -15,7 +15,6 @@ export type {
   SidePanelInjectedProps,
   PostSidePanelExtra,
   NewsSidePanelExtra,
-  FieldComponentProps,
   SEOFormFields,
   OGPFormFields,
   BooleanPublishFormFields,
