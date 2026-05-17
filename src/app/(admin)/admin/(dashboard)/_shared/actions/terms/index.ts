@@ -1,13 +1,11 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import {
-  termsFormSchema,
-  type TermsFormInput,
-} from "@/shared/lib/validations/terms";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   createTermsCommand,
   hardDeleteTermsCommand,
@@ -17,6 +15,7 @@ import {
   updateTermsPublishedCommand,
 } from "@/shared/domain/terms/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { termsFormSchema } from "../../../terms/_components/terms-form-schema";
 
 function invalidateTermsCaches(slug?: string, previousSlug?: string) {
   updateTag(CACHE_TAGS.TERMS);
@@ -25,41 +24,6 @@ function invalidateTermsCaches(slug?: string, previousSlug?: string) {
   if (previousSlug && previousSlug !== slug) {
     updateTag(getCacheTag.terms.detail(previousSlug));
   }
-}
-
-export async function createTerms(
-  input: TermsFormInput,
-): Promise<MutationResult<{ id: string; slug: string }>> {
-  const parsed = termsFormSchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
-
-  return executeAdminMutationResult({
-    resource: "terms",
-    action: "create",
-    execute: async () => createTermsCommand(parsed.data),
-    afterSuccess: (data) => {
-      invalidateTermsCaches(data.slug);
-    },
-    resolveAuditResourceId: (data) => data.id,
-  });
-}
-
-export async function updateTerms(
-  id: string,
-  input: TermsFormInput,
-): Promise<MutationResult<{ id: string; slug: string }>> {
-  const parsed = termsFormSchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
-
-  return executeAdminMutationResult({
-    resource: "terms",
-    action: "update",
-    resourceId: id,
-    execute: async () => updateTermsCommand(id, parsed.data),
-    afterSuccess: (data) => {
-      invalidateTermsCaches(data.slug, data.previousSlug);
-    },
-  });
 }
 
 export async function deleteTerms(
@@ -116,5 +80,56 @@ export async function restoreTerms(
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },
+  });
+}
+
+// =============================================================================
+// Conform `useActionState` 用 Server Actions (Phase 1 Task 8.3)
+//
+// `(prev, formData) => SubmissionResult` signature。TermsForm (page 遷移付き form)
+// で `<form action={action}>` 経由で利用される。create は新規作成ページ、update は
+// id を bind で部分適用。
+// =============================================================================
+
+export async function createTermsAction(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, termsFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "terms",
+      action: "create",
+      execute: async () => createTermsCommand(data),
+      afterSuccess: (output) => {
+        invalidateTermsCaches(output.slug);
+      },
+      resolveAuditResourceId: (output) => output.id,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
+}
+
+export async function updateTermsAction(
+  id: string,
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, termsFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "terms",
+      action: "update",
+      resourceId: id,
+      execute: async () => updateTermsCommand(id, data),
+      afterSuccess: (output) => {
+        invalidateTermsCaches(output.slug, output.previousSlug);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
   });
 }
