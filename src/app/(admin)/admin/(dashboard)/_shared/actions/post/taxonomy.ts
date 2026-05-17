@@ -208,14 +208,14 @@ export async function deletePostTag(id: string): Promise<MutationResult> {
 }
 
 // =============================================================================
-// Conform `useActionState` 用 Server Actions (Phase 1 Task 6-7)
+// Conform `useActionState` 用 Server Actions
 //
 // `(prev, formData) => SubmissionResult` signature。TaxonomyEditor (edit page)
 // と CategoryManager / TagManager (dialog form) の両方で利用される。
 // =============================================================================
 
 /**
- * カテゴリ作成 — conform `useActionState` 統合経路 (Phase 1 Task 7)。
+ * カテゴリ作成 — conform `useActionState` 統合経路。
  *
  * CategoryManager dialog form 用。dialog では SEO フィールド (metaTitle 等) は
  * 入力されないため optional 扱い、null 化して domain command に渡す。
@@ -252,7 +252,7 @@ export async function createPostCategoryAction(
 }
 
 /**
- * タグ作成 — conform `useActionState` 統合経路 (Phase 1 Task 7)。
+ * タグ作成 — conform `useActionState` 統合経路。
  *
  * TagManager dialog form 用。
  */

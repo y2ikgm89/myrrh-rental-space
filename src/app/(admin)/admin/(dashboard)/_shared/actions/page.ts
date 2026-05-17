@@ -82,7 +82,6 @@ export async function updatePage(
 /**
  * 新規 page 作成 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function createPage(

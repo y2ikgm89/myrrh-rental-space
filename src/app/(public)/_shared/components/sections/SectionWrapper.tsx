@@ -24,7 +24,7 @@ import type {
 } from "@/shared/lib/sections/definitions/_shared/layout";
 
 // =============================================================================
-// Mapping tables — Layout (Phase 3 Bundle 2)
+// Mapping tables — Layout
 // =============================================================================
 
 /** layout.padding → 上下 py-* クラス（@theme --space-* token 参照） */
@@ -111,7 +111,7 @@ interface SectionWrapperProps {
   readonly style: SectionStylePayload;
   readonly children: ReactNode;
   readonly className?: string;
-  /** Phase 3 Bundle 2: 共通 layout / visibility / animation 設定 */
+  /** 共通 layout / visibility / animation 設定 */
   readonly layout?: SectionLayoutConfig;
   /** 追加の inline style（config.backgroundColor 等） */
   readonly styleProp?: CSSProperties;

@@ -3,7 +3,6 @@
 /**
  * AutoGroupField — 折りたたみ可能なグループフィールド
  *
- * Phase 3-A conform 移行: FieldMetadata.getFieldset() で nested object のサブ
  * フィールドアクセサを取得。循環 import を避けるため、子フィールドのレンダリング
  * は renderField prop で受け取る。
  */

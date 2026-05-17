@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * TagManager — タグ管理コンポーネント (Phase 1 Task 7 conform 移行)
+ * TagManager — タグ管理コンポーネント
  *
  * @description nuqs対応、検索・ソート・フィルター機能付き。
  * Dialog 内 form は conform `useActionState` + `useForm` (Variant A:

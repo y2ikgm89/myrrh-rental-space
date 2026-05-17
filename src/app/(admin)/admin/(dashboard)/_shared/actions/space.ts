@@ -120,7 +120,7 @@ export async function updateSpace(
 }
 
 /**
- * 管理画面 新規 Space 作成 — conform `useActionState` canonical (Phase 1 Task 8.7)
+ * 管理画面 新規 Space 作成 — conform `useActionState` canonical
  *
  * `(prev, formData) => SubmissionResult` signature。
  * 成功時は server-side `redirect(/admin/spaces/<id>)` で詳細ページに遷移、失敗時は `submission.reply()`。
@@ -163,7 +163,7 @@ export async function createSpaceAction(
 }
 
 /**
- * 管理画面 Space 更新 — conform `useActionState` canonical (Phase 1 Task 8.7)
+ * 管理画面 Space 更新 — conform `useActionState` canonical
  *
  * id は `bind(null, space.id)` で部分適用。
  * 成功時は server-side `redirect(/admin/spaces/<id>)` で詳細ページに遷移。

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * FaqItemDialog — Phase 1 Task 6 conform 移行 (Variant B canonical)
+ * FaqItemDialog
  *
  * 質問の作成・編集を Dialog で行う共用コンポーネント。parent component
  * (`FaqCategoryDetailView`) が `editingItem` + `open` state を保持し、本 Dialog

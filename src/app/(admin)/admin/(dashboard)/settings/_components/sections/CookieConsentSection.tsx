@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Cookie同意バナー設定セクション (Phase 1 Task 5 conform 移行)
+ * Cookie同意バナー設定セクション
  *
  * GDPR対応のCookie同意バナーの表示設定
  */

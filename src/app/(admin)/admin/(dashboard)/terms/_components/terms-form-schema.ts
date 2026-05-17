@@ -3,7 +3,7 @@ import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import { TERMS_TYPE_VALUES } from "@/shared/lib/validations/terms";
 
 /**
- * TermsForm (conform) form schema — Phase 1 Task 8.3
+ * TermsForm (conform) form schema
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
  * - `contentJson` (Lexical EditorState JSON string) は hidden input で transit

@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * 顧客新規作成フォーム — Phase 1 Task 6 conform 移行。
+ * 顧客新規作成フォーム
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。Switch / Select は `useInputControl` で hidden input
  * と sync する公式パターン (https://conform.guide/api/react/useInputControl)。
  * カナ自動入力は `useKanaInput` 互換 (内部 state → 同 name の controlled input)。

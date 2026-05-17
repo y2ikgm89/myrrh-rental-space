@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * Instagram フィード表示設定 — Phase 1 Task 6 conform 移行
+ * Instagram フィード表示設定
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。フィード有効化 (Switch) /
  * レイアウト (SelectionBox) / 列数・表示件数 (number) / キャプション・もっと見る
  * (Switch) を 1 保存単位で扱う。
  */

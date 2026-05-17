@@ -59,9 +59,8 @@ function invalidateCalendarSyncCache(): void {
 }
 
 /**
- * Google Calendar 設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * Google Calendar 設定更新 — conform `useActionState` 統合経路。
  *
- * `useFormAction` (RHF) から `useActionState` + `useForm` (conform) に clean break 移行。
  * 空文字列フィールドは null 化して domain command に渡す。
  */
 export async function updateGoogleCalendarSettings(
@@ -208,9 +207,8 @@ export async function disconnectGoogleCalendarOAuth(): Promise<MutationResult> {
 }
 
 /**
- * 双方向同期設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * 双方向同期設定更新 — conform `useActionState` 統合経路。
  *
- * `useFormAction` (RHF) から `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateTwoWaySyncSettings(
   _prev: SubmissionResult | undefined,

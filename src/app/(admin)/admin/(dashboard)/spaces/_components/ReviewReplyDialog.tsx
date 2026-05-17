@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ReviewReplyDialog — Phase 1 Task 6 conform 移行 (Variant B)
+ * ReviewReplyDialog
  *
  * `useForm` (RHF + `zodResolver`) → `useActionState` + `useForm`
  * (@conform-to/react) clean break 移行。parent component が `open` /

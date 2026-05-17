@@ -30,7 +30,7 @@ import { barFormSchema } from "./bar-form-schema";
 import type { DeleteDialogProps } from "./types";
 
 // =============================================================================
-// BarFormDialog (Phase 1 Task 8.1 — conform Variant A: mount-on-open + bind)
+// BarFormDialog
 // =============================================================================
 
 type BarFormDialogProps = {

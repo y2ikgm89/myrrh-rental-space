@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * ページSEO編集フォーム — Phase 1 Task 6 conform 移行。
+ * ページSEO編集フォーム
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。`updatePageSeo` は `page.slug` を bind で部分適用。
  *
  * - 基本SEO設定 / OGP設定 を「フォーム左 / ライブプレビュー右」で表示

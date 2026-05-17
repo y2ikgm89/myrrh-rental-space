@@ -3,7 +3,6 @@
 /**
  * AutoSectionForm — Zod スキーマ駆動のセクション設定フォーム自動生成
  *
- * Phase 3-A conform 移行: RHF + standardSchemaResolver → conform useForm + parseWithZod.
  * onSave callback 契約は維持（親 SectionEditPanel が updatePageSection を呼ぶ pattern）。
  *
  * セクション定義レジストリから Zod スキーマを取得し、各フィールドに埋め込まれた

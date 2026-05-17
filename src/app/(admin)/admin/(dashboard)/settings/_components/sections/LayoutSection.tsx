@@ -1,11 +1,9 @@
 "use client";
 
 /**
- * レイアウト設定セクション — Phase 1 Task 6 conform 移行
+ * レイアウト設定セクション
  *
  * サイト全体の幅と記事コンテンツ幅を設定（比率プレビュー付き）。
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。Select は `useInputControl` で
  * value 取得 + onValueChange 経由で双方向 sync、conditional Custom field
  * (LayoutWidth.CUSTOM 選択時のみ) はリアクティブ表示。
  */

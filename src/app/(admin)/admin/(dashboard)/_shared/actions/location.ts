@@ -41,7 +41,7 @@ const locationOrderSchema = z
   });
 
 /**
- * 管理画面 新規 Location 作成 — conform `useActionState` canonical (Phase 1 Task 8.6)
+ * 管理画面 新規 Location 作成 — conform `useActionState` canonical
  *
  * `(prev, formData) => SubmissionResult` signature。
  * 成功時は `redirect(/admin/locations/<id>)` で詳細ページに遷移、失敗時は `submission.reply()`。

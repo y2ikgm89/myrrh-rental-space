@@ -1,13 +1,11 @@
 "use client";
 
 /**
- * 基本情報セクション — Phase 1 Task 6 conform 移行
+ * 基本情報セクション
  *
  * サイト名、フッターコピーライト、サイト説明（テキスト情報）と、
  * ロゴ・ファビコン・OGP画像（ブランド画像）を 1 つの保存単位で管理する。
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。MediaPickerField は `useInputControl`
  * で value / onChange を bridge、Switch も `useInputControl` + hidden input
  * 経由で "on" / "" sync。
  *

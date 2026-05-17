@@ -41,7 +41,6 @@ import {
 /**
  * メンテナンス設定の更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 5 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  * 認証・権限・監査ログは `executeAdminMutationResult` SSoT に委譲する。
  */
@@ -75,7 +74,6 @@ export async function updateMaintenanceSettings(
 /**
  * Cookie 同意設定の更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 5 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateCookieConsentSettings(
@@ -282,7 +280,6 @@ export async function updateFooterSettings(
  * sitemap prune / SectionRenderer skip / cron 早期 return。
  * cache invalidation は影響範囲に応じて広範囲に実行する必要がある。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateFeatureModulesSettings(
@@ -303,7 +300,7 @@ export async function updateFeatureModulesSettings(
         afterSuccess: () => {
           // FEATURE_MODULES SSoT 自体
           updateTag(CACHE_TAGS.FEATURE_MODULES);
-          // Phase 3 で feature filter を埋め込んだ全 consumer を invalidate
+          // feature filter を埋め込んだ全 consumer を invalidate
           updateTag(CACHE_TAGS.NAVIGATION);
           updateTag(CACHE_TAGS.PAGE_SECTIONS);
           updateTag(CACHE_TAGS.SECTIONS);

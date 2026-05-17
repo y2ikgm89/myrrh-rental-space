@@ -1,10 +1,9 @@
 "use client";
 
 /**
- * Google Calendar設定セクション — Phase 1 Task 6 conform 移行
+ * Google Calendar設定セクション
  *
  * サービスアカウント連携、OAuth連携、iCal/Add to Calendar設定。
- * `useFormAction` (RHF) → `useActionState` + `useForm` (conform) clean break 移行。
  */
 
 import { useActionState, useEffect, useState, useTransition } from "react";

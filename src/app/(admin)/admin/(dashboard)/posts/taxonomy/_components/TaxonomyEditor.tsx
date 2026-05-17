@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * TaxonomyEditor — Phase 1 Task 6 conform 移行
+ * TaxonomyEditor
  *
  * `useForm` (RHF + `standardSchemaResolver`) → `useActionState` + `useForm`
  * (@conform-to/react) clean break。Category / Tag は別 `useActionState` を持つ

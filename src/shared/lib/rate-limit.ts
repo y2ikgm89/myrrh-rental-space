@@ -5,7 +5,6 @@
  * Redis 等の distributed backend を switch 可能にした SSoT。
  *
  * **設計判断（distributed environments）:**
- *
  * `InMemoryRateLimitStore` は **per-instance protection only**。Cloud Run の
  * multi-instance autoscale 環境では、各 instance が独立した bucket を持つため
  * 「同一 IP が N instance × maxRequests/min を発行可能」になる。完全な
@@ -13,14 +12,12 @@
  * Memorystore 等）に env-driven で切り替える。
  *
  * **多層防御:**
- *
  * - Layer 1: `InMemoryRateLimitStore`（このファイル、per-instance）
  * - Layer 2: Cloudflare Turnstile（公開フォームの bot 緩和、`turnstile-actions.ts`）
  * - Layer 3: Cloud Run autoscale max instance 数（実質的なグローバル上限）
  * - Layer 4: Cloudflare WAF Custom Rules（CDN 層 IP rate limit、運用配線）
  *
  * **interface contract:**
- *
  * `check(token, options)` は `Promise<RateLimitResult>` を返す（Redis backend
  * 切替を前提とした async）。in-memory 実装は LRU から同期取得するが、
  * `Promise.resolve()` で wrap して interface を統一する。

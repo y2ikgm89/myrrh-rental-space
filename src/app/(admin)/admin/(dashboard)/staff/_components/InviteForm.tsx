@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * スタッフ招待フォーム — Phase 1 Task 6 conform 移行。
+ * スタッフ招待フォーム
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。`sendInvitation` Server Action は
  * `(prev, formData)` SubmissionResult signature。
  *

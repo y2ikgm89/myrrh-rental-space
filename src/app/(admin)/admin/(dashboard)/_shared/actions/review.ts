@@ -66,7 +66,6 @@ export async function deleteReview(
 /**
  * レビュー返信 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function replyToReview(

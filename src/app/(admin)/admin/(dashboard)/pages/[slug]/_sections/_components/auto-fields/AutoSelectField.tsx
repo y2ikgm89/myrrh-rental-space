@@ -3,7 +3,6 @@
 /**
  * AutoSelectField — conform useInputControl ベースの Select
  *
- * Phase 3-A conform 移行: FieldMetadata + useInputControl + hidden input transit.
  * static options（schema 由来）と dynamic options（DB 由来）の両方をサポート。
  * dynamicOptions が渡された場合、先頭に「（指定なし）」エントリ + DB 値を options
  * として描画する（static options は使わない）。

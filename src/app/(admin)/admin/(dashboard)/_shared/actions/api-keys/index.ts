@@ -53,7 +53,6 @@ function refreshSettingsCache(): void {
 /**
  * Resend 設定更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  * 空文字は domain command 渡し前に null 化（クリア operation は `clearResendKeys`
  * を使うが、空フィールド送信で実質クリアにならないよう "" → null 変換のみ）。
@@ -121,7 +120,6 @@ export async function clearResendKeys(): Promise<MutationResult> {
 /**
  * Turnstile 設定更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateTurnstileSettings(
@@ -198,7 +196,6 @@ export async function clearTurnstileKeys(): Promise<MutationResult> {
 /**
  * Google Maps 設定更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateGoogleMapsSettings(
@@ -270,7 +267,6 @@ export async function clearGoogleMapsKeys(): Promise<MutationResult> {
 /**
  * Cloudflare 設定更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  */
 export async function updateCloudflareSettings(

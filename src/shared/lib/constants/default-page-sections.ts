@@ -9,7 +9,7 @@ import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { createBlock, createSpan } from "@/shared/lib/portable-text";
 
 /**
- * Phase 4: textarea -> block 移行 helper
+ * textarea -> block 移行 helper
  * 単一行テキストを PortableTextBlock 配列にラップして defaults に流す。
  */
 function block(text: string) {

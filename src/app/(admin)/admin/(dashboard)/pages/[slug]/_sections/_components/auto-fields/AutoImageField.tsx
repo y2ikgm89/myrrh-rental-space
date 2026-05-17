@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AutoImageField — セクションエディタ用画像フィールド（Phase 3）
+ * AutoImageField — セクションエディタ用画像フィールド
  *
  * Zod スキーマ駆動のセクション設定フォーム（AutoSectionForm）で使用される画像フィールドコンポーネント。
  *

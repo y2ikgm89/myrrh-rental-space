@@ -1,7 +1,7 @@
 /**
  * Button Inspector Panel
  *
- * @description ButtonNodeのプロパティ編集パネル (Phase 5: rich label tokens 対応版)
+ * @description ButtonNodeのプロパティ編集パネル
  */
 
 "use client";

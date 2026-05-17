@@ -1,12 +1,10 @@
 "use client";
 
 /**
- * 事業者情報セクション — Phase 1 Task 6 conform 移行
+ * 事業者情報セクション
  *
  * 会社名 / 屋号 / 代表者 / 事業形態 (Select) / 業種 (Select) / 設立日 /
  * 法人番号 / インボイス登録番号 / 事業概要 (textarea) を 1 保存単位で扱う。
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。
  */
 
 import { useActionState, useEffect } from "react";

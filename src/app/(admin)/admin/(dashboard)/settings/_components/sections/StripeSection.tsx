@@ -1,10 +1,9 @@
 "use client";
 
 /**
- * Stripe設定セクション — Phase 1 Task 6 conform 移行
+ * Stripe設定セクション
  *
  * Stripe APIキーの設定と接続テスト。
- * `useFormAction` (RHF) → `useActionState` + `useForm` (conform) clean break 移行。
  */
 
 import { useActionState, useEffect, useState, useTransition } from "react";

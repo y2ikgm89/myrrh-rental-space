@@ -39,7 +39,6 @@ function emptyToNull(value: string | undefined): string | null {
 /**
  * 基本情報更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  * テキスト 3 件 + MediaPicker 4 件 + Switch 2 件を 1 保存単位で扱う。
  */
@@ -79,7 +78,6 @@ export async function updateBasicInfo(
 /**
  * レイアウト設定更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  * containerWidth / contentWidth は LayoutWidth enum、custom 値は
  * string で受け取り CUSTOM の場合のみ parseInt して domain に渡す。
@@ -119,7 +117,7 @@ export async function updateLayoutSettings(
 }
 
 /**
- * メタ情報設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * メタ情報設定更新 — conform `useActionState` 統合経路。
  */
 export async function updateMetaSettings(
   _prev: SubmissionResult | undefined,
@@ -150,7 +148,7 @@ export async function updateMetaSettings(
 }
 
 /**
- * Analytics 設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * Analytics 設定更新 — conform `useActionState` 統合経路。
  *
  * analyticsType: フォームでは "none" を含む union (conform 経由) で受け、
  * domain command 渡し時に "none" → null に変換。
@@ -191,7 +189,7 @@ export async function updateAnalyticsSettings(
 }
 
 /**
- * 検索エンジン検証設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * 検索エンジン検証設定更新 — conform `useActionState` 統合経路。
  */
 export async function updateSearchVerification(
   _prev: SubmissionResult | undefined,

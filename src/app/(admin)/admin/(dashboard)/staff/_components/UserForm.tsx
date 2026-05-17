@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * スタッフ（User）作成・編集フォーム — Phase 1 Task 6 conform 移行。
+ * スタッフ（User）作成・編集フォーム
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。`updateUser` は `user.id` を bind で部分適用。
  *
  * ロール選択肢は `editableRoles` prop に従う（呼び出し側が階層から決定）。

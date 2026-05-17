@@ -18,7 +18,7 @@ import { BookingSummary } from "./booking-summary";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 
 // ---------------------------------------------------------------------------
-// Types — conform fields SSoT (Phase 1 Task 8.5 EventForm pattern)
+// Types — conform fields SSoT
 // ---------------------------------------------------------------------------
 
 export type ReservationFormFields = Required<{

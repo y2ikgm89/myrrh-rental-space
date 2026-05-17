@@ -16,7 +16,6 @@ import { isRecord } from "@/shared/lib/serialize";
 /**
  * スペースフォーム用バリデーションスキーマ
  *
- * Phase 1 Task 8.7 で conform `useActionState` + FormData transit に対応
  * （in-place preprocess pattern、Task 8.6 LocationForm canonical 踏襲）。
  *
  * preprocess は typed value pass-through で no-op、string/FormData 入力時のみ coerce。

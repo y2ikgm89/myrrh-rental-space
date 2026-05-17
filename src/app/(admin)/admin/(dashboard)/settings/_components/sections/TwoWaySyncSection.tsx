@@ -1,10 +1,9 @@
 "use client";
 
 /**
- * 双方向同期設定セクション — Phase 1 Task 6 conform 移行
+ * 双方向同期設定セクション
  *
  * Google Calendarからの変更を予約システムに反映する設定。
- * `useFormAction` (RHF) → `useActionState` + `useForm` (conform) clean break 移行。
  */
 
 import { useActionState, useEffect, useState, useTransition } from "react";

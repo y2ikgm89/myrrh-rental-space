@@ -34,7 +34,7 @@ import {
 } from "../../../reservations/_components/reservation-form-schema";
 
 /**
- * 管理画面 新規予約作成 — conform `useActionState` canonical (Phase 1 Task 8.4)
+ * 管理画面 新規予約作成 — conform `useActionState` canonical
  *
  * `(prev, formData) => SubmissionResult` signature。
  * 成功時は `redirect()` で詳細ページに遷移、失敗時は `submission.reply()` を返す。
@@ -175,7 +175,7 @@ export async function createReservationAction(
 }
 
 /**
- * 管理画面 予約更新 — conform `useActionState` canonical (Phase 1 Task 8.4)
+ * 管理画面 予約更新 — conform `useActionState` canonical
  *
  * id は `bind(null, reservation.id)` で部分適用。
  * 成功時は詳細ページにリダイレクト、失敗時は `submission.reply()` を返す。

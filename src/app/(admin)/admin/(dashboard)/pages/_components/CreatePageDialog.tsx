@@ -1,12 +1,11 @@
 "use client";
 
 /**
- * 新規ページ作成ダイアログ — Phase 1 Task 6 conform 移行 (Variant A)
+ * 新規ページ作成ダイアログ
  *
  * - タイトルからスラッグ自動生成
  * - リアルタイムスラッグ検証（debounce 500ms）
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * clean break 移行。Dialog open state は本 component 内で `useState` 管理
  * (Variant A、PR #64 SpaceCategory pattern と同型)、controlled 親 prop も
  * オプショナル対応。success 検知 → close + navigate は render 中 sync

@@ -6,7 +6,6 @@
  *
  * - `@generated/prisma/enums`  — Prisma enum 値（const オブジェクト + 型）
  * - `@generated/prisma/browser` — `Prisma` 名前空間の **型のみ**
- *
  * `src/shared/db/` および `src/shared/domain/` 以外のコード（`src/app/**`,
  * `src/shared/lib/**` 等）は `@generated/prisma/*` を直接 import せず、
  * 必ずこのファイルを経由してください（architecture-boundaries.test.ts で強制）。
