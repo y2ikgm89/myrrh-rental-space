@@ -4,7 +4,7 @@
  * サイドバー設定セクション（オーケストレーター）
  *
  * 状態管理・保存処理のみ担当。UI は sidebar/ サブコンポーネントに委譲。
- * Settings CRUD table 例外パターン: useState + useTransition（useFormAction 不使用）
+ * Settings CRUD table 例外パターン: useState + useTransition で sortable widget 配列を管理。
  */
 
 import { useState, useTransition } from "react";
