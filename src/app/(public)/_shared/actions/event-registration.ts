@@ -1,18 +1,16 @@
 "use server";
 
+import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
-import {
-  publicEventRegistrationSchema,
-  type PublicEventRegistrationInput,
-} from "@/shared/lib/validations/event-registration";
+import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { z } from "zod";
 import {
   checkActionRateLimit,
-  createValidationMutationError,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   createMutationError,
   type MutationResult,
@@ -41,120 +39,117 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getEventDetailsForEmail } from "@/shared/domain/events/registration-queries";
 
 export async function registerForEvent(
-  input: PublicEventRegistrationInput,
-): Promise<MutationResult<{ id: string }>> {
-  // 1. Rate limit check
-  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
-  if (!rateLimit.success) return createMutationError(rateLimit.error);
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    publicEventRegistrationSchema,
+    async (data) => {
+      const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+      if (!rateLimit.success) {
+        return { ok: false, error: rateLimit.error };
+      }
 
-  // 2. Validate input
-  const parsed = publicEventRegistrationSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
+      const turnstile = await validateTurnstile({
+        token: data.turnstileToken,
+        expectedAction: TURNSTILE_ACTIONS.event_registration,
+      });
+      if (!turnstile.success) {
+        return { ok: false, error: turnstile.error };
+      }
 
-  // 3. Turnstile verification
-  const turnstile = await validateTurnstile({
-    token: parsed.data.turnstileToken,
-    expectedAction: TURNSTILE_ACTIONS.event_registration,
-  });
-  if (!turnstile.success) {
-    return createMutationError(turnstile.error);
-  }
+      // Get current user (non-blocking — null if not logged in)
+      const session = await getCustomerSession();
+      const user = session?.user;
+      let customerId: string | null = null;
+      if (user) {
+        const customer = await getCustomerByUserId(user.id);
+        if (customer) {
+          customerId = customer.id;
+        }
+      }
 
-  // 4. Get current user (non-blocking — null if not logged in)
-  const session = await getCustomerSession();
-  const user = session?.user;
-  let customerId: string | null = null;
-  if (user) {
-    const customer = await getCustomerByUserId(user.id);
-    if (customer) {
-      customerId = customer.id;
-    }
-  }
+      try {
+        const result = await createEventRegistrationCommand({
+          eventId: data.eventId,
+          name: data.name,
+          email: data.email,
+          phone: data.phone ?? null,
+          note: data.note ?? null,
+          numberOfPeople: data.numberOfPeople,
+          customerId,
+        });
 
-  // 5. Create registration
-  try {
-    const { turnstileToken: _, ...registrationData } = parsed.data;
-    const result = await createEventRegistrationCommand({
-      eventId: registrationData.eventId,
-      name: registrationData.name,
-      email: registrationData.email,
-      phone: registrationData.phone ?? null,
-      note: registrationData.note ?? null,
-      numberOfPeople: registrationData.numberOfPeople,
-      customerId,
-    });
+        invalidateEventCaches(result.registration.eventId, result.event.slug, {
+          registrations: true,
+          notifications: true,
+        });
 
-    // 6. Invalidate cache
-    invalidateEventCaches(result.registration.eventId, result.event.slug, {
-      registrations: true,
-      notifications: true,
-    });
+        fireAndForget(
+          (async () => {
+            const event = await getEventDetailsForEmail(
+              result.registration.eventId,
+            );
+            if (!event) return;
 
-    // 7. Send emails (fire-and-forget)
-    fireAndForget(
-      (async () => {
-        const event = await getEventDetailsForEmail(
-          result.registration.eventId,
+            await Promise.all([
+              sendEventRegistrationConfirmation({
+                registrationId: result.registration.id,
+                customerName: result.registration.name,
+                customerEmail: result.registration.email,
+                eventTitle: result.event.title,
+                eventStartTime: event.startTime,
+                eventEndTime: event.endTime,
+                location: event.location ?? undefined,
+                numberOfPeople: result.registration.numberOfPeople,
+                icsSequence: result.registration.icsSequence,
+              }),
+              sendEventAdminNotification(
+                {
+                  registrationId: result.registration.id,
+                  participantName: result.registration.name,
+                  participantEmail: result.registration.email,
+                  eventTitle: result.event.title,
+                  eventStartTime: event.startTime,
+                  numberOfPeople: result.registration.numberOfPeople,
+                  currentRegistrations: event.confirmedCount,
+                  capacity: event.capacity,
+                },
+                "registration",
+              ),
+            ]);
+          })(),
+          {
+            operation: "sendEventRegistrationEmails",
+            category: ErrorCategory.EXTERNAL_API,
+          },
         );
-        if (!event) return;
 
-        await Promise.all([
-          sendEventRegistrationConfirmation({
-            registrationId: result.registration.id,
-            customerName: result.registration.name,
-            customerEmail: result.registration.email,
-            eventTitle: result.event.title,
-            eventStartTime: event.startTime,
-            eventEndTime: event.endTime,
-            location: event.location ?? undefined,
-            numberOfPeople: result.registration.numberOfPeople,
-            icsSequence: result.registration.icsSequence,
+        fireAndForget(
+          createNotificationCommand({
+            type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+            title:
+              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
+            message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
+            resourceType: "event",
+            resourceId: result.registration.eventId,
           }),
-          sendEventAdminNotification(
-            {
-              registrationId: result.registration.id,
-              participantName: result.registration.name,
-              participantEmail: result.registration.email,
-              eventTitle: result.event.title,
-              eventStartTime: event.startTime,
-              numberOfPeople: result.registration.numberOfPeople,
-              currentRegistrations: event.confirmedCount,
-              capacity: event.capacity,
-            },
-            "registration",
-          ),
-        ]);
-      })(),
-      {
-        operation: "sendEventRegistrationEmails",
-        category: ErrorCategory.EXTERNAL_API,
-      },
-    );
+          {
+            operation: "createEventRegistrationNotification",
+            category: ErrorCategory.DATABASE,
+          },
+        );
 
-    // 8. Create admin notification (fire-and-forget)
-    fireAndForget(
-      createNotificationCommand({
-        type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
-        message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
-        resourceType: "event",
-        resourceId: result.registration.eventId,
-      }),
-      {
-        operation: "createEventRegistrationNotification",
-        category: ErrorCategory.DATABASE,
-      },
-    );
-
-    return { id: result.registration.id };
-  } catch (error) {
-    if (error instanceof DomainError) {
-      return createMutationError(error.message);
-    }
-    throw error;
-  }
+        return { ok: true };
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
+      }
+    },
+  );
 }
 
 export async function cancelEventRegistration(
