@@ -69,7 +69,7 @@ Stripe / Vercel / Linear / Shopify は **"fast PR feedback smoke + heavy jobs on
 
 ## Section schema test contract（`safeParse({})` 成立 + default assert）
 
-`field.text()` 等のヘルパーが `.default("")` を必ず適用するため、section schema は architectural contract として `safeParse({})` 常に success。**test で required-field validation を期待しない**（schema 層は permissive、UI 層 = admin form の **conform `useForm` + `parseWithZod` + `getZodConstraint`**（Phase 1 Task 4-8 全完了、`zodResolver` / `standardSchemaResolver` は別 phase で残存 RHF 完全削除予定）が必須バリデーション責務）。
+`field.text()` 等のヘルパーが `.default("")` を必ず適用するため、section schema は architectural contract として `safeParse({})` 常に success。**test で required-field validation を期待しない** (schema 層は permissive、UI 層 = admin form の **conform `useForm` + `parseWithZod` + `getZodConstraint`** が必須バリデーション責務、React Hook Form は `package.json` から完全削除済)。
 
 ```typescript
 // OK: 空 config で default 適用を assert

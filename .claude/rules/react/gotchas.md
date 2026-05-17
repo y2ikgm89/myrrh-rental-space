@@ -68,7 +68,7 @@ import { Activity } from 'react'
 - **`toPlainObject` は `Serialized<T>` を返す** — ドメインクエリが `toPlainObject()` を通すと `Date` → `string` に変換される。クエリの戻り型は `Serialized<T>` で宣言し、Client Component の props も `Serialized<T>` で受け取る。`Date` 型のまま Client Component に渡すと実行時は `string` なのに型は `Date` になる不整合が発生する
 - **`element.style.*` への色指定も CSS 変数を使う** — `el.style.backgroundColor = "oklch(...)"` 禁止。`color-mix(in oklch, var(--color-background) 90%, transparent)` や `var(--shadow-sm)` 等の CSS 変数参照で記述する。ScrollTrigger コールバック等の GSAP 内インラインスタイルも同様
 - **管理者入力 HTML は `SanitizedHtml` 必須** — 生の HTML 直接レンダリング禁止。`import { SanitizedHtml } from "@/shared/components/SanitizedHtml"` を使う（isomorphic-dompurify, ADD_TAGS: ['iframe']）。例外: JSON-LD の `<script type="application/ld+json">` は JSON.stringify() 経由のため安全で変更不要
-- **`useFormStatus` は conform `useActionState` + native `<form action={action}>` で正しく動作する** — Phase 1 Task 4-8 で conform 1.19 + `useActionState(serverAction, undefined)` + `<form action={action}>` パターンに全完了 (settings sections 17/17 + Dialog 内 form + Page 遷移 form 7 PR、AnnouncementBar / Navigation / Terms / Reservation / Event / Location / Space 含む)、`useFormStatus` 内 `pending` は SubmitButton 子孫で取得可能。残存 RHF 利用箇所（inline editor side-panel / auto-section-form のみ）は別 phase 完了後に `package.json` から削除予定、当該 form 編集時のみ `SubmitButton` に `isPending` prop で待機状態を渡す legacy パターンを維持する。新規 form は `<form action={action}>` + `useFormStatus` 子孫が canonical
+- **`useFormStatus` は conform `useActionState` + native `<form action={action}>` で正しく動作する** — `useActionState(serverAction, undefined)` + `<form action={action}>` パターン経由で `useFormStatus` 内 `pending` は SubmitButton 子孫で取得可能。React Hook Form は `package.json` から完全削除済のため、`useFormStatus` 子孫パターンが唯一の canonical
 - **`DndContext`（@dnd-kit）には必ず `id` prop を付与** — 未指定だと内部カウンター（`DndDescribedBy-N`）が SSR/クライアントでずれ hydration mismatch が発生する。固定コンポーネントは文字列リテラル（`id="xxx-sortable"`）、汎用コンポーネントは `useId()` を使用
 - **`@eslint-react/eslint-plugin` v4 でルール名プレフィックスフラット化** — `@eslint-react/dom/no-xxx` → `@eslint-react/dom-no-xxx`、`@eslint-react/web-api/no-xxx` → `@eslint-react/web-api-no-xxx`。eslint-disable コメントと `eslint.config.mjs` のルール名を一括置換。v4 で `@eslint-react/purity` の `new Date()` false positive が大幅改善（大半の disable コメントを削除可能）
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` パターンは React Compiler が最適化できないため error。JSX 前に変数抽出する
@@ -87,4 +87,3 @@ import { Activity } from 'react'
 - [React Compiler — デバッグ](https://react.dev/learn/react-compiler/debugging)
 - ['use no memo' ディレクティブ](https://react.dev/reference/react-compiler/directives/use-no-memo)
 - [eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)
-- [React Hook Form useWatch](https://react-hook-form.com/docs/usewatch)

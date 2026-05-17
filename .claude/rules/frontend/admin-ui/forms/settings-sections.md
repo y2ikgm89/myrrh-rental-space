@@ -8,7 +8,7 @@ paths:
 
 # 設定セクション フォームパターン (conform canonical)
 
-> Phase 1 Task 5 (PR #61) で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン。`useFormAction` (RHF) は legacy で新規利用禁止 (Task 8 で削除予定)。
+> React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターンが canonical。React Hook Form は `package.json` から完全削除済、新規利用不可。
 
 ## 設定ページ間の導線（`SettingsLayout` / `CardDescription`）
 
@@ -216,17 +216,16 @@ const [testPending, startTestTransition] = useTransition();
 
 ## 非適用の例外（form 不要 / 構造が大きく異なる場合）
 
-- **CRUD テーブル** (`CustomApiKeysSection` / `ICalFeedSection` / `SidebarSection` — widget CRUD list) — 1 レコード CRUD ではなく行ごとに dialog 編集、`useFormAction` 不使用パターンのため migration 対象外
+- **CRUD テーブル** (`CustomApiKeysSection` / `ICalFeedSection` / `SidebarSection` — widget CRUD list) — 1 レコード CRUD ではなく行ごとに dialog 編集、conform 単一 form pattern 非適用のため移行対象外
 - **読み取り専用 UI** (`PermissionsSection`) — form 不要
 - **Lexical エディタ** (`RobotsTxtSection`) — エディタ統合特殊
-- **複雑なネスト配列** (`BusinessHoursSection` — 曜日 × 時間帯) — 別 phase で conform `form.insert/remove` に migration 予定（参照実装: `DiscountSection` PR #84 で 1 次元 `useFieldArray` → `form.insert/remove` の clean break 移行を確立。LocationForm PR #96 で dnd-kit + `form.reorder` 完成）
-- **スペース作成・編集フォーム** (`SpaceEditForm`) — Phase 1 Task 8.7 (PR #98) で conform 完全移行完了。5 tab monolithic + useState array transit + dnd-kit splice reorder + JSON-encoded facilities + Lexical 派生計算 pattern 確立（→ `server-actions/implementation/forms-and-public.md` §動的配列 + 複雑 widget 連携の `useState` array transit pattern）
+- **複雑なネスト配列** (`BusinessHoursSection` — 曜日 × 時間帯) — 個別 PR で conform `form.insert/remove` に migration 検討 (参照実装: `DiscountSection` の 1 次元 `useFieldArray` → `form.insert/remove` clean break 移行 / `LocationForm` の dnd-kit + `form.reorder`)
+- **スペース作成・編集フォーム** (`SpaceEditForm`) — 5 tab monolithic + useState array transit + dnd-kit splice reorder + JSON-encoded facilities + Lexical 派生計算 pattern 確立 (→ `server-actions/implementation/forms-and-public.md` §動的配列 + 複雑 widget 連携の `useState` array transit pattern)
 
 ## 禁止事項
 
-- **`useFormAction` (RHF) 新規利用禁止** — legacy hook、別 phase で削除予定。設定セクションで残存している場合は同 commit 内で conform に置換する
 - **`useState` + 手動 `onChange` のフォーム管理禁止** — conform `useForm` を使う
 - **`useRefreshOnSuccess` フック禁止** — 削除済、conform `useEffect(() => { if (lastResult?.initialValue === null) router.refresh() })` で代替
 - **Server Action 内 `parseWithZod` 直接呼び出し禁止** — `executeConformMutation` SSoT helper 経由
 - **`@conform-to/zod` ルート import 禁止** — Zod v3 用、Zod 4 と非互換。`@conform-to/zod/v4` から `parseWithZod` を import する
-- **`standardSchemaResolver` 使用禁止** — RHF + Standard Schema 用、conform では不要
+- **React Hook Form (`react-hook-form` / `@hookform/resolvers` / `useFormAction` / `standardSchemaResolver` / `zodResolver` / `useForm` from `react-hook-form`) 新規利用禁止** — `package.json` から完全削除済

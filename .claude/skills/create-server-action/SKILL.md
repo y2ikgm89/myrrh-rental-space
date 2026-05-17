@@ -15,7 +15,7 @@ argument-hint: <resource-name>
 1. `src/app/(admin)/admin/(dashboard)/_shared/actions/<name>.ts`
 2. `src/shared/lib/validations/<name>.ts`
 
-の 2 ファイルを生成する。**Phase 1 Task 6 で確立した conform pattern が canonical**。RHF + `useFormAction` への scaffold 復活は禁止（Task 8 で `react-hook-form` / `@hookform/resolvers` を `package.json` から削除予定）。
+の 2 ファイルを生成する。**conform pattern が canonical**。React Hook Form (`react-hook-form` / `@hookform/resolvers`) は `package.json` から完全削除済、`useFormAction` 等の RHF API への scaffold 復活は禁止。
 
 ## Step 1: リソース名の確認
 
@@ -232,8 +232,7 @@ export async function delete<ResourcePascal>(
 - **`executeAdminMutationResult` の `resource` / `action` は `permissions.ts` の定義と一致させる**
 - **`CACHE_TAGS.<NAME_UPPER>` が存在しない場合は `cache.ts` に追加してから `updateTag` を呼ぶ**
 - **conform Zod 4 専用 subpath**: `@conform-to/zod/v4` から `parseWithZod` を import する（`@conform-to/zod` ルートは Zod v3 用で Zod 4 と非互換）
-- **RHF (`react-hook-form` / `@hookform/resolvers`) は Phase 1 Task 8 完了、別 phase で削除予定** — 新規 Server Action では絶対に scaffold しない
-- **`useFormAction` hook は legacy** — 既存利用箇所のみ残存（inline editor side-panel / auto-section-form のみ）、新規利用禁止（別 phase で削除予定）
+- **React Hook Form (`react-hook-form` / `@hookform/resolvers` / `useFormAction` / `standardSchemaResolver` / `zodResolver`) は `package.json` から完全削除済** — 新規 Server Action では絶対に scaffold しない
 - **conform helper SSoT**: `executeConformMutation` は `@/shared/lib/forms/conform-action` のみ。Server Action 内 `parseWithZod` 直接呼び出し禁止（認証・権限・監査ログを `executeAdminMutationResult` で一括処理する flow と整合）
 - **参照実装** (Phase 1 PR #59-#62 で確立した form 移行 16 件):
   - **simple (PR #61)**: 9 settings sections (`MaintenanceSection` / `CookieConsentSection` / `NotificationSection` / `HeaderSection` / `PermalinkSection` / `ReservationSection` / `EmailSection` / `FooterSection` / `TaxSection`)

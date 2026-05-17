@@ -281,9 +281,7 @@ export function <Resource>Form({ <resource> }: Props): ReactElement {
 
 ## 禁止事項
 
-- **RHF (`react-hook-form` / `@hookform/resolvers`) 復活禁止** — Phase 1 Task 8 完了、別 phase で残存 (inline editor side-panel / auto-section-form のみ) 完全削除予定
-- **`useFormAction` hook scaffold 禁止** — legacy hook、別 phase で削除予定
-- **`standardSchemaResolver` 使用禁止** — `parseWithZod` (`@conform-to/zod/v4`) が canonical
+- **React Hook Form (`react-hook-form` / `@hookform/resolvers` / `useFormAction` / `standardSchemaResolver` / `zodResolver` / `useForm` from `react-hook-form`) 復活禁止** — `package.json` から完全削除済
 - **Server Action 内 `parseWithZod` 直接呼び出し禁止** — `executeConformMutation` SSoT helper 経由
 - **`@conform-to/zod` ルート import 禁止** — Zod v3 用、Zod 4 と非互換。`@conform-to/zod/v4` から `parseWithZod` を import する
 

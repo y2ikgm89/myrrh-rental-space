@@ -54,19 +54,16 @@ grep -rn "/admin/settings/\(notify\|api\|navigation\|announcement-bar\)" src/ --
 ### 3. フォームパターン (conform canonical)
 
 - conform `useActionState` + `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`) を使用しているか
-  (`useState` + 手動 `onChange` 禁止、`useFormAction` (RHF) は legacy で新規利用禁止)
+  (`useState` + 手動 `onChange` 禁止、React Hook Form は `package.json` から完全削除済 / 新規利用不可)
 - `SubmitButton` を使用しているか（インライン isPending パターン禁止）
 - `SubmitButton` が `<div className="flex justify-end ...">` でラップされているか
 - `useActionState` の `isPending` を `SubmitButton` の `isPending` prop に渡しているか
 
 ```bash
-# conform 未採用 (legacy useFormAction 残存) セクションを検出
+# conform 未採用セクションを検出
 for f in src/app/\(admin\)/admin/\(dashboard\)/settings/_components/sections/*Section.tsx; do
   if ! grep -q "useActionState\|useForm" "$f" 2>/dev/null; then
     echo "conform 未採用: $(basename "$f")"
-  fi
-  if grep -q "useFormAction" "$f" 2>/dev/null; then
-    echo "legacy useFormAction 残存: $(basename "$f")  → Task 6-8 で conform 化対象"
   fi
 done
 ```

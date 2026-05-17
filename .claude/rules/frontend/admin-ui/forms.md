@@ -11,7 +11,7 @@ paths:
 
 # 管理画面フォーム・ページ構造パターン (conform canonical)
 
-> Phase 1 Task 4-8 で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン (Phase 1 全完了、settings sections 17/17 + Dialog 内 form taxonomy managers + Task 8.1-8.7 大型 form 移行完了)。RHF + `useFormAction` は legacy (Phase 1 残存は inline editor side-panel / auto-section-form のみ、別 phase 完了後に `package.json` から削除予定)、新規利用禁止。動的配列は ① **`form.insert/remove/reorder` + `getFieldList()` + `getFieldset()`** (DiscountSection PR #84 で確立、Task 8.6 LocationForm canonical で dnd-kit + `form.reorder({ name, from, to })` 完成) または ② **`useState<{key, ...}[]>` + 安定 key + hidden input append + schema preprocess** (Task 8.7 SpaceEditForm canonical、MediaPicker / IconPickerField 等複雑 widget 連携時、`crypto.randomUUID()` key で React reconciliation + dnd-kit 整合) のいずれかを採用。Page 遷移 form の成功時遷移は **server-side `redirect(toAppRoute(...))`** (Task 8.4-8.7 canonical、client `router.push` 不要)。canonical schema の **in-place preprocess** で FormData transit と object literal (test) を両対応 (Task 8.6 LocationForm 確立、Task 8.7 SpaceEditForm に水平展開、`standardSchemaResolver` 経路と非互換のため conform 完全移行と同一 commit で実施)。**5+ tab の大型 form は monolithic 単一 file** (Task 8.6/8.7 canonical、1100-1800 行規模、tab 分割 + prop drilling より maintainable、React Compiler が中規模 component のメモ化を自動処理)。詳細パターンは [`server-actions/implementation/forms-and-public.md`](../../server-actions/implementation/forms-and-public.md) §管理フォームの canonical (conform) 参照。
+> React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターンが canonical。React Hook Form (`react-hook-form` / `@hookform/resolvers`) は `package.json` から完全削除済、新規利用不可。動的配列は ① **`form.insert/remove/reorder` + `getFieldList()` + `getFieldset()`** (DiscountSection で確立、LocationForm canonical で dnd-kit + `form.reorder({ name, from, to })` 完成) または ② **`useState<{key, ...}[]>` + 安定 key + hidden input append + schema preprocess** (SpaceEditForm canonical、MediaPicker / IconPickerField 等複雑 widget 連携時、`crypto.randomUUID()` key で React reconciliation + dnd-kit 整合) のいずれかを採用。Page 遷移 form の成功時遷移は **server-side `redirect(toAppRoute(...))`** (client `router.push` 不要)。canonical schema の **in-place preprocess** で FormData transit と object literal (test) を両対応 (LocationForm 確立、SpaceEditForm に水平展開)。**5+ tab の大型 form は monolithic 単一 file** (LocationForm / SpaceEditForm canonical、1100-1800 行規模、tab 分割 + prop drilling より maintainable、React Compiler が中規模 component のメモ化を自動処理)。詳細パターンは [`server-actions/implementation/forms-and-public.md`](../../server-actions/implementation/forms-and-public.md) §管理フォームの canonical (conform) 参照。
 
 > 詳細サブルール（path-scoped auto-load）:
 >
@@ -67,7 +67,7 @@ export async function updateItem(
 // const [lastResult, formAction, isPending] = useActionState(action, undefined);
 
 // NG: 直接 checkPermission（executeAdminMutationResult を使う）
-// NG: useFormAction + (input: ItemInput) signature (legacy、Task 8 で削除)
+// NG: 旧 RHF `useFormAction` signature (React Hook Form は削除済、新規利用不可)
 // NG: Server Action 内 parseWithZod 直接呼び出し（executeConformMutation 経由必須）
 ```
 

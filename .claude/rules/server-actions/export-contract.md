@@ -138,7 +138,7 @@ export async function fetchOgpPreview(url: string) {
 - Client Component からの mutation 呼び出し（RPC）
 - キャッシュ無効化を伴う write 操作（`updateTag` は Server Action 内のみ可能）
 
-`useFormAction` (RHF) 経由の mutation は legacy で新規利用禁止 (Task 8 で削除予定)。
+React Hook Form は `package.json` から完全削除済、`useFormAction` 等の RHF API 経由 mutation は新規利用不可。
 
 読み取り操作で「server-side state（DB / cookie / headers）を読むだけ」なら Route Handler。
 
