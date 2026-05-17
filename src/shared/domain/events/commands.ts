@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { asPrismaInputJsonValue, parsePrismaInputJson } from "@/shared/db/json";
 import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
@@ -251,7 +252,10 @@ export async function duplicateEventCommand(id: string) {
     data: {
       title: `${source.title}（コピー）`,
       slug,
-      descriptionJson: source.descriptionJson as Prisma.InputJsonValue,
+      descriptionJson: asPrismaInputJsonValue(
+        source.descriptionJson,
+        "descriptionJson が不正です",
+      ),
       descriptionHtml: source.descriptionHtml,
       descriptionPlainText: source.descriptionPlainText,
       thumbnailUrl: source.thumbnailUrl,
@@ -285,9 +289,10 @@ export async function upsertEventFromCalendar(data: {
   location?: string | null;
 }) {
   const plain = (data.description ?? "").trim();
-  const descriptionJson = JSON.parse(
+  const descriptionJson = parsePrismaInputJson(
     buildParagraphEditorStateJson(plain),
-  ) as Prisma.InputJsonValue;
+    "descriptionJson が不正です",
+  );
   const descriptionHtml = buildParagraphHtml(plain);
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
 

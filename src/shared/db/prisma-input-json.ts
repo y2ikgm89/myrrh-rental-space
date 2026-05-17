@@ -51,6 +51,23 @@ export function parsePrismaInputJson(
   return parsed;
 }
 
+/**
+ * 既パース済みオブジェクトを `Prisma.InputJsonValue` として narrow して返す。
+ * `parsePrismaInputJson` は string を受けて JSON.parse + 検証するが、
+ * Prisma の read 結果 (`Prisma.JsonValue`) や Zod parsed object 等の
+ * **既にオブジェクト化された値** を `as Prisma.InputJsonValue` cast せず
+ * runtime 検証経由で narrow したい場合はこちらを使う。
+ */
+export function asPrismaInputJsonValue(
+  value: unknown,
+  invalidMessage: string,
+): Prisma.InputJsonValue {
+  if (!isPrismaInputJsonValue(value)) {
+    throw new DomainError(invalidMessage, "VALIDATION");
+  }
+  return value;
+}
+
 export function clonePrismaInputJson(
   value: unknown,
   invalidMessage: string,

@@ -3,6 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import {
   AnnouncementBarAnimation,
@@ -215,10 +216,9 @@ export type AnnouncementBarInput = z.infer<typeof announcementBarInputSchema>;
 
 function normalizeAnnouncementBarInput(data: AnnouncementBarInput) {
   return {
-    // PortableTextSpan[] を Prisma の Json 列に渡すための SDK 境界 cast
-    // (type-safety.md §許可例外 #2: Prisma JSON 型)
-    message:
-      data.message satisfies ReadonlyArray<unknown> as Prisma.InputJsonValue,
+    // PortableTextSpan[] を Prisma の Json 列に渡すための runtime narrow
+    // (Zod schema 検証済 + helper による defensive type guard)
+    message: asPrismaInputJsonValue(data.message, "message が不正です"),
     linkUrl: data.linkUrl || null,
     linkText: data.linkText || null,
     bgColor: data.bgColor || null,

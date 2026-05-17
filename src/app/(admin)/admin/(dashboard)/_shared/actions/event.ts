@@ -3,7 +3,7 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
+import { parsePrismaInputJson } from "@/shared/db/json";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -44,9 +44,10 @@ const idSchema = z.string().uuid({ error: "イベントIDが不正です" });
 function buildEventCommandInput(data: EventFormData) {
   const descriptionHtml = data.descriptionHtml;
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
-  const descriptionJson = JSON.parse(
+  const descriptionJson = parsePrismaInputJson(
     data.descriptionJson,
-  ) as Prisma.InputJsonValue;
+    "descriptionJson が不正です",
+  );
 
   const {
     descriptionJson: _dropJson,
