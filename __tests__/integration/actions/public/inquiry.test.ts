@@ -3,8 +3,15 @@
  *
  * src/app/(public)/_shared/actions/inquiry.ts のテスト
  *
+ * Phase 2 conform 移行後:
+ *   signature: `(_prev: SubmissionResult | undefined, formData: FormData) => Promise<SubmissionResult>`
+ *   - parseWithZod (`@conform-to/zod/v4`) で FormData → input
+ *   - `submission.reply()` で field-level errors
+ *   - `submission.reply({ formErrors: [msg] })` で top-level errors (rate limit / Turnstile / DomainError)
+ *   - `submission.reply({ resetForm: true })` で success
+ *
  * モック方針:
- * - validateTurnstile: action-helpers をモック（常に成功を返す）
+ * - validateTurnstile: action-helpers をモック(常に成功を返す)
  * - createInquiryCommand: domain コマンドをモック
  * - email 送信: email-service をモック
  * - updateTag: next/cache をモック
@@ -31,12 +38,6 @@ const mockCheckActionRateLimit = mock(
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
   checkActionRateLimit: mockCheckActionRateLimit,
-  createValidationMutationError: (error: import("zod").ZodError) => ({
-    error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
-  }),
 }));
 
 const mockCreateInquiryCommand = mock(() =>
@@ -73,7 +74,7 @@ mock.module("next/cache", () => ({
 
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
-    // テスト用に即時実行（エラーは無視）
+    // テスト用に即時実行(エラーは無視)
     void promise.catch(() => {});
   },
   settleAllWithLogging: <T>(promises: Promise<T>[]) =>
@@ -82,7 +83,7 @@ mock.module("@/shared/lib/async-utils", () => ({
   withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
 
-// server-only モック（テスト環境で server-only を無効化）
+// server-only モック(テスト環境で server-only を無効化)
 mock.module("server-only", () => ({}));
 
 // `submitInquiry` は `getClientIpFromHeaders` を経由して next/headers を呼ぶため、
@@ -97,7 +98,7 @@ mock.module("next/headers", () => ({
   }),
 }));
 
-/** Next の request scope なしでも動かす（getSession は headers に依存） */
+/** Next の request scope なしでも動かす(getSession は headers に依存) */
 const mockGetSession = mock(() => Promise.resolve(null));
 
 mock.module("@/shared/lib/customer-auth", () => ({
@@ -124,7 +125,19 @@ mock.module("@/shared/lib/admin-auth", () => ({
 // テストデータ
 // =============================================================================
 
-const VALID_INPUT = {
+type InquiryInputShape = {
+  customerType: CustomerType;
+  lastName: string;
+  firstName: string;
+  email: string;
+  subject: string;
+  message: string;
+  companyName?: string;
+  turnstileToken?: string;
+  agreedTermsIds?: readonly string[];
+};
+
+const VALID_INPUT: InquiryInputShape = {
   customerType: CustomerType.PERSONAL,
   lastName: "山田",
   firstName: "太郎",
@@ -132,6 +145,32 @@ const VALID_INPUT = {
   subject: "スペース利用について",
   message: "大人数での利用は可能でしょうか？詳しく教えていただけますか。",
   turnstileToken: "test-token-valid",
+};
+
+function inputToFormData(input: InquiryInputShape): FormData {
+  const fd = new FormData();
+  fd.append("customerType", input.customerType);
+  fd.append("lastName", input.lastName);
+  fd.append("firstName", input.firstName);
+  fd.append("email", input.email);
+  fd.append("subject", input.subject);
+  fd.append("message", input.message);
+  if (input.companyName !== undefined) {
+    fd.append("companyName", input.companyName);
+  }
+  if (input.turnstileToken !== undefined) {
+    fd.append("turnstileToken", input.turnstileToken);
+  }
+  for (const id of input.agreedTermsIds ?? []) {
+    fd.append("agreedTermsIds", id);
+  }
+  return fd;
+}
+
+type SubmissionLike = {
+  readonly status?: "success" | "error";
+  readonly initialValue?: unknown;
+  readonly error?: Record<string, string[] | null> | null;
 };
 
 // =============================================================================
@@ -143,12 +182,16 @@ describe("submitInquiry", () => {
     mockGetSession.mockClear();
     mockGetSession.mockImplementation(() => Promise.resolve(null));
     mockValidateTurnstile.mockClear();
+    mockCheckActionRateLimit.mockClear();
     mockCreateInquiryCommand.mockClear();
     mockSendContactConfirmationEmail.mockClear();
     mockSendContactAdminNotification.mockClear();
     mockUpdateTag.mockClear();
     // 成功レスポンスにリセット
     mockValidateTurnstile.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
+    mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
     mockCreateInquiryCommand.mockImplementation(() =>
@@ -167,20 +210,26 @@ describe("submitInquiry", () => {
   });
 
   describe("正常系", () => {
-    test("有効な入力で問い合わせ作成が成功し id を返す", async () => {
+    test("有効な入力で問い合わせ作成が成功する", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry(VALID_INPUT);
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "inquiry-001" });
+      // conform v1.19: `reply({ resetForm: true })` は `{ initialValue: null }`
+      // のみ返し status は未設定。success 検出は initialValue === null が canonical
+      expect(result.initialValue).toBeNull();
+      expect(result.status).not.toBe("error");
     });
 
     test("createInquiryCommand が name / email / subject / message を引数に呼ばれる", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      await submitInquiry(VALID_INPUT);
+      await submitInquiry(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreateInquiryCommand).toHaveBeenCalledTimes(1);
       expect(mockCreateInquiryCommand).toHaveBeenCalledWith({
@@ -198,17 +247,17 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      await submitInquiry(VALID_INPUT);
+      await submitInquiry(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(1);
     });
 
-    test("turnstileToken が undefined でも Turnstile 検証が呼ばれる", async () => {
+    test("turnstileToken が省略されても Turnstile 検証が呼ばれる", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const inputWithoutToken = { ...VALID_INPUT, turnstileToken: undefined };
-      await submitInquiry(inputWithoutToken);
+      const { turnstileToken: _omit, ...inputWithoutToken } = VALID_INPUT;
+      await submitInquiry(undefined, inputToFormData(inputWithoutToken));
 
       expect(mockValidateTurnstile).toHaveBeenCalledTimes(1);
     });
@@ -219,108 +268,96 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({ ...VALID_INPUT, lastName: "" });
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("lastName");
+      expect(result.status).toBe("error");
+      expect(result.error).toBeDefined();
+      expect(result.error?.["lastName"]).toBeDefined();
     });
 
     test("email が無効な形式のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({
-        ...VALID_INPUT,
-        email: "not-an-email",
-      });
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, email: "not-an-email" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("email");
+      expect(result.status).toBe("error");
+      expect(result.error?.["email"]).toBeDefined();
     });
 
     test("subject が空文字列のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({ ...VALID_INPUT, subject: "" });
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, subject: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("subject");
+      expect(result.status).toBe("error");
+      expect(result.error?.["subject"]).toBeDefined();
     });
 
     test("message が空文字列のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({ ...VALID_INPUT, message: "" });
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, message: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("message");
+      expect(result.status).toBe("error");
+      expect(result.error?.["message"]).toBeDefined();
     });
 
     test("lastName が 50 文字超のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({
-        ...VALID_INPUT,
-        lastName: "あ".repeat(51),
-      });
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "あ".repeat(51) }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("lastName");
+      expect(result.status).toBe("error");
+      expect(result.error?.["lastName"]).toBeDefined();
     });
 
     test("message が 5000 文字超のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({
-        ...VALID_INPUT,
-        message: "あ".repeat(5001),
-      });
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, message: "あ".repeat(5001) }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("message");
+      expect(result.status).toBe("error");
+      expect(result.error?.["message"]).toBeDefined();
     });
 
     test("バリデーション失敗時は createInquiryCommand が呼ばれない", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      await submitInquiry({ ...VALID_INPUT, lastName: "" });
+      await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "" }),
+      );
 
       expect(mockCreateInquiryCommand).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: Turnstile 検証失敗", () => {
-    test("Turnstile 検証失敗時はエラーを返す", async () => {
+    test("Turnstile 検証失敗時は formErrors に top-level エラーを返す", async () => {
       mockValidateTurnstile.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
@@ -332,11 +369,15 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry(VALID_INPUT);
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toContain("セキュリティ検証");
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors).toBeDefined();
+      expect(formErrors?.[0]).toContain("セキュリティ検証");
     });
 
     test("Turnstile 失敗時は createInquiryCommand が呼ばれない", async () => {
@@ -350,14 +391,14 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      await submitInquiry(VALID_INPUT);
+      await submitInquiry(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreateInquiryCommand).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: DomainError", () => {
-    test("createInquiryCommand が DomainError をスローしたとき MutationError を返す", async () => {
+    test("createInquiryCommand が DomainError をスローしたとき formErrors を返す", async () => {
       mockCreateInquiryCommand.mockImplementation(() =>
         Promise.reject(
           new DomainError("DB エラーが発生しました", "UNEXPECTED"),
@@ -367,11 +408,14 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry(VALID_INPUT);
+      const result = (await submitInquiry(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("DB エラーが発生しました");
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors?.[0]).toBe("DB エラーが発生しました");
     });
 
     test("createInquiryCommand が DomainError 以外の Error をスローしたとき再スローされる", async () => {
@@ -382,13 +426,13 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      await expect(submitInquiry(VALID_INPUT)).rejects.toThrow(
-        "予期しないエラー",
-      );
+      await expect(
+        submitInquiry(undefined, inputToFormData(VALID_INPUT)),
+      ).rejects.toThrow("予期しないエラー");
     });
   });
 
-  describe("publicInquirySchema バリデーション（単体）", () => {
+  describe("publicInquirySchema バリデーション(単体)", () => {
     test("有効な最小データで通過", async () => {
       const { publicInquirySchema } =
         await import("@/shared/lib/validations/inquiry");

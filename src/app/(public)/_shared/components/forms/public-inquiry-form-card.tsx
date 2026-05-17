@@ -1,18 +1,20 @@
 "use client";
 
-import { useRef, useState, type ReactElement } from "react";
-import { useWatch } from "react-hook-form";
+import { useActionState, useEffect, useRef, useState } from "react";
+import type { ReactElement } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
-import {
-  createMutationError,
-  isMutationError,
-} from "@/shared/lib/mutation-result";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { submitInquiry } from "@/public/actions/inquiry";
-import { usePublicForm } from "@/public/hooks/use-public-form";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
@@ -65,6 +67,10 @@ function getSubmitLabel(
   return isPending ? "送信中..." : submitLabel;
 }
 
+function isCustomerType(value: unknown): value is CustomerType {
+  return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
+}
+
 export function PublicInquiryFormCard({
   mode = "live",
   turnstileSiteKey = null,
@@ -76,66 +82,84 @@ export function PublicInquiryFormCard({
   requiredTerms = [],
 }: PublicInquiryFormCardProps): ReactElement {
   const [submitted, setSubmitted] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
+  const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const isInteractive = mode === "live";
 
-  const { form, isPending, onSubmit } = usePublicForm(
-    publicInquirySchema,
-    async (data) => {
-      if (!isInteractive) {
-        return createMutationError(
-          "この画面からはお問い合わせを送信できません",
-        );
-      }
-
-      setErrorMessage(null);
-      const result = await submitInquiry(data);
-      if (isMutationError(result)) {
-        setErrorMessage(result.error);
-        turnstileRef.current?.reset();
-      } else {
-        setSubmitted(true);
-      }
-      return result;
-    },
-    defaultSubject ? { defaultValues: { subject: defaultSubject } } : undefined,
+  const [lastResult, formAction, isPending] = useActionState(
+    submitInquiry,
+    undefined,
   );
 
-  const customerType = useWatch({
-    control: form.control,
-    name: "customerType",
+  const [form, fields] = useForm({
+    id: "public-inquiry-form",
+    constraint: getZodConstraint(publicInquirySchema),
+    lastResult,
+    defaultValue: {
+      customerType: CustomerType.PERSONAL,
+      ...(defaultSubject !== undefined && { subject: defaultSubject }),
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: publicInquirySchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
   });
 
-  const agreedTermsIds = useWatch({
-    control: form.control,
-    name: "agreedTermsIds",
-  });
+  const customerTypeControl = useInputControl(fields.customerType);
+  const turnstileTokenControl = useInputControl(fields.turnstileToken);
 
-  const allTermsAgreed =
-    requiredTerms.length === 0 ||
-    requiredTerms.every((term) => agreedTermsIds?.includes(term.id));
-  const isSubmitDisabled = !isInteractive || isPending || !allTermsAgreed;
+  const customerTypeValue = customerTypeControl.value;
+  const customerType: CustomerType = isCustomerType(customerTypeValue)
+    ? customerTypeValue
+    : CustomerType.PERSONAL;
+
+  // Render 中 state sync (React 公式: Adjusting State Directly During Render)
+  // executeConformMutation の `submission.reply({ resetForm: true })` は
+  // `{ initialValue: null }` のみ返し status は未設定 (conform v1.19 公式仕様)
+  if (lastResult !== previousResult) {
+    setPreviousResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      setSubmitted(true);
+      setAgreedTermsIds([]);
+    }
+  }
+
+  // Turnstile widget の DOM 側 reset は副作用 — effect に残す
+  useEffect(() => {
+    if (lastResult?.status === "error") {
+      turnstileRef.current?.reset();
+      turnstileTokenControl.change("");
+    }
+  }, [lastResult, turnstileTokenControl]);
 
   function handleCustomerTypeChange(type: CustomerType) {
-    if (!isInteractive) {
-      return;
-    }
-
-    form.setValue("customerType", type);
-    if (type === CustomerType.PERSONAL) {
-      form.setValue("companyName", "");
-      form.clearErrors("companyName");
-    }
+    if (!isInteractive) return;
+    customerTypeControl.change(type);
   }
 
   function handleTurnstileVerify(token: string) {
-    form.setValue("turnstileToken", token);
+    turnstileTokenControl.change(token);
   }
 
   function handleTurnstileExpire() {
-    form.setValue("turnstileToken", "");
+    turnstileTokenControl.change("");
   }
+
+  function toggleTermAgreement(id: string) {
+    if (!isInteractive) return;
+    setAgreedTermsIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  const allTermsAgreed =
+    requiredTerms.length === 0 ||
+    requiredTerms.every((term) => agreedTermsIds.includes(term.id));
+  const isSubmitDisabled = !isInteractive || isPending || !allTermsAgreed;
+  const formErrorMessage =
+    form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
 
   if (submitted) {
     return (
@@ -191,12 +215,35 @@ export function PublicInquiryFormCard({
       <div>
         <CustomerTypeToggle
           id="public-inquiry-type"
-          value={customerType ?? CustomerType.PERSONAL}
+          value={customerType}
           onChange={handleCustomerTypeChange}
           disabled={!isInteractive}
         />
 
-        <form onSubmit={onSubmit} className="mt-8">
+        <form
+          {...getFormProps(form)}
+          action={isInteractive ? formAction : undefined}
+          className="mt-8"
+        >
+          <input
+            type="hidden"
+            name={fields.customerType.name}
+            value={customerType}
+          />
+          <input
+            type="hidden"
+            name={fields.turnstileToken.name}
+            value={turnstileTokenControl.value ?? ""}
+          />
+          {agreedTermsIds.map((id) => (
+            <input
+              key={id}
+              type="hidden"
+              name={fields.agreedTermsIds.name}
+              value={id}
+            />
+          ))}
+
           <div className="border border-border p-6 sm:p-8">
             <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               {customerType === CustomerType.CORPORATE
@@ -207,95 +254,81 @@ export function PublicInquiryFormCard({
             <div className="space-y-6">
               {customerType === CustomerType.CORPORATE ? (
                 <Input
-                  id="contact-company"
                   label="会社名・団体名"
-                  type="text"
                   required
                   disabled={!isInteractive || isPending}
                   placeholder="株式会社〇〇"
                   autoComplete="organization"
-                  {...(form.formState.errors.companyName?.message !==
-                    undefined && {
-                    error: form.formState.errors.companyName.message,
+                  {...(fields.companyName.errors?.[0] !== undefined && {
+                    error: fields.companyName.errors[0],
                   })}
-                  {...form.register("companyName")}
+                  {...getInputProps(fields.companyName, { type: "text" })}
                 />
               ) : null}
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <Input
-                  id="contact-lastname"
                   label={
                     customerType === CustomerType.CORPORATE ? "担当者 姓" : "姓"
                   }
-                  type="text"
                   required
                   disabled={!isInteractive || isPending}
                   placeholder="山田"
                   autoComplete="family-name"
-                  {...(form.formState.errors.lastName?.message !==
-                    undefined && {
-                    error: form.formState.errors.lastName.message,
+                  {...(fields.lastName.errors?.[0] !== undefined && {
+                    error: fields.lastName.errors[0],
                   })}
-                  {...form.register("lastName")}
+                  {...getInputProps(fields.lastName, { type: "text" })}
                 />
                 <Input
-                  id="contact-firstname"
                   label={
                     customerType === CustomerType.CORPORATE ? "担当者 名" : "名"
                   }
-                  type="text"
                   required
                   disabled={!isInteractive || isPending}
                   placeholder="太郎"
                   autoComplete="given-name"
-                  {...(form.formState.errors.firstName?.message !==
-                    undefined && {
-                    error: form.formState.errors.firstName.message,
+                  {...(fields.firstName.errors?.[0] !== undefined && {
+                    error: fields.firstName.errors[0],
                   })}
-                  {...form.register("firstName")}
+                  {...getInputProps(fields.firstName, { type: "text" })}
                 />
               </div>
 
               <Input
-                id="contact-email"
                 label="メールアドレス"
-                type="email"
                 required
                 disabled={!isInteractive || isPending}
                 placeholder="mail@example.com"
                 autoComplete="email"
                 leadingIcon="IconMail"
-                {...(form.formState.errors.email?.message !== undefined && {
-                  error: form.formState.errors.email.message,
+                {...(fields.email.errors?.[0] !== undefined && {
+                  error: fields.email.errors[0],
                 })}
-                {...form.register("email")}
+                {...getInputProps(fields.email, { type: "email" })}
               />
 
               <Input
-                id="contact-subject"
                 label="件名"
-                type="text"
                 required
                 disabled={!isInteractive || isPending}
                 placeholder="お問い合わせの件名"
-                {...(form.formState.errors.subject?.message !== undefined && {
-                  error: form.formState.errors.subject.message,
+                {...(fields.subject.errors?.[0] !== undefined && {
+                  error: fields.subject.errors[0],
                 })}
-                {...form.register("subject")}
+                {...getInputProps(fields.subject, { type: "text" })}
               />
 
               <Textarea
-                id="contact-message"
                 label="お問い合わせ内容"
                 rows={8}
                 required
                 disabled={!isInteractive || isPending}
                 placeholder="お問い合わせ内容をご記入ください"
-                {...(form.formState.errors.message?.message !== undefined && {
-                  error: form.formState.errors.message.message,
+                {...(fields.message.errors?.[0] !== undefined && {
+                  error: fields.message.errors[0],
                 })}
-                {...form.register("message")}
+                {...getInputProps(fields.message, { type: "text" })}
               />
 
               {isInteractive ? (
@@ -312,7 +345,7 @@ export function PublicInquiryFormCard({
             {requiredTerms.length > 0 ? (
               <div className="mt-8 space-y-3 border-t border-border pt-6">
                 {requiredTerms.map((term) => {
-                  const isChecked = agreedTermsIds?.includes(term.id) ?? false;
+                  const isChecked = agreedTermsIds.includes(term.id);
                   return (
                     <label
                       key={term.id}
@@ -323,22 +356,13 @@ export function PublicInquiryFormCard({
                         className="mt-0.5 h-4 w-4 border-border accent-accent"
                         disabled={!isInteractive || isPending}
                         checked={isChecked}
-                        onChange={() => {
-                          if (!isInteractive) return;
-                          const current =
-                            form.getValues("agreedTermsIds") ?? [];
-                          const next = isChecked
-                            ? current.filter((id) => id !== term.id)
-                            : [...current, term.id];
-                          form.setValue("agreedTermsIds", next, {
-                            shouldValidate: true,
-                          });
-                        }}
+                        onChange={() => toggleTermAgreement(term.id)}
                       />
                       <span className="text-sm text-muted-foreground">
                         <a
                           href={`/terms/${term.slug}`}
                           target="_blank"
+                          rel="noreferrer"
                           className="text-accent underline transition-colors hover:text-foreground"
                         >
                           {term.title}
@@ -352,12 +376,12 @@ export function PublicInquiryFormCard({
             ) : null}
           </div>
 
-          {errorMessage !== null ? (
+          {formErrorMessage !== null ? (
             <div
               className="mt-6 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
               role="alert"
             >
-              {errorMessage}
+              {formErrorMessage}
             </div>
           ) : null}
 
