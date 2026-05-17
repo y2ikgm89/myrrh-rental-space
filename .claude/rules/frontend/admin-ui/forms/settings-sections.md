@@ -219,12 +219,12 @@ const [testPending, startTestTransition] = useTransition();
 - **CRUD テーブル** (`CustomApiKeysSection` / `ICalFeedSection` / `SidebarSection` — widget CRUD list) — 1 レコード CRUD ではなく行ごとに dialog 編集、`useFormAction` 不使用パターンのため migration 対象外
 - **読み取り専用 UI** (`PermissionsSection`) — form 不要
 - **Lexical エディタ** (`RobotsTxtSection`) — エディタ統合特殊
-- **複雑なネスト配列** (`BusinessHoursSection` — 曜日 × 時間帯) — Phase 1 Task 8 で conform `form.insert/remove` に migration 予定（参照実装: `DiscountSection` PR #84 で 1 次元 `useFieldArray` → `form.insert/remove` の clean break 移行を確立）
-- **スペース作成・編集フォーム** (`SpaceEditForm`) — DnD・メディアピッカー・複数 `useFieldArray` 等のため、現在は RHF + `useActionState` + `FormData` hybrid。Phase 1 Task 8 で conform 完全化予定
+- **複雑なネスト配列** (`BusinessHoursSection` — 曜日 × 時間帯) — 別 phase で conform `form.insert/remove` に migration 予定（参照実装: `DiscountSection` PR #84 で 1 次元 `useFieldArray` → `form.insert/remove` の clean break 移行を確立。LocationForm PR #96 で dnd-kit + `form.reorder` 完成）
+- **スペース作成・編集フォーム** (`SpaceEditForm`) — Phase 1 Task 8.7 (PR #98) で conform 完全移行完了。5 tab monolithic + useState array transit + dnd-kit splice reorder + JSON-encoded facilities + Lexical 派生計算 pattern 確立（→ `server-actions/implementation/forms-and-public.md` §動的配列 + 複雑 widget 連携の `useState` array transit pattern）
 
 ## 禁止事項
 
-- **`useFormAction` (RHF) 新規利用禁止** — legacy hook、Task 8 で削除予定。設定セクションで残存している場合は同 commit 内で conform に置換する
+- **`useFormAction` (RHF) 新規利用禁止** — legacy hook、別 phase で削除予定。設定セクションで残存している場合は同 commit 内で conform に置換する
 - **`useState` + 手動 `onChange` のフォーム管理禁止** — conform `useForm` を使う
 - **`useRefreshOnSuccess` フック禁止** — 削除済、conform `useEffect(() => { if (lastResult?.initialValue === null) router.refresh() })` で代替
 - **Server Action 内 `parseWithZod` 直接呼び出し禁止** — `executeConformMutation` SSoT helper 経由

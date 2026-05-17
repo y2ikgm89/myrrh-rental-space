@@ -87,4 +87,4 @@ done
 - `CustomApiKeysSection` / `ICalFeedSection` — CRUD テーブル型（行ごとの編集、form 不要）
 - `PermissionsSection` — 読み取り専用 UI
 - `RobotsTxtSection` — Lexical エディタ型
-- `BusinessHoursSection` — 複雑なネスト配列（曜日 × 時間帯）、Phase 1 Task 7 で conform `form.insert/remove` に migration 予定
+- `BusinessHoursSection` — 複雑なネスト配列（曜日 × 時間帯）、別 phase で conform `form.insert/remove` に migration 予定（LocationForm PR #96 で dnd-kit + `form.reorder` canonical 確立済 / SpaceEditForm PR #98 で useState array transit canonical 確立済）
