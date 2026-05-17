@@ -1,11 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { useActionState, useEffect, useRef, useState } from "react";
+import type { ReactElement } from "react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { spaceReviewSchema } from "@/shared/lib/validations/review";
 import { submitReview } from "@/public/actions/review";
-import { usePublicForm } from "@/public/hooks/use-public-form";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import { Heading } from "@/public/components/design-system/heading";
 import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
@@ -17,7 +22,6 @@ import {
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import type { SpaceReviewInput } from "@/shared/lib/validations/review";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,7 +41,7 @@ type ReviewFormInnerProps = Omit<
 >;
 
 // ---------------------------------------------------------------------------
-// Component
+// Outer gate (hooks なし — feature flag による render 分岐)
 // ---------------------------------------------------------------------------
 
 /**
@@ -46,7 +50,8 @@ type ReviewFormInnerProps = Omit<
  * - Global ON + per-space OFF → "このスペースは受け付けていません" メッセージ
  * - 両方 ON → ReviewFormInner
  *
- * precedence: global が上位（WordPress / Ghost pattern）
+ * precedence: global が上位 (WordPress / Ghost pattern)
+ * → `react/hooks/component-and-state.md` §Outer/Inner Component Split 準拠
  */
 export function ReviewForm({
   reservationId,
@@ -54,7 +59,7 @@ export function ReviewForm({
   reviewsEnabled,
   reviewsFeatureEnabled,
   turnstileSiteKey,
-}: ReviewFormProps) {
+}: ReviewFormProps): ReactElement {
   if (!reviewsFeatureEnabled) {
     return (
       <div className="rounded-lg border border-border bg-surface p-6 text-center">
@@ -84,47 +89,67 @@ export function ReviewForm({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Inner (conform pattern)
+// ---------------------------------------------------------------------------
+
 function ReviewFormInner({
   reservationId,
   spaceName,
   turnstileSiteKey,
-}: ReviewFormInnerProps) {
+}: ReviewFormInnerProps): ReactElement {
+  const [rating, setRating] = useState<number>(0);
+  const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const [submitted, setSubmitted] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
 
-  const { form, isPending, onSubmit } = usePublicForm<
-    SpaceReviewInput,
-    { id: string }
-  >(
-    spaceReviewSchema,
-    async (data) => {
-      const result = await submitReview(data);
-      if (isMutationError(result)) {
-        turnstileRef.current?.reset();
-      } else {
-        setSubmitted(true);
-      }
-      return result;
-    },
-    {
-      defaultValues: {
-        reservationId,
-        rating: 0,
-        title: "",
-        comment: "",
-      },
-    },
+  const [lastResult, formAction, isPending] = useActionState(
+    submitReview,
+    undefined,
   );
 
+  const [form, fields] = useForm({
+    id: "review-form",
+    constraint: getZodConstraint(spaceReviewSchema),
+    lastResult,
+    defaultValue: {
+      reservationId,
+      title: "",
+      comment: "",
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: spaceReviewSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  const turnstileTokenControl = useInputControl(fields.turnstileToken);
+
+  // Render 中 state sync: 成功検出 (executeConformMutation default
+  // `resetForm: true` で `{ initialValue: null }` を返す)
+  if (lastResult !== previousResult) {
+    setPreviousResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      setSubmitted(true);
+    }
+  }
+
+  // Turnstile DOM reset は副作用のため effect に残置
+  useEffect(() => {
+    if (lastResult?.status === "error") {
+      turnstileRef.current?.reset();
+      turnstileTokenControl.change("");
+    }
+  }, [lastResult, turnstileTokenControl]);
+
   function handleTurnstileVerify(token: string) {
-    form.setValue("turnstileToken", token);
+    turnstileTokenControl.change(token);
   }
 
   function handleTurnstileExpire() {
-    form.setValue("turnstileToken", "");
+    turnstileTokenControl.change("");
   }
-
-  const rating = useWatch({ control: form.control, name: "rating" });
 
   if (submitted) {
     return (
@@ -139,7 +164,9 @@ function ReviewFormInner({
     );
   }
 
-  const ratingError = form.formState.errors.rating?.message;
+  const ratingError = fields.rating.errors?.[0];
+  const formErrorMessage =
+    form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
 
   return (
     <section className="mt-4 md:mt-8 border border-border p-4 sm:p-6">
@@ -147,11 +174,30 @@ function ReviewFormInner({
         「{spaceName}」のレビューを投稿
       </Heading>
 
-      <form onSubmit={onSubmit} className="space-y-6">
-        {/* Hidden reservation ID */}
-        <input type="hidden" {...form.register("reservationId")} />
+      <form {...getFormProps(form)} action={formAction} className="space-y-6">
+        {/* Hidden inputs for transit (rating は useState 経由) */}
+        <input
+          type="hidden"
+          name={fields.reservationId.name}
+          value={reservationId}
+        />
+        <input type="hidden" name={fields.rating.name} value={String(rating)} />
+        <input
+          type="hidden"
+          name={fields.turnstileToken.name}
+          value={turnstileTokenControl.value ?? ""}
+        />
 
-        {/* IconStar Rating */}
+        {formErrorMessage !== null && (
+          <div
+            className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            role="alert"
+          >
+            {formErrorMessage}
+          </div>
+        )}
+
+        {/* Star Rating */}
         <div>
           <label className="mb-2 block text-sm font-medium">
             評価
@@ -162,13 +208,13 @@ function ReviewFormInner({
           </label>
           <StarRating
             mode="interactive"
-            rating={rating ?? 0}
+            rating={rating}
             size={28}
             onChange={(value) => {
-              form.setValue("rating", value, { shouldValidate: true });
+              setRating(value);
             }}
           />
-          {ratingError ? (
+          {ratingError !== undefined ? (
             <p className="mt-1 text-sm text-destructive" role="alert">
               {ratingError}
             </p>
@@ -178,22 +224,20 @@ function ReviewFormInner({
         {/* Title */}
         <Input
           label="タイトル（任意）"
-          id="review-title"
-          {...form.register("title")}
-          {...(form.formState.errors.title?.message
-            ? { error: form.formState.errors.title.message }
-            : {})}
+          {...(fields.title.errors?.[0] !== undefined && {
+            error: fields.title.errors[0],
+          })}
+          {...getInputProps(fields.title, { type: "text" })}
         />
 
         {/* Comment */}
         <Textarea
           label="コメント（任意）"
-          id="review-comment"
           rows={4}
-          {...form.register("comment")}
-          {...(form.formState.errors.comment?.message
-            ? { error: form.formState.errors.comment.message }
-            : {})}
+          {...(fields.comment.errors?.[0] !== undefined && {
+            error: fields.comment.errors[0],
+          })}
+          {...getInputProps(fields.comment, { type: "text" })}
         />
 
         <TurnstileWidget

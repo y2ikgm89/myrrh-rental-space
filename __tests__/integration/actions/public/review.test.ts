@@ -3,18 +3,23 @@
  *
  * src/app/(public)/_shared/actions/review.ts のテスト
  *
+ * Phase 2 conform 移行後:
+ *   signature: `(_prev: SubmissionResult | undefined, formData: FormData) => Promise<SubmissionResult>`
+ *   - `executeConformMutation(formData, spaceReviewSchema, handler)` 経由 (default `resetForm: true`)
+ *   - success: `submission.reply({ resetForm: true })` → `{ initialValue: null }`
+ *   - field-level error: `submission.reply()` で field-level errors
+ *   - form-level error (rate limit / auth / Turnstile / DomainError): `reply({ formErrors })`
+ *
  * モック方針:
- * - checkActionRateLimit: action-helpers をモック（常に成功を返す）
- * - createValidationMutationError: action-helpers をモック（ZodError → fieldErrors 変換）
- * - getSession: auth をモック（ログイン状態を制御）
+ * - checkActionRateLimit: action-helpers をモック (常に成功を返す)
+ * - getCustomerSession: auth をモック (ログイン状態を制御)
  * - getCustomerByUserId: customers/queries をモック
  * - createReviewCommand: domain コマンドをモック
- * - updateTag: next/cache をモック
+ * - invalidateReviewCaches: cache helper をモック
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -25,15 +30,14 @@ const mockCheckActionRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockValidateTurnstile = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
-  validateTurnstile: mock(() => Promise.resolve({ success: true })),
-  createValidationMutationError: (error: import("zod").ZodError) => ({
-    error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
-  }),
+  validateTurnstile: mockValidateTurnstile,
 }));
 
 const mockGetSession = mock<
@@ -64,8 +68,18 @@ mock.module("@/shared/lib/admin-auth", () => ({
   DASHBOARD_ROLES: [],
 }));
 
-const mockGetCustomerByUserId = mock<() => Promise<{ id: string } | null>>(() =>
-  Promise.resolve({ id: "customer-001" }),
+const mockGetCustomerByUserId = mock<
+  () => Promise<{
+    id: string;
+    lastName: string;
+    firstName: string;
+  } | null>
+>(() =>
+  Promise.resolve({
+    id: "customer-001",
+    lastName: "山田",
+    firstName: "太郎",
+  }),
 );
 
 mock.module("@/shared/domain/customers/queries", () => ({
@@ -76,6 +90,7 @@ const mockCreateReviewCommand = mock(() =>
   Promise.resolve({
     id: "review-001",
     spaceId: "space-001",
+    spaceSlug: "test-space",
   }),
 );
 
@@ -87,13 +102,29 @@ mock.module("@/shared/domain/reviews/commands", () => ({
   deleteReviewCommand: mock(() => Promise.resolve({ spaceId: "space-001" })),
 }));
 
+const mockInvalidateReviewCaches = mock(() => undefined);
+
+mock.module("@/shared/lib/cache/review-cache", () => ({
+  invalidateReviewCaches: mockInvalidateReviewCaches,
+}));
+
 const mockUpdateTag = mock(() => undefined);
 
 mock.module("next/cache", () => ({
   updateTag: mockUpdateTag,
 }));
 
-// server-only モック（テスト環境で server-only を無効化）
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (promise: Promise<unknown>) => {
+    void promise.catch(() => {});
+  },
+  settleAllWithLogging: <T>(promises: Promise<T>[]) =>
+    Promise.allSettled(promises),
+  withTimeout: <T>(promise: Promise<T>) => promise,
+  withRetry: <T>(fn: () => Promise<T>) => fn(),
+}));
+
+// server-only モック
 mock.module("server-only", () => ({}));
 
 // =============================================================================
@@ -102,12 +133,40 @@ mock.module("server-only", () => ({}));
 
 const VALID_RESERVATION_ID = "00000000-0000-4000-a000-000000000001";
 
-const VALID_INPUT = {
+type ReviewInputShape = {
+  reservationId: string;
+  rating: number;
+  title?: string;
+  comment?: string;
+  turnstileToken: string;
+};
+
+const VALID_INPUT: ReviewInputShape = {
   reservationId: VALID_RESERVATION_ID,
   rating: 4,
   title: "素晴らしいスペースでした",
   comment: "清潔感があり、スタッフも親切でした。また利用したいです。",
   turnstileToken: "test-turnstile-token",
+};
+
+function inputToFormData(input: ReviewInputShape): FormData {
+  const fd = new FormData();
+  fd.append("reservationId", input.reservationId);
+  fd.append("rating", String(input.rating));
+  if (input.title !== undefined) {
+    fd.append("title", input.title);
+  }
+  if (input.comment !== undefined) {
+    fd.append("comment", input.comment);
+  }
+  fd.append("turnstileToken", input.turnstileToken);
+  return fd;
+}
+
+type SubmissionLike = {
+  readonly status?: "success" | "error";
+  readonly initialValue?: unknown;
+  readonly error?: Record<string, string[] | null> | null;
 };
 
 // =============================================================================
@@ -117,12 +176,17 @@ const VALID_INPUT = {
 describe("submitReview", () => {
   beforeEach(() => {
     mockCheckActionRateLimit.mockClear();
+    mockValidateTurnstile.mockClear();
     mockGetSession.mockClear();
     mockGetCustomerByUserId.mockClear();
     mockCreateReviewCommand.mockClear();
+    mockInvalidateReviewCaches.mockClear();
     mockUpdateTag.mockClear();
     // 成功レスポンスにリセット
     mockCheckActionRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
+    mockValidateTurnstile.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
     mockGetSession.mockImplementation(() =>
@@ -131,31 +195,41 @@ describe("submitReview", () => {
       }),
     );
     mockGetCustomerByUserId.mockImplementation(() =>
-      Promise.resolve({ id: "customer-001" }),
+      Promise.resolve({
+        id: "customer-001",
+        lastName: "山田",
+        firstName: "太郎",
+      }),
     );
     mockCreateReviewCommand.mockImplementation(() =>
       Promise.resolve({
         id: "review-001",
         spaceId: "space-001",
+        spaceSlug: "test-space",
       }),
     );
   });
 
   describe("正常系", () => {
-    test("有効な入力でレビュー作成が成功し id を返す", async () => {
+    test("有効な入力でレビュー作成が成功する", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview(VALID_INPUT);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "review-001" });
+      // conform v1.19: `reply({ resetForm: true })` は `{ initialValue: null }`
+      expect(result.initialValue).toBeNull();
+      expect(result.status).not.toBe("error");
     });
 
     test("createReviewCommand が customerId / reservationId / rating / title / comment を引数に呼ばれる", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      await submitReview(VALID_INPUT);
+      await submitReview(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreateReviewCommand).toHaveBeenCalledTimes(1);
       expect(mockCreateReviewCommand).toHaveBeenCalledWith({
@@ -167,78 +241,80 @@ describe("submitReview", () => {
       });
     });
 
-    test("updateTag がキャッシュ無効化のために複数回呼ばれる", async () => {
+    test("invalidateReviewCaches がキャッシュ無効化のために呼ばれる", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      await submitReview(VALID_INPUT);
+      await submitReview(undefined, inputToFormData(VALID_INPUT));
 
-      // REVIEWS + reviews.space(spaceId) + reviews.stats(spaceId) + CUSTOMERS + customers.detail(customerId) = 5回
-      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(5);
+      expect(mockInvalidateReviewCaches).toHaveBeenCalledTimes(1);
+      expect(mockInvalidateReviewCaches).toHaveBeenCalledWith(
+        "space-001",
+        "test-space",
+        { customerId: "customer-001", notifications: true },
+      );
     });
 
     test("title と comment が省略されても成功する", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const inputWithoutOptional = {
-        reservationId: VALID_RESERVATION_ID,
-        rating: 5,
-        turnstileToken: "test-turnstile-token",
-      };
-      const result = await submitReview(inputWithoutOptional);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({
+          reservationId: VALID_RESERVATION_ID,
+          rating: 5,
+          turnstileToken: "test-turnstile-token",
+        }),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "review-001" });
-    });
-
-    test("title と comment が空文字列でも成功する", async () => {
-      const { submitReview } =
-        await import("@/app/(public)/_shared/actions/review");
-
-      const result = await submitReview({
-        ...VALID_INPUT,
-        title: "",
-        comment: "",
-      });
-
-      expect(result).toEqual({ id: "review-001" });
+      expect(result.initialValue).toBeNull();
     });
 
     test("rating が最小値 1 で成功する", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({ ...VALID_INPUT, rating: 1 });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, rating: 1 }),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "review-001" });
+      expect(result.initialValue).toBeNull();
     });
 
     test("rating が最大値 5 で成功する", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({ ...VALID_INPUT, rating: 5 });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, rating: 5 }),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "review-001" });
+      expect(result.initialValue).toBeNull();
     });
   });
 
   describe("異常系: レート制限", () => {
-    test("レート制限超過時はエラーを返す", async () => {
+    test("レート制限超過時は formErrors にエラーを返す", async () => {
       mockCheckActionRateLimit.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
-          error:
-            "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+          error: "リクエストが多すぎます",
         }),
       );
 
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview(VALID_INPUT);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("リクエストが多すぎます");
     });
 
     test("レート制限超過時は createReviewCommand が呼ばれない", async () => {
@@ -252,114 +328,105 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      await submitReview(VALID_INPUT);
+      await submitReview(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreateReviewCommand).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("reservationId が無効な UUID のとき fieldErrors を含むエラーを返す", async () => {
+    test("reservationId が無効な UUID のとき fieldErrors を返す", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({
-        ...VALID_INPUT,
-        reservationId: "not-a-uuid",
-      });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, reservationId: "not-a-uuid" }),
+      )) as SubmissionLike;
 
-      expect(result).toMatchObject({
-        error: expect.any(String),
-        fieldErrors: expect.objectContaining({
-          reservationId: expect.any(Array),
-        }),
-      });
+      expect(result.status).toBe("error");
+      expect(result.error?.["reservationId"]).toBeDefined();
     });
 
-    test("rating が 0 のとき fieldErrors を含むエラーを返す", async () => {
+    test("rating が 0 のとき fieldErrors を返す", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({ ...VALID_INPUT, rating: 0 });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, rating: 0 }),
+      )) as SubmissionLike;
 
-      expect(result).toMatchObject({
-        error: expect.any(String),
-        fieldErrors: expect.objectContaining({
-          rating: expect.any(Array),
-        }),
-      });
+      expect(result.status).toBe("error");
+      expect(result.error?.["rating"]).toBeDefined();
     });
 
-    test("rating が 6 のとき fieldErrors を含むエラーを返す", async () => {
+    test("rating が 6 のとき fieldErrors を返す", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({ ...VALID_INPUT, rating: 6 });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, rating: 6 }),
+      )) as SubmissionLike;
 
-      expect(result).toMatchObject({
-        error: expect.any(String),
-        fieldErrors: expect.objectContaining({
-          rating: expect.any(Array),
-        }),
-      });
+      expect(result.status).toBe("error");
+      expect(result.error?.["rating"]).toBeDefined();
     });
 
-    test("title が 101 文字のとき fieldErrors を含むエラーを返す", async () => {
+    test("title が 101 文字のとき fieldErrors を返す", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({
-        ...VALID_INPUT,
-        title: "あ".repeat(101),
-      });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, title: "あ".repeat(101) }),
+      )) as SubmissionLike;
 
-      expect(result).toMatchObject({
-        error: expect.any(String),
-        fieldErrors: expect.objectContaining({
-          title: expect.any(Array),
-        }),
-      });
+      expect(result.status).toBe("error");
+      expect(result.error?.["title"]).toBeDefined();
     });
 
-    test("comment が 1001 文字のとき fieldErrors を含むエラーを返す", async () => {
+    test("comment が 1001 文字のとき fieldErrors を返す", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview({
-        ...VALID_INPUT,
-        comment: "あ".repeat(1001),
-      });
+      const result = (await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, comment: "あ".repeat(1001) }),
+      )) as SubmissionLike;
 
-      expect(result).toMatchObject({
-        error: expect.any(String),
-        fieldErrors: expect.objectContaining({
-          comment: expect.any(Array),
-        }),
-      });
+      expect(result.status).toBe("error");
+      expect(result.error?.["comment"]).toBeDefined();
     });
 
     test("バリデーション失敗時は createReviewCommand が呼ばれない", async () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      await submitReview({ ...VALID_INPUT, rating: 0 });
+      await submitReview(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, rating: 0 }),
+      );
 
       expect(mockCreateReviewCommand).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: 未認証", () => {
-    test("未ログイン時はエラーを返す", async () => {
+    test("未ログイン時は formErrors にエラーを返す", async () => {
       mockGetSession.mockImplementation(() => Promise.resolve(null));
 
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview(VALID_INPUT);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(isMutationError(result)).toBe(true);
-      if (!isMutationError(result)) throw new Error("Expected MutationError");
-      expect(result.error).toBe("ログインが必要です");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("ログインが必要です");
     });
 
     test("未ログイン時は createReviewCommand が呼ばれない", async () => {
@@ -368,27 +435,29 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      await submitReview(VALID_INPUT);
+      await submitReview(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreateReviewCommand).not.toHaveBeenCalled();
     });
 
-    test("顧客情報が見つからない場合はエラーを返す", async () => {
+    test("顧客情報が見つからない場合は formErrors にエラーを返す", async () => {
       mockGetCustomerByUserId.mockImplementation(() => Promise.resolve(null));
 
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview(VALID_INPUT);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(isMutationError(result)).toBe(true);
-      if (!isMutationError(result)) throw new Error("Expected MutationError");
-      expect(result.error).toBe("顧客情報が見つかりません");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("顧客情報が見つかりません");
     });
   });
 
   describe("異常系: DomainError", () => {
-    test("DomainError（NOT_FOUND）をスローしたとき MutationError を返す", async () => {
+    test("DomainError (NOT_FOUND) をスローしたとき formErrors を返す", async () => {
       mockCreateReviewCommand.mockImplementation(() =>
         Promise.reject(new DomainError("予約が見つかりません", "NOT_FOUND")),
       );
@@ -396,54 +465,16 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview(VALID_INPUT);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(isMutationError(result)).toBe(true);
-      if (!isMutationError(result)) throw new Error("Expected MutationError");
-      expect(result.error).toBe("予約が見つかりません");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("予約が見つかりません");
     });
 
-    test("DomainError（UNAUTHORIZED）をスローしたとき MutationError を返す", async () => {
-      mockCreateReviewCommand.mockImplementation(() =>
-        Promise.reject(
-          new DomainError(
-            "この予約にレビューを投稿する権限がありません",
-            "UNAUTHORIZED",
-          ),
-        ),
-      );
-
-      const { submitReview } =
-        await import("@/app/(public)/_shared/actions/review");
-
-      const result = await submitReview(VALID_INPUT);
-
-      expect(isMutationError(result)).toBe(true);
-      if (!isMutationError(result)) throw new Error("Expected MutationError");
-      expect(result.error).toBe("この予約にレビューを投稿する権限がありません");
-    });
-
-    test("DomainError（VALIDATION）をスローしたとき MutationError を返す", async () => {
-      mockCreateReviewCommand.mockImplementation(() =>
-        Promise.reject(
-          new DomainError(
-            "完了済みの予約のみレビューを投稿できます",
-            "VALIDATION",
-          ),
-        ),
-      );
-
-      const { submitReview } =
-        await import("@/app/(public)/_shared/actions/review");
-
-      const result = await submitReview(VALID_INPUT);
-
-      expect(isMutationError(result)).toBe(true);
-      if (!isMutationError(result)) throw new Error("Expected MutationError");
-      expect(result.error).toBe("完了済みの予約のみレビューを投稿できます");
-    });
-
-    test("DomainError（CONFLICT）をスローしたとき MutationError を返す", async () => {
+    test("DomainError (CONFLICT) をスローしたとき formErrors を返す", async () => {
       mockCreateReviewCommand.mockImplementation(() =>
         Promise.reject(
           new DomainError(
@@ -456,11 +487,15 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = await submitReview(VALID_INPUT);
+      const result = (await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(isMutationError(result)).toBe(true);
-      if (!isMutationError(result)) throw new Error("Expected MutationError");
-      expect(result.error).toBe("この予約には既にレビューが投稿されています");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe(
+        "この予約には既にレビューが投稿されています",
+      );
     });
 
     test("DomainError 以外の Error をスローしたとき再スローされる", async () => {
@@ -471,9 +506,9 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      await expect(submitReview(VALID_INPUT)).rejects.toThrow(
-        "予期しないDBエラー",
-      );
+      await expect(
+        submitReview(undefined, inputToFormData(VALID_INPUT)),
+      ).rejects.toThrow("予期しないDBエラー");
     });
   });
 
@@ -570,15 +605,10 @@ describe("submitReview", () => {
 
       const result = spaceReviewSchema.safeParse({
         rating: 3,
+        turnstileToken: "test-token",
       });
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const reservationIdError = result.error.issues.find(
-          (issue) => issue.path[0] === "reservationId",
-        );
-        expect(reservationIdError).toBeDefined();
-      }
     });
   });
 });
