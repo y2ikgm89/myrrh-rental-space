@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import type {
   AnalyticsType,
@@ -470,7 +471,12 @@ export async function updateFeatureModulesCommand(
   modules: Record<string, boolean>,
 ): Promise<void> {
   await prisma.settings.updateMany({
-    data: { featureModules: modules as Prisma.InputJsonValue },
+    data: {
+      featureModules: asPrismaInputJsonValue(
+        modules,
+        "featureModules が不正です",
+      ),
+    },
   });
 }
 

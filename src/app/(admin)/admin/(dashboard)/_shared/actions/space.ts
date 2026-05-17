@@ -4,7 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { z } from "zod";
-import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
+import { parsePrismaInputJson } from "@/shared/db/json";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -50,9 +50,10 @@ function revalidateSpaces(...ids: string[]): void {
 function buildSpaceCommandInput(data: SpaceFormData) {
   const descriptionHtml = data.descriptionHtml;
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
-  const descriptionJson = JSON.parse(
+  const descriptionJson = parsePrismaInputJson(
     data.descriptionJson,
-  ) as Prisma.InputJsonValue;
+    "descriptionJson が不正です",
+  );
 
   const {
     descriptionJson: _dropJson,

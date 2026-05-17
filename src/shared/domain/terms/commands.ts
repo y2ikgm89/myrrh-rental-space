@@ -1,8 +1,8 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { parsePrismaInputJson } from "@/shared/db/json";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { TermsFormInput } from "@/shared/lib/validations/terms";
 
@@ -26,7 +26,10 @@ async function ensureSlugAvailable(
 
 function buildContent(input: TermsFormInput) {
   return {
-    contentJson: JSON.parse(input.contentJson) as Prisma.InputJsonValue,
+    contentJson: parsePrismaInputJson(
+      input.contentJson,
+      "contentJson が不正です",
+    ),
     contentHtml: input.contentHtml,
   };
 }

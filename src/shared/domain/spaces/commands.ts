@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import {
   DiscountType,
   DurationDiscountOverride,
@@ -284,7 +285,10 @@ export async function duplicateSpaceCommand(
     data: {
       slug,
       name: `${source.name}（コピー）`,
-      descriptionJson: source.descriptionJson as Prisma.InputJsonValue,
+      descriptionJson: asPrismaInputJsonValue(
+        source.descriptionJson,
+        "descriptionJson が不正です",
+      ),
       descriptionHtml: source.descriptionHtml,
       descriptionPlainText: source.descriptionPlainText,
       addressDetail: source.addressDetail,
@@ -293,12 +297,21 @@ export async function duplicateSpaceCommand(
       hourlyPrice: source.hourlyPrice,
       dailyPrice: source.dailyPrice,
       mainImageUrl: source.mainImageUrl,
-      imageUrls: source.imageUrls as Prisma.InputJsonValue,
-      facilities: source.facilities as Prisma.InputJsonValue,
+      imageUrls: asPrismaInputJsonValue(
+        source.imageUrls,
+        "imageUrls が不正です",
+      ),
+      facilities: asPrismaInputJsonValue(
+        source.facilities,
+        "facilities が不正です",
+      ),
       businessHours:
         source.businessHours === null
           ? Prisma.JsonNull
-          : (source.businessHours as Prisma.InputJsonValue),
+          : asPrismaInputJsonValue(
+              source.businessHours,
+              "businessHours が不正です",
+            ),
       reviewsEnabled: source.reviewsEnabled,
       metaDescription: source.metaDescription,
       metaKeywords: source.metaKeywords,

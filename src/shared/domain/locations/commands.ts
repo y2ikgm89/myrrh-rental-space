@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { BusinessHours } from "@/shared/lib/json-validators";
@@ -54,13 +55,16 @@ function toLocationData(data: LocationFormData) {
     buildingName: data.buildingName || null,
     accessLines: data.accessLines.map((line) => line.value),
     parkingInfo: data.parkingInfo || null,
-    amenities: data.amenities as Prisma.InputJsonValue,
+    amenities: asPrismaInputJsonValue(data.amenities, "amenities が不正です"),
     imageUrl: data.imageUrl,
     imageUrls: data.imageUrls.map((image) => image.url),
     businessHours: businessHoursToJson(data.businessHours ?? null),
     specialHolidays:
       data.specialHolidays && data.specialHolidays.length > 0
-        ? (data.specialHolidays as Prisma.InputJsonValue)
+        ? asPrismaInputJsonValue(
+            data.specialHolidays,
+            "specialHolidays が不正です",
+          )
         : Prisma.JsonNull,
     latitude: data.latitude ?? null,
     longitude: data.longitude ?? null,
