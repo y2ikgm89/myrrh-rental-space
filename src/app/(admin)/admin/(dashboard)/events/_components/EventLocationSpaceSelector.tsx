@@ -1,13 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type {
-  FieldErrors,
-  UseFormGetValues,
-  UseFormSetValue,
-} from "react-hook-form";
-import { useWatch } from "react-hook-form";
-import type { Control } from "react-hook-form";
+import { getInputProps } from "@conform-to/react";
 import {
   Input,
   Label,
@@ -21,60 +15,41 @@ import {
   CardHeader,
   CardTitle,
 } from "@/admin/components/ui";
-import type { eventFormSchema } from "@/shared/lib/validations/event";
 import type {
   getLocationsForEvent,
   getSpacesForEvent,
 } from "@/shared/domain/events/admin-queries";
-import type { z } from "zod";
+import type { EventFormFields } from "./event-form-fields-types";
+import { LOCATION_NONE_VALUE, SPACE_NONE_VALUE } from "./event-form-schema";
 
-// =============================================================================
-// Types
-// =============================================================================
-
-type FormValues = z.infer<typeof eventFormSchema>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
 type LocationOption = Awaited<ReturnType<typeof getLocationsForEvent>>[number];
 
 type EventLocationSpaceSelectorProps = {
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
-  getValues: UseFormGetValues<FormValues>;
-  errors: FieldErrors<FormValues>;
-  register: (name: "addressDetail") => object;
+  fields: EventFormFields;
   isPending: boolean;
   locations: LocationOption[];
   spaces: SpaceOption[];
+  locationId: string | null;
+  spaceId: string | null;
+  onLocationChange: (locationId: string | null) => void;
+  onSpaceChange: (spaceId: string | null) => void;
 };
 
-// =============================================================================
-// Helpers
-// =============================================================================
-
-const LOCATION_NONE_VALUE = "__none__";
-const SPACE_NONE_VALUE = "__none__";
-
-// =============================================================================
-// Component
-// =============================================================================
-
 export function EventLocationSpaceSelector({
-  control,
-  setValue,
-  getValues,
-  errors,
-  register,
+  fields,
   isPending,
   locations,
   spaces,
+  locationId,
+  spaceId,
+  onLocationChange,
+  onSpaceChange,
 }: EventLocationSpaceSelectorProps): ReactElement {
-  const watchedLocationId = useWatch({ control, name: "locationId" });
-  const watchedSpaceId = useWatch({ control, name: "spaceId" });
-
-  const hasLocationSelected = Boolean(watchedLocationId);
-  const hasSpaceSelected = Boolean(watchedSpaceId);
-  const spacesInLocation = watchedLocationId
-    ? spaces.filter((s) => s.locationId === watchedLocationId)
+  const hasLocationSelected = Boolean(locationId);
+  const hasSpaceSelected = Boolean(spaceId);
+  const spacesInLocation = locationId
+    ? spaces.filter((s) => s.locationId === locationId)
     : [];
 
   const addressDetailFieldMeta = hasSpaceSelected
@@ -98,26 +73,13 @@ export function EventLocationSpaceSelector({
         };
 
   const handleLocationChange = (value: string) => {
-    const nextLocationId = value === LOCATION_NONE_VALUE ? null : value;
-    setValue("locationId", nextLocationId, { shouldDirty: true });
-    const currentSpaceId = getValues("spaceId");
-    if (currentSpaceId) {
-      const currentSpace = spaces.find((s) => s.id === currentSpaceId);
-      if (!currentSpace || currentSpace.locationId !== nextLocationId) {
-        setValue("spaceId", null, { shouldDirty: true });
-      }
-    }
+    const next = value === LOCATION_NONE_VALUE ? null : value;
+    onLocationChange(next);
   };
 
   const handleSpaceChange = (value: string) => {
-    const nextSpaceId = value === SPACE_NONE_VALUE ? null : value;
-    setValue("spaceId", nextSpaceId, { shouldDirty: true });
-    if (nextSpaceId) {
-      const selected = spaces.find((s) => s.id === nextSpaceId);
-      if (selected && getValues("locationId") !== selected.locationId) {
-        setValue("locationId", selected.locationId, { shouldDirty: true });
-      }
-    }
+    const next = value === SPACE_NONE_VALUE ? null : value;
+    onSpaceChange(next);
   };
 
   return (
@@ -130,15 +92,15 @@ export function EventLocationSpaceSelector({
           登録済み会場（本館・支店等）を選択し、その中の特定スペースで開催する場合はスペースも選択します。外部会場の場合は「外部会場」を選んで会場名・住所を入力します。
         </p>
 
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="locationId">会場</Label>
+            <Label htmlFor="event-locationId">会場</Label>
             <Select
-              value={watchedLocationId ?? LOCATION_NONE_VALUE}
+              value={locationId ?? LOCATION_NONE_VALUE}
               onValueChange={handleLocationChange}
               disabled={isPending}
             >
-              <SelectTrigger id="locationId">
+              <SelectTrigger id="event-locationId">
                 <SelectValue placeholder="会場を選択" />
               </SelectTrigger>
               <SelectContent>
@@ -150,17 +112,20 @@ export function EventLocationSpaceSelector({
                 ))}
               </SelectContent>
             </Select>
-            {errors.locationId && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.locationId.message}
+            {fields.locationId.errors && (
+              <p
+                id={fields.locationId.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.locationId.errors.join(", ")}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="spaceId">スペース（任意）</Label>
+            <Label htmlFor="event-spaceId">スペース（任意）</Label>
             <Select
-              value={watchedSpaceId ?? SPACE_NONE_VALUE}
+              value={spaceId ?? SPACE_NONE_VALUE}
               onValueChange={handleSpaceChange}
               disabled={
                 isPending ||
@@ -168,7 +133,7 @@ export function EventLocationSpaceSelector({
                 spacesInLocation.length === 0
               }
             >
-              <SelectTrigger id="spaceId">
+              <SelectTrigger id="event-spaceId">
                 <SelectValue
                   placeholder={
                     !hasLocationSelected
@@ -191,19 +156,23 @@ export function EventLocationSpaceSelector({
             <p className="mt-1 text-xs text-muted-foreground">
               特定スペースで開催する場合のみ選択。ロビーやホール全体を使う場合は「会場全体で開催」のままにします。
             </p>
-            {errors.spaceId && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.spaceId.message}
+            {fields.spaceId.errors && (
+              <p
+                id={fields.spaceId.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.spaceId.errors.join(", ")}
               </p>
             )}
           </div>
         </div>
 
         <div>
-          <Label htmlFor="addressDetail">{addressDetailFieldMeta.label}</Label>
+          <Label htmlFor={fields.addressDetail.id}>
+            {addressDetailFieldMeta.label}
+          </Label>
           <Input
-            id="addressDetail"
-            {...register("addressDetail")}
+            {...getInputProps(fields.addressDetail, { type: "text" })}
             disabled={isPending}
             placeholder={addressDetailFieldMeta.placeholder}
             aria-describedby="addressDetail-description"
@@ -214,9 +183,12 @@ export function EventLocationSpaceSelector({
           >
             {addressDetailFieldMeta.description}
           </p>
-          {errors.addressDetail && (
-            <p className="text-sm text-destructive mt-1">
-              {errors.addressDetail.message}
+          {fields.addressDetail.errors && (
+            <p
+              id={fields.addressDetail.errorId}
+              className="mt-1 text-sm text-destructive"
+            >
+              {fields.addressDetail.errors.join(", ")}
             </p>
           )}
         </div>
