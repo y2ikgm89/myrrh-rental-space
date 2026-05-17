@@ -3,14 +3,13 @@
 /**
  * お知らせエディタ 設定ダイアログ定義
  *
- * SettingsDialog に渡すタブ・セクション構成。フォーム型は `NewsSettingsFormData`
- * （本文 contentJson を含まないメタデータ専用）。
+ * SettingsDialog に渡すタブ・セクション構成。conform `FieldMetadata` ベース。
+ * フォーム型は `NewsSettingsFormData` (本文 contentJson を含まないメタデータ専用)。
  */
 
 import type { NewsSettingsFormData } from "@/admin/lib/validations/news";
+import { generateSlug } from "@/shared/lib/slug";
 import {
-  SEO_FIELD_NAMES,
-  OGP_FIELD_NAMES,
   type NewsSidePanelExtra,
   type SidePanelDefinition,
   spreadOptionalDisabled,
@@ -38,20 +37,35 @@ export const newsSettingsPanel: SidePanelDefinition<
       sections: [
         {
           title: "基本情報",
-          render: (ctx) => (
-            <TitleSlugFields<NewsSettingsFormData>
-              register={ctx.register}
-              control={ctx.control}
-              errors={ctx.errors}
-              setValue={ctx.setValue}
-              getValues={ctx.getValues}
-              {...spreadOptionalDisabled(ctx)}
-              fields={{ title: "title", slug: "slug" }}
-              slugPreviewPath="/news"
-              titlePlaceholder="お知らせのタイトル"
-              slugPlaceholder="news-slug"
-            />
-          ),
+          render: (ctx) => {
+            const titleValue =
+              typeof ctx.fields.title.value === "string"
+                ? ctx.fields.title.value
+                : "";
+            const slugValue =
+              typeof ctx.fields.slug.value === "string"
+                ? ctx.fields.slug.value
+                : "";
+            return (
+              <TitleSlugFields
+                titleField={ctx.fields.title}
+                slugField={ctx.fields.slug}
+                slugPreviewPath="/news"
+                slugPreviewValue={slugValue}
+                titlePlaceholder="お知らせのタイトル"
+                slugPlaceholder="news-slug"
+                onAutoGenerateSlug={() => {
+                  if (titleValue) {
+                    ctx.form.update({
+                      name: ctx.fields.slug.name,
+                      value: generateSlug(titleValue),
+                    });
+                  }
+                }}
+                {...spreadOptionalDisabled(ctx)}
+              />
+            );
+          },
         },
       ],
     },
@@ -62,24 +76,21 @@ export const newsSettingsPanel: SidePanelDefinition<
         {
           title: "SEO設定",
           render: (ctx) => (
-            <SEOFields<NewsSettingsFormData>
-              register={ctx.register}
-              errors={ctx.errors}
+            <SEOFields
+              metaDescriptionField={ctx.fields.metaDescription}
+              metaKeywordsField={ctx.fields.metaKeywords}
               {...spreadOptionalDisabled(ctx)}
-              fields={SEO_FIELD_NAMES}
             />
           ),
         },
         {
           title: "OGP設定",
           render: (ctx) => (
-            <OGPFields<NewsSettingsFormData>
-              register={ctx.register}
-              control={ctx.control}
-              errors={ctx.errors}
-              setValue={ctx.setValue}
+            <OGPFields
+              ogpTitleField={ctx.fields.ogpTitle}
+              ogpDescriptionField={ctx.fields.ogpDescription}
+              ogpImageUrlField={ctx.fields.ogpImageUrl}
               {...spreadOptionalDisabled(ctx)}
-              fields={OGP_FIELD_NAMES}
             />
           ),
         },
@@ -92,20 +103,12 @@ export const newsSettingsPanel: SidePanelDefinition<
         {
           title: "公開設定",
           render: (ctx) => (
-            <UnifiedPublishFields<NewsSettingsFormData>
-              register={ctx.register}
-              control={ctx.control}
-              errors={ctx.errors}
-              setValue={ctx.setValue}
-              getValues={ctx.getValues}
-              {...spreadOptionalDisabled(ctx)}
+            <UnifiedPublishFields
               controlType="isPublished"
-              fields={{
-                publishedAt: "publishedAt",
-                isPublished: "isPublished",
-              }}
+              publishedAtField={ctx.fields.publishedAt}
               isPublishedValue={ctx.isPublishedValue}
               onIsPublishedChange={ctx.onIsPublishedChange}
+              {...spreadOptionalDisabled(ctx)}
             />
           ),
         },
@@ -113,10 +116,8 @@ export const newsSettingsPanel: SidePanelDefinition<
           title: "レイアウト",
           render: (ctx) => (
             <LayoutFieldsConnected
-              register={ctx.register}
-              control={ctx.control}
-              errors={ctx.errors}
-              setValue={ctx.setValue}
+              fields={ctx.fields}
+              form={ctx.form}
               {...spreadOptionalDisabled(ctx)}
             />
           ),
