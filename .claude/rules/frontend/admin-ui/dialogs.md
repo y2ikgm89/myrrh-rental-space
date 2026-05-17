@@ -23,7 +23,7 @@ Dialog 型 CRUD・多選択肢ダイアログ・Radix Dialog の a11y 要件を�
 
 ### canonical pattern (conform `useActionState` + Radix Dialog controlled)
 
-Phase 1 Task 4-6 で確立した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる。**Dialog open state の管理場所で 2 つの canonical variant を持つ** — どちらも「success 検知 → close」を **render 中 sync** (React 公式 ["You Might Not Need an Effect" §Adjusting State Directly During Render](https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes)) で表現し、副作用 (`toast` / `router.refresh`) のみ `useEffect` で分離する規律は同一。
+Phase 1 Task 4-7 で確立した conform 1.19 + Zod 4 + Server Action 統合パターン。Radix Dialog の close-after-async-submit 公式パターンと組み合わせる。**Dialog open state の管理場所で 2 つの canonical variant を持つ** — どちらも「success 検知 → close」を **render 中 sync** (React 公式 ["You Might Not Need an Effect" §Adjusting State Directly During Render](https://react.dev/learn/you-might-not-need-an-effect#adjusting-state-when-a-prop-changes)) で表現し、副作用 (`toast` / `router.refresh`) のみ `useEffect` で分離する規律は同一。
 
 #### Variant A: Dialog open state を child component (FooDialog) 内で管理
 
@@ -208,8 +208,9 @@ useEffect(() => {
 
 参照実装:
 
-- Variant A: `space-categories/_components/CreateCategoryDialog.tsx` / `CategoryActionCell.tsx` + `CategoryForm.tsx` (PR #64, 2026-05-16)
-- Variant B: `faq/_components/FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` + 親 `FaqCategoryDetailView.tsx` / `FaqCategoryListView.tsx` / `FaqCategoryActionCell.tsx` (PR #70, 2026-05-16) — create / edit を別 sub-component に分離し独立 `useActionState` を持つ、parent が `editingItem` / `category` state を保持し undefined で create mode を選択する master-detail pattern
+- Variant A (create/edit 分離): `space-categories/_components/CreateCategoryDialog.tsx` / `CategoryActionCell.tsx` + `CategoryForm.tsx` (PR #64, 2026-05-16)
+- Variant A (create/edit 統合 + mount-on-open + `bind` 部分適用): `posts/taxonomy/_components/CategoryManager.tsx` / `TagManager.tsx` (PR #88, 2026-05-17) — 親で `editingItem: T | null` + `isDialogOpen` を持ち、`{isDialogOpen && <FormDialog editingItem={...} />}` の **mount-on-open pattern** で Dialog 内 conform `useForm` の `defaultValue` を確実に反映（Dialog 閉じる時 unmount → 次回開く時 fresh init）。child Dialog 内で `isEdit = editingItem !== null` 判定し、`bind` 部分適用で update/create action を切替 (`updateAction.bind(null, editingItem.id)` vs `createAction`)、独立 `useActionState` で両 mode を 1 sub-component に統合
+- Variant B (create/edit 分離 + master-detail): `faq/_components/FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` + 親 `FaqCategoryDetailView.tsx` / `FaqCategoryListView.tsx` / `FaqCategoryActionCell.tsx` (PR #70, 2026-05-16) — create / edit を別 sub-component に分離し独立 `useActionState` を持つ、parent が `editingItem` / `category` state を保持し undefined で create mode を選択する master-detail pattern
 
 ### controlled / uncontrolled 両対応（空状態からの起動）
 
