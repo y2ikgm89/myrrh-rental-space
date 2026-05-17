@@ -56,9 +56,11 @@ export function PostForm({ defaultValue }: Props) {
 
 Server Action 側は `parseWithZod({ formData, schema })` で **同一 schema** を再実行し、client / server の二段検証は不要（schema 1 元化が conform の優位点）。`executeAdminMutationResult` との統合は `executeConformMutation` SSoT helper（`@/shared/lib/forms/conform-action`）経由。
 
-**conform 採用基準**: 全 admin / public 新規 form は本パターン必須。`zodResolver` / `useForm` from `react-hook-form` / `standardSchemaResolver` は **Phase 1 Task 7-8 で削除予定** のため新規利用禁止。残存 RHF 利用 (auto-section-form / LayoutFields / inline editor side panel 等) は Task 7 で順次 conform 化。
+**conform 採用基準**: 全 admin / public 新規 form は本パターン必須。`zodResolver` / `useForm` from `react-hook-form` / `standardSchemaResolver` は **Task 8 残作業 (Task 8.7 SpaceEditForm) + inline editor 別 phase 完了後に `package.json` から削除予定** のため新規利用禁止。残存 RHF 利用 (SpaceEditForm hybrid / auto-section-form / LayoutFields / inline editor side panel 等) は順次 conform 化。
 
-### 残存 RHF (Phase 1 Task 7-8 移行対象、新規利用禁止)
+**In-place schema preprocess (Task 8.6 LocationForm 確立)**: canonical schema (`@/shared/lib/validations/<entity>.ts`) を in-place 修正で FormData transit (conform) と object literal (test) を両対応にする SSoT pattern。詳細は [`server-actions/implementation/forms-and-public.md`](../server-actions/implementation/forms-and-public.md) §In-place schema preprocess pattern を参照。**重要**: preprocess の input 型は `unknown` 化するため、`standardSchemaResolver` (RHF) と非互換。schema preprocess 追加は conform 完全移行と同一 commit で行う (途中状態でビルドが通らない)。
+
+### 残存 RHF (Task 8.7 + 別 phase 移行対象、新規利用禁止)
 
 ```typescript
 // 残存 RHF 編集時の参照のみ — 新規 form では使用しない

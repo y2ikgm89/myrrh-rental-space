@@ -11,7 +11,7 @@ paths:
 
 # 管理画面フォーム・ページ構造パターン (conform canonical)
 
-> Phase 1 Task 4-7 で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン (settings sections 17/17 + Dialog 内 form taxonomy managers 完了)。RHF + `useFormAction` は legacy (Task 8 で削除予定)、新規利用禁止。動的配列は `form.insert/remove` (DiscountSection PR #84 が canonical 参照実装)。
+> Phase 1 Task 4-8 で確立した React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターン (settings sections 17/17 + Dialog 内 form taxonomy managers + Task 8.1-8.6 大型 form 移行完了、残 Task 8.7 SpaceEditForm のみ)。RHF + `useFormAction` は legacy (Task 8.7 完了 + inline editor 別 phase 後に `package.json` から削除予定)、新規利用禁止。動的配列は `form.insert/remove/reorder` + `getFieldList()` + `getFieldset()` (DiscountSection PR #84 で確立、Task 8.6 LocationForm canonical で dnd-kit + `form.reorder({ name, from, to })` 完成)。Page 遷移 form の成功時遷移は **server-side `redirect(toAppRoute(...))`** (Task 8.4-8.6 canonical、client `router.push` 不要)。canonical schema の **in-place preprocess** で FormData transit と object literal (test) を両対応 (Task 8.6 LocationForm 確立、`standardSchemaResolver` 経路と非互換のため conform 完全移行と同一 commit で実施)。詳細パターンは [`server-actions/implementation/forms-and-public.md`](../../server-actions/implementation/forms-and-public.md) §管理フォームの canonical (conform) 参照。
 
 > 詳細サブルール（path-scoped auto-load）:
 >
