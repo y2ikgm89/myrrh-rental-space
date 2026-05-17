@@ -29,8 +29,12 @@ export {
   useCommentPanel,
 } from "./hooks";
 
-// 専用エディターフック
-export { usePostEditor, useNewsEditor, useContentWidth } from "./hooks/index";
+// 専用エディターフック + 共有 helper
+export {
+  usePostEditor,
+  useNewsEditor,
+  resolveContentWidthPx,
+} from "./hooks/index";
 
 // 基本コンポーネント
 export { EditorHeader } from "./EditorHeader";

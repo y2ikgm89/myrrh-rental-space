@@ -12,11 +12,7 @@
  * cast は `assertion-bans.md` §5 conform generic invariance の例外区分。
  */
 
-import {
-  useInputControl,
-  type FieldMetadata,
-  type FormMetadata,
-} from "@conform-to/react";
+import { useInputControl, type FieldMetadata } from "@conform-to/react";
 import {
   Input,
   Label,
@@ -144,11 +140,9 @@ export function LayoutFields({
  */
 export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
   fields,
-  form,
   disabled,
 }: {
   fields: Record<string, FieldMetadata<unknown, TForm, string[]>>;
-  form: FormMetadata<TForm, string[]>;
   disabled?: boolean;
 }) {
   // generic invariance 境界 cast (§5 conform generic invariance、ledger 登録済)

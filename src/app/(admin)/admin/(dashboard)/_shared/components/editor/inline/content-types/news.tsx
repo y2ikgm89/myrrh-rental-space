@@ -117,7 +117,6 @@ export const newsSettingsPanel: SidePanelDefinition<
           render: (ctx) => (
             <LayoutFieldsConnected
               fields={ctx.fields}
-              form={ctx.form}
               {...spreadOptionalDisabled(ctx)}
             />
           ),
