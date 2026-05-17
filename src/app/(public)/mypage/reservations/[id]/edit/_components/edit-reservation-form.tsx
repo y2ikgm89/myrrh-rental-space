@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
-import { usePublicForm } from "@/public/hooks/use-public-form";
+import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
-import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  customerReservationEditSchema,
-  type CustomerReservationEditInput,
-} from "@/shared/lib/validations/customer-reservation";
 import { updateReservationAction } from "../../../../_shared/actions/reservation";
 import {
   TurnstileWidget,
@@ -74,9 +77,9 @@ export function EditReservationForm({
   spaces,
   initialValues,
   turnstileSiteKey,
-}: EditReservationFormProps) {
+}: EditReservationFormProps): ReactElement {
   const router = useRouter();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const turnstileRef = useRef<TurnstileInstance>(null);
 
   const spaceOptions = spaces.map((s) => ({
@@ -84,47 +87,85 @@ export function EditReservationForm({
     label: `${s.name}（定員${String(s.capacity)}名・${formatCurrency(s.hourlyPrice)}/h）`,
   }));
 
-  const { form, isPending, onSubmit } =
-    usePublicForm<CustomerReservationEditInput>(
-      customerReservationEditSchema,
-      async (data) => {
-        setErrorMessage(null);
-        const result = await updateReservationAction(data);
-        if (isMutationError(result)) {
-          setErrorMessage(result.error);
-          turnstileRef.current?.reset();
-        } else {
-          router.push(`/mypage/reservations/${reservationId}`);
-        }
-        return result;
-      },
-      {
-        defaultValues: {
-          reservationId,
-          spaceId: initialValues.spaceId,
-          date: initialValues.date,
-          startTime: initialValues.startTime,
-          endTime: initialValues.endTime,
-          numberOfGuests,
-        },
-      },
-    );
+  const [lastResult, formAction, isPending] = useActionState(
+    updateReservationAction,
+    undefined,
+  );
+
+  const [form, fields] = useForm({
+    id: "edit-reservation-form",
+    constraint: getZodConstraint(customerReservationEditSchema),
+    lastResult,
+    defaultValue: {
+      reservationId,
+      spaceId: initialValues.spaceId,
+      date: initialValues.date,
+      startTime: initialValues.startTime,
+      endTime: initialValues.endTime,
+      numberOfGuests,
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: customerReservationEditSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  const turnstileTokenControl = useInputControl(fields.turnstileToken);
+
+  // Render 中 state sync: 成功検出 (default `resetForm: true` → initialValue === null)
+  // 成功時は detail page に navigate
+  if (lastResult !== previousResult) {
+    setPreviousResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
+      router.push(toAppRoute(`/mypage/reservations/${reservationId}`));
+    }
+  }
+
+  // Turnstile DOM reset は副作用のため effect に残置
+  useEffect(() => {
+    if (lastResult?.status === "error") {
+      turnstileRef.current?.reset();
+      turnstileTokenControl.change("");
+    }
+  }, [lastResult, turnstileTokenControl]);
 
   function handleTurnstileVerify(token: string) {
-    form.setValue("turnstileToken", token);
-  }
-  function handleTurnstileExpire() {
-    form.setValue("turnstileToken", "");
+    turnstileTokenControl.change(token);
   }
 
+  function handleTurnstileExpire() {
+    turnstileTokenControl.change("");
+  }
+
+  const formErrorMessage =
+    form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      {errorMessage != null && (
+    <form {...getFormProps(form)} action={formAction} className="space-y-6">
+      {/* Hidden inputs for transit */}
+      <input
+        type="hidden"
+        name={fields.reservationId.name}
+        value={reservationId}
+      />
+      <input
+        type="hidden"
+        name={fields.numberOfGuests.name}
+        value={String(numberOfGuests)}
+      />
+      <input
+        type="hidden"
+        name={fields.turnstileToken.name}
+        value={turnstileTokenControl.value ?? ""}
+      />
+
+      {formErrorMessage !== null && (
         <div
           className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
-          {errorMessage}
+          {formErrorMessage}
         </div>
       )}
 
@@ -132,20 +173,19 @@ export function EditReservationForm({
         label="スペース"
         options={spaceOptions}
         required
-        {...form.register("spaceId")}
-        {...(form.formState.errors.spaceId?.message && {
-          error: form.formState.errors.spaceId.message,
+        {...(fields.spaceId.errors?.[0] !== undefined && {
+          error: fields.spaceId.errors[0],
         })}
+        {...getInputProps(fields.spaceId, { type: "text" })}
       />
 
       <Input
         label="利用日"
-        type="date"
         required
-        {...form.register("date")}
-        {...(form.formState.errors.date?.message && {
-          error: form.formState.errors.date.message,
+        {...(fields.date.errors?.[0] !== undefined && {
+          error: fields.date.errors[0],
         })}
+        {...getInputProps(fields.date, { type: "date" })}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -153,20 +193,20 @@ export function EditReservationForm({
           label="開始時間"
           options={TIME_OPTIONS}
           required
-          {...form.register("startTime")}
-          {...(form.formState.errors.startTime?.message && {
-            error: form.formState.errors.startTime.message,
+          {...(fields.startTime.errors?.[0] !== undefined && {
+            error: fields.startTime.errors[0],
           })}
+          {...getInputProps(fields.startTime, { type: "text" })}
         />
 
         <Select
           label="終了時間"
           options={TIME_OPTIONS}
           required
-          {...form.register("endTime")}
-          {...(form.formState.errors.endTime?.message && {
-            error: form.formState.errors.endTime.message,
+          {...(fields.endTime.errors?.[0] !== undefined && {
+            error: fields.endTime.errors[0],
           })}
+          {...getInputProps(fields.endTime, { type: "text" })}
         />
       </div>
 
