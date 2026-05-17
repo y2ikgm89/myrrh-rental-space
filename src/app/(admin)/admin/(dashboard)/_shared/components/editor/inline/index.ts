@@ -38,14 +38,8 @@ export { SettingsDialog } from "./SettingsDialog";
 export type { SettingsDialogProps } from "./SettingsDialog";
 export { InlineEditorShell } from "./InlineEditorShell";
 
-// side-panel フィールドコンポーネントが参照する shared 型
-export type {
-  EditorHeaderProps,
-  SidePanelSectionProps,
-  PostEditorFormData,
-  PostCategoryOption,
-  NewsEditorFormData,
-} from "./types";
+// EditorHeader props 型
+export type { EditorHeaderProps } from "./types";
 
 // Re-export AddCommentPayload for convenience
 export type { AddCommentPayload } from "../lexical/types";

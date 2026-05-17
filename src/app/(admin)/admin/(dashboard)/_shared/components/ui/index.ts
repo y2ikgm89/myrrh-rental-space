@@ -168,18 +168,6 @@ export type { SubmitButtonProps } from "./SubmitButton";
 // CharCount
 export { CharCount } from "./CharCount";
 
-// Form
-export {
-  useFormField,
-  Form,
-  FormItem,
-  FormLabel,
-  FormField,
-  FormControl,
-  FormDescription,
-  FormMessage,
-} from "./form";
-
 // Toggle Group
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
