@@ -14,6 +14,6 @@ export {
   updateCustomerFromReservation,
 } from "./mutations";
 
-export { createAdminReservation, updateAdminReservation } from "./admin";
+export { createReservationAction, updateReservationAction } from "./admin";
 
 export { createCheckoutSession, refundReservationPayment } from "./payment";

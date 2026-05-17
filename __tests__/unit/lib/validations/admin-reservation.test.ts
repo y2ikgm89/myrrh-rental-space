@@ -1,335 +1,298 @@
 import { describe, test, expect } from "bun:test";
 import {
-  newCustomerSchema,
-  adminReservationSchema,
-} from "@/admin/lib/validations/admin-reservation";
+  createReservationFormSchema,
+  updateReservationFormSchema,
+} from "@/app/(admin)/admin/(dashboard)/reservations/_components/reservation-form-schema";
 import { ReservationStatus } from "@generated/prisma/enums";
 
-describe("newCustomerSchema", () => {
-  const validCustomerData = {
-    lastName: "山田",
-    firstName: "太郎",
-    email: "yamada@example.com",
-    phoneNumber: "090-1234-5678",
-  };
+const VALID_CUSTOMER_DATA = {
+  lastName: "山田",
+  firstName: "太郎",
+  email: "yamada@example.com",
+  phoneNumber: "090-1234-5678",
+};
 
-  test("有効なデータでバリデーションに成功する", () => {
-    const result = newCustomerSchema.safeParse(validCustomerData);
-    expect(result.success).toBe(true);
-  });
+const VALID_EXISTING_CUSTOMER_INPUT = {
+  mode: "existing",
+  customerId: "123e4567-e89b-12d3-a456-426614174001",
+  spaceId: "123e4567-e89b-12d3-a456-426614174000",
+  date: "2026-03-01",
+  startTime: "10:00",
+  endTime: "12:00",
+  status: ReservationStatus.CONFIRMED,
+  sendEmail: true,
+} as const;
 
-  test("姓が空の場合にエラー", () => {
-    const invalidData = { ...validCustomerData, lastName: "" };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("姓を入力してください");
-    }
-  });
+const VALID_NEW_CUSTOMER_INPUT = {
+  mode: "new",
+  customerData: VALID_CUSTOMER_DATA,
+  spaceId: "123e4567-e89b-12d3-a456-426614174000",
+  date: "2026-03-01",
+  startTime: "10:00",
+  endTime: "12:00",
+  status: ReservationStatus.CONFIRMED,
+  sendEmail: true,
+} as const;
 
-  test("名が空の場合にエラー", () => {
-    const invalidData = { ...validCustomerData, firstName: "" };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("名を入力してください");
-    }
-  });
-
-  test("メールアドレスが空の場合にエラー", () => {
-    const invalidData = { ...validCustomerData, email: "" };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
-        "メールアドレスを入力してください",
+describe("createReservationFormSchema", () => {
+  describe("正常系", () => {
+    test("既存顧客モードで有効なデータはバリデーション成功", () => {
+      const result = createReservationFormSchema.safeParse(
+        VALID_EXISTING_CUSTOMER_INPUT,
       );
-    }
+      expect(result.success).toBe(true);
+    });
+
+    test("新規顧客モードで有効なデータはバリデーション成功", () => {
+      const result = createReservationFormSchema.safeParse(
+        VALID_NEW_CUSTOMER_INPUT,
+      );
+      expect(result.success).toBe(true);
+    });
+
+    test("オプショナルフィールドに空文字列を許可", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        couponCode: "",
+        notes: "",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("予約時間がちょうど1時間の場合に成功", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        startTime: "10:00",
+        endTime: "11:00",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("作成時は PENDING / CONFIRMED のみ許可", () => {
+      for (const status of [
+        ReservationStatus.PENDING,
+        ReservationStatus.CONFIRMED,
+      ]) {
+        const result = createReservationFormSchema.safeParse({
+          ...VALID_EXISTING_CUSTOMER_INPUT,
+          status,
+        });
+        expect(result.success).toBe(true);
+      }
+    });
+
+    test("phoneNumber と companyName はオプショナル", () => {
+      const customerData = {
+        lastName: "山田",
+        firstName: "太郎",
+        email: "yamada@example.com",
+      };
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_NEW_CUSTOMER_INPUT,
+        customerData,
+      });
+      expect(result.success).toBe(true);
+    });
   });
 
-  test("無効なメールアドレスの場合にエラー", () => {
-    const invalidData = { ...validCustomerData, email: "invalid-email" };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("有効なメールアドレス");
-    }
-  });
+  describe("異常系", () => {
+    test("スペースIDが無効", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        spaceId: "invalid-uuid",
+      });
+      expect(result.success).toBe(false);
+    });
 
-  test("姓の最大長を超える場合にエラー", () => {
-    const invalidData = { ...validCustomerData, lastName: "あ".repeat(51) };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
-    }
-  });
+    test("日付形式が無効", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        date: "2026/03/01",
+      });
+      expect(result.success).toBe(false);
+    });
 
-  test("名の最大長を超える場合にエラー", () => {
-    const invalidData = { ...validCustomerData, firstName: "あ".repeat(51) };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("50文字以内");
-    }
-  });
+    test("開始時間の形式が無効", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        startTime: "10時00分",
+      });
+      expect(result.success).toBe(false);
+    });
 
-  test("電話番号の最大長を超える場合にエラー", () => {
-    const invalidData = { ...validCustomerData, phoneNumber: "0".repeat(21) };
-    const result = newCustomerSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("20文字以内");
-    }
-  });
+    test("終了時間が24時間を超える", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        endTime: "25:00",
+      });
+      expect(result.success).toBe(false);
+    });
 
-  test("電話番号に空文字列を許可", () => {
-    const validData = { ...validCustomerData, phoneNumber: "" };
-    const result = newCustomerSchema.safeParse(validData);
-    expect(result.success).toBe(true);
-  });
+    test("既存モードで customerId が空", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        customerId: "",
+      });
+      expect(result.success).toBe(false);
+    });
 
-  test("電話番号はオプショナル", () => {
-    const validData = { ...validCustomerData };
-    delete (validData as Record<string, unknown>)["phoneNumber"];
-    const result = newCustomerSchema.safeParse(validData);
-    expect(result.success).toBe(true);
+    test("既存モードで customerId が不正な UUID", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        customerId: "invalid-uuid",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("新規モードで customerData が欠落", () => {
+      const result = createReservationFormSchema.safeParse({
+        mode: "new",
+        spaceId: VALID_EXISTING_CUSTOMER_INPUT.spaceId,
+        date: VALID_EXISTING_CUSTOMER_INPUT.date,
+        startTime: VALID_EXISTING_CUSTOMER_INPUT.startTime,
+        endTime: VALID_EXISTING_CUSTOMER_INPUT.endTime,
+        status: ReservationStatus.CONFIRMED,
+        sendEmail: true,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("新規モードで姓が空", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_NEW_CUSTOMER_INPUT,
+        customerData: { ...VALID_CUSTOMER_DATA, lastName: "" },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("新規モードで無効なメールアドレス", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_NEW_CUSTOMER_INPUT,
+        customerData: { ...VALID_CUSTOMER_DATA, email: "invalid-email" },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("終了時間が開始時間より前", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        startTime: "14:00",
+        endTime: "12:00",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("終了時間と開始時間が同じ", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        startTime: "10:00",
+        endTime: "10:00",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("予約時間が1時間未満", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        startTime: "10:00",
+        endTime: "10:30",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("料金に負の値", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        totalPrice: -100,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("メモが1000文字超", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        notes: "あ".repeat(1001),
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("クーポンコードが20文字超", () => {
+      const result = createReservationFormSchema.safeParse({
+        ...VALID_EXISTING_CUSTOMER_INPUT,
+        couponCode: "A".repeat(21),
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("作成時に終端ステータスを拒否", () => {
+      for (const status of [
+        ReservationStatus.COMPLETED,
+        ReservationStatus.CANCELLED,
+        ReservationStatus.NO_SHOW,
+      ]) {
+        const result = createReservationFormSchema.safeParse({
+          ...VALID_EXISTING_CUSTOMER_INPUT,
+          status,
+        });
+        expect(result.success).toBe(false);
+      }
+    });
   });
 });
 
-describe("adminReservationSchema", () => {
-  const validReservationData = {
+describe("updateReservationFormSchema", () => {
+  const VALID_UPDATE_INPUT = {
     spaceId: "123e4567-e89b-12d3-a456-426614174000",
     date: "2026-03-01",
     startTime: "10:00",
     endTime: "12:00",
     customerId: "123e4567-e89b-12d3-a456-426614174001",
     status: ReservationStatus.CONFIRMED,
-    sendEmail: true,
+    sendNotificationEmail: false,
   };
 
-  test("有効なデータでバリデーションに成功する", () => {
-    const result = adminReservationSchema.safeParse(validReservationData);
-    expect(result.success).toBe(true);
-  });
-
-  test("スペースIDが無効な場合にエラー", () => {
-    const invalidData = { ...validReservationData, spaceId: "invalid-uuid" };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
-        "スペースを選択してください",
-      );
-    }
-  });
-
-  test("日付形式が無効な場合にエラー", () => {
-    const invalidData = { ...validReservationData, date: "2026/03/01" };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
-        "日付の形式が正しくありません",
-      );
-    }
-  });
-
-  test("時間形式が無効な場合にエラー（開始時間）", () => {
-    const invalidData = { ...validReservationData, startTime: "10時00分" };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain(
-        "時間の形式が正しくありません",
-      );
-    }
-  });
-
-  test("時間形式が無効な場合にエラー（終了時間）", () => {
-    const invalidData = { ...validReservationData, endTime: "12:00:00" };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("時間形式が24時間を超える場合にエラー", () => {
-    const invalidData = { ...validReservationData, startTime: "25:00" };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("顧客IDと顧客データの両方がない場合にエラー", () => {
-    const invalidData = { ...validReservationData };
-    delete (invalidData as Record<string, unknown>)["customerId"];
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("顧客を選択するか");
-    }
-  });
-
-  test("顧客IDの代わりに顧客データを指定できる", () => {
-    const validData = {
-      ...validReservationData,
-      customerData: {
-        lastName: "山田",
-        firstName: "太郎",
-        email: "yamada@example.com",
-      },
-    };
-    delete (validData as Record<string, unknown>)["customerId"];
-    const result = adminReservationSchema.safeParse(validData);
-    expect(result.success).toBe(true);
-  });
-
-  test("終了時間が開始時間より前の場合にエラー", () => {
-    const invalidData = {
-      ...validReservationData,
-      startTime: "14:00",
-      endTime: "12:00",
-    };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(
-        result.error.issues.some((issue) =>
-          issue.message.includes("終了時間は開始時間より後"),
-        ),
-      ).toBe(true);
-    }
-  });
-
-  test("終了時間と開始時間が同じ場合にエラー", () => {
-    const invalidData = {
-      ...validReservationData,
-      startTime: "10:00",
-      endTime: "10:00",
-    };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("予約時間が1時間未満の場合にエラー", () => {
-    const invalidData = {
-      ...validReservationData,
-      startTime: "10:00",
-      endTime: "10:30",
-    };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(
-        result.error.issues.some((issue) =>
-          issue.message.includes("最低1時間以上"),
-        ),
-      ).toBe(true);
-    }
-  });
-
-  test("予約時間がちょうど1時間の場合に成功", () => {
-    const validData = {
-      ...validReservationData,
-      startTime: "10:00",
-      endTime: "11:00",
-    };
-    const result = adminReservationSchema.safeParse(validData);
-    expect(result.success).toBe(true);
-  });
-
-  test("料金に負の値を設定した場合にエラー", () => {
-    const invalidData = { ...validReservationData, totalPrice: -100 };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("0以上");
-    }
-  });
-
-  test("割引額に負の値を設定した場合にエラー", () => {
-    const invalidData = { ...validReservationData, manualDiscountAmount: -100 };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("0以上");
-    }
-  });
-
-  test("メモの最大長を超える場合にエラー", () => {
-    const invalidData = { ...validReservationData, notes: "あ".repeat(1001) };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("1000文字以内");
-    }
-  });
-
-  test("割引理由の最大長を超える場合にエラー", () => {
-    const invalidData = {
-      ...validReservationData,
-      manualDiscountReason: "あ".repeat(201),
-    };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("200文字以内");
-    }
-  });
-
-  test("クーポンコードの最大長を超える場合にエラー", () => {
-    const invalidData = { ...validReservationData, couponCode: "A".repeat(21) };
-    const result = adminReservationSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("statusフィールドはデフォルトでCONFIRMED", () => {
-    const data = { ...validReservationData };
-    delete (data as Record<string, unknown>)["status"];
-    const result = adminReservationSchema.safeParse(data);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.status).toBe(ReservationStatus.CONFIRMED);
-    }
-  });
-
-  test("sendEmailフィールドはデフォルトでtrue", () => {
-    const data = { ...validReservationData };
-    delete (data as Record<string, unknown>)["sendEmail"];
-    const result = adminReservationSchema.safeParse(data);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.sendEmail).toBe(true);
-    }
-  });
-
-  test("作成時は PENDING / CONFIRMED のみ許可", () => {
-    const allowed = [ReservationStatus.PENDING, ReservationStatus.CONFIRMED];
-    allowed.forEach((status) => {
-      const data = { ...validReservationData, status };
-      const result = adminReservationSchema.safeParse(data);
+  describe("正常系", () => {
+    test("有効なデータはバリデーション成功", () => {
+      const result = updateReservationFormSchema.safeParse(VALID_UPDATE_INPUT);
       expect(result.success).toBe(true);
     });
-  });
 
-  test("作成時に終端ステータスを拒否", () => {
-    const terminal = [
-      ReservationStatus.COMPLETED,
-      ReservationStatus.CANCELLED,
-      ReservationStatus.NO_SHOW,
-    ];
-    terminal.forEach((status) => {
-      const data = { ...validReservationData, status };
-      const result = adminReservationSchema.safeParse(data);
-      expect(result.success).toBe(false);
+    test("全 ReservationStatus を許可（更新時は終端状態も指定可能）", () => {
+      for (const status of Object.values(ReservationStatus)) {
+        const result = updateReservationFormSchema.safeParse({
+          ...VALID_UPDATE_INPUT,
+          status,
+        });
+        expect(result.success).toBe(true);
+      }
     });
   });
 
-  test("オプショナルフィールドに空文字列を許可", () => {
-    const validData = {
-      ...validReservationData,
-      couponCode: "",
-      manualDiscountReason: "",
-    };
-    const result = adminReservationSchema.safeParse(validData);
-    expect(result.success).toBe(true);
+  describe("異常系", () => {
+    test("customerId が空でエラー", () => {
+      const result = updateReservationFormSchema.safeParse({
+        ...VALID_UPDATE_INPUT,
+        customerId: "",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("終了時間 < 開始時間でエラー", () => {
+      const result = updateReservationFormSchema.safeParse({
+        ...VALID_UPDATE_INPUT,
+        startTime: "14:00",
+        endTime: "12:00",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("予約時間が1時間未満でエラー", () => {
+      const result = updateReservationFormSchema.safeParse({
+        ...VALID_UPDATE_INPUT,
+        startTime: "10:00",
+        endTime: "10:30",
+      });
+      expect(result.success).toBe(false);
+    });
   });
 });

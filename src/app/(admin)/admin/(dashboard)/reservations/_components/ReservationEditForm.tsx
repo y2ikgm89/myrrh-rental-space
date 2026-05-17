@@ -1,14 +1,15 @@
 "use client";
 
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useWatch } from "react-hook-form";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import {
   IconCalendar,
-  IconUser,
   IconMail,
   IconPhone,
+  IconUser,
 } from "@tabler/icons-react";
 import {
   Button,
@@ -28,12 +29,7 @@ import {
   SelectionBox,
   SubmitButton,
 } from "@/admin/components/ui";
-import {
-  updateReservationSchema,
-  type UpdateReservationInput,
-} from "@/admin/lib/validations/admin-reservation";
-import { updateAdminReservation } from "@/admin/actions/reservation";
-import { useFormAction } from "@/admin/hooks/useFormAction";
+import { updateReservationAction } from "@/admin/actions/reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
@@ -42,10 +38,7 @@ import {
   RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
-
-// =============================================================================
-// Types
-// =============================================================================
+import { updateReservationFormSchema } from "./reservation-form-schema";
 
 type SpaceOption = {
   id: string;
@@ -58,30 +51,22 @@ type ReservationEditFormProps = {
   spaces: SpaceOption[];
 };
 
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/** ISO 8601 文字列 または Date → YYYY-MM-DD（ローカルタイムゾーン） */
-function toLocalDateString(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+/** ISO 8601 文字列 → YYYY-MM-DD（ローカルタイムゾーン） */
+function toLocalDateString(date: string): string {
+  const d = new Date(date);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
-/** ISO 8601 文字列 または Date → HH:MM（ローカルタイムゾーン） */
-function toLocalTimeString(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+/** ISO 8601 文字列 → HH:MM（ローカルタイムゾーン） */
+function toLocalTimeString(date: string): string {
+  const d = new Date(date);
   const h = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${h}:${min}`;
 }
-
-// =============================================================================
-// Constants
-// =============================================================================
 
 const STATUS_DESCRIPTIONS: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: "確認待ち",
@@ -114,15 +99,10 @@ function getStatusOptionsForCurrent(currentStatus: ReservationStatus) {
   });
 }
 
-// 時間オプション（9:00-21:00、1時間刻み）
 const TIME_OPTIONS = Array.from({ length: 13 }, (_, i) => {
   const hour = 9 + i;
   return `${hour.toString().padStart(2, "0")}:00`;
 });
-
-// =============================================================================
-// Main Component
-// =============================================================================
 
 export function ReservationEditForm({
   reservation,
@@ -131,81 +111,98 @@ export function ReservationEditForm({
   const router = useRouter();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
-  const { form, isPending, onSubmit } = useFormAction(
-    updateReservationSchema,
-    (data: UpdateReservationInput) =>
-      updateAdminReservation(reservation.id, {
-        ...data,
-        totalPrice: manualPrice,
-      }),
-    {
-      defaultValues: {
-        spaceId: reservation.spaceId,
-        date: toLocalDateString(reservation.startTime),
-        startTime: toLocalTimeString(reservation.startTime),
-        endTime: toLocalTimeString(reservation.endTime),
-        customerId: reservation.customerId,
-        couponCode: reservation.coupon?.code ?? "",
-        status: reservation.status,
-        notes: reservation.notes ?? "",
-        sendNotificationEmail: false,
-      },
-      successMessage: "予約を更新しました",
-      redirectTo: `/admin/reservations/${reservation.id}`,
-    },
+  const initialDate = toLocalDateString(reservation.startTime);
+  const initialStartTime = toLocalTimeString(reservation.startTime);
+  const initialEndTime = toLocalTimeString(reservation.endTime);
+
+  const [spaceId, setSpaceId] = useState<string>(reservation.spaceId);
+  const [startTime, setStartTime] = useState<string>(initialStartTime);
+  const [endTime, setEndTime] = useState<string>(initialEndTime);
+  const [status, setStatus] = useState<ReservationStatus>(reservation.status);
+  const [sendNotificationEmail, setSendNotificationEmail] =
+    useState<boolean>(false);
+
+  const boundAction = updateReservationAction.bind(null, reservation.id);
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
   );
 
-  const {
-    register,
-    formState: { errors },
-    setValue,
-    control,
-  } = form;
-
-  const spaceId = useWatch({ control, name: "spaceId" });
-  const date = useWatch({ control, name: "date" });
-  const startTime = useWatch({ control, name: "startTime" });
-  const endTime = useWatch({ control, name: "endTime" });
-  const status = useWatch({ control, name: "status" });
-  const sendNotificationEmail = useWatch({
-    control,
-    name: "sendNotificationEmail",
+  const [form, fields] = useForm({
+    id: `reservation-edit-${reservation.id}`,
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: updateReservationFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: {
+      date: initialDate,
+      couponCode: reservation.coupon?.code ?? "",
+      notes: reservation.notes ?? "",
+    },
   });
 
-  // 選択されたスペース情報
   const selectedSpace = spaces.find((s) => s.id === spaceId);
 
-  // 料金自動計算
   const calculatedPrice = (() => {
     if (!selectedSpace || !startTime || !endTime) return null;
-    try {
-      const start = new Date(`${date || "2000-01-01"}T${startTime}`);
-      const end = new Date(`${date || "2000-01-01"}T${endTime}`);
-      if (end <= start) return null;
-      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return selectedSpace.hourlyPrice * hours;
-    } catch {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
       return null;
     }
+    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    return selectedSpace.hourlyPrice * hours;
   })();
 
   const displayPrice = manualPrice ?? calculatedPrice;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form {...getFormProps(form)} action={action} className="space-y-6">
+      {/* customerId / spaceId / startTime / endTime / status / sendNotificationEmail hidden inputs */}
+      <input
+        type="hidden"
+        name={fields.customerId.name}
+        value={reservation.customerId}
+      />
+      <input type="hidden" name={fields.spaceId.name} value={spaceId} />
+      <input type="hidden" name={fields.startTime.name} value={startTime} />
+      <input type="hidden" name={fields.endTime.name} value={endTime} />
+      <input type="hidden" name={fields.status.name} value={status} />
+      <input
+        type="hidden"
+        name={fields.totalPrice.name}
+        value={manualPrice ?? ""}
+      />
+      <input
+        type="hidden"
+        name={fields.sendNotificationEmail.name}
+        value={sendNotificationEmail ? "on" : ""}
+      />
+
+      {form.errors && form.errors.length > 0 && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          {form.errors.join(", ")}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* 左カラム: 予約情報（スペース・日時・料金・クーポン） */}
+        {/* 左カラム: 予約情報 */}
         <Card>
           <CardHeader>
             <CardTitle>予約情報</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* スペース選択 */}
             <div className="space-y-2">
               <Label htmlFor="spaceId">スペース *</Label>
               <Select
-                value={spaceId || ""}
-                onValueChange={(value) => setValue("spaceId", value)}
+                value={spaceId}
+                onValueChange={setSpaceId}
                 disabled={isPending}
               >
                 <SelectTrigger id="spaceId">
@@ -219,40 +216,45 @@ export function ReservationEditForm({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.spaceId && (
-                <p className="text-sm text-destructive">
-                  {errors.spaceId.message}
+              {fields.spaceId.errors && (
+                <p
+                  id={fields.spaceId.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.spaceId.errors.join(", ")}
                 </p>
               )}
             </div>
 
-            {/* 日付 */}
             <div className="space-y-2">
-              <Label htmlFor="date">日付 *</Label>
+              <Label htmlFor={fields.date.id}>日付 *</Label>
               <div className="relative">
                 <Input
-                  id="date"
-                  type="date"
-                  {...register("date")}
+                  {...getInputProps(fields.date, { type: "date" })}
                   disabled={isPending}
                   className="pr-10"
                 />
-                <IconCalendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <IconCalendar
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
               </div>
-              {errors.date && (
-                <p className="text-sm text-destructive">
-                  {errors.date.message}
+              {fields.date.errors && (
+                <p
+                  id={fields.date.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.date.errors.join(", ")}
                 </p>
               )}
             </div>
 
-            {/* 開始・終了時間 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startTime">開始時間 *</Label>
                 <Select
-                  value={startTime || ""}
-                  onValueChange={(value) => setValue("startTime", value)}
+                  value={startTime}
+                  onValueChange={setStartTime}
                   disabled={isPending}
                 >
                   <SelectTrigger id="startTime">
@@ -266,9 +268,12 @@ export function ReservationEditForm({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.startTime && (
-                  <p className="text-sm text-destructive">
-                    {errors.startTime.message}
+                {fields.startTime.errors && (
+                  <p
+                    id={fields.startTime.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.startTime.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -276,8 +281,8 @@ export function ReservationEditForm({
               <div className="space-y-2">
                 <Label htmlFor="endTime">終了時間 *</Label>
                 <Select
-                  value={endTime || ""}
-                  onValueChange={(value) => setValue("endTime", value)}
+                  value={endTime}
+                  onValueChange={setEndTime}
                   disabled={isPending}
                 >
                   <SelectTrigger id="endTime">
@@ -291,15 +296,17 @@ export function ReservationEditForm({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.endTime && (
-                  <p className="text-sm text-destructive">
-                    {errors.endTime.message}
+                {fields.endTime.errors && (
+                  <p
+                    id={fields.endTime.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.endTime.errors.join(", ")}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* 料金表示 */}
             {displayPrice !== null ? (
               <div className="space-y-1">
                 <div className="text-2xl font-bold">
@@ -307,8 +314,7 @@ export function ReservationEditForm({
                 </div>
                 {!manualPrice && calculatedPrice !== null && selectedSpace && (
                   <p className="text-sm text-muted-foreground">
-                    自動計算: {formatCurrency(selectedSpace.hourlyPrice)}
-                    /時間 ×{" "}
+                    自動計算: {formatCurrency(selectedSpace.hourlyPrice)}/時間 ×{" "}
                     {((calculatedPrice / selectedSpace.hourlyPrice) * 10) / 10}
                     時間
                   </p>
@@ -320,7 +326,6 @@ export function ReservationEditForm({
               </p>
             )}
 
-            {/* 手動料金調整 */}
             <div className="space-y-2">
               <Label htmlFor="manualPrice">手動で料金を調整</Label>
               <Input
@@ -340,19 +345,19 @@ export function ReservationEditForm({
               </p>
             </div>
 
-            {/* クーポン */}
             <div className="space-y-2">
-              <Label htmlFor="couponCode">クーポンコード</Label>
+              <Label htmlFor={fields.couponCode.id}>クーポンコード</Label>
               <Input
-                id="couponCode"
-                type="text"
-                {...register("couponCode")}
+                {...getInputProps(fields.couponCode, { type: "text" })}
                 placeholder="クーポンコードを入力（任意）"
                 disabled={isPending}
               />
-              {errors.couponCode && (
-                <p className="text-sm text-destructive">
-                  {errors.couponCode.message}
+              {fields.couponCode.errors && (
+                <p
+                  id={fields.couponCode.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.couponCode.errors.join(", ")}
                 </p>
               )}
             </div>
@@ -361,16 +366,17 @@ export function ReservationEditForm({
 
         {/* 右カラム: 顧客情報 + 追加設定 */}
         <div className="space-y-6">
-          {/* 顧客情報 */}
           <Card>
             <CardHeader>
               <CardTitle>顧客情報</CardTitle>
             </CardHeader>
             <CardContent>
-              <input type="hidden" {...register("customerId")} />
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <IconUser className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <IconUser
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
                   <Link
                     href={`/admin/customers/${reservation.customer.id}`}
                     className="font-medium hover:underline"
@@ -380,14 +386,20 @@ export function ReservationEditForm({
                   </Link>
                 </div>
                 <div className="flex items-center gap-2">
-                  <IconMail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <IconMail
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
                   <span className="text-sm text-muted-foreground">
                     {reservation.customer.email}
                   </span>
                 </div>
                 {reservation.customer.phoneNumber && (
                   <div className="flex items-center gap-2">
-                    <IconPhone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <IconPhone
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-muted-foreground"
+                    />
                     <span className="text-sm text-muted-foreground">
                       {reservation.customer.phoneNumber}
                     </span>
@@ -397,7 +409,6 @@ export function ReservationEditForm({
             </CardContent>
           </Card>
 
-          {/* 追加設定 */}
           <Card>
             <CardHeader>
               <CardTitle>追加設定</CardTitle>
@@ -407,29 +418,38 @@ export function ReservationEditForm({
                 <Label>予約ステータス</Label>
                 <SelectionBox
                   options={getStatusOptionsForCurrent(reservation.status)}
-                  value={status ?? ReservationStatus.CONFIRMED}
+                  value={status}
                   onChange={(value) => {
-                    if (isValidReservationStatus(value))
-                      setValue("status", value);
+                    if (isValidReservationStatus(value)) setStatus(value);
                   }}
                   columns={3}
                   disabled={isPending}
                   name="予約ステータス"
                 />
+                {fields.status.errors && (
+                  <p
+                    id={fields.status.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.status.errors.join(", ")}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">メモ</Label>
+                <Label htmlFor={fields.notes.id}>メモ</Label>
                 <Textarea
-                  id="notes"
-                  {...register("notes")}
+                  {...getInputProps(fields.notes, { type: "text" })}
                   placeholder="例: 電話予約、紹介（山田様）"
                   disabled={isPending}
                   rows={3}
                 />
-                {errors.notes && (
-                  <p className="text-sm text-destructive">
-                    {errors.notes.message}
+                {fields.notes.errors && (
+                  <p
+                    id={fields.notes.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.notes.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -439,7 +459,7 @@ export function ReservationEditForm({
                   id="sendNotificationEmail"
                   checked={sendNotificationEmail}
                   onCheckedChange={(checked) =>
-                    setValue("sendNotificationEmail", checked === true)
+                    setSendNotificationEmail(checked === true)
                   }
                   disabled={isPending}
                 />
@@ -455,7 +475,6 @@ export function ReservationEditForm({
         </div>
       </div>
 
-      {/* ボタン */}
       <div className="flex justify-end gap-4">
         <Button
           type="button"
@@ -469,7 +488,6 @@ export function ReservationEditForm({
           isPending={isPending}
           label="予約を更新"
           pendingLabel="更新中..."
-          disabled={!form.formState.isDirty}
         />
       </div>
     </form>
