@@ -126,7 +126,34 @@ context cost / 動作に直結する top-level field のみ抜粋。詳細は公
 
 ### 自動 drift 監査
 
-本チェックリスト全項目を実行可能化した SKILL: `/audit-claude-config`（`.claude/skills/audit-claude-config/SKILL.md`）。`disable-model-invocation: true` で常時 context 消費ゼロ、手動 invoke 時のみ Phase 1 (local grep) + Phase 2 (公式 spec WebFetch + diff) を実行する。Claude Code 本体バージョン更新時 (`claude --version` で v2.1.X 上昇確認時) / `.claude/{rules,agents,skills,hooks}/**` 大規模変更後 / 月次定期で実行する想定。
+本チェックリスト全項目を実行可能化した SKILL: `/audit-claude-config`（`.claude/skills/audit-claude-config/SKILL.md`）。`disable-model-invocation: true` + `user-invocable: true` で常時 context 消費ゼロ + `/audit-claude-config` slash command 経由のみ起動可。手動 invoke 時のみ Phase 1 (local grep) + Phase 2 (公式 spec WebFetch + diff) を実行する。Claude Code 本体バージョン更新時 (`claude --version` で version 上昇確認時) / `.claude/{rules,agents,skills,hooks}/**` 大規模変更後 / 月次定期で実行する想定。
+
+### `disable-model-invocation: true` Skill の起動制約 (公式仕様準拠)
+
+`disable-model-invocation: true` を持つ Skill は **Skill tool 経由で呼び出せない**。Claude (model) が `Skill` ツールで invoke すると `cannot be used with Skill tool due to disable-model-invocation` エラーが返る (公式仕様、`code.claude.com/docs/en/skills` §Model invocation control)。
+
+**該当 Skill 一覧** (`grep -l '^disable-model-invocation: true' .claude/skills/*/SKILL.md` で抽出):
+
+| Skill                   | user-invocable | Claude (model) 起動方法                               |
+| ----------------------- | :------------: | ----------------------------------------------------- |
+| `audit-claude-config`   |       ✅       | ユーザーに `/audit-claude-config` 実行依頼            |
+| `create-section-type`   |    (未設定)    | SKILL.md を Read して内容を参照、必要 step を手動実行 |
+| `debug-cloud-run`       |    (未設定)    | 同上                                                  |
+| `debug-google-calendar` |    (未設定)    | 同上                                                  |
+| `debug-instagram`       |    (未設定)    | 同上                                                  |
+| `debug-stripe`          |    (未設定)    | 同上                                                  |
+| `debug-turbopack`       |    (未設定)    | 同上                                                  |
+| `worktree-bootstrap`    |    (未設定)    | 同上                                                  |
+
+**Claude が誤って Skill tool で呼んだ場合の対処**:
+
+1. **`user-invocable: true` 設定済 Skill** → ユーザーに `/skill-name` 実行を依頼する (本人起動経路、公式準拠)
+2. **`user-invocable` 未設定 Skill** → SKILL.md の checklist 内容を `Read` で取得し、`Bash` で grep を手動実行する代替対応 (Skill tool 経路は永続的に閉鎖されている)
+
+**新規 `disable-model-invocation: true` Skill 作成時の判断**:
+
+- ユーザーが手動 trigger したいワークフロー → **`user-invocable: true` 併用**が canonical (`/skill-name` slash command 経路を確保)
+- 完全な reference doc / context 常時消費を絶対避けたい read-only 仕様書 → `user-invocable` 未設定 (rule docs 経由 Read のみ)
 
 ### 例外申請
 
