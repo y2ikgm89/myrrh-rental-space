@@ -11,32 +11,97 @@ import {
   TaxRateType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { facilitiesSchema } from "@/shared/lib/json-validators";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * スペースフォーム用バリデーションスキーマ
  *
- * クライアント・サーバー両方で使用
+ * Phase 1 Task 8.7 で conform `useActionState` + FormData transit に対応
+ * （in-place preprocess pattern、Task 8.6 LocationForm canonical 踏襲）。
+ *
+ * preprocess は typed value pass-through で no-op、string/FormData 入力時のみ coerce。
+ * test fixture（object literal input）と admin form FormData transit を両対応。
  */
+
+const emptyToNull = (value: unknown) => {
+  if (typeof value === "string" && value.trim() === "") return null;
+  return value;
+};
+
+const coerceOptionalNumber = (value: unknown) => {
+  if (value === "" || value === null || value === undefined) return null;
+  if (typeof value === "number") return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : value;
+};
+
+const coerceRequiredNumber = (value: unknown) => {
+  if (typeof value === "number") return value;
+  if (value === "" || value === null || value === undefined) return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : value;
+};
+
+const coerceBoolean = (value: unknown): boolean =>
+  value === "on" || value === true;
 
 /**
  * 画像URL配列のバリデーション
  *
  * 各 URL は React key の stable ID として機能するため、重複を禁止する。
+ * FormData 送信時は同名 hidden input の `getAll()` で `string[]` になる。
  */
-const imageUrlsSchema = z
-  .array(z.string().url({ error: "有効なURLを入力してください" }))
-  .max(10, { error: "画像は最大10枚までです" })
-  .refine((arr) => new Set(arr).size === arr.length, {
-    error: "同じ画像を複数登録することはできません",
-  })
-  .default([]);
+const imageUrlsSchema = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") return [];
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === "string" ? item.trim() : item))
+        .filter((item) => typeof item !== "string" || item.length > 0);
+    }
+    return value;
+  },
+  z
+    .array(z.string().url({ error: "有効なURLを入力してください" }))
+    .max(10, { error: "画像は最大10枚までです" })
+    .refine((arr) => new Set(arr).size === arr.length, {
+      error: "同じ画像を複数登録することはできません",
+    }),
+);
 
 /**
- * 設備配列フォーム用スキーマ — canonical `facilitiesSchema` (`@/shared/lib/json-validators`) に
- * `.default([])` を chain。input undefined → `[]`（min 検証 skip）の Zod 4 公式挙動で
- * `safeParse({})` 契約と write-side 検証の両立を維持。
+ * 設備配列フォーム用スキーマ
+ *
+ * FormData transit 時は各エントリが JSON 文字列として送信される
+ * (`<input type="hidden" name="facilities" value='{"name":"...","iconName":"..."}' />` の append 列)。
+ * test fixture では object literal で渡るため、両対応の preprocess を行う。
  */
-const facilitiesFormSchema = facilitiesSchema.default([]);
+const facilitiesFormSchema = z.preprocess((value) => {
+  if (value === undefined || value === null || value === "") return [];
+  if (!Array.isArray(value)) return value;
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        const trimmed = item.trim();
+        if (trimmed === "") return null;
+        try {
+          const parsed: unknown = JSON.parse(trimmed);
+          if (
+            isRecord(parsed) &&
+            typeof parsed["name"] === "string" &&
+            typeof parsed["iconName"] === "string"
+          ) {
+            return { name: parsed["name"], iconName: parsed["iconName"] };
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      }
+      return item;
+    })
+    .filter((item) => item !== null);
+}, facilitiesSchema);
 
 /**
  * スペース割引タイプ
@@ -49,9 +114,6 @@ export const spaceDiscountTypeSchema = z.enum(DiscountType);
 export const durationDiscountOverrideSchema = z.enum(DurationDiscountOverride);
 
 /**
- * スペース作成・編集フォームスキーマ
- */
-/**
  * スラッグのバリデーション
  */
 export const spaceSlugSchema = z
@@ -63,10 +125,34 @@ export const spaceSlugSchema = z
   });
 
 /**
+ * SEO/OGP optional フィールドの preprocess shape。
+ *
+ * FormData 送信時は空文字列が来るため null に正規化する。
+ * 元の `seoOgpFieldsSchema` は `.nullable().optional()` の string なので、
+ * preprocess wrapper でラップして empty-to-null を強制する。
+ */
+const optionalSeoStringShape = {
+  metaDescription: z.preprocess(
+    emptyToNull,
+    seoOgpFieldsSchema.shape.metaDescription,
+  ),
+  metaKeywords: z.preprocess(
+    emptyToNull,
+    seoOgpFieldsSchema.shape.metaKeywords,
+  ),
+  ogpTitle: z.preprocess(emptyToNull, seoOgpFieldsSchema.shape.ogpTitle),
+  ogpDescription: z.preprocess(
+    emptyToNull,
+    seoOgpFieldsSchema.shape.ogpDescription,
+  ),
+  ogpImageUrl: z.preprocess(emptyToNull, seoOgpFieldsSchema.shape.ogpImageUrl),
+} as const;
+
+/**
  * スペース作成・編集フォームの基底 ZodObject（.refine() 前）
  *
  * cross-field 検証（mainImageUrl ↔ imageUrls 重複チェック）は含まない。
- * `.omit()` / `.extend()` が必要な派生スキーマ（spaceEditFormSchema 等）はこちらを使う。
+ * `.omit()` / `.extend()` が必要な派生スキーマはこちらを使う。
  */
 export const spaceFormBaseSchema = z
   .object({
@@ -78,64 +164,101 @@ export const spaceFormBaseSchema = z
     descriptionJson: lexicalJsonSchema,
     /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
     descriptionHtml: z.string(),
-    addressDetail: z
-      .string()
-      .max(500, { error: "所在地補足は500文字以内で入力してください" })
-      .optional()
-      .or(z.literal("")),
-    capacity: z
-      .number()
-      .int({ error: "整数を入力してください" })
-      .min(1, { error: "定員は1以上で入力してください" })
-      .max(1000, { error: "定員は1000以下で入力してください" }),
+    addressDetail: z.preprocess(
+      (value) => {
+        if (typeof value === "string" && value.trim() === "") return undefined;
+        return value;
+      },
+      z
+        .string()
+        .max(500, { error: "所在地補足は500文字以内で入力してください" })
+        .optional(),
+    ),
+    capacity: z.preprocess(
+      coerceRequiredNumber,
+      z
+        .number()
+        .int({ error: "整数を入力してください" })
+        .min(1, { error: "定員は1以上で入力してください" })
+        .max(1000, { error: "定員は1000以下で入力してください" }),
+    ),
     area: z
-      .number()
-      .positive({ error: "正の数を入力してください" })
-      .max(10000, { error: "面積は10000以下で入力してください" })
-      .optional()
-      .nullable(),
-    hourlyPrice: z
-      .number()
-      .min(0, { error: "時間料金は0以上で入力してください" })
-      .max(1000000, { error: "時間料金は1000000以下で入力してください" }),
+      .preprocess(
+        coerceOptionalNumber,
+        z.union([
+          z.null(),
+          z
+            .number()
+            .positive({ error: "正の数を入力してください" })
+            .max(10000, { error: "面積は10000以下で入力してください" }),
+        ]),
+      )
+      .optional(),
+    hourlyPrice: z.preprocess(
+      coerceRequiredNumber,
+      z
+        .number()
+        .min(0, { error: "時間料金は0以上で入力してください" })
+        .max(1000000, { error: "時間料金は1000000以下で入力してください" }),
+    ),
     dailyPrice: z
-      .number()
-      .min(0, { error: "日額料金は0以上で入力してください" })
-      .max(10000000, { error: "日額料金は10000000以下で入力してください" })
-      .optional()
-      .nullable(),
+      .preprocess(
+        coerceOptionalNumber,
+        z.union([
+          z.null(),
+          z
+            .number()
+            .min(0, { error: "日額料金は0以上で入力してください" })
+            .max(10000000, {
+              error: "日額料金は10000000以下で入力してください",
+            }),
+        ]),
+      )
+      .optional(),
     mainImageUrl: z
       .string()
       .min(1, { error: "メイン画像URLを入力してください" })
       .url({ error: "有効なURLを入力してください" }),
     imageUrls: imageUrlsSchema,
     facilities: facilitiesFormSchema,
-    isPublished: z.boolean().default(false),
-    reviewsEnabled: z.boolean().default(true),
+    isPublished: z.preprocess(coerceBoolean, z.boolean()),
+    reviewsEnabled: z.preprocess((value) => {
+      // 編集フォームでは on/off で送られるが、未指定（チェックボックス未配置）時は
+      // default true を維持する。test fixture では明示的に boolean 値を渡す。
+      if (value === undefined) return true;
+      return value === "on" || value === true;
+    }, z.boolean()),
     locationId: z
       .string()
       .min(1, { error: "拠点を選択してください" })
       .uuid({ error: "拠点IDが無効です" }),
     categoryId: z
-      .string()
-      .uuid({ error: "カテゴリーIDが無効です" })
-      .optional()
-      .nullable(),
+      .preprocess(
+        emptyToNull,
+        z.string().uuid({ error: "カテゴリーIDが無効です" }).nullable(),
+      )
+      .optional(),
     // 割引設定
     discountType: spaceDiscountTypeSchema.default(DiscountType.none),
     discountValue: z
-      .number()
-      .min(0, { error: "割引値は0以上で入力してください" })
-      .max(1000000, { error: "割引値は1000000以下で入力してください" })
-      .optional()
-      .nullable(),
+      .preprocess(
+        coerceOptionalNumber,
+        z.union([
+          z.null(),
+          z
+            .number()
+            .min(0, { error: "割引値は0以上で入力してください" })
+            .max(1000000, { error: "割引値は1000000以下で入力してください" }),
+        ]),
+      )
+      .optional(),
     durationDiscountOverride: durationDiscountOverrideSchema.default(
       DurationDiscountOverride.inherit,
     ),
     // 税率設定
     taxRateType: z.enum(TaxRateType).default(TaxRateType.standard),
   })
-  .extend(seoOgpFieldsSchema.shape);
+  .extend(optionalSeoStringShape);
 
 /**
  * スペース作成・編集フォームスキーマ（cross-field 検証付き）
