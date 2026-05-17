@@ -132,28 +132,27 @@ context cost / 動作に直結する top-level field のみ抜粋。詳細は公
 
 `disable-model-invocation: true` を持つ Skill は **Skill tool 経由で呼び出せない**。Claude (model) が `Skill` ツールで invoke すると `cannot be used with Skill tool due to disable-model-invocation` エラーが返る (公式仕様、`code.claude.com/docs/en/skills` §Model invocation control)。
 
-**該当 Skill 一覧** (`grep -l '^disable-model-invocation: true' .claude/skills/*/SKILL.md` で抽出):
+**該当 Skill 一覧** (`grep -l '^disable-model-invocation: true' .claude/skills/*/SKILL.md` で抽出、全件 `user-invocable: true` 併用済):
 
-| Skill                   | user-invocable | Claude (model) 起動方法                               |
-| ----------------------- | :------------: | ----------------------------------------------------- |
-| `audit-claude-config`   |       ✅       | ユーザーに `/audit-claude-config` 実行依頼            |
-| `create-section-type`   |    (未設定)    | SKILL.md を Read して内容を参照、必要 step を手動実行 |
-| `debug-cloud-run`       |    (未設定)    | 同上                                                  |
-| `debug-google-calendar` |    (未設定)    | 同上                                                  |
-| `debug-instagram`       |    (未設定)    | 同上                                                  |
-| `debug-stripe`          |    (未設定)    | 同上                                                  |
-| `debug-turbopack`       |    (未設定)    | 同上                                                  |
-| `worktree-bootstrap`    |    (未設定)    | 同上                                                  |
+| Skill                   | user-invocable | Claude (model) 起動方法                            |
+| ----------------------- | :------------: | -------------------------------------------------- |
+| `audit-claude-config`   |       ✅       | ユーザーに `/audit-claude-config` 実行依頼         |
+| `create-section-type`   |       ✅       | ユーザーに `/create-section-type <type>` 実行依頼  |
+| `debug-cloud-run`       |       ✅       | ユーザーに `/debug-cloud-run` 実行依頼             |
+| `debug-google-calendar` |       ✅       | ユーザーに `/debug-google-calendar` 実行依頼       |
+| `debug-instagram`       |       ✅       | ユーザーに `/debug-instagram` 実行依頼             |
+| `debug-stripe`          |       ✅       | ユーザーに `/debug-stripe` 実行依頼                |
+| `debug-turbopack`       |       ✅       | ユーザーに `/debug-turbopack` 実行依頼             |
+| `worktree-bootstrap`    |       ✅       | ユーザーに `/worktree-bootstrap <branch>` 実行依頼 |
 
-**Claude が誤って Skill tool で呼んだ場合の対処**:
+**Claude が誤って Skill tool で呼んだ場合の対処** (全 8 SKILL とも `user-invocable: true` 設定済のため統一):
 
-1. **`user-invocable: true` 設定済 Skill** → ユーザーに `/skill-name` 実行を依頼する (本人起動経路、公式準拠)
-2. **`user-invocable` 未設定 Skill** → SKILL.md の checklist 内容を `Read` で取得し、`Bash` で grep を手動実行する代替対応 (Skill tool 経路は永続的に閉鎖されている)
+→ ユーザーに `/skill-name` 実行を依頼する (本人起動経路、公式準拠)。本セッション中に問題を解決したい場合は、SKILL.md の checklist 内容を `Read` で取得し `Bash` で手動実行する代替対応も可能。
 
 **新規 `disable-model-invocation: true` Skill 作成時の判断**:
 
 - ユーザーが手動 trigger したいワークフロー → **`user-invocable: true` 併用**が canonical (`/skill-name` slash command 経路を確保)
-- 完全な reference doc / context 常時消費を絶対避けたい read-only 仕様書 → `user-invocable` 未設定 (rule docs 経由 Read のみ)
+- 完全な reference doc / context 常時消費を絶対避けたい read-only 仕様書 → `user-invocable` 未設定 (rule docs 経由 Read のみ、現状該当 SKILL なし)
 
 ### 例外申請
 

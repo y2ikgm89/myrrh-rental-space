@@ -3,6 +3,7 @@ name: worktree-bootstrap
 description: Bootstrap an isolated git worktree for parallel Claude sessions or manual feature isolation. Prefer the official `claude --worktree <name>` route (auto applies `.worktreeinclude`, auto cleanup on exit) — this skill is the manual fallback for cases where `--worktree` is not applicable (legacy `.worktrees/` location, dev server kept on main, IDE-driven workflow).
 when_to_use: "公式 `claude --worktree <name>` が使えない場面（dev server を main で常駐維持 / VS Code 等から手動で開きたい / `--worktree` の trust dialog が未 accept）で worktree を手動で bootstrap するとき。subagent 隔離なら frontmatter `isolation: worktree` を優先。"
 disable-model-invocation: true
+user-invocable: true
 argument-hint: "<branch-name-kebab-case>"
 ---
 
