@@ -2,13 +2,7 @@
 
 import Image from "next/image";
 import type { ReactElement } from "react";
-import type {
-  Control,
-  FieldErrors,
-  UseFormRegister,
-  UseFormSetValue,
-} from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import { getInputProps } from "@conform-to/react";
 import { IconPhotoPlus, IconX } from "@tabler/icons-react";
 import {
   Button,
@@ -31,26 +25,20 @@ import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
 import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
-import type { eventFormSchema } from "@/shared/lib/validations/event";
-import type { z } from "zod";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-type FormValues = z.infer<typeof eventFormSchema>;
+import type { EventFormFields } from "./event-form-fields-types";
 
 type EventPublishFieldsProps = {
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
-  register: UseFormRegister<FormValues>;
-  errors: FieldErrors<FormValues>;
+  fields: EventFormFields;
   isPending: boolean;
+  status: EventStatus;
+  onStatusChange: (status: EventStatus) => void;
+  registrationOpen: boolean;
+  onRegistrationOpenChange: (open: boolean) => void;
+  contentJson: string;
+  onContentJsonChange: (json: string) => void;
+  thumbnailUrl: string | null;
+  onThumbnailUrlChange: (url: string | null) => void;
 };
-
-// =============================================================================
-// Helpers
-// =============================================================================
 
 const EVENT_STATUS_OPTIONS = [
   { value: EventStatus.DRAFT, label: EVENT_STATUS_LABELS[EventStatus.DRAFT] },
@@ -68,43 +56,24 @@ const EVENT_STATUS_OPTIONS = [
   },
 ] as const;
 
-// =============================================================================
-// Component
-// =============================================================================
-
 export function EventPublishFields({
-  control,
-  setValue,
-  register,
-  errors,
+  fields,
   isPending,
+  status,
+  onStatusChange,
+  registrationOpen,
+  onRegistrationOpenChange,
+  contentJson,
+  onContentJsonChange,
+  thumbnailUrl,
+  onThumbnailUrlChange,
 }: EventPublishFieldsProps): ReactElement {
-  const watchedStatus = useWatch({ control, name: "status" });
-  const watchedRegistrationOpen = useWatch({
-    control,
-    name: "registrationOpen",
-  });
-  const watchedDescriptionJson = useWatch({
-    control,
-    name: "descriptionJson",
-  });
-  const watchedThumbnailUrl = useWatch({ control, name: "thumbnailUrl" }) ?? "";
-
-  const isPublished = watchedStatus === EventStatus.PUBLISHED;
-  const registrationOpenChecked = isPublished
-    ? (watchedRegistrationOpen ?? false)
-    : false;
+  const isPublished = status === EventStatus.PUBLISHED;
+  const registrationOpenChecked = isPublished ? registrationOpen : false;
 
   const handleStatusChange = (value: string) => {
     if (!isValidEventStatus(value)) return;
-    setValue("status", value, { shouldDirty: true });
-    if (value !== EventStatus.PUBLISHED) {
-      setValue("registrationOpen", false, { shouldDirty: true });
-    }
-  };
-
-  const handleDescriptionJsonChange = (json: string) => {
-    setValue("descriptionJson", json, { shouldDirty: true });
+    onStatusChange(value);
   };
 
   const thumbnailPicker = useSingleMediaPicker({
@@ -112,14 +81,10 @@ export function EventPublishFields({
     onSelect: (media) => {
       const selected = media[0];
       if (selected) {
-        setValue("thumbnailUrl", selected.url, { shouldDirty: true });
+        onThumbnailUrlChange(selected.url);
       }
     },
   });
-
-  const handleRemoveThumbnail = () => {
-    setValue("thumbnailUrl", null, { shouldDirty: true });
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -130,13 +95,13 @@ export function EventPublishFields({
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="status">ステータス</Label>
+            <Label htmlFor="event-status">ステータス</Label>
             <Select
-              value={watchedStatus}
+              value={status}
               onValueChange={handleStatusChange}
               disabled={isPending}
             >
-              <SelectTrigger>
+              <SelectTrigger id="event-status">
                 <SelectValue placeholder="ステータス" />
               </SelectTrigger>
               <SelectContent>
@@ -150,11 +115,13 @@ export function EventPublishFields({
           </div>
 
           <div>
-            <Label htmlFor="registrationDeadline">申込締切日時（任意）</Label>
+            <Label htmlFor={fields.registrationDeadline.id}>
+              申込締切日時（任意）
+            </Label>
             <Input
-              id="registrationDeadline"
-              type="datetime-local"
-              {...register("registrationDeadline")}
+              {...getInputProps(fields.registrationDeadline, {
+                type: "datetime-local",
+              })}
               disabled={isPending}
               aria-describedby="registrationDeadline-description"
             />
@@ -164,9 +131,12 @@ export function EventPublishFields({
             >
               未設定の場合は開始時刻まで申込を受け付けます。
             </p>
-            {errors.registrationDeadline && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.registrationDeadline.message}
+            {fields.registrationDeadline.errors && (
+              <p
+                id={fields.registrationDeadline.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.registrationDeadline.errors.join(", ")}
               </p>
             )}
           </div>
@@ -177,9 +147,7 @@ export function EventPublishFields({
                 id="registrationOpen"
                 checked={registrationOpenChecked}
                 onCheckedChange={(checked) =>
-                  setValue("registrationOpen", checked, {
-                    shouldDirty: true,
-                  })
+                  onRegistrationOpenChange(checked === true)
                 }
                 disabled={isPending || !isPublished}
               />
@@ -201,10 +169,10 @@ export function EventPublishFields({
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-4">
-            {watchedThumbnailUrl ? (
+            {thumbnailUrl ? (
               <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-border">
                 <Image
-                  src={watchedThumbnailUrl}
+                  src={thumbnailUrl}
                   alt="メイン画像プレビュー"
                   fill
                   sizes="160px"
@@ -214,8 +182,8 @@ export function EventPublishFields({
             ) : (
               <div className="flex h-24 w-40 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-muted">
                 <IconPhotoPlus
-                  className="h-6 w-6 text-muted-foreground"
                   aria-hidden="true"
+                  className="h-6 w-6 text-muted-foreground"
                 />
               </div>
             )}
@@ -232,30 +200,30 @@ export function EventPublishFields({
                   onClick={() => thumbnailPicker.openPicker()}
                   disabled={isPending}
                 >
-                  <IconPhotoPlus className="mr-1 h-4 w-4" aria-hidden="true" />
-                  {watchedThumbnailUrl ? "変更" : "選択"}
+                  <IconPhotoPlus aria-hidden="true" className="mr-1 h-4 w-4" />
+                  {thumbnailUrl ? "変更" : "選択"}
                 </Button>
-                {watchedThumbnailUrl && (
+                {thumbnailUrl && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={handleRemoveThumbnail}
+                    onClick={() => onThumbnailUrlChange(null)}
                     disabled={isPending}
                   >
-                    <IconX className="mr-1 h-4 w-4" aria-hidden="true" />
+                    <IconX aria-hidden="true" className="mr-1 h-4 w-4" />
                     削除
                   </Button>
                 )}
               </div>
-              {watchedThumbnailUrl && (
+              {thumbnailUrl && (
                 <p className="truncate text-xs text-muted-foreground">
-                  {watchedThumbnailUrl}
+                  {thumbnailUrl}
                 </p>
               )}
-              {errors.thumbnailUrl && (
+              {fields.thumbnailUrl.errors && (
                 <p className="text-sm text-destructive">
-                  {errors.thumbnailUrl.message}
+                  {fields.thumbnailUrl.errors.join(", ")}
                 </p>
               )}
             </div>
@@ -264,23 +232,23 @@ export function EventPublishFields({
         </CardContent>
       </Card>
 
-      {/* 本文（Lexical エディタ） — 詳細説明として最下部に配置（業界標準: Eventbrite / Peatix / connpass 準拠） */}
+      {/* 本文（Lexical エディタ） */}
       <Card>
         <CardHeader>
           <CardTitle>本文（詳細説明）</CardTitle>
         </CardHeader>
         <CardContent>
           <LazyLexicalEditor
-            contentJson={watchedDescriptionJson}
-            onChange={handleDescriptionJsonChange}
+            contentJson={contentJson}
+            onChange={onContentJsonChange}
             disabled={isPending}
             className={EDITOR_PROSE_CLASSES}
             placeholder="イベントの詳細・プログラム・参加要件等を入力..."
             showInspector={false}
           />
-          {errors.descriptionJson && (
-            <p className="text-sm text-destructive mt-2">
-              {errors.descriptionJson.message}
+          {fields.descriptionJson.errors && (
+            <p className="mt-2 text-sm text-destructive">
+              {fields.descriptionJson.errors.join(", ")}
             </p>
           )}
         </CardContent>

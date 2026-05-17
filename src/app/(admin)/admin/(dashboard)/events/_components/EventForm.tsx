@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactElement } from "react";
+import { useActionState, useState } from "react";
+import Link from "next/link";
+import { getFormProps, useForm } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import { Button, SubmitButton } from "@/admin/components/ui";
-import { useFormAction } from "@/admin/hooks";
-import { createEvent, updateEvent } from "@/admin/actions/event";
+import { createEventAction, updateEventAction } from "@/admin/actions/event";
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
-import { eventFormSchema } from "@/shared/lib/validations/event";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
@@ -19,10 +20,7 @@ import { EventBasicFields } from "./EventBasicFields";
 import { EventScheduleFields } from "./EventScheduleFields";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
-
-// =============================================================================
-// Types
-// =============================================================================
+import { eventFormSchema } from "./event-form-schema";
 
 type EventData = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
@@ -34,14 +32,8 @@ type EventFormProps = {
   spaces: SpaceOption[];
 };
 
-// =============================================================================
-// Helpers
-// =============================================================================
-
 /**
  * DB の Lexical JSON（オブジェクト形式）を Editor 初期値用の文字列に変換。
- * Prisma JSON カラムは runtime ではパース済みオブジェクトが返るため、
- * Editor に渡す前に文字列化する。
  */
 function serializeDescriptionJson(value: unknown): string {
   if (value == null) return EMPTY_LEXICAL_EDITOR_STATE_JSON;
@@ -49,122 +41,170 @@ function serializeDescriptionJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-// =============================================================================
-// Component
-// =============================================================================
-
 export function EventForm({
   event,
   locations,
   spaces,
 }: EventFormProps): ReactElement {
-  const isEdit = !!event;
+  const isEdit = Boolean(event);
 
-  const { form, isPending, onSubmit } = useFormAction(
-    eventFormSchema,
-    async (data) => {
-      const descriptionHtml = renderEditorStateJsonToHtmlClient(
-        data.descriptionJson,
-      );
-      const payload = { ...data, descriptionHtml };
-      if (isEdit) {
-        return updateEvent(event.id, payload);
-      }
-      return createEvent(payload);
-    },
-    {
-      redirectTo: "/admin/events",
-      successMessage: isEdit
-        ? "イベントを更新しました"
-        : "イベントを作成しました",
-      defaultValues: event
-        ? {
-            title: event.title,
-            slug: event.slug,
-            descriptionJson: serializeDescriptionJson(event.descriptionJson),
-            descriptionHtml: "",
-            thumbnailUrl: event.thumbnailUrl,
-            startTime: formatDateTimeLocalInJst(event.startTime),
-            endTime: formatDateTimeLocalInJst(event.endTime),
-            registrationDeadline: event.registrationDeadline
-              ? formatDateTimeLocalInJst(event.registrationDeadline)
-              : "",
-            capacity: event.capacity ?? undefined,
-            price: event.price ?? undefined,
-            addressDetail: event.addressDetail ?? "",
-            locationId: event.locationId,
-            spaceId: event.spaceId,
-            status: event.status,
-            registrationOpen: event.registrationOpen,
-          }
-        : {
-            title: "",
-            slug: "",
-            descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
-            descriptionHtml: "",
-            thumbnailUrl: null,
-            startTime: "",
-            endTime: "",
-            registrationDeadline: "",
-            capacity: undefined,
-            price: undefined,
-            addressDetail: "",
-            locationId: null,
-            spaceId: null,
-            status: EventStatus.DRAFT,
-            registrationOpen: false,
-          },
-    },
+  // Controlled state（hidden input 経由で送信）
+  const [contentJson, setContentJson] = useState<string>(() =>
+    serializeDescriptionJson(event?.descriptionJson),
+  );
+  // 派生計算: React Compiler が自動メモ化（flushSync / useMemo 不要、Task 8.3 canonical）
+  const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
+    event?.thumbnailUrl ?? null,
+  );
+  const [status, setStatus] = useState<EventStatus>(
+    event?.status ?? EventStatus.DRAFT,
+  );
+  const [registrationOpen, setRegistrationOpen] = useState<boolean>(
+    event?.registrationOpen ?? false,
+  );
+  const [locationId, setLocationId] = useState<string | null>(
+    event?.locationId ?? null,
+  );
+  const [spaceId, setSpaceId] = useState<string | null>(event?.spaceId ?? null);
+
+  const boundAction =
+    isEdit && event?.id
+      ? updateEventAction.bind(null, event.id)
+      : createEventAction;
+  const [lastResult, action, isPending] = useActionState(
+    boundAction,
+    undefined,
   );
 
+  const [form, fields] = useForm({
+    id: isEdit ? `event-edit-${event?.id ?? ""}` : "event-create",
+    lastResult,
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: eventFormSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+    defaultValue: event
+      ? {
+          title: event.title,
+          slug: event.slug,
+          startTime: formatDateTimeLocalInJst(event.startTime),
+          endTime: formatDateTimeLocalInJst(event.endTime),
+          registrationDeadline: event.registrationDeadline
+            ? formatDateTimeLocalInJst(event.registrationDeadline)
+            : "",
+          capacity: event.capacity != null ? String(event.capacity) : "",
+          price: event.price != null ? String(event.price) : "",
+          addressDetail: event.addressDetail ?? "",
+        }
+      : {
+          title: "",
+          slug: "",
+          startTime: "",
+          endTime: "",
+          registrationDeadline: "",
+          capacity: "",
+          price: "",
+          addressDetail: "",
+        },
+  });
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form {...getFormProps(form)} action={action} className="space-y-6">
+      {/* hidden inputs (controlled state → FormData) */}
+      <input
+        type="hidden"
+        name={fields.descriptionJson.name}
+        value={contentJson}
+      />
+      <input
+        type="hidden"
+        name={fields.descriptionHtml.name}
+        value={contentHtml}
+      />
+      <input
+        type="hidden"
+        name={fields.thumbnailUrl.name}
+        value={thumbnailUrl ?? ""}
+      />
+      <input type="hidden" name={fields.status.name} value={status} />
+      <input
+        type="hidden"
+        name={fields.registrationOpen.name}
+        value={registrationOpen ? "on" : ""}
+      />
+      <input
+        type="hidden"
+        name={fields.locationId.name}
+        value={locationId ?? ""}
+      />
+      <input type="hidden" name={fields.spaceId.name} value={spaceId ?? ""} />
+
+      {form.errors && form.errors.length > 0 && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          {form.errors.join(", ")}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* 左カラム: 基本情報 + 日程・定員・料金 */}
         <div className="flex flex-col gap-6">
-          <EventBasicFields
-            register={form.register}
-            errors={form.formState.errors}
-            isPending={isPending}
-          />
-          <EventScheduleFields
-            register={form.register}
-            errors={form.formState.errors}
-            isPending={isPending}
-          />
+          <EventBasicFields fields={fields} isPending={isPending} />
+          <EventScheduleFields fields={fields} isPending={isPending} />
         </div>
 
-        {/* 右カラム: 公開設定・サムネ・本文 */}
         <EventPublishFields
-          control={form.control}
-          setValue={form.setValue}
-          register={form.register}
-          errors={form.formState.errors}
+          fields={fields}
           isPending={isPending}
+          status={status}
+          onStatusChange={(next) => {
+            setStatus(next);
+            if (next !== EventStatus.PUBLISHED) {
+              setRegistrationOpen(false);
+            }
+          }}
+          registrationOpen={registrationOpen}
+          onRegistrationOpenChange={setRegistrationOpen}
+          contentJson={contentJson}
+          onContentJsonChange={setContentJson}
+          thumbnailUrl={thumbnailUrl}
+          onThumbnailUrlChange={setThumbnailUrl}
         />
       </div>
 
-      {/* 会場 */}
       <EventLocationSpaceSelector
-        control={form.control}
-        setValue={form.setValue}
-        getValues={form.getValues}
-        errors={form.formState.errors}
-        register={form.register}
+        fields={fields}
         isPending={isPending}
         locations={locations}
         spaces={spaces}
+        locationId={locationId}
+        spaceId={spaceId}
+        onLocationChange={(nextLocationId) => {
+          setLocationId(nextLocationId);
+          if (spaceId) {
+            const currentSpace = spaces.find((s) => s.id === spaceId);
+            if (!currentSpace || currentSpace.locationId !== nextLocationId) {
+              setSpaceId(null);
+            }
+          }
+        }}
+        onSpaceChange={(nextSpaceId) => {
+          setSpaceId(nextSpaceId);
+          if (nextSpaceId) {
+            const selected = spaces.find((s) => s.id === nextSpaceId);
+            if (selected && locationId !== selected.locationId) {
+              setLocationId(selected.locationId);
+            }
+          }
+        }}
       />
 
       <div className="flex justify-end gap-4">
         <Button variant="outline" asChild>
           <Link href="/admin/events">キャンセル</Link>
         </Button>
-        <SubmitButton
-          isPending={isPending}
-          label={isEdit ? "更新" : "作成"}
-          {...(isEdit && { disabled: !form.formState.isDirty })}
-        />
+        <SubmitButton isPending={isPending} label={isEdit ? "更新" : "作成"} />
       </div>
     </form>
   );

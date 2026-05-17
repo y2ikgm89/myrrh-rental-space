@@ -1,8 +1,13 @@
 "use server";
 
+import type { SubmissionResult } from "@conform-to/react";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -26,20 +31,17 @@ import {
 } from "@/shared/lib/calendar-sync/event-outbound";
 import {
   eventFormSchema,
-  type EventFormInput,
-} from "@/shared/lib/validations/event";
+  type EventFormData,
+} from "../../events/_components/event-form-schema";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "イベントIDが不正です" });
 
 /**
- * EventFormInput (Lexical JSON + 事前 render 済み HTML) → EventCommandInput
- * (Prisma InputJsonValue + HTML cache + plain text)
- *
- * client が `renderEditorStateJsonToHtmlClient` で事前 render した HTML を受け取り、
- * 派生 plain text を server-side で計算する（Lexical を server で実行しない設計）。
+ * EventFormData (conform parsed output: Lexical JSON string + 事前 render 済み HTML)
+ * → EventCommandInput (Prisma InputJsonValue + HTML cache + plain text)
  */
-function buildEventCommandInput(data: EventFormInput) {
+function buildEventCommandInput(data: EventFormData) {
   const descriptionHtml = data.descriptionHtml;
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
   const descriptionJson = JSON.parse(
@@ -61,10 +63,7 @@ function buildEventCommandInput(data: EventFormInput) {
   });
 }
 
-/**
- * create / duplicate / update / publish / cancel 共通: afterSuccess で DB 1 回読んで GCal 同期
- * delete 後は soft-delete で取得できないため呼ばないこと
- */
+/** create / duplicate / update / publish 共通 GCal 同期 */
 async function syncEventOutbound(eventId: string): Promise<void> {
   const context = await getEventForCalendarSync(eventId);
   if (!context) return;
@@ -75,9 +74,7 @@ async function syncEventOutbound(eventId: string): Promise<void> {
   }
 }
 
-/**
- * cancel / delete 用: 既存 GCal ID がある場合のみ削除
- */
+/** cancel / delete 用: 既存 GCal ID がある場合のみ削除 */
 async function deleteEventOutbound(
   eventId: string,
   gcalEventId: string | null,
@@ -86,61 +83,126 @@ async function deleteEventOutbound(
   await deleteEventCalendarSync(eventId, gcalEventId);
 }
 
-export async function createEvent(
-  input: EventFormInput,
-): Promise<MutationResult<{ id: string; slug: string }>> {
-  const parsed = eventFormSchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
+// =============================================================================
+// conform Server Actions — Phase 1 Task 8.5
+// =============================================================================
 
-  return executeAdminMutationResult({
-    resource: "event",
-    action: "create",
-    execute: async () => {
-      const commandInput = await buildEventCommandInput(parsed.data);
-      const event = await createEventCommand(commandInput);
-      return { id: event.id, slug: event.slug };
-    },
-    afterSuccess: (data) => {
-      invalidateEventCaches(data.id, data.slug);
-      fireAndForget(syncEventOutbound(data.id), {
-        operation: "syncEventOutbound.create",
-        category: ErrorCategory.EXTERNAL_API,
+/**
+ * 管理画面 新規イベント作成 — conform `useActionState` canonical
+ *
+ * `(prev, formData) => SubmissionResult` signature。
+ * 成功時は `redirect()` で一覧ページに遷移、失敗時は `submission.reply()` を返す。
+ */
+export async function createEventAction(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  let createdId: string | null = null;
+  let createdSlug: string | null = null;
+
+  const submissionResult = await executeConformMutation(
+    formData,
+    eventFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "event",
+        action: "create",
+        execute: async () => {
+          const commandInput = buildEventCommandInput(data);
+          const event = await createEventCommand(commandInput);
+          return { id: event.id, slug: event.slug };
+        },
+        afterSuccess: (payload) => {
+          invalidateEventCaches(payload.id, payload.slug);
+          fireAndForget(syncEventOutbound(payload.id), {
+            operation: "syncEventOutbound.create",
+            category: ErrorCategory.EXTERNAL_API,
+          });
+        },
+        resolveAuditResourceId: (payload) => payload.id,
       });
+
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      createdId = result.id;
+      createdSlug = result.slug;
+      return { ok: true };
     },
-    resolveAuditResourceId: (data) => data.id,
-  });
+  );
+
+  if (createdId !== null && createdSlug !== null) {
+    redirect(toAppRoute(`/admin/events`));
+  }
+
+  return submissionResult;
 }
 
-export async function updateEvent(
+/**
+ * 管理画面 イベント更新 — conform `useActionState` canonical
+ *
+ * id は `bind(null, event.id)` で部分適用。
+ */
+export async function updateEventAction(
   id: string,
-  input: EventFormInput,
-): Promise<MutationResult<null>> {
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
   const idParsed = idSchema.safeParse(id);
-  if (!idParsed.success) return createValidationMutationError(idParsed.error);
+  if (!idParsed.success) {
+    return {
+      status: "error",
+      error: { "": ["イベントIDが不正です"] },
+    } satisfies SubmissionResult;
+  }
+  const validId = idParsed.data;
 
-  const parsed = eventFormSchema.safeParse(input);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
+  let success = false;
+  let updatedSlug: string | null = null;
 
-  return executeAdminMutationResult({
-    resource: "event",
-    action: "update",
-    resourceId: idParsed.data,
-    execute: async () => {
-      const commandInput = await buildEventCommandInput(parsed.data);
-      await updateEventCommand(idParsed.data, commandInput);
-      return null;
-    },
-    afterSuccess: () => {
-      invalidateEventCaches(idParsed.data, parsed.data.slug, {
-        registrations: true,
+  const submissionResult = await executeConformMutation(
+    formData,
+    eventFormSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "event",
+        action: "update",
+        resourceId: validId,
+        execute: async () => {
+          const commandInput = buildEventCommandInput(data);
+          await updateEventCommand(validId, commandInput);
+          return null;
+        },
+        afterSuccess: () => {
+          invalidateEventCaches(validId, data.slug, {
+            registrations: true,
+          });
+          fireAndForget(syncEventOutbound(validId), {
+            operation: "syncEventOutbound.update",
+            category: ErrorCategory.EXTERNAL_API,
+          });
+        },
       });
-      fireAndForget(syncEventOutbound(idParsed.data), {
-        operation: "syncEventOutbound.update",
-        category: ErrorCategory.EXTERNAL_API,
-      });
+
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      success = true;
+      updatedSlug = data.slug;
+      return { ok: true };
     },
-  });
+  );
+
+  if (success && updatedSlug !== null) {
+    redirect(toAppRoute(`/admin/events`));
+  }
+
+  return submissionResult;
 }
+
+// =============================================================================
+// id-only mutation actions (unchanged — 単純な id 引数のみ、conform 不要)
+// =============================================================================
 
 export async function deleteEvent(
   id: string,

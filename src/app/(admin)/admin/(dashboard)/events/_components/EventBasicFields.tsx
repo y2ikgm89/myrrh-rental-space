@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import { getInputProps } from "@conform-to/react";
 import {
   Input,
   Label,
@@ -10,28 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/admin/components/ui";
-import type { eventFormSchema } from "@/shared/lib/validations/event";
-import type { z } from "zod";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-type FormValues = z.infer<typeof eventFormSchema>;
+import type { EventFormFields } from "./event-form-fields-types";
 
 type EventBasicFieldsProps = {
-  register: UseFormRegister<FormValues>;
-  errors: FieldErrors<FormValues>;
+  fields: EventFormFields;
   isPending: boolean;
 };
 
-// =============================================================================
-// Component
-// =============================================================================
-
 export function EventBasicFields({
-  register,
-  errors,
+  fields,
   isPending,
 }: EventBasicFieldsProps): ReactElement {
   return (
@@ -41,21 +28,33 @@ export function EventBasicFields({
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label htmlFor="title">タイトル</Label>
-          <Input id="title" {...register("title")} disabled={isPending} />
-          {errors.title && (
-            <p className="text-sm text-destructive mt-1">
-              {errors.title.message}
+          <Label htmlFor={fields.title.id}>タイトル</Label>
+          <Input
+            {...getInputProps(fields.title, { type: "text" })}
+            disabled={isPending}
+          />
+          {fields.title.errors && (
+            <p
+              id={fields.title.errorId}
+              className="mt-1 text-sm text-destructive"
+            >
+              {fields.title.errors.join(", ")}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="slug">スラッグ</Label>
-          <Input id="slug" {...register("slug")} disabled={isPending} />
-          {errors.slug && (
-            <p className="text-sm text-destructive mt-1">
-              {errors.slug.message}
+          <Label htmlFor={fields.slug.id}>スラッグ</Label>
+          <Input
+            {...getInputProps(fields.slug, { type: "text" })}
+            disabled={isPending}
+          />
+          {fields.slug.errors && (
+            <p
+              id={fields.slug.errorId}
+              className="mt-1 text-sm text-destructive"
+            >
+              {fields.slug.errors.join(", ")}
             </p>
           )}
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import { getInputProps } from "@conform-to/react";
 import {
   Input,
   Label,
@@ -10,28 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/admin/components/ui";
-import type { eventFormSchema } from "@/shared/lib/validations/event";
-import type { z } from "zod";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-type FormValues = z.infer<typeof eventFormSchema>;
+import type { EventFormFields } from "./event-form-fields-types";
 
 type EventScheduleFieldsProps = {
-  register: UseFormRegister<FormValues>;
-  errors: FieldErrors<FormValues>;
+  fields: EventFormFields;
   isPending: boolean;
 };
 
-// =============================================================================
-// Component
-// =============================================================================
-
 export function EventScheduleFields({
-  register,
-  errors,
+  fields,
   isPending,
 }: EventScheduleFieldsProps): ReactElement {
   return (
@@ -40,65 +27,69 @@ export function EventScheduleFields({
         <CardTitle>日程・定員・料金</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="startTime">開始日時</Label>
+            <Label htmlFor={fields.startTime.id}>開始日時</Label>
             <Input
-              id="startTime"
-              type="datetime-local"
-              {...register("startTime")}
+              {...getInputProps(fields.startTime, { type: "datetime-local" })}
               disabled={isPending}
             />
-            {errors.startTime && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.startTime.message}
+            {fields.startTime.errors && (
+              <p
+                id={fields.startTime.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.startTime.errors.join(", ")}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="endTime">終了日時</Label>
+            <Label htmlFor={fields.endTime.id}>終了日時</Label>
             <Input
-              id="endTime"
-              type="datetime-local"
-              {...register("endTime")}
+              {...getInputProps(fields.endTime, { type: "datetime-local" })}
               disabled={isPending}
             />
-            {errors.endTime && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.endTime.message}
+            {fields.endTime.errors && (
+              <p
+                id={fields.endTime.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.endTime.errors.join(", ")}
               </p>
             )}
           </div>
         </div>
 
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="capacity">定員</Label>
+            <Label htmlFor={fields.capacity.id}>定員</Label>
             <Input
-              id="capacity"
-              type="number"
-              {...register("capacity", { valueAsNumber: true })}
+              {...getInputProps(fields.capacity, { type: "number" })}
               disabled={isPending}
             />
-            {errors.capacity && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.capacity.message}
+            {fields.capacity.errors && (
+              <p
+                id={fields.capacity.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.capacity.errors.join(", ")}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="price">料金</Label>
+            <Label htmlFor={fields.price.id}>料金</Label>
             <Input
-              id="price"
-              type="number"
-              {...register("price", { valueAsNumber: true })}
+              {...getInputProps(fields.price, { type: "number" })}
               disabled={isPending}
             />
-            {errors.price && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.price.message}
+            {fields.price.errors && (
+              <p
+                id={fields.price.errorId}
+                className="mt-1 text-sm text-destructive"
+              >
+                {fields.price.errors.join(", ")}
               </p>
             )}
           </div>

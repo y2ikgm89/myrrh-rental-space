@@ -1,19 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import {
-  eventFormSchema,
-  updateEventSchema,
-} from "@/shared/lib/validations/event";
+import { eventFormSchema } from "@/app/(admin)/admin/(dashboard)/events/_components/event-form-schema";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
-describe("eventFormSchema", () => {
+describe("eventFormSchema (conform)", () => {
   const validInput = {
     title: "テストイベント",
     slug: "test-event",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     descriptionHtml: "",
-    startTime: "2026-05-01T10:00:00.000Z",
-    endTime: "2026-05-01T12:00:00.000Z",
+    startTime: "2026-05-01T10:00",
+    endTime: "2026-05-01T12:00",
     status: "DRAFT",
+    registrationOpen: false,
   };
 
   it("有効な入力を受け入れる", () => {
@@ -29,8 +27,8 @@ describe("eventFormSchema", () => {
   it("終了時刻が開始時刻より前の場合エラー", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      startTime: "2026-05-01T12:00:00.000Z",
-      endTime: "2026-05-01T10:00:00.000Z",
+      startTime: "2026-05-01T12:00",
+      endTime: "2026-05-01T10:00",
     });
     expect(result.success).toBe(false);
   });
@@ -40,9 +38,30 @@ describe("eventFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("定員がnullの場合は無制限として受け入れる", () => {
+  it("定員が null の場合は無制限として受け入れる", () => {
     const result = eventFormSchema.safeParse({ ...validInput, capacity: null });
     expect(result.success).toBe(true);
+  });
+
+  it("定員が空文字の場合 null として受け入れる (FormData transit)", () => {
+    const result = eventFormSchema.safeParse({ ...validInput, capacity: "" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.capacity).toBeNull();
+    }
+  });
+
+  it("定員が string '5' で number 5 にコース", () => {
+    const result = eventFormSchema.safeParse({ ...validInput, capacity: "5" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.capacity).toBe(5);
+    }
+  });
+
+  it("料金が負の値はエラー", () => {
+    const result = eventFormSchema.safeParse({ ...validInput, price: -100 });
+    expect(result.success).toBe(false);
   });
 
   it("無効なステータスを拒否する", () => {
@@ -53,10 +72,77 @@ describe("eventFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("registrationOpen が 'on' 文字列で true にコース (FormData transit)", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      registrationOpen: "on",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.registrationOpen).toBe(true);
+    }
+  });
+
+  it("registrationOpen が空文字で false にコース", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      registrationOpen: "",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.registrationOpen).toBe(false);
+    }
+  });
+
+  it("locationId が __none__ sentinel で null にコース", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      locationId: "__none__",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.locationId).toBeNull();
+    }
+  });
+
+  it("spaceId が __none__ sentinel で null にコース", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      spaceId: "__none__",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.spaceId).toBeNull();
+    }
+  });
+
+  it("申込締切が開始時刻以降の場合エラー", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      registrationDeadline: "2026-05-01T15:00",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("申込締切が開始時刻と同じ場合 OK (start 以前 = ≤)", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      registrationDeadline: "2026-05-01T10:00",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("申込締切が空文字でも OK (任意)", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      registrationDeadline: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("オプションフィールドを受け入れる", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      description: "説明文",
       capacity: 30,
       price: 1000,
       addressDetail: "2F 会議室A",
@@ -67,31 +153,15 @@ describe("eventFormSchema", () => {
     });
     expect(result.success).toBe(true);
   });
-});
 
-describe("updateEventSchema", () => {
-  it("idが必須", () => {
-    const result = updateEventSchema.safeParse({
-      title: "更新",
-      slug: "update",
-      startTime: "2026-05-01T10:00:00.000Z",
-      endTime: "2026-05-01T12:00:00.000Z",
-      status: "DRAFT",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("有効な更新入力を受け入れる", () => {
-    const result = updateEventSchema.safeParse({
-      id: "test-id",
-      title: "更新イベント",
-      slug: "updated-event",
-      descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
-      descriptionHtml: "",
-      startTime: "2026-05-01T10:00:00.000Z",
-      endTime: "2026-05-01T12:00:00.000Z",
-      status: "PUBLISHED",
+  it("addressDetail が空文字で null にコース", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      addressDetail: "",
     });
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.addressDetail).toBeNull();
+    }
   });
 });
