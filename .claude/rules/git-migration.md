@@ -108,6 +108,7 @@ claude --worktree "#1234"
 - **`.serena/memories/` は部分 tracked / 部分 ignored 状態** — 過去 commit 済みファイルは tracked のまま残存。update 後の `git add` は `paths are ignored` エラーで失敗するため `git add -f <path>` 必須
 - **memory file（`~/.claude/projects/<slug>/memory/*.md`）の連続 Edit は auto-format race で失敗する** — `Edit` 直後に別 Edit は「File has been modified since read」エラー。1 件ずつ順次完了を確認
 - **handoff memo の「commit `<SHA>` で完了」記述は新セッション開始時に `git show <SHA>` で実在検証必須** — 前セッションの commit 漏れで該当 SHA が main に存在しないことあり
+- **main 直接 commit 事故時の recovery は `branch + reset --hard origin/main` 非破壊 pattern** — branch 切り替え忘れで main 直 commit してしまった場合の canonical 復旧手順 (branch protection で push reject されるため必須)。① `git branch <new-branch> <commit-SHA>` で commit を新 branch に名前付け保存 ② `git reset --hard origin/main` で local main を origin に巻き戻す ③ `git checkout <new-branch>` で新 branch に移動 ④ `git push -u origin <new-branch>` → PR 化。`cherry-pick` 経由より一段少なく、commit 自体は reflog にも残るため安全。`git reset --hard` は destructive 操作だが origin への巻き戻しのみで未保存変更が他にない前提なら安全。実例: 2026-05-18 セッションで Phase comment cleanup commit を main 直に積んでしまい本 pattern で `chore/src-phase-cleanup` branch に分離して PR #126 化
 
 ## Push 戦略（main 直接 vs feature branch + PR）
 
