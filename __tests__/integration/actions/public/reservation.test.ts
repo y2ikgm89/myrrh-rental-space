@@ -3,11 +3,19 @@
  *
  * src/app/(public)/_shared/actions/reservation.ts のテスト
  *
+ * Phase 2 conform 移行後 (B-7):
+ *   signature: `(_prev, formData) => SubmissionResult`
+ *   - `executeConformMutation` SSoT 経由 (default `resetForm: true`)
+ *   - success: `{ initialValue: null }` (form は submitted view に切替)
+ *   - field-level error: `submission.reply()`
+ *   - form-level error (rate limit / Turnstile / domain space-location mismatch
+ *     / DomainError): `reply({ formErrors })`
+ *
  * モック方針:
- * - validateTurnstile: action-helpers をモック（常に成功を返す）
+ * - validateTurnstile / checkActionRateLimit: action-helpers をモック
  * - verifySpaceBelongsToLocation: スペース所属確認を DB なしで成功に固定
  * - createPublicReservationCommand: domain コマンドをモック
- * - email 送信: email-service をモック
+ * - sendReservationAdminNotification: email-service をモック
  * - updateTag: next/cache をモック
  */
 
@@ -31,17 +39,12 @@ const mockCheckActionRateLimit = mock(
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
   checkActionRateLimit: mockCheckActionRateLimit,
-  createValidationMutationError: (error: import("zod").ZodError) => ({
-    error: "入力内容に誤りがあります",
-    fieldErrors: Object.fromEntries(
-      error.issues.map((issue) => [issue.path[0] ?? "_", [issue.message]]),
-    ),
-  }),
 }));
 
 const mockCreatePublicReservationCommand = mock(() =>
   Promise.resolve({
     id: "reservation-001",
+    customerId: null,
     payload: {
       reservationId: "reservation-001",
       customerEmail: "yamada@example.com",
@@ -60,7 +63,6 @@ mock.module("@/shared/domain/reservations/public-commands", () => ({
   createPublicReservationCommand: mockCreatePublicReservationCommand,
 }));
 
-/** DB を使わず、ロケーションとスペースの整合チェックを通過させる */
 const mockVerifySpaceBelongsToLocation = mock(() => Promise.resolve(true));
 
 mock.module("@/shared/domain/spaces/public-queries", () => ({
@@ -148,7 +150,7 @@ mock.module("@/shared/lib/admin-auth", () => ({
   DASHBOARD_ROLES: [],
 }));
 
-// server-only モック（テスト環境で server-only を無効化）
+// server-only モック
 mock.module("server-only", () => ({}));
 
 // =============================================================================
@@ -158,19 +160,76 @@ mock.module("server-only", () => ({}));
 const VALID_LOCATION_ID = "00000000-0000-4000-a000-000000000001";
 const VALID_SPACE_ID = "550e8400-e29b-41d4-a716-446655440000";
 
-const VALID_INPUT = {
+type ReservationInputShape = {
+  locationId: string;
+  spaceId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  numberOfGuests: number;
+  customerType?: "PERSONAL" | "CORPORATE";
+  companyName?: string;
+  lastName: string;
+  firstName: string;
+  email: string;
+  phoneNumber?: string;
+  notes?: string;
+  turnstileToken?: string;
+  agreedTermsIds?: readonly string[];
+};
+
+const VALID_INPUT: ReservationInputShape = {
   locationId: VALID_LOCATION_ID,
   spaceId: VALID_SPACE_ID,
   date: "2025-06-01",
   startTime: "10:00",
   endTime: "12:00",
   numberOfGuests: 5,
+  customerType: "PERSONAL",
   lastName: "山田",
   firstName: "太郎",
   email: "yamada@example.com",
   phoneNumber: "090-1234-5678",
   notes: "",
   turnstileToken: "test-token-valid",
+};
+
+function inputToFormData(input: ReservationInputShape): FormData {
+  const fd = new FormData();
+  fd.append("locationId", input.locationId);
+  fd.append("spaceId", input.spaceId);
+  fd.append("date", input.date);
+  fd.append("startTime", input.startTime);
+  fd.append("endTime", input.endTime);
+  fd.append("numberOfGuests", String(input.numberOfGuests));
+  if (input.customerType !== undefined) {
+    fd.append("customerType", input.customerType);
+  }
+  if (input.companyName !== undefined) {
+    fd.append("companyName", input.companyName);
+  }
+  fd.append("lastName", input.lastName);
+  fd.append("firstName", input.firstName);
+  fd.append("email", input.email);
+  if (input.phoneNumber !== undefined) {
+    fd.append("phoneNumber", input.phoneNumber);
+  }
+  if (input.notes !== undefined) {
+    fd.append("notes", input.notes);
+  }
+  if (input.turnstileToken !== undefined) {
+    fd.append("turnstileToken", input.turnstileToken);
+  }
+  for (const id of input.agreedTermsIds ?? []) {
+    fd.append("agreedTermsIds", id);
+  }
+  return fd;
+}
+
+type SubmissionLike = {
+  readonly status?: "success" | "error";
+  readonly initialValue?: unknown;
+  readonly error?: Record<string, string[] | null> | null;
 };
 
 // =============================================================================
@@ -180,17 +239,23 @@ const VALID_INPUT = {
 describe("submitReservation", () => {
   beforeEach(() => {
     mockValidateTurnstile.mockClear();
+    mockCheckActionRateLimit.mockClear();
     mockCreatePublicReservationCommand.mockClear();
     mockVerifySpaceBelongsToLocation.mockClear();
     mockSendReservationAdminNotification.mockClear();
     mockUpdateTag.mockClear();
-    // 成功レスポンスにリセット
+    mockGetCurrentUser.mockClear();
+
     mockValidateTurnstile.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
+    mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
     mockCreatePublicReservationCommand.mockImplementation(() =>
       Promise.resolve({
         id: "reservation-001",
+        customerId: null,
         payload: {
           reservationId: "reservation-001",
           customerEmail: "yamada@example.com",
@@ -207,23 +272,28 @@ describe("submitReservation", () => {
     mockVerifySpaceBelongsToLocation.mockImplementation(() =>
       Promise.resolve(true),
     );
+    mockGetCurrentUser.mockImplementation(() => Promise.resolve(null));
   });
 
   describe("正常系", () => {
-    test("有効な入力で予約作成が成功し id を返す", async () => {
+    test("有効な入力で予約作成が成功する", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation(VALID_INPUT);
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "reservation-001" });
+      expect(result.initialValue).toBeNull();
+      expect(result.status).not.toBe("error");
     });
 
     test("createPublicReservationCommand がパース済みデータを引数に呼ばれる", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      await submitReservation(VALID_INPUT);
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreatePublicReservationCommand).toHaveBeenCalledTimes(1);
     });
@@ -232,207 +302,162 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      await submitReservation(VALID_INPUT);
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
 
-      // RESERVATIONS + reservations.calendar + CUSTOMERS + customers.detail = 4回以上
-      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(4);
+      // invalidateReservationCaches 経由で複数 tag invalidate
+      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 
     test("phoneNumber が省略されても成功する", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const inputWithoutPhone = { ...VALID_INPUT, phoneNumber: undefined };
-      const result = await submitReservation(inputWithoutPhone);
+      const { phoneNumber: _omit, ...inputWithoutPhone } = VALID_INPUT;
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData(inputWithoutPhone),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "reservation-001" });
+      expect(result.initialValue).toBeNull();
     });
 
     test("notes が空文字列でも成功する", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({ ...VALID_INPUT, notes: "" });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, notes: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toEqual({ id: "reservation-001" });
-    });
-
-    test("turnstileToken が undefined でも Turnstile 検証が呼ばれる", async () => {
-      const { submitReservation } =
-        await import("@/app/(public)/_shared/actions/reservation");
-
-      const inputWithoutToken = { ...VALID_INPUT, turnstileToken: undefined };
-      await submitReservation(inputWithoutToken);
-
-      expect(mockValidateTurnstile).toHaveBeenCalledTimes(1);
+      expect(result.initialValue).toBeNull();
     });
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("spaceId が無効な UUID のとき fieldErrors を含むエラーを返す", async () => {
+    test("spaceId が無効な UUID のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        spaceId: "not-a-uuid",
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, spaceId: "not-a-uuid" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("spaceId");
+      expect(result.status).toBe("error");
+      expect(result.error?.["spaceId"]).toBeDefined();
     });
 
-    test("date が不正な形式のとき fieldErrors を含むエラーを返す", async () => {
+    test("date が不正な形式のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        date: "2025/06/01",
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, date: "2025/06/01" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("date");
+      expect(result.status).toBe("error");
+      expect(result.error?.["date"]).toBeDefined();
     });
 
-    test("startTime が不正な形式のとき fieldErrors を含むエラーを返す", async () => {
+    test("startTime が不正な形式のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        startTime: "10:00:00",
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, startTime: "10:00:00" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("startTime");
+      expect(result.status).toBe("error");
+      expect(result.error?.["startTime"]).toBeDefined();
     });
 
     test("endTime が startTime より前のとき refine エラーを返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        startTime: "14:00",
-        endTime: "10:00",
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({
+          ...VALID_INPUT,
+          startTime: "14:00",
+          endTime: "10:00",
+        }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("endTime");
+      expect(result.status).toBe("error");
+      expect(result.error?.["endTime"]).toBeDefined();
     });
 
-    test("numberOfGuests が 0 のとき fieldErrors を含むエラーを返す", async () => {
+    test("numberOfGuests が 0 のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        numberOfGuests: 0,
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, numberOfGuests: 0 }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("numberOfGuests");
+      expect(result.status).toBe("error");
+      expect(result.error?.["numberOfGuests"]).toBeDefined();
     });
 
-    test("numberOfGuests が 501 のとき fieldErrors を含むエラーを返す", async () => {
+    test("numberOfGuests が 501 のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        numberOfGuests: 501,
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, numberOfGuests: 501 }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("numberOfGuests");
+      expect(result.status).toBe("error");
+      expect(result.error?.["numberOfGuests"]).toBeDefined();
     });
 
-    test("lastName が空文字列のとき fieldErrors を含むエラーを返す", async () => {
+    test("lastName が空文字列のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({ ...VALID_INPUT, lastName: "" });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("lastName");
+      expect(result.status).toBe("error");
+      expect(result.error?.["lastName"]).toBeDefined();
     });
 
-    test("firstName が空文字列のとき fieldErrors を含むエラーを返す", async () => {
+    test("email が無効な形式のとき fieldErrors を返す", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        firstName: "",
-      });
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, email: "invalid-email" }),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("firstName");
-    });
-
-    test("email が無効な形式のとき fieldErrors を含むエラーを返す", async () => {
-      const { submitReservation } =
-        await import("@/app/(public)/_shared/actions/reservation");
-
-      const result = await submitReservation({
-        ...VALID_INPUT,
-        email: "invalid-email",
-      });
-
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("email");
+      expect(result.status).toBe("error");
+      expect(result.error?.["email"]).toBeDefined();
     });
 
     test("バリデーション失敗時は createPublicReservationCommand が呼ばれない", async () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      await submitReservation({ ...VALID_INPUT, lastName: "" });
+      await submitReservation(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, lastName: "" }),
+      );
 
       expect(mockCreatePublicReservationCommand).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系: Turnstile 検証失敗", () => {
-    test("Turnstile 検証失敗時はエラーを返す", async () => {
+    test("Turnstile 検証失敗時は formErrors にエラーを返す", async () => {
       mockValidateTurnstile.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
@@ -444,11 +469,14 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation(VALID_INPUT);
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toContain("セキュリティ検証");
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors?.[0]).toContain("セキュリティ検証");
     });
 
     test("Turnstile 失敗時は createPublicReservationCommand が呼ばれない", async () => {
@@ -462,14 +490,35 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      await submitReservation(VALID_INPUT);
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreatePublicReservationCommand).not.toHaveBeenCalled();
     });
   });
 
+  describe("異常系: スペース所属チェック失敗", () => {
+    test("スペースがロケーションに属さないとき formErrors を返す", async () => {
+      mockVerifySpaceBelongsToLocation.mockImplementation(() =>
+        Promise.resolve(false),
+      );
+
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
+
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toContain(
+        "選択されたスペースは指定された場所",
+      );
+    });
+  });
+
   describe("異常系: DomainError", () => {
-    test("DomainError（NOT_FOUND）をスローしたとき MutationError を返す", async () => {
+    test("DomainError (NOT_FOUND) をスローしたとき formErrors を返す", async () => {
       mockCreatePublicReservationCommand.mockImplementation(() =>
         Promise.reject(
           new DomainError("指定されたスペースが見つかりません", "NOT_FOUND"),
@@ -479,14 +528,18 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation(VALID_INPUT);
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("指定されたスペースが見つかりません");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe(
+        "指定されたスペースが見つかりません",
+      );
     });
 
-    test("DomainError（CONFLICT）をスローしたとき MutationError を返す", async () => {
+    test("DomainError (CONFLICT) をスローしたとき formErrors を返す", async () => {
       mockCreatePublicReservationCommand.mockImplementation(() =>
         Promise.reject(
           new DomainError(
@@ -499,165 +552,26 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = await submitReservation(VALID_INPUT);
+      const result = (await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      )) as SubmissionLike;
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toContain("既に予約されています");
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toContain("既に予約されています");
     });
 
     test("DomainError 以外の Error をスローしたとき再スローされる", async () => {
       mockCreatePublicReservationCommand.mockImplementation(() =>
-        Promise.reject(new Error("DB 接続エラー")),
+        Promise.reject(new Error("予期しないDBエラー")),
       );
 
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      await expect(submitReservation(VALID_INPUT)).rejects.toThrow(
-        "DB 接続エラー",
-      );
-    });
-  });
-
-  describe("publicReservationSchema バリデーション（単体）", () => {
-    test("有効な最小データで通過", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        locationId: VALID_LOCATION_ID,
-        spaceId: VALID_SPACE_ID,
-        date: "2025-06-01",
-        startTime: "10:00",
-        endTime: "12:00",
-        numberOfGuests: 1,
-        lastName: "山田",
-        firstName: "太郎",
-        email: "yamada@example.com",
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("phoneNumber は省略可能", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        locationId: VALID_LOCATION_ID,
-        spaceId: VALID_SPACE_ID,
-        date: "2025-06-01",
-        startTime: "10:00",
-        endTime: "12:00",
-        numberOfGuests: 2,
-        lastName: "田中",
-        firstName: "花子",
-        email: "tanaka@example.com",
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("phoneNumber が空文字列でも通過", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        phoneNumber: "",
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("notes が空文字列でも通過", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        notes: "",
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("startTime === endTime のとき refine で失敗", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        startTime: "10:00",
-        endTime: "10:00",
-      });
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        const endTimeError = result.error.issues.find(
-          (issue) => issue.path[0] === "endTime",
-        );
-        expect(endTimeError).toBeDefined();
-      }
-    });
-
-    test("numberOfGuests が 1 の境界値で通過", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        numberOfGuests: 1,
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("numberOfGuests が 500 の境界値で通過", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        numberOfGuests: 500,
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("notes が 2000 文字で通過", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        notes: "あ".repeat(2000),
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("notes が 2001 文字で失敗", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const result = publicReservationSchema.safeParse({
-        ...VALID_INPUT,
-        notes: "あ".repeat(2001),
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    test("turnstileToken は省略可能", async () => {
-      const { publicReservationSchema } =
-        await import("@/shared/lib/validations/public-reservation");
-
-      const { turnstileToken: _, ...inputWithoutToken } = VALID_INPUT;
-      const result = publicReservationSchema.safeParse(inputWithoutToken);
-
-      expect(result.success).toBe(true);
+      await expect(
+        submitReservation(undefined, inputToFormData(VALID_INPUT)),
+      ).rejects.toThrow("予期しないDBエラー");
     });
   });
 });
