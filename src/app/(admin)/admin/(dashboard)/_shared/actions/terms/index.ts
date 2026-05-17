@@ -84,7 +84,7 @@ export async function restoreTerms(
 }
 
 // =============================================================================
-// Conform `useActionState` 用 Server Actions (Phase 1 Task 8.3)
+// Conform `useActionState` 用 Server Actions
 //
 // `(prev, formData) => SubmissionResult` signature。TermsForm (page 遷移付き form)
 // で `<form action={action}>` 経由で利用される。create は新規作成ページ、update は

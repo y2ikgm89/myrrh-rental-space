@@ -73,7 +73,7 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
     id: "contact",
     label: "お問い合わせ",
     description: "問い合わせフォーム + 補足",
-    // contact-form type は Phase 3 で追加予定。Phase 1 では Section type が無いため使えないが、
+    // contact-form type は将来追加予定。現状 Section type が無いため使えないが、
     // テンプレート定義としては allowedSectionTypes に含めておく。
     allowedSectionTypes: ["page-hero", "hero", "contact-form", "custom", "map"],
     defaultSections: DEFAULT_PAGE_SECTIONS["contact"] ?? [],

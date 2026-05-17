@@ -41,7 +41,6 @@ function emptyToNull(value: string | undefined): string | null {
 /**
  * 事業者情報更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  * 7 文字列 + 1 日付 + 1 textarea + 2 Select を 1 保存単位で扱う。
  */
@@ -85,7 +84,6 @@ export async function updateBusinessInfo(
 /**
  * 連絡先情報更新 — conform `useActionState` 統合経路。
  *
- * Phase 1 Task 6 conform 移行で `useFormAction` (RHF) から
  * `useActionState` + `useForm` (conform) に clean break 移行。
  * UI 側は `contactInfoFormSchema` (空文字許容)、domain 側は
  * `contactInfoSchema` (nullable) を使い分け、executor 内で `emptyToNull` で

@@ -3,7 +3,6 @@
 /**
  * クーポン Server Actions
  *
- * Phase 1 Task 6 で `createCoupon` / `updateCoupon` を conform
  * `useActionState` 統合経路に clean break 移行。delete / publish 系は
  * input ベース (table 経由) で残置。
  */

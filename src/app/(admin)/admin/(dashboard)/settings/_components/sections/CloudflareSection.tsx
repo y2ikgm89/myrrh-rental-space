@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * CloudflareSection — Phase 1 Task 6 conform 移行
+ * CloudflareSection
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。Cloudflare CDN cache purge 用 Zone ID +
  * API Token の設定と接続テスト。PR #75 ResendSection canonical pattern を踏襲、
  * Zone ID と API Token の 2 入力に拡張。
  */

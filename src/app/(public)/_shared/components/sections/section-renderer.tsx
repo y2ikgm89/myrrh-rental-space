@@ -138,7 +138,7 @@ export async function SectionRenderer({
 }: SectionRendererProps): Promise<ReactElement | null> {
   // 該当 section type が disabled feature module に紐づく場合は早期 null。
   // 例: spaces feature OFF 時にホームに埋め込まれた space-showcase / space-list を非表示化。
-  // 公開ページ自体の 404 ガードは page.tsx の requireFeatureEnabled が担う（Phase 2）。
+  // 公開ページ自体の 404 ガードは page.tsx の requireFeatureEnabled が担う。
   const featureCtx = await getFeatureFilterContext();
   if (featureCtx.disabledSectionTypes.has(section.type)) {
     return null;
@@ -400,7 +400,7 @@ export async function SectionRenderer({
       if (hasInlineItems) {
         // FaqData.question / answer は string 契約（DB 由来 FaqItem と統一）。
         // Section.config.items[].question は PortableTextSpan[]、
-        // .answer は PortableTextBlock[] (Phase 4) に格上げしたが、
+        // .answer は PortableTextBlock[] に格上げしたが、
         // FaqListSection 描画は plain text 前提のため境界で派生する
         // （inline 項目の rich rendering は将来 FaqData 型拡張で対応）。
         const items: FaqData[] = inlineItems.map((item, index) => ({

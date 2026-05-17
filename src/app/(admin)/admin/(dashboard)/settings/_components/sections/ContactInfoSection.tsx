@@ -1,10 +1,9 @@
 "use client";
 
 /**
- * 連絡先情報セクション — Phase 1 Task 6 conform 移行
+ * 連絡先情報セクション
  *
  * 電話番号、メールアドレス、住所などの連絡先設定。
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。
  */
 

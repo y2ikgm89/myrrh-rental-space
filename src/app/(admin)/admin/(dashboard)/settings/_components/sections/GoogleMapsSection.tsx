@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * Google Maps設定セクション — Phase 1 Task 6 conform 移行
+ * Google Maps設定セクション
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。Google Maps APIキーの設定と接続テスト。
  * PR #75 ResendSection canonical pattern を踏襲。
  */
 

@@ -3,7 +3,6 @@
 /**
  * 顧客 Server Actions
  *
- * Phase 1 Task 6 で `createCustomer` / `updateCustomer` を conform
  * `useActionState` 統合経路 (`(prev, formData) => SubmissionResult`) に
  * clean break 移行。認証・権限・監査ログは `executeAdminMutationResult` SSoT
  * に委譲する。

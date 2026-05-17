@@ -1,19 +1,8 @@
 "use client";
 
 /**
- * クーポン新規作成・編集フォーム — Phase 1 Task 6 conform 移行。
+ * クーポン新規作成・編集フォーム
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` +
- * `useForm` (@conform-to/react) への clean break 移行。`updateCoupon` は
- * `coupon.id` を `Function.prototype.bind` で部分適用する。
- *
- * - 数値 field (`discountValue` / `minReservationAmount` / `maxDiscountAmount`
- *   / `usageLimit`) は `z.coerce.number()` で FormData string を受ける。
- * - boolean Switch (`isActive` / `canCombineWithDurationDiscount`) は
- *   `useInputControl` + hidden input で sync。
- * - 割引タイプ Select も `useInputControl` で sync。PERCENTAGE 時のみ
- *   `maxDiscountAmount` を render する conditional UI も control 経由。
- * - `validFrom` / `validUntil` は `datetime-local` で `formatDateTimeLocalInJst`
  *   経由 JST 固定表示。
  */
 

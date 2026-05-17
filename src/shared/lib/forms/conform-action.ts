@@ -102,8 +102,7 @@ export async function executeConformMutation<TSchema extends z.ZodTypeAny>(
     return submission.reply({ formErrors: [result.error] });
   }
 
-  // resetForm defaults to true (Phase 1 Task 4-8 の settings sections / dialog
-  // form の挙動を維持)。false 指定時は submitted values を維持して inline 表示
+  // resetForm defaults to true。false 指定時は submitted values を維持して inline 表示
   return options?.resetForm === false
     ? submission.reply()
     : submission.reply({ resetForm: true });

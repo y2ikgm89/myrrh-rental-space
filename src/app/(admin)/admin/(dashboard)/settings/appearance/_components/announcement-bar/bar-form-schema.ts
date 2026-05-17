@@ -6,7 +6,7 @@ import {
 } from "@/shared/lib/portable-text";
 
 /**
- * BarDialog (conform) form schema — Phase 1 Task 8.1
+ * BarDialog (conform) form schema
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
  * - `messageJson` は hidden input から PortableTextSpan[] を JSON.stringify した文字列で送信

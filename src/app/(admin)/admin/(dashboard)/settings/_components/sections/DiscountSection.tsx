@@ -1,12 +1,9 @@
 "use client";
 
 /**
- * 割引設定セクション — Phase 1 Task 6 conform 移行
+ * 割引設定セクション
  *
  * 長時間割引ルールと割引併用モードの設定。
- * `useFormAction` (RHF + useFieldArray) → `useActionState` + `useForm` (conform)
- * + `form.insert/remove` clean break 移行。conform の動的配列 intent dispatcher
- * (`form.insert.getButtonProps` / `form.remove.getButtonProps`) を採用、
  * RHF useFieldArray から完全移行。
  */
 

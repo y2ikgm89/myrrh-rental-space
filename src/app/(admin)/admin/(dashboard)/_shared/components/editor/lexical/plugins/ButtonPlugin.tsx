@@ -3,7 +3,6 @@
  *
  * @description ボタン/CTAの挿入を提供するプラグイン
  *
- * Phase 5 (rich label tokens) 対応版:
  * - label は PortableTextSpan[] (PortableTextInlineEditor)
  * - variant: primary / secondary / ghost / link / editorial (5 種、公開 Button Primitive と一致)
  * - AccentColor (10色) で bronze 以外の accent 指定可能

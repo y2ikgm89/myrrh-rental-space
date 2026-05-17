@@ -108,7 +108,7 @@ export type CTAButtonSize = (typeof ctaButtonSizes)[number];
 /**
  * CTAボタン配列アイテムスキーマファクトリ。
  *
- * Phase 2A 以降、フィールド shape は `definitions/_shared/buttons.ts` の
+ * フィールド shape は `definitions/_shared/buttons.ts` の
  * `createButtonsArraySchema` と一致させる必要がある。section.ts (`heroConfigSchema` /
  * `ctaConfigSchema` の旧 schema 経由) と新 definitions レジストリの両方が同じ
  * runtime shape を使う。

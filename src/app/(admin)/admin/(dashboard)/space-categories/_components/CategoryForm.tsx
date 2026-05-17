@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * SpaceCategory form — Phase 1 Task 6 conform 移行。
+ * SpaceCategory form
  *
  * Dialog 内 conform 化 PoC。`useForm` (@conform-to/react) を内側に持ち、
  * parent dialog から `lastResult` / `formAction` / `formId` / `isPending` を

@@ -115,7 +115,7 @@ export async function updateSocialLinkOrder(
 }
 
 // =============================================================================
-// Conform `useActionState` 用 Server Actions (Phase 1 Task 8.2)
+// Conform `useActionState` 用 Server Actions
 //
 // `(prev, formData) => SubmissionResult` signature。NavigationFormDialog /
 // SocialLinkFormDialog (Variant A) で mount-on-open + bind 部分適用で利用される。

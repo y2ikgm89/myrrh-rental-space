@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * メンテナンス設定セクション (Phase 1 Task 5 conform PoC)
+ * メンテナンス設定セクション
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react) への
  * clean break 移行。Switch は `useInputControl` で hidden input と sync する公式パターン
  * (https://conform.guide/api/react/useInputControl)。
  */

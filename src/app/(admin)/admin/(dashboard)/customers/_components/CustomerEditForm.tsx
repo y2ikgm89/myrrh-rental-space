@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * 顧客編集フォーム — Phase 1 Task 6 conform 移行。
+ * 顧客編集フォーム
  *
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。`updateCustomer` Server Action は `customer.id` を
  * `Function.prototype.bind` で部分適用する。Switch / Select は
  * `useInputControl` で hidden input と sync する公式パターン。

@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * Resend設定セクション — Phase 1 Task 6 conform 移行
+ * Resend設定セクション
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。Resend APIキーの設定と接続テスト。
  * 接続テスト / クリア operation は form 経由でない separate Server Action のため
  * `useTransition` を維持（PR #62-#71 settings 系 canonical pattern）。
  */

@@ -3,7 +3,7 @@ import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
 /**
- * EventForm (conform) form schema — Phase 1 Task 8.5
+ * EventForm (conform) form schema
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
  * - `descriptionJson` (Lexical EditorState JSON) は hidden input で transit

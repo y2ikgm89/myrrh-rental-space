@@ -1,10 +1,9 @@
 "use client";
 
 /**
- * リストページ用SEO設定フォーム — Phase 1 Task 6 conform 移行。
+ * リストページ用SEO設定フォーム
  *
  * ブログ一覧・お知らせ一覧など、リストページのSEO/OGP設定を編集するフォーム。
- * `useFormAction` (RHF) → `useActionState` + `useForm` (@conform-to/react)
  * への clean break 移行。`updatePageSeo` は `slug` を bind で部分適用。
  */
 

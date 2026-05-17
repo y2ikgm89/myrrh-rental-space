@@ -10,7 +10,7 @@ import {
 } from "@/shared/lib/portable-text";
 
 /**
- * Navigation / SocialLink Dialog (conform) form schemas — Phase 1 Task 8.2
+ * Navigation / SocialLink Dialog (conform) form schemas
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
  * - `labelJson` は hidden input から PortableTextSpan[] を JSON.stringify した文字列で送信

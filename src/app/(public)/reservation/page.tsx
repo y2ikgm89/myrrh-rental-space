@@ -2,7 +2,7 @@
  * /reservation — ご予約ページ
  *
  * Page-Template Architecture: 全 section を SectionRenderer 経由で描画。
- * `reservation-form` セクション（Phase 5）が 3-step ウィザードを内包し、
+ * `reservation-form` セクションが 3-step ウィザードを内包し、
  * `searchParams` を SectionRenderer に forward して `?spaceId=` を反映する。
  */
 

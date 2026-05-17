@@ -3,7 +3,7 @@ import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 /**
- * ReservationForm / ReservationEditForm (conform) form schema — Phase 1 Task 8.4
+ * ReservationForm / ReservationEditForm (conform) form schema
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
  * - boolean (`sendEmail` / `sendNotificationEmail`) は Switch + hidden input

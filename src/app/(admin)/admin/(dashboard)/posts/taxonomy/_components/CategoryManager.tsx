@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * CategoryManager — カテゴリ管理コンポーネント (Phase 1 Task 7 conform 移行)
+ * CategoryManager — カテゴリ管理コンポーネント
  *
  * @description nuqs対応、検索機能付き、D&D並べ替え対応。
  * Dialog 内 form は conform `useActionState` + `useForm` (Variant A:

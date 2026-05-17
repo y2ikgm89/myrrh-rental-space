@@ -21,7 +21,7 @@ import * as settingsCommands from "@/shared/domain/settings/commands";
 import { discountFormSchema } from "./schemas/form-schemas-security-integrations";
 
 /**
- * 割引設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * 割引設定更新 — conform `useActionState` 統合経路。
  *
  * `durationDiscountRules` は配列 (conform `form.insert`/`form.remove` で操作)。
  */

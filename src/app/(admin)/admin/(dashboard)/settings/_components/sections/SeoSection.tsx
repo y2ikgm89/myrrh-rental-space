@@ -1,12 +1,10 @@
 "use client";
 
 /**
- * SEO設定セクション — Phase 1 Task 6 conform 移行
+ * SEO設定セクション
  *
  * メタ情報、Analytics設定、検索エンジン検証の3カード構成。
  * 各カードが独立した `useActionState` + `useForm` (conform) を持つ。
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。
  */
 
 import { useActionState, useEffect } from "react";

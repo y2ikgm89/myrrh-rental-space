@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * Cloudflare Turnstile設定セクション — Phase 1 Task 6 conform 移行
+ * Cloudflare Turnstile設定セクション
  *
- * `useFormAction` (RHF + shadcn Form/FormField) → `useActionState` + `useForm`
- * (@conform-to/react) clean break 移行。Bot対策のためのTurnstile設定。
  * PR #75-#77 ResendSection / GoogleMapsSection / CloudflareSection canonical
  * pattern を踏襲、Site Key + Secret Key の 2 入力。
  */

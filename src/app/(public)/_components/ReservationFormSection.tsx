@@ -9,7 +9,6 @@
  * - `defaultSpaceId`: URL `?spaceId=` 未指定時の事前選択スペース ID
  * - `requireLogin`: true のとき未ログイン顧客は `/login` へリダイレクト
  * - `skipStep1` / `enableCoupon`: schema には保存されるが form 側未対応
- *   （Phase 6 以降で wiring 予定）
  */
 
 import type { ReactElement } from "react";

@@ -12,8 +12,6 @@
  * data-attribute のみで構築し `lexical-content.css` の
  * `[data-button-*]` セレクタで公開 Button Primitive と視覚一致するスタイルを適用。
  *
- * Phase 1-4 で確立した rich label token pattern (Section.config.buttons[] /
- * NavigationItem.label) を Lexical 本文中の Button にも適用する Phase 5。
  */
 
 "use client";

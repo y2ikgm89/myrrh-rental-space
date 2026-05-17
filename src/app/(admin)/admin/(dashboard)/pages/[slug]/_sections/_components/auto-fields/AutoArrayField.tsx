@@ -3,7 +3,6 @@
 /**
  * AutoArrayField — conform getFieldList ベースの配列フィールドリピーター
  *
- * Phase 3-A conform 移行: FieldMetadata.getFieldList() で per-item アクセサを取得、
  * form.insert/remove.getButtonProps で追加/削除を制御する。子フィールドのレンダリング
  * は renderField prop で受け取り、auto-section-form の AutoFieldByType に委譲する。
  */

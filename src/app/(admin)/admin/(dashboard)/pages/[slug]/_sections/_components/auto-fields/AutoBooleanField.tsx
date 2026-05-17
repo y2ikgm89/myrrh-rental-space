@@ -3,7 +3,6 @@
 /**
  * AutoBooleanField — conform useInputControl ベースの Switch
  *
- * Phase 3-A conform 移行: FieldMetadata + useInputControl + hidden input transit.
  * boolean 値は "on" / "" 文字列で FormData 送信、schema 層の preprocess で boolean 化する。
  */
 

@@ -31,9 +31,8 @@ import {
 // =============================================================================
 
 /**
- * Stripe設定更新 — conform `useActionState` 統合経路 (Phase 1 Task 6)。
+ * Stripe設定更新 — conform `useActionState` 統合経路。
  *
- * `useFormAction` (RHF) から `useActionState` + `useForm` (conform) に clean break 移行。
  * 空文字列フィールドは null 化して domain command に渡す。
  */
 export async function updateStripeSettings(

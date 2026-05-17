@@ -69,7 +69,7 @@ export async function toggleAnnouncementBarActive(
 }
 
 // =============================================================================
-// Conform `useActionState` 用 Server Actions (Phase 1 Task 8.1)
+// Conform `useActionState` 用 Server Actions
 //
 // `(prev, formData) => SubmissionResult` signature。BarFormDialog (Variant A) で
 // mount-on-open + bind 部分適用で利用される。

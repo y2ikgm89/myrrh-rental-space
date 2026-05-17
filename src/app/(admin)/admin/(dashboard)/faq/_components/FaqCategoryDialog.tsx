@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * FaqCategoryDialog — Phase 1 Task 6 conform 移行 (Variant B canonical)
+ * FaqCategoryDialog
  *
  * FAQ カテゴリの作成・編集を Dialog で行う共用コンポーネント。/admin/faq（一覧）と
  * /admin/faq/[categoryId]（詳細）の両方から起動される。parent component

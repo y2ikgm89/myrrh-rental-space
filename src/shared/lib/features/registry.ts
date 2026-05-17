@@ -13,7 +13,7 @@
  * 2. `FEATURE_MODULES` Record にメタデータを追加
  * 3. `prisma/seed.ts` `seedSettings` の `featureModules` に追加
  * 4. 該当 migration（SQL UPDATE で新 key を埋める）
- * 5. Phase 5 の `/admin/settings/features` UI で表示
+ * 5. `/admin/settings/features` UI で表示
  */
 
 export const FEATURE_MODULES_LIST = [

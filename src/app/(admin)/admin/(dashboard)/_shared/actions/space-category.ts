@@ -3,7 +3,6 @@
 /**
  * SpaceCategory Server Actions
  *
- * Phase 1 Task 6 で `createSpaceCategory` / `updateSpaceCategory` を conform
  * `useActionState` 統合経路に clean break 移行。delete / order / active 系は
  * input ベース (table 経由) で残置。
  */

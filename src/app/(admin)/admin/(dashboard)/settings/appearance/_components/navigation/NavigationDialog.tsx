@@ -42,7 +42,7 @@ import type {
 import { platformLabels, platformIcons } from "./types";
 
 // =============================================================================
-// NavigationFormDialog (Phase 1 Task 8.2 — conform Variant A)
+// NavigationFormDialog
 // =============================================================================
 
 type NavigationFormDialogProps = {
@@ -260,7 +260,7 @@ export function NavigationFormDialog({
 }
 
 // =============================================================================
-// SocialLinkFormDialog (Phase 1 Task 8.2 — conform Variant A)
+// SocialLinkFormDialog
 // =============================================================================
 
 type SocialLinkFormDialogProps = {
