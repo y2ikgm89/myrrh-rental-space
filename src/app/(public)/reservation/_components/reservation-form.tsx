@@ -1,28 +1,34 @@
 "use client";
 
-import { formatPrice } from "@/shared/lib/pricing/format";
-import { useReducer, useRef, useTransition, type ReactElement } from "react";
+import {
+  useActionState,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+  type ReactElement,
+} from "react";
 import Link from "next/link";
+import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
-import { usePublicForm } from "@/public/hooks/use-public-form";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
-import {
-  publicReservationSchema,
-  type PublicReservationInput,
-} from "@/shared/lib/validations/public-reservation";
+import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import { addMinutesToTime } from "@/shared/lib/reservation/time-slots-utils";
 import { submitReservation } from "@/public/actions/reservation";
 import { fetchAvailableSlots } from "@/public/actions/availability";
+import type { TurnstileInstance } from "@/public/components/ui/turnstile-widget";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
-import { CustomerStep } from "./customer-step";
+import { CustomerStep, type ReservationFormFields } from "./customer-step";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
 import {
@@ -54,11 +60,14 @@ function formatDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function isCustomerType(value: unknown): value is CustomerType {
+  return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
+}
+
 function resolveAutoIds(
   locations: readonly LocationWithSpaces[],
   initialSpaceId: string | undefined,
 ) {
-  // URL param pre-selection: find location containing the specified space
   if (initialSpaceId) {
     for (const loc of locations) {
       const space = loc.spaces.find((s) => s.id === initialSpaceId);
@@ -68,7 +77,6 @@ function resolveAutoIds(
     }
   }
 
-  // Auto-selection: single location → single space
   const locationId = locations.length === 1 ? (locations[0]?.id ?? null) : null;
   const location = locationId
     ? locations.find((l) => l.id === locationId)
@@ -117,8 +125,6 @@ export function ReservationForm({
 }: ReservationFormProps): ReactElement {
   const auto = resolveAutoIds(locations, initialSpaceId);
   const preSelected = auto.locationId != null && auto.spaceId != null;
-  // Hide step 1 only when there's genuinely no choice (single location + single space)
-  // URL pre-selection shows all 3 steps so the user can go back and change
   const hideStep1 = preSelected && !initialSpaceId;
 
   const [state, dispatch] = useReducer(selectionReducer, {
@@ -134,8 +140,46 @@ export function ReservationForm({
     errorMessage: null,
   });
 
+  const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
+  const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const [isFetchingSlots, startSlotTransition] = useTransition();
   const spaceSectionRef = useRef<HTMLElement>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+
+  const [lastResult, formAction, isPending] = useActionState(
+    submitReservation,
+    undefined,
+  );
+
+  const [form, fields] = useForm({
+    id: "reservation-form",
+    constraint: getZodConstraint(publicReservationSchema),
+    lastResult,
+    defaultValue: {
+      locationId: auto.locationId ?? "",
+      spaceId: auto.spaceId ?? "",
+      numberOfGuests: 1,
+      customerType: CustomerType.PERSONAL,
+      companyName: "",
+      lastName: prefillData?.lastName ?? "",
+      firstName: prefillData?.firstName ?? "",
+      email: prefillData?.email ?? "",
+      phoneNumber: prefillData?.phoneNumber ?? "",
+      notes: "",
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: publicReservationSchema });
+    },
+    shouldValidate: "onBlur",
+    shouldRevalidate: "onInput",
+  });
+
+  const customerTypeControl = useInputControl(fields.customerType);
+  const turnstileTokenControl = useInputControl(fields.turnstileToken);
+
+  const customerType: CustomerType = isCustomerType(customerTypeControl.value)
+    ? customerTypeControl.value
+    : CustomerType.PERSONAL;
 
   // --- Derived ---
   const currentLocation = locations.find((l) => l.id === state.locationId);
@@ -161,43 +205,26 @@ export function ReservationForm({
   const visibleSteps = hideStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
   const displayStep = hideStep1 ? state.step - 1 : state.step;
 
-  // --- Form ---
-  const { form, isPending, onSubmit } = usePublicForm(
-    publicReservationSchema,
-    async (data: PublicReservationInput) => {
-      const result = await submitReservation(data);
-      if (isMutationError(result)) {
-        dispatch({ type: "setError", message: result.error });
-        return result;
-      }
+  // --- Render 中 state sync: 成功 / エラー検出 ---
+  if (lastResult !== previousResult) {
+    setPreviousResult(lastResult);
+    if (lastResult && lastResult.initialValue === null) {
       dispatch({ type: "setSubmitted" });
-      return result;
-    },
-    {
-      defaultValues: {
-        locationId: auto.locationId ?? "",
-        spaceId: auto.spaceId ?? "",
-        numberOfGuests: 1,
-        customerType: CustomerType.PERSONAL,
-        companyName: "",
-        lastName: prefillData?.lastName ?? "",
-        firstName: prefillData?.firstName ?? "",
-        email: prefillData?.email ?? "",
-        phoneNumber: prefillData?.phoneNumber ?? "",
-        notes: "",
-        agreedTermsIds: [],
-        turnstileToken: "",
-      },
-    },
-  );
-
-  // --- Sync reducer state → RHF (one-way) ---
-  function syncFormField(
-    field: keyof PublicReservationInput,
-    value: string | number,
-  ) {
-    form.setValue(field, value);
+    } else if (lastResult?.status === "error") {
+      const formErrors = lastResult.error?.[""];
+      if (formErrors !== undefined && formErrors !== null && formErrors[0]) {
+        dispatch({ type: "setError", message: formErrors[0] });
+      }
+    }
   }
+
+  // --- Turnstile DOM reset on error ---
+  useEffect(() => {
+    if (lastResult?.status === "error") {
+      turnstileRef.current?.reset();
+      turnstileTokenControl.change("");
+    }
+  }, [lastResult, turnstileTokenControl]);
 
   // --- Handlers ---
   function handleLocationSelect(id: string) {
@@ -205,12 +232,6 @@ export function ReservationForm({
     const autoSpace =
       loc?.spaces.length === 1 ? (loc.spaces[0]?.id ?? null) : null;
     dispatch({ type: "selectLocation", id, autoSpaceId: autoSpace });
-    syncFormField("locationId", id);
-    syncFormField("spaceId", autoSpace ?? "");
-    syncFormField("date", "");
-    syncFormField("startTime", "");
-    syncFormField("endTime", "");
-    // Scroll to space section if multiple spaces revealed
     if (!autoSpace) {
       setTimeout(() => scrollToElement(spaceSectionRef.current), 100);
     }
@@ -218,20 +239,12 @@ export function ReservationForm({
 
   function handleSpaceSelect(id: string) {
     dispatch({ type: "selectSpace", id });
-    syncFormField("spaceId", id);
-    syncFormField("date", "");
-    syncFormField("startTime", "");
-    syncFormField("endTime", "");
   }
 
   function handleDateChange(date: Date | undefined) {
     dispatch({ type: "selectDate", date });
-    syncFormField("startTime", "");
-    syncFormField("endTime", "");
     if (date) {
-      syncFormField("date", formatDateString(date));
       scrollToSectionAfterRender("reservation-time-slots");
-      // Fetch slots via startTransition (React 19 pattern — no useEffect)
       if (state.spaceId) {
         const spaceId = state.spaceId;
         const dateStr = formatDateString(date);
@@ -240,15 +253,11 @@ export function ReservationForm({
           dispatch({ type: "setSlots", slots: result });
         });
       }
-    } else {
-      syncFormField("date", "");
     }
   }
 
   function handleStartTimeChange(time: string | null) {
     dispatch({ type: "selectStartTime", time });
-    syncFormField("startTime", time ?? "");
-    syncFormField("endTime", "");
     if (time) {
       scrollToSectionAfterRender("reservation-duration");
     }
@@ -257,16 +266,30 @@ export function ReservationForm({
   function handleDurationChange(minutes: number | null) {
     dispatch({ type: "selectDuration", minutes });
     if (minutes && state.startTime) {
-      syncFormField("endTime", addMinutesToTime(state.startTime, minutes));
       scrollToSectionAfterRender("reservation-guests");
-    } else {
-      syncFormField("endTime", "");
     }
   }
 
   function handleGuestsChange(count: number) {
     dispatch({ type: "setGuests", count });
-    syncFormField("numberOfGuests", count);
+  }
+
+  function handleCustomerTypeChange(type: CustomerType) {
+    customerTypeControl.change(type);
+  }
+
+  function handleTurnstileVerify(token: string) {
+    turnstileTokenControl.change(token);
+  }
+
+  function handleTurnstileExpire() {
+    turnstileTokenControl.change("");
+  }
+
+  function toggleTermAgreement(id: string) {
+    setAgreedTermsIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   // --- Navigation ---
@@ -275,22 +298,12 @@ export function ReservationForm({
     scrollToTop();
   }
 
-  async function advanceToStep2() {
-    const valid = await form.trigger(["locationId", "spaceId"]);
-    if (valid && isStep1Complete) goToStep(2);
+  function advanceToStep2() {
+    if (isStep1Complete) goToStep(2);
   }
 
-  async function advanceToStep3() {
-    const valid = await form.trigger([
-      "locationId",
-      "spaceId",
-      "date",
-      "startTime",
-      "endTime",
-      "numberOfGuests",
-    ]);
-    if (!valid || !isStep2Complete) return;
-    goToStep(3);
+  function advanceToStep3() {
+    if (isStep2Complete) goToStep(3);
   }
 
   // --- Render helpers ---
@@ -396,17 +409,66 @@ export function ReservationForm({
     );
   }
 
-  // --- Step 3: Customer info ---
+  // --- Step 3: Customer info (form 送信ステップ) ---
   if (state.step === 3) {
     return (
-      <form onSubmit={onSubmit} className="space-y-10">
+      <form {...getFormProps(form)} action={formAction} className="space-y-10">
+        {/* Hidden inputs for reducer state-driven values (set via dispatch in earlier steps) */}
+        <input
+          type="hidden"
+          name={fields.locationId.name}
+          value={state.locationId ?? ""}
+        />
+        <input
+          type="hidden"
+          name={fields.spaceId.name}
+          value={state.spaceId ?? ""}
+        />
+        <input
+          type="hidden"
+          name={fields.date.name}
+          value={state.date ? formatDateString(state.date) : ""}
+        />
+        <input
+          type="hidden"
+          name={fields.startTime.name}
+          value={state.startTime ?? ""}
+        />
+        <input type="hidden" name={fields.endTime.name} value={endTime ?? ""} />
+        <input
+          type="hidden"
+          name={fields.numberOfGuests.name}
+          value={String(state.guests)}
+        />
+        <input
+          type="hidden"
+          name={fields.customerType.name}
+          value={customerType}
+        />
+        <input
+          type="hidden"
+          name={fields.turnstileToken.name}
+          value={turnstileTokenControl.value ?? ""}
+        />
+        {agreedTermsIds.map((id) => (
+          <input
+            key={id}
+            type="hidden"
+            name={fields.agreedTermsIds.name}
+            value={id}
+          />
+        ))}
+
         {renderStepIndicator()}
         <CustomerStep
-          form={form}
+          fields={fields as ReservationFormFields}
+          customerType={customerType}
+          turnstileSiteKey={turnstileSiteKey}
+          turnstileRef={turnstileRef}
+          requiredTerms={requiredTerms}
+          agreedTermsIds={agreedTermsIds}
           isPending={isPending}
           errorMessage={state.errorMessage}
-          turnstileSiteKey={turnstileSiteKey}
-          requiredTerms={requiredTerms}
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",
@@ -416,6 +478,10 @@ export function ReservationForm({
             guests: state.guests,
             price,
           }}
+          onCustomerTypeChange={handleCustomerTypeChange}
+          onTurnstileVerify={handleTurnstileVerify}
+          onTurnstileExpire={handleTurnstileExpire}
+          onToggleTerm={toggleTermAgreement}
           onBack={() => goToStep(2)}
         />
       </form>
@@ -455,7 +521,6 @@ export function ReservationForm({
     <div className="space-y-10">
       {renderStepIndicator()}
 
-      {/* Location section */}
       <section>
         <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
           場所を選択
@@ -492,7 +557,6 @@ export function ReservationForm({
         ) : null}
       </section>
 
-      {/* Space section */}
       {state.locationId != null && currentSpaces.length > 1 ? (
         <section ref={spaceSectionRef} className="animate-section-enter">
           <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
