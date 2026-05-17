@@ -215,15 +215,27 @@ describe("updateNewsSettingsSchema", () => {
 });
 
 describe("newsBodyFormSchema", () => {
-  test("有効な本文でバリデーションに成功する", () => {
+  test("有効な contentJson + contentHtml でバリデーションに成功する", () => {
     const result = newsBodyFormSchema.safeParse({
       contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "<p>お知らせ本文</p>",
     });
     expect(result.success).toBe(true);
   });
 
-  test("本文が空の場合にエラー", () => {
-    const result = newsBodyFormSchema.safeParse({ contentJson: "" });
+  test("contentHtml が空の場合にエラー", () => {
+    const result = newsBodyFormSchema.safeParse({
+      contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  test("不正な contentJson はエラー", () => {
+    const result = newsBodyFormSchema.safeParse({
+      contentJson: "<p>not-lexical-json</p>",
+      contentHtml: "<p>お知らせ本文</p>",
+    });
     expect(result.success).toBe(false);
   });
 });
@@ -234,7 +246,7 @@ describe("newsSettingsFormSchema", () => {
       slug: "sample-news",
       title: "サンプルニュース",
       isPublished: true,
-      publishedAt: "2026-01-01T00:00:00Z",
+      publishedAt: "2026-01-01T00:00",
       contentWidth: "LG",
       contentWidthCustom: "1200",
       metaDescription: "ニュースの概要",
@@ -248,14 +260,45 @@ describe("newsSettingsFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("isPublished フィールドは必須", () => {
-    const invalidData = {
+  test("isPublished はデフォルトで false（FormData 経路で checkbox 未チェック想定）", () => {
+    const data = {
       slug: "sample-news",
       title: "サンプルニュース",
     };
 
-    const result = newsSettingsFormSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
+    const result = newsSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.isPublished).toBe(false);
+    }
+  });
+
+  test("isPublished は checkbox value 'on' を true に変換する", () => {
+    const data = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: "on",
+    };
+
+    const result = newsSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.isPublished).toBe(true);
+    }
+  });
+
+  test("isPublished は boolean true をそのまま受け取る", () => {
+    const data = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: true,
+    };
+
+    const result = newsSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.isPublished).toBe(true);
+    }
   });
 
   test("publishedAt フィールドはオプショナル", () => {
@@ -269,7 +312,31 @@ describe("newsSettingsFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("contentWidth フィールドは文字列として受け取る", () => {
+  test("publishedAt は datetime-local 形式を受け取る", () => {
+    const data = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: false,
+      publishedAt: "2026-01-01T10:00",
+    };
+
+    const result = newsSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+  });
+
+  test("publishedAt の空文字列は許可", () => {
+    const data = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: false,
+      publishedAt: "",
+    };
+
+    const result = newsSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+  });
+
+  test("contentWidth フィールドは LayoutWidth 値を受け取る", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
@@ -279,9 +346,27 @@ describe("newsSettingsFormSchema", () => {
 
     const result = newsSettingsFormSchema.safeParse(validData);
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contentWidth).toBe(LayoutWidth.SM);
+    }
   });
 
-  test("contentWidthCustom フィールドは文字列として受け取る", () => {
+  test("contentWidth の空文字列は null に変換", () => {
+    const validData = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: true,
+      contentWidth: "",
+    };
+
+    const result = newsSettingsFormSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contentWidth).toBeNull();
+    }
+  });
+
+  test("contentWidthCustom フィールドは文字列を数値に変換する", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
@@ -291,5 +376,20 @@ describe("newsSettingsFormSchema", () => {
 
     const result = newsSettingsFormSchema.safeParse(validData);
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contentWidthCustom).toBe(1200);
+    }
+  });
+
+  test("contentWidthCustom が範囲外の場合エラー", () => {
+    const data = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: true,
+      contentWidthCustom: "100",
+    };
+
+    const result = newsSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(false);
   });
 });

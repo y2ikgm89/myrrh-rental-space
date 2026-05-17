@@ -213,15 +213,27 @@ describe("updatePostSettingsSchema", () => {
 });
 
 describe("postBodyFormSchema", () => {
-  test("有効な本文でバリデーションに成功する", () => {
+  test("有効な contentJson + contentHtml でバリデーションに成功する", () => {
     const result = postBodyFormSchema.safeParse({
       contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "<p>記事本文</p>",
     });
     expect(result.success).toBe(true);
   });
 
-  test("本文が空の場合にエラー", () => {
-    const result = postBodyFormSchema.safeParse({ contentJson: "" });
+  test("contentHtml が空の場合にエラー", () => {
+    const result = postBodyFormSchema.safeParse({
+      contentJson: VALID_LEXICAL_JSON,
+      contentHtml: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  test("不正な contentJson はエラー", () => {
+    const result = postBodyFormSchema.safeParse({
+      contentJson: "<p>not-lexical-json</p>",
+      contentHtml: "<p>記事本文</p>",
+    });
     expect(result.success).toBe(false);
   });
 });
@@ -233,7 +245,7 @@ describe("postSettingsFormSchema", () => {
     excerpt: "記事の抜粋です",
     thumbnailUrl: "https://example.com/image.jpg",
     categoryId: "123e4567-e89b-12d3-a456-426614174000",
-    tags: "tag1,tag2",
+    tags: [],
     status: PostStatus.DRAFT,
   };
 
@@ -262,10 +274,45 @@ describe("postSettingsFormSchema", () => {
     });
   });
 
-  test("tags フィールドは文字列として受け取る", () => {
-    const data = { ...validFormData, tags: "tag1,tag2,tag3" };
+  test("tags フィールドは UUID 配列として受け取る", () => {
+    const data = {
+      ...validFormData,
+      tags: ["123e4567-e89b-12d3-a456-426614174001"],
+    };
     const result = postSettingsFormSchema.safeParse(data);
     expect(result.success).toBe(true);
+  });
+
+  test("tags フィールドは JSON 文字列も配列に変換する（FormData transit）", () => {
+    const data = {
+      ...validFormData,
+      tags: JSON.stringify(["123e4567-e89b-12d3-a456-426614174001"]),
+    };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tags).toEqual([
+        "123e4567-e89b-12d3-a456-426614174001",
+      ]);
+    }
+  });
+
+  test("tags フィールドは重複を拒否する", () => {
+    const data = {
+      ...validFormData,
+      tags: [
+        "123e4567-e89b-12d3-a456-426614174001",
+        "123e4567-e89b-12d3-a456-426614174001",
+      ],
+    };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  test("categoryId は UUID 必須", () => {
+    const data = { ...validFormData, categoryId: "not-a-uuid" };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(false);
   });
 
   test("publishedAt フィールドはオプショナル", () => {
@@ -273,10 +320,49 @@ describe("postSettingsFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("contentWidth フィールドは文字列として受け取る", () => {
+  test("publishedAt は datetime-local 形式を受け取る", () => {
+    const data = { ...validFormData, publishedAt: "2026-01-01T10:00" };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+  });
+
+  test("publishedAt の空文字列は許可", () => {
+    const data = { ...validFormData, publishedAt: "" };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+  });
+
+  test("contentWidth フィールドは LayoutWidth 値を受け取る", () => {
     const data = { ...validFormData, contentWidth: "LG" };
     const result = postSettingsFormSchema.safeParse(data);
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contentWidth).toBe(LayoutWidth.LG);
+    }
+  });
+
+  test("contentWidth の空文字列は null に変換", () => {
+    const data = { ...validFormData, contentWidth: "" };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contentWidth).toBeNull();
+    }
+  });
+
+  test("contentWidthCustom フィールドは文字列を数値に変換する", () => {
+    const data = { ...validFormData, contentWidthCustom: "1200" };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contentWidthCustom).toBe(1200);
+    }
+  });
+
+  test("contentWidthCustom が範囲外の場合エラー", () => {
+    const data = { ...validFormData, contentWidthCustom: "100" };
+    const result = postSettingsFormSchema.safeParse(data);
+    expect(result.success).toBe(false);
   });
 });
 
