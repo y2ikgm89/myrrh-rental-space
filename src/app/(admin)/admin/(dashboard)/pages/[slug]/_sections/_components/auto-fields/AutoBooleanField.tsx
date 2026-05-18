@@ -6,8 +6,9 @@
  * boolean 値は "on" / "" 文字列で FormData 送信、schema 層の preprocess で boolean 化する。
  */
 
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import { type FieldMetadata } from "@conform-to/react";
 import { Label, Switch } from "@/admin/components/ui";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 
 interface AutoBooleanFieldProps {
   readonly field: FieldMetadata<unknown>;
@@ -26,9 +27,7 @@ export function AutoBooleanField({
   isPending,
   error,
 }: AutoBooleanFieldProps) {
-  // conform useInputControl は string ベースの FieldMetadata を要求するため境界変換
-  // (型 ledger §5/§7 と同列の generic invariance 対応、動的 schema 用)
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   const isOn = control.value === "on" || control.value === "true";
 
   return (
