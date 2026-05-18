@@ -57,13 +57,12 @@ Claude Code 公式の配置 (`code.claude.com/docs/en/{memory,sub-agents,skills,
 
 両 AI から参照する非エージェント専用ドキュメントは `docs/` に集約する。AI 専用ディレクトリ名（`claude-rules` のような別名）は使わない。
 
-| パス                | 内容                       |
-| ------------------- | -------------------------- |
-| `docs/explanation/` | 設計の「なぜ」             |
-| `docs/how-to/`      | 手順                       |
-| `docs/guides/`      | 機能セットアップ運用ガイド |
-| `docs/superpowers/` | plan / spec ドラフト       |
-| `docs/templates/`   | doc / plan の雛形          |
+| パス                | 内容                                               |
+| ------------------- | -------------------------------------------------- |
+| `docs/explanation/` | 設計の「なぜ」（Diátaxis explanation 軸）          |
+| `docs/how-to/`      | 手順（Diátaxis how-to 軸、インフラ・外部連携統合） |
+| `docs/superpowers/` | plan / spec ドラフト（軸外 / ワークフロー成果物）  |
+| `docs/templates/`   | plan / plan-readme-entry の雛形（軸外）            |
 
 ライブラリ API リファレンス（GSAP / React / Bun 等）は公式 docs を直接参照する。プロジェクト固有のパターン・規約は `.claude/rules/**`（Claude Code）/ `.agents/skills/**`（Codex）が SSoT。
 
@@ -74,7 +73,7 @@ Claude Code 公式の配置 (`code.claude.com/docs/en/{memory,sub-agents,skills,
 - `.claude/rules` と Codex 資産を同期しない
 - Codex 用 skill を `.claude/skills` へ置かない
 - Codex 用 agent を `.claude/agents` へ置かない
-- どちらの AI からも参照する project 共通内容は `docs/explanation/` または `docs/how-to/` / `docs/guides/` に置く
+- どちらの AI からも参照する project 共通内容は `docs/explanation/`（設計）または `docs/how-to/`（手順・外部連携セットアップ）に置く
 
 ## メンテナンス基準
 
