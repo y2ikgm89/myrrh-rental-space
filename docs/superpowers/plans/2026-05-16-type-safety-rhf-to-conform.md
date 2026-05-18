@@ -422,12 +422,18 @@ bunx playwright test --project=chromium-smoke
 
 ## Progress Snapshot (2026-05-18 update)
 
-> Phase 3-B/3-C を 2026-05-18 セッションで完遂。RHF → conform 全置換 part は完了、Task 1-3 / Task 9-11 のみ残作業。
+> **Snapshot: 2026-05-18**
+> **Completed: 2026-05-18**
 
-### 完了済 (RHF → conform 全置換 + Phase 3-A/3-B/3-C)
+本 plan は全 Task (Task 1-11) を 2026-05-18 セッションで完遂。Task 1-3 (SDK / Prisma / Route 9 cast 構造解消) は Phase 1 (PR #109) で事前完遂済 + Task 9-11 (ledger 削除 + assertion-bans.md §1-7 permanent exception 統合 + architecture-boundaries gate 追加 + verification) を PR #130 で完遂。
+
+### 完了済 (全 Task)
 
 | Task        | 内容                                                                 | 状態         | 関連 PR         |
 | ----------- | -------------------------------------------------------------------- | ------------ | --------------- |
+| Task 1      | SDK Zod typed schema (googleapis / Resend) — 2 cast 解消             | ✅ Completed | PR #109         |
+| Task 2      | Prisma InputJsonValue cast 解消 — 12 cast → 0 (helper 強制)          | ✅ Completed | PR #109         |
+| Task 3      | Route\<string\> typed helper 導入 — 4 cast 解消                      | ✅ Completed | PR #109         |
 | Task 4      | conform 導入準備 + `executeConformMutation` SSoT 確立                | ✅ Completed | PR #61 era      |
 | Task 5      | conform simple form 移行 (settings sections 17/17)                   | ✅ Completed | PR #61-87       |
 | Task 6      | conform medium form 移行 (Dialog / Tab form)                         | ✅ Completed | PR #88-91       |
@@ -437,16 +443,13 @@ bunx playwright test --project=chromium-smoke
 | Phase 3-B   | inline editor 21 file (4 hooks + 12 side-panel + SettingsDialog 等)  | ✅ Completed | PR #120-#123    |
 | Phase 3-C   | `react-hook-form` / `@hookform/resolvers` を `package.json` から削除 | ✅ Completed | PR #122         |
 | Cleanup     | rule docs / src コメント / lint warnings stale 参照解消              | ✅ Completed | PR #124-#128    |
+| Task 9      | `documented-exceptions-ledger.md` 廃止 + assertion-bans.md §1-7 統合 | ✅ Completed | PR #130         |
+| Task 10     | skill / subagent / rule docs を §1-7 permanent exception に同期      | ✅ Completed | PR #130         |
+| Task 11     | architecture-boundaries.test.ts に 4 件不可逆 gate 追加 + 最終検証   | ✅ Completed | PR #130         |
 
-### 残作業 (RHF 移行と独立、別 plan で扱う候補)
+### 最終状態
 
-| Phase     | 内容                                         | 状態                    |
-| --------- | -------------------------------------------- | ----------------------- |
-| Task 1-3  | SDK / Prisma / Route ledger entries 構造解消 | 未着手 (RHF 移行と独立) |
-| Task 9-11 | ledger 削除 + rule docs 更新 + verification  | Task 1-3 完了後         |
-
-### 次セッション起点
-
-- **handoff memo**: 同セッション完遂のため不要化済 (Phase 3-B/3-C plan の Completed marker は本日 PR #127 で追加)
-- **Task 1-3 着手判断**: SDK / Prisma / Route ledger entries は RHF 移行と独立スコープのため別 plan で再 brainstorming するか、必要性自体を再評価
-- 型 ledger は Phase 3-C 完了時点で **15 entry** ({Phase 3-A 拡張 + Phase 3-B Sub-Chunk 2c rename} 反映、`.claude/rules/type-safety/documented-exceptions-ledger.md` 参照)
+- **`as` cast 構造解消**: SDK / Prisma JSON / Route の 9 cast を `z.custom<T>` typed schema + `asPrismaInputJsonValue` helper で完全構造化、呼び出し側 cast 0 件
+- **ledger 廃止**: instance-level 15 entry 列挙 → `assertion-bans.md` §1-7 permanent exception canonical 定義に集約
+- **architecture-boundaries gate**: RHF import 0 件 / SDK 境界 cast 0 件 / `as Prisma.InputJsonValue` 0 件 / ledger ファイル不在 の 4 件を不可逆 gate 化
+- **本 plan は完遂、handoff 不要**
