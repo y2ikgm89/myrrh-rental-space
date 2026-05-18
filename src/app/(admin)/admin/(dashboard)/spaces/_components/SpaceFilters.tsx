@@ -11,10 +11,7 @@ import {
   SelectValue,
   Input,
 } from "@/admin/components/ui";
-import {
-  ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED,
-  ADMIN_SPACE_LIST_SORT_BY,
-} from "@/shared/lib/constants/admin-space-management";
+import { ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED } from "@/shared/lib/constants/admin-space-management";
 import type { AdminSpaceListSortBy } from "@/shared/lib/constants/admin-space-management";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
@@ -24,11 +21,64 @@ const PUBLISH_STATUS_OPTIONS = [
   { value: "false", label: PUBLISH_LABELS.unpublished },
 ] as const;
 
-const SORT_OPTIONS: { value: AdminSpaceListSortBy; label: string }[] = [
-  { value: "createdAt", label: "作成日" },
-  { value: "updatedAt", label: "更新日" },
-  { value: "name", label: "名前" },
-  { value: "hourlyPrice", label: "時間料金" },
+type SortOrder = "asc" | "desc";
+
+type SortOption = {
+  value: string;
+  label: string;
+  sortBy: AdminSpaceListSortBy;
+  sortOrder: SortOrder;
+};
+
+const SORT_OPTIONS: SortOption[] = [
+  {
+    value: "createdAt:desc",
+    label: "作成日（新しい順）",
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  },
+  {
+    value: "createdAt:asc",
+    label: "作成日（古い順）",
+    sortBy: "createdAt",
+    sortOrder: "asc",
+  },
+  {
+    value: "updatedAt:desc",
+    label: "更新日（新しい順）",
+    sortBy: "updatedAt",
+    sortOrder: "desc",
+  },
+  {
+    value: "updatedAt:asc",
+    label: "更新日（古い順）",
+    sortBy: "updatedAt",
+    sortOrder: "asc",
+  },
+  {
+    value: "name:asc",
+    label: "名前（昇順）",
+    sortBy: "name",
+    sortOrder: "asc",
+  },
+  {
+    value: "name:desc",
+    label: "名前（降順）",
+    sortBy: "name",
+    sortOrder: "desc",
+  },
+  {
+    value: "hourlyPrice:asc",
+    label: "料金（安い順）",
+    sortBy: "hourlyPrice",
+    sortOrder: "asc",
+  },
+  {
+    value: "hourlyPrice:desc",
+    label: "料金（高い順）",
+    sortBy: "hourlyPrice",
+    sortOrder: "desc",
+  },
 ];
 
 export type SpaceFilterSelectOption = { id: string; name: string };
@@ -84,106 +134,80 @@ export function SpaceFilters({
     void setParams({ spCategoryId: next, spPage: 1 });
   };
 
-  const setSortBy = (value: string) => {
-    const parsed = ADMIN_SPACE_LIST_SORT_BY.find((v) => v === value);
-    if (!parsed) return;
-    void setParams({ spSortBy: parsed, spPage: 1 });
-  };
-
-  const setSortOrder = (value: string) => {
-    if (value !== "asc" && value !== "desc") return;
-    void setParams({ spSortOrder: value, spPage: 1 });
+  const setSort = (value: string) => {
+    const option = SORT_OPTIONS.find((opt) => opt.value === value);
+    if (!option) return;
+    void setParams({
+      spSortBy: option.sortBy,
+      spSortOrder: option.sortOrder,
+      spPage: 1,
+    });
   };
 
   const currentStatus = params.spStatus || "ALL";
   const currentLocation = params.spLocationId || "ALL";
   const currentCategory = params.spCategoryId || "ALL";
+  const currentSort = `${params.spSortBy}:${params.spSortOrder}`;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center">
-        <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:flex xl:w-auto xl:flex-1 xl:gap-3">
-          <div className="w-full sm:min-w-40 lg:max-w-xs">
-            <Select value={currentStatus} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="公開状態" />
-              </SelectTrigger>
-              <SelectContent>
-                {PUBLISH_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <Select value={currentStatus} onValueChange={setStatus}>
+          <SelectTrigger aria-label="公開状態で絞り込み">
+            <SelectValue placeholder="公開状態" />
+          </SelectTrigger>
+          <SelectContent>
+            {PUBLISH_STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <div className="w-full sm:min-w-40 lg:max-w-xs">
-            <Select value={currentLocation} onValueChange={setLocationFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="拠点" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">すべての拠点</SelectItem>
-                {locationOptions.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <Select value={currentLocation} onValueChange={setLocationFilter}>
+          <SelectTrigger aria-label="拠点で絞り込み">
+            <SelectValue placeholder="拠点" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">すべての拠点</SelectItem>
+            {locationOptions.map((loc) => (
+              <SelectItem key={loc.id} value={loc.id}>
+                {loc.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <div className="w-full sm:min-w-40 lg:max-w-xs">
-            <Select value={currentCategory} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="カテゴリ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">すべてのカテゴリ</SelectItem>
-                <SelectItem value={ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED}>
-                  未分類のみ
-                </SelectItem>
-                {categoryOptions.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <Select value={currentCategory} onValueChange={setCategoryFilter}>
+          <SelectTrigger aria-label="カテゴリで絞り込み">
+            <SelectValue placeholder="カテゴリ" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">すべてのカテゴリ</SelectItem>
+            <SelectItem value={ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED}>
+              未分類のみ
+            </SelectItem>
+            {categoryOptions.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center xl:w-auto">
-          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-            <span className="shrink-0 text-xs text-muted-foreground sm:w-10">
-              並び
-            </span>
-            <div className="grid flex-1 grid-cols-2 gap-2 sm:flex sm:flex-1">
-              <Select value={params.spSortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="項目" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={params.spSortOrder} onValueChange={setSortOrder}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="順序" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">降順</SelectItem>
-                  <SelectItem value="asc">昇順</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+        <Select value={currentSort} onValueChange={setSort}>
+          <SelectTrigger aria-label="並び替え">
+            <SelectValue placeholder="並び替え" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex-1">
