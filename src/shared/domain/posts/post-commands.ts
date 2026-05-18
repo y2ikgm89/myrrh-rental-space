@@ -283,3 +283,18 @@ export async function unpublishPost(id: string): Promise<DeletePostResult> {
     slug: post.slug,
   };
 }
+
+export async function archivePost(id: string): Promise<DeletePostResult> {
+  const post = await ensurePostExists(id);
+
+  await prisma.post.update({
+    where: { id },
+    data: {
+      status: PostStatus.ARCHIVED,
+    },
+  });
+
+  return {
+    slug: post.slug,
+  };
+}

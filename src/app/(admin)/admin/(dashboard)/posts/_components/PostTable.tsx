@@ -9,8 +9,8 @@
 import { useState } from "react";
 import { Badge, Table, TableBody, TableCell } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { PostStatusBadge } from "@/admin/components/status-badges";
 import { PostActionCell } from "./PostActionCell";
+import { PostStatusSelect } from "./PostStatusSelect";
 import { PostTableHeader } from "./PostTableHeader";
 import { PostBulkActions } from "./PostBulkActions";
 import {
@@ -110,11 +110,17 @@ export function PostTable({ posts }: PostTableProps) {
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {formatDateTimeShort(post.createdAt)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <PostStatusBadge status={post.status} />
+                  <TableCell
+                    className="whitespace-nowrap"
+                    onClick={stopRowClick}
+                  >
+                    <PostStatusSelect
+                      postId={post.id}
+                      currentStatus={post.status}
+                    />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
-                    <PostActionCell postId={post.id} status={post.status} />
+                    <PostActionCell postId={post.id} />
                   </TableCell>
                 </ClickableTableRow>
               ))}
