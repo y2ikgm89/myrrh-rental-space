@@ -23,8 +23,8 @@ export function detectSlashIconTrigger(root: HTMLElement): SlashTrigger | null {
   const range = sel.getRangeAt(0);
   if (!range.collapsed) return null;
   if (!root.contains(range.startContainer)) return null;
-  if (range.startContainer.nodeType !== Node.TEXT_NODE) return null;
-  const textNode = range.startContainer as Text;
+  const textNode = range.startContainer;
+  if (!(textNode instanceof Text)) return null;
   const beforeCursor = textNode.data.slice(0, range.startOffset);
   const match = beforeCursor.match(SLASH_ICON_TRIGGER);
   if (!match) return null;

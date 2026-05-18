@@ -45,7 +45,8 @@ export function serializeBlocks(root: HTMLElement): PortableTextBlock[] {
       }
       continue;
     }
-    const el = node as HTMLElement;
+    if (!(node instanceof HTMLElement)) continue;
+    const el = node;
     if (el.tagName !== "P") {
       // Stray non-<p> element: serialize its inline content as 1 block
       const children = serializeNodes(el);

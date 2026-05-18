@@ -35,13 +35,37 @@ uniform.value = 42;
 
 ## `as` の許可例外（7 種類限定）
 
-### 1. DOM event target
+### 1. DOM event target / DOM walker (instanceof narrow が canonical)
+
+ブラウザ DOM API の `EventTarget` / `Node` / `Document.getElementById` 等は仕様で wider 型。**`as` cast ではなく `instanceof` narrow が canonical** (2026-05-18 PR で全 10 cast を排除済、type-safe + null check 同時実現):
 
 ```typescript
-// OK: ブラウザ DOM API の型制約
+// NG: as cast による型逃がし
 const input = event.target as HTMLInputElement;
-const value = input.value;
+const target = e.target as HTMLElement;
+const nameInput = document.getElementById(id) as HTMLInputElement | null;
+const el = node as HTMLElement;
+const textNode = range.startContainer as Text;
+e.target as Node;
+
+// OK: instanceof narrow (TypeScript 公式推奨、cast 不要 + null check 同時)
+if (event.target instanceof HTMLInputElement) {
+  const value = event.target.value;
+}
+if (!(e.target instanceof Element)) return;
+const iconSpan = e.target.closest("[data-icon]");
+const nameInput = document.getElementById(id);
+if (!(nameInput instanceof HTMLInputElement)) return;
+for (const node of root.childNodes) {
+  if (!(node instanceof HTMLElement)) continue;
+  // ...
+}
+const textNode = range.startContainer;
+if (!(textNode instanceof Text)) return null;
+if (e.target instanceof Node && !panel.contains(e.target)) close();
 ```
+
+**例外**: React event handler の `e.currentTarget` は `React.MouseEvent<HTMLDivElement>` 等の generic で narrow される (bubbling 対象である `e.target` は仕様で wider のまま — `instanceof` narrow 必須)。
 
 ### 2. Prisma JSON 型 — helper 強制 + Prisma.InputJsonObject data field のみ許容
 
