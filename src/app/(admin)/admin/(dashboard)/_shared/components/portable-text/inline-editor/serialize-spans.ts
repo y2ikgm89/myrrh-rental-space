@@ -45,11 +45,10 @@ export function serializeNodes(root: HTMLElement): PortableTextSpan[] {
       }
       continue;
     }
-    if (node.nodeType === 1 /* ELEMENT_NODE */) {
-      const el = node as HTMLElement;
-      const iconName = el.getAttribute(ICON_NAME_ATTR);
+    if (node instanceof HTMLElement) {
+      const iconName = node.getAttribute(ICON_NAME_ATTR);
       if (iconName !== null && iconName.length > 0) {
-        const persistedKey = el.getAttribute(KEY_DATA_ATTR);
+        const persistedKey = node.getAttribute(KEY_DATA_ATTR);
         spans.push(
           persistedKey !== null && persistedKey.length > 0
             ? { _key: persistedKey, _type: "iconInline", name: iconName }

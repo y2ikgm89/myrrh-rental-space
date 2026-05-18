@@ -43,7 +43,11 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
     if (!open) return;
 
     function handleMouseDown(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (
+        panelRef.current &&
+        e.target instanceof Node &&
+        !panelRef.current.contains(e.target)
+      ) {
         setOpen(false);
         setIsEditingYear(false);
       }

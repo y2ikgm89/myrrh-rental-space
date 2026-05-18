@@ -167,8 +167,8 @@ export function PortableTextInlineEditor({
   };
 
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const iconSpan = target.closest(`[${ICON_NAME_ATTR}]`);
+    if (!(e.target instanceof Element)) return;
+    const iconSpan = e.target.closest(`[${ICON_NAME_ATTR}]`);
     if (!iconSpan || !editorRef.current?.contains(iconSpan)) return;
     iconSpan.parentNode?.removeChild(iconSpan);
     serializeAndEmit();

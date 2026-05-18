@@ -176,13 +176,13 @@ function TagFormDialog({
   }, [lastResult, isEdit, onOpenChange, onSuccess]);
 
   const handleGenerateSlug = () => {
-    const nameInput = document.getElementById(
-      fields.name.id,
-    ) as HTMLInputElement | null;
-    const slugInput = document.getElementById(
-      fields.slug.id,
-    ) as HTMLInputElement | null;
-    if (!nameInput || !slugInput) return;
+    const nameInput = document.getElementById(fields.name.id);
+    const slugInput = document.getElementById(fields.slug.id);
+    if (
+      !(nameInput instanceof HTMLInputElement) ||
+      !(slugInput instanceof HTMLInputElement)
+    )
+      return;
     const name = nameInput.value;
     if (!name) return;
     const slug = name

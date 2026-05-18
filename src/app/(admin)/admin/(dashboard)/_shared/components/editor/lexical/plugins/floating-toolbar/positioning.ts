@@ -63,9 +63,7 @@ export function setFloatingElemPosition(
     const range = selection.getRangeAt(0);
     const textNode = range.startContainer;
     const textElement =
-      textNode.nodeType === Node.ELEMENT_NODE
-        ? (textNode as Element)
-        : textNode.parentElement;
+      textNode instanceof Element ? textNode : textNode.parentElement;
     if (textElement) {
       const textAlign = window.getComputedStyle(textElement).textAlign;
       if (textAlign === "right" || textAlign === "end") {
