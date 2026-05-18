@@ -154,24 +154,30 @@ export default async function SpacePage({ params }: Props) {
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts
-import { revalidateTag } from "next/cache";
+"use server";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { purgeSpaceCache } from "@/shared/lib/cloudflare";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 
-export const updateSpace = withPermission(
-  "space",
-  "update",
-)(async (user, id, data) => {
-  // ... 更新処理
-
-  // サーバーキャッシュ無効化
-  revalidateTag(CACHE_TAGS.SPACES, "default");
-
-  // Cloudflare CDN キャッシュパージ
-  void purgeSpaceCache(id);
-
-  return createSuccess("スペースを更新しました");
-});
+export async function updateSpace(id: string, input: UpdateSpaceInput) {
+  return executeAdminMutationResult({
+    resource: "space",
+    action: "update",
+    resourceId: id,
+    execute: async () => updateSpaceCommand(id, input),
+    afterSuccess: () => {
+      // Server Action: read-your-own-writes 用に updateTag (revalidateTag は Route Handler 用)
+      updateTag(CACHE_TAGS.SPACES);
+      // Cloudflare CDN キャッシュパージ（fireAndForget で非ブロッキング）
+      fireAndForget(purgeSpaceCache(id), { operation: "purgeSpaceCache" });
+    },
+  });
+}
 ```
+
+詳細は [`.claude/rules/server-actions/implementation.md`](../../.claude/rules/server-actions/implementation.md) §`executeAdminMutationResult` 実行順序契約。
 
 ### Fire-and-Forget パターン
 
@@ -326,14 +332,3 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 - [Next.js Caching Documentation](https://nextjs.org/docs/app/building-your-application/caching)
 - [Cloudflare Cache Purge API](https://developers.cloudflare.com/cache/how-to/purge-cache/purge-by-url/)
 - [Cloudflare Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/)
-
----
-
-## 更新履歴
-
-- **2026-01-23**: PPR + 積極的キャッシュ戦略に更新
-  - `use cache` + `cacheLife()` 対応
-  - Cloudflare API自動パージ機能追加
-  - 管理画面でのCloudflare設定機能追加
-- **2026-01-05**: 初版作成
-  - Next.js 16 + Cloud Run + Cloudflare CDN統合ガイド

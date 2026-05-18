@@ -45,7 +45,7 @@ graph TB
 - UI / route が Prisma の generated 型へ依存しない。公開する型は `shared/domain/*/types.ts` と DB ゲートウェイ経由を正とする。
 - 各 bounded context は `queries.ts` / `commands.ts` / `types.ts` 等の役割分割を基本とし、必要に応じて `admin-queries.ts` や feature 特有のモジュールを追加する。
 - `app/api/*`・admin 補助・calendar / iCal / sitemap 等も、データアクセスの正本は domain query・command に寄せる。
-- Better Auth 用 Prisma adapter は `src/shared/db/better-auth-adapter.ts` に隔離し、`shared/lib/auth.ts` は DB client を直接握らない。
+- Better Auth 用 Prisma adapter は `src/shared/db/better-auth-adapter.ts` に隔離し、`shared/lib/{admin,customer}-auth.ts` は DB client を直接握らない。
 
 ### 3. DB 境界
 

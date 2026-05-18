@@ -41,8 +41,8 @@
 
 管理 (`adminAuth`) と顧客 (`customerAuth`) は **別の Better Auth インスタンス**。Cookie prefix と generateId 設定を分離し、session 漏洩の経路を物理的に断つ。
 
-- `src/shared/lib/auth.ts` — 管理用静的 export `auth`
-- `src/shared/lib/customer-auth.ts` — 顧客用静的 export
+- `src/shared/lib/admin-auth.ts` — 管理用静的 export `adminAuth`（`cookiePrefix: "admin-auth"`、email/password）
+- `src/shared/lib/customer-auth.ts` — 顧客用静的 export `customerAuth`（`cookiePrefix: "customer-auth"`、Google/LINE）
 - 動的 `getAuth()` の再導入は禁止（cache 不整合の silent bug）
 
 ### RBAC モデル

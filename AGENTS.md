@@ -59,10 +59,9 @@ Path aliases: `@/*` -> `src/*`, `@generated/*` -> `generated/*`, `@/admin/*`, `@
 ## Setup Commands
 
 ```bash
-bun install
+bun install                          # postinstall で bun run db:generate を自動実行
 bunx --bun prisma migrate dev
-bun run db:generate
-bun prisma/seed.ts
+bun run db:seed
 bun run dev
 ```
 

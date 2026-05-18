@@ -61,21 +61,21 @@ CMD ["bun", "server.js"]
 
 ### 設計のポイント
 
-| 項目                 | 詳細                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **ビルド・実行**     | Bun + `bun.lock`（[Bun Docker ガイド](https://bun.sh/guides/ecosystem/docker)）。`CMD ["bun", "server.js"]`      |
-| **ベース**           | `oven/bun:1.3.13-alpine`（`base` を builder / runner で共有）                                                    |
-| **libc6-compat**     | Alpine でのネイティブ互換。deps + runner                                                                         |
-| **Prisma generate**  | deps ステージ。出力先: `generated/prisma/`                                                                       |
-| **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須                                         |
-| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化                                                 |
-| **builder**          | `bun run type-check && bun run lint && bun run build`（`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` は BuildKit secret） |
-| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                                                        |
-| **Prisma WASM**      | `node_modules/@prisma` を runner にコピー（standalone trace に含まれないため）                                   |
-| **ポート**           | 8080（`--port` で Cloud Run 注入）。`ENV PORT` は Dockerfile で書かない                                          |
-| **プローブ**         | startup + liveness とも HTTP GET `/api/live`（DB 非依存）。`/api/health` は監視・手動確認専用                    |
-| **Prisma CLI**       | Cloud Run Job (prisma-migrate) が同一 image で動くため `node_modules/prisma` + `prisma/` を runner に明示コピー  |
-| **非 root**          | `adduser nextjs` + `USER nextjs`                                                                                 |
+| 項目                 | 詳細                                                                                                                                                       |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ビルド・実行**     | Bun + `bun.lock`（[Bun Docker ガイド](https://bun.sh/guides/ecosystem/docker)）。`CMD ["bun", "server.js"]`                                                |
+| **ベース**           | `oven/bun:<version>-alpine`（`base` を builder / runner で共有、実バージョンは [`Dockerfile`](../../Dockerfile) と `package.json#packageManager` が SSoT） |
+| **libc6-compat**     | Alpine でのネイティブ互換。deps + runner                                                                                                                   |
+| **Prisma generate**  | deps ステージ。出力先: `generated/prisma/`                                                                                                                 |
+| **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須                                                                                   |
+| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化                                                                                           |
+| **builder**          | `bun run type-check && bun run lint && bun run build`（`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` は BuildKit secret）                                           |
+| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                                                                                                  |
+| **Prisma WASM**      | `node_modules/@prisma` を runner にコピー（standalone trace に含まれないため）                                                                             |
+| **ポート**           | 8080（`--port` で Cloud Run 注入）。`ENV PORT` は Dockerfile で書かない                                                                                    |
+| **プローブ**         | startup + liveness とも HTTP GET `/api/live`（DB 非依存）。`/api/health` は監視・手動確認専用                                                              |
+| **Prisma CLI**       | Cloud Run Job (prisma-migrate) が同一 image で動くため `node_modules/prisma` + `prisma/` を runner に明示コピー                                            |
+| **非 root**          | `adduser nextjs` + `USER nextjs`                                                                                                                           |
 
 ### なぜ STANDALONE 環境変数が必要か
 

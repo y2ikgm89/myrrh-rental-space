@@ -16,55 +16,54 @@ DDoS / レート制限 / Bot 保護を実装・運用する手順。設計の「
 - HTTP Flood 対策
 - Slowloris 攻撃対策
 
-## 2. レート制限（@upstash/ratelimit）
+## 2. レート制限（`@/shared/lib/rate-limit` adapter pattern）
 
-### 設定
+### SSoT
+
+`src/shared/lib/rate-limit.ts` が **`RateLimitStore` interface + `InMemoryRateLimitStore`（`lru-cache` backend）** で実装。Redis 等の distributed backend に env-driven で切替可能。
 
 ```typescript
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { createRateLimiter } from "@/shared/lib/rate-limit";
 
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, "10 s"),
-  analytics: true,
+const apiRateLimiter = createRateLimiter({
+  interval: 60_000, // 1 分
+  maxRequests: 100,
 });
+
+const { success } = await apiRateLimiter.check(ipAddress);
+if (!success) return { error: "リクエストが多すぎます" };
 ```
 
-### エンドポイント別の制限値
+`check()` / `reset()` は `Promise` を返す async API（Redis backend 切替を前提）。
 
-| エンドポイント | 制限        |
-| -------------- | ----------- |
-| ログイン       | 10 回/10 秒 |
-| 予約フォーム   | 5 回/分     |
-| お問い合わせ   | 3 回/分     |
-| API 一般       | 100 回/分   |
+### 多層防御
 
-### 実装例
+| Layer | 役割                                                | 場所                            |
+| ----- | --------------------------------------------------- | ------------------------------- |
+| 1     | `InMemoryRateLimitStore`（per-instance LRUCache）   | `src/shared/lib/rate-limit.ts`  |
+| 2     | Cloudflare Turnstile（公開フォームの bot 緩和）     | `src/shared/lib/turnstile.ts`   |
+| 3     | Cloud Run autoscale max instance（実質的な上限）    | `cloudbuild.yaml`               |
+| 4     | Cloudflare WAF Custom Rules（CDN 層 IP rate limit） | Cloudflare Dashboard で運用配線 |
 
-```typescript
-export async function createReservation(data: Input) {
-  const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+Cloud Run multi-instance では Layer 1 は per-instance protection のみ（各 instance が独立 bucket）。完全な distributed rate limiting には `RedisRateLimitStore` 実装に切替える（`RateLimitStore` interface を共有）。
 
-  const { success } = await ratelimit.limit(ip);
-  if (!success) {
-    return createFailure("リクエストが多すぎます。しばらくお待ちください。");
-  }
+### 配置箇所
 
-  // 処理続行
-}
-```
+| エンドポイント             | 制御                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| `proxy.ts`                 | `/api/*` 全体に `apiRateLimiter`（100 req/min）。probe / cron / webhooks は早期 return で除外 |
+| 公開フォーム Server Action | Turnstile + 必要に応じて per-IP rate limit                                                    |
+| 管理 Server Action         | 認証 + 監査ログで担保（rate-limit 任意）                                                      |
 
 ### Cloud Run probe endpoint の除外
 
-`/api/live` / `/api/health` は **`proxy.ts` で rate-limit から除外する**。probe IP が `unknown` で合算され 429 → コンテナ kill 連鎖の silent bug を防ぐ。
+`/api/live` / `/api/health` は **`proxy.ts` で rate-limit から除外する**。probe IP が `unknown` で合算され 429 → コンテナ kill 連鎖の silent bug を防ぐ（Cloud Run probe は `x-forwarded-for` 未設定 → `getClientIp()` が `"unknown"` を返し全 probe が同一 bucket に合算される）。
 
 ## 3. Cloudflare Turnstile（Bot 保護）
 
 ### キー管理
 
-Site Key / Secret Key は **DB の `Settings` テーブル**に暗号化保存（管理画面 `/admin/settings/security-integrations` から設定）。
+Site Key / Secret Key は **DB の `Settings` テーブル**に暗号化保存（管理画面 `/admin/settings/integrations?tab=turnstile` から設定）。
 環境変数には置かない（`NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` は不使用）。
 
 ### 公式推奨の追加保護（本プロジェクトで全採用）
@@ -150,23 +149,15 @@ await adminAuthClient.resetPassword({
 
 ## 4. 荒らし対策
 
-### IP ブロック
+### IP ブロック（Cloudflare WAF で対応）
 
-```typescript
-const BLOCKED_IPS = new Set([
-  // 悪意のある IP を追加
-]);
-
-export function isBlocked(ip: string): boolean {
-  return BLOCKED_IPS.has(ip);
-}
-```
+アプリ層に静的 IP allowlist / blocklist は持たない（hot-reload と運用負荷の問題）。攻撃 IP のブロックは **Cloudflare Dashboard → Security → WAF → Custom Rules** で IP / ASN / Country 単位で運用する。アプリ層は rate limit + Turnstile + 認証で多層防御し、永続化されたブロックリストは CDN 層に集約する。
 
 ### スパム検出
 
-- 同一内容の連続投稿検出
-- 禁止ワードフィルタ
-- URL 過多検出
+- Turnstile が bot trafic を緩和（Layer 2、`siteverify` の `cdata` action 検証込み）
+- 同一フォームへの per-IP rate limit（`createRateLimiter`）で burst 抑制
+- 内容ベースのフィルタ（禁止ワード / URL 過多）は要件発生時に domain command に追加
 
 ## 5. Cloud Run 設定
 
@@ -219,7 +210,7 @@ resources:
 2. **確認**: Cloud Logging で攻撃パターン特定
 3. **対応**:
    - Cloudflare: **Under Attack Mode** 有効化
-   - アプリ: `BLOCKED_IPS` に追加 → デプロイ
+   - Cloudflare WAF Custom Rules で攻撃 IP / ASN / Country をブロック（アプリ再デプロイ不要）
 4. **収束確認**: トラフィック正常化を確認
 5. **記録**: インシデントレポート作成、再発防止策を path-scoped rule に追記
 
