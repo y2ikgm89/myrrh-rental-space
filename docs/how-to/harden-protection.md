@@ -210,7 +210,7 @@ resources:
 2. **確認**: Cloud Logging で攻撃パターン特定
 3. **対応**:
    - Cloudflare: **Under Attack Mode** 有効化
-   - アプリ: `BLOCKED_IPS` に追加 → デプロイ
+   - Cloudflare WAF Custom Rules で攻撃 IP / ASN / Country をブロック（アプリ再デプロイ不要）
 4. **収束確認**: トラフィック正常化を確認
 5. **記録**: インシデントレポート作成、再発防止策を path-scoped rule に追記
 
