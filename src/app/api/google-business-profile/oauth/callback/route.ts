@@ -1,27 +1,32 @@
 /**
  * Google Business Profile OAuth Callback Route
  *
- * Authorization Code フローの callback。
+ * Authorization Code + state CSRF フローの callback。
  *
  * 1. 管理者セッション検証 → 未認証なら `/admin/login` にリダイレクト
- * 2. `code` / `error` クエリ取得（不足時は API 設定ページにリダイレクト）
- * 3. `exchangeGbpAuthCode` で access / refresh token を取得
- * 4. `listGbpAccounts` で先頭アカウントを取得
- * 5. `saveGbpAuthState` で Settings に永続化
- * 6. 設定ページに `gbp_success=true` で戻す
+ * 2. `code` / `state` / `error` クエリ取得（不足時は API 設定ページにリダイレクト）
+ * 3. CSRF state 検証（httpOnly cookie と照合、不一致なら拒否）
+ * 4. `exchangeGbpAuthCode` で access / refresh token を取得
+ * 5. `listGbpAccounts` で先頭アカウントを取得
+ * 6. `saveGbpAuthState` で Settings に永続化
+ * 7. 設定ページに `gbp_success=true` で戻す
  *
  * @module api/google-business-profile/oauth/callback
  */
 
 import "server-only";
 
+import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { listGbpAccounts } from "@/shared/lib/google-business-profile/account";
 import { createOAuth2Client } from "@/shared/lib/google-business-profile/client";
-import { exchangeGbpAuthCode } from "@/shared/lib/google-business-profile/oauth";
+import {
+  exchangeGbpAuthCode,
+  GBP_OAUTH_STATE_COOKIE,
+} from "@/shared/lib/google-business-profile/oauth";
 import { saveGbpAuthState } from "@/shared/domain/google-business-profile/settings";
 import {
   ErrorCategory,
@@ -39,6 +44,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const code = request.nextUrl.searchParams.get("code");
+    const state = request.nextUrl.searchParams.get("state");
     const errorParam = request.nextUrl.searchParams.get("error");
 
     if (errorParam || !code) {
@@ -49,6 +55,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         ),
       );
     }
+
+    // CSRF state 検証（公式 OAuth 2.0 RFC 6749 §10.12 準拠）
+    const cookieStore = await cookies();
+    const savedState = cookieStore.get(GBP_OAUTH_STATE_COOKIE)?.value;
+    if (!state || !savedState || savedState !== state) {
+      logError(new Error("CSRF state mismatch in GBP OAuth"), {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "gbpOauthCallback",
+          hasState: Boolean(savedState),
+        },
+      });
+      cookieStore.delete(GBP_OAUTH_STATE_COOKIE);
+      return NextResponse.redirect(
+        new URL(
+          "/admin/settings/integrations?gbp_error=state_mismatch",
+          request.url,
+        ),
+      );
+    }
+
+    // 検証成功後に cookie を削除（single-use 保証）
+    cookieStore.delete(GBP_OAUTH_STATE_COOKIE);
 
     const tokens = await exchangeGbpAuthCode(code);
 

@@ -63,6 +63,30 @@ mock.module("@/shared/lib/google-business-profile", () => ({
   createOAuth2Client: mockCreateOAuth2Client,
   getGbpClient: mockGetGbpClient,
   GBP_SCOPES: ["https://www.googleapis.com/auth/business.manage"] as const,
+  GBP_OAUTH_STATE_COOKIE: "gbp_oauth_state",
+  GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS: 600,
+}));
+
+const mockCookieStoreSet = mock<
+  (name: string, value: string, options: unknown) => void
+>(() => {});
+const mockCookieStoreDelete = mock<(name: string) => void>(() => {});
+const mockCookieStoreGet = mock<(name: string) => { value: string } | null>(
+  () => null,
+);
+
+mock.module("next/headers", () => ({
+  cookies: () =>
+    Promise.resolve({
+      set: mockCookieStoreSet,
+      delete: mockCookieStoreDelete,
+      get: mockCookieStoreGet,
+    }),
+  headers: () => Promise.resolve(new Headers()),
+}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: { NODE_ENV: "test" },
 }));
 
 const mockSyncLocationToGbpCommand = mock<
@@ -144,10 +168,13 @@ describe("Google Business Profile Server Actions", () => {
     mockVerifyAdminSession.mockClear();
     mockUpdateTag.mockClear();
     mockRedirect.mockClear();
+    mockCookieStoreSet.mockClear();
+    mockCookieStoreDelete.mockClear();
+    mockCookieStoreGet.mockClear();
   });
 
   describe("initiateGbpAuth", () => {
-    test("verifyAdminSession を呼び、redirect をスローする", async () => {
+    test("verifyAdminSession を呼び、state cookie 設定後 redirect をスローする", async () => {
       let caught: unknown = null;
       try {
         await initiateGbpAuth();
@@ -156,7 +183,26 @@ describe("Google Business Profile Server Actions", () => {
       }
 
       expect(mockVerifyAdminSession).toHaveBeenCalledTimes(1);
-      expect(mockGetGbpAuthorizeUrl).toHaveBeenCalledWith("");
+
+      // CSRF state cookie が httpOnly + sameSite: lax + maxAge: 600 で設定される
+      expect(mockCookieStoreSet).toHaveBeenCalledTimes(1);
+      expect(mockCookieStoreSet).toHaveBeenCalledWith(
+        "gbp_oauth_state",
+        expect.stringMatching(/^[0-9a-f-]{36}$/),
+        expect.objectContaining({
+          httpOnly: true,
+          sameSite: "lax",
+          maxAge: 600,
+          path: "/",
+        }),
+      );
+
+      // 生成した state が getGbpAuthorizeUrl に渡される
+      expect(mockGetGbpAuthorizeUrl).toHaveBeenCalledTimes(1);
+      expect(mockGetGbpAuthorizeUrl).toHaveBeenCalledWith(
+        expect.stringMatching(/^[0-9a-f-]{36}$/),
+      );
+
       expect(mockRedirect).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/v2/auth?test=1",
       );

@@ -102,8 +102,11 @@ export async function resendInvitation(id: string): Promise<MutationResult> {
     resource: "user",
     action: "create",
     resourceId: validated.data,
-    execute: async () => {
-      await resendInvitationCommand(validated.data);
+    execute: async (user) => {
+      await resendInvitationCommand(validated.data, {
+        id: user.id,
+        role: user.role,
+      });
       return null;
     },
     afterSuccess: () => {

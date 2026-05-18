@@ -117,11 +117,12 @@ async function ensureInvitationDeletable(id: string): Promise<{
   id: string;
   email: string;
   name: string | null;
+  role: Role;
   usedAt: Date | null;
 }> {
   const invitation = await prisma.staffInvitation.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true, usedAt: true },
+    select: { id: true, email: true, name: true, role: true, usedAt: true },
   });
 
   if (!invitation) {
@@ -285,8 +286,19 @@ export async function deleteInvitation(id: string): Promise<void> {
   });
 }
 
-export async function resendInvitation(id: string): Promise<void> {
+export async function resendInvitation(
+  id: string,
+  actor: { id: string; role: Role },
+): Promise<void> {
   const invitation = await ensureInvitationDeletable(id);
+
+  if (!canInviteRole(actor.role, invitation.role)) {
+    throw new DomainError(
+      "このロールの招待を再送する権限がありません",
+      "FORBIDDEN",
+    );
+  }
+
   const token = generateToken();
   const expiresAt = getExpiryDate();
 

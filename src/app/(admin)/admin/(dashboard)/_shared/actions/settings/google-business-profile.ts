@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 
@@ -10,11 +11,14 @@ import {
 } from "@/shared/domain/locations/gbp-sync-commands";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { serverEnv } from "@/shared/lib/env/server";
 import {
   clearGbpAuthState,
   getGbpAuthorizeUrl,
   getGbpAuthState,
   revokeGbpToken,
+  GBP_OAUTH_STATE_COOKIE,
+  GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
 } from "@/shared/lib/google-business-profile";
 import type { GbpSyncResult } from "@/shared/lib/google-business-profile";
 import type { ToggleLocationGbpSyncResult } from "@/shared/domain/locations/gbp-sync-commands";
@@ -24,13 +28,26 @@ import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 /**
  * GBP OAuth フローを開始する。
  *
- * 認証 URL を組み立てて Google の同意画面へ redirect する。
+ * CSRF 対策の state を生成 → httpOnly cookie に保存 → state 付き authorize URL へ redirect する。
+ * Instagram OAuth `/api/instagram/oauth/authorize` と同パターンの公式 OAuth 2.0 state 検証。
+ *
  * `redirect()` は throw する Next.js API のため try/catch で握り潰せない。
  * `executeAdminMutationResult` を経由せず `verifyAdminSession()` で直接認証する。
  */
 export async function initiateGbpAuth(): Promise<void> {
   await verifyAdminSession();
-  const url = getGbpAuthorizeUrl("");
+
+  const state = crypto.randomUUID();
+  const cookieStore = await cookies();
+  cookieStore.set(GBP_OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: serverEnv.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
+    path: "/",
+  });
+
+  const url = getGbpAuthorizeUrl(state);
   redirect(toAppRoute(url));
 }
 
