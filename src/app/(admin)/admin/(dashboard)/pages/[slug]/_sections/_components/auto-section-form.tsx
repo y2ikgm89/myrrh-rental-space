@@ -20,7 +20,10 @@ import {
   type FieldMetadata,
   type FormMetadata,
 } from "@conform-to/react";
-import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
+import {
+  asConformLooseRecord,
+  useTypedInputControl,
+} from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod } from "@conform-to/zod/v4";
 import dynamic from "next/dynamic";
 import { z } from "zod";
@@ -155,11 +158,9 @@ export function AutoSectionForm({
   const [form, fields] = useForm<Record<string, unknown>>({
     id: `auto-section-${section.id}`,
     // defaultValue: 内部的に boolean/number/array/object を含むが、conform は runtime で
-    // FormData string にシリアライズするため実害なし。TS の DefaultValue<> 型は strict のため境界変換
-    defaultValue: defaultConfig as unknown as Record<
-      string,
-      string | null | undefined
-    >,
+    // FormData string にシリアライズするため実害なし
+    // (ledger §5 — typed-input-control SSoT helper 経由)
+    defaultValue: asConformLooseRecord(defaultConfig),
     onValidate({ formData }) {
       // schema が未定義のケースも parseWithZod 経由で Submission を返す（reply 等の API 完備のため）
       // schema は typed cast して submission.value 型を form の Schema と整合させる
@@ -210,7 +211,7 @@ export function AutoSectionForm({
     if (fallback.success && isRecord(fallback.data)) {
       lastVariantRef.current = nextVariant;
       form.update({
-        value: fallback.data as Record<string, string | null | undefined>,
+        value: asConformLooseRecord(fallback.data),
       });
     }
   });

@@ -11,6 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { asConformFieldset } from "@/shared/lib/conform/typed-input-control";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { Heading } from "@/public/components/design-system/heading";
@@ -461,7 +462,7 @@ export function ReservationForm({
 
         {renderStepIndicator()}
         <CustomerStep
-          fields={fields as ReservationFormFields}
+          fields={asConformFieldset<ReservationFormFields>(fields)}
           customerType={customerType}
           turnstileSiteKey={turnstileSiteKey}
           turnstileRef={turnstileRef}

@@ -14,7 +14,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, type DefaultValue } from "@conform-to/react";
+import { useForm } from "@conform-to/react";
+import {
+  asConformDefaultValue,
+  asConformSubmissionValue,
+} from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -188,15 +192,13 @@ export function usePostEditor({
   const isBodyDirty = contentJson !== savedContentJson;
 
   // 設定 — conform useForm
-  // documented exception §5 conform generic invariance:
-  // preprocess input 型 (`tags: unknown` / `contentWidth: unknown`) は conform
-  // DefaultValue<T> の string-only 制約と非互換のため境界 cast。
+  // ledger §5 conform generic invariance — typed-input-control SSoT helper 経由
   const [settingsForm, settingsFields] = useForm<PostSettingsFormData>({
     id: "post-settings-form",
     constraint: getZodConstraint(postSettingsFormSchema),
-    defaultValue: toSettingsFormData(
-      post,
-    ) as unknown as DefaultValue<PostSettingsFormData>,
+    defaultValue: asConformDefaultValue<PostSettingsFormData>(
+      toSettingsFormData(post),
+    ),
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: postSettingsFormSchema });
     },
@@ -266,7 +268,7 @@ export function usePostEditor({
       toast.error("入力内容に誤りがあります");
       return null;
     }
-    return submission.value as unknown as PostSettingsFormData;
+    return asConformSubmissionValue<PostSettingsFormData>(submission.value);
   };
 
   const onSubmitSettings = () => {

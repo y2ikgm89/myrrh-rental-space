@@ -13,14 +13,15 @@ import type { FieldMetadata, FormMetadata } from "@conform-to/react";
 
 import { Button, Card, CardContent, Label } from "@/admin/components/ui";
 import {
+  asConformButtonGetter,
   getTypedFieldList,
   getTypedFieldset,
 } from "@/shared/lib/conform/typed-input-control";
 
 // 動的 schema 用の getButtonProps 境界変換型
-// (型 ledger §5/§7 と同列の generic invariance 対応)。
-// conform の Intent / FieldName は branded type のため、call site で
-// 名前と defaultValue を緩めた function signature にキャストする
+// (ledger §5 conform generic invariance — typed-input-control SSoT helper 経由)。
+// conform の Intent / FieldName は branded type のため、name と defaultValue を
+// 緩めた function signature を helper で集約する。
 type InsertButtonGetter = (opts: {
   name: string;
   defaultValue?: Record<string, unknown>;
@@ -121,7 +122,9 @@ export function AutoArrayField({
           type="button"
           variant="outline"
           size="sm"
-          {...(form.insert.getButtonProps as unknown as InsertButtonGetter)({
+          {...asConformButtonGetter<InsertButtonGetter>(
+            form.insert.getButtonProps,
+          )({
             name: field.name,
             defaultValue: createEmptyItem(),
           })}
@@ -155,8 +158,8 @@ export function AutoArrayField({
                   type="button"
                   variant="destructive-ghost"
                   size="sm"
-                  {...(
-                    form.remove.getButtonProps as unknown as RemoveButtonGetter
+                  {...asConformButtonGetter<RemoveButtonGetter>(
+                    form.remove.getButtonProps,
                   )({
                     name: field.name,
                     index,
