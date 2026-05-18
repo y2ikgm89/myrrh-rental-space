@@ -79,28 +79,31 @@ describe("モジュール名 or 機能名", () => {
 
 ## 環境変数のモック
 
-テストごとに環境変数を変更する場合は `beforeAll` / `afterAll` でオリジナルを保存・復元する。
+**canonical (2026-05-18 PR #145 以降)**: `serverEnv` snapshot 仕様と test 容易性の両立は **boundary helper + `mock.module`** で実現する。`process.env` 直接 mutation は `@t3-oss/env-nextjs` の lazy initialization (1 回評価固定) と非互換のため避ける:
 
 ```typescript
+import { mock } from "bun:test";
+
+const TEST_KEY = "a".repeat(64);
+const mockGetEncryptionKey = mock<() => string>(() => TEST_KEY);
+
+mock.module("@/shared/lib/env/encryption", () => ({
+  getEncryptionKey: mockGetEncryptionKey,
+}));
+
+const { encrypt, decrypt } = await import("@/shared/lib/crypto");
+
 describe("crypto", () => {
-  const originalKey = process.env["ENCRYPTION_KEY"];
-  const testKey = "a".repeat(64); // 64文字の16進数
-
-  beforeAll(() => {
-    process.env["ENCRYPTION_KEY"] = testKey;
-  });
-
-  afterAll(() => {
-    if (originalKey) {
-      process.env["ENCRYPTION_KEY"] = originalKey;
-    } else {
-      delete process.env["ENCRYPTION_KEY"];
-    }
-  });
-
   test("暗号化できる", () => {
     const encrypted = encrypt("secret");
     expect(encrypted).toContain(":");
+  });
+
+  test("異常系: ENCRYPTION_KEY 未設定で null を返す", () => {
+    mockGetEncryptionKey.mockImplementationOnce(() => {
+      throw new Error("ENCRYPTION_KEY is not set");
+    });
+    expect(safeEncrypt("test")).toBeNull();
   });
 });
 ```
