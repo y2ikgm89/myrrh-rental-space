@@ -340,3 +340,32 @@ export async function unpublishPost(id: string): Promise<MutationResult> {
     },
   });
 }
+
+export async function archivePost(id: string): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  let archivedPostSlug: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "post",
+    action: "publish",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await postCommands.archivePost(validated.data);
+      archivedPostSlug = result.slug;
+      return null;
+    },
+    afterSuccess: async () => {
+      if (!archivedPostSlug) {
+        return;
+      }
+
+      await invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(archivedPostSlug));
+      await purgePostCaches(archivedPostSlug);
+    },
+  });
+}

@@ -1,65 +1,27 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
-import { toast } from "sonner";
 import {
   ActionDropdown,
   ActionDropdownItem,
-  ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
-import { publishPost, unpublishPost } from "@/admin/actions/post/mutations";
-import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 type PostActionCellProps = {
   postId: string;
-  status: PostStatus;
 };
 
-export function PostActionCell({ postId, status }: PostActionCellProps) {
-  const [isPending, startTransition] = useTransition();
-  const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
-  const isPublished = optimisticStatus === PostStatus.PUBLISHED;
-
-  const handlePublish = () => {
-    startTransition(async () => {
-      setOptimisticStatus(PostStatus.PUBLISHED);
-      const result = await publishPost(postId);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(`公開しました（バージョン ${result.version}）`);
-    });
-  };
-
-  const handleUnpublish = () => {
-    startTransition(async () => {
-      setOptimisticStatus(PostStatus.DRAFT);
-      const result = await unpublishPost(postId);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("下書きに戻しました");
-    });
-  };
-
+/**
+ * 投稿管理一覧の ActionDropdown。
+ *
+ * ステータス変更（公開 / 下書き / アーカイブ）は同行の `PostStatusSelect`
+ * で inline 変更するため、本 cell からは publish / unpublish menu を削除済み
+ * （業界標準: WordPress / Notion / Linear ステータス inline 切替パターン）。
+ */
+export function PostActionCell({ postId }: PostActionCellProps) {
   return (
-    <ActionDropdown disabled={isPending}>
+    <ActionDropdown>
       <ActionDropdownItem href={`/admin/posts/${postId}`}>
         編集
       </ActionDropdownItem>
-      <ActionDropdownSeparator />
-      {isPublished ? (
-        <ActionDropdownItem onClick={handleUnpublish}>
-          下書きに戻す
-        </ActionDropdownItem>
-      ) : (
-        <ActionDropdownItem onClick={handlePublish}>
-          公開する
-        </ActionDropdownItem>
-      )}
     </ActionDropdown>
   );
 }
