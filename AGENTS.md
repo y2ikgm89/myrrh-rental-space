@@ -135,7 +135,7 @@ bun run e2e                                       # 広域 E2E（label opt-in CI
 - 業務ロジックは `src/shared/domain/*`、Prisma 境界は `src/shared/db/*`。
 - 管理 write 系 Server Action は `executeAdminMutationResult` を使う。
 - API Route のみ `checkPermission()` を直接使う。
-- `src/app/` から `@/shared/db/prisma` を直接 import しない（例外: `calendar-sync` の `$queryRaw`）。
+- `src/app/` から `@/shared/db/prisma` を直接 import しない（例外なし — `calendar-sync` の `pg_try_advisory_lock` は `@/shared/domain/calendar-sync/locks` helper に集約済）。
 
 ## Data, Auth, Security
 

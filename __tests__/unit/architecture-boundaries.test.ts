@@ -874,19 +874,11 @@ describe("architecture boundaries", () => {
 
   test("shared/ の外に Prisma 直 import を残さない", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
-    // AGENTS.md §Architecture Boundaries: app 層からの Prisma 直 import 禁止（例外: calendar-sync $queryRaw）
-    const CALENDAR_SYNC_EXEMPTION = join(
-      SRC_ROOT,
-      "app",
-      "api",
-      "cron",
-      "calendar-sync",
-      "route.ts",
-    );
+    // AGENTS.md §Architecture Boundaries: app 層からの Prisma 直 import 禁止
+    // (calendar-sync $queryRaw は @/shared/domain/calendar-sync/locks helper に集約済、例外なし)
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles
       .filter((file) => !file.startsWith(SHARED_ROOT))
-      .filter((file) => file !== CALENDAR_SYNC_EXEMPTION)
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return source.includes('from "@/shared/db/prisma"');
