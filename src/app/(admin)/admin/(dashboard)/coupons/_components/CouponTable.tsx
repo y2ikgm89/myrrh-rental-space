@@ -17,7 +17,7 @@ import {
   stopRowClick,
 } from "@/admin/components/table";
 import { updateCouponActive } from "@/admin/actions/coupon";
-import { CouponTypeBadge, CouponStatusBadge } from "./CouponStatusBadge";
+import { CouponTypeBadge, COUPON_STATUS_LABELS } from "./CouponStatusBadge";
 import { CouponActionCell } from "./CouponActionCell";
 import { CouponBulkActions } from "./CouponBulkActions";
 import type { CouponData } from "@/shared/domain/coupons/types";
@@ -98,7 +98,6 @@ export function CouponTable({ coupons }: CouponTableProps) {
                     aria-label="すべてのクーポンを選択"
                   />
                 </TableHead>
-                <TableHead>ステータス</TableHead>
                 <TableHead>コード</TableHead>
                 <TableHead>名称</TableHead>
                 <TableHead>タイプ</TableHead>
@@ -107,7 +106,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                   利用数
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">有効期間</TableHead>
-                <TableHead className="text-center">有効</TableHead>
+                <TableHead className="text-center">ステータス</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -124,9 +123,6 @@ export function CouponTable({ coupons }: CouponTableProps) {
                       onChange={() => toggleOne(coupon.id)}
                       aria-label={`${coupon.name} を選択`}
                     />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <CouponStatusBadge status={coupon.status} />
                   </TableCell>
                   <TableCell className="font-mono font-medium">
                     {coupon.code}
@@ -157,8 +153,11 @@ export function CouponTable({ coupons }: CouponTableProps) {
                       id={coupon.id}
                       isPublished={coupon.isActive}
                       onToggle={updateCouponActive}
-                      resourceLabel={`${coupon.name} の有効状態`}
-                      label={{ published: "有効", unpublished: "無効" }}
+                      resourceLabel={`${coupon.name} のステータス`}
+                      label={{
+                        published: COUPON_STATUS_LABELS[coupon.status],
+                        unpublished: COUPON_STATUS_LABELS.inactive,
+                      }}
                     />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>

@@ -28,6 +28,20 @@ const couponStatusConfig = {
   { label: string; variant: CouponBadgeVariant }
 >;
 
+/**
+ * クーポン派生ステータス 5 値の表示ラベル SSoT。
+ *
+ * `CouponTable` で `PublishSwitch.label` を override する際にも参照される
+ * （Switch 下に派生 operational state を表示し、StatusBadge との 2 列重複を解消）。
+ */
+export const COUPON_STATUS_LABELS: Record<CouponStatusType, string> = {
+  active: couponStatusConfig.active.label,
+  inactive: couponStatusConfig.inactive.label,
+  expired: couponStatusConfig.expired.label,
+  limitReached: couponStatusConfig.limitReached.label,
+  notStarted: couponStatusConfig.notStarted.label,
+};
+
 export function CouponTypeBadge({ type }: { type: CouponType }) {
   const config = couponTypeConfig[type];
   return <Badge variant={config.variant}>{config.label}</Badge>;
