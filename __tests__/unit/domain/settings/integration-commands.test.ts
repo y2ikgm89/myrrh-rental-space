@@ -55,6 +55,13 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
   ),
 }));
 
+// `getEncryptionKey()` は setup.ts でグローバル mock 済 (固定 64 文字 hex)。
+// 異常系 test (未設定シナリオ) では `mockImplementationOnce` で個別 override する。
+const mockGetEncryptionKeyOverride = mock<() => string>(() => "a".repeat(64));
+mock.module("@/shared/lib/env/encryption", () => ({
+  getEncryptionKey: mockGetEncryptionKeyOverride,
+}));
+
 // CalendarSyncMethod enum モック
 mock.module("@generated/prisma/enums", () => ({
   CalendarSyncMethod: {
@@ -223,49 +230,39 @@ describe("updateStripeSettings", () => {
 
   describe("異常系", () => {
     test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする（stripeSecretKey）", async () => {
-      const originalKey = process.env["ENCRYPTION_KEY"];
-      delete process.env["ENCRYPTION_KEY"];
+      mockGetEncryptionKeyOverride.mockImplementationOnce(() => {
+        throw new Error("ENCRYPTION_KEY is not set");
+      });
 
-      try {
-        await expect(
-          updateStripeSettings({
-            stripeEnabled: true,
-            stripeTestMode: false,
-            stripeSecretKey: "sk_test_abc",
-            stripeCurrency: "jpy",
-          }),
-        ).rejects.toMatchObject({
-          code: "VALIDATION",
-          message: expect.stringContaining("暗号化に失敗しました"),
-        });
-      } finally {
-        if (originalKey !== undefined) {
-          process.env["ENCRYPTION_KEY"] = originalKey;
-        }
-      }
+      await expect(
+        updateStripeSettings({
+          stripeEnabled: true,
+          stripeTestMode: false,
+          stripeSecretKey: "sk_test_abc",
+          stripeCurrency: "jpy",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: expect.stringContaining("暗号化に失敗しました"),
+      });
     });
 
     test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする（stripeWebhookSecret）", async () => {
-      const originalKey = process.env["ENCRYPTION_KEY"];
-      delete process.env["ENCRYPTION_KEY"];
+      mockGetEncryptionKeyOverride.mockImplementationOnce(() => {
+        throw new Error("ENCRYPTION_KEY is not set");
+      });
 
-      try {
-        await expect(
-          updateStripeSettings({
-            stripeEnabled: true,
-            stripeTestMode: false,
-            stripeWebhookSecret: "whsec_test",
-            stripeCurrency: "jpy",
-          }),
-        ).rejects.toMatchObject({
-          code: "VALIDATION",
-          message: expect.stringContaining("暗号化に失敗しました"),
-        });
-      } finally {
-        if (originalKey !== undefined) {
-          process.env["ENCRYPTION_KEY"] = originalKey;
-        }
-      }
+      await expect(
+        updateStripeSettings({
+          stripeEnabled: true,
+          stripeTestMode: false,
+          stripeWebhookSecret: "whsec_test",
+          stripeCurrency: "jpy",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: expect.stringContaining("暗号化に失敗しました"),
+      });
     });
   });
 });

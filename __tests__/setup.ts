@@ -18,12 +18,17 @@ process.env["SKIP_ENV_VALIDATION"] = "true"; // @t3-oss/env バリデーショ�
 process.env["BETTER_AUTH_URL"] = "http://localhost:3000";
 process.env["BETTER_AUTH_SECRET"] = "test-secret-key-for-testing-only";
 process.env["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test";
-// crypto.ts の getMasterKey() が process.env を直接参照するため、
-// @t3-oss/env-nextjs のスナップショット問題を回避する目的でプリロード時に設定
-process.env["ENCRYPTION_KEY"] = "a".repeat(64); // テスト用 64文字16進数キー
 
 // クライアント環境変数（テスト用ダミー値）
 process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
 process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
+
+// `crypto.ts` の `getMasterKey()` は `@/shared/lib/env/encryption` の
+// `getEncryptionKey()` 経由で `serverEnv.ENCRYPTION_KEY` を読む。
+// `serverEnv` はモジュールロード時 snapshot を取る公式仕様のため、test 環境では
+// helper を `mock.module` で固定値に置換 (個別 test の異常系で動的 override 可能)。
+mock.module("@/shared/lib/env/encryption", () => ({
+  getEncryptionKey: () => "a".repeat(64),
+}));
 
 export {};

@@ -27,6 +27,7 @@ import {
   randomBytes,
   createHmac,
 } from "crypto";
+import { getEncryptionKey } from "./env/encryption";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 
 const ALGORITHM = "aes-256-gcm";
@@ -43,21 +44,13 @@ interface EncryptOptions {
 /**
  * マスター暗号化キーを取得
  *
- * `process.env` 直参照を維持する理由: unit test (`crypto.test.ts` /
- * `integration-commands.test.ts`) が `delete process.env["ENCRYPTION_KEY"]` /
- * `process.env["ENCRYPTION_KEY"] = testKey` で runtime 動的変更を行うため、
- * `@t3-oss/env-nextjs` の lazy initialization (1 回評価固定) と非互換。
- * Length は `serverEnv.ENCRYPTION_KEY` の `.length(64)` startup 検証と
- * `validateProductionEnv()` で本番起動時に保証される (admin-login-gate.ts と同パターン)。
+ * SSoT 経由 (`@/shared/lib/env/encryption.getEncryptionKey`)。test での
+ * 「ENCRYPTION_KEY 未設定」シナリオは helper の `mock.module` 差し替えで
+ * 対応する (`process.env` 直参照は撤廃済)。Length は `serverEnv.ENCRYPTION_KEY`
+ * の `.length(64)` 検証と `validateProductionEnv()` で本番起動時に保証される。
  */
 function getMasterKey(): Buffer {
-  const key = process.env["ENCRYPTION_KEY"];
-  if (!key) {
-    throw new Error(
-      "ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32",
-    );
-  }
-  return Buffer.from(key, "hex");
+  return Buffer.from(getEncryptionKey(), "hex");
 }
 
 /**

@@ -1,9 +1,21 @@
 /**
  * 暗号化/復号化ユーティリティテスト
+ *
+ * `getEncryptionKey()` を `mock.module` で差し替えて runtime 動的変更を実現する。
+ * `setup.ts` でグローバル mock 済みのため通常 test は固定 64 文字 hex キーで動作、
+ * 異常系 test (未設定シナリオ) のみ `mockImplementationOnce` で個別 override する。
  */
 
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import {
+import { describe, test, expect, mock } from "bun:test";
+
+const TEST_KEY = "a".repeat(64);
+const mockGetEncryptionKey = mock<() => string>(() => TEST_KEY);
+
+mock.module("@/shared/lib/env/encryption", () => ({
+  getEncryptionKey: mockGetEncryptionKey,
+}));
+
+const {
   encrypt,
   decrypt,
   isEncrypted,
@@ -11,25 +23,9 @@ import {
   safeDecrypt,
   encryptApiKey,
   encryptStripeData,
-} from "@/shared/lib/crypto";
+} = await import("@/shared/lib/crypto");
 
 describe("crypto", () => {
-  const originalKey = process.env["ENCRYPTION_KEY"];
-  // テスト用の有効なキー（64文字の16進数）
-  const testKey = "a".repeat(64);
-
-  beforeAll(() => {
-    process.env["ENCRYPTION_KEY"] = testKey;
-  });
-
-  afterAll(() => {
-    if (originalKey) {
-      process.env["ENCRYPTION_KEY"] = originalKey;
-    } else {
-      delete process.env["ENCRYPTION_KEY"];
-    }
-  });
-
   describe("encrypt / decrypt", () => {
     test("平文を暗号化して復号化できる", () => {
       const plaintext = "Hello, World!";
@@ -140,13 +136,12 @@ describe("crypto", () => {
     });
 
     test("safeEncrypt は環境変数が無い場合nullを返す", () => {
-      const originalKey = process.env["ENCRYPTION_KEY"];
-      delete process.env["ENCRYPTION_KEY"];
+      mockGetEncryptionKey.mockImplementationOnce(() => {
+        throw new Error("ENCRYPTION_KEY is not set");
+      });
 
       const result = safeEncrypt("test");
       expect(result).toBeNull();
-
-      process.env["ENCRYPTION_KEY"] = originalKey || testKey;
     });
   });
 
