@@ -11,9 +11,9 @@ paths:
 
 ## 例外項目
 
-- `LayoutFields.tsx` / `auto-section-form.tsx` / `AutoArrayField.tsx` / `Auto{Boolean,Select,Group}Field.tsx` の `as unknown as FieldMetadata<...>` 境界 cast — `type-safety/assertion-bans.md` §6 conform `FieldMetadata<T>` generic invariance で明示許可 (Pure Component に渡すための境界変換、conform 公式仕様の invariant type parameter 制約)
-- `to-app-route.ts` 内部の `z.custom<Route<string>>` cast — `type-safety/assertion-bans.md` §5 SDK 境界 Zod typed schema で明示許可 (Next.js typedRoutes の generated 型を SSoT helper 1 箇所に集約)
-- `email/schemas.ts` 内部の `z.custom<CreateEmailOptions>` cast / `google-business-profile/schemas.ts` 内部の `z.custom<Schema$Location>` cast — 同 §5 で明示許可 (Resend / googleapis SDK 境界の SSoT helper)
+- `@/shared/lib/conform/typed-input-control.ts` 内部 4 helper (`useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField`) の `as unknown as FieldMetadata<...>` 境界 cast — `type-safety/assertion-bans.md` §5 conform `FieldMetadata<T>` generic invariance で明示許可 (conform 公式仕様の invariant type parameter 制約を helper 1 箇所に集約)。helper 外部 (auto-section-form / Auto\*Field / side-panel / content-types 等) での同 cast は禁止
+- `to-app-route.ts` 内部の `z.custom<Route<string>>` cast — `type-safety/assertion-bans.md` §4 SDK 境界 Zod typed schema で明示許可 (Next.js typedRoutes の generated 型を SSoT helper 1 箇所に集約)
+- `email/schemas.ts` 内部の `z.custom<CreateEmailOptions>` cast / `google-business-profile/schemas.ts` 内部の `z.custom<Schema$Location>` cast — 同 §4 で明示許可 (Resend / googleapis SDK 境界の SSoT helper)
 - `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
 - `select.tsx` の `required` — `frontend/project-design-config.md` で Radix 制約として除外
 - `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
