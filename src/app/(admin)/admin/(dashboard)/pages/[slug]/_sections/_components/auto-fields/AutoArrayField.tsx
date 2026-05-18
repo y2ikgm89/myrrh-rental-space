@@ -12,6 +12,10 @@ import type { z } from "zod";
 import type { FieldMetadata, FormMetadata } from "@conform-to/react";
 
 import { Button, Card, CardContent, Label } from "@/admin/components/ui";
+import {
+  getTypedFieldList,
+  getTypedFieldset,
+} from "@/shared/lib/conform/typed-input-control";
 
 // 動的 schema 用の getButtonProps 境界変換型
 // (型 ledger §5/§7 と同列の generic invariance 対応)。
@@ -67,10 +71,7 @@ export function AutoArrayField({
   const { min, max } = getArrayConstraints(schema);
 
   // conform: per-item アクセサ（各 item は FieldMetadata、getFieldset() で子フィールドを取得）
-  // 動的 schema 用の境界変換（getFieldList は FieldMetadata<T[]> 必須）
-  const items: ReadonlyArray<FieldMetadata<unknown>> = (
-    field as unknown as FieldMetadata<unknown[]>
-  ).getFieldList();
+  const items = getTypedFieldList(field);
   const canAdd = max === undefined || items.length < max;
   const canRemove = min === undefined || items.length > min;
   const constraintHint = (() => {
@@ -144,9 +145,7 @@ export function AutoArrayField({
         </div>
       )}
       {items.map((itemField, index) => {
-        const itemFieldset = (
-          itemField as unknown as FieldMetadata<Record<string, unknown>>
-        ).getFieldset();
+        const itemFieldset = getTypedFieldset(itemField);
         return (
           <Card key={itemField.key}>
             <CardContent className="pt-4 space-y-3">

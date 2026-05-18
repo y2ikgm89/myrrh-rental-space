@@ -5,14 +5,15 @@
  *
  * conform `FieldMetadata` ベース。コンテンツ幅の個別設定のみ。
  *
- * ## conform 0.10+ generic invariance 境界
+ * ## conform generic invariance 境界
  *
  * `FieldMetadata<T>` は invariant のため、Pure Component に値・error 文字列・
- * callback のみを渡し、Connected ラッパーで型ブリッジする。`as FieldMetadata<...>`
- * cast は `assertion-bans.md` §5 conform generic invariance の例外区分。
+ * callback のみを渡し、Connected ラッパーで型ブリッジする。境界 cast は
+ * `@/shared/lib/conform/typed-input-control` の `useTypedInputControl` helper
+ * 内に集約済 (assertion-bans.md §6)。
  */
 
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import { type FieldMetadata } from "@conform-to/react";
 import {
   Input,
   Label,
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 
 // =============================================================================
 // Pure Component（conform 非依存）
@@ -135,8 +137,8 @@ export function LayoutFields({
  * LayoutFieldsConnected — conform 接続ラッパー
  *
  * `FieldMetadata<T>` の generic invariance を Pure Component に Pure 値で
- * 透過する。`as FieldMetadata<...>` cast は `assertion-bans.md` §5 conform
- * generic invariance の例外区分。
+ * 透過する。境界 cast は `useTypedInputControl` helper 内に集約済
+ * (assertion-bans.md §6)。
  */
 export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
   fields,
@@ -145,16 +147,17 @@ export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
   fields: Record<string, FieldMetadata<unknown, TForm, string[]>>;
   disabled?: boolean;
 }) {
-  // generic invariance 境界 cast (§5 conform generic invariance、ledger 登録済)
-  const contentWidthField = fields["contentWidth"] as unknown as FieldMetadata<
-    string | null | undefined
-  >;
-  const contentWidthCustomField = fields[
-    "contentWidthCustom"
-  ] as unknown as FieldMetadata<number | null | undefined>;
-
-  const contentWidthControl = useInputControl(contentWidthField);
-  const contentWidthCustomControl = useInputControl(contentWidthCustomField);
+  const contentWidthField = fields["contentWidth"];
+  const contentWidthCustomField = fields["contentWidthCustom"];
+  if (!contentWidthField || !contentWidthCustomField) {
+    throw new Error(
+      "LayoutFieldsConnected: contentWidth / contentWidthCustom fields が見つかりません",
+    );
+  }
+  const contentWidthControl = useTypedInputControl(contentWidthField);
+  const contentWidthCustomControl = useTypedInputControl(
+    contentWidthCustomField,
+  );
 
   const contentWidth =
     typeof contentWidthControl.value === "string" && contentWidthControl.value

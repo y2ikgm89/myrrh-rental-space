@@ -8,7 +8,7 @@
  * として描画する（static options は使わない）。
  */
 
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import { type FieldMetadata } from "@conform-to/react";
 import type { z } from "zod";
 import {
   Label,
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 import { getSelectOptions } from "../zod-introspection";
 
 const DYNAMIC_NONE_VALUE = "__none__";
@@ -48,8 +49,7 @@ export function AutoSelectField({
   readonly error: string | undefined;
   readonly dynamicOptions?: ReadonlyArray<DynamicCategoryOption>;
 }) {
-  // conform useInputControl は string ベース FieldMetadata を要求するため境界変換
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   const isDynamic = dynamicOptions !== undefined;
   const staticOptions = isDynamic ? [] : getSelectOptions(schema);
 

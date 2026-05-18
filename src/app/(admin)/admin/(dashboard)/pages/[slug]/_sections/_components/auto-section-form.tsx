@@ -17,10 +17,10 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
   type FieldMetadata,
   type FormMetadata,
 } from "@conform-to/react";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod } from "@conform-to/zod/v4";
 import dynamic from "next/dynamic";
 import { z } from "zod";
@@ -688,7 +688,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Specialized field components (useInputControl ベース)
+// Specialized field components (useTypedInputControl ベース)
 // ─────────────────────────────────────────────────────────────
 
 function AutoImageFieldControlled({
@@ -706,7 +706,7 @@ function AutoImageFieldControlled({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   const currentValue = typeof control.value === "string" ? control.value : "";
 
   return (
@@ -746,7 +746,7 @@ function AutoColorField({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   const colorValue =
     typeof control.value === "string" && control.value.length > 0
       ? control.value
@@ -802,7 +802,7 @@ function AutoIconField({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   const value = typeof control.value === "string" ? control.value : "";
 
   return (
@@ -840,7 +840,7 @@ function AutoRichLabelField({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   // conform stores spans as JSON string in FormData transit; parse for editor
   const rawValue = control.value;
   const parsedSpans = parsePortableTextSpans(rawValue);
@@ -882,7 +882,7 @@ function AutoRichBlocksField({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useInputControl(field as unknown as FieldMetadata<string>);
+  const control = useTypedInputControl(field);
   const rawValue = control.value;
   const parsedBlocks = parsePortableTextBlocks(rawValue);
   const serializedValue = JSON.stringify(parsedBlocks);

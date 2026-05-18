@@ -57,7 +57,7 @@ import {
 // ─────────────────────────────────────────────────────────────
 
 /** 全 22 セクション定義（page-hero 含む） */
-const definitions: Record<string, SectionDefinition> = {
+const definitions = {
   "page-hero": {
     type: "page-hero",
     configSchema: pageHeroConfigSchema,
@@ -168,7 +168,26 @@ const definitions: Record<string, SectionDefinition> = {
     configSchema: locationListConfigSchema,
     metadata: locationListMetadata,
   },
-};
+} as const satisfies Record<string, SectionDefinition>;
+
+/** 全 section type の定義 map (typeof definitions 経由で literal key を保持)。 */
+export type SectionDefinitionMap = typeof definitions;
+
+/** 既存 section type の literal union (`"hero" | "hero-parallax" | ...`)。 */
+export type SectionTypeKey = keyof SectionDefinitionMap;
+
+const SECTION_TYPE_KEY_SET = new Set<string>(Object.keys(definitions));
+
+/**
+ * type 文字列が登録済みの section type かを判定する型ガード。
+ * `validateSectionConfig` で SectionConfig union への narrowing に使用。
+ */
+export function isSectionTypeKey(type: string): type is SectionTypeKey {
+  return SECTION_TYPE_KEY_SET.has(type);
+}
+
+/** definitions 自体を export (validations/section.ts の validateSectionConfig が narrowing 後に直接 lookup する用)。 */
+export { definitions as sectionDefinitions };
 
 // ─────────────────────────────────────────────────────────────
 // 公開 API
@@ -181,7 +200,7 @@ const definitions: Record<string, SectionDefinition> = {
 export function getSectionDefinition(
   type: string,
 ): SectionDefinition | undefined {
-  return definitions[type];
+  return isSectionTypeKey(type) ? definitions[type] : undefined;
 }
 
 /**
@@ -221,11 +240,11 @@ export function validateSectionConfig(
   type: string,
   config: unknown,
 ): { success: true; data: unknown } | { success: false; error: string } {
-  const def = definitions[type];
-  if (!def) {
+  if (!isSectionTypeKey(type)) {
     return { success: false, error: `Unknown section type: ${type}` };
   }
 
+  const def = definitions[type];
   const result = def.configSchema.safeParse(config);
   if (result.success) {
     return { success: true, data: result.data };
@@ -240,11 +259,11 @@ export function validateSectionConfig(
  * タイプが存在しない場合は空オブジェクトを返す。
  */
 export function getDefaultConfig(type: string): Record<string, unknown> {
-  const def = definitions[type];
-  if (!def) {
+  if (!isSectionTypeKey(type)) {
     return {};
   }
 
+  const def = definitions[type];
   const result = def.configSchema.safeParse({});
   if (result.success) {
     const data = result.data;
@@ -254,12 +273,4 @@ export function getDefaultConfig(type: string): Record<string, unknown> {
   }
 
   return {};
-}
-
-/**
- * セクション定義を追加登録する（CLI 拡張ポイント）。
- * 既存タイプを上書きする場合も同様に使用できる。
- */
-export function registerSectionDefinition(def: SectionDefinition): void {
-  definitions[def.type] = def;
 }

@@ -13,7 +13,10 @@
 
 import { z } from "zod";
 
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import {
+  isSectionTypeKey,
+  sectionDefinitions,
+} from "@/shared/lib/sections/registry";
 
 // =============================================================================
 // SectionType 定数（DB VARCHAR の SSoT）
@@ -232,8 +235,10 @@ export type SectionConfig =
 
 /**
  * type に応じた config を canonical schema で検証する。
- * 戻り値型を SectionConfig union に widening することで、呼び出し側の
- * `as SectionConfig` が不要になる（→ `type-safety.md` §`as` 許可例外）。
+ *
+ * `isSectionTypeKey` で string を `SectionTypeKey` literal union に narrowing し、
+ * `sectionDefinitions[type].configSchema.safeParse()` の戻り値型が全 22 schema の
+ * output union (= `SectionConfig`) に subtype 包含される構造で `as cast` を排除。
  */
 export function validateSectionConfig(
   type: string,
@@ -241,14 +246,13 @@ export function validateSectionConfig(
 ):
   | { success: true; data: SectionConfig }
   | { success: false; error: z.ZodError } {
-  const def = getSectionDefinition(type);
-  if (!def) {
+  if (!isSectionTypeKey(type)) {
     return { success: false, error: new z.ZodError([]) };
   }
+  const def = sectionDefinitions[type];
   const result = def.configSchema.safeParse(config);
   if (result.success) {
-    // 各 schema の output 型は個別だが、戻り値型注釈で SectionConfig に widening
-    return { success: true, data: result.data as SectionConfig };
+    return { success: true, data: result.data };
   }
   return { success: false, error: result.error };
 }
