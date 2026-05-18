@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  PublishSwitch,
   Table,
   TableBody,
   TableCell,
@@ -16,8 +15,8 @@ import {
   ClickableTableRow,
   stopRowClick,
 } from "@/admin/components/table";
-import { updateCouponActive } from "@/admin/actions/coupon";
-import { CouponTypeBadge, COUPON_STATUS_LABELS } from "./CouponStatusBadge";
+import { CouponTypeBadge } from "./CouponStatusBadge";
+import { CouponStateToggle } from "./CouponStateToggle";
 import { CouponActionCell } from "./CouponActionCell";
 import { CouponBulkActions } from "./CouponBulkActions";
 import type { CouponData } from "@/shared/domain/coupons/types";
@@ -149,15 +148,11 @@ export function CouponTable({ coupons }: CouponTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-center" onClick={stopRowClick}>
-                    <PublishSwitch
+                    <CouponStateToggle
                       id={coupon.id}
-                      isPublished={coupon.isActive}
-                      onToggle={updateCouponActive}
-                      resourceLabel={`${coupon.name} のステータス`}
-                      label={{
-                        published: COUPON_STATUS_LABELS[coupon.status],
-                        unpublished: COUPON_STATUS_LABELS.inactive,
-                      }}
+                      isActive={coupon.isActive}
+                      status={coupon.status}
+                      name={coupon.name}
                     />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
