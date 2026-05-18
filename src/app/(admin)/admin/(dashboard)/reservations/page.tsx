@@ -73,13 +73,13 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild className="min-h-10 sm:min-h-9">
+          <Button asChild>
             <Link href="/admin/reservations/new">
               <IconPlus className="mr-2 h-4 w-4" />
               新規予約
             </Link>
           </Button>
-          <Button variant="outline" asChild className="min-h-10 sm:min-h-9">
+          <Button variant="outline" asChild>
             <Link href="/admin/reservations/calendar">
               <IconCalendar className="mr-2 h-4 w-4" />
               カレンダー表示

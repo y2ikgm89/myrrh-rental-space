@@ -75,7 +75,7 @@ export default async function CouponsPage({ searchParams }: PageProps) {
             クーポンの作成・管理を行います
           </p>
         </div>
-        <Button asChild className="min-h-10 sm:min-h-9">
+        <Button asChild>
           <Link href="/admin/coupons/new">
             <IconPlus className="mr-2 h-4 w-4" />
             新規クーポン

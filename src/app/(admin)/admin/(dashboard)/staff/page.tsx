@@ -106,7 +106,7 @@ export default async function StaffPage({ searchParams }: PageProps) {
             管理画面にアクセスできるスタッフアカウントを管理します
           </p>
         </div>
-        <Button asChild className="min-h-10 sm:min-h-9">
+        <Button asChild>
           <Link href="/admin/staff/new">スタッフを招待</Link>
         </Button>
       </div>
