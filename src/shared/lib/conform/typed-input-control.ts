@@ -13,14 +13,14 @@ import { useInputControl, type FieldMetadata } from "@conform-to/react";
  * (既存 LayoutFields / AutoBooleanField の `typeof control.value === "string"`
  * パターンと同等)。
  *
- * ledger §6 conform `FieldMetadata<T>` generic invariance の唯一の許可場所。
+ * ledger §5 conform `FieldMetadata<T>` generic invariance の唯一の許可場所。
  * helper 外部で `as unknown as FieldMetadata<...>` を書くことは禁止。
  * 検知は `__tests__/unit/architecture-boundaries.test.ts` の grep gate。
  */
 export function useTypedInputControl(
   field: FieldMetadata<unknown>,
 ): ReturnType<typeof useInputControl<string>> {
-  // §6 generic invariance — 唯一の境界 cast
+  // §5 generic invariance — 唯一の境界 cast
   return useInputControl(field as unknown as FieldMetadata<string>);
 }
 
@@ -35,7 +35,7 @@ export function useTypedInputControl(
 export function getTypedFieldList<T>(
   field: FieldMetadata<unknown>,
 ): ReadonlyArray<FieldMetadata<T>> {
-  // §6 generic invariance — 唯一の境界 cast
+  // §5 generic invariance — 唯一の境界 cast
   const items = (field as unknown as FieldMetadata<unknown[]>).getFieldList();
   return items as unknown as ReadonlyArray<FieldMetadata<T>>;
 }
@@ -51,7 +51,7 @@ export function getTypedFieldList<T>(
 export function getTypedFieldset<T extends Record<string, unknown>>(
   field: FieldMetadata<unknown>,
 ): { readonly [K in keyof T]: FieldMetadata<T[K]> } {
-  // §6 generic invariance — 唯一の境界 cast
+  // §5 generic invariance — 唯一の境界 cast
   const fieldset = (
     field as unknown as FieldMetadata<Record<string, unknown>>
   ).getFieldset();
@@ -69,6 +69,6 @@ export function getTypedFieldset<T extends Record<string, unknown>>(
 export function asTypedField<T>(
   field: FieldMetadata<unknown>,
 ): FieldMetadata<T> {
-  // §6 generic invariance — 唯一の境界 cast
+  // §5 generic invariance — 唯一の境界 cast
   return field as unknown as FieldMetadata<T>;
 }

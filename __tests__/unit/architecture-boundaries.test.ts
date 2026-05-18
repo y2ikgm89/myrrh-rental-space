@@ -1843,8 +1843,8 @@ describe("architecture boundaries", () => {
   });
 });
 
-describe("assertion-bans §6 conform FieldMetadata generic invariance gate", () => {
-  test("§6 FieldMetadata cast は typed-input-control helper 内部のみ許可", () => {
+describe("assertion-bans §5 conform FieldMetadata generic invariance gate", () => {
+  test("§5 FieldMetadata cast は typed-input-control helper 内部のみ許可", () => {
     const glob = new Bun.Glob("**/*.{ts,tsx}");
     const allowedFile = join(
       SRC_ROOT,
