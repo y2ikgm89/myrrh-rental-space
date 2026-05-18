@@ -68,6 +68,8 @@ paths:
 
 **識別 → 分類 → スペック → 実績 → 状態 → 操作**
 
+全テーブル例外なくこの順序に統一する（旧「ワークフロー系テーブルはステータスを左端に配置」例外は撤回済み、2026-05-19）。状態（PublishSwitch / StatusBadge / CouponStateToggle 等）は **必ず操作カラムの直前**に配置し、識別・分類・スペック・実績カラムが左、状態・操作カラムが右という一貫した視覚パターンで横断統一する。
+
 | グループ | 例                                         |
 | -------- | ------------------------------------------ |
 | 識別     | 名前・タイトル・スラッグ（画像サムネ併記） |
@@ -77,7 +79,7 @@ paths:
 | 状態     | 公開/非公開スイッチ・ステータス Badge      |
 | 操作     | `ActionDropdown`（常時右端固定）           |
 
-ステータス Badge を**左端**に配置するパターン（予約・お問い合わせ等、状態が最重要なワークフロー系テーブル）は例外として許可。**適用対象**: Post / News / Terms / FAQ / Page / Inquiry / Reservation。参照実装: `SpaceTableDesktop`（スペース管理）、`LocationTable`（場所管理）。
+**参照実装** (右配置 canonical で統一済 = 全テーブル): `CouponTable` / `SpaceTableDesktop` / `LocationTable` / `CategoryTable` / `PostTable` / `NewsTable` / `TermsTable` / `FaqCategoryItemsTable` / `PageListTable` / `InquiryTable` / `CustomerTable` / `EventTable` / `ReservationTable`。**禁止**: 旧「ワークフロー系テーブルはステータスを左端に配置する例外」パターンの復活（2026-05-19 全 10 テーブル右配置で統一済）。
 
 ## インラインコントロールのモバイル非表示
 

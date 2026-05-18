@@ -75,9 +75,6 @@ export function EventTable({ events }: EventTableProps) {
                       aria-label={`${event.title} を選択`}
                     />
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <EventStatusBadge status={event.status} />
-                  </TableCell>
                   <TableCell>
                     <div>
                       <div className="max-w-xs truncate font-medium">
@@ -100,6 +97,9 @@ export function EventTable({ events }: EventTableProps) {
                       space: event.space,
                       addressDetail: event.addressDetail,
                     }) ?? "-"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <EventStatusBadge status={event.status} />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
                     <EventActionCell eventId={event.id} status={event.status} />

@@ -40,7 +40,6 @@ export function PostTableHeader({
             aria-label="すべての行を選択"
           />
         </TableHead>
-        <TableHead>ステータス</TableHead>
         <SortableColumnHeader
           column="title"
           currentSortBy={params.sortBy}
@@ -69,6 +68,7 @@ export function PostTableHeader({
         >
           登録日
         </SortableColumnHeader>
+        <TableHead>ステータス</TableHead>
         <TableHead>操作</TableHead>
       </TableRow>
     </TableHeader>

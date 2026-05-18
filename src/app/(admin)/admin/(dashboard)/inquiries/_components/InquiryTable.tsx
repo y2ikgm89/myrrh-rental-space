@@ -74,7 +74,6 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                     aria-label="すべての行を選択"
                   />
                 </TableHead>
-                <TableHead>ステータス</TableHead>
                 <TableHead>件名</TableHead>
                 <TableHead className="hidden md:table-cell">お名前</TableHead>
                 <TableHead className="hidden lg:table-cell">
@@ -82,6 +81,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                 </TableHead>
                 <TableHead className="hidden md:table-cell">顧客</TableHead>
                 <TableHead className="hidden md:table-cell">受付日時</TableHead>
+                <TableHead>ステータス</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -98,9 +98,6 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                       onChange={() => toggleOne(inquiry.id)}
                       aria-label={`${inquiry.subject} を選択`}
                     />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <InquiryStatusBadge status={inquiry.status} />
                   </TableCell>
                   <TableCell>
                     <div className="max-w-xs truncate font-medium">
@@ -143,6 +140,9 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {formatDateTimeShort(inquiry.createdAt)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <InquiryStatusBadge status={inquiry.status} />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
                     <InquiryActionCell inquiryId={inquiry.id} />
