@@ -7,11 +7,6 @@ paths:
 
 > nuqs 2.8.9 / Next.js 16.2 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **5 基本パターン (useQueryState / useQueryStates / Server Component cache / ネスト SC / 共有 parsers)** — `nuqs-patterns/usage-patterns.md`
-> - **組み込み / カスタム parser + enum フィルター best practice + プロジェクト標準パーサー集約** — `nuqs-patterns/parsers.md`
-
 ## 概要
 
 nuqs は URL 状態管理ライブラリ。クエリパラメータを型安全に管理。

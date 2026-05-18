@@ -10,11 +10,6 @@ paths:
 
 > Zod 4.3 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **基本スキーマ + 複合 + .extend() 合成 + URL + datetime-local 連携 (JST 変換)** — `zod-patterns/validation-schemas/basics.md`
-> - **useFieldArray + safeParse + Discriminated default + prefault + Length introspection + .default([]) skip + Read/Write 分離** — `zod-patterns/validation-schemas/advanced.md`
-
 ## URL パラメータバリデーション
 
 ```typescript

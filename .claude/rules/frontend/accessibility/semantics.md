@@ -10,10 +10,6 @@ paths:
 
 # Accessibility — セマンティック HTML / aria-\*
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **セマンティック HTML（見出し階層 / ランドマーク / button vs link / Block Link Card Overlay / nav vs tab WAI-ARIA 区別）** — `frontend/accessibility/semantics/html-elements.md`
-
 ## aria-\* 属性
 
 ### aria-label / aria-labelledby

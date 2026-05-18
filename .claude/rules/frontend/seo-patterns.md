@@ -11,13 +11,6 @@ paths:
 
 > JSON-LD @graph / microdata / NAP 一貫性 / MEO 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **JSON-LD @graph + microdata 配置と原則** — `frontend/seo/structured-data.md`
-> - **NAP + per-location LocalBusiness + OpeningHours + amenityFeature** — `frontend/seo/local-business.md`
-> - **スペース Product / 記事 Article / NewsArticle / Breadcrumb JSON-LD** — `frontend/seo/article-product.md`
-> - **メタデータ生成（generatePageMetadata / generateArticleMetadata）** — `frontend/seo/metadata-factory.md`
-
 ## JsonLd コンポーネント一覧
 
 `@/public/components/seo/JsonLd.tsx` で提供:

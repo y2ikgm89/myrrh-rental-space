@@ -13,13 +13,6 @@ paths:
 
 > React 19 `useActionState` + conform `useForm` + `executeConformMutation` 統合パターンが canonical。React Hook Form (`react-hook-form` / `@hookform/resolvers`) は `package.json` から完全削除済、新規利用不可。動的配列は ① **`form.insert/remove/reorder` + `getFieldList()` + `getFieldset()`** (DiscountSection で確立、LocationForm canonical で dnd-kit + `form.reorder({ name, from, to })` 完成) または ② **`useState<{key, ...}[]>` + 安定 key + hidden input append + schema preprocess** (SpaceEditForm canonical、MediaPicker / IconPickerField 等複雑 widget 連携時、`crypto.randomUUID()` key で React reconciliation + dnd-kit 整合) のいずれかを採用。Page 遷移 form の成功時遷移は **server-side `redirect(toAppRoute(...))`** (client `router.push` 不要)。canonical schema の **in-place preprocess** で FormData transit と object literal (test) を両対応 (LocationForm 確立、SpaceEditForm に水平展開)。**5+ tab の大型 form は monolithic 単一 file** (LocationForm / SpaceEditForm canonical、1100-1800 行規模、tab 分割 + prop drilling より maintainable、React Compiler が中規模 component のメモ化を自動処理)。詳細パターンは [`server-actions/implementation/forms-and-public.md`](../../server-actions/implementation/forms-and-public.md) §管理フォームの canonical (conform) 参照。
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **詳細・編集・新規作成ページ標準構造** — `frontend/admin-ui/forms/page-structure.md`
-> - **2 カラム + 参照表示 + Relation FK + 親子 FK カスケード** — `frontend/admin-ui/forms/two-column-and-relations.md`
-> - **ToggleGroup / aria 注入 / FormDescription / Destructive / 画像 picker / fieldset / Input adornment** — `frontend/admin-ui/forms/widgets.md`
-> - **設定セクション conform `useActionState` パターン** — `frontend/admin-ui/forms/settings-sections.md`
-
 ## Server Actions の認証パターン (conform canonical)
 
 管理画面の書き込み系 Server Actions は **`(prev, formData) => SubmissionResult` signature** で `executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:

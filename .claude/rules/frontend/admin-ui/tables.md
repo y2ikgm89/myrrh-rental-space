@@ -11,14 +11,6 @@ paths:
 
 > ページネーション + Status / Type Badge への icon prefix + サブルール一覧。
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **2 層ラッパー + Progressive Disclosure + カラム順 + インライン非表示** — `frontend/admin-ui/tables/responsive.md`
-> - **ActionDropdown + Dialog 起動 + インライン制御共存** — `frontend/admin-ui/tables/actions.md`
-> - **ソータブルリスト + BulkActions + カラムソート** — `frontend/admin-ui/tables/sortable-bulk.md`
-> - **複数フィルター共存 + 標準フィルターバー順序** — `frontend/admin-ui/tables/filtering.md`
-> - **ClickableTableRow + stopRowClick + destination URL** — `frontend/admin-ui/tables/row-click.md`
-
 ## ページネーションコンポーネント
 
 共通コンポーネント `Pagination` (`@/admin/components/ui/Pagination`) を使用（Carbon Design 準拠、range text + perPage Select + Prev/番号/Next の 3 ゾーン）。required props は `currentPage` / `totalPages` / `total` / `perPage` の 4 つ（`perPage` は表示テキスト `start-end / 全 N 件` 算出に必須）。

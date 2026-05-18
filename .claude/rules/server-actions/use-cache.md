@@ -11,11 +11,6 @@ paths:
 
 > Next.js 16 新 API / CACHE_TAGS SSoT
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **'use cache' + cacheTag (CACHE_TAGS / getCacheTag) + cacheLife プリセット (CACHE_LIFE.\*)** — `server-actions/use-cache/config-and-tags.md`
-> - **updateTag SA / revalidateTag SA+RH + 優先順位 + revalidatePath 最終手段** — `server-actions/use-cache/invalidation.md`
-
 ## リソース別 SSoT helper / 定数
 
 ### Settings — `CACHE_TAGS.SETTINGS` は廃止済み

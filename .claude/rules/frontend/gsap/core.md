@@ -13,10 +13,6 @@ paths:
 
 > GSAP 3.14.2 / @gsap/react 2.1.2 / ScrollTrigger / Lenis 1.3.19 対応（`package.json` と `bun.lock` の解決版に合わせる）
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **基本ルール (useGSAP / scope / gsap-config 経由 import) + アニメーション定数 (DURATION / EASE / STAGGER / SCROLL_TRIGGER / PARALLAX)** — `frontend/gsap/core/rules-and-constants.md`
-
 ## レスポンシブ規約
 
 | 機能             | デスクトップ                           | モバイル                        |
