@@ -124,14 +124,13 @@ describe("serialize", () => {
     });
 
     test("null をそのまま返す", () => {
-      // toPlainArray の型は T[] だが null/undefined をそのまま返す実装
-      // unknown 経由で型制約を回避
-      const result: unknown = toPlainArray(null as any);
+      // toPlainArray の null/undefined overload で型安全に呼べる
+      const result: unknown = toPlainArray(null);
       expect(result).toBe(null);
     });
 
     test("undefined をそのまま返す", () => {
-      const result: unknown = toPlainArray(undefined as any);
+      const result: unknown = toPlainArray(undefined);
       expect(result).toBe(undefined);
     });
 

@@ -6,7 +6,12 @@
 
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
-import { $getRoot, $createParagraphNode } from "lexical";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   FeatureIconListContainerNode,
   FeatureIconItemNode,
@@ -15,6 +20,44 @@ import {
   $isFeatureIconListContainerNode,
   $isFeatureIconItemNode,
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/FeatureIconListNode";
+
+/**
+ * FeatureIconList の serialize 結果。$config() の flat: true により stateConfigs
+ * が top-level に展開される。default 値は省略されるため optional 宣言。
+ */
+type SerializedFeatureIconListContainerNode =
+  SerializedElementNode<SerializedFeatureIconItemNode> & {
+    type: "feature-icon-list-container";
+    columns?: number;
+    accentColor?: string;
+    iconSize?: string;
+  };
+
+type SerializedFeatureIconItemNode =
+  SerializedElementNode<SerializedLexicalNode> & {
+    type: "feature-icon-item";
+    iconName?: string;
+  };
+
+function assertSerializedFeatureIconListContainerNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedFeatureIconListContainerNode {
+  if (node?.type !== "feature-icon-list-container") {
+    throw new Error(
+      `Expected SerializedFeatureIconListContainerNode, got ${String(node?.type)}`,
+    );
+  }
+}
+
+function assertSerializedFeatureIconItemNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedFeatureIconItemNode {
+  if (node?.type !== "feature-icon-item") {
+    throw new Error(
+      `Expected SerializedFeatureIconItemNode, got ${String(node?.type)}`,
+    );
+  }
+}
 
 function createEditor() {
   return createHeadlessEditor({
@@ -38,8 +81,8 @@ describe("FeatureIconListContainerNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeJson = json.root.children[0] as any;
+    const nodeJson = json.root.children[0];
+    assertSerializedFeatureIconListContainerNode(nodeJson);
     expect(nodeJson.type).toBe("feature-icon-list-container");
     expect(nodeJson.columns).toBe(3);
     expect(nodeJson.accentColor).toBe("blue");
@@ -73,8 +116,10 @@ describe("FeatureIconItemNode", () => {
       $getRoot().append(container);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const itemJson = (json.root.children[0] as any).children[0];
+    const containerJson = json.root.children[0];
+    assertSerializedFeatureIconListContainerNode(containerJson);
+    const itemJson = containerJson.children[0];
+    assertSerializedFeatureIconItemNode(itemJson);
     expect(itemJson.type).toBe("feature-icon-item");
     expect(itemJson.iconName).toBe("IconClock");
   });

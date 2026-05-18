@@ -6,7 +6,12 @@
 
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
-import { $getRoot, $createParagraphNode } from "lexical";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   TestimonialContainerNode,
   TestimonialItemNode,
@@ -15,6 +20,48 @@ import {
   $isTestimonialContainerNode,
   $isTestimonialItemNode,
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/TestimonialNode";
+
+/**
+ * Testimonial の serialize 結果。$config() の flat: true により stateConfigs
+ * が top-level に展開される。default 値は省略されるため optional 宣言。
+ */
+type SerializedTestimonialContainerNode =
+  SerializedElementNode<SerializedTestimonialItemNode> & {
+    type: "testimonial-container";
+    layout?: string;
+    columns?: number;
+    accentColor?: string;
+  };
+
+type SerializedTestimonialItemNode =
+  SerializedElementNode<SerializedLexicalNode> & {
+    type: "testimonial-item";
+    authorName?: string;
+    authorTitle?: string;
+    avatarUrl?: string;
+    rating?: number;
+    date?: string;
+  };
+
+function assertSerializedTestimonialContainerNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedTestimonialContainerNode {
+  if (node?.type !== "testimonial-container") {
+    throw new Error(
+      `Expected SerializedTestimonialContainerNode, got ${String(node?.type)}`,
+    );
+  }
+}
+
+function assertSerializedTestimonialItemNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedTestimonialItemNode {
+  if (node?.type !== "testimonial-item") {
+    throw new Error(
+      `Expected SerializedTestimonialItemNode, got ${String(node?.type)}`,
+    );
+  }
+}
 
 function createEditor() {
   return createHeadlessEditor({
@@ -38,8 +85,8 @@ describe("TestimonialContainerNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeJson = json.root.children[0] as any;
+    const nodeJson = json.root.children[0];
+    assertSerializedTestimonialContainerNode(nodeJson);
     expect(nodeJson.type).toBe("testimonial-container");
     expect(nodeJson.layout).toBe("list");
     expect(nodeJson.columns).toBe(3);
@@ -85,8 +132,10 @@ describe("TestimonialItemNode", () => {
       $getRoot().append(container);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const itemJson = (json.root.children[0] as any).children[0];
+    const containerJson = json.root.children[0];
+    assertSerializedTestimonialContainerNode(containerJson);
+    const itemJson = containerJson.children[0];
+    assertSerializedTestimonialItemNode(itemJson);
     expect(itemJson.type).toBe("testimonial-item");
     expect(itemJson.authorName).toBe("山田太郎");
     expect(itemJson.authorTitle).toBe("CEO");

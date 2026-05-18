@@ -7,12 +7,40 @@
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
 import { HeadingNode } from "@lexical/rich-text";
-import { $getRoot, $createParagraphNode } from "lexical";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   CoverNode,
   $createCoverNode,
   $isCoverNode,
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/CoverNode";
+
+/**
+ * CoverNode の serialize 結果。$config() の flat: true により stateConfigs が
+ * top-level に展開されるため、SerializedElementNode を拡張して各 state プロパティ
+ * を optional で持つ shape を test 内で宣言する (default 値は省略される)。
+ */
+type SerializedCoverNode = SerializedElementNode<SerializedLexicalNode> & {
+  type: "cover";
+  backgroundImageUrl?: string;
+  overlayColor?: string;
+  overlayOpacity?: number;
+  minHeight?: string;
+  contentAlign?: string;
+  contentPosition?: string;
+};
+
+function assertSerializedCoverNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedCoverNode {
+  if (node?.type !== "cover") {
+    throw new Error(`Expected SerializedCoverNode, got ${String(node?.type)}`);
+  }
+}
 
 function createEditor() {
   return createHeadlessEditor({
@@ -41,8 +69,8 @@ describe("CoverNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeJson = json.root.children[0] as any;
+    const nodeJson = json.root.children[0];
+    assertSerializedCoverNode(nodeJson);
     expect(nodeJson.type).toBe("cover");
     expect(nodeJson.backgroundImageUrl).toBe("https://example.com/bg.jpg");
     expect(nodeJson.overlayColor).toBe("blue");
@@ -63,8 +91,8 @@ describe("CoverNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeJson = json.root.children[0] as any;
+    const nodeJson = json.root.children[0];
+    assertSerializedCoverNode(nodeJson);
     expect(nodeJson.backgroundImageUrl).toBe("https://example.com/cover.png");
   });
 
