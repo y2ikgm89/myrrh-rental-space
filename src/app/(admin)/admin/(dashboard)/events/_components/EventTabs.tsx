@@ -1,29 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import type { EventTabFilter } from "@/shared/lib/nuqs";
-import { cn } from "@/shared/lib/cn";
+import { NavTabs, type NavTabItem } from "@/admin/components/ui";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+
+// =============================================================================
+// 型・定数
+// =============================================================================
 
 type EventTabsProps = {
   activeTab: EventTabFilter;
 };
 
-const TAB_ITEMS: { value: EventTabFilter; label: string }[] = [
+const TAB_BASE: readonly { value: EventTabFilter; label: string }[] = [
   { value: "open", label: "開催" },
   { value: "past", label: "終了" },
   { value: "draft", label: "下書き" },
   { value: "cancelled", label: "キャンセル" },
   { value: "all", label: "すべて" },
 ];
-
-const tabTriggerClass = cn(
-  "inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-  "hover:bg-background/50",
-);
 
 function hrefForTab(tab: EventTabFilter, current: URLSearchParams): Route {
   const next = new URLSearchParams(current.toString());
@@ -37,38 +34,29 @@ function hrefForTab(tab: EventTabFilter, current: URLSearchParams): Route {
   return toAppRoute(qs ? `/admin/events?${qs}` : "/admin/events");
 }
 
+// =============================================================================
+// コンポーネント
+// =============================================================================
+
 /**
  * イベント管理のタブナビゲーション。
- * 時間軸 + ステータスでイベントを分類し、`nav` + `aria-current="page"` でセマンティック実装。
- * フィルタ（検索・期間）は他タブにも保持、ページ番号・ソート・ステータス Select は切替時にリセット。
+ *
+ * 共通 `NavTabs` primitive 経由で実装（WAI-ARIA APG: ページ遷移は `role="tab"` ではなく
+ * `nav` + `aria-current="page"`、`accessibility/semantics/html-elements.md` §nav vs tab 区別）。
+ * 時間軸 + ステータスでイベントを分類。フィルタ（検索・期間）は他タブにも保持、
+ * ページ番号・ソート・ステータス Select は切替時にリセット。
  */
 export function EventTabs({ activeTab }: EventTabsProps) {
   const searchParams = useSearchParams();
+  const items: readonly NavTabItem<EventTabFilter>[] = TAB_BASE.map(
+    ({ value, label }) => ({
+      value,
+      label,
+      href: hrefForTab(value, searchParams),
+    }),
+  );
 
   return (
-    <nav aria-label="イベント分類">
-      <ul className="inline-flex w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground">
-        {TAB_ITEMS.map(({ value, label }) => {
-          const isActive = activeTab === value;
-          return (
-            <li key={value}>
-              <Link
-                href={hrefForTab(value, searchParams)}
-                scroll={false}
-                prefetch={false}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  tabTriggerClass,
-                  isActive &&
-                    "bg-background text-foreground shadow-sm hover:bg-background",
-                )}
-              >
-                {label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <NavTabs items={items} activeValue={activeTab} ariaLabel="イベント分類" />
   );
 }
