@@ -27,6 +27,7 @@ import {
   randomBytes,
   createHmac,
 } from "crypto";
+import { serverEnv } from "@/shared/lib/env/server";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 
 const ALGORITHM = "aes-256-gcm";
@@ -42,15 +43,16 @@ interface EncryptOptions {
 
 /**
  * マスター暗号化キーを取得
+ *
+ * Length は serverEnv の z.string().length(64) で起動時検証済み。
  */
 function getMasterKey(): Buffer {
-  const key = process.env["ENCRYPTION_KEY"];
+  const key = serverEnv.ENCRYPTION_KEY;
   if (!key) {
     throw new Error(
       "ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32",
     );
   }
-  // Length is guaranteed by Zod schema (.length(64)) validated at startup
   return Buffer.from(key, "hex");
 }
 

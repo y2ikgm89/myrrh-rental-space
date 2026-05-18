@@ -2,6 +2,8 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { serverEnv } from "@/shared/lib/env/server";
+
 /**
  * Signup terms agreement cookie
  *
@@ -34,16 +36,6 @@ function isSignupTermsCookiePayload(
   );
 }
 
-function getSecret(): string {
-  const secret = process.env["BETTER_AUTH_SECRET"];
-  if (!secret || secret.length < 32) {
-    throw new Error(
-      "BETTER_AUTH_SECRET is not configured for signup terms cookie",
-    );
-  }
-  return secret;
-}
-
 function base64UrlEncode(bytes: Buffer): string {
   return bytes
     .toString("base64")
@@ -59,7 +51,9 @@ function base64UrlDecode(value: string): Buffer {
 }
 
 function sign(payload: string): string {
-  return createHmac("sha256", getSecret()).update(payload).digest("hex");
+  return createHmac("sha256", serverEnv.BETTER_AUTH_SECRET)
+    .update(payload)
+    .digest("hex");
 }
 
 export function encodeSignupTermsCookie(termsIds: readonly string[]): string {
