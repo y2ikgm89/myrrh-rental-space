@@ -28,6 +28,10 @@ import {
   RegistrationStatus,
 } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
+import {
+  asPrismaInputJsonValue,
+  parsePrismaInputJson,
+} from "@/shared/db/prisma-input-json";
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
@@ -51,9 +55,10 @@ function buildSeedDescription(text: string) {
   const collapsed = text.replace(/\s+/g, " ").trim();
   const descriptionHtml = buildParagraphHtml(collapsed);
   return {
-    descriptionJson: JSON.parse(
+    descriptionJson: parsePrismaInputJson(
       buildParagraphEditorStateJson(collapsed),
-    ) as Prisma.InputJsonValue,
+      "seed description JSON が不正です",
+    ),
     descriptionHtml,
     descriptionPlainText: stripHtmlToText(descriptionHtml, 200),
   };
@@ -69,7 +74,7 @@ function buildLexicalContent(text: string) {
     ? buildParagraphEditorStateJson(paragraphs.join(" "))
     : buildParagraphEditorStateJson(text);
   return {
-    json: JSON.parse(json) as Prisma.InputJsonValue,
+    json: parsePrismaInputJson(json, "seed lexical JSON が不正です"),
     html,
   };
 }
@@ -2281,9 +2286,10 @@ async function seedNews() {
     if (!existing) {
       // Lexical JSON 同時保存（CLAUDE.md ハードルール: contentHtml 単独禁止）
       const plainText = stripHtmlToText(news.contentHtml, 4000);
-      const contentJson = JSON.parse(
+      const contentJson = parsePrismaInputJson(
         buildParagraphEditorStateJson(plainText),
-      ) as Prisma.InputJsonValue;
+        "seed news contentJson が不正です",
+      );
       await prisma.news.create({
         data: {
           ...news,
@@ -2743,9 +2749,10 @@ async function seedBlog() {
       const rawContent =
         typeof postData.contentHtml === "string" ? postData.contentHtml : "";
       const plainText = stripHtmlToText(rawContent, 4000);
-      const contentJson = JSON.parse(
+      const contentJson = parsePrismaInputJson(
         buildParagraphEditorStateJson(plainText),
-      ) as Prisma.InputJsonValue;
+        "seed post contentJson が不正です",
+      );
 
       await prisma.post.create({
         data: {
@@ -3019,9 +3026,10 @@ async function seedSystemPageSections() {
         for (const section of homeSections) {
           const plain = section.content?.trim() ?? "";
           const contentJson = plain
-            ? (JSON.parse(
+            ? parsePrismaInputJson(
                 buildParagraphEditorStateJson(plain),
-              ) as Prisma.InputJsonValue)
+                "seed homepage section contentJson が不正です",
+              )
             : null;
           await prisma.section.create({
             data: {
@@ -3068,9 +3076,10 @@ async function seedSystemPageSections() {
     for (const section of defaults) {
       const plain = section.content?.trim() ?? "";
       const contentJson = plain
-        ? (JSON.parse(
+        ? parsePrismaInputJson(
             buildParagraphEditorStateJson(plain),
-          ) as Prisma.InputJsonValue)
+            "seed system page section contentJson が不正です",
+          )
         : null;
       await prisma.section.create({
         data: {
@@ -3724,7 +3733,7 @@ async function seedMedia() {
         usage: entry.usage,
         alt: entry.alt,
         title: entry.title,
-        tags: entry.tags as Prisma.InputJsonValue,
+        tags: asPrismaInputJsonValue(entry.tags, "seed media tags が不正です"),
         ...(uploader ? { uploadedBy: uploader.id } : {}),
       },
     });
@@ -3776,9 +3785,10 @@ async function seedBlockTemplates() {
       data: {
         name: template.name,
         description: template.description,
-        nodeJson: JSON.parse(
+        nodeJson: parsePrismaInputJson(
           buildParagraphEditorStateJson(template.content),
-        ) as Prisma.InputJsonValue,
+          "seed block template nodeJson が不正です",
+        ),
         ...(creator ? { createdBy: creator.id } : {}),
       },
     });
@@ -4278,7 +4288,12 @@ async function seedPostVersions() {
         version: 1,
         contentHtml: post.contentHtml,
         ...(post.contentJson !== null
-          ? { contentJson: post.contentJson as Prisma.InputJsonValue }
+          ? {
+              contentJson: asPrismaInputJsonValue(
+                post.contentJson,
+                "seed post version contentJson が不正です",
+              ),
+            }
           : {}),
         ...(post.authorId !== null ? { createdBy: post.authorId } : {}),
       },
@@ -4327,7 +4342,12 @@ async function seedNewsVersions() {
         version: 1,
         contentHtml: news.contentHtml,
         ...(news.contentJson !== null
-          ? { contentJson: news.contentJson as Prisma.InputJsonValue }
+          ? {
+              contentJson: asPrismaInputJsonValue(
+                news.contentJson,
+                "seed news version contentJson が不正です",
+              ),
+            }
           : {}),
         ...(admin?.id ? { createdBy: admin.id } : {}),
       },
