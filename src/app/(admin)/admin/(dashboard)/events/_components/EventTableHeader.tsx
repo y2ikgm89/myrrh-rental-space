@@ -45,7 +45,6 @@ export function EventTableHeader({
             aria-label="すべての行を選択"
           />
         </TableHead>
-        <TableHead>ステータス</TableHead>
         <SortableColumnHeader
           column="title"
           currentSortBy={params.sortBy}
@@ -65,6 +64,7 @@ export function EventTableHeader({
         </SortableColumnHeader>
         <TableHead className="hidden md:table-cell">終了日時</TableHead>
         <TableHead className="hidden lg:table-cell">場所</TableHead>
+        <TableHead>ステータス</TableHead>
         <TableHead>操作</TableHead>
       </TableRow>
     </TableHeader>

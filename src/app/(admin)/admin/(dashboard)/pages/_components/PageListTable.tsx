@@ -3,8 +3,8 @@
 /**
  * ページ一覧テーブル
  *
- * カラム順（admin-ui-patterns.md §テーブルカラム順序、ワークフロー系例外）:
- *   checkbox → ステータス → タイトル → 種別 → スラッグ(sm+) → セクション数(md+) → 更新日時(md+) → 操作
+ * カラム順（admin-ui-patterns.md §テーブルカラム順序、canonical 順序）:
+ *   checkbox → タイトル → 種別 → スラッグ(sm+) → セクション数(md+) → 更新日時(md+) → ステータス → 操作
  *
  * - 空状態は `EmptyState` を表示し CreatePageDialog を起動する
  * - 列ヘッダーソートは PageTableHeader + nuqs `useQueryStates` で URL 同期
@@ -127,18 +127,6 @@ export function PageListTable({
                         />
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {page.isSystemPage && isHomepage ? (
-                        <Badge variant="success">公開中</Badge>
-                      ) : (
-                        <PublishSwitch
-                          id={page.slug}
-                          isPublished={page.isPublished}
-                          onToggle={updatePagePublished}
-                          resourceLabel={`${page.title} の公開状態`}
-                        />
-                      )}
-                    </TableCell>
                     <TableCell className="font-medium">{page.title}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {page.isSystemPage ? (
@@ -155,6 +143,18 @@ export function PageListTable({
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {formatDateTimeShort(page.updatedAt)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {page.isSystemPage && isHomepage ? (
+                        <Badge variant="success">公開中</Badge>
+                      ) : (
+                        <PublishSwitch
+                          id={page.slug}
+                          isPublished={page.isPublished}
+                          onToggle={updatePagePublished}
+                          resourceLabel={`${page.title} の公開状態`}
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       <PageActions

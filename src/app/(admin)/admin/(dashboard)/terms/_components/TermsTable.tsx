@@ -37,9 +37,9 @@ export function TermsTable({ items }: TermsTableProps) {
               <TableHead>タイトル</TableHead>
               <TableHead>タイプ</TableHead>
               <TableHead>スラッグ</TableHead>
-              <TableHead>状態</TableHead>
               <TableHead>同意必須</TableHead>
               <TableHead className="text-right">同意数</TableHead>
+              <TableHead>状態</TableHead>
               <TableHead>操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -54,15 +54,6 @@ export function TermsTable({ items }: TermsTableProps) {
                 </TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {item.slug}
-                </TableCell>
-                <TableCell>
-                  <PublishSwitch
-                    id={item.id}
-                    isPublished={item.isPublished}
-                    onToggle={updateTermsPublished}
-                    resourceLabel={`${item.title} の公開状態`}
-                    label={{ published: "公開中", unpublished: "下書き" }}
-                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -85,6 +76,15 @@ export function TermsTable({ items }: TermsTableProps) {
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {item.agreementsCount}
+                </TableCell>
+                <TableCell>
+                  <PublishSwitch
+                    id={item.id}
+                    isPublished={item.isPublished}
+                    onToggle={updateTermsPublished}
+                    resourceLabel={`${item.title} の公開状態`}
+                    label={{ published: "公開中", unpublished: "下書き" }}
+                  />
                 </TableCell>
                 <TableCell>
                   <TermsActionCell id={item.id} title={item.title} />

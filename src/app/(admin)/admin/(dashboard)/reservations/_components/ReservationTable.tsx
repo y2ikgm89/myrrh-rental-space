@@ -149,6 +149,12 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                     <TableCell className="hidden text-right md:table-cell">
                       {formatPrice(reservation.totalPrice)}
                     </TableCell>
+                    <TableCell className="hidden whitespace-nowrap md:table-cell">
+                      <PaymentStatusBadge status={reservation.paymentStatus} />
+                    </TableCell>
+                    <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
+                      {formatDate(reservation.createdAt)}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {reservation.deletedAt ? (
                         <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -157,12 +163,6 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                       ) : (
                         <ReservationStatusBadge status={reservation.status} />
                       )}
-                    </TableCell>
-                    <TableCell className="hidden whitespace-nowrap md:table-cell">
-                      <PaymentStatusBadge status={reservation.paymentStatus} />
-                    </TableCell>
-                    <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
-                      {formatDate(reservation.createdAt)}
                     </TableCell>
                     <TableCell className="text-right" onClick={stopRowClick}>
                       <div className="flex items-center justify-end gap-2">

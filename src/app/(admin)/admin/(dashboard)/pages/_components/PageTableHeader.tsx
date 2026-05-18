@@ -3,8 +3,8 @@
 /**
  * ページ一覧テーブルヘッダー
  *
- * カラム順は admin-ui-patterns.md のワークフロー系テーブル例外に従い、
- * 状態を左端に配置: checkbox → ステータス → タイトル → 種別 → スラッグ → セクション数 → 更新日時 → 操作
+ * カラム順は admin-ui-patterns.md の canonical 順序に従う:
+ * checkbox → タイトル → 種別 → スラッグ → 構成 → 更新日時 → ステータス → 操作
  */
 
 import { useQueryStates } from "nuqs";
@@ -48,7 +48,6 @@ export function PageTableHeader({
             aria-label="すべての行を選択"
           />
         </TableHead>
-        <TableHead>ステータス</TableHead>
         <SortableColumnHeader
           column="title"
           currentSortBy={params.sortBy}
@@ -77,6 +76,7 @@ export function PageTableHeader({
         >
           更新日時
         </SortableColumnHeader>
+        <TableHead>ステータス</TableHead>
         <TableHead>操作</TableHead>
       </TableRow>
     </TableHeader>

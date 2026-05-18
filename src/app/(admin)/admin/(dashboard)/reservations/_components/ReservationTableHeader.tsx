@@ -54,7 +54,6 @@ export function ReservationTableHeader({
         <TableHead>スペース</TableHead>
         <TableHead className="hidden lg:table-cell">顧客</TableHead>
         <TableHead className="hidden text-right md:table-cell">料金</TableHead>
-        <TableHead>ステータス</TableHead>
         <TableHead className="hidden md:table-cell">決済</TableHead>
         <SortableColumnHeader
           column="createdAt"
@@ -65,6 +64,7 @@ export function ReservationTableHeader({
         >
           登録日
         </SortableColumnHeader>
+        <TableHead>ステータス</TableHead>
         <TableHead className="text-right">操作</TableHead>
       </TableRow>
     </TableHeader>

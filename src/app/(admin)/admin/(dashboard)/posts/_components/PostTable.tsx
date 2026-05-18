@@ -86,9 +86,6 @@ export function PostTable({ posts }: PostTableProps) {
                       aria-label={`${post.title} を選択`}
                     />
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <PostStatusBadge status={post.status} />
-                  </TableCell>
                   <TableCell>
                     <div>
                       <div className="max-w-xs truncate font-medium">
@@ -112,6 +109,9 @@ export function PostTable({ posts }: PostTableProps) {
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {formatDateTimeShort(post.createdAt)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <PostStatusBadge status={post.status} />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
                     <PostActionCell postId={post.id} status={post.status} />

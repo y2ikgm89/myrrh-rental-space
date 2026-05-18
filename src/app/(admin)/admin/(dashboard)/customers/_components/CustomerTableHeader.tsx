@@ -43,7 +43,6 @@ export function CustomerTableHeader({
             />
           </TableHead>
         ) : null}
-        <TableHead>ステータス</TableHead>
         <TableHead>お名前</TableHead>
         <TableHead className="hidden md:table-cell">種別</TableHead>
         <TableHead className="hidden lg:table-cell">メールアドレス</TableHead>
@@ -84,6 +83,7 @@ export function CustomerTableHeader({
         >
           登録日
         </SortableColumnHeader>
+        <TableHead>ステータス</TableHead>
         <TableHead>操作</TableHead>
       </TableRow>
     </TableHeader>

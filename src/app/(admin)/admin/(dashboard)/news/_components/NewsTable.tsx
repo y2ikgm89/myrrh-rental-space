@@ -77,10 +77,10 @@ export function NewsTable({ news }: NewsTableProps) {
                     aria-label="すべての行を選択"
                   />
                 </TableHead>
-                <TableHead>ステータス</TableHead>
                 <TableHead>タイトル</TableHead>
                 <TableHead className="hidden md:table-cell">公開日時</TableHead>
                 <TableHead className="hidden lg:table-cell">作成日時</TableHead>
+                <TableHead>ステータス</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -98,17 +98,6 @@ export function NewsTable({ news }: NewsTableProps) {
                       aria-label={`${item.title} を選択`}
                     />
                   </TableCell>
-                  <TableCell
-                    className="whitespace-nowrap"
-                    onClick={stopRowClick}
-                  >
-                    <PublishSwitch
-                      id={item.id}
-                      isPublished={item.isPublished}
-                      onToggle={updateNewsPublished}
-                      resourceLabel={`${item.title} の公開状態`}
-                    />
-                  </TableCell>
                   <TableCell>
                     <div className="max-w-xs truncate font-medium">
                       {item.title}
@@ -119,6 +108,17 @@ export function NewsTable({ news }: NewsTableProps) {
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {item.createdAtLabel}
+                  </TableCell>
+                  <TableCell
+                    className="whitespace-nowrap"
+                    onClick={stopRowClick}
+                  >
+                    <PublishSwitch
+                      id={item.id}
+                      isPublished={item.isPublished}
+                      onToggle={updateNewsPublished}
+                      resourceLabel={`${item.title} の公開状態`}
+                    />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
                     <NewsActionCell

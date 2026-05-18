@@ -99,9 +99,6 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                         aria-label={`${customer.lastName} ${customer.firstName} を選択`}
                       />
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <CustomerStatusBadge status={customer.status} />
-                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium">
@@ -161,6 +158,9 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                     </TableCell>
                     <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
                       {formatDateShort(customer.createdAt)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <CustomerStatusBadge status={customer.status} />
                     </TableCell>
                     <TableCell onClick={stopRowClick}>
                       <CustomerActionCell customerId={customer.id} />

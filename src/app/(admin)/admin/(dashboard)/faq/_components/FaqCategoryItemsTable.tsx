@@ -125,15 +125,6 @@ function SortableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="hidden md:table-cell" onClick={stopRowClick}>
-        <PublishSwitch
-          id={item.id}
-          isPublished={item.isPublished}
-          onToggle={updateFaqItemPublished}
-          resourceLabel={`${item.question} の公開状態`}
-          label={{ published: "公開中", unpublished: "下書き" }}
-        />
-      </TableCell>
       <TableCell
         className="hidden text-right text-muted-foreground lg:table-cell tabular-nums"
         onClick={() => onEdit(item)}
@@ -145,6 +136,15 @@ function SortableRow({
         onClick={() => onEdit(item)}
       >
         {new Date(item.updatedAt).toLocaleDateString("ja-JP")}
+      </TableCell>
+      <TableCell className="hidden md:table-cell" onClick={stopRowClick}>
+        <PublishSwitch
+          id={item.id}
+          isPublished={item.isPublished}
+          onToggle={updateFaqItemPublished}
+          resourceLabel={`${item.question} の公開状態`}
+          label={{ published: "公開中", unpublished: "下書き" }}
+        />
       </TableCell>
       <TableCell className="text-right" onClick={stopRowClick}>
         <FaqItemActionCell
@@ -304,9 +304,6 @@ export function FaqCategoryItemsTable({
                         />
                       </TableHead>
                       <TableHead>質問</TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        公開状態
-                      </TableHead>
                       <SortableColumnHeader
                         column="viewCount"
                         currentSortBy={currentSortBy}
@@ -325,6 +322,9 @@ export function FaqCategoryItemsTable({
                       >
                         更新日時
                       </SortableColumnHeader>
+                      <TableHead className="hidden md:table-cell">
+                        公開状態
+                      </TableHead>
                       <TableHead className="text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
