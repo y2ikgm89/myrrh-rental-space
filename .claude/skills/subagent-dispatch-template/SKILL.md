@@ -150,6 +150,36 @@ grep -n "<deleted-symbol>" <file>  # 出力ゼロを確認
 
 ---
 
+## Scope 物理制限（autocompact thrashing 防止）
+
+公式 Best Practices §Avoid common failure patterns "**The infinite exploration**" + Troubleshooting §Auto-compaction stops with a thrashing error 対策として、全 subagent dispatch prompt に以下を明記する:
+
+- **Read max 15 file / task** — 15 超 candidate なら scope narrow を要求 return
+- **Read は offset/limit 部分読み必須** — 先頭 80 行以内、ファイル全文 (200+ 行) read 禁止
+- **Grep は `output_mode: files_with_matches` を default**、`head_limit ≤ 30`
+- **layer cross-cutting scope は分割** — 「全 API routes」「Server Action 全般」「auth flow 全層」等は narrow scope (path prefix + 5-10 file) に分けて dispatch
+- **並列 dispatch は 3 件まで** — 4 件以上は逐次（[issue #23463](https://github.com/anthropics/claude-code/issues/23463): 7 並列で parent context overflow）
+- **最終 report は < 50 findings**、中間 search log を含めない
+
+### 違反検出時の abort 規律
+
+subagent が 15 tool calls 超過 / 30+ file candidate を発見 / cross-layer 判定した場合は task abort + narrow scope 要求の return を出す。`.claude/agents/security-reviewer.md` の "Scope discipline" 節と "Abort report format" が canonical 参照実装。
+
+### Parent fallback（2 連続 thrash → 直接 Grep）
+
+subagent dispatch が **2 件連続 thrash したら subagent を諦め、parent (Opus 1M context) で直接 `Grep` (files_with_matches + head_limit) + 個別 `Read` (offset/limit) に切替**。
+
+判定基準:
+
+- 1 件 thrash → 同じ scope で再 dispatch せず、scope を物理半減 (15 → 7 file) でリトライ
+- 2 件連続 thrash → fallback 確定、parent 直接実施
+
+公式根拠: Troubleshooting "Ask Claude to read the oversized file in smaller chunks" + Best Practices "Let Claude fetch what it needs"。実証: PR #151 セッションで `"use server"` 62 file scan を 5 分以内完遂 (subagent 2 件連続 thrash 後の parent 直接 Grep 切替)。
+
+詳細規律は `.claude/rules/research-audit.md` §project-wide audit の scope 分割規律 を参照（agents/ 編集時に path-scoped auto-load）。
+
+---
+
 ## Subagent 規律（補足）
 
 ### 基本
