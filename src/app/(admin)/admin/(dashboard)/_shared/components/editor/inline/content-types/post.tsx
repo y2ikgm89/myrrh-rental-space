@@ -7,7 +7,7 @@
  * フォーム型は `PostSettingsFormData` (本文 contentJson を含まないメタデータ専用)。
  */
 
-import type { FieldMetadata } from "@conform-to/react";
+import { asTypedField } from "@/shared/lib/conform/typed-input-control";
 import type { PostSettingsFormData } from "@/admin/lib/validations/post";
 import { generateSlug } from "@/shared/lib/slug";
 import {
@@ -87,9 +87,7 @@ export const postSettingsPanel: SidePanelDefinition<
           title: "タグ",
           render: (ctx) => (
             <PostTagFields
-              // documented exception §5 conform generic invariance:
-              // tags は preprocess input 型が unknown のため境界 cast。
-              tagsField={ctx.fields.tags as unknown as FieldMetadata<string[]>}
+              tagsField={asTypedField<string[]>(ctx.fields.tags)}
               availableTags={ctx.availableTags}
               {...(ctx.onCreateTag && { onCreateTag: ctx.onCreateTag })}
               {...spreadOptionalDisabled(ctx)}
