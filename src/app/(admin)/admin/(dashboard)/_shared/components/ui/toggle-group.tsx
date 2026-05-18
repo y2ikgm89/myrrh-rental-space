@@ -30,7 +30,7 @@ function ToggleGroupItem({
     <ToggleGroupPrimitive.Item
       ref={ref}
       className={cn(
-        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-sm px-3 py-2 text-xs font-medium transition-all",
+        "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm px-3 py-2 text-xs font-medium transition-all",
         "text-muted-foreground hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",

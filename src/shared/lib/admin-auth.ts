@@ -35,6 +35,7 @@ import {
   normalizeError,
 } from "./errors/server";
 import { sendPasswordResetEmail } from "./email/password-reset-emails";
+import { clientEnv } from "./env/client";
 import { serverEnv } from "./env/server";
 import { validateTurnstile } from "./action-helpers";
 import { TURNSTILE_ACTIONS, type TurnstileAction } from "./turnstile-actions";
@@ -94,7 +95,7 @@ function createAdminAuth() {
   // session 確立失敗 → /admin navigation timeout の silent UX bug。
   // `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` の opt-in 環境でのみ secure cookie を無効化する
   // （staging / production には build env 不在のため絶対伝播しない）。
-  const isE2EOptIn = process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1";
+  const isE2EOptIn = clientEnv.NEXT_PUBLIC_ENABLE_E2E_LOGIN === "1";
 
   return betterAuth({
     baseURL: appUrl,

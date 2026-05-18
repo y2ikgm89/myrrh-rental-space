@@ -68,7 +68,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild className="min-h-10 sm:min-h-9">
+          <Button asChild>
             <Link href="/admin/customers/new">
               <IconPlus className="mr-2 h-4 w-4" />
               新規顧客

@@ -42,6 +42,13 @@ interface EncryptOptions {
 
 /**
  * マスター暗号化キーを取得
+ *
+ * `process.env` 直参照を維持する理由: unit test (`crypto.test.ts` /
+ * `integration-commands.test.ts`) が `delete process.env["ENCRYPTION_KEY"]` /
+ * `process.env["ENCRYPTION_KEY"] = testKey` で runtime 動的変更を行うため、
+ * `@t3-oss/env-nextjs` の lazy initialization (1 回評価固定) と非互換。
+ * Length は `serverEnv.ENCRYPTION_KEY` の `.length(64)` startup 検証と
+ * `validateProductionEnv()` で本番起動時に保証される (admin-login-gate.ts と同パターン)。
  */
 function getMasterKey(): Buffer {
   const key = process.env["ENCRYPTION_KEY"];
@@ -50,7 +57,6 @@ function getMasterKey(): Buffer {
       "ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32",
     );
   }
-  // Length is guaranteed by Zod schema (.length(64)) validated at startup
   return Buffer.from(key, "hex");
 }
 
