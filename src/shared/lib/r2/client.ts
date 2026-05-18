@@ -20,7 +20,12 @@ type GlobalStore = {
   r2Client?: S3Client;
 };
 
-const globalStore = globalThis as unknown as GlobalStore;
+declare global {
+  // ambient global singleton store (HMR / cold start でのリーク防止)
+  var __myrrhR2GlobalStore: GlobalStore | undefined;
+}
+
+const globalStore: GlobalStore = (globalThis.__myrrhR2GlobalStore ??= {});
 const isProduction = serverEnv.NODE_ENV === "production";
 
 /**

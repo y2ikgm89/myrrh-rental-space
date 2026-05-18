@@ -50,7 +50,12 @@ type GlobalStore = {
   prisma?: PrismaClient;
 };
 
-const globalStore = globalThis as unknown as GlobalStore;
+declare global {
+  // ambient global singleton store (HMR / cold start でのリーク防止)
+  var __myrrhPrismaGlobalStore: GlobalStore | undefined;
+}
+
+const globalStore: GlobalStore = (globalThis.__myrrhPrismaGlobalStore ??= {});
 const isProduction = serverEnv.NODE_ENV === "production";
 
 /**
