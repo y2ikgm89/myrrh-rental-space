@@ -27,7 +27,6 @@ import {
   randomBytes,
   createHmac,
 } from "crypto";
-import { serverEnv } from "@/shared/lib/env/server";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 
 const ALGORITHM = "aes-256-gcm";
@@ -44,10 +43,15 @@ interface EncryptOptions {
 /**
  * マスター暗号化キーを取得
  *
- * Length は serverEnv の z.string().length(64) で起動時検証済み。
+ * `process.env` 直参照を維持する理由: unit test (`crypto.test.ts` /
+ * `integration-commands.test.ts`) が `delete process.env["ENCRYPTION_KEY"]` /
+ * `process.env["ENCRYPTION_KEY"] = testKey` で runtime 動的変更を行うため、
+ * `@t3-oss/env-nextjs` の lazy initialization (1 回評価固定) と非互換。
+ * Length は `serverEnv.ENCRYPTION_KEY` の `.length(64)` startup 検証と
+ * `validateProductionEnv()` で本番起動時に保証される (admin-login-gate.ts と同パターン)。
  */
 function getMasterKey(): Buffer {
-  const key = serverEnv.ENCRYPTION_KEY;
+  const key = process.env["ENCRYPTION_KEY"];
   if (!key) {
     throw new Error(
       "ENCRYPTION_KEY is not set. Generate with: openssl rand -hex 32",
