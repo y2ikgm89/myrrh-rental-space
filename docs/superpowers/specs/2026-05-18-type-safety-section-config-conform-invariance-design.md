@@ -8,17 +8,23 @@
 
 - **§3 SectionConfig union widening**: 1 件
   - `src/shared/lib/validations/section.ts:251` の `result.data as SectionConfig`
-- **§6 conform FieldMetadata 21 件**: 3 サブカテゴリ
-  - 動的 schema 系 (Auto\*Field) 10 件 — `auto-section-form.tsx` 5 件 + `Auto{Boolean,Select,Array,Group}Field.tsx` 5 件
-  - Connected wrapper 系 9 件 — `_shared/components/editor/inline/side-panel/` 配下の `LayoutFields` / `UnifiedPublishFields` / `SEOFields` / `TagFields` / `TitleSlugFields` / `OGPFields` / `PostTagFields` / `CategoryTagFields` / `ExcerptFields` / `ImageFields` / `BasicInfoFields` / `CategoryFields`
-  - その他 2 件 — `content-types/post.tsx` の `tagsField` / `customer-step.tsx` の form binding
+- **§6 conform FieldMetadata 13 件** (`as unknown as FieldMetadata<...>` strict grep で実測、initial 21 件は overestimate):
+  - `auto-section-form.tsx`: 5 件 (lines 709 / 749 / 805 / 843 / 885) — 色 / アイコン / span / block / text input
+  - `auto-fields/AutoSelectField.tsx`: 1 件 (line 52)
+  - `auto-fields/AutoBooleanField.tsx`: 1 件 (line 31)
+  - `auto-fields/AutoArrayField.tsx`: 2 件 (lines 72, 148) — getFieldList + getFieldset
+  - `auto-fields/AutoGroupField.tsx`: 1 件 (line 56) — getFieldset
+  - `_shared/components/editor/inline/side-panel/LayoutFields.tsx`: 2 件 (lines 149, 154) — contentWidth / contentWidthCustom
+  - `_shared/components/editor/inline/content-types/post.tsx`: 1 件 (line 92) — tagsField wrapper
+- side-panel の `UnifiedPublishFields` / `SEOFields` 等 11 file は **`FieldMetadata<T>` 型を type-only import で使用**しており実 cast なし (spec 初稿の誤り)
+- `customer-step.tsx` (public) も同様に type-only usage、cast なし
 
 ### 採用方針 (確定済)
 
 - conform 維持 (PR #122 で `react-hook-form` 完全削除直後、現状全 form の SSoT)
 - TanStack Form 移行 / 共存は不採用 (Bundle / Server Action 統合コスト / SSoT 違反)
 - §3: `validateSectionConfig` の generic narrowing で cast を構造解消 (1 → 0 件)
-- §6: `useInputControl` / `getFieldList()` / `getFieldset()` + Connected wrapper 配送 cast の boundary を 4 helper 内部の 1 line に閉じ込め (呼び出し側 21 件 → 0 件、helper 内部 4 件のみ、ledger §6 唯一許可場所として明文化)
+- §6: `useInputControl` / `getFieldList()` / `getFieldset()` + Connected wrapper 配送 cast の boundary を 4 helper 内部の 1 line に閉じ込め (呼び出し側 13 件 → 0 件、helper 内部 4 件のみ、ledger §6 唯一許可場所として明文化)
 
 ## 設計
 
@@ -133,12 +139,15 @@ grep -rnE 'as\s+SectionConfig\b' src/
 
 #### 現状の構造
 
-3 種類のメソッド呼び出しで cast が頻発:
+3 種類のメソッド呼び出しで cast が頻発 (実測 13 件):
 
-1. `useInputControl(field as unknown as FieldMetadata<string>)` — 単一値 controlled binding (15 件)
-2. `(field as unknown as FieldMetadata<unknown[]>).getFieldList()` — array iteration (2 件)
-3. `(field as unknown as FieldMetadata<Record<string, unknown>>).getFieldset()` — object decomposition (2 件)
-4. 値配送目的の wrapper cast (2 件) — `tagsField={ctx.fields.tags as unknown as FieldMetadata<string[]>}` 等
+1. `useInputControl(field as unknown as FieldMetadata<T>)` — 単一値 controlled binding (9 件)
+   - `FieldMetadata<string>` × 7 (auto-section-form ×5 + AutoSelectField + AutoBooleanField)
+   - `FieldMetadata<string \| null \| undefined>` × 1 (LayoutFields contentWidth)
+   - `FieldMetadata<number \| null \| undefined>` × 1 (LayoutFields contentWidthCustom)
+2. `(field as unknown as FieldMetadata<T[]>).getFieldList()` — array iteration (1 件: AutoArrayField line 72)
+3. `(field as unknown as FieldMetadata<Record<string, unknown>>).getFieldset()` — object decomposition (2 件: AutoArrayField line 148 + AutoGroupField line 56)
+4. 値配送目的の wrapper cast (1 件: post.tsx line 92, `tagsField={ctx.fields.tags as unknown as FieldMetadata<string[]>}`)
 
 #### 構造解消: 4 helper SSoT
 
@@ -310,11 +319,9 @@ bun run test:integration
 - `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-fields/AutoArrayField.tsx` — 2 件置換
 - `src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-fields/AutoGroupField.tsx` — 1 件置換
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/LayoutFields.tsx` — 2 件置換
-- `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/UnifiedPublishFields.tsx` — 推定 1〜2 件置換 (実装読込で確定)
-- `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/SEOFields.tsx` 他 7 file — 各 0〜2 件置換 (実装読込で確定)
-- `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/post.tsx` — 1 件置換
-- `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/types.ts` — `FieldMetadata` import 整理 (helper 経由化に伴う)
-- `src/app/(public)/reservation/_components/customer-step.tsx` — 1 件置換
+- `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/post.tsx` — 1 件置換 (`asTypedField<string[]>` 経由)
+- side-panel 配下の他 11 file (`UnifiedPublishFields` / `SEOFields` / `TagFields` 等) は cast 不在のため変更なし
+- `customer-step.tsx` (public) も cast 不在のため変更なし
 - `.claude/rules/type-safety/assertion-bans.md` — §3 削除 + §6 改訂 (検出 grep 追加)
 - `CLAUDE.md` — 許可例外 7 → 6 種類
 - `.claude/rules/ssot-singletons.md` — typed-input-control SSoT 追記
