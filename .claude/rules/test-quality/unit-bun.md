@@ -52,18 +52,46 @@ mock.module("server-only", () => ({})); // server-only を no-op にする
 テストで `process.env["KEY"]` を変更しても `serverEnv.KEY` には反映されない。
 
 ```typescript
-// NG: serverEnv を使ったコードはテストで env 変更が効かない
+// NG: serverEnv を実装側で直接参照すると test 動的変更が効かない
 function getMasterKey() {
   const key = serverEnv.ENCRYPTION_KEY; // スナップショット — delete process.env["KEY"] が効かない
 }
 
-// OK: process.env を直接参照(遅延評価 — テストで変更が反映される）
+// NG (旧 pattern, 2026-05-18 PR #145 で deprecated): process.env 直接参照
 function getMasterKey() {
-  const key = process.env["ENCRYPTION_KEY"]; // 毎回評価
+  const key = process.env["ENCRYPTION_KEY"]; // SSoT bypass + Zod validation 迂回
 }
+
+// OK (canonical): boundary helper 経由化 + test は mock.module で差し替え
+// src/shared/lib/env/encryption.ts
+export function getEncryptionKey(): string {
+  const key = serverEnv.ENCRYPTION_KEY;
+  if (!key) throw new Error("ENCRYPTION_KEY is not set");
+  return key;
+}
+
+// src/shared/lib/crypto.ts
+import { getEncryptionKey } from "./env/encryption";
+function getMasterKey(): Buffer {
+  return Buffer.from(getEncryptionKey(), "hex");
+}
+
+// __tests__/setup.ts (グローバル mock)
+mock.module("@/shared/lib/env/encryption", () => ({
+  getEncryptionKey: () => "a".repeat(64),
+}));
+
+// 異常系 test (個別 override)
+const mockGetEncryptionKey = mock<() => string>(() => testKey);
+mock.module("@/shared/lib/env/encryption", () => ({
+  getEncryptionKey: mockGetEncryptionKey,
+}));
+mockGetEncryptionKey.mockImplementationOnce(() => {
+  throw new Error("...");
+});
 ```
 
-テストで変更を必要とする env 変数は `process.env` 直接参照で実装し、デフォルト値は `__tests__/setup.ts` のプリロードで設定する（`ENCRYPTION_KEY` 参照）。
+`@t3-oss/env-nextjs` snapshot 仕様 (runtime 動的変更不可) と test 容易性を、**boundary helper を 1 層挟むこと**で両立する canonical pattern。`asPrismaInputJsonValue` / `typed-input-control` 等の既存 SSoT helper パターンと同思想で統一済 (PR #145)。
 
 ## 環境変数のモック
 
