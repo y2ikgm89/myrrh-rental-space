@@ -3,7 +3,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
-import type { Route } from "next";
 
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -24,6 +23,7 @@ import {
 import type { GbpSyncResult } from "@/shared/lib/google-business-profile";
 import type { ToggleLocationGbpSyncResult } from "@/shared/domain/locations/gbp-sync-commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 
 /**
  * GBP OAuth フローを開始する。
@@ -48,7 +48,7 @@ export async function initiateGbpAuth(): Promise<void> {
   });
 
   const url = getGbpAuthorizeUrl(state);
-  redirect(url as Route<string>);
+  redirect(toAppRoute(url));
 }
 
 /**
