@@ -91,6 +91,8 @@ export async function myAction() {
 }
 ```
 
+**`getAdminSessionUser` / `getCustomerSessionUser` signature** は 2026-05-18 PR #134 で `(session: AdminSession | null)` → `(session: unknown)` に拡張済 (`getCustomerSessionUser` 同様)。内部 `isRecord(session)` + `isValidSessionUser(session.user)` + `isValidRole(role)` の 3 段 type guard で narrow するため、test fixture や Better Auth Session 型と structural mismatch な input でも cast 不要で安全に検証可能。call site (上記 `verifyAdminSession` 等) は wider 型受け取りで backward compatible (`AdminSession | null` も `unknown` の subtype として受理)。
+
 ### オプショナル認証（リダイレクトなし）
 
 ```typescript
