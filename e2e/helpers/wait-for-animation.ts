@@ -1,9 +1,18 @@
 import type { Page, Locator } from "@playwright/test";
 
+declare global {
+  // ブラウザコンテキストで GSAP が window に attach される。
+  // `page.waitForFunction` callback 内で `window.gsap` を型安全に参照するための ambient declaration。
+  // (`window.lenis` は lenis package が独自に declare 済みのためここでは触らない)
+  interface Window {
+    gsap?: { globalTimeline?: { isActive?: () => boolean } };
+  }
+}
+
 /**
  * E2E アニメーション待機ヘルパー
  *
- * GSAP / Lenis を使う公開ページで、アニメーション完了前に assertion が
+ * GSAP を使う公開ページで、アニメーション完了前に assertion が
  * 走ると flaky になる問題への対処。Playwright 公式の
  * `animations: "disabled"` はスクリーンショット時のみ有効なため、
  * インタラクション前後の待機はこのヘルパーで対応する。
@@ -16,7 +25,6 @@ import type { Page, Locator } from "@playwright/test";
  * 参照:
  * - https://playwright.dev/docs/api/class-page#page-wait-for-function
  * - https://greensock.com/docs/v3/GSAP/gsap.globalTimeline
- * - https://github.com/darkroomengineering/lenis
  */
 
 /**
@@ -37,11 +45,7 @@ export async function waitForGsapComplete(
     .waitForFunction(
       () => {
         // GSAP 未ロードなら即完了扱い
-        const gsap = (
-          globalThis as unknown as {
-            gsap?: { globalTimeline?: { isActive?: () => boolean } };
-          }
-        ).gsap;
+        const gsap = window.gsap;
         if (!gsap?.globalTimeline?.isActive) return true;
         return !gsap.globalTimeline.isActive();
       },
@@ -53,38 +57,7 @@ export async function waitForGsapComplete(
 }
 
 /**
- * Lenis の慣性スクロールが停止するまで待機する。
- *
- * `lenis.isScrolling === false` になった時点で resolve。
- * Lenis が読み込まれていないページは即 resolve。
- *
- * @param page - Playwright Page instance
- * @param timeout - 最大待機時間 (ms), デフォルト 2000
- */
-export async function waitForLenisStop(
-  page: Page,
-  timeout = 2000,
-): Promise<void> {
-  await page
-    .waitForFunction(
-      () => {
-        const lenis = (
-          globalThis as unknown as {
-            lenis?: { isScrolling?: boolean };
-          }
-        ).lenis;
-        if (!lenis) return true;
-        return lenis.isScrolling === false;
-      },
-      { timeout },
-    )
-    .catch(() => {
-      // noop
-    });
-}
-
-/**
- * 要素までスクロールした後、GSAP / Lenis の完了を待機する複合ヘルパー。
+ * 要素までスクロールした後、GSAP の完了を待機する複合ヘルパー。
  *
  * ScrollTrigger で発火するアニメーションを全て終了させたい場合に使用。
  *
@@ -96,7 +69,6 @@ export async function stabilizeScroll(
   locator: Locator,
 ): Promise<void> {
   await locator.scrollIntoViewIfNeeded();
-  await waitForLenisStop(page);
   await waitForGsapComplete(page);
 }
 
@@ -110,5 +82,4 @@ export async function stabilizeScroll(
  */
 export async function waitForInitialAnimations(page: Page): Promise<void> {
   await waitForGsapComplete(page, 5000);
-  await waitForLenisStop(page, 2000);
 }
