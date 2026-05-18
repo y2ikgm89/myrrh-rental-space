@@ -7,7 +7,7 @@ paths:
 
 # 型アサーション / 非null アサーション禁止
 
-> `as` キャスト・`!` 非null アサーションは原則禁止。許可例外は 7 種類限定 + 禁止パターン → 代替手段マッピング。
+> `as` キャスト・`!` 非null アサーションは原則禁止。許可例外は 6 種類限定 + 禁止パターン → 代替手段マッピング。
 
 ## 非null アサーション (`!`) の代替パターン
 
@@ -161,7 +161,7 @@ await client.locations.patch({ requestBody, ... });
 
 conform の `FieldMetadata<T, FormShape, FormError>` は **invariant** な type parameter を持つため、動的 schema (22 種の Section type に対応する `AutoSectionForm` 等) や Pure Component 越境で `FieldMetadata<unknown>` → `FieldMetadata<T>` の boundary cast が必要になる (公式仕様の限界、library 側 semver-major 対応待ち)。
 
-**`@/shared/lib/conform/typed-input-control` の 4 helper 内部のみ許可** (`useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField`)、helper 外部での `as unknown as FieldMetadata<...>` 記述は禁止。呼び出し側 cast は 0 件、helper 内部 4 件のみに集約済。
+**`@/shared/lib/conform/typed-input-control` の 9 helper 内部のみ許可** (`useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField` / `asConformDefaultValue` / `asConformSubmissionValue` / `asConformButtonGetter` / `asConformLooseRecord` / `asConformFieldset`)、helper 外部での `as unknown as FieldMetadata<...>` 記述は禁止。呼び出し側 cast は 0 件、helper 内部 9 件のみに集約済 (2026-05-18 PR #143 で 5 helper 追加完了)。
 
 ```typescript
 // OK: helper 経由 (呼び出し側 cast 0 件)
