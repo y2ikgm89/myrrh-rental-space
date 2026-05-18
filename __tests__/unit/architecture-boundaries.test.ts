@@ -1842,3 +1842,43 @@ describe("architecture boundaries", () => {
     }
   });
 });
+
+describe("assertion-bans §6 conform FieldMetadata generic invariance gate", () => {
+  test("§6 FieldMetadata cast は typed-input-control helper 内部のみ許可", () => {
+    const glob = new Bun.Glob("**/*.{ts,tsx}");
+    const allowedFile = join(
+      SRC_ROOT,
+      "shared",
+      "lib",
+      "conform",
+      "typed-input-control.ts",
+    );
+    const pattern = /as\s+unknown\s+as\s+FieldMetadata\b/;
+    const offenders: string[] = [];
+    for (const rel of glob.scanSync({ cwd: SRC_ROOT })) {
+      const abs = join(SRC_ROOT, rel);
+      if (abs === allowedFile) continue;
+      const content = readFileSync(abs, "utf-8");
+      if (pattern.test(content)) {
+        offenders.push(relative(ROOT, abs));
+      }
+    }
+    expect(offenders).toEqual([]);
+  }, 30000);
+});
+
+describe("assertion-bans §3 SectionConfig union widening cast (構造解消済)", () => {
+  test("`as SectionConfig` cast は src/ 全体で 0 件", () => {
+    const glob = new Bun.Glob("**/*.{ts,tsx}");
+    const pattern = /\bas\s+SectionConfig\b/;
+    const offenders: string[] = [];
+    for (const rel of glob.scanSync({ cwd: SRC_ROOT })) {
+      const abs = join(SRC_ROOT, rel);
+      const content = readFileSync(abs, "utf-8");
+      if (pattern.test(content)) {
+        offenders.push(relative(ROOT, abs));
+      }
+    }
+    expect(offenders).toEqual([]);
+  }, 30000);
+});
