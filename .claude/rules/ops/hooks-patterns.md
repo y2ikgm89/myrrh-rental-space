@@ -14,15 +14,15 @@ paths:
 
 プロジェクトで実使用 → 詳細セクション参照。未使用 → 公式 docs 参照。新規 hook 追加時は本表を canonical 比較対象とする。
 
-| カテゴリ                 | プロジェクト使用中                   | プロジェクト未使用（公式参照）                                                                      |
-| ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Session lifecycle        | `SessionStart`                       | `Setup` / `SessionEnd`                                                                              |
-| Per-turn                 | `UserPromptSubmit` / `Stop`          | `UserPromptExpansion` / `StopFailure`                                                               |
-| Tool execution           | `PreToolUse` / `PostToolUse`         | `PostToolUseFailure` / `PostToolBatch` / `PermissionRequest` / `PermissionDenied`                   |
-| Agent/Task               | `PostToolUse matcher: Agent`（代替） | `SubagentStart` / `SubagentStop` / `TaskCreated` / `TaskCompleted` / `TeammateIdle`                 |
-| File/Config/Compact      | —                                    | `FileChanged` / `ConfigChange` / `CwdChanged` / `InstructionsLoaded` / `PreCompact` / `PostCompact` |
-| Notification/Elicitation | `Notification`                       | `Elicitation` / `ElicitationResult`                                                                 |
-| Worktree                 | —                                    | `WorktreeCreate` / `WorktreeRemove`                                                                 |
+| カテゴリ                 | プロジェクト使用中                   | プロジェクト未使用（公式参照）                                                       |
+| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------ |
+| Session lifecycle        | `SessionStart`                       | `Setup` / `SessionEnd`                                                               |
+| Per-turn                 | `UserPromptSubmit` / `Stop`          | `UserPromptExpansion` / `StopFailure`                                                |
+| Tool execution           | `PreToolUse` / `PostToolUse`         | `PostToolUseFailure` / `PostToolBatch` / `PermissionRequest` / `PermissionDenied`    |
+| Agent/Task               | `PostToolUse matcher: Agent`（代替） | `SubagentStart` / `SubagentStop` / `TaskCreated` / `TaskCompleted` / `TeammateIdle`  |
+| File/Config/Compact      | `PreCompact`                         | `FileChanged` / `ConfigChange` / `CwdChanged` / `InstructionsLoaded` / `PostCompact` |
+| Notification/Elicitation | `Notification`                       | `Elicitation` / `ElicitationResult`                                                  |
+| Worktree                 | —                                    | `WorktreeCreate` / `WorktreeRemove`                                                  |
 
 **新規追加判断**: 未使用 events の採用は context cost と便益のトレードオフを記述したうえで `.claude/settings.json` に書く。`InstructionsLoaded` は path-scoped rule の debug 用途で有用候補（実装した場合は `additionalContext` 不可・ログ専用）。
 
@@ -187,6 +187,24 @@ fi
 ```
 
 matcher で分離する方法もあるが、単一スクリプト内で分岐した方が保守しやすい。
+
+## PreCompact hook (kitchen sink session 対策)
+
+公式 best-practices §Avoid common failure patterns "**The kitchen sink session**" 対策。auto-compaction 発火は無関係タスク累積の典型 signal。matcher `auto` のみに絞り、`additionalContext` で Claude に判断ポイント (`/clear` 推奨) を注入する。`manual` (user 明示 `/compact`) は警告対象外。
+
+```bash
+TRIGGER=$(printf '%s' "$INPUT" | jq -r '.trigger // "auto"')
+[ "$TRIGGER" = "manual" ] && exit 0
+
+jq -n '{
+  hookSpecificOutput: {
+    hookEventName: "PreCompact",
+    additionalContext: "auto-compaction 発火、kitchen sink signal。/clear 検討..."
+  }
+}'
+```
+
+参照実装: `.claude/hooks/pre-compact-warn.sh`。
 
 ## SubagentStop の代替: PostToolUse matcher `Agent`
 

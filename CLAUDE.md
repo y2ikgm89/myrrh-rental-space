@@ -97,6 +97,16 @@ Multiple Root Layouts: `(admin)/` `(public)/` `(preview)/` で CSS・認証・�
 - 実行: `subagent-driven-development` / `executing-plans`
 - 完了: `verification-before-completion` → `finishing-a-development-branch`
 
+### `/clear` トリガー（kitchen sink session 対策）
+
+公式 best-practices §Avoid common failure patterns "The kitchen sink session" 対策。下記いずれかに該当したら `/clear` 推奨を user に明示する（自動実行はしない）:
+
+- **タスク完遂 + 次が無関係トピック** — 直前の topic と次の prompt が異なる domain（auth / UI / migration / docs 等）
+- **同じ問題で 2 回以上修正失敗** — context が失敗 approach で汚染、specific prompt で再 start
+- **auto-compaction が同セッションで 2 回以上発火** — `PreCompact` hook が signal を注入
+- **statusline `ctx %` が 80% 超 + 残タスクあり** — context budget 不足、続行で performance 劣化
+- **subagent dispatch 2 件連続 thrash** — controller も rule auto-load で重い、別セッション推奨
+
 ## 自動完遂ポリシー
 
 タスク完了点で、ユーザー確認なしで commit → push → PR → CI → squash merge → ローカル sync まで自動進行。「進めて」等の明示承認は **不要**。下記 gate のいずれか fail で停止。
