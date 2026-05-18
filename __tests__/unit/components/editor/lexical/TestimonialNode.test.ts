@@ -6,8 +6,12 @@
 
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
-import { $getRoot, $createParagraphNode } from "lexical";
-import { isRecord } from "@/shared/lib/serialize";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   TestimonialContainerNode,
   TestimonialItemNode,
@@ -18,15 +22,44 @@ import {
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/TestimonialNode";
 
 /**
- * editor.getEditorState().toJSON() の root.children は SerializedLexicalNode[]
- * 型で個別 Node 固有プロパティへの直接 access ができないため、isRecord で narrow
- * してから [key] access で test する。`as` cast を発生させない canonical pattern。
+ * Testimonial の serialize 結果。$config() の flat: true により stateConfigs
+ * が top-level に展開される。default 値は省略されるため optional 宣言。
  */
-function assertSerializedNode(
-  value: unknown,
-): asserts value is Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new Error("Expected serialized node to be a record");
+type SerializedTestimonialContainerNode =
+  SerializedElementNode<SerializedTestimonialItemNode> & {
+    type: "testimonial-container";
+    layout?: string;
+    columns?: number;
+    accentColor?: string;
+  };
+
+type SerializedTestimonialItemNode =
+  SerializedElementNode<SerializedLexicalNode> & {
+    type: "testimonial-item";
+    authorName?: string;
+    authorTitle?: string;
+    avatarUrl?: string;
+    rating?: number;
+    date?: string;
+  };
+
+function assertSerializedTestimonialContainerNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedTestimonialContainerNode {
+  if (node?.type !== "testimonial-container") {
+    throw new Error(
+      `Expected SerializedTestimonialContainerNode, got ${String(node?.type)}`,
+    );
+  }
+}
+
+function assertSerializedTestimonialItemNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedTestimonialItemNode {
+  if (node?.type !== "testimonial-item") {
+    throw new Error(
+      `Expected SerializedTestimonialItemNode, got ${String(node?.type)}`,
+    );
   }
 }
 
@@ -52,12 +85,12 @@ describe("TestimonialContainerNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    const nodeJson: unknown = json.root.children[0];
-    assertSerializedNode(nodeJson);
-    expect(nodeJson["type"]).toBe("testimonial-container");
-    expect(nodeJson["layout"]).toBe("list");
-    expect(nodeJson["columns"]).toBe(3);
-    expect(nodeJson["accentColor"]).toBe("blue");
+    const nodeJson = json.root.children[0];
+    assertSerializedTestimonialContainerNode(nodeJson);
+    expect(nodeJson.type).toBe("testimonial-container");
+    expect(nodeJson.layout).toBe("list");
+    expect(nodeJson.columns).toBe(3);
+    expect(nodeJson.accentColor).toBe("blue");
   });
 
   test("$isTestimonialContainerNode returns true for TestimonialContainerNode", async () => {
@@ -99,20 +132,16 @@ describe("TestimonialItemNode", () => {
       $getRoot().append(container);
     });
     const json = editor.getEditorState().toJSON();
-    const containerJson: unknown = json.root.children[0];
-    assertSerializedNode(containerJson);
-    const childrenValue = containerJson["children"];
-    if (!Array.isArray(childrenValue)) {
-      throw new Error("Expected container children to be an array");
-    }
-    const itemJson: unknown = childrenValue[0];
-    assertSerializedNode(itemJson);
-    expect(itemJson["type"]).toBe("testimonial-item");
-    expect(itemJson["authorName"]).toBe("山田太郎");
-    expect(itemJson["authorTitle"]).toBe("CEO");
-    expect(itemJson["avatarUrl"]).toBe("https://example.com/avatar.jpg");
-    expect(itemJson["rating"]).toBe(4);
-    expect(itemJson["date"]).toBe("2024-01-01");
+    const containerJson = json.root.children[0];
+    assertSerializedTestimonialContainerNode(containerJson);
+    const itemJson = containerJson.children[0];
+    assertSerializedTestimonialItemNode(itemJson);
+    expect(itemJson.type).toBe("testimonial-item");
+    expect(itemJson.authorName).toBe("山田太郎");
+    expect(itemJson.authorTitle).toBe("CEO");
+    expect(itemJson.avatarUrl).toBe("https://example.com/avatar.jpg");
+    expect(itemJson.rating).toBe(4);
+    expect(itemJson.date).toBe("2024-01-01");
   });
 
   test("$isTestimonialItemNode returns true for TestimonialItemNode", async () => {

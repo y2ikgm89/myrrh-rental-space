@@ -6,8 +6,12 @@
 
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
-import { $getRoot, $createParagraphNode } from "lexical";
-import { isRecord } from "@/shared/lib/serialize";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   InlineImageNode,
   $createInlineImageNode,
@@ -15,29 +19,46 @@ import {
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/InlineImageNode";
 
 /**
- * editor.getEditorState().toJSON() の root.children は SerializedLexicalNode[]
- * 型で個別 Node 固有プロパティへの直接 access ができないため、isRecord で narrow
- * してから [key] access で test する。`as` cast を発生させない canonical pattern。
+ * InlineImageNode の serialize 結果。$config() の flat: true により stateConfigs
+ * が top-level に展開される。default 値 (position: "full" / width: 200) は省略
+ * されるため optional 宣言。
  */
-function assertSerializedNode(
-  value: unknown,
-): asserts value is Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new Error("Expected serialized node to be a record");
+type SerializedInlineImageNode = SerializedLexicalNode & {
+  type: "inline-image";
+  src: string;
+  altText: string;
+  position?: string;
+  width?: number;
+};
+
+function assertSerializedInlineImageNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedInlineImageNode {
+  if (node?.type !== "inline-image") {
+    throw new Error(
+      `Expected SerializedInlineImageNode, got ${String(node?.type)}`,
+    );
   }
 }
 
-function getNestedChild(
-  parent: Record<string, unknown>,
-  index: number,
-): Record<string, unknown> {
-  const children = parent["children"];
-  if (!Array.isArray(children)) {
-    throw new Error("Expected children to be an array");
+/**
+ * lexical の SerializedElementNode は `type: string` (literal ではない) が widen
+ * されていて `node.type === "paragraph"` で narrow できないため、test 用に
+ * literal-typed variant を定義して discriminated union narrow を成立させる。
+ */
+type SerializedParagraphLike = Omit<
+  SerializedElementNode<SerializedLexicalNode>,
+  "type"
+> & {
+  type: "paragraph";
+};
+
+function assertSerializedParagraphLike(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedParagraphLike {
+  if (node?.type !== "paragraph") {
+    throw new Error(`Expected paragraph parent, got ${String(node?.type)}`);
   }
-  const child = children[index];
-  assertSerializedNode(child);
-  return child;
 }
 
 function createEditor() {
@@ -65,14 +86,15 @@ describe("InlineImageNode", () => {
       $getRoot().append(para);
     });
     const json = editor.getEditorState().toJSON();
-    const parent: unknown = json.root.children[0];
-    assertSerializedNode(parent);
-    const nodeJson = getNestedChild(parent, 0);
-    expect(nodeJson["type"]).toBe("inline-image");
+    const paragraph = json.root.children[0];
+    assertSerializedParagraphLike(paragraph);
+    const nodeJson = paragraph.children[0];
+    assertSerializedInlineImageNode(nodeJson);
+    expect(nodeJson.type).toBe("inline-image");
     // flat: true でトップレベルにシリアライズされる
-    expect(nodeJson["src"]).toBe("https://example.com/img.jpg");
-    expect(nodeJson["position"]).toBe("left");
-    expect(nodeJson["width"]).toBe(300);
+    expect(nodeJson.src).toBe("https://example.com/img.jpg");
+    expect(nodeJson.position).toBe("left");
+    expect(nodeJson.width).toBe(300);
   });
 
   test("$isInlineImageNode returns true for InlineImageNode", async () => {
@@ -99,14 +121,15 @@ describe("InlineImageNode", () => {
       $getRoot().append(para);
     });
     const json = editor.getEditorState().toJSON();
-    const parent: unknown = json.root.children[0];
-    assertSerializedNode(parent);
-    const nodeJson = getNestedChild(parent, 0);
+    const paragraph = json.root.children[0];
+    assertSerializedParagraphLike(paragraph);
+    const nodeJson = paragraph.children[0];
+    assertSerializedInlineImageNode(nodeJson);
     // flat: true + NodeState API はデフォルト値を JSON から省略する
     // position: 'full' と width: 200 は省略され undefined になる
-    expect(nodeJson["position"]).toBeUndefined();
-    expect(nodeJson["width"]).toBeUndefined();
-    expect(nodeJson["src"]).toBe("x");
+    expect(nodeJson.position).toBeUndefined();
+    expect(nodeJson.width).toBeUndefined();
+    expect(nodeJson.src).toBe("x");
   });
 
   test("$isInlineImageNode returns false for non-InlineImageNode", async () => {
@@ -133,10 +156,11 @@ describe("InlineImageNode", () => {
       $getRoot().append(para);
     });
     const json = editor.getEditorState().toJSON();
-    const parent: unknown = json.root.children[0];
-    assertSerializedNode(parent);
-    const nodeJson = getNestedChild(parent, 0);
-    expect(nodeJson["src"]).toBe("https://example.com/photo.png");
-    expect(nodeJson["altText"]).toBe("A photo");
+    const paragraph = json.root.children[0];
+    assertSerializedParagraphLike(paragraph);
+    const nodeJson = paragraph.children[0];
+    assertSerializedInlineImageNode(nodeJson);
+    expect(nodeJson.src).toBe("https://example.com/photo.png");
+    expect(nodeJson.altText).toBe("A photo");
   });
 });

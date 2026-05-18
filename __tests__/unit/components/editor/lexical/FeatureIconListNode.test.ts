@@ -6,8 +6,12 @@
 
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
-import { $getRoot, $createParagraphNode } from "lexical";
-import { isRecord } from "@/shared/lib/serialize";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   FeatureIconListContainerNode,
   FeatureIconItemNode,
@@ -18,15 +22,40 @@ import {
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/FeatureIconListNode";
 
 /**
- * editor.getEditorState().toJSON() の root.children は SerializedLexicalNode[]
- * 型で個別 Node 固有プロパティへの直接 access ができないため、isRecord で narrow
- * してから [key] access で test する。`as` cast を発生させない canonical pattern。
+ * FeatureIconList の serialize 結果。$config() の flat: true により stateConfigs
+ * が top-level に展開される。default 値は省略されるため optional 宣言。
  */
-function assertSerializedNode(
-  value: unknown,
-): asserts value is Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new Error("Expected serialized node to be a record");
+type SerializedFeatureIconListContainerNode =
+  SerializedElementNode<SerializedFeatureIconItemNode> & {
+    type: "feature-icon-list-container";
+    columns?: number;
+    accentColor?: string;
+    iconSize?: string;
+  };
+
+type SerializedFeatureIconItemNode =
+  SerializedElementNode<SerializedLexicalNode> & {
+    type: "feature-icon-item";
+    iconName?: string;
+  };
+
+function assertSerializedFeatureIconListContainerNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedFeatureIconListContainerNode {
+  if (node?.type !== "feature-icon-list-container") {
+    throw new Error(
+      `Expected SerializedFeatureIconListContainerNode, got ${String(node?.type)}`,
+    );
+  }
+}
+
+function assertSerializedFeatureIconItemNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedFeatureIconItemNode {
+  if (node?.type !== "feature-icon-item") {
+    throw new Error(
+      `Expected SerializedFeatureIconItemNode, got ${String(node?.type)}`,
+    );
   }
 }
 
@@ -52,12 +81,12 @@ describe("FeatureIconListContainerNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    const nodeJson: unknown = json.root.children[0];
-    assertSerializedNode(nodeJson);
-    expect(nodeJson["type"]).toBe("feature-icon-list-container");
-    expect(nodeJson["columns"]).toBe(3);
-    expect(nodeJson["accentColor"]).toBe("blue");
-    expect(nodeJson["iconSize"]).toBe("lg");
+    const nodeJson = json.root.children[0];
+    assertSerializedFeatureIconListContainerNode(nodeJson);
+    expect(nodeJson.type).toBe("feature-icon-list-container");
+    expect(nodeJson.columns).toBe(3);
+    expect(nodeJson.accentColor).toBe("blue");
+    expect(nodeJson.iconSize).toBe("lg");
   });
 
   test("isShadowRoot returns true for both nodes", async () => {
@@ -87,16 +116,12 @@ describe("FeatureIconItemNode", () => {
       $getRoot().append(container);
     });
     const json = editor.getEditorState().toJSON();
-    const containerJson: unknown = json.root.children[0];
-    assertSerializedNode(containerJson);
-    const childrenValue = containerJson["children"];
-    if (!Array.isArray(childrenValue)) {
-      throw new Error("Expected container children to be an array");
-    }
-    const itemJson: unknown = childrenValue[0];
-    assertSerializedNode(itemJson);
-    expect(itemJson["type"]).toBe("feature-icon-item");
-    expect(itemJson["iconName"]).toBe("IconClock");
+    const containerJson = json.root.children[0];
+    assertSerializedFeatureIconListContainerNode(containerJson);
+    const itemJson = containerJson.children[0];
+    assertSerializedFeatureIconItemNode(itemJson);
+    expect(itemJson.type).toBe("feature-icon-item");
+    expect(itemJson.iconName).toBe("IconClock");
   });
 
   test("$isFeatureIconListContainerNode and $isFeatureIconItemNode type guards work", async () => {

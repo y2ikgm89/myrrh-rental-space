@@ -7,8 +7,12 @@
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
 import { HeadingNode } from "@lexical/rich-text";
-import { $getRoot, $createParagraphNode } from "lexical";
-import { isRecord } from "@/shared/lib/serialize";
+import {
+  $getRoot,
+  $createParagraphNode,
+  type SerializedElementNode,
+  type SerializedLexicalNode,
+} from "lexical";
 import {
   CoverNode,
   $createCoverNode,
@@ -16,15 +20,25 @@ import {
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/CoverNode";
 
 /**
- * editor.getEditorState().toJSON() の root.children は SerializedLexicalNode[]
- * 型で個別 Node 固有プロパティへの直接 access ができないため、isRecord で narrow
- * してから [key] access で test する。`as` cast を発生させない canonical pattern。
+ * CoverNode の serialize 結果。$config() の flat: true により stateConfigs が
+ * top-level に展開されるため、SerializedElementNode を拡張して各 state プロパティ
+ * を optional で持つ shape を test 内で宣言する (default 値は省略される)。
  */
-function assertSerializedNode(
-  value: unknown,
-): asserts value is Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new Error("Expected serialized node to be a record");
+type SerializedCoverNode = SerializedElementNode<SerializedLexicalNode> & {
+  type: "cover";
+  backgroundImageUrl?: string;
+  overlayColor?: string;
+  overlayOpacity?: number;
+  minHeight?: string;
+  contentAlign?: string;
+  contentPosition?: string;
+};
+
+function assertSerializedCoverNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedCoverNode {
+  if (node?.type !== "cover") {
+    throw new Error(`Expected SerializedCoverNode, got ${String(node?.type)}`);
   }
 }
 
@@ -55,15 +69,15 @@ describe("CoverNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    const nodeJson: unknown = json.root.children[0];
-    assertSerializedNode(nodeJson);
-    expect(nodeJson["type"]).toBe("cover");
-    expect(nodeJson["backgroundImageUrl"]).toBe("https://example.com/bg.jpg");
-    expect(nodeJson["overlayColor"]).toBe("blue");
-    expect(nodeJson["overlayOpacity"]).toBe(60);
-    expect(nodeJson["minHeight"]).toBe("lg");
-    expect(nodeJson["contentAlign"]).toBe("left");
-    expect(nodeJson["contentPosition"]).toBe("bottom");
+    const nodeJson = json.root.children[0];
+    assertSerializedCoverNode(nodeJson);
+    expect(nodeJson.type).toBe("cover");
+    expect(nodeJson.backgroundImageUrl).toBe("https://example.com/bg.jpg");
+    expect(nodeJson.overlayColor).toBe("blue");
+    expect(nodeJson.overlayOpacity).toBe(60);
+    expect(nodeJson.minHeight).toBe("lg");
+    expect(nodeJson.contentAlign).toBe("left");
+    expect(nodeJson.contentPosition).toBe("bottom");
   });
 
   test("backgroundImageUrl is preserved for non-default value", async () => {
@@ -77,11 +91,9 @@ describe("CoverNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    const nodeJson: unknown = json.root.children[0];
-    assertSerializedNode(nodeJson);
-    expect(nodeJson["backgroundImageUrl"]).toBe(
-      "https://example.com/cover.png",
-    );
+    const nodeJson = json.root.children[0];
+    assertSerializedCoverNode(nodeJson);
+    expect(nodeJson.backgroundImageUrl).toBe("https://example.com/cover.png");
   });
 
   test("isShadowRoot returns true", async () => {
