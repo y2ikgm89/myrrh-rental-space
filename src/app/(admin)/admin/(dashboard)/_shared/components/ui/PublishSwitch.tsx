@@ -44,16 +44,13 @@ export function PublishSwitch<TData = unknown>({
   };
 
   return (
-    <div className="inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-1 py-2">
+    <div className="inline-flex min-h-11 min-w-11 items-center justify-center py-2">
       <Switch
         checked={isPublished}
         onCheckedChange={handleChange}
         disabled={isPending}
         aria-label={`${resourceLabel}（現在: ${isPublished ? label.published : label.unpublished}）`}
       />
-      <span className="text-xs text-muted-foreground" aria-hidden="true">
-        {isPublished ? label.published : label.unpublished}
-      </span>
     </div>
   );
 }
