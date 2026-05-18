@@ -1,4 +1,8 @@
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import {
+  useInputControl,
+  type DefaultValue,
+  type FieldMetadata,
+} from "@conform-to/react";
 
 /**
  * `useInputControl` の generic invariance 境界を helper 内に閉じ込めた wrapper。
@@ -71,4 +75,76 @@ export function asTypedField<T>(
 ): FieldMetadata<T> {
   // §5 generic invariance — 唯一の境界 cast
   return field as unknown as FieldMetadata<T>;
+}
+
+/**
+ * conform `useForm<T>({ defaultValue })` の `DefaultValue<T>` invariance 境界 helper。
+ *
+ * preprocess input 型 (`tags: unknown` / `contentWidth: unknown` / boolean 等) は
+ * conform `DefaultValue<T>` の string-only 制約と構造的に非互換のため、helper 内部で
+ * 境界 cast を集約する。runtime は FormData transit で string 化されるため実害なし。
+ *
+ * 用途: `defaultValue: asConformDefaultValue<PostSettingsFormData>(toSettingsFormData(post))`
+ */
+export function asConformDefaultValue<T>(value: unknown): DefaultValue<T> {
+  // §5 generic invariance — DefaultValue<T> の string-only 制約境界
+  return value as DefaultValue<T>;
+}
+
+/**
+ * conform `parseWithZod` の `submission.value` を typed schema の output 型へ narrow する helper。
+ *
+ * `parseWithZod` の submission.value 型は schema の `z.output<T>` だが、
+ * preprocess を持つ schema では output 型と input 型 (`z.input<T>`) が異なり、
+ * caller の TForm 型と structural mismatch を起こす。helper 内部で境界 cast を集約。
+ *
+ * 用途: `return asConformSubmissionValue<PostSettingsFormData>(submission.value)`
+ */
+export function asConformSubmissionValue<T>(value: unknown): T {
+  // §5 generic invariance — preprocess input/output mismatch 境界
+  return value as T;
+}
+
+/**
+ * conform `form.insert.getButtonProps` / `form.remove.getButtonProps` の動的 schema 境界 helper。
+ *
+ * conform の Intent / FieldName は branded type のため、動的 schema (22 種 Section type) の
+ * AutoArrayField で `name: string` / `defaultValue: Record<string, unknown>` を渡す場合、
+ * 緩めた function signature への cast が必要。helper 内部で集約。
+ *
+ * 用途: `const insert = asConformButtonGetter<InsertButtonGetter>(form.insert.getButtonProps)`
+ */
+export function asConformButtonGetter<T>(getter: unknown): T {
+  // §5 generic invariance — branded Intent / FieldName 境界
+  return getter as T;
+}
+
+/**
+ * conform `defaultValue` / `form.update({ value })` の動的 schema 用 record 境界 helper。
+ *
+ * AutoSectionForm の動的 schema (22 種) では `Record<string, unknown>` 形式の config を
+ * conform `DefaultValue<Record<string, string | null | undefined>>` に渡す必要がある
+ * (runtime は boolean / number / array / object も FormData serialize で string 化される)。
+ *
+ * 用途: `defaultValue: asConformLooseRecord(defaultConfig)` / `form.update({ value: asConformLooseRecord(data) })`
+ */
+export function asConformLooseRecord(
+  value: unknown,
+): Record<string, string | null | undefined> {
+  // §5 generic invariance — runtime string serialization 境界
+  return value as Record<string, string | null | undefined>;
+}
+
+/**
+ * conform `fields` (FormMetadata 戻り値) を typed Fieldset object へ narrow する helper。
+ *
+ * `useForm<TForm>` の戻り `fields` は `Required<{[K in keyof TForm]: FieldMetadata<TForm[K]>}>` だが、
+ * preprocess を持つ schema や TForm が `Record<string, unknown>` 型のとき
+ * caller の typed Fieldset 型 (e.g. `ReservationFormFields`) と structural mismatch を起こす。
+ *
+ * 用途: `<CustomerStep fields={asConformFieldset<ReservationFormFields>(fields)} />`
+ */
+export function asConformFieldset<T>(fields: unknown): T {
+  // §5 generic invariance — Fieldset object 全体の cast
+  return fields as T;
 }

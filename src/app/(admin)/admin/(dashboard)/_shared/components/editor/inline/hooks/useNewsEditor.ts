@@ -10,7 +10,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, type DefaultValue } from "@conform-to/react";
+import { useForm } from "@conform-to/react";
+import {
+  asConformDefaultValue,
+  asConformSubmissionValue,
+} from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -142,14 +146,13 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const isBodyDirty = contentJson !== savedContentJson;
 
   // 設定 — conform useForm
-  // documented exception §5 conform generic invariance:
-  // preprocess input 型は conform DefaultValue<T> の string-only 制約と非互換のため境界 cast。
+  // ledger §5 conform generic invariance — typed-input-control SSoT helper 経由
   const [settingsForm, settingsFields] = useForm<NewsSettingsFormData>({
     id: "news-settings-form",
     constraint: getZodConstraint(newsSettingsFormSchema),
-    defaultValue: toSettingsFormData(
-      news,
-    ) as unknown as DefaultValue<NewsSettingsFormData>,
+    defaultValue: asConformDefaultValue<NewsSettingsFormData>(
+      toSettingsFormData(news),
+    ),
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: newsSettingsFormSchema });
     },
@@ -220,7 +223,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       toast.error("入力内容に誤りがあります");
       return null;
     }
-    return submission.value as unknown as NewsSettingsFormData;
+    return asConformSubmissionValue<NewsSettingsFormData>(submission.value);
   };
 
   const onSubmitSettings = () => {
