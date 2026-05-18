@@ -13,6 +13,7 @@ import type { FieldMetadata } from "@conform-to/react";
 import { cn } from "@/shared/lib/cn";
 import { isRecord } from "@/shared/lib/serialize";
 import { Card, CardContent } from "@/admin/components/ui";
+import { getTypedFieldset } from "@/shared/lib/conform/typed-input-control";
 import { IconChevronDown } from "@tabler/icons-react";
 import { getZodObjectShape, extractFieldMetaDeep } from "../zod-introspection";
 import type { FieldInfo } from "../zod-introspection";
@@ -51,10 +52,7 @@ export function AutoGroupField({
   if (subFields.length === 0) return null;
 
   // conform: nested object のサブフィールドアクセサ（Record<string, FieldMetadata>）
-  // 動的 schema 用の境界変換（getFieldset は FieldMetadata<Record<string, T>> 必須）
-  const fieldset = (
-    field as unknown as FieldMetadata<Record<string, unknown>>
-  ).getFieldset();
+  const fieldset = getTypedFieldset(field);
 
   return (
     <Card>
