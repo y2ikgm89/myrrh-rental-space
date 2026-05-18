@@ -2,7 +2,7 @@
 
 > 理解指向のドキュメント。アーキテクチャ判断、データモデル、トレードオフ、設計原則。
 
-[Diátaxis](https://diataxis.fr/explanation/) の **explanation** に相当する。読み終えた後に「なぜそうなっているのか」が分かる状態を目指す。手順は [`../how-to/`](../how-to/) を、API 仕様は [`../reference/`](../reference/) を参照。
+[Diátaxis](https://diataxis.fr/explanation/) の **explanation** に相当する。読み終えた後に「なぜそうなっているのか」が分かる状態を目指す。手順は [`../how-to/`](../how-to/) を、ライブラリ API 仕様は公式 docs を直接参照（reference 軸は本 repo に置かない方針 — `CLAUDE.md` §md ドキュメント規律）。
 
 ## ドキュメント
 
