@@ -267,11 +267,11 @@ function isValidSessionUser(user: unknown): user is AdminSession["user"] {
   return typeof user["id"] === "string" && typeof user["email"] === "string";
 }
 
-export function getAdminSessionUser(
-  session: AdminSession | null,
-): AdminUser | null {
-  if (!session?.user || !isValidSessionUser(session.user)) return null;
-  const { role, ...rest } = session.user;
+export function getAdminSessionUser(session: unknown): AdminUser | null {
+  if (!isRecord(session)) return null;
+  const user = session["user"];
+  if (!isValidSessionUser(user)) return null;
+  const { role, ...rest } = user;
   if (!isValidRole(role)) return null;
   return { ...rest, role };
 }

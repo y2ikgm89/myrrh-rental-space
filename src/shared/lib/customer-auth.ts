@@ -135,11 +135,11 @@ function isValidSessionUser(user: unknown): user is CustomerSession["user"] {
   return typeof user["id"] === "string" && typeof user["email"] === "string";
 }
 
-export function getCustomerSessionUser(
-  session: CustomerSession | null,
-): CustomerUser | null {
-  if (!session?.user || !isValidSessionUser(session.user)) return null;
-  const { role, ...rest } = session.user;
+export function getCustomerSessionUser(session: unknown): CustomerUser | null {
+  if (!isRecord(session)) return null;
+  const user = session["user"];
+  if (!isValidSessionUser(user)) return null;
+  const { role, ...rest } = user;
   if (!isValidRole(role)) return null;
   return { ...rest, role };
 }

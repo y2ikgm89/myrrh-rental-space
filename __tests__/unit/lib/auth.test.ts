@@ -86,8 +86,8 @@ describe("isValidRole", () => {
 describe("getAdminSessionUser", () => {
   describe("正常系", () => {
     test("有効なセッションからユーザーを取得", () => {
-      // any にキャストしてテスト（実際のBetter Auth Session型との互換性のため）
-      const user = getAdminSessionUser(VALID_SESSION as any);
+      // getAdminSessionUser は unknown 受け取りで内部 type guard により narrow する
+      const user = getAdminSessionUser(VALID_SESSION);
 
       expect(user).not.toBeNull();
       expect(user?.id).toBe("user-123");
@@ -109,7 +109,7 @@ describe("getAdminSessionUser", () => {
           ...VALID_SESSION,
           user: { ...VALID_USER, role },
         };
-        const user = getAdminSessionUser(session as any);
+        const user = getAdminSessionUser(session);
 
         expect(user).not.toBeNull();
         expect(user?.role).toBe(role);
@@ -124,7 +124,7 @@ describe("getAdminSessionUser", () => {
     });
 
     test("user がないセッションはnullを返す", () => {
-      const session = { session: VALID_SESSION.session } as any;
+      const session = { session: VALID_SESSION.session };
       const user = getAdminSessionUser(session);
       expect(user).toBeNull();
     });
@@ -134,7 +134,7 @@ describe("getAdminSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: "INVALID_ROLE" },
       };
-      const user = getAdminSessionUser(session as any);
+      const user = getAdminSessionUser(session);
       expect(user).toBeNull();
     });
 
@@ -143,7 +143,7 @@ describe("getAdminSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, id: undefined },
       };
-      const user = getAdminSessionUser(session as any);
+      const user = getAdminSessionUser(session);
       expect(user).toBeNull();
     });
 
@@ -152,7 +152,7 @@ describe("getAdminSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, email: undefined },
       };
-      const user = getAdminSessionUser(session as any);
+      const user = getAdminSessionUser(session);
       expect(user).toBeNull();
     });
 
@@ -161,7 +161,7 @@ describe("getAdminSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: undefined },
       };
-      const user = getAdminSessionUser(session as any);
+      const user = getAdminSessionUser(session);
       expect(user).toBeNull();
     });
   });
@@ -170,7 +170,7 @@ describe("getAdminSessionUser", () => {
 describe("getCustomerSessionUser (role extraction)", () => {
   describe("正常系", () => {
     test("有効なセッションからロールを取得", () => {
-      const user = getCustomerSessionUser(VALID_SESSION as any);
+      const user = getCustomerSessionUser(VALID_SESSION);
       expect(user).not.toBeNull();
       expect(user?.role).toBe(Role.ADMIN);
     });
@@ -189,7 +189,7 @@ describe("getCustomerSessionUser (role extraction)", () => {
           ...VALID_SESSION,
           user: { ...VALID_USER, role: roleValue },
         };
-        const user = getCustomerSessionUser(session as any);
+        const user = getCustomerSessionUser(session);
         expect(user).not.toBeNull();
         expect(user?.role).toBe(roleValue);
       }
@@ -203,7 +203,7 @@ describe("getCustomerSessionUser (role extraction)", () => {
     });
 
     test("user がないセッションはnullを返す", () => {
-      const session = { session: VALID_SESSION.session } as any;
+      const session = { session: VALID_SESSION.session };
       const user = getCustomerSessionUser(session);
       expect(user).toBeNull();
     });
@@ -213,7 +213,7 @@ describe("getCustomerSessionUser (role extraction)", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: "INVALID_ROLE" },
       };
-      const user = getCustomerSessionUser(session as any);
+      const user = getCustomerSessionUser(session);
       expect(user).toBeNull();
     });
 
@@ -222,7 +222,7 @@ describe("getCustomerSessionUser (role extraction)", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: "" },
       };
-      const user = getCustomerSessionUser(session as any);
+      const user = getCustomerSessionUser(session);
       expect(user).toBeNull();
     });
   });

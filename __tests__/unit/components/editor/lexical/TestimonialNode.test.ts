@@ -7,6 +7,7 @@
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
 import { $getRoot, $createParagraphNode } from "lexical";
+import { isRecord } from "@/shared/lib/serialize";
 import {
   TestimonialContainerNode,
   TestimonialItemNode,
@@ -15,6 +16,19 @@ import {
   $isTestimonialContainerNode,
   $isTestimonialItemNode,
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/TestimonialNode";
+
+/**
+ * editor.getEditorState().toJSON() の root.children は SerializedLexicalNode[]
+ * 型で個別 Node 固有プロパティへの直接 access ができないため、isRecord で narrow
+ * してから [key] access で test する。`as` cast を発生させない canonical pattern。
+ */
+function assertSerializedNode(
+  value: unknown,
+): asserts value is Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new Error("Expected serialized node to be a record");
+  }
+}
 
 function createEditor() {
   return createHeadlessEditor({
@@ -38,12 +52,12 @@ describe("TestimonialContainerNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeJson = json.root.children[0] as any;
-    expect(nodeJson.type).toBe("testimonial-container");
-    expect(nodeJson.layout).toBe("list");
-    expect(nodeJson.columns).toBe(3);
-    expect(nodeJson.accentColor).toBe("blue");
+    const nodeJson: unknown = json.root.children[0];
+    assertSerializedNode(nodeJson);
+    expect(nodeJson["type"]).toBe("testimonial-container");
+    expect(nodeJson["layout"]).toBe("list");
+    expect(nodeJson["columns"]).toBe(3);
+    expect(nodeJson["accentColor"]).toBe("blue");
   });
 
   test("$isTestimonialContainerNode returns true for TestimonialContainerNode", async () => {
@@ -85,14 +99,20 @@ describe("TestimonialItemNode", () => {
       $getRoot().append(container);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const itemJson = (json.root.children[0] as any).children[0];
-    expect(itemJson.type).toBe("testimonial-item");
-    expect(itemJson.authorName).toBe("山田太郎");
-    expect(itemJson.authorTitle).toBe("CEO");
-    expect(itemJson.avatarUrl).toBe("https://example.com/avatar.jpg");
-    expect(itemJson.rating).toBe(4);
-    expect(itemJson.date).toBe("2024-01-01");
+    const containerJson: unknown = json.root.children[0];
+    assertSerializedNode(containerJson);
+    const childrenValue = containerJson["children"];
+    if (!Array.isArray(childrenValue)) {
+      throw new Error("Expected container children to be an array");
+    }
+    const itemJson: unknown = childrenValue[0];
+    assertSerializedNode(itemJson);
+    expect(itemJson["type"]).toBe("testimonial-item");
+    expect(itemJson["authorName"]).toBe("山田太郎");
+    expect(itemJson["authorTitle"]).toBe("CEO");
+    expect(itemJson["avatarUrl"]).toBe("https://example.com/avatar.jpg");
+    expect(itemJson["rating"]).toBe(4);
+    expect(itemJson["date"]).toBe("2024-01-01");
   });
 
   test("$isTestimonialItemNode returns true for TestimonialItemNode", async () => {

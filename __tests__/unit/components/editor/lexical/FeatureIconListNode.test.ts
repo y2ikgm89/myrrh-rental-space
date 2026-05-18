@@ -7,6 +7,7 @@
 import { describe, test, expect } from "bun:test";
 import { createHeadlessEditor } from "@lexical/headless";
 import { $getRoot, $createParagraphNode } from "lexical";
+import { isRecord } from "@/shared/lib/serialize";
 import {
   FeatureIconListContainerNode,
   FeatureIconItemNode,
@@ -15,6 +16,19 @@ import {
   $isFeatureIconListContainerNode,
   $isFeatureIconItemNode,
 } from "../../../../../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/FeatureIconListNode";
+
+/**
+ * editor.getEditorState().toJSON() の root.children は SerializedLexicalNode[]
+ * 型で個別 Node 固有プロパティへの直接 access ができないため、isRecord で narrow
+ * してから [key] access で test する。`as` cast を発生させない canonical pattern。
+ */
+function assertSerializedNode(
+  value: unknown,
+): asserts value is Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new Error("Expected serialized node to be a record");
+  }
+}
 
 function createEditor() {
   return createHeadlessEditor({
@@ -38,12 +52,12 @@ describe("FeatureIconListContainerNode", () => {
       $getRoot().append(node);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeJson = json.root.children[0] as any;
-    expect(nodeJson.type).toBe("feature-icon-list-container");
-    expect(nodeJson.columns).toBe(3);
-    expect(nodeJson.accentColor).toBe("blue");
-    expect(nodeJson.iconSize).toBe("lg");
+    const nodeJson: unknown = json.root.children[0];
+    assertSerializedNode(nodeJson);
+    expect(nodeJson["type"]).toBe("feature-icon-list-container");
+    expect(nodeJson["columns"]).toBe(3);
+    expect(nodeJson["accentColor"]).toBe("blue");
+    expect(nodeJson["iconSize"]).toBe("lg");
   });
 
   test("isShadowRoot returns true for both nodes", async () => {
@@ -73,10 +87,16 @@ describe("FeatureIconItemNode", () => {
       $getRoot().append(container);
     });
     const json = editor.getEditorState().toJSON();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const itemJson = (json.root.children[0] as any).children[0];
-    expect(itemJson.type).toBe("feature-icon-item");
-    expect(itemJson.iconName).toBe("IconClock");
+    const containerJson: unknown = json.root.children[0];
+    assertSerializedNode(containerJson);
+    const childrenValue = containerJson["children"];
+    if (!Array.isArray(childrenValue)) {
+      throw new Error("Expected container children to be an array");
+    }
+    const itemJson: unknown = childrenValue[0];
+    assertSerializedNode(itemJson);
+    expect(itemJson["type"]).toBe("feature-icon-item");
+    expect(itemJson["iconName"]).toBe("IconClock");
   });
 
   test("$isFeatureIconListContainerNode and $isFeatureIconItemNode type guards work", async () => {

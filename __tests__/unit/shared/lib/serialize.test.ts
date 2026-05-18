@@ -162,14 +162,12 @@ describe("toPlainArray", () => {
     });
 
     test("null をそのまま返す", () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result: unknown = toPlainArray(null as any);
+      const result: unknown = toPlainArray(null);
       expect(result).toBe(null);
     });
 
     test("undefined をそのまま返す", () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result: unknown = toPlainArray(undefined as any);
+      const result: unknown = toPlainArray(undefined);
       expect(result).toBe(undefined);
     });
   });

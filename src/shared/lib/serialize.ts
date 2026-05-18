@@ -172,9 +172,12 @@ export function toPlainObject(obj: unknown): unknown {
  * ```
  */
 export function toPlainArray<T>(arr: T[]): Serialized<T>[];
-export function toPlainArray(arr: unknown[]): unknown[] {
-  // null/undefined/空配列はそのまま返す（パフォーマンス最適化）
-  if (!arr || arr.length === 0) {
+export function toPlainArray(arr: null): null;
+export function toPlainArray(arr: undefined): undefined;
+export function toPlainArray(arr: unknown): unknown {
+  // null/undefined/空配列はそのまま返す（パフォーマンス最適化 + 防御的入力対応）
+  if (arr === null || arr === undefined) return arr;
+  if (!Array.isArray(arr) || arr.length === 0) {
     return arr;
   }
 
