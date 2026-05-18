@@ -11,13 +11,6 @@ paths:
 
 > Next.js 16.2 Server Actions / safeFetch / criticalFetch / logger 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **MutationResult<T> + createMutationError + Zod バリデーション** — `error-handling/mutation-result.md`
-> - **Server Action エラーパターン (executeAdminMutationResult / DB / DomainError / withRetry)** — `error-handling/server-actions.md`
-> - **safeFetch / criticalFetch + fallback 値設計** — `error-handling/safe-fetch.md`
-> - **logger / logError + ErrorCategory・Severity + 正規化 + ドメイン固有エラー** — `error-handling/logger.md`
-
 ## 禁止事項
 
 1. **エラー握りつぶし禁止**

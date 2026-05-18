@@ -1,7 +1,7 @@
 ---
 name: audit-a11y
-description: 公開ページの hero / image overlay / archive list / 配色 token 編集後に Playwright MCP axe-core scan で violations + incomplete を実機検証する。CI broad E2E flake (bgGradient / bgOverlap incomplete → production violation 昇格 / image load timing 偽陽性) を編集セッション内で発見する canonical pattern。
-when_to_use: 公開ページ (`src/app/(public*)/**`) の hero / image overlay / archive list / 配色 token (`public.css` の `--color-*`) を編集した後、commit 前に Playwright MCP で a11y 実機検証したいとき。CI broad E2E は opt-in (1h20m+) のため、a11y flake が main merge 後の別 PR でしか発覚しないリスクを未然に防ぐ。
+description: 公開ページの hero / image overlay / archive list / 配色 token 編集後に Playwright MCP axe-core scan で violations + incomplete を実機検証。CI broad E2E flake (bgGradient incomplete 等) を編集セッション内で発見する canonical pattern。
+when_to_use: 公開ページの hero / image overlay / archive list / 配色 token (`public.css` の `--color-*`) を編集した後、commit 前に a11y 実機検証したいとき。
 paths:
   - src/app/(public*)/**/*.tsx
   - src/app/(public*)/_styles/public*.css

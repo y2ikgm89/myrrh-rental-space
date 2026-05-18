@@ -8,14 +8,6 @@ paths:
 
 > Better Auth 1.6.10 / RBAC / Next.js 16.2 対応（`package.json` の `better-auth` と一致）
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **管理 Server Action / API Route 認証 + 監査ログ + EDITOR ロール契約** — `auth-patterns/admin-actions.md`
-> - **公開顧客ソーシャルログイン + ensureCustomerLinked + signIn/signOut** — `auth-patterns/customer-social.md`
-> - **Better Auth 公式設定 + セッション取得関数の使い分け** — `auth-patterns/sessions.md`
-> - **権限階層 + DASHBOARD_ROLES + リソース別アクション enum** — `auth-patterns/roles.md`
-> - **Cloudflare Turnstile 保護エンドポイント** — `auth-patterns/turnstile.md`
-
 ## 禁止事項
 
 1. **認証チェック漏れ禁止**

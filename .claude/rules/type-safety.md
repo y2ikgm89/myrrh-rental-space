@@ -8,13 +8,6 @@ paths:
 
 > TypeScript 6.0 / noUncheckedIndexedAccess 有効
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **noUncheckedIndexedAccess + TS 6.0 設定 + 配列 / ループ / Record アクセス** — `type-safety/index-access.md`
-> - **`as` / `!` 禁止 + 5 つの限定許可例外 + 禁止パターン代替** — `type-safety/assertion-bans.md`
-> - **Mutually Exclusive Discriminated Union + `_type` Portable Text + `satisfies`** — `type-safety/discriminated-unions.md`
-> - **ユーザー定義 / Set-based / Zod safeParse / Select onChange 型ガード** — `type-safety/type-guards.md`
-
 ## tsconfig 必須オプション
 
 | オプション                           | 値     | 影響                                                                                                                 |

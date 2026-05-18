@@ -14,12 +14,6 @@ paths:
 
 > Bun 1.3.x runtime + Bun Test 対応。公式仕様（[bun.com/docs](https://bun.com/docs)）準拠で 2026-05-15 verification 済。
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **基本構造 + DOM (jsdom) + 環境変数モック + Symbol.dispose + ファイル配置 + コマンド + カバレッジ** — `bun-patterns/test-runner.md`
-> - **mock / spyOn / mock.module + Vitest API 禁止表 + 純粋モジュール非モック / 連続呼び出し / mock.calls** — `bun-patterns/mocking.md`
-> - **Server Actions 統合テスト（依存差し替え + アクション直呼び）** — `bun-patterns/server-actions-tests.md`
-
 ## TypeScript セットアップ（公式推奨）
 
 公式（`bun.com/docs/runtime/typescript`）は `@types/bun` パッケージ + `tsconfig.json#compilerOptions.types` に `"bun"` 指定が canonical:

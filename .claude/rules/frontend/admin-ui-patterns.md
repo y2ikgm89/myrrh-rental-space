@@ -7,20 +7,6 @@ paths:
 
 > Swiss Industrial Admin テーマ / 一貫性のある管理 UI を実現するためのパターン集
 
-## 詳細パターン別ファイル（ファイル種別で自動ロード）
-
-ファイル種別に応じて以下が自動ロードされる:
-
-- **`admin-ui/dialogs.md`** — Dialog 型 CRUD・多選択肢ダイアログ（`*Dialog.tsx`）
-- **`admin-ui/tables.md`** — テーブルレスポンシブ・ActionDropdown・フィルター・ソート・一括操作・ソータブルリスト（`*Table*.tsx` / `*Filters.tsx` / `*ActionCell.tsx` / `*BulkActions.tsx`）
-- **`admin-ui/forms.md`** — Server Actions 認証・2 カラムフォーム・詳細/編集/新規作成ページ・ToggleGroup・設定セクション（`*Form.tsx` / `new/page.tsx` / `edit/page.tsx` / `settings/**`）
-- **`admin-ui/navigation.md`** — サイドバーアクティブ判定（`ResponsiveSidebar.tsx` / `layout.tsx`）
-
-> 共通パターンサブルール（path-scoped auto-load）:
->
-> - **タブ UI A/B + ページヘッダー + admin 専用カラートークン + サイドバーモバイルオーバーレイ** — `frontend/admin-ui-patterns/tabs-headers-tokens.md`
-> - **SubmitButton 統一 + Sticky 子サイドバー (3 点セット)** — `frontend/admin-ui-patterns/submit-and-sticky.md`
-
 ## 禁止事項
 
 1. **型 re-export の追加禁止** — 共有型のローカル aliases は不要（`export type Foo = SharedFoo`）

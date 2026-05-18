@@ -8,12 +8,6 @@ paths:
 
 > Bun Test / Playwright E2E 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **Bun Unit / Integration テスト + ドメインコマンドテスト** — `test-quality/unit-bun.md`
-> - **Bun Test 型安全パターン 8 種** — `test-quality/types.md`
-> - **Playwright E2E + Next.js App Router Gotchas** — `test-quality/e2e.md`
-
 ## テスト分類
 
 | 種類          | フレームワーク | 場所                               | CI trigger                              | 用途                                             |

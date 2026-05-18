@@ -8,11 +8,6 @@ paths:
 
 > Tailwind CSS 4.2 / CSS-first 設定 / Multiple Root Layouts 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **CSS アーキテクチャ + @theme + OKLCH カラー + Typography SSoT + @keyframes** — `tailwind-patterns/theme-tokens/foundations.md`
-> - **セマンティックトークン (admin / public) + ハードコード代替表 + @layer + カスタムアニメーション + Border Radius** — `tailwind-patterns/theme-tokens/semantic-tokens.md`
-
 ## 禁止事項（テーマ・カラー系）
 
 1. **globals.css 作成禁止**

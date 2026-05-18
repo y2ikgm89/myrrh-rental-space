@@ -1,7 +1,7 @@
 ---
 name: audit-claude-config
-description: Claude Code 公式仕様 (`code.claude.com/docs/en/{memory,sub-agents,skills,settings,hooks}`) からの drift を `.claude/` 全体で検出する手動監査 SKILL。`claude-code-patterns.md` のチェックリストを実行可能化し、公式 docs を WebFetch して field 表と diff し、修正提案を出力する。`disable-model-invocation: true` で skill listing budget 常時消費ゼロ + `user-invocable: true` で `/audit-claude-config` slash command 経由のみ起動可。
-when_to_use: 公式 docs 更新の確認（月次）、`.claude/{rules,agents,skills,hooks}/**` の大規模変更後の自己検証、`audit-memory-staleness` と組み合わせた包括 audit、Claude Code 本体バージョン更新後（`claude --version` で version 上昇を確認したとき）。Claude (model) は Skill tool 経由で呼び出せない (公式仕様 `disable-model-invocation: true`)、ユーザーの slash command 起動のみ。
+description: Claude Code 公式仕様 (`code.claude.com/docs/en/{memory,sub-agents,skills,settings,hooks}`) からの drift を `.claude/` 全体で検出する手動監査 SKILL。
+when_to_use: 公式 docs 更新確認 (月次)、`.claude/{rules,agents,skills,hooks}/**` の大規模変更後の自己検証、Claude Code 本体バージョン更新後 (`claude --version`)。
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash, Grep, Glob, Read, WebFetch

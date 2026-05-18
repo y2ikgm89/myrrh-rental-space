@@ -11,14 +11,6 @@ paths:
 
 > Prisma 7.8 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **Enum パターン** — `prisma-patterns/enums.md`
-> - **JSON フィールド + Date シリアライゼーション** — `prisma-patterns/json-fields.md`
-> - **クエリパターン** — `prisma-patterns/queries.md`
-> - **Migrations** — `prisma-patterns/migrations.md`
-> - **Lexical JSON Primary** — `prisma-patterns/lexical-storage.md`
-
 ## Better Auth との境界
 
 - **アプリ本体**: `src/shared/db/prisma.ts` の **`prisma`**（**`createAppPrismaClient`** 適用済み）。

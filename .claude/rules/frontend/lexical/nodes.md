@@ -9,12 +9,6 @@ paths:
 
 # Lexical ノード実装パターン
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **5 基本ノード + NodeState API + プロパティルール** — `frontend/lexical/nodes/state-api.md`
-> - **単一レベル vs コンポジット + isShadowRoot / canBeEmpty / collapseAtStart / カラムレイアウト** — `frontend/lexical/nodes/composite.md`
-> - **CSS-first exportDOM + AccentColor + curation icon SVG 埋め込み** — `frontend/lexical/nodes/styling.md`
-
 ## NodeState `parse` 関数の共通ヘルパー（`config/type-guards.ts`）
 
 文字列・真偽値の `parse` 関数は `config/type-guards.ts` の共通ヘルパーを使う。inline lambda の重複禁止:

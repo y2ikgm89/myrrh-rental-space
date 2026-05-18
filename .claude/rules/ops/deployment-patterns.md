@@ -16,13 +16,6 @@ paths:
 
 > Docker / Cloud Run / Cloud Build / Artifact Registry 対応
 
-> 詳細サブルール（path-scoped auto-load）:
->
-> - **Dockerfile 3-stage build + Prisma WASM + STANDALONE + NEXT_PUBLIC ARG** — `ops/deployment/dockerfile.md`
-> - **Cloud Build + Cloud Run runtime + migrate Job + secret pinning** — `ops/deployment/cloudbuild.md`
-> - **シークレット管理 + .dockerignore / .gcloudignore** — `ops/deployment/secrets-and-ignore.md`
-> - **Deploy / Build / Tailwind+Turbopack の Gotchas** — `ops/deployment/gotchas.md`
-
 ## アーキテクチャ概要
 
 Cloud Run (Gen2) + Artifact Registry + Cloud Build によるデプロイ。
