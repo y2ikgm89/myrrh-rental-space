@@ -229,14 +229,14 @@ export function asTypedField<T>(
 
 | Before                                                                            | After                                                      | 件数 |
 | --------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---- |
-| `useInputControl(field as unknown as FieldMetadata<string>)`                      | `useTypedInputControl<string>(field)`                      | 8    |
-| `useInputControl(field as unknown as FieldMetadata<string \| null \| undefined>)` | `useTypedInputControl<string \| null \| undefined>(field)` | 6    |
+| `useInputControl(field as unknown as FieldMetadata<string>)`                      | `useTypedInputControl<string>(field)`                      | 7    |
+| `useInputControl(field as unknown as FieldMetadata<string \| null \| undefined>)` | `useTypedInputControl<string \| null \| undefined>(field)` | 1    |
 | `useInputControl(field as unknown as FieldMetadata<number \| null \| undefined>)` | `useTypedInputControl<number \| null \| undefined>(field)` | 1    |
-| `(field as unknown as FieldMetadata<unknown[]>).getFieldList()`                   | `getTypedFieldList(field)`                                 | 2    |
+| `(field as unknown as FieldMetadata<unknown[]>).getFieldList()`                   | `getTypedFieldList(field)`                                 | 1    |
 | `(field as unknown as FieldMetadata<Record<string, unknown>>).getFieldset()`      | `getTypedFieldset(field)`                                  | 2    |
-| `ctx.fields.tags as unknown as FieldMetadata<string[]>`                           | `asTypedField<string[]>(ctx.fields.tags)`                  | 2    |
+| `ctx.fields.tags as unknown as FieldMetadata<string[]>`                           | `asTypedField<string[]>(ctx.fields.tags)`                  | 1    |
 
-合計 21 件の boundary cast → helper 呼び出し置換完了で **呼び出し側 cast 0 件**。
+合計 13 件の boundary cast → helper 呼び出し置換完了で **呼び出し側 cast 0 件**。
 
 #### ledger / docs 更新
 
