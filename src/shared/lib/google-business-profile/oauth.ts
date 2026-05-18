@@ -22,6 +22,20 @@ type ExchangeGbpAuthCodeResult = {
 };
 
 /**
+ * CSRF 対策の state を保存する httpOnly cookie 名。
+ *
+ * `initiateGbpAuth()` で生成し、`/api/google-business-profile/oauth/callback`
+ * route で照合する。Instagram OAuth と同じ命名規約。
+ */
+export const GBP_OAUTH_STATE_COOKIE = "gbp_oauth_state";
+
+/**
+ * state cookie の有効期限（秒）。OAuth フロー完了までの猶予を 10 分に設定。
+ * Instagram OAuth と同じ値。
+ */
+export const GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS = 600;
+
+/**
  * Authorize URL を組み立てる。
  *
  * - `access_type: "offline"` で refresh token を要求

@@ -19,6 +19,8 @@ export {
   getGbpAuthorizeUrl,
   exchangeGbpAuthCode,
   revokeGbpToken,
+  GBP_OAUTH_STATE_COOKIE,
+  GBP_OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
 } from "./oauth";
 export { createOAuth2Client, getGbpClient, GBP_SCOPES } from "./client";
 export type {

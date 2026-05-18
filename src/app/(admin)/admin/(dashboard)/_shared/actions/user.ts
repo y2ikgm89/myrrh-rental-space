@@ -131,6 +131,7 @@ export async function updateUserRole(
     const result = await updateUserRoleCommand(
       parsed.data.id,
       parsed.data.role,
+      { id: auth.user.id, role: auth.user.role },
     );
 
     void logRoleChange(

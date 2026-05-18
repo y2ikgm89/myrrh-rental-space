@@ -543,6 +543,7 @@ describe("resendInvitation", () => {
         id: INVITATION_ID,
         email: "staff@example.com",
         name: "テストスタッフ",
+        role: "EDITOR",
         usedAt: null,
       }),
     );
@@ -556,13 +557,15 @@ describe("resendInvitation", () => {
 
   describe("正常系", () => {
     test("未使用の招待に対してトークン再生成とメール再送ができる", async () => {
-      await expect(resendInvitation(INVITATION_ID)).resolves.toBeUndefined();
+      await expect(
+        resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
+      ).resolves.toBeUndefined();
       expect(mockInvitationUpdate).toHaveBeenCalledTimes(1);
       expect(mockSendStaffInvitationEmail).toHaveBeenCalledTimes(1);
     });
 
     test("再送時に token と expiresAt が更新される", async () => {
-      await resendInvitation(INVITATION_ID);
+      await resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR);
       expect(mockInvitationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: INVITATION_ID },
@@ -575,7 +578,7 @@ describe("resendInvitation", () => {
     });
 
     test("メール再送時に setupUrl が /admin/setup/{token} 形式になる", async () => {
-      await resendInvitation(INVITATION_ID);
+      await resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR);
       expect(mockSendStaffInvitationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "staff@example.com",
@@ -590,22 +593,32 @@ describe("resendInvitation", () => {
           id: INVITATION_ID,
           email: "staff@example.com",
           name: null,
+          role: "EDITOR",
           usedAt: null,
         }),
       );
-      await resendInvitation(INVITATION_ID);
+      await resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR);
       expect(mockSendStaffInvitationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           staffName: "staff@example.com",
         }),
       );
     });
+
+    test("ADMIN は EDITOR の招待を再送できる", async () => {
+      await expect(
+        resendInvitation(INVITATION_ID, ADMIN_CREATOR),
+      ).resolves.toBeUndefined();
+      expect(mockSendStaffInvitationEmail).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("異常系", () => {
     test("存在しない招待 ID で NOT_FOUND エラーをスロー", async () => {
       mockInvitationFindUnique.mockImplementation(() => Promise.resolve(null));
-      await expect(resendInvitation("nonexistent")).rejects.toMatchObject({
+      await expect(
+        resendInvitation("nonexistent", SUPER_ADMIN_CREATOR),
+      ).rejects.toMatchObject({
         code: "NOT_FOUND",
       });
     });
@@ -616,12 +629,36 @@ describe("resendInvitation", () => {
           id: INVITATION_ID,
           email: "staff@example.com",
           name: "テストスタッフ",
+          role: "EDITOR",
           usedAt: new Date("2024-01-10T12:00:00Z"),
         }),
       );
-      await expect(resendInvitation(INVITATION_ID)).rejects.toMatchObject({
+      await expect(
+        resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
+      ).rejects.toMatchObject({
         code: "CONFLICT",
       });
+      expect(mockSendStaffInvitationEmail).not.toHaveBeenCalled();
+    });
+
+    test("ADMIN は ADMIN の招待を再送できない（FORBIDDEN）", async () => {
+      mockInvitationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: INVITATION_ID,
+          email: "staff@example.com",
+          name: "テストスタッフ",
+          role: "ADMIN",
+          usedAt: null,
+        }),
+      );
+      await expect(
+        resendInvitation(INVITATION_ID, ADMIN_CREATOR),
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        message: "このロールの招待を再送する権限がありません",
+      });
+
+      expect(mockInvitationUpdate).not.toHaveBeenCalled();
       expect(mockSendStaffInvitationEmail).not.toHaveBeenCalled();
     });
 
@@ -629,7 +666,9 @@ describe("resendInvitation", () => {
       mockSendStaffInvitationEmail.mockImplementation(() =>
         Promise.resolve({ success: false, error: "SMTP error" }),
       );
-      await expect(resendInvitation(INVITATION_ID)).rejects.toMatchObject({
+      await expect(
+        resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
+      ).rejects.toMatchObject({
         code: "UNEXPECTED",
       });
     });
@@ -639,7 +678,9 @@ describe("resendInvitation", () => {
       mockSendStaffInvitationEmail.mockImplementation(() =>
         Promise.resolve({ success: false, error: "SMTP error" }),
       );
-      await expect(resendInvitation(INVITATION_ID)).rejects.toThrow();
+      await expect(
+        resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
+      ).rejects.toThrow();
       expect(mockLogError).toHaveBeenCalledTimes(1);
     });
   });

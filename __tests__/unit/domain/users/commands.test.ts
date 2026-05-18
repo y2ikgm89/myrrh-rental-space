@@ -70,6 +70,8 @@ const mockUserDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "user-1" }),
 );
 
+const mockUserCount = mock<() => Promise<number>>(() => Promise.resolve(2));
+
 const mockTransaction = mock((fn: (tx: typeof mockTx) => Promise<unknown>) =>
   fn(mockTx),
 );
@@ -85,6 +87,7 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockUserCreate,
       update: mockUserUpdate,
       delete: mockUserDelete,
+      count: mockUserCount,
     },
     $transaction: mockTransaction,
   },
@@ -136,6 +139,7 @@ describe("users/commands", () => {
     mockUserCreate.mockReset();
     mockUserUpdate.mockReset();
     mockUserDelete.mockReset();
+    mockUserCount.mockReset();
     mockTransaction.mockReset();
     mockTxUserUpdate.mockReset();
     mockTxAccountFindFirst.mockReset();
@@ -149,6 +153,7 @@ describe("users/commands", () => {
     mockUserCreate.mockResolvedValue({ id: "user-1" });
     mockUserUpdate.mockResolvedValue({ id: USER_ID });
     mockUserDelete.mockResolvedValue({ id: USER_ID });
+    mockUserCount.mockResolvedValue(2);
     mockTransaction.mockImplementation(
       (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
     );
@@ -672,7 +677,11 @@ describe("users/commands", () => {
           _count: { reservations: 0, posts: 0 },
         });
 
-        const result = await updateUserRole(USER_ID, Role.EDITOR);
+        const result = await updateUserRole(
+          USER_ID,
+          Role.EDITOR,
+          SUPER_ADMIN_ACTOR,
+        );
 
         expect(result).toEqual({
           oldRole: Role.ADMIN,
@@ -687,7 +696,7 @@ describe("users/commands", () => {
           _count: { reservations: 0, posts: 0 },
         });
 
-        await updateUserRole(USER_ID, Role.SUPER_ADMIN);
+        await updateUserRole(USER_ID, Role.SUPER_ADMIN, SUPER_ADMIN_ACTOR);
 
         expect(mockUserUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -704,7 +713,11 @@ describe("users/commands", () => {
           _count: { reservations: 0, posts: 0 },
         });
 
-        const result = await updateUserRole(USER_ID, Role.ADMIN);
+        const result = await updateUserRole(
+          USER_ID,
+          Role.ADMIN,
+          SUPER_ADMIN_ACTOR,
+        );
 
         expect(result).toEqual({
           oldRole: Role.ADMIN,
@@ -721,10 +734,26 @@ describe("users/commands", () => {
           });
           mockUserUpdate.mockResolvedValueOnce({ id: USER_ID });
 
-          const result = await updateUserRole(USER_ID, role);
+          const result = await updateUserRole(USER_ID, role, SUPER_ADMIN_ACTOR);
 
           expect(result.newRole).toBe(role);
         }
+      });
+
+      test("SUPER_ADMIN が複数いる場合、SUPER_ADMIN を降格できる", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.SUPER_ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+        mockUserCount.mockResolvedValueOnce(3);
+
+        await expect(
+          updateUserRole(USER_ID, Role.ADMIN, SUPER_ADMIN_ACTOR),
+        ).resolves.toEqual({
+          oldRole: Role.SUPER_ADMIN,
+          newRole: Role.ADMIN,
+        });
       });
     });
 
@@ -732,14 +761,64 @@ describe("users/commands", () => {
       test("存在しないユーザー ID で NOT_FOUND エラーをスローする", async () => {
         mockUserFindUnique.mockResolvedValueOnce(null);
 
-        await expect(updateUserRole(USER_ID, Role.ADMIN)).rejects.toMatchObject(
-          {
-            code: "NOT_FOUND",
-            message: "ユーザーが見つかりません",
-          },
-        );
+        await expect(
+          updateUserRole(USER_ID, Role.ADMIN, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
+          code: "NOT_FOUND",
+          message: "ユーザーが見つかりません",
+        });
 
         expect(mockUserUpdate).not.toHaveBeenCalled();
+      });
+
+      test("自分自身のロールは変更できない（CONFLICT）", async () => {
+        await expect(
+          updateUserRole(USER_ID, Role.EDITOR, {
+            id: USER_ID,
+            role: Role.SUPER_ADMIN,
+          }),
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+          message: "自分自身のロールは変更できません",
+        });
+
+        expect(mockUserFindUnique).not.toHaveBeenCalled();
+        expect(mockUserUpdate).not.toHaveBeenCalled();
+      });
+
+      test("最後の SUPER_ADMIN を降格できない（CONFLICT）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.SUPER_ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+        mockUserCount.mockResolvedValueOnce(1);
+
+        await expect(
+          updateUserRole(USER_ID, Role.ADMIN, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+          message: "最後のSUPER_ADMINのロールは変更できません",
+        });
+
+        expect(mockUserUpdate).not.toHaveBeenCalled();
+      });
+
+      test("SUPER_ADMIN → SUPER_ADMIN（同ロール）は count 検証を発火しない", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.SUPER_ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+
+        await expect(
+          updateUserRole(USER_ID, Role.SUPER_ADMIN, SUPER_ADMIN_ACTOR),
+        ).resolves.toEqual({
+          oldRole: Role.SUPER_ADMIN,
+          newRole: Role.SUPER_ADMIN,
+        });
+
+        expect(mockUserCount).not.toHaveBeenCalled();
       });
     });
   });

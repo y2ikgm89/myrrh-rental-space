@@ -200,12 +200,33 @@ export async function deleteUser(
  *
  * 既存の `updateUser` と違い、SUPER_ADMIN の格上げ・格下げを含む全ロール変更に対応。
  * Server Action 側で `checkRole(Role.SUPER_ADMIN)` を先に通すことで保護する。
+ *
+ * 追加の domain 不変条件:
+ * - 自分自身のロールは変更不可（lockout 防止）
+ * - 最後の SUPER_ADMIN を降格不可（UI からの SUPER_ADMIN 復旧経路を保全）
  */
 export async function updateUserRole(
   id: string,
   role: Role,
+  actor: { id: string; role: Role },
 ): Promise<{ oldRole: Role; newRole: Role }> {
+  if (actor.id === id) {
+    throw new DomainError("自分自身のロールは変更できません", "CONFLICT");
+  }
+
   const user = await ensureUserExists(id);
+
+  if (user.role === Role.SUPER_ADMIN && role !== Role.SUPER_ADMIN) {
+    const superAdminCount = await prisma.user.count({
+      where: { role: Role.SUPER_ADMIN },
+    });
+    if (superAdminCount <= 1) {
+      throw new DomainError(
+        "最後のSUPER_ADMINのロールは変更できません",
+        "CONFLICT",
+      );
+    }
+  }
 
   await prisma.user.update({
     where: { id },
