@@ -17,30 +17,47 @@ const couponTypeConfig = {
   FIXED_AMOUNT: { label: "定額割引", variant: "secondary" },
 } satisfies Record<CouponType, { label: string; variant: CouponBadgeVariant }>;
 
-const couponStatusConfig = {
-  active: { label: "有効", variant: "success" },
-  inactive: { label: "無効", variant: "outline" },
-  expired: { label: "期限切れ", variant: "destructive" },
-  limitReached: { label: "上限到達", variant: "warning" },
-  notStarted: { label: "期間前", variant: "secondary" },
+/**
+ * クーポン派生 5 状態 SSoT: label + Badge variant + 補助テキスト色クラス。
+ *
+ * 消費者:
+ * - `<CouponStatusBadge>` — 詳細ページの Badge 描画
+ * - `<CouponStateToggle>` — 一覧ページの Switch + 派生状態テキスト
+ *
+ * `textColor` は WCAG 1.4.1 (Use of Color) 補強用。warning / destructive 状態を
+ * 一覧で即時識別可能にするセマンティックカラートークン参照（admin.css の
+ * `--color-success` / `--color-warning` / `--color-destructive`）。
+ */
+export const COUPON_STATUS_CONFIG = {
+  active: {
+    label: "有効",
+    variant: "success",
+    textColor: "text-success",
+  },
+  inactive: {
+    label: "無効",
+    variant: "outline",
+    textColor: "text-muted-foreground",
+  },
+  expired: {
+    label: "期限切れ",
+    variant: "destructive",
+    textColor: "text-destructive",
+  },
+  limitReached: {
+    label: "上限到達",
+    variant: "warning",
+    textColor: "text-warning",
+  },
+  notStarted: {
+    label: "期間前",
+    variant: "secondary",
+    textColor: "text-muted-foreground",
+  },
 } satisfies Record<
   CouponStatusType,
-  { label: string; variant: CouponBadgeVariant }
+  { label: string; variant: CouponBadgeVariant; textColor: string }
 >;
-
-/**
- * クーポン派生ステータス 5 値の表示ラベル SSoT。
- *
- * `CouponTable` で `PublishSwitch.label` を override する際にも参照される
- * （Switch 下に派生 operational state を表示し、StatusBadge との 2 列重複を解消）。
- */
-export const COUPON_STATUS_LABELS: Record<CouponStatusType, string> = {
-  active: couponStatusConfig.active.label,
-  inactive: couponStatusConfig.inactive.label,
-  expired: couponStatusConfig.expired.label,
-  limitReached: couponStatusConfig.limitReached.label,
-  notStarted: couponStatusConfig.notStarted.label,
-};
 
 export function CouponTypeBadge({ type }: { type: CouponType }) {
   const config = couponTypeConfig[type];
@@ -48,14 +65,16 @@ export function CouponTypeBadge({ type }: { type: CouponType }) {
 }
 
 /**
- * クーポンの表示ステータス Badge。
+ * クーポンの表示ステータス Badge（詳細ページ用）。
  *
  * ステータス計算は Server Component 側（`getCouponStatus(coupon, now)`）で
  * 事前に行い、本コンポーネントは結果を受け取って描画するだけの責務に分離。
  * これにより render 中の `new Date()` 副作用を排除し、React Compiler の
  * `purity` ルールに準拠する。
+ *
+ * 一覧ページでは `<CouponStateToggle>`（Switch 統合版）を使用する。
  */
 export function CouponStatusBadge({ status }: { status: CouponStatusType }) {
-  const config = couponStatusConfig[status];
+  const config = COUPON_STATUS_CONFIG[status];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
