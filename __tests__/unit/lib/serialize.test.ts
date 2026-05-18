@@ -46,10 +46,8 @@ describe("serialize", () => {
     test("Date を ISO 文字列に変換する", () => {
       const date = new Date("2024-01-15T10:30:00.000Z");
       const result = toPlainObject({ createdAt: date });
-      // toPlainObject<T> の返り型は T のまま（Date型）だが、実行時は string に変換される
-      // unknown 経由で型制約を回避
-      const createdAt: unknown = result.createdAt;
-      expect(createdAt).toBe("2024-01-15T10:30:00.000Z");
+      // Serialized<T> により Date → string narrow 済、直接 access 可能
+      expect(result.createdAt).toBe("2024-01-15T10:30:00.000Z");
     });
 
     test("ネストされたオブジェクトを変換する", () => {
@@ -79,9 +77,8 @@ describe("serialize", () => {
       const symbol = Symbol("test");
       const input = { id: 1, [symbol]: "removed" };
       const result = toPlainObject(input);
-      // TS型には Symbol プロパティが含まれるため unknown 経由で比較
-      const plain: unknown = result;
-      expect(plain).toEqual({ id: 1 });
+      // Serialized<T> が Symbol key を除外するため型レベルでも { id: number } に narrow
+      expect(result).toEqual({ id: 1 });
       expect(symbol in result).toBe(false);
     });
 
@@ -110,9 +107,8 @@ describe("serialize", () => {
         },
       };
       const result = toPlainObject(input);
-      // TS型には method プロパティが含まれるため unknown 経由で比較
-      const plain: unknown = result;
-      expect(plain).toEqual({ id: 1 });
+      // Serialized<T> が function key を除外するため型レベルでも { id: number } に narrow
+      expect(result).toEqual({ id: 1 });
     });
   });
 
@@ -124,13 +120,14 @@ describe("serialize", () => {
     });
 
     test("null をそのまま返す", () => {
-      // toPlainArray の null/undefined overload で型安全に呼べる
-      const result: unknown = toPlainArray(null);
+      // toPlainArray の null overload で戻り値型は null に narrow 済
+      const result = toPlainArray(null);
       expect(result).toBe(null);
     });
 
     test("undefined をそのまま返す", () => {
-      const result: unknown = toPlainArray(undefined);
+      // toPlainArray の undefined overload で戻り値型は undefined に narrow 済
+      const result = toPlainArray(undefined);
       expect(result).toBe(undefined);
     });
 
@@ -147,11 +144,9 @@ describe("serialize", () => {
         { id: 2, createdAt: date },
       ];
       const result = toPlainArray(input);
-      // toPlainArray<T> の返り型は T[] のまま（Date型）だが、実行時は string に変換される
-      const createdAt0: unknown = result[0]?.createdAt;
-      const createdAt1: unknown = result[1]?.createdAt;
-      expect(createdAt0).toBe("2024-01-15T10:30:00.000Z");
-      expect(createdAt1).toBe("2024-01-15T10:30:00.000Z");
+      // Serialized<T> により Date → string narrow 済、直接 access 可能
+      expect(result[0]?.createdAt).toBe("2024-01-15T10:30:00.000Z");
+      expect(result[1]?.createdAt).toBe("2024-01-15T10:30:00.000Z");
     });
 
     test("ネストされたオブジェクトの配列を変換する", () => {
