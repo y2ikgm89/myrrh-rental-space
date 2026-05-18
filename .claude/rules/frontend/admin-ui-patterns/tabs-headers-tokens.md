@@ -49,6 +49,8 @@ const [activeTab, setActiveTab] = useQueryState(
 | タブナビ       | `Link` + 名前空間付きクエリの preserve | タブ切替で他タブのフィルタが汚染されない           |
 | 子のデータ読み | `searchParamsCache.all()` / `get`      | 親で `parse` 済みなら子で二重 `parse` を避ける     |
 
+**実装は `NavTabs` primitive 経由必須**（`@/admin/components/ui` から re-export、`_shared/components/ui/nav-tabs.tsx` が SSoT）。`<nav>` / `<ul>` / トリガー `<Link>` をローカルで直書きする legacy 実装は禁止 — スタイル・WCAG 2.5.5 (44×44) ヒットエリア・`aria-current="page"`・`scrollbar-hide` 契約をすべて primitive が保証する。margin は consumer 側で `className` 経由（例: `<NavTabs className="mb-2" ... />`）。スタイル契約は `Tabs` primitive（`tabs.tsx`）の `TabsList` / `TabsTrigger` と一致（`min-h-11` / `bg-muted` / `px-3 py-2` / active 時 `bg-background shadow-sm`）。参照実装: `SpaceManagementTabs.tsx` / `EventTabs.tsx`。
+
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧 + フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
 
 ## 時間軸 + ステータス分類タブ（list 系 admin ページ）
@@ -62,7 +64,7 @@ const [activeTab, setActiveTab] = useQueryState(
 - **URL state は 2 分**: タブ切替時 search/dateFrom/dateTo 保持、page/sortBy/sortOrder/status reset（タブ別 default が効くため）
 - **status Select は `tab === "all"` のみ表示**: 他タブは tab 自体が status を絞るため UI 重複防止
 - **ラベルは 2-4 文字 + 対比で意味立て**: 「開催 / 終了 / 下書き / キャンセル / すべて」(Notion/Linear "Active vs Done" pattern)。Mobile 375px に 5 タブ ~300-350px 目安、6 タブ以上で横スクロール必須化
-- **`nav` + `aria-current="page"` パターン**: ページ遷移は `role="tab"` ではない（`accessibility/semantics/html-elements.md` §nav vs tab WAI-ARIA 区別 準拠）。既存 `SpaceManagementTabs` の `role="tab"` は legacy、新規実装では nav パターン採用
+- **`nav` + `aria-current="page"` パターン**: ページ遷移は `role="tab"` ではない（`accessibility/semantics/html-elements.md` §nav vs tab WAI-ARIA 区別 準拠）。実装は **`NavTabs` primitive 経由必須**（`@/admin/components/ui`）。ローカル `<nav>` / `<ul>` 直書きは禁止
 
 ### 参照実装
 
