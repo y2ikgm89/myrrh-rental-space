@@ -45,7 +45,7 @@ const value = input.value;
 
 ### 2. Prisma JSON 型 — helper 強制 + Prisma.InputJsonObject data field のみ許容
 
-`as Prisma.InputJsonValue` cast は **禁止**（2026-05-17 PR #109 で 12 cast → 0 構造解消済）。`@/shared/db/prisma-input-json` の `asPrismaInputJsonValue(value, msg)` / `parsePrismaInputJson(json, msg)` / `clonePrismaInputJson(value, msg)` helper 経由で `isPrismaInputJsonValue` type guard + `DomainError("VALIDATION")` throw による runtime narrow を強制する:
+`as Prisma.InputJsonValue` cast は **禁止**（2026-05-17 PR #109 で src/ 12 cast → 0 構造解消済、2026-05-18 PR #133 で `prisma/seed.ts` 10 cast も helper 経由化 → プロジェクト全体で 0 達成）。`@/shared/db/prisma-input-json` の `asPrismaInputJsonValue(value, msg)` / `parsePrismaInputJson(json, msg)` / `clonePrismaInputJson(value, msg)` helper 経由で `isPrismaInputJsonValue` type guard + `DomainError("VALIDATION")` throw による runtime narrow を強制する:
 
 ```typescript
 // NG: cast による型逃がし
