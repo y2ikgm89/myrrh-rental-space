@@ -29,6 +29,41 @@ paths:
 - **a11y 実装は ARIA First Rule（"native HTML > ARIA role"）を最優先で適用** — `role="button"` + 自前キーボードハンドラ（Enter=keydown / Space=keyup）は 2nd-best。native `<button>` を absolute overlay + `pointer-events-none/auto` で組み替えられないか先検討（→ `frontend/accessibility/semantics.md`）
 - **a11y 実装前に UX state の実使用を grep で確認** — `selectedId` / `isSelected` 等の state が外部 consumer と連動しない「視覚ハイライト専用」なら dead state として削除候補
 
+## project-wide audit の scope 分割規律 (autocompact thrashing 防止)
+
+公式 Best Practices §Avoid common failure patterns "**The infinite exploration**" 対策。layer cross-cutting (DB + middleware + Server Action + API route + Component) を 1 subagent task に詰め込まない。narrow scope は以下 2 軸どちらかで定義:
+
+- **Path prefix 軸**: `src/app/api/webhooks/stripe/` のみ / `src/shared/lib/crypto/` のみ / `src/app/(public)/_shared/actions/` のみ
+- **SSoT helper 軸**: `executeAdminMutationResult` の認可ロジックのみ / `validateTurnstile` の検証経路のみ / `getEncryptionKey` の HKDF 周辺のみ
+
+1 task = **5-10 file 上限、1-2 layer 以内**。これを超えそうなら parent 側で 3-5 sub-task に再分割してから dispatch。
+
+**禁止 scope 例** (cross-layer wide):
+
+- 「全 Server Action の認可監査」(60+ file 候補)
+- 「Better Auth dual-instance 全般」(config + middleware + cookie + RBAC + ensureCustomerLinked + マイページ全層)
+- 「API routes 全種」(webhook + cron + oauth + admin + public 横断)
+
+**OK scope 例** (narrow):
+
+- 「`src/app/api/webhooks/stripe/route.ts` の signature 検証 + replay 防止」(2-3 file)
+- 「`executeAdminMutationResult` の認可順序契約 (auth → resolveResourceId → hasPermission → resourceAccess → execute)」(SSoT helper 1 + 利用箇所 5 file)
+- 「`@/shared/lib/crypto.ts` の AES-GCM IV 生成 + HKDF」(SSoT helper 1 + caller 3-5 file)
+
+## subagent thrashing 後の fallback
+
+subagent dispatch が **2 件連続 thrash したら subagent を諦め、parent (Opus 1M context) で直接 `Grep` + 個別 `Read` に切替**。公式 Troubleshooting:
+
+> "Ask Claude to read the oversized file in smaller chunks, such as a specific line range or function, instead of the whole file"
+> "Move the large-file work to a subagent so it runs in a separate context window"
+
+subagent が thrash する scope は parent (1M context) でも厳しいが、parent は ① rule docs auto-load 済 ② path prefix grep の結果を整理しながら段階的に進められる ③ 中間 finding を即座に user に共有できる、の 3 点で有利。実例: 本セッション #5 `"use server"` 62 file scan を `Grep` files_with_matches + 個別 Read で 5 分以内完遂 (subagent 2 件連続 thrash 後の fallback 経路)。
+
+判定基準:
+
+- subagent 1 件 thrash → 同じ scope で再 dispatch せず、subagent prompt で **scope を物理半減** (15 file → 7 file 等) してリトライ
+- subagent 2 件連続 thrash → fallback 確定、parent 直接実施へ
+
 ## subagent 報告の ground truth 検証
 
 - **精査系 subagent の「使用なし」「欠落」報告は実装 Read + grep で二段検証必須** — grep ベース調査は seed 関数内の間接使用を見落として false positive を出す
