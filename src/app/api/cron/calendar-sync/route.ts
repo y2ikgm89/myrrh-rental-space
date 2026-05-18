@@ -9,20 +9,16 @@
  * - Webhookの自動更新
  * - 同期失敗時のエラー通知
  *
- * ## アーキテクチャ境界の例外
+ * ## アーキテクチャ境界
  *
- * このファイルは `@/shared/db/prisma` を **app 層から直接 import** している
- * **唯一の正式な例外** です（`__tests__/unit/architecture-boundaries.test.ts`
- * の `CALENDAR_SYNC_EXEMPTION` で allowlist に登録）。理由:
+ * AGENTS.md §Architecture Boundaries の「app 層からの Prisma 直 import 禁止」
+ * 規約を遵守し、`pg_try_advisory_lock` raw query は
+ * `@/shared/domain/calendar-sync/locks` helper に集約済 (route handler は
+ * domain layer 経由でロックを取得/解放する)。
  *
- * - cron route で `pg_try_advisory_lock` (`$queryRaw`) による排他制御を行う
- *   ため、ドメインコマンド層では表現できない低レベル DB 操作が必要
- * - 排他ロックは route handler スコープでの取得・解放が必須で、ドメイン層に
- *   切り出すとトランザクション境界が壊れる
- *
- * 例外を増やさないこと。新しい cron route は原則ドメインコマンド経由で実装し、
- * 排他ロックが必要な場合は本ファイルのパターン（`pg_try_advisory_lock` →
- * 処理 → `finally` で `pg_advisory_unlock`）を踏襲する。
+ * 排他ロックが必要な新規 cron route は同 helper パターン
+ * (`tryAcquireXxxLock` / `releaseXxxLock`) を踏襲し、`prisma` を route から
+ * 直接 import しないこと。
  *
  * @module api/cron/calendar-sync
  */
@@ -30,7 +26,10 @@
 import { unstable_rethrow } from "next/navigation";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
-import { prisma } from "@/shared/db/prisma";
+import {
+  releaseCalendarSyncLock,
+  tryAcquireCalendarSyncLock,
+} from "@/shared/domain/calendar-sync/locks";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
 import {
   isTwoWaySyncEnabled,
@@ -89,12 +88,8 @@ export async function GET(request: Request) {
       });
     }
 
-    // 並行実行ロック（Cloud Run 複数インスタンス対策）
-    const CALENDAR_SYNC_LOCK_ID = 728349;
-    const lockResult = await prisma.$queryRaw<
-      { pg_try_advisory_lock: boolean }[]
-    >`SELECT pg_try_advisory_lock(${CALENDAR_SYNC_LOCK_ID})`;
-    const acquired = lockResult[0]?.pg_try_advisory_lock === true;
+    // 並行実行ロック（Cloud Run 複数インスタンス対策、domain layer 経由）
+    const acquired = await tryAcquireCalendarSyncLock();
     if (!acquired) {
       return jsonSuccess({
         skipped: true,
@@ -193,7 +188,7 @@ export async function GET(request: Request) {
         timestamp: new Date().toISOString(),
       });
     } finally {
-      await prisma.$queryRaw`SELECT pg_advisory_unlock(${CALENDAR_SYNC_LOCK_ID})`;
+      await releaseCalendarSyncLock();
     }
   } catch (error) {
     unstable_rethrow(error);
