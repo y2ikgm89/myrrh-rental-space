@@ -34,7 +34,7 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 const PROVIDERS = [
   { id: "google", label: "Google", logoClass: "" },
-  { id: "line", label: "LINE", logoClass: "text-[#06C755]" },
+  { id: "line", label: "LINE", logoClass: "text-line-brand" },
 ] as const;
 
 // ---------------------------------------------------------------------------

@@ -57,6 +57,12 @@
   --color-info: oklch(0.52 0.12 250);
   --color-info-foreground: oklch(0.985 0 0);
 
+  /* External Brand Colors (公式ブランドガイドライン準拠)
+   * LINE: #06C755 + 白テキスト/アイコン
+   * https://developers.line.biz/en/docs/line-login/login-button/ */
+  --color-line-brand: oklch(0.7155 0.1849 144.5);
+  --color-line-brand-foreground: oklch(1 0 0);
+
   /* --------------------------------------------------------------------------
    * Typography — Editorial Magazine × Japanese
    *

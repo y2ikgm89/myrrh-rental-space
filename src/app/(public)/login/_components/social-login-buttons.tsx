@@ -190,14 +190,14 @@ export function SocialLoginButtons({
         {pending === "google" ? "リダイレクト中..." : "Googleでログイン"}
       </button>
 
-      {/* LINE — 公式ブランドガイドライン: #06C755 背景 + 白テキスト/アイコン */}
+      {/* LINE — 公式ブランドガイドライン: line-brand 背景 + line-brand-foreground テキスト/アイコン */}
       <button
         type="button"
         disabled={disabled}
         onClick={() => void handleSignIn("line")}
         className={cn(
-          "flex w-full items-center justify-center gap-3 bg-[#06C755] px-6 py-3 text-sm font-medium text-white transition-opacity duration-200",
-          "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#06C755] focus-visible:ring-offset-2",
+          "flex w-full items-center justify-center gap-3 bg-line-brand px-6 py-3 text-sm font-medium text-line-brand-foreground transition-opacity duration-200",
+          "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-brand focus-visible:ring-offset-2",
           "disabled:opacity-50 disabled:pointer-events-none",
         )}
       >
