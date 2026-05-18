@@ -81,6 +81,56 @@ const undefResult = toPlainArray(undefined); // 戻り値型は undefined
 
 旧 `toPlainObject<T>(obj: T): T` 時代の `: unknown` 経由パターンは 2026-05-18 PR #135 で `Serialized<T>` 戻り値型 + 型レベル Symbol/function 除外への移行で全削除済。新規 test 作成時は本パターン踏襲必須。
 
+## 4-2. Lexical Node test の discriminated union type guard pattern (`as` cast 不要)
+
+`editor.getEditorState().toJSON()` の `root.children[0]` の型は `SerializedLexicalNode` で `type: string` (literal でない) のため、`type === "X"` で narrow 不能。test 内で **literal-typed variant** を定義 + `assertSerialized*Node` type guard helper で discriminated union narrow を成立させ、`as` cast / `: unknown` 注釈なしで property 直接 access を実現する。
+
+```typescript
+// OK: 各 Node の $config() type 文字列をリテラル型として SerializedElementNode を拡張
+import type { SerializedElementNode, SerializedLexicalNode } from "lexical";
+
+type SerializedCoverNode = SerializedElementNode<SerializedLexicalNode> & {
+  type: "cover";
+  backgroundImageUrl?: string;
+  overlayColor?: string;
+  // ... NodeState の flat: true 展開で default 省略されるため optional
+};
+
+function assertSerializedCoverNode(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedCoverNode {
+  if (node?.type !== "cover") {
+    throw new Error(`Expected SerializedCoverNode, got ${String(node?.type)}`);
+  }
+}
+
+// caller — cast 不要 + type-safe property access (property name typo を TS が検出)
+const nodeJson = json.root.children[0];
+assertSerializedCoverNode(nodeJson);
+expect(nodeJson.backgroundImageUrl).toBe("https://example.com/bg.jpg");
+```
+
+### ParagraphNode 親越え narrow
+
+lexical の `SerializedElementNode` は `type: string` (literal でない) のため `node.type === "paragraph"` で narrow 不能。test 内に literal-typed variant を定義:
+
+```typescript
+type SerializedParagraphLike = Omit<
+  SerializedElementNode<SerializedLexicalNode>,
+  "type"
+> & {
+  type: "paragraph";
+};
+
+function assertSerializedParagraphLike(
+  node: SerializedLexicalNode | undefined,
+): asserts node is SerializedParagraphLike {
+  if (node?.type !== "paragraph") throw new Error(...);
+}
+```
+
+**禁止**: `(json.root.children[0] as any).children[0]` / `const x: unknown = json.root.children[0]` 経由 access (PR #134/#135 で全 4 Lexical test file から削除済)。新規 Lexical Node test 作成時は本 discriminated union pattern を必ず踏襲する。参照実装: `__tests__/unit/components/editor/lexical/{Cover,FeatureIconList,InlineImage,Testimonial}Node.test.ts`。
+
 ## 5. `executeAdminMutationResult` の型推論
 
 `executeAdminMutationResult` はジェネリクスで戻り値型を推論する。`execute` コールバックの戻り値型が複雑な場合、TypeScript が `unknown` に推論することがある。明示的な型引数で解決する。
