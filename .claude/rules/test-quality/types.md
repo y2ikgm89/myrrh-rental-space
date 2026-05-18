@@ -56,28 +56,30 @@ const expectedStatuses: CustomerStatus[] = [
 expect(CUSTOMER_STATUSES.sort()).toEqual(expectedStatuses.sort());
 ```
 
-## 4. `toPlainObject<T>: T` の型 vs ランタイム不一致
+## 4. `toPlainObject<T>` / `toPlainArray<T>` は `Serialized<T>` 戻り値型で実態と一致 (旧 `: unknown` 経由は dead code)
 
-`toPlainObject` の返り型は `T`（入力の型をそのまま保持）だが、ランタイムでは `Date → string` 変換・Symbol 除去・関数除去が行われる。型と実態が乖離するため `unknown` 経由でアクセス。
+`toPlainObject<T>(obj: T): Serialized<T>` / `toPlainArray<T>(arr: T[]): Serialized<T>[]` の戻り値型は `Serialized<T>` で **Date → string 変換 / function プロパティ除去 / Symbol key 除去**を型レベルで正確に表現する。test で `: unknown` 経由 access する必要はなく、property を直接 access する canonical pattern を使う。
 
 ```typescript
-// NG: result.createdAt の型は Date だが実行時は string → toBe('2024-...') で型エラー
+// OK: Serialized<T> が Date → string を narrow するため直接 access 可能
 const result = toPlainObject({
   createdAt: new Date("2024-01-15T10:30:00.000Z"),
 });
-expect(result.createdAt).toBe("2024-01-15T10:30:00.000Z");
+expect(result.createdAt).toBe("2024-01-15T10:30:00.000Z"); // result.createdAt は string
 
-// OK: unknown 経由でアクセス
-const result = toPlainObject({
-  createdAt: new Date("2024-01-15T10:30:00.000Z"),
-});
-const createdAt: unknown = result.createdAt;
-expect(createdAt).toBe("2024-01-15T10:30:00.000Z");
+// OK: Symbol key / function 除去も型レベルで narrow される
+const symbol = Symbol("hidden");
+const result = toPlainObject({ id: 1, [symbol]: "removed", method() {} });
+expect(result).toEqual({ id: 1 }); // result は { id: number }、symbol/method 除外済
 
-// OK: Symbol プロパティ除去の検証
-const plain: unknown = result;
-expect(plain).toEqual({ id: 1 });
+// OK: null/undefined overload で narrow 済
+const nullResult = toPlainArray(null); // 戻り値型は null
+const undefResult = toPlainArray(undefined); // 戻り値型は undefined
 ```
+
+**禁止**: `const x: unknown = result.createdAt` の widening 注釈、`const plain: unknown = result; expect(plain).toEqual(...)` パターン。`Serialized<T>` 戻り値型が型と実態を一致させているため、過剰防御の `: unknown` 経由は dead code。
+
+旧 `toPlainObject<T>(obj: T): T` 時代の `: unknown` 経由パターンは 2026-05-18 PR #135 で `Serialized<T>` 戻り値型 + 型レベル Symbol/function 除外への移行で全削除済。新規 test 作成時は本パターン踏襲必須。
 
 ## 5. `executeAdminMutationResult` の型推論
 
