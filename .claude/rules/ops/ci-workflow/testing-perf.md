@@ -76,9 +76,11 @@ production build でも `DevLoginButton` を表示するため `NEXT_PUBLIC_ENAB
 
 ```tsx
 // page.tsx の DevLoginButton render gate
+// (2026-05-18 PR #141 で clientEnv 経由化、process.env 直参照は禁止)
+import { clientEnv } from "@/shared/lib/env/client";
 {
   (process.env["NODE_ENV"] !== "production" ||
-    process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && <DevLoginButton />;
+    clientEnv.NEXT_PUBLIC_ENABLE_E2E_LOGIN === "1") && <DevLoginButton />;
 }
 ```
 
