@@ -380,24 +380,9 @@ test.describe("お問い合わせページ - 送信処理", () => {
     expect(isDisabled || hasLoadingText?.includes("送信中")).toBeTruthy();
   });
 
-  test.skip("送信成功時に完了メッセージが表示される", async ({ page }) => {
-    // このテストはTurnstileの設定とメール送信サービスの設定が必要
-    // テスト環境ではスキップ
-    await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
-
-    await page.click('button[type="submit"]');
-
-    // 成功メッセージを確認
-    const successMessage = page.locator(
-      'text=送信しました, text=お問い合わせを受け付けました, [role="status"]',
-    );
-    await expect(successMessage.first()).toBeVisible({ timeout: 10000 });
-  });
+  // 送信成功時の完了メッセージ検証は Turnstile / Resend mock が必要なため
+  // E2E ではなく __tests__/integration/inquiry-submission.test.ts の Server Action
+  // 統合テストで検証する (defensive `test.skip(true)` 規律違反のため削除済)。
 });
 
 // =============================================================================
