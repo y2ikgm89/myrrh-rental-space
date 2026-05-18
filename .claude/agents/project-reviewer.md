@@ -31,7 +31,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **Type safety** (`.claude/rules/type-safety.md`):
 
-- **No `as` type assertions** except the 7 permanent exceptions documented in `type-safety/assertion-bans.md` §1-7 (DOM event target / Prisma helper-routed / SectionConfig union widening / serialize helper / SDK boundary via `z.custom<T>` / conform `FieldMetadata<T>` generic invariance / JSX defensive narrowing). New `as Prisma.InputJsonValue` / `as Route<string>` / `as unknown as Schema$Location` / `as CreateEmailOptions` are all forbidden — use `asPrismaInputJsonValue()` / `toAppRoute()` / `LocationSchema.parse()` / `CreateEmailOptionsSchema.parse()` SSoT helpers instead
+- **No `as` type assertions** except the 6 permanent exceptions documented in `type-safety/assertion-bans.md` §1-6 (DOM event target / Prisma helper-routed / serialize helper / SDK boundary via `z.custom<T>` / conform `FieldMetadata<T>` invariance via `typed-input-control` helper SSoT / JSX defensive narrowing). New `as Prisma.InputJsonValue` / `as Route<string>` / `as unknown as Schema$Location` / `as CreateEmailOptions` / `as unknown as FieldMetadata<T>` are all forbidden — use `asPrismaInputJsonValue()` / `toAppRoute()` / `LocationSchema.parse()` / `CreateEmailOptionsSchema.parse()` / `useTypedInputControl()` etc. SSoT helpers instead
 - **`noUncheckedIndexedAccess` is enabled**: Array/Record index access returns `T | undefined`. Direct `.property` access without a guard (`if (!item) return`, `?.`, `?? default`) is a compile error.
 - **`keysOf(obj)`** instead of `Object.keys(obj) as T[]`
 
@@ -133,7 +133,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - Read `.claude/rules/frontend/admin-inline-editor-patterns.md`
 - Side panel: **`SidePanelDefinition` + `render(ctx)`**; **`extraProps` and `getValues` required** on `UnifiedSidePanel`
 - Do not reintroduce **`component` + `props` + `ComponentType<any>`** section registry for the metadata panel
-- Only **`LayoutFieldsConnected` / `AutoSectionForm` / `AutoArrayField` / `Auto{Boolean,Select,Group}Field`** may use the **`as unknown as FieldMetadata<...>`** boundary cast (permanent exception §6 conform `FieldMetadata<T>` generic invariance, `type-safety/assertion-bans.md`); do not introduce new cast points elsewhere in `side-panel/` or `auto-fields/`
+- **`as unknown as FieldMetadata<...>`** boundary cast is only allowed inside **`@/shared/lib/conform/typed-input-control.ts`** (4 helper SSoT: `useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField`). All callers (`auto-section-form` / `Auto{Boolean,Select,Array,Group}Field` / `LayoutFieldsConnected` / `content-types/post.tsx`) must use the helper, not direct cast. Permanent exception §5 conform `FieldMetadata<T>` generic invariance, `type-safety/assertion-bans.md`
 
 **`src/app/(public\*)/**/seo/**`or`**/layouts/**`**:
 

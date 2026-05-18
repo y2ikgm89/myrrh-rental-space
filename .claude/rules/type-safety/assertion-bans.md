@@ -293,7 +293,7 @@ grep -rnE '\bas\s+any\b|\bas\s+unknown\s+as\b|@ts-(ignore|expect-error|nocheck)'
 # §5 conform FieldMetadata cast の helper 強制検証（typed-input-control.ts 内部以外 0 件期待）
 grep -rnE 'as\s+unknown\s+as\s+FieldMetadata' src/ | grep -v 'src/shared/lib/conform/typed-input-control.ts'
 
-# §3 SectionConfig union widening cast 構造解消検証 (0 件期待)
+# 旧 SectionConfig union widening cast 構造解消検証 (validateSectionConfig generic narrowing 化済、0 件期待)
 grep -rnE '\bas\s+SectionConfig\b' src/
 
 # `Object.keys() as T[]` パターン（keysOf() 置換対象）

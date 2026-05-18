@@ -71,7 +71,7 @@ type BasicInfoFieldsProps = {
 
 ## `LayoutFields` の `FieldMetadata<...>` 境界 cast
 
-`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。`as unknown as FieldMetadata<string | null | undefined>` cast は `type-safety/assertion-bans.md` §6 conform `FieldMetadata<T>` generic invariance の permanent exception で管理。
+`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。境界 cast は **`@/shared/lib/conform/typed-input-control`** の 4 helper (`useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField`) 内部に集約済 (`type-safety/assertion-bans.md` §5 permanent exception)。Connected wrapper では `useTypedInputControl(fields["contentWidth"])` 経由で呼び出し側 cast 0 件を保つ。
 
 ## `exactOptionalPropertyTypes` と `disabled`
 
@@ -143,4 +143,4 @@ const validateSettings = (): PostSettingsFormData | null => {
 | conform canonical pattern                         | `frontend/admin-ui/forms.md`                        |
 | In-place preprocess pattern                       | `server-actions/implementation/forms-and-public.md` |
 | Server Actions                                    | `server-actions/use-cache.md`                       |
-| permanent exception §6 conform generic invariance | `type-safety/assertion-bans.md` §6                  |
+| permanent exception §5 conform generic invariance | `type-safety/assertion-bans.md` §5                  |
