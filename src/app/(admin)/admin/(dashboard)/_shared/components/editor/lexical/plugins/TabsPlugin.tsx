@@ -10,7 +10,6 @@
 
 import { useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { cn } from "@/shared/lib/cn";
 import {
   $createParagraphNode,
   $createTextNode,
@@ -79,17 +78,6 @@ import {
   TABS_SIZE_LABELS,
   TABS_FIXED_WIDTH_LABELS,
 } from "../config/node-labels";
-
-// =============================================================================
-// Preview
-// =============================================================================
-
-// TabTitleNode と同じベースクラスを使い、lexical-content.css がスタイルを上書き
-const TAB_BASE_CLASS =
-  "px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer select-none";
-const TAB_ACTIVE_CLASS = "border-primary text-foreground bg-background";
-const TAB_INACTIVE_CLASS = "border-transparent text-muted-foreground";
-const TAB_LIST_CLASS = "flex border-b bg-muted/50";
 
 // =============================================================================
 // Utilities
@@ -567,32 +555,26 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
             )}
           </div>
 
-          {/* プレビュー — エディタと同じ data 属性 + role で lexical-content.css を適用 */}
-          <div
-            className="my-0 border rounded-lg overflow-hidden"
-            data-tabs-container="true"
-            data-tabs-style={selectedStyle}
-            data-tabs-size={selectedSize}
-            data-tabs-fixed-width={selectedFixedWidth}
-            data-tabs-active="0"
-          >
-            <div role="tablist" className={TAB_LIST_CLASS}>
-              {Array.from({ length: 2 }, (_, i) => (
-                <div
-                  key={i}
-                  role="tab"
-                  aria-selected={i === 0}
-                  className={cn(
-                    TAB_BASE_CLASS,
-                    i === 0 ? TAB_ACTIVE_CLASS : TAB_INACTIVE_CLASS,
-                  )}
-                >
-                  タブ{i + 1}
-                </div>
-              ))}
-            </div>
-            <div role="tabpanel" className="p-4 text-sm text-muted-foreground">
-              タブ1のコンテンツ
+          {/* プレビュー — 実際の data 属性 HTML + lexical-content.css でレンダリング */}
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <div className="text-xs text-muted-foreground mb-2">プレビュー</div>
+            <div
+              className="my-0"
+              data-tabs-container="true"
+              data-tabs-style={selectedStyle}
+              data-tabs-size={selectedSize}
+              data-tabs-fixed-width={selectedFixedWidth}
+              data-tabs-active="0"
+              data-color="default"
+            >
+              <div role="tablist">
+                {Array.from({ length: 2 }, (_, i) => (
+                  <div key={i} role="tab" aria-selected={i === 0}>
+                    タブ{i + 1}
+                  </div>
+                ))}
+              </div>
+              <div role="tabpanel">タブ1のコンテンツ</div>
             </div>
           </div>
         </div>
