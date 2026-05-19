@@ -3,25 +3,14 @@
 import { useQueryStates } from "nuqs";
 import { adminReservationSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useDebouncedCallback } from "@/admin/hooks";
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/admin/components/ui";
-import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { entriesOf } from "@/shared/lib/serialize";
+import { Input } from "@/admin/components/ui";
 
-const STATUS_OPTIONS = [
-  { value: "ALL", label: "すべて" },
-  ...entriesOf(RESERVATION_STATUS_LABELS).map(([value, label]) => ({
-    value,
-    label,
-  })),
-];
-
+/**
+ * 予約管理一覧のフィルター（期間 + 検索）。
+ *
+ * ステータス絞り込みは `ReservationTabs` (`<NavTabs>`) に移管済み (PR で clean break)。
+ * Filter は他テーブル (Event canonical) と同型の構造に整合。
+ */
 export function ReservationFilters() {
   const [params, setParams] = useQueryStates(
     adminReservationSearchParamsParsers,
@@ -67,28 +56,6 @@ export function ReservationFilters() {
           onChange={(e) => setSearchDebounced(e.target.value)}
           leadingIcon="IconSearch"
         />
-      </div>
-      <div className="w-full sm:w-[180px]">
-        <Select
-          value={params.status === "" ? "ALL" : params.status}
-          onValueChange={(value) =>
-            void setParams({
-              status: value === "ALL" ? null : value,
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="ステータス" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );

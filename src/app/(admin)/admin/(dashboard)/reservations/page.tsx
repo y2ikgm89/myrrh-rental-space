@@ -5,9 +5,9 @@ import { IconCalendar, IconDownload, IconPlus } from "@tabler/icons-react";
 import { getReservations } from "@/admin/queries/reservation";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
+import { ReservationTabs } from "./_components/ReservationTabs";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { parseReservationStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";
@@ -29,11 +29,10 @@ async function ReservationList({
 }) {
   await connection();
   const params = await loadAdminReservationSearchParams(searchParams);
-  const status = parseReservationStatusFilter(params.status);
 
   const result = await getReservations(
     omitUndefined({
-      status,
+      tab: params.tab,
       search: params.search || undefined,
       startDate: params.dateFrom || undefined,
       endDate: params.dateTo || undefined,
@@ -60,6 +59,8 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
+  const params = await loadAdminReservationSearchParams(searchParams);
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -94,7 +95,10 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      {/* フィルター */}
+      {/* タブ（ステータス別分類） */}
+      <ReservationTabs activeTab={params.tab} />
+
+      {/* フィルター（期間 + 検索） */}
       <Suspense fallback={<LoadingState variant="inline" />}>
         <ReservationFilters />
       </Suspense>
