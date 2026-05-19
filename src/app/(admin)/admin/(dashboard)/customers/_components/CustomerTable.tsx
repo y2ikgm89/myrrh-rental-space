@@ -156,7 +156,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                         ? formatDateShort(customer.lastReservationAt)
                         : "-"}
                     </TableCell>
-                    <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
                       {formatDateShort(customer.createdAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">

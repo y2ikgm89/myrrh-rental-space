@@ -101,11 +101,11 @@ export function CouponTable({ coupons }: CouponTableProps) {
                 <TableHead>名称</TableHead>
                 <TableHead>タイプ</TableHead>
                 <TableHead className="text-right">割引</TableHead>
-                <TableHead className="hidden text-center md:table-cell">
+                <TableHead className="hidden text-right md:table-cell">
                   利用数
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">有効期間</TableHead>
-                <TableHead className="text-center">ステータス</TableHead>
+                <TableHead>ステータス</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -133,7 +133,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                   <TableCell className="text-right font-medium">
                     {formatDiscountValue(coupon.type, coupon.discountValue)}
                   </TableCell>
-                  <TableCell className="hidden text-center text-muted-foreground md:table-cell">
+                  <TableCell className="hidden text-right text-muted-foreground md:table-cell">
                     {coupon.usageCount}
                     {coupon.usageLimit && ` / ${coupon.usageLimit}`}
                   </TableCell>
@@ -147,7 +147,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center" onClick={stopRowClick}>
+                  <TableCell onClick={stopRowClick}>
                     <CouponStateToggle
                       id={coupon.id}
                       isActive={coupon.isActive}

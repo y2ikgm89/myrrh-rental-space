@@ -60,7 +60,7 @@ export function ReservationTableHeader({
           currentSortBy={params.sortBy}
           currentSortOrder={params.sortOrder}
           onSort={handleSort}
-          className="hidden text-right lg:table-cell"
+          className="hidden lg:table-cell"
         >
           登録日
         </SortableColumnHeader>

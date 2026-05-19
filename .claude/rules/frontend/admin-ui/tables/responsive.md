@@ -88,6 +88,39 @@ paths:
 
 **参照実装** (右配置 canonical で統一済 = 全テーブル): `CouponTable` / `SpaceTableDesktop` / `LocationTable` / `CategoryTable` / `PostTable` / `NewsTable` / `TermsTable` / `FaqCategoryItemsTable` / `PageListTable` / `InquiryTable` / `CustomerTable` / `EventTable` / `ReservationTable`。**禁止**: 旧「ワークフロー系テーブルはステータスを左端に配置する例外」パターンの復活（2026-05-19 全 10 テーブル右配置で統一済）。
 
+## カラム alignment 規律（semantic ベース、業界標準準拠）
+
+業界標準（Stripe Dashboard / Shopify Admin / Linear / GitHub Issues / Material DataGrid / Ant Design Table）に準拠し、列の semantic 種別で alignment を決める。`text-center` は新規禁止（業界標準で center を採用する列はテーブル上に存在しない）。
+
+| 列 semantic                                                                  | TableHead / TableCell                               | 例                                            |
+| ---------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------- |
+| **数値**（金額・件数・カウント・PV・割引・利用数・予約数・累計金額・並び順） | **`text-right`** （tabular-nums も推奨）            | 料金 / スペース数 / PV / 利用数 / 累計金額    |
+| 日時                                                                         | 寄せ指定なし（デフォルト左）                        | 予約日時 / 登録日 / 更新日 / 最終予約         |
+| テキスト（タイトル・名前・コード・スラッグ・説明・住所・メール・電話）       | 寄せ指定なし                                        | スペース名 / 顧客名 / クーポンコード          |
+| Badge（種別・タイプ・同期ステータス）                                        | 寄せ指定なし                                        | カスタム/システム / CouponTypeBadge / GBP同期 |
+| PublishSwitch / CouponStateToggle / `<XxxStatusSelect>` / `<XxxStatusBadge>` | 寄せ指定なし                                        | 公開状態 / 有効状態 / 予約ステータス          |
+| Checkbox（行選択）                                                           | 寄せ指定なし（`CheckboxCell` 内の flex で中央化）   | 行選択                                        |
+| 操作（ActionDropdown）                                                       | 既存「操作列の標準」記述に従う（本 section 対象外） | 三点リーダー                                  |
+
+**禁止**:
+
+- **`text-center` 全面禁止** — center で揃える業界標準列は存在しない。数値は `text-right`、Badge / Toggle / Switch は左揃え（指定なし）。`text-center` を残すと「数値 center」「Switch center」「Badge center」のいずれにも筋が通らず drift する
+- **日時列に `text-right`** — 業界標準は日時=左。Stripe Dashboard / Shopify Orders / Linear Issues いずれも `created_at` / `updated_at` は左寄せ
+- **数値列を指定なし（デフォルト左）** — 数値は桁揃えのため右寄せ必須（小数点・通貨記号を視覚的に整列）
+- **PublishSwitch / Toggle / StatusSelect / Badge に `text-center` / `text-right`** — 業界標準で center / right はコントロールに不適切（左揃えで列内の他データと視線が揃う）
+
+**監査 grep**:
+
+```bash
+# text-center 残存検出（ゼロ件期待）
+grep -rnE 'text-center' src/app/\(admin\)/admin/\(dashboard\)/**/_components/*Table*.tsx | grep -vE 'h-24 text-center|p-12 text-center|py-4 text-center'
+
+# 日時列の text-right 残存検出（登録日 / createdAt / updatedAt / publishedAt / lastReservationAt 等）
+grep -rnE 'text-right' src/app/\(admin\)/admin/\(dashboard\)/**/_components/*Table*.tsx -B2 -A2 | grep -E '(createdAt|updatedAt|publishedAt|登録日|更新日|公開日|最終予約)'
+```
+
+**参照実装** (規律統一済): `ReservationTable` / `CustomerTable` / `CategoryTable` / `LocationTable` / `CouponTable`。
+
 ## インラインコントロールのモバイル非表示
 
 複雑なインラインコントロール（Select・フォーム等）は小画面で折り畳む:

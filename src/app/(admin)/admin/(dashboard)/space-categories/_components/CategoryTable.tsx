@@ -38,10 +38,10 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 アイコン
               </TableHead>
               <TableHead className="hidden w-24 lg:table-cell">色</TableHead>
-              <TableHead className="hidden w-24 text-center md:table-cell">
+              <TableHead className="hidden w-24 text-right md:table-cell">
                 スペース数
               </TableHead>
-              <TableHead className="w-28 text-center">状態</TableHead>
+              <TableHead className="w-28">状態</TableHead>
               <TableHead className="w-32 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -87,10 +87,10 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="hidden text-center md:table-cell">
+                <TableCell className="hidden text-right md:table-cell">
                   <Badge variant="secondary">{category._count.spaces}件</Badge>
                 </TableCell>
-                <TableCell className="text-center whitespace-nowrap">
+                <TableCell className="whitespace-nowrap">
                   <PublishSwitch
                     id={category.id}
                     isPublished={category.isActive}
