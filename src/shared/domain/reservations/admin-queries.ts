@@ -4,13 +4,61 @@ import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import type { ReservationTabFilter } from "@/shared/lib/nuqs";
 import type { Prisma } from "@generated/prisma/client";
 
 type ReservationWhereInput = Prisma.ReservationWhereInput;
 
+/**
+ * 予約一覧のタブ別 where 句。
+ *
+ * - confirmed: CONFIRMED (来店予定)
+ * - pending: PENDING (確認待ち、要対応)
+ * - completed: COMPLETED (利用済み)
+ * - cancelled: CANCELLED または NO_SHOW (終了)
+ * - all: 制約なし
+ */
+function buildTabWhere(tab: ReservationTabFilter): ReservationWhereInput {
+  switch (tab) {
+    case "confirmed":
+      return { status: ReservationStatus.CONFIRMED };
+    case "pending":
+      return { status: ReservationStatus.PENDING };
+    case "completed":
+      return { status: ReservationStatus.COMPLETED };
+    case "cancelled":
+      return {
+        status: {
+          in: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
+        },
+      };
+    case "all":
+      return {};
+  }
+}
+
+/** タブ別のデフォルトソート（URL に sortBy/sortOrder が指定されていない場合の初期値） */
+function getDefaultSort(tab: ReservationTabFilter): {
+  sortBy: "startTime" | "createdAt";
+  sortOrder: "asc" | "desc";
+} {
+  switch (tab) {
+    case "confirmed":
+      return { sortBy: "startTime", sortOrder: "asc" };
+    case "pending":
+      return { sortBy: "createdAt", sortOrder: "desc" };
+    case "completed":
+      return { sortBy: "startTime", sortOrder: "desc" };
+    case "cancelled":
+      return { sortBy: "startTime", sortOrder: "desc" };
+    case "all":
+      return { sortBy: "startTime", sortOrder: "desc" };
+  }
+}
+
 export async function getReservationsQuery(
   filters: {
-    status?: ReservationStatus | "ALL" | undefined;
+    tab?: ReservationTabFilter | undefined;
     search?: string | undefined;
     startDate?: string | undefined;
     endDate?: string | undefined;
@@ -23,19 +71,18 @@ export async function getReservationsQuery(
     sortOrder?: "asc" | "desc" | undefined;
   } = {},
 ) {
-  const { status, search, startDate, endDate, spaceId } = filters;
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "startTime",
-    sortOrder = "desc",
-  } = pagination;
+  const { tab = "all", search, startDate, endDate, spaceId } = filters;
+  const { page = 1, limit = 10, sortBy, sortOrder } = pagination;
 
-  const where: ReservationWhereInput = { deletedAt: null };
+  const tabWhere = buildTabWhere(tab);
+  const defaults = getDefaultSort(tab);
+  const effectiveSortBy = sortBy ?? defaults.sortBy;
+  const effectiveSortOrder = sortOrder ?? defaults.sortOrder;
 
-  if (status && status !== "ALL") {
-    where.status = status;
-  }
+  const where: ReservationWhereInput = {
+    deletedAt: null,
+    ...tabWhere,
+  };
 
   if (spaceId) {
     where.spaceId = spaceId;
@@ -115,7 +162,7 @@ export async function getReservationsQuery(
         },
       },
       orderBy: {
-        [sortBy]: sortOrder,
+        [effectiveSortBy]: effectiveSortOrder,
       },
       skip: (page - 1) * limit,
       take: limit,

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { ReservationTabFilter } from "@/shared/lib/nuqs";
 import {
   getReservationByIdQuery,
   getReservationsForCalendarQuery,
@@ -66,7 +67,7 @@ export type GetReservationsResult = {
 };
 
 export type ReservationFilters = {
-  status?: ReservationStatus | "ALL" | undefined;
+  tab?: ReservationTabFilter | undefined;
   search?: string | undefined;
   startDate?: string | undefined;
   endDate?: string | undefined;

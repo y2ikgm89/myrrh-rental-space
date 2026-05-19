@@ -502,9 +502,27 @@ export async function loadAdminInquirySearchParams(
 
 const reservationSortByValues = ["startTime", "createdAt"] as const;
 
+/** 管理画面 予約一覧のタブ（ステータスで分類） */
+export const reservationTabFilterValues = [
+  "confirmed",
+  "pending",
+  "completed",
+  "cancelled",
+  "all",
+] as const;
+export type ReservationTabFilter = (typeof reservationTabFilterValues)[number];
+const reservationTabFilterSet = new Set<string>(reservationTabFilterValues);
+export function isReservationTabFilter(
+  value: string,
+): value is ReservationTabFilter {
+  return reservationTabFilterSet.has(value);
+}
+
 export const adminReservationSearchParamsParsers = {
   search: parseAsQuery,
-  status: parseAsString.withDefault(""),
+  tab: parseAsStringLiteral(reservationTabFilterValues).withDefault(
+    "confirmed",
+  ),
   page: parseAsPage,
   perPage: parseAsPerPage,
   sortBy: parseAsStringLiteral(reservationSortByValues).withDefault(
