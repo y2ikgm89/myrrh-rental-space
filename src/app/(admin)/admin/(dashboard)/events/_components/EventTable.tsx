@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Table, TableBody, TableCell } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { EventStatusBadge } from "@/admin/components/status-badges";
 import {
   CheckboxCell,
   ClickableTableRow,
   stopRowClick,
 } from "@/admin/components/table";
 import { EventActionCell } from "./EventActionCell";
+import { EventStatusSelect } from "./EventStatusSelect";
 import { EventTableHeader } from "./EventTableHeader";
 import { EventBulkActions } from "./EventBulkActions";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
@@ -98,11 +98,17 @@ export function EventTable({ events }: EventTableProps) {
                       addressDetail: event.addressDetail,
                     }) ?? "-"}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <EventStatusBadge status={event.status} />
+                  <TableCell
+                    className="whitespace-nowrap"
+                    onClick={stopRowClick}
+                  >
+                    <EventStatusSelect
+                      eventId={event.id}
+                      currentStatus={event.status}
+                    />
                   </TableCell>
                   <TableCell onClick={stopRowClick}>
-                    <EventActionCell eventId={event.id} status={event.status} />
+                    <EventActionCell eventId={event.id} />
                   </TableCell>
                 </ClickableTableRow>
               ))}

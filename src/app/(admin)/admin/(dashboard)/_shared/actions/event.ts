@@ -11,6 +11,7 @@ import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
+  archiveEventCommand,
   cancelEventCommand,
   createEventCommand,
   deleteEventCommand,
@@ -310,6 +311,39 @@ export async function cancelEvent(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
           operation: "deleteEventOutbound.cancel",
+          category: ErrorCategory.EXTERNAL_API,
+        },
+      );
+    },
+  });
+}
+
+export async function archiveEvent(
+  id: string,
+): Promise<
+  MutationResult<{ slug: string | null; googleCalendarEventId: string | null }>
+> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      const event = await getEventById(validated.data);
+      await archiveEventCommand(validated.data);
+      return {
+        slug: event?.slug ?? null,
+        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+      };
+    },
+    afterSuccess: (data) => {
+      invalidateEventCaches(validated.data, data.slug, { registrations: true });
+      fireAndForget(
+        deleteEventOutbound(validated.data, data.googleCalendarEventId),
+        {
+          operation: "deleteEventOutbound.archive",
           category: ErrorCategory.EXTERNAL_API,
         },
       );

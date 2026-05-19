@@ -8,7 +8,6 @@ import type {
   PaymentStatus,
   RegistrationStatus,
   ReservationStatus,
-  PostStatus,
   Role,
   AuditAction,
 } from "@/shared/lib/validations/enums/prisma-types";
@@ -85,12 +84,6 @@ const paymentStatusConfig: StatusConfig<PaymentStatus> = {
   FAILED: { label: PAYMENT_STATUS_LABELS.FAILED, variant: "destructive" },
 };
 
-const postStatusConfig: StatusConfig<PostStatus> = {
-  DRAFT: { label: POST_STATUS_LABELS.DRAFT, variant: "secondary" },
-  PUBLISHED: { label: POST_STATUS_LABELS.PUBLISHED, variant: "success" },
-  ARCHIVED: { label: POST_STATUS_LABELS.ARCHIVED, variant: "outline" },
-};
-
 const eventStatusConfig: StatusConfig<EventStatus> = {
   DRAFT: { label: EVENT_STATUS_LABELS.DRAFT, variant: "secondary" },
   PUBLISHED: { label: EVENT_STATUS_LABELS.PUBLISHED, variant: "default" },
@@ -140,11 +133,6 @@ export function ReservationStatusBadge({
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   const config = paymentStatusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-}
-
-export function PostStatusBadge({ status }: { status: PostStatus }) {
-  const config = postStatusConfig[status];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 

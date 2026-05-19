@@ -8,6 +8,7 @@ const EventStatus = {
   DRAFT: "DRAFT",
   PUBLISHED: "PUBLISHED",
   CANCELLED: "CANCELLED",
+  ARCHIVED: "ARCHIVED",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,7 @@ import {
   duplicateEventCommand,
   publishEventCommand,
   cancelEventCommand,
+  archiveEventCommand,
   upsertEventFromCalendar,
 } from "@/shared/domain/events/commands";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -691,6 +693,79 @@ describe("cancelEventCommand", () => {
       mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
 
       await expect(cancelEventCommand("non-existent")).rejects.toThrow(
+        DomainError,
+      );
+    });
+  });
+});
+
+describe("archiveEventCommand", () => {
+  beforeEach(() => {
+    mockEventFindFirst.mockClear();
+    mockEventUpdate.mockClear();
+    mockFireAndForget.mockClear();
+  });
+
+  describe("正常系", () => {
+    test("既存イベントをアーカイブできる", async () => {
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.PUBLISHED,
+        }),
+      );
+      mockEventUpdate.mockImplementation(() =>
+        Promise.resolve({ id: "event-1" }),
+      );
+
+      await archiveEventCommand("event-1");
+
+      expect(mockEventUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: EventStatus.ARCHIVED }),
+        }),
+      );
+    });
+
+    test("アーカイブでは参加者メール通知は送られない", async () => {
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.CANCELLED,
+        }),
+      );
+      mockEventUpdate.mockImplementation(() =>
+        Promise.resolve({ id: "event-1" }),
+      );
+
+      await archiveEventCommand("event-1");
+
+      expect(mockFireAndForget).not.toHaveBeenCalled();
+    });
+
+    test("update の where 条件に deletedAt: null が含まれる", async () => {
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.DRAFT,
+        }),
+      );
+
+      await archiveEventCommand("event-1");
+
+      expect(mockEventUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: "event-1", deletedAt: null }),
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("存在しないイベントをアーカイブしようとすると DomainError をスローする", async () => {
+      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
+
+      await expect(archiveEventCommand("non-existent")).rejects.toThrow(
         DomainError,
       );
     });

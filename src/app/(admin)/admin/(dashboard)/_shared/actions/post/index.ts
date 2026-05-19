@@ -7,6 +7,7 @@ export {
   deletePost,
   publishPost,
   unpublishPost,
+  archivePost,
 } from "./mutations";
 export { createPostBackup, restorePostVersion } from "./backup";
 export {
