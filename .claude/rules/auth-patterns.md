@@ -6,7 +6,7 @@ paths:
 
 # 認証パターンルール
 
-> Better Auth 1.6.10 / RBAC / Next.js 16.2 対応（`package.json` の `better-auth` と一致）
+> Better Auth + RBAC 対応。バージョン SSoT は `package.json` の `better-auth`。
 
 ## 禁止事項
 

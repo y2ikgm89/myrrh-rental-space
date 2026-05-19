@@ -10,7 +10,7 @@ paths:
 
 # 実装パターン
 
-> skill 化済みのパターンは CLAUDE.md の skill ポインタ参照（`add-prisma-enum` / `add-settings-field` / `create-admin-page` / `create-page-content` / `create-server-action` / `lexical-node` / `lexical-plugin` / `lexical-toolbar` / `parallax-section` / `upgrade-deps` / `split-action-file` / `worktree-bootstrap`）。
+> skill 化済みのパターンは CLAUDE.md の skill ポインタ参照（`add-prisma-enum` / `add-settings-field` / `create-admin-page` / `create-page-content` / `create-server-action` / `lexical-node` / `lexical-plugin` / `lexical-toolbar` / `parallax-section` / `upgrade-deps` / `split-action-file`）。
 
 ## 新規モデル / Seed
 

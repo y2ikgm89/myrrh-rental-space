@@ -14,7 +14,7 @@ paths:
 ## Worktree（公式仕様準拠 SSoT）
 
 > 出典: [Claude Code Worktrees](https://code.claude.com/docs/en/worktrees) / [git-worktree(1)](https://git-scm.com/docs/git-worktree)
-> 採用決定後の bootstrap は `.claude/skills/worktree-bootstrap/SKILL.md`。**公式 `claude --worktree` が canonical 経路**、手動 `git worktree add` は legacy fallback。
+> **公式 `claude --worktree <name>` が唯一の canonical 経路**（`.claude/worktrees/<name>/` 配下に作成、`.worktreeinclude` で gitignored を自動 copy、終了時 changes なしで自動 cleanup）。
 
 ### 公式機能の active 設定
 
@@ -24,7 +24,6 @@ paths:
 | `worktree.baseRef`                   | `.claude/settings.json` | `"head"` | local HEAD（未 push commit + WIP 含む）ベースで worktree 作成。default の `"fresh"`（`origin/HEAD`）だと in-progress feature branch が消える |
 | `cleanupPeriodDays`                  | `.claude/settings.json` | `14`     | 孤児化した subagent worktree を 14 日後に自動掃除（uncommitted/untracked/unpushed なしの場合のみ）                                           |
 | `.gitignore` で `.claude/worktrees/` | `.gitignore`            | ignored  | 公式 default の worktree 配置を tracked にしない                                                                                             |
-| `.gitignore` で `.worktrees/`        | `.gitignore`            | ignored  | legacy manual bootstrap location（後方互換）                                                                                                 |
 
 ### Canonical 動線（公式 `--worktree` 経路）
 
@@ -64,7 +63,7 @@ claude --worktree "#1234"
 
 - **`isolation: worktree` は公式 sub-agent frontmatter フィールド** — temporary worktree を切り、変更なしで自動 cleanup（[公式仕様](https://code.claude.com/docs/en/sub-agents#supported-frontmatter-fields)）
 - Controller が `Agent` tool dispatch 時に `isolation: "worktree"` を渡せば implementer が独立 workspace で実装する。手動 bootstrap 不要
-- Phase 分割 plan を `subagent-driven-development` skill で実行する場合、controller 側で先に `claude --worktree <name>` または `worktree-bootstrap` SKILL で worktree を切り、implementer に worktree path を渡す
+- Phase 分割 plan を `subagent-driven-development` skill で実行する場合、controller 側で先に `claude --worktree <name>` で worktree を切り、implementer に worktree path を渡す
 - 完了検証は worktree 内で直接 `git status --short` + `git diff --stat HEAD`（`PostToolUse:Agent` hook の snapshot は main 基準で subagent 成果が見えない）
 
 ### Cleanup（公式仕様）
@@ -72,12 +71,8 @@ claude --worktree "#1234"
 - **`--worktree` セッション終了時** — uncommitted/untracked/unpushed なしなら worktree + branch を自動削除。named session は prompt
 - **subagent worktree** — 完了時に変更なしなら自動 cleanup、変更ありは保持
 - **孤児 worktree** — `cleanupPeriodDays` 経過後の startup sweep で自動掃除（uncommitted/untracked/unpushed なし時のみ）
-- **手動 cleanup** — `bash .claude/skills/worktree-bootstrap/scripts/cleanup.sh <branch>` または `git worktree remove <path> && git worktree prune`
+- **手動 cleanup** — `git worktree remove <path> && git worktree prune`
 - **`-p` 非対話モード** — auto cleanup なし。明示的に `git worktree remove` する
-
-### bootstrap.sh（legacy manual fallback）
-
-`claude --worktree` が使えない場面（例: dev server を main で常駐維持、subagent でなく手動で隔離）では `bash .claude/skills/worktree-bootstrap/scripts/bootstrap.sh <branch>` を使う。配置は `.worktrees/<branch>/`（公式 default `.claude/worktrees/` とは別 location で legacy）。
 
 ## Migration / Prisma
 
@@ -133,7 +128,7 @@ claude --worktree "#1234"
 
 - **diverged worktree branch の merge は `--no-ff` 推奨**（FF 不可時） — `git rev-list --count main..feature/X` が N、逆が M（>0）で diverged の場合、rebase より `--no-ff` merge + conflict 解決の方が history が明示的（merge commit が「並行開発の境界」を示す）。Linear history の `--ff-only` は **diverge していない場合**の規律
 - **並行 worktree merge の典型 conflict 箇所** — `src/shared/lib/constants/cache.ts` の `getCacheTag` は両方の追加を残す
-- **Windows `.worktrees/` ディレクトリの強制削除失敗は harmless** — `git worktree remove --force` がファイル名長エラーで disk 上の dir 削除に失敗しても、`git worktree prune` + `git branch -d feature/X` で git references はクリーンアップ済み。`git worktree list` から消えていれば後続作業に影響なし
+- **Windows worktree ディレクトリの強制削除失敗は harmless** — `git worktree remove --force` がファイル名長エラーで disk 上の dir 削除に失敗しても、`git worktree prune` + `git branch -d feature/X` で git references はクリーンアップ済み。`git worktree list` から消えていれば後続作業に影響なし
 - **ADR system 廃止後の worktree merge で `docs/architecture/decisions/` modify/delete conflict** — main で ADR system 全面廃止 (commit `8ebd49c2`「drop ADR system entirely, consolidate decisions into rule docs」) 後、worktree が新 ADR ファイルを追加していると `--no-ff` merge で "modify/delete: README.md deleted in HEAD and modified in feature/X" conflict が発生する。canonical resolve: **HEAD (削除) を尊重して両 ADR ファイル削除** + 設計判断は `docs/how-to/<topic>-setup.md` (運用手順) または `.claude/rules/<scope>.md` (規律) または merge commit message (履歴記録) に集約。worktree 内 ADR の Status / Context / Decision セクションは how-to に編入、Consequences は rule docs に展開する pattern（実例: 2026-05-09 MEO Phase 2 merge `df5c19b6` で ADR 0027 削除、設計判断は `docs/how-to/google-business-profile-setup.md` + merge commit msg に集約）
 - **CLAUDE.md slim 化後の worktree merge で大規模 conflict は path-scoped rule に migrate** — Phase 4 で確立した CLAUDE.md slim + path-scoped rule auto-load 構造のため、worktree が CLAUDE.md に追加した新 guidance を merge 時にそのまま CLAUDE.md に取り込むと slim 構造を破壊する。canonical resolve: HEAD (slim 版) を採用 + worktree 追加分を該当 path-scoped rule (`.claude/rules/<scope>.md`) に再配置。例: Server Action redirect typedRoutes cast は `.claude/rules/server-actions/implementation.md` へ。実例: 2026-05-09 MEO Phase 2 merge で worktree が CLAUDE.md に追加した「Server Action redirect typedRoutes cast」を `server-actions/implementation.md` に migrate（merge commit `df5c19b6`）
 

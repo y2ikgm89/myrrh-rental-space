@@ -90,7 +90,6 @@ __pycache__/
 .serena/logs/
 .serena/project.local.yml
 .claire/
-.worktrees/
 .superpowers/
 
 # ─── Claude Code local state ─────────────────────────────────────────────────

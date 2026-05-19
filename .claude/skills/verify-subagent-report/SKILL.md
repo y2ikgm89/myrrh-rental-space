@@ -48,7 +48,7 @@ git show --stat <sha>
 git log --oneline -5
 ```
 
-報告された commit が HEAD またはその近傍にあることを確認。worktree 実行の場合は対象 worktree の HEAD を確認（`git -C .worktrees/<name> log --oneline -5`）。
+報告された commit が HEAD またはその近傍にあることを確認。worktree 実行の場合は対象 worktree の HEAD を確認（`git -C .claude/worktrees/<name> log --oneline -5`）。
 
 ### 4. テスト結果の再現
 

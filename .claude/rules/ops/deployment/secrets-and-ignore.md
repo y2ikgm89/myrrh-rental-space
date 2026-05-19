@@ -29,7 +29,7 @@ generated
 .git
 .gitignore
 .gitattributes
-.worktrees/
+.claude/worktrees/
 
 # Environment
 .env

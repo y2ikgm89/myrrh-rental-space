@@ -56,7 +56,7 @@ Agent({
 - read-only 調査 (Explore subagent)
 - 1 file 編集の短時間タスク
 
-`Agent` tool option を使わず手動 bootstrap が必要なケースは `.claude/skills/worktree-bootstrap/SKILL.md`。採否判定の SSoT は `.claude/rules/git-migration.md` §Worktree。
+採否判定の SSoT は `.claude/rules/git-migration.md` §Worktree（公式 `claude --worktree <name>` が canonical）。
 
 ### 完了報告フォーマット
 
