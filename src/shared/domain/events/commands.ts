@@ -215,6 +215,25 @@ export async function cancelEventCommand(id: string) {
 }
 
 /**
+ * イベントをアーカイブ（terminal 状態）にする。
+ *
+ * `EVENT_STATUS_TRANSITIONS` 上 ARCHIVED は terminal で全状態から遷移可能。
+ * 公開ページ・カレンダーから除外する（cancelEvent と同様に GCal 削除を呼ぶ）。
+ */
+export async function archiveEventCommand(id: string) {
+  const event = await prisma.event.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, status: true },
+  });
+  if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+
+  await prisma.event.update({
+    where: { id, deletedAt: null },
+    data: { status: EventStatus.ARCHIVED },
+  });
+}
+
+/**
  * 既存イベントを複製して新規 DRAFT イベントを作成する。
  *
  * - 本文・サムネイル・日時・会場・定員・料金は全てコピー

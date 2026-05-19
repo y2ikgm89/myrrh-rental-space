@@ -161,6 +161,7 @@ import {
   deletePost,
   publishPost,
   unpublishPost,
+  archivePost,
 } from "@/shared/domain/posts/post-commands";
 import {
   createPostBackup,
@@ -631,6 +632,50 @@ describe("unpublishPost", () => {
       mockPostFindUnique.mockResolvedValue(null);
 
       await expect(unpublishPost("non-existent")).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "投稿記事が見つかりません",
+      });
+    });
+  });
+});
+
+// =============================================================================
+// archivePost
+// =============================================================================
+
+describe("archivePost", () => {
+  beforeEach(() => {
+    mockPostFindUnique.mockReset();
+    mockPostUpdate.mockReset();
+
+    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostUpdate.mockResolvedValue({ id: POST_ID });
+  });
+
+  describe("正常系", () => {
+    test("投稿をアーカイブするとスラッグを返す", async () => {
+      const result = await archivePost(POST_ID);
+
+      expect(result).toEqual({ slug: POST_SLUG });
+      expect(mockPostUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    test("status が ARCHIVED になるよう update が呼ばれる", async () => {
+      await archivePost(POST_ID);
+
+      expect(mockPostUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { status: "ARCHIVED" },
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
+      mockPostFindUnique.mockResolvedValue(null);
+
+      await expect(archivePost("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "投稿記事が見つかりません",
       });

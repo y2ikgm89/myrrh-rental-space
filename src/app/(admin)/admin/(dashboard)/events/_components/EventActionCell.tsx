@@ -6,35 +6,24 @@ import { toast } from "sonner";
 import {
   ActionDropdown,
   ActionDropdownItem,
-  ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
-import {
-  cancelEvent,
-  duplicateEvent,
-  publishEvent,
-} from "@/admin/actions/event";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { duplicateEvent } from "@/admin/actions/event";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 type EventActionCellProps = {
   eventId: string;
-  status: EventStatus;
 };
 
-export function EventActionCell({ eventId, status }: EventActionCellProps) {
+/**
+ * イベント管理一覧の ActionDropdown。
+ *
+ * ステータス変更（公開 / キャンセル / アーカイブ）は同行の `EventStatusSelect`
+ * で inline 変更するため、本 cell からは publish / cancel menu を削除済み
+ * （業界標準: WordPress / Notion / Linear ステータス inline 切替パターン）。
+ */
+export function EventActionCell({ eventId }: EventActionCellProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  const handlePublish = () => {
-    startTransition(async () => {
-      const result = await publishEvent(eventId);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("イベントを公開しました");
-    });
-  };
 
   const handleDuplicate = () => {
     startTransition(async () => {
@@ -48,17 +37,6 @@ export function EventActionCell({ eventId, status }: EventActionCellProps) {
     });
   };
 
-  const handleCancel = () => {
-    startTransition(async () => {
-      const result = await cancelEvent(eventId);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("イベントをキャンセルしました");
-    });
-  };
-
   return (
     <ActionDropdown disabled={isPending}>
       <ActionDropdownItem href={`/admin/events/${eventId}`}>
@@ -68,17 +46,6 @@ export function EventActionCell({ eventId, status }: EventActionCellProps) {
         編集
       </ActionDropdownItem>
       <ActionDropdownItem onClick={handleDuplicate}>複製</ActionDropdownItem>
-      <ActionDropdownSeparator />
-      {status === EventStatus.DRAFT && (
-        <ActionDropdownItem onClick={handlePublish}>
-          公開する
-        </ActionDropdownItem>
-      )}
-      {(status === EventStatus.DRAFT || status === EventStatus.PUBLISHED) && (
-        <ActionDropdownItem destructive onClick={handleCancel}>
-          キャンセル
-        </ActionDropdownItem>
-      )}
     </ActionDropdown>
   );
 }
