@@ -379,7 +379,11 @@
   padding: 0.375rem 1rem;
   cursor: pointer;
   font-weight: 500;
-  background-color: color-mix(in oklch, var(--color-muted) 50%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 8%,
+    var(--color-background)
+  );
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -450,7 +454,11 @@ details[data-collapsible-item]
 }
 
 [data-collapsible-style="card"] [data-collapsible-title] {
-  background-color: color-mix(in oklch, var(--color-muted) 70%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 10%,
+    var(--color-background)
+  );
 }
 
 [data-collapsible-style="card"] [data-collapsible-content] {
@@ -496,12 +504,20 @@ details[data-collapsible-item]
   overflow: hidden;
 }
 
-/* ---- Tab List ---- */
+/* ---- Tab List ----
+ * tablist 全体を accent ベースで着色。
+ * background を base にして 10% accent を mix することで純色が visible。
+ * (Material 3 container surface / Notion category color パターン)。
+ */
 
 [data-tabs-container] [role="tablist"] {
   display: flex;
   border-bottom: 1px solid var(--color-border);
-  background-color: color-mix(in oklch, var(--color-muted) 50%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 10%,
+    var(--color-background)
+  );
 }
 
 /* ---- Tab Title (base) ---- */
@@ -530,12 +546,20 @@ details[data-collapsible-item]
   display: none;
 }
 
-/* ---- Underline Style (default) ---- */
+/* ---- Underline Style (default) ----
+ * Active タブに視認可能な accent 着色 (Material 3 selected state / Notion パターン)。
+ * accent 比率 12% (Material 3 selected state layer 仕様 8-12% 上限)。
+ * active text も accent 色で「選択中」を明示。
+ */
 
 [data-tabs-style="underline"] [role="tab"][aria-selected="true"] {
   border-bottom-color: var(--accent, var(--color-accent));
-  color: var(--color-foreground);
-  background-color: var(--color-background);
+  color: var(--accent, var(--color-accent));
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 12%,
+    var(--color-background)
+  );
 }
 
 [data-tabs-style="underline"] [role="tab"][aria-selected="false"] {
@@ -545,14 +569,22 @@ details[data-collapsible-item]
 
 [data-tabs-style="underline"] [role="tab"][aria-selected="false"]:hover {
   color: var(--color-foreground);
-  background-color: color-mix(in oklch, var(--color-muted) 50%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 8%,
+    transparent
+  );
 }
 
 /* ---- Pills Style ---- */
 
 [data-tabs-style="pills"] [role="tablist"] {
   border-bottom: none;
-  background: var(--color-muted);
+  background: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 12%,
+    var(--color-background)
+  );
   border-radius: 0;
   padding: 0.25rem;
   gap: 0.25rem;
@@ -580,7 +612,7 @@ details[data-collapsible-item]
 [data-tabs-style="pills"] [role="tab"][aria-selected="false"]:hover {
   background-color: color-mix(
     in oklch,
-    var(--color-foreground) 6%,
+    var(--accent, var(--color-accent)) 10%,
     transparent
   );
   color: var(--color-foreground);
@@ -605,10 +637,18 @@ details[data-collapsible-item]
 }
 
 [data-tabs-style="boxed"] [role="tab"][aria-selected="true"] {
-  background-color: var(--color-background);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 10%,
+    var(--color-background)
+  );
   color: var(--color-foreground);
   border-color: var(--color-border);
-  border-bottom-color: var(--color-background);
+  border-bottom-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 10%,
+    var(--color-background)
+  );
   border-top: 2px solid var(--accent, var(--color-accent));
 }
 
@@ -618,7 +658,11 @@ details[data-collapsible-item]
 }
 
 [data-tabs-style="boxed"] [role="tab"][aria-selected="false"]:hover {
-  background-color: var(--color-muted);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 8%,
+    var(--color-muted)
+  );
   color: var(--color-foreground);
   border-color: var(--color-border);
   border-bottom-color: transparent;
@@ -646,7 +690,7 @@ details[data-collapsible-item]
 }
 
 [data-tabs-style="minimal"] [role="tab"][aria-selected="true"] {
-  color: var(--color-foreground);
+  color: var(--accent, var(--color-accent));
   font-weight: 600;
   background: transparent;
   border-bottom-color: var(--accent, var(--color-accent));
@@ -660,6 +704,11 @@ details[data-collapsible-item]
 
 [data-tabs-style="minimal"] [role="tab"][aria-selected="false"]:hover {
   color: var(--color-foreground);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 8%,
+    transparent
+  );
 }
 
 [data-tabs-style="minimal"] [role="tabpanel"] {
@@ -1100,7 +1149,11 @@ details[data-collapsible-item]
 
 [data-pull-quote-style="classic"] {
   border-left: 4px solid var(--accent, var(--color-accent));
-  background-color: color-mix(in oklch, var(--color-muted) 30%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 8%,
+    var(--color-background)
+  );
   padding: 1.5rem 2rem;
 }
 
@@ -1117,8 +1170,7 @@ details[data-collapsible-item]
 /* ---- Minimal Style ---- */
 
 [data-pull-quote-style="minimal"] {
-  border-left: 2px solid
-    color-mix(in oklch, var(--color-muted-foreground) 30%, transparent);
+  border-left: 2px solid var(--accent, var(--color-accent));
   padding: 1rem 0 1rem 1.5rem;
 }
 

@@ -133,16 +133,39 @@ CSS 変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制
    />
    ```
 
-### タブスタイル別 AccentColor CSS パターン
+### AccentColor 反映パターン — Material 3 state layer 比率 SSoT
 
-スタイル別に適した手法でアクセントを表現（いずれもレイアウト変更なし）:
+ブロック（Tabs / Collapsible / PullQuote 等）の bg / border / text に `color-mix(in oklch, var(--accent) X%, var(--color-background))` を適用し、AccentColor 切替を全 surface に伝播する。比率は Material Design 3 state layer specification 準拠（hover 8% / selected 10-12%、上限 12%）。base は `--color-background` (白) を使い純色を visible にする — `--color-muted` (グレー) を base にすると accent が灰色に飲まれて視認不能になる silent bug。
 
-| スタイル    | 手法               | 適用プロパティ                                                               |
-| ----------- | ------------------ | ---------------------------------------------------------------------------- |
-| `underline` | 下線色             | `border-bottom-color: var(--accent)`                                         |
-| `pills`     | 背景色＋テキスト色 | `background-color: var(--accent)` / `color: var(--accent-fg)`                |
-| `boxed`     | inset top-stripe   | `box-shadow: inset 0 2px 0 var(--accent)`（box-shadow = レイアウト変更なし） |
-| `minimal`   | 下線色             | `border-bottom-color: var(--accent)`                                         |
+```css
+/* Material 3 state layer baseline */
+background-color: color-mix(
+  in oklch,
+  var(--accent, var(--color-accent)) 8%,
+  var(--color-background)
+);
+```
+
+#### タブスタイル別の役割分担
+
+| スタイル    | tablist 背景   | active タブ                                            | hover                 |
+| ----------- | -------------- | ------------------------------------------------------ | --------------------- |
+| `underline` | accent 10% mix | text=accent + bg=accent 12% mix + border-bottom=accent | bg=accent 8% mix      |
+| `pills`     | accent 12% mix | bg=accent (純色) + text=accent-fg                      | bg=accent 10% mix     |
+| `boxed`     | transparent    | bg/border-bottom=accent 10% mix + border-top=accent    | bg=accent 8% on muted |
+| `minimal`   | transparent    | text=accent + border-bottom=accent                     | bg=accent 8% mix      |
+
+#### 他ブロックへの伝播
+
+| ブロック / variant                 | 適用箇所         | 比率                                     |
+| ---------------------------------- | ---------------- | ---------------------------------------- |
+| `data-collapsible-title` (default) | title bg         | 8% accent + background                   |
+| `data-collapsible-style="card"`    | title bg         | 10% accent + background                  |
+| `data-collapsible-style="filled"`  | title bg (純色)  | `var(--accent)` + `var(--accent-fg)`     |
+| `data-pull-quote-style="classic"`  | bg + border-left | 8% accent + background + `var(--accent)` |
+| `data-pull-quote-style="minimal"`  | border-left      | `var(--accent)` (2px solid)              |
+
+新規 variant 追加時は本テーブルに 1 行追加 + `lexical-content.css` 該当セクションへ `color-mix` を配置。`pills` の active のみが純色 accent を使う例外（コントラスト確保のため `var(--accent-fg)` text 必須）、他は全て mix で「accent 着色だが下地は維持」の方針で統一する。
 
 ## exportDOM 内で curation icon を SVG として埋め込む（FeatureIconListNode pattern）
 
