@@ -81,7 +81,7 @@ export function NewsTable({ news }: NewsTableProps) {
                 <TableHead className="hidden md:table-cell">公開日時</TableHead>
                 <TableHead className="hidden lg:table-cell">作成日時</TableHead>
                 <TableHead>ステータス</TableHead>
-                <TableHead>操作</TableHead>
+                <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,7 +120,7 @@ export function NewsTable({ news }: NewsTableProps) {
                       resourceLabel={`${item.title} の公開状態`}
                     />
                   </TableCell>
-                  <TableCell onClick={stopRowClick}>
+                  <TableCell className="text-right" onClick={stopRowClick}>
                     <NewsActionCell
                       newsId={item.id}
                       isPublished={item.isPublished}

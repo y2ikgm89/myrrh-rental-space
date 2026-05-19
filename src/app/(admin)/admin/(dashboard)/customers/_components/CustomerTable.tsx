@@ -162,7 +162,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                     <TableCell className="whitespace-nowrap">
                       <CustomerStatusBadge status={customer.status} />
                     </TableCell>
-                    <TableCell onClick={stopRowClick}>
+                    <TableCell className="text-right" onClick={stopRowClick}>
                       <CustomerActionCell customerId={customer.id} />
                     </TableCell>
                   </ClickableTableRow>

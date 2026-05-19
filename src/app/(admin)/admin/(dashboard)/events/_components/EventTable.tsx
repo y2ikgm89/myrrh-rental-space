@@ -107,7 +107,7 @@ export function EventTable({ events }: EventTableProps) {
                       currentStatus={event.status}
                     />
                   </TableCell>
-                  <TableCell onClick={stopRowClick}>
+                  <TableCell className="text-right" onClick={stopRowClick}>
                     <EventActionCell eventId={event.id} />
                   </TableCell>
                 </ClickableTableRow>

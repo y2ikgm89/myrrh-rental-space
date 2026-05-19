@@ -69,7 +69,7 @@ export function PostTableHeader({
           登録日
         </SortableColumnHeader>
         <TableHead>ステータス</TableHead>
-        <TableHead>操作</TableHead>
+        <TableHead className="text-right">操作</TableHead>
       </TableRow>
     </TableHeader>
   );

@@ -156,7 +156,7 @@ export function PageListTable({
                         />
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <PageActions
                         slug={page.slug}
                         title={page.title}

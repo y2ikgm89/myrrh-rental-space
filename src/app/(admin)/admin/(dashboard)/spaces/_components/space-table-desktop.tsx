@@ -64,7 +64,7 @@ export function SpaceTableDesktop({
               <TableHead className="hidden text-right xl:table-cell">
                 予約数
               </TableHead>
-              <TableHead className="text-center">公開状態</TableHead>
+              <TableHead>公開状態</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -133,7 +133,6 @@ export function SpaceTableDesktop({
                   </Badge>
                 </TableCell>
                 <TableCell
-                  className="text-center"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >

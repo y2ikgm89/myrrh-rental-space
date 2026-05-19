@@ -52,7 +52,7 @@ paths:
 | -------------------------- | ---------- | -------------------- | --------------------- |
 | ステータス・タイトル・操作 | スラッグ等 | 補助情報・料金・日時 | 詳細情報・住所・PV 数 |
 
-**操作列（`*ActionCell` 配置）の標準**: `<TableHead>操作</TableHead>` + `<TableCell>`（どちらも幅指定・寄せ指定なし）。`w-24 text-right` / `className="text-right"` の付与は多数派（Post/News/Customer/Event/Inquiry/Coupon）から逸脱するため禁止。例外は既存の `LocationTable` / `FaqTrashTable` のみ（`text-right` 指定あり）。
+**操作列（`*ActionCell` 配置）の標準**: `<TableHead className="text-right">操作</TableHead>` + `<TableCell className="text-right">`。業界標準（shadcn-ui 公式 Table 例 / Material DataGrid `actions` column type / Shopify Polaris / Stripe Dashboard / Linear / GitHub Issues / Ant Design Table）と整合。ActionDropdown / 三点リーダーは行右端に固定し、複数行縦に並べた際に操作ボタン位置が揃って Fitts's Law が成立する。`w-24` 等の固定幅指定は禁止（content driven width で operations content がはみ出さない）。下記「カラム alignment 規律」§操作（ActionDropdown）と整合。
 
 ## Badge の折り返し防止
 
@@ -92,15 +92,15 @@ paths:
 
 業界標準（Stripe Dashboard / Shopify Admin / Linear / GitHub Issues / Material DataGrid / Ant Design Table）に準拠し、列の semantic 種別で alignment を決める。`text-center` は新規禁止（業界標準で center を採用する列はテーブル上に存在しない）。
 
-| 列 semantic                                                                  | TableHead / TableCell                               | 例                                            |
-| ---------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------- |
-| **数値**（金額・件数・カウント・PV・割引・利用数・予約数・累計金額・並び順） | **`text-right`** （tabular-nums も推奨）            | 料金 / スペース数 / PV / 利用数 / 累計金額    |
-| 日時                                                                         | 寄せ指定なし（デフォルト左）                        | 予約日時 / 登録日 / 更新日 / 最終予約         |
-| テキスト（タイトル・名前・コード・スラッグ・説明・住所・メール・電話）       | 寄せ指定なし                                        | スペース名 / 顧客名 / クーポンコード          |
-| Badge（種別・タイプ・同期ステータス）                                        | 寄せ指定なし                                        | カスタム/システム / CouponTypeBadge / GBP同期 |
-| PublishSwitch / CouponStateToggle / `<XxxStatusSelect>` / `<XxxStatusBadge>` | 寄せ指定なし                                        | 公開状態 / 有効状態 / 予約ステータス          |
-| Checkbox（行選択）                                                           | 寄せ指定なし（`CheckboxCell` 内の flex で中央化）   | 行選択                                        |
-| 操作（ActionDropdown）                                                       | 既存「操作列の標準」記述に従う（本 section 対象外） | 三点リーダー                                  |
+| 列 semantic                                                                  | TableHead / TableCell                             | 例                                            |
+| ---------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| **数値**（金額・件数・カウント・PV・割引・利用数・予約数・累計金額・並び順） | **`text-right`** （tabular-nums も推奨）          | 料金 / スペース数 / PV / 利用数 / 累計金額    |
+| 日時                                                                         | 寄せ指定なし（デフォルト左）                      | 予約日時 / 登録日 / 更新日 / 最終予約         |
+| テキスト（タイトル・名前・コード・スラッグ・説明・住所・メール・電話）       | 寄せ指定なし                                      | スペース名 / 顧客名 / クーポンコード          |
+| Badge（種別・タイプ・同期ステータス）                                        | 寄せ指定なし                                      | カスタム/システム / CouponTypeBadge / GBP同期 |
+| PublishSwitch / CouponStateToggle / `<XxxStatusSelect>` / `<XxxStatusBadge>` | 寄せ指定なし                                      | 公開状態 / 有効状態 / 予約ステータス          |
+| Checkbox（行選択）                                                           | 寄せ指定なし（`CheckboxCell` 内の flex で中央化） | 行選択                                        |
+| **操作（ActionDropdown）**                                                   | **`text-right`** （TableHead + TableCell 両方）   | 三点リーダー                                  |
 
 **禁止**:
 

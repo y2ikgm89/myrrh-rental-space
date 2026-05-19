@@ -77,7 +77,7 @@ export function PageTableHeader({
           更新日時
         </SortableColumnHeader>
         <TableHead>ステータス</TableHead>
-        <TableHead>操作</TableHead>
+        <TableHead className="text-right">操作</TableHead>
       </TableRow>
     </TableHeader>
   );
