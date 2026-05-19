@@ -149,7 +149,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                     <TableCell className="hidden whitespace-nowrap md:table-cell">
                       <PaymentStatusBadge status={reservation.paymentStatus} />
                     </TableCell>
-                    <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
+                    <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                       {formatDate(reservation.createdAt)}
                     </TableCell>
                     <TableCell

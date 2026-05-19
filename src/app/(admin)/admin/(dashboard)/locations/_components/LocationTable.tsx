@@ -74,10 +74,8 @@ export function LocationTable({ locations }: LocationTableProps) {
               <TableHead className="hidden text-right md:table-cell">
                 スペース数
               </TableHead>
-              <TableHead className="hidden text-center md:table-cell">
-                GBP 同期
-              </TableHead>
-              <TableHead className="text-center">公開状態</TableHead>
+              <TableHead className="hidden md:table-cell">GBP 同期</TableHead>
+              <TableHead>公開状態</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -113,7 +111,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                 <TableCell className="hidden text-right md:table-cell">
                   <Badge variant="secondary">{location._count.spaces}件</Badge>
                 </TableCell>
-                <TableCell className="hidden text-center md:table-cell">
+                <TableCell className="hidden md:table-cell">
                   <GbpSyncBadge
                     hasPlaceId={!!location.googleBusinessPlaceId}
                     enabled={location.gbpSyncEnabled}
@@ -121,7 +119,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                     error={location.gbpSyncError}
                   />
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell>
                   <PublishSwitch
                     id={location.id}
                     isPublished={location.isPublished}
