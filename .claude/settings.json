@@ -26,6 +26,11 @@
     "baseRef": "head"
   },
   "cleanupPeriodDays": 14,
+  "statusLine": {
+    "type": "command",
+    "command": "bash",
+    "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/statusline-context.sh"]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -204,6 +209,20 @@
             "asyncRewake": true,
             "timeout": 300,
             "statusMessage": "背景で型チェック中..."
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-compact-warn.sh"],
+            "timeout": 5,
+            "statusMessage": "kitchen sink session を検査中..."
           }
         ]
       }
