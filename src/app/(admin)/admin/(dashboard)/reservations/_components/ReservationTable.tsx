@@ -9,10 +9,7 @@
 import { useState } from "react";
 import { Table, TableBody, TableCell } from "@/admin/components/ui";
 import { ReservationTableHeader } from "./ReservationTableHeader";
-import {
-  PaymentStatusBadge,
-  ReservationStatusBadge,
-} from "@/admin/components/status-badges";
+import { PaymentStatusBadge } from "@/admin/components/status-badges";
 import { ReservationStatusSelect } from "./ReservationStatusSelect";
 import { ReservationActionCell } from "./ReservationActionCell";
 import { ReservationBulkActions } from "./ReservationBulkActions";
@@ -155,28 +152,26 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                     <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
                       {formatDate(reservation.createdAt)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell
+                      className="whitespace-nowrap"
+                      onClick={stopRowClick}
+                    >
                       {reservation.deletedAt ? (
                         <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                           削除済み
                         </span>
                       ) : (
-                        <ReservationStatusBadge status={reservation.status} />
+                        <ReservationStatusSelect
+                          reservationId={reservation.id}
+                          currentStatus={reservation.status}
+                        />
                       )}
                     </TableCell>
                     <TableCell className="text-right" onClick={stopRowClick}>
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="hidden sm:block">
-                          <ReservationStatusSelect
-                            reservationId={reservation.id}
-                            currentStatus={reservation.status}
-                          />
-                        </div>
-                        <ReservationActionCell
-                          reservationId={reservation.id}
-                          isDeleted={reservation.deletedAt != null}
-                        />
-                      </div>
+                      <ReservationActionCell
+                        reservationId={reservation.id}
+                        isDeleted={reservation.deletedAt != null}
+                      />
                     </TableCell>
                   </ClickableTableRow>
                 );
