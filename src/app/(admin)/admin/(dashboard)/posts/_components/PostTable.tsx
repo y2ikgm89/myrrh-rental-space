@@ -119,7 +119,7 @@ export function PostTable({ posts }: PostTableProps) {
                       currentStatus={post.status}
                     />
                   </TableCell>
-                  <TableCell onClick={stopRowClick}>
+                  <TableCell className="text-right" onClick={stopRowClick}>
                     <PostActionCell postId={post.id} />
                   </TableCell>
                 </ClickableTableRow>

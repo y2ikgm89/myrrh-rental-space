@@ -106,7 +106,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">有効期間</TableHead>
                 <TableHead>ステータス</TableHead>
-                <TableHead>操作</TableHead>
+                <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,7 +155,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                       name={coupon.name}
                     />
                   </TableCell>
-                  <TableCell onClick={stopRowClick}>
+                  <TableCell className="text-right" onClick={stopRowClick}>
                     <CouponActionCell couponId={coupon.id} />
                   </TableCell>
                 </ClickableTableRow>

@@ -65,7 +65,7 @@ export function EventTableHeader({
         <TableHead className="hidden md:table-cell">終了日時</TableHead>
         <TableHead className="hidden lg:table-cell">場所</TableHead>
         <TableHead>ステータス</TableHead>
-        <TableHead>操作</TableHead>
+        <TableHead className="text-right">操作</TableHead>
       </TableRow>
     </TableHeader>
   );

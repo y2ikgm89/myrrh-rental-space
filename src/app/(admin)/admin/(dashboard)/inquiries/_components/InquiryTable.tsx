@@ -82,7 +82,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                 <TableHead className="hidden md:table-cell">顧客</TableHead>
                 <TableHead className="hidden md:table-cell">受付日時</TableHead>
                 <TableHead>ステータス</TableHead>
-                <TableHead>操作</TableHead>
+                <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,7 +144,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                   <TableCell className="whitespace-nowrap">
                     <InquiryStatusBadge status={inquiry.status} />
                   </TableCell>
-                  <TableCell onClick={stopRowClick}>
+                  <TableCell className="text-right" onClick={stopRowClick}>
                     <InquiryActionCell inquiryId={inquiry.id} />
                   </TableCell>
                 </ClickableTableRow>
