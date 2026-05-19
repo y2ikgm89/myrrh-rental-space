@@ -5,7 +5,7 @@ paths:
 
 # nuqs パターンルール
 
-> nuqs 2.8.9 / Next.js 16.2 対応
+> nuqs ベース URL 状態管理。バージョン SSoT は `package.json`。
 
 ## 概要
 

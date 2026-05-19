@@ -9,7 +9,7 @@ paths:
 
 # エラーハンドリングルール
 
-> Next.js 16.2 Server Actions / safeFetch / criticalFetch / logger 対応
+> Server Actions / safeFetch / criticalFetch / logger SSoT。Next.js バージョンは `package.json`。
 
 ## 禁止事項
 
