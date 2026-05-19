@@ -177,6 +177,8 @@ export async function updateXxxActive(id: string, isActive: boolean) {
 
 - **canonical 命名**: `update<Resource>Published(id, isPublished)` / `update<Resource>Active(id, isActive)`
 - `PublishSwitch.onToggle: (id, bool) => Promise<MutationResult<T>>` 契約と整合（`frontend/admin-ui-patterns.md` §Gotchas 参照）
-- 9 resource 統一済: Space / Location / Page / FAQ / News / Terms / Review (Published) + Coupon / SpaceCategory (Active)
+- 8 resource 統一済: Space / Location / Page / FAQ / News / Terms / Review (Published) + SpaceCategory (Active)
 - **FK 紐づきガード**: 非アクティブ化で参照整合性が壊れる resource（`SpaceCategory._count.spaces > 0` 等）は domain command 内で `DomainError("CONFLICT")` early throw（`updateSpaceCategoryActive` が参照実装）
 - ActionDropdown 経由の旧「公開/非公開にする」「有効化/無効化」menu は PublishSwitch 配線時に削除（責務単一化）
+- **Coupon は `CouponStateToggle` 専用 component を使用** — PublishSwitch.label の binary published/unpublished prop を派生 5 状態（active/inactive/expired/limitReached/notStarted）に流用する API abuse 回避のため専用化（PR #155）
+- **多状態 (3+ states) status は `<XxxStatusSelect>` inline Select pattern** — Reservation / Post / Event canonical（PR #159 / #161）。ActionDropdown 経由の publish/cancel/archive menu 復活禁止（状態変更は inline Select で完結）

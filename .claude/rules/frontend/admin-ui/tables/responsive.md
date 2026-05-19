@@ -68,7 +68,14 @@ paths:
 
 **識別 → 分類 → スペック → 実績 → 状態 → 操作**
 
-全テーブル例外なくこの順序に統一する（旧「ワークフロー系テーブルはステータスを左端に配置」例外は撤回済み、2026-05-19）。状態（PublishSwitch / StatusBadge / CouponStateToggle 等）は **必ず操作カラムの直前**に配置し、識別・分類・スペック・実績カラムが左、状態・操作カラムが右という一貫した視覚パターンで横断統一する。
+全テーブル例外なくこの順序に統一する（旧「ワークフロー系テーブルはステータスを左端に配置」例外は撤回済み、2026-05-19）。状態 UI patterns は 4 種:
+
+- **`PublishSwitch`** (binary): News / Page / Space / Location / Terms / FAQ / Review / SpaceCategory
+- **`CouponStateToggle`** (binary + 5 派生状態 + セマンティックカラー): Coupon 専用
+- **`<XxxStatusSelect>`** (3+ states inline Select): Reservation / Post / Event
+- **`<XxxStatusBadge>`** (read-only): Customer / Inquiry（状態遷移 UI は別 UX）
+
+全 4 種とも **必ず操作カラムの直前**に配置し、識別・分類・スペック・実績カラムが左、状態・操作カラムが右という一貫した視覚パターンで横断統一する。
 
 | グループ | 例                                         |
 | -------- | ------------------------------------------ |
