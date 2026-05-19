@@ -53,24 +53,37 @@ const [activeTab, setActiveTab] = useQueryState(
 
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧 + フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
 
-## 時間軸 + ステータス分類タブ（list 系 admin ページ）
+## ステータス分類タブ（list 系 admin ページ）
 
-リソースが時系列要素を持つ（events / 予約 / 通知）かつステータス遷移する場合、ステータス Select 単独より時間軸 × ステータスを組み合わせたタブが運営動線に合う。
+リソースがステータス遷移する場合、ステータス Select Filter 単独より**ステータス軸タブ**が運営動線に合う。業界標準（Shopify Orders / Stripe Payments / Linear Issues）と整合。タブ軸の選び方で 2 variants:
 
-### 設計指針
+### Variant A: 純ステータス軸（Reservation canonical）
+
+時系列要素なしの per-status タブ。各タブが特定 `status` enum 値（または複数値の OR グループ）を絞り込む。
+
+- **タブ value = ステータス enum 値**: `confirmed` / `pending` / `completed` / `cancelled` (CANCELLED + NO_SHOW 統合)
+- **タブ別 default sort**: active なタブは `startTime asc`（直近優先）、過去/cancelled は `startTime desc`
+- **default tab**: active items (確認済み / open 等)
+
+**参照実装**: `reservations/_components/ReservationTabs.tsx` + `page.tsx` / `shared/domain/reservations/admin-queries.ts` の `buildTabWhere(tab)` + `getDefaultSort(tab)` / `shared/lib/nuqs/parsers.ts` の `reservationTabFilterValues` + `isReservationTabFilter`
+
+### Variant B: 時間軸 + ステータス軸（Event canonical）
+
+リソースが時系列要素も持つ（イベント開催期間等）場合、時間軸 × ステータスを組み合わせる。
 
 - **判定軸は `endTime` 系の終了時刻列**: 「開催」= `endTime >= now`、「終了」= `endTime < now`。`startTime` ベースだと開催期間中のレコードが「開催予定」から脱落する silent UX。複数日イベント（startTime/endTime 日跨ぎ）も自然に挙動（期間中ずっと「開催」、終了後「終了」へ自動遷移）
-- **タブ別 default sort は domain 層 `getDefaultSort(tab)` helper**: parser default 1 種で全タブ覆禁止。open: `startTime asc` / past: `endTime desc` / draft: `updatedAt desc` 等。URL に sortBy/sortOrder があれば優先
-- **URL state は 2 分**: タブ切替時 search/dateFrom/dateTo 保持、page/sortBy/sortOrder/status reset（タブ別 default が効くため）
+- **タブ別 default sort**: open: `startTime asc` / past: `endTime desc` / draft: `updatedAt desc` 等。
 - **status Select は `tab === "all"` のみ表示**: 他タブは tab 自体が status を絞るため UI 重複防止
-- **ラベルは 2-4 文字 + 対比で意味立て**: 「開催 / 終了 / 下書き / キャンセル / すべて」(Notion/Linear "Active vs Done" pattern)。Mobile 375px に 5 タブ ~300-350px 目安、6 タブ以上で横スクロール必須化
+
+**参照実装**: `events/_components/EventTabs.tsx` + `page.tsx` + `EventFilters.tsx` / `shared/domain/events/admin-queries.ts` の `buildTabWhere(tab, now)` + `getDefaultSort(tab)` / `shared/lib/nuqs/parsers.ts` の `eventTabFilterValues` + `isEventTabFilter`
+
+### 共通設計指針（両 variants）
+
+- **タブ別 default sort は domain 層 `getDefaultSort(tab)` helper 必須**: parser default 1 種で全タブ覆禁止。URL に sortBy/sortOrder があれば優先
+- **URL state は 2 分**: タブ切替時 search/dateFrom/dateTo 保持、page/sortBy/sortOrder reset（タブ別 default が効くため）
+- **ラベルは 2-4 文字 + 対比で意味立て**: 「確認済み / 保留中 / 完了 / キャンセル / すべて」(Notion/Linear "Active vs Done" pattern)。Mobile 375px に 5 タブ ~300-350px 目安、6 タブ以上で横スクロール必須化
 - **`nav` + `aria-current="page"` パターン**: ページ遷移は `role="tab"` ではない（`accessibility/semantics/html-elements.md` §nav vs tab WAI-ARIA 区別 準拠）。実装は **`NavTabs` primitive 経由必須**（`@/admin/components/ui`）。ローカル `<nav>` / `<ul>` 直書きは禁止
-
-### 参照実装
-
-- `events/_components/EventTabs.tsx` + `page.tsx` + `EventFilters.tsx`
-- `shared/domain/events/admin-queries.ts` の `buildTabWhere(tab, now)` + `getDefaultSort(tab)` helper
-- `shared/lib/nuqs/parsers.ts` の `eventTabFilterValues` + `isEventTabFilter`
+- **Status 列 (`<XxxStatusSelect>`) との併用**: タブで絞り込み + 行内 Select で per-row 状態変更（Post / Reservation / Event 全 3 canonical で同型）
 
 ## ページヘッダー標準構造
 
