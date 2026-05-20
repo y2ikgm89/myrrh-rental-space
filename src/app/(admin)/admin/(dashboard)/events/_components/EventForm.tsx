@@ -21,6 +21,11 @@ import { EventScheduleFields } from "./EventScheduleFields";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
 import { eventFormSchema } from "./event-form-schema";
+import {
+  TicketsField,
+  createDefaultTicket,
+  type TicketDraft,
+} from "./TicketsField";
 
 type EventData = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
@@ -68,6 +73,21 @@ export function EventForm({
     event?.locationId ?? null,
   );
   const [spaceId, setSpaceId] = useState<string | null>(event?.spaceId ?? null);
+  const [tickets, setTickets] = useState<TicketDraft[]>(() => {
+    if (event && event.tickets && event.tickets.length > 0) {
+      return event.tickets.map((t, i) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description ?? "",
+        price: t.price,
+        capacity: t.capacity,
+        unitSize: t.unitSize,
+        sortOrder: t.sortOrder ?? i,
+        isAvailable: t.isAvailable,
+      }));
+    }
+    return [createDefaultTicket(0)];
+  });
 
   const boundAction =
     isEdit && event?.id
@@ -139,6 +159,11 @@ export function EventForm({
         value={locationId ?? ""}
       />
       <input type="hidden" name={fields.spaceId.name} value={spaceId ?? ""} />
+      <input
+        type="hidden"
+        name={fields.tickets.name}
+        value={JSON.stringify(tickets)}
+      />
 
       {form.errors && form.errors.length > 0 && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -170,6 +195,13 @@ export function EventForm({
           onThumbnailUrlChange={setThumbnailUrl}
         />
       </div>
+
+      <TicketsField
+        tickets={tickets}
+        onChange={setTickets}
+        errors={fields.tickets.errors ?? undefined}
+        isPending={isPending}
+      />
 
       <EventLocationSpaceSelector
         fields={fields}

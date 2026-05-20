@@ -53,15 +53,18 @@ function buildEventCommandInput(data: EventFormData) {
   const {
     descriptionJson: _dropJson,
     descriptionHtml: _dropHtml,
+    tickets: rawTickets,
     ...rest
   } = data;
   void _dropJson;
   void _dropHtml;
+  const tickets = rawTickets.map((t) => omitUndefined(t));
   return omitUndefined({
     ...rest,
     descriptionJson,
     descriptionHtml,
     descriptionPlainText,
+    tickets,
   });
 }
 

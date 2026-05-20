@@ -22,17 +22,29 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { registerForEvent } from "@/public/actions/event-registration";
 
+export type TicketOption = {
+  readonly id: string;
+  readonly name: string;
+  readonly price: number;
+  readonly unitSize: number;
+};
+
 interface EventRegistrationFormProps {
   readonly eventId: string;
   readonly turnstileSiteKey: string | null;
   readonly remainingCapacity: number | null;
+  readonly tickets: readonly TicketOption[];
 }
 
 export function EventRegistrationForm({
   eventId,
   turnstileSiteKey,
   remainingCapacity,
+  tickets,
 }: EventRegistrationFormProps): ReactElement {
+  const [selectedTicketId, setSelectedTicketId] = useState<string>(
+    tickets[0]?.id ?? "",
+  );
   const [submitted, setSubmitted] = useState(false);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const turnstileRef = useRef<TurnstileInstance>(null);
@@ -48,6 +60,7 @@ export function EventRegistrationForm({
     lastResult,
     defaultValue: {
       eventId,
+      ticketId: tickets[0]?.id ?? "",
       quantity: 1,
     },
     onValidate({ formData }) {
@@ -125,9 +138,72 @@ export function EventRegistrationForm({
         <input type="hidden" name={fields.eventId.name} value={eventId} />
         <input
           type="hidden"
+          name={fields.ticketId.name}
+          value={selectedTicketId}
+        />
+        <input
+          type="hidden"
           name={fields.turnstileToken.name}
           value={turnstileTokenControl.value ?? ""}
         />
+
+        {tickets.length > 1 && (
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium text-foreground">
+              チケット種別を選択
+            </legend>
+            <div className="space-y-2">
+              {tickets.map((ticket) => {
+                const id = `ticket-option-${ticket.id}`;
+                const isSelected = selectedTicketId === ticket.id;
+                return (
+                  <label
+                    key={ticket.id}
+                    htmlFor={id}
+                    className={
+                      isSelected
+                        ? "flex min-h-11 cursor-pointer items-center justify-between gap-3 border border-accent bg-accent/5 p-4"
+                        : "flex min-h-11 cursor-pointer items-center justify-between gap-3 border border-border p-4 hover:border-foreground/30"
+                    }
+                  >
+                    <span className="flex items-center gap-3">
+                      <input
+                        id={id}
+                        type="radio"
+                        name="ticket-selector"
+                        value={ticket.id}
+                        checked={isSelected}
+                        onChange={() => setSelectedTicketId(ticket.id)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm font-medium text-foreground">
+                        {ticket.name}
+                      </span>
+                    </span>
+                    <span className="text-sm text-accent">
+                      ¥{ticket.price.toLocaleString()}
+                      {ticket.unitSize > 1 && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          / {String(ticket.unitSize)}名
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {fields.ticketId.errors !== undefined &&
+              fields.ticketId.errors.length > 0 && (
+                <p
+                  className="text-sm text-destructive"
+                  role="alert"
+                  id={fields.ticketId.errorId}
+                >
+                  {fields.ticketId.errors[0]}
+                </p>
+              )}
+          </fieldset>
+        )}
 
         <Input
           label="お名前"
