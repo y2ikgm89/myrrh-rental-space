@@ -242,6 +242,12 @@ export default async function EventDetailPage({
                 eventId={event.id}
                 turnstileSiteKey={turnstileSiteKey}
                 remainingCapacity={remainingCapacity}
+                tickets={event.tickets.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  price: t.price,
+                  unitSize: t.unitSize,
+                }))}
               />
             ) : isFull ? (
               <EventStatusNotice

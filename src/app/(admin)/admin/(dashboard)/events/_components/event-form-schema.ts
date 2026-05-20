@@ -9,7 +9,8 @@ import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
  * - `descriptionJson` (Lexical EditorState JSON) は hidden input で transit
  * - `descriptionHtml` は client-side で `renderEditorStateJsonToHtmlClient()` で生成 → hidden input
  * - boolean (`registrationOpen`) は Switch + hidden input "on" / "" を `z.preprocess` で coerce
- * - 数値 (`capacity` / `price`) は `<input type="number">` 経由で空文字 → null
+ * - 数値 (`capacity`) は `<input type="number">` 経由で空文字 → null
+ * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
  * - sentinel `__none__` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
  * - datetime-local (`startTime` / `endTime` / `registrationDeadline`) は JST 固定 `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst` SSoT 経由 (command 層)
  * - cross-field refine: 終了 > 開始 / registrationDeadline ≤ startTime
@@ -37,6 +38,41 @@ const nullableUuidWithSentinel = (sentinel: string) =>
       value === "" || value === sentinel || value === undefined ? null : value,
     z.string().uuid({ error: "無効なID形式です" }).nullable().optional(),
   );
+
+const ticketInputSchema = z.object({
+  id: z.string().optional(),
+  name: z
+    .string()
+    .min(1, { error: "チケット名は必須です" })
+    .max(100, { error: "チケット名は100文字以内です" }),
+  description: z
+    .string()
+    .max(500, { error: "説明は500文字以内です" })
+    .optional(),
+  price: z.number().int().min(0, { error: "料金は0以上です" }),
+  capacity: z.number().int().min(1).nullable().optional(),
+  unitSize: z
+    .number()
+    .int()
+    .min(1, { error: "1チケットあたりの人数は1以上です" }),
+  sortOrder: z.number().int().min(0),
+  isAvailable: z.boolean(),
+});
+
+const ticketsSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    if (value === "") return [];
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  },
+  z
+    .array(ticketInputSchema)
+    .min(1, { error: "チケット種別を少なくとも1つ登録してください" }),
+);
 
 const eventFormBaseSchema = z.object({
   title: z
@@ -68,7 +104,7 @@ const eventFormBaseSchema = z.object({
     .nullable()
     .optional(),
   capacity: optionalNullableInt,
-  price: optionalNullableInt,
+  tickets: ticketsSchema,
   addressDetail: z.preprocess(
     (value) => (value === "" ? null : value),
     z
@@ -89,7 +125,6 @@ function refineEvent(
     endTime: string;
     registrationDeadline?: string | null | undefined;
     capacity?: number | null | undefined;
-    price?: number | null | undefined;
   },
   ctx: z.RefinementCtx,
 ): void {
@@ -127,18 +162,6 @@ function refineEvent(
       code: "custom",
       message: "定員は1以上です",
       path: ["capacity"],
-    });
-  }
-
-  if (
-    typeof data.price === "number" &&
-    Number.isFinite(data.price) &&
-    data.price < 0
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "料金は0以上です",
-      path: ["price"],
     });
   }
 }

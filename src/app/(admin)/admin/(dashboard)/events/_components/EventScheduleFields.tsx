@@ -24,7 +24,7 @@ export function EventScheduleFields({
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>日程・定員・料金</CardTitle>
+        <CardTitle>日程・定員</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -61,38 +61,20 @@ export function EventScheduleFields({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor={fields.capacity.id}>定員</Label>
-            <Input
-              {...getInputProps(fields.capacity, { type: "number" })}
-              disabled={isPending}
-            />
-            {fields.capacity.errors && (
-              <p
-                id={fields.capacity.errorId}
-                className="mt-1 text-sm text-destructive"
-              >
-                {fields.capacity.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor={fields.price.id}>料金</Label>
-            <Input
-              {...getInputProps(fields.price, { type: "number" })}
-              disabled={isPending}
-            />
-            {fields.price.errors && (
-              <p
-                id={fields.price.errorId}
-                className="mt-1 text-sm text-destructive"
-              >
-                {fields.price.errors.join(", ")}
-              </p>
-            )}
-          </div>
+        <div>
+          <Label htmlFor={fields.capacity.id}>定員（全体）</Label>
+          <Input
+            {...getInputProps(fields.capacity, { type: "number" })}
+            disabled={isPending}
+          />
+          {fields.capacity.errors && (
+            <p
+              id={fields.capacity.errorId}
+              className="mt-1 text-sm text-destructive"
+            >
+              {fields.capacity.errors.join(", ")}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
