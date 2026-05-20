@@ -53,6 +53,10 @@ const [activeTab, setActiveTab] = useQueryState(
 
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧 + フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
 
+### `TabsTrigger` の `type="button"` default (form submit silent bug 防止)
+
+`@/admin/components/ui/tabs` の `TabsTrigger` は **`type={type ?? "button"}` を default 設定**する (2026-05-20 PR #170 確立)。HTML 仕様で `<form>` 内の `<button>` は default `type="submit"` となるため、SettingsDialog 等で `<form>` 内に Radix Tabs を配置すると **tab 切替クリックが form submit を発火する silent bug** が起きる。Radix の `TabsPrimitive.Trigger` は `type` 未指定で素通し、caller が明示しないと `<button>` の HTML default が適用される。`type="button"` default 化で全 admin Tabs 利用箇所が form 内外を問わず安全に動作する (caller が `type` を渡せば override 可能)。`type` 直書きの呼び出し側コード復活禁止。
+
 ## ステータス分類タブ（list 系 admin ページ）
 
 リソースがステータス遷移する場合、ステータス Select Filter 単独より**ステータス軸タブ**が運営動線に合う。業界標準（Shopify Orders / Stripe Payments / Linear Issues）と整合。タブ軸の選び方で 2 variants:
