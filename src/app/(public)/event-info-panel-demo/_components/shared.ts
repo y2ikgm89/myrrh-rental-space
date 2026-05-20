@@ -53,7 +53,7 @@ export const VARIANTS: readonly VariantMeta[] = [
     name: "Editorial Sequenced",
     tagline: "01 / 02 / 03 · serif italic",
     description:
-      "Kinfolk Journal 風の序数（01/02/03/04）+ Cormorant Garamond italic ラベル。アイコンを排し、活字体の格調と余白で情報を構造化。Myrrh の editorial magazine トーンと最も整合。",
+      "Kinfolk Journal 風の序数（01/02/03/04）+ font-heading italic ラベル。アイコンを排し、活字体の格調と余白で情報を構造化。Myrrh の editorial magazine トーンと最も整合。",
     pros: [
       "ブランドトーン (Editorial Magazine) と完全整合",
       "差別化された格調高い印象",
