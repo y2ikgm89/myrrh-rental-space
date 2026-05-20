@@ -1,6 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
-import { IconCalendar, IconMapPin, IconUsers } from "@tabler/icons-react";
+import {
+  IconCalendar,
+  IconCoin,
+  IconMapPin,
+  IconUsers,
+} from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import {
   formatEventDate,
@@ -46,15 +51,14 @@ interface EventInfoPanelProps {
 /**
  * EventInfoPanel — イベント詳細ページの情報サマリー + CTA パネル
  *
- * Split Hero Card パターン（Lu.ma / Cal.com の現代 booking widget 業界標準）。
+ * Minimal editorial pattern (Apple Store / Stripe / Notion booking 業界標準)。
+ * Hero block の `bg-surface` 強調を廃し、全ての情報を一様な `bg-background` の
+ * Detail list として scan しやすく並べる。typographic rhythm と hairline divider
+ * のみで構造化、Luxury White × Bronze brand と最も整合。
  *
- * 1. **Hero block (`bg-surface`)** — Status Badge + 価格 hero + 残席状況
- * 2. **Detail list (`bg-background`)** — 日時 + 開催場所（icon + label + 値）
+ * 1. **Status band** — Badge 単独配置（申込受付中 / 申込締切 等）
+ * 2. **Detail list** — 開催日時 / 開催場所 / 定員 / 参加費 の 4 行（全 DetailRow）
  * 3. **CTA block** — `bg-foreground` ボタン（`registration.kind === "open"` のみ）
- *
- * 視覚ヒエラルキー: 一目で「予約可否 / 価格 / 残席」が分かる hero zone と、
- * scan して読む詳細情報 zone を明確に分離。Editorial Magazine ブランド
- * （`bg-surface` warm cream）を保持しつつ、申込導線を阻害しない設計。
  *
  * `variant="sidebar"` は `lg+` で `ArticleLayout` の `toc` slot に渡され sticky 表示、
  * `variant="mobile"` は `<lg` で本文冒頭の inline カードとして展開される。
@@ -75,13 +79,15 @@ export function EventInfoPanel({
     <aside
       aria-label="イベント情報"
       className={cn(
-        "overflow-hidden border border-border bg-background shadow-sm",
+        "border border-border bg-background shadow-sm",
         isSidebar
           ? "lg:sticky lg:top-[calc(var(--header-height)+2rem)]"
           : "mb-12",
       )}
     >
-      <HeroBlock registration={registration} price={price} />
+      <div className="px-8 pb-5 pt-7 sm:px-10">
+        <RegistrationBadgeRow registration={registration} />
+      </div>
       <dl className="px-8 sm:px-10">
         <DetailRow
           icon={<IconCalendar className="h-4 w-4" aria-hidden="true" />}
@@ -108,6 +114,14 @@ export function EventInfoPanel({
             <CapacityValue capacity={capacity} registration={registration} />
           </DetailRow>
         ) : null}
+        {price !== null ? (
+          <DetailRow
+            icon={<IconCoin className="h-4 w-4" aria-hidden="true" />}
+            label="参加費"
+          >
+            <PriceValue price={price} />
+          </DetailRow>
+        ) : null}
       </dl>
       {registration.kind === "open" ? (
         <div className="px-8 pb-6 sm:px-10">
@@ -120,45 +134,6 @@ export function EventInfoPanel({
         </div>
       ) : null}
     </aside>
-  );
-}
-
-function HeroBlock({
-  registration,
-  price,
-}: {
-  readonly registration: RegistrationState;
-  readonly price: number | null;
-}): ReactElement {
-  const isInactive =
-    registration.kind === "deadline-passed" || registration.kind === "closed";
-
-  return (
-    <div className="bg-surface px-8 pb-8 pt-8 sm:px-10 sm:pb-10 sm:pt-10">
-      <RegistrationBadgeRow registration={registration} />
-      {price !== null ? (
-        <p
-          className={cn(
-            "mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 font-heading",
-            isInactive && "opacity-60",
-          )}
-        >
-          <span
-            className={cn(
-              "font-normal leading-none text-foreground",
-              isInactive ? "text-3xl" : "text-[2.5rem]",
-            )}
-          >
-            {price === 0 ? "無料" : formatPrice(price)}
-          </span>
-          {price > 0 ? (
-            <span className="text-sm text-muted-foreground">
-              / 1 名（税込）
-            </span>
-          ) : null}
-        </p>
-      ) : null}
-    </div>
   );
 }
 
@@ -180,9 +155,9 @@ function RegistrationBadgeRow({
 }
 
 /**
- * Hero block (bg-surface) 上で visible なネガティブ状態 Badge。
+ * `bg-background` 上で visible なネガティブ状態 Badge。
  * Badge primitive の `variant="default"` は `bg-surface text-foreground` で
- * 同色背景に溶ける silent bug を回避するため、background + border の outline 枠で描画。
+ * いずれの背景でも同色に溶けやすいため、border + bg-background の outline 枠で描画。
  */
 function OutlineBadge({
   children,
@@ -229,6 +204,18 @@ function CapacityValue({
   return <span>{capacity} 名</span>;
 }
 
+function PriceValue({ price }: { readonly price: number }): ReactElement {
+  if (price === 0) {
+    return <span>無料</span>;
+  }
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-2">
+      <span>{formatPrice(price)}</span>
+      <span className="text-xs text-muted-foreground">/ 1 名（税込）</span>
+    </span>
+  );
+}
+
 function DetailRow({
   icon,
   label,
@@ -240,7 +227,7 @@ function DetailRow({
 }): ReactElement {
   return (
     <>
-      <dt className="flex items-center gap-2 pt-5 text-xs text-muted-foreground first:pt-7">
+      <dt className="flex items-center gap-2 pt-5 text-xs text-muted-foreground">
         <span className="text-accent">{icon}</span>
         <span>{label}</span>
       </dt>
