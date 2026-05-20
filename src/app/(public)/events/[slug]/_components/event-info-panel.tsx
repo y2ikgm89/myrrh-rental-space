@@ -155,10 +155,27 @@ function RegistrationBadgeRow({
     case "full":
       return <Badge variant="warning">満員</Badge>;
     case "deadline-passed":
-      return <Badge variant="default">申込締切</Badge>;
+      return <OutlineBadge>申込締切</OutlineBadge>;
     case "closed":
-      return <Badge variant="default">申込受付終了</Badge>;
+      return <OutlineBadge>申込受付終了</OutlineBadge>;
   }
+}
+
+/**
+ * Hero block (bg-surface) 上で visible なネガティブ状態 Badge。
+ * Badge primitive の `variant="default"` は `bg-surface text-foreground` で
+ * 同色背景に溶ける silent bug を回避するため、background + border の outline 枠で描画。
+ */
+function OutlineBadge({
+  children,
+}: {
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+      {children}
+    </span>
+  );
 }
 
 function CapacityStatus({
