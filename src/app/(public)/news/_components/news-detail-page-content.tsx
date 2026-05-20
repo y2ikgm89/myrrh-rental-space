@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { Metadata } from "next";
 import { NewsArticleJsonLd } from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
@@ -55,8 +55,10 @@ export async function buildNewsMetadata(slug: string): Promise<Metadata> {
 
 export async function NewsDetailPageContent({
   newsItem,
+  banner,
 }: {
   newsItem: PublishedNewsItem;
+  banner?: ReactNode;
 }): Promise<ReactElement> {
   const [layoutConfig, sidebarSettings] = await Promise.all([
     getNewsLayoutSettings(newsItem.id),
@@ -72,6 +74,7 @@ export async function NewsDetailPageContent({
 
   return (
     <ArticleLayout
+      {...(banner !== undefined && { banner })}
       jsonLd={
         <NewsArticleJsonLd
           headline={newsItem.title}

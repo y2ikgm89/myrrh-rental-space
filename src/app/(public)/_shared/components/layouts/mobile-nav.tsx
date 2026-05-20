@@ -19,6 +19,7 @@ import {
 } from "@tabler/icons-react";
 import type { Route } from "next";
 import { cn } from "@/shared/lib/cn";
+import { normalizePreviewPathname } from "@/shared/lib/preview-routes";
 
 export type MobileNavAuthKind = "mypage" | "login" | null;
 
@@ -50,7 +51,9 @@ function isActive(pathname: string, item: NavItem): boolean {
 }
 
 export function MobileNav({ authKind }: MobileNavProps) {
-  const pathname = usePathname();
+  // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/posts` 等) に正規化して
+  // active 判定する。preview と本番で同じタブが選択状態として表示される。
+  const pathname = normalizePreviewPathname(usePathname());
   const authItem = authKind ? AUTH_NAV_ITEMS[authKind] : null;
   const items: readonly NavItem[] = authItem
     ? [...STATIC_NAV_ITEMS, authItem]

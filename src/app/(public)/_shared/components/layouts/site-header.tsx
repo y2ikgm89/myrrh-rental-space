@@ -24,6 +24,7 @@ import {
   HeaderBackgroundMode,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
+import { normalizePreviewPathname } from "@/shared/lib/preview-routes";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { Button } from "@/public/components/design-system/button";
 import { LogoutButton } from "@/public/components/ui/logout-button";
@@ -83,7 +84,10 @@ const MOBILE_CHILD_CLASS =
  * 外部リンクと別 origin の URL は常に false を返す。
  */
 function useIsActiveUrl(url: string, isExternal: boolean): boolean {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/posts` 等) に正規化して
+  // active 判定する。preview と本番で同じ nav 項目が active 表示される。
+  const pathname = normalizePreviewPathname(rawPathname);
   if (isExternal || !url.startsWith("/")) return false;
   if (url === "/") return pathname === "/";
   return pathname === url || pathname.startsWith(`${url}/`);

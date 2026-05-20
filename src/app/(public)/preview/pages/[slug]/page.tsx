@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { getPageBySlug } from "@/admin/queries/page";
-import { getPageForEdit } from "@/admin/queries/page-section";
+import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { getPageBySlugQuery } from "@/shared/domain/pages/admin-queries";
+import { getPageForEditQuery } from "@/shared/domain/sections/admin-queries";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
 
@@ -20,15 +21,16 @@ export default async function ManagedPagePreviewPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
+  await verifyAdminSession();
 
   const { slug } = await params;
-  const pageMeta = await getPageBySlug(slug);
+  const pageMeta = await getPageBySlugQuery(slug);
 
   if (!pageMeta) {
     notFound();
   }
 
-  const page = await getPageForEdit(slug);
+  const page = await getPageForEditQuery(slug);
 
   if (!page) {
     notFound();
@@ -37,9 +39,9 @@ export default async function ManagedPagePreviewPage({
   const activeSections = page.sections.filter((section) => section.isActive);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
       <PreviewBanner />
       <ManagedPageSections sections={activeSections} pageSlug={page.slug} />
-    </div>
+    </>
   );
 }

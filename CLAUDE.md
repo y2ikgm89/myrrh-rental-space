@@ -21,7 +21,7 @@ bun outdated && bun update                    # 依存更新（メジャーは u
 
 ## アーキテクチャ
 
-Multiple Root Layouts: `(admin)/` `(public)/` `(preview)/` で CSS・認証・レイアウト完全分離（遷移はフルページリロード）。
+Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト完全分離（遷移はフルページリロード）。preview は本番同等 UI/UX 提供のため `(public)/preview/{posts,news,pages}/` 配下で `(public)` root layout を共有（Next.js 公式 Multiple Root Layouts ガイドライン「完全に異なる UI/experience」用途と整合）。
 管理 write 系は `executeAdminMutationResult`（認証・権限・監査ログ一括処理）。API Route のみ `checkPermission()` 直接。
 公開コンテンツ: `/posts` `/news` `/spaces` `/events` `/faq`、RSS `/feed.xml`。
 
@@ -43,7 +43,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` `(preview)/` で CSS・認証・�
 - **内部 helper は `import "server-only"`、Server Action endpoint は `"use server"` を使い分け**（`server-only-patterns.md`）
 - **server-only 定数を Client Component から import 禁止** — client-safe ファイルに分離
 - **Cloud Run probe (`/api/live` `/api/health`) は proxy.ts rate-limit 除外必須**（`ops/deployment-patterns.md`）
-- **管理画面 preview は第 3 root layout `(preview)/`** — URL 生成は `@/shared/lib/preview-routes` SSoT
+- **管理画面 preview は `(public)/preview/{posts,news,pages}/` 配下で `(public)` root layout 共有** — 本番同等 chrome (site-header / footer / mobile-nav / analytics) 継承、admin auth は `verifyAdminSession()` 明示。URL 生成は `@/shared/lib/preview-routes` SSoT
 - **Next.js 16 Server Action / RSC は `react-server` condition** — Lexical 等 DOM 依存は client 完結、Server Action は事前 render 済 contentHtml を受け取る（`frontend/lexical/conventions.md`）
 - **scripts/seed/db:\* は Bun runtime + `bunx --bun prisma` 必須** — `node:*` / `dotenv` / `.mjs` 新規禁止（`bun-patterns.md`）
 - **Serena MCP は LSP symbol query 専用** — Read/Edit/Grep/Glob は Claude Code native、`write_memory` は user 明示要求時のみ

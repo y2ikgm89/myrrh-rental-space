@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { Metadata } from "next";
 import { ArticleJsonLd } from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
@@ -53,8 +53,10 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
 
 export async function PostDetailPageContent({
   post,
+  banner,
 }: {
   post: PublishedPost;
+  banner?: ReactNode;
 }): Promise<ReactElement> {
   const [layoutConfig, sidebarSettings] = await Promise.all([
     getPostLayoutSettings(post.id),
@@ -70,6 +72,7 @@ export async function PostDetailPageContent({
 
   return (
     <ArticleLayout
+      {...(banner !== undefined && { banner })}
       jsonLd={
         <ArticleJsonLd
           headline={post.title}
