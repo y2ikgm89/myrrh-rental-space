@@ -137,21 +137,26 @@ function HeroBlock({
     <div className="bg-surface px-8 pb-8 pt-8 sm:px-10 sm:pb-10 sm:pt-10">
       <RegistrationBadgeRow registration={registration} />
       {price !== null ? (
-        <div className={cn("mt-6", isInactive && "opacity-60")}>
-          <p
+        <p
+          className={cn(
+            "mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 font-heading",
+            isInactive && "opacity-60",
+          )}
+        >
+          <span
             className={cn(
-              "font-heading font-normal leading-none text-foreground",
+              "font-normal leading-none text-foreground",
               isInactive ? "text-3xl" : "text-[2.5rem]",
             )}
           >
             {price === 0 ? "無料" : formatPrice(price)}
-          </p>
+          </span>
           {price > 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              税込・1 名あたり
-            </p>
+            <span className="text-sm text-muted-foreground">
+              / 1 名（税込）
+            </span>
           ) : null}
-        </div>
+        </p>
       ) : null}
     </div>
   );
