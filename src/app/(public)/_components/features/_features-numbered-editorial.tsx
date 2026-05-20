@@ -79,7 +79,7 @@ export function FeaturesNumberedEditorial({
   return (
     <SectionWrapper style={style} layout={config.layout}>
       {hasTitle && (
-        <div className="mx-auto mb-16 max-w-2xl text-center md:mb-24">
+        <div className="mx-auto mb-12 max-w-2xl text-center md:mb-16">
           <ScrollReveal>
             {config.sectionLabel ? (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
