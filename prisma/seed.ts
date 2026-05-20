@@ -3203,17 +3203,32 @@ async function seedEvents() {
     },
   ];
 
-  const events = eventSeedSource.map(({ description, ...rest }) => ({
-    ...rest,
-    ...buildSeedDescription(description),
+  const events = eventSeedSource.map(({ description, price, ...rest }) => ({
+    rest,
+    description,
+    seedPrice: price,
   }));
 
   let createdCount = 0;
-  for (const eventData of events) {
+  for (const { rest, description, seedPrice } of events) {
     await prisma.event.upsert({
-      where: { slug: eventData.slug },
+      where: { slug: rest.slug },
       update: {},
-      create: eventData,
+      create: {
+        ...rest,
+        ...buildSeedDescription(description),
+        tickets: {
+          create: [
+            {
+              name: "一般",
+              price: seedPrice,
+              unitSize: 1,
+              sortOrder: 0,
+              isAvailable: true,
+            },
+          ],
+        },
+      },
     });
     createdCount++;
   }
