@@ -49,13 +49,19 @@ interface EventInfoPanelProps {
  * EventInfoPanel — イベント詳細ページの情報サマリー + CTA パネル
  *
  * Editorial Magazine トーンの「右サイド sticky 概要カード」（業界標準 — Eventbrite /
- * Peatix / Lu.ma / connpass のイベント詳細 sidebar と同パターン）。日時・会場・
- * 定員・参加費・申込状況を 1 箇所に集約し、CTA「お申し込みへ」アンカーで本文末尾の
- * フォームへ誘導する。
+ * Peatix / Lu.ma / connpass のイベント詳細 sidebar と同パターン）。3 セクション
+ * 構造で情報の視覚的階層を確保する:
+ *
+ * 1. **ステータス帯** — 申込状況 Badge（`申込受付中` / `満員` 等）
+ * 2. **情報リスト** — 日時 / 会場 / 定員 / 参加費 を hairline 区切りで縦積み
+ * 3. **CTA 帯** — 「お申し込みへ進む」アンカー（`registration.kind === "open"` のみ）
+ *
+ * 各セクションは `border-t border-divider` で flow 上に明確に分離され、内側 padding
+ * （`px-8 sm:px-10`）で white space を確保。row 境界は dt の `border-t` で表現し、
+ * dt-dd ペア間には線を引かない（divide-y dl で dt-dd 境界にも線が入る silent bug 回避）。
  *
  * `variant="sidebar"` は `lg+` で `ArticleLayout` の `toc` slot に渡され sticky 表示、
- * `variant="mobile"` は `<lg` で本文冒頭の inline カードとして展開される（mobile も
- * 重要情報を fold above に出すことで予約導線を阻害しない）。
+ * `variant="mobile"` は `<lg` で本文冒頭の inline カードとして展開される。
  */
 export function EventInfoPanel({
   variant,
@@ -73,23 +79,25 @@ export function EventInfoPanel({
     <aside
       aria-label="イベント情報"
       className={cn(
-        "border border-border bg-background p-6 shadow-sm sm:p-7",
+        "border border-border bg-background shadow-sm",
         isSidebar
           ? "lg:sticky lg:top-[calc(var(--header-height)+2rem)]"
-          : "mb-10",
+          : "mb-12",
       )}
     >
-      <RegistrationBadgeRow registration={registration} />
-      <dl className="mt-5 divide-y divide-divider">
+      <div className="px-8 py-5 sm:px-10">
+        <RegistrationBadgeRow registration={registration} />
+      </div>
+      <dl className="border-t border-divider px-8 sm:px-10">
         <InfoRow
-          icon={<IconCalendar className="h-5 w-5" aria-hidden="true" />}
+          icon={<IconCalendar className="h-[1.125rem] w-[1.125rem]" />}
           label="開催日時"
         >
           {formatEventDateTimeRange(startTime, endTime)}
         </InfoRow>
         {venues.length > 0 ? (
           <InfoRow
-            icon={<IconMapPin className="h-5 w-5" aria-hidden="true" />}
+            icon={<IconMapPin className="h-[1.125rem] w-[1.125rem]" />}
             label="開催場所"
           >
             <VenueList venues={venues} />
@@ -97,7 +105,7 @@ export function EventInfoPanel({
         ) : null}
         {capacity !== null ? (
           <InfoRow
-            icon={<IconUsers className="h-5 w-5" aria-hidden="true" />}
+            icon={<IconUsers className="h-[1.125rem] w-[1.125rem]" />}
             label="定員"
           >
             <CapacityValue
@@ -112,20 +120,23 @@ export function EventInfoPanel({
         ) : null}
         {price !== null ? (
           <InfoRow
-            icon={<IconCoin className="h-5 w-5" aria-hidden="true" />}
+            icon={<IconCoin className="h-[1.125rem] w-[1.125rem]" />}
             label="参加費"
+            emphasize
           >
             <PriceValue price={price} />
           </InfoRow>
         ) : null}
       </dl>
       {registration.kind === "open" ? (
-        <Link
-          href={`#${registerAnchorId}`}
-          className="mt-6 inline-flex min-h-11 w-full items-center justify-center bg-accent px-6 py-3 text-sm font-medium tracking-[0.12em] text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          お申し込みへ進む
-        </Link>
+        <div className="border-t border-divider px-8 py-6 sm:px-10">
+          <Link
+            href={`#${registerAnchorId}`}
+            className="inline-flex min-h-12 w-full items-center justify-center bg-accent px-6 py-3 text-sm font-medium tracking-[0.12em] text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            お申し込みへ進む
+          </Link>
+        </div>
       ) : null}
     </aside>
   );
@@ -151,19 +162,26 @@ function RegistrationBadgeRow({
 function InfoRow({
   icon,
   label,
+  emphasize,
   children,
 }: {
   readonly icon: ReactNode;
   readonly label: string;
+  readonly emphasize?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   return (
     <>
-      <dt className="flex items-center gap-2 pt-4 text-xs text-muted-foreground first:pt-0">
+      <dt className="flex items-center gap-2 border-t border-divider pt-5 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground first:border-t-0 first:pt-6">
         <span className="text-accent">{icon}</span>
         <span>{label}</span>
       </dt>
-      <dd className="ml-7 pb-4 pt-1 text-base leading-relaxed text-foreground last:pb-0">
+      <dd
+        className={cn(
+          "mt-2 text-base leading-relaxed text-foreground",
+          emphasize ? "pb-6 last:pb-7" : "pb-5 last:pb-6",
+        )}
+      >
         {children}
       </dd>
     </>
@@ -176,7 +194,7 @@ function VenueList({
   readonly venues: readonly EventInfoPanelVenue[];
 }): ReactElement {
   return (
-    <ul className="space-y-1.5">
+    <ul className="space-y-2">
       {venues.map((venue, index) => (
         <li key={`${venue.kind}-${String(index)}`}>
           <VenueItem venue={venue} />
@@ -225,7 +243,7 @@ function CapacityValue({
   readonly remaining: number | null;
 }): ReactElement {
   return (
-    <span className="flex items-baseline gap-3">
+    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
       <span>定員 {capacity} 名</span>
       {remaining !== null ? (
         <span className="text-sm text-accent">残り {remaining} 名</span>
@@ -237,13 +255,13 @@ function CapacityValue({
 function PriceValue({ price }: { readonly price: number }): ReactElement {
   if (price === 0) {
     return (
-      <span className="font-heading text-h3 font-light text-foreground">
+      <span className="font-heading text-h2 font-light leading-none text-foreground">
         無料
       </span>
     );
   }
   return (
-    <span className="font-heading text-h3 font-light text-foreground">
+    <span className="font-heading text-h2 font-light leading-none text-foreground">
       {formatPrice(price)}
     </span>
   );
