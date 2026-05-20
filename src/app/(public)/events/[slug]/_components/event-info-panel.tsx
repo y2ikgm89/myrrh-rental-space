@@ -1,11 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
-import {
-  IconCalendar,
-  IconMapPin,
-  IconUsers,
-  IconCoin,
-} from "@tabler/icons-react";
+import { IconCalendar, IconMapPin } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
@@ -48,17 +43,15 @@ interface EventInfoPanelProps {
 /**
  * EventInfoPanel — イベント詳細ページの情報サマリー + CTA パネル
  *
- * Editorial Magazine トーンの「右サイド sticky 概要カード」（業界標準 — Eventbrite /
- * Peatix / Lu.ma / connpass のイベント詳細 sidebar と同パターン）。3 セクション
- * 構造で情報の視覚的階層を確保する:
+ * Split Hero Card パターン（Lu.ma / Cal.com の現代 booking widget 業界標準）。
  *
- * 1. **ステータス帯** — 申込状況 Badge（`申込受付中` / `満員` 等）
- * 2. **情報リスト** — 日時 / 会場 / 定員 / 参加費 を hairline 区切りで縦積み
- * 3. **CTA 帯** — 「お申し込みへ進む」アンカー（`registration.kind === "open"` のみ）
+ * 1. **Hero block (`bg-surface`)** — Status Badge + 価格 hero + 残席状況
+ * 2. **Detail list (`bg-background`)** — 日時 + 開催場所（icon + label + 値）
+ * 3. **CTA block** — `bg-foreground` ボタン（`registration.kind === "open"` のみ）
  *
- * 各セクションは `border-t border-divider` で flow 上に明確に分離され、内側 padding
- * （`px-8 sm:px-10`）で white space を確保。row 境界は dt の `border-t` で表現し、
- * dt-dd ペア間には線を引かない（divide-y dl で dt-dd 境界にも線が入る silent bug 回避）。
+ * 視覚ヒエラルキー: 一目で「予約可否 / 価格 / 残席」が分かる hero zone と、
+ * scan して読む詳細情報 zone を明確に分離。Editorial Magazine ブランド
+ * （`bg-surface` warm cream）を保持しつつ、申込導線を阻害しない設計。
  *
  * `variant="sidebar"` は `lg+` で `ArticleLayout` の `toc` slot に渡され sticky 表示、
  * `variant="mobile"` は `<lg` で本文冒頭の inline カードとして展開される。
@@ -79,66 +72,75 @@ export function EventInfoPanel({
     <aside
       aria-label="イベント情報"
       className={cn(
-        "border border-border bg-background shadow-sm",
+        "overflow-hidden border border-border bg-background shadow-sm",
         isSidebar
           ? "lg:sticky lg:top-[calc(var(--header-height)+2rem)]"
           : "mb-12",
       )}
     >
-      <div className="px-8 py-5 sm:px-10">
-        <RegistrationBadgeRow registration={registration} />
-      </div>
-      <dl className="border-t border-divider px-8 sm:px-10">
-        <InfoRow
-          icon={<IconCalendar className="h-[1.125rem] w-[1.125rem]" />}
+      <HeroBlock
+        registration={registration}
+        price={price}
+        capacity={capacity}
+      />
+      <dl className="px-8 sm:px-10">
+        <DetailRow
+          icon={<IconCalendar className="h-4 w-4" aria-hidden="true" />}
           label="開催日時"
         >
           {formatEventDateTimeRange(startTime, endTime)}
-        </InfoRow>
+        </DetailRow>
         {venues.length > 0 ? (
-          <InfoRow
-            icon={<IconMapPin className="h-[1.125rem] w-[1.125rem]" />}
+          <DetailRow
+            icon={<IconMapPin className="h-4 w-4" aria-hidden="true" />}
             label="開催場所"
           >
             <VenueList venues={venues} />
-          </InfoRow>
-        ) : null}
-        {capacity !== null ? (
-          <InfoRow
-            icon={<IconUsers className="h-[1.125rem] w-[1.125rem]" />}
-            label="定員"
-          >
-            <CapacityValue
-              capacity={capacity}
-              remaining={
-                registration.kind === "open"
-                  ? registration.remainingCapacity
-                  : null
-              }
-            />
-          </InfoRow>
-        ) : null}
-        {price !== null ? (
-          <InfoRow
-            icon={<IconCoin className="h-[1.125rem] w-[1.125rem]" />}
-            label="参加費"
-            emphasize
-          >
-            <PriceValue price={price} />
-          </InfoRow>
+          </DetailRow>
         ) : null}
       </dl>
       {registration.kind === "open" ? (
-        <div className="border-t border-divider px-8 py-6 sm:px-10">
+        <div className="px-8 pb-6 sm:px-10">
           <Link
             href={`#${registerAnchorId}`}
-            className="inline-flex min-h-12 w-full items-center justify-center bg-accent px-6 py-3 text-sm font-medium tracking-[0.12em] text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex min-h-12 w-full items-center justify-center bg-foreground px-6 text-sm font-medium tracking-[0.08em] text-background transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             お申し込みへ進む
           </Link>
         </div>
       ) : null}
     </aside>
+  );
+}
+
+function HeroBlock({
+  registration,
+  price,
+  capacity,
+}: {
+  readonly registration: RegistrationState;
+  readonly price: number | null;
+  readonly capacity: number | null;
+}): ReactElement {
+  return (
+    <div className="bg-surface px-8 pb-7 pt-7 sm:px-10">
+      <RegistrationBadgeRow registration={registration} />
+      {price !== null ? (
+        <div className="mt-5">
+          <p className="font-heading text-[2.5rem] font-light leading-none text-foreground">
+            {price === 0 ? "無料" : formatPrice(price)}
+          </p>
+          {price > 0 ? (
+            <p className="mt-1.5 text-xs text-muted-foreground">税込 / 1 名</p>
+          ) : null}
+        </div>
+      ) : null}
+      <CapacityStatus
+        registration={registration}
+        capacity={capacity}
+        hasGap={price !== null}
+      />
+    </div>
   );
 }
 
@@ -159,29 +161,61 @@ function RegistrationBadgeRow({
   }
 }
 
-function InfoRow({
+function CapacityStatus({
+  registration,
+  capacity,
+  hasGap,
+}: {
+  readonly registration: RegistrationState;
+  readonly capacity: number | null;
+  readonly hasGap: boolean;
+}): ReactElement | null {
+  if (capacity === null) return null;
+  const marginClass = hasGap ? "mt-4" : "mt-5";
+
+  if (registration.kind === "open" && registration.remainingCapacity !== null) {
+    return (
+      <p className={cn("text-sm text-muted-foreground", marginClass)}>
+        残り{" "}
+        <span className="font-medium text-accent">
+          {registration.remainingCapacity} 席
+        </span>{" "}
+        / {capacity} 名
+      </p>
+    );
+  }
+
+  if (registration.kind === "full") {
+    return (
+      <p className={cn("text-sm text-muted-foreground", marginClass)}>
+        定員 {capacity} 名 / 満席
+      </p>
+    );
+  }
+
+  return (
+    <p className={cn("text-sm text-muted-foreground", marginClass)}>
+      定員 {capacity} 名
+    </p>
+  );
+}
+
+function DetailRow({
   icon,
   label,
-  emphasize,
   children,
 }: {
   readonly icon: ReactNode;
   readonly label: string;
-  readonly emphasize?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   return (
     <>
-      <dt className="flex items-center gap-2 border-t border-divider pt-5 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground first:border-t-0 first:pt-6">
+      <dt className="flex items-center gap-2 pt-5 text-xs text-muted-foreground first:pt-7">
         <span className="text-accent">{icon}</span>
         <span>{label}</span>
       </dt>
-      <dd
-        className={cn(
-          "mt-2 text-base leading-relaxed text-foreground",
-          emphasize ? "pb-6 last:pb-7" : "pb-5 last:pb-6",
-        )}
-      >
+      <dd className="mb-5 mt-1.5 text-sm leading-relaxed text-foreground last:mb-7">
         {children}
       </dd>
     </>
@@ -194,7 +228,7 @@ function VenueList({
   readonly venues: readonly EventInfoPanelVenue[];
 }): ReactElement {
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-1.5">
       {venues.map((venue, index) => (
         <li key={`${venue.kind}-${String(index)}`}>
           <VenueItem venue={venue} />
@@ -224,7 +258,7 @@ function VenueItem({
         <span className="flex flex-col gap-0.5">
           <span>{venue.name}</span>
           {venue.address ? (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {venue.address}
             </span>
           ) : null}
@@ -233,36 +267,4 @@ function VenueItem({
     case "addressDetail":
       return <span>{venue.text}</span>;
   }
-}
-
-function CapacityValue({
-  capacity,
-  remaining,
-}: {
-  readonly capacity: number;
-  readonly remaining: number | null;
-}): ReactElement {
-  return (
-    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <span>定員 {capacity} 名</span>
-      {remaining !== null ? (
-        <span className="text-sm text-accent">残り {remaining} 名</span>
-      ) : null}
-    </span>
-  );
-}
-
-function PriceValue({ price }: { readonly price: number }): ReactElement {
-  if (price === 0) {
-    return (
-      <span className="font-heading text-h2 font-light leading-none text-foreground">
-        無料
-      </span>
-    );
-  }
-  return (
-    <span className="font-heading text-h2 font-light leading-none text-foreground">
-      {formatPrice(price)}
-    </span>
-  );
 }
