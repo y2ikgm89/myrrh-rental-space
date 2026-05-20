@@ -49,11 +49,17 @@ function TabsList({
 function TabsTrigger({
   className,
   ref,
+  type,
   ...props
 }: React.ComponentPropsWithRef<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
       ref={ref}
+      // `<form>` 内に Tabs を配置した際、HTML 仕様で `<button>` の default
+      // `type` は `"submit"` のため tab 切替が form submit を発火する silent bug
+      // が起きる。明示的に `type="button"` を default 設定して回避する
+      // (caller が type を渡せば override 可能)。
+      type={type ?? "button"}
       className={cn(
         "inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-all duration-200",
         // フォーカス

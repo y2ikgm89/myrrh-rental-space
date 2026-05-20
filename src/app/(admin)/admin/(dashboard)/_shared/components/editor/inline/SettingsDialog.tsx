@@ -9,7 +9,7 @@
  * 合成して渡す。
  */
 
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { tv } from "tailwind-variants";
 import {
   Button,
@@ -161,6 +161,18 @@ export function SettingsDialog<
 
   const sectionContext = buildRenderContext(injected, extraProps);
 
+  // conform `useForm({ id })` で指定した form id に対応する <form> を DOM に確実に
+  // 持たせる (conform 公式パターン)。未配置だと useInputControl が dummy input の
+  // 必要性を判定できず "unable to find form#xxx" warning を出す。
+  // imperative validation (onSave callback 経由) と両立させるため、conform の
+  // form.onSubmit は使わず onSubmit で preventDefault + onSave 呼び出しに統一する。
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isPending && isDirty) {
+      onSave();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[var(--modal-max-height)] overflow-y-auto">
@@ -171,57 +183,59 @@ export function SettingsDialog<
           ) : null}
         </DialogHeader>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
-          <TabsList className={classes.tabsList()}>
+        <form id={injected.form.id} onSubmit={handleFormSubmit} noValidate>
+          <Tabs
+            value={activeTab}
+            onValueChange={handleTabChange}
+            className="w-full"
+          >
+            <TabsList className={classes.tabsList()}>
+              {config.tabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
             {config.tabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.label}
-              </TabsTrigger>
+              <TabsContent
+                key={tab.id}
+                value={tab.id}
+                className={classes.tabContent()}
+              >
+                <div className={classes.sectionWrapper()}>
+                  {tab.sections.map((section, index) => (
+                    // eslint-disable-next-line @eslint-react/no-array-index-key
+                    <Card key={`${tab.id}-${index}`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm">
+                          {section.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {section.render(sectionContext)}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
             ))}
-          </TabsList>
+          </Tabs>
 
-          {config.tabs.map((tab) => (
-            <TabsContent
-              key={tab.id}
-              value={tab.id}
-              className={classes.tabContent()}
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isPending}
             >
-              <div className={classes.sectionWrapper()}>
-                {tab.sections.map((section, index) => (
-                  // eslint-disable-next-line @eslint-react/no-array-index-key
-                  <Card key={`${tab.id}-${index}`}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">{section.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>{section.render(sectionContext)}</CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isPending}
-          >
-            キャンセル
-          </Button>
-          <Button
-            type="button"
-            onClick={onSave}
-            disabled={isPending || !isDirty}
-          >
-            {isPending ? "保存中..." : "保存"}
-          </Button>
-        </DialogFooter>
+              キャンセル
+            </Button>
+            <Button type="submit" disabled={isPending || !isDirty}>
+              {isPending ? "保存中..." : "保存"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

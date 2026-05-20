@@ -1,37 +1,17 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { openPreview } from "@/admin/hooks";
-import { getPagePreviewHref } from "@/shared/lib/preview-routes";
+import { describe, expect, test } from "bun:test";
+import {
+  getNewsPreviewHref,
+  getPagePreviewHref,
+  getPostPreviewHref,
+} from "@/shared/lib/preview-routes";
 
 describe("preview routing", () => {
-  const openSpy = mock(() => null);
-
-  beforeEach(() => {
-    Reflect.set(globalThis, "window", { open: openSpy });
+  test("投稿 preview は dedicated id-based route を返す", () => {
+    expect(getPostPreviewHref("abc-123")).toBe("/preview/posts/abc-123");
   });
 
-  afterEach(() => {
-    openSpy.mockClear();
-    Reflect.deleteProperty(globalThis, "window");
-  });
-
-  test("投稿 preview は dedicated route を開く", () => {
-    openPreview("hello-world", "/posts");
-
-    expect(openSpy).toHaveBeenCalledWith(
-      "/posts/preview/hello-world",
-      "_blank",
-      "noreferrer",
-    );
-  });
-
-  test("ニュース preview は dedicated route を開く", () => {
-    openPreview("release-note", "/news");
-
-    expect(openSpy).toHaveBeenCalledWith(
-      "/news/preview/release-note",
-      "_blank",
-      "noreferrer",
-    );
+  test("ニュース preview は dedicated id-based route を返す", () => {
+    expect(getNewsPreviewHref("xyz-789")).toBe("/preview/news/xyz-789");
   });
 
   test("固定ページ preview は page 専用 route を返す", () => {

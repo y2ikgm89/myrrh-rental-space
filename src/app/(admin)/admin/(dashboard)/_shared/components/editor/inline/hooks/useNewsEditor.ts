@@ -28,14 +28,13 @@ import {
   deleteNews,
   updateNewsPublished,
 } from "@/admin/actions/news";
-import { createPreviewHandlers } from "@/admin/hooks";
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { getNewsPreviewHref } from "@/shared/lib/preview-routes";
 import type { NewsData } from "@/shared/domain/news/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { NewsPreviewData } from "@/shared/types";
 
 import {
   useEditorCore,
@@ -110,27 +109,10 @@ function toSettingsSubmitPayload(formData: NewsSettingsFormData) {
   };
 }
 
-function toPreviewData(
-  settingsData: NewsSettingsFormData,
-  contentHtml: string,
-): NewsPreviewData {
-  return {
-    title: settingsData.title || "無題",
-    slug: settingsData.slug || "preview-new",
-    contentHtml,
-    publishedAt:
-      typeof settingsData.publishedAt === "string"
-        ? settingsData.publishedAt || null
-        : null,
-  };
-}
-
 export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const router = useRouter();
 
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-
-  const { saveAndOpenPreview } = createPreviewHandlers("news");
 
   // 本文 (contentJson) — 軽量 useState 管理
   const initialContentJson = news?.contentJson
@@ -358,21 +340,56 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     });
   };
 
+  // プレビューは Next.js 16 公式推奨の server-side fetch パターン。
+  // 設計原則 (WordPress / Notion / Ghost 標準):
+  // - 本文 (contentJson) のみ save → 新タブで preview URL を開く
+  // - 設定 (title / slug / publishedAt 等) の更新は SettingsDialog の「保存」ボタン専任
+  // - 設定 validation を preview の入口に挟まない (preview は draft 可視化目的)
+  // - create mode は id がないので「先に保存してください」toast
+  //
+  // popup blocker 対策: ユーザー gesture の同期 frame 内で先に空タブを window.open
+  // で予約し、async 保存完了後にそのタブを preview URL へ navigate する。
+  // `noreferrer` / `noopener` window feature は親→子の Window.location 操作を
+  // browsing context レベルで遮断する HTML Living Standard 仕様のため指定しない
+  // (admin→admin 同一 origin での遷移につき reverse tabnabbing リスクなし)。
   const handlePreview = () => {
-    try {
-      const settingsData = validateSettings();
-      if (!settingsData) return;
-      const identifier =
-        mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
-      const previewData = toPreviewData(settingsData, contentHtml);
-      saveAndOpenPreview(identifier, previewData, "/news");
-    } catch (error) {
-      logger.error("プレビュー生成中にエラーが発生しました", {
-        error: getErrorMessage(error),
-      });
-      toast.error("プレビューの生成に失敗しました");
+    if (mode === "create" || !news) {
+      toast.error("プレビューには記事の保存が必要です。先に保存してください。");
+      return;
     }
+
+    const previewWindow = window.open("about:blank", "_blank");
+
+    core.startTransition(async () => {
+      try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+        const bodyResult = await updateNewsBody(news.id, {
+          contentJson,
+          contentHtml,
+        });
+        if (isMutationError(bodyResult)) {
+          previewWindow?.close();
+          toast.error(bodyResult.error);
+          return;
+        }
+
+        setSavedContentJson(contentJson);
+        router.refresh();
+
+        const url = getNewsPreviewHref(news.id);
+        if (previewWindow) {
+          previewWindow.location.href = url;
+        } else {
+          window.open(url, "_blank");
+        }
+      } catch (error) {
+        previewWindow?.close();
+        logger.error("プレビュー生成中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("プレビューの生成に失敗しました");
+      }
+    });
   };
 
   const handleBack = () => core.handleBack(isDirty);
