@@ -76,7 +76,7 @@ paths:
 - **Button primary の bronze shimmer アニメーション廃止**
 - **ImageFrame の hover は `opacity-85`（`scale-105` 廃止）**
 - **SC children を CC 内でタブ切替する場合は CSS `hidden` を使用** — page.tsx から両ビューを props で渡し DOM 保持
-- **公開詳細ページのレイアウトパターンは 2 種** — ①記事型（posts/news）SWELL 風パンくず帯 + Heading level={1} + メタ情報。②固定型（events/terms/spaces）`PageHero variant="compact"` + Section
+- **公開詳細ページのレイアウトパターンは 2 種** — ①記事型（posts/news/events）`ArticleLayout` + `bg-surface` パンくず帯 + `<header>` (eyebrow + h1 + thumbnail) + `Prose` 本文。②固定型（terms/spaces）`PageHero variant="compact"` + Section。**events 固有**: `ArticleLayout` の `toc` / `mobileToc` slot に `EventInfoPanel`（右サイド sticky 情報カード / mobile 本文冒頭 inline、Eventbrite / Peatix / Lu.ma 業界標準）を注入し、CTA は `#event-register` アンカー + `scroll-mt-[calc(var(--header-height)+2rem)]` で本文末尾の登録フォームへ誘導。`AddToCalendar` は主導線位置から退避し `<details>` 折りたたみ + 「予約しなくても追加できます」注記で `ArticleFooter` 直前に控えめ配置（業界標準 — 主 CTA を阻害しないリマインダー UX）
 - **記事本文は `Prose` Primitive 必須** — `<Prose variant="editorial">`（drop-cap + リンク色 + blockquote スタイル）
 - **共有コンポーネントの descendant selector override 禁止** — `[&_a]:py-0` 等を外部から制御しない、`size` / `variant` prop を追加
 - **記事詳細ページのフッターは `ArticleFooter`（`@/public/components/ui/article-footer`）に統合**
