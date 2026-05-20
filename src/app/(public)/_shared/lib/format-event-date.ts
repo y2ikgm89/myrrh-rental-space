@@ -24,6 +24,21 @@ export function formatEventDateTimeRange(
   return `${datePart} ${startTimePart} - ${endTimePart}`;
 }
 
+/** イベント開始日のみ（年・月・日・曜日）を `2026年5月15日(金)` 形式で返す。 */
+export function formatEventDate(startTime: string): string {
+  return dateFormatter.format(new Date(startTime));
+}
+
+/** 開始〜終了時刻のみを `10:00 - 12:00` 形式で返す。 */
+export function formatEventTimeRange(
+  startTime: string,
+  endTime: string,
+): string {
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  return `${timeFormatter.format(start)} - ${timeFormatter.format(end)}`;
+}
+
 const monthYearFormatter = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo",
   year: "numeric",

@@ -2,7 +2,10 @@ import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
 import { IconCalendar, IconMapPin, IconUsers } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
-import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
+import {
+  formatEventDate,
+  formatEventTimeRange,
+} from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { cn } from "@/shared/lib/cn";
 
@@ -84,7 +87,12 @@ export function EventInfoPanel({
           icon={<IconCalendar className="h-4 w-4" aria-hidden="true" />}
           label="開催日時"
         >
-          {formatEventDateTimeRange(startTime, endTime)}
+          <span className="flex flex-col gap-0.5">
+            <span>{formatEventDate(startTime)}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatEventTimeRange(startTime, endTime)}
+            </span>
+          </span>
         </DetailRow>
         {venues.length > 0 ? (
           <DetailRow
