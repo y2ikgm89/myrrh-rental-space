@@ -130,16 +130,26 @@ function HeroBlock({
   readonly registration: RegistrationState;
   readonly price: number | null;
 }): ReactElement {
+  const isInactive =
+    registration.kind === "deadline-passed" || registration.kind === "closed";
+
   return (
-    <div className="bg-surface px-8 pb-7 pt-7 sm:px-10">
+    <div className="bg-surface px-8 pb-8 pt-8 sm:px-10 sm:pb-10 sm:pt-10">
       <RegistrationBadgeRow registration={registration} />
       {price !== null ? (
-        <div className="mt-5">
-          <p className="font-heading text-[2.5rem] font-light leading-none text-foreground">
+        <div className={cn("mt-6", isInactive && "opacity-60")}>
+          <p
+            className={cn(
+              "font-heading font-light leading-none text-foreground",
+              isInactive ? "text-3xl" : "text-[2.5rem]",
+            )}
+          >
             {price === 0 ? "無料" : formatPrice(price)}
           </p>
           {price > 0 ? (
-            <p className="mt-1.5 text-xs text-muted-foreground">税込 / 1 名</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              税込・1 名あたり
+            </p>
           ) : null}
         </div>
       ) : null}
