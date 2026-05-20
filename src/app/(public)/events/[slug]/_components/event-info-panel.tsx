@@ -85,9 +85,7 @@ export function EventInfoPanel({
           icon={<IconCalendar className="h-5 w-5" aria-hidden="true" />}
           label="開催日時"
         >
-          <span className="font-medium text-foreground">
-            {formatEventDateTimeRange(startTime, endTime)}
-          </span>
+          {formatEventDateTimeRange(startTime, endTime)}
         </InfoRow>
         {venues.length > 0 ? (
           <InfoRow
@@ -215,9 +213,7 @@ function VenueItem({
         </span>
       );
     case "addressDetail":
-      return (
-        <span className="text-sm text-muted-foreground">{venue.text}</span>
-      );
+      return <span>{venue.text}</span>;
   }
 }
 
