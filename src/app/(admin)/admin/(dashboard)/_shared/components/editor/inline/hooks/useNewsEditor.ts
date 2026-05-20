@@ -347,18 +347,17 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // - 設定 validation を preview の入口に挟まない (preview は draft 可視化目的)
   // - create mode は id がないので「先に保存してください」toast
   //
-  // popup blocker 対策: ユーザー gesture の同期 frame 内で先に空タブを window.open
-  // で予約し、async 保存完了後にそのタブを preview URL へ navigate する。
-  // `noreferrer` / `noopener` window feature は親→子の Window.location 操作を
-  // browsing context レベルで遮断する HTML Living Standard 仕様のため指定しない
-  // (admin→admin 同一 origin での遷移につき reverse tabnabbing リスクなし)。
+  // popup blocker 対策: 動的に `<a target="_blank" rel="noreferrer">` を生成し
+  // `.click()` で navigation。user gesture context 内のため popup blocker を通過する。
+  // `window.open` で開いた window は `noreferrer` 指定時に戻り値 null + browsing
+  // context 分離となり `.location.href` write が silent fail するため anchor.click()
+  // パターンを採用 (HTML Living Standard 準拠 + admin 全 `window.open` に noreferrer
+  // 必須の architecture-boundaries 規律と整合)。
   const handlePreview = () => {
     if (mode === "create" || !news) {
       toast.error("プレビューには記事の保存が必要です。先に保存してください。");
       return;
     }
-
-    const previewWindow = window.open("about:blank", "_blank");
 
     core.startTransition(async () => {
       try {
@@ -368,7 +367,6 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
           contentHtml,
         });
         if (isMutationError(bodyResult)) {
-          previewWindow?.close();
           toast.error(bodyResult.error);
           return;
         }
@@ -377,13 +375,12 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
         router.refresh();
 
         const url = getNewsPreviewHref(news.id);
-        if (previewWindow) {
-          previewWindow.location.href = url;
-        } else {
-          window.open(url, "_blank");
-        }
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.target = "_blank";
+        anchor.rel = "noreferrer";
+        anchor.click();
       } catch (error) {
-        previewWindow?.close();
         logger.error("プレビュー生成中にエラーが発生しました", {
           error: getErrorMessage(error),
         });

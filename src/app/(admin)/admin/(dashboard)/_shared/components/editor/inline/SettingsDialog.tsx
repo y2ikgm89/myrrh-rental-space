@@ -231,7 +231,11 @@ export function SettingsDialog<
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending || !isDirty}>
+            <Button
+              type="button"
+              onClick={onSave}
+              disabled={isPending || !isDirty}
+            >
               {isPending ? "保存中..." : "保存"}
             </Button>
           </DialogFooter>
