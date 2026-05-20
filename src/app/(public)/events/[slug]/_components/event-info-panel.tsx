@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
-import { IconCalendar, IconMapPin } from "@tabler/icons-react";
+import { IconCalendar, IconMapPin, IconUsers } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
@@ -78,11 +78,7 @@ export function EventInfoPanel({
           : "mb-12",
       )}
     >
-      <HeroBlock
-        registration={registration}
-        price={price}
-        capacity={capacity}
-      />
+      <HeroBlock registration={registration} price={price} />
       <dl className="px-8 sm:px-10">
         <DetailRow
           icon={<IconCalendar className="h-4 w-4" aria-hidden="true" />}
@@ -96,6 +92,14 @@ export function EventInfoPanel({
             label="開催場所"
           >
             <VenueList venues={venues} />
+          </DetailRow>
+        ) : null}
+        {capacity !== null ? (
+          <DetailRow
+            icon={<IconUsers className="h-4 w-4" aria-hidden="true" />}
+            label="定員"
+          >
+            <CapacityValue capacity={capacity} registration={registration} />
           </DetailRow>
         ) : null}
       </dl>
@@ -116,11 +120,9 @@ export function EventInfoPanel({
 function HeroBlock({
   registration,
   price,
-  capacity,
 }: {
   readonly registration: RegistrationState;
   readonly price: number | null;
-  readonly capacity: number | null;
 }): ReactElement {
   return (
     <div className="bg-surface px-8 pb-7 pt-7 sm:px-10">
@@ -135,11 +137,6 @@ function HeroBlock({
           ) : null}
         </div>
       ) : null}
-      <CapacityStatus
-        registration={registration}
-        capacity={capacity}
-        hasGap={price !== null}
-      />
     </div>
   );
 }
@@ -178,43 +175,37 @@ function OutlineBadge({
   );
 }
 
-function CapacityStatus({
-  registration,
+function CapacityValue({
   capacity,
-  hasGap,
+  registration,
 }: {
+  readonly capacity: number;
   readonly registration: RegistrationState;
-  readonly capacity: number | null;
-  readonly hasGap: boolean;
-}): ReactElement | null {
-  if (capacity === null) return null;
-  const marginClass = hasGap ? "mt-4" : "mt-5";
-
+}): ReactElement {
   if (registration.kind === "open" && registration.remainingCapacity !== null) {
     return (
-      <p className={cn("text-sm text-muted-foreground", marginClass)}>
-        残り{" "}
-        <span className="font-medium text-accent">
-          {registration.remainingCapacity} 席
-        </span>{" "}
-        / {capacity} 名
-      </p>
+      <span className="flex flex-wrap items-baseline gap-x-2">
+        <span>{capacity} 名</span>
+        <span className="text-xs text-muted-foreground">
+          残り{" "}
+          <span className="font-medium text-accent">
+            {registration.remainingCapacity} 席
+          </span>
+        </span>
+      </span>
     );
   }
 
   if (registration.kind === "full") {
     return (
-      <p className={cn("text-sm text-muted-foreground", marginClass)}>
-        定員 {capacity} 名 / 満席
-      </p>
+      <span className="flex flex-wrap items-baseline gap-x-2">
+        <span>{capacity} 名</span>
+        <span className="text-xs text-muted-foreground">満席</span>
+      </span>
     );
   }
 
-  return (
-    <p className={cn("text-sm text-muted-foreground", marginClass)}>
-      定員 {capacity} 名
-    </p>
-  );
+  return <span>{capacity} 名</span>;
 }
 
 function DetailRow({
