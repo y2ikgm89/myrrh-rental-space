@@ -129,6 +129,44 @@ const validateSettings = (): PostSettingsFormData | null => {
 4. 設定 form schema は conform 互換の **in-place preprocess pattern** で定義 (`@/admin/lib/validations/<entity>.ts` に追加、`tags` は JSON.stringify transit、`contentWidth` は string ↔ enum、`isPublished` は checkbox "on" ↔ boolean、`publishedAt` は datetime-local など)
 5. Hook (`use<Entity>Editor`) は本文を useState + 設定を conform `useForm` で管理 (`usePostEditor.ts` / `useNewsEditor.ts` 参照)
 
+## プレビューハンドラ — `anchor.click()` pattern (popup blocker + noreferrer 両立)
+
+`usePostEditor` / `useNewsEditor` の `handlePreview` は **動的 `<a target="_blank" rel="noreferrer">` 生成 + `.click()` で navigation** を canonical pattern とする (2026-05-20 PR #170 確立):
+
+```tsx
+const handlePreview = () => {
+  if (mode === "create" || !post) {
+    toast.error("プレビューには記事の保存が必要です。先に保存してください。");
+    return;
+  }
+  core.startTransition(async () => {
+    const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+    const result = await updatePostBody(post.id, { contentJson, contentHtml });
+    if (isMutationError(result)) {
+      toast.error(result.error);
+      return;
+    }
+    setSavedContentJson(contentJson);
+    router.refresh();
+
+    const url = getPostPreviewHref(post.id);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer"; // admin の全 _blank に noreferrer 必須 (architecture-boundaries 規律)
+    anchor.click();
+  });
+};
+```
+
+**設計理由**:
+
+- `window.open(url, "_blank", "noreferrer")` は browsing context 分離で戻り値 `null` になり、`previewWindow.location.href = url` を後から write しても silent fail
+- `window.open("about:blank", "_blank")` を `noreferrer` なしで開く方式は admin `_blank` 規律違反 (architecture-boundaries.test.ts で CI fail)
+- 動的 anchor の `.click()` は **user gesture context 内**で発火するため popup blocker を通過、かつ HTML Living Standard 準拠で `rel="noreferrer"` も維持される
+
+**保存 → preview の順序契約**: ① `updatePostBody({ contentJson, contentHtml })` で DB 永続化 ② `setSavedContentJson` で local state 同期 ③ `router.refresh()` で Next.js cache 無効化 ④ `anchor.click()` で別タブ navigation。`(public)/preview/posts/[id]` SC が `getPostByIdForPreview(id)` で最新 DB 値を fetch するため、preview 表示は常に保存済み draft と一致する。
+
 ## `ContentTypeId` と固定ページ
 
 - インライン `content-types` の `ContentTypeId` は **`post` / `news` のみ**。固定ページのレイアウト (`showSidebar` 等) は **`@/shared/lib/validations/page`** とページ編集 UI が正本。

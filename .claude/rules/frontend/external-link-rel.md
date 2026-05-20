@@ -17,13 +17,14 @@ paths:
 
 ## 統一ガイドライン
 
-| シナリオ                                             | 推奨パターン                                     |
-| ---------------------------------------------------- | ------------------------------------------------ |
-| 1. `<a target="_blank">` + **内部 app route**        | `rel` なし（HTML 標準の暗黙 noopener 任せ）      |
-| 2. `<a target="_blank">` + **外部 URL**              | `rel="noreferrer"` のみ（noopener は冗長）       |
-| 3. `<a target="_blank">` + **動的判定（内/外混在）** | `rel={isExternal ? "noreferrer" : undefined}`    |
-| 4. `window.open(url, "_blank", windowFeatures)`      | `windowFeatures = "noreferrer"` のみ             |
-| 5. Lexical Node DOM 直接書込（`link.rel = ...`）     | `link.rel = "noreferrer"`（任意 URL = 外部想定） |
+| シナリオ                                                        | 推奨パターン                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. `<a target="_blank">` + **内部 app route**                   | `rel` なし（HTML 標準の暗黙 noopener 任せ）                                                                                                                                                                                                                                                                                 |
+| 2. `<a target="_blank">` + **外部 URL**                         | `rel="noreferrer"` のみ（noopener は冗長）                                                                                                                                                                                                                                                                                  |
+| 3. `<a target="_blank">` + **動的判定（内/外混在）**            | `rel={isExternal ? "noreferrer" : undefined}`                                                                                                                                                                                                                                                                               |
+| 4. `window.open(url, "_blank", windowFeatures)`                 | `windowFeatures = "noreferrer"` のみ                                                                                                                                                                                                                                                                                        |
+| 5. Lexical Node DOM 直接書込（`link.rel = ...`）                | `link.rel = "noreferrer"`（任意 URL = 外部想定）                                                                                                                                                                                                                                                                            |
+| 6. event handler で動的に別タブ navigation（保存 → preview 等） | 動的 `<a target="_blank" rel="noreferrer">` 生成 + `.click()`（user gesture context 内で popup blocker 通過 + `noreferrer` 維持。`window.open` の戻り値が browsing context 分離で `null` になり `.location.href` write が silent fail する罠を回避。詳細 → `frontend/admin-inline-editor-patterns.md` §プレビューハンドラ） |
 
 ### `noopener noreferrer` 併記禁止
 

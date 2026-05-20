@@ -11,7 +11,7 @@
 - 公開系: `src/app/(public)/...` — デザイン重視、スクロール演出あり
 - 管理系: `src/app/(admin)/admin/(dashboard)/...` — 実務向け UI、Lexical / 型付きフォーム
 - 共有: `src/shared/...` — CSS 変数に依存しない共通ロジック
-- プレビュー: `src/app/(preview)/...` — 管理画面向け第 3 root layout（`ManagedPageSections` を共有）
+- プレビュー: `src/app/(public)/preview/{posts,news,pages}/...` — 管理画面向け server-side preview を `(public)` root layout に統合（2026-05-20 PR #170 で旧 `(preview)/` 第 3 root layout を廃止、本番同等 chrome を継承）。admin auth は `verifyAdminSession()` で明示
 
 公開 ↔ 管理間の遷移は **フルリロード**を前提とする（異なる Root Layout のため）。
 
