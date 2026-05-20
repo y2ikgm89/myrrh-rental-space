@@ -12,6 +12,15 @@ describe("eventFormSchema (conform)", () => {
     endTime: "2026-05-01T12:00",
     status: "DRAFT",
     registrationOpen: false,
+    tickets: JSON.stringify([
+      {
+        name: "一般",
+        price: 5000,
+        unitSize: 1,
+        sortOrder: 0,
+        isAvailable: true,
+      },
+    ]),
   };
 
   it("有効な入力を受け入れる", () => {
@@ -59,8 +68,27 @@ describe("eventFormSchema (conform)", () => {
     }
   });
 
-  it("料金が負の値はエラー", () => {
-    const result = eventFormSchema.safeParse({ ...validInput, price: -100 });
+  it("チケットの料金が負の値はエラー", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      tickets: JSON.stringify([
+        {
+          name: "一般",
+          price: -100,
+          unitSize: 1,
+          sortOrder: 0,
+          isAvailable: true,
+        },
+      ]),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("チケット未登録 (空配列) はエラー", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      tickets: JSON.stringify([]),
+    });
     expect(result.success).toBe(false);
   });
 
