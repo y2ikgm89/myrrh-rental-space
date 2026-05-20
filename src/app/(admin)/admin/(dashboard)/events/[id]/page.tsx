@@ -149,7 +149,16 @@ export default async function EventDetailPage({ params }: PageProps) {
           />
           <DetailField
             label="料金"
-            value={event.price !== null ? formatPrice(event.price) : "-"}
+            value={
+              event.tickets.length > 0
+                ? event.tickets
+                    .map(
+                      (t) =>
+                        `${t.name}: ${t.price === 0 ? "無料" : formatPrice(t.price)}${t.unitSize > 1 ? ` (${t.unitSize}名)` : ""}`,
+                    )
+                    .join(" / ")
+                : "-"
+            }
           />
           <DetailField
             label="説明"

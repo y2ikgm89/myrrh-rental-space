@@ -3221,7 +3221,15 @@ async function seedEvents() {
   // PUBLISHED イベントにサンプル申込を追加
   const publishedEvents = await prisma.event.findMany({
     where: { status: EventStatus.PUBLISHED },
-    select: { id: true, slug: true },
+    select: {
+      id: true,
+      slug: true,
+      tickets: {
+        select: { id: true },
+        orderBy: { sortOrder: "asc" as const },
+        take: 1,
+      },
+    },
   });
 
   const sampleRegistrations = [
@@ -3229,27 +3237,29 @@ async function seedEvents() {
       name: "田中太郎",
       email: "tanaka@example.com",
       phone: null,
-      numberOfPeople: 2,
+      quantity: 2,
       status: RegistrationStatus.CONFIRMED,
     },
     {
       name: "佐藤花子",
       email: "sato@example.com",
       phone: "090-1234-5678",
-      numberOfPeople: 1,
+      quantity: 1,
       status: RegistrationStatus.CONFIRMED,
     },
     {
       name: "鈴木一郎",
       email: "suzuki@example.com",
       phone: "080-9876-5432",
-      numberOfPeople: 3,
+      quantity: 3,
       status: RegistrationStatus.CANCELLED,
     },
   ];
 
   let registrationCount = 0;
   for (const event of publishedEvents) {
+    const firstTicket = event.tickets[0];
+    if (!firstTicket) continue;
     // idempotent: 既存申込がある場合はスキップ（EventRegistration に unique 制約がないため）
     const existingCount = await prisma.eventRegistration.count({
       where: { eventId: event.id },
@@ -3260,10 +3270,11 @@ async function seedEvents() {
       await prisma.eventRegistration.create({
         data: {
           eventId: event.id,
+          ticketId: firstTicket.id,
           name: reg.name,
           email: reg.email,
           phone: reg.phone,
-          numberOfPeople: reg.numberOfPeople,
+          quantity: reg.quantity,
           status: reg.status,
         },
       });

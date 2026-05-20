@@ -32,9 +32,10 @@ type CreateRegistrationResult = {
   registration: {
     id: string;
     eventId: string;
+    ticketId: string;
     name: string;
     email: string;
-    numberOfPeople: number;
+    quantity: number;
     icsSequence: number;
   };
   event: { title: string };
@@ -52,11 +53,12 @@ export async function adminCreateRegistration(
     execute: async () => {
       const result = await createEventRegistrationCommand({
         eventId: parsed.data.eventId,
+        ticketId: parsed.data.ticketId,
         name: parsed.data.name,
         email: parsed.data.email,
         phone: parsed.data.phone ?? null,
         note: parsed.data.note ?? null,
-        numberOfPeople: parsed.data.numberOfPeople,
+        quantity: parsed.data.quantity,
       });
       return {
         id: result.registration.id,
@@ -85,7 +87,7 @@ export async function adminCreateRegistration(
               eventStartTime: event.startTime,
               eventEndTime: event.endTime,
               location: event.location ?? undefined,
-              numberOfPeople: data.registration.numberOfPeople,
+              quantity: data.registration.quantity,
               icsSequence: data.registration.icsSequence,
             }),
             sendEventAdminNotification(
@@ -95,7 +97,7 @@ export async function adminCreateRegistration(
                 participantEmail: data.registration.email,
                 eventTitle: data.event.title,
                 eventStartTime: event.startTime,
-                numberOfPeople: data.registration.numberOfPeople,
+                quantity: data.registration.quantity,
                 currentRegistrations: event.confirmedCount,
                 capacity: event.capacity,
               },
@@ -119,7 +121,7 @@ type CancelRegistrationData = {
   name: string;
   email: string;
   eventTitle: string;
-  numberOfPeople: number;
+  quantity: number;
   icsSequence: number;
 };
 
@@ -142,7 +144,7 @@ export async function adminCancelRegistration(
         name: registration.name,
         email: registration.email,
         eventTitle: registration.event.title,
-        numberOfPeople: registration.numberOfPeople,
+        quantity: registration.quantity,
         icsSequence: registration.icsSequence,
       };
     },
@@ -180,7 +182,7 @@ export async function adminCancelRegistration(
               eventStartTime: event.startTime,
               eventEndTime: event.endTime,
               location: event.location ?? undefined,
-              numberOfPeople: data.numberOfPeople,
+              quantity: data.quantity,
               icsSequence: data.icsSequence,
             }),
             sendEventAdminNotification(
@@ -190,7 +192,7 @@ export async function adminCancelRegistration(
                 participantEmail: data.email,
                 eventTitle: data.eventTitle,
                 eventStartTime: event.startTime,
-                numberOfPeople: data.numberOfPeople,
+                quantity: data.quantity,
                 currentRegistrations: event.confirmedCount,
                 capacity: event.capacity,
               },

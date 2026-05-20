@@ -76,7 +76,7 @@ export async function GET(
       customerName: registration.customerName,
       startTime: registration.startTime,
       endTime: registration.endTime,
-      numberOfPeople: registration.numberOfPeople,
+      quantity: registration.quantity,
       sequence: registration.icsSequence,
       ...(registration.location != null
         ? { location: registration.location }

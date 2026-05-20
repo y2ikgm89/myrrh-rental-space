@@ -146,7 +146,7 @@ function buildEventDescription(params: EventCalendarParams): string {
     `イベント: ${params.eventTitle}`,
     `日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,
     `お名前: ${params.customerName}`,
-    `参加人数: ${params.numberOfPeople}名`,
+    `参加人数: ${params.quantity}名`,
   ].join("\n");
 }
 

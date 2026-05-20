@@ -9,7 +9,7 @@ describe("publicEventRegistrationSchema", () => {
     eventId: "550e8400-e29b-41d4-a716-446655440000",
     name: "山田太郎",
     email: "yamada@example.com",
-    numberOfPeople: 2,
+    quantity: 2,
     turnstileToken: "token-abc",
   };
 
@@ -34,36 +34,36 @@ describe("publicEventRegistrationSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("numberOfPeople が 0 の場合拒否する", () => {
+  it("quantity が 0 の場合拒否する", () => {
     const result = publicEventRegistrationSchema.safeParse({
       ...validInput,
-      numberOfPeople: 0,
+      quantity: 0,
     });
     expect(result.success).toBe(false);
   });
 
-  it("numberOfPeople が 11 の場合拒否する", () => {
+  it("quantity が 11 の場合拒否する", () => {
     const result = publicEventRegistrationSchema.safeParse({
       ...validInput,
-      numberOfPeople: 11,
+      quantity: 11,
     });
     expect(result.success).toBe(false);
   });
 
-  it("numberOfPeople が 1 の場合受け入れる", () => {
+  it("quantity が 1 の場合受け入れる", () => {
     const result = publicEventRegistrationSchema.safeParse({
       ...validInput,
-      numberOfPeople: 1,
+      quantity: 1,
     });
     expect(result.success).toBe(true);
   });
 
-  it("numberOfPeople のデフォルトは 1", () => {
-    const { numberOfPeople: _removed, ...withoutNumber } = validInput;
+  it("quantity のデフォルトは 1", () => {
+    const { quantity: _removed, ...withoutNumber } = validInput;
     const result = publicEventRegistrationSchema.safeParse(withoutNumber);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.numberOfPeople).toBe(1);
+      expect(result.data.quantity).toBe(1);
     }
   });
 
@@ -99,7 +99,7 @@ describe("adminEventRegistrationSchema", () => {
     eventId: "550e8400-e29b-41d4-a716-446655440000",
     name: "山田太郎",
     email: "yamada@example.com",
-    numberOfPeople: 1,
+    quantity: 1,
   };
 
   it("有効な入力を受け入れる（turnstileToken 不要）", () => {
@@ -123,18 +123,18 @@ describe("adminEventRegistrationSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("numberOfPeople が 0 の場合拒否する", () => {
+  it("quantity が 0 の場合拒否する", () => {
     const result = adminEventRegistrationSchema.safeParse({
       ...validInput,
-      numberOfPeople: 0,
+      quantity: 0,
     });
     expect(result.success).toBe(false);
   });
 
-  it("numberOfPeople に max 制限がない（管理者用）", () => {
+  it("quantity に max 制限がない（管理者用）", () => {
     const result = adminEventRegistrationSchema.safeParse({
       ...validInput,
-      numberOfPeople: 100,
+      quantity: 100,
     });
     expect(result.success).toBe(true);
   });

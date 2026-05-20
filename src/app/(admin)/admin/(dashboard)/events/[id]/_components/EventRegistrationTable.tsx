@@ -24,7 +24,7 @@ type Registration = {
   email: string;
   phone: string | null;
   note: string | null;
-  numberOfPeople: number;
+  quantity: number;
   status: RegistrationStatus;
   cancelledAt: string | null;
   createdAt: string;
@@ -81,7 +81,7 @@ export function EventRegistrationTable({
                 <TableCell className="hidden md:table-cell">
                   {reg.email}
                 </TableCell>
-                <TableCell>{reg.numberOfPeople}名</TableCell>
+                <TableCell>{reg.quantity}名</TableCell>
                 <TableCell className="whitespace-nowrap">
                   <RegistrationStatusBadge status={reg.status} />
                 </TableCell>

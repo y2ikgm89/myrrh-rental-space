@@ -96,7 +96,6 @@ export function EventForm({
             ? formatDateTimeLocalInJst(event.registrationDeadline)
             : "",
           capacity: event.capacity != null ? String(event.capacity) : "",
-          price: event.price != null ? String(event.price) : "",
           addressDetail: event.addressDetail ?? "",
         }
       : {
@@ -106,7 +105,6 @@ export function EventForm({
           endTime: "",
           registrationDeadline: "",
           capacity: "",
-          price: "",
           addressDetail: "",
         },
   });

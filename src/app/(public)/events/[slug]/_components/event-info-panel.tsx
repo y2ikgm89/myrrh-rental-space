@@ -36,13 +36,23 @@ export type EventInfoPanelVenue =
       readonly text: string;
     };
 
+export interface EventTicketSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly price: number;
+  readonly capacity: number | null;
+  readonly unitSize: number;
+  readonly sortOrder: number;
+}
+
 interface EventInfoPanelProps {
   readonly variant: "sidebar" | "mobile";
   readonly startTime: string;
   readonly endTime: string;
   readonly venues: readonly EventInfoPanelVenue[];
   readonly capacity: number | null;
-  readonly price: number | null;
+  readonly tickets: readonly EventTicketSummary[];
   readonly registration: RegistrationState;
   /** Anchor ID rendered on the registration form section (e.g. "event-register"). */
   readonly registerAnchorId: string;
@@ -69,7 +79,7 @@ export function EventInfoPanel({
   endTime,
   venues,
   capacity,
-  price,
+  tickets,
   registration,
   registerAnchorId,
 }: EventInfoPanelProps): ReactElement {
@@ -114,12 +124,12 @@ export function EventInfoPanel({
             <CapacityValue capacity={capacity} registration={registration} />
           </DetailRow>
         ) : null}
-        {price !== null ? (
+        {tickets.length > 0 ? (
           <DetailRow
             icon={<IconCoin className="h-4 w-4" aria-hidden="true" />}
-            label="参加費"
+            label={tickets.length > 1 ? "チケット種別" : "参加費"}
           >
-            <PriceValue price={price} />
+            <TicketList tickets={tickets} />
           </DetailRow>
         ) : null}
       </dl>
@@ -204,14 +214,52 @@ function CapacityValue({
   return <span>{capacity} 名</span>;
 }
 
-function PriceValue({ price }: { readonly price: number }): ReactElement {
-  if (price === 0) {
-    return <span>無料</span>;
+function TicketList({
+  tickets,
+}: {
+  readonly tickets: readonly EventTicketSummary[];
+}): ReactElement {
+  if (tickets.length === 1) {
+    const ticket = tickets[0];
+    if (!ticket) return <span>—</span>;
+    return <TicketRow ticket={ticket} showName={false} />;
   }
   return (
-    <span className="flex flex-wrap items-baseline gap-x-2">
-      <span>{formatPrice(price)}</span>
-      <span className="text-xs text-muted-foreground">/ 1 名（税込）</span>
+    <ul className="space-y-2">
+      {tickets.map((ticket) => (
+        <li key={ticket.id}>
+          <TicketRow ticket={ticket} showName />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TicketRow({
+  ticket,
+  showName,
+}: {
+  readonly ticket: EventTicketSummary;
+  readonly showName: boolean;
+}): ReactElement {
+  const priceLabel = ticket.price === 0 ? "無料" : formatPrice(ticket.price);
+  const unitSuffix =
+    ticket.price === 0
+      ? null
+      : ticket.unitSize === 1
+        ? "/ 1 名（税込）"
+        : `/ ${String(ticket.unitSize)} 名（税込）`;
+  return (
+    <span className="flex flex-col gap-0.5">
+      {showName ? (
+        <span className="text-xs text-muted-foreground">{ticket.name}</span>
+      ) : null}
+      <span className="flex flex-wrap items-baseline gap-x-2">
+        <span>{priceLabel}</span>
+        {unitSuffix ? (
+          <span className="text-xs text-muted-foreground">{unitSuffix}</span>
+        ) : null}
+      </span>
     </span>
   );
 }

@@ -14,7 +14,7 @@ export async function getEventRegistrations(eventId: string) {
       email: true,
       phone: true,
       note: true,
-      numberOfPeople: true,
+      quantity: true,
       status: true,
       cancelledAt: true,
       createdAt: true,
@@ -36,9 +36,9 @@ export async function getEventIdsByCustomerId(
 export async function getRegistrationCount(eventId: string) {
   const result = await prisma.eventRegistration.aggregate({
     where: { eventId, status: RegistrationStatus.CONFIRMED },
-    _sum: { numberOfPeople: true },
+    _sum: { quantity: true },
   });
-  return result._sum.numberOfPeople ?? 0;
+  return result._sum.quantity ?? 0;
 }
 
 export async function getEventDetailsForEmail(eventId: string): Promise<{
@@ -86,7 +86,7 @@ export async function getCustomerEventRegistrations(customerId: string) {
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
-      numberOfPeople: true,
+      quantity: true,
       status: true,
       cancelledAt: true,
       createdAt: true,
@@ -107,7 +107,7 @@ export async function getCustomerEventRegistrations(customerId: string) {
   });
   return rows.map((row) => ({
     id: row.id,
-    numberOfPeople: row.numberOfPeople,
+    quantity: row.quantity,
     status: row.status,
     cancelledAt: row.cancelledAt,
     createdAt: row.createdAt,
@@ -137,7 +137,7 @@ export async function getEventRegistrationForCalendar(params: {
   startTime: Date;
   endTime: Date;
   location: string | null;
-  numberOfPeople: number;
+  quantity: number;
   icsSequence: number;
   status: RegistrationStatus;
 } | null> {
@@ -150,7 +150,7 @@ export async function getEventRegistrationForCalendar(params: {
     select: {
       id: true,
       name: true,
-      numberOfPeople: true,
+      quantity: true,
       icsSequence: true,
       status: true,
       event: {
@@ -177,7 +177,7 @@ export async function getEventRegistrationForCalendar(params: {
       space: reg.event.space,
       addressDetail: reg.event.addressDetail,
     }),
-    numberOfPeople: reg.numberOfPeople,
+    quantity: reg.quantity,
     icsSequence: reg.icsSequence,
     status: reg.status,
   };

@@ -6,11 +6,12 @@ import { DomainError } from "@/shared/domain/domain-error";
 
 export async function createEventRegistrationCommand(data: {
   eventId: string;
+  ticketId: string;
   name: string;
   email: string;
   phone?: string | null;
   note?: string | null;
-  numberOfPeople: number;
+  quantity: number;
   customerId?: string | null;
 }) {
   const event = await prisma.event.findFirst({
@@ -54,7 +55,7 @@ export async function createEventRegistrationCommand(data: {
 
   if (event.capacity != null) {
     const remaining = event.capacity - event._count.registrations;
-    if (data.numberOfPeople > remaining) {
+    if (data.quantity > remaining) {
       throw new DomainError(
         remaining <= 0
           ? "このイベントは満員です"
@@ -64,22 +65,35 @@ export async function createEventRegistrationCommand(data: {
     }
   }
 
+  // チケットがイベントに属するか確認
+  const ticket = await prisma.eventTicket.findFirst({
+    where: { id: data.ticketId, eventId: data.eventId, isAvailable: true },
+    select: { id: true },
+  });
+  if (!ticket)
+    throw new DomainError(
+      "指定されたチケット種別が見つかりません",
+      "NOT_FOUND",
+    );
+
   const registration = await prisma.eventRegistration.create({
     data: {
       eventId: data.eventId,
+      ticketId: data.ticketId,
       name: data.name,
       email: data.email,
       phone: data.phone ?? null,
       note: data.note ?? null,
-      numberOfPeople: data.numberOfPeople,
+      quantity: data.quantity,
       customerId: data.customerId ?? null,
     },
     select: {
       id: true,
       eventId: true,
+      ticketId: true,
       name: true,
       email: true,
-      numberOfPeople: true,
+      quantity: true,
       icsSequence: true,
     },
   });
@@ -103,7 +117,7 @@ export async function cancelEventRegistrationCommand(
       eventId: true,
       name: true,
       email: true,
-      numberOfPeople: true,
+      quantity: true,
       event: { select: { title: true, slug: true } },
     },
   });
