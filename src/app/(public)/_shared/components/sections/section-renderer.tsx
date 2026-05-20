@@ -531,7 +531,7 @@ export async function SectionRenderer({
         }),
         startTime: e.startTime,
         endTime: e.endTime,
-        price: e.price,
+        price: e.tickets[0]?.price ?? null,
         registrationOpen: e.registrationOpen,
         spaceName: e.space?.name ?? null,
         thumbnailUrl: e.thumbnailUrl ?? null,

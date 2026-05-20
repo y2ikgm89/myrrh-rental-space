@@ -41,7 +41,7 @@ export async function GET(request: Request): Promise<Response> {
       { header: "氏名", accessor: (r) => r.name },
       { header: "メール", accessor: (r) => r.email },
       { header: "電話番号", accessor: (r) => r.phone },
-      { header: "参加人数", accessor: (r) => r.numberOfPeople },
+      { header: "参加人数", accessor: (r) => r.quantity },
       {
         header: "ステータス",
         accessor: (r) => REGISTRATION_STATUS_LABELS[r.status],

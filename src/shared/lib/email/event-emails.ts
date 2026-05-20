@@ -50,7 +50,7 @@ type EventRegistrationConfirmationData = {
   eventStartTime: Date;
   eventEndTime: Date;
   location: string | undefined;
-  numberOfPeople: number;
+  quantity: number;
   icsSequence: number;
 };
 
@@ -78,7 +78,7 @@ export async function sendEventRegistrationConfirmation(
     startTime: data.eventStartTime,
     endTime: data.eventEndTime,
     ...(data.location !== undefined ? { location: data.location } : {}),
-    numberOfPeople: data.numberOfPeople,
+    quantity: data.quantity,
     sequence: data.icsSequence,
     organizerName: organizer.name,
     organizerEmail: organizer.email,
@@ -135,7 +135,7 @@ export async function sendEventRegistrationConfirmation(
           startTime,
           endTime,
           location: data.location,
-          numberOfPeople: data.numberOfPeople,
+          quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
         }),
@@ -159,7 +159,7 @@ type EventRegistrationCancelledData = {
   eventStartTime: Date;
   eventEndTime: Date;
   location: string | undefined;
-  numberOfPeople: number;
+  quantity: number;
   icsSequence: number;
 };
 
@@ -184,7 +184,7 @@ export async function sendEventRegistrationCancelled(
     startTime: data.eventStartTime,
     endTime: data.eventEndTime,
     ...(data.location !== undefined ? { location: data.location } : {}),
-    numberOfPeople: data.numberOfPeople,
+    quantity: data.quantity,
     sequence: data.icsSequence,
     organizerName: organizer.name,
     organizerEmail: organizer.email,
@@ -240,7 +240,7 @@ type EventAdminNotificationData = {
   participantEmail: string;
   eventTitle: string;
   eventStartTime: Date;
-  numberOfPeople: number;
+  quantity: number;
   currentRegistrations: number;
   capacity: number | null;
 };
@@ -272,7 +272,7 @@ export async function sendEventAdminNotification(
         participantEmail: data.participantEmail,
         eventTitle: data.eventTitle,
         eventDate,
-        numberOfPeople: data.numberOfPeople,
+        quantity: data.quantity,
         currentRegistrations: data.currentRegistrations,
         capacity: data.capacity,
       }),
@@ -307,7 +307,7 @@ export async function sendEventCancelledToAllParticipants(
           id: true,
           name: true,
           email: true,
-          numberOfPeople: true,
+          quantity: true,
           icsSequence: true,
         },
       },
@@ -342,7 +342,7 @@ export async function sendEventCancelledToAllParticipants(
             startTime: event.startTime,
             endTime: event.endTime,
             ...(venueDisplay !== null ? { location: venueDisplay } : {}),
-            numberOfPeople: registration.numberOfPeople,
+            quantity: registration.quantity,
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
             organizerEmail: organizer.email,
@@ -422,7 +422,7 @@ export async function sendEventUpdatedToAllParticipants(
           id: true,
           name: true,
           email: true,
-          numberOfPeople: true,
+          quantity: true,
           icsSequence: true,
         },
       },
@@ -462,7 +462,7 @@ export async function sendEventUpdatedToAllParticipants(
             startTime: event.startTime,
             endTime: event.endTime,
             ...(venueDisplay !== null ? { location: venueDisplay } : {}),
-            numberOfPeople: registration.numberOfPeople,
+            quantity: registration.quantity,
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
             organizerEmail: organizer.email,

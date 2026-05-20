@@ -45,6 +45,54 @@ const mockSendEventCancelled = mock<() => Promise<void>>(() =>
 
 mock.module("server-only", () => ({}));
 
+const mockEventTicketUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
+  Promise.resolve({ id: "ticket-1" }),
+);
+const mockEventTicketCreateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 1 }),
+);
+const mockEventTicketDeleteMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+const mockEventTicketFindMany = mock<() => Promise<{ id: string }[]>>(() =>
+  Promise.resolve([]),
+);
+const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
+  Promise.resolve(0),
+);
+
+// $transaction interactive callback で tx を渡す mock
+type TxClient = {
+  event: {
+    create: typeof mockEventCreate;
+    update: typeof mockEventUpdate;
+  };
+  eventTicket: {
+    findMany: typeof mockEventTicketFindMany;
+    update: typeof mockEventTicketUpdate;
+    create: typeof mockEventCreate;
+    createMany: typeof mockEventTicketCreateMany;
+    deleteMany: typeof mockEventTicketDeleteMany;
+  };
+  eventRegistration: {
+    count: typeof mockEventRegistrationCount;
+  };
+};
+const txStub: TxClient = {
+  event: { create: mockEventCreate, update: mockEventUpdate },
+  eventTicket: {
+    findMany: mockEventTicketFindMany,
+    update: mockEventTicketUpdate,
+    create: mockEventCreate,
+    createMany: mockEventTicketCreateMany,
+    deleteMany: mockEventTicketDeleteMany,
+  },
+  eventRegistration: { count: mockEventRegistrationCount },
+};
+const mockTransaction = mock(
+  async (callback: (tx: TxClient) => Promise<unknown>) => callback(txStub),
+);
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     event: {
@@ -53,6 +101,7 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockEventCreate,
       update: mockEventUpdate,
     },
+    $transaction: mockTransaction,
   },
 }));
 
@@ -134,7 +183,16 @@ const VALID_EVENT_INPUT = {
   endTime: "2024-06-15T12:00:00Z",
   registrationDeadline: null,
   capacity: 30,
-  price: 5000,
+  tickets: [
+    {
+      name: "一般",
+      price: 5000,
+      capacity: null,
+      unitSize: 1,
+      sortOrder: 0,
+      isAvailable: true,
+    },
+  ],
   addressDetail: "東京都渋谷区",
   locationId: null,
   spaceId: null,
@@ -784,7 +842,17 @@ describe("duplicateEventCommand", () => {
     endTime: new Date("2024-06-15T12:00:00Z"),
     registrationDeadline: new Date("2024-06-14T23:59:00Z"),
     capacity: 30,
-    price: 5000,
+    tickets: [
+      {
+        name: "一般",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        sortOrder: 0,
+        isAvailable: true,
+      },
+    ],
     addressDetail: "東京都渋谷区",
     locationId: null,
     spaceId: null,
@@ -845,7 +913,6 @@ describe("duplicateEventCommand", () => {
             endTime: SOURCE_EVENT.endTime,
             registrationDeadline: SOURCE_EVENT.registrationDeadline,
             capacity: SOURCE_EVENT.capacity,
-            price: SOURCE_EVENT.price,
             addressDetail: SOURCE_EVENT.addressDetail,
           }),
         }),

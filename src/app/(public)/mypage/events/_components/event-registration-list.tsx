@@ -30,7 +30,7 @@ import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calen
 
 interface EventRegistration {
   readonly id: string;
-  readonly numberOfPeople: number;
+  readonly quantity: number;
   readonly status: string;
   readonly cancelledAt: string | null;
   readonly createdAt: string;
@@ -159,7 +159,7 @@ function EventRegistrationCard({
         )}
         <div>
           <dt className="inline">参加人数: </dt>
-          <dd className="inline">{registration.numberOfPeople}名</dd>
+          <dd className="inline">{registration.quantity}名</dd>
         </div>
       </dl>
 
@@ -180,7 +180,7 @@ function EventRegistrationCard({
               description: [
                 `申込ID: ${registration.id.slice(0, 8).toUpperCase()}`,
                 `イベント: ${registration.event.title}`,
-                `参加人数: ${registration.numberOfPeople}名`,
+                `参加人数: ${registration.quantity}名`,
               ].join("\n"),
               startTime: new Date(registration.event.startTime),
               endTime: new Date(registration.event.endTime),

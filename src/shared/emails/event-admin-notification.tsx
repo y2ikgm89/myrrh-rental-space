@@ -16,7 +16,7 @@ type Props = {
   participantEmail: string;
   eventTitle: string;
   eventDate: string;
-  numberOfPeople: number;
+  quantity: number;
   currentRegistrations: number;
   capacity: number | null;
 };
@@ -27,7 +27,7 @@ export function EventAdminNotificationEmail({
   participantEmail,
   eventTitle,
   eventDate,
-  numberOfPeople,
+  quantity,
   currentRegistrations,
   capacity,
 }: Props) {
@@ -67,7 +67,7 @@ export function EventAdminNotificationEmail({
               <strong>参加者:</strong> {participantName} ({participantEmail})
             </Text>
             <Text style={detailItem}>
-              <strong>参加人数:</strong> {String(numberOfPeople)}名
+              <strong>参加人数:</strong> {String(quantity)}名
             </Text>
             <Text style={detailItem}>
               <strong>現在の申込状況:</strong> {capacityText}

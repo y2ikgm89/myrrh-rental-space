@@ -20,6 +20,20 @@ import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
+ * チケット種別の書き込み入力型。
+ */
+export interface EventTicketInput {
+  id?: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  capacity?: number | null;
+  unitSize?: number;
+  sortOrder?: number;
+  isAvailable?: boolean;
+}
+
+/**
  * Domain レイヤーの Event 書き込み入力型。
  * Server Action 側で `buildEventCommandInput` が `EventFormInput`（Lexical JSON string）
  * から 3 値（descriptionJson / descriptionHtml / descriptionPlainText）を生成して渡す。
@@ -38,12 +52,12 @@ export interface EventCommandInput {
   /** 申込締切日時（null = 開始時刻まで受付）。startTime 以前である必要あり。 */
   registrationDeadline?: string | null;
   capacity?: number | null;
-  price?: number | null;
   addressDetail?: string | null;
   locationId?: string | null;
   spaceId?: string | null;
   status: (typeof EventStatus)[keyof typeof EventStatus];
   registrationOpen?: boolean;
+  tickets?: readonly EventTicketInput[];
 }
 
 /**
@@ -63,32 +77,50 @@ function normalizeRegistrationOpen(
 export async function createEventCommand(data: EventCommandInput) {
   const slug = await ensureUniqueSlug(data.slug);
 
-  const event = await prisma.event.create({
-    data: {
-      title: data.title,
-      slug,
-      descriptionJson: data.descriptionJson,
-      descriptionHtml: data.descriptionHtml,
-      descriptionPlainText: data.descriptionPlainText,
-      thumbnailUrl: data.thumbnailUrl ?? null,
-      startTime: parseDateTimeLocalAsJst(data.startTime),
-      endTime: parseDateTimeLocalAsJst(data.endTime),
-      registrationDeadline: data.registrationDeadline
-        ? parseDateTimeLocalAsJst(data.registrationDeadline)
-        : null,
-      capacity: data.capacity ?? null,
-      price: data.price ?? null,
-      addressDetail: data.addressDetail ?? null,
-      locationId: data.locationId ?? null,
-      spaceId: data.spaceId ?? null,
-      status: data.status,
-      registrationOpen: normalizeRegistrationOpen(
-        data.status,
-        data.registrationOpen,
-      ),
-      publishedAt: data.status === EventStatus.PUBLISHED ? new Date() : null,
-    },
-    select: { id: true, slug: true },
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.event.create({
+      data: {
+        title: data.title,
+        slug,
+        descriptionJson: data.descriptionJson,
+        descriptionHtml: data.descriptionHtml,
+        descriptionPlainText: data.descriptionPlainText,
+        thumbnailUrl: data.thumbnailUrl ?? null,
+        startTime: parseDateTimeLocalAsJst(data.startTime),
+        endTime: parseDateTimeLocalAsJst(data.endTime),
+        registrationDeadline: data.registrationDeadline
+          ? parseDateTimeLocalAsJst(data.registrationDeadline)
+          : null,
+        capacity: data.capacity ?? null,
+        addressDetail: data.addressDetail ?? null,
+        locationId: data.locationId ?? null,
+        spaceId: data.spaceId ?? null,
+        status: data.status,
+        registrationOpen: normalizeRegistrationOpen(
+          data.status,
+          data.registrationOpen,
+        ),
+        publishedAt: data.status === EventStatus.PUBLISHED ? new Date() : null,
+      },
+      select: { id: true, slug: true },
+    });
+
+    if (data.tickets && data.tickets.length > 0) {
+      await tx.eventTicket.createMany({
+        data: data.tickets.map((ticket, index) => ({
+          eventId: created.id,
+          name: ticket.name,
+          description: ticket.description ?? null,
+          price: ticket.price,
+          capacity: ticket.capacity ?? null,
+          unitSize: ticket.unitSize ?? 1,
+          sortOrder: ticket.sortOrder ?? index,
+          isAvailable: ticket.isAvailable ?? true,
+        })),
+      });
+    }
+
+    return created;
   });
 
   return event;
@@ -122,32 +154,82 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
   const newStartTime = parseDateTimeLocalAsJst(data.startTime);
   const newEndTime = parseDateTimeLocalAsJst(data.endTime);
 
-  await prisma.event.update({
-    where: { id, deletedAt: null },
-    data: {
-      title: data.title,
-      slug,
-      descriptionJson: data.descriptionJson,
-      descriptionHtml: data.descriptionHtml,
-      descriptionPlainText: data.descriptionPlainText,
-      thumbnailUrl: data.thumbnailUrl ?? null,
-      startTime: newStartTime,
-      endTime: newEndTime,
-      registrationDeadline: data.registrationDeadline
-        ? parseDateTimeLocalAsJst(data.registrationDeadline)
-        : null,
-      capacity: data.capacity ?? null,
-      price: data.price ?? null,
-      addressDetail: data.addressDetail ?? null,
-      locationId: data.locationId ?? null,
-      spaceId: data.spaceId ?? null,
-      status: data.status,
-      registrationOpen: normalizeRegistrationOpen(
-        data.status,
-        data.registrationOpen,
-      ),
-      ...(wasPublished && { publishedAt: new Date() }),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.event.update({
+      where: { id, deletedAt: null },
+      data: {
+        title: data.title,
+        slug,
+        descriptionJson: data.descriptionJson,
+        descriptionHtml: data.descriptionHtml,
+        descriptionPlainText: data.descriptionPlainText,
+        thumbnailUrl: data.thumbnailUrl ?? null,
+        startTime: newStartTime,
+        endTime: newEndTime,
+        registrationDeadline: data.registrationDeadline
+          ? parseDateTimeLocalAsJst(data.registrationDeadline)
+          : null,
+        capacity: data.capacity ?? null,
+        addressDetail: data.addressDetail ?? null,
+        locationId: data.locationId ?? null,
+        spaceId: data.spaceId ?? null,
+        status: data.status,
+        registrationOpen: normalizeRegistrationOpen(
+          data.status,
+          data.registrationOpen,
+        ),
+        ...(wasPublished && { publishedAt: new Date() }),
+      },
+    });
+
+    if (data.tickets !== undefined) {
+      const incoming = data.tickets;
+      const incomingIds = new Set(
+        incoming.filter((t) => t.id !== undefined).map((t) => t.id as string),
+      );
+
+      const existing = await tx.eventTicket.findMany({
+        where: { eventId: id },
+        select: { id: true },
+      });
+
+      const toDelete = existing
+        .map((e) => e.id)
+        .filter((existingId) => !incomingIds.has(existingId));
+      if (toDelete.length > 0) {
+        await tx.eventTicket.deleteMany({ where: { id: { in: toDelete } } });
+      }
+
+      for (const [index, ticket] of incoming.entries()) {
+        if (ticket.id) {
+          await tx.eventTicket.update({
+            where: { id: ticket.id },
+            data: {
+              name: ticket.name,
+              description: ticket.description ?? null,
+              price: ticket.price,
+              capacity: ticket.capacity ?? null,
+              unitSize: ticket.unitSize ?? 1,
+              sortOrder: ticket.sortOrder ?? index,
+              isAvailable: ticket.isAvailable ?? true,
+            },
+          });
+        } else {
+          await tx.eventTicket.create({
+            data: {
+              eventId: id,
+              name: ticket.name,
+              description: ticket.description ?? null,
+              price: ticket.price,
+              capacity: ticket.capacity ?? null,
+              unitSize: ticket.unitSize ?? 1,
+              sortOrder: ticket.sortOrder ?? index,
+              isAvailable: ticket.isAvailable ?? true,
+            },
+          });
+        }
+      }
+    }
   });
 
   const dateTimeChanged =
@@ -256,43 +338,72 @@ export async function duplicateEventCommand(id: string) {
       endTime: true,
       registrationDeadline: true,
       capacity: true,
-      price: true,
       addressDetail: true,
       locationId: true,
       spaceId: true,
       registrationOpen: true,
+      tickets: {
+        select: {
+          name: true,
+          description: true,
+          price: true,
+          capacity: true,
+          unitSize: true,
+          sortOrder: true,
+          isAvailable: true,
+        },
+        orderBy: { sortOrder: "asc" },
+      },
     },
   });
   if (!source) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
   const slug = await ensureUniqueSlug(`${source.slug}-copy`);
 
-  const created = await prisma.event.create({
-    data: {
-      title: `${source.title}（コピー）`,
-      slug,
-      descriptionJson: asPrismaInputJsonValue(
-        source.descriptionJson,
-        "descriptionJson が不正です",
-      ),
-      descriptionHtml: source.descriptionHtml,
-      descriptionPlainText: source.descriptionPlainText,
-      thumbnailUrl: source.thumbnailUrl,
-      startTime: source.startTime,
-      endTime: source.endTime,
-      registrationDeadline: source.registrationDeadline,
-      capacity: source.capacity,
-      price: source.price,
-      addressDetail: source.addressDetail,
-      locationId: source.locationId,
-      spaceId: source.spaceId,
-      status: EventStatus.DRAFT,
-      // DRAFT 化に伴い受付状態は強制 false（normalizeRegistrationOpen と同等）
-      registrationOpen: false,
-      publishedAt: null,
-      googleCalendarEventId: null,
-    },
-    select: { id: true, slug: true },
+  const created = await prisma.$transaction(async (tx) => {
+    const newEvent = await tx.event.create({
+      data: {
+        title: `${source.title}（コピー）`,
+        slug,
+        descriptionJson: asPrismaInputJsonValue(
+          source.descriptionJson,
+          "descriptionJson が不正です",
+        ),
+        descriptionHtml: source.descriptionHtml,
+        descriptionPlainText: source.descriptionPlainText,
+        thumbnailUrl: source.thumbnailUrl,
+        startTime: source.startTime,
+        endTime: source.endTime,
+        registrationDeadline: source.registrationDeadline,
+        capacity: source.capacity,
+        addressDetail: source.addressDetail,
+        locationId: source.locationId,
+        spaceId: source.spaceId,
+        status: EventStatus.DRAFT,
+        // DRAFT 化に伴い受付状態は強制 false（normalizeRegistrationOpen と同等）
+        registrationOpen: false,
+        publishedAt: null,
+        googleCalendarEventId: null,
+      },
+      select: { id: true, slug: true },
+    });
+
+    if (source.tickets.length > 0) {
+      await tx.eventTicket.createMany({
+        data: source.tickets.map((ticket) => ({
+          eventId: newEvent.id,
+          name: ticket.name,
+          description: ticket.description,
+          price: ticket.price,
+          capacity: ticket.capacity,
+          unitSize: ticket.unitSize,
+          sortOrder: ticket.sortOrder,
+          isAvailable: ticket.isAvailable,
+        })),
+      });
+    }
+
+    return newEvent;
   });
 
   return created;

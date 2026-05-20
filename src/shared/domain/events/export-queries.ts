@@ -12,7 +12,7 @@ export async function getEventRegistrationsForExport(eventId: string) {
       email: true,
       phone: true,
       note: true,
-      numberOfPeople: true,
+      quantity: true,
       status: true,
       cancelledAt: true,
       createdAt: true,

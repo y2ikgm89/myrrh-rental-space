@@ -21,12 +21,24 @@ const publicEventSelect = {
   endTime: true,
   registrationDeadline: true,
   capacity: true,
-  price: true,
   addressDetail: true,
   status: true,
   registrationOpen: true,
   location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
+  tickets: {
+    where: { isAvailable: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      capacity: true,
+      unitSize: true,
+      sortOrder: true,
+    },
+    orderBy: { sortOrder: "asc" as const },
+  },
 };
 
 const publicEventDetailSelect = {

@@ -13,7 +13,6 @@ const eventListSelect = {
   endTime: true,
   registrationDeadline: true,
   capacity: true,
-  price: true,
   addressDetail: true,
   status: true,
   registrationOpen: true,
@@ -22,6 +21,19 @@ const eventListSelect = {
   createdAt: true,
   location: { select: { id: true, name: true } },
   space: { select: { id: true, name: true } },
+  tickets: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      capacity: true,
+      unitSize: true,
+      sortOrder: true,
+      isAvailable: true,
+    },
+    orderBy: { sortOrder: "asc" as const },
+  },
 } satisfies Prisma.EventSelect;
 
 const eventDetailSelect = {

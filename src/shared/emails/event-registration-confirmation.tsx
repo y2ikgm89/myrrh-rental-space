@@ -19,7 +19,7 @@ type Props = {
   startTime: string;
   endTime: string;
   location?: string;
-  numberOfPeople: number;
+  quantity: number;
   registrationId: string;
   addToCalendarLinks?: AddToCalendarUrls;
 };
@@ -31,7 +31,7 @@ export function EventRegistrationConfirmationEmail({
   startTime,
   endTime,
   location,
-  numberOfPeople,
+  quantity,
   registrationId,
   addToCalendarLinks,
 }: Props) {
@@ -71,7 +71,7 @@ export function EventRegistrationConfirmationEmail({
               </Text>
             )}
             <Text style={detailItem}>
-              <strong>参加人数:</strong> {String(numberOfPeople)}名
+              <strong>参加人数:</strong> {String(quantity)}名
             </Text>
           </Section>
 

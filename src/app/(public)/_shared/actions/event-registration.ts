@@ -73,11 +73,12 @@ export async function registerForEvent(
       try {
         const result = await createEventRegistrationCommand({
           eventId: data.eventId,
+          ticketId: data.ticketId,
           name: data.name,
           email: data.email,
           phone: data.phone ?? null,
           note: data.note ?? null,
-          numberOfPeople: data.numberOfPeople,
+          quantity: data.quantity,
           customerId,
         });
 
@@ -102,7 +103,7 @@ export async function registerForEvent(
                 eventStartTime: event.startTime,
                 eventEndTime: event.endTime,
                 location: event.location ?? undefined,
-                numberOfPeople: result.registration.numberOfPeople,
+                quantity: result.registration.quantity,
                 icsSequence: result.registration.icsSequence,
               }),
               sendEventAdminNotification(
@@ -112,7 +113,7 @@ export async function registerForEvent(
                   participantEmail: result.registration.email,
                   eventTitle: result.event.title,
                   eventStartTime: event.startTime,
-                  numberOfPeople: result.registration.numberOfPeople,
+                  quantity: result.registration.quantity,
                   currentRegistrations: event.confirmedCount,
                   capacity: event.capacity,
                 },
@@ -221,7 +222,7 @@ export async function cancelEventRegistration(
             eventStartTime: event.startTime,
             eventEndTime: event.endTime,
             location: event.location ?? undefined,
-            numberOfPeople: registration.numberOfPeople,
+            quantity: registration.quantity,
             icsSequence: registration.icsSequence,
           }),
           sendEventAdminNotification(
@@ -231,7 +232,7 @@ export async function cancelEventRegistration(
               participantEmail: registration.email,
               eventTitle: registration.event.title,
               eventStartTime: event.startTime,
-              numberOfPeople: registration.numberOfPeople,
+              quantity: registration.quantity,
               currentRegistrations: event.confirmedCount,
               capacity: event.capacity,
             },

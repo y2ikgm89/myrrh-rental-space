@@ -1727,7 +1727,6 @@ model Event {
   startTime             DateTime
   endTime               DateTime
   capacity              Int?
-  price                 Int?
   /// 号室・フロア・補足情報または外部会場名。
   /// locationId/spaceId と併用時は補足情報（フロア・入口案内等）、
   /// 両方 null のときは外部会場名として使う。
@@ -1751,6 +1750,7 @@ model Event {
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
   deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
+  tickets       EventTicket[]
 
   @@index([startTime, endTime])
   @@index([status])
@@ -1761,30 +1761,59 @@ model Event {
 }
 
 // ==============================================
+// Event Ticket Model (イベントチケット種別)
+// ==============================================
+
+model EventTicket {
+  id          String  @id @default(cuid()) @db.VarChar(30)
+  eventId     String  @db.VarChar(30)
+  name        String  @db.VarChar(100)
+  description String? @db.Text
+  price       Int
+  capacity    Int?
+  /// 1申込あたりの人数単位（1 = 1名、2 = 2名セット 等）
+  unitSize    Int     @default(1)
+  sortOrder   Int     @default(0)
+  isAvailable Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
+
+  @@index([eventId, sortOrder])
+  @@index([eventId, isAvailable])
+  @@map("event_tickets")
+}
+
+// ==============================================
 // Event Registration Model (イベント申込)
 // ==============================================
 
 model EventRegistration {
-  id              String             @id @default(cuid()) @db.VarChar(30)
-  eventId         String             @db.VarChar(30)
-  name            String             @db.VarChar(100)
-  email           String             @db.VarChar(255)
-  phone           String?            @db.VarChar(20)
-  note            String?            @db.Text
-  numberOfPeople  Int                @default(1)
-  status          RegistrationStatus @default(CONFIRMED)
-  customerId      String?            @db.Uuid
-  cancelledAt     DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id          String             @id @default(cuid()) @db.VarChar(30)
+  eventId     String             @db.VarChar(30)
+  ticketId    String             @db.VarChar(30)
+  name        String             @db.VarChar(100)
+  email       String             @db.VarChar(255)
+  phone       String?            @db.VarChar(20)
+  note        String?            @db.Text
+  quantity    Int                @default(1)
+  status      RegistrationStatus @default(CONFIRMED)
+  customerId  String?            @db.Uuid
+  cancelledAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
 
-  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  event    Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticket   EventTicket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
+  @@index([ticketId])
   @@index([customerId])
   @@index([status])
   @@index([eventId, status, createdAt])

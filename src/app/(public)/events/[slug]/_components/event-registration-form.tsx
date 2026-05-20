@@ -48,7 +48,7 @@ export function EventRegistrationForm({
     lastResult,
     defaultValue: {
       eventId,
-      numberOfPeople: 1,
+      quantity: 1,
     },
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: publicEventRegistrationSchema });
@@ -168,10 +168,10 @@ export function EventRegistrationForm({
           required
           min={1}
           max={remainingCapacity ?? 10}
-          {...(fields.numberOfPeople.errors?.[0] !== undefined && {
-            error: fields.numberOfPeople.errors[0],
+          {...(fields.quantity.errors?.[0] !== undefined && {
+            error: fields.quantity.errors[0],
           })}
-          {...getInputProps(fields.numberOfPeople, { type: "number" })}
+          {...getInputProps(fields.quantity, { type: "number" })}
         />
 
         <Textarea

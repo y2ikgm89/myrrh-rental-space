@@ -146,7 +146,7 @@ export default async function EventDetailPage({
     endTime: event.endTime,
     venues,
     capacity: event.capacity ?? null,
-    price: event.price ?? null,
+    tickets: event.tickets,
     registration,
     registerAnchorId: REGISTER_ANCHOR_ID,
   } as const;
@@ -189,10 +189,10 @@ export default async function EventDetailPage({
                   },
                 }
               : {})}
-            {...(event.price != null
+            {...(event.tickets.length > 0
               ? {
                   offers: {
-                    price: event.price,
+                    price: event.tickets[0]?.price ?? 0,
                     priceCurrency: "JPY",
                     availability: isFull ? "SoldOut" : "InStock",
                     url: eventUrl,

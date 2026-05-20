@@ -53,7 +53,7 @@ describe("GET /api/calendar/event/[registrationId]", () => {
           startTime: new Date("2026-05-01T10:00:00+09:00"),
           endTime: new Date("2026-05-01T12:00:00+09:00"),
           location: "東京",
-          numberOfPeople: 2,
+          quantity: 2,
           icsSequence: 0,
           status: "CONFIRMED",
         }),

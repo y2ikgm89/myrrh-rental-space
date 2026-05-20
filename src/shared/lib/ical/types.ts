@@ -49,7 +49,7 @@ export type EventCalendarParams = {
   readonly startTime: Date;
   readonly endTime: Date;
   readonly location?: string;
-  readonly numberOfPeople: number;
+  readonly quantity: number;
   readonly sequence: number;
   readonly url?: string;
   readonly organizerName?: string;
