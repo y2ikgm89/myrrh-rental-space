@@ -89,9 +89,7 @@ export function EventInfoPanel({
         >
           <span className="flex flex-col gap-0.5">
             <span>{formatEventDate(startTime)}</span>
-            <span className="text-xs text-muted-foreground">
-              {formatEventTimeRange(startTime, endTime)}
-            </span>
+            <span>{formatEventTimeRange(startTime, endTime)}</span>
           </span>
         </DetailRow>
         {venues.length > 0 ? (
