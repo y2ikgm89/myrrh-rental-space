@@ -140,7 +140,7 @@ function HeroBlock({
         <div className={cn("mt-6", isInactive && "opacity-60")}>
           <p
             className={cn(
-              "font-heading font-light leading-none text-foreground",
+              "font-heading font-normal leading-none text-foreground",
               isInactive ? "text-3xl" : "text-[2.5rem]",
             )}
           >
