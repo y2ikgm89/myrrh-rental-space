@@ -61,6 +61,6 @@ paths:
 - **lefthook 2.x は `core.hooksPath` 設定済みで `prepare` を exit 1 で失敗** — `bunx lefthook install --reset-hooks-path` で local 設定 unset + 再 install
 - **Goal hook 条件が両カバー選択肢を含むなら AskUserQuestion スキップして即実装** — どちらでも goal 満たすので確認冗長
 - **Playwright MCP HMR キャッシュ罠** — Edit/Write 直後の `browser_navigate` は古い bundle キャッシュ、`browser_evaluate("() => window.location.reload()")` で強制 reload
-- **`bun -e` Prisma 直接アクセス canonical** — `@/shared/db/prisma` は `server-only` で blocked、`PrismaClient + PrismaPg + Pool` 直接 instantiate（`scripts/generate-login-url.ts` 参照）
+- **`bun -e` Prisma 直接アクセス canonical** — `@/shared/db/prisma` は `server-only` で blocked、`new PrismaClient({ adapter: new PrismaPg({ connectionString }) })` の config-object 形式で直接 instantiate（`scripts/generate-login-url.ts` 参照）
 - **handoff memo 完遂時は同セッションで削除 + `MEMORY.md` index 除去** — 残ると次セッション「未完了」と誤読
 - **管理画面ログイン URL は `bun scripts/generate-login-url.ts`** — dev (`NODE_ENV === "development"`) は proxy.ts が Gate bypass + `/admin/login` に SUPER_ADMIN ワンクリックボタン
