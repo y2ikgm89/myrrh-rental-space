@@ -21,6 +21,8 @@ import {
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { registerForEvent } from "@/public/actions/event-registration";
+import { formatEventPrice } from "@/public/lib/format-event-date";
+import { cn } from "@/shared/lib/cn";
 
 export type TicketOption = {
   readonly id: string;
@@ -160,11 +162,12 @@ export function EventRegistrationForm({
                   <label
                     key={ticket.id}
                     htmlFor={id}
-                    className={
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-center justify-between gap-3 border p-4",
                       isSelected
-                        ? "flex min-h-11 cursor-pointer items-center justify-between gap-3 border border-accent bg-accent/5 p-4"
-                        : "flex min-h-11 cursor-pointer items-center justify-between gap-3 border border-border p-4 hover:border-foreground/30"
-                    }
+                        ? "border-accent bg-accent/5"
+                        : "border-border hover:border-foreground/30",
+                    )}
                   >
                     <span className="flex items-center gap-3">
                       <input
@@ -181,7 +184,7 @@ export function EventRegistrationForm({
                       </span>
                     </span>
                     <span className="text-sm text-accent">
-                      ¥{ticket.price.toLocaleString()}
+                      {formatEventPrice(ticket.price)}
                       {ticket.unitSize > 1 && (
                         <span className="ml-1 text-xs text-muted-foreground">
                           / {String(ticket.unitSize)}名
