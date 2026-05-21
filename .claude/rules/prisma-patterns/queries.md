@@ -153,7 +153,7 @@ type PostTableProps = {
 
 ## トランザクション
 
-**`prisma.$transaction([...])` の配列形式は禁止**（ESLint `no-restricted-syntax` で error）。`@prisma/adapter-pg` 7.7.0 + `pg` 8.20.0 の組み合わせで、pinned PoolClient 上に `BEGIN → N queries → COMMIT` が積まれる瞬間があり、pg の `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` deprecation を誘発する（`_queryQueue.length > 0` 時に発火）。
+**`prisma.$transaction([...])` の配列形式は禁止**（ESLint `no-restricted-syntax` で error）。`@prisma/adapter-pg` + `pg` driver adapter 構成で、pinned PoolClient 上に `BEGIN → N queries → COMMIT` が積まれる瞬間があり、pg の `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` deprecation を誘発する（`_queryQueue.length > 0` 時に発火）。
 
 ```typescript
 // NG: 配列形式 — pg deprecation を誘発
