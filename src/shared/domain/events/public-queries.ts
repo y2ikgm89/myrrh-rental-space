@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { EventStatus } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
@@ -75,8 +76,9 @@ export async function getPublishedEvents() {
 /**
  * 指定イベントを除外した「今後のイベント」を取得する（関連イベント表示用）。
  *
- * - 同スペース優先 → 残りを他スペースで埋める
- * - 終了済み（startTime < now）は除外
+ * - 同スペース優先 → 残り枠を他イベントで埋める
+ * - 終了済み（startTime < now）は DB クエリの `startTime >= now` で除外
+ * - `take` で件数を絞った 2 クエリのみ（全公開イベントを取得して JS で絞る旧実装を廃止）
  * - `'use cache'` 非対応（`new Date()` を使うため呼び出し側が動的スコープ必須）
  */
 export async function getUpcomingEventsExcluding(params: {
@@ -85,17 +87,46 @@ export async function getUpcomingEventsExcluding(params: {
   readonly limit?: number;
 }) {
   const { excludeEventId, spaceId, limit = 4 } = params;
+  const now = new Date();
 
-  const all = await getPublishedEvents();
-  const now = Date.now();
-  const future = all.filter(
-    (e) => e.id !== excludeEventId && new Date(e.startTime).getTime() >= now,
+  const fetchUpcoming = (where: Prisma.EventWhereInput, take: number) =>
+    safeFetch({
+      fetch: () =>
+        prisma.event.findMany({
+          where: {
+            status: EventStatus.PUBLISHED,
+            deletedAt: null,
+            startTime: { gte: now },
+            ...where,
+          },
+          select: publicEventSelect,
+          orderBy: { startTime: "asc" },
+          take,
+        }),
+      fallback: [],
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getUpcomingEventsExcluding",
+    });
+
+  // 1. 同スペースの今後のイベントを優先取得
+  const sameSpace =
+    spaceId !== null
+      ? await fetchUpcoming({ id: { not: excludeEventId }, spaceId }, limit)
+      : [];
+
+  if (sameSpace.length >= limit) {
+    return toPlainArray(sameSpace);
+  }
+
+  // 2. 残り枠を「現在のイベント + 取得済み同スペース」を除いた今後のイベントで埋める
+  const excludeIds = [excludeEventId, ...sameSpace.map((e) => e.id)];
+  const others = await fetchUpcoming(
+    { id: { notIn: excludeIds } },
+    limit - sameSpace.length,
   );
 
-  const sameSpace =
-    spaceId !== null ? future.filter((e) => e.space?.id === spaceId) : [];
-  const otherSpaces = future.filter((e) => e.space?.id !== spaceId);
-  return [...sameSpace, ...otherSpaces].slice(0, limit);
+  return toPlainArray([...sameSpace, ...others]);
 }
 
 /**

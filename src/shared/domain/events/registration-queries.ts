@@ -4,22 +4,48 @@ import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@generated/prisma/enums";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 
-export async function getEventRegistrations(eventId: string) {
-  return prisma.eventRegistration.findMany({
-    where: { eventId, event: { deletedAt: null } },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      note: true,
-      quantity: true,
-      status: true,
-      cancelledAt: true,
-      createdAt: true,
-    },
-  });
+/** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
+export const EVENT_REGISTRATIONS_PER_PAGE = 20;
+
+/**
+ * 管理画面イベント詳細の参加者一覧をページネーション付きで取得する。
+ *
+ * 申込が多いイベントでも全件をメモリに読み込まないよう `skip` / `take` で絞り、
+ * 一覧総数（`total`）と確定申込数（`confirmedCount`）を count クエリで併せて返す。
+ */
+export async function getEventRegistrations(
+  eventId: string,
+  options: { page?: number; perPage?: number } = {},
+) {
+  const perPage = Math.max(1, options.perPage ?? EVENT_REGISTRATIONS_PER_PAGE);
+  const page = Math.max(1, options.page ?? 1);
+  const where = { eventId, event: { deletedAt: null } };
+
+  const [registrations, total, confirmedCount] = await Promise.all([
+    prisma.eventRegistration.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * perPage,
+      take: perPage,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        note: true,
+        quantity: true,
+        status: true,
+        cancelledAt: true,
+        createdAt: true,
+      },
+    }),
+    prisma.eventRegistration.count({ where }),
+    prisma.eventRegistration.count({
+      where: { ...where, status: RegistrationStatus.CONFIRMED },
+    }),
+  ]);
+
+  return { registrations, total, confirmedCount, page, perPage };
 }
 
 export async function getEventIdsByCustomerId(

@@ -11,13 +11,13 @@ import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
  * - boolean (`registrationOpen`) は Switch + hidden input "on" / "" を `z.preprocess` で coerce
  * - 数値 (`capacity`) は `<input type="number">` 経由で空文字 → null
  * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
- * - sentinel `__none__` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
+ * - sentinel `EVENT_FORM_NONE_VALUE` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
  * - datetime-local (`startTime` / `endTime` / `registrationDeadline`) は JST 固定 `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst` SSoT 経由 (command 層)
  * - cross-field refine: 終了 > 開始 / registrationDeadline ≤ startTime
  */
 
-export const LOCATION_NONE_VALUE = "__none__";
-export const SPACE_NONE_VALUE = "__none__";
+/** Radix Select の `value=""` 予約を回避する「未選択」sentinel（会場 / スペース共通）。 */
+export const EVENT_FORM_NONE_VALUE = "__none__";
 
 const booleanFromCheckbox = z.preprocess(
   (value) => value === "on" || value === true,
@@ -48,9 +48,9 @@ const ticketInputSchema = z.object({
   description: z
     .string()
     .max(500, { error: "説明は500文字以内です" })
-    .optional(),
+    .nullable(),
   price: z.number().int().min(0, { error: "料金は0以上です" }),
-  capacity: z.number().int().min(1).nullable().optional(),
+  capacity: z.number().int().min(1).nullable(),
   unitSize: z
     .number()
     .int()
@@ -113,8 +113,8 @@ const eventFormBaseSchema = z.object({
       .nullable()
       .optional(),
   ),
-  locationId: nullableUuidWithSentinel(LOCATION_NONE_VALUE),
-  spaceId: nullableUuidWithSentinel(SPACE_NONE_VALUE),
+  locationId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
+  spaceId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
   status: z.enum(EventStatus, { error: "無効なステータスです" }),
   registrationOpen: booleanFromCheckbox,
 });

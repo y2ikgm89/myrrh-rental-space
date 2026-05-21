@@ -21,11 +21,11 @@ import { EventScheduleFields } from "./EventScheduleFields";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
 import { eventFormSchema } from "./event-form-schema";
+import { TicketsField } from "./TicketsField";
 import {
-  TicketsField,
   createDefaultTicket,
-  type TicketDraft,
-} from "./TicketsField";
+  type EventTicketInput,
+} from "@/shared/domain/events/ticket-types";
 
 type EventData = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
@@ -73,16 +73,16 @@ export function EventForm({
     event?.locationId ?? null,
   );
   const [spaceId, setSpaceId] = useState<string | null>(event?.spaceId ?? null);
-  const [tickets, setTickets] = useState<TicketDraft[]>(() => {
-    if (event && event.tickets && event.tickets.length > 0) {
-      return event.tickets.map((t, i) => ({
+  const [tickets, setTickets] = useState<EventTicketInput[]>(() => {
+    if (event && event.tickets.length > 0) {
+      return event.tickets.map((t) => ({
         id: t.id,
         name: t.name,
-        description: t.description ?? "",
+        description: t.description,
         price: t.price,
         capacity: t.capacity,
         unitSize: t.unitSize,
-        sortOrder: t.sortOrder ?? i,
+        sortOrder: t.sortOrder,
         isAvailable: t.isAvailable,
       }));
     }
@@ -181,12 +181,7 @@ export function EventForm({
           fields={fields}
           isPending={isPending}
           status={status}
-          onStatusChange={(next) => {
-            setStatus(next);
-            if (next !== EventStatus.PUBLISHED) {
-              setRegistrationOpen(false);
-            }
-          }}
+          onStatusChange={setStatus}
           registrationOpen={registrationOpen}
           onRegistrationOpenChange={setRegistrationOpen}
           contentJson={contentJson}

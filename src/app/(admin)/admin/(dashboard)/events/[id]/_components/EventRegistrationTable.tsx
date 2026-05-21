@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
   Button,
+  Pagination,
 } from "@/admin/components/ui";
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import { adminCancelRegistration } from "@/admin/actions/event-registration";
@@ -32,10 +33,19 @@ type Registration = {
 
 interface EventRegistrationTableProps {
   readonly registrations: Registration[];
+  /** 全申込件数（全ページ合計）。ページネーション表示に使用。 */
+  readonly total: number;
+  /** 現在のページ番号（1 始まり）。 */
+  readonly currentPage: number;
+  /** 1 ページあたり件数。 */
+  readonly perPage: number;
 }
 
 export function EventRegistrationTable({
   registrations,
+  total,
+  currentPage,
+  perPage,
 }: EventRegistrationTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -52,7 +62,7 @@ export function EventRegistrationTable({
     });
   }
 
-  if (registrations.length === 0) {
+  if (total === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">
         参加申込はまだありません
@@ -60,53 +70,64 @@ export function EventRegistrationTable({
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>名前</TableHead>
-              <TableHead className="hidden md:table-cell">メール</TableHead>
-              <TableHead>参加人数</TableHead>
-              <TableHead>ステータス</TableHead>
-              <TableHead className="hidden lg:table-cell">申込日時</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {registrations.map((reg) => (
-              <TableRow key={reg.id}>
-                <TableCell className="font-medium">{reg.name}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {reg.email}
-                </TableCell>
-                <TableCell>{reg.quantity}名</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <RegistrationStatusBadge status={reg.status} />
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  {formatDateTimeShort(reg.createdAt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {reg.status === "CONFIRMED" ? (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={() => handleCancel(reg.id)}
-                    >
-                      キャンセル
-                    </Button>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </TableCell>
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>名前</TableHead>
+                <TableHead className="hidden md:table-cell">メール</TableHead>
+                <TableHead>参加人数</TableHead>
+                <TableHead>ステータス</TableHead>
+                <TableHead className="hidden lg:table-cell">申込日時</TableHead>
+                <TableHead className="text-right">操作</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {registrations.map((reg) => (
+                <TableRow key={reg.id}>
+                  <TableCell className="font-medium">{reg.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {reg.email}
+                  </TableCell>
+                  <TableCell>{reg.quantity}名</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <RegistrationStatusBadge status={reg.status} />
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {formatDateTimeShort(reg.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {reg.status === "CONFIRMED" ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() => handleCancel(reg.id)}
+                      >
+                        キャンセル
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        perPage={perPage}
+        defaultPerPage={20}
+      />
     </div>
   );
 }

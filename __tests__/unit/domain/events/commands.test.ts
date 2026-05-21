@@ -186,6 +186,7 @@ const VALID_EVENT_INPUT = {
   tickets: [
     {
       name: "一般",
+      description: null,
       price: 5000,
       capacity: null,
       unitSize: 1,

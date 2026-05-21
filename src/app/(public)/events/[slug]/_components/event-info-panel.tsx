@@ -12,6 +12,7 @@ import {
   formatEventTimeRange,
 } from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import type { EventTicketSummary } from "@/shared/domain/events/ticket-types";
 import { cn } from "@/shared/lib/cn";
 
 type RegistrationState =
@@ -35,16 +36,6 @@ export type EventInfoPanelVenue =
       readonly kind: "addressDetail";
       readonly text: string;
     };
-
-export interface EventTicketSummary {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly price: number;
-  readonly capacity: number | null;
-  readonly unitSize: number;
-  readonly sortOrder: number;
-}
 
 interface EventInfoPanelProps {
   readonly variant: "sidebar" | "mobile";
