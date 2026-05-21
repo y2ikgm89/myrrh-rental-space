@@ -28,13 +28,6 @@ export async function createEventRegistrationCommand(data: {
       registrationOpen: true,
       registrationDeadline: true,
       startTime: true,
-      _count: {
-        select: {
-          registrations: {
-            where: { status: RegistrationStatus.CONFIRMED },
-          },
-        },
-      },
     },
   });
 
@@ -53,8 +46,39 @@ export async function createEventRegistrationCommand(data: {
       "VALIDATION",
     );
 
-  if (event.capacity != null) {
-    const remaining = event.capacity - event._count.registrations;
+  // チケットがイベントに属するか確認（per-ticket capacity も取得）
+  const ticket = await prisma.eventTicket.findFirst({
+    where: { id: data.ticketId, eventId: data.eventId, isAvailable: true },
+    select: { id: true, name: true, capacity: true },
+  });
+  if (!ticket)
+    throw new DomainError(
+      "指定されたチケット種別が見つかりません",
+      "NOT_FOUND",
+    );
+
+  // 残枠集計は CONFIRMED 申込の quantity 合計で判定（公開ページ表示と同一基準）
+  const [eventConfirmed, ticketConfirmed] = await Promise.all([
+    event.capacity != null
+      ? prisma.eventRegistration.aggregate({
+          where: { eventId: event.id, status: RegistrationStatus.CONFIRMED },
+          _sum: { quantity: true },
+        })
+      : Promise.resolve(null),
+    ticket.capacity != null
+      ? prisma.eventRegistration.aggregate({
+          where: {
+            eventId: event.id,
+            ticketId: ticket.id,
+            status: RegistrationStatus.CONFIRMED,
+          },
+          _sum: { quantity: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (event.capacity != null && eventConfirmed) {
+    const remaining = event.capacity - (eventConfirmed._sum.quantity ?? 0);
     if (data.quantity > remaining) {
       throw new DomainError(
         remaining <= 0
@@ -65,16 +89,17 @@ export async function createEventRegistrationCommand(data: {
     }
   }
 
-  // チケットがイベントに属するか確認
-  const ticket = await prisma.eventTicket.findFirst({
-    where: { id: data.ticketId, eventId: data.eventId, isAvailable: true },
-    select: { id: true },
-  });
-  if (!ticket)
-    throw new DomainError(
-      "指定されたチケット種別が見つかりません",
-      "NOT_FOUND",
-    );
+  if (ticket.capacity != null && ticketConfirmed) {
+    const remaining = ticket.capacity - (ticketConfirmed._sum.quantity ?? 0);
+    if (data.quantity > remaining) {
+      throw new DomainError(
+        remaining <= 0
+          ? `「${ticket.name}」は満員です`
+          : `「${ticket.name}」は残り${String(remaining)}枠です。参加人数を${String(remaining)}名以下にしてください`,
+        "VALIDATION",
+      );
+    }
+  }
 
   const registration = await prisma.eventRegistration.create({
     data: {
