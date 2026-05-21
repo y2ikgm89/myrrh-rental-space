@@ -114,7 +114,7 @@ const spacesInLocation = watchedLocationId
 
 // 親変更: 子が新親に属さなければ clear
 const handleLocationChange = (value: string) => {
-  const nextLocationId = value === LOCATION_NONE_VALUE ? null : value;
+  const nextLocationId = value === EVENT_FORM_NONE_VALUE ? null : value;
   form.setValue("locationId", nextLocationId, { shouldDirty: true });
   const currentSpaceId = form.getValues("spaceId");
   if (currentSpaceId) {
@@ -127,7 +127,7 @@ const handleLocationChange = (value: string) => {
 
 // 子選択: 親未設定なら子の parent を auto-set
 const handleSpaceChange = (value: string) => {
-  const nextSpaceId = value === SPACE_NONE_VALUE ? null : value;
+  const nextSpaceId = value === EVENT_FORM_NONE_VALUE ? null : value;
   form.setValue("spaceId", nextSpaceId, { shouldDirty: true });
   if (nextSpaceId) {
     const selected = spaces.find((s) => s.id === nextSpaceId);
@@ -143,7 +143,7 @@ const handleSpaceChange = (value: string) => {
 
 **ルール**:
 
-- sentinel 値は親専用・子専用それぞれ定義（`LOCATION_NONE_VALUE = "__none__"` / `SPACE_NONE_VALUE = "__none__"`）、Radix Select の `value=""` 予約回避
+- sentinel 値は単一定数を親子共有（`EVENT_FORM_NONE_VALUE = "__none__"`）。値が同一で `nullableUuidWithSentinel(sentinel)` factory が parameterized なため、親専用・子専用に分けず 1 定数を使い回す。Radix Select の `value=""` 予約回避
 - domain query は `getChildOptions` で `parentId: true` を select に含める（フィルタに必要）
 - 子 Select のプレースホルダーは親の options に応じて動的（`"この会場に登録スペースがありません"` 等）
 - 参照実装: `events/_components/EventForm.tsx`（Location → Space、`handleLocationChange` / `handleSpaceChange`）
