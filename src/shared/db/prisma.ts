@@ -2,7 +2,8 @@
  * Prisma Client Singleton（Prisma 7.8 / adapter-pg / Next.js 16 公式推奨パターン）
  *
  * - `globalThis` を使った singleton（hot reload 時のコネクションリーク防止）
- * - `adapter-pg` には外部 `Pool` を渡して `externalPool` 経路に入れる（毎接続での新 Pool 生成を防止）
+ * - `PrismaPg` には接続設定オブジェクトを渡す（Prisma 7 公式推奨形式）。`pg.Pool` の
+ *   生成・ライフサイクルは adapter-pg 内部に委譲し、アプリは外部 `pg` 依存を持たない
  * - v6 互換のタイムアウト設定を採用（v7 デフォルトの 10s idle は短すぎて Vercel/Cloud Run で早期切断される）
  * - Better Auth には素の `PrismaClient` を渡す（Decimal 拡張干渉を防ぐため）
  *
@@ -13,7 +14,6 @@
 import "server-only";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 import { serverEnv } from "@/shared/lib/env/server";
 import { PrismaClient } from "@generated/prisma/client";
 import type * as PrismaModels from "@generated/prisma/client";
@@ -42,11 +42,10 @@ export type Settings = ConvertDecimalFields<PrismaModels.Settings>;
 export type Coupon = ConvertDecimalFields<PrismaModels.Coupon>;
 
 // ---------------------------------------------------------------------------
-// Singleton: pg Pool + PrismaClient
+// Singleton: PrismaClient
 // ---------------------------------------------------------------------------
 
 type GlobalStore = {
-  pgPool?: Pool;
   prisma?: PrismaClient;
 };
 
@@ -59,31 +58,25 @@ const globalStore: GlobalStore = (globalThis.__myrrhPrismaGlobalStore ??= {});
 const isProduction = serverEnv.NODE_ENV === "production";
 
 /**
- * pg Pool singleton
+ * Prisma driver adapter（adapter-pg）
  *
- * `PrismaPg({ connectionString })` 形式だと `connect()` 毎に新 Pool が作られる
- * （adapter-pg 7.7 の実装詳細）。明示的な `Pool` インスタンスを渡すことで
- * externalPool 経路に入り、1 Pool が再利用される。
+ * `PrismaPg` に接続設定オブジェクトを渡す Prisma 7 公式推奨形式。`pg.Pool` の
+ * 生成は adapter-pg が `connect()` 時に内部で 1 度だけ行う。`connect()` は
+ * PrismaClient のライフタイムにつき 1 回しか呼ばれず（client engine が
+ * memoize する公式仕様）、PrismaClient 自体が下記 globalStore singleton の
+ * ため、Pool も実質 1 インスタンスに収束する。
  *
  * タイムアウト値は Prisma 公式の「v6 互換」推奨値に準拠:
  * - `connectionTimeoutMillis: 5_000` (v6 connect_timeout)
  * - `idleTimeoutMillis: 300_000` (v6 max_idle_connection_lifetime)
  * v7 デフォルト（idle 10s）は短すぎて Cloud Run のコールドスタート直後に切断される。
  */
-const pgPool =
-  globalStore.pgPool ??
-  new Pool({
-    connectionString: serverEnv.DATABASE_URL,
-    connectionTimeoutMillis: 5_000,
-    idleTimeoutMillis: 300_000,
-    max: serverEnv.DATABASE_POOL_MAX ?? 10,
-  });
-
-if (!isProduction) {
-  globalStore.pgPool = pgPool;
-}
-
-const adapter = new PrismaPg(pgPool);
+const adapter = new PrismaPg({
+  connectionString: serverEnv.DATABASE_URL,
+  connectionTimeoutMillis: 5_000,
+  idleTimeoutMillis: 300_000,
+  max: serverEnv.DATABASE_POOL_MAX ?? 10,
+});
 
 /**
  * Base PrismaClient（$extends 前の素のクライアント）

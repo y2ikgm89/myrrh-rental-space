@@ -1,6 +1,5 @@
 import { hashPassword } from "better-auth/crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 import { PrismaClient } from "../../generated/prisma/client";
 import { Role } from "../../generated/prisma/enums";
 import { adminCredentials, testUsers } from "../../e2e/fixtures";
@@ -11,15 +10,13 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required");
 }
 
-const pool = new Pool({
-  connectionString: databaseUrl,
-  connectionTimeoutMillis: 5_000,
-  idleTimeoutMillis: 300_000,
-  max: 2,
-});
-
 const prisma = new PrismaClient({
-  adapter: new PrismaPg(pool),
+  adapter: new PrismaPg({
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 5_000,
+    idleTimeoutMillis: 300_000,
+    max: 2,
+  }),
 });
 
 async function ensureAdminUser(): Promise<void> {
@@ -111,5 +108,4 @@ try {
   await ensureAdminUser();
 } finally {
   await prisma.$disconnect();
-  await pool.end();
 }
