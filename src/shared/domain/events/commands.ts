@@ -74,6 +74,22 @@ function normalizeRegistrationOpen(
   return registrationOpen ?? true;
 }
 
+/**
+ * EventTicket の create / update に共通する書き込みフィールドを構築する。
+ * `eventId` は create 時のみ必要なため呼び出し側で付与する。
+ */
+function buildTicketWriteData(ticket: EventTicketInput, index: number) {
+  return {
+    name: ticket.name,
+    description: ticket.description ?? null,
+    price: ticket.price,
+    capacity: ticket.capacity ?? null,
+    unitSize: ticket.unitSize ?? 1,
+    sortOrder: ticket.sortOrder ?? index,
+    isAvailable: ticket.isAvailable ?? true,
+  };
+}
+
 export async function createEventCommand(data: EventCommandInput) {
   const slug = await ensureUniqueSlug(data.slug);
 
@@ -109,13 +125,7 @@ export async function createEventCommand(data: EventCommandInput) {
       await tx.eventTicket.createMany({
         data: data.tickets.map((ticket, index) => ({
           eventId: created.id,
-          name: ticket.name,
-          description: ticket.description ?? null,
-          price: ticket.price,
-          capacity: ticket.capacity ?? null,
-          unitSize: ticket.unitSize ?? 1,
-          sortOrder: ticket.sortOrder ?? index,
-          isAvailable: ticket.isAvailable ?? true,
+          ...buildTicketWriteData(ticket, index),
         })),
       });
     }
@@ -200,34 +210,22 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         await tx.eventTicket.deleteMany({ where: { id: { in: toDelete } } });
       }
 
+      const toCreate: Prisma.EventTicketCreateManyInput[] = [];
       for (const [index, ticket] of incoming.entries()) {
         if (ticket.id) {
           await tx.eventTicket.update({
             where: { id: ticket.id },
-            data: {
-              name: ticket.name,
-              description: ticket.description ?? null,
-              price: ticket.price,
-              capacity: ticket.capacity ?? null,
-              unitSize: ticket.unitSize ?? 1,
-              sortOrder: ticket.sortOrder ?? index,
-              isAvailable: ticket.isAvailable ?? true,
-            },
+            data: buildTicketWriteData(ticket, index),
           });
         } else {
-          await tx.eventTicket.create({
-            data: {
-              eventId: id,
-              name: ticket.name,
-              description: ticket.description ?? null,
-              price: ticket.price,
-              capacity: ticket.capacity ?? null,
-              unitSize: ticket.unitSize ?? 1,
-              sortOrder: ticket.sortOrder ?? index,
-              isAvailable: ticket.isAvailable ?? true,
-            },
+          toCreate.push({
+            eventId: id,
+            ...buildTicketWriteData(ticket, index),
           });
         }
+      }
+      if (toCreate.length > 0) {
+        await tx.eventTicket.createMany({ data: toCreate });
       }
     }
   });

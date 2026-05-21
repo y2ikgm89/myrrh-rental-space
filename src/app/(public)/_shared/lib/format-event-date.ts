@@ -1,3 +1,5 @@
+import { formatPrice } from "@/shared/lib/pricing/format";
+
 const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo",
   year: "numeric",
@@ -111,5 +113,5 @@ export function isSameJSTDay(
 
 export function formatEventPrice(price: number): string {
   if (price === 0) return "無料";
-  return `\u00A5${price.toLocaleString("ja-JP")}`;
+  return formatPrice(price);
 }
