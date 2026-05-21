@@ -22,20 +22,14 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { registerForEvent } from "@/public/actions/event-registration";
 import { formatEventPrice } from "@/public/lib/format-event-date";
+import type { EventTicketOption } from "@/shared/domain/events/ticket-types";
 import { cn } from "@/shared/lib/cn";
-
-export type TicketOption = {
-  readonly id: string;
-  readonly name: string;
-  readonly price: number;
-  readonly unitSize: number;
-};
 
 interface EventRegistrationFormProps {
   readonly eventId: string;
   readonly turnstileSiteKey: string | null;
   readonly remainingCapacity: number | null;
-  readonly tickets: readonly TicketOption[];
+  readonly tickets: readonly EventTicketOption[];
 }
 
 export function EventRegistrationForm({

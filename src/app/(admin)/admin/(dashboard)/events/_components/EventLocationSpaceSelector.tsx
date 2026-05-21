@@ -20,7 +20,7 @@ import type {
   getSpacesForEvent,
 } from "@/shared/domain/events/admin-queries";
 import type { EventFormFields } from "./event-form-fields-types";
-import { LOCATION_NONE_VALUE, SPACE_NONE_VALUE } from "./event-form-schema";
+import { EVENT_FORM_NONE_VALUE } from "./event-form-schema";
 
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
 type LocationOption = Awaited<ReturnType<typeof getLocationsForEvent>>[number];
@@ -73,12 +73,12 @@ export function EventLocationSpaceSelector({
         };
 
   const handleLocationChange = (value: string) => {
-    const next = value === LOCATION_NONE_VALUE ? null : value;
+    const next = value === EVENT_FORM_NONE_VALUE ? null : value;
     onLocationChange(next);
   };
 
   const handleSpaceChange = (value: string) => {
-    const next = value === SPACE_NONE_VALUE ? null : value;
+    const next = value === EVENT_FORM_NONE_VALUE ? null : value;
     onSpaceChange(next);
   };
 
@@ -96,7 +96,7 @@ export function EventLocationSpaceSelector({
           <div>
             <Label htmlFor="event-locationId">会場</Label>
             <Select
-              value={locationId ?? LOCATION_NONE_VALUE}
+              value={locationId ?? EVENT_FORM_NONE_VALUE}
               onValueChange={handleLocationChange}
               disabled={isPending}
             >
@@ -104,7 +104,7 @@ export function EventLocationSpaceSelector({
                 <SelectValue placeholder="会場を選択" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={LOCATION_NONE_VALUE}>外部会場</SelectItem>
+                <SelectItem value={EVENT_FORM_NONE_VALUE}>外部会場</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name}
@@ -125,7 +125,7 @@ export function EventLocationSpaceSelector({
           <div>
             <Label htmlFor="event-spaceId">スペース（任意）</Label>
             <Select
-              value={spaceId ?? SPACE_NONE_VALUE}
+              value={spaceId ?? EVENT_FORM_NONE_VALUE}
               onValueChange={handleSpaceChange}
               disabled={
                 isPending ||
@@ -145,7 +145,9 @@ export function EventLocationSpaceSelector({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={SPACE_NONE_VALUE}>会場全体で開催</SelectItem>
+                <SelectItem value={EVENT_FORM_NONE_VALUE}>
+                  会場全体で開催
+                </SelectItem>
                 {spacesInLocation.map((space) => (
                   <SelectItem key={space.id} value={space.id}>
                     {space.name}

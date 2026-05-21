@@ -12,41 +12,20 @@ import {
   CardTitle,
   Switch,
 } from "@/admin/components/ui";
+import {
+  createDefaultTicket,
+  type EventTicketInput,
+} from "@/shared/domain/events/ticket-types";
 
 /**
- * チケット種別の入力データ (admin form state)
+ * 複数チケット種別の入力 UI（Peatix / Eventbrite 流）。
  *
- * Peatix / Eventbrite 流の複数チケット種別 UI。
- * 例: 「一般 5000円」「学割 3000円」「4人グループ 12000円 (unitSize=4)」
- *
- * `id` は既存 ticket のみ持つ (update 時に diff/upsert で利用)。新規追加分は省略。
+ * 例: 「一般 5000円」「学割 3000円」「4人グループ 12000円 (unitSize=4)」。
+ * 型は `@/shared/domain/events/ticket-types` の `EventTicketInput` SSoT を共有する。
  */
-export type TicketDraft = {
-  readonly id?: string;
-  readonly name: string;
-  readonly description?: string;
-  readonly price: number;
-  readonly capacity: number | null;
-  readonly unitSize: number;
-  readonly sortOrder: number;
-  readonly isAvailable: boolean;
-};
-
-export function createDefaultTicket(sortOrder: number): TicketDraft {
-  return {
-    name: "",
-    description: "",
-    price: 0,
-    capacity: null,
-    unitSize: 1,
-    sortOrder,
-    isAvailable: true,
-  };
-}
-
 type TicketsFieldProps = {
-  tickets: readonly TicketDraft[];
-  onChange: (next: TicketDraft[]) => void;
+  tickets: readonly EventTicketInput[];
+  onChange: (next: EventTicketInput[]) => void;
   errors?: string[] | undefined;
   isPending: boolean;
 };
@@ -57,7 +36,7 @@ export function TicketsField({
   errors,
   isPending,
 }: TicketsFieldProps): ReactElement {
-  function updateTicket(index: number, patch: Partial<TicketDraft>): void {
+  function updateTicket(index: number, patch: Partial<EventTicketInput>): void {
     const next = tickets.map((t, i) => (i === index ? { ...t, ...patch } : t));
     onChange(next);
   }

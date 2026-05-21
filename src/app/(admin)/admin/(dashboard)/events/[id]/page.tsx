@@ -12,14 +12,14 @@ import { EventStatusBadge } from "@/admin/components/status-badges";
 import { Badge, Button } from "@/admin/components/ui";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
-import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { loadAdminEventRegistrationsSearchParams } from "@/shared/lib/nuqs";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import type { Metadata } from "next";
-
-type Params = Promise<{ id: string }>;
+import type { SearchParams } from "nuqs/server";
 
 type PageProps = {
-  params: Params;
+  params: Promise<{ id: string }>;
+  searchParams: Promise<SearchParams>;
 };
 
 export async function generateMetadata({
@@ -39,26 +39,29 @@ export async function generateMetadata({
   };
 }
 
-export default async function EventDetailPage({ params }: PageProps) {
+export default async function EventDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id } = await params;
-  const [event, registrations] = await Promise.all([
+  const { page, perPage } =
+    await loadAdminEventRegistrationsSearchParams(searchParams);
+  const [event, registrationPage] = await Promise.all([
     getEventById(id),
-    getEventRegistrations(id),
+    getEventRegistrations(id, { page, perPage }),
   ]);
 
   if (!event) {
     notFound();
   }
 
-  const serializedRegistrations = registrations.map((r) => ({
+  const serializedRegistrations = registrationPage.registrations.map((r) => ({
     ...r,
     cancelledAt: r.cancelledAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
   }));
 
-  const confirmedCount = registrations.filter(
-    (r) => r.status === RegistrationStatus.CONFIRMED,
-  ).length;
+  const confirmedCount = registrationPage.confirmedCount;
 
   return (
     <AdminDetailLayout
@@ -180,7 +183,12 @@ export default async function EventDetailPage({ params }: PageProps) {
       </DetailSection>
 
       <DetailSection title={`参加者一覧（${String(confirmedCount)}名）`}>
-        <EventRegistrationTable registrations={serializedRegistrations} />
+        <EventRegistrationTable
+          registrations={serializedRegistrations}
+          total={registrationPage.total}
+          currentPage={registrationPage.page}
+          perPage={registrationPage.perPage}
+        />
       </DetailSection>
     </AdminDetailLayout>
   );

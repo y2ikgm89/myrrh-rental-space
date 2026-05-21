@@ -134,6 +134,23 @@ export async function loadNewsSearchParams(
 }
 
 // ============================================================
+// 管理画面: イベント詳細 — 参加者一覧
+// ============================================================
+
+const adminEventRegistrationsSearchParamsCache = createSearchParamsCache({
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+});
+
+/** イベント詳細の参加者一覧ページネーションパラメータローダー */
+export async function loadAdminEventRegistrationsSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminEventRegistrationsSearchParamsCache.parse(searchParams);
+  return adminEventRegistrationsSearchParamsCache.all();
+}
+
+// ============================================================
 // 管理画面: スタッフ（ユーザー一覧）
 // ============================================================
 

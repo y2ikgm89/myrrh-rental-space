@@ -15,7 +15,9 @@ describe("eventFormSchema (conform)", () => {
     tickets: JSON.stringify([
       {
         name: "一般",
+        description: null,
         price: 5000,
+        capacity: null,
         unitSize: 1,
         sortOrder: 0,
         isAvailable: true,

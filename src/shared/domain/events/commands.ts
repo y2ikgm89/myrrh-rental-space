@@ -18,20 +18,10 @@ import {
 } from "@/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
-
-/**
- * チケット種別の書き込み入力型。
- */
-export interface EventTicketInput {
-  id?: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  capacity?: number | null;
-  unitSize?: number;
-  sortOrder?: number;
-  isAvailable?: boolean;
-}
+import type {
+  EventTicketInput,
+  EventTicketWritableFields,
+} from "./ticket-types";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -75,18 +65,20 @@ function normalizeRegistrationOpen(
 }
 
 /**
- * EventTicket の create / update に共通する書き込みフィールドを構築する。
- * `eventId` は create 時のみ必要なため呼び出し側で付与する。
+ * EventTicket の create / update に共通する書き込みフィールドを抽出する。
+ * `id` を除いた永続フィールドのみを返す（`eventId` は create 時に呼び出し側で付与）。
  */
-function buildTicketWriteData(ticket: EventTicketInput, index: number) {
+function buildTicketWriteData(
+  ticket: EventTicketInput,
+): EventTicketWritableFields {
   return {
     name: ticket.name,
-    description: ticket.description ?? null,
+    description: ticket.description,
     price: ticket.price,
-    capacity: ticket.capacity ?? null,
-    unitSize: ticket.unitSize ?? 1,
-    sortOrder: ticket.sortOrder ?? index,
-    isAvailable: ticket.isAvailable ?? true,
+    capacity: ticket.capacity,
+    unitSize: ticket.unitSize,
+    sortOrder: ticket.sortOrder,
+    isAvailable: ticket.isAvailable,
   };
 }
 
@@ -123,9 +115,9 @@ export async function createEventCommand(data: EventCommandInput) {
 
     if (data.tickets && data.tickets.length > 0) {
       await tx.eventTicket.createMany({
-        data: data.tickets.map((ticket, index) => ({
+        data: data.tickets.map((ticket) => ({
           eventId: created.id,
-          ...buildTicketWriteData(ticket, index),
+          ...buildTicketWriteData(ticket),
         })),
       });
     }
@@ -195,7 +187,7 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     if (data.tickets !== undefined) {
       const incoming = data.tickets;
       const incomingIds = new Set(
-        incoming.filter((t) => t.id !== undefined).map((t) => t.id as string),
+        incoming.flatMap((t) => (t.id != null ? [t.id] : [])),
       );
 
       const existing = await tx.eventTicket.findMany({
@@ -211,16 +203,16 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       }
 
       const toCreate: Prisma.EventTicketCreateManyInput[] = [];
-      for (const [index, ticket] of incoming.entries()) {
+      for (const ticket of incoming) {
         if (ticket.id) {
           await tx.eventTicket.update({
             where: { id: ticket.id },
-            data: buildTicketWriteData(ticket, index),
+            data: buildTicketWriteData(ticket),
           });
         } else {
           toCreate.push({
             eventId: id,
-            ...buildTicketWriteData(ticket, index),
+            ...buildTicketWriteData(ticket),
           });
         }
       }
