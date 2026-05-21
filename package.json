@@ -81,7 +81,7 @@
     "lru-cache": "^11.5.0",
     "next": "^16.2.6",
     "nuqs": "2.8.9",
-    "pg": "^8.21.0",
+    "pg": "^8.20.0",
     "prisma": "^7.8.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.6",
@@ -132,6 +132,7 @@
     "unrs-resolver"
   ],
   "overrides": {
+    "pg": "8.20.0",
     "@types/pg": "^8.20.0",
     "protobufjs": "^8.0.0",
     "minimatch": "^10.0.1",
