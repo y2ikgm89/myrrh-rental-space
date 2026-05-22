@@ -107,8 +107,10 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
     });
   };
 
+  // 視覚スタイルは公開ページ共通の Button variant="editorial" と一致させる
+  // （border-foreground / text-foreground / sans）。マグネット動作のみ MagneticButton 固有。
   const baseClassName = cn(
-    "relative inline-flex items-center justify-center gap-2 overflow-hidden border border-accent/40 bg-transparent font-heading uppercase tracking-[0.18em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "relative inline-flex items-center justify-center gap-2 overflow-hidden border border-foreground bg-transparent text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     sizeClasses[size],
     className,
   );
