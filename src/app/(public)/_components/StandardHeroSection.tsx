@@ -189,16 +189,17 @@ export function StandardHeroSection({
   // 旧 `bg-gradient-to-b from-surface via-background to-background` 廃止。
   // axe-core が gradient ancestor を bgGradient incomplete で評価できず、
   // production build で violation に昇格する silent bug の root cause。
-  // 代替: `bg-background` (body bg と同色) + `border-b border-border` で
-  // editorial separation を表現。WCAG AA 全 text token (accent / muted-fg /
-  // foreground) が definitively passable な solid bg を保証。
+  // 代替は solid `bg-background` (body bg と同色)。ヒーローと本文の区切りは
+  // 罫線ではなく余白で表現（Editorial Magazine の whitespace 規律）。
+  // WCAG AA 全 text token (accent / muted-fg / foreground) が
+  // definitively passable な solid bg を保証。
   // =========================================================================
   if (useMinimalLayout) {
     return (
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex items-end overflow-hidden border-b border-border bg-background pb-6 pt-[calc(var(--header-height)+1rem)] md:pb-10 md:pt-[calc(var(--header-height)+1.5rem)]"
+        className="relative flex items-end overflow-hidden bg-background pb-6 pt-[calc(var(--header-height)+1rem)] md:pb-10 md:pt-[calc(var(--header-height)+1.5rem)]"
       >
         <Container className="relative w-full !max-w-6xl text-center">
           {showSectionLabel && (
