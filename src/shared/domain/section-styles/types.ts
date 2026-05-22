@@ -82,7 +82,7 @@ export const DEFAULT_SECTION_STYLE: SectionStylePayload = Object.freeze({
 
 const CTA_SECTION_STYLE: SectionStylePayload = Object.freeze({
   spacing: { paddingTop: "md", paddingBottom: "md" },
-  background: { type: "surface", overlayOpacity: 0 },
+  background: { type: "default", overlayOpacity: 0 },
   container: { maxWidth: "lg" },
   typography: { titleSize: "xl", textAlign: "center" },
   animation: { preset: "fade" },

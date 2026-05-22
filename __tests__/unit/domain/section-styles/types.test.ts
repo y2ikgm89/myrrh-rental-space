@@ -14,11 +14,11 @@ describe("getDefaultSectionStyle", () => {
     expect(Object.isFrozen(DEFAULT_SECTION_STYLE)).toBe(true);
   });
 
-  test("cta は CTA_SECTION_STYLE（titleSize=xl, textAlign=center, surface 背景）", () => {
+  test("cta は CTA_SECTION_STYLE（titleSize=xl, textAlign=center, default 背景）", () => {
     const style = getDefaultSectionStyle("cta");
     expect(style.typography.titleSize).toBe("xl");
     expect(style.typography.textAlign).toBe("center");
-    expect(style.background.type).toBe("surface");
+    expect(style.background.type).toBe("default");
   });
 
   test("gallery / instagram は FULL_BLEED_STYLE（maxWidth=full, padding=none, animation=none）", () => {
