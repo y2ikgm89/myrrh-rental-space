@@ -26,6 +26,7 @@ import type {
   SelectedMedia,
   MediaPickerTab,
 } from "@/admin/types/media-picker";
+import type { MediaAcceptType } from "@/shared/lib/sections/types";
 import { cn } from "@/shared/lib/cn";
 
 export interface MediaPickerDialogProps {
@@ -37,6 +38,8 @@ export interface MediaPickerDialogProps {
   defaultUsage?: MediaUsage;
   initialSelected?: SelectedMedia[];
   showUrlTab?: boolean;
+  /** 許容するメディアカテゴリ (default: "image") */
+  accept?: MediaAcceptType;
 }
 
 export function MediaPickerDialog({
@@ -48,6 +51,7 @@ export function MediaPickerDialog({
   defaultUsage = "GENERAL",
   initialSelected = [],
   showUrlTab = true,
+  accept = "image",
 }: MediaPickerDialogProps) {
   const [activeTab, setActiveTab] = useState<MediaPickerTab>("library");
 
@@ -146,16 +150,22 @@ export function MediaPickerDialog({
               selectedIds={selectedIds}
               onSelect={handleLibrarySelect}
               canSelectMore={canSelectMore}
+              accept={accept}
             />
           )}
           {activeTab === "url" && showUrlTab && (
-            <UrlTab onAdd={handleUrlAdd} canAddMore={canSelectMore} />
+            <UrlTab
+              onAdd={handleUrlAdd}
+              canAddMore={canSelectMore}
+              accept={accept}
+            />
           )}
           {activeTab === "upload" && (
             <UploadTab
               onUploadComplete={handleUploadComplete}
               usage={defaultUsage}
               canAddMore={canSelectMore}
+              accept={accept}
             />
           )}
         </div>

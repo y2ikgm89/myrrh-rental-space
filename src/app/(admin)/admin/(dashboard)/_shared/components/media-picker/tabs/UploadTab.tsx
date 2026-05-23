@@ -15,17 +15,21 @@ import {
 import { DropZone, FilePreview } from "../components";
 import { Button } from "@/admin/components/ui";
 import type { MediaUsage } from "@/admin/lib/validations/media";
+import type { MediaAcceptType } from "@/shared/lib/sections/types";
+import { acceptToInputAttr } from "../accept-helpers";
 
 interface UploadTabProps {
   onUploadComplete: (media: UploadResult) => void;
   usage: MediaUsage;
   canAddMore: boolean;
+  accept?: MediaAcceptType;
 }
 
 export function UploadTab({
   onUploadComplete,
   usage,
   canAddMore,
+  accept = "image",
 }: UploadTabProps) {
   const [file, setFile] = useState<File | null>(null);
   const [alt, setAlt] = useState("");
@@ -62,7 +66,11 @@ export function UploadTab({
   if (!file) {
     return (
       <div className="space-y-4">
-        <DropZone onDrop={handleFileDrop} disabled={!canAddMore} />
+        <DropZone
+          onDrop={handleFileDrop}
+          disabled={!canAddMore}
+          accept={acceptToInputAttr(accept)}
+        />
         {!canAddMore && (
           <p className="text-center text-sm text-muted-foreground">
             選択できる画像の上限に達しました

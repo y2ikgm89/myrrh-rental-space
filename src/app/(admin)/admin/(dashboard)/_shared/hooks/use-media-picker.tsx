@@ -11,6 +11,7 @@ import { useState, type ReactNode } from "react";
 import { MediaPickerDialog } from "@/admin/components/media-picker/MediaPickerDialog";
 import type { MediaUsage } from "@/admin/lib/validations/media";
 import type { SelectionMode, SelectedMedia } from "@/admin/types/media-picker";
+import type { MediaAcceptType } from "@/shared/lib/sections/types";
 
 export interface UseMediaPickerOptions {
   /** 選択モード */
@@ -21,6 +22,11 @@ export interface UseMediaPickerOptions {
   defaultUsage?: MediaUsage;
   /** URLタブを表示するか */
   showUrlTab?: boolean;
+  /**
+   * 許容するメディアカテゴリ (`field.media` / Lexical Inspector 等から指定)。
+   * 省略時は `"image"` (旧 useSingleMediaPicker 互換)。
+   */
+  accept?: MediaAcceptType;
   /** 選択時のコールバック */
   onSelect?: (media: SelectedMedia[]) => void;
 }
@@ -34,6 +40,7 @@ interface MediaPickerRendererProps {
   defaultUsage: MediaUsage;
   initialSelected: SelectedMedia[];
   showUrlTab: boolean;
+  accept: MediaAcceptType;
 }
 
 function MediaPickerRenderer({
@@ -45,6 +52,7 @@ function MediaPickerRenderer({
   defaultUsage,
   initialSelected,
   showUrlTab,
+  accept,
 }: MediaPickerRendererProps) {
   return (
     <MediaPickerDialog
@@ -56,6 +64,7 @@ function MediaPickerRenderer({
       defaultUsage={defaultUsage}
       initialSelected={initialSelected}
       showUrlTab={showUrlTab}
+      accept={accept}
     />
   );
 }
@@ -81,6 +90,7 @@ export function useMediaPicker(
     maxSelections = 10,
     defaultUsage = "GENERAL",
     showUrlTab = true,
+    accept = "image",
     onSelect,
   } = options;
 
@@ -112,6 +122,7 @@ export function useMediaPicker(
       defaultUsage={defaultUsage}
       initialSelected={initialSelected}
       showUrlTab={showUrlTab}
+      accept={accept}
     />
   );
 

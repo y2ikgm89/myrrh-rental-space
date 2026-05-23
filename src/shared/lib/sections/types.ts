@@ -14,6 +14,7 @@ export const FIELD_TYPES = [
   "select",
   "color",
   "image",
+  "media",
   "url",
   "icon",
   "array",
@@ -23,6 +24,26 @@ export const FIELD_TYPES = [
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
+
+/**
+ * `field.media({ accept })` の許容カテゴリ。
+ * server-side magic-byte 検出 + MediaPicker dialog filter / native `<input accept>` に伝播。
+ *
+ * - `image`: 画像 (JPEG/PNG/WebP/GIF)
+ * - `video`: 動画 (MP4/WebM)
+ * - `audio`: 音声 (MP3/WAV)
+ * - `file`: 文書 (PDF) — 「file」は業界標準の呼称（Lexical FileNode と整合）
+ * - `any`: 画像/動画/音声/文書すべて（汎用メディアライブラリ用）
+ */
+export const MEDIA_ACCEPT_TYPES = [
+  "image",
+  "video",
+  "audio",
+  "file",
+  "any",
+] as const;
+
+export type MediaAcceptType = (typeof MEDIA_ACCEPT_TYPES)[number];
 
 // ────────────────────────────────────────────
 // Section Definition (one per section type)

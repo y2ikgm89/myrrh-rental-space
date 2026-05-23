@@ -16,11 +16,14 @@ import {
   MediaGridSkeleton,
 } from "../components";
 import type { GetMediaResult, MediaData } from "@/admin/types/media-picker";
+import type { MediaAcceptType } from "@/shared/lib/sections/types";
+import { acceptToInitialMediaType } from "../accept-helpers";
 
 interface LibraryTabProps {
   selectedIds: Set<string>;
   onSelect: (media: MediaData) => void;
   canSelectMore: boolean;
+  accept?: MediaAcceptType;
 }
 
 /**
@@ -57,12 +60,14 @@ export function LibraryTab({
   selectedIds,
   onSelect,
   canSelectMore,
+  accept = "image",
 }: LibraryTabProps) {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
+  const initialType = acceptToInitialMediaType(accept);
   const { mediaPromise, isInitialLoading, searchMedia } = useMediaLibrary({
-    initialFilters: { type: "IMAGE" },
+    initialFilters: initialType ? { type: initialType } : {},
   });
 
   const handleSearchChange = (value: string) => {

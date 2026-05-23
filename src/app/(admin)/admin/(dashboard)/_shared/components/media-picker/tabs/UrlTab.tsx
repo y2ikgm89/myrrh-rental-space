@@ -9,13 +9,18 @@
 import { useState } from "react";
 import { IconLink, IconAlertCircle, IconPhoto } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
+import type { MediaAcceptType } from "@/shared/lib/sections/types";
+import { acceptToLabel, acceptToUrlPlaceholder } from "../accept-helpers";
 
 interface UrlTabProps {
   onAdd: (url: string, alt?: string) => void;
   canAddMore: boolean;
+  accept?: MediaAcceptType;
 }
 
-export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
+export function UrlTab({ onAdd, canAddMore, accept = "image" }: UrlTabProps) {
+  const acceptLabel = acceptToLabel(accept);
+  const urlPlaceholder = acceptToUrlPlaceholder(accept);
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +76,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">画像URL</label>
+        <label className="text-sm font-medium">{acceptLabel}URL</label>
         <div className="relative">
           <IconLink className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -79,7 +84,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
             value={url}
             onChange={(e) => handleUrlChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="https://example.com/image.jpg"
+            placeholder={urlPlaceholder}
             className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>

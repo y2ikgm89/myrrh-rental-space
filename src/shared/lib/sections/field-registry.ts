@@ -11,7 +11,7 @@ import {
   createBlockArraySchema,
   createSpanArraySchema,
 } from "@/shared/lib/portable-text";
-import type { FieldType } from "./types";
+import type { FieldType, MediaAcceptType } from "./types";
 
 // ─────────────────────────────────────────────────────────────
 // FieldMeta インターフェース
@@ -49,6 +49,11 @@ export interface FieldMeta {
   readonly leadingIcon?: string;
   /** 入力欄の右端に表示する curation icon 名（バリデーション status 等）。 */
   readonly trailingIcon?: string;
+  /**
+   * `field.media` 専用 — 許容するメディアカテゴリ。
+   * MediaPickerDialog / AutoMediaField がプレビュー描画 / MIME filter に使用。
+   */
+  readonly mediaAccept?: MediaAcceptType;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -114,6 +119,13 @@ interface SelectOpts<T extends string> extends CommonFieldOpts {
 }
 
 interface StringFieldOpts extends StringConstraints, CommonFieldOpts {
+  readonly placeholder?: string;
+  readonly helpText?: string;
+  readonly default?: string;
+}
+
+interface MediaFieldOpts extends StringConstraints, CommonFieldOpts {
+  readonly accept: MediaAcceptType;
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
@@ -326,6 +338,34 @@ export const field = {
           placeholder: opts.placeholder,
         }),
         ...(opts?.helpText !== undefined && { helpText: opts.helpText }),
+      });
+  },
+
+  /**
+   * メディア選択（一般化版 — 画像/動画/音声/文書をカテゴリ別に許可）
+   *
+   * `accept` で MediaPickerDialog の Library tab filter / Upload tab `<input accept>` /
+   * URL tab placeholder / AutoMediaField プレビュー variant を切り替える。
+   *
+   * - `accept: "image"` → JPEG/PNG/WebP/GIF
+   * - `accept: "video"` → MP4/WebM、URL タブで YouTube/Vimeo 埋込 URL も許容
+   * - `accept: "audio"` → MP3/WAV
+   * - `accept: "file"` → PDF
+   * - `accept: "any"` → 全カテゴリ（汎用 picker）
+   */
+  media(label: string, opts: MediaFieldOpts) {
+    return applyStringConstraints(z.string(), opts)
+      .default(opts.default ?? "")
+      .register(fieldRegistry, {
+        fieldType: "media",
+        label,
+        group: opts.group ?? "content",
+        mediaAccept: opts.accept,
+        ...(opts.subGroup !== undefined && { subGroup: opts.subGroup }),
+        ...(opts.placeholder !== undefined && {
+          placeholder: opts.placeholder,
+        }),
+        ...(opts.helpText !== undefined && { helpText: opts.helpText }),
       });
   },
 
