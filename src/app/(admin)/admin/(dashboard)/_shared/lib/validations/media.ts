@@ -27,24 +27,28 @@ export const MediaUsageEnum = z.enum(MediaUsage);
 // Constants
 // =============================================================================
 
+/**
+ * クライアント側プレビュー / `<input accept="...">` の hint 用 MIME 一覧。
+ * **trust boundary ではない** — 真の検証は server-side `r2/media-magic-bytes` で行う。
+ * server-side 検出が拒否する MIME (svg / quicktime 等) はここにも含めない。
+ */
 export const ALLOWED_MIME_TYPES: Record<MediaType, string[]> = {
-  IMAGE: [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "image/svg+xml",
-  ],
-  VIDEO: ["video/mp4", "video/webm", "video/quicktime"],
+  IMAGE: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  VIDEO: ["video/mp4", "video/webm"],
   DOCUMENT: ["application/pdf"],
-  OTHER: [],
+  OTHER: ["audio/mpeg", "audio/wav"],
 };
 
+/**
+ * クライアント側 file.size 事前ガード用の上限（bytes）。
+ * `r2/media-magic-bytes` の `MEDIA_MAX_SIZE_BYTES` と数値同期。
+ * - IMAGE 5MB / VIDEO 50MB / AUDIO=OTHER 20MB / DOCUMENT 10MB
+ */
 export const MAX_FILE_SIZES: Record<MediaType, number> = {
-  IMAGE: 10 * 1024 * 1024, // 10MB
-  VIDEO: 100 * 1024 * 1024, // 100MB
-  DOCUMENT: 10 * 1024 * 1024, // 10MB
-  OTHER: 5 * 1024 * 1024, // 5MB
+  IMAGE: 5 * 1024 * 1024,
+  VIDEO: 50 * 1024 * 1024,
+  DOCUMENT: 10 * 1024 * 1024,
+  OTHER: 20 * 1024 * 1024,
 };
 
 // =============================================================================
@@ -52,10 +56,10 @@ export const MAX_FILE_SIZES: Record<MediaType, number> = {
 // =============================================================================
 
 /**
- * メディアアップロード入力
+ * メディアアップロード入力。
+ * `type` は server-side で magic-byte から派生するためフォーム入力では受け取らない。
  */
 export const mediaUploadSchema = z.object({
-  type: MediaTypeEnum.default("IMAGE"),
   usage: MediaUsageEnum.default("GENERAL"),
   alt: z
     .string()
@@ -181,7 +185,11 @@ export function isAllowedFileSize(size: number, type: MediaType): boolean {
 }
 
 /**
- * ファイルバリデーション
+ * ファイルバリデーション（client-hint 段階、true 認可は server-side）。
+ *
+ * `file.type` / `file.name` はクライアント供給で偽装可能なため、ここでの
+ * 結果は「明らかに非対応」を早期 reject する UX hint に留まる。
+ * 真の検証は `r2/media-magic-bytes` の magic-byte で行う。
  */
 export function validateFile(
   file: File,
@@ -205,6 +213,26 @@ export function validateFile(
     };
   }
 
+  return { valid: true };
+}
+
+/**
+ * Server Action 受領時の事前 size 検証（MIME 文字列を信用しない）。
+ * 全カテゴリの最大値 (動画 50MB) を上限とし、それ以下は magic-byte で per-type
+ * 上限まで再検証される。
+ */
+const AGGREGATE_MAX_SIZE = Math.max(...Object.values(MAX_FILE_SIZES));
+
+export function preValidateMediaFile(
+  file: File,
+): { valid: true } | { valid: false; error: string } {
+  if (file.size > AGGREGATE_MAX_SIZE) {
+    const maxMB = Math.round(AGGREGATE_MAX_SIZE / (1024 * 1024));
+    return {
+      valid: false,
+      error: `ファイルサイズは${maxMB}MB以下にしてください`,
+    };
+  }
   return { valid: true };
 }
 
@@ -282,7 +310,6 @@ export function parseMediaUploadFormData(
   }
 
   const metadataResult = mediaUploadSchema.safeParse({
-    type: getFormString(formData, "type"),
     usage: getFormString(formData, "usage"),
     alt: getFormString(formData, "alt"),
     title: getFormString(formData, "title"),

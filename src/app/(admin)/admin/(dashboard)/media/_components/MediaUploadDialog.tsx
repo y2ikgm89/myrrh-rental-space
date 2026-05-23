@@ -170,7 +170,7 @@ export function MediaUploadDialog({
                 ドラッグ&ドロップ または クリックして選択
               </p>
               <p className="text-xs text-muted-foreground">
-                画像: 10MB以下 / 動画: 100MB以下
+                画像 5MB / 動画 50MB / 音声 20MB / PDF 10MB
               </p>
               <label htmlFor="file-input" className="sr-only">
                 ファイルを選択
@@ -178,7 +178,7 @@ export function MediaUploadDialog({
               <input
                 id="file-input"
                 type="file"
-                accept="image/*,video/*,application/pdf"
+                accept="image/*,video/*,audio/*,application/pdf"
                 onChange={handleInputChange}
                 className="hidden"
               />

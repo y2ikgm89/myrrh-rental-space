@@ -28,15 +28,13 @@ describe("mediaUploadSchema", () => {
       const result = mediaUploadSchema.safeParse({});
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.type).toBe("IMAGE");
         expect(result.data.usage).toBe("GENERAL");
         expect(result.data.tags).toEqual([]);
       }
     });
 
-    test("全フィールド指定も許可", () => {
+    test("全フィールド指定も許可（type は server-side で派生するため未受領）", () => {
       const result = mediaUploadSchema.safeParse({
-        type: "VIDEO",
         usage: "POST",
         alt: "代替テキスト",
         title: "タイトル",
@@ -44,22 +42,6 @@ describe("mediaUploadSchema", () => {
         tags: ["tag1", "tag2"],
       });
       expect(result.success).toBe(true);
-    });
-  });
-
-  describe("type", () => {
-    test("有効なMediaType値は許可", () => {
-      const validTypes = ["IMAGE", "VIDEO", "DOCUMENT", "OTHER"];
-
-      for (const type of validTypes) {
-        const result = mediaUploadSchema.safeParse({ type });
-        expect(result.success).toBe(true);
-      }
-    });
-
-    test("無効なtype値はエラー", () => {
-      const result = mediaUploadSchema.safeParse({ type: "INVALID" });
-      expect(result.success).toBe(false);
     });
   });
 
@@ -295,28 +277,28 @@ describe("inferMediaType", () => {
 
 describe("isAllowedMimeType", () => {
   describe("IMAGE", () => {
-    test("許可されたMIMEタイプはtrue", () => {
+    test("許可されたMIMEタイプはtrue (SVG / quicktime は server-side 拒否のため除外済)", () => {
       expect(isAllowedMimeType("image/jpeg", "IMAGE")).toBe(true);
       expect(isAllowedMimeType("image/png", "IMAGE")).toBe(true);
       expect(isAllowedMimeType("image/webp", "IMAGE")).toBe(true);
       expect(isAllowedMimeType("image/gif", "IMAGE")).toBe(true);
-      expect(isAllowedMimeType("image/svg+xml", "IMAGE")).toBe(true);
     });
 
-    test("許可されていないMIMEタイプはfalse", () => {
+    test("SVG / 非対応 MIME は false (magic-byte 検証で reject される)", () => {
+      expect(isAllowedMimeType("image/svg+xml", "IMAGE")).toBe(false);
       expect(isAllowedMimeType("image/bmp", "IMAGE")).toBe(false);
       expect(isAllowedMimeType("video/mp4", "IMAGE")).toBe(false);
     });
   });
 
   describe("VIDEO", () => {
-    test("許可されたMIMEタイプはtrue", () => {
+    test("許可されたMIMEタイプはtrue (quicktime は server-side 拒否)", () => {
       expect(isAllowedMimeType("video/mp4", "VIDEO")).toBe(true);
       expect(isAllowedMimeType("video/webm", "VIDEO")).toBe(true);
-      expect(isAllowedMimeType("video/quicktime", "VIDEO")).toBe(true);
     });
 
-    test("許可されていないMIMEタイプはfalse", () => {
+    test("quicktime / 他形式は false", () => {
+      expect(isAllowedMimeType("video/quicktime", "VIDEO")).toBe(false);
       expect(isAllowedMimeType("video/avi", "VIDEO")).toBe(false);
     });
   });
@@ -331,9 +313,10 @@ describe("isAllowedMimeType", () => {
     });
   });
 
-  describe("OTHER", () => {
-    test("OTHER は空配列のため全ての MIME タイプを拒否（セキュア既定）", () => {
-      expect(isAllowedMimeType("anything", "OTHER")).toBe(false);
+  describe("OTHER (audio)", () => {
+    test("OTHER に登録された audio MIME のみ許可（その他は拒否）", () => {
+      expect(isAllowedMimeType("audio/mpeg", "OTHER")).toBe(true);
+      expect(isAllowedMimeType("audio/wav", "OTHER")).toBe(true);
       expect(isAllowedMimeType("text/plain", "OTHER")).toBe(false);
       expect(isAllowedMimeType("application/octet-stream", "OTHER")).toBe(
         false,
@@ -351,14 +334,14 @@ describe("isAllowedMimeType", () => {
 });
 
 describe("isAllowedFileSize", () => {
-  test("IMAGE: 10MB以下は許可", () => {
-    expect(isAllowedFileSize(10 * 1024 * 1024, "IMAGE")).toBe(true);
-    expect(isAllowedFileSize(10 * 1024 * 1024 + 1, "IMAGE")).toBe(false);
+  test("IMAGE: 5MB以下は許可", () => {
+    expect(isAllowedFileSize(5 * 1024 * 1024, "IMAGE")).toBe(true);
+    expect(isAllowedFileSize(5 * 1024 * 1024 + 1, "IMAGE")).toBe(false);
   });
 
-  test("VIDEO: 100MB以下は許可", () => {
-    expect(isAllowedFileSize(100 * 1024 * 1024, "VIDEO")).toBe(true);
-    expect(isAllowedFileSize(100 * 1024 * 1024 + 1, "VIDEO")).toBe(false);
+  test("VIDEO: 50MB以下は許可", () => {
+    expect(isAllowedFileSize(50 * 1024 * 1024, "VIDEO")).toBe(true);
+    expect(isAllowedFileSize(50 * 1024 * 1024 + 1, "VIDEO")).toBe(false);
   });
 
   test("DOCUMENT: 10MB以下は許可", () => {
@@ -366,26 +349,27 @@ describe("isAllowedFileSize", () => {
     expect(isAllowedFileSize(10 * 1024 * 1024 + 1, "DOCUMENT")).toBe(false);
   });
 
-  test("OTHER: 5MB以下は許可", () => {
-    expect(isAllowedFileSize(5 * 1024 * 1024, "OTHER")).toBe(true);
-    expect(isAllowedFileSize(5 * 1024 * 1024 + 1, "OTHER")).toBe(false);
+  test("OTHER (audio): 20MB以下は許可", () => {
+    expect(isAllowedFileSize(20 * 1024 * 1024, "OTHER")).toBe(true);
+    expect(isAllowedFileSize(20 * 1024 * 1024 + 1, "OTHER")).toBe(false);
   });
 });
 
 describe("constants", () => {
-  test("MAX_FILE_SIZES が正しく定義されている", () => {
-    expect(MAX_FILE_SIZES.IMAGE).toBe(10 * 1024 * 1024);
-    expect(MAX_FILE_SIZES.VIDEO).toBe(100 * 1024 * 1024);
+  test("MAX_FILE_SIZES が canonical SSoT と同期 (画像5MB/動画50MB/音声20MB/文書10MB)", () => {
+    expect(MAX_FILE_SIZES.IMAGE).toBe(5 * 1024 * 1024);
+    expect(MAX_FILE_SIZES.VIDEO).toBe(50 * 1024 * 1024);
     expect(MAX_FILE_SIZES.DOCUMENT).toBe(10 * 1024 * 1024);
-    expect(MAX_FILE_SIZES.OTHER).toBe(5 * 1024 * 1024);
+    expect(MAX_FILE_SIZES.OTHER).toBe(20 * 1024 * 1024);
   });
 
-  test("ALLOWED_MIME_TYPES が正しく定義されている", () => {
+  test("ALLOWED_MIME_TYPES に audio が OTHER として含まれる (Phase 4 で AUDIO 派生予定)", () => {
     expect(ALLOWED_MIME_TYPES.IMAGE).toContain("image/jpeg");
     expect(ALLOWED_MIME_TYPES.IMAGE).toContain("image/png");
     expect(ALLOWED_MIME_TYPES.VIDEO).toContain("video/mp4");
     expect(ALLOWED_MIME_TYPES.DOCUMENT).toContain("application/pdf");
-    expect(ALLOWED_MIME_TYPES.OTHER).toEqual([]);
+    expect(ALLOWED_MIME_TYPES.OTHER).toContain("audio/mpeg");
+    expect(ALLOWED_MIME_TYPES.OTHER).toContain("audio/wav");
   });
 });
 
@@ -441,16 +425,16 @@ describe("validateFile", () => {
   });
 
   describe("ファイルサイズエラー", () => {
-    test("IMAGEの10MB超過はエラーを返す", () => {
+    test("IMAGEの5MB超過はエラーを返す", () => {
       const file = createMockFile(
         "large.jpg",
         "image/jpeg",
-        10 * 1024 * 1024 + 1,
+        5 * 1024 * 1024 + 1,
       );
       const result = validateFile(file, "IMAGE");
       expect(result.valid).toBe(false);
       if (!result.valid) {
-        expect(result.error).toContain("10MB以下");
+        expect(result.error).toContain("5MB以下");
       }
     });
   });
