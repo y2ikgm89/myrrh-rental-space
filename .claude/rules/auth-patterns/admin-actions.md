@@ -102,6 +102,24 @@ if (!auth.success) return jsonError(auth.error.error, 401);
 
 **判定基準**: 3 条件すべて満たすなら `checkAdminAuth`。1 つでも該当しなければ `checkPermission(resource, action)` を使う（例: media アップロード → `media:create` / settings 更新 → `settings:update`）。
 
+## OAuth redirect を行う Server Action は `checkPermission` を直接呼ぶ
+
+OAuth フローを開始する Server Action（`initiateGbpAuth` 等）は本体が `redirect()` でプロバイダの authorize URL へ遷移して終わる。`redirect()` は `NEXT_REDIRECT` を throw する Next.js API で戻り値が `void`（`MutationResult<T>` を返さない）ため `executeAdminMutationResult` の契約に乗らない。この種の action は **`checkPermission(resource, action)` を直接呼び、失敗時も `redirect()` でエラーページへ遷移**する:
+
+```typescript
+"use server";
+
+export async function initiateGbpAuth(): Promise<void> {
+  const auth = await checkPermission("settings", "update");
+  if (!auth.success) {
+    redirect("/admin/settings/integrations?gbp_error=forbidden");
+  }
+  // OAuth state cookie 保存 → redirect(authorizeUrl)
+}
+```
+
+**判定基準**: ① `"use server"` ファイル ② 本体が `redirect()` で終わり戻り値が `void` ③ OAuth state cookie 保存等の軽量副作用のみ — 3 条件すべて満たすなら `checkPermission` 直接呼び出しを許容（§NG パターン「Server Actions で checkPermission 直接呼び出し」の唯一の例外）。`verifyAdminSession()` は `cache()` 付き Server Component 用のため Server Action では使わない（→ `auth-patterns.md` §4）。参照実装: `actions/settings/google-business-profile.ts` の `initiateGbpAuth`。
+
 ## HTTP status の使い分け（401 vs 403）
 
 [RFC 9110 §15.5.2 / §15.5.4](https://www.rfc-editor.org/rfc/rfc9110#name-401-unauthorized) 準拠:

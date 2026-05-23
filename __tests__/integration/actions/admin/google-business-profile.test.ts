@@ -110,9 +110,24 @@ const mockVerifyAdminSession = mock<
   () => Promise<{ id: string; role: string }>
 >(() => Promise.resolve({ id: "user-1", role: "ADMIN" }));
 
+type MockPermissionResult =
+  | { success: true; user: { id: string; role: string } }
+  | { success: false; error: { error: string } };
+
+const mockCheckPermission = mock<() => Promise<MockPermissionResult>>(() =>
+  Promise.resolve({
+    success: true as const,
+    user: { id: "user-1", role: "ADMIN" },
+  }),
+);
+
 mock.module("@/shared/lib/admin-auth", () => ({
   verifyAdminSession: mockVerifyAdminSession,
   DASHBOARD_ROLES: ["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] as const,
+}));
+
+mock.module("@/admin/lib/action-auth", () => ({
+  checkPermission: mockCheckPermission,
 }));
 
 mock.module("@/admin/lib/admin-action", () => ({
@@ -166,6 +181,11 @@ describe("Google Business Profile Server Actions", () => {
     mockSyncLocationToGbpCommand.mockClear();
     mockToggleLocationGbpSyncCommand.mockClear();
     mockVerifyAdminSession.mockClear();
+    mockCheckPermission.mockClear();
+    mockCheckPermission.mockResolvedValue({
+      success: true as const,
+      user: { id: "user-1", role: "ADMIN" },
+    });
     mockUpdateTag.mockClear();
     mockRedirect.mockClear();
     mockCookieStoreSet.mockClear();
@@ -174,7 +194,7 @@ describe("Google Business Profile Server Actions", () => {
   });
 
   describe("initiateGbpAuth", () => {
-    test("verifyAdminSession を呼び、state cookie 設定後 redirect をスローする", async () => {
+    test("settings:update 権限を確認し、state cookie 設定後 redirect をスローする", async () => {
       let caught: unknown = null;
       try {
         await initiateGbpAuth();
@@ -182,7 +202,7 @@ describe("Google Business Profile Server Actions", () => {
         caught = error;
       }
 
-      expect(mockVerifyAdminSession).toHaveBeenCalledTimes(1);
+      expect(mockCheckPermission).toHaveBeenCalledWith("settings", "update");
 
       // CSRF state cookie が httpOnly + sameSite: lax + maxAge: 600 で設定される
       expect(mockCookieStoreSet).toHaveBeenCalledTimes(1);
@@ -205,6 +225,28 @@ describe("Google Business Profile Server Actions", () => {
 
       expect(mockRedirect).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/v2/auth?test=1",
+      );
+      expect(caught).toBeInstanceOf(Error);
+      expect((caught as Error).message).toBe("NEXT_REDIRECT");
+    });
+
+    test("settings:update 権限がない場合は OAuth state を発行しない", async () => {
+      mockCheckPermission.mockResolvedValueOnce({
+        success: false as const,
+        error: { error: "settingsのupdate権限がありません" },
+      });
+
+      let caught: unknown = null;
+      try {
+        await initiateGbpAuth();
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(mockCookieStoreSet).not.toHaveBeenCalled();
+      expect(mockGetGbpAuthorizeUrl).not.toHaveBeenCalled();
+      expect(mockRedirect).toHaveBeenCalledWith(
+        "/admin/settings/integrations?gbp_error=forbidden",
       );
       expect(caught).toBeInstanceOf(Error);
       expect((caught as Error).message).toBe("NEXT_REDIRECT");
