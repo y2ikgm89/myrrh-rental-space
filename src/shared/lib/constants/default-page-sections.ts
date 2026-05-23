@@ -329,7 +329,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           },
         ],
         layout: {
-          padding: "xl",
+          padding: "lg",
           containerWidth: "md",
           animateOnScroll: "fade-up",
         },
