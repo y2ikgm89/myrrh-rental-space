@@ -129,7 +129,7 @@ export default async function ReservationDetailPage({
   });
 
   return (
-    <Stack gap="lg" className="max-w-2xl">
+    <Stack gap="lg" className="mx-auto max-w-2xl">
       <Heading level={1}>予約詳細</Heading>
 
       {reason && (

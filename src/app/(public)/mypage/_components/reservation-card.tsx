@@ -99,8 +99,8 @@ export function ReservationCard({
         </Badge>
       </div>
 
-      {/* Date/time + price */}
-      <div className="flex flex-col gap-2 text-sm text-muted-foreground mb-4">
+      {/* Date/time + price + actions */}
+      <div className="flex flex-col gap-2 text-sm text-muted-foreground">
         <p>
           {formatSerializedDate(startTime, {
             year: "numeric",
@@ -115,44 +115,45 @@ export function ReservationCard({
             minute: "2-digit",
           })}
         </p>
-        <div className="flex items-center gap-2">
-          <p className="text-foreground font-medium">
-            {formatTotal(totalPrice, "未定")}
-          </p>
-          {paymentStatusEnum !== "PAID" && (
-            <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>
-              {PAYMENT_STATUS_LABELS[paymentStatusEnum]}
-            </Badge>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2">
+            <p className="text-foreground font-medium">
+              {formatTotal(totalPrice, "未定")}
+            </p>
+            {paymentStatusEnum !== "PAID" && (
+              <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>
+                {PAYMENT_STATUS_LABELS[paymentStatusEnum]}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {canCancel && (
+              <Link
+                href={`/mypage/reservations/${id}`}
+                className="inline-flex min-h-11 items-center whitespace-nowrap px-1 text-sm text-destructive hover:text-destructive/80 transition-colors"
+              >
+                キャンセル
+              </Link>
+            )}
+
+            {canModify && (
+              <Link
+                href={`/mypage/reservations/${id}/edit`}
+                className="inline-flex min-h-11 items-center whitespace-nowrap px-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                変更
+              </Link>
+            )}
+
+            <Link
+              href={`/mypage/reservations/${id}`}
+              className="inline-flex min-h-11 items-center whitespace-nowrap px-1 text-sm font-medium text-foreground underline underline-offset-4 hover:text-accent transition-colors"
+            >
+              詳細を見る
+            </Link>
+          </div>
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 border-t border-border">
-        <Link
-          href={`/mypage/reservations/${id}`}
-          className="inline-block px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          詳細を見る
-        </Link>
-
-        {canModify && (
-          <Link
-            href={`/mypage/reservations/${id}/edit`}
-            className="inline-block px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            変更
-          </Link>
-        )}
-
-        {canCancel && (
-          <Link
-            href={`/mypage/reservations/${id}`}
-            className="inline-block px-3 py-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors"
-          >
-            キャンセル
-          </Link>
-        )}
 
         {showPastDeadlineMessage && (
           <p className="text-xs text-muted-foreground">
