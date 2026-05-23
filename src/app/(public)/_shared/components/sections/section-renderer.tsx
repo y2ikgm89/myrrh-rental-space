@@ -110,6 +110,7 @@ import {
   blocksToPlainText,
   spansToPlainText,
 } from "@/shared/lib/portable-text";
+import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 
 /** /posts archive variant のページあたり件数（旧 page.tsx の `POSTS_PER_PAGE`） */
 const POSTS_ARCHIVE_PER_PAGE = 12;
@@ -129,12 +130,19 @@ interface SectionRendererProps {
    * page-context が必要な section が参照する。未指定時は section 側で fallback。
    */
   readonly pageSlug?: string;
+  /**
+   * 任意 — お問い合わせフォーム (contact-form section) の初期値。
+   * 認証済顧客のプロフィールから派生する値 (姓名 / メール / 法人区分 /
+   * 会社名 / プリセット件名) を流す。`contact/page.tsx` のみが渡す。
+   */
+  readonly inquiryDefaults?: InquiryDefaults;
 }
 
 export async function SectionRenderer({
   section,
   searchParams,
   pageSlug,
+  inquiryDefaults,
 }: SectionRendererProps): Promise<ReactElement | null> {
   // 該当 section type が disabled feature module に紐づく場合は早期 null。
   // 例: spaces feature OFF 時にホームに埋め込まれた space-showcase / space-list を非表示化。
@@ -479,6 +487,7 @@ export async function SectionRenderer({
           style={resolved}
           turnstileSiteKey={turnstileSiteKey}
           requiredTerms={requiredTerms}
+          {...(inquiryDefaults !== undefined && { inquiryDefaults })}
         />
       );
     }

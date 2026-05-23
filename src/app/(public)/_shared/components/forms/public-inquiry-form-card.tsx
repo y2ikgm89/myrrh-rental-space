@@ -14,6 +14,7 @@ import { cn } from "@/shared/lib/cn";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 import { submitInquiry } from "@/public/actions/inquiry";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
@@ -35,7 +36,13 @@ export interface RequiredInquiryTerm {
 type PublicInquiryFormCardProps = {
   readonly mode?: PublicInquiryFormMode;
   readonly turnstileSiteKey?: string | null;
-  readonly defaultSubject?: string;
+  /**
+   * フォーム初期値。マイページログイン中の顧客情報 (姓名 / 法人区分 /
+   * メール / 会社名) を Server Component から流し込む。
+   * セクション設定の「件名プリセット」も `subject` 経由で渡す。
+   * 認証なし or Customer 未紐づけ時は `{}`（フィールドは全空表示）。
+   */
+  readonly defaults?: InquiryDefaults;
   readonly title?: string | null;
   readonly description?: string | null;
   readonly className?: string;
@@ -74,7 +81,7 @@ function isCustomerType(value: unknown): value is CustomerType {
 export function PublicInquiryFormCard({
   mode = "live",
   turnstileSiteKey = null,
-  defaultSubject,
+  defaults,
   title,
   description,
   className,
@@ -86,19 +93,35 @@ export function PublicInquiryFormCard({
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const isInteractive = mode === "live";
+  const hasPrefilledIdentity =
+    defaults !== undefined &&
+    (defaults.email !== undefined ||
+      defaults.lastName !== undefined ||
+      defaults.firstName !== undefined);
 
   const [lastResult, formAction, isPending] = useActionState(
     submitInquiry,
     undefined,
   );
 
+  const initialCustomerType: CustomerType =
+    defaults?.customerType ?? CustomerType.PERSONAL;
+
   const [form, fields] = useForm({
     id: "public-inquiry-form",
     constraint: getZodConstraint(publicInquirySchema),
     lastResult,
     defaultValue: {
-      customerType: CustomerType.PERSONAL,
-      ...(defaultSubject !== undefined && { subject: defaultSubject }),
+      customerType: initialCustomerType,
+      ...(defaults?.companyName !== undefined && {
+        companyName: defaults.companyName,
+      }),
+      ...(defaults?.lastName !== undefined && { lastName: defaults.lastName }),
+      ...(defaults?.firstName !== undefined && {
+        firstName: defaults.firstName,
+      }),
+      ...(defaults?.email !== undefined && { email: defaults.email }),
+      ...(defaults?.subject !== undefined && { subject: defaults.subject }),
     },
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: publicInquirySchema });
@@ -113,7 +136,7 @@ export function PublicInquiryFormCard({
   const customerTypeValue = customerTypeControl.value;
   const customerType: CustomerType = isCustomerType(customerTypeValue)
     ? customerTypeValue
-    : CustomerType.PERSONAL;
+    : initialCustomerType;
 
   // Render 中 state sync (React 公式: Adjusting State Directly During Render)
   // executeConformMutation の `submission.reply({ resetForm: true })` は
@@ -245,11 +268,21 @@ export function PublicInquiryFormCard({
           ))}
 
           <div className="border border-border p-6 sm:p-8">
-            <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              {customerType === CustomerType.CORPORATE
-                ? "ご担当者情報"
-                : "お客様情報"}
-            </p>
+            <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                {customerType === CustomerType.CORPORATE
+                  ? "ご担当者情報"
+                  : "お客様情報"}
+              </p>
+              {hasPrefilledIdentity ? (
+                <p
+                  className="text-xs text-muted-foreground"
+                  data-testid="inquiry-prefilled-note"
+                >
+                  マイページの登録情報を反映しています
+                </p>
+              ) : null}
+            </div>
 
             <div className="space-y-6">
               {customerType === CustomerType.CORPORATE ? (
