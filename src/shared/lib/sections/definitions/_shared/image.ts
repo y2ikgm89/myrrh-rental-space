@@ -33,7 +33,7 @@ export function createImageGroupSchema(label = "画像") {
       fieldType: "group",
       label,
       group: "content",
-      subGroup: "image",
+      subGroup: "media",
     });
 }
 
@@ -48,6 +48,6 @@ export function createCompactImageGroupSchema(label = "画像") {
       fieldType: "group",
       label,
       group: "content",
-      subGroup: "image",
+      subGroup: "media",
     });
 }

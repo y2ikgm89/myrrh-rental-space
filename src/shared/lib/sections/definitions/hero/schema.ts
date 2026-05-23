@@ -61,7 +61,7 @@ export const heroConfigSchema = z.object({
   }),
   video: field.media("動画", {
     accept: "video",
-    subGroup: "image",
+    subGroup: "media",
     helpText:
       "R2 にアップロードした動画 / YouTube / Vimeo URL を選択 (variant=video 時のみ表示)",
   }),

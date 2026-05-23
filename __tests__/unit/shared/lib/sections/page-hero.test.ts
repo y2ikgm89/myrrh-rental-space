@@ -1,7 +1,7 @@
 /**
  * page-hero セクション定義のユニットテスト
  *
- * discriminated union (editorial-split / compact / minimal) と field-registry meta を検証。
+ * discriminated union (editorial-split / compact / minimal / video) と field-registry meta を検証。
  * 純粋モジュールのため mock.module 不要。
  */
 
@@ -217,6 +217,66 @@ describe("pageHeroConfigSchema", () => {
     });
   });
 
+  describe("video variant", () => {
+    test("最小構成（video URL のみ）でパース成功", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "video",
+        video: "https://example.com/hero.mp4",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("YouTube URL も受け付ける", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "video",
+        video: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("video 空文字でもパース成功（default 適用）", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "video",
+      });
+      expect(result.success).toBe(true);
+      if (result.success && result.data.variant === "video") {
+        expect(result.data.video).toBe("");
+      }
+    });
+
+    test("posterImage は省略可能（prefault で default 補完）", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "video",
+        video: "https://example.com/hero.mp4",
+      });
+      expect(result.success).toBe(true);
+      if (result.success && result.data.variant === "video") {
+        expect(result.data.posterImage).toMatchObject({ url: "", alt: "" });
+      }
+    });
+
+    test("overlay / overlayOpacity の default が適用される", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "video",
+        video: "https://example.com/hero.mp4",
+      });
+      expect(result.success).toBe(true);
+      if (result.success && result.data.variant === "video") {
+        expect(result.data.overlay).toBe(true);
+        expect(result.data.overlayOpacity).toBe(40);
+      }
+    });
+
+    test("overlayOpacity は 0-100 範囲内のみ許容", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "video",
+        video: "https://example.com/hero.mp4",
+        overlayOpacity: 150,
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe("variant discrimination", () => {
     test("不正な variant は reject", () => {
       const result = pageHeroConfigSchema.safeParse({
@@ -295,7 +355,26 @@ describe("zod-introspection / discriminated union 対応", () => {
     expect(info).toBeDefined();
     expect(info?.discriminator).toBe("variant");
     const values = info?.options.map((o) => o.value).sort();
-    expect(values).toEqual(["compact", "editorial-split", "minimal"]);
+    expect(values).toEqual(["compact", "editorial-split", "minimal", "video"]);
+  });
+
+  test("extractSchemaFields(schema, { variant: 'video' }) は video のフィールドを返す", () => {
+    const fields = extractSchemaFields(pageHeroConfigSchema, {
+      variant: "video",
+    });
+    const keys = fields.map((f) => f.key);
+    expect(keys).toContain("variant");
+    expect(keys).toContain("video"); // video variant 固有
+    expect(keys).toContain("posterImage");
+    expect(keys).toContain("overlay");
+    expect(keys).toContain("overlayOpacity");
+    expect(keys).toContain("title");
+    expect(keys).toContain("description");
+    expect(keys).toContain("buttons");
+    // 他 variant 固有フィールドは出ない
+    expect(keys).not.toContain("images");
+    expect(keys).not.toContain("image");
+    expect(keys).not.toContain("eyebrow");
   });
 
   test("extractSchemaFields(schema) は discriminator + 先頭 variant のフィールドを返す", () => {

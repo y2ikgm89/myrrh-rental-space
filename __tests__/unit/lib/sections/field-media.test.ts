@@ -41,11 +41,11 @@ describe("field.media", () => {
     const schema = field.media("ファイル", {
       accept: "file",
       helpText: "PDF をアップロード",
-      subGroup: "image",
+      subGroup: "media",
     });
     const meta = fieldRegistry.get(schema);
     expect(meta?.helpText).toBe("PDF をアップロード");
-    expect(meta?.subGroup).toBe("image");
+    expect(meta?.subGroup).toBe("media");
   });
 
   test("string 以外を渡すと type 違反として reject", () => {

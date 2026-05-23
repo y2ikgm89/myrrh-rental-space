@@ -17,7 +17,7 @@ export const galleryConfigSchema = z
     }),
     title: field.portableTextInline("見出し", { subGroup: "text" }),
     images: field.array("画像", {
-      subGroup: "image",
+      subGroup: "media",
       fields: {
         url: field.image("画像"),
         alt: field.text("代替テキスト"),
