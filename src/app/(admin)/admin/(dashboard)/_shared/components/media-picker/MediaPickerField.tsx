@@ -3,7 +3,8 @@
 /**
  * MediaPickerField
  *
- * RHF agnostic な単一画像選択フィールド。`<FormField>` の `<FormControl>` 配下で使う。
+ * form-library agnostic な単一画像選択フィールド。conform `useInputControl()` の
+ * `value` / `change` と接続して使う (BasicInfoSection の headerLogoUrl 等が参照実装)。
  *
  * UI パターン（業界標準: GitHub Avatar / YouTube サムネ / Notion カバー / Sanity Studio Image Field 準拠）:
  * - **未選択時**: 大きい dashed ドロップ枠全体がクリック可能 button。アイコン + ラベル + 推奨サイズを内包
@@ -14,7 +15,8 @@
  * - 全 interactive 要素 ≥ 44px（WCAG 2.5.5 Enhanced）
  * - Block Link / Card Overlay パターン準拠（ARIA First Rule）
  * - キーボード: focus-within で overlay 表示（hover に依存しない）
- * - shadcn `<FormControl>` の Slot 注入（id / aria-describedby / aria-invalid）を primary トリガーに forward
+ * - 親 `<Label htmlFor>` / エラー要素 ID と紐づけるため `id` / `aria-describedby` を
+ *   primary トリガーボタンに forward (`aria-invalid` は button role 非対応のため意図的に省略)
  */
 
 import Image from "next/image";
@@ -42,12 +44,15 @@ interface MediaPickerFieldProps {
   /** メディアライブラリ初期表示カテゴリ */
   defaultUsage?: MediaUsage;
   /**
-   * shadcn `<FormControl>` から Slot 経由で注入される。
-   * primary トリガーボタンに forward して FormLabel / FormMessage と紐づける。
-   * （`aria-invalid` は button role 非対応のため意図的に受け取らない。
-   * エラーメッセージは `aria-describedby` 経由で FormMessage の ID として伝搬する）
+   * 親 `<Label htmlFor>` と紐づけるための id。conform `fields.xxx.id` を forward する。
+   * primary トリガーボタンに付与され、ラベルクリックでフォーカスが移る。
    */
   id?: string;
+  /**
+   * エラーメッセージ要素の id (conform `fields.xxx.errorId` 等)。
+   * primary トリガーボタンの `aria-describedby` に forward し SR にエラー伝搬する。
+   * （`aria-invalid` は button role 非対応のため受け取らない設計）
+   */
   "aria-describedby"?: string;
 }
 

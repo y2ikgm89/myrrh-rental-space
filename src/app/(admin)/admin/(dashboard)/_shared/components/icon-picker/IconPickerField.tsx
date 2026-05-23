@@ -12,7 +12,8 @@
  *
  * a11y:
  * - WCAG 2.5.5 Enhanced (AAA) — トリガー / 削除ともに 44×44 CSS px 以上
- * - shadcn `<FormControl>` の Slot 注入（id / aria-describedby）をトリガーに forward
+ * - 親 `<Label htmlFor>` / エラー要素 ID と紐づけるため `id` / `aria-describedby` を
+ *   primary トリガーボタンに forward (conform `fields.xxx.id` / `fields.xxx.errorId` を受ける)
  */
 
 import { createElement, useState } from "react";
@@ -31,10 +32,14 @@ interface IconPickerFieldProps {
   /** 入力無効化（フォーム送信中など） */
   readonly disabled?: boolean;
   /**
-   * shadcn `<FormControl>` から Slot 経由で注入される。
-   * primary トリガーに forward して FormLabel / FormMessage と紐づける。
+   * 親 `<Label htmlFor>` と紐づけるための id。conform `fields.xxx.id` を forward する。
+   * primary トリガーボタンに付与され、ラベルクリックでフォーカスが移る。
    */
   readonly id?: string;
+  /**
+   * エラーメッセージ要素の id (conform `fields.xxx.errorId` 等)。
+   * primary トリガーボタンの `aria-describedby` に forward し SR にエラー伝搬する。
+   */
   readonly "aria-describedby"?: string;
 }
 
