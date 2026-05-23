@@ -523,17 +523,17 @@ function GlobalContactBlock({
         </h2>
       </div>
 
-      <dl className="mx-auto grid max-w-3xl gap-8 sm:grid-cols-2 sm:gap-12">
+      <dl className="mx-auto grid max-w-3xl gap-10 sm:grid-cols-2 sm:gap-12">
         {businessInfo.phone && (
           <div className="text-center">
             <dt className="text-eyebrow uppercase text-muted-foreground">
               電話
             </dt>
-            <dd className="mt-3">
+            <dd className="mt-4">
               <a
                 itemProp="telephone"
                 href={`tel:${businessInfo.phone}`}
-                className="text-h2 inline-flex min-h-11 items-center font-heading italic text-foreground transition-opacity hover:opacity-60"
+                className="text-h1 inline-flex min-h-11 items-center font-heading italic text-foreground transition-opacity hover:opacity-60"
               >
                 {businessInfo.phone}
               </a>
@@ -546,11 +546,11 @@ function GlobalContactBlock({
             <dt className="text-eyebrow uppercase text-muted-foreground">
               メール
             </dt>
-            <dd className="mt-3">
+            <dd className="mt-4">
               <a
                 itemProp="email"
                 href={`mailto:${businessInfo.email}`}
-                className="inline-flex min-h-11 items-center break-all border-b border-foreground pb-0.5 text-base text-foreground transition-opacity hover:opacity-60"
+                className="text-h3 inline-flex min-h-11 items-center break-all border-b border-foreground pb-1 text-foreground transition-opacity hover:opacity-60"
               >
                 {businessInfo.email}
               </a>

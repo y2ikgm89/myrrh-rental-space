@@ -150,7 +150,9 @@ function InfoSection({
         </span>
         <span>{label}</span>
       </dt>
-      <dd className="ml-8 mt-1 text-sm text-foreground">{children}</dd>
+      <dd className="ml-8 mt-2 text-base leading-relaxed text-foreground">
+        {children}
+      </dd>
     </>
   );
 }
@@ -169,7 +171,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
       itemScope
       itemType="https://schema.org/LocalBusiness"
     >
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="text-eyebrow uppercase text-muted-foreground">
         アクセス・営業情報
       </p>
       <meta itemProp="name" content={info.name} />
