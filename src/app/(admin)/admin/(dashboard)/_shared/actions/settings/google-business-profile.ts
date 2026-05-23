@@ -5,11 +5,11 @@ import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { checkPermission } from "@/admin/lib/action-auth";
 import {
   syncLocationToGbpCommand,
   toggleLocationGbpSyncCommand,
 } from "@/shared/domain/locations/gbp-sync-commands";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
@@ -32,10 +32,13 @@ import { toAppRoute } from "@/shared/lib/routes/to-app-route";
  * Instagram OAuth `/api/instagram/oauth/authorize` と同パターンの公式 OAuth 2.0 state 検証。
  *
  * `redirect()` は throw する Next.js API のため try/catch で握り潰せない。
- * `executeAdminMutationResult` を経由せず `verifyAdminSession()` で直接認証する。
+ * `executeAdminMutationResult` を経由せず、OAuth redirect 前に settings:update を直接確認する。
  */
 export async function initiateGbpAuth(): Promise<void> {
-  await verifyAdminSession();
+  const auth = await checkPermission("settings", "update");
+  if (!auth.success) {
+    redirect("/admin/settings/integrations?gbp_error=forbidden");
+  }
 
   const state = crypto.randomUUID();
   const cookieStore = await cookies();

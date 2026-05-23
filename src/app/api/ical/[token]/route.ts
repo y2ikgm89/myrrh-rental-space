@@ -35,6 +35,48 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 
+const DEFAULT_ICAL_FILENAME_BASE = "calendar";
+
+function normalizeICalFilenameBase(name: string | null | undefined): string {
+  const normalized = (name ?? "")
+    .trim()
+    .replace(/[\x00-\x1f\x7f]+/g, "_")
+    .replace(/[\\/:*?"<>|;=]+/g, "_")
+    .replace(/\s+/g, "-")
+    .replace(/_+/g, "_")
+    .replace(/-+/g, "-")
+    .replace(/^[._-]+|[._-]+$/g, "");
+
+  return normalized || DEFAULT_ICAL_FILENAME_BASE;
+}
+
+function toAsciiFallbackFilenameBase(filenameBase: string): string {
+  const ascii = filenameBase
+    .normalize("NFKD")
+    .replace(/[^\x20-\x7e]/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^[._-]+|[._-]+$/g, "");
+
+  return ascii || DEFAULT_ICAL_FILENAME_BASE;
+}
+
+function encodeRfc5987Value(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (character) => {
+    return `%${character.charCodeAt(0).toString(16).toUpperCase()}`;
+  });
+}
+
+function buildICalContentDisposition(
+  tokenName: string | null | undefined,
+): string {
+  const filenameBase = normalizeICalFilenameBase(tokenName);
+  const fallbackFilename = `${toAsciiFallbackFilenameBase(filenameBase)}.ics`;
+  const encodedFilename = encodeRfc5987Value(`${filenameBase}.ics`);
+
+  return `inline; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`;
+}
+
 /**
  * iCalフィード配信エンドポイント
  * GET /api/ical/{token}
@@ -118,7 +160,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": `inline; filename="${icalToken.name || "calendar"}.ics"`,
+        "Content-Disposition": buildICalContentDisposition(icalToken.name),
         "Cache-Control": "private, max-age=3600",
       },
     });
