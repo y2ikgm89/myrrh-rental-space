@@ -1455,6 +1455,7 @@ enum EditorCommentStatus {
 enum MediaType {
   IMAGE
   VIDEO
+  AUDIO
   DOCUMENT
   OTHER
 }

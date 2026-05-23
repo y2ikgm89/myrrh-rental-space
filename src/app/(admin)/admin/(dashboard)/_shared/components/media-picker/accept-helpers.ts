@@ -30,8 +30,8 @@ export function acceptToInputAttr(accept: MediaAcceptType): string {
 
 /**
  * `accept` → MediaPicker Library tab で初期表示する `MediaType` フィルター。
- * - `image/video` は対応 MediaType に narrow
- * - `audio/file` は MediaType.OTHER / DOCUMENT に narrow
+ * - `image/video/audio` は対応 MediaType に narrow
+ * - `file` は MediaType.DOCUMENT に narrow
  * - `any` は filter なし (`undefined`)
  */
 export function acceptToInitialMediaType(
@@ -43,7 +43,7 @@ export function acceptToInitialMediaType(
     case "video":
       return "VIDEO";
     case "audio":
-      return "OTHER"; // Phase 4 で MediaType.AUDIO 追加予定
+      return "AUDIO";
     case "file":
       return "DOCUMENT";
     case "any":
