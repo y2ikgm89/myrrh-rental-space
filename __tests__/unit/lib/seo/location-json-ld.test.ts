@@ -59,8 +59,8 @@ describe("buildLocationLocalBusinessJsonLdData", () => {
       includeBranchOf: false,
     });
     expect(typeof data["@id"]).toBe("string");
-    // slug が @id に含まれることを確認
-    expect(data["@id"]).toMatch(/\/access\/honkan#localbusiness$/);
+    // slug が @id に含まれることを確認（anchor 形式: 全拠点を /access の 1 @graph に統合）
+    expect(data["@id"]).toMatch(/\/access#honkan-localbusiness$/);
   });
 
   test("latitude / longitude が両方設定されている場合 geo を含む", () => {
@@ -174,7 +174,7 @@ describe("buildLocationLocalBusinessJsonLdData", () => {
       includeBranchOf: false,
     });
     expect(data.name).toBe("本館");
-    expect(data.url).toContain("/access/honkan");
+    expect(data.url).toContain("/access#honkan");
   });
 
   test("buildingName が streetAddress に連結される", () => {

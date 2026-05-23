@@ -9,8 +9,6 @@
  */
 
 import type { ReactElement } from "react";
-import Link from "next/link";
-import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   IconArrowDown,
   IconExternalLink,
@@ -252,16 +250,6 @@ function LocationChapter({
             {location.description}
           </p>
         )}
-        {location.slug !== "main-location" && (
-          <div className="pt-1">
-            <Link
-              href={toAppRoute(`/access/${location.slug}`)}
-              className="inline-flex min-h-11 items-center text-sm uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              詳細を見る
-            </Link>
-          </div>
-        )}
       </header>
 
       {location.imageUrl && (
@@ -289,7 +277,7 @@ function LocationChapter({
             itemType="https://schema.org/PostalAddress"
           >
             <div className="border-b border-border pb-3">
-              <p className="text-eyebrow uppercase text-muted-foreground">
+              <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
                 Address / 住所
               </p>
             </div>
@@ -319,7 +307,7 @@ function LocationChapter({
           {transitLines.length > 0 && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-eyebrow uppercase text-muted-foreground">
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Routes / アクセス
                 </p>
               </div>
@@ -349,7 +337,7 @@ function LocationChapter({
       {hoursDisplay.length > 0 && (
         <div className="mx-auto max-w-2xl space-y-6">
           <div className="border-b border-border pb-3">
-            <p className="text-eyebrow uppercase text-muted-foreground">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
               Hours / 営業時間
             </p>
           </div>
@@ -383,7 +371,7 @@ function LocationChapter({
           {location.parkingInfo && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-eyebrow uppercase text-muted-foreground">
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Parking / 駐車場
                 </p>
               </div>
@@ -396,7 +384,7 @@ function LocationChapter({
           {amenityKeys.length > 0 && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-eyebrow uppercase text-muted-foreground">
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Amenities / 設備
                 </p>
               </div>
@@ -428,7 +416,7 @@ function LocationChapter({
       {location.address && (
         <div className="space-y-4">
           <div className="border-b border-border pb-3">
-            <p className="text-eyebrow uppercase text-muted-foreground">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
               Map / マップ
             </p>
           </div>
@@ -455,7 +443,7 @@ function LocationsOverviewBlock({
 
   return (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-eyebrow uppercase text-muted-foreground">
+      <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
         Our Locations / 拠点一覧
       </p>
       <h2 className="text-h2 mt-4 font-heading italic text-foreground">
@@ -515,7 +503,7 @@ function GlobalContactBlock({
       <meta itemProp="name" content={businessInfo.name} />
 
       <div className="text-center">
-        <p className="text-eyebrow uppercase text-muted-foreground">
+        <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
           Get in Touch
         </p>
         <h2 className="text-h2 mt-3 font-heading italic text-foreground">

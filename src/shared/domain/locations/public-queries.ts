@@ -8,7 +8,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import { toPlainArray } from "@/shared/lib/serialize";
 import {
   parseFacilities,
   parseStringArray,
@@ -157,57 +157,6 @@ export async function getPublishedLocationsForAccess(
   );
 }
 
-export async function getPublishedLocationForAccessBySlug(
-  slug: string,
-): Promise<LocationForAccess | null> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.LOCATIONS);
-
-  const location = await safeFetch({
-    fetch: () =>
-      prisma.location.findUnique({
-        where: { slug, isPublished: true, isActive: true },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          address: true,
-          postalCode: true,
-          prefecture: true,
-          city: true,
-          streetAddress: true,
-          buildingName: true,
-          accessLines: true,
-          parkingInfo: true,
-          amenities: true,
-          imageUrl: true,
-          businessHours: true,
-          specialHolidays: true,
-          phoneNumber: true,
-          email: true,
-          latitude: true,
-          longitude: true,
-          googleReviewUrl: true,
-          googleBusinessPlaceId: true,
-          priceRange: true,
-          paymentAccepted: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getPublishedLocationForAccessBySlug",
-  });
-
-  if (!location) return null;
-  return toPlainObject({
-    ...location,
-    accessLines: parseStringArray(location.accessLines),
-  });
-}
-
 /**
  * JSON-LD / SEO 用: 公開済み Location を取得
  *
@@ -281,51 +230,6 @@ export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
   });
 
   return toPlainArray(locations);
-}
-
-export async function getPublishedLocationForSeoBySlug(
-  slug: string,
-): Promise<LocationForSeo | null> {
-  "use cache";
-  cacheLife(CACHE_LIFE.METADATA);
-  cacheTag(CACHE_TAGS.LOCATIONS);
-
-  const location = await safeFetch({
-    fetch: () =>
-      prisma.location.findUnique({
-        where: { slug, isPublished: true, isActive: true },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          address: true,
-          postalCode: true,
-          prefecture: true,
-          city: true,
-          streetAddress: true,
-          buildingName: true,
-          phoneNumber: true,
-          email: true,
-          latitude: true,
-          longitude: true,
-          googleBusinessPlaceId: true,
-          googleReviewUrl: true,
-          priceRange: true,
-          paymentAccepted: true,
-          imageUrl: true,
-          businessHours: true,
-          specialHolidays: true,
-          amenities: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getPublishedLocationForSeoBySlug",
-  });
-
-  return location;
 }
 
 /**

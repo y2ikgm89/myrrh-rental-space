@@ -25,7 +25,6 @@ export {
 // per-location JSON-LD
 export {
   getAllPublishedLocationsJsonLdData,
-  getLocationJsonLdDataBySlug,
   buildLocationLocalBusinessJsonLdData,
   type LocationLocalBusinessJsonLdData,
 } from "./location-json-ld";
