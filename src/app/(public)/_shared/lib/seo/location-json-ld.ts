@@ -13,7 +13,6 @@ import { cacheLife, cacheTag } from "next/cache";
 import { getBaseUrl, CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   getPublishedLocationsForSeo,
-  getPublishedLocationForSeoBySlug,
   type LocationForSeo,
 } from "@/shared/domain/locations/public-queries";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -117,9 +116,9 @@ export function buildLocationLocalBusinessJsonLdData(
     : undefined;
 
   return omitUndefined({
-    "@id": `${BASE_URL}/access/${location.slug}#localbusiness`,
+    "@id": `${BASE_URL}/access#${location.slug}-localbusiness`,
     name: location.name,
-    url: `${BASE_URL}/access/${location.slug}`,
+    url: `${BASE_URL}/access#${location.slug}`,
     description: location.description ?? undefined,
     image: location.imageUrl ? [location.imageUrl] : undefined,
     telephone: location.phoneNumber ?? undefined,
@@ -164,24 +163,4 @@ export async function getAllPublishedLocationsJsonLdData(): Promise<
   return locations.map((loc) =>
     buildLocationLocalBusinessJsonLdData(loc, { includeBranchOf }),
   );
-}
-
-/**
- * 拠点単体ページ向け JSON-LD データを取得（/access/[locationSlug] 用）
- */
-export async function getLocationJsonLdDataBySlug(
-  slug: string,
-): Promise<LocationLocalBusinessJsonLdData | null> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.LOCATIONS);
-
-  const [location, all] = await Promise.all([
-    getPublishedLocationForSeoBySlug(slug),
-    getPublishedLocationsForSeo(),
-  ]);
-  if (!location) return null;
-  return buildLocationLocalBusinessJsonLdData(location, {
-    includeBranchOf: all.length > 1,
-  });
 }

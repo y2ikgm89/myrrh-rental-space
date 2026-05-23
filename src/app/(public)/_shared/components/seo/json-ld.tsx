@@ -222,27 +222,6 @@ export function GraphJsonLd({
 }
 
 /**
- * 単一拠点詳細ページ用 LocalBusiness JSON-LD
- */
-export function LocationLocalBusinessJsonLd(
-  props: LocationLocalBusinessJsonLdData,
-): ReactElement {
-  const data: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    ...props,
-  };
-  if (props.geo) {
-    data["geo"] = {
-      "@type": "GeoCoordinates",
-      latitude: props.geo.latitude,
-      longitude: props.geo.longitude,
-    };
-  }
-  return <JsonLd data={data} />;
-}
-
-/**
  * /access 一覧ページ用 LocalBusiness JSON-LD（複数拠点を 1 script にまとめる）
  */
 export function LocationsLocalBusinessJsonLd({

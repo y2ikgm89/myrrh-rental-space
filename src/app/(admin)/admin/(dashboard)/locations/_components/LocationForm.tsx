@@ -531,9 +531,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 <p className="text-xs text-muted-foreground">
-                  公開 URL: <code>/access/{fields.slug.value || "slug"}</code>。
-                  小文字英数字とハイフンのみ。一度公開後の変更は SEO
-                  に影響します。
+                  公開アンカー:{" "}
+                  <code>/access#{fields.slug.value || "slug"}</code>。
+                  小文字英数字とハイフンのみ。/access ページ内の章 anchor
+                  として使われ、JSON-LD `@id` にも影響します。
                 </p>
                 {fields.slug.errors && (
                   <p className="text-sm text-destructive">

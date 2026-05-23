@@ -14,17 +14,17 @@ paths:
 
 ## JSON-LD（`application/ld+json`）
 
-**@graph パターン**（現在の実装）: `Organization + WebSite` を 1 つの `<script>` タグにまとめ、`@id` で相互参照。`LocalBusiness` は per-location ページに委譲する:
+**@graph パターン**（現在の実装）: `Organization + WebSite` を 1 つの `<script>` タグにまとめ、`@id` で相互参照。`LocalBusiness` は `/access` ページの単一 @graph に全拠点をまとめて出力する（各拠点は anchor `#<slug>` で section に対応）:
 
-| 型               | @id                                      | 配置場所                                               | 備考                                    |
-| ---------------- | ---------------------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| `Organization`   | `{BASE_URL}/#organization`               | `(public)/layout.tsx`                                  | 全公開ページ共通（サイト代表情報）      |
-| `WebSite`        | `{BASE_URL}/#website`                    | `(public)/layout.tsx`                                  | `publisher` で `/#organization` 参照    |
-| `LocalBusiness`  | `{BASE_URL}/access/{slug}#localbusiness` | `/access/page.tsx` / `/access/[locationSlug]/page.tsx` | 拠点ごとに出力（`branchOf` で組織参照） |
-| `BreadcrumbList` | —                                        | 各ページの `page.tsx`                                  | ページ固有                              |
-| `Product`        | —                                        | `/spaces/[slug]/page.tsx`                              | AggregateRating + Offer 付き            |
-| `Article`        | —                                        | `/posts/[slug]/page.tsx`                               | ブログ記事詳細                          |
-| `NewsArticle`    | —                                        | `/news/[slug]/page.tsx`                                | ニュース詳細                            |
+| 型               | @id                                      | 配置場所                  | 備考                                                              |
+| ---------------- | ---------------------------------------- | ------------------------- | ----------------------------------------------------------------- |
+| `Organization`   | `{BASE_URL}/#organization`               | `(public)/layout.tsx`     | 全公開ページ共通（サイト代表情報）                                |
+| `WebSite`        | `{BASE_URL}/#website`                    | `(public)/layout.tsx`     | `publisher` で `/#organization` 参照                              |
+| `LocalBusiness`  | `{BASE_URL}/access#{slug}-localbusiness` | `/access/page.tsx`        | 全拠点を 1 @graph に統合（`branchOf` で組織参照、章 anchor 連動） |
+| `BreadcrumbList` | —                                        | 各ページの `page.tsx`     | ページ固有                                                        |
+| `Product`        | —                                        | `/spaces/[slug]/page.tsx` | AggregateRating + Offer 付き                                      |
+| `Article`        | —                                        | `/posts/[slug]/page.tsx`  | ブログ記事詳細                                                    |
+| `NewsArticle`    | —                                        | `/news/[slug]/page.tsx`   | ニュース詳細                                                      |
 
 ```typescript
 // layout.tsx — @graph パターン（実際の実装）
