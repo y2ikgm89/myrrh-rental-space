@@ -141,7 +141,7 @@ function InfoSection({
 }) {
   return (
     <>
-      <dt className="flex items-center gap-3 text-eyebrow uppercase text-muted-foreground">
+      <dt className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
         <span
           className="flex h-5 w-5 shrink-0 items-center justify-center"
           aria-hidden="true"
@@ -171,7 +171,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
       itemScope
       itemType="https://schema.org/LocalBusiness"
     >
-      <p className="text-eyebrow uppercase text-muted-foreground">
+      <p className="text-sm font-medium text-muted-foreground">
         アクセス・営業情報
       </p>
       <meta itemProp="name" content={info.name} />

@@ -137,7 +137,7 @@ export function NewsListSimpleView({
               className="group border border-border p-5 transition-colors duration-200"
             >
               <time
-                className="text-eyebrow uppercase text-muted-foreground"
+                className="text-sm tabular-nums text-muted-foreground"
                 style={getTextStyle(style)}
               >
                 {formatDate(item.publishedAt)}
@@ -154,7 +154,7 @@ export function NewsListSimpleView({
               className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
             >
               <time
-                className="shrink-0 text-eyebrow tabular-nums uppercase text-muted-foreground"
+                className="shrink-0 text-sm tabular-nums text-muted-foreground"
                 style={getTextStyle(style)}
               >
                 {formatDate(item.publishedAt)}

@@ -359,7 +359,7 @@ function LocationChapter({
                 key={h.microdataContent}
                 className="grid grid-cols-[5rem_1fr] items-baseline gap-4 py-3"
               >
-                <dt className="text-eyebrow uppercase text-muted-foreground">
+                <dt className="text-sm font-medium text-muted-foreground">
                   {h.label}
                 </dt>
                 <dd className="text-h4 font-heading italic text-foreground">
@@ -526,9 +526,7 @@ function GlobalContactBlock({
       <dl className="mx-auto grid max-w-3xl gap-10 sm:grid-cols-2 sm:gap-12">
         {businessInfo.phone && (
           <div className="text-center">
-            <dt className="text-eyebrow uppercase text-muted-foreground">
-              電話
-            </dt>
+            <dt className="text-sm font-medium text-muted-foreground">電話</dt>
             <dd className="mt-4">
               <a
                 itemProp="telephone"
@@ -543,7 +541,7 @@ function GlobalContactBlock({
 
         {businessInfo.email && (
           <div className="text-center">
-            <dt className="text-eyebrow uppercase text-muted-foreground">
+            <dt className="text-sm font-medium text-muted-foreground">
               メール
             </dt>
             <dd className="mt-4">
