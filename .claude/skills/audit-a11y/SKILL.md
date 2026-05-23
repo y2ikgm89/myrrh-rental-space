@@ -174,7 +174,7 @@ N 件 — bgGradient / bgOverlap / bgImage [list each + 修正策]
 実機 scan に加え、以下の **static pattern** も同時に確認:
 
 1. **image overlay text の alpha scrim** — `bg-foreground/[0-9]+` または `text-background/[0-9]+` + `absolute` + image 親要素 → solid scrim に置換 (`bg-foreground` / `text-background`)
-2. **hero / section の gradient bg** — `bg-gradient-*` + 配下 text element → solid bg に置換 (`bg-background` + `border-b border-border`)
+2. **hero / section の gradient bg** — `bg-gradient-*` + 配下 text element → solid bg に置換 (`bg-background` のみ、区切りは余白で表現。PR #191 で `border-b border-border` 撤去済)
 3. **隣接 absolute button overlap** — 同 parent 内 `absolute right-N` が複数あり N の差が 44px (`h-11 w-11`) 未満で重なる
 4. **ScrollReveal 内の archive list** — 長い `.map` + text-muted-foreground 多用 → static layout に降格推奨
 5. **token computed contrast 不達** — `--color-muted-foreground` / `--color-accent` 等の oklch L 値が WCAG AA 達成ラインを下回る

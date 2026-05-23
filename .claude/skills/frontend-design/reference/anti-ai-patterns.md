@@ -186,15 +186,15 @@ gsap.fromTo(
 
 ### Myrrh パターン（推奨）
 
-| 要素               | radius         | 理由                         |
-| ------------------ | -------------- | ---------------------------- |
-| カード container   | `rounded-lg`   | コンテンツを包むコンテナ     |
-| 画像（standalone） | `rounded-lg`   | ConceptSection ParallaxImage |
-| ボタン（CTA）      | `rounded-full` | MagneticButton は pill shape |
-| フォーム input     | `rounded-lg`   | 一貫性                       |
-| セクション         | なし (sharp)   | セクション区切りは背景色切替 |
+| 要素               | radius        | 理由                                                                                         |
+| ------------------ | ------------- | -------------------------------------------------------------------------------------------- |
+| カード container   | `rounded-lg`  | コンテンツを包むコンテナ                                                                     |
+| 画像（standalone） | `rounded-lg`  | ConceptSection ParallaxImage                                                                 |
+| ボタン（CTA）      | sharp（なし） | editorial 統一（`Button variant="editorial"` / `MagneticButton` 共に rounded なし、PR #193） |
+| フォーム input     | `rounded-lg`  | 一貫性                                                                                       |
+| セクション         | なし (sharp)  | セクション区切りは余白で表現                                                                 |
 
-**混合のルール**: コンテナ/画像 = `rounded-lg`、CTA = `rounded-full`、セクション境界 = sharp
+**混合のルール**: コンテナ/画像 = `rounded-lg`、全ボタン = sharp（editorial 統一）、セクション境界 = sharp。`rounded-full` はバッジ・タグ・アイコンボタン・スピナーのみ
 
 ---
 
