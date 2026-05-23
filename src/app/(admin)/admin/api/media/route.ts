@@ -8,13 +8,12 @@ import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import {
-  inferMediaType,
   mediaFiltersSchema,
   mediaPaginationSchema,
   parseMediaUploadFormData,
   parseMediaTypeFilter,
   parseMediaUsageFilter,
-  validateFile,
+  preValidateMediaFile,
 } from "@/admin/lib/validations/media";
 import { uploadMediaCommand } from "@/shared/domain/media/commands";
 import { getMediaListQuery } from "@/shared/domain/media/queries";
@@ -93,17 +92,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const { file, metadata } = parsedUpload.data;
-    const type = metadata.type ?? inferMediaType(file.type);
-    const validation = validateFile(file, type);
-    if (!validation.valid) {
-      return jsonError(validation.error ?? "アップロードに失敗しました", 400);
+    const preCheck = preValidateMediaFile(file);
+    if (!preCheck.valid) {
+      return jsonError(preCheck.error, 400);
     }
 
     const result = await uploadMediaCommand({
       file,
       folder: metadata.usage?.toLowerCase() || "general",
       uploadedBy: auth.user.id,
-      type,
       usage: metadata.usage ?? null,
       alt: metadata.alt ?? null,
       title: metadata.title ?? null,

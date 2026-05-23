@@ -5,11 +5,9 @@
  * - クライアント供給の `file.type` / `file.name` は **MIME / 拡張子の判定に使わない**
  * - server-side で magic-byte (12 byte signature) から MIME を確定させ、
  *   `Content-Type` / object key 拡張子の両方をその検出値から派生させる
- * - 現プロジェクトで扱うのは画像のみのため `FileValidation.allowedTypes` は
- *   `SupportedImageMimeType[]` に型 narrow 済（type-level で image-only を強制）
- * - 将来非画像（PDF / zip 等）を扱う場合は **別 upload 関数** + 別 magic-byte
- *   detector を新設する。`every()` や heuristic で image vs non-image を後付け
- *   分岐する設計には戻さない（fail-open のリスク）
+ * - 画像 / 動画 / 音声 / 文書を 1 つの `uploadFile` で扱う。MIME カテゴリ別の
+ *   許可 list (`validation.allowedTypes`) + 個別 size 上限を呼び出し側が宣言する
+ * - 検出値が `validation.allowedTypes` 外 / size 上限超 → 拒否（fail-closed）
  *
  * @see https://developers.cloudflare.com/r2/examples/aws/aws-sdk-js-v3/
  * @see https://github.com/aws/aws-sdk-js-v3/blob/main/supplemental-docs/EFFECTIVE_PRACTICES.md
@@ -27,10 +25,13 @@ import {
 } from "@/shared/lib/errors/server";
 import { getR2BucketName, getR2Client } from "./client";
 import {
-  detectImageMimeFromMagicBytes,
+  detectMediaMimeFromMagicBytes,
+  MEDIA_MAX_SIZE_BYTES,
   SUPPORTED_IMAGE_MIME_TYPES,
+  SUPPORTED_MEDIA_MIME_TYPES,
   type SupportedImageMimeType,
-} from "./image-magic-bytes";
+  type SupportedMediaMimeType,
+} from "./media-magic-bytes";
 import { buildPublicUrl, generateStorageKey, type StoragePrefix } from "./keys";
 
 // =============================================================================
@@ -43,53 +44,91 @@ export type UploadResult =
       url: string;
       path: string;
       /** server-side 確定した MIME type（DB 永続用） */
-      contentType: SupportedImageMimeType;
+      contentType: SupportedMediaMimeType;
     }
   | { success: false; error: string };
 
 /**
- * 画像 upload 用 validation。
- * `allowedTypes` は型レベルで `SupportedImageMimeType[]` に narrow されており、
- * 任意の MIME 文字列を渡せない（コンパイル時の image-only 強制）。
+ * メディア upload 用 validation。
+ *
+ * `allowedTypes` は呼び出し側で**カテゴリを宣言**する役割を持つ
+ * （image-only / video-only / image+video 等）。`maxSize` を省略すると
+ * 各 allowed type の `MEDIA_MAX_SIZE_BYTES` の**最大値**が暗黙適用される。
  */
-export type ImageUploadValidation = {
-  /** バイト単位の上限サイズ */
-  maxSize: number;
-  /** 許可する画像 MIME type のリスト（magic-byte 検出値と照合） */
-  allowedTypes: readonly SupportedImageMimeType[];
+export type MediaUploadValidation = {
+  /** 全体の上限 size（bytes）。省略時は allowedTypes 内の最大値 */
+  maxSize?: number;
+  /** 許可する MIME type のリスト（magic-byte 検出値と照合） */
+  allowedTypes: readonly SupportedMediaMimeType[];
 };
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-export const DEFAULT_VALIDATION: ImageUploadValidation = {
-  maxSize: 5 * 1024 * 1024, // 5 MB
+/**
+ * デフォルト validation: 画像のみ（旧 `DEFAULT_VALIDATION` 互換の挙動を維持）。
+ * 動画 / 音声 / 文書を受け取る upload 経路は呼び出し側で `allowedTypes` を明示する。
+ */
+export const DEFAULT_VALIDATION: MediaUploadValidation = {
   allowedTypes: SUPPORTED_IMAGE_MIME_TYPES,
 };
 
-export const IMAGE_VALIDATION: ImageUploadValidation = {
-  maxSize: 10 * 1024 * 1024, // 10 MB
+/** 画像のみを受け付ける明示エイリアス（OGP / hero / favicon 等） */
+export const IMAGE_VALIDATION: MediaUploadValidation = {
   allowedTypes: SUPPORTED_IMAGE_MIME_TYPES,
+};
+
+/** 画像 / 動画 / 音声 / 文書すべて（メディアライブラリ / Lexical Inspector 用） */
+export const MEDIA_VALIDATION: MediaUploadValidation = {
+  allowedTypes: SUPPORTED_MEDIA_MIME_TYPES,
 };
 
 const DEFAULT_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 // =============================================================================
-// Validation
+// Validation helpers
 // =============================================================================
 
 /**
- * クライアントヒント（file.size のみ）に基づく事前ガード。
+ * `validation.maxSize` が指定されていればそれを返し、未指定なら
+ * `allowedTypes` 内の `MEDIA_MAX_SIZE_BYTES` 最大値を返す。
+ */
+function resolveAggregateMaxSize(validation: MediaUploadValidation): number {
+  if (validation.maxSize !== undefined) return validation.maxSize;
+  return Math.max(
+    ...validation.allowedTypes.map((mime) => MEDIA_MAX_SIZE_BYTES[mime]),
+  );
+}
+
+/**
+ * client.size hint に基づく事前ガード（trust boundary 前の早期 reject）。
  * MIME / 拡張子は信用しない（後段の magic-byte 検証が trust boundary）。
  */
 function preValidateSize(
   file: File,
-  validation: ImageUploadValidation,
+  validation: MediaUploadValidation,
 ): string | null {
-  if (file.size > validation.maxSize) {
-    const maxSizeMB = Math.round(validation.maxSize / (1024 * 1024));
+  const maxSize = resolveAggregateMaxSize(validation);
+  if (file.size > maxSize) {
+    const maxSizeMB = Math.round(maxSize / (1024 * 1024));
     return `ファイルサイズは${maxSizeMB}MB以下にしてください`;
+  }
+  return null;
+}
+
+/**
+ * MIME 検出後の per-type size 検証。
+ * 動画 50MB / 音声 20MB / 画像 5MB / 文書 10MB の上限を MIME 別に強制。
+ */
+function validatePerTypeSize(
+  fileSize: number,
+  detectedMime: SupportedMediaMimeType,
+): string | null {
+  const limit = MEDIA_MAX_SIZE_BYTES[detectedMime];
+  if (fileSize > limit) {
+    const limitMB = Math.round(limit / (1024 * 1024));
+    return `この形式 (${detectedMime}) は ${limitMB}MB 以下にしてください`;
   }
   return null;
 }
@@ -101,21 +140,22 @@ function preValidateSize(
 type UploadOptions = {
   /** 任意のサブフォルダ（`isValidStorageFolder` を通過する値のみ） */
   folder?: string;
-  /** デフォルトは {@link DEFAULT_VALIDATION} */
-  validation?: ImageUploadValidation;
+  /** デフォルトは {@link DEFAULT_VALIDATION}（image-only） */
+  validation?: MediaUploadValidation;
   /** デフォルトは Cloudflare CDN 向け immutable long-cache */
   cacheControl?: string;
 };
 
 /**
- * 画像 File を R2 にアップロードする。
+ * メディア File を R2 にアップロードする。
  *
  * 処理順序:
- * 1. file.size の事前ガード（safe early reject）
+ * 1. file.size の事前ガード（aggregate max — safe early reject）
  * 2. arrayBuffer 化 → magic-byte で MIME 確定
  * 3. 検出 MIME が `validation.allowedTypes` 内かを照合
- * 4. 検出 MIME 由来の拡張子で object key 生成
- * 5. R2 へ送信（`Content-Type` も検出値）
+ * 4. 検出 MIME に対応する per-type size 上限を検証
+ * 5. 検出 MIME 由来の拡張子で object key 生成
+ * 6. R2 へ送信（`Content-Type` も検出値）
  *
  * @returns success 時は `{ url, path, contentType }` を返す
  *   （`contentType` は server-side 確定値 — DB 永続化に使う canonical 値）
@@ -145,19 +185,24 @@ export async function uploadFile(
     const body = new Uint8Array(arrayBuffer);
 
     // server-side の trust boundary: magic-byte で MIME を確定する
-    const detected = detectImageMimeFromMagicBytes(body);
+    const detected = detectMediaMimeFromMagicBytes(body);
     if (!detected) {
       return {
         success: false,
         error:
-          "ファイルの中身が画像として認識できません。対応形式（JPEG / PNG / WebP / GIF）でアップロードしてください。",
+          "ファイルの中身が対応形式（画像 / 動画 / 音声 / PDF）として認識できません。",
       };
     }
     if (!validation.allowedTypes.includes(detected)) {
       return {
         success: false,
-        error: `許可されていない画像形式です（検出: ${detected}）`,
+        error: `許可されていないファイル形式です（検出: ${detected}）`,
       };
+    }
+
+    const perTypeError = validatePerTypeSize(file.size, detected);
+    if (perTypeError) {
+      return { success: false, error: perTypeError };
     }
 
     const key = generateStorageKey({
@@ -225,3 +270,9 @@ export async function uploadFiles(
 
   return { success: true, results };
 }
+
+// =============================================================================
+// Re-exports (consumer 側の barrel 化を抑えるため type のみ slim re-export)
+// =============================================================================
+
+export type { SupportedImageMimeType };

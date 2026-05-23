@@ -17,10 +17,9 @@ import {
   uploadMediaCommand,
 } from "@/shared/domain/media/commands";
 import {
-  inferMediaType,
   parseMediaUploadFormData,
   mediaUpdateSchema,
-  validateFile,
+  preValidateMediaFile,
   type MediaUpdateInput,
 } from "@/admin/lib/validations/media";
 
@@ -43,12 +42,11 @@ export async function uploadMedia(
   }
 
   const { file, metadata } = parsedUpload.data;
-  const mediaType = metadata.type || inferMediaType(file.type);
-  const validation = validateFile(file, mediaType);
-  if (!validation.valid) {
-    return {
-      error: validation.error ?? "アップロードに失敗しました",
-    } satisfies MutationError;
+  // 客側ヒント (file.size) のみ事前ガード。MIME / 拡張子は信用しない
+  // （後段 r2/upload の magic-byte 検証が trust boundary、type は server-side で派生）
+  const preCheck = preValidateMediaFile(file);
+  if (!preCheck.valid) {
+    return { error: preCheck.error } satisfies MutationError;
   }
 
   return executeAdminMutationResult({
@@ -59,7 +57,6 @@ export async function uploadMedia(
         file,
         folder: metadata.usage?.toLowerCase() || "general",
         uploadedBy: user.id,
-        type: mediaType,
         usage: metadata.usage ?? null,
         alt: metadata.alt ?? null,
         title: metadata.title ?? null,

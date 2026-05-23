@@ -112,7 +112,7 @@ describe("uploadFile (magic-byte trust boundary)", () => {
     const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA);
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
-    expect(result.error).toContain("画像として認識できません");
+    expect(result.error).toContain("認識できません");
     expect(sendMock).not.toHaveBeenCalled();
   });
 
@@ -127,7 +127,7 @@ describe("uploadFile (magic-byte trust boundary)", () => {
     });
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
-    expect(result.error).toContain("許可されていない画像形式");
+    expect(result.error).toContain("許可されていないファイル形式");
     expect(sendMock).not.toHaveBeenCalled();
   });
 
@@ -197,16 +197,17 @@ describe("uploadFiles", () => {
 });
 
 describe("DEFAULT_VALIDATION / IMAGE_VALIDATION", () => {
-  test("DEFAULT は 5MB / 全画像 MIME 許可", () => {
-    expect(DEFAULT_VALIDATION.maxSize).toBe(5 * 1024 * 1024);
+  test("DEFAULT は 全画像 MIME 許可（maxSize 省略時は per-type 上限が適用）", () => {
     expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/jpeg");
     expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/png");
     expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/webp");
     expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/gif");
   });
 
-  test("IMAGE は 10MB / 全画像 MIME 許可", () => {
-    expect(IMAGE_VALIDATION.maxSize).toBe(10 * 1024 * 1024);
+  test("IMAGE は 全画像 MIME 許可", () => {
+    expect(IMAGE_VALIDATION.allowedTypes).toContain("image/jpeg");
+    expect(IMAGE_VALIDATION.allowedTypes).toContain("image/png");
     expect(IMAGE_VALIDATION.allowedTypes).toContain("image/webp");
+    expect(IMAGE_VALIDATION.allowedTypes).toContain("image/gif");
   });
 });

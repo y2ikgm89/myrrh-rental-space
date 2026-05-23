@@ -3,15 +3,15 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { STORAGE_PREFIXES } from "@/shared/lib/r2/keys";
-import { uploadFile } from "@/shared/lib/r2/upload";
+import { MEDIA_VALIDATION, uploadFile } from "@/shared/lib/r2/upload";
+import { deriveMediaTypeFromMime } from "@/shared/lib/r2/media-type-derivation";
 import { deleteFile, deleteFiles } from "@/shared/lib/r2/delete";
-import type { MediaType, MediaUsage } from "@generated/prisma/enums";
+import type { MediaUsage } from "@generated/prisma/enums";
 
 export async function uploadMediaCommand(input: {
   file: File;
   folder: string;
   uploadedBy: string;
-  type: MediaType;
   usage?: MediaUsage | null;
   alt?: string | null;
   title?: string | null;
@@ -23,6 +23,7 @@ export async function uploadMediaCommand(input: {
   try {
     const result = await uploadFile(input.file, STORAGE_PREFIXES.MEDIA, {
       folder: input.folder,
+      validation: MEDIA_VALIDATION,
     });
 
     if (!result.success) {
@@ -46,7 +47,9 @@ export async function uploadMediaCommand(input: {
         size: input.file.size,
         width: null,
         height: null,
-        type: input.type,
+        // server-side magic-byte で確定した MIME から MediaType を派生する
+        // （クライアント供給 input.type 信用バイパス）
+        type: deriveMediaTypeFromMime(result.contentType),
         usage: input.usage || "GENERAL",
         alt: input.alt ?? null,
         title: input.title ?? null,

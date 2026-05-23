@@ -19,9 +19,9 @@
  */
 
 import {
-  IMAGE_MIME_EXTENSIONS,
-  type SupportedImageMimeType,
-} from "./image-magic-bytes";
+  MEDIA_MIME_EXTENSIONS,
+  type SupportedMediaMimeType,
+} from "./media-magic-bytes";
 
 export const STORAGE_PREFIXES = {
   SPACES: "spaces",
@@ -50,10 +50,10 @@ export function isValidStorageFolder(folder: string): boolean {
 type GenerateStorageKeyInput = {
   prefix: StoragePrefix;
   /**
-   * **server-side で検出済みの MIME type**（`detectImageMimeFromMagicBytes` の戻り値等）。
+   * **server-side で検出済みの MIME type**（`detectMediaMimeFromMagicBytes` の戻り値等）。
    * クライアント供給の `file.type` は magic-byte 偽装可能なため受け付けない。
    */
-  contentType: SupportedImageMimeType;
+  contentType: SupportedMediaMimeType;
   /** 任意のサブフォルダ（`isValidStorageFolder` を通過した値のみ）*/
   folder?: string;
 };
@@ -77,7 +77,7 @@ export function generateStorageKey(input: GenerateStorageKeyInput): string {
       `Invalid storage folder: must match /^[a-z0-9-]+$/ (max 64 chars). Got: ${JSON.stringify(input.folder)}`,
     );
   }
-  const ext = IMAGE_MIME_EXTENSIONS[input.contentType];
+  const ext = MEDIA_MIME_EXTENSIONS[input.contentType];
   const uniqueId = crypto.randomUUID();
   const timestamp = Date.now();
   const folderSegment = input.folder ? `${input.folder}/` : "";
