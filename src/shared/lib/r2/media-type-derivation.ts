@@ -7,8 +7,8 @@
  * canonical 派生関数。文字列ベースの prefix 判定（`mimeType.startsWith("image/")` 等）を
  * UI / domain command / seed の各層で重複定義しない。
  *
- * Phase 1 制約: `MediaType` enum は `IMAGE / VIDEO / DOCUMENT / OTHER` の 4 値
- * （Phase 4 で `AUDIO` 追加予定）。本 phase では audio MIME を `OTHER` に派生する。
+ * Phase 4 (2026-05-24): `AUDIO` enum 値を追加。audio MIME は MediaType.AUDIO に派生する。
+ * Phase 1 で `OTHER` 派生していた既存レコードはそのまま保持（再分類は行わない）。
  */
 
 import {
@@ -39,7 +39,6 @@ export function deriveMediaTypeFromMime(
       return MediaType.DOCUMENT;
     case "audio/mpeg":
     case "audio/wav":
-      // Phase 4 で MediaType.AUDIO を追加するまで OTHER に派生する
-      return MediaType.OTHER;
+      return MediaType.AUDIO;
   }
 }

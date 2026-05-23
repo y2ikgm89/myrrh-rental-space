@@ -19,10 +19,10 @@ describe("acceptToInputAttr", () => {
 });
 
 describe("acceptToInitialMediaType", () => {
-  test("MediaType filter に narrow (audio は Phase 4 で AUDIO 追加するまで OTHER)", () => {
+  test("MediaType filter に narrow (Phase 4 で AUDIO enum 追加済)", () => {
     expect(acceptToInitialMediaType("image")).toBe("IMAGE");
     expect(acceptToInitialMediaType("video")).toBe("VIDEO");
-    expect(acceptToInitialMediaType("audio")).toBe("OTHER");
+    expect(acceptToInitialMediaType("audio")).toBe("AUDIO");
     expect(acceptToInitialMediaType("file")).toBe("DOCUMENT");
     expect(acceptToInitialMediaType("any")).toBeUndefined();
   });

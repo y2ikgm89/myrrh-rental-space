@@ -313,12 +313,12 @@ describe("isAllowedMimeType", () => {
     });
   });
 
-  describe("OTHER (audio)", () => {
-    test("OTHER に登録された audio MIME のみ許可（その他は拒否）", () => {
-      expect(isAllowedMimeType("audio/mpeg", "OTHER")).toBe(true);
-      expect(isAllowedMimeType("audio/wav", "OTHER")).toBe(true);
-      expect(isAllowedMimeType("text/plain", "OTHER")).toBe(false);
-      expect(isAllowedMimeType("application/octet-stream", "OTHER")).toBe(
+  describe("AUDIO", () => {
+    test("AUDIO に登録された audio MIME のみ許可（その他は拒否）", () => {
+      expect(isAllowedMimeType("audio/mpeg", "AUDIO")).toBe(true);
+      expect(isAllowedMimeType("audio/wav", "AUDIO")).toBe(true);
+      expect(isAllowedMimeType("text/plain", "AUDIO")).toBe(false);
+      expect(isAllowedMimeType("application/octet-stream", "AUDIO")).toBe(
         false,
       );
     });
@@ -349,9 +349,9 @@ describe("isAllowedFileSize", () => {
     expect(isAllowedFileSize(10 * 1024 * 1024 + 1, "DOCUMENT")).toBe(false);
   });
 
-  test("OTHER (audio): 20MB以下は許可", () => {
-    expect(isAllowedFileSize(20 * 1024 * 1024, "OTHER")).toBe(true);
-    expect(isAllowedFileSize(20 * 1024 * 1024 + 1, "OTHER")).toBe(false);
+  test("AUDIO: 20MB以下は許可", () => {
+    expect(isAllowedFileSize(20 * 1024 * 1024, "AUDIO")).toBe(true);
+    expect(isAllowedFileSize(20 * 1024 * 1024 + 1, "AUDIO")).toBe(false);
   });
 });
 
@@ -359,17 +359,18 @@ describe("constants", () => {
   test("MAX_FILE_SIZES が canonical SSoT と同期 (画像5MB/動画50MB/音声20MB/文書10MB)", () => {
     expect(MAX_FILE_SIZES.IMAGE).toBe(5 * 1024 * 1024);
     expect(MAX_FILE_SIZES.VIDEO).toBe(50 * 1024 * 1024);
+    expect(MAX_FILE_SIZES.AUDIO).toBe(20 * 1024 * 1024);
     expect(MAX_FILE_SIZES.DOCUMENT).toBe(10 * 1024 * 1024);
-    expect(MAX_FILE_SIZES.OTHER).toBe(20 * 1024 * 1024);
   });
 
-  test("ALLOWED_MIME_TYPES に audio が OTHER として含まれる (Phase 4 で AUDIO 派生予定)", () => {
+  test("ALLOWED_MIME_TYPES が AUDIO enum を canonical で表現する (Phase 4 で AUDIO 派生済)", () => {
     expect(ALLOWED_MIME_TYPES.IMAGE).toContain("image/jpeg");
     expect(ALLOWED_MIME_TYPES.IMAGE).toContain("image/png");
     expect(ALLOWED_MIME_TYPES.VIDEO).toContain("video/mp4");
+    expect(ALLOWED_MIME_TYPES.AUDIO).toContain("audio/mpeg");
+    expect(ALLOWED_MIME_TYPES.AUDIO).toContain("audio/wav");
     expect(ALLOWED_MIME_TYPES.DOCUMENT).toContain("application/pdf");
-    expect(ALLOWED_MIME_TYPES.OTHER).toContain("audio/mpeg");
-    expect(ALLOWED_MIME_TYPES.OTHER).toContain("audio/wav");
+    expect(ALLOWED_MIME_TYPES.OTHER).toEqual([]);
   });
 });
 

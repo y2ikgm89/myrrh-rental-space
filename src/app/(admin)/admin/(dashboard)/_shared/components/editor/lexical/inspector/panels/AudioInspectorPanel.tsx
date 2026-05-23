@@ -1,7 +1,7 @@
 /**
  * Audio Inspector Panel
  *
- * @description AudioNode のプロパティ編集パネル
+ * @description AudioNode のプロパティ編集パネル (Phase 4: MediaPicker 統合)
  */
 
 "use client";
@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { $getState, $setState } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { IconMusic, IconTrash } from "@tabler/icons-react";
 import {
   $isAudioNode,
   audioUrlState,
@@ -19,7 +20,8 @@ import type { AudioNode } from "../../nodes/AudioNode";
 import { InspectorHeader } from "../InspectorHeader";
 import { InspectorFields } from "../InspectorFields";
 import { useNodeUpdater } from "../hooks/use-node-updater";
-import { Input, Label } from "@/admin/components/ui";
+import { Button, Input, Label } from "@/admin/components/ui";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 
 // =============================================================================
 // Types
@@ -61,6 +63,25 @@ export function AudioInspectorPanel({
     });
   }, [editor, node]);
 
+  const audioPicker = useSingleMediaPicker({
+    accept: "audio",
+    defaultUsage: "GENERAL",
+    showUrlTab: true,
+    onSelect: (media) => {
+      const selected = media[0];
+      if (!selected) return;
+      updateNode((n) => {
+        $setState(n, audioUrlState, selected.url);
+      });
+    },
+  });
+
+  const handleUrlClear = () => {
+    updateNode((n) => {
+      $setState(n, audioUrlState, "");
+    });
+  };
+
   const handleTitleChange = (value: string) => {
     updateNode((n) => {
       $setState(n, audioTitleState, value);
@@ -77,12 +98,51 @@ export function AudioInspectorPanel({
     <div>
       <InspectorHeader title="音声プレイヤー" />
 
-      <InspectorFields title="基本設定">
+      <InspectorFields title="音声ファイル">
         <div className="space-y-2">
-          <Label className="text-xs">音声URL</Label>
-          <p className="text-xs text-muted-foreground truncate">{url}</p>
+          {url.length > 0 ? (
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <IconMusic
+                  className="h-5 w-5 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="truncate text-xs text-muted-foreground">{url}</p>
+              </div>
+              <audio src={url} controls preload="metadata" className="w-full" />
+            </div>
+          ) : (
+            <div className="flex aspect-[3/1] w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted text-muted-foreground">
+              <IconMusic className="h-8 w-8" aria-hidden="true" />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={url.length > 0 ? "outline" : "default"}
+              size="sm"
+              className="flex-1"
+              onClick={() => audioPicker.openPicker()}
+            >
+              <IconMusic className="mr-2 h-4 w-4" aria-hidden="true" />
+              {url.length > 0 ? "音声を差し替え" : "音声を選択"}
+            </Button>
+            {url.length > 0 && (
+              <Button
+                type="button"
+                variant="destructive-ghost"
+                size="sm"
+                onClick={handleUrlClear}
+                aria-label="音声を削除"
+              >
+                <IconTrash className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
         </div>
+      </InspectorFields>
 
+      <InspectorFields title="メタデータ">
         <div className="space-y-2">
           <Label htmlFor="inspector-audio-title" className="text-xs">
             タイトル
@@ -109,6 +169,8 @@ export function AudioInspectorPanel({
           />
         </div>
       </InspectorFields>
+
+      {audioPicker.mediaPickerDialog}
     </div>
   );
 }

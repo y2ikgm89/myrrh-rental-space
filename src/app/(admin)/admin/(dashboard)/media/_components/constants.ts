@@ -20,6 +20,7 @@ export const TYPE_OPTIONS: readonly TypeFilterOption[] = [
   { value: "", label: "すべての種別" },
   { value: MediaType.IMAGE, label: "画像" },
   { value: MediaType.VIDEO, label: "動画" },
+  { value: MediaType.AUDIO, label: "音声" },
   { value: MediaType.DOCUMENT, label: "ドキュメント" },
 ];
 
@@ -52,6 +53,7 @@ export const TYPE_CONFIG: Record<MediaType, { label: string; color: string }> =
   {
     [MediaType.IMAGE]: { label: "画像", color: "bg-media-image" },
     [MediaType.VIDEO]: { label: "動画", color: "bg-media-video" },
+    [MediaType.AUDIO]: { label: "音声", color: "bg-media-audio" },
     [MediaType.DOCUMENT]: { label: "PDF", color: "bg-media-document" },
     [MediaType.OTHER]: { label: "その他", color: "bg-media-other" },
   };
