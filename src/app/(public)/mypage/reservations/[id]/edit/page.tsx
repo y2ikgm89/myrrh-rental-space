@@ -112,7 +112,7 @@ export default async function ReservationEditPage({
   const endTimeStr = timeFormatter.format(endDate);
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <Heading level={1}>予約内容の変更</Heading>
 
       <EditReservationForm
