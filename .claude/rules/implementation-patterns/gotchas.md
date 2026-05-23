@@ -34,6 +34,7 @@ paths:
 - **`ensureCustomerLinked` で別ユーザーにリンク済みの Customer を乗っ取らない** — `byEmail.userId` が既に別ユーザーに設定されている場合は新規 Customer を作成
 - **予約の guest フィールドと Customer プロフィールは独立** — `guestLastName` / `guestFirstName` / `guestPhone` / `guestCompanyName` は予約時の入力スナップショット。`buildPayload` は `customer` テーブルの現在値を使用
 - **Inquiry ↔ Customer 紐づけ: 3 段解決** — `createInquiryCommand` が `customerId`（明示） > メール一致 > null で解決
+- **公開フォーム初期値は `InquiryDefaults` SSoT 経由で配線** — `/contact` 等のログイン顧客向け自動入力は `getInquiryDefaultsForCurrentCustomer()`（`@/shared/domain/inquiries/customer-defaults`、`server-only`、cache 済 `getCurrentCustomerUser()` + `getCustomerByUserId()` 派生）で `InquiryDefaults`（`@/shared/lib/inquiry/defaults`）を生成し、`SectionRenderer.inquiryDefaults` prop 経由で `ContactFormSection` → `PublicInquiryFormCard.defaults` に貫通。page.tsx 内で `getCustomerSession()` を直接呼んで姓名/メール/法人区分を組み立てる経路は禁止（cache 重複 + 派生型の dead code 化）。未ログイン時は `{}`、Customer 未紐づけ時は `{ email }` のみを返す契約
 - **`customer-queries.ts` の select は admin 側と同期必須** — 一覧用（`LIST_SELECT`）と詳細用（`DETAIL_SELECT`）を分離
 - **予約フォームはプロフィール未完了でも表示する** — 業界標準: インライン収集。`isCustomerProfileComplete()` はマイページ警告判定のみ
 - **予約フォームの `?spaceId=` 事前選択** — `/reservation?spaceId={id}` リンク + `resolveAutoIds` が locationId 逆引き
