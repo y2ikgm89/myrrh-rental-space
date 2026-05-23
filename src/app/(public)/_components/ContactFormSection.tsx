@@ -26,6 +26,7 @@ import {
 import { BusinessInfo } from "../contact/_components/business-info";
 import type { ContactFormConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { spansToPlainText } from "@/shared/lib/portable-text";
@@ -35,6 +36,12 @@ interface ContactFormSectionProps {
   readonly style: SectionStylePayload;
   readonly turnstileSiteKey: string | null;
   readonly requiredTerms: readonly RequiredInquiryTerm[];
+  /**
+   * マイページログイン中の顧客情報。`contact/page.tsx` が
+   * `getInquiryDefaultsForCurrentCustomer()` で取得して
+   * `SectionRenderer` 経由で流す。未ログイン時は `undefined`。
+   */
+  readonly inquiryDefaults?: InquiryDefaults;
 }
 
 export function ContactFormSection({
@@ -42,6 +49,7 @@ export function ContactFormSection({
   style,
   turnstileSiteKey,
   requiredTerms,
+  inquiryDefaults,
 }: ContactFormSectionProps): ReactElement {
   const variant = config.variant;
   const submitLabel = spansToPlainText(config.submitButtonText);
@@ -55,6 +63,7 @@ export function ContactFormSection({
         mode="live"
         turnstileSiteKey={turnstileSiteKey}
         requiredTerms={requiredTerms}
+        {...(inquiryDefaults !== undefined && { defaults: inquiryDefaults })}
         {...(submitLabel.length > 0 && { submitLabel })}
       />
     </ScrollReveal>

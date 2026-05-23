@@ -12,6 +12,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { getInquiryDefaultsForCurrentCustomer } from "@/shared/domain/inquiries/customer-defaults";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -22,7 +23,10 @@ export default async function ContactPage(): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("contact");
 
-  const sections = await getPageSectionsWithFallback("contact");
+  const [sections, inquiryDefaults] = await Promise.all([
+    getPageSectionsWithFallback("contact"),
+    getInquiryDefaultsForCurrentCustomer(),
+  ]);
 
   return (
     <>
@@ -31,6 +35,7 @@ export default async function ContactPage(): Promise<ReactElement> {
           key={section.id}
           section={section}
           pageSlug="contact"
+          inquiryDefaults={inquiryDefaults}
         />
       ))}
     </>
