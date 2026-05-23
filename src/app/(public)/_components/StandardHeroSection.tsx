@@ -24,6 +24,7 @@ import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { cn } from "@/shared/lib/cn";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
+import { VideoPlayer } from "@/public/components/design-system/video-player";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   DURATION,
@@ -114,7 +115,7 @@ export function StandardHeroSection({
   const variant = config.variant;
   const hasBackground = !!(
     config.backgroundImage.url ||
-    (variant === "video" && config.videoUrl)
+    (variant === "video" && config.video)
   );
 
   // minimal layout: explicit minimal OR default without background
@@ -327,7 +328,7 @@ export function StandardHeroSection({
   // =========================================================================
   // Default / Parallax / Video: centered with background
   // =========================================================================
-  const useVideo = variant === "video" && config.videoUrl;
+  const useVideo = variant === "video" && config.video.length > 0;
 
   return (
     <section
@@ -341,15 +342,9 @@ export function StandardHeroSection({
     >
       {/* Background image or video */}
       {useVideo ? (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover"
-        >
-          <source src={config.videoUrl} />
-        </video>
+        <div className="absolute inset-0">
+          <VideoPlayer url={config.video} variant="background" />
+        </div>
       ) : config.backgroundImage.url ? (
         <div className="absolute inset-0">
           <div ref={imageRef} className="relative h-full w-full">
