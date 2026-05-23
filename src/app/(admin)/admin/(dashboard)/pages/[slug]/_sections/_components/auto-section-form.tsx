@@ -30,7 +30,7 @@ import { z } from "zod";
 import {
   IconArticle,
   IconLink,
-  IconPhoto,
+  IconPhotoVideo,
   IconTypography,
 } from "@tabler/icons-react";
 import {
@@ -267,7 +267,7 @@ export function AutoSectionForm({
 
   // subGroup 別に content フィールドを分類
   const textFields = contentFields.filter((f) => f.meta.subGroup === "text");
-  const imageFields = contentFields.filter((f) => f.meta.subGroup === "image");
+  const mediaFields = contentFields.filter((f) => f.meta.subGroup === "media");
   const buttonFields = contentFields.filter(
     (f) => f.meta.subGroup === "button",
   );
@@ -297,9 +297,9 @@ export function AutoSectionForm({
           </FieldGroupSection>
         )}
 
-        {imageFields.length > 0 && (
-          <FieldGroupSection title="画像" icon={IconPhoto}>
-            {imageFields.map(renderTopLevelField)}
+        {mediaFields.length > 0 && (
+          <FieldGroupSection title="メディア" icon={IconPhotoVideo}>
+            {mediaFields.map(renderTopLevelField)}
           </FieldGroupSection>
         )}
 

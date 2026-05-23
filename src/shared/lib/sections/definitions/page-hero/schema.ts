@@ -1,8 +1,13 @@
 /**
  * page-hero セクション設定スキーマ
  *
- * variant 別 discriminated union（editorial-split / compact / minimal）。
- * 旧 `@/shared/lib/sections/page-hero/schema.ts` を Section レジストリに統合した正本。
+ * variant 別 discriminated union（editorial-split / compact / minimal / video）。
+ * Section レジストリに統合された正本。`Section.config` JSON 列に保存される。
+ *
+ * - editorial-split: 雑誌カバー風 2 列 + 複数静止画 carousel + transition 演出
+ * - compact: 中型単一画像 + 右テキスト帯
+ * - minimal: 画像なし、見出しとリードのみ
+ * - video: 全面背景動画 + センター寄せ overlay テキスト（2026-05-24 追加、MediaPicker Phase 7）
  */
 
 import { z } from "zod";
@@ -28,7 +33,7 @@ const editorialSplitSchema = z.object({
   }),
   images: field
     .array("ヒーロー画像", {
-      subGroup: "image",
+      subGroup: "media",
       fields: {
         url: field.image("画像"),
         alt: field.text("代替テキスト"),
@@ -39,7 +44,7 @@ const editorialSplitSchema = z.object({
       path: ["images"],
     }),
   transition: field.select("トランジション", {
-    subGroup: "image",
+    subGroup: "media",
     options: HERO_TRANSITIONS,
     default: "crossfade",
     helpText: "複数画像表示時の切り替え演出",
@@ -66,7 +71,7 @@ const compactSchema = z.object({
       fieldType: "group",
       label: "ヒーロー画像",
       group: "content",
-      subGroup: "image",
+      subGroup: "media",
     }),
   buttons: createButtonsArraySchema(),
   layout: sectionLayoutSchema,
@@ -80,6 +85,59 @@ const minimalSchema = z.object({
     subGroup: "text",
     maxBlocks: 100,
   }),
+  layout: sectionLayoutSchema,
+});
+
+/**
+ * video variant — 全面背景動画 + センター寄せ overlay テキスト
+ *
+ * 業界 reference: Apple Hero / Squarespace Video Backgrounds / Webflow Background Video。
+ *
+ * - `video`: R2 self-host mp4 / YouTube / Vimeo URL を受け付ける（VideoPlayer Primitive が
+ *   `detectVideoProvider()` で自動 dispatch、`variant="background"` で auto-play + loop + mute）
+ * - `posterImage`: 動画 load 中 / モバイル autoplay 失敗時 / 不明 provider 時のフォールバック
+ * - `overlay` + `overlayOpacity`: 動画上のテキスト可読性確保（WCAG 1.4.3 准拠）
+ */
+const videoSchema = z.object({
+  variant: z.literal("video"),
+  label: field.portableTextInline("ラベル", { subGroup: "text" }),
+  title: field.portableTextInline("タイトル", { subGroup: "text" }),
+  description: field.portableTextBlock("説明", {
+    subGroup: "text",
+    maxBlocks: 100,
+  }),
+  video: field.media("動画", {
+    accept: "video",
+    subGroup: "media",
+    helpText: "R2 にアップロードした動画 / YouTube / Vimeo URL を選択",
+  }),
+  posterImage: z
+    .object({
+      url: field.image("ポスター画像"),
+      alt: field.text("代替テキスト"),
+    })
+    .prefault({})
+    .register(fieldRegistry, {
+      fieldType: "group",
+      label: "ポスター画像",
+      group: "content",
+      subGroup: "media",
+      helpText: "動画読み込み中・autoplay 失敗時に表示する代替画像",
+    }),
+  overlay: field.boolean("テキスト可読性のためのオーバーレイを表示", {
+    default: true,
+    group: "design",
+    helpText: "動画上に半透明レイヤーを重ねて見出しを読みやすくする",
+  }),
+  overlayOpacity: field.number("オーバーレイの濃さ", {
+    min: 0,
+    max: 100,
+    default: 40,
+    suffix: "%",
+    group: "design",
+    helpText: "0% は透明、100% は完全に黒",
+  }),
+  buttons: createButtonsArraySchema(),
   layout: sectionLayoutSchema,
 });
 
@@ -100,6 +158,7 @@ export const pageHeroConfigSchema = z
     editorialSplitSchema,
     compactSchema,
     minimalSchema,
+    videoSchema,
   ])
   .register(fieldRegistry, {
     fieldType: "select",

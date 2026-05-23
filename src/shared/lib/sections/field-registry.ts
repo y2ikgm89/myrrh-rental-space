@@ -20,8 +20,13 @@ import type { FieldType, MediaAcceptType } from "./types";
 /**
  * AutoSectionForm の content グループ内でフィールドを意味別に分類するためのサブグループ。
  * design / advanced グループでは無視される（content グループ内のみ意味を持つ）。
+ *
+ * `"media"` は画像 / 動画 / 音声 / 文書を包括するメディアアセット系フィールド。
+ * 旧 `"image"` は 2026-05-24 に `"media"` にリネーム（MediaPicker Phase 7、破壊的変更）。
+ * Phase 1-5 で field.media が image / video / audio / file の 4 accept カテゴリに対応
+ * 済のため、subGroup ラベルも「画像」固定から「メディア」に一般化した。
  */
-export type FieldSubGroup = "text" | "image" | "button" | "other";
+export type FieldSubGroup = "text" | "media" | "button" | "other";
 
 /**
  * 動的 select の取得元ソース識別子。
