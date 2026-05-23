@@ -71,7 +71,7 @@ type BasicInfoFieldsProps = {
 
 ## `LayoutFields` の `FieldMetadata<...>` 境界 cast
 
-`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。境界 cast は **`@/shared/lib/conform/typed-input-control`** の 4 helper (`useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField`) 内部に集約済 (`type-safety/assertion-bans.md` §5 permanent exception)。Connected wrapper では `useTypedInputControl(fields["contentWidth"])` 経由で呼び出し側 cast 0 件を保つ。
+`FieldMetadata<T>` は invariant のため、Pure Component (`LayoutFields`) + Connected wrapper (`LayoutFieldsConnected`) パターンで型ブリッジ。境界 cast は **`@/shared/lib/conform/typed-input-control`** の 9 helper (`useTypedInputControl` / `getTypedFieldList` / `getTypedFieldset` / `asTypedField` / `asConformDefaultValue` / `asConformSubmissionValue` / `asConformButtonGetter` / `asConformLooseRecord` / `asConformFieldset`) 内部に集約済 (`type-safety/assertion-bans.md` §5 permanent exception)。Connected wrapper では `useTypedInputControl(fields["contentWidth"])` 経由で呼び出し側 cast 0 件を保つ。**`useTypedInputControl` は `field.value` が runtime で常に string / null / undefined である field 専用** — array of objects（`PortableTextSpan[]` 等）を保持する field は内部 sync `useEffect` が conform `normalizeStringValues` で throw するため、`useState<T[]>` + hidden input JSON transit + render 中 sync の canonical pattern を採用する（→ `type-safety/assertion-bans.md` §5 Gotchas）。
 
 ## `exactOptionalPropertyTypes` と `disabled`
 

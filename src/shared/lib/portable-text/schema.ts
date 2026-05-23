@@ -58,6 +58,19 @@ interface SpanArrayOpts {
   readonly maxSpans?: number;
 }
 
+// conform FormData transit では hidden input に JSON.stringify した配列が乗るため、
+// string → array へ復元する preprocess を schema 側に持たせる
+// (field.number / field.boolean と同様の object literal / FormData 両対応 pattern)。
+function decodePortableTextInput(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  if (v === "") return undefined;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return v;
+  }
+}
+
 /**
  * Inline Span 配列スキーマ factory（短いラベル / 見出し / リンクテキスト用）。
  * `safeParse(undefined)` で `[]` フォールバック契約。
@@ -65,8 +78,12 @@ interface SpanArrayOpts {
 export function createSpanArraySchema(opts: SpanArrayOpts = {}) {
   const maxSpans = opts.maxSpans ?? 50;
   return z
-    .array(portableTextSpanSchema)
-    .max(maxSpans, { error: `Span は${maxSpans}件以内です` })
+    .preprocess(
+      decodePortableTextInput,
+      z
+        .array(portableTextSpanSchema)
+        .max(maxSpans, { error: `Span は${maxSpans}件以内です` }),
+    )
     .default([]);
 }
 
@@ -81,7 +98,11 @@ interface BlockArrayOpts {
 export function createBlockArraySchema(opts: BlockArrayOpts = {}) {
   const maxBlocks = opts.maxBlocks ?? 50;
   return z
-    .array(portableTextBlockSchema)
-    .max(maxBlocks, { error: `Block は${maxBlocks}件以内です` })
+    .preprocess(
+      decodePortableTextInput,
+      z
+        .array(portableTextBlockSchema)
+        .max(maxBlocks, { error: `Block は${maxBlocks}件以内です` }),
+    )
     .default([]);
 }
