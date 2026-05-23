@@ -157,5 +157,6 @@ admin.css / public.css の両方で統一:
 コンポーネント別 border-radius 方針（→ `project-design-config.md` §セクション設計）:
 
 - コンテナ / 画像: `rounded-lg`
-- CTA ボタン: `rounded-full`
+- 全ボタン: sharp（editorial 統一、`Button variant="editorial"` / `MagneticButton` 共に rounded なし）
 - セクション境界: sharp（rounded なし）
+- `rounded-full`: バッジ・タグ・アイコンボタン・スピナーのみ

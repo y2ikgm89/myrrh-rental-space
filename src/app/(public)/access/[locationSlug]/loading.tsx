@@ -10,7 +10,7 @@ export default function LocationDetailLoading(): ReactElement {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero */}
-      <section className="border-b border-border bg-background py-[var(--space-lg)]">
+      <section className="bg-background py-[var(--space-lg)]">
         <Container>
           <div className="mx-auto max-w-3xl space-y-4 text-center">
             <Skeleton className="mx-auto h-3 w-24" variant="text" />

@@ -9,7 +9,7 @@ export default function EventDetailLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero (compact) */}
-      <section className="border-b border-border bg-background py-[var(--space-lg)]">
+      <section className="bg-background py-[var(--space-lg)]">
         <Container>
           <div className="mx-auto max-w-3xl space-y-4 text-center">
             <Skeleton className="mx-auto h-3 w-20" variant="text" />

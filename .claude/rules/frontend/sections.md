@@ -74,7 +74,7 @@ const content =
 「他システムページと揃える」判断時、**`hero` section type の `StandardHeroSection variant="minimal"`** が canonical（faq / contact / about 等が使用、`DEFAULT_PAGE_SECTIONS.faq` / `.contact` 参照）。
 
 - **中央寄せ Container** + 両端 gold-line eyebrow (`SectionLabel`) + `text-page-hero` h1 + SplitText
-- solid `bg-background` + `border-b border-border` separation（旧 `bg-gradient-to-b from-surface via-background to-background` は axe-core `bgGradient` incomplete + production build で violation 昇格の silent bug のため 2026-05-14 に置換。WCAG AA 全 text token が definitively passable な solid bg 必須）
+- solid `bg-background`（旧 `bg-gradient-to-b from-surface via-background to-background` は axe-core `bgGradient` incomplete + production build で violation 昇格の silent bug のため 2026-05-14 に solid bg へ置換。WCAG AA 全 text token が definitively passable な solid bg 必須）。ヒーローと本文の区切りは罫線ではなく余白で表現（Editorial Magazine の whitespace 規律、PR #191 で従来の `border-b border-border` を撤去）
 
 `page-hero` section type の `MinimalHero` は **別実装**（Page.pageHero、ホーム editorial 系の 1 variant）— **左寄せ** + uppercase eyebrow (gold-line なし) + plain h1。
 
