@@ -244,11 +244,11 @@ function LocationChapter({
         <p className="font-heading text-base italic tracking-[0.18em] text-accent">
           Location {indexLabel}
         </p>
-        <h2 className="font-heading text-[clamp(2rem,4vw,2.75rem)] font-light italic leading-tight text-foreground">
+        <h2 className="text-h1 font-heading italic text-foreground">
           {location.name}
         </h2>
         {location.description && (
-          <p className="mx-auto max-w-2xl pt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
+          <p className="mx-auto max-w-2xl pt-2 text-base leading-relaxed text-muted-foreground">
             {location.description}
           </p>
         )}
@@ -256,7 +256,7 @@ function LocationChapter({
           <div className="pt-1">
             <Link
               href={toAppRoute(`/access/${location.slug}`)}
-              className="inline-flex min-h-11 items-center text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex min-h-11 items-center text-sm uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
             >
               詳細を見る
             </Link>
@@ -294,7 +294,7 @@ function LocationChapter({
               </p>
             </div>
             <p
-              className="font-heading text-[clamp(1.25rem,2vw,1.625rem)] font-light italic leading-snug text-foreground"
+              className="text-h3 font-heading italic text-foreground"
               itemProp="streetAddress"
             >
               {location.address}
@@ -303,7 +303,7 @@ function LocationChapter({
               href={mapsHref}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex min-h-11 items-center gap-2 text-xs uppercase tracking-[0.18em] text-foreground"
+              className="group inline-flex min-h-11 items-center gap-2 text-sm uppercase tracking-[0.18em] text-foreground"
             >
               <IconMapPin className="h-4 w-4 text-accent" aria-hidden="true" />
               <span className="border-b border-foreground pb-0.5 transition-opacity group-hover:opacity-60">
@@ -335,7 +335,7 @@ function LocationChapter({
                     >
                       {String(idx + 1).padStart(2, "0")}
                     </span>
-                    <p className="pt-0.5 text-sm leading-relaxed text-foreground">
+                    <p className="pt-0.5 text-base leading-relaxed text-foreground">
                       {line}
                     </p>
                   </li>
@@ -362,7 +362,7 @@ function LocationChapter({
                 <dt className="text-eyebrow uppercase text-muted-foreground">
                   {h.label}
                 </dt>
-                <dd className="font-heading text-base italic text-foreground md:text-lg">
+                <dd className="text-h4 font-heading italic text-foreground">
                   <time itemProp="openingHours" content={h.microdataContent}>
                     {h.time}
                   </time>
@@ -387,7 +387,7 @@ function LocationChapter({
                   Parking / 駐車場
                 </p>
               </div>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-foreground md:text-base">
+              <p className="whitespace-pre-line text-base leading-relaxed text-foreground">
                 {location.parkingInfo}
               </p>
             </div>
@@ -407,7 +407,7 @@ function LocationChapter({
                   return (
                     <li
                       key={key}
-                      className="inline-flex items-center gap-2 text-sm text-foreground"
+                      className="inline-flex items-center gap-2 text-base text-foreground"
                     >
                       {Icon && (
                         <Icon
@@ -458,7 +458,7 @@ function LocationsOverviewBlock({
       <p className="text-eyebrow uppercase text-muted-foreground">
         Our Locations / 拠点一覧
       </p>
-      <h2 className="mt-4 font-heading text-[clamp(2rem,4.5vw,3rem)] font-light italic leading-tight text-foreground">
+      <h2 className="text-h2 mt-4 font-heading italic text-foreground">
         {headline}
       </h2>
 
@@ -518,7 +518,7 @@ function GlobalContactBlock({
         <p className="text-eyebrow uppercase text-muted-foreground">
           Get in Touch
         </p>
-        <h2 className="mt-3 font-heading text-[clamp(1.75rem,3.5vw,2.25rem)] font-light italic leading-tight text-foreground">
+        <h2 className="text-h2 mt-3 font-heading italic text-foreground">
           {headline}
         </h2>
       </div>
@@ -533,7 +533,7 @@ function GlobalContactBlock({
               <a
                 itemProp="telephone"
                 href={`tel:${businessInfo.phone}`}
-                className="inline-flex min-h-11 items-center font-heading text-2xl font-light italic text-foreground transition-opacity hover:opacity-60 md:text-3xl"
+                className="text-h2 inline-flex min-h-11 items-center font-heading italic text-foreground transition-opacity hover:opacity-60"
               >
                 {businessInfo.phone}
               </a>
@@ -546,11 +546,11 @@ function GlobalContactBlock({
             <dt className="text-eyebrow uppercase text-muted-foreground">
               メール
             </dt>
-            <dd className="mt-3 text-sm">
+            <dd className="mt-3">
               <a
                 itemProp="email"
                 href={`mailto:${businessInfo.email}`}
-                className="inline-flex min-h-11 items-center break-all border-b border-foreground pb-0.5 text-foreground transition-opacity hover:opacity-60"
+                className="inline-flex min-h-11 items-center break-all border-b border-foreground pb-0.5 text-base text-foreground transition-opacity hover:opacity-60"
               >
                 {businessInfo.email}
               </a>
