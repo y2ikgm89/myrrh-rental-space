@@ -25,7 +25,7 @@ paths:
 - skill invoke 後、SKILL.md content は session 全体に残る（recurring token cost）
 - auto-compaction で 5000 token/skill 維持、合計 25000 token budget
 - → SKILL.md 500 行未満を維持、reference は別ファイル
-- `disable-model-invocation: true` Skill は Skill tool 経由不可、`user-invocable: true` 併用で `/skill-name` 起動経路を確保 (本プロジェクトは全 8 SKILL 併用済)
+- `disable-model-invocation: true` Skill は Skill tool 経由不可、`user-invocable: true` 併用で `/skill-name` 起動経路を確保 (本プロジェクトでは 7 SKILL: audit-claude-config / create-section-type / debug-cloud-run / debug-google-calendar / debug-instagram / debug-stripe / debug-turbopack)
 
 ## 撤回済み独自パターン (再導入禁止)
 
