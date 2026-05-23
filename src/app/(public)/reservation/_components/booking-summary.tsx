@@ -62,8 +62,8 @@ function SummaryRow({
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-eyebrow uppercase text-muted-foreground">{label}</p>
-        <p className="text-sm text-foreground">{value}</p>
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-base text-foreground">{value}</p>
       </div>
     </div>
   );
