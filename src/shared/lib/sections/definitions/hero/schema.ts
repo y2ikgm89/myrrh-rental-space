@@ -59,7 +59,12 @@ export const heroConfigSchema = z.object({
     helpText: "0% は透明、100% は完全に黒",
     group: "design",
   }),
-  videoUrl: field.url("動画 URL", { subGroup: "image" }),
+  video: field.media("動画", {
+    accept: "video",
+    subGroup: "image",
+    helpText:
+      "R2 にアップロードした動画 / YouTube / Vimeo URL を選択 (variant=video 時のみ表示)",
+  }),
   parallaxSpeed: field.number("パララックス速度", {
     min: 0,
     max: 1,

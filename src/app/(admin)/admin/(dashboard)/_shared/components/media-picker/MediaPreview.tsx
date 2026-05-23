@@ -20,24 +20,16 @@ import {
 } from "@tabler/icons-react";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
 import { cn } from "@/shared/lib/cn";
-
-const YOUTUBE_PATTERN =
-  /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]+)/;
-const VIMEO_PATTERN = /vimeo\.com\/(\d+)/;
+import {
+  detectVideoProvider,
+  isEmbeddableVideoUrl,
+} from "@/shared/lib/video/url-detect";
 
 interface MediaPreviewProps {
   readonly url: string;
   readonly accept: MediaAcceptType;
   readonly alt?: string;
   readonly className?: string;
-}
-
-function detectVideoEmbed(url: string): string | null {
-  const yt = YOUTUBE_PATTERN.exec(url);
-  if (yt && yt[1]) return `https://www.youtube.com/embed/${yt[1]}`;
-  const vm = VIMEO_PATTERN.exec(url);
-  if (vm && vm[1]) return `https://player.vimeo.com/video/${vm[1]}`;
-  return null;
 }
 
 export function MediaPreview({
@@ -59,11 +51,11 @@ export function MediaPreview({
   }
 
   if (accept === "video" || (accept === "any" && looksLikeVideo(url))) {
-    const embed = detectVideoEmbed(url);
-    if (embed) {
+    const { embedUrl } = detectVideoProvider(url);
+    if (embedUrl) {
       return (
         <iframe
-          src={embed}
+          src={embedUrl}
           title={alt ?? "動画プレビュー"}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -139,11 +131,7 @@ function looksLikeImage(url: string): boolean {
 }
 
 function looksLikeVideo(url: string): boolean {
-  return (
-    /\.(mp4|webm)(\?|$)/i.test(url) ||
-    YOUTUBE_PATTERN.test(url) ||
-    VIMEO_PATTERN.test(url)
-  );
+  return /\.(mp4|webm)(\?|$)/i.test(url) || isEmbeddableVideoUrl(url);
 }
 
 function looksLikeAudio(url: string): boolean {
