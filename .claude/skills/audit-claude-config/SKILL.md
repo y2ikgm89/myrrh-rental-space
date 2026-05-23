@@ -66,6 +66,15 @@ echo ""
 echo "=== 7. CLAUDE.md size (target < 200 行) ==="
 lines=$(wc -l < CLAUDE.md)
 [ "$lines" -ge 200 ] && echo "OVER 200: CLAUDE.md ($lines 行) — path-scoped rule への退避を検討" || echo "OK: $lines 行"
+
+echo ""
+echo "=== 8. SKILL.md size (公式推奨 < 500 行、reference は別ファイル) ==="
+over=0
+for f in .claude/skills/*/SKILL.md; do
+  lines=$(wc -l < "$f")
+  [ "$lines" -ge 500 ] && { echo "OVER 500: $f ($lines 行) — reference/*.md への分割推奨"; over=$((over+1)); }
+done
+[ "$over" -eq 0 ] && echo "OK: 全 SKILL.md 500 行未満"
 ```
 
 ## Phase 2: 公式 spec WebFetch + diff（必要時のみ）
@@ -99,6 +108,7 @@ WebFetch https://code.claude.com/docs/en/memory "Summarize CLAUDE.md best practi
 | agent-memory drift                  | `memory: project` 削除（未使用）or `MEMORY.md` stub 作成（利用予定）          |
 | 撤回 pattern 残骸                   | `git rm -r <path>`、`claude-code-patterns.md` の撤回表で正当化                |
 | CLAUDE.md > 200 行                  | path-scoped rule に退避                                                       |
+| SKILL.md > 500 行                   | `reference/*.md` に詳細を分割、SKILL.md は概要 + ナビに圧縮                   |
 | 公式新 field / event                | `claude-code-patterns.md` / `hooks-patterns.md` の field 表に追記（1 commit） |
 
 ## 出力形式
@@ -113,6 +123,7 @@ Phase 1 (local grep):
   ✅ agent-memory 整合
   ✅ 撤回 pattern 残骸ゼロ
   ✅ CLAUDE.md 169 行 / 200 行
+  ✅ SKILL.md 全件 500 行未満
 Phase 2 (official spec diff): [skipped or executed]
   ⚠️  hooks に新 event `XxxYyy` 追加 (v2.1.150) → hooks-patterns.md に追記要
 
