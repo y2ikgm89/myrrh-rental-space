@@ -81,7 +81,7 @@ import {
   extractSchemaFields,
 } from "./zod-introspection";
 import type { FieldInfo, ArrayItemFieldInfo } from "./zod-introspection";
-import type { FieldType } from "@/shared/lib/sections/types";
+import type { FieldType, MediaAcceptType } from "@/shared/lib/sections/types";
 import type {
   DynamicCategoryOption,
   DynamicSectionOptions,
@@ -91,6 +91,7 @@ import { AutoSelectField } from "./auto-fields/AutoSelectField";
 import { AutoArrayField } from "./auto-fields/AutoArrayField";
 import { AutoGroupField } from "./auto-fields/AutoGroupField";
 import { AutoImageField } from "./auto-fields/AutoImageField";
+import { AutoMediaField } from "./auto-fields/AutoMediaField";
 import { isRecord } from "@/shared/lib/serialize";
 
 const LexicalEditor = dynamic(
@@ -386,6 +387,7 @@ function AutoField({
       suffix={meta.suffix}
       leadingIcon={meta.leadingIcon}
       trailingIcon={meta.trailingIcon}
+      mediaAccept={meta.mediaAccept}
       schema={fieldInfo.schema}
       field={field}
       form={form}
@@ -407,6 +409,7 @@ interface AutoFieldByTypeProps {
   readonly suffix: string | undefined;
   readonly leadingIcon: string | undefined;
   readonly trailingIcon: string | undefined;
+  readonly mediaAccept: MediaAcceptType | undefined;
   readonly schema: z.ZodType;
   readonly field: FieldMetadata<unknown>;
   readonly form: FormMetadata<Record<string, unknown>>;
@@ -426,6 +429,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     suffix,
     leadingIcon,
     trailingIcon,
+    mediaAccept,
     schema,
     field,
     form,
@@ -610,6 +614,19 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
+    case "media":
+      return (
+        <AutoMediaFieldControlled
+          field={field}
+          fieldId={fieldId}
+          label={label}
+          accept={mediaAccept ?? "image"}
+          helpText={helpText}
+          isPending={isPending}
+          error={error}
+        />
+      );
+
     case "url":
       return (
         <div className="space-y-2">
@@ -716,6 +733,47 @@ function AutoImageFieldControlled({
       <AutoImageField
         fieldId={fieldId}
         label={label}
+        value={currentValue.length > 0 ? currentValue : undefined}
+        onSelect={(url) => control.change(url)}
+        {...(helpText !== undefined && { helpText })}
+        {...(isPending && { disabled: true })}
+      />
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AutoMediaFieldControlled({
+  field,
+  fieldId,
+  label,
+  accept,
+  helpText,
+  isPending,
+  error,
+}: {
+  readonly field: FieldMetadata<unknown>;
+  readonly fieldId: string;
+  readonly label: string;
+  readonly accept: MediaAcceptType;
+  readonly helpText: string | undefined;
+  readonly isPending: boolean;
+  readonly error: string | undefined;
+}) {
+  const control = useTypedInputControl(field);
+  const currentValue = typeof control.value === "string" ? control.value : "";
+
+  return (
+    <div className="space-y-2">
+      <input type="hidden" name={field.name} value={currentValue} />
+      <AutoMediaField
+        fieldId={fieldId}
+        label={label}
+        accept={accept}
         value={currentValue.length > 0 ? currentValue : undefined}
         onSelect={(url) => control.change(url)}
         {...(helpText !== undefined && { helpText })}
