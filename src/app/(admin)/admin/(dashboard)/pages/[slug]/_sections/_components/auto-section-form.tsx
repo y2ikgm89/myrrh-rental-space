@@ -826,6 +826,17 @@ function AutoIconField({
   );
 }
 
+// PortableText fields は `useInputControl` を使わず local state + hidden input transit
+// (BarDialog / NavigationDialog canonical pattern と同型)。
+//
+// `useInputControl<string>` は内部 sync useEffect で `change(field.value)` を呼ぶが、
+// conform `defaultValue` に `PortableTextSpan[]` / `PortableTextBlock[]` (array of objects)
+// を渡すと `normalizeStringValues` が "Expected string or string[]" を throw する。
+// hidden input 経由で JSON 文字列を FormData に乗せ、schema 側 preprocess で復号する
+// (`createSpanArraySchema` / `createBlockArraySchema` の `decodePortableTextInput`)。
+//
+// variant 切替時の `form.update` 等で field.value が外部要因により変化した場合に同期できる
+// よう、React 公式「Adjusting State Directly During Render」パターンを採用。
 function AutoRichLabelField({
   field,
   fieldId,
@@ -841,20 +852,24 @@ function AutoRichLabelField({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useTypedInputControl(field);
-  // conform stores spans as JSON string in FormData transit; parse for editor
-  const rawValue = control.value;
-  const parsedSpans = parsePortableTextSpans(rawValue);
-  const serializedValue = JSON.stringify(parsedSpans);
+  const fieldValue = field.value;
+  const [spans, setSpans] = useState<PortableTextSpan[]>(() =>
+    parsePortableTextSpans(fieldValue),
+  );
+  const [previousFieldValue, setPreviousFieldValue] = useState(fieldValue);
+  if (fieldValue !== previousFieldValue) {
+    setPreviousFieldValue(fieldValue);
+    setSpans(parsePortableTextSpans(fieldValue));
+  }
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={field.name} value={serializedValue} />
+      <input type="hidden" name={field.name} value={JSON.stringify(spans)} />
       <Label htmlFor={fieldId}>{label}</Label>
       <PortableTextInlineEditor
         id={fieldId}
-        value={parsedSpans}
-        onChange={(tokens) => control.change(JSON.stringify(tokens))}
+        value={spans}
+        onChange={setSpans}
         disabled={isPending}
         aria-label={label}
       />
@@ -883,19 +898,24 @@ function AutoRichBlocksField({
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
-  const control = useTypedInputControl(field);
-  const rawValue = control.value;
-  const parsedBlocks = parsePortableTextBlocks(rawValue);
-  const serializedValue = JSON.stringify(parsedBlocks);
+  const fieldValue = field.value;
+  const [blocks, setBlocks] = useState<PortableTextBlock[]>(() =>
+    parsePortableTextBlocks(fieldValue),
+  );
+  const [previousFieldValue, setPreviousFieldValue] = useState(fieldValue);
+  if (fieldValue !== previousFieldValue) {
+    setPreviousFieldValue(fieldValue);
+    setBlocks(parsePortableTextBlocks(fieldValue));
+  }
 
   return (
     <div className="space-y-2">
-      <input type="hidden" name={field.name} value={serializedValue} />
+      <input type="hidden" name={field.name} value={JSON.stringify(blocks)} />
       <Label htmlFor={fieldId}>{label}</Label>
       <PortableTextBlockEditor
         id={fieldId}
-        value={parsedBlocks}
-        onChange={(blocks) => control.change(JSON.stringify(blocks))}
+        value={blocks}
+        onChange={setBlocks}
         disabled={isPending}
         aria-label={label}
       />

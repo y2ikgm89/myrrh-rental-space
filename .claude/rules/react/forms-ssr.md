@@ -121,16 +121,23 @@ export default async function Page({ searchParams }: Props) {
 
 ## 親の safeParse(field.value) と子の identity-based useEffect は非互換
 
-`useController` ベースの親が毎レンダリングで `safeParse(field.value).data` を子の prop として渡すパターンは、子の `useRef === value` identity 比較を破壊する。
+親が毎レンダリングで `safeParse(field.value).data` を子の prop として渡すパターンは、子の `useRef === value` identity 比較を破壊する。
 
 ```tsx
-// 親（auto-section-form.tsx パターン）
-const { field } = useController({ control, name });
-const parsed = createSpanArraySchema().safeParse(field.value);
+// 親（auto-section-form.tsx の旧 useTypedInputControl 経路、現在は廃止）
+const control = useTypedInputControl(field);
+const parsed = createSpanArraySchema().safeParse(control.value);
 const value = parsed.success ? parsed.data : []; // 毎レンダリング新参照
 
-return <PortableTextInlineEditor value={value} onChange={field.onChange} />;
+return (
+  <PortableTextInlineEditor
+    value={value}
+    onChange={(t) => control.change(JSON.stringify(t))}
+  />
+);
 ```
+
+> **現行 canonical**: 親は `useState<PortableTextSpan[]>` で local 保持し、子に `value={spans}` を渡す（stable reference）。外部 sync は「Adjusting State Directly During Render」（`fieldValue !== previousFieldValue` 検知で `setSpans(parsePortableTextSpans(fieldValue))`）。本セクションの「子の deep-equal 必須」契約は親実装が変わっても維持される — 初回マウントと外部 sync 時に必ず新参照の配列が渡るため、子側の `spansEqualIgnoringKey` / `blocksEqualIgnoringKey` deep-equal は今後も必須。
 
 ```tsx
 // 子（旧実装、典型的アンチパターン）
