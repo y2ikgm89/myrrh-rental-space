@@ -948,9 +948,8 @@ model Page {
   isActive           Boolean      @default(true)
   isSystemPage       Boolean      @default(false) // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
   template           String       @db.VarChar(64)
-  contentWidth       LayoutWidth?
-  contentWidthCustom Int? // CUSTOMの場合の幅（px）
-  showSidebar        Boolean? // null=デフォルト使用、true/false=明示的指定
+  /// post-list archive variant の sidebar 表示制御（getPageShowSidebar 専用）。null=デフォルト使用、true/false=明示的指定
+  showSidebar        Boolean?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -963,11 +962,13 @@ model Page {
   @@map("pages")
 }
 
-/// 統一セクション（ホームページ + カスタムページ共通）
-/// pageId = null でホームページセクション判別
+/// 統一セクション（システムページ + カスタムページ共通）
+/// 全 section が pageId を持つ（home の page-hero も含めて pageId = Page.id で紐づく、seed.ts:2330 参照）。
+/// pageId が null の section は domain command で NOT_FOUND として reject される（commands.ts:ensurePageSectionExists）。
+/// nullable のままにしてあるのは destructive migration 回避のため（将来 NOT NULL 化検討余地あり）。
 model Section {
   id          String      @id @default(uuid()) @db.Uuid
-  pageId String? @db.Uuid // null = ホームページ
+  pageId String? @db.Uuid
   type        String      @db.VarChar(64)
   order       Int         @default(0) // 表示順序（DnDで変更可能）
   isActive    Boolean     @default(true) // ON/OFF制御
