@@ -112,13 +112,6 @@ describe("updatePageSectionCommand", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  test("pageId が null のホームページセクションは NOT_FOUND をスロー", async () => {
-    mockSectionFindUnique.mockImplementation(() =>
-      Promise.resolve(HOMEPAGE_SECTION_RECORD),
-    );
-
-    await expect(
-      updatePageSectionCommand(SECTION_ID, { config: {} }),
-    ).rejects.toMatchObject({ code: "NOT_FOUND" });
-  });
+  // 旧 test 「pageId が null のホームページセクション」は schema NOT NULL 化
+  // （migration `_section_page_id_not_null`）により発生不能となったため削除
 });

@@ -963,24 +963,23 @@ model Page {
 }
 
 /// 統一セクション（システムページ + カスタムページ共通）
-/// 全 section が pageId を持つ（home の page-hero も含めて pageId = Page.id で紐づく、seed.ts:2330 参照）。
-/// pageId が null の section は domain command で NOT_FOUND として reject される（commands.ts:ensurePageSectionExists）。
-/// nullable のままにしてあるのは destructive migration 回避のため（将来 NOT NULL 化検討余地あり）。
+/// 全 section は必ず Page に紐づく（home の page-hero も含めて pageId = Page.id、seed.ts 参照）。
+/// 旧仕様（pageId nullable = home section）は廃止済（migration `_section_page_id_not_null`）。
 model Section {
-  id          String      @id @default(uuid()) @db.Uuid
-  pageId String? @db.Uuid
-  type        String      @db.VarChar(64)
-  order       Int         @default(0) // 表示順序（DnDで変更可能）
-  isActive    Boolean     @default(true) // ON/OFF制御
+  id          String   @id @default(uuid()) @db.Uuid
+  pageId      String   @db.Uuid
+  type        String   @db.VarChar(64)
+  order       Int      @default(0) // 表示順序（DnDで変更可能）
+  isActive    Boolean  @default(true) // ON/OFF制御
   title       String? // セクション見出し（表示用）
-  contentHtml String?     @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
+  contentHtml String?  @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
   contentJson Json? // Lexical EditorState JSON（プライマリ）
-  config      Json        @default("{}") // タイプ別設定（Zodで型安全）
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  config      Json     @default("{}") // タイプ別設定（Zodで型安全）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  page  Page?          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId, order, isActive])
   @@index([type])

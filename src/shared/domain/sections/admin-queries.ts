@@ -39,7 +39,7 @@ function parseSectionConfig(type: string, config: unknown): SectionConfig {
 
 function toSectionData(section: {
   id: string;
-  pageId: string | null;
+  pageId: string;
   type: string;
   title: string | null;
   config: unknown;
@@ -63,10 +63,7 @@ export async function getPageSectionsQuery(pageId: string) {
     orderBy: { order: "asc" },
   });
 
-  return sections.map((section) => ({
-    ...toSectionData(section),
-    pageId: section.pageId ?? "",
-  }));
+  return sections.map((section) => toSectionData(section));
 }
 
 export async function getPublicPageSectionsQuery(pageId: string) {
@@ -76,10 +73,7 @@ export async function getPublicPageSectionsQuery(pageId: string) {
     orderBy: { order: "asc" },
   });
 
-  return sections.map((section) => ({
-    ...toSectionData(section),
-    pageId: section.pageId ?? "",
-  }));
+  return sections.map((section) => toSectionData(section));
 }
 
 export async function getPageWithSectionsQuery(slug: string) {
@@ -104,10 +98,7 @@ export async function getPageWithSectionsQuery(slug: string) {
     id: page.id,
     slug: page.slug,
     title: page.title,
-    sections: page.sections.map((section) => ({
-      ...toSectionData(section),
-      pageId: section.pageId ?? "",
-    })),
+    sections: page.sections.map((section) => toSectionData(section)),
   };
 }
 
@@ -149,10 +140,7 @@ export async function getPageForEditQuery(slug: string) {
     ogpTitle: page.ogpTitle,
     ogpDescription: page.ogpDescription,
     ogpImageUrl: page.ogpImageUrl,
-    sections: page.sections.map((section) => ({
-      ...toSectionData(section),
-      pageId: section.pageId ?? "",
-    })),
+    sections: page.sections.map((section) => toSectionData(section)),
   };
 }
 
@@ -162,14 +150,11 @@ export async function getPageSectionQuery(id: string) {
     select: ADMIN_SECTION_SELECT,
   });
 
-  if (!section || !section.pageId) {
+  if (!section) {
     return null;
   }
 
-  return {
-    ...toSectionData(section),
-    pageId: section.pageId,
-  };
+  return toSectionData(section);
 }
 
 /** EDITOR のページ割当チェック用（権限ゲートで sectionId から pageId を解決） */
