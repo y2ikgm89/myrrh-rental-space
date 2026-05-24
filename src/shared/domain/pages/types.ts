@@ -1,5 +1,3 @@
-import type { LayoutWidth } from "@generated/prisma/enums";
-
 type DateLike = Date | string;
 
 export type PageData = {
@@ -16,8 +14,6 @@ export type PageData = {
   publishedAt: DateLike | null;
   isActive: boolean;
   isSystemPage: boolean;
-  contentWidth: LayoutWidth | null;
-  contentWidthCustom: number | null;
   showSidebar: boolean | null;
   sectionCount?: number | undefined;
   createdAt: DateLike;

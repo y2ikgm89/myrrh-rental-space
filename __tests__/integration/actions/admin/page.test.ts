@@ -421,8 +421,6 @@ describe("Page Admin Action Integration", () => {
         publishedAt: Date | null;
         isActive: boolean;
         isSystemPage: boolean;
-        contentWidth: (typeof LayoutWidth)[keyof typeof LayoutWidth] | null;
-        contentWidthCustom: number | null;
         createdAt: Date;
         updatedAt: Date;
       };
@@ -441,14 +439,12 @@ describe("Page Admin Action Integration", () => {
         publishedAt: new Date(),
         isActive: true,
         isSystemPage: false,
-        contentWidth: LayoutWidth.MD,
-        contentWidthCustom: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       expect(page.slug).toBe("test-page");
-      expect(page.contentWidth).toBe("MD");
+      expect(page.isSystemPage).toBe(false);
     });
   });
 

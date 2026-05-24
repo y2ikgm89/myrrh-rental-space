@@ -11,10 +11,7 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainObject } from "@/shared/lib/serialize";
-import {
-  idParamSchema,
-  slugParamSchema,
-} from "@/shared/lib/validations/params";
+import { idParamSchema } from "@/shared/lib/validations/params";
 import type { LayoutConfig } from "@/shared/types/layout";
 
 export interface SeoSettings {
@@ -312,47 +309,6 @@ export async function getNewsLayoutSettings(
     contentWidth: newsSettings?.contentWidth ?? siteSettings.contentWidth,
     contentWidthCustom:
       newsSettings?.contentWidthCustom ?? siteSettings.contentWidthCustom,
-  };
-}
-
-export async function getPageLayoutSettings(
-  slug: string,
-): Promise<LayoutConfig> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(
-    getCacheTag.layoutSettings.site(),
-    getCacheTag.layoutSettings.page(slug),
-  );
-
-  if (!slugParamSchema.safeParse(slug).success) {
-    return FALLBACK_LAYOUT_CONFIG;
-  }
-
-  const [siteSettings, pageSettings] = await Promise.all([
-    getSiteLayoutSettings(),
-    safeFetch({
-      fetch: () =>
-        prisma.page.findUnique({
-          where: { slug },
-          select: {
-            contentWidth: true,
-            contentWidthCustom: true,
-          },
-        }),
-      fallback: null,
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      operationName: "getPageLayoutSettings",
-    }),
-  ]);
-
-  return {
-    containerWidth: siteSettings.containerWidth,
-    containerWidthCustom: siteSettings.containerWidthCustom,
-    contentWidth: pageSettings?.contentWidth ?? siteSettings.contentWidth,
-    contentWidthCustom:
-      pageSettings?.contentWidthCustom ?? siteSettings.contentWidthCustom,
   };
 }
 
