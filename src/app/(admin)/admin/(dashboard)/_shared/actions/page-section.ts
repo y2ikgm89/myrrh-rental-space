@@ -4,7 +4,10 @@ import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { purgePageCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createPageSectionCommand,
@@ -37,13 +40,16 @@ const reorderPageSectionsSchema = z.object({
     }),
 });
 
-function revalidatePages(pageId?: string) {
+function revalidatePages(pageSlug: string) {
   updateTag(CACHE_TAGS.SECTIONS);
   updateTag(CACHE_TAGS.PAGE_SECTIONS);
   updateTag(CACHE_TAGS.PAGES);
-  if (pageId) {
-    updateTag(getCacheTag.pages.detail(pageId));
-  }
+  updateTag(getCacheTag.pages.detail(pageSlug));
+  fireAndForget(purgePageCache(pageSlug), {
+    operation: "purgePageCache",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.LOW,
+  });
 }
 
 // =============================================================================
@@ -83,10 +89,10 @@ export async function updatePageSection(
         parsed.data,
         contentHtml,
       );
-      return { pageId: result.pageId };
+      return { pageId: result.pageId, pageSlug: result.pageSlug };
     },
     afterSuccess: (data) => {
-      revalidatePages(data.pageId);
+      revalidatePages(data.pageSlug);
     },
   });
 }
@@ -108,10 +114,14 @@ export async function createPageSection(
     resourceId: parsed.data.pageId,
     execute: async () => {
       const result = await createPageSectionCommand(parsed.data);
-      return { id: result.id, pageId: result.pageId };
+      return {
+        id: result.id,
+        pageId: result.pageId,
+        pageSlug: result.pageSlug,
+      };
     },
     afterSuccess: (data) => {
-      revalidatePages(data.pageId);
+      revalidatePages(data.pageSlug);
     },
     resolveAuditResourceId: (data) => data.id,
   });
@@ -135,10 +145,14 @@ export async function deletePageSection(
     resolveAuditResourceId: () => parsedId.data,
     execute: async () => {
       const result = await deletePageSectionCommand(parsedId.data);
-      return { id: result.id, pageId: result.pageId };
+      return {
+        id: result.id,
+        pageId: result.pageId,
+        pageSlug: result.pageSlug,
+      };
     },
     afterSuccess: (data) => {
-      revalidatePages(data.pageId);
+      revalidatePages(data.pageSlug);
     },
   });
 }
@@ -160,10 +174,14 @@ export async function duplicatePageSection(
     resolveResourceId: () => getSectionPageIdQuery(parsedId.data),
     execute: async () => {
       const result = await duplicatePageSectionCommand(parsedId.data);
-      return { id: result.id, pageId: result.pageId };
+      return {
+        id: result.id,
+        pageId: result.pageId,
+        pageSlug: result.pageSlug,
+      };
     },
     afterSuccess: (data) => {
-      revalidatePages(data.pageId);
+      revalidatePages(data.pageSlug);
     },
     resolveAuditResourceId: (data) => data.id,
   });
@@ -190,11 +208,12 @@ export async function togglePageSectionActive(
       return {
         id: result.id,
         pageId: result.pageId,
+        pageSlug: result.pageSlug,
         isActive: result.isActive,
       };
     },
     afterSuccess: (data) => {
-      revalidatePages(data.pageId);
+      revalidatePages(data.pageSlug);
     },
   });
 }
@@ -219,10 +238,14 @@ export async function reorderPageSections(
         pageId: parsed.data.pageId,
         orderedIds: parsed.data.orderedIds,
       });
-      return { count: result.count, pageId: result.pageId };
+      return {
+        count: result.count,
+        pageId: result.pageId,
+        pageSlug: result.pageSlug,
+      };
     },
     afterSuccess: (data) => {
-      revalidatePages(data.pageId);
+      revalidatePages(data.pageSlug);
     },
   });
 }

@@ -25,7 +25,6 @@ import {
 import { getPageIdBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import {
   createPageSchema,
-  getSystemPageDefinition,
   updatePageSchema,
   updatePageSeoSchema,
   type UpdatePageInput,
@@ -73,7 +72,9 @@ export async function updatePage(
       return null;
     },
     afterSuccess: () => {
+      // title / metaDescription 等は SEO metadata の派生元のため PAGE_SEO も invalidate
       invalidatePageTags(slug);
+      invalidatePageSeoTags(slug);
       purgePageCaches(slug);
     },
   });
@@ -158,7 +159,7 @@ export async function restorePage(slug: string): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.PAGES);
+      invalidatePageTags(slug);
       purgePageCaches(slug);
     },
   });
@@ -231,11 +232,8 @@ export async function updatePageSeo(
       resolveResourceId: () => getPageIdBySlugQuery(slug),
       resolveAuditResourceId: () => slug,
       execute: async () => {
-        const definition = getSystemPageDefinition(slug);
-        await updatePageSeoCommand(slug, {
-          ...data,
-          title: data.title || definition?.title || slug,
-        });
+        // title は schema で `min(1)` 必須のため fallback 不要（dead branch だった）
+        await updatePageSeoCommand(slug, data);
         return null;
       },
       afterSuccess: () => {

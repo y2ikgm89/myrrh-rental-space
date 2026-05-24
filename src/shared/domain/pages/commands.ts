@@ -291,13 +291,14 @@ export async function updatePageSeoCommand(
   slug: string,
   input: UpdatePageSeoInput,
 ): Promise<void> {
-  const existingPage = await ensurePageExists(slug);
-  const definition = getSystemPageDefinition(existingPage.slug);
+  await ensurePageExists(slug);
 
+  // title は schema で `min(1)` 必須のため直接保存（旧 `|| definition?.title || input.title`
+  // は左辺が常に truthy で dead branch だった）
   await prisma.page.update({
     where: { slug },
     data: {
-      title: input.title || definition?.title || input.title,
+      title: input.title,
       metaDescription: normalizeNullableString(input.metaDescription),
       metaKeywords: normalizeNullableString(input.metaKeywords),
       ogpTitle: normalizeNullableString(input.ogpTitle),
