@@ -41,7 +41,7 @@ async function ensurePageSectionExists(id: string) {
     },
   });
 
-  if (!section || !section.pageId || !section.page) {
+  if (!section) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
   }
 
@@ -156,10 +156,6 @@ export async function createPageSectionCommand(input: {
     },
   });
 
-  if (!created.pageId || !created.page) {
-    throw new DomainError("セクションの pageId が不正です", "VALIDATION");
-  }
-
   return {
     id: created.id,
     pageId: created.pageId,
@@ -197,7 +193,7 @@ export async function duplicatePageSectionCommand(
       page: { select: { slug: true } },
     },
   });
-  if (!source || !source.pageId || !source.page) {
+  if (!source) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
   }
   if (source.type === "page-hero") {
@@ -251,7 +247,7 @@ export async function togglePageSectionActiveCommand(id: string): Promise<{
       page: { select: { slug: true } },
     },
   });
-  if (!current || !current.pageId || !current.page) {
+  if (!current) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
   }
 
