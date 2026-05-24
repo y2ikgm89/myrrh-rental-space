@@ -83,14 +83,9 @@ describe("updatePageSectionCommand", () => {
   });
 
   test("存在するページセクションのコンテンツを更新して pageId を返す", async () => {
-    const result = await updatePageSectionCommand(
-      SECTION_ID,
-      {
-        config: { variant: "default" },
-        contentJson: '{"root":{"children":[]}}',
-      },
-      "<p>更新</p>",
-    );
+    const result = await updatePageSectionCommand(SECTION_ID, {
+      config: { variant: "default" },
+    });
 
     expect(result).toMatchObject({ pageId: PAGE_ID, pageSlug: "test-page" });
     expect(mockSectionUpdate).toHaveBeenCalledWith(
@@ -98,7 +93,6 @@ describe("updatePageSectionCommand", () => {
         where: { id: SECTION_ID },
         data: expect.objectContaining({
           config: expect.objectContaining({ variant: "default" }),
-          contentHtml: "<p>更新</p>",
         }),
       }),
     );

@@ -38,20 +38,18 @@ const PADDING_MAP = {
 
 interface CustomSectionProps {
   readonly config: CustomConfig;
-  readonly content: string | null;
-  readonly title: string | null;
   readonly style: SectionStylePayload;
 }
 
 export function CustomSection({
   config,
-  content,
-  title,
   style,
 }: CustomSectionProps): ReactElement {
   const maxWidthClass =
     MAX_WIDTH_MAP[config.layout.containerWidth] ?? MAX_WIDTH_MAP.lg;
   const paddingClass = PADDING_MAP[config.layout.padding] ?? PADDING_MAP.md;
+  const hasTitle = config.title.length > 0;
+  const hasBody = config.body.length > 0;
 
   return (
     <SectionWrapper
@@ -62,7 +60,7 @@ export function CustomSection({
     >
       <div className={paddingClass}>
         <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
-          {title && (
+          {hasTitle && (
             <div className="mb-8 md:mb-12">
               <ScrollReveal>
                 {config.sectionLabel && (
@@ -73,18 +71,18 @@ export function CustomSection({
                     level={2}
                     className={cn(getTitleClasses(style), "tracking-tight")}
                   >
-                    {title}
+                    {config.title}
                   </Heading>
                 </div>
               </ScrollReveal>
             </div>
           )}
 
-          {content && (
+          {hasBody && (
             <ScrollReveal>
               <div style={getTextStyle(style)}>
                 <SanitizedHtml
-                  html={content}
+                  html={config.body}
                   className="prose prose-neutral max-w-none"
                 />
               </div>

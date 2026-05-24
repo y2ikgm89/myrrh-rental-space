@@ -171,60 +171,8 @@ describe("AutoSectionForm", () => {
     container = undefined;
   });
 
-  test("custom セクションは Lexical 本文だけの変更でも保存可能にする", async () => {
-    container = document.createElement("div");
-    document.body.append(container);
-    root = createRoot(container);
-
-    await act(async () => {
-      root?.render(
-        <AutoSectionForm
-          section={{
-            id: "section-1",
-            pageId: "page-1",
-            type: "custom",
-            title: "本文",
-            config: {
-              sectionLabel: "Contents",
-              containerClass: "",
-              backgroundColor: "",
-              layout: {
-                padding: "md",
-                containerWidth: "lg",
-                hideOnMobile: false,
-                hideOnDesktop: false,
-                animateOnScroll: "fade-up",
-              },
-            },
-            contentHtml: null,
-            contentJson: { root: { children: [] } },
-            order: 0,
-            isActive: true,
-            createdAt: new Date("2026-01-01T00:00:00.000Z"),
-            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-          }}
-          onSave={() => undefined}
-          isPending={false}
-        />,
-      );
-    });
-
-    const submit = container.querySelector<HTMLButtonElement>(
-      'button[type="submit"]',
-    );
-    expect(submit?.disabled).toBe(true);
-
-    const editorChange = container.querySelector<HTMLButtonElement>(
-      '[data-testid="editor-change"]',
-    );
-    expect(editorChange).not.toBeNull();
-
-    await act(async () => {
-      editorChange?.dispatchEvent(
-        new window.MouseEvent("click", { bubbles: true, cancelable: true }),
-      );
-    });
-
-    expect(submit?.disabled).toBe(false);
-  });
+  // 旧 「CUSTOM section の Lexical 本文編集」test は削除済。
+  // CUSTOM section の title + body は config field として AutoSectionForm の
+  // 通常 textarea / text input で編集する canonical pattern に統合された
+  // (Section.title / contentHtml / contentJson 列削除 migration 適用済)。
 });

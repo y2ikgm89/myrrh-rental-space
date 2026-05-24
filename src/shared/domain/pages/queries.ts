@@ -13,7 +13,6 @@ import { toPlainObject } from "@/shared/lib/serialize";
 
 export interface PageSeoData {
   title: string;
-  description: string | null;
   metaDescription: string | null;
   metaKeywords: string | null;
   ogpTitle: string | null;
@@ -25,7 +24,6 @@ export type PublicPage = {
   readonly id: string;
   readonly slug: string;
   readonly title: string;
-  readonly description: string | null;
   readonly isSystemPage: boolean;
 };
 
@@ -48,7 +46,6 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
           id: true,
           slug: true,
           title: true,
-          description: true,
           isSystemPage: true,
         },
       }),
@@ -81,7 +78,6 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
         },
         select: {
           title: true,
-          description: true,
           metaDescription: true,
           metaKeywords: true,
           ogpTitle: true,
@@ -101,7 +97,6 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
 
   return {
     title: result.title || slug,
-    description: result.description ?? null,
     metaDescription: result.metaDescription ?? null,
     metaKeywords: result.metaKeywords ?? null,
     ogpTitle: result.ogpTitle ?? null,

@@ -24,9 +24,6 @@ import { getPublicPage } from "@/shared/domain/pages/queries";
 export type PublicSection = {
   readonly id: string;
   readonly type: string;
-  readonly title: string | null;
-  readonly contentHtml: string | null;
-  readonly contentJson: unknown | null;
   readonly config: unknown;
   readonly order: number;
 };
@@ -40,9 +37,6 @@ function getDefaultSections(slug: string): PublicSection[] {
   return defaults.map((section, index) => ({
     id: `default-${slug}-${index}`,
     type: section.type,
-    title: section.title,
-    contentHtml: section.content,
-    contentJson: null,
     config: section.config,
     order: section.order,
   }));
@@ -120,9 +114,6 @@ export async function getPageSections(
         select: {
           id: true,
           type: true,
-          title: true,
-          contentHtml: true,
-          contentJson: true,
           config: true,
           order: true,
         },

@@ -295,7 +295,6 @@ function makePage(slug: string, title: string): PageData {
     id: `page-${slug}`,
     slug,
     title,
-    description: null,
     metaDescription: null,
     metaKeywords: null,
     ogpTitle: null,

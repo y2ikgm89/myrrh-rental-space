@@ -57,9 +57,7 @@ export async function ensurePageSectionsCommand(
           data: toCreate.map((section) => ({
             pageId,
             type: section.type,
-            title: section.title,
             config: section.config,
-            contentHtml: section.content,
             order: section.order,
             isActive: section.isActive,
           })),
@@ -100,7 +98,6 @@ export async function bootstrapSystemPagesCommand(
         data: {
           slug: definition.slug,
           title: definition.title,
-          description: definition.description,
           template: resolveTemplateForSlug(definition.slug),
           isPublished: true,
           isActive: true,

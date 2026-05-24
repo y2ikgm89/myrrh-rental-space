@@ -12,7 +12,6 @@ import type { DynamicSectionOptions } from "@/shared/domain/sections/dynamic-opt
 
 export interface ConfigFormSavePayload {
   config: Record<string, unknown>;
-  contentJson?: string;
 }
 
 export interface ConfigFormProps {

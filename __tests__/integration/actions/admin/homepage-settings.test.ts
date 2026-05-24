@@ -118,47 +118,8 @@ describe("Homepage Settings Admin Action Integration", () => {
       });
     });
 
-    describe("title バリデーション", () => {
-      test("100 文字のタイトルはOK", () => {
-        const result = createSectionSchema.safeParse({
-          ...VALID_CREATE_INPUT,
-          title: "あ".repeat(100),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("101 文字のタイトルはエラー", () => {
-        const result = createSectionSchema.safeParse({
-          ...VALID_CREATE_INPUT,
-          title: "あ".repeat(101),
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("100文字以内");
-        }
-      });
-    });
-
-    describe("contentJson バリデーション", () => {
-      test("500,000 文字のコンテンツはOK", () => {
-        const result = createSectionSchema.safeParse({
-          ...VALID_CREATE_INPUT,
-          contentJson: "a".repeat(500000),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("500,001 文字のコンテンツはエラー", () => {
-        const result = createSectionSchema.safeParse({
-          ...VALID_CREATE_INPUT,
-          contentJson: "a".repeat(500001),
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("500,000文字以内");
-        }
-      });
-    });
+    // 旧 title / contentJson バリデーション describe は削除
+    // (Section.title / contentJson 列削除 + createSectionSchema field 削除済)
 
     describe("order バリデーション", () => {
       test("0 以上の整数は許可", () => {
@@ -211,7 +172,7 @@ describe("Homepage Settings Admin Action Integration", () => {
     describe("正常系", () => {
       test("有効な更新データでパス", () => {
         const result = updateSectionSchema.safeParse({
-          title: "更新タイトル",
+          config: { maxItems: 10 },
           isActive: false,
         });
         expect(result.success).toBe(true);
@@ -222,49 +183,14 @@ describe("Homepage Settings Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("title のみの更新は許可", () => {
-        const result = updateSectionSchema.safeParse({
-          title: "新しいタイトル",
-        });
-        expect(result.success).toBe(true);
-      });
-
       test("isActive のみの更新は許可", () => {
         const result = updateSectionSchema.safeParse({ isActive: false });
         expect(result.success).toBe(true);
       });
     });
 
-    describe("title バリデーション", () => {
-      test("100 文字のタイトルはOK", () => {
-        const result = updateSectionSchema.safeParse({
-          title: "あ".repeat(100),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("101 文字のタイトルはエラー", () => {
-        const result = updateSectionSchema.safeParse({
-          title: "あ".repeat(101),
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("100文字以内");
-        }
-      });
-    });
-
-    describe("contentJson バリデーション", () => {
-      test("500,001 文字のコンテンツはエラー", () => {
-        const result = updateSectionSchema.safeParse({
-          contentJson: "a".repeat(500001),
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("500,000文字以内");
-        }
-      });
-    });
+    // 旧 title / contentJson バリデーション describe は削除
+    // (updateSectionSchema からも title / contentJson 削除済)
   });
 
   describe("updateSectionOrderSchema バリデーション", () => {
@@ -483,13 +409,7 @@ describe("Homepage Settings Admin Action Integration", () => {
       expect(result.success).toBe(true);
     });
 
-    test("タイトル 101 文字（境界超過）", () => {
-      const result = createSectionSchema.safeParse({
-        ...VALID_CREATE_INPUT,
-        title: "x".repeat(101),
-      });
-      expect(result.success).toBe(false);
-    });
+    // 旧「タイトル 101 文字 境界超過」test は削除 (createSectionSchema から title 削除済)
 
     test("order 0（最小値）", () => {
       const result = createSectionSchema.safeParse({

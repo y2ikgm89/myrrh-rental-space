@@ -252,15 +252,9 @@ describe("createPageSchema", () => {
     });
   });
 
-  describe("description", () => {
-    test("500文字超過はエラー", () => {
-      const result = createPageSchema.safeParse({
-        ...VALID_CREATE_PAGE_INPUT,
-        description: "あ".repeat(501),
-      });
-      expect(result.success).toBe(false);
-    });
-  });
+  // 旧 description field test は削除（createPageSchema から description 削除済、
+  // Page.description 列も migration `_drop_section_legacy_columns_and_page_description`
+  // で削除済）
 });
 
 describe("SYSTEM_PAGES", () => {

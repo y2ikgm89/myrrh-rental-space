@@ -26,7 +26,6 @@ const BASE_URL = getBaseUrl();
  */
 export interface PageSeoData {
   title: string;
-  description: string | null;
   metaDescription: string | null;
   metaKeywords: string | null;
   ogpTitle: string | null;
@@ -36,6 +35,9 @@ export interface PageSeoData {
 
 /**
  * システムページのデフォルトSEO設定を取得
+ *
+ * SystemPageDefinition.description は seed metadata 専用で `Page.description` 列が
+ * 削除済のため metaDescription の fallback として利用する。
  */
 export function getDefaultPageSeo(slug: string): PageSeoData | null {
   const definition = getSystemPageDefinition(slug);
@@ -43,7 +45,6 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
 
   return {
     title: definition.title,
-    description: definition.description,
     metaDescription: definition.description,
     metaKeywords: null,
     ogpTitle: null,
@@ -77,12 +78,11 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
   // タイトル: DB > デフォルト > slug
   const title = seo?.title || defaultSeo?.title || slug;
 
-  // 説明文: DB metaDescription > DB description > Settings > デフォルト
+  // 説明文: DB metaDescription > Settings > デフォルト
   const description =
     seo?.metaDescription ||
-    seo?.description ||
     settings?.defaultMetaDescription ||
-    defaultSeo?.description ||
+    defaultSeo?.metaDescription ||
     undefined;
 
   // OGP タイトル/説明: DB OGP > Settings OGP > 通常値

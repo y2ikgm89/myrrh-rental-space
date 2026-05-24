@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/admin/components/ui";
 import { updatePageSection } from "@/admin/actions/page-section";
-import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
@@ -44,21 +43,8 @@ export function SectionEditPanel({
 
   const handleSave = (payload: ConfigFormSavePayload) => {
     startTransition(async () => {
-      // client で contentJson を HTML に変換（server-side Lexical 実行を回避）
-      // - contentJson === undefined: 本文未更新
-      // - contentJson === "" (falsy): 明示クリア → contentHtml = null
-      // - contentJson === "<json>": 本文更新 → contentHtml = render 結果
-      const contentHtml =
-        payload.contentJson === undefined
-          ? undefined
-          : payload.contentJson
-            ? renderEditorStateJsonToHtmlClient(payload.contentJson)
-            : null;
       const result = await updatePageSection(section.id, {
         config: payload.config,
-        ...(payload.contentJson !== undefined
-          ? { contentJson: payload.contentJson, contentHtml }
-          : {}),
       });
       if (isMutationError(result)) {
         toast.error(result.error);

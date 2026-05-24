@@ -30,10 +30,9 @@ describe("PageSection Admin Action Integration", () => {
   });
 
   describe("updateSectionContentSchema", () => {
-    test("config と contentJson の本文更新だけを許可する", () => {
+    test("config 更新だけを許可する", () => {
       const result = updateSectionContentSchema.safeParse({
         config: { title: "本文" },
-        contentJson: '{"root":{"children":[]}}',
       });
 
       expect(result.success).toBe(true);
@@ -47,22 +46,6 @@ describe("PageSection Admin Action Integration", () => {
 
       expect(result.success).toBe(false);
     });
-
-    test("contentJson は 500,000 文字まで許可する", () => {
-      const result = updateSectionContentSchema.safeParse({
-        contentJson: "a".repeat(500000),
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    test("contentJson が 500,001 文字なら拒否する", () => {
-      const result = updateSectionContentSchema.safeParse({
-        contentJson: "a".repeat(500001),
-      });
-
-      expect(result.success).toBe(false);
-    });
   });
 
   describe("createSectionSchema", () => {
@@ -70,9 +53,7 @@ describe("PageSection Admin Action Integration", () => {
       const result = createSectionSchema.safeParse({
         pageId: VALID_UUID,
         type: "hero",
-        title: "ヒーロー",
         config: { title: "Hello" },
-        contentJson: '{"root":{"children":[]}}',
         order: 0,
         isActive: true,
       });

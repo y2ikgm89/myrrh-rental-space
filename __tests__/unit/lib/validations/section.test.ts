@@ -879,20 +879,13 @@ describe("createSectionSchema", () => {
     }
   });
 
-  test("contentJsonの文字数制限", () => {
-    const data = {
-      type: "custom",
-      contentJson: "a".repeat(500001),
-    };
-    const result = createSectionSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
+  // 旧 contentJson 文字数制限 test は削除（Section.contentJson 列削除済、
+  // createSectionSchema からも contentJson field 削除済）
 });
 
 describe("updateSectionSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
-      title: "更新タイトル",
       config: { maxItems: 10 },
       isActive: false,
     };

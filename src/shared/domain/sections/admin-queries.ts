@@ -12,10 +12,7 @@ const ADMIN_SECTION_SELECT = {
   id: true,
   pageId: true,
   type: true,
-  title: true,
   config: true,
-  contentHtml: true,
-  contentJson: true,
   order: true,
   isActive: true,
   createdAt: true,
@@ -41,10 +38,7 @@ function toSectionData(section: {
   id: string;
   pageId: string;
   type: string;
-  title: string | null;
   config: unknown;
-  contentHtml: string | null;
-  contentJson: unknown;
   order: number;
   isActive: boolean;
   createdAt: Date;

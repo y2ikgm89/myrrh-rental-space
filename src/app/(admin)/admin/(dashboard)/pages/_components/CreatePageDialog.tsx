@@ -23,7 +23,6 @@ import { useRouter } from "next/navigation";
 import {
   getFormProps,
   getInputProps,
-  getTextareaProps,
   useForm,
   useInputControl,
 } from "@conform-to/react";
@@ -46,7 +45,6 @@ import {
 } from "@/admin/components/ui/dialog";
 import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
-import { Textarea } from "@/admin/components/ui/textarea";
 import { createPage } from "@/admin/actions/page";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { createPageSchema } from "@/shared/lib/validations/page";
@@ -135,7 +133,6 @@ export function CreatePageDialog({
     defaultValue: {
       slug: "",
       title: "",
-      description: "",
     },
   });
 
@@ -317,24 +314,6 @@ export function CreatePageDialog({
               URLに使用されます（例: example.com/about-us）
               {!isManualSlug && title && " — タイトルから自動生成"}
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={fields.description.id}>説明（オプション）</Label>
-            <Textarea
-              {...getTextareaProps(fields.description)}
-              placeholder="ページの説明"
-              rows={2}
-              disabled={isPending}
-            />
-            {fields.description.errors && (
-              <p
-                id={fields.description.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.description.errors.join(", ")}
-              </p>
-            )}
           </div>
 
           {formErrors && formErrors.length > 0 && (

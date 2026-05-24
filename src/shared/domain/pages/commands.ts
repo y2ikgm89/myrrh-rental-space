@@ -101,7 +101,6 @@ export async function ensureSystemPageCommand(slug: string) {
       data: {
         slug: definition.slug,
         title: definition.title,
-        description: definition.description,
         template: resolveTemplateForSlug(definition.slug),
         isPublished: true,
         isActive: true,
@@ -123,15 +122,11 @@ export async function createPageCommand(
   await ensurePageSlugAvailable(input.slug);
 
   const publishedAt = input.isPublished ? new Date() : null;
-  const sections = createDefaultCustomPageSections(
-    input.title,
-    input.description,
-  );
+  const sections = createDefaultCustomPageSections(input.title);
   const page = await prisma.page.create({
     data: {
       slug: input.slug,
       title: input.title,
-      description: normalizeNullableString(input.description),
       template: resolveTemplateForSlug(input.slug),
       isPublished: input.isPublished,
       publishedAt,
@@ -139,9 +134,7 @@ export async function createPageCommand(
       sections: {
         create: sections.map((section) => ({
           type: section.type,
-          title: section.title,
           config: section.config,
-          contentHtml: section.content,
           order: section.order,
           isActive: section.isActive,
         })),

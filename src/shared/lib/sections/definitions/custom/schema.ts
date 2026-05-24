@@ -9,6 +9,14 @@ export const customConfigSchema = z.object({
     maxLength: 50,
     subGroup: "text",
   }),
+  title: field.text("見出し", {
+    maxLength: 100,
+    subGroup: "text",
+  }),
+  body: field.textarea("本文 (HTML)", {
+    placeholder: "<p>...</p>",
+    subGroup: "text",
+  }),
   containerClass: field.text("カスタム CSS クラス", { group: "advanced" }),
   backgroundColor: field.color("背景色", { group: "design" }),
   layout: sectionLayoutSchema,

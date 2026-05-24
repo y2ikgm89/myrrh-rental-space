@@ -1,8 +1,8 @@
 import "server-only";
 
-import { clonePrismaInputJson, parsePrismaInputJson } from "@/shared/db/json";
+import { clonePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
-import { Prisma } from "@generated/prisma/client";
+import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
@@ -11,20 +11,6 @@ import {
   type SectionConfig,
   type UpdateSectionContentInput,
 } from "@/shared/lib/validations/section";
-
-function parseJsonValue(
-  value: string | null | undefined,
-): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (!value) {
-    return Prisma.JsonNull;
-  }
-
-  return parsePrismaInputJson(value, "JSONデータが不正です");
-}
 
 function cloneJsonValue(value: unknown): Prisma.InputJsonValue {
   return clonePrismaInputJson(value, "JSONデータが不正です");
@@ -76,7 +62,6 @@ function validateConfig(type: string, config: unknown): SectionConfig {
 export async function updatePageSectionCommand(
   id: string,
   input: UpdateSectionContentInput,
-  contentHtml?: string | null,
 ): Promise<{ pageId: string; pageSlug: string }> {
   const existing = await ensurePageSectionExists(id);
 
@@ -89,12 +74,6 @@ export async function updatePageSectionCommand(
     where: { id },
     data: omitUndefined({
       config: config === undefined ? undefined : cloneJsonValue(config),
-      ...(input.contentJson !== undefined
-        ? {
-            contentJson: parseJsonValue(input.contentJson),
-            contentHtml: contentHtml ?? null,
-          }
-        : {}),
     }),
   });
 
@@ -186,8 +165,6 @@ export async function duplicatePageSectionCommand(
       pageId: true,
       type: true,
       config: true,
-      contentHtml: true,
-      contentJson: true,
       order: true,
       isActive: true,
       page: { select: { slug: true } },
@@ -215,11 +192,6 @@ export async function duplicatePageSectionCommand(
         pageId: sourcePageId,
         type: source.type,
         config: cloneJsonValue(source.config),
-        contentHtml: source.contentHtml,
-        contentJson:
-          source.contentJson === null
-            ? Prisma.JsonNull
-            : cloneJsonValue(source.contentJson),
         order: source.order + 1,
         isActive: source.isActive,
       },
