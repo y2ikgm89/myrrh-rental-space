@@ -3024,21 +3024,11 @@ async function seedSystemPageSections() {
       const homeSections = DEFAULT_PAGE_SECTIONS["home"];
       if (homeSections) {
         for (const section of homeSections) {
-          const plain = section.content?.trim() ?? "";
-          const contentJson = plain
-            ? parsePrismaInputJson(
-                buildParagraphEditorStateJson(plain),
-                "seed homepage section contentJson が不正です",
-              )
-            : null;
           await prisma.section.create({
             data: {
               pageId: homePage.id,
               type: section.type,
-              title: section.title,
               config: section.config,
-              contentHtml: plain ? buildParagraphHtml(plain) : section.content,
-              ...(contentJson !== null ? { contentJson } : {}),
               order: section.order,
               isActive: section.isActive,
             },
@@ -3074,21 +3064,11 @@ async function seedSystemPageSections() {
     if (!defaults || defaults.length === 0) continue;
 
     for (const section of defaults) {
-      const plain = section.content?.trim() ?? "";
-      const contentJson = plain
-        ? parsePrismaInputJson(
-            buildParagraphEditorStateJson(plain),
-            "seed system page section contentJson が不正です",
-          )
-        : null;
       await prisma.section.create({
         data: {
           pageId: page.id,
           type: section.type,
-          title: section.title,
           config: section.config,
-          contentHtml: plain ? buildParagraphHtml(plain) : section.content,
-          ...(contentJson !== null ? { contentJson } : {}),
           order: section.order,
           isActive: section.isActive,
         },
