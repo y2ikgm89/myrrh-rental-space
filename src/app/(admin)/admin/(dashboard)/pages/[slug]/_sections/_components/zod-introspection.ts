@@ -37,7 +37,11 @@ export interface ArrayItemFieldInfo {
 
 /**
  * Zod スキーマから ZodObject の shape を取得する。
- * ZodDefault, ZodPipe 等のラッパーを再帰的にアンラップする。
+ * ZodDefault / ZodOptional / ZodPrefault 等のラッパーを再帰的にアンラップする。
+ *
+ * `createImageGroupSchema` / `createMediaGroupSchema` 等の `z.object(...).prefault({}).register(...)`
+ * factory パターンは `_zod.def.type === "prefault"` で wrap されるため、明示的に unwrap しないと
+ * AutoGroupField の sub-shape introspection が undefined を返して sub-fields が描画されない silent bug。
  */
 export function getZodObjectShape(
   schema: z.ZodType,
@@ -59,6 +63,11 @@ export function getZodObjectShape(
 
   // ZodOptional → innerType
   if (type === "optional" && isZodType(def["innerType"])) {
+    return getZodObjectShape(def["innerType"]);
+  }
+
+  // ZodPrefault → innerType（`createMediaGroupSchema` / `createImageGroupSchema` 等で必須）
+  if (type === "prefault" && isZodType(def["innerType"])) {
     return getZodObjectShape(def["innerType"]);
   }
 
@@ -104,11 +113,14 @@ export function hasShape(
 
 /**
  * FieldMeta を抽出する。
- * registry に直接登録されていない場合は ZodDefault / ZodOptional をアンラップして探索する。
+ * registry に直接登録されていない場合は ZodDefault / ZodOptional / ZodPrefault を
+ * アンラップして探索する。
  *
  * Note: Zod 4 の natural chain パターン（`.max().default().register()`）では
  * register が ZodDefault に attach されるため direct lookup が通るが、nested
- * ZodOptional 経由でアクセスされる場合に備えて unwrap フォールバックを持つ。
+ * ZodOptional / ZodPrefault 経由でアクセスされる場合（`createMediaGroupSchema` 等の
+ * `z.object(...).prefault({}).register(...)` factory が attach 先）に備えて unwrap
+ * フォールバックを持つ。
  */
 export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
   // Direct registry lookup
@@ -127,6 +139,11 @@ export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
 
   // ZodOptional → check innerType
   if (type === "optional" && isZodType(def["innerType"])) {
+    return extractFieldMetaDeep(def["innerType"]);
+  }
+
+  // ZodPrefault → check innerType
+  if (type === "prefault" && isZodType(def["innerType"])) {
     return extractFieldMetaDeep(def["innerType"]);
   }
 
