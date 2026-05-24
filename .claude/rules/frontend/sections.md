@@ -30,7 +30,7 @@ paths:
 
 ## 高さ単位 / Hero
 
-- **公開ページのセクション高さは `svh` 単位を使用** — `vh` は iOS Safari のアドレスバー問題がある。`min-h-[*svh]` を使用し、`h-[*vh]` は禁止。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]`、ダイアログの `max-h-[85vh]`、`min-h-screen`（ページ全体）
+- **section 高さは `svh`、ページ chrome 全体は `dvh` を使用** — `vh` / `h-screen` / `min-h-screen` は iOS Safari でアドレスバー高さを含めないため body が overflow する [CSS Working Group `vh-bug` 公式 issue](https://github.com/w3c/csswg-drafts/issues/4329)。section 高さは `min-h-[*svh]` (small viewport、アドレスバー表示時の最小値で固定、可読性安定)、ページ chrome 全体 wrapper は `min-h-dvh` (dynamic viewport、アドレスバー表示/非表示で動的調整、folder UI 等の chrome 切替に追従)。`h-[*vh]` / `h-screen` / `min-h-screen` は全廃済 (PR #216、Safari 15.4+ / Chrome 108+ / Firefox 101+ で dvh / svh / lvh ネイティブ対応、本プロジェクト最低サポート Safari 16.4+ で完全動作)。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]` (mobile fallback として中央寄せ優先の業界標準)、ダイアログの `max-h-[85vh]` (Radix Dialog 公式推奨値で mobile address bar 表示時にも切れにくい中位値)
 - **ヒーロー高さはセマンティックプリセット + カスタム** — `sm/md/lg/full/custom` の 5 段階。custom 時は `heightCustom`（svh 数値）をインラインスタイルで適用。ユーザーに px / vh を直接入力させない（Squarespace / Payload CMS 方式）
 
 ## sectionLabel 単独 render 禁止

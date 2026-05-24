@@ -68,7 +68,26 @@ consumer 側は必ず親に `@container` を付与（`SpaceShowcaseSection` / `S
 
 // NG: arbitrary max-w-[90rem] を @theme 経由せず直書き
 <div className="max-w-[90rem]">
+
+// NG: admin dashboard widget で viewport breakpoint（サイドバー開閉に追従しない silent UX bug）
+//     viewport 1024px でも main が狭ければ 6 col は過密 → 容器幅基準が canonical
+<div className="grid grid-cols-2 sm:grid-cols-4">  // ← AnalyticsCard 等
 ```
+
+## 適用済 dashboard widget SSoT (PR #217)
+
+`DashboardMain.tsx` の `@container/main` 内側で grid-cols を使う dashboard widget は **必ず `@*/main:` named variant**。viewport breakpoint 直接使用は禁止。canonical:
+
+| widget                                 | grid                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------ |
+| `AnalyticsCard` (4 統計セル)           | `grid-cols-2 @md/main:grid-cols-4`                                             |
+| `AuditLogStats` (4 統計セル)           | `grid-cols-1 @md/main:grid-cols-2 @3xl/main:grid-cols-4`                       |
+| `CommentStats` (3 統計セル)            | `grid-cols-1 @2xl/main:grid-cols-3`                                            |
+| `RecentItemsSkeleton` (2 card)         | `grid-cols-1 @3xl/main:grid-cols-2`                                            |
+| `settings/page.tsx` (8 カテゴリカード) | `grid-cols-1 @md/main:grid-cols-2 @3xl/main:grid-cols-3`                       |
+| `media/page.tsx` (画像 grid)           | `grid-cols-2 @md/main:grid-cols-3 @2xl/main:grid-cols-4 @4xl/main:grid-cols-6` |
+
+新規 dashboard widget 追加時は本 SSoT 踏襲必須。sidebar (288px) 開閉時の main 実 width に追従する設計（viewport 1024px でも sidebar 表示時 main 688px で `@2xl/main:grid-cols-4` までで適正密度）。
 
 ## OK パターン
 
