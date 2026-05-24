@@ -1,8 +1,12 @@
 /**
  * page-hero セクション定義のユニットテスト
  *
- * discriminated union (editorial-split / compact / minimal / video) と field-registry meta を検証。
+ * discriminated union (editorial-split / compact / minimal / media) と field-registry meta を検証。
  * 純粋モジュールのため mock.module 不要。
+ *
+ * 2026-05-24 PR (MediaPicker Phase 8): 旧 `video` variant + `video` field を
+ * `media` variant + `media: { url, alt, caption }` group に統合（業界標準
+ * WordPress Cover Block パターン）。
  */
 
 import { describe, expect, test } from "bun:test";
@@ -217,51 +221,62 @@ describe("pageHeroConfigSchema", () => {
     });
   });
 
-  describe("video variant", () => {
-    test("最小構成（video URL のみ）でパース成功", () => {
+  describe("media variant", () => {
+    test("最小構成（media URL のみ - 画像）でパース成功", () => {
       const result = pageHeroConfigSchema.safeParse({
-        variant: "video",
-        video: "https://example.com/hero.mp4",
+        variant: "media",
+        media: { url: "https://example.com/hero.jpg", alt: "alt" },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("動画 URL（R2 mp4）も受け付ける", () => {
+      const result = pageHeroConfigSchema.safeParse({
+        variant: "media",
+        media: { url: "https://example.com/hero.mp4", alt: "video" },
       });
       expect(result.success).toBe(true);
     });
 
     test("YouTube URL も受け付ける", () => {
       const result = pageHeroConfigSchema.safeParse({
-        variant: "video",
-        video: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        variant: "media",
+        media: {
+          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          alt: "yt",
+        },
       });
       expect(result.success).toBe(true);
     });
 
-    test("video 空文字でもパース成功（default 適用）", () => {
+    test("media を完全省略でもパース成功（prefault で default 適用）", () => {
       const result = pageHeroConfigSchema.safeParse({
-        variant: "video",
+        variant: "media",
       });
       expect(result.success).toBe(true);
-      if (result.success && result.data.variant === "video") {
-        expect(result.data.video).toBe("");
+      if (result.success && result.data.variant === "media") {
+        expect(result.data.media).toMatchObject({ url: "", alt: "" });
       }
     });
 
     test("posterImage は省略可能（prefault で default 補完）", () => {
       const result = pageHeroConfigSchema.safeParse({
-        variant: "video",
-        video: "https://example.com/hero.mp4",
+        variant: "media",
+        media: { url: "https://example.com/hero.mp4", alt: "" },
       });
       expect(result.success).toBe(true);
-      if (result.success && result.data.variant === "video") {
+      if (result.success && result.data.variant === "media") {
         expect(result.data.posterImage).toMatchObject({ url: "", alt: "" });
       }
     });
 
     test("overlay / overlayOpacity の default が適用される", () => {
       const result = pageHeroConfigSchema.safeParse({
-        variant: "video",
-        video: "https://example.com/hero.mp4",
+        variant: "media",
+        media: { url: "https://example.com/hero.mp4", alt: "" },
       });
       expect(result.success).toBe(true);
-      if (result.success && result.data.variant === "video") {
+      if (result.success && result.data.variant === "media") {
         expect(result.data.overlay).toBe(true);
         expect(result.data.overlayOpacity).toBe(40);
       }
@@ -269,8 +284,8 @@ describe("pageHeroConfigSchema", () => {
 
     test("overlayOpacity は 0-100 範囲内のみ許容", () => {
       const result = pageHeroConfigSchema.safeParse({
-        variant: "video",
-        video: "https://example.com/hero.mp4",
+        variant: "media",
+        media: { url: "https://example.com/hero.mp4", alt: "" },
         overlayOpacity: 150,
       });
       expect(result.success).toBe(false);
@@ -355,16 +370,16 @@ describe("zod-introspection / discriminated union 対応", () => {
     expect(info).toBeDefined();
     expect(info?.discriminator).toBe("variant");
     const values = info?.options.map((o) => o.value).sort();
-    expect(values).toEqual(["compact", "editorial-split", "minimal", "video"]);
+    expect(values).toEqual(["compact", "editorial-split", "media", "minimal"]);
   });
 
-  test("extractSchemaFields(schema, { variant: 'video' }) は video のフィールドを返す", () => {
+  test("extractSchemaFields(schema, { variant: 'media' }) は media のフィールドを返す", () => {
     const fields = extractSchemaFields(pageHeroConfigSchema, {
-      variant: "video",
+      variant: "media",
     });
     const keys = fields.map((f) => f.key);
     expect(keys).toContain("variant");
-    expect(keys).toContain("video"); // video variant 固有
+    expect(keys).toContain("media"); // media variant 固有
     expect(keys).toContain("posterImage");
     expect(keys).toContain("overlay");
     expect(keys).toContain("overlayOpacity");

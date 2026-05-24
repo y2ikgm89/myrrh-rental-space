@@ -30,7 +30,8 @@ export type FieldType = (typeof FIELD_TYPES)[number];
  * server-side magic-byte 検出 + MediaPicker dialog filter / native `<input accept>` に伝播。
  *
  * - `image`: 画像 (JPEG/PNG/WebP/GIF)
- * - `video`: 動画 (MP4/WebM)
+ * - `video`: 動画 (MP4/WebM + YouTube/Vimeo URL)
+ * - `image-or-video`: 画像 OR 動画 (Hero 系の単一メディアフィールド用、WordPress Cover Block / Sanity Studio 業界標準パターン)
  * - `audio`: 音声 (MP3/WAV)
  * - `file`: 文書 (PDF) — 「file」は業界標準の呼称（Lexical FileNode と整合）
  * - `any`: 画像/動画/音声/文書すべて（汎用メディアライブラリ用）
@@ -38,6 +39,7 @@ export type FieldType = (typeof FIELD_TYPES)[number];
 export const MEDIA_ACCEPT_TYPES = [
   "image",
   "video",
+  "image-or-video",
   "audio",
   "file",
   "any",

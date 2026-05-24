@@ -1,16 +1,21 @@
 "use client";
 
 /**
- * VideoHero — page-hero variant=video
+ * MediaHero — page-hero variant=media
  *
- * 全面背景動画 + センター寄せ overlay テキスト（業界 reference: Apple Hero /
- * Squarespace Video Backgrounds / Webflow Background Video）。
+ * 全面背景メディア（画像 OR 動画）+ センター寄せ overlay テキスト。
+ * 業界 reference: WordPress Cover Block / Apple Hero / Squarespace Video Backgrounds /
+ * Webflow Background Video。`media.url` が動画なら VideoPlayer Primitive で auto-play +
+ * loop + mute、画像なら next/image で表示する（`detectMediaSourceType()` で runtime 判別）。
  *
- * - 背景動画は `VideoPlayer variant="background"` (auto-play + loop + mute + コントロール非表示)
- * - 動画 URL は R2 self-host mp4 / YouTube / Vimeo を `detectVideoProvider()` で自動 dispatch
- * - posterImage は動画 load 中 / autoplay 失敗時のフォールバック（モバイル iOS Safari 等）
+ * - 動画選択時: VideoPlayer (R2 mp4 / YouTube / Vimeo を `detectVideoProvider()` で auto dispatch)
+ *   + posterImage を load 中 / autoplay 失敗時の fallback（モバイル iOS Safari 等）として表示
+ * - 画像選択時: next/image で背景 fill
  * - overlay は WCAG 1.4.3 のテキスト可読性確保用（管理画面で disable も可能）
  * - 入場アニメーションは GSAP matchMedia pattern A-1（prefers-reduced-motion 自動 skip）
+ *
+ * 2026-05-24 PR (MediaPicker Phase 8): 旧 VideoHero.tsx を破壊的に置換。`video` フィールド
+ * と `backgroundImage` の 2 軸分離を `media` 単一フィールド + runtime discriminate に統合。
  */
 
 import { useRef, type ReactElement } from "react";
@@ -27,26 +32,28 @@ import { isAppRoute } from "@/shared/lib/typed-routes";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
+import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
 
-export type VideoHeroProps = Omit<
-  Extract<PageHeroConfig, { variant: "video" }>,
+export type MediaHeroProps = Omit<
+  Extract<PageHeroConfig, { variant: "media" }>,
   "variant" | "layout"
 >;
 
-export function VideoHero({
+export function MediaHero({
   label,
   title,
   description,
-  video,
+  media,
   posterImage,
   overlay,
   overlayOpacity,
   buttons,
-}: VideoHeroProps): ReactElement {
+}: MediaHeroProps): ReactElement {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const hasVideo = video.length > 0;
+  const hasMedia = media.url.length > 0;
+  const mediaType = hasMedia ? detectMediaSourceType(media.url) : "image";
   const hasPoster = posterImage.url.length > 0;
   const hasLabel = label.length > 0;
   const hasTitle = title.length > 0;
@@ -83,8 +90,8 @@ export function VideoHero({
         "pt-[var(--header-height)]",
       )}
     >
-      {/* Background: video > poster image > solid foreground fallback */}
-      {hasVideo ? (
+      {/* Background: video > image > poster image > solid foreground fallback */}
+      {hasMedia && mediaType === "video" ? (
         <div className="absolute inset-0">
           {hasPoster ? (
             <Image
@@ -98,11 +105,22 @@ export function VideoHero({
           ) : null}
           <div className="absolute inset-0">
             <VideoPlayer
-              url={video}
+              url={media.url}
               variant="background"
               {...(hasPoster && { poster: posterImage.url })}
             />
           </div>
+        </div>
+      ) : hasMedia && mediaType === "image" ? (
+        <div className="absolute inset-0">
+          <Image
+            src={media.url}
+            alt={media.alt}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority
+          />
         </div>
       ) : hasPoster ? (
         <div className="absolute inset-0">

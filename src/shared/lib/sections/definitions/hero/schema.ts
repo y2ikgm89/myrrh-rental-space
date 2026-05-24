@@ -2,18 +2,24 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
-import { createImageGroupSchema } from "../_shared/image";
+import { createMediaGroupSchema } from "../_shared/media";
 import { sectionLayoutSchema } from "../_shared/layout";
 
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 
-const variantOptions = [
-  "default",
-  "minimal",
-  "split",
-  "video",
-  "parallax",
-] as const;
+/**
+ * hero section variants
+ *
+ * - `default`: 中央配置 + 背景メディア（画像 or 動画）+ overlay
+ * - `minimal`: 中央配置 + 背景なし
+ * - `split`: 左テキスト + 右メディア
+ * - `parallax`: scrub parallax 背景メディア
+ *
+ * 2026-05-24 PR (MediaPicker Phase 8): `backgroundImage` + `video` の 2 フィールド構成を
+ * `backgroundMedia` 単一フィールドに統合（業界標準 WordPress Cover Block / Sanity Studio
+ * パターン）。`variant="video"` も削除し、media URL 自体が動画なら video として描画される。
+ */
+const variantOptions = ["default", "minimal", "split", "parallax"] as const;
 
 export const heroConfigSchema = z.object({
   sectionLabel: field.text("セクションラベル", {
@@ -26,7 +32,7 @@ export const heroConfigSchema = z.object({
   subtitle: field.portableTextBlock("サブ見出し", {
     subGroup: "text",
   }),
-  backgroundImage: createImageGroupSchema("背景画像"),
+  backgroundMedia: createMediaGroupSchema("背景メディア（画像 / 動画）"),
   buttons: createButtonsArraySchema("ボタン"),
   height: field.select("高さ", {
     options: heightOptions,
@@ -58,12 +64,6 @@ export const heroConfigSchema = z.object({
     suffix: "%",
     helpText: "0% は透明、100% は完全に黒",
     group: "design",
-  }),
-  video: field.media("動画", {
-    accept: "video",
-    subGroup: "media",
-    helpText:
-      "R2 にアップロードした動画 / YouTube / Vimeo URL を選択 (variant=video 時のみ表示)",
   }),
   parallaxSpeed: field.number("パララックス速度", {
     min: 0,

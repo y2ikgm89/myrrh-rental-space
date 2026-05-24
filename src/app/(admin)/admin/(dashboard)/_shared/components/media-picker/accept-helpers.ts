@@ -19,6 +19,8 @@ export function acceptToInputAttr(accept: MediaAcceptType): string {
       return "image/*";
     case "video":
       return "video/*";
+    case "image-or-video":
+      return "image/*,video/*";
     case "audio":
       return "audio/*";
     case "file":
@@ -42,6 +44,10 @@ export function acceptToInitialMediaType(
       return "IMAGE";
     case "video":
       return "VIDEO";
+    case "image-or-video":
+      // 初期は画像表示（業界一般: WordPress Cover Block / Squarespace の Hero Media picker
+      // は初期 image tab スタートで動画タブに切替できる UX）
+      return "IMAGE";
     case "audio":
       return "AUDIO";
     case "file":
@@ -58,6 +64,8 @@ export function acceptToLabel(accept: MediaAcceptType): string {
       return "画像";
     case "video":
       return "動画";
+    case "image-or-video":
+      return "画像 / 動画";
     case "audio":
       return "音声";
     case "file":
@@ -76,6 +84,8 @@ export function acceptToUrlPlaceholder(accept: MediaAcceptType): string {
       return "https://.../image.jpg";
     case "video":
       return "https://www.youtube.com/watch?v=... または https://.../video.mp4";
+    case "image-or-video":
+      return "https://.../image.jpg または https://www.youtube.com/watch?v=...";
     case "audio":
       return "https://.../audio.mp3";
     case "file":

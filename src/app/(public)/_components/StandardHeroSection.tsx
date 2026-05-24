@@ -3,14 +3,21 @@
 /**
  * StandardHeroSection — Generic hero with height/overlay/CTA variants
  *
- * Configurable height, background image overlay, SplitText title,
+ * Configurable height, background media (image OR video) overlay, SplitText title,
  * and CTA buttons via MagneticButton + text link.
  *
  * `minimal` variant is the DB-driven mini hero used by all system pages:
  * bottom-aligned, gradient background, left-aligned text, chars animation.
  *
- * `default` variant without a background image automatically
- * delegates to the minimal layout for visual consistency.
+ * `default` variant without a background automatically delegates to the minimal
+ * layout for visual consistency.
+ *
+ * 2026-05-24 PR (MediaPicker Phase 8): `backgroundImage` (image-only) + `video`
+ * (video-only) を `backgroundMedia` (image OR video) 単一フィールドに統合。
+ * 公開側は `detectMediaSourceType()` で runtime に image / video を派生して
+ * `<Image>` / `<VideoPlayer>` を出し分ける（業界標準 WordPress Cover Block
+ * パターン）。`variant="video"` も撤廃 — メディア URL 自体が動画なら自動的に
+ * 動画として描画される。
  */
 
 import { useRef, type ReactElement } from "react";
@@ -38,6 +45,7 @@ import { toAppRoute } from "@/shared/lib/typed-routes";
 import { spansToPlainText } from "@/shared/lib/portable-text";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
+import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
 import {
   getTitleStyle,
   getTextStyle,
@@ -113,14 +121,13 @@ export function StandardHeroSection({
   const imageRef = useRef<HTMLDivElement>(null);
 
   const variant = config.variant;
-  const hasBackground = !!(
-    config.backgroundImage.url ||
-    (variant === "video" && config.video)
-  );
+  const mediaUrl = config.backgroundMedia.url;
+  const hasMedia = mediaUrl.length > 0;
+  const mediaType = hasMedia ? detectMediaSourceType(mediaUrl) : "image";
 
   // minimal layout: explicit minimal OR default without background
   const useMinimalLayout =
-    variant === "minimal" || (variant === "default" && !hasBackground);
+    variant === "minimal" || (variant === "default" && !hasMedia);
 
   useGSAP(
     () => {
@@ -144,10 +151,11 @@ export function StandardHeroSection({
           },
         );
 
-        // Parallax background when variant is 'parallax'
+        // Parallax background when variant is 'parallax' AND media is an image
         const image = imageRef.current;
         const section = sectionRef.current;
-        if (!image || !section || variant !== "parallax") return;
+        if (!image || !section) return;
+        if (variant !== "parallax" || mediaType !== "image") return;
 
         const displacement = config.parallaxSpeed * 200;
         gsap.set(image, { scale: 1.15 });
@@ -190,10 +198,7 @@ export function StandardHeroSection({
   // 旧 `bg-gradient-to-b from-surface via-background to-background` 廃止。
   // axe-core が gradient ancestor を bgGradient incomplete で評価できず、
   // production build で violation に昇格する silent bug の root cause。
-  // 代替は solid `bg-background` (body bg と同色)。ヒーローと本文の区切りは
-  // 罫線ではなく余白で表現（Editorial Magazine の whitespace 規律）。
-  // WCAG AA 全 text token (accent / muted-fg / foreground) が
-  // definitively passable な solid bg を保証。
+  // 代替は solid `bg-background` (body bg と同色)。
   // =========================================================================
   if (useMinimalLayout) {
     return (
@@ -248,7 +253,7 @@ export function StandardHeroSection({
   }
 
   // =========================================================================
-  // Split: 2-column layout (text left, image right)
+  // Split: 2-column layout (text left, media right)
   // =========================================================================
   if (variant === "split") {
     return (
@@ -306,17 +311,21 @@ export function StandardHeroSection({
               </ScrollReveal>
             )}
           </div>
-          {config.backgroundImage.url && (
+          {hasMedia && (
             <div className="relative flex-1">
               <div className="relative aspect-[4/5] w-full overflow-hidden">
-                <Image
-                  src={config.backgroundImage.url}
-                  alt={config.backgroundImage.alt}
-                  fill
-                  sizes="50vw"
-                  className="object-cover"
-                  priority
-                />
+                {mediaType === "video" ? (
+                  <VideoPlayer url={mediaUrl} variant="background" />
+                ) : (
+                  <Image
+                    src={mediaUrl}
+                    alt={config.backgroundMedia.alt}
+                    fill
+                    sizes="50vw"
+                    className="object-cover"
+                    priority
+                  />
+                )}
               </div>
             </div>
           )}
@@ -326,10 +335,8 @@ export function StandardHeroSection({
   }
 
   // =========================================================================
-  // Default / Parallax / Video: centered with background
+  // Default / Parallax: centered with background media (image or video)
   // =========================================================================
-  const useVideo = variant === "video" && config.video.length > 0;
-
   return (
     <section
       ref={sectionRef}
@@ -340,25 +347,26 @@ export function StandardHeroSection({
       )}
       style={customHeightStyle}
     >
-      {/* Background image or video */}
-      {useVideo ? (
-        <div className="absolute inset-0">
-          <VideoPlayer url={config.video} variant="background" />
-        </div>
-      ) : config.backgroundImage.url ? (
-        <div className="absolute inset-0">
-          <div ref={imageRef} className="relative h-full w-full">
-            <Image
-              src={config.backgroundImage.url}
-              alt={config.backgroundImage.alt}
-              fill
-              sizes="100vw"
-              className="object-cover"
-              priority
-            />
+      {/* Background media: video or image (runtime discriminated) */}
+      {hasMedia &&
+        (mediaType === "video" ? (
+          <div className="absolute inset-0">
+            <VideoPlayer url={mediaUrl} variant="background" />
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <div className="absolute inset-0">
+            <div ref={imageRef} className="relative h-full w-full">
+              <Image
+                src={mediaUrl}
+                alt={config.backgroundMedia.alt}
+                fill
+                sizes="100vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+          </div>
+        ))}
 
       {/* Overlay */}
       {config.overlay && (

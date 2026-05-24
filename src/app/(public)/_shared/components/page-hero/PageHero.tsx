@@ -3,7 +3,7 @@ import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-her
 import { EditorialSplitHero } from "./EditorialSplitHero";
 import { CompactHero } from "./CompactHero";
 import { MinimalHero } from "./MinimalHero";
-import { VideoHero } from "./VideoHero";
+import { MediaHero } from "./MediaHero";
 
 interface PageHeroProps {
   readonly config: unknown;
@@ -32,9 +32,9 @@ export function PageHero({ config }: PageHeroProps): ReactElement | null {
       const { variant: _v, layout: _l, ...rest } = hero;
       return <MinimalHero {...rest} />;
     }
-    case "video": {
+    case "media": {
       const { variant: _v, layout: _l, ...rest } = hero;
-      return <VideoHero {...rest} />;
+      return <MediaHero {...rest} />;
     }
     default:
       return null;

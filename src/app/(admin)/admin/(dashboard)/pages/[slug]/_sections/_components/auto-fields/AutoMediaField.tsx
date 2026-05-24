@@ -61,6 +61,10 @@ function mimePrefixForAccept(accept: MediaAcceptType): string | null {
       return "image/";
     case "video":
       return "video/";
+    case "image-or-video":
+      // 画像 / 動画 どちらも許容 — 単一 prefix で表現不能のため UI hint は省略
+      // (server-side magic-byte が trust boundary、UI は誤投下を許容する canonical pattern)
+      return null;
     case "audio":
       return "audio/";
     case "file":
