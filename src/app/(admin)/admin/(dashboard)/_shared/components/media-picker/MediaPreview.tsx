@@ -40,7 +40,10 @@ export function MediaPreview({
 }: MediaPreviewProps) {
   if (url.length === 0) return null;
 
-  if (accept === "image" || (accept === "any" && looksLikeImage(url))) {
+  if (
+    accept === "image" ||
+    ((accept === "any" || accept === "image-or-video") && looksLikeImage(url))
+  ) {
     return (
       <img
         src={url}
@@ -50,7 +53,10 @@ export function MediaPreview({
     );
   }
 
-  if (accept === "video" || (accept === "any" && looksLikeVideo(url))) {
+  if (
+    accept === "video" ||
+    ((accept === "any" || accept === "image-or-video") && looksLikeVideo(url))
+  ) {
     const { embedUrl } = detectVideoProvider(url);
     if (embedUrl) {
       return (

@@ -1,13 +1,19 @@
 /**
  * page-hero セクション設定スキーマ
  *
- * variant 別 discriminated union（editorial-split / compact / minimal / video）。
+ * variant 別 discriminated union（editorial-split / compact / minimal / media）。
  * Section レジストリに統合された正本。`Section.config` JSON 列に保存される。
  *
  * - editorial-split: 雑誌カバー風 2 列 + 複数静止画 carousel + transition 演出
  * - compact: 中型単一画像 + 右テキスト帯
  * - minimal: 画像なし、見出しとリードのみ
- * - video: 全面背景動画 + センター寄せ overlay テキスト（2026-05-24 追加、MediaPicker Phase 7）
+ * - media: 全面背景メディア（画像 OR 動画）+ センター寄せ overlay テキスト
+ *
+ * 2026-05-24 PR (MediaPicker Phase 8): 旧 `video` variant を `media` variant にリネーム
+ * し、`video` フィールド（動画専用）を `backgroundMedia` group（accept: image-or-video）
+ * に統合。業界標準 WordPress Cover Block / Sanity Studio / Squarespace Hero Block の
+ * 「単一 media field + runtime discriminate」パターンと整合。
+ * `posterImage` は動画選択時の load 中 / autoplay 失敗時 fallback として残す。
  */
 
 import { z } from "zod";
@@ -15,6 +21,7 @@ import { z } from "zod";
 import { field, fieldRegistry } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 import { createButtonsArraySchema } from "../_shared/buttons";
+import { createMediaGroupSchema } from "../_shared/media";
 
 const HERO_TRANSITIONS = [
   "crossfade",
@@ -89,28 +96,25 @@ const minimalSchema = z.object({
 });
 
 /**
- * video variant — 全面背景動画 + センター寄せ overlay テキスト
+ * media variant — 全面背景メディア（画像 OR 動画）+ センター寄せ overlay テキスト
  *
- * 業界 reference: Apple Hero / Squarespace Video Backgrounds / Webflow Background Video。
+ * 業界 reference: WordPress Cover Block / Apple Hero / Squarespace Hero / Webflow
+ * Background Video。`media.url` が動画なら VideoPlayer Primitive で auto-play + loop +
+ * mute、画像なら next/image で表示する（runtime に `detectMediaSourceType()` で派生）。
  *
- * - `video`: R2 self-host mp4 / YouTube / Vimeo URL を受け付ける（VideoPlayer Primitive が
- *   `detectVideoProvider()` で自動 dispatch、`variant="background"` で auto-play + loop + mute）
- * - `posterImage`: 動画 load 中 / モバイル autoplay 失敗時 / 不明 provider 時のフォールバック
- * - `overlay` + `overlayOpacity`: 動画上のテキスト可読性確保（WCAG 1.4.3 准拠）
+ * - `media`: 画像 / 動画どちらでも選択可能（WordPress Cover Block の `mediaUrl` 等価）
+ * - `posterImage`: 動画選択時の load 中 / autoplay 失敗時の fallback（画像時は未使用）
+ * - `overlay` + `overlayOpacity`: メディア上のテキスト可読性確保（WCAG 1.4.3 准拠）
  */
-const videoSchema = z.object({
-  variant: z.literal("video"),
+const mediaSchema = z.object({
+  variant: z.literal("media"),
   label: field.portableTextInline("ラベル", { subGroup: "text" }),
   title: field.portableTextInline("タイトル", { subGroup: "text" }),
   description: field.portableTextBlock("説明", {
     subGroup: "text",
     maxBlocks: 100,
   }),
-  video: field.media("動画", {
-    accept: "video",
-    subGroup: "media",
-    helpText: "R2 にアップロードした動画 / YouTube / Vimeo URL を選択",
-  }),
+  media: createMediaGroupSchema("背景メディア（画像 / 動画）"),
   posterImage: z
     .object({
       url: field.image("ポスター画像"),
@@ -122,12 +126,12 @@ const videoSchema = z.object({
       label: "ポスター画像",
       group: "content",
       subGroup: "media",
-      helpText: "動画読み込み中・autoplay 失敗時に表示する代替画像",
+      helpText: "動画選択時の読み込み中・autoplay 失敗時に表示する代替画像",
     }),
   overlay: field.boolean("テキスト可読性のためのオーバーレイを表示", {
     default: true,
     group: "design",
-    helpText: "動画上に半透明レイヤーを重ねて見出しを読みやすくする",
+    helpText: "メディア上に半透明レイヤーを重ねて見出しを読みやすくする",
   }),
   overlayOpacity: field.number("オーバーレイの濃さ", {
     min: 0,
@@ -158,7 +162,7 @@ export const pageHeroConfigSchema = z
     editorialSplitSchema,
     compactSchema,
     minimalSchema,
-    videoSchema,
+    mediaSchema,
   ])
   .register(fieldRegistry, {
     fieldType: "select",
