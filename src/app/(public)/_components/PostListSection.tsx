@@ -6,8 +6,8 @@
  * それ以外（grid / list）のときは既存の PostListSimpleView (CC) を描画する。
  *
  * 公開ページ /posts は本セクションの "archive" variant に統一テンプレート化されており、
- * SectionRenderer は searchParams を受け取って paginated データ + categories +
- * showSidebar を fetch して `mode={{ kind: "archive", ... }}` で渡す。
+ * SectionRenderer は searchParams を受け取って paginated データ + categories を
+ * fetch して `mode={{ kind: "archive", ... }}` で渡す。
  */
 
 import { Suspense, type ReactElement } from "react";
@@ -53,7 +53,6 @@ export type PostListMode =
       readonly totalPages: number;
       readonly query: string;
       readonly categorySlug: string;
-      readonly showSidebar: boolean | null;
     };
 
 interface PostListSectionProps {
@@ -76,7 +75,7 @@ export function PostListSection({
     return (
       <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
-          <BlogLayout showSidebar={mode.showSidebar}>
+          <BlogLayout>
             <Suspense fallback={null}>
               <div className="mb-8 max-w-md">
                 <SearchBar placeholder="記事を検索..." />

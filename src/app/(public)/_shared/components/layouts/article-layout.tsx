@@ -21,11 +21,12 @@ interface ArticleLayoutProps {
   /** When provided, renders a `bg-surface` breadcrumb band. */
   readonly breadcrumb?: ReadonlyArray<BreadcrumbItem>;
   /**
-   * `null` = follow global sidebar settings. `true`/`false` = explicit override.
+   * Component-level explicit disable (`false`)。未指定時は global sidebar settings
+   * (`Settings.sidebarEnabled`) に従う。
    * `toc` が渡されたときは BlogLayout を経由せず独自 2 カラムを組むため
    * この値は無視される（TOC サイドバーが sidebar slot を占有する）。
    */
-  readonly showSidebar?: boolean | null;
+  readonly showSidebar?: boolean;
   /** Article body width preset. Omitted = fluid width (no max-width). */
   readonly contentWidth?: LayoutWidth;
   readonly contentWidthCustom?: number | null;
@@ -60,7 +61,7 @@ export function ArticleLayout({
   jsonLd,
   banner,
   breadcrumb,
-  showSidebar = null,
+  showSidebar,
   contentWidth,
   contentWidthCustom = null,
   showCta = true,
@@ -99,7 +100,9 @@ export function ArticleLayout({
             <aside className="hidden lg:block">{toc}</aside>
           </div>
         ) : (
-          <BlogLayout showSidebar={showSidebar}>{article}</BlogLayout>
+          <BlogLayout {...(showSidebar !== undefined && { showSidebar })}>
+            {article}
+          </BlogLayout>
         )}
       </Container>
       {showCta ? <SiteCTA /> : null}

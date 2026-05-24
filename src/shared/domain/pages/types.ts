@@ -14,7 +14,6 @@ export type PageData = {
   publishedAt: DateLike | null;
   isActive: boolean;
   isSystemPage: boolean;
-  showSidebar: boolean | null;
   sectionCount?: number | undefined;
   createdAt: DateLike;
   updatedAt: DateLike;

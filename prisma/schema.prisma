@@ -948,8 +948,6 @@ model Page {
   isActive           Boolean      @default(true)
   isSystemPage       Boolean      @default(false) // システムページ（SEO/OGPのみ編集可、コンテンツ編集不可）
   template           String       @db.VarChar(64)
-  /// post-list archive variant の sidebar 表示制御（getPageShowSidebar 専用）。null=デフォルト使用、true/false=明示的指定
-  showSidebar        Boolean?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
