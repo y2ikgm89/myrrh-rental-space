@@ -122,11 +122,12 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
 
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
+          aria-label="選択をクリア"
           onClick={onClear}
           disabled={isPending}
         >
-          <IconX className="h-4 w-4" />
+          <IconX className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </div>
