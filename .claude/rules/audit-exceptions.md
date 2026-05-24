@@ -17,6 +17,7 @@ paths:
 - `global-error.tsx` のハードコードカラー — `tailwind-patterns/theme-tokens.md` で client-side fallback として除外
 - `select.tsx` の `required` — `frontend/project-design-config.md` で Radix 制約として除外
 - `revalidateTag` の第 2 引数 — `server-actions/use-cache.md` で Next.js 16 API として記載
+- `src/shared/domain/{customers,inquiries,news/admin,posts/admin,reservations/admin}/queries.ts` の `type XxxWhereInput = Prisma.XxxWhereInput;` ローカル alias — `buildXxxWhere` helper signature の局所利便性目的。`enums/prisma-types` ゲートウェイ違反ではない (`Prisma.XxxWhereInput` を `Prisma` namespace 経由で参照しているだけの利便型 alias)。ファイル内 1 行 alias + 内部 helper signature のみで使用される閉じた pattern であり、`*WhereInput` 値を実体化 / 越境させない限り SSoT 違反にはあたらない
 
 ## 「legacy / 互換」コメント sanctioned 例外
 
