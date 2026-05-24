@@ -18,48 +18,42 @@ function block(text: string) {
 
 export type DefaultSectionDef = {
   type: string;
-  title: string | null;
   config: Prisma.InputJsonValue;
-  content: string | null;
   order: number;
   isActive: boolean;
 };
 
 export function createDefaultCustomPageSections(
   pageTitle: string,
-  description?: string | null,
 ): DefaultSectionDef[] {
   return [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: pageTitle,
         title: pageTitle,
-        subtitle: description ?? "",
+        subtitle: "",
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "custom",
-      title: "本文",
       config: {
         sectionLabel: "Contents",
+        title: "本文",
+        body: "",
         maxWidth: "lg",
         containerClass: "",
         backgroundColor: "",
         padding: "md",
       },
-      content: null,
       order: 1,
       isActive: true,
     },
     {
       type: "cta",
-      title: null,
       config: {
         title: [
           {
@@ -72,7 +66,6 @@ export function createDefaultCustomPageSections(
         ctaPrimary: { text: "予約する", url: "/reservation" },
         ctaSecondary: { text: "お問い合わせ", url: "/contact" },
       },
-      content: null,
       order: 2,
       isActive: true,
     },
@@ -88,7 +81,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [
     {
       type: "features",
-      title: "ご利用の流れ",
       config: {
         sectionLabel: "How to Reserve",
         title: [
@@ -140,13 +132,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           animateOnScroll: "fade-up",
         },
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "value-props",
-      title: null,
       config: {
         items: [
           {
@@ -200,13 +190,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           animateOnScroll: "fade-up",
         },
       },
-      content: null,
       order: 1,
       isActive: true,
     },
     {
       type: "space-showcase",
-      title: "厳選スペース",
       config: {
         sectionLabel: "Selected Spaces",
         title: [
@@ -229,13 +217,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           animateOnScroll: "fade-up",
         },
       },
-      content: null,
       order: 2,
       isActive: true,
     },
     {
       type: "features",
-      title: "選ばれる理由",
       config: {
         sectionLabel: "Why Myrrh",
         title: [
@@ -302,13 +288,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           animateOnScroll: "fade-up",
         },
       },
-      content: null,
       order: 3,
       isActive: true,
     },
     {
       type: "cta",
-      title: null,
       config: {
         sectionLabel: "Reservation",
         title: [
@@ -334,7 +318,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           animateOnScroll: "fade-up",
         },
       },
-      content: null,
       order: 4,
       isActive: true,
     },
@@ -343,7 +326,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   about: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "About",
         title: [
@@ -358,22 +340,19 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "custom",
-      title: "ミッション",
-      config: {},
-      content:
-        "<p>私たちは、すべての人が自分らしい活動ができる「場」を提供することを目指しています。</p><p>会議、セミナー、ワークショップ、撮影、パーティーなど、様々なシーンで活用できるレンタルスペースを通じて、お客様の可能性を広げるお手伝いをいたします。</p><p>快適で使いやすい空間と、きめ細やかなサポートで、あなたの大切なひとときを演出します。</p>",
+      config: {
+        body: "<p>私たちは、すべての人が自分らしい活動ができる「場」を提供することを目指しています。</p><p>会議、セミナー、ワークショップ、撮影、パーティーなど、様々なシーンで活用できるレンタルスペースを通じて、お客様の可能性を広げるお手伝いをいたします。</p><p>快適で使いやすい空間と、きめ細やかなサポートで、あなたの大切なひとときを演出します。</p>",
+      },
       order: 1,
       isActive: true,
     },
     {
       type: "cta",
-      title: null,
       config: {
         title: [
           {
@@ -388,7 +367,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ctaPrimary: { text: "お問い合わせ", url: "/contact" },
         ctaSecondary: { text: "スペースを見る", url: "/spaces" },
       },
-      content: null,
       order: 2,
       isActive: true,
     },
@@ -397,7 +375,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   faq: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "FAQ",
         title: [
@@ -412,24 +389,20 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "faq-list",
-      title: "よくあるご質問",
       config: {
         maxItems: 20,
         showCategories: true,
       },
-      content: null,
       order: 1,
       isActive: true,
     },
     {
       type: "cta",
-      title: null,
       config: {
         title: [
           {
@@ -443,7 +416,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ),
         ctaPrimary: { text: "お問い合わせ", url: "/contact" },
       },
-      content: null,
       order: 2,
       isActive: true,
     },
@@ -452,7 +424,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   contact: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "Contact",
         title: [
@@ -467,13 +438,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "contact-form",
-      title: null,
       config: {
         sectionLabel: "",
         title: [
@@ -481,7 +450,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ],
         variant: "split",
       },
-      content: null,
       order: 1,
       isActive: true,
     },
@@ -490,7 +458,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   access: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "Access",
         title: [
@@ -503,13 +470,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: block("最寄り駅・駐車場・営業時間をご案内します。"),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "location-list",
-      title: null,
       config: {
         sectionLabel: "Locations",
         title: [
@@ -535,13 +500,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ],
         chapterLayout: "alternating",
       },
-      content: null,
       order: 1,
       isActive: true,
     },
     {
       type: "cta",
-      title: null,
       config: {
         title: [
           {
@@ -554,7 +517,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           { text: "お問い合わせ", url: "/contact", variant: "primary" },
         ],
       },
-      content: null,
       order: 2,
       isActive: true,
     },
@@ -563,7 +525,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   news: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "News",
         title: [
@@ -576,13 +537,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: block("お知らせ・最新情報をお届けします。"),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "news-list",
-      title: null,
       config: {
         sectionLabel: "",
         title: [
@@ -591,7 +550,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         displayLayout: "archive",
         showViewAllLink: false,
       },
-      content: null,
       order: 1,
       isActive: true,
     },
@@ -600,7 +558,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   posts: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "Blog",
         title: [
@@ -613,13 +570,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: block("最新のお知らせやお役立ち情報をお届けします。"),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "post-list",
-      title: null,
       config: {
         sectionLabel: "",
         title: [
@@ -628,7 +583,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         displayLayout: "archive",
         showViewAllLink: false,
       },
-      content: null,
       order: 1,
       isActive: true,
     },
@@ -637,7 +591,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   reservation: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "Reserve",
         title: [
@@ -652,20 +605,17 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "reservation-form",
-      title: null,
       config: {
         sectionLabel: "",
         title: [
           { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
         ],
       },
-      content: null,
       order: 1,
       isActive: true,
     },
@@ -674,7 +624,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   events: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "Events",
         title: [
@@ -687,15 +636,12 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: block("開催予定のイベント・ワークショップ情報"),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "event-calendar",
-      title: "イベントカレンダー",
       config: {},
-      content: null,
       order: 1,
       isActive: true,
     },
@@ -704,7 +650,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   spaces: [
     {
       type: "hero",
-      title: null,
       config: {
         sectionLabel: "Spaces",
         title: [
@@ -717,13 +662,11 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: block("ご利用可能なレンタルスペースをお探しください。"),
         variant: "minimal",
       },
-      content: null,
       order: 0,
       isActive: true,
     },
     {
       type: "space-list",
-      title: null,
       config: {
         sectionLabel: "",
         title: [
@@ -733,7 +676,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         showOnlyPublished: true,
         showViewAllLink: false,
       },
-      content: null,
       order: 1,
       isActive: true,
     },

@@ -266,32 +266,16 @@ export const createSectionSchema = z.object({
   type: z.enum(SECTION_TYPE_VALUES, {
     error: "有効なセクションタイプを選択してください",
   }),
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   config: z.record(z.string(), z.unknown()).default({}),
-  contentJson: z
-    .string()
-    .max(500000, { error: "コンテンツは500,000文字以内です" })
-    .optional(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
 });
 
 export const updateSectionContentSchema = z.strictObject({
   config: z.record(z.string(), z.unknown()).optional(),
-  contentJson: z
-    .string()
-    .max(500000, { error: "コンテンツは500,000文字以内です" })
-    .optional(),
-  /**
-   * クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML。
-   * `contentJson` が指定されている場合は同時に提供する。
-   * `contentJson === null` での明示クリア時は `null` を渡す。
-   */
-  contentHtml: z.string().nullable().optional(),
 });
 
 export const updateSectionSchema = updateSectionContentSchema.extend({
-  title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   isActive: z.boolean().optional(),
 });
 

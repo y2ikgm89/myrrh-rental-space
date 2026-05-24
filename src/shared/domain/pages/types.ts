@@ -4,7 +4,6 @@ export type PageData = {
   id: string;
   slug: string;
   title: string;
-  description: string | null;
   metaDescription: string | null;
   metaKeywords: string | null;
   ogpTitle: string | null;

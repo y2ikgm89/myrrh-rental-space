@@ -937,7 +937,6 @@ model Page {
   id                 String       @id @default(uuid()) @db.Uuid
   slug               String       @unique
   title              String
-  description        String?      @db.Text
   metaDescription    String?
   metaKeywords       String?
   ogpTitle           String?
@@ -963,18 +962,17 @@ model Page {
 /// 統一セクション（システムページ + カスタムページ共通）
 /// 全 section は必ず Page に紐づく（home の page-hero も含めて pageId = Page.id、seed.ts 参照）。
 /// 旧仕様（pageId nullable = home section）は廃止済（migration `_section_page_id_not_null`）。
+/// title / contentHtml / contentJson 列は廃止し config JSON に統合済（CUSTOM section の title +
+/// body は config.title + config.body で編集、migration `_drop_section_legacy_columns_*` 参照）。
 model Section {
-  id          String   @id @default(uuid()) @db.Uuid
-  pageId      String   @db.Uuid
-  type        String   @db.VarChar(64)
-  order       Int      @default(0) // 表示順序（DnDで変更可能）
-  isActive    Boolean  @default(true) // ON/OFF制御
-  title       String? // セクション見出し（表示用）
-  contentHtml String?  @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
-  contentJson Json? // Lexical EditorState JSON（プライマリ）
-  config      Json     @default("{}") // タイプ別設定（Zodで型安全）
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  pageId    String   @db.Uuid
+  type      String   @db.VarChar(64)
+  order     Int      @default(0) // 表示順序（DnDで変更可能）
+  isActive  Boolean  @default(true) // ON/OFF制御
+  config    Json     @default("{}") // タイプ別設定（Zodで型安全）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)

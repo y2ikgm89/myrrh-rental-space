@@ -92,7 +92,6 @@ const EXISTING_PAGE = {
 const VALID_CREATE_INPUT = {
   slug: PAGE_SLUG,
   title: "テストページ",
-  description: "テストの説明",
   isPublished: false,
 };
 
@@ -277,31 +276,7 @@ describe("createPageCommand", () => {
       );
     });
 
-    test("description が空文字の場合 null として保存される", async () => {
-      await createPageCommand({ ...VALID_CREATE_INPUT, description: "" });
-
-      expect(mockPageCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            description: null,
-          }),
-        }),
-      );
-    });
-
-    test("description が undefined の場合 null として保存される", async () => {
-      const { description: _unused, ...inputWithoutDesc } = VALID_CREATE_INPUT;
-      void _unused;
-      await createPageCommand(inputWithoutDesc);
-
-      expect(mockPageCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            description: null,
-          }),
-        }),
-      );
-    });
+    // 旧 description field test は削除（Page.description 列削除 migration 適用済）
   });
 
   describe("異常系", () => {

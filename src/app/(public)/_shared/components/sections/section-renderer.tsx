@@ -180,14 +180,7 @@ export async function SectionRenderer({
 
     case SectionType.CUSTOM: {
       const config = getCustomConfig(section.config);
-      return (
-        <CustomSection
-          config={config}
-          content={section.contentHtml ?? ""}
-          title={section.title}
-          style={resolved}
-        />
-      );
+      return <CustomSection config={config} style={resolved} />;
     }
 
     case SectionType.CONCEPT: {

@@ -27,12 +27,7 @@ import {
 import { parseWithZod } from "@conform-to/zod/v4";
 import dynamic from "next/dynamic";
 import { z } from "zod";
-import {
-  IconArticle,
-  IconLink,
-  IconPhotoVideo,
-  IconTypography,
-} from "@tabler/icons-react";
+import { IconLink, IconPhotoVideo, IconTypography } from "@tabler/icons-react";
 import {
   Accordion,
   AccordionContent,
@@ -44,8 +39,6 @@ import {
 } from "@/admin/components/ui";
 import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
-import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
-import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 // IconPickerField は Tabler 100+ icons + IconPickerDialog を含む heavy chain (~300+ KB)。
 const IconPickerField = dynamic(
   () =>
@@ -94,23 +87,6 @@ import { AutoImageField } from "./auto-fields/AutoImageField";
 import { AutoMediaField } from "./auto-fields/AutoMediaField";
 import { isRecord } from "@/shared/lib/serialize";
 
-const LexicalEditor = dynamic(
-  () =>
-    import("@/admin/components/editor/lexical/LexicalEditor").then((mod) => ({
-      default: mod.LexicalEditor,
-    })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[300px] flex items-center justify-center border rounded-lg bg-muted/50">
-        <div className="animate-pulse text-muted-foreground">
-          エディタを読み込み中...
-        </div>
-      </div>
-    ),
-  },
-);
-
 // ─────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────
@@ -124,13 +100,6 @@ export function AutoSectionForm({
   dynamicOptions,
 }: ConfigFormProps) {
   const definition = getSectionDefinition(section.type);
-  const isCustomType = section.type === "custom";
-  const initialEditorContentJson = section.contentJson
-    ? JSON.stringify(section.contentJson)
-    : EMPTY_LEXICAL_EDITOR_STATE_JSON;
-  const [editorContentJson, setEditorContentJson] = useState(
-    initialEditorContentJson,
-  );
 
   // デフォルト config を取得（スキーマ .parse({}) でデフォルト値を生成）
   const defaultConfig = definition
@@ -176,11 +145,7 @@ export function AutoSectionForm({
       if (!submission || submission.status !== "success") return;
       const config: unknown = submission.value;
       if (!isRecord(config)) return;
-      if (isCustomType) {
-        onSave({ config, contentJson: editorContentJson });
-      } else {
-        onSave({ config });
-      }
+      onSave({ config });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
@@ -226,9 +191,7 @@ export function AutoSectionForm({
     ? { [duInfo.discriminator]: watchedDiscriminator }
     : undefined;
   const fieldsList = schema ? extractSchemaFields(schema, watchedValues) : [];
-  const isEditorDirty =
-    isCustomType && editorContentJson !== initialEditorContentJson;
-  const isFormDirty = form.dirty || isEditorDirty;
+  const isFormDirty = form.dirty;
 
   if (!definition) {
     return (
@@ -279,18 +242,6 @@ export function AutoSectionForm({
     <form {...getFormProps(form)} className="space-y-4">
       {/* Content: 常時展開（Accordion 外） */}
       <div className="space-y-6">
-        {isCustomType && (
-          <FieldGroupSection title="本文" icon={IconArticle}>
-            <LexicalEditor
-              contentJson={editorContentJson}
-              onChange={setEditorContentJson}
-              placeholder="セクションのコンテンツを入力..."
-              className={EDITOR_PROSE_CLASSES}
-              height="400px"
-            />
-          </FieldGroupSection>
-        )}
-
         {textFields.length > 0 && (
           <FieldGroupSection title="テキスト" icon={IconTypography}>
             {textFields.map(renderTopLevelField)}

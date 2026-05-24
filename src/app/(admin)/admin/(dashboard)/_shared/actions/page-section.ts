@@ -68,15 +68,6 @@ export async function updatePageSection(
     return createValidationMutationError(parsed.error);
   }
 
-  // client-side `renderEditorStateJsonToHtmlClient` で事前生成された HTML を使用。
-  // - contentJson === undefined: 本文未更新 → contentHtml も undefined
-  // - contentJson === "" → null: 明示クリア → contentHtml も null（client が null 送信）
-  // - contentJson === "<json>": 本文更新 → contentHtml も同時送信
-  const contentHtml =
-    parsed.data.contentJson === undefined
-      ? undefined
-      : (parsed.data.contentHtml ?? null);
-
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
@@ -84,11 +75,7 @@ export async function updatePageSection(
     resolveResourceId: () => getSectionPageIdQuery(parsedId.data),
     resolveAuditResourceId: () => parsedId.data,
     execute: async () => {
-      const result = await updatePageSectionCommand(
-        parsedId.data,
-        parsed.data,
-        contentHtml,
-      );
+      const result = await updatePageSectionCommand(parsedId.data, parsed.data);
       return { pageId: result.pageId, pageSlug: result.pageSlug };
     },
     afterSuccess: (data) => {

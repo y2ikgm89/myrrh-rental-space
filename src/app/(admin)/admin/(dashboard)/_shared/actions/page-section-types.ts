@@ -11,10 +11,7 @@ export type PageSectionData = {
   id: string;
   pageId: string;
   type: string;
-  title: string | null;
   config: SectionConfig;
-  contentHtml: string | null;
-  contentJson: unknown;
   order: number;
   isActive: boolean;
   createdAt: Date;

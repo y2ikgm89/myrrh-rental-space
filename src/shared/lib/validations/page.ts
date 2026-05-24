@@ -131,10 +131,6 @@ export const createPageSchema = z.object({
     .string()
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内です" }),
-  description: z
-    .string()
-    .max(500, { error: "説明は500文字以内です" })
-    .optional(),
   isPublished: z.boolean().default(false),
 });
 
