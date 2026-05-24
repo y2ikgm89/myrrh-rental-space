@@ -111,7 +111,7 @@ export default function EventInfoPanelDemoPage() {
           className="mx-auto max-w-6xl px-6 pb-20"
           aria-label="全 6 variant の比較"
         >
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="@container grid grid-cols-1 gap-8 @md:grid-cols-2 @3xl:grid-cols-3">
             {VARIANTS.map((variant) => {
               const VComp = COMPONENTS[variant.id];
               return (

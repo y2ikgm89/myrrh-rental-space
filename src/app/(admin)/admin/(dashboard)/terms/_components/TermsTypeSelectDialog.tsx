@@ -110,7 +110,7 @@ export function TermsTypeSelectDialog() {
             作成する規約の種類を選んでください。標準テンプレートがある場合は本文と事業者情報が自動で投入されます。
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="@container grid grid-cols-1 gap-3 py-4 @md:grid-cols-2 @3xl:grid-cols-3">
           {TERMS_TYPE_VALUES.map((type) => {
             const meta = TERMS_TYPE_META[type];
             const hasTemplate = getTemplatesForType(type).length > 0;
