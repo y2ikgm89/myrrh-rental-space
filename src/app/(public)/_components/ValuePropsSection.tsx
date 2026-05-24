@@ -41,8 +41,8 @@ interface ValuePropsSectionProps {
 /** 項目数 → grid columns class */
 const GRID_COLS: Record<2 | 3 | 4, string> = {
   2: "grid-cols-2 divide-x divide-divider",
-  3: "grid-cols-1 divide-y divide-divider md:grid-cols-3 md:divide-x md:divide-y-0",
-  4: "grid-cols-2 divide-x divide-y divide-divider md:grid-cols-4 md:divide-y-0",
+  3: "grid-cols-1 divide-y divide-divider @md:grid-cols-3 @md:divide-x @md:divide-y-0",
+  4: "grid-cols-2 divide-x divide-y divide-divider @md:grid-cols-4 @md:divide-y-0",
 };
 
 const CONTAINER_MAX_WIDTH: Record<LayoutContainerWidth, string> = {
@@ -112,7 +112,7 @@ export function ValuePropsSection({
         return (
           <div
             key={`${item.eyebrow}-${spansToPlainText(item.title)}`}
-            className="flex flex-col items-center gap-4 px-6 py-8 text-center md:px-8 md:py-10"
+            className="flex flex-col items-center gap-4 px-6 py-8 text-center @md:px-8 @md:py-10"
           >
             {iconElement}
             <div className="flex flex-col items-center gap-1.5">
@@ -139,7 +139,9 @@ export function ValuePropsSection({
   );
 
   return (
-    <section className={cn("border-y border-border", visibilityClass)}>
+    <section
+      className={cn("@container border-y border-border", visibilityClass)}
+    >
       {animate === "none" ? (
         grid
       ) : (

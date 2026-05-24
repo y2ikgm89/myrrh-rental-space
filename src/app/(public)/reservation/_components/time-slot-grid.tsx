@@ -20,7 +20,7 @@ export function TimeSlotGrid({
   if (isLoading) {
     return (
       <div
-        className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+        className="@container grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
         aria-busy="true"
       >
         {Array.from({ length: 12 }, (_, i) => (
@@ -42,7 +42,7 @@ export function TimeSlotGrid({
     <div
       role="listbox"
       aria-label="開始時間を選択"
-      className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+      className="@container grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
     >
       {slots.map((slot) => {
         const isSelected = slot.time === selectedTime;

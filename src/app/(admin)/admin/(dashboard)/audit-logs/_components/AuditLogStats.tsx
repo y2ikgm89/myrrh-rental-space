@@ -12,7 +12,7 @@ export async function AuditLogStats() {
   const stats = await getAuditLogStats();
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-4 @md/main:grid-cols-2 @3xl/main:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">総ログ数</CardTitle>

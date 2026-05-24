@@ -114,7 +114,7 @@ export async function AnalyticsCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* 基本統計 */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 @md/main:grid-cols-4">
           <div>
             <p className="text-sm text-muted-foreground">PV数</p>
             <p className="text-2xl font-bold">

@@ -32,7 +32,7 @@ function RecentItemCard() {
 
 export function RecentItemsSkeleton() {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 @3xl/main:grid-cols-2">
       <RecentItemCard />
       <RecentItemCard />
     </div>
