@@ -33,17 +33,35 @@ function cloneJsonValue(value: unknown): Prisma.InputJsonValue {
 async function ensurePageSectionExists(id: string) {
   const section = await prisma.section.findUnique({
     where: { id },
-    select: { id: true, pageId: true, type: true },
+    select: {
+      id: true,
+      pageId: true,
+      type: true,
+      page: { select: { slug: true } },
+    },
   });
 
-  if (!section || !section.pageId) {
+  if (!section || !section.pageId || !section.page) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
   }
 
   return {
-    ...section,
+    id: section.id,
     pageId: section.pageId,
+    type: section.type,
+    pageSlug: section.page.slug,
   };
+}
+
+async function getPageSlugByIdOrThrow(pageId: string): Promise<string> {
+  const page = await prisma.page.findUnique({
+    where: { id: pageId },
+    select: { slug: true },
+  });
+  if (!page) {
+    throw new DomainError("ページが見つかりません", "NOT_FOUND");
+  }
+  return page.slug;
 }
 
 function validateConfig(type: string, config: unknown): SectionConfig {
@@ -59,7 +77,7 @@ export async function updatePageSectionCommand(
   id: string,
   input: UpdateSectionContentInput,
   contentHtml?: string | null,
-): Promise<{ pageId: string }> {
+): Promise<{ pageId: string; pageSlug: string }> {
   const existing = await ensurePageSectionExists(id);
 
   const config =
@@ -80,7 +98,7 @@ export async function updatePageSectionCommand(
     }),
   });
 
-  return { pageId: existing.pageId };
+  return { pageId: existing.pageId, pageSlug: existing.pageSlug };
 }
 
 // =============================================================================
@@ -94,7 +112,7 @@ export async function updatePageSectionCommand(
 export async function createPageSectionCommand(input: {
   pageId: string;
   type: string;
-}): Promise<{ id: string; pageId: string }> {
+}): Promise<{ id: string; pageId: string; pageSlug: string }> {
   const definition = getSectionDefinition(input.type);
   if (!definition) {
     throw new DomainError("不正なセクションタイプです", "VALIDATION");
@@ -131,32 +149,40 @@ export async function createPageSectionCommand(input: {
       order: nextOrder,
       isActive: true,
     },
-    select: { id: true, pageId: true },
+    select: {
+      id: true,
+      pageId: true,
+      page: { select: { slug: true } },
+    },
   });
 
-  if (!created.pageId) {
+  if (!created.pageId || !created.page) {
     throw new DomainError("セクションの pageId が不正です", "VALIDATION");
   }
 
-  return { id: created.id, pageId: created.pageId };
+  return {
+    id: created.id,
+    pageId: created.pageId,
+    pageSlug: created.page.slug,
+  };
 }
 
 /** セクションを削除する。page-hero は ページ削除時のみ削除可能（個別削除は CONFLICT）。 */
 export async function deletePageSectionCommand(
   id: string,
-): Promise<{ id: string; pageId: string }> {
+): Promise<{ id: string; pageId: string; pageSlug: string }> {
   const existing = await ensurePageSectionExists(id);
   if (existing.type === "page-hero") {
     throw new DomainError("ヒーローは削除できません", "CONFLICT");
   }
   await prisma.section.delete({ where: { id } });
-  return { id, pageId: existing.pageId };
+  return { id, pageId: existing.pageId, pageSlug: existing.pageSlug };
 }
 
 /** セクションを直後に複製する。page-hero は複製不可（CONFLICT）。 */
 export async function duplicatePageSectionCommand(
   id: string,
-): Promise<{ id: string; pageId: string }> {
+): Promise<{ id: string; pageId: string; pageSlug: string }> {
   const source = await prisma.section.findUnique({
     where: { id },
     select: {
@@ -168,9 +194,10 @@ export async function duplicatePageSectionCommand(
       contentJson: true,
       order: true,
       isActive: true,
+      page: { select: { slug: true } },
     },
   });
-  if (!source || !source.pageId) {
+  if (!source || !source.pageId || !source.page) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
   }
   if (source.type === "page-hero") {
@@ -178,6 +205,7 @@ export async function duplicatePageSectionCommand(
   }
 
   const sourcePageId = source.pageId;
+  const sourcePageSlug = source.page.slug;
 
   const createdId = await prisma.$transaction(async (tx) => {
     // source.order より大きい order を全部 +1 にずらす
@@ -204,18 +232,26 @@ export async function duplicatePageSectionCommand(
     return created.id;
   });
 
-  return { id: createdId, pageId: sourcePageId };
+  return { id: createdId, pageId: sourcePageId, pageSlug: sourcePageSlug };
 }
 
 /** セクションの有効/無効をトグルする。 */
-export async function togglePageSectionActiveCommand(
-  id: string,
-): Promise<{ id: string; pageId: string; isActive: boolean }> {
+export async function togglePageSectionActiveCommand(id: string): Promise<{
+  id: string;
+  pageId: string;
+  pageSlug: string;
+  isActive: boolean;
+}> {
   const current = await prisma.section.findUnique({
     where: { id },
-    select: { id: true, pageId: true, isActive: true },
+    select: {
+      id: true,
+      pageId: true,
+      isActive: true,
+      page: { select: { slug: true } },
+    },
   });
-  if (!current || !current.pageId) {
+  if (!current || !current.pageId || !current.page) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
   }
 
@@ -227,6 +263,7 @@ export async function togglePageSectionActiveCommand(
   return {
     id: updated.id,
     pageId: current.pageId,
+    pageSlug: current.page.slug,
     isActive: updated.isActive,
   };
 }
@@ -238,11 +275,14 @@ export async function togglePageSectionActiveCommand(
 export async function reorderPageSectionsCommand(input: {
   pageId: string;
   orderedIds: readonly string[];
-}): Promise<{ count: number; pageId: string }> {
-  const existing = await prisma.section.findMany({
-    where: { pageId: input.pageId },
-    select: { id: true, type: true, order: true },
-  });
+}): Promise<{ count: number; pageId: string; pageSlug: string }> {
+  const [existing, pageSlug] = await Promise.all([
+    prisma.section.findMany({
+      where: { pageId: input.pageId },
+      select: { id: true, type: true, order: true },
+    }),
+    getPageSlugByIdOrThrow(input.pageId),
+  ]);
   const existingIds = new Set(existing.map((s) => s.id));
 
   for (const id of input.orderedIds) {
@@ -270,5 +310,9 @@ export async function reorderPageSectionsCommand(input: {
     }
   });
 
-  return { count: input.orderedIds.length, pageId: input.pageId };
+  return {
+    count: input.orderedIds.length,
+    pageId: input.pageId,
+    pageSlug,
+  };
 }

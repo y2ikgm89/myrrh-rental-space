@@ -67,6 +67,7 @@ const HOMEPAGE_SECTION_RECORD = {
 const PAGE_SECTION_RECORD = {
   ...HOMEPAGE_SECTION_RECORD,
   pageId: PAGE_ID,
+  page: { slug: "test-page" },
 };
 
 describe("updatePageSectionCommand", () => {
@@ -91,7 +92,7 @@ describe("updatePageSectionCommand", () => {
       "<p>更新</p>",
     );
 
-    expect(result).toMatchObject({ pageId: PAGE_ID });
+    expect(result).toMatchObject({ pageId: PAGE_ID, pageSlug: "test-page" });
     expect(mockSectionUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: SECTION_ID },

@@ -25,7 +25,11 @@ const mockSectionFindMany = mock<() => Promise<Record<string, unknown>[]>>(() =>
   Promise.resolve([]),
 );
 const mockSectionCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "section-new", pageId: "page-1" }),
+  Promise.resolve({
+    id: "section-new",
+    pageId: "page-1",
+    page: { slug: "test-page" },
+  }),
 );
 const mockSectionUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "section-new", isActive: true }),
@@ -39,6 +43,9 @@ const mockSectionDelete = mock<() => Promise<Record<string, unknown>>>(() =>
 const mockSectionAggregate = mock<
   () => Promise<{ _max: { order: number | null } }>
 >(() => Promise.resolve({ _max: { order: null } }));
+const mockPageFindUnique = mock<() => Promise<{ slug: string } | null>>(() =>
+  Promise.resolve({ slug: "test-page" }),
+);
 
 mock.module("server-only", () => ({}));
 
@@ -53,6 +60,9 @@ mock.module("@/shared/db/prisma", () => ({
       updateMany: mockSectionUpdateMany,
       delete: mockSectionDelete,
       aggregate: mockSectionAggregate,
+    },
+    page: {
+      findUnique: mockPageFindUnique,
     },
     $transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => {
       const tx = {
@@ -111,6 +121,11 @@ beforeEach(() => {
   mockSectionUpdateMany.mockReset();
   mockSectionDelete.mockReset();
   mockSectionAggregate.mockReset();
+  mockPageFindUnique.mockReset();
+  // 各 test の前にデフォルトで page.findUnique は { slug } を返す
+  mockPageFindUnique.mockImplementation(() =>
+    Promise.resolve({ slug: "test-page" }),
+  );
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -140,7 +155,11 @@ describe("createPageSectionCommand", () => {
       Promise.resolve({ _max: { order: 5 } }),
     );
     mockSectionCreate.mockImplementationOnce(() =>
-      Promise.resolve({ id: "new-hero", pageId: PAGE_ID }),
+      Promise.resolve({
+        id: "new-hero",
+        pageId: PAGE_ID,
+        page: { slug: "test-page" },
+      }),
     );
 
     const result = await createPageSectionCommand({
@@ -166,7 +185,11 @@ describe("createPageSectionCommand", () => {
       Promise.resolve({ _max: { order: 5 } }),
     );
     mockSectionCreate.mockImplementationOnce(() =>
-      Promise.resolve({ id: "new-cta", pageId: PAGE_ID }),
+      Promise.resolve({
+        id: "new-cta",
+        pageId: PAGE_ID,
+        page: { slug: "test-page" },
+      }),
     );
 
     await createPageSectionCommand({ pageId: PAGE_ID, type: "cta" });
@@ -183,7 +206,11 @@ describe("createPageSectionCommand", () => {
       Promise.resolve({ _max: { order: null } }),
     );
     mockSectionCreate.mockImplementationOnce(() =>
-      Promise.resolve({ id: "new", pageId: PAGE_ID }),
+      Promise.resolve({
+        id: "new",
+        pageId: PAGE_ID,
+        page: { slug: "test-page" },
+      }),
     );
 
     await createPageSectionCommand({ pageId: PAGE_ID, type: "cta" });
@@ -215,6 +242,7 @@ describe("deletePageSectionCommand", () => {
         id: SECTION_ID,
         pageId: PAGE_ID,
         type: "page-hero",
+        page: { slug: "test-page" },
       }),
     );
 
@@ -229,6 +257,7 @@ describe("deletePageSectionCommand", () => {
         id: SECTION_ID,
         pageId: PAGE_ID,
         type: "cta",
+        page: { slug: "test-page" },
       }),
     );
     mockSectionDelete.mockImplementationOnce(() => Promise.resolve({}));
@@ -237,6 +266,7 @@ describe("deletePageSectionCommand", () => {
 
     expect(result.id).toBe(SECTION_ID);
     expect(result.pageId).toBe(PAGE_ID);
+    expect(result.pageSlug).toBe("test-page");
     expect(mockSectionDelete).toHaveBeenCalledWith({
       where: { id: SECTION_ID },
     });
@@ -267,6 +297,7 @@ describe("duplicatePageSectionCommand", () => {
         contentJson: null,
         order: -1,
         isActive: true,
+        page: { slug: "test-page" },
       }),
     );
 
@@ -286,6 +317,7 @@ describe("duplicatePageSectionCommand", () => {
         contentJson: null,
         order: 3,
         isActive: true,
+        page: { slug: "test-page" },
       }),
     );
     mockSectionUpdateMany.mockImplementationOnce(() =>
@@ -332,6 +364,7 @@ describe("togglePageSectionActiveCommand", () => {
         id: SECTION_ID,
         pageId: PAGE_ID,
         isActive: true,
+        page: { slug: "test-page" },
       }),
     );
     mockSectionUpdate.mockImplementationOnce(() =>
@@ -341,6 +374,7 @@ describe("togglePageSectionActiveCommand", () => {
     const result = await togglePageSectionActiveCommand(SECTION_ID);
 
     expect(result.isActive).toBe(false);
+    expect(result.pageSlug).toBe("test-page");
     expect(mockSectionUpdate).toHaveBeenCalledWith({
       where: { id: SECTION_ID },
       data: { isActive: false },
@@ -354,6 +388,7 @@ describe("togglePageSectionActiveCommand", () => {
         id: SECTION_ID,
         pageId: PAGE_ID,
         isActive: false,
+        page: { slug: "test-page" },
       }),
     );
     mockSectionUpdate.mockImplementationOnce(() =>
@@ -422,6 +457,7 @@ describe("reorderPageSectionsCommand", () => {
     });
 
     expect(result.count).toBe(3);
+    expect(result.pageSlug).toBe("test-page");
 
     // page-hero（id-hero）は order=-1 維持
     expect(mockSectionUpdate).toHaveBeenCalledWith({
