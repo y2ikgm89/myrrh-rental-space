@@ -50,7 +50,6 @@ import {
   getPublishedPostsList,
   getPostCategories,
 } from "@/shared/domain/posts/queries";
-import { getPageShowSidebar } from "@/shared/domain/pages/queries";
 import { getPublishedEvents } from "@/shared/domain/events/public-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
@@ -126,8 +125,9 @@ interface SectionRendererProps {
   readonly searchParams?: Promise<SearchParams>;
   /**
    * 任意 — 親ページの slug（PAGE_TEMPLATES のキー / Page.slug と一致）。
-   * post-list archive variant の sidebar 表示判定（`getPageShowSidebar(slug)`）など、
-   * page-context が必要な section が参照する。未指定時は section 側で fallback。
+   * page-context が必要な section が参照するための予約 prop。
+   * 現状 SectionRenderer 本体では参照しないが、全 public page.tsx から
+   * 渡される public API として維持（将来の section 拡張用）。
    */
   readonly pageSlug?: string;
   /**
@@ -141,7 +141,7 @@ interface SectionRendererProps {
 export async function SectionRenderer({
   section,
   searchParams,
-  pageSlug,
+  pageSlug: _pageSlug,
   inquiryDefaults,
 }: SectionRendererProps): Promise<ReactElement | null> {
   // 該当 section type が disabled feature module に紐づく場合は早期 null。
@@ -347,7 +347,7 @@ export async function SectionRenderer({
           ? await postsSearchParams.parse(searchParams)
           : { page: 1, q: "", category: "" };
         const currentPage = Math.max(1, sp.page);
-        const [postsResult, categories, showSidebar] = await Promise.all([
+        const [postsResult, categories] = await Promise.all([
           getPublishedPostsList(
             currentPage,
             POSTS_ARCHIVE_PER_PAGE,
@@ -355,8 +355,6 @@ export async function SectionRenderer({
             sp.category,
           ),
           getPostCategories(),
-          // pageSlug 未指定時は "posts"（旧ハードコード相当）にフォールバック
-          getPageShowSidebar(pageSlug ?? "posts"),
         ]);
         return (
           <PostListSection
@@ -370,7 +368,6 @@ export async function SectionRenderer({
               totalPages: postsResult.totalPages,
               query: sp.q,
               categorySlug: sp.category,
-              showSidebar,
             }}
           />
         );

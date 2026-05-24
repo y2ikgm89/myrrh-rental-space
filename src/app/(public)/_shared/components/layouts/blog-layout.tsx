@@ -5,8 +5,12 @@ import { BlogSidebar } from "@/public/components/layouts/blog-sidebar";
 
 interface BlogLayoutProps {
   children: ReactNode;
-  /** Page.showSidebar override: null=use global, true/false=explicit */
-  showSidebar?: boolean | null;
+  /**
+   * Component-level explicit disable. ArticleLayout / terms ページなどで
+   * sidebar 非表示にする用途専用。
+   * 未指定時は `Settings.sidebarEnabled` (global) に従う。
+   */
+  showSidebar?: boolean;
 }
 
 export async function BlogLayout({
@@ -19,9 +23,7 @@ export async function BlogLayout({
   }
 
   const settings = await getSidebarSettings();
-  const sidebarEnabled = showSidebar != null ? showSidebar : settings.enabled;
-
-  if (!sidebarEnabled) {
+  if (!settings.enabled) {
     return <>{children}</>;
   }
 
