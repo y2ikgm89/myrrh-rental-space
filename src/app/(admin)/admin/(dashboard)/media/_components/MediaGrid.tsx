@@ -40,7 +40,7 @@ export function MediaGrid({ items }: Props) {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-4 @md/main:grid-cols-3 @2xl/main:grid-cols-4 @4xl/main:grid-cols-6">
         {items.map((item) => (
           <article
             key={item.id}

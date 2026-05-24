@@ -59,7 +59,7 @@ export default async function MediaPage({ searchParams }: PageProps) {
 
 function MediaGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 gap-4 @md/main:grid-cols-3 @2xl/main:grid-cols-4 @4xl/main:grid-cols-6">
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           /* eslint-disable-next-line @eslint-react/no-array-index-key */

@@ -26,7 +26,7 @@ export default async function AdminResetPasswordPage({
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6 sm:p-8">
+      <div className="flex min-h-dvh items-center justify-center bg-background p-6 sm:p-8">
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -54,7 +54,7 @@ export default async function AdminResetPasswordPage({
   const turnstileSiteKey = await getTurnstileSiteKey();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6 sm:p-8">
+    <div className="flex min-h-dvh items-center justify-center bg-background p-6 sm:p-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">

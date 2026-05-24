@@ -9,7 +9,7 @@ import { Skeleton } from "@/admin/components/ui";
  */
 export default function EditorLoading() {
   return (
-    <div className="flex min-h-screen flex-col" aria-busy="true">
+    <div className="flex min-h-dvh flex-col" aria-busy="true">
       {/* Fixed top header (h-14) */}
       <div className="fixed inset-x-0 top-0 z-40 h-14 border-b bg-background/95 backdrop-blur">
         <div className="flex h-full items-center justify-between px-4">

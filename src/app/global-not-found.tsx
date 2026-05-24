@@ -33,7 +33,7 @@ export default function NotFound(): ReactElement {
   return (
     <html lang="ja">
       <body className="font-sans antialiased">
-        <div className="flex min-h-screen flex-col items-center justify-center px-5 md:px-8">
+        <div className="flex min-h-dvh flex-col items-center justify-center px-5 md:px-8">
           <div className="w-full max-w-md text-center">
             <div className="mb-8">
               <span className="font-heading text-8xl font-bold text-border">

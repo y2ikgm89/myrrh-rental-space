@@ -8,7 +8,7 @@ import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 // children（dashboard / list / detail ページ）が @*/main variant で
 // サイドバー折りたたみに応じたレイアウト適応が可能（Tailwind v4 公式推奨）
 const mainStyles = tv({
-  base: "@container/main min-h-[calc(100vh-4rem)] bg-background",
+  base: "@container/main min-h-[calc(100dvh-4rem)] bg-background",
   variants: {
     isFullscreen: {
       true: "",

@@ -44,7 +44,7 @@ export function InlineEditorShell({
   useBeforeUnload({ isDirty });
 
   return (
-    <div className="h-screen flex flex-col pt-14">
+    <div className="h-dvh flex flex-col pt-14">
       {header}
       <div className="flex flex-1 min-w-0 overflow-hidden">{children}</div>
     </div>

@@ -261,7 +261,7 @@ export default async function PublicRootLayout({
           <StructuredDataContent />
         </Suspense>
         <AriaLiveProvider>
-          <div className="flex min-h-screen flex-col pb-16 md:pb-0">
+          <div className="flex min-h-dvh flex-col pb-16 md:pb-0">
             {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
             <SkipLink />
 

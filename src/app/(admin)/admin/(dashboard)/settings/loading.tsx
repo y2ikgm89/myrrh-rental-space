@@ -17,7 +17,7 @@ export default function SettingsLoading() {
       </div>
 
       {/* Category cards (1/2/3 col responsive) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 @md/main:grid-cols-2 @3xl/main:grid-cols-3">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="space-y-3 rounded-lg border bg-card p-6">
             <div className="flex items-start gap-3">
