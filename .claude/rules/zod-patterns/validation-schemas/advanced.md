@@ -67,7 +67,23 @@ const recentSchema = z.object({
 
 generic helper（`<TFields>` で受けて `.prefault({})` を内蔵）は TS が `TFields` 全要素 ZodDefault かを推論できず型エラー。**各 schema 定義側で `z.object({...}).prefault({}).register(...)` を直接呼ぶのが Zod 4 公式 idiom**（generic helper 化禁止）。
 
-参照実装: `sectionLayoutSchema` / `createImageGroupSchema`（`@/shared/lib/sections/definitions/_shared/{layout,image}`）
+参照実装: `sectionLayoutSchema` / `createImageGroupSchema` / `createMediaGroupSchema`（`@/shared/lib/sections/definitions/_shared/{layout,image,media}`）
+
+### `_zod.def.type === "prefault"` を introspection helper でも unwrap 必須
+
+`.prefault({}).register(fieldRegistry, ...)` で構築した group schema は `_zod.def.type === "prefault"` で wrap される。**runtime introspection を行う helper（`getZodObjectShape` / `extractFieldMetaDeep` / `extractDiscriminatedUnionInfo` / `getSelectOptions` / `getArrayItemShape` / `getArrayConstraints` 等）は `default` / `optional` と並列で `prefault` も `def.innerType` 再帰 unwrap が必須**。漏れると AutoSectionForm 等の introspection が `undefined` を返して group sub-fields が空配列扱いになり、UI 上「メディア」「レイアウト・表示制御」アコーディオン内が無描画になる silent bug の温床。
+
+```ts
+// 必須 3 分岐（default / optional / prefault）
+if (type === "default" && isZodType(def["innerType"]))
+  return walk(def["innerType"]);
+if (type === "optional" && isZodType(def["innerType"]))
+  return walk(def["innerType"]);
+if (type === "prefault" && isZodType(def["innerType"]))
+  return walk(def["innerType"]);
+```
+
+実例: 2026-05-24 PR #221 で `getZodObjectShape` / `extractFieldMetaDeep` の prefault unwrap 漏れを修正、全 23 sections の design accordion 内 `sectionLayoutSchema` group + 各 hero variant の `createMediaGroupSchema` / `createImageGroupSchema` / inline `z.object().prefault()` group の sub-fields（合計 31 prefault group field）が一斉に正しく描画される回帰修正。参照実装: `@/admin/.../pages/[slug]/_sections/_components/zod-introspection.ts`。
 
 ## Length check の内部構造（runtime introspection 用）
 
