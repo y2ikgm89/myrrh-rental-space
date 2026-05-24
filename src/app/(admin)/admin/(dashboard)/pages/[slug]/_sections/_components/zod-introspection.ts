@@ -151,7 +151,10 @@ export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
 }
 
 /**
- * ZodDefault/ZodOptional をアンラップして select フィールドの enum 値を取得する。
+ * ZodDefault / ZodOptional / ZodPrefault をアンラップして select フィールドの enum 値を取得する。
+ *
+ * `getZodObjectShape` / `extractFieldMetaDeep` と同じく `prefault` を unwrap しないと
+ * `z.enum(...).prefault(...)` でラップされた select が空配列を返す silent bug。
  */
 export function getSelectOptions(schema: z.ZodType): string[] {
   const def = getZodDef(schema);
@@ -178,11 +181,17 @@ export function getSelectOptions(schema: z.ZodType): string[] {
     return getSelectOptions(def["innerType"]);
   }
 
+  // ZodPrefault → innerType
+  if (type === "prefault" && isZodType(def["innerType"])) {
+    return getSelectOptions(def["innerType"]);
+  }
+
   return [];
 }
 
 /**
- * ZodDefault/ZodArray から配列要素の ZodObject shape を取得する。
+ * ZodArray から配列要素の ZodObject shape を取得する。
+ * ZodDefault / ZodOptional / ZodPrefault でラップされていても unwrap する。
  */
 export function getArrayItemShape(
   schema: z.ZodType,
@@ -203,6 +212,16 @@ export function getArrayItemShape(
 
   // ZodDefault → innerType
   if (type === "default" && isZodType(def["innerType"])) {
+    return getArrayItemShape(def["innerType"]);
+  }
+
+  // ZodOptional → innerType
+  if (type === "optional" && isZodType(def["innerType"])) {
+    return getArrayItemShape(def["innerType"]);
+  }
+
+  // ZodPrefault → innerType
+  if (type === "prefault" && isZodType(def["innerType"])) {
     return getArrayItemShape(def["innerType"]);
   }
 
@@ -229,6 +248,16 @@ export function getArrayConstraints(schema: z.ZodType): ArrayConstraints {
 
   // ZodDefault → innerType
   if (type === "default" && isZodType(def["innerType"])) {
+    return getArrayConstraints(def["innerType"]);
+  }
+
+  // ZodOptional → innerType
+  if (type === "optional" && isZodType(def["innerType"])) {
+    return getArrayConstraints(def["innerType"]);
+  }
+
+  // ZodPrefault → innerType
+  if (type === "prefault" && isZodType(def["innerType"])) {
     return getArrayConstraints(def["innerType"]);
   }
 
@@ -294,7 +323,10 @@ export interface DiscriminatedUnionInfo {
 
 /**
  * ZodDiscriminatedUnion を判定して discriminator + options を抽出する。
- * ZodDefault / ZodOptional でラップされていても unwrap して再帰探索する。
+ * ZodDefault / ZodOptional / ZodPrefault でラップされていても unwrap して再帰探索する。
+ *
+ * page-hero `backgroundMedia` のような `z.discriminatedUnion(...).prefault({...})`
+ * を unwrap しないと info が null 返りで variant select が出ない silent bug。
  */
 export function extractDiscriminatedUnionInfo(
   schema: z.ZodType,
@@ -311,6 +343,11 @@ export function extractDiscriminatedUnionInfo(
 
   // ZodOptional → unwrap
   if (type === "optional" && isZodType(def["innerType"])) {
+    return extractDiscriminatedUnionInfo(def["innerType"]);
+  }
+
+  // ZodPrefault → unwrap
+  if (type === "prefault" && isZodType(def["innerType"])) {
     return extractDiscriminatedUnionInfo(def["innerType"]);
   }
 
