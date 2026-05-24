@@ -6,7 +6,6 @@
  */
 
 import { z } from "zod";
-import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // システムページ定義
@@ -118,46 +117,6 @@ export const updatePageSeoSchema = z.object({
 export type UpdatePageSeoInput = z.infer<typeof updatePageSeoSchema>;
 
 /**
- * ページ更新用バリデーションスキーマ（コンテンツ編集可能ページ用）
- */
-export const updatePageSchema = z.object({
-  title: z
-    .string()
-    .min(1, { error: "タイトルは必須です" })
-    .max(200, { error: "タイトルは200文字以内です" }),
-  description: z
-    .string()
-    .max(500, { error: "説明は500文字以内です" })
-    .optional(),
-  metaDescription: z
-    .string()
-    .max(160, { error: "メタディスクリプションは160文字以内です" })
-    .optional(),
-  metaKeywords: z
-    .string()
-    .max(200, { error: "メタキーワードは200文字以内です" })
-    .optional(),
-  ogpTitle: z
-    .string()
-    .max(100, { error: "OGPタイトルは100文字以内です" })
-    .optional(),
-  ogpDescription: z
-    .string()
-    .max(200, { error: "OGP説明は200文字以内です" })
-    .optional(),
-  ogpImageUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .optional()
-    .or(z.literal("")),
-  isPublished: z.boolean().default(true),
-  publishedAt: z.coerce.date().optional(),
-  contentWidth: z.enum(LayoutWidth).optional(),
-  contentWidthCustom: z.number().int().min(320).max(1920).optional(),
-  showSidebar: z.boolean().nullable().optional(),
-});
-
-/**
  * ページ作成用バリデーションスキーマ
  */
 export const createPageSchema = z.object({
@@ -179,5 +138,4 @@ export const createPageSchema = z.object({
   isPublished: z.boolean().default(false),
 });
 
-export type UpdatePageInput = z.infer<typeof updatePageSchema>;
 export type CreatePageInput = z.infer<typeof createPageSchema>;

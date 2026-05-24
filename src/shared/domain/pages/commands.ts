@@ -12,7 +12,6 @@ import {
   getSystemPageDefinition,
   isSystemPageSlug,
   type CreatePageInput,
-  type UpdatePageInput,
   type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
 import { createDefaultCustomPageSections } from "@/shared/lib/constants/default-page-sections";
@@ -116,31 +115,6 @@ export async function ensureSystemPageCommand(slug: string) {
     page: toPlainObject(page),
     created: !existingPage,
   };
-}
-
-export async function updatePageCommand(
-  slug: string,
-  input: UpdatePageInput,
-): Promise<void> {
-  await ensurePageExists(slug);
-
-  await prisma.page.update({
-    where: { slug },
-    data: {
-      title: input.title,
-      description: normalizeNullableString(input.description),
-      metaDescription: normalizeNullableString(input.metaDescription),
-      metaKeywords: normalizeNullableString(input.metaKeywords),
-      ogpTitle: normalizeNullableString(input.ogpTitle),
-      ogpDescription: normalizeNullableString(input.ogpDescription),
-      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-      isPublished: input.isPublished,
-      publishedAt: input.publishedAt ?? null,
-      contentWidth: input.contentWidth ?? null,
-      contentWidthCustom: input.contentWidthCustom ?? null,
-      showSidebar: input.showSidebar ?? null,
-    },
-  });
 }
 
 export async function createPageCommand(

@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgePageCache } from "@/shared/lib/cloudflare";
@@ -16,7 +15,6 @@ import {
   deletePageCommand,
   deletePagePermanentlyCommand,
   restorePageCommand,
-  updatePageCommand,
   updatePagePublishedCommand,
   updatePageSeoCommand,
   bulkDeletePagesCommand,
@@ -25,9 +23,7 @@ import {
 import { getPageIdBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import {
   createPageSchema,
-  updatePageSchema,
   updatePageSeoSchema,
-  type UpdatePageInput,
 } from "@/shared/lib/validations/page";
 
 function purgePageCaches(...slugs: string[]): void {
@@ -50,34 +46,6 @@ function invalidatePageTags(...slugs: string[]): void {
 function invalidatePageSeoTags(slug: string): void {
   updateTag(CACHE_TAGS.PAGE_SEO);
   updateTag(getCacheTag.pageSeo.detail(slug));
-}
-
-export async function updatePage(
-  slug: string,
-  input: UpdatePageInput,
-): Promise<MutationResult> {
-  const parsed = updatePageSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "page",
-    action: "update",
-    checkResourceAccess: true,
-    resolveResourceId: () => getPageIdBySlugQuery(slug),
-    resolveAuditResourceId: () => slug,
-    execute: async () => {
-      await updatePageCommand(slug, parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      // title / metaDescription 等は SEO metadata の派生元のため PAGE_SEO も invalidate
-      invalidatePageTags(slug);
-      invalidatePageSeoTags(slug);
-      purgePageCaches(slug);
-    },
-  });
 }
 
 /**

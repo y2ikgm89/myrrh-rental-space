@@ -62,7 +62,6 @@ mock.module("@/shared/lib/section-defaults", () => ({
 import {
   createPageIfNotExistsCommand,
   ensureSystemPageCommand,
-  updatePageCommand,
   createPageCommand,
   deletePageCommand,
   deletePagePermanentlyCommand,
@@ -88,29 +87,6 @@ const EXISTING_PAGE = {
   isActive: true,
   isPublished: false,
   publishedAt: null,
-};
-
-const EXISTING_PAGE_PUBLISHED = {
-  id: "page-1",
-  slug: PAGE_SLUG,
-  isActive: true,
-  isPublished: true,
-  publishedAt: new Date("2024-06-01T12:00:00Z"),
-};
-
-const VALID_UPDATE_INPUT = {
-  title: "テストページ",
-  description: "テストの説明",
-  metaDescription: "メタディスクリプション",
-  metaKeywords: "キーワード",
-  ogpTitle: "OGPタイトル",
-  ogpDescription: "OGP説明",
-  ogpImageUrl: "https://example.com/ogp.jpg",
-  isPublished: false,
-  publishedAt: undefined,
-  contentWidth: undefined,
-  contentWidthCustom: undefined,
-  showSidebar: undefined,
 };
 
 const VALID_CREATE_INPUT = {
@@ -261,132 +237,6 @@ describe("ensureSystemPageCommand", () => {
       await ensureSystemPageCommand("non-system-page");
 
       expect(mockEnsurePageSections).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// =============================================================================
-// updatePageCommand
-// =============================================================================
-
-describe("updatePageCommand", () => {
-  beforeEach(() => {
-    mockPageFindUnique.mockReset();
-    mockPageUpdate.mockReset();
-    mockPageFindUnique.mockResolvedValue(EXISTING_PAGE);
-    mockPageUpdate.mockResolvedValue({ id: "page-1", slug: PAGE_SLUG });
-  });
-
-  describe("正常系", () => {
-    test("既存ページを更新できる", async () => {
-      await updatePageCommand(PAGE_SLUG, VALID_UPDATE_INPUT);
-
-      expect(mockPageUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    test("update が正しい where 条件で呼ばれる", async () => {
-      await updatePageCommand(PAGE_SLUG, VALID_UPDATE_INPUT);
-
-      expect(mockPageUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { slug: PAGE_SLUG },
-        }),
-      );
-    });
-
-    test("nullable 文字列フィールドが空文字の場合 null に変換される", async () => {
-      await updatePageCommand(PAGE_SLUG, {
-        ...VALID_UPDATE_INPUT,
-        description: "",
-        metaDescription: "",
-        metaKeywords: "",
-        ogpTitle: "",
-        ogpDescription: "",
-        ogpImageUrl: "",
-      });
-
-      expect(mockPageUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            description: null,
-            metaDescription: null,
-            metaKeywords: null,
-            ogpTitle: null,
-            ogpDescription: null,
-            ogpImageUrl: null,
-          }),
-        }),
-      );
-    });
-
-    test("nullable 文字列フィールドに値がある場合はそのまま保存される", async () => {
-      await updatePageCommand(PAGE_SLUG, {
-        ...VALID_UPDATE_INPUT,
-        description: "説明テキスト",
-      });
-
-      expect(mockPageUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            description: "説明テキスト",
-          }),
-        }),
-      );
-    });
-
-    test("publishedAt が undefined の場合は null として保存される", async () => {
-      await updatePageCommand(PAGE_SLUG, {
-        ...VALID_UPDATE_INPUT,
-        publishedAt: undefined,
-      });
-
-      expect(mockPageUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            publishedAt: null,
-          }),
-        }),
-      );
-    });
-
-    test("publishedAt に日時が指定された場合はその値が保存される", async () => {
-      const publishedAt = new Date("2024-07-01T12:00:00Z");
-
-      await updatePageCommand(PAGE_SLUG, {
-        ...VALID_UPDATE_INPUT,
-        publishedAt,
-      });
-
-      expect(mockPageUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            publishedAt,
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("ページが存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPageFindUnique.mockResolvedValue(null);
-
-      await expect(
-        updatePageCommand("non-existent", VALID_UPDATE_INPUT),
-      ).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "ページが見つかりません",
-      });
-    });
-
-    test("ページが存在しない場合は update が呼ばれない", async () => {
-      mockPageFindUnique.mockResolvedValue(null);
-
-      await expect(
-        updatePageCommand("non-existent", VALID_UPDATE_INPUT),
-      ).rejects.toThrow(DomainError);
-
-      expect(mockPageUpdate).not.toHaveBeenCalled();
     });
   });
 });

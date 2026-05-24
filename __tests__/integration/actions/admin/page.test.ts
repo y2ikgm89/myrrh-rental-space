@@ -40,42 +40,6 @@ const updatePageSeoSchema = z.object({
     .or(z.literal("")),
 });
 
-const updatePageSchema = z.object({
-  title: z
-    .string()
-    .min(1, { error: "タイトルは必須です" })
-    .max(200, { error: "タイトルは200文字以内です" }),
-  description: z
-    .string()
-    .max(500, { error: "説明は500文字以内です" })
-    .optional(),
-  metaDescription: z
-    .string()
-    .max(160, { error: "メタディスクリプションは160文字以内です" })
-    .optional(),
-  metaKeywords: z
-    .string()
-    .max(200, { error: "メタキーワードは200文字以内です" })
-    .optional(),
-  ogpTitle: z
-    .string()
-    .max(100, { error: "OGPタイトルは100文字以内です" })
-    .optional(),
-  ogpDescription: z
-    .string()
-    .max(200, { error: "OGP説明は200文字以内です" })
-    .optional(),
-  ogpImageUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .optional()
-    .or(z.literal("")),
-  isPublished: z.boolean().default(true),
-  publishedAt: z.coerce.date().optional(),
-  contentWidth: z.enum(LayoutWidth).optional(),
-  contentWidthCustom: z.number().int().min(320).max(1920).optional(),
-});
-
 const createPageSchema = z.object({
   slug: z
     .string()
@@ -101,13 +65,6 @@ const VALID_CREATE_PAGE_INPUT = {
   title: "テストページ",
   description: "テストページの説明です。",
   isPublished: false,
-};
-
-// 有効なページ更新データ
-const VALID_UPDATE_PAGE_INPUT = {
-  title: "テストページ（更新）",
-  description: "テストページの説明です（更新）。",
-  isPublished: true,
 };
 
 // 有効なSEO更新データ
@@ -272,76 +229,6 @@ describe("Page Admin Action Integration", () => {
     });
   });
 
-  describe("updatePageSchema バリデーション", () => {
-    describe("正常系", () => {
-      test("有効なデータはバリデーション通過", () => {
-        const result = updatePageSchema.safeParse(VALID_UPDATE_PAGE_INPUT);
-        expect(result.success).toBe(true);
-      });
-
-      test("contentWidthオプション設定可能", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidth: LayoutWidth.MD,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("contentWidthCustom設定可能", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidthCustom: 800,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("publishedAtは日付に変換される", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          publishedAt: "2024-01-15T10:00:00Z",
-        });
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.publishedAt).toBeInstanceOf(Date);
-        }
-      });
-    });
-
-    describe("contentWidthCustom", () => {
-      test("320px（最小値）はOK", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidthCustom: 320,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("1920px（最大値）はOK", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidthCustom: 1920,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("319px（最小値未満）はエラー", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidthCustom: 319,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("1921px（最大値超過）はエラー", () => {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidthCustom: 1921,
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
   describe("updatePageSeoSchema バリデーション", () => {
     describe("正常系", () => {
       test("有効なデータはバリデーション通過", () => {
@@ -491,26 +378,6 @@ describe("Page Admin Action Integration", () => {
       expect(LayoutWidth.XL).toBeDefined();
       expect(LayoutWidth.FULL).toBeDefined();
       expect(LayoutWidth.CUSTOM).toBeDefined();
-    });
-
-    test("updatePageSchemaでLayoutWidth使用可能", () => {
-      const widths = [
-        LayoutWidth.XS,
-        LayoutWidth.SM,
-        LayoutWidth.MD,
-        LayoutWidth.LG,
-        LayoutWidth.XL,
-        LayoutWidth.FULL,
-        LayoutWidth.CUSTOM,
-      ];
-
-      for (const width of widths) {
-        const result = updatePageSchema.safeParse({
-          ...VALID_UPDATE_PAGE_INPUT,
-          contentWidth: width,
-        });
-        expect(result.success).toBe(true);
-      }
     });
   });
 

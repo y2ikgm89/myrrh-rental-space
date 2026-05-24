@@ -7,7 +7,6 @@
 import { describe, test, expect } from "bun:test";
 import {
   updatePageSeoSchema,
-  updatePageSchema,
   createPageSchema,
   getSystemPageDefinition,
   isSystemPageSlug,
@@ -24,18 +23,6 @@ const VALID_SEO_INPUT = {
   ogpTitle: "OGPタイトル",
   ogpDescription: "OGP説明文",
   ogpImageUrl: "https://example.com/ogp.jpg",
-};
-
-// 有効なページ更新データ
-const VALID_PAGE_INPUT = {
-  title: "テストページタイトル",
-  description: "ページの説明",
-  metaDescription: "メタディスクリプション",
-  metaKeywords: "キーワード",
-  ogpTitle: "OGPタイトル",
-  ogpDescription: "OGP説明",
-  ogpImageUrl: "https://example.com/ogp.jpg",
-  isPublished: true,
 };
 
 // 有効なページ作成データ
@@ -168,85 +155,6 @@ describe("updatePageSeoSchema", () => {
         ogpImageUrl: "https://example.com/image.jpg",
       });
       expect(result.success).toBe(true);
-    });
-  });
-});
-
-describe("updatePageSchema", () => {
-  describe("正常系", () => {
-    test("有効なデータは検証を通過", () => {
-      const result = updatePageSchema.safeParse(VALID_PAGE_INPUT);
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("title", () => {
-    test("空文字はエラー", () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        title: "",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("200文字超過はエラー", () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        title: "あ".repeat(201),
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe("description", () => {
-    test("500文字超過はエラー", () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        description: "あ".repeat(501),
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("500文字以内");
-      }
-    });
-  });
-
-  describe("isPublished", () => {
-    test("デフォルトはtrue", () => {
-      const { isPublished, ...withoutIsPublished } = VALID_PAGE_INPUT;
-      const result = updatePageSchema.safeParse(withoutIsPublished);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.isPublished).toBe(true);
-      }
-    });
-  });
-
-  describe("contentWidthCustom", () => {
-    test("319はエラー", () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        contentWidthCustom: 319,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("1921はエラー", () => {
-      const result = updatePageSchema.safeParse({
-        ...VALID_PAGE_INPUT,
-        contentWidthCustom: 1921,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("320-1920は許可", () => {
-      for (const value of [320, 1024, 1920]) {
-        const result = updatePageSchema.safeParse({
-          ...VALID_PAGE_INPUT,
-          contentWidthCustom: value,
-        });
-        expect(result.success).toBe(true);
-      }
     });
   });
 });
