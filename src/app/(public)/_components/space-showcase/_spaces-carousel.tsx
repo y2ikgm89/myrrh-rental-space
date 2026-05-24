@@ -439,20 +439,20 @@ export function SpacesCarousel({
                       {isActive ? (
                         <div
                           className={cn(
-                            "pointer-events-none absolute inset-0 hidden flex-col justify-end bg-foreground/70 p-4 opacity-0 md:flex md:p-5",
+                            "pointer-events-none absolute inset-0 hidden flex-col justify-end bg-foreground p-4 opacity-0 md:flex md:p-5",
                             !reduceMotion &&
                               "transition-opacity duration-700 group-hover:opacity-100",
                           )}
                         >
                           {space.categoryName ? (
-                            <span className="text-[0.6875rem] uppercase tracking-[0.18em] text-accent-foreground/70">
+                            <span className="text-[0.6875rem] uppercase tracking-[0.18em] text-accent-foreground">
                               {space.categoryName}
                             </span>
                           ) : null}
                           <p className="mt-1 font-heading text-h3 font-light text-accent-foreground">
                             {space.name}
                           </p>
-                          <div className="mt-3 flex items-baseline gap-4 text-[0.8rem] text-accent-foreground/80">
+                          <div className="mt-3 flex items-baseline gap-4 text-[0.8rem] text-accent-foreground">
                             {space.area != null ? (
                               <span>広さ {space.area}m²</span>
                             ) : null}
