@@ -10,6 +10,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { apiRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
 import {
   getRouteErrorStatus,
   jsonError,
@@ -21,6 +22,15 @@ export async function GET(request: Request): Promise<NextResponse> {
     const auth = await checkPermission("page", "read", request.headers);
     if (!auth.success) {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
+    }
+
+    // 認証後に rate-limit 適用（業界標準 Stripe / Linear admin reader hardening）
+    const rateLimit = await apiRateLimiter.check(getClientIp(request));
+    if (!rateLimit.success) {
+      return jsonError(
+        "リクエストが多すぎます。しばらくしてからお試しください。",
+        429,
+      );
     }
 
     const allowedPageIds = isEditorRole(auth.user.role)
