@@ -67,7 +67,7 @@ export default async function DashboardLayout({
               quickActions={quickActions}
               recents={recents}
             >
-              <div className="min-h-screen bg-background">
+              <div className="min-h-dvh bg-background">
                 {/* レスポンシブサイドバー */}
                 <ResponsiveSidebar
                   items={sidebarItems}

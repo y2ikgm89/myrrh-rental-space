@@ -126,7 +126,7 @@ export default async function SettingsPage() {
       </Suspense>
 
       {/* カテゴリカード一覧 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 @md/main:grid-cols-2 @3xl/main:grid-cols-3">
         {SETTINGS_CATEGORIES.map((category) => (
           <SettingsCard key={category.href} {...category} />
         ))}

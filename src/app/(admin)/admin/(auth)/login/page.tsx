@@ -37,7 +37,7 @@ export default async function LoginPage(): Promise<ReactElement> {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-dvh flex">
       {/* 左パネル: ブランディング（サイドバーと同じダークテーマ） */}
       <div className="hidden lg:flex lg:w-1/2 bg-sidebar-bg relative overflow-hidden">
         {/* 装飾的なグリッドパターン */}

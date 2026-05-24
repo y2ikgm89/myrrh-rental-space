@@ -10,7 +10,7 @@ import { Skeleton } from "@/admin/components/ui";
 export default function AuthLoading() {
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-background p-6"
+      className="flex min-h-dvh items-center justify-center bg-background p-6"
       aria-busy="true"
     >
       <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8">

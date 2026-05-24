@@ -15,7 +15,7 @@ export default function AuthError({ error, unstable_retry }: ErrorInfo) {
   }, [error, digest]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
         <h1 className="mb-4 text-2xl font-bold tracking-tight text-foreground">
           エラーが発生しました

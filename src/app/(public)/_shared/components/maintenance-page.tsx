@@ -14,7 +14,7 @@ export function MaintenancePage({
   const displayMessage = message ?? DEFAULT_MESSAGE;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 md:px-8">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-5 md:px-8">
       <div className="animate-maintenance-in w-full max-w-sm text-center">
         {/* ブランドロゴ */}
         <p className="font-heading text-xl tracking-[0.18em] text-foreground">
