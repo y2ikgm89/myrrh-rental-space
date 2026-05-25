@@ -30,6 +30,7 @@ export type SpaceOption = {
 export type LocationWithSpaces = {
   id: string;
   name: string;
+  description: string | null;
   address: string;
   imageUrl: string;
   spaces: SpaceOption[];
@@ -250,6 +251,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         select: {
           id: true,
           name: true,
+          description: true,
           address: true,
           imageUrl: true,
           spaces: {

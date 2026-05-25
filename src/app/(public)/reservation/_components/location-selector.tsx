@@ -61,6 +61,12 @@ export function LocationSelector({
                 <p className="mt-1 text-sm text-muted-foreground">
                   {location.address}
                 </p>
+                {location.description != null &&
+                location.description.length > 0 ? (
+                  <p className="mt-2 hidden text-sm leading-relaxed text-muted-foreground @md:line-clamp-2 @md:block">
+                    {location.description}
+                  </p>
+                ) : null}
               </div>
               <p className="text-sm text-muted-foreground @md:mt-auto">
                 {location.spaces.length} スペース

@@ -81,6 +81,11 @@ export function SpaceSelector({
                     定員{space.capacity}名
                     {space.area != null ? ` / ${String(space.area)}㎡` : ""}
                   </p>
+                  {space.descriptionPlainText.length > 0 ? (
+                    <p className="mt-2 hidden text-sm leading-relaxed text-muted-foreground @md:line-clamp-2 @md:block">
+                      {space.descriptionPlainText}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center justify-between gap-2 @md:mt-auto">
                   <span className="text-lg font-light text-accent @md:text-xl">
