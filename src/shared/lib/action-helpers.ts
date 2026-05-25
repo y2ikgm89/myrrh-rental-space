@@ -135,7 +135,6 @@ type RateLimitCheckResult =
 export async function checkActionRateLimit(limiter: {
   check(token: string): Promise<{ success: boolean }>;
 }): Promise<RateLimitCheckResult> {
-  const { getClientIpFromHeaders } = await import("./rate-limit");
   const ip = await getClientIpFromHeaders();
   const result = await limiter.check(ip);
   if (!result.success) {
