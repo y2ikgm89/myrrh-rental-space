@@ -210,46 +210,47 @@ export default async function EventDetailPage({
           { label: "イベント", href: "/events" },
           { label: event.title },
         ]}
+        hero={
+          <ArticleHeader
+            eyebrow="Event"
+            title={event.title}
+            meta={
+              <>
+                <time
+                  dateTime={startDateIso}
+                  className="font-heading text-sm font-light"
+                >
+                  {formatEventDateTimeRange(event.startTime, event.endTime)}
+                </time>
+                {venueName ? (
+                  <>
+                    <span aria-hidden="true" className="text-border">
+                      ·
+                    </span>
+                    <span>{venueName}</span>
+                  </>
+                ) : null}
+              </>
+            }
+            {...(event.thumbnailUrl && {
+              media: (
+                <ImageFrame
+                  src={event.thumbnailUrl}
+                  alt={event.title}
+                  aspect="video"
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  rounded
+                  priority
+                />
+              ),
+            })}
+          />
+        }
         toc={<EventInfoPanel variant="sidebar" {...infoPanelProps} />}
         mobileToc={<EventInfoPanel variant="mobile" {...infoPanelProps} />}
         showCta={false}
       >
-        <ArticleHeader
-          eyebrow="Event"
-          title={event.title}
-          meta={
-            <>
-              <time
-                dateTime={startDateIso}
-                className="font-heading text-sm font-light"
-              >
-                {formatEventDateTimeRange(event.startTime, event.endTime)}
-              </time>
-              {venueName ? (
-                <>
-                  <span aria-hidden="true" className="text-border">
-                    ·
-                  </span>
-                  <span>{venueName}</span>
-                </>
-              ) : null}
-            </>
-          }
-          {...(event.thumbnailUrl && {
-            media: (
-              <ImageFrame
-                src={event.thumbnailUrl}
-                alt={event.title}
-                aspect="video"
-                fill
-                sizes="(min-width: 1024px) 60vw, 100vw"
-                rounded
-                priority
-              />
-            ),
-          })}
-        />
-
         {event.descriptionHtml.trim() !== "" ? (
           <Prose variant="editorial" className="max-w-none">
             <SanitizedHtml html={event.descriptionHtml} />

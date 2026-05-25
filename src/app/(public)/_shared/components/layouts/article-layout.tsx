@@ -21,6 +21,13 @@ interface ArticleLayoutProps {
   /** When provided, renders a `bg-surface` breadcrumb band. */
   readonly breadcrumb?: ReadonlyArray<BreadcrumbItem>;
   /**
+   * Full-width hero block within `<article>` (eyebrow + h1 + hairline + meta + media)。
+   * `toc` / sidebar の 2-col grid 開始前に配置されるため、gallery / thumbnail が
+   * 横の sticky widget に圧迫されない。Airbnb / Booking.com / Eventbrite / Notion
+   * 業界標準パターン (hero full-width → 本文 2-col)。
+   */
+  readonly hero?: ReactNode;
+  /**
    * Component-level explicit disable (`false`)。未指定時は global sidebar settings
    * (`Settings.sidebarEnabled`) に従う。
    * `toc` が渡されたときは BlogLayout を経由せず独自 2 カラムを組むため
@@ -38,29 +45,33 @@ interface ArticleLayoutProps {
    */
   readonly toc?: ReactNode;
   /**
-   * 本文冒頭（breadcrumb の下、`<article>` 内の最上部）に挿入されるコンテンツ。
-   * モバイル用 `<details>` 折りたたみ目次などに使う（sidebar は `<lg` で末尾スタック
-   * されるため、モバイルでは冒頭配置が定石）。
+   * 本文冒頭（`<article>` 内の hero 下、body の最上部）に挿入されるコンテンツ。
+   * モバイル用 `<details>` 折りたたみ目次や予約 widget の inline 表示に使う
+   * (sidebar は `<lg` で末尾スタックされるため、モバイルでは冒頭配置が定石)。
    * `toc` が desktop 側に置かれていても mobile 表示用は別途ここで渡す。
    */
   readonly mobileToc?: ReactNode;
 }
 
 /**
- * ArticleLayout — 公開記事詳細ページ共通レイアウト
+ * ArticleLayout — 公開記事 / リソース詳細ページ共通レイアウト
  *
- * posts / news / preview 詳細ページの単一エントリポイント。
- * Breadcrumb 帯 → semantic `<article>` → optional sidebar → optional CTA。
+ * Breadcrumb 帯 → semantic `<article>` (full-width hero → body grid) → optional CTA。
  *
- * 標準パスは `BlogLayout`（widget ベース）。`toc` prop が渡された場合のみ
- * 独自 2 カラム grid（`lg:grid-cols-[1fr_280px]`）に切り替わり、TOC が
- * sticky サイドバーとして配置される。
+ * Body grid:
+ *   - `toc` あり: 独自 2 カラム (`lg:grid-cols-[1fr_280px]`)
+ *   - `toc` なし: `BlogLayout` (widget サイドバー)
+ *
+ * Hero は body grid の **外** (`<article>` 内 full-width) に配置されるため、
+ * gallery / thumbnail が右の sticky widget で圧迫されない (Airbnb / Eventbrite /
+ * Notion 業界標準パターン)。
  */
 export function ArticleLayout({
   children,
   jsonLd,
   banner,
   breadcrumb,
+  hero,
   showSidebar,
   contentWidth,
   contentWidthCustom = null,
@@ -72,14 +83,14 @@ export function ArticleLayout({
     ? resolveWidthStyles({ width: contentWidth, customPx: contentWidthCustom })
     : null;
 
-  const article = (
-    <article
-      className={cn(widthStyles?.className)}
+  const body = (
+    <div
+      className={cn("min-w-0", widthStyles?.className)}
       {...(widthStyles?.style && { style: widthStyles.style })}
     >
       {mobileToc ? <div className="lg:hidden">{mobileToc}</div> : null}
       {children}
-    </article>
+    </div>
   );
 
   return (
@@ -94,16 +105,19 @@ export function ArticleLayout({
         </div>
       ) : null}
       <Container className="pt-10 pb-[var(--space-lg)] md:pt-14">
-        {toc ? (
-          <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
-            <div className="min-w-0">{article}</div>
-            <aside className="hidden lg:block">{toc}</aside>
-          </div>
-        ) : (
-          <BlogLayout {...(showSidebar !== undefined && { showSidebar })}>
-            {article}
-          </BlogLayout>
-        )}
+        <article>
+          {hero ? <div className="mb-12">{hero}</div> : null}
+          {toc ? (
+            <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
+              {body}
+              <aside className="hidden lg:block">{toc}</aside>
+            </div>
+          ) : (
+            <BlogLayout {...(showSidebar !== undefined && { showSidebar })}>
+              {body}
+            </BlogLayout>
+          )}
+        </article>
       </Container>
       {showCta ? <SiteCTA /> : null}
     </>
