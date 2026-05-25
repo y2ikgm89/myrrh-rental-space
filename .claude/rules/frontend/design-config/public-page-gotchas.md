@@ -64,6 +64,7 @@ paths:
 - **`SectionWrapper` と `Section` Primitive を混同しない** — SectionWrapper（DB 駆動）vs Section Primitive（静的レイアウト用）
 - **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` から `space-list`、`/events` から `event-calendar` を `trailingSections` フィルタで除外
 - **ページ固有 CTA を持つページは `cta` セクションも除外** — `/faq` / `/contact` で重複防止
+- **入力 UI を内包する section type のページ template から同種 listing section を `allowedSectionTypes` 除外必須** — `reservation-form` (Step 1 でスペース選択を内包) は `reservation` template の `allowedSectionTypes` から `space-list` を除外、`contact-form` 等も同種 listing を除外。trailing filter ではなく **`page-templates.ts` で構造的に追加不能化** が canonical (admin の AddSectionDialog 段階で選択肢から外れる)。実例: PR #240 で reservation template `allowedSectionTypes: ["page-hero", "hero", "reservation-form", "space-list", "cta"]` → `["page-hero", "hero", "reservation-form", "cta"]`、UX 上の二重表示 silent bug を構造的に防止
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須**
 - **hero 直下の一覧セクションは上余白を縮小** — `pt-10 pb-[var(--space-lg)] md:pt-14`
 - **ホームヒーローは `Page.pageHero` のみ** — `homepage-hero` Section type / registry は廃止
