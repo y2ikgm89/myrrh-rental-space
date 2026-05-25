@@ -4,11 +4,18 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import type { SpaceOption } from "@/shared/domain/locations/public-queries";
 import { IconInfoCircle } from "@tabler/icons-react";
+import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
-import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { SpaceDetailDialog } from "./space-detail-dialog";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
+/**
+ * 公開予約ページ Step 1 スペース選択。
+ *
+ * Variant G (Step Wizard Improved) 準拠 — 横長カード (画像左 + テキスト右) ×
+ * 3 列 grid (Container Queries) で 1 画面密度を最大化。
+ * 旧 縦長カード + horizontal snap-scroll パターンは廃止。
+ */
 export function SpaceSelector({
   spaces,
   selectedId,
@@ -27,11 +34,7 @@ export function SpaceSelector({
       <div
         role="radiogroup"
         aria-label="スペースを選択"
-        className={
-          spaces.length <= 3
-            ? "@container grid grid-cols-1 gap-6 @md:grid-cols-2 @3xl:grid-cols-3"
-            : "@container flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2 @md:grid @md:grid-cols-3 @md:overflow-visible @md:snap-none @md:pb-0"
-        }
+        className="@container grid grid-cols-1 gap-3 @md:grid-cols-2 @3xl:grid-cols-3"
       >
         {spaces.map((space) => {
           const isSelected = space.id === selectedId;
@@ -49,45 +52,47 @@ export function SpaceSelector({
                 }
               }}
               className={cn(
-                "flex min-w-[75vw] snap-start flex-col overflow-hidden border text-left transition-colors duration-200 md:min-w-0",
+                "grid grid-cols-[110px_1fr] gap-3 border p-2 text-left transition-colors duration-200",
                 isSelected
                   ? "border-accent bg-accent/5"
                   : "border-border hover:border-foreground/30",
                 isSingle ? "cursor-default" : "cursor-pointer",
               )}
             >
-              <ImageFrame
-                src={space.mainImageUrl}
-                alt={space.name}
-                width={400}
-                height={300}
-                sizes="(max-width: 768px) 75vw, 280px"
-                rounded={false}
-                className="aspect-[4/3] w-full"
-              />
-              <div className="p-3">
-                <span className="font-heading text-sm font-light tracking-tight">
-                  {space.name}
-                </span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  定員{space.capacity}名
-                  {space.area != null ? ` / ${String(space.area)}㎡` : ""}
-                </span>
-                <div className="mt-1.5 flex items-center justify-between">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface">
+                <Image
+                  src={space.mainImageUrl}
+                  alt={space.name}
+                  fill
+                  sizes="110px"
+                  className="object-cover transition-opacity duration-400 hover:opacity-85"
+                />
+              </div>
+              <div className="flex min-h-[110px] flex-col justify-between py-1">
+                <div className="min-w-0">
+                  <p className="truncate font-heading text-sm font-light tracking-tight">
+                    {space.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    定員{space.capacity}名
+                    {space.area != null ? ` / ${String(space.area)}㎡` : ""}
+                  </p>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
                   <span className="text-sm font-light text-accent">
                     {formatUnit(space.hourlyPrice, "/h")}
                   </span>
                   <button
                     type="button"
                     aria-label={`${space.name}の詳細を見る`}
-                    className="inline-flex items-center gap-1 border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground hover:border-foreground/30"
+                    className="inline-flex shrink-0 items-center gap-1 border border-border px-2 py-1 text-xs text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDetailSpace(space);
                     }}
                   >
                     <IconInfoCircle className="h-3 w-3" />
-                    詳細を見る
+                    詳細
                   </button>
                 </div>
               </div>
