@@ -3,7 +3,7 @@
  */
 
 export type VariantMeta = {
-  readonly id: "a" | "b" | "c" | "d" | "e" | "f";
+  readonly id: "a" | "b" | "c" | "d" | "e" | "f" | "g";
   readonly name: string;
   readonly tagline: string;
   readonly description: string;
@@ -88,6 +88,24 @@ export const VARIANTS: readonly VariantMeta[] = [
     ],
     cons: ["ステップ数 = 画面遷移数 (4-5 タップ)", "操作回数は最多"],
     reference: "Aman Resorts / Hoshinoya / 高級ホテル予約",
+  },
+  {
+    id: "g",
+    name: "Step Wizard Improved (推奨)",
+    tagline: "ステップ方式維持 / 密度改善 / sticky 要約強化",
+    description:
+      "現行 3 ステップ方式を温存しつつ、Step 1 を横長カード 3 列で 1 画面に密度収納、Step 2 で sticky 下部バーに選択中サマリーを常時表示。A + B のハイブリッドで「ステップの安心感」「スクロール量最小化」「ブランド体験」の三立を目指す。",
+    pros: [
+      "現行 reducer / StepIndicator を維持できる (移行コスト最小)",
+      "進捗・戻り操作が明確 (ステップ方式の安心感)",
+      "Step 1 を 1 画面に収納してスクロール最小化",
+      "sticky 要約で選択内容を常時確認可能",
+    ],
+    cons: [
+      "スペース数が 10+ の場合は密度限界",
+      "デスクトップ右サイドバー型 (B) ほどの情報量はない",
+    ],
+    reference: "Airbnb / 一休 / Booking.com (modal predictable-step UX)",
   },
   {
     id: "f",

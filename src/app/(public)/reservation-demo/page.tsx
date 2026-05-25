@@ -7,6 +7,7 @@ import { VariantCSinglePageScroll } from "./_components/variant-c-single-page-sc
 import { VariantDCalendarFirst } from "./_components/variant-d-calendar-first";
 import { VariantEEditorialMagazine } from "./_components/variant-e-editorial-magazine";
 import { VariantFMarketplaceSplit } from "./_components/variant-f-marketplace-split";
+import { VariantGStepWizardImproved } from "./_components/variant-g-step-wizard-improved";
 
 export const metadata: Metadata = {
   title: "予約ページ デザイン比較",
@@ -21,6 +22,7 @@ const COMPONENTS: Record<(typeof VARIANTS)[number]["id"], () => ReactElement> =
     d: VariantDCalendarFirst,
     e: VariantEEditorialMagazine,
     f: VariantFMarketplaceSplit,
+    g: VariantGStepWizardImproved,
   };
 
 export default function ReservationDemoPage(): ReactElement {
