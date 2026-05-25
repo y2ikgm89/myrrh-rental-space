@@ -129,13 +129,9 @@ export const PAGE_TEMPLATES: Record<string, PageTemplate> = {
     id: "reservation",
     label: "予約",
     description: "予約フォーム",
-    allowedSectionTypes: [
-      "page-hero",
-      "hero",
-      "reservation-form",
-      "space-list",
-      "cta",
-    ],
+    // space-list は除外: reservation-form の Step 1 でスペース選択を内包するため
+    // 二重表示になる (公開ページに同一スペース一覧が並ぶ silent UX bug 防止)
+    allowedSectionTypes: ["page-hero", "hero", "reservation-form", "cta"],
     defaultSections: DEFAULT_PAGE_SECTIONS["reservation"] ?? [],
     requiredSectionTypes: ["reservation-form"],
   },
