@@ -12,9 +12,12 @@ import { useFormatPrice } from "@/public/hooks/use-format-price";
 /**
  * 公開予約ページ Step 1 スペース選択。
  *
- * Variant G (Step Wizard Improved) 準拠 — 横長カード (画像左 + テキスト右) ×
- * 3 列 grid (Container Queries) で 1 画面密度を最大化。
- * 旧 縦長カード + horizontal snap-scroll パターンは廃止。
+ * Responsive ハイブリッドカード (Container Queries):
+ * - mobile: 縦長 1 列 + aspect 16:9 全幅 (Spacemarket / Airbnb / インスタベース系) で
+ *   写真主役、雰囲気重視。1 件約 280px 高、1 画面 2 件。
+ * - @md (tablet+): 横長 1 列 + 画像 260px (aspect 4:3) (Booking.com / 楽天トラベル系) で
+ *   比較容易性優先、1 行に名前・定員・面積・価格・詳細を並列表示。
+ * - @3xl (desktop wide): 画像 320px に拡大しゆとり確保。
  */
 export function SpaceSelector({
   spaces,
@@ -34,7 +37,7 @@ export function SpaceSelector({
       <div
         role="radiogroup"
         aria-label="スペースを選択"
-        className="@container grid grid-cols-1 gap-3 @md:grid-cols-2 @3xl:grid-cols-3"
+        className="@container flex flex-col gap-3 @md:gap-4"
       >
         {spaces.map((space) => {
           const isSelected = space.id === selectedId;
@@ -52,46 +55,47 @@ export function SpaceSelector({
                 }
               }}
               className={cn(
-                "grid grid-cols-[110px_1fr] gap-3 border p-2 text-left transition-colors duration-200",
+                "group flex flex-col overflow-hidden border text-left transition-colors duration-200",
+                "@md:grid @md:grid-cols-[260px_1fr] @md:gap-5 @md:p-4 @3xl:grid-cols-[320px_1fr]",
                 isSelected
                   ? "border-accent bg-accent/5"
                   : "border-border hover:border-foreground/30",
                 isSingle ? "cursor-default" : "cursor-pointer",
               )}
             >
-              <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface">
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface @md:aspect-[4/3]">
                 <Image
                   src={space.mainImageUrl}
                   alt={space.name}
                   fill
-                  sizes="110px"
-                  className="object-cover transition-opacity duration-400 hover:opacity-85"
+                  sizes="(min-width: 120rem) 320px, (min-width: 48rem) 260px, 100vw"
+                  className="object-cover transition-opacity duration-400 group-hover:opacity-85"
                 />
               </div>
-              <div className="flex min-h-[110px] flex-col justify-between py-1">
+              <div className="flex min-w-0 flex-col gap-2 p-4 @md:gap-3 @md:p-0 @md:py-1">
                 <div className="min-w-0">
-                  <p className="truncate font-heading text-sm font-light tracking-tight">
+                  <p className="font-heading text-lg font-light tracking-tight @md:text-xl">
                     {space.name}
                   </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     定員{space.capacity}名
                     {space.area != null ? ` / ${String(space.area)}㎡` : ""}
                   </p>
                 </div>
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <span className="text-sm font-light text-accent">
+                <div className="flex items-center justify-between gap-2 @md:mt-auto">
+                  <span className="text-lg font-light text-accent @md:text-xl">
                     {formatUnit(space.hourlyPrice, "/h")}
                   </span>
                   <button
                     type="button"
                     aria-label={`${space.name}の詳細を見る`}
-                    className="inline-flex shrink-0 items-center gap-1 border border-border px-2 py-1 text-xs text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
+                    className="inline-flex min-h-11 shrink-0 items-center gap-1.5 border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground @md:text-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDetailSpace(space);
                     }}
                   >
-                    <IconInfoCircle className="h-3 w-3" />
+                    <IconInfoCircle className="h-4 w-4" />
                     詳細
                   </button>
                 </div>

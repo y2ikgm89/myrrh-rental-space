@@ -2,9 +2,16 @@
 
 import type { ReactElement } from "react";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
+import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
-import { ImageFrame } from "@/public/components/design-system/image-frame";
 
+/**
+ * 公開予約ページ Step 1 場所選択。
+ *
+ * SpaceSelector と同型の Responsive ハイブリッドカード:
+ * mobile = 縦長 aspect 16:9 / @md+ = 横長 aspect 4:3 + 画像 260/320px。
+ * Step 1-2 でカード言語を完全統一する。
+ */
 export function LocationSelector({
   locations,
   selectedId,
@@ -18,7 +25,7 @@ export function LocationSelector({
     <div
       role="radiogroup"
       aria-label="場所を選択"
-      className="grid grid-cols-1 gap-6 md:grid-cols-2"
+      className="@container flex flex-col gap-3 @md:gap-4"
     >
       {locations.map((location) => {
         const isSelected = location.id === selectedId;
@@ -31,31 +38,33 @@ export function LocationSelector({
             onClick={() => onSelect(location.id)}
             className={cn(
               "group flex flex-col overflow-hidden border text-left transition-colors duration-200",
+              "@md:grid @md:grid-cols-[260px_1fr] @md:gap-5 @md:p-4 @3xl:grid-cols-[320px_1fr]",
               isSelected
                 ? "border-accent bg-accent/5"
                 : "border-border hover:border-foreground/30",
             )}
           >
-            <ImageFrame
-              src={location.imageUrl}
-              alt={location.name}
-              width={400}
-              height={225}
-              sizes="(max-width: 768px) 100vw, 400px"
-              rounded={false}
-              className="aspect-video w-full transition-opacity duration-400 group-hover:opacity-85"
-            />
-            <div className="p-4">
-              <span className="font-heading text-base font-light tracking-tight">
-                {location.name}
-              </span>
-              <span className="mt-1 block text-sm text-muted-foreground">
-                {location.address}
-              </span>
-              <span className="mt-2 block text-xs text-muted-foreground">
-                {location.spaces.length}
-                {location.spaces.length === 1 ? " スペース" : " スペース"}
-              </span>
+            <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface @md:aspect-[4/3]">
+              <Image
+                src={location.imageUrl}
+                alt={location.name}
+                fill
+                sizes="(min-width: 120rem) 320px, (min-width: 48rem) 260px, 100vw"
+                className="object-cover transition-opacity duration-400 group-hover:opacity-85"
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-2 p-4 @md:gap-3 @md:p-0 @md:py-1">
+              <div className="min-w-0">
+                <p className="font-heading text-lg font-light tracking-tight @md:text-xl">
+                  {location.name}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {location.address}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground @md:mt-auto">
+                {location.spaces.length} スペース
+              </p>
             </div>
           </button>
         );
