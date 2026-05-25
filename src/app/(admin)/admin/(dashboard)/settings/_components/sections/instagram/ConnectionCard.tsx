@@ -293,7 +293,7 @@ export function ConnectionCard({
               </StatusBanner>
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <SubmitButton
                 isPending={isTesting}
                 label="接続テスト"

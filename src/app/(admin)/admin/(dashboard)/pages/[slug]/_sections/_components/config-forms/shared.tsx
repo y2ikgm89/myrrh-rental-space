@@ -46,7 +46,7 @@ export function FormActions({
   }, [isDirty, onDirtyChange]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center justify-end gap-3">
       {isDirty && (
         <span className="text-sm text-warning font-medium">
           未保存の変更があります
