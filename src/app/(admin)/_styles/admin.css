@@ -194,6 +194,9 @@
   --text-small: 0.75rem;
   --text-label: 0.75rem;
 
+  /* Lexical / Prose 共通行間（@/shared/lib/styles/prose.ts と同値、public.css と統一） */
+  --leading-normal: 1.8;
+
   /* --------------------------------------------------------------------------
    * Layout — Admin dashboard
    * -------------------------------------------------------------------------- */

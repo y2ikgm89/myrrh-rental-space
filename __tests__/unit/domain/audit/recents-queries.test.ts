@@ -32,7 +32,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/admin/lib/permissions", () => ({
+mock.module("@/shared/lib/admin-permissions", () => ({
   hasPermission: (role: Role, resource: string) =>
     mockHasPermission(role, resource),
 }));
@@ -119,7 +119,10 @@ describe("getRecentAuditedResources", () => {
     const items = await getRecentAuditedResources(USER_ID, ADMIN_ROLE);
 
     expect(items).toHaveLength(2);
-    expect(items.map((i) => i.resourceId)).toEqual(["s1", "s2"]);
+    expect(items.map((i: { resourceId: string }) => i.resourceId)).toEqual([
+      "s1",
+      "s2",
+    ]);
   });
 
   test("limit を超えたら早期 break する", async () => {

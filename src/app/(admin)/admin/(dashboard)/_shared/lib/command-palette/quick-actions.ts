@@ -1,5 +1,5 @@
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
-import type { QuickAction } from "@/admin/components/command-palette/types";
+import type { QuickAction } from "@/shared/lib/command-palette-types";
 import { hasPermission } from "@/admin/lib/permissions";
 
 const ALL_QUICK_ACTIONS: readonly QuickAction[] = [

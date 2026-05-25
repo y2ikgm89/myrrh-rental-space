@@ -4,8 +4,8 @@ import { prisma } from "@/shared/db/prisma";
 import type {
   SearchResultGroup,
   SearchResultItem,
-} from "@/admin/components/command-palette/types";
-import type { Resource } from "@/admin/lib/admin-resources";
+} from "@/shared/lib/command-palette-types";
+import type { Resource } from "@/shared/lib/admin-resources";
 import { keysOf } from "@/shared/lib/serialize";
 
 const SEARCH_LIMIT_PER_RESOURCE = 5;

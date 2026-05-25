@@ -15,7 +15,7 @@ import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getActiveSpacesByLocationId } from "@/shared/domain/spaces/public-queries";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
 import { EditReservationForm } from "./_components/edit-reservation-form";
 

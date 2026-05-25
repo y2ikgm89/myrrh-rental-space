@@ -45,7 +45,7 @@ import type { Serialized } from "@/shared/lib/serialize";
 import {
   SUPPORTED_CURRENCIES,
   SUPPORTED_CURRENCY_VALUES,
-} from "@/admin/lib/stripe-shared";
+} from "@/shared/lib/stripe-shared";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared/StatusBanner";

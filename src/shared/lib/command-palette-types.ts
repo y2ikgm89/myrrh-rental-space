@@ -1,4 +1,11 @@
-import type { Resource } from "@/admin/lib/admin-resources";
+/**
+ * Command Palette 共有型定義（client-safe）
+ *
+ * admin layer の UI / Server Action と shared/domain layer の query helper
+ * （admin-search / audit-recents）の両方から参照されるため shared/lib に集約。
+ */
+
+import type { Resource } from "@/shared/lib/admin-resources";
 
 export type NavItem = {
   id: string;

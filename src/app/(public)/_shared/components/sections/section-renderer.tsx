@@ -71,7 +71,7 @@ import {
 } from "@/public/lib/search-params";
 import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
 import { getBusinessInfo } from "@/public/data/business";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
 
 // v3 components

@@ -23,7 +23,7 @@ mock.module("@/admin/lib/action-auth", () => ({
   checkAdminAuth: mockCheckAdminAuth,
 }));
 
-mock.module("@/admin/lib/ssrf-guard", () => ({
+mock.module("@/shared/lib/ssrf-guard", () => ({
   isUrlSafe: mockIsUrlSafe,
 }));
 

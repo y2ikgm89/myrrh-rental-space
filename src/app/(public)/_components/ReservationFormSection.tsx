@@ -26,7 +26,7 @@ import {
 
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";
 import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";

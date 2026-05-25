@@ -17,7 +17,7 @@ import { updateProfileAction } from "../../_shared/actions/profile";
 import {
   TurnstileWidget,
   type TurnstileInstance,
-} from "@/public/components/ui/turnstile-widget";
+} from "@/shared/components/turnstile-widget";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 

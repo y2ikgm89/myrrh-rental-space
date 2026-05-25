@@ -11,7 +11,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import * as stripeLib from "@/admin/lib/stripe";
+import * as stripeLib from "@/shared/lib/stripe";
 import { stripeFormSchema } from "./schemas/form-schemas-security-integrations";
 import { DomainError } from "@/shared/domain/domain-error";
 import * as settingsCommands from "@/shared/domain/settings/commands";

@@ -17,7 +17,7 @@ import { Textarea } from "@/public/components/design-system/textarea";
 import {
   TurnstileWidget,
   type TurnstileInstance,
-} from "@/public/components/ui/turnstile-widget";
+} from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { registerForEvent } from "@/public/actions/event-registration";

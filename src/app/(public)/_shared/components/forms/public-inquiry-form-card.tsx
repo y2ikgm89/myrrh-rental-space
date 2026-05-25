@@ -23,7 +23,7 @@ import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle"
 import {
   TurnstileWidget,
   type TurnstileInstance,
-} from "@/public/components/ui/turnstile-widget";
+} from "@/shared/components/turnstile-widget";
 
 export type PublicInquiryFormMode = "live" | "preview" | "disabled";
 

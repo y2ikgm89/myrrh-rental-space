@@ -25,7 +25,7 @@ import { deleteAccountAction } from "../../_shared/actions/account";
 import {
   TurnstileWidget,
   type TurnstileInstance,
-} from "@/public/components/ui/turnstile-widget";
+} from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------

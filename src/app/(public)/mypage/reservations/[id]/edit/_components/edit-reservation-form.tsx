@@ -19,7 +19,7 @@ import { updateReservationAction } from "../../../../_shared/actions/reservation
 import {
   TurnstileWidget,
   type TurnstileInstance,
-} from "@/public/components/ui/turnstile-widget";
+} from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 

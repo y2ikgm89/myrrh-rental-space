@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import type { Resource } from "@/admin/lib/admin-resources";
+import type { Resource } from "@/shared/lib/admin-resources";
 
 // =============================================================================
 // Mocks (must precede module under test import — TDZ)

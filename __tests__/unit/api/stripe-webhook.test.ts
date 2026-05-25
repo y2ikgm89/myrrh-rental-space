@@ -104,7 +104,7 @@ mock.module("@/shared/lib/crypto", () => ({
   safeDecrypt: (value: string) => mockSafeDecrypt(value),
 }));
 
-mock.module("@/app/(admin)/admin/(dashboard)/_shared/lib/stripe", () => ({
+mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => mockGetStripeClient(),
 }));
 
