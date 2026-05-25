@@ -15,7 +15,7 @@ import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
-import { toISOString } from "@/shared/lib/serialize";
+import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 
 /** 目次を表示するための最低 h2 数。これ未満なら TOC を非表示にする。 */
@@ -100,8 +100,18 @@ export async function NewsDetailPageContent({
       })}
     >
       <ArticleHeader
+        eyebrow="News"
         title={newsItem.title}
-        publishedAt={newsItem.publishedAt}
+        meta={
+          datePublished ? (
+            <time
+              dateTime={datePublished}
+              className="font-heading text-sm font-light"
+            >
+              {formatSerializedDate(datePublished)}
+            </time>
+          ) : null
+        }
       />
       <Prose variant="editorial" className="max-w-none">
         <SanitizedHtml html={newsItem.contentHtml} />

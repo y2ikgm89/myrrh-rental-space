@@ -1,74 +1,55 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Heading } from "../design-system/heading";
-import { ImageFrame } from "../design-system/image-frame";
-import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
 
 interface ArticleHeaderProps {
+  /** Eyebrow ラベル ("Space" / "Event" / category 名等)。小文字英数 / 日本語可。 */
+  readonly eyebrow?: string;
   readonly title: string;
-  readonly publishedAt: string | Date | null;
-  readonly category?: string | null;
-  readonly author?: string | null;
-  readonly thumbnail?: { readonly url: string; readonly alt: string } | null;
+  /**
+   * h1 下の hairline divider の下に配置する meta 行。
+   * 日時 / 著者 / 容量 / 会場等を inline で組み立てて渡す。
+   * 渡されない場合は hairline のみ表示（typographic rhythm を維持）。
+   */
+  readonly meta?: ReactNode;
+  /** thumbnail / gallery 等のメイン画像。h1 + meta の下に配置。 */
+  readonly media?: ReactNode;
 }
 
 /**
- * ArticleHeader — 公開記事詳細ページ共通ヘッダー
+ * ArticleHeader — 公開記事 / リソース詳細ページ共通ヘッダー
  *
- * `<header>` に title (h1) + meta (category / date / author) + optional thumbnail
- * を集約。ArticleLayout 内の `<article>` 直下に配置する。
+ * Editorial Magazine の Kinfolk hairline パターン:
+ *   eyebrow → h1 → hairline rule → meta line → media
+ *
+ * 5 系統 (spaces / events / news / posts / terms) の詳細ページで共通利用。
+ * 各 page で meta / media を組み立てて slot に流す。
  */
 export function ArticleHeader({
+  eyebrow,
   title,
-  publishedAt,
-  category,
-  author,
-  thumbnail,
+  meta,
+  media,
 }: ArticleHeaderProps): ReactElement {
-  const isoDate = toISOString(publishedAt);
-  const showCategoryDivider = Boolean(category && (publishedAt || author));
-  const showAuthorDivider = Boolean(author && publishedAt);
-
   return (
     <header className="mb-12 space-y-8">
       <div className="space-y-6">
+        {eyebrow ? (
+          <p className="text-[0.7rem] uppercase tracking-[0.18em] text-accent">
+            {eyebrow}
+          </p>
+        ) : null}
         <Heading level={1}>{title}</Heading>
-        <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
-          {category ? (
-            <span className="text-[0.7rem] uppercase tracking-[0.18em] text-accent">
-              {category}
-            </span>
-          ) : null}
-          {showCategoryDivider ? (
-            <span aria-hidden="true" className="text-border">
-              ·
-            </span>
-          ) : null}
-          {publishedAt ? (
-            <time
-              dateTime={isoDate ?? undefined}
-              className="font-heading text-sm font-light"
-            >
-              {formatSerializedDate(isoDate)}
-            </time>
-          ) : null}
-          {showAuthorDivider ? (
-            <span aria-hidden="true" className="text-border">
-              ·
-            </span>
-          ) : null}
-          {author ? <span className="text-sm">{author}</span> : null}
-        </div>
-      </div>
-      {thumbnail ? (
-        <ImageFrame
-          src={thumbnail.url}
-          alt={thumbnail.alt}
-          aspect="video"
-          fill
-          sizes="(min-width: 1024px) 60vw, 100vw"
-          rounded
+        <hr
+          aria-hidden="true"
+          className="w-16 border-0 border-t border-divider"
         />
-      ) : null}
+        {meta ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {meta}
+          </div>
+        ) : null}
+      </div>
+      {media ?? null}
     </header>
   );
 }
