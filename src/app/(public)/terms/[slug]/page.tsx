@@ -11,6 +11,7 @@ import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
 import { Prose } from "@/public/components/design-system/prose";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
+import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 const TOC_MIN_H2 = 2;
@@ -60,6 +61,13 @@ export default async function TermsDetailPage({ params }: PageProps) {
   const h2Count = headings.filter((h) => h.level === 2).length;
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 
+  const publishedAtIso = toISOString(terms.publishedAt);
+  const headerMeta = publishedAtIso ? (
+    <time dateTime={publishedAtIso} className="font-heading text-sm font-light">
+      {formatSerializedDate(publishedAtIso)} 施行
+    </time>
+  ) : null;
+
   return (
     <ArticleLayout
       breadcrumb={[
@@ -75,7 +83,11 @@ export default async function TermsDetailPage({ params }: PageProps) {
         ),
       })}
     >
-      <ArticleHeader title={terms.title} publishedAt={terms.publishedAt} />
+      <ArticleHeader
+        eyebrow="Terms"
+        title={terms.title}
+        {...(headerMeta && { meta: headerMeta })}
+      />
       <Prose variant="editorial" className="max-w-none">
         <SanitizedHtml html={terms.contentHtml} />
       </Prose>

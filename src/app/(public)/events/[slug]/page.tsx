@@ -3,8 +3,10 @@ import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
+import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Heading } from "@/public/components/design-system/heading";
+import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { Prose } from "@/public/components/design-system/prose";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { EventJsonLd } from "@/public/components/seo/json-ld";
@@ -23,7 +25,7 @@ import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { EventArticleHeader } from "./_components/event-article-header";
+import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import {
   EventInfoPanel,
   type EventInfoPanelVenue,
@@ -212,13 +214,40 @@ export default async function EventDetailPage({
         mobileToc={<EventInfoPanel variant="mobile" {...infoPanelProps} />}
         showCta={false}
       >
-        <EventArticleHeader
+        <ArticleHeader
+          eyebrow="Event"
           title={event.title}
-          thumbnail={
-            event.thumbnailUrl
-              ? { url: event.thumbnailUrl, alt: event.title }
-              : null
+          meta={
+            <>
+              <time
+                dateTime={startDateIso}
+                className="font-heading text-sm font-light"
+              >
+                {formatEventDateTimeRange(event.startTime, event.endTime)}
+              </time>
+              {venueName ? (
+                <>
+                  <span aria-hidden="true" className="text-border">
+                    ·
+                  </span>
+                  <span>{venueName}</span>
+                </>
+              ) : null}
+            </>
           }
+          {...(event.thumbnailUrl && {
+            media: (
+              <ImageFrame
+                src={event.thumbnailUrl}
+                alt={event.title}
+                aspect="video"
+                fill
+                sizes="(min-width: 1024px) 60vw, 100vw"
+                rounded
+                priority
+              />
+            ),
+          })}
         />
 
         {event.descriptionHtml.trim() !== "" ? (

@@ -1,14 +1,7 @@
-import {
-  IconUsers,
-  IconRuler2,
-  IconMapPin,
-  IconWalk,
-  IconCar,
-} from "@tabler/icons-react";
+import { IconCar, IconMapPin, IconWalk } from "@tabler/icons-react";
 
 import { Heading } from "../../../_shared/components/design-system/heading";
 import { Prose } from "../../../_shared/components/design-system/prose";
-import { Badge } from "../../../_shared/components/design-system/badge";
 import { Stack } from "../../../_shared/components/design-system/stack";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
@@ -18,16 +11,10 @@ interface SpaceInfoProps {
   readonly space: {
     readonly name: string;
     readonly descriptionHtml: string;
-    readonly capacity: number;
-    readonly area: number | null;
     /** 拠点住所 + 所在地補足の1行 */
     readonly lineAddress: string;
     /** Prisma Json（{ name, iconName }[] 形式 — `parseFacilities` で防御的型ガード） */
     readonly facilities: unknown;
-    readonly category: {
-      readonly name: string;
-      readonly icon: string | null;
-    } | null;
     /**
      * 親 Location（accessLines / parkingInfo は Booking.com Room → Property の
      * 業界標準パターンに沿って Space 詳細から表示する）。
@@ -48,40 +35,10 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
 
   return (
     <Stack gap="xl">
-      {/* Category + Meta */}
-      <div>
-        <div className="mb-4 flex flex-wrap gap-2">
-          {space.category ? (
-            <Badge>
-              {space.category.icon ? (
-                <CuratedIcon
-                  name={space.category.icon}
-                  className="mr-1 inline h-3 w-3"
-                />
-              ) : null}
-              {space.category.name}
-            </Badge>
-          ) : null}
-          {space.location ? (
-            <Badge variant="info">{space.location.name}</Badge>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <IconUsers className="h-4 w-4" />
-            {space.capacity}名
-          </span>
-          {space.area ? (
-            <span className="flex items-center gap-1">
-              <IconRuler2 className="h-4 w-4" />
-              {Number(space.area)}㎡
-            </span>
-          ) : null}
-          <span className="flex items-center gap-1">
-            <IconMapPin className="h-4 w-4" />
-            {space.lineAddress}
-          </span>
-        </div>
+      {/* 住所行（category / location / capacity / area は ArticleHeader meta に集約済） */}
+      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+        <IconMapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>{space.lineAddress}</span>
       </div>
 
       {/* Description */}

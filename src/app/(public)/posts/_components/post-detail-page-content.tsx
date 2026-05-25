@@ -4,6 +4,7 @@ import { ArticleJsonLd } from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
+import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { Prose } from "@/public/components/design-system/prose";
 import {
   generateArticleMetadata,
@@ -15,7 +16,7 @@ import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { getPostLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
-import { toISOString } from "@/shared/lib/serialize";
+import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 
 /** 目次を表示するための最低 h2 数。これ未満なら TOC を非表示にする。 */
@@ -94,13 +95,38 @@ export async function PostDetailPageContent({
       })}
     >
       <ArticleHeader
+        {...(post.category?.name && { eyebrow: post.category.name })}
         title={post.title}
-        publishedAt={post.publishedAt}
-        category={post.category?.name ?? null}
-        author={post.author?.name ?? null}
-        thumbnail={
-          post.thumbnailUrl ? { url: post.thumbnailUrl, alt: post.title } : null
+        meta={
+          <>
+            {datePublished ? (
+              <time
+                dateTime={datePublished}
+                className="font-heading text-sm font-light"
+              >
+                {formatSerializedDate(datePublished)}
+              </time>
+            ) : null}
+            {datePublished && post.author?.name ? (
+              <span aria-hidden="true" className="text-border">
+                ·
+              </span>
+            ) : null}
+            {post.author?.name ? <span>{post.author.name}</span> : null}
+          </>
         }
+        {...(post.thumbnailUrl && {
+          media: (
+            <ImageFrame
+              src={post.thumbnailUrl}
+              alt={post.title}
+              aspect="video"
+              fill
+              sizes="(min-width: 1024px) 60vw, 100vw"
+              rounded
+            />
+          ),
+        })}
       />
       <Prose variant="editorial" className="max-w-none">
         <SanitizedHtml html={post.contentHtml} />
