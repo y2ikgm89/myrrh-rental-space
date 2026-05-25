@@ -7,17 +7,10 @@ import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getBaseUrl } from "@/shared/lib/constants";
-import {
-  ProductJsonLd,
-  BreadcrumbJsonLd,
-} from "../../_shared/components/seo/json-ld";
-import { PageHero } from "../../_shared/components/layouts/page-hero";
-import { Breadcrumb } from "../../_shared/components/layouts/breadcrumb";
+import { ProductJsonLd } from "../../_shared/components/seo/json-ld";
+import { ArticleLayout } from "../../_shared/components/layouts/article-layout";
 import { SiteCTA } from "../../_shared/components/layouts/site-cta";
-import { PageLayout } from "../../_shared/components/design-system/page-layout";
-import { Section } from "../../_shared/components/design-system/section";
-import { Container } from "../../_shared/components/design-system/container";
-import { SpaceGallery } from "./_components/space-gallery";
+import { SpaceArticleHeader } from "./_components/space-article-header";
 import { SpaceInfo } from "./_components/space-info";
 import { ReservationWidget } from "./_components/reservation-widget";
 import { RelatedSpaces } from "./_components/related-spaces";
@@ -66,77 +59,60 @@ export default async function SpaceDetailPage({
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
 
+  const reservationWidget = (
+    <ReservationWidget
+      spaceId={space.id}
+      spaceName={space.name}
+      hourlyPrice={Number(space.hourlyPrice)}
+      dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
+    />
+  );
+
   return (
-    <PageLayout
-      variant="content"
-      hero={
-        <PageHero
-          variant="compact"
-          title={space.name}
-          breadcrumb={
-            <Breadcrumb
-              items={[
-                { label: "スペース一覧", href: "/spaces" },
-                { label: space.name },
-              ]}
-            />
-          }
-        />
-      }
-      cta={<SiteCTA />}
-    >
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "スペース一覧", url: "/spaces" },
-          { name: space.name, url: spaceUrl },
+    <>
+      <ArticleLayout
+        jsonLd={
+          <ProductJsonLd
+            name={space.name}
+            description={space.descriptionPlainText || space.name}
+            image={space.mainImageUrl ?? `${baseUrl}/og-image.png`}
+            url={spaceUrl}
+            offers={{
+              price: space.hourlyPrice,
+              priceCurrency: "JPY",
+            }}
+            {...(reviewStats.totalCount > 0 && {
+              aggregateRating: {
+                ratingValue: reviewStats.averageRating,
+                reviewCount: reviewStats.totalCount,
+              },
+            })}
+          />
+        }
+        breadcrumb={[
+          { label: "スペース一覧", href: "/spaces" },
+          { label: space.name },
         ]}
-      />
-      <ProductJsonLd
-        name={space.name}
-        description={space.descriptionPlainText || space.name}
-        image={space.mainImageUrl ?? `${baseUrl}/og-image.png`}
-        url={spaceUrl}
-        offers={{
-          price: space.hourlyPrice,
-          priceCurrency: "JPY",
-        }}
-        {...(reviewStats.totalCount > 0 && {
-          aggregateRating: {
-            ratingValue: reviewStats.averageRating,
-            reviewCount: reviewStats.totalCount,
-          },
-        })}
-      />
+        toc={reservationWidget}
+        mobileToc={reservationWidget}
+        showCta={false}
+      >
+        <SpaceArticleHeader
+          title={space.name}
+          mainImage={space.mainImageUrl}
+          images={space.imageUrls}
+        />
 
-      <Section className="pt-10 pb-[var(--space-lg)] md:pt-14">
-        <Container>
-          <div className="grid gap-10 lg:grid-cols-[1fr_320px] lg:gap-12">
-            <div className="space-y-12">
-              <SpaceGallery
-                mainImage={space.mainImageUrl}
-                images={space.imageUrls}
-                name={space.name}
-              />
-              <SpaceInfo space={space} />
-              {space.reviewsEnabled && (
-                <Suspense fallback={null}>
-                  <SpaceReviews spaceId={space.id} />
-                </Suspense>
-              )}
-            </div>
+        <SpaceInfo space={space} />
 
-            <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
-              <ReservationWidget
-                spaceId={space.id}
-                spaceName={space.name}
-                hourlyPrice={Number(space.hourlyPrice)}
-                dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
-              />
-            </div>
-          </div>
-        </Container>
-      </Section>
+        {space.reviewsEnabled ? (
+          <section className="mt-16">
+            <Suspense fallback={null}>
+              <SpaceReviews spaceId={space.id} />
+            </Suspense>
+          </section>
+        ) : null}
+      </ArticleLayout>
 
       <Suspense fallback={null}>
         <RelatedSpaces
@@ -144,6 +120,7 @@ export default async function SpaceDetailPage({
           categoryId={space.category?.id ?? null}
         />
       </Suspense>
-    </PageLayout>
+      <SiteCTA />
+    </>
   );
 }
