@@ -44,19 +44,20 @@ paths:
 
 ## ファイル配置
 
-| パス                                   | 内容                                                                                                     |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `@/shared/lib/admin-auth.ts`           | 管理者用 Better Auth 設定・セッション検証（`cookiePrefix: "admin-auth"`、email/password）                |
-| `@/shared/lib/admin-auth-client.ts`    | 管理者用認証クライアント（`adminAuthClient`）                                                            |
-| `@/shared/lib/customer-auth.ts`        | 顧客用 Better Auth 設定・セッション検証（`cookiePrefix: "customer-auth"`、Google/LINE）                  |
-| `@/shared/lib/customer-auth-client.ts` | 顧客用認証クライアント（`customerAuthClient`）                                                           |
-| `@/admin/lib/admin-action.ts`          | `executeAdminMutationResult`（Server Actions 標準認証パターン）                                          |
-| `@/admin/lib/action-auth.ts`           | 認証プリミティブ（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`） |
-| `@/admin/lib/permissions.ts`           | 権限定義（`ROLE_PERMISSIONS`, `hasPermission`, `userHasResourceAccess`）                                 |
-| `@/admin/lib/audit.ts`                 | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                   |
-| `@/admin/lib/role-guards.ts`           | ロール判定ヘルパー（`isEditorRole` 等）                                                                  |
-| `@/shared/lib/admin-roles.ts`          | DASHBOARD_ROLES SSoT（client-safe、`server-only` なし）                                                  |
-| `@/shared/lib/admin-resources.ts`      | リソース enum SSoT（client-safe）                                                                        |
+| パス                                   | 内容                                                                                                                                                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@/shared/lib/admin-auth.ts`           | 管理者用 Better Auth 設定・セッション検証（`cookiePrefix: "admin-auth"`、email/password）                                                                                                                        |
+| `@/shared/lib/admin-auth-client.ts`    | 管理者用認証クライアント（`adminAuthClient`）                                                                                                                                                                    |
+| `@/shared/lib/customer-auth.ts`        | 顧客用 Better Auth 設定・セッション検証（`cookiePrefix: "customer-auth"`、Google/LINE）                                                                                                                          |
+| `@/shared/lib/customer-auth-client.ts` | 顧客用認証クライアント（`customerAuthClient`）                                                                                                                                                                   |
+| `@/admin/lib/admin-action.ts`          | `executeAdminMutationResult`（Server Actions 標準認証パターン）                                                                                                                                                  |
+| `@/admin/lib/action-auth.ts`           | 認証プリミティブ（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`）                                                                                                         |
+| `@/shared/lib/admin-permissions`       | client-safe 純粋 RBAC SSoT（`ROLE_PERMISSIONS` / `hasPermission` / `PermissionKey` / `RolePermissions`、PR #232）                                                                                                |
+| `@/shared/lib/admin-resources`         | client-safe Resource SSoT（`Resource` / `Action` / `RESOURCE_LABELS`、PR #232 で `@/admin/lib/` から移管）                                                                                                       |
+| `@/admin/lib/permissions.ts`           | server-only セッション/Prisma 連携層（`userHasPermission` / `userHasResourceAccess` / `canAccessAdmin` / `checkReadPermissionFor` / `ACTION_LABELS`、純粋 RBAC は `@/shared/lib/admin-permissions` を再 export） |
+| `@/admin/lib/audit.ts`                 | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                                                                                                                           |
+| `@/admin/lib/role-guards.ts`           | ロール判定ヘルパー（`isEditorRole` 等）                                                                                                                                                                          |
+| `@/shared/lib/admin-roles.ts`          | DASHBOARD_ROLES SSoT（client-safe、`server-only` なし）                                                                                                                                                          |
 
 ## Gotchas
 

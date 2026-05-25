@@ -85,7 +85,7 @@ Site Key / Secret Key は **DB の `Settings` テーブル**に暗号化保存�
 
 ```tsx
 "use client";
-import { TurnstileWidget } from "@/public/components/ui/turnstile-widget";
+import { TurnstileWidget } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // デフォルト: appearance="always" — Cloudflare 公式デフォルト
