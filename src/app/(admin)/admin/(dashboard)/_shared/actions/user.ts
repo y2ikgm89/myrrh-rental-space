@@ -4,8 +4,8 @@ import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { checkRole } from "@/admin/lib/action-auth";
-import { logRoleChange } from "@/admin/lib/audit";
+import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { logPermissionDenied, logRoleChange } from "@/admin/lib/audit";
 import {
   createUserSchema,
   updateUserSchema,
@@ -117,9 +117,13 @@ export async function updateUserRole(
   id: string,
   role: Role,
 ): Promise<MutationResult> {
-  const auth = await checkRole(Role.SUPER_ADMIN);
+  const auth = await checkAdminAuth();
   if (!auth.success) {
     return { error: auth.error.error };
+  }
+  if (auth.user.role !== Role.SUPER_ADMIN) {
+    void logPermissionDenied(auth.user.id, "role", "update");
+    return { error: "SUPER_ADMIN権限が必要です" };
   }
 
   const parsed = updateRoleSchema.safeParse({ id, role });
