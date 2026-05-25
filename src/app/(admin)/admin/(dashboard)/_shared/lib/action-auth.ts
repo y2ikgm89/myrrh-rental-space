@@ -14,7 +14,7 @@ import {
   getAdminSessionUser,
   type AdminUser,
 } from "@/shared/lib/admin-auth";
-import { Role, AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   hasPermission,
   userHasResourceAccess,
@@ -128,39 +128,6 @@ export async function checkResourceAccess(
         error: { error: "このリソースへのアクセス権がありません" },
       };
     }
-  }
-
-  return { success: true, user };
-}
-
-/**
- * ロールチェック
- */
-export async function checkRole(
-  requiredRole: Role,
-  requestHeaders?: Headers,
-): Promise<AuthResult> {
-  const auth = await checkAdminAuth(requestHeaders);
-  if (!auth.success) return auth;
-
-  const { user } = auth;
-  const roleHierarchy: readonly Role[] = [
-    Role.SUPER_ADMIN,
-    Role.ADMIN,
-    Role.EDITOR,
-    Role.VIEWER,
-    Role.USER,
-    Role.CUSTOMER,
-  ];
-  const userRoleIndex = roleHierarchy.indexOf(user.role);
-  const requiredRoleIndex = roleHierarchy.indexOf(requiredRole);
-
-  if (userRoleIndex > requiredRoleIndex) {
-    void logPermissionDenied(user.id, "role", requiredRole);
-    return {
-      success: false,
-      error: { error: `${requiredRole}以上の権限が必要です` },
-    };
   }
 
   return { success: true, user };

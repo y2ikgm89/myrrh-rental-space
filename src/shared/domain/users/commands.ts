@@ -199,7 +199,7 @@ export async function deleteUser(
  * ロールのみを変更する特権操作（SUPER_ADMIN 専用）
  *
  * 既存の `updateUser` と違い、SUPER_ADMIN の格上げ・格下げを含む全ロール変更に対応。
- * Server Action 側で `checkRole(Role.SUPER_ADMIN)` を先に通すことで保護する。
+ * Server Action 側で `checkAdminAuth()` + `user.role === Role.SUPER_ADMIN` を先に通すことで保護する。
  *
  * 追加の domain 不変条件:
  * - 自分自身のロールは変更不可（lockout 防止）
