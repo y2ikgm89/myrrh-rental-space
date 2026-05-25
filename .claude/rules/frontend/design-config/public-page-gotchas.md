@@ -85,7 +85,7 @@ paths:
 - **記事詳細ページのフッターは `ArticleFooter`（`@/public/components/ui/article-footer`）に統合**
 - **記事詳細ページのレイアウトは `ArticleLayout` + `ArticleHeader` に統一** — `Container` + `BlogLayout` + `contentClassName` div の 4 階層ネスト禁止
 - **`ArticleLayout` の `toc` / `mobileToc` prop が渡されると `BlogLayout` をバイパスして独自 2-col grid になる** — `lg:grid-cols-[1fr_280px]` + sticky aside
-- **`BlogLayout` の `showSidebar={false}` は明示的 fast path** — DB fetch をスキップ
+- **`BlogLayout` の `showSidebar={false}` は明示的 fast path** — DB fetch をスキップ（page-level `Page.showSidebar` override は PR #230 で廃止、グローバル `Settings.sidebarWidgets` enable 状態のみが正本）
 - **`/posts` はブログ一覧、`/news` はお知らせ一覧** — `/journal` は廃止済み
 - **`SearchBar` は `searchFilterParsers`（q + page）固定**
 - **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理
@@ -129,7 +129,7 @@ paths:
 - **`sidebarWidgets` JSON は順序付き配列** — `[{ type: "search", enabled: true }, ...]`
 - **`BlogLayout` は Container の中に配置**
 - **サイドバー有効時に `Container variant="narrow"` 禁止** — default Container (1280px) を使用
-- **`Page.showSidebar` オーバーライド**: `null`=グローバル設定、`true/false`=明示的
+- **`Page.showSidebar` page-level override は PR #230 で廃止済** — サイドバー表示はグローバル `Settings.sidebarWidgets` の enable 状態のみで判定（per-page override 復活禁止）
 - **サイドバーデータ変更時は `SIDEBAR_DATA` キャッシュ無効化が必要**
 - **Zod `z.union` の discriminated union narrowing は `switch` の `case` で効く**
 - **Post リスト widget（recent/popular）は `SidebarPostList` 1 コンポーネントに統一**
