@@ -169,7 +169,7 @@ const handlePreview = () => {
 
 ## `ContentTypeId` と固定ページ
 
-- インライン `content-types` の `ContentTypeId` は **`post` / `news` のみ**。固定ページのレイアウト (`showSidebar` 等) は **`@/shared/lib/validations/page`** とページ編集 UI が正本。
+- インライン `content-types` の `ContentTypeId` は **`post` / `news` のみ**。固定ページのレイアウト・コンテンツは **`@/shared/lib/validations/page`** + Section schema (`field.*`) とページ編集 UI が正本。`Page.showSidebar` page-level override は PR #230 で廃止済、サイドバー表示はグローバル `Settings.sidebarWidgets` 一本化。
 
 ## 関連ドキュメント
 
