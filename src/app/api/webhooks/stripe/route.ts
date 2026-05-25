@@ -43,7 +43,7 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
 import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
-import { getStripeClient } from "@/app/(admin)/admin/(dashboard)/_shared/lib/stripe";
+import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
 

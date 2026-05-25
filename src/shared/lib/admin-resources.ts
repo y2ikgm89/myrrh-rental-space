@@ -1,8 +1,12 @@
 /**
  * リソース定義（client-safe）
  *
- * permissions.ts（server-only チェーン）から分離した SSOT。
+ * permissions.ts（server-only チェーン）から分離した SSoT。
  * admin-roles.ts ↔ admin-auth.ts と同じ分離パターン。
+ *
+ * shared 配下に置く理由: shared/domain の query helper（admin-search / audit-recents 等）
+ * から型として参照されるため、shared/lib に集約。admin 層からは `@/shared/lib/admin-resources`
+ * 経由で参照する。
  */
 
 export type Resource =

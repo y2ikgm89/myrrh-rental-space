@@ -23,7 +23,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { Stack } from "@/public/components/design-system/stack";
 import { Divider } from "@/public/components/design-system/divider";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
 import { ReviewForm } from "./_components/review-form";

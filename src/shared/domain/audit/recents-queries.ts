@@ -3,10 +3,10 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import { prisma } from "@/shared/db/prisma";
-import { hasPermission } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
-import type { Resource } from "@/admin/lib/admin-resources";
-import type { RecentItem } from "@/admin/components/command-palette/types";
+import type { Resource } from "@/shared/lib/admin-resources";
+import type { RecentItem } from "@/shared/lib/command-palette-types";
 
 const SUPPORTED_RESOURCES: ReadonlySet<string> = new Set<string>([
   "space",

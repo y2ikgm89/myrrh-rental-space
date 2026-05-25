@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { AUDIT_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { RESOURCE_LABELS } from "@/admin/lib/admin-resources";
+import { RESOURCE_LABELS } from "@/shared/lib/admin-resources";
 import { entriesOf } from "@/shared/lib/serialize";
 
 const ACTION_OPTIONS = [

@@ -11,7 +11,7 @@ import {
   searchByResource,
   SEARCHABLE_RESOURCES,
 } from "@/shared/domain/admin-search/queries";
-import type { SearchResultGroup } from "@/admin/components/command-palette/types";
+import type { SearchResultGroup } from "@/shared/lib/command-palette-types";
 
 type SearchPayload = { groups: SearchResultGroup[] };
 

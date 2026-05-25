@@ -25,7 +25,7 @@ import type { BusinessHours } from "@/shared/lib/json-validators";
 import { addMinutesToTime } from "@/shared/lib/reservation/time-slots-utils";
 import { submitReservation } from "@/public/actions/reservation";
 import { fetchAvailableSlots } from "@/public/actions/availability";
-import type { TurnstileInstance } from "@/public/components/ui/turnstile-widget";
+import type { TurnstileInstance } from "@/shared/components/turnstile-widget";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";

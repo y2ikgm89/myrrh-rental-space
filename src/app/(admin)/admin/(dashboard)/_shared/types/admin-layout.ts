@@ -3,7 +3,7 @@
  */
 
 import type { ReactNode } from "react";
-import type { Action, Resource } from "@/admin/lib/admin-resources";
+import type { Action, Resource } from "@/shared/lib/admin-resources";
 
 /** サイドバー状態 */
 export type SidebarState = "expanded" | "collapsed" | "hidden";

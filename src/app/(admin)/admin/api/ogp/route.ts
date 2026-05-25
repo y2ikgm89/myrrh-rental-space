@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { isUrlSafe } from "@/admin/lib/ssrf-guard";
+import { isUrlSafe } from "@/shared/lib/ssrf-guard";
 import {
   extractTitle,
   extractDescription,

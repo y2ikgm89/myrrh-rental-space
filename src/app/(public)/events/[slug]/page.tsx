@@ -18,7 +18,7 @@ import {
   formatEventAddress,
   formatEventVenue,
 } from "@/shared/domain/events/venue";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";

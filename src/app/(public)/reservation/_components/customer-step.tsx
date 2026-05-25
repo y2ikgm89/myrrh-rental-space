@@ -9,7 +9,7 @@ import { Textarea } from "@/public/components/design-system/textarea";
 import {
   TurnstileWidget,
   type TurnstileInstance,
-} from "@/public/components/ui/turnstile-widget";
+} from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";

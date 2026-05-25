@@ -3,7 +3,7 @@ import "server-only";
 import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getStripeClient } from "@/app/(admin)/admin/(dashboard)/_shared/lib/stripe";
+import { getStripeClient } from "@/shared/lib/stripe";
 import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
 import { getAppUrl } from "@/shared/lib/constants";
 import {

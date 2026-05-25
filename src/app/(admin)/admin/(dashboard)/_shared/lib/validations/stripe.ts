@@ -9,7 +9,7 @@ import {
   isValidSecretKey,
   isValidWebhookSecret,
   keysHaveMatchingMode,
-} from "@/admin/lib/stripe-shared";
+} from "@/shared/lib/stripe-shared";
 
 // バリデーションメッセージ
 interface ValidationMessages {

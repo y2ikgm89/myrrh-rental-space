@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactElement } from "react";
 import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { ForgotPasswordForm } from "./_components/forgot-password-form";
 
 export const metadata: Metadata = {

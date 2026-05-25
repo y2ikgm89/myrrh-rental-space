@@ -5,7 +5,7 @@ import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { getRequiredTermsAtSignup } from "@/shared/domain/terms/queries";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";

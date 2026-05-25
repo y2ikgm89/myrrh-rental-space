@@ -8,7 +8,7 @@ import type {
   QuickAction,
   RecentItem,
   SearchResultGroup,
-} from "./types";
+} from "@/shared/lib/command-palette-types";
 
 type CommandPaletteContextValue = {
   open: boolean;

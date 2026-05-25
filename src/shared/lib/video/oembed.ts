@@ -13,7 +13,7 @@ import "server-only";
  * 業界標準: [oEmbed 仕様](https://oembed.com/) / YouTube oEmbed / Vimeo oEmbed 公式 endpoint。
  */
 
-import { isUrlSafe } from "@/admin/lib/ssrf-guard";
+import { isUrlSafe } from "@/shared/lib/ssrf-guard";
 import {
   logError,
   ErrorCategory,
