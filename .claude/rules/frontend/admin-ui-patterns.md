@@ -26,7 +26,7 @@ paths:
 15. **テーブルに `overflow-x-auto` なしで `overflow-hidden` のみ使用禁止** — モバイルでテーブルがクリップされスクロール不可になる
 16. **管理画面のサブページディレクトリにルーティング対象名を使用禁止** — `[slug]/sections/` や `[slug]/seo/` は `_` プレフィックスでプライベート化（`[slug]/_sections/` / `[slug]/_seo/`）
 17. **新規作成フォームに `disabled={!isDirty}` 禁止** — 新規作成は初期状態で全フィールドが空のため isDirty は常に false。create/edit 共用は `{...(isEdit && { disabled: !form.formState.isDirty })}` 条件スプレッド
-18. **設定セクションの SubmitButton を CardContent 内に直置き禁止** — `<div className="flex justify-end pt-2">` でラップして右寄せ
+18. **管理画面 form の主送信ボタン (SubmitButton) は trailing edge (`justify-end`) 配置必須** — 単独保存は `<div className="flex justify-end pt-2">`、複合 button group (クリア / 接続テスト + 保存等) は `<div className="flex flex-wrap items-center justify-end gap-2">` で右寄せ統一。`CardContent` / `CardFooter` / 任意の wrapper への直置き (`justify-end` 不在) は全て違反。Dialog 内は `<DialogFooter>` (shadcn 標準で `sm:justify-end`) を使う。業界標準 (Material Design 3 trailing edge / Apple HIG default-button trailing / shadcn DialogFooter) と整合。canonical 例 → `admin-ui/forms/settings-sections.md` §SubmitButton 配置（settings 配下に閉じない一般原則として settings 以外の admin form にも適用）
 19. **`<Input type="date" placeholder="...">` 禁止** — `type="date"` は placeholder を無視するため dead code。`aria-label` で説明
 20. **同一 navigation chrome 情報の二重表示禁止** — user identity / notification badge / breadcrumb 等は単一 SSoT 配置のみ。user identity SSoT は サイドバー下部 `UserInfo`
 21. **管理画面 edit form の outer `mx-auto max-w-*` 禁止** — `DashboardMain` の `p-4 lg:p-6` で十分。`SpaceEditForm` / `CouponForm` 等は full width + 内部 `grid sm:grid-cols-2`。プレビュー要素を含む場合は intra-card `lg:grid-cols-2` を使う（→ `admin-ui/forms.md` §Edit + Live Preview）
