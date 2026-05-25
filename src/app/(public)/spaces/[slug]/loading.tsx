@@ -1,6 +1,6 @@
 /**
- * /spaces/[slug] ローディング — ArticleLayout 構造に同期
- * (breadcrumb 帯 → article header eyebrow + h1 + gallery → 2-col body + sticky widget)
+ * /spaces/[slug] ローディング — ArticleLayout hero full-width 構造に同期
+ * (breadcrumb 帯 → article header full-width → body 2-col + sticky aside)
  */
 
 import { Container } from "@/public/components/design-system/container";
@@ -17,29 +17,27 @@ export default function SpaceDetailLoading() {
       </div>
 
       <Container className="pt-10 pb-[var(--space-lg)] md:pt-14">
-        <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
-          <div className="min-w-0 space-y-12">
-            {/* Article header: eyebrow + h1 + gallery */}
-            <header className="space-y-8">
-              <div className="space-y-6">
-                <Skeleton className="h-3 w-16" variant="text" />
-                <Skeleton className="h-10 w-3/4 md:h-12" variant="text" />
-              </div>
-              <Skeleton className="aspect-video w-full" />
-            </header>
-
-            {/* Body: badges + meta */}
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Skeleton className="h-6 w-20 rounded-full" />
-                <Skeleton className="h-6 w-24 rounded-full" />
-              </div>
-              <div className="flex flex-wrap gap-4">
-                <Skeleton className="h-4 w-20" variant="text" />
-                <Skeleton className="h-4 w-16" variant="text" />
-                <Skeleton className="h-4 w-32" variant="text" />
-              </div>
+        {/* Hero block (full-width within article) */}
+        <header className="mb-12 space-y-8">
+          <div className="space-y-6">
+            <Skeleton className="h-3 w-16" variant="text" />
+            <Skeleton className="h-10 w-3/4 md:h-12" variant="text" />
+            <Skeleton className="h-px w-16" />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+              <Skeleton className="h-5 w-16" variant="text" />
+              <Skeleton className="h-5 w-12" variant="text" />
             </div>
+          </div>
+          <Skeleton className="aspect-video w-full" />
+        </header>
+
+        {/* Body grid: SpaceInfo body + sticky reservation widget */}
+        <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
+          <div className="min-w-0 space-y-10">
+            {/* lineAddress */}
+            <Skeleton className="h-4 w-1/2" variant="text" />
 
             {/* Description */}
             <div className="space-y-3">

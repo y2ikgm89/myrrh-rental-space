@@ -76,6 +76,13 @@ export default async function TermsDetailPage({ params }: PageProps) {
       ]}
       contentWidth={TERMS_CONTENT_WIDTH}
       showSidebar={false}
+      hero={
+        <ArticleHeader
+          eyebrow="Terms"
+          title={terms.title}
+          {...(headerMeta && { meta: headerMeta })}
+        />
+      }
       {...(showToc && {
         toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
         mobileToc: (
@@ -83,11 +90,6 @@ export default async function TermsDetailPage({ params }: PageProps) {
         ),
       })}
     >
-      <ArticleHeader
-        eyebrow="Terms"
-        title={terms.title}
-        {...(headerMeta && { meta: headerMeta })}
-      />
       <Prose variant="editorial" className="max-w-none">
         <SanitizedHtml html={terms.contentHtml} />
       </Prose>

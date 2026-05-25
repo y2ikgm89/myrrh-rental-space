@@ -72,6 +72,48 @@ export default async function SpaceDetailPage({
     />
   );
 
+  const articleHero = (
+    <ArticleHeader
+      eyebrow="Space"
+      title={space.name}
+      meta={
+        <>
+          {space.category ? (
+            <Badge>
+              {space.category.icon ? (
+                <CuratedIcon
+                  name={space.category.icon}
+                  className="mr-1 inline h-3 w-3"
+                />
+              ) : null}
+              {space.category.name}
+            </Badge>
+          ) : null}
+          {space.location ? (
+            <Badge variant="info">{space.location.name}</Badge>
+          ) : null}
+          <span className="flex items-center gap-1">
+            <IconUsers className="h-4 w-4" aria-hidden="true" />
+            {space.capacity}名
+          </span>
+          {space.area ? (
+            <span className="flex items-center gap-1">
+              <IconRuler2 className="h-4 w-4" aria-hidden="true" />
+              {Number(space.area)}㎡
+            </span>
+          ) : null}
+        </>
+      }
+      media={
+        <SpaceGallery
+          mainImage={space.mainImageUrl}
+          images={space.imageUrls}
+          name={space.name}
+        />
+      }
+    />
+  );
+
   return (
     <>
       <ArticleLayout
@@ -97,50 +139,11 @@ export default async function SpaceDetailPage({
           { label: "スペース一覧", href: "/spaces" },
           { label: space.name },
         ]}
+        hero={articleHero}
         toc={reservationWidget}
         mobileToc={reservationWidget}
         showCta={false}
       >
-        <ArticleHeader
-          eyebrow="Space"
-          title={space.name}
-          meta={
-            <>
-              {space.category ? (
-                <Badge>
-                  {space.category.icon ? (
-                    <CuratedIcon
-                      name={space.category.icon}
-                      className="mr-1 inline h-3 w-3"
-                    />
-                  ) : null}
-                  {space.category.name}
-                </Badge>
-              ) : null}
-              {space.location ? (
-                <Badge variant="info">{space.location.name}</Badge>
-              ) : null}
-              <span className="flex items-center gap-1">
-                <IconUsers className="h-4 w-4" aria-hidden="true" />
-                {space.capacity}名
-              </span>
-              {space.area ? (
-                <span className="flex items-center gap-1">
-                  <IconRuler2 className="h-4 w-4" aria-hidden="true" />
-                  {Number(space.area)}㎡
-                </span>
-              ) : null}
-            </>
-          }
-          media={
-            <SpaceGallery
-              mainImage={space.mainImageUrl}
-              images={space.imageUrls}
-              name={space.name}
-            />
-          }
-        />
-
         <SpaceInfo space={space} />
 
         {space.reviewsEnabled ? (

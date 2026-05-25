@@ -87,6 +87,42 @@ export async function PostDetailPageContent({
       breadcrumb={[{ label: "ブログ", href: "/posts" }, { label: post.title }]}
       contentWidth={layoutConfig.contentWidth}
       contentWidthCustom={layoutConfig.contentWidthCustom}
+      hero={
+        <ArticleHeader
+          {...(post.category?.name && { eyebrow: post.category.name })}
+          title={post.title}
+          meta={
+            <>
+              {datePublished ? (
+                <time
+                  dateTime={datePublished}
+                  className="font-heading text-sm font-light"
+                >
+                  {formatSerializedDate(datePublished)}
+                </time>
+              ) : null}
+              {datePublished && post.author?.name ? (
+                <span aria-hidden="true" className="text-border">
+                  ·
+                </span>
+              ) : null}
+              {post.author?.name ? <span>{post.author.name}</span> : null}
+            </>
+          }
+          {...(post.thumbnailUrl && {
+            media: (
+              <ImageFrame
+                src={post.thumbnailUrl}
+                alt={post.title}
+                aspect="video"
+                fill
+                sizes="(min-width: 1024px) 60vw, 100vw"
+                rounded
+              />
+            ),
+          })}
+        />
+      }
       {...(showToc && {
         toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
         mobileToc: (
@@ -94,40 +130,6 @@ export async function PostDetailPageContent({
         ),
       })}
     >
-      <ArticleHeader
-        {...(post.category?.name && { eyebrow: post.category.name })}
-        title={post.title}
-        meta={
-          <>
-            {datePublished ? (
-              <time
-                dateTime={datePublished}
-                className="font-heading text-sm font-light"
-              >
-                {formatSerializedDate(datePublished)}
-              </time>
-            ) : null}
-            {datePublished && post.author?.name ? (
-              <span aria-hidden="true" className="text-border">
-                ·
-              </span>
-            ) : null}
-            {post.author?.name ? <span>{post.author.name}</span> : null}
-          </>
-        }
-        {...(post.thumbnailUrl && {
-          media: (
-            <ImageFrame
-              src={post.thumbnailUrl}
-              alt={post.title}
-              aspect="video"
-              fill
-              sizes="(min-width: 1024px) 60vw, 100vw"
-              rounded
-            />
-          ),
-        })}
-      />
       <Prose variant="editorial" className="max-w-none">
         <SanitizedHtml html={post.contentHtml} />
       </Prose>

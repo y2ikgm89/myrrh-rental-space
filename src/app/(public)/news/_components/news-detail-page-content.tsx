@@ -92,6 +92,22 @@ export async function NewsDetailPageContent({
       ]}
       contentWidth={layoutConfig.contentWidth}
       contentWidthCustom={layoutConfig.contentWidthCustom}
+      hero={
+        <ArticleHeader
+          eyebrow="News"
+          title={newsItem.title}
+          meta={
+            datePublished ? (
+              <time
+                dateTime={datePublished}
+                className="font-heading text-sm font-light"
+              >
+                {formatSerializedDate(datePublished)}
+              </time>
+            ) : null
+          }
+        />
+      }
       {...(showToc && {
         toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
         mobileToc: (
@@ -99,20 +115,6 @@ export async function NewsDetailPageContent({
         ),
       })}
     >
-      <ArticleHeader
-        eyebrow="News"
-        title={newsItem.title}
-        meta={
-          datePublished ? (
-            <time
-              dateTime={datePublished}
-              className="font-heading text-sm font-light"
-            >
-              {formatSerializedDate(datePublished)}
-            </time>
-          ) : null
-        }
-      />
       <Prose variant="editorial" className="max-w-none">
         <SanitizedHtml html={newsItem.contentHtml} />
       </Prose>
