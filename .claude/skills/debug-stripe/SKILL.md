@@ -30,8 +30,8 @@ user-invocable: true
 
 | ファイル                                                               | 役割                                                 |
 | ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe.ts`              | Stripe クライアント生成・接続テスト（`server-only`） |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe-shared.ts`       | キー形式バリデーション（クライアント safe）          |
+| `src/shared/lib/stripe.ts`                                             | Stripe クライアント生成・接続テスト（`server-only`） |
+| `src/shared/lib/stripe-shared.ts`                                      | キー形式バリデーション（クライアント safe）          |
 | `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts` | 設定保存・接続テスト Server Action                   |
 | `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/stripe.ts`  | Zod スキーマ                                         |
 

@@ -60,7 +60,7 @@ import {
 
 ## リソース別アクション一覧
 
-`Resource` 型と `Action` 型は `@/admin/lib/permissions` で定義:
+`Resource` 型と `Action` 型は `@/shared/lib/admin-resources`（client-safe SSoT、PR #232 で `@/admin/lib/` から移管）で定義。`@/admin/lib/permissions` も型再 export で互換性を維持:
 
 ```typescript
 type Resource =

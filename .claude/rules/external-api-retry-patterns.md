@@ -10,7 +10,7 @@ paths:
   - src/shared/lib/instagram/**
   - src/shared/lib/turnstile*
   - src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe*
-  - src/app/(admin)/admin/(dashboard)/_shared/lib/stripe*
+  - src/shared/lib/stripe*
   - src/app/api/webhooks/**
   - src/app/**/api-keys/**
 ---
@@ -31,15 +31,15 @@ paths:
 
 ## 実装 SSoT
 
-| 領域                         | ヘルパー                                             | 場所                                      |
-| ---------------------------- | ---------------------------------------------------- | ----------------------------------------- |
-| Resend                       | `sendEmail({ payload, idempotencyKey, ... })`        | `@/shared/lib/email/send.ts`              |
-| Google API (Cal/GBP/GA 共通) | `withGoogleApiRetry(() => client.xxx(...))`          | `@/shared/lib/google-api/retry.ts`        |
-| Instagram Graph API          | `withInstagramApiRetry(() => callInstagramApi(...))` | `@/shared/lib/instagram/retry.ts`         |
-| Turnstile                    | `validateTurnstile({ token, expectedAction })`       | `@/shared/lib/action-helpers.ts`          |
-| Cloudflare cache purge       | `callPurgeApi` 内部で retry を内蔵                   | `@/shared/lib/cloudflare.ts`              |
-| Cloudflare R2                | AWS SDK v3 内蔵 retry を利用                         | `@/shared/lib/r2/{client,upload,delete}`  |
-| Stripe                       | Stripe SDK 内蔵 retry を利用                         | `@/app/(admin)/.../_shared/lib/stripe.ts` |
+| 領域                         | ヘルパー                                             | 場所                                     |
+| ---------------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| Resend                       | `sendEmail({ payload, idempotencyKey, ... })`        | `@/shared/lib/email/send.ts`             |
+| Google API (Cal/GBP/GA 共通) | `withGoogleApiRetry(() => client.xxx(...))`          | `@/shared/lib/google-api/retry.ts`       |
+| Instagram Graph API          | `withInstagramApiRetry(() => callInstagramApi(...))` | `@/shared/lib/instagram/retry.ts`        |
+| Turnstile                    | `validateTurnstile({ token, expectedAction })`       | `@/shared/lib/action-helpers.ts`         |
+| Cloudflare cache purge       | `callPurgeApi` 内部で retry を内蔵                   | `@/shared/lib/cloudflare.ts`             |
+| Cloudflare R2                | AWS SDK v3 内蔵 retry を利用                         | `@/shared/lib/r2/{client,upload,delete}` |
+| Stripe                       | Stripe SDK 内蔵 retry を利用                         | `@/shared/lib/stripe.ts`                 |
 
 **直接 SDK メソッド呼び出しは禁止**。例外:
 
