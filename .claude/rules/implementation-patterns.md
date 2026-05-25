@@ -81,7 +81,7 @@ paths:
 
 ## UI デザイン探索
 
-- **UI デザイン探索は `src/app/(public)/<feature>-demo/` で複数バリアント比較** — `hero-demo/` / `spaces-design-demo/` が参照実装。上部 sticky nav で variant 切替 + `max-w-[420px]` wrapper で desktop でも mobile preview 可能。`shared.ts` に variant metadata（name / tagline / description / pros / cons）を SSoT 化
+- **UI デザイン探索は `src/app/(public)/<feature>-demo/` で複数バリアント比較** — `hero-demo/` / `reservation-demo/` が参照実装。`hero-demo/` は sticky nav + variant 切替 + `max-w-[420px]` mobile preview wrapper (UI 単位の hero 比較)、`reservation-demo/` は sticky anchor index + 6+ variants を 1 ページ縦並び表示 + 各 variant に Pros/Cons/Reference 注釈 (UX フロー単位の比較、PR #237/#238)。両者とも `shared.tsx` (または `.ts`) に variant metadata (name / tagline / description / pros / cons / reference) を SSoT 化、`_data.ts` で固定ダミーデータを共有。`robots: { index: false, follow: false }` 必須 (本番 SEO 汚染防止)
 
 ## 管理画面 table 行クリック
 
