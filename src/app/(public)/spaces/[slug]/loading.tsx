@@ -30,7 +30,9 @@ export default function SpaceDetailLoading() {
               <Skeleton className="h-5 w-12" variant="text" />
             </div>
           </div>
-          <Skeleton className="aspect-video w-full" />
+          <div className="mx-auto max-w-4xl">
+            <Skeleton className="aspect-video w-full" />
+          </div>
         </header>
 
         {/* Body grid: SpaceInfo body + sticky reservation widget */}
