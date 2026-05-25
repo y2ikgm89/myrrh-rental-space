@@ -92,6 +92,7 @@ export async function NewsDetailPageContent({
       ]}
       contentWidth={layoutConfig.contentWidth}
       contentWidthCustom={layoutConfig.contentWidthCustom}
+      heroPosition="in-grid"
       hero={
         <ArticleHeader
           eyebrow="News"
