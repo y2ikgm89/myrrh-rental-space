@@ -110,7 +110,9 @@ export function ArticleLayout({
           {toc ? (
             <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
               {body}
-              <aside className="hidden lg:block">{toc}</aside>
+              <aside className="hidden lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:block lg:self-start">
+                {toc}
+              </aside>
             </div>
           ) : (
             <BlogLayout {...(showSidebar !== undefined && { showSidebar })}>
