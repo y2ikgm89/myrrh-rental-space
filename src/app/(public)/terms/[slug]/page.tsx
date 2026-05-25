@@ -76,6 +76,7 @@ export default async function TermsDetailPage({ params }: PageProps) {
       ]}
       contentWidth={TERMS_CONTENT_WIDTH}
       showSidebar={false}
+      heroPosition="in-grid"
       hero={
         <ArticleHeader
           eyebrow="Terms"

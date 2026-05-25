@@ -21,12 +21,25 @@ interface ArticleLayoutProps {
   /** When provided, renders a `bg-surface` breadcrumb band. */
   readonly breadcrumb?: ReadonlyArray<BreadcrumbItem>;
   /**
-   * Full-width hero block within `<article>` (eyebrow + h1 + hairline + meta + media)。
-   * `toc` / sidebar の 2-col grid 開始前に配置されるため、gallery / thumbnail が
-   * 横の sticky widget に圧迫されない。Airbnb / Booking.com / Eventbrite / Notion
-   * 業界標準パターン (hero full-width → 本文 2-col)。
+   * Hero block within `<article>` (eyebrow + h1 + hairline + meta + media)。
+   * 配置は `heroPosition` で制御 (default `"full-width"`)。
    */
   readonly hero?: ReactNode;
+  /**
+   * Hero の配置位置。コンテンツ性質ごとに業界標準が分かれる:
+   *
+   * - **`"full-width"`** (default): 2-col grid の **外** に配置 (Airbnb /
+   *   Booking.com / Eventbrite / Peatix 業界標準)。予約サービス系
+   *   (spaces / events) で gallery を main visual として強調するため。
+   *
+   * - **`"in-grid"`**: 2-col grid の **左カラム内 上部** に配置 (WordPress
+   *   Astra / GeneratePress / Newspaper / Hashnode 業界標準、および
+   *   Stripe / GitHub / Notion 規約・docs)。記事系 (posts / news) で
+   *   Search / Recent / Popular widget を hero 同 row sticky で常時可視に
+   *   保つため、また長文 docs / 規約 (terms) で TOC を hero 同 row sticky に
+   *   置いて navigation friction を下げるため。
+   */
+  readonly heroPosition?: "full-width" | "in-grid";
   /**
    * Component-level explicit disable (`false`)。未指定時は global sidebar settings
    * (`Settings.sidebarEnabled`) に従う。
@@ -72,6 +85,7 @@ export function ArticleLayout({
   banner,
   breadcrumb,
   hero,
+  heroPosition = "full-width",
   showSidebar,
   contentWidth,
   contentWidthCustom = null,
@@ -83,11 +97,14 @@ export function ArticleLayout({
     ? resolveWidthStyles({ width: contentWidth, customPx: contentWidthCustom })
     : null;
 
+  const heroBlock = hero ? <div className="mb-12">{hero}</div> : null;
+
   const body = (
     <div
       className={cn("min-w-0", widthStyles?.className)}
       {...(widthStyles?.style && { style: widthStyles.style })}
     >
+      {heroPosition === "in-grid" ? heroBlock : null}
       {mobileToc ? <div className="lg:hidden">{mobileToc}</div> : null}
       {children}
     </div>
@@ -106,7 +123,7 @@ export function ArticleLayout({
       ) : null}
       <Container className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <article>
-          {hero ? <div className="mb-12">{hero}</div> : null}
+          {heroPosition === "full-width" ? heroBlock : null}
           {toc ? (
             <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
               {body}

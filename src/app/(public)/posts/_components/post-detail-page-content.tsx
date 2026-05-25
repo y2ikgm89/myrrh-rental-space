@@ -87,6 +87,7 @@ export async function PostDetailPageContent({
       breadcrumb={[{ label: "ブログ", href: "/posts" }, { label: post.title }]}
       contentWidth={layoutConfig.contentWidth}
       contentWidthCustom={layoutConfig.contentWidthCustom}
+      heroPosition="in-grid"
       hero={
         <ArticleHeader
           {...(post.category?.name && { eyebrow: post.category.name })}
