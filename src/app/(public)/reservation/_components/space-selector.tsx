@@ -6,8 +6,12 @@ import type { SpaceOption } from "@/shared/domain/locations/public-queries";
 import { IconInfoCircle } from "@tabler/icons-react";
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { SpaceDetailDialog } from "./space-detail-dialog";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+
+/** Desktop card に表示する設備 icon 最大件数。超過分は "+N" badge で示す。 */
+const MAX_FACILITY_ICONS = 6;
 
 /**
  * 公開予約ページ Step 1 スペース選択。
@@ -85,6 +89,36 @@ export function SpaceSelector({
                     <p className="mt-2 hidden text-sm leading-relaxed text-muted-foreground @md:line-clamp-2 @md:block">
                       {space.descriptionPlainText}
                     </p>
+                  ) : null}
+                  {space.facilities.length > 0 ? (
+                    <ul
+                      aria-label="主要な設備"
+                      className="mt-3 hidden flex-wrap items-center gap-1.5 @md:flex"
+                    >
+                      {space.facilities
+                        .slice(0, MAX_FACILITY_ICONS)
+                        .map((facility) => (
+                          <li
+                            key={facility.name}
+                            aria-label={facility.name}
+                            title={facility.name}
+                            className="inline-flex h-7 w-7 items-center justify-center border border-border text-muted-foreground"
+                          >
+                            <CuratedIcon
+                              name={facility.iconName}
+                              className="h-4 w-4"
+                            />
+                          </li>
+                        ))}
+                      {space.facilities.length > MAX_FACILITY_ICONS ? (
+                        <li
+                          aria-label={`他 ${space.facilities.length - MAX_FACILITY_ICONS} 件の設備`}
+                          className="inline-flex h-7 items-center px-2 text-xs text-muted-foreground"
+                        >
+                          +{space.facilities.length - MAX_FACILITY_ICONS}
+                        </li>
+                      ) : null}
+                    </ul>
                   ) : null}
                 </div>
                 <div className="flex items-center justify-between gap-2 @md:mt-auto">
