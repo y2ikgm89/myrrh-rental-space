@@ -37,6 +37,11 @@ export interface EventCommandInput {
   descriptionHtml: string;
   descriptionPlainText: string;
   thumbnailUrl?: string | null;
+  ogpImageUrl?: string | null;
+  ogpTitle?: string | null;
+  ogpDescription?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
   startTime: string;
   endTime: string;
   /** 申込締切日時（null = 開始時刻まで受付）。startTime 以前である必要あり。 */
@@ -94,6 +99,11 @@ export async function createEventCommand(data: EventCommandInput) {
         descriptionHtml: data.descriptionHtml,
         descriptionPlainText: data.descriptionPlainText,
         thumbnailUrl: data.thumbnailUrl ?? null,
+        ogpImageUrl: data.ogpImageUrl ?? null,
+        ogpTitle: data.ogpTitle ?? null,
+        ogpDescription: data.ogpDescription ?? null,
+        metaDescription: data.metaDescription ?? null,
+        metaKeywords: data.metaKeywords ?? null,
         startTime: parseDateTimeLocalAsJst(data.startTime),
         endTime: parseDateTimeLocalAsJst(data.endTime),
         registrationDeadline: data.registrationDeadline
@@ -166,6 +176,11 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         descriptionHtml: data.descriptionHtml,
         descriptionPlainText: data.descriptionPlainText,
         thumbnailUrl: data.thumbnailUrl ?? null,
+        ogpImageUrl: data.ogpImageUrl ?? null,
+        ogpTitle: data.ogpTitle ?? null,
+        ogpDescription: data.ogpDescription ?? null,
+        metaDescription: data.metaDescription ?? null,
+        metaKeywords: data.metaKeywords ?? null,
         startTime: newStartTime,
         endTime: newEndTime,
         registrationDeadline: data.registrationDeadline
@@ -324,6 +339,11 @@ export async function duplicateEventCommand(id: string) {
       descriptionHtml: true,
       descriptionPlainText: true,
       thumbnailUrl: true,
+      ogpImageUrl: true,
+      ogpTitle: true,
+      ogpDescription: true,
+      metaDescription: true,
+      metaKeywords: true,
       startTime: true,
       endTime: true,
       registrationDeadline: true,
@@ -362,6 +382,11 @@ export async function duplicateEventCommand(id: string) {
         descriptionHtml: source.descriptionHtml,
         descriptionPlainText: source.descriptionPlainText,
         thumbnailUrl: source.thumbnailUrl,
+        ogpImageUrl: source.ogpImageUrl,
+        ogpTitle: source.ogpTitle,
+        ogpDescription: source.ogpDescription,
+        metaDescription: source.metaDescription,
+        metaKeywords: source.metaKeywords,
         startTime: source.startTime,
         endTime: source.endTime,
         registrationDeadline: source.registrationDeadline,

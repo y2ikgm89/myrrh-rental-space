@@ -74,6 +74,12 @@ const ticketsSchema = z.preprocess(
     .min(1, { error: "チケット種別を少なくとも1つ登録してください" }),
 );
 
+const optionalNullableString = (maxLength: number, error: string) =>
+  z.preprocess(
+    emptyOrNullToNull,
+    z.string().max(maxLength, { error }).nullable().optional(),
+  );
+
 const eventFormBaseSchema = z.object({
   title: z
     .string()
@@ -117,6 +123,14 @@ const eventFormBaseSchema = z.object({
   spaceId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
   status: z.enum(EventStatus, { error: "無効なステータスです" }),
   registrationOpen: booleanFromCheckbox,
+  ogpImageUrl: z.preprocess(
+    emptyOrNullToNull,
+    z.string().nullable().optional(),
+  ),
+  ogpTitle: optionalNullableString(70, "OGPタイトルは70文字以内です"),
+  ogpDescription: optionalNullableString(200, "OGP説明文は200文字以内です"),
+  metaDescription: optionalNullableString(160, "メタ説明文は160文字以内です"),
+  metaKeywords: optionalNullableString(500, "メタキーワードは500文字以内です"),
 });
 
 function refineEvent(

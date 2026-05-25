@@ -1721,6 +1721,11 @@ model Event {
   /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
   descriptionPlainText  String      @db.Text
   thumbnailUrl          String?
+  ogpImageUrl           String?
+  ogpTitle              String?
+  ogpDescription        String?
+  metaDescription       String?     @db.Text
+  metaKeywords          String?
   startTime             DateTime
   endTime               DateTime
   capacity              Int?

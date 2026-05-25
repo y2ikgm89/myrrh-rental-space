@@ -53,22 +53,27 @@ export async function generateMetadata({
     return { title: "イベントが見つかりません" };
   }
 
-  const description =
+  const fallbackDescription =
     event.descriptionPlainText.trim() !== ""
       ? event.descriptionPlainText
       : `${event.title} - イベント詳細`;
+  const description = event.metaDescription ?? fallbackDescription;
+  const ogpTitle = event.ogpTitle ?? event.title;
+  const ogpDescription = event.ogpDescription ?? fallbackDescription;
+  const ogpImage = event.ogpImageUrl ?? event.thumbnailUrl;
   const canonicalUrl = `${getBaseUrl()}/events/${slug}`;
 
   return {
     title: event.title,
     description,
+    ...(event.metaKeywords ? { keywords: event.metaKeywords } : {}),
     alternates: { canonical: canonicalUrl },
     openGraph: {
       type: "website",
-      title: event.title,
-      description,
+      title: ogpTitle,
+      description: ogpDescription,
       url: canonicalUrl,
-      ...(event.thumbnailUrl ? { images: [event.thumbnailUrl] } : {}),
+      ...(ogpImage ? { images: [ogpImage] } : {}),
     },
   };
 }

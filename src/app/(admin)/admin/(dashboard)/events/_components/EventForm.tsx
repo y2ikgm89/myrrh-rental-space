@@ -11,6 +11,7 @@ import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lex
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
+import { asTypedField } from "@/shared/lib/conform/typed-input-control";
 import type {
   getEventById,
   getLocationsForEvent,
@@ -20,6 +21,7 @@ import { EventBasicFields } from "./EventBasicFields";
 import { EventScheduleFields } from "./EventScheduleFields";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
+import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
 import {
@@ -62,6 +64,9 @@ export function EventForm({
 
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
     event?.thumbnailUrl ?? null,
+  );
+  const [ogpImageUrl, setOgpImageUrl] = useState<string | null>(
+    event?.ogpImageUrl ?? null,
   );
   const [status, setStatus] = useState<EventStatus>(
     event?.status ?? EventStatus.DRAFT,
@@ -117,6 +122,10 @@ export function EventForm({
             : "",
           capacity: event.capacity != null ? String(event.capacity) : "",
           addressDetail: event.addressDetail ?? "",
+          ogpTitle: event.ogpTitle ?? "",
+          ogpDescription: event.ogpDescription ?? "",
+          metaDescription: event.metaDescription ?? "",
+          metaKeywords: event.metaKeywords ?? "",
         }
       : {
           title: "",
@@ -126,6 +135,10 @@ export function EventForm({
           registrationDeadline: "",
           capacity: "",
           addressDetail: "",
+          ogpTitle: "",
+          ogpDescription: "",
+          metaDescription: "",
+          metaKeywords: "",
         },
   });
 
@@ -222,6 +235,33 @@ export function EventForm({
               setLocationId(selected.locationId);
             }
           }
+        }}
+      />
+
+      <EventSeoFields
+        fields={{
+          ogpImageUrl: asTypedField<string | null | undefined>(
+            fields.ogpImageUrl,
+          ),
+          ogpTitle: asTypedField<string | null | undefined>(fields.ogpTitle),
+          ogpDescription: asTypedField<string | null | undefined>(
+            fields.ogpDescription,
+          ),
+          metaDescription: asTypedField<string | null | undefined>(
+            fields.metaDescription,
+          ),
+          metaKeywords: asTypedField<string | null | undefined>(
+            fields.metaKeywords,
+          ),
+        }}
+        isPending={isPending}
+        ogpImageUrl={ogpImageUrl}
+        onOgpImageUrlChange={setOgpImageUrl}
+        defaults={{
+          ogpTitle: event?.ogpTitle ?? "",
+          ogpDescription: event?.ogpDescription ?? "",
+          metaDescription: event?.metaDescription ?? "",
+          metaKeywords: event?.metaKeywords ?? "",
         }}
       />
 

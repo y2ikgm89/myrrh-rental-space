@@ -47,6 +47,11 @@ const publicEventDetailSelect = {
   descriptionJson: true,
   descriptionHtml: true,
   publishedAt: true,
+  ogpImageUrl: true,
+  ogpTitle: true,
+  ogpDescription: true,
+  metaDescription: true,
+  metaKeywords: true,
 };
 
 export async function getPublishedEvents() {
