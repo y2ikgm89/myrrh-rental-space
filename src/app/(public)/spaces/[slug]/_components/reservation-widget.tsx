@@ -1,9 +1,8 @@
 "use client";
 
-import { Button } from "../../../_shared/components/design-system/button";
-import { Heading } from "../../../_shared/components/design-system/heading";
+import Link from "next/link";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
-import { Stack } from "../../../_shared/components/design-system/stack";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface ReservationWidgetProps {
   readonly spaceId: string;
@@ -12,6 +11,14 @@ interface ReservationWidgetProps {
   readonly dailyPrice: number | null;
 }
 
+/**
+ * ReservationWidget — Variant E (Booking 構造 × Editorial brand) 適用済 SSoT。
+ *
+ * - border-y accent (Kinfolk hairline) + 中央寄せ
+ * - serif heading 価格 (text-4xl) + italic per-day note
+ * - Reservation / Inquiry buttons (uppercase tracking-[0.18em], sharp edge, min-h-12 / 11)
+ * - 即予約 USP 3 列 (accent uppercase)
+ */
 export function ReservationWidget({
   spaceId,
   hourlyPrice,
@@ -19,47 +26,61 @@ export function ReservationWidget({
 }: ReservationWidgetProps) {
   const { formatUnit } = useFormatPrice();
   return (
-    <div className="border border-border p-6">
-      <Stack gap="lg">
-        <Heading level={3}>料金</Heading>
+    <div className="border border-accent bg-background py-6 text-center">
+      <p className="text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground">
+        — Reservation —
+      </p>
+      <p className="mt-3 font-heading text-4xl font-light leading-none text-foreground">
+        {formatUnit(hourlyPrice, "/h")}
+      </p>
+      {dailyPrice != null ? (
+        <p className="mt-1 font-heading text-sm font-light italic text-muted-foreground">
+          / {formatUnit(dailyPrice, "/day")}
+        </p>
+      ) : null}
 
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">1時間</span>
-            <span className="text-xl font-bold text-accent">
-              {formatUnit(hourlyPrice, "/h")}
+      <hr
+        aria-hidden="true"
+        className="mx-auto my-5 w-8 border-0 border-t border-divider"
+      />
+
+      <ul className="space-y-1.5 px-6 text-xs">
+        <li className="flex items-baseline justify-between">
+          <span className="text-muted-foreground">1 時間</span>
+          <span className="font-heading text-base text-foreground">
+            {formatUnit(hourlyPrice, "/h")}
+          </span>
+        </li>
+        {dailyPrice != null ? (
+          <li className="flex items-baseline justify-between">
+            <span className="text-muted-foreground">1 日</span>
+            <span className="font-heading text-base text-foreground">
+              {formatUnit(dailyPrice, "/day")}
             </span>
-          </div>
-          {dailyPrice != null ? (
-            <div className="flex items-baseline justify-between">
-              <span className="text-muted-foreground">1日</span>
-              <span className="text-xl font-bold text-accent">
-                {formatUnit(dailyPrice, "/day")}
-              </span>
-            </div>
-          ) : null}
-        </div>
+          </li>
+        ) : null}
+      </ul>
 
-        <hr className="border-border" />
+      <div className="mt-6 space-y-1.5 text-[0.7rem] uppercase tracking-[0.15em] text-accent">
+        <p>＋ 即時予約</p>
+        <p>＋ 24h 前まで無料キャンセル</p>
+        <p>＋ 事前決済不要</p>
+      </div>
 
-        <Button
-          variant="editorial"
-          size="lg"
-          href={`/reservation?spaceId=${spaceId}`}
-          className="w-full"
+      <div className="mt-6 space-y-2 px-6">
+        <Link
+          href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
+          className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-7 py-3 text-xs uppercase tracking-[0.18em] text-background transition-opacity hover:opacity-90"
         >
-          このスペースを予約する
-        </Button>
-
-        <Button
-          variant="editorial"
-          size="md"
+          Reserve this space
+        </Link>
+        <Link
           href="/contact"
-          className="w-full"
+          className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-5 py-2.5 text-xs uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background"
         >
-          お問い合わせ
-        </Button>
-      </Stack>
+          Inquiry
+        </Link>
+      </div>
     </div>
   );
 }
