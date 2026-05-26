@@ -30,8 +30,8 @@ export default function SpaceDetailLoading() {
               <Skeleton className="h-5 w-12" variant="text" />
             </div>
           </div>
-          <div className="mx-auto max-w-4xl">
-            <Skeleton className="aspect-video w-full" />
+          <div className="mx-auto max-w-3xl">
+            <Skeleton className="aspect-[3/2] w-full" />
           </div>
         </header>
 
