@@ -682,16 +682,6 @@
     mix-blend-mode: multiply;
   }
 
-  .drop-cap > p:first-of-type::first-letter {
-    font-family: var(--font-serif);
-    font-size: 3.5em;
-    float: left;
-    line-height: 0.8;
-    margin-right: 0.12em;
-    margin-top: 0.08em;
-    color: var(--color-accent);
-  }
-
   /* Editorial decorative borders */
   .editorial-border-top {
     border-top: 1px solid var(--color-border);
