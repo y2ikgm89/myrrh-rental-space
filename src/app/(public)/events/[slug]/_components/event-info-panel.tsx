@@ -52,14 +52,15 @@ interface EventInfoPanelProps {
 /**
  * EventInfoPanel — イベント詳細ページの情報サマリー + CTA パネル
  *
- * Minimal editorial pattern (Apple Store / Stripe / Notion booking 業界標準)。
- * Hero block の `bg-surface` 強調を廃し、全ての情報を一様な `bg-background` の
- * Detail list として scan しやすく並べる。typographic rhythm と hairline divider
- * のみで構造化、Luxury White × Bronze brand と最も整合。
+ * Variant E (Minimal adaptation, 2026-05-27) — Eventbrite / Peatix / Lu.ma
+ * 業界標準の Article-style hero は ArticleLayout 側で維持しつつ、本 panel
+ * のみ spaces ReservationWidget と同様の **4 辺 border-accent + eyebrow +
+ * sharp-edge CTA** で Editorial Magazine brand consistency を強化。
  *
- * 1. **Status band** — Badge 単独配置（申込受付中 / 申込締切 等）
- * 2. **Detail list** — 開催日時 / 開催場所 / 定員 / 参加費 の 4 行（全 DetailRow）
- * 3. **CTA block** — `bg-foreground` ボタン（`registration.kind === "open"` のみ）
+ * 1. **Eyebrow** — "— Event —" uppercase tracking (Kinfolk hairline pattern)
+ * 2. **Status band** — Badge 単独配置（申込受付中 / 申込締切 等）
+ * 3. **Detail list** — 開催日時 / 開催場所 / 定員 / 参加費（全 DetailRow）
+ * 4. **CTA block** — sharp-edge bronze-bordered ボタン（`registration.kind === "open"` のみ）
  *
  * `variant="sidebar"` は `lg+` で `ArticleLayout` の `toc` slot に渡され sticky 表示、
  * `variant="mobile"` は `<lg` で本文冒頭の inline カードとして展開される。
@@ -80,13 +81,16 @@ export function EventInfoPanel({
     <aside
       aria-label="イベント情報"
       className={cn(
-        "border border-border bg-background shadow-sm",
+        "border border-accent bg-background",
         isSidebar
           ? "lg:sticky lg:top-[calc(var(--header-height)+2rem)]"
           : "mb-12",
       )}
     >
-      <div className="px-8 pb-5 pt-7 sm:px-10">
+      <p className="px-8 pt-7 text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground sm:px-10">
+        — Event —
+      </p>
+      <div className="px-8 pb-5 pt-4 sm:px-10">
         <RegistrationBadgeRow registration={registration} />
       </div>
       <dl className="px-8 sm:px-10">
@@ -125,10 +129,10 @@ export function EventInfoPanel({
         ) : null}
       </dl>
       {registration.kind === "open" ? (
-        <div className="px-8 pb-6 sm:px-10">
+        <div className="px-8 pb-7 sm:px-10">
           <Link
             href={`#${registerAnchorId}`}
-            className="inline-flex min-h-12 w-full items-center justify-center bg-foreground px-6 text-sm font-medium tracking-[0.08em] text-background transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-sm tracking-[0.12em] text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             お申し込みへ進む
           </Link>
