@@ -5,6 +5,7 @@ import { VariantAAirbnbMosaic } from "./_components/variant-a-airbnb-mosaic";
 import { VariantBBookingHeroWidget } from "./_components/variant-b-booking-hero-widget";
 import { VariantCEditorialRefined } from "./_components/variant-c-editorial-refined";
 import { VariantDTabNavigation } from "./_components/variant-d-tab-navigation";
+import { VariantEBookingEditorial } from "./_components/variant-e-booking-editorial";
 
 export const metadata: Metadata = {
   title: "スペース詳細ページ デザイン比較",
@@ -17,6 +18,7 @@ const COMPONENTS: Record<(typeof VARIANTS)[number]["id"], () => ReactElement> =
     b: VariantBBookingHeroWidget,
     c: VariantCEditorialRefined,
     d: VariantDTabNavigation,
+    e: VariantEBookingEditorial,
   };
 
 export default function SpacesDetailDemoPage(): ReactElement {
