@@ -25,7 +25,7 @@ interface SpaceInfoProps {
 /**
  * SpaceInfo — Variant E (Editorial Magazine brand) 適用済の本文 body。
  *
- * - About: drop-cap + serif body + 余白
+ * - About: serif body + 余白 (drop-cap なし、全段落同一スタイル)
  * - Amenities: 中央寄せ editorial grid (font-heading)
  * - Access: editorial editorial list + italic 駐車場注記
  *
@@ -36,7 +36,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
 
   return (
     <div className="space-y-16">
-      {/* About: drop-cap description */}
+      {/* About: flat description (drop-cap なし) */}
       {space.descriptionHtml ? (
         <section>
           <p className="text-[0.7rem] uppercase tracking-[0.24em] text-accent">
@@ -45,7 +45,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
           <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
             このスペースについて
           </h2>
-          <div className="mt-8 [&_p]:text-base [&_p]:leading-[2] [&_p]:text-foreground [&_p+p]:mt-6 [&_p:first-of-type]:first-letter:float-left [&_p:first-of-type]:first-letter:mr-2 [&_p:first-of-type]:first-letter:mt-1 [&_p:first-of-type]:first-letter:font-heading [&_p:first-of-type]:first-letter:text-6xl [&_p:first-of-type]:first-letter:font-light [&_p:first-of-type]:first-letter:leading-none [&_p:first-of-type]:first-letter:text-accent">
+          <div className="mt-8 [&_p]:text-base [&_p]:leading-[2] [&_p]:text-foreground [&_p+p]:mt-6">
             <SanitizedHtml html={space.descriptionHtml} />
           </div>
         </section>
