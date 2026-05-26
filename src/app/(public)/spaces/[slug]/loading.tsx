@@ -33,7 +33,7 @@ export default function SpaceDetailLoading() {
         </div>
 
         {/* Pricing widget */}
-        <aside className="border-y border-accent bg-background py-6 text-center">
+        <aside className="border border-accent bg-background py-6 text-center">
           <Skeleton className="mx-auto h-3 w-24" variant="text" />
           <Skeleton className="mx-auto mt-3 h-10 w-32" variant="text" />
           <Skeleton className="mx-auto mt-1 h-4 w-28" variant="text" />

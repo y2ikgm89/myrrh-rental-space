@@ -26,7 +26,7 @@ export function ReservationWidget({
 }: ReservationWidgetProps) {
   const { formatUnit } = useFormatPrice();
   return (
-    <div className="border-y border-accent bg-background py-6 text-center">
+    <div className="border border-accent bg-background py-6 text-center">
       <p className="text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground">
         — Reservation —
       </p>
