@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { IconStar } from "@tabler/icons-react";
+import {
+  IconStar,
+  IconUsers,
+  IconRuler2,
+  IconMapPin,
+  IconCategory,
+} from "@tabler/icons-react";
 
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
@@ -118,42 +124,6 @@ export default async function SpaceDetailPage({
             aria-hidden="true"
             className="mx-auto mt-6 w-12 border-0 border-t border-accent"
           />
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            {reviewStats.totalCount > 0 ? (
-              <>
-                <span className="flex items-center gap-1.5">
-                  <IconStar
-                    className="h-3.5 w-3.5 fill-accent text-accent"
-                    aria-hidden="true"
-                  />
-                  <span className="text-foreground">
-                    {reviewStats.averageRating.toFixed(1)}
-                  </span>
-                  ({reviewStats.totalCount})
-                </span>
-                <span aria-hidden="true">·</span>
-              </>
-            ) : null}
-            {space.category ? (
-              <>
-                <span>{space.category.name}</span>
-                <span aria-hidden="true">·</span>
-              </>
-            ) : null}
-            {space.location ? (
-              <>
-                <span>{space.location.name}</span>
-                <span aria-hidden="true">·</span>
-              </>
-            ) : null}
-            <span>{space.capacity}名</span>
-            {space.area ? (
-              <>
-                <span aria-hidden="true">/</span>
-                <span>{Number(space.area)}㎡</span>
-              </>
-            ) : null}
-          </div>
         </header>
 
         {/* 2-col: 左カラム (gallery + body) / 右カラム (sticky widget) — widget は本文全体を追従 */}
@@ -187,6 +157,77 @@ export default async function SpaceDetailPage({
                 </div>
               ))}
             </div>
+
+            {/* Quick stats row (Airbnb / Vrbo pattern): gallery 直下 icon + label + value 4-col grid */}
+            <section
+              aria-label="スペースの概要"
+              className="border-y border-divider py-6"
+            >
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+                {reviewStats.totalCount > 0 ? (
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                      <IconStar
+                        className="h-3.5 w-3.5 fill-accent text-accent"
+                        aria-hidden="true"
+                      />
+                      評価
+                    </dt>
+                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                      {reviewStats.averageRating.toFixed(1)}{" "}
+                      <span className="text-xs text-muted-foreground">
+                        ({reviewStats.totalCount})
+                      </span>
+                    </dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                    <IconUsers className="h-3.5 w-3.5" aria-hidden="true" />
+                    収容人数
+                  </dt>
+                  <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                    {space.capacity}名
+                  </dd>
+                </div>
+                {space.area ? (
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                      <IconRuler2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      広さ
+                    </dt>
+                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                      {Number(space.area)}㎡
+                    </dd>
+                  </div>
+                ) : null}
+                {space.location ? (
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                      <IconMapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                      所在地
+                    </dt>
+                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                      {space.location.name}
+                    </dd>
+                  </div>
+                ) : null}
+                {space.category ? (
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                      <IconCategory
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                      カテゴリ
+                    </dt>
+                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                      {space.category.name}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
 
             {/* Body */}
             <SpaceInfo space={space} />

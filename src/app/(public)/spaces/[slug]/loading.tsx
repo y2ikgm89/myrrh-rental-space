@@ -21,7 +21,6 @@ export default function SpaceDetailLoading() {
         <Skeleton className="mx-auto h-3 w-16" variant="text" />
         <Skeleton className="mx-auto mt-5 h-12 w-1/2 md:h-14" variant="text" />
         <Skeleton className="mx-auto mt-6 h-px w-12" />
-        <Skeleton className="mx-auto mt-5 h-3 w-1/3" variant="text" />
       </header>
 
       {/* Gallery mosaic + sticky widget */}
