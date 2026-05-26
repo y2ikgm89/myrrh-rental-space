@@ -41,28 +41,6 @@ export function ReservationWidget({
         </p>
       ) : null}
 
-      <hr
-        aria-hidden="true"
-        className="mx-auto my-5 w-8 border-0 border-t border-divider"
-      />
-
-      <ul className="space-y-1.5 px-6 text-xs">
-        <li className="flex items-baseline justify-between">
-          <span className="text-muted-foreground">1 時間</span>
-          <span className="text-base font-medium tabular-nums text-foreground">
-            {formatUnit(hourlyPrice, "/h")}
-          </span>
-        </li>
-        {dailyPrice != null ? (
-          <li className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">1 日</span>
-            <span className="text-base font-medium tabular-nums text-foreground">
-              {formatUnit(dailyPrice, "/day")}
-            </span>
-          </li>
-        ) : null}
-      </ul>
-
       <div className="mt-6 space-y-1.5 text-[0.7rem] uppercase tracking-[0.15em] text-accent">
         <p>＋ 即時予約</p>
         <p>＋ 24h 前まで無料キャンセル</p>
