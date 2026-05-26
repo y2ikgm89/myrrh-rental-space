@@ -1,5 +1,5 @@
 export interface VariantMeta {
-  readonly id: "a" | "b" | "c" | "d";
+  readonly id: "a" | "b" | "c" | "d" | "e";
   readonly name: string;
   readonly tagline: string;
   readonly description: string;
@@ -60,6 +60,25 @@ export const VARIANTS: readonly VariantMeta[] = [
       "業界主流 (Airbnb) から外れる独自路線",
     ],
     reference: "Kinfolk / Cereal Magazine / The Gentlewoman",
+  },
+  {
+    id: "e",
+    name: "Booking × Editorial Hybrid",
+    tagline: "Booking.com 構造 × Kinfolk brand",
+    description:
+      "B の即予約 UX 構造 (hero gallery 全幅 + price widget hero 内右) に C の Editorial Magazine brand (hairline / serif heading / italic / 余白 / accent bronze / pull quote) を注入したハイブリッド。CVR と brand integrity の両立を試みる。",
+    pros: [
+      "即予約 CTA が above-the-fold で可視 (B の CVR 強み)",
+      "Kinfolk brand 整合 (serif heading / hairline / italic / accent)",
+      "Editorial 余白 + Booking.com 情報密度のバランス",
+      "国際標準構造 (Booking.com) と独自 brand の両立",
+    ],
+    cons: [
+      "B 単独より情報密度がやや控えめ (editorial 余白優先)",
+      "Editorial 純度は C より低い",
+      "ハイブリッドゆえ単一明確な業界 reference がない",
+    ],
+    reference: "Booking.com 構造 × Kinfolk / Cereal brand 解釈",
   },
   {
     id: "d",
