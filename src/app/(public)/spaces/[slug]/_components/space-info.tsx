@@ -1,10 +1,5 @@
-import { IconCar, IconMapPin, IconWalk } from "@tabler/icons-react";
-
-import { Heading } from "../../../_shared/components/design-system/heading";
-import { Prose } from "../../../_shared/components/design-system/prose";
-import { Stack } from "../../../_shared/components/design-system/stack";
+import { IconMapPin } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
-import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { parseFacilities } from "@/shared/lib/json-validators";
 
 interface SpaceInfoProps {
@@ -27,95 +22,80 @@ interface SpaceInfoProps {
   };
 }
 
+/**
+ * SpaceInfo — Variant E (Editorial Magazine brand) 適用済の本文 body。
+ *
+ * - About: drop-cap + serif body + 余白
+ * - Amenities: 中央寄せ editorial grid (font-heading)
+ * - Access: editorial editorial list + italic 駐車場注記
+ *
+ * Lead 段落 / Pull-quote / Reviews は page.tsx 側で構築 (この component の責務外)。
+ */
 export function SpaceInfo({ space }: SpaceInfoProps) {
-  // facilities は構造化済み `{ name, iconName }[]`（migration 20260507163006）。
-  // `parseFacilities` が SSoT — `facilitiesSchema` の uniqueness refine + curation 外
-  // iconName fallback を一括適用する（`@/shared/lib/json-validators`）。
   const facilities = parseFacilities(space.facilities);
 
   return (
-    <Stack gap="xl">
-      {/* 住所行（category / location / capacity / area は ArticleHeader meta に集約済） */}
-      <div className="flex items-start gap-2 text-sm text-muted-foreground">
-        <IconMapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>{space.lineAddress}</span>
-      </div>
-
-      {/* Description */}
+    <div className="space-y-16">
+      {/* About: drop-cap description */}
       {space.descriptionHtml ? (
-        <div>
-          <Heading level={2} className="mb-4">
-            スペースについて
-          </Heading>
-          <Prose>
+        <section>
+          <p className="text-[0.7rem] uppercase tracking-[0.24em] text-accent">
+            — About this space —
+          </p>
+          <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
+            このスペースについて
+          </h2>
+          <div className="mt-8 [&_p]:text-base [&_p]:leading-[2] [&_p]:text-foreground [&_p+p]:mt-6 [&_p:first-of-type]:first-letter:float-left [&_p:first-of-type]:first-letter:mr-2 [&_p:first-of-type]:first-letter:mt-1 [&_p:first-of-type]:first-letter:font-heading [&_p:first-of-type]:first-letter:text-6xl [&_p:first-of-type]:first-letter:font-light [&_p:first-of-type]:first-letter:leading-none [&_p:first-of-type]:first-letter:text-accent">
             <SanitizedHtml html={space.descriptionHtml} />
-          </Prose>
-        </div>
-      ) : null}
-
-      {/* Facilities */}
-      {facilities.length > 0 ? (
-        <div>
-          <Heading level={2} className="mb-4">
-            設備・備品
-          </Heading>
-          <div className="@container">
-            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3">
-              {facilities.map((facility) => (
-                <div
-                  key={facility.name}
-                  className="flex items-center gap-3 border border-border px-3 py-2 text-sm"
-                >
-                  {facility.iconName ? (
-                    <CuratedIcon
-                      name={facility.iconName}
-                      className="h-4 w-4 shrink-0 text-accent"
-                    />
-                  ) : null}
-                  <span>{facility.name}</span>
-                </div>
-              ))}
-            </div>
           </div>
-        </div>
+        </section>
       ) : null}
 
-      {/* Access — 親 Location から継承表示（Booking.com Room → Property 標準）。
-          スペース固有の補足は addressDetail / lineAddress（メタ行）に集約。 */}
-      {space.location &&
-      (space.location.accessLines.length > 0 || space.location.parkingInfo) ? (
-        <div>
-          <Heading level={2} className="mb-4">
-            アクセス
-          </Heading>
-          <Stack gap="md">
-            {space.location.accessLines.length > 0 ? (
-              <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                <IconWalk
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <ol className="space-y-1">
-                  {space.location.accessLines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ol>
-              </div>
-            ) : null}
-            {space.location.parkingInfo ? (
-              <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                <IconCar
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <p className="whitespace-pre-line">
-                  {space.location.parkingInfo}
-                </p>
-              </div>
-            ) : null}
-          </Stack>
-        </div>
+      {/* Amenities: 中央寄せ editorial grid */}
+      {facilities.length > 0 ? (
+        <section className="border-y border-divider py-12">
+          <p className="text-center text-[0.7rem] uppercase tracking-[0.24em] text-accent">
+            — Amenities —
+          </p>
+          <h2 className="mt-4 text-center font-heading text-2xl font-light md:text-3xl">
+            設備
+          </h2>
+          <ul className="mt-8 grid grid-cols-2 gap-y-3 text-center font-heading text-base font-light md:grid-cols-4">
+            {facilities.map((f) => (
+              <li key={f.name}>{f.name}</li>
+            ))}
+          </ul>
+        </section>
       ) : null}
-    </Stack>
+
+      {/* Access: editorial list + italic 駐車場 */}
+      <section>
+        <p className="text-[0.7rem] uppercase tracking-[0.24em] text-accent">
+          — Access —
+        </p>
+        <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
+          アクセス
+        </h2>
+        <p className="mt-6 flex items-start gap-2 text-base text-foreground">
+          <IconMapPin
+            className="mt-1 h-4 w-4 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <span>{space.lineAddress}</span>
+        </p>
+        {space.location && space.location.accessLines.length > 0 ? (
+          <ol className="mt-4 space-y-2 font-heading text-base font-light leading-relaxed">
+            {space.location.accessLines.map((line) => (
+              <li key={line}>・{line}</li>
+            ))}
+          </ol>
+        ) : null}
+        {space.location?.parkingInfo ? (
+          <p className="mt-6 text-sm italic text-muted-foreground">
+            — {space.location.parkingInfo}
+          </p>
+        ) : null}
+      </section>
+    </div>
   );
 }
