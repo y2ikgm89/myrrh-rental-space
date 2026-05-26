@@ -6,8 +6,7 @@
       "Lint & Type Check",
       "Unit Tests",
       "Smoke E2E (critical path)",
-      "Build (env validation)",
-      "Bundle Analysis (Turbopack)"
+      "Build (env validation)"
     ]
   },
   "enforce_admins": null,

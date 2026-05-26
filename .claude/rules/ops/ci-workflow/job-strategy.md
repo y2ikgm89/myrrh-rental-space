@@ -17,16 +17,19 @@ paths:
 | 分類                               | Job                               | trigger                                                                                            |
 | ---------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------- |
 | **Required** (毎 push 実行)        | `dependency-audit` (bun audit)    | push + PR                                                                                          |
-|                                    | `lint-and-typecheck`              | push + PR                                                                                          |
+|                                    | `lint-and-typecheck` (wrapper)    | push + PR (lint-format / type-check 並列実行を集約)                                                |
 |                                    | `unit-tests` (per-file isolation) | push + PR                                                                                          |
 |                                    | **`smoke-e2e` (critical path)**   | **push + PR**                                                                                      |
 |                                    | `build` (env validation)          | push (main) + PR                                                                                   |
-|                                    | `bundle-analysis` (Turbopack)     | push (main) + PR                                                                                   |
 | **Opt-in** (label / dispatch のみ) | `e2e-tests` (広域)                | PR `e2e` label / `workflow_dispatch run_e2e=true`                                                  |
 |                                    | `visual-regression`               | PR `visual-regression` label / `workflow_dispatch run_visual=true` / `update_visual_baseline=true` |
 |                                    | `lighthouse-ci`                   | PR `lighthouse` label / `workflow_dispatch run_lighthouse=true`                                    |
-| **PR comment only**                | `bundle-size-diff`                | PR のみ                                                                                            |
+| **PR comment only**                | `bundle-size-diff`                | PR のみ (code 変更時)                                                                              |
 | **main only**                      | `docs` (typedoc)                  | main push                                                                                          |
+|                                    | `bundle-analysis` (Turbopack)     | main push (PR は `bundle-size-diff` で代替し build 重複回避)                                       |
+| **Aggregator (paths-filter)**      | `changes` (dorny/paths-filter)    | push + PR (docs / rule / メモリ-only 変更は code=false を出力)                                     |
+|                                    | `lint-format` (children)          | push + PR (heavy steps gate)                                                                       |
+|                                    | `type-check` (children)           | push + PR (heavy steps gate)                                                                       |
 
 ### smoke-e2e job の SLA
 
@@ -156,11 +159,12 @@ gh pr merge <num> --squash --delete-branch  # 業界標準 squash merge (Chromat
 Required (毎 push 実行) job が完走するように pass-rate を確保した上で、GitHub Settings → Branches → Protection rules で **"Require status checks to pass before merging"** に以下を登録:
 
 - `Dependency Audit (bun audit)`
-- `Lint & Type Check`
+- `Lint & Type Check` (wrapper — `lint-format` + `type-check` 並列の集約)
 - `Unit Tests`
 - `Smoke E2E (critical path)`
 - `Build (env validation)`
-- `Bundle Analysis (Turbopack)`
+
+**`Bundle Analysis (Turbopack)` は required から除外** — PR には軽量な `bundle-size-diff` (compressed-size-action) が PR sticky comment で feedback を提供、archived analysis artifact は main push 時のみで十分（PR 1 本ごとの full build × 2 重複を削減）。
 
 opt-in job（E2E / Visual / Lighthouse）を required にすると、label を付け忘れた PR が永遠に merge できない silent UX bug になるため **required 登録禁止**。
 

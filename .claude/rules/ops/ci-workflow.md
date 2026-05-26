@@ -76,6 +76,71 @@ concurrency:
 
 **禁止**: `.github/workflows/codeql.yml` を再追加（custom query が必要なときのみ Advanced setup、現プロジェクトには該当機能なし）。
 
+## 4.5. paths-filter + 重い step gate（docs/rule PR の wall clock を 60s 以下に圧縮）
+
+docs / rule / メモリ-only の PR で `full Next.js build × 3` (build env-validation + bundle-analysis + smoke-e2e build) が走るのが旧来の最大コスト（約 15-20 分の wall clock 浪費）。`dorny/paths-filter@v4` で前置 `changes` job を切り、required job の重い step を gate する。
+
+**Required check 名は維持** — job 自体は常に走らせ、heavy step のみ `if: needs.changes.outputs.code == 'true'` で skip する pattern (公式推奨)。skip された場合 job conclusion は `success`(全 step skip) のため branch protection が満たされる。
+
+```yaml
+jobs:
+  changes:
+    name: Detect Code Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.claude/rules/**'
+              - '!.claude/agents/**'
+              - '!.claude/skills/**'
+              - '!.serena/memories/**'
+              - '!LICENSE'
+              - '!.gitignore'
+
+  unit-tests:
+    needs: [changes]
+    steps:
+      - if: needs.changes.outputs.code == 'true'
+        uses: actions/checkout@v6
+      # ...全 step に if: needs.changes.outputs.code == 'true' を gate として付ける
+```
+
+**禁止**:
+
+- **job-level `if: needs.changes.outputs.code == 'true'`** — job conclusion が `skipped` になり branch protection が「required check 未受信」扱いで永久 BLOCKED になる silent bug。必ず step-level gate を使う
+- **`!**`glob を`paths-ignore:` workflow trigger で書く\*\* — paths-ignore で skip された run は branch protection から検出不能、required checks が永久未受信になる同 silent bug。filter は job 内で実施
+
+## 4.6. `bun install` cache（30-60s → 5-10s）
+
+`oven-sh/setup-bun@v2` は **デフォルトで node_modules を cache しない**（[公式 issue #54](https://github.com/oven-sh/setup-bun/issues/54)）。`actions/cache@v5` で `~/.bun/install/cache` を `bun.lock` ハッシュで cache すると各 job の install が大幅短縮。並列 job 数 ×30s の wall clock 削減効果。
+
+```yaml
+- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+  with:
+    bun-version-file: package.json
+
+- name: Cache Bun dependencies
+  uses: actions/cache@v5
+  with:
+    path: ~/.bun/install/cache
+    key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+    restore-keys: |
+      bun-deps-${{ runner.os }}-
+
+- name: Install dependencies
+  run: bun install --frozen-lockfile
+```
+
+**SSoT**: 全 job で同じ cache step を共有（key は `bun.lock` hash で statelessly 一致）。bun は cache hit 時に `bun install` を skip し symlink resolution のみで完了する。
+
 ## 5. Test job は per-file isolation 必須
 
 bun:test の `mock.module()` は **live binding を残す**公式仕様のため、複数 `*.test.ts` を同一 `bun test` 起動で実行すると干渉する（[Bun docs](https://bun.com/docs/test/mocks)）。`bun run test:unit` / `test:integration` は per-file isolation runner（`scripts/run-tests.ts`）経由必須:
