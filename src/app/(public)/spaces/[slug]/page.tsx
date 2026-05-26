@@ -106,8 +106,8 @@ export default async function SpaceDetailPage({
       </div>
 
       <article className="mx-auto max-w-[var(--container-max)] px-6 pt-12 md:px-12 md:pt-16">
-        {/* Hero header: Kinfolk hairline (左寄せ eyebrow + serif h1 + meta) */}
-        <header>
+        {/* Hero header: Kinfolk magazine cover pattern (中央寄せ eyebrow + serif h1 + meta) */}
+        <header className="text-center">
           <p className="text-[0.7rem] uppercase tracking-[0.24em] text-accent">
             — Space —
           </p>
@@ -116,9 +116,9 @@ export default async function SpaceDetailPage({
           </h1>
           <hr
             aria-hidden="true"
-            className="mt-6 w-12 border-0 border-t border-accent"
+            className="mx-auto mt-6 w-12 border-0 border-t border-accent"
           />
-          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
             {reviewStats.totalCount > 0 ? (
               <>
                 <span className="flex items-center gap-1.5">

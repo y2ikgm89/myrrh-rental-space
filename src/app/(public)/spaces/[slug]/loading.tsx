@@ -16,12 +16,12 @@ export default function SpaceDetailLoading() {
         </Container>
       </div>
 
-      {/* Hero header (centered editorial) */}
+      {/* Hero header (Kinfolk magazine cover: 中央寄せ) */}
       <header className="mx-auto max-w-[var(--container-max)] px-6 pt-12 text-center md:px-12 md:pt-16">
         <Skeleton className="mx-auto h-3 w-16" variant="text" />
-        <Skeleton className="mx-auto mt-5 h-12 w-3/4 md:h-14" variant="text" />
+        <Skeleton className="mx-auto mt-5 h-12 w-1/2 md:h-14" variant="text" />
         <Skeleton className="mx-auto mt-6 h-px w-12" />
-        <Skeleton className="mx-auto mt-5 h-3 w-1/2" variant="text" />
+        <Skeleton className="mx-auto mt-5 h-3 w-1/3" variant="text" />
       </header>
 
       {/* Gallery mosaic + sticky widget */}
