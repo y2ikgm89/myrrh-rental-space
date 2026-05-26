@@ -130,33 +130,46 @@ export default async function SpaceDetailPage({
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_320px]">
           {/* Left column */}
           <div className="min-w-0 space-y-16">
-            {/* Gallery mosaic */}
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:grid-rows-2">
-              <div className="relative aspect-[4/3] overflow-hidden md:col-span-2 md:row-span-2 md:aspect-auto md:h-[440px]">
+            {/* Gallery: 1 枚なら中央寄せ単独表示、2 枚以上で mosaic 4-grid */}
+            {subImages.length >= 1 ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:grid-rows-2">
+                <div className="relative aspect-[4/3] overflow-hidden md:col-span-2 md:row-span-2 md:aspect-auto md:h-[440px]">
+                  <Image
+                    src={space.mainImageUrl}
+                    alt={space.name}
+                    fill
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+                {subImages.slice(0, 2).map((img) => (
+                  <div
+                    key={img}
+                    className="relative hidden aspect-[4/3] overflow-hidden md:block md:h-[215px]"
+                  >
+                    <Image
+                      src={img}
+                      alt={`${space.name} の写真`}
+                      fill
+                      sizes="(min-width: 1024px) 17vw, 33vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl overflow-hidden md:aspect-[16/9]">
                 <Image
                   src={space.mainImageUrl}
                   alt={space.name}
                   fill
-                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  sizes="(min-width: 1024px) 768px, 100vw"
                   className="object-cover"
                   priority
                 />
               </div>
-              {subImages.slice(0, 2).map((img) => (
-                <div
-                  key={img}
-                  className="relative hidden aspect-[4/3] overflow-hidden md:block md:h-[215px]"
-                >
-                  <Image
-                    src={img}
-                    alt={`${space.name} の写真`}
-                    fill
-                    sizes="(min-width: 1024px) 17vw, 33vw"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            )}
 
             {/* Quick stats row (Airbnb / Vrbo pattern): gallery 直下 icon + label + value 4-col grid */}
             <section
