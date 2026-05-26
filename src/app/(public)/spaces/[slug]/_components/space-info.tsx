@@ -26,8 +26,8 @@ interface SpaceInfoProps {
  * SpaceInfo — Variant E (Editorial Magazine brand) 適用済の本文 body。
  *
  * - About: serif body + 余白 (drop-cap なし、全段落同一スタイル)
- * - Amenities: 中央寄せ editorial grid (font-heading)
- * - Access: editorial editorial list + italic 駐車場注記
+ * - Amenities: 中央寄せ editorial grid (font-sans / Noto Sans JP 統一)
+ * - Access: editorial list (font-sans / Noto Sans JP 統一) + italic 駐車場注記
  *
  * Lead 段落 / Pull-quote / Reviews は page.tsx 側で構築 (この component の責務外)。
  */
@@ -60,7 +60,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
           <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
             設備
           </h2>
-          <ul className="mt-8 grid grid-cols-2 gap-y-3 font-heading text-base font-light md:grid-cols-3">
+          <ul className="mt-8 grid grid-cols-2 gap-y-3 text-base text-foreground md:grid-cols-3">
             {facilities.map((f) => (
               <li key={f.name}>・{f.name}</li>
             ))}
@@ -84,7 +84,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
           <span>{space.lineAddress}</span>
         </p>
         {space.location && space.location.accessLines.length > 0 ? (
-          <ol className="mt-4 space-y-2 font-heading text-base font-light leading-relaxed">
+          <ol className="mt-4 space-y-2 text-base leading-relaxed text-foreground">
             {space.location.accessLines.map((line) => (
               <li key={line}>・{line}</li>
             ))}
