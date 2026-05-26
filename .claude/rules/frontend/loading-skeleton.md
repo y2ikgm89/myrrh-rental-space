@@ -79,13 +79,19 @@ export { default } from "../../_shared/components/EditorLoading";
 1. **Page hero placeholder** — `<section className="bg-background py-[var(--space-xl)]">` で `StandardHeroSection variant="minimal"` を模倣（旧 `bg-gradient-to-b from-surface via-background to-background` は axe-core が bgGradient incomplete で評価できず production build で violation 昇格する silent bug のため solid `bg-background` に統一、2026-05-14。PR #191 で `border-b border-border` を撤去 — ヒーローと本文の区切りは余白で表現するため placeholder にも border を付けない）
 2. **本文セクション** — Container 内に `space-y-* py-[var(--space-lg)]` で複数 skeleton を縦積み
 
-詳細ページ (posts / news / events / spaces / terms) は ArticleLayout 反映:
+詳細ページのレイアウト 2 系統 (PR #246-#256):
 
-- Breadcrumb 帯 (`<div className="bg-surface py-2 shadow-inner">` — PR #248 で確立)
-- Article header (eyebrow + h1 + hairline divider w-16 + meta + media、Kinfolk hairline pattern PR #247)
-- Hero media は `mx-auto max-w-4xl` で約 896px 制約 (PR #249)
-- Body 2-col (`lg:grid-cols-[1fr_280px]`) + Sidebar (`<aside lg:sticky lg:top-[calc(var(--header-height)+2rem)]>`)
-- カテゴリ別 hero 配置: spaces / events は `heroPosition="full-width"` (2-col grid 外)、posts / news / terms は `heroPosition="in-grid"` (2-col 内左カラム上、WordPress Astra / Stripe docs 業界標準)
+- **ArticleLayout 統一の 4 系統** (events / news / posts / terms):
+  - Breadcrumb 帯 (`<div className="bg-surface py-2 shadow-inner">` — PR #248)
+  - Article header (eyebrow + h1 + hairline divider w-16 + meta + media、Kinfolk hairline pattern PR #247)
+  - Hero media は `mx-auto max-w-3xl` で約 768px 制約 (PR #253、業界標準範囲)
+  - Body 2-col (`lg:grid-cols-[1fr_280px]`) + Sidebar (`<aside lg:sticky lg:top-[calc(var(--header-height)+2rem)]>`)
+  - カテゴリ別 hero 配置: events は `heroPosition="full-width"`、posts / news / terms は `heroPosition="in-grid"` (PR #250)
+- **Variant E (Booking × Editorial) 独立構造の 1 系統** (spaces): PR #256 で ArticleLayout 廃止
+  - Breadcrumb 帯 (同上)
+  - 中央寄せ Hero header (eyebrow + serif h1 + hairline w-12 accent、Kinfolk magazine cover pure)
+  - 2-col grid (`lg:grid-cols-[1fr_320px]`) 統合: 左カラム (gallery mosaic + Quick stats row + body) / 右 aside (sticky ReservationWidget 4 辺枠)
+  - widget は本文全体 scroll を sticky 追従 (1 つの grid 内構造)
 
 ## 管理画面 loading.tsx の構造原則
 
