@@ -105,9 +105,9 @@ export default async function SpaceDetailPage({
         </Container>
       </div>
 
-      <article>
-        {/* Hero header: Kinfolk hairline (中央寄せ eyebrow + serif h1 + meta) */}
-        <header className="mx-auto max-w-[var(--container-max)] px-6 pt-12 text-center md:px-12 md:pt-16">
+      <article className="mx-auto max-w-[var(--container-max)] px-6 pt-12 md:px-12 md:pt-16">
+        {/* Hero header: Kinfolk hairline (左寄せ eyebrow + serif h1 + meta) */}
+        <header>
           <p className="text-[0.7rem] uppercase tracking-[0.24em] text-accent">
             — Space —
           </p>
@@ -116,9 +116,9 @@ export default async function SpaceDetailPage({
           </h1>
           <hr
             aria-hidden="true"
-            className="mx-auto mt-6 w-12 border-0 border-t border-accent"
+            className="mt-6 w-12 border-0 border-t border-accent"
           />
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
             {reviewStats.totalCount > 0 ? (
               <>
                 <span className="flex items-center gap-1.5">
@@ -156,37 +156,49 @@ export default async function SpaceDetailPage({
           </div>
         </header>
 
-        {/* Hero: gallery (B 4-grid mosaic) + sticky widget 右 */}
-        <div className="mx-auto mt-12 grid max-w-[var(--container-max)] gap-6 px-6 md:px-12 lg:grid-cols-[1fr_320px] lg:gap-10">
-          {/* Mosaic gallery */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:grid-rows-2">
-            <div className="relative aspect-[4/3] overflow-hidden md:col-span-2 md:row-span-2 md:aspect-auto md:h-[440px]">
-              <Image
-                src={space.mainImageUrl}
-                alt={space.name}
-                fill
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover"
-                priority
-              />
-            </div>
-            {subImages.slice(0, 2).map((img) => (
-              <div
-                key={img}
-                className="relative hidden aspect-[4/3] overflow-hidden md:block md:h-[215px]"
-              >
+        {/* 2-col: 左カラム (gallery + body) / 右カラム (sticky widget) — widget は本文全体を追従 */}
+        <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_320px]">
+          {/* Left column */}
+          <div className="min-w-0 space-y-16">
+            {/* Gallery mosaic */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:grid-rows-2">
+              <div className="relative aspect-[4/3] overflow-hidden md:col-span-2 md:row-span-2 md:aspect-auto md:h-[440px]">
                 <Image
-                  src={img}
-                  alt={`${space.name} の写真`}
+                  src={space.mainImageUrl}
+                  alt={space.name}
                   fill
-                  sizes="(min-width: 1024px) 17vw, 33vw"
+                  sizes="(min-width: 1024px) 50vw, 100vw"
                   className="object-cover"
+                  priority
                 />
               </div>
-            ))}
+              {subImages.slice(0, 2).map((img) => (
+                <div
+                  key={img}
+                  className="relative hidden aspect-[4/3] overflow-hidden md:block md:h-[215px]"
+                >
+                  <Image
+                    src={img}
+                    alt={`${space.name} の写真`}
+                    fill
+                    sizes="(min-width: 1024px) 17vw, 33vw"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Body */}
+            <SpaceInfo space={space} />
+
+            {space.reviewsEnabled ? (
+              <Suspense fallback={null}>
+                <SpaceReviews spaceId={space.id} />
+              </Suspense>
+            ) : null}
           </div>
 
-          {/* Sticky pricing widget (editorial-decorated) */}
+          {/* Sticky pricing widget — 本文全体を追従 */}
           <aside className="lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:self-start">
             <ReservationWidget
               spaceId={space.id}
@@ -196,20 +208,9 @@ export default async function SpaceDetailPage({
             />
           </aside>
         </div>
-
-        {/* Body: editorial body */}
-        <div className="mx-auto mt-16 max-w-3xl px-6 pb-16 md:px-12">
-          <SpaceInfo space={space} />
-
-          {space.reviewsEnabled ? (
-            <section className="mt-16">
-              <Suspense fallback={null}>
-                <SpaceReviews spaceId={space.id} />
-              </Suspense>
-            </section>
-          ) : null}
-        </div>
       </article>
+
+      <div className="pb-16" />
 
       <Suspense fallback={null}>
         <RelatedSpaces

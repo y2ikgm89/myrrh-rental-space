@@ -54,15 +54,15 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
       {/* Amenities: 中央寄せ editorial grid */}
       {facilities.length > 0 ? (
         <section className="border-y border-divider py-12">
-          <p className="text-center text-[0.7rem] uppercase tracking-[0.24em] text-accent">
+          <p className="text-[0.7rem] uppercase tracking-[0.24em] text-accent">
             — Amenities —
           </p>
-          <h2 className="mt-4 text-center font-heading text-2xl font-light md:text-3xl">
+          <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
             設備
           </h2>
-          <ul className="mt-8 grid grid-cols-2 gap-y-3 text-center font-heading text-base font-light md:grid-cols-4">
+          <ul className="mt-8 grid grid-cols-2 gap-y-3 font-heading text-base font-light md:grid-cols-3">
             {facilities.map((f) => (
-              <li key={f.name}>{f.name}</li>
+              <li key={f.name}>・{f.name}</li>
             ))}
           </ul>
         </section>
