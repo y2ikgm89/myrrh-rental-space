@@ -159,12 +159,12 @@ export default async function SpaceDetailPage({
                 ))}
               </div>
             ) : (
-              <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl overflow-hidden md:aspect-[16/9]">
+              <div className="relative mx-auto aspect-[4/3] w-full max-w-2xl overflow-hidden">
                 <Image
                   src={space.mainImageUrl}
                   alt={space.name}
                   fill
-                  sizes="(min-width: 1024px) 768px, 100vw"
+                  sizes="(min-width: 1024px) 672px, 100vw"
                   className="object-cover"
                   priority
                 />
