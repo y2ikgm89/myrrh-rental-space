@@ -41,12 +41,12 @@ env:
 
 ```yaml
 # NG: hardcode（9+ 箇所で drift する）
-- uses: oven-sh/setup-bun@v2
+- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
   with:
     bun-version: "1.3.13"
 
 # OK: package.json#packageManager (bun@X.Y.Z) を SSoT
-- uses: oven-sh/setup-bun@v2
+- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
   with:
     bun-version-file: package.json
 ```
@@ -114,24 +114,47 @@ env:
 
 GitHub-hosted runner の Node.js 20 deprecation（2026-06 強制 Node 24 化、2026-09 Node 20 削除）は **全 upstream actions が Node 24 対応 major version をリリース済**（2026-04 時点）。warn 放置ではなく **最新 major version に upgrade が canonical**:
 
-| Action                             | 旧 (Node 20) | 新 (Node 24) | Breaking change                                                                |
-| ---------------------------------- | ------------ | ------------ | ------------------------------------------------------------------------------ |
-| `actions/checkout`                 | `@v4`        | **`@v6`**    | v6: persist-credentials を `$RUNNER_` 格納（runner v2.329.0+）                 |
-| `actions/upload-artifact`          | `@v4`        | **`@v7`**    | v7: ESM 移行 + 任意 `archive: false` で direct upload                          |
-| `actions/cache`                    | `@v4`        | **`@v5`**    | input 互換、runner v2.327.1+ 必須                                              |
-| `actions/dependency-review-action` | `@v4`        | **未採用**   | Dependency Graph 機能依存 + bun audit と機能重複（§10 参照）                   |
-| `actions/labeler`                  | `@v5`        | **`@v6`**    | input 互換（config 形式は v5 で確立、`changed-files-labels-limit` 新規 input） |
-| `actions/stale`                    | `@v9`        | **`@v10`**   | input 互換、runner v2.327.1+ 必須                                              |
-| `peter-evans/create-pull-request`  | `@v6`        | **`@v8`**    | input 互換、runner v2.327.1+ 必須                                              |
-| `oven-sh/setup-bun`                | `@v2`        | `@v2` (現行) | major version 据置                                                             |
-| `preactjs/compressed-size-action`  | `@v2`        | `@v2` (現行) | major version 据置                                                             |
-| `rhysd/actionlint`                 | bash dl      | bash dl      | curl で latest を取得（version pin なし）                                      |
+| Action                             | 旧 (Node 20) | 新 (Node 24)            | Breaking change                                                                                                                                                                                                          |
+| ---------------------------------- | ------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `actions/checkout`                 | `@v4`        | **`@v6`**               | v6: persist-credentials を `$RUNNER_` 格納（runner v2.329.0+）                                                                                                                                                           |
+| `actions/upload-artifact`          | `@v4`        | **`@v7`**               | v7: ESM 移行 + 任意 `archive: false` で direct upload                                                                                                                                                                    |
+| `actions/cache`                    | `@v4`        | **`@v5`**               | input 互換、runner v2.327.1+ 必須                                                                                                                                                                                        |
+| `actions/dependency-review-action` | `@v4`        | **未採用**              | Dependency Graph 機能依存 + bun audit と機能重複（§10 参照）                                                                                                                                                             |
+| `actions/labeler`                  | `@v5`        | **`@v6`**               | input 互換（config 形式は v5 で確立、`changed-files-labels-limit` 新規 input）                                                                                                                                           |
+| `actions/stale`                    | `@v9`        | **`@v10`**              | input 互換、runner v2.327.1+ 必須                                                                                                                                                                                        |
+| `peter-evans/create-pull-request`  | `@v6`        | **`@v8`**               | input 互換、runner v2.327.1+ 必須                                                                                                                                                                                        |
+| `oven-sh/setup-bun`                | SHA pin      | `@ecf28ddc... # v2.1.3` | tag → SHA 直 pin に移行（GitHub Actions 公式 security best practice）。tag は force-push 攻撃リスク + codeload tarball 404 outage で全 job が `Set up job` 段階 fail する silent risk。PR #256 で 10 箇所一括 SHA pin 化 |
+| `preactjs/compressed-size-action`  | `@v2`        | `@v2` (現行)            | major version 据置                                                                                                                                                                                                       |
+| `rhysd/actionlint`                 | bash dl      | bash dl                 | curl で latest を取得（version pin なし）                                                                                                                                                                                |
 
 GitHub-hosted `ubuntu-latest` は常に最新 runner のため runner version 制約は自動充足。`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 強制 opt-in は不要。
 
 **Action 最新版の確認 SSoT**: `curl -s "https://api.github.com/repos/<owner>/<repo>/releases/latest" | jq -r .tag_name`。
 
 **禁止**: deprecation warning を「warn のまま放置」する旧運用（upstream が既に Node 24 対応版をリリース済の状態では誤り）。
+
+## 8.1. Third-party action は SHA 直 pin（GitHub Actions 公式 security best practice）
+
+GitHub Actions 公式 [security guide](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-third-party-actions) は third-party action を **commit SHA で pin** することを推奨。tag 参照は以下のリスク:
+
+1. **Force-push 攻撃**: 攻撃者が tag を別 commit に移動 → 既知の良い code と思って動かしているのが malicious commit になる
+2. **Codeload tarball 404 outage**: tag が指す SHA の archive download が GitHub codeload 側で 404 になる障害（2026-05-26 に `oven-sh/setup-bun@v2` = v2.2.0 SHA `0c5077e5...` で全社的に発生、全 job が `Set up job` step で fail する silent risk）
+
+**canonical pattern**:
+
+```yaml
+# OK: SHA 直 pin + コメントで version 記録
+- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+- uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+
+# NG: tag 参照（force-push + outage リスク）
+- uses: oven-sh/setup-bun@v2
+- uses: actions/checkout@v6
+```
+
+**SHA 取得**: `gh api repos/<owner>/<repo>/git/refs/tags/<tag> --jq '.object.sha'`。
+
+**upgrade 時**: SHA + コメント version を両方更新。`gh api repos/<owner>/<repo>/releases/latest --jq '{tag_name, target_commitish}'` で latest 確認。
 
 ## 8. CI 専用 host-aware security headers（HSTS / CSP localhost skip）
 
@@ -171,7 +194,7 @@ function applySecurityHeaders(
 ```yaml
 # OK: setup-bun を先に走らせて PATH に bun を通す
 - uses: actions/checkout@v6
-- uses: oven-sh/setup-bun@v2
+- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
   with:
     bun-version-file: package.json
 - uses: preactjs/compressed-size-action@v2
