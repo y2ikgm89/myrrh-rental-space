@@ -79,12 +79,13 @@ export { default } from "../../_shared/components/EditorLoading";
 1. **Page hero placeholder** — `<section className="bg-background py-[var(--space-xl)]">` で `StandardHeroSection variant="minimal"` を模倣（旧 `bg-gradient-to-b from-surface via-background to-background` は axe-core が bgGradient incomplete で評価できず production build で violation 昇格する silent bug のため solid `bg-background` に統一、2026-05-14。PR #191 で `border-b border-border` を撤去 — ヒーローと本文の区切りは余白で表現するため placeholder にも border を付けない）
 2. **本文セクション** — Container 内に `space-y-* py-[var(--space-lg)]` で複数 skeleton を縦積み
 
-詳細ページ (posts / news / events / spaces / access) は ArticleLayout 反映:
+詳細ページ (posts / news / events / spaces / terms) は ArticleLayout 反映:
 
-- Breadcrumb 帯 (`<div className="border-b border-divider bg-surface">`)
-- Article header (h1 + meta + thumbnail aspect-video)
-- Prose body (`space-y-4` の text rows)
-- Sidebar (lg+ で `<aside>` 280px)
+- Breadcrumb 帯 (`<div className="bg-surface py-2 shadow-inner">` — PR #248 で確立)
+- Article header (eyebrow + h1 + hairline divider w-16 + meta + media、Kinfolk hairline pattern PR #247)
+- Hero media は `mx-auto max-w-4xl` で約 896px 制約 (PR #249)
+- Body 2-col (`lg:grid-cols-[1fr_280px]`) + Sidebar (`<aside lg:sticky lg:top-[calc(var(--header-height)+2rem)]>`)
+- カテゴリ別 hero 配置: spaces / events は `heroPosition="full-width"` (2-col grid 外)、posts / news / terms は `heroPosition="in-grid"` (2-col 内左カラム上、WordPress Astra / Stripe docs 業界標準)
 
 ## 管理画面 loading.tsx の構造原則
 
