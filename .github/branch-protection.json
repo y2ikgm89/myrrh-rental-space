@@ -3,7 +3,8 @@
     "strict": true,
     "contexts": [
       "Dependency Audit (bun audit)",
-      "Lint & Type Check",
+      "Lint & Format",
+      "Type Check",
       "Unit Tests",
       "Smoke E2E (critical path)",
       "Build (env validation)"
