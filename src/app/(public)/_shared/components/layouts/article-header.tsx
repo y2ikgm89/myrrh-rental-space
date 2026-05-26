@@ -49,7 +49,7 @@ export function ArticleHeader({
           </div>
         ) : null}
       </div>
-      {media ? <div className="mx-auto max-w-4xl">{media}</div> : null}
+      {media ? <div className="mx-auto max-w-3xl">{media}</div> : null}
     </header>
   );
 }
