@@ -17,7 +17,8 @@ paths:
 | 分類                               | Job                               | trigger                                                                                            |
 | ---------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------- |
 | **Required** (毎 push 実行)        | `dependency-audit` (bun audit)    | push + PR                                                                                          |
-|                                    | `lint-and-typecheck` (wrapper)    | push + PR (lint-format / type-check 並列実行を集約)                                                |
+|                                    | `lint-format`                     | push + PR (format:check + lint, type-check と並列)                                                 |
+|                                    | `type-check`                      | push + PR (tsc --noEmit, lint-format と並列)                                                       |
 |                                    | `unit-tests` (per-file isolation) | push + PR                                                                                          |
 |                                    | **`smoke-e2e` (critical path)**   | **push + PR**                                                                                      |
 |                                    | `build` (env validation)          | push (main) + PR                                                                                   |
@@ -28,8 +29,6 @@ paths:
 | **main only**                      | `docs` (typedoc)                  | main push                                                                                          |
 |                                    | `bundle-analysis` (Turbopack)     | main push (PR は `bundle-size-diff` で代替し build 重複回避)                                       |
 | **Aggregator (paths-filter)**      | `changes` (dorny/paths-filter)    | push + PR (docs / rule / メモリ-only 変更は code=false を出力)                                     |
-|                                    | `lint-format` (children)          | push + PR (heavy steps gate)                                                                       |
-|                                    | `type-check` (children)           | push + PR (heavy steps gate)                                                                       |
 
 ### smoke-e2e job の SLA
 
@@ -159,12 +158,15 @@ gh pr merge <num> --squash --delete-branch  # 業界標準 squash merge (Chromat
 Required (毎 push 実行) job が完走するように pass-rate を確保した上で、GitHub Settings → Branches → Protection rules で **"Require status checks to pass before merging"** に以下を登録:
 
 - `Dependency Audit (bun audit)`
-- `Lint & Type Check` (wrapper — `lint-format` + `type-check` 並列の集約)
+- `Lint & Format` (format:check + lint)
+- `Type Check` (tsc --noEmit)
 - `Unit Tests`
 - `Smoke E2E (critical path)`
 - `Build (env validation)`
 
 **`Bundle Analysis (Turbopack)` は required から除外** — PR には軽量な `bundle-size-diff` (compressed-size-action) が PR sticky comment で feedback を提供、archived analysis artifact は main push 時のみで十分（PR 1 本ごとの full build × 2 重複を削減）。
+
+**`Lint & Type Check` wrapper は撤去済み** — backwards-compat shim だったため、Trunk-Based Development + Conventional Commits の "isolated complete change" 原則に従い `lint-format` / `type-check` を独立 required として直接登録（Google Engineering Practices `small-cls.md` の "single concern per change" と整合）。下流 job (`build` / `bundle-size-diff` / `bundle-analysis` / `lighthouse-ci` / `docs`) は `needs: [lint-format, type-check]` で両者完了を待つ。
 
 opt-in job（E2E / Visual / Lighthouse）を required にすると、label を付け忘れた PR が永遠に merge できない silent UX bug になるため **required 登録禁止**。
 
