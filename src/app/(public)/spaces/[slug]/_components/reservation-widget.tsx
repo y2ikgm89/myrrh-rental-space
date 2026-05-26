@@ -15,7 +15,9 @@ interface ReservationWidgetProps {
  * ReservationWidget — Variant E (Booking 構造 × Editorial brand) 適用済 SSoT。
  *
  * - border-y accent (Kinfolk hairline) + 中央寄せ
- * - serif heading 価格 (text-4xl) + italic per-day note
+ * - 価格は **sans + tabular-nums** (Stripe / Airbnb / Booking.com / Shopify と
+ *   揃えた業界標準。Cormorant Garamond の old-style figures は数値スキャンに
+ *   弱いため数字系では使わない、Editorial Magazine 通念とも整合)
  * - Reservation / Inquiry buttons (uppercase tracking-[0.18em], sharp edge, min-h-12 / 11)
  * - 即予約 USP 3 列 (accent uppercase)
  */
@@ -30,11 +32,11 @@ export function ReservationWidget({
       <p className="text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground">
         — Reservation —
       </p>
-      <p className="mt-3 font-heading text-4xl font-light leading-none text-foreground">
+      <p className="mt-3 text-3xl font-medium leading-none tabular-nums text-foreground">
         {formatUnit(hourlyPrice, "/h")}
       </p>
       {dailyPrice != null ? (
-        <p className="mt-1 font-heading text-sm font-light italic text-muted-foreground">
+        <p className="mt-1 text-sm tabular-nums text-muted-foreground">
           / {formatUnit(dailyPrice, "/day")}
         </p>
       ) : null}
@@ -47,14 +49,14 @@ export function ReservationWidget({
       <ul className="space-y-1.5 px-6 text-xs">
         <li className="flex items-baseline justify-between">
           <span className="text-muted-foreground">1 時間</span>
-          <span className="font-heading text-base text-foreground">
+          <span className="text-base font-medium tabular-nums text-foreground">
             {formatUnit(hourlyPrice, "/h")}
           </span>
         </li>
         {dailyPrice != null ? (
           <li className="flex items-baseline justify-between">
             <span className="text-muted-foreground">1 日</span>
-            <span className="font-heading text-base text-foreground">
+            <span className="text-base font-medium tabular-nums text-foreground">
               {formatUnit(dailyPrice, "/day")}
             </span>
           </li>

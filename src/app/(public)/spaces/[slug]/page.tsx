@@ -186,7 +186,7 @@ export default async function SpaceDetailPage({
                       />
                       評価
                     </dt>
-                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                    <dd className="mt-1 text-lg font-medium tabular-nums text-foreground">
                       {reviewStats.averageRating.toFixed(1)}{" "}
                       <span className="text-xs text-muted-foreground">
                         ({reviewStats.totalCount})
@@ -199,7 +199,7 @@ export default async function SpaceDetailPage({
                     <IconUsers className="h-3.5 w-3.5" aria-hidden="true" />
                     収容人数
                   </dt>
-                  <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                  <dd className="mt-1 text-lg font-medium tabular-nums text-foreground">
                     {space.capacity}名
                   </dd>
                 </div>
@@ -209,7 +209,7 @@ export default async function SpaceDetailPage({
                       <IconRuler2 className="h-3.5 w-3.5" aria-hidden="true" />
                       広さ
                     </dt>
-                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                    <dd className="mt-1 text-lg font-medium tabular-nums text-foreground">
                       {Number(space.area)}㎡
                     </dd>
                   </div>
@@ -220,7 +220,7 @@ export default async function SpaceDetailPage({
                       <IconMapPin className="h-3.5 w-3.5" aria-hidden="true" />
                       所在地
                     </dt>
-                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                    <dd className="mt-1 text-lg font-medium tabular-nums text-foreground">
                       {space.location.name}
                     </dd>
                   </div>
@@ -234,7 +234,7 @@ export default async function SpaceDetailPage({
                       />
                       カテゴリ
                     </dt>
-                    <dd className="mt-1 font-heading text-lg font-light text-foreground">
+                    <dd className="mt-1 text-lg font-medium tabular-nums text-foreground">
                       {space.category.name}
                     </dd>
                   </div>

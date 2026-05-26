@@ -186,10 +186,10 @@ function CapacityValue({
   if (registration.kind === "open" && registration.remainingCapacity !== null) {
     return (
       <span className="flex flex-wrap items-baseline gap-x-2">
-        <span>{capacity} 名</span>
+        <span className="tabular-nums">{capacity} 名</span>
         <span className="text-xs text-muted-foreground">
           残り{" "}
-          <span className="font-medium text-accent">
+          <span className="font-medium tabular-nums text-accent">
             {registration.remainingCapacity} 席
           </span>
         </span>
@@ -200,13 +200,13 @@ function CapacityValue({
   if (registration.kind === "full") {
     return (
       <span className="flex flex-wrap items-baseline gap-x-2">
-        <span>{capacity} 名</span>
+        <span className="tabular-nums">{capacity} 名</span>
         <span className="text-xs text-muted-foreground">満席</span>
       </span>
     );
   }
 
-  return <span>{capacity} 名</span>;
+  return <span className="tabular-nums">{capacity} 名</span>;
 }
 
 function TicketList({
@@ -250,7 +250,7 @@ function TicketRow({
         <span className="text-xs text-muted-foreground">{ticket.name}</span>
       ) : null}
       <span className="flex flex-wrap items-baseline gap-x-2">
-        <span>{priceLabel}</span>
+        <span className="tabular-nums">{priceLabel}</span>
         {unitSuffix ? (
           <span className="text-xs text-muted-foreground">{unitSuffix}</span>
         ) : null}
