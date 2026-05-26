@@ -2,7 +2,8 @@
  * Editorial Magazine prose スタイル（公開・編集の SSoT）
  *
  * Kinfolk / Cereal Magazine 準拠（Cormorant Garamond serif heading（light） +
- * italic blockquote + bronze accent link + drop-cap は editorial variant のみ）。
+ * italic blockquote + bronze accent link）。drop-cap は 2026-05-27 に全廃済
+ * （spaces / events / news / posts / terms 全 5 layout で同色統一、装飾なし）。
  *
  * 公開: `Prose` Primitive (`design-system/prose.tsx`) が参照
  * 編集: Lexical エディタの ContentEditable 親 div に `EDITOR_PROSE_CLASSES` で適用
