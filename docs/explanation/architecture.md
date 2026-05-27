@@ -133,10 +133,6 @@ graph TB
 
 ## 静的検証ルール
 
-- `proxy.ts` に Prisma import を置かない
-- `src/shared/db/*` の外で `@generated/prisma/*` を import しない
-- `@/shared/lib/prisma` の legacy shim import を残さない
-- `src/shared/domain/*` と `src/shared/db/*` の外で `@/shared/db/prisma` を import しない
-- `src/shared/db/index.ts`, `src/shared/db/client.ts`, `src/shared/db/models/*` のような互換 shim を再導入しない
-- `src/app/*` から `@/shared/db/client` と `@/shared/db/models/*` を import しない
-- `bun run validate`, `bun test`, `bun run build` を通す
+上記の境界違反は `__tests__/unit/architecture-boundaries.test.ts` が runtime gate として検出する（lefthook `pre-push` + CI required）。具体的な検出パターン・対象 path・許容例外は実テストファイルを SSoT とし、本書には列挙しない（drift 防止）。
+
+加えてローカル / CI 双方で `bun run validate`、`bun test`、`bun run build` を通すこと。
