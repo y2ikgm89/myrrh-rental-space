@@ -34,13 +34,13 @@
 
 ### ページ分類
 
-| 分類                | ページ                                                     | サーバーキャッシュ   | CDNキャッシュ  |
-| ------------------- | ---------------------------------------------------------- | -------------------- | -------------- |
-| **PPRベース**       | `/spaces/[id]`, `/news/[id]`, `/posts/[slug]`, `/p/[slug]` | `cacheLife('hours')` | 1時間          |
-| **PPRハイブリッド** | `/posts`, `/faq`, `/terms`                                 | `cacheLife('hours')` | 1時間          |
-| **動的**            | `/`, `/spaces`, `/news`, `/contact`, `/about`              | なし                 | 1時間          |
-| **認証必須**        | `/admin/*`, `/reservation/*`                               | なし                 | キャッシュ禁止 |
-| **API**             | `/api/*`                                                   | なし                 | キャッシュ禁止 |
+| 分類                | ページ                                                   | サーバーキャッシュ   | CDNキャッシュ  |
+| ------------------- | -------------------------------------------------------- | -------------------- | -------------- |
+| **PPRベース**       | `/spaces/[slug]`, `/news/[slug]`, `/posts/[...segments]` | `cacheLife('hours')` | 1時間          |
+| **PPRハイブリッド** | `/posts`, `/faq`, `/terms`                               | `cacheLife('hours')` | 1時間          |
+| **動的**            | `/`, `/spaces`, `/news`, `/contact`, `/about`            | なし                 | 1時間          |
+| **認証必須**        | `/admin/*`, `/reservation/*`                             | なし                 | キャッシュ禁止 |
+| **API**             | `/api/*`                                                 | なし                 | キャッシュ禁止 |
 
 ---
 
@@ -88,13 +88,14 @@ async headers() {
 PPRページでは `use cache` ディレクティブと `cacheLife()` を使用：
 
 ```typescript
-// src/app/(public)/spaces/[id]/page.tsx
+// src/app/(public)/spaces/[slug]/page.tsx
 import { cacheLife, cacheTag } from "next/cache";
 
 export default async function SpacePage({ params }: Props) {
   "use cache";
   cacheLife("hours");
-  cacheTag("space", `space:${params.id}`);
+  const { slug } = await params;
+  cacheTag("space", `space:${slug}`);
 
   // ... コンポーネントの実装
 }
@@ -141,13 +142,13 @@ export default async function SpacePage({ params }: Props) {
 
 | 関数                        | 対象パス                       |
 | --------------------------- | ------------------------------ |
-| `purgeSpaceCache(id?)`      | `/spaces`, `/spaces/[id]`, `/` |
-| `purgePostCache(slug?)`     | `/posts`, `/posts/[slug]`, `/` |
-| `purgeNewsCache(id?)`       | `/news`, `/news/[id]`, `/`     |
-| `purgePageCache(slug)`      | `/p/[slug]`                    |
+| `purgeSpaceCache(spaceId?)` | `/spaces`, `/spaces/<spaceId>` |
+| `purgePostCache(slug?)`     | `/posts`, `/posts/<slug>`      |
+| `purgeNewsCache(newsId?)`   | `/news`, `/news/<newsId>`      |
+| `purgePageCache(slug)`      | `/<slug>` (custom page)        |
+| `purgeHomeCache()`          | `/`                            |
 | `purgeFaqCache()`           | `/faq`                         |
 | `purgeTermsCache()`         | `/terms`                       |
-| `purgeHomeCache()`          | `/`                            |
 | `purgeAllCloudflareCache()` | 全キャッシュ                   |
 
 ### 実装例

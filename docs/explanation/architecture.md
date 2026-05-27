@@ -118,7 +118,7 @@ graph TB
 ### Preview
 
 - 通常の詳細ページには query-string の preview 分岐を持たせない。
-- preview は `posts` / `news` 等の専用 route のみで描画し、常に `noindex`。
+- preview は `(public)/preview/{posts,news,pages}/*` 配下の専用 route のみで描画し、常に `noindex`。
 
 ## データ取得とキャッシュ
 

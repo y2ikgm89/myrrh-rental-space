@@ -161,29 +161,7 @@ await adminAuthClient.resetPassword({
 
 ## 5. Cloud Run 設定
 
-### タイムアウト
-
-```yaml
-annotations:
-  run.googleapis.com/timeout: "60s"
-```
-
-### スケーリング制限
-
-```yaml
-annotations:
-  autoscaling.knative.dev/maxScale: "10"
-  autoscaling.knative.dev/minScale: "0"
-```
-
-### リソース制限
-
-```yaml
-resources:
-  limits:
-    cpu: "1"
-    memory: 512Mi
-```
+タイムアウト・スケーリング・リソース制限の値は [`cloudbuild.yaml`](../../cloudbuild.yaml) の substitutions（`_MEMORY` / `_MAX_INSTANCES` 等）が SSoT。詳細パラメータと設計意図は [`deploy.md`](./deploy.md) §9 を参照（`max-instances=1` 運用、`--no-cpu-throttling`、liveness/startup probe は `/api/live` 等）。本書で値を複製しない（drift 防止）。
 
 ## 監視・アラート
 
