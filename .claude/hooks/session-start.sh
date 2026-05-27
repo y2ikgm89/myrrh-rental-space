@@ -36,6 +36,31 @@ if [ -d "$PLANS_DIR" ]; then
 fi
 [ "$FOUND" -eq 0 ] && echo '(なし)'
 
+# --- 共通: 自分の open PR + CI 状態 ---
+# auto-merge 予約後の CI fail を次セッション開始時に検出するための SSoT
+# (CLAUDE.md §自動完遂ポリシー gate 8 = CI fail 検知 / feedback_auto-merge-default.md)
+# gh 未インストール / 認証なし / network fail でも silent に skip (exit 0 維持)
+if command -v gh >/dev/null 2>&1; then
+  PRS_JSON=$(gh pr list --author '@me' --state open --json number,title,headRefName,statusCheckRollup,autoMergeRequest 2>/dev/null || echo '[]')
+  PR_COUNT=$(printf '%s' "$PRS_JSON" | jq 'length' 2>/dev/null || echo '0')
+
+  if [ "${PR_COUNT:-0}" -gt 0 ]; then
+    echo ''
+    echo '=== 自分の open PR (auto-merge 待機 / fix 待ち) ==='
+    printf '%s' "$PRS_JSON" | jq -r '.[] |
+      . as $pr |
+      ($pr.statusCheckRollup // []) as $checks |
+      (if ($checks | length) == 0 then "PENDING"
+       elif ($checks | any(.conclusion == "FAILURE" or .conclusion == "CANCELLED" or .conclusion == "TIMED_OUT")) then "FAIL"
+       elif ($checks | any(.status == "IN_PROGRESS" or .status == "QUEUED" or .status == "PENDING")) then "RUNNING"
+       elif ($checks | all((.conclusion // "") | IN("SUCCESS", "NEUTRAL", "SKIPPED", ""))) then "PASS"
+       else "UNKNOWN"
+       end) as $state |
+      (if ($pr.autoMergeRequest // null) then " (auto-merge ON)" else "" end) as $auto |
+      "- #\($pr.number) [\($state)\($auto)] \($pr.title) (\($pr.headRefName))"' 2>/dev/null || echo '(取得失敗)'
+  fi
+fi
+
 # --- compact 専用: 圧縮後の state 再注入 ---
 if [ "$SOURCE" = "compact" ]; then
   cd "$CLAUDE_PROJECT_DIR" 2>/dev/null || exit 0
