@@ -1,11 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
-import {
-  IconCalendar,
-  IconCoin,
-  IconMapPin,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconCalendar, IconMapPin, IconUsers } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import {
   formatEventDate,
@@ -88,6 +83,11 @@ export function EventInfoPanel({
       <div className="px-8 pb-5 pt-4 sm:px-10">
         <RegistrationBadgeRow registration={registration} />
       </div>
+      {tickets.length > 0 ? (
+        <div className="px-8 pb-5 sm:px-10">
+          <TicketHeroList tickets={tickets} />
+        </div>
+      ) : null}
       <dl className="px-8 sm:px-10">
         <DetailRow
           icon={<IconCalendar className="h-4 w-4" aria-hidden="true" />}
@@ -112,14 +112,6 @@ export function EventInfoPanel({
             label="定員"
           >
             <CapacityValue capacity={capacity} registration={registration} />
-          </DetailRow>
-        ) : null}
-        {tickets.length > 0 ? (
-          <DetailRow
-            icon={<IconCoin className="h-4 w-4" aria-hidden="true" />}
-            label={tickets.length > 1 ? "チケット種別" : "参加費"}
-          >
-            <TicketList tickets={tickets} />
           </DetailRow>
         ) : null}
       </dl>
@@ -213,53 +205,74 @@ function CapacityValue({
   return <span className="tabular-nums">{capacity} 名</span>;
 }
 
-function TicketList({
+/**
+ * TicketHeroList — spaces ReservationWidget の価格 hero と揃えた pricing block。
+ *
+ * 単一 ticket は hero 単独 (text-3xl)、複数 ticket は最初の ticket を hero、
+ * 残りを secondary tier (text-xl) として layered 表示する。
+ * 表記規律は spaces 価格 hero と一致:
+ *   [price tabular-nums] [/ unit muted] [（税込）muted]
+ */
+function TicketHeroList({
   tickets,
 }: {
   readonly tickets: readonly EventTicketSummary[];
-}): ReactElement {
-  if (tickets.length === 1) {
-    const ticket = tickets[0];
-    if (!ticket) return <span>—</span>;
-    return <TicketRow ticket={ticket} showName={false} />;
-  }
+}): ReactElement | null {
+  const [primary, ...secondary] = tickets;
+  if (!primary) return null;
   return (
-    <ul className="space-y-2">
-      {tickets.map((ticket) => (
-        <li key={ticket.id}>
-          <TicketRow ticket={ticket} showName />
-        </li>
+    <>
+      <TicketHero
+        ticket={primary}
+        tier="primary"
+        showName={tickets.length > 1}
+      />
+      {secondary.map((ticket) => (
+        <TicketHero key={ticket.id} ticket={ticket} tier="secondary" showName />
       ))}
-    </ul>
+    </>
   );
 }
 
-function TicketRow({
+function TicketHero({
   ticket,
+  tier,
   showName,
 }: {
   readonly ticket: EventTicketSummary;
+  readonly tier: "primary" | "secondary";
   readonly showName: boolean;
 }): ReactElement {
-  const priceLabel = ticket.price === 0 ? "無料" : formatPrice(ticket.price);
-  const unitSuffix =
-    ticket.price === 0
-      ? null
-      : ticket.unitSize === 1
-        ? "/ 1 名（税込）"
-        : `/ ${String(ticket.unitSize)} 名（税込）`;
+  const isFree = ticket.price === 0;
+  const priceLabel = isFree ? "無料" : formatPrice(ticket.price);
+  const unitSuffix = isFree
+    ? null
+    : ticket.unitSize === 1
+      ? "/ 1 名"
+      : `/ ${String(ticket.unitSize)} 名`;
+  const isPrimary = tier === "primary";
   return (
-    <span className="flex flex-col gap-0.5">
+    <div className={cn(!isPrimary && "mt-3")}>
       {showName ? (
-        <span className="text-xs text-muted-foreground">{ticket.name}</span>
+        <p className="mb-1 text-xs text-muted-foreground">{ticket.name}</p>
       ) : null}
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="tabular-nums">{priceLabel}</span>
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span
+          className={cn(
+            "font-medium leading-none tabular-nums text-foreground",
+            isPrimary ? "text-3xl" : "text-xl",
+          )}
+        >
+          {priceLabel}
+        </span>
         {unitSuffix ? (
           <span className="text-xs text-muted-foreground">{unitSuffix}</span>
         ) : null}
-      </span>
-    </span>
+        {!isFree ? (
+          <span className="text-xs text-muted-foreground">（税込）</span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
