@@ -217,6 +217,7 @@ export default async function EventDetailPage({
         ]}
         hero={
           <ArticleHeader
+            align="center"
             eyebrow="Event"
             title={event.title}
             meta={
