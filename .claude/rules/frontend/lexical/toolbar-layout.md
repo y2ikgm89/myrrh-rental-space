@@ -29,6 +29,32 @@ paths:
 - `@lexical/react` を上げたら **`node_modules/.../LexicalDraggableBlockPlugin` と差分マージ**し、必要ならフォークを更新する。
 - `eslint.config.mjs` の `lexical-draggable-fork` が当該ファイル用のルール緩和を担う。フォークを大きく変えたら **要否を再確認**する。
 
+### メイン toolbar 外枠は CSS Grid `[1fr_auto_1fr]`（中央配置 + 右固定）
+
+`ToolbarPlugin` の外枠は「左 spacer + 中央ツール群 + 右 InspectorControls」の 3 列構成。**flex 3-spacer は禁止**（右 spacer 内に `shrink-0` な InspectorControls を持つと min-content が圧縮できず、中央の `max-w-full` と衝突して overlap する silent bug）。canonical:
+
+```tsx
+// OK: CSS Grid で 3 列を物理分離（WordPress Gutenberg / Notion 同型）
+<div
+  role="toolbar"
+  className="grid min-h-10 min-w-0 grid-cols-[1fr_auto_1fr] items-stretch border-b border-border bg-muted/40"
+>
+  <div aria-hidden="true" />
+  <div className="flex min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto scrollbar-hide">
+    {/* tools */}
+  </div>
+  <div className="flex items-center justify-end">
+    <InspectorControls ... />
+  </div>
+</div>
+```
+
+- `1fr / auto / 1fr` で左右余白を等分、中央は intrinsic content + `overflow-x-auto`
+- 中央 `min-w-0` が grid track の min-content を 0 に下げ、超過時は内部 horizontal scroll に逃がす
+- 右 InspectorControls は `auto` track で固定幅維持（侵食されない）
+
+**禁止**: `<div className="flex ...">` + `<div className="flex-1 basis-0 shrink" />` × 2 で挟む構成（中央 `max-w-full` と右 `shrink-0` 子の min が衝突して overlap）。
+
 ## Floating Toolbar 責務分離（Text FT / Block FT）
 
 公開 API は**2 種類のフローティングツールバーに責務分離**する（WordPress Gutenberg 流の UX と Lexical 公式 `FloatingTextFormatToolbarPlugin` パターンを両立させるための設計）。
@@ -44,6 +70,35 @@ paths:
 - Block FT: `$isMultiBlockSelection()` が `true` のときのみ `setIsMultiBlock(true)` で表示
 
 **`$getSelectionBlockNodes()` も同ファイルの正本**。`GroupPlugin` など、選択の「ブロック粒度」を取得が必要なプラグインは **必ずこのヘルパー経由**（ローカル再実装禁止）。アルゴリズムは WordPress Gutenberg の `getCommonRootClientID` 相当で、**deepest common ancestor の直接 block-level 子**を返す。Group ネストに自動対応する（Root 直下選択 → Root 子、Group 内選択 → Group 子）。
+
+### Floating Toolbar 位置計算と scroller 制約（`setFloatingElemPosition` SSoT）
+
+両 FT が共有する `floating-toolbar/positioning.ts` の `setFloatingElemPosition` は以下の規律で実装する:
+
+1. **scroller 有効幅は `clientWidth` で取得** — `getBoundingClientRect().width` は vertical scrollbar 幅 (~17px) を含むため、`overflow-y: auto` でスクロールバーが出る長文編集中は floating toolbar 右端がバー裏に隠れる silent bug の原因になる。`scrollerElem.clientWidth` (scrollbar / border 除外) を maxWidth 上限と右 clamp の両方で使う
+2. **`floatingElem.style.maxWidth` は計測前に確定** — `clientWidth - (horizontalOffset * 2 + 4)` で設定。`+4` は `shadow-lg` の visual はみ出し許容。設定後に `getBoundingClientRect()` を取って left/top を計算する
+3. **wrapper は `flex flex-wrap`** — natural width が maxWidth を超えた場合に自動多段化（Notion / Google Docs 同 UX）。`flex` 単独だとアイテムが overflow して clip される
+
+```typescript
+// canonical
+const scrollerInnerWidth = scrollerElem.clientWidth;
+const scrollerInnerRight = editorScrollerRect.left + scrollerInnerWidth;
+const safetyBuffer = horizontalOffset * 2 + 4;
+floatingElem.style.maxWidth = `${Math.max(0, scrollerInnerWidth - safetyBuffer)}px`;
+
+const floatingElemRect = floatingElem.getBoundingClientRect();
+// ... position 計算 ...
+
+if (left + floatingElemRect.width > scrollerInnerRight) {
+  left = scrollerInnerRight - floatingElemRect.width - horizontalOffset;
+}
+```
+
+**禁止**:
+
+- 右 clamp で `editorScrollerRect.right`（scrollbar 込み）を使う（scrollbar 幅だけ右端が見切れる）
+- `flex-wrap` なし wrapper で多数アイテム配置（scroller 幅超過時 horizontal clip）
+- `maxWidth` 設定を `getBoundingClientRect()` 後に行う（rect が古い値で clamp 計算が破綻）
 
 ### グループ化操作のエントリポイント（WordPress Gutenberg reference 準拠）
 
