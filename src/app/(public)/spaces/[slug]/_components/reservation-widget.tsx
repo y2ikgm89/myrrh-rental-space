@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   IconBolt,
   IconCalendarOff,
+  IconCoin,
   IconCreditCardOff,
 } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
@@ -68,7 +69,12 @@ export function ReservationWidget({
         <Badge variant="success">即時予約可</Badge>
       </div>
       <div className="px-8 pb-5 sm:px-10">
-        <p className="mb-2 text-xs text-muted-foreground">料金</p>
+        <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="text-accent">
+            <IconCoin className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span>料金</span>
+        </p>
         {hourly ? (
           <div className="flex items-baseline gap-x-2">
             <span className="text-3xl font-medium leading-none tabular-nums text-foreground">
