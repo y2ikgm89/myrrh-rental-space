@@ -85,6 +85,7 @@ export function EventInfoPanel({
       </div>
       {tickets.length > 0 ? (
         <div className="px-8 pb-5 sm:px-10">
+          <p className="mb-2 text-xs text-muted-foreground">参加費</p>
           <TicketHeroList tickets={tickets} />
         </div>
       ) : null}

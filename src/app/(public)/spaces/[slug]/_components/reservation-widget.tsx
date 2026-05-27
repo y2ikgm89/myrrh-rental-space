@@ -68,6 +68,7 @@ export function ReservationWidget({
         <Badge variant="success">即時予約可</Badge>
       </div>
       <div className="px-8 pb-5 sm:px-10">
+        <p className="mb-2 text-xs text-muted-foreground">料金</p>
         {hourly ? (
           <div className="flex items-baseline gap-x-2">
             <span className="text-3xl font-medium leading-none tabular-nums text-foreground">
