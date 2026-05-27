@@ -52,7 +52,8 @@ paths:
 - **`revise-claude-md` はセッション終了直前** — プロジェクトレベルのプロンプトキャッシュ層、中途変更で以降全ターンの cache が破壊
 - **スキルは必ず Skill ツール経由（Agent ツール不可）** — `plugin:name` / `ns:name` 形式も同様
 - **MCP ツールはセッション開始前に確定** — 途中変更で MCP プレフィックスが変わりキャッシュ破壊
-- **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` deny のため `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式
+- **新規 hook スクリプトは exec form 必須** — MINGW64 で `chmod` deny のため `{"command": "bash", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/script.sh"]}` 形式（Shell form 禁止、詳細は `ops/hooks-patterns.md` §Hook command 形式）
+- **`bash -c` 診断スクリプトは末尾 `exit 0` 必須** — `[ -f ... ] && echo ...` で締めると、最終反復で file 不在時に `[` が exit 1 を返し、`&&` 短絡で last command exit code が 1 となりスクリプト全体が exit 1。並列 tool call all-or-nothing semantics で同 message の他 tool call が **silent cancel** される（実例: 2026-05-27 audit Phase 1 で `find -maxdepth 1 -type d` の最終 dir `zod-patterns/` に対応する top-level `zod-patterns.md` 不在で 5 件の WebFetch が巻き添えキャンセル）。診断系 `bash -c` は末尾 `exit 0` か全 `&&` を `|| true` で締める
 - **path-scoped rule auto-load は context 大量消費** — `.claude/rules/frontend/*.md` は該当ファイル Read 時に system-reminder で一括注入。大規模 plan は context 予算を立て、worktree + rules path Read が多数なら chunk 分割 + session 跨ぎ handoff 判断
 - **Implementer subagent thrashing 後は controller 直接続行が canonical** — 再 dispatch は同じ rule 再注入で再 thrashing。controller は rules 読み込み済 + worktree path キャッシュ効くため efficient
 - **Read 直後 parallel Edit batch は途中で race** — 1 turn で N file Read → 同 turn で N+ Edit parallel は最初の 1-2 件のみ成功。安全策: Edit を sequential、または `replace_all: true` で 1 Edit にまとめる
