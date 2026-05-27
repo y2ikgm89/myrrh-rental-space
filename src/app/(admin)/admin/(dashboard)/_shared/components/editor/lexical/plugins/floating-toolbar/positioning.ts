@@ -53,15 +53,17 @@ export function setFloatingElemPosition(
   const anchorElementRect = anchorElem.getBoundingClientRect();
   const editorScrollerRect = scrollerElem.getBoundingClientRect();
 
-  // scroller 幅を超える toolbar は内部で flex-wrap させて多段化する
-  // (Inspector 開閉や狭い viewport で natural width > scroller width となる
-  //  場合、`overflow-y: auto` 由来の `overflow-x: auto` 化で右端が切れる
-  //  silent bug を防ぐ)。maxWidth を計測前に確定する必要があるため
-  //  floatingElemRect の取得はこの後に行う。
-  const maxFloatingWidth = Math.max(
-    0,
-    editorScrollerRect.width - horizontalOffset * 2,
-  );
+  // scroller の有効描画幅は `clientWidth` で算出する。`getBoundingClientRect().width`
+  // は vertical scrollbar 幅 (~17px) を含むため、`overflow-y: auto` でスクロール
+  // バーが現れる長文編集中はバー幅分だけ toolbar 右端が見切れる silent bug の
+  // 原因になる。`clientWidth` は scrollbar / border 除外のため安全。
+  // - `scrollerInnerWidth`: toolbar の maxWidth 上限
+  // - `scrollerInnerRight`: clamp 用の右端境界 (viewport coord)
+  // safety buffer は horizontalOffset * 2 + 4px (shadow-lg のはみ出し許容分)。
+  const scrollerInnerWidth = scrollerElem.clientWidth;
+  const scrollerInnerRight = editorScrollerRect.left + scrollerInnerWidth;
+  const safetyBuffer = horizontalOffset * 2 + 4;
+  const maxFloatingWidth = Math.max(0, scrollerInnerWidth - safetyBuffer);
   floatingElem.style.maxWidth = `${maxFloatingWidth}px`;
 
   const floatingElemRect = floatingElem.getBoundingClientRect();
@@ -92,9 +94,9 @@ export function setFloatingElemPosition(
     top += floatingElemRect.height + targetRect.height + verticalGap * 2;
   }
 
-  // 左右境界クランプ（scroller 幅を基準に）
-  if (left + floatingElemRect.width > editorScrollerRect.right) {
-    left = editorScrollerRect.right - floatingElemRect.width - horizontalOffset;
+  // 左右境界クランプ（scrollbar 除外の scrollerInnerRight / scrollerRect.left を基準）
+  if (left + floatingElemRect.width > scrollerInnerRight) {
+    left = scrollerInnerRight - floatingElemRect.width - horizontalOffset;
   }
   if (left < editorScrollerRect.left) {
     left = editorScrollerRect.left + horizontalOffset;
