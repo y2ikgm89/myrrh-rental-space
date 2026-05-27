@@ -1,142 +1,65 @@
-# Cloudflare CDN統合ガイド
+# Cloudflare CDN 統合ガイド
 
-> **Note**: このドキュメントには、Next.js 16 PPR + Cloud Run + Cloudflare CDNの統合について記載されています。
-
----
+Next.js PPR + Cloud Run + Cloudflare CDN による 2 層キャッシュ戦略の設定・運用手順。設計の「なぜ」は [`../explanation/caching.md`](../explanation/caching.md) を参照。
 
 ## 概要
 
-このシステムは、Next.js 16 PPR（Partial Pre-Rendering）とCloudflare CDNを組み合わせた2層キャッシュ戦略を採用しています。
+公開ページは `'use cache'` + `cacheLife()` + `cacheTag()` をサーバーサイドキャッシュ層、Cloudflare CDN を補助層に重ねる。コンテンツ更新時は Server Action の `afterSuccess` で `updateTag()`（read-your-own-writes）と `fireAndForget(purgeXxxCache(...))`（CDN パージ）を同時実行する。
 
-### 2層キャッシュ構造
+### 2 層キャッシュ構造
 
-| 層                    | 技術                                       | 役割                    |
-| --------------------- | ------------------------------------------ | ----------------------- |
-| **サーバーサイド**    | `use cache` + `cacheLife()` + `cacheTag()` | 高速化の主役            |
-| **CDN（Cloudflare）** | Cache-Control ヘッダー                     | 補助的役割 + 帯域幅削減 |
+| 層               | 技術                                        | 役割                |
+| ---------------- | ------------------------------------------- | ------------------- |
+| サーバーサイド   | `'use cache'` + `cacheLife` + `cacheTag`    | 高速化の主役        |
+| CDN (Cloudflare) | `Cache-Control` ヘッダー + 自動 cache purge | 帯域幅削減 + 補助層 |
 
-### 期待される効果
-
-| 項目               | 効果        |
-| ------------------ | ----------- |
-| **帯域幅削減**     | 約95%       |
-| **無料枠内PV目安** | 〜50万PV/月 |
-| **TTFB改善**       | 50%以上     |
-| **LCP改善**        | 30%以上     |
-
----
+積極的キャッシュ戦略下の実測目安: Cloud Run 帯域幅約 95% 削減、無料枠内 PV 目安〜50 万 PV/月、TTFB 50% 以上改善、LCP 30% 以上改善。
 
 ## キャッシュ戦略
 
-### 積極的戦略（採用）
-
-公開ページに `public, s-maxage=3600, stale-while-revalidate=3600` を設定し、コンテンツ更新時にCloudflare APIでキャッシュをパージします。
+公開ページは `public, s-maxage=3600, stale-while-revalidate=3600` を設定し、コンテンツ更新時に Cloudflare API でパージする。
 
 ### ページ分類
 
-| 分類                | ページ                                                   | サーバーキャッシュ   | CDNキャッシュ  |
-| ------------------- | -------------------------------------------------------- | -------------------- | -------------- |
-| **PPRベース**       | `/spaces/[slug]`, `/news/[slug]`, `/posts/[...segments]` | `cacheLife('hours')` | 1時間          |
-| **PPRハイブリッド** | `/posts`, `/faq`, `/terms`                               | `cacheLife('hours')` | 1時間          |
-| **動的**            | `/`, `/spaces`, `/news`, `/contact`, `/about`            | なし                 | 1時間          |
-| **認証必須**        | `/admin/*`, `/reservation/*`                             | なし                 | キャッシュ禁止 |
-| **API**             | `/api/*`                                                 | なし                 | キャッシュ禁止 |
+| 分類             | ページ                                                   | サーバーキャッシュ   | CDN キャッシュ |
+| ---------------- | -------------------------------------------------------- | -------------------- | -------------- |
+| PPR ベース       | `/spaces/[slug]`, `/news/[slug]`, `/posts/[...segments]` | `cacheLife('hours')` | 1 時間         |
+| PPR ハイブリッド | `/posts`, `/faq`, `/terms`                               | `cacheLife('hours')` | 1 時間         |
+| 動的             | `/`, `/spaces`, `/news`, `/contact`                      | なし                 | 1 時間         |
+| 認証必須         | `/admin/*`, `/reservation/*`                             | なし                 | キャッシュ禁止 |
+| API              | `/api/*`                                                 | なし                 | キャッシュ禁止 |
 
----
+### Next.js 設定
 
-## Next.js設定
+`Cache-Control` ヘッダーの SSoT は [`next.config.ts`](../../next.config.ts) の `headers()` 関数。route group ごとに `public, s-maxage=3600, stale-while-revalidate=3600`（公開ページ）/ `private, no-cache, no-store, must-revalidate`（管理 / 予約）/ `private, no-cache`（API）が割り当てられる。`'use cache'` + `cacheLife` 等の実装パターン詳細は [`../explanation/caching.md`](../explanation/caching.md) と Claude Code 用 path-scoped rule `.claude/rules/server-actions/use-cache.md` を参照。
 
-### Cache-Control ヘッダー（next.config.ts）
+## Cloudflare 設定
 
-```typescript
-async headers() {
-  return [
-    // 管理画面（キャッシュ禁止）
-    {
-      source: '/admin/:path*',
-      headers: [
-        { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
-      ],
-    },
-    // 予約ページ（キャッシュ禁止）
-    {
-      source: '/reservation/:path*',
-      headers: [
-        { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
-      ],
-    },
-    // API Routes（キャッシュ禁止）
-    {
-      source: '/api/:path*',
-      headers: [
-        { key: 'Cache-Control', value: 'private, no-cache' },
-      ],
-    },
-    // 公開ページ（積極的キャッシュ）
-    {
-      source: '/:path*',
-      headers: [
-        { key: 'Cache-Control', value: 'public, s-maxage=3600, stale-while-revalidate=3600' },
-      ],
-    },
-  ]
-}
-```
-
-### サーバーサイドキャッシュ（use cache）
-
-PPRページでは `use cache` ディレクティブと `cacheLife()` を使用：
-
-```typescript
-// src/app/(public)/spaces/[slug]/page.tsx
-import { cacheLife, cacheTag } from "next/cache";
-
-export default async function SpacePage({ params }: Props) {
-  "use cache";
-  cacheLife("hours");
-  const { slug } = await params;
-  cacheTag("space", `space:${slug}`);
-
-  // ... コンポーネントの実装
-}
-```
-
----
-
-## Cloudflare設定（管理画面）
-
-### 設定手順
-
-1. **管理画面** → **設定** → **外部サービス連携** → **Cloudflare**
-2. **Zone ID** と **API Token** を入力
-3. **接続テスト** で確認
-4. **保存**
-
-### Cloudflare APIトークン作成手順
+### API トークン作成
 
 1. Cloudflare Dashboard → My Profile → API Tokens
 2. Create Token → Custom token
-3. **Permissions**: Zone > Cache Purge > Purge
-4. **Zone Resources**: Include > Specific zone > your-domain.com
+3. Permissions: `Zone > Cache Purge > Purge`
+4. Zone Resources: `Include > Specific zone > <対象ドメイン>`
 5. Create Token
 
-### 必要な権限
+### 管理画面での登録
 
-| 項目               | 設定                                     |
-| ------------------ | ---------------------------------------- |
-| **Permissions**    | Zone > Cache Purge > Purge               |
-| **Zone Resources** | Include > Specific zone > (対象ドメイン) |
+1. 管理画面 → 設定 → 外部サービス連携 → Cloudflare
+2. Zone ID と API Token を入力
+3. 接続テストで確認
+4. 保存
 
----
+Site / Zone Key は DB の `Settings` テーブルに AES-256-GCM で暗号化保存される（環境変数には置かない）。
 
 ## 自動キャッシュパージ
 
 ### 仕組み
 
-コンテンツを更新すると、Server Actionsが自動的に以下を実行：
+コンテンツ更新時に Server Action の `afterSuccess` が以下を同時実行する。
 
-1. `revalidateTag()` でサーバーキャッシュを無効化
-2. `purgeXxxCache()` でCloudflare CDNキャッシュをパージ
+1. `updateTag(CACHE_TAGS.XXX)` でサーバーキャッシュを即時無効化（Server Actions では `updateTag` が canonical、Route Handler / cron / webhook は `revalidateTag(tag, CACHE_LIFE.MAX)` を使う）
+2. `fireAndForget(purgeXxxCache(...))` で Cloudflare CDN キャッシュをパージ（非ブロッキング、`@/shared/lib/async-utils`）
 
 ### パージ関数
 
@@ -169,167 +92,79 @@ export async function updateSpace(id: string, input: UpdateSpaceInput) {
     resourceId: id,
     execute: async () => updateSpaceCommand(id, input),
     afterSuccess: () => {
-      // Server Action: read-your-own-writes 用に updateTag (revalidateTag は Route Handler 用)
       updateTag(CACHE_TAGS.SPACES);
-      // Cloudflare CDN キャッシュパージ（fireAndForget で非ブロッキング）
       fireAndForget(purgeSpaceCache(id), { operation: "purgeSpaceCache" });
     },
   });
 }
 ```
 
-詳細は [`.claude/rules/server-actions/implementation.md`](../../.claude/rules/server-actions/implementation.md) §`executeAdminMutationResult` 実行順序契約。
+実行順序契約は [`.claude/rules/server-actions/implementation.md`](../../.claude/rules/server-actions/implementation.md) §`executeAdminMutationResult` 実行順序契約を参照。`void purgeXxxCache()` の直接利用は禁止（`fireAndForget` 経由が SSoT、`unhandled rejection` 対策のため）。
 
-### Fire-and-Forget パターン
+## Cloudflare Dashboard 設定
 
-`void purgeXxxCache()` を使用して非同期でパージを実行します。これにより：
+### DNS
 
-- ユーザーへのレスポンスがブロックされない
-- パージ失敗時もメイン処理に影響しない
-- ログにパージ結果が記録される
-
----
-
-## Cloudflare Dashboard設定
-
-### DNS設定
-
-1. Cloudflareダッシュボードで「Add a Site」をクリック
+1. Cloudflare ダッシュボードで「Add a Site」をクリック
 2. ドメイン名を入力
-3. Cloud RunのIPアドレスでAレコードまたはCNAMEレコードを追加
-4. **プロキシモードを有効にする**（オレンジの雲アイコン）
+3. Cloud Run のエンドポイントへ A / CNAME レコードを追加（Cloud Run の正本 URL を CNAME 推奨）
+4. プロキシモードを有効化（オレンジ雲アイコン）
 
-### SSL/TLS設定
+### SSL/TLS
 
-| 設定                    | 推奨値        |
-| ----------------------- | ------------- |
-| **SSL/TLSモード**       | Full (strict) |
-| **Always Use HTTPS**    | 有効          |
-| **Minimum TLS Version** | TLS 1.2       |
+| 設定                | 推奨値        |
+| ------------------- | ------------- |
+| SSL/TLS モード      | Full (Strict) |
+| Always Use HTTPS    | 有効          |
+| Minimum TLS Version | TLS 1.2 以上  |
 
-### Cache Rules設定（推奨）
+### Cache Rules
 
-Cloudflare Dashboard → Caching → Configuration → Cache Rules
+Cloudflare Dashboard → Caching → Configuration → Cache Rules で以下を設定する（先頭が高優先）。
 
-#### 1. 管理画面・予約ページ（キャッシュ禁止）
-
-- **URL**: `/admin/*` OR `/reservation/*`
-- **Cache Status**: Bypass
-
-#### 2. API Routes（キャッシュ禁止）
-
-- **URL**: `/api/*`
-- **Cache Status**: Bypass
-
-#### 3. 静的アセット
-
-- **URL**: `/_next/static/*`
-- **Cache Status**: Cache
-- **Edge TTL**: Respect origin headers
-
-#### 4. 公開ページ
-
-- **URL**: `/*`
-- **Cache Status**: Cache
-- **Edge TTL**: Respect origin headers
-
----
+| 優先 | URL               | Cache Status           | 補足                                      |
+| ---- | ----------------- | ---------------------- | ----------------------------------------- |
+| 1    | `/admin/*`        | Bypass                 | 管理画面（CDN キャッシュ禁止）            |
+| 2    | `/reservation/*`  | Bypass                 | 予約ページ（CDN キャッシュ禁止）          |
+| 3    | `/api/*`          | Bypass                 | API Routes（CDN キャッシュ禁止）          |
+| 4    | `/_next/static/*` | Cache + Respect origin | 静的アセット（Next.js が長期 TTL を発行） |
+| 5    | `/*`              | Cache + Respect origin | 公開ページ                                |
 
 ## トラブルシューティング
 
 ### キャッシュが更新されない
 
-**原因**: Cloudflare APIの接続問題
+1. 管理画面で Cloudflare 接続テストを実行
+2. Zone ID と API Token を確認
+3. ログで `Cloudflare cache purge failed` を検索
 
-**解決策**:
+### パージ API がエラー
 
-1. 管理画面でCloudflare接続テストを実行
-2. Zone IDとAPI Tokenが正しいか確認
-3. ログで `Cloudflare cache purge failed` を確認
+1. Cloudflare Dashboard で API トークン権限を確認
+2. `Zone > Cache Purge > Purge` 権限の有無を確認
+3. Zone Resources が対象ドメインを指しているか確認
 
-### パージAPIがエラーを返す
+### コンテンツ更新が反映遅延
 
-**原因**: APIトークンの権限不足
+`stale-while-revalidate` の挙動（最大 1 時間まで古いコンテンツが配信される）。即時反映が必要な場合は Cloudflare Dashboard → Caching → Configuration → Purge Cache で手動パージする。
 
-**解決策**:
+### Cloudflare 未設定環境での挙動
 
-1. Cloudflare DashboardでAPIトークンの権限を確認
-2. `Zone > Cache Purge > Purge` 権限があるか確認
-3. Zone Resourcesが正しいドメインを指しているか確認
+管理画面で Cloudflare 設定が未登録の場合、CDN パージ処理はスキップされる。サーバーサイドキャッシュ（Server Action の `updateTag` / Route Handler の `revalidateTag`）は正常に動作する。
 
-### コンテンツ更新が遅延する
+## モニタリング
 
-**原因**: stale-while-revalidateによる遅延
+| 確認項目           | 場所                                                          |
+| ------------------ | ------------------------------------------------------------- |
+| キャッシュヒット率 | Cloudflare Dashboard → Analytics                              |
+| パージログ         | アプリケーションログで `Cloudflare cache purged` を検索       |
+| パージエラー       | アプリケーションログで `Cloudflare cache purge failed` を検索 |
 
-**解決策**:
+## 関連
 
-- これは正常な動作です
-- 更新後、最大で `stale-while-revalidate` の時間（1時間）だけ古いコンテンツが表示される可能性があります
-- 即座に反映が必要な場合は、Cloudflare Dashboardで手動パージを実行
-
-### 手動キャッシュパージ
-
-1. Cloudflare Dashboard → Caching → Configuration → Purge Cache
-2. **Purge Everything**: 全キャッシュを削除
-3. **Custom Purge**: 特定のURLを指定してパージ
-
----
-
-## 運用ガイド
-
-### 通常運用
-
-- コンテンツ更新時は自動的にキャッシュがパージされます
-- 特別な操作は不要です
-
-### 緊急時の対応
-
-1. **Cloudflare Dashboardで手動パージ**
-   - Caching → Configuration → Purge Cache → Purge Everything
-
-2. **Cloudflare設定が未設定の場合**
-   - 管理画面でCloudflare設定が未設定の場合、パージ処理はスキップされます
-   - サーバーサイドキャッシュ（`revalidateTag`）は正常に動作します
-
-### モニタリング
-
-| 確認項目               | 場所                                                          |
-| ---------------------- | ------------------------------------------------------------- |
-| **キャッシュヒット率** | Cloudflare Dashboard → Analytics                              |
-| **パージログ**         | アプリケーションログで `Cloudflare cache purged` を検索       |
-| **パージエラー**       | アプリケーションログで `Cloudflare cache purge failed` を検索 |
-
----
-
-## コスト最適化
-
-### Cloudflare無料プラン
-
-| 機能                | 利用可否                       |
-| ------------------- | ------------------------------ |
-| **帯域幅**          | 無制限                         |
-| **Cache Purge API** | 利用可能（1,000リクエスト/月） |
-| **DDoS保護**        | 基本機能あり                   |
-| **Bot Fight Mode**  | 利用可能                       |
-| **Cache Rules**     | 10ルールまで                   |
-
-### Cloud Run帯域幅削減
-
-- **削減率**: 約95%（積極的キャッシュ戦略）
-- **無料枠内PV目安**: 〜50万PV/月
-
----
-
-## 参考資料
-
-### プロジェクトドキュメント
-
-- [`AGENTS.md`](../../AGENTS.md) - Codex 向けプロジェクト概要
-- [`deploy.md`](./deploy.md) - デプロイメント手順
-- [`../explanation/`](../explanation/) - システムアーキテクチャ
-
-### 外部リソース
-
-- [Next.js Caching Documentation](https://nextjs.org/docs/app/building-your-application/caching)
+- [`../explanation/caching.md`](../explanation/caching.md) — キャッシュ戦略の設計判断
+- [`./deploy.md`](./deploy.md) — Cloud Run デプロイ手順
+- [`./harden-protection.md`](./harden-protection.md) — Cloudflare DDoS / Turnstile / WAF
 - [Cloudflare Cache Purge API](https://developers.cloudflare.com/cache/how-to/purge-cache/purge-by-url/)
 - [Cloudflare Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/)
+- [Next.js Caching](https://nextjs.org/docs/app/building-your-application/caching)

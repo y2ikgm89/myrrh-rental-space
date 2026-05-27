@@ -22,23 +22,23 @@ myrrh-rental-space/
 
 ### アーキテクチャ
 
-3-stage multi-stage build。共通 `base` ステージで DRY:
+3-stage multi-stage build。共通 `base` ステージで DRY 化する。
 
-```
-base (oven/bun:1.3.x-alpine)
+```text
+base (oven/bun:<version>-alpine)
 ├── deps          → 依存インストール + Prisma generate
 ├── builder-base  → ソース + 依存（ビルド準備）
 ├── builder       → type-check + lint + build（standalone、Secret で SA 鍵注入）
 └── runner        → 同一 Bun 系イメージ、`bun server.js` で standalone 実行
 ```
 
-### 実際の Dockerfile
+### Dockerfile 抜粋
 
-正本はリポジトリルートの `Dockerfile`。ビルド・本番実行とも **Bun**。
+実バージョンと最新の正本はリポジトリルートの [`Dockerfile`](../../Dockerfile)（`package.json#packageManager` と同一の Bun バージョンを使用）。ビルド・本番実行とも Bun ランタイム。
 
 ```dockerfile
 # syntax=docker.io/docker/dockerfile:1
-FROM oven/bun:1.3.13-alpine AS base
+FROM oven/bun:<version>-alpine AS base
 WORKDIR /app
 # ... deps, builder-base, builder ...
 

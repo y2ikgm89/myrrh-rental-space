@@ -1,8 +1,30 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
+import {
+  IconBolt,
+  IconCalendarOff,
+  IconCreditCardOff,
+} from "@tabler/icons-react";
+import { Badge } from "@/public/components/design-system/badge";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+
+// `formatTotal` の戻り値（例: `¥550（税込）`）を hero typography 用に
+// price / tax-label に分離するローカル helper。`both` mode の
+// `¥605（税込）/ ¥550（税抜）` は対象外 (null を返し caller が raw 表示にフォールバック)。
+function splitTaxedPrice(
+  formatted: string,
+): { readonly value: string; readonly taxLabel: string | null } | null {
+  if (formatted.includes("/")) return null;
+  const match = /^(.+?)（(税込|税抜)）$/.exec(formatted);
+  if (match) {
+    const [, value, taxLabel] = match;
+    if (value && taxLabel) return { value, taxLabel };
+  }
+  return { value: formatted, taxLabel: null };
+}
 
 interface ReservationWidgetProps {
   readonly spaceId: string;
@@ -12,55 +34,131 @@ interface ReservationWidgetProps {
 }
 
 /**
- * ReservationWidget — Variant E (Booking 構造 × Editorial brand) 適用済 SSoT。
+ * ReservationWidget — spaces 詳細ページのサイドバー予約サマリー + CTA パネル
  *
- * - border-y accent (Kinfolk hairline) + 中央寄せ
- * - 価格は **sans + tabular-nums** (Stripe / Airbnb / Booking.com / Shopify と
- *   揃えた業界標準。Cormorant Garamond の old-style figures は数値スキャンに
- *   弱いため数字系では使わない、Editorial Magazine 通念とも整合)
- * - Reservation / Inquiry buttons (uppercase tracking-[0.18em], sharp edge, min-h-12 / 11)
- * - 即予約 USP 3 列 (accent uppercase)
+ * EventInfoPanel と視覚言語を統一: `border border-accent bg-background` 4 辺枠 +
+ * `— Reservation —` eyebrow + Status Badge + 価格 hero + `<dl>` rhythm +
+ * sharp-edge CTA。Airbnb / Vrbo / Booking listing widget の業界標準パターン
+ * (価格 hero + 構造化条件リスト + 予約 CTA) に整合。
+ *
+ * 1. **Eyebrow** — "— Reservation —" uppercase tracking (Kinfolk hairline)
+ * 2. **Status band** — Badge「即時予約可」(events `申込受付中` と同 success variant)
+ * 3. **Price hero** — 時間料金 + 日料金 (sans + tabular-nums、Stripe / Airbnb 標準)
+ * 4. **Detail list** — 予約 / キャンセル / 決済 の USP を `<dl>` で構造化
+ * 5. **CTA block** — Reserve this space (primary) + Inquiry (secondary)
+ *
+ * 外側の `<aside lg:sticky>` は呼び出し側 (page.tsx) で wrap される。
  */
 export function ReservationWidget({
   spaceId,
   hourlyPrice,
   dailyPrice,
 }: ReservationWidgetProps) {
-  const { formatUnit } = useFormatPrice();
+  const { formatTotal, formatUnit } = useFormatPrice();
+  const hourly = splitTaxedPrice(formatTotal(hourlyPrice));
+  const daily =
+    dailyPrice != null ? splitTaxedPrice(formatTotal(dailyPrice)) : null;
+
   return (
-    <div className="border border-accent bg-background py-6 text-center">
-      <p className="text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground">
+    <div className="border border-accent bg-background">
+      <p className="px-8 pt-7 text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground sm:px-10">
         — Reservation —
       </p>
-      <p className="mt-3 text-3xl font-medium leading-none tabular-nums text-foreground">
-        {formatUnit(hourlyPrice, "/h")}
-      </p>
-      {dailyPrice != null ? (
-        <p className="mt-1 text-sm tabular-nums text-muted-foreground">
-          / {formatUnit(dailyPrice, "/day")}
-        </p>
-      ) : null}
-
-      <div className="mt-6 space-y-1.5 text-[0.7rem] uppercase tracking-[0.15em] text-accent">
-        <p>＋ 即時予約</p>
-        <p>＋ 24h 前まで無料キャンセル</p>
-        <p>＋ 事前決済不要</p>
+      <div className="px-8 pb-5 pt-4 sm:px-10">
+        <Badge variant="success">即時予約可</Badge>
       </div>
-
-      <div className="mt-6 space-y-2 px-6">
+      <div className="px-8 pb-5 sm:px-10">
+        {hourly ? (
+          <div className="flex items-baseline gap-x-2">
+            <span className="text-3xl font-medium leading-none tabular-nums text-foreground">
+              {hourly.value}
+            </span>
+            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              / hour
+            </span>
+            {hourly.taxLabel ? (
+              <span className="text-xs text-muted-foreground">
+                （{hourly.taxLabel}）
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-3xl font-medium leading-none tabular-nums text-foreground">
+            {formatUnit(hourlyPrice, "/h")}
+          </p>
+        )}
+        {daily ? (
+          <div className="mt-2 flex items-baseline gap-x-2">
+            <span className="text-xl font-medium leading-none tabular-nums text-foreground">
+              {daily.value}
+            </span>
+            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              / day
+            </span>
+            {daily.taxLabel ? (
+              <span className="text-xs text-muted-foreground">
+                （{daily.taxLabel}）
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      <dl className="px-8 sm:px-10">
+        <DetailRow
+          icon={<IconBolt className="h-4 w-4" aria-hidden="true" />}
+          label="予約"
+        >
+          即時予約成立
+        </DetailRow>
+        <DetailRow
+          icon={<IconCalendarOff className="h-4 w-4" aria-hidden="true" />}
+          label="キャンセル"
+        >
+          24 時間前まで無料
+        </DetailRow>
+        <DetailRow
+          icon={<IconCreditCardOff className="h-4 w-4" aria-hidden="true" />}
+          label="決済"
+        >
+          事前決済不要
+        </DetailRow>
+      </dl>
+      <div className="space-y-2 px-8 pb-7 sm:px-10">
         <Link
           href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
-          className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-7 py-3 text-xs uppercase tracking-[0.18em] text-background transition-opacity hover:opacity-90"
+          className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-xs uppercase tracking-[0.18em] text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Reserve this space
         </Link>
         <Link
           href="/contact"
-          className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-5 py-2.5 text-xs uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-6 text-xs uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Inquiry
         </Link>
       </div>
     </div>
+  );
+}
+
+function DetailRow({
+  icon,
+  label,
+  children,
+}: {
+  readonly icon: ReactNode;
+  readonly label: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <>
+      <dt className="flex items-center gap-2 pt-5 text-xs text-muted-foreground">
+        <span className="text-accent">{icon}</span>
+        <span>{label}</span>
+      </dt>
+      <dd className="mb-5 mt-1.5 text-sm leading-relaxed text-foreground last:mb-7">
+        {children}
+      </dd>
+    </>
   );
 }

@@ -76,17 +76,12 @@ export function EventInfoPanel({
   registerAnchorId,
 }: EventInfoPanelProps): ReactElement {
   const isSidebar = variant === "sidebar";
-
-  return (
-    <aside
-      aria-label="イベント情報"
-      className={cn(
-        "border border-accent bg-background",
-        isSidebar
-          ? "lg:sticky lg:top-[calc(var(--header-height)+2rem)]"
-          : "mb-12",
-      )}
-    >
+  const wrapperClassName = cn(
+    "border border-accent bg-background",
+    isSidebar ? null : "mb-12",
+  );
+  const body = (
+    <>
       <p className="px-8 pt-7 text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground sm:px-10">
         — Event —
       </p>
@@ -138,6 +133,15 @@ export function EventInfoPanel({
           </Link>
         </div>
       ) : null}
+    </>
+  );
+
+  if (isSidebar) {
+    return <div className={wrapperClassName}>{body}</div>;
+  }
+  return (
+    <aside aria-label="イベント情報" className={wrapperClassName}>
+      {body}
     </aside>
   );
 }
