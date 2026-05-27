@@ -25,7 +25,6 @@ import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import {
   EventInfoPanel,
   type EventInfoPanelVenue,
@@ -217,26 +216,9 @@ export default async function EventDetailPage({
         ]}
         hero={
           <ArticleHeader
+            align="center"
             eyebrow="Event"
             title={event.title}
-            meta={
-              <>
-                <time
-                  dateTime={startDateIso}
-                  className="font-heading text-sm font-light"
-                >
-                  {formatEventDateTimeRange(event.startTime, event.endTime)}
-                </time>
-                {venueName ? (
-                  <>
-                    <span aria-hidden="true" className="text-border">
-                      ·
-                    </span>
-                    <span>{venueName}</span>
-                  </>
-                ) : null}
-              </>
-            }
             {...(event.thumbnailUrl && {
               media: (
                 <ImageFrame
