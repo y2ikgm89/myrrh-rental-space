@@ -5,7 +5,15 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { Button, SubmitButton } from "@/admin/components/ui";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
+import {
+  Button,
+  SubmitButton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/admin/components/ui";
 import { createEventAction, updateEventAction } from "@/admin/actions/event";
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -39,6 +47,40 @@ type EventFormProps = {
   spaces: SpaceOption[];
 };
 
+const EVENT_EDIT_TAB_VALUES = [
+  "basic",
+  "schedule",
+  "publish",
+  "tickets",
+  "location",
+  "seo",
+] as const satisfies readonly [string, ...string[]];
+
+type EventEditTabValue = (typeof EVENT_EDIT_TAB_VALUES)[number];
+
+const EVENT_EDIT_TAB_VALUE_SET: ReadonlySet<string> = new Set(
+  EVENT_EDIT_TAB_VALUES,
+);
+
+function isEventEditTabValue(value: string): value is EventEditTabValue {
+  return EVENT_EDIT_TAB_VALUE_SET.has(value);
+}
+
+const EVENT_EDIT_TAB_LABELS: Record<EventEditTabValue, string> = {
+  basic: "基本情報",
+  schedule: "日時",
+  publish: "本文・公開",
+  tickets: "チケット",
+  location: "会場",
+  seo: "SEO",
+};
+
+type ConformFieldErrors = readonly string[] | string[] | undefined;
+
+function fieldHasErrors(errors: ConformFieldErrors): boolean {
+  return Array.isArray(errors) && errors.length > 0;
+}
+
 /**
  * DB の Lexical JSON（オブジェクト形式）を Editor 初期値用の文字列に変換。
  */
@@ -54,6 +96,14 @@ export function EventForm({
   spaces,
 }: EventFormProps): ReactElement {
   const isEdit = Boolean(event);
+
+  // タブ state（イベント管理ハブの `tab` と衝突しないよう `section` を使用）
+  const [activeSection, setActiveSection] = useQueryState(
+    "section",
+    parseAsStringLiteral(EVENT_EDIT_TAB_VALUES)
+      .withDefault("basic")
+      .withOptions({ history: "push", shallow: true }),
+  );
 
   // Controlled state（hidden input 経由で送信）
   const [contentJson, setContentJson] = useState<string>(() =>
@@ -142,6 +192,39 @@ export function EventForm({
         },
   });
 
+  // タブごとのエラー数（バッジ表示用）
+  const tabErrorCount: Record<EventEditTabValue, number> = {
+    basic: [fields.title, fields.slug].filter((f) => fieldHasErrors(f.errors))
+      .length,
+    schedule: [fields.startTime, fields.endTime, fields.capacity].filter((f) =>
+      fieldHasErrors(f.errors),
+    ).length,
+    publish: [
+      fields.descriptionJson,
+      fields.thumbnailUrl,
+      fields.registrationDeadline,
+      fields.status,
+      fields.registrationOpen,
+    ].filter((f) => fieldHasErrors(f.errors)).length,
+    tickets: [fields.tickets].filter((f) => fieldHasErrors(f.errors)).length,
+    location: [fields.locationId, fields.spaceId, fields.addressDetail].filter(
+      (f) => fieldHasErrors(f.errors),
+    ).length,
+    seo: [
+      fields.ogpTitle,
+      fields.ogpDescription,
+      fields.ogpImageUrl,
+      fields.metaDescription,
+      fields.metaKeywords,
+    ].filter((f) => fieldHasErrors(f.errors)).length,
+  };
+
+  const onTabChange = (value: string) => {
+    if (isEventEditTabValue(value)) {
+      void setActiveSection(value);
+    }
+  };
+
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
       {/* hidden inputs (controlled state → FormData) */}
@@ -184,86 +267,156 @@ export function EventForm({
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-6">
+      <Tabs
+        value={activeSection}
+        onValueChange={onTabChange}
+        className="space-y-4"
+      >
+        <TabsList className="h-auto flex-wrap gap-1">
+          {EVENT_EDIT_TAB_VALUES.map((tab) => {
+            const errorCount = tabErrorCount[tab];
+            return (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="flex items-center gap-1.5"
+              >
+                {EVENT_EDIT_TAB_LABELS[tab]}
+                {errorCount > 0 && (
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-medium text-destructive-foreground">
+                    {errorCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        {/* ============ 基本情報 ============ */}
+        <TabsContent
+          value="basic"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <EventBasicFields fields={fields} isPending={isPending} />
+        </TabsContent>
+
+        {/* ============ 日時 ============ */}
+        <TabsContent
+          value="schedule"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <EventScheduleFields fields={fields} isPending={isPending} />
-        </div>
+        </TabsContent>
 
-        <EventPublishFields
-          fields={fields}
-          isPending={isPending}
-          status={status}
-          onStatusChange={setStatus}
-          registrationOpen={registrationOpen}
-          onRegistrationOpenChange={setRegistrationOpen}
-          contentJson={contentJson}
-          onContentJsonChange={setContentJson}
-          thumbnailUrl={thumbnailUrl}
-          onThumbnailUrlChange={setThumbnailUrl}
-        />
-      </div>
+        {/* ============ 本文・公開 ============ */}
+        <TabsContent
+          value="publish"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <EventPublishFields
+            fields={fields}
+            isPending={isPending}
+            status={status}
+            onStatusChange={setStatus}
+            registrationOpen={registrationOpen}
+            onRegistrationOpenChange={setRegistrationOpen}
+            contentJson={contentJson}
+            onContentJsonChange={setContentJson}
+            thumbnailUrl={thumbnailUrl}
+            onThumbnailUrlChange={setThumbnailUrl}
+          />
+        </TabsContent>
 
-      <TicketsField
-        tickets={tickets}
-        onChange={setTickets}
-        errors={fields.tickets.errors ?? undefined}
-        isPending={isPending}
-      />
+        {/* ============ チケット ============ */}
+        <TabsContent
+          value="tickets"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <TicketsField
+            tickets={tickets}
+            onChange={setTickets}
+            errors={fields.tickets.errors ?? undefined}
+            isPending={isPending}
+          />
+        </TabsContent>
 
-      <EventLocationSpaceSelector
-        fields={fields}
-        isPending={isPending}
-        locations={locations}
-        spaces={spaces}
-        locationId={locationId}
-        spaceId={spaceId}
-        onLocationChange={(nextLocationId) => {
-          setLocationId(nextLocationId);
-          if (spaceId) {
-            const currentSpace = spaces.find((s) => s.id === spaceId);
-            if (!currentSpace || currentSpace.locationId !== nextLocationId) {
-              setSpaceId(null);
-            }
-          }
-        }}
-        onSpaceChange={(nextSpaceId) => {
-          setSpaceId(nextSpaceId);
-          if (nextSpaceId) {
-            const selected = spaces.find((s) => s.id === nextSpaceId);
-            if (selected && locationId !== selected.locationId) {
-              setLocationId(selected.locationId);
-            }
-          }
-        }}
-      />
+        {/* ============ 会場 ============ */}
+        <TabsContent
+          value="location"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <EventLocationSpaceSelector
+            fields={fields}
+            isPending={isPending}
+            locations={locations}
+            spaces={spaces}
+            locationId={locationId}
+            spaceId={spaceId}
+            onLocationChange={(nextLocationId) => {
+              setLocationId(nextLocationId);
+              if (spaceId) {
+                const currentSpace = spaces.find((s) => s.id === spaceId);
+                if (
+                  !currentSpace ||
+                  currentSpace.locationId !== nextLocationId
+                ) {
+                  setSpaceId(null);
+                }
+              }
+            }}
+            onSpaceChange={(nextSpaceId) => {
+              setSpaceId(nextSpaceId);
+              if (nextSpaceId) {
+                const selected = spaces.find((s) => s.id === nextSpaceId);
+                if (selected && locationId !== selected.locationId) {
+                  setLocationId(selected.locationId);
+                }
+              }
+            }}
+          />
+        </TabsContent>
 
-      <EventSeoFields
-        fields={{
-          ogpImageUrl: asTypedField<string | null | undefined>(
-            fields.ogpImageUrl,
-          ),
-          ogpTitle: asTypedField<string | null | undefined>(fields.ogpTitle),
-          ogpDescription: asTypedField<string | null | undefined>(
-            fields.ogpDescription,
-          ),
-          metaDescription: asTypedField<string | null | undefined>(
-            fields.metaDescription,
-          ),
-          metaKeywords: asTypedField<string | null | undefined>(
-            fields.metaKeywords,
-          ),
-        }}
-        isPending={isPending}
-        ogpImageUrl={ogpImageUrl}
-        onOgpImageUrlChange={setOgpImageUrl}
-        defaults={{
-          ogpTitle: event?.ogpTitle ?? "",
-          ogpDescription: event?.ogpDescription ?? "",
-          metaDescription: event?.metaDescription ?? "",
-          metaKeywords: event?.metaKeywords ?? "",
-        }}
-      />
+        {/* ============ SEO ============ */}
+        <TabsContent
+          value="seo"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <EventSeoFields
+            fields={{
+              ogpImageUrl: asTypedField<string | null | undefined>(
+                fields.ogpImageUrl,
+              ),
+              ogpTitle: asTypedField<string | null | undefined>(
+                fields.ogpTitle,
+              ),
+              ogpDescription: asTypedField<string | null | undefined>(
+                fields.ogpDescription,
+              ),
+              metaDescription: asTypedField<string | null | undefined>(
+                fields.metaDescription,
+              ),
+              metaKeywords: asTypedField<string | null | undefined>(
+                fields.metaKeywords,
+              ),
+            }}
+            isPending={isPending}
+            ogpImageUrl={ogpImageUrl}
+            onOgpImageUrlChange={setOgpImageUrl}
+            defaults={{
+              ogpTitle: event?.ogpTitle ?? "",
+              ogpDescription: event?.ogpDescription ?? "",
+              metaDescription: event?.metaDescription ?? "",
+              metaKeywords: event?.metaKeywords ?? "",
+            }}
+          />
+        </TabsContent>
+      </Tabs>
 
       <div className="flex justify-end gap-4">
         <Button variant="outline" asChild>
