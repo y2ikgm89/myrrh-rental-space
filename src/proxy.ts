@@ -217,19 +217,16 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     if (pathname.startsWith("/api/cron")) {
       const cronSecret = serverEnv.CRON_SECRET;
 
-      // 本番では CRON_SECRET 必須（validateProductionEnv で起動時チェック済み）
-      // 非本番でも未設定時は拒否（staging 環境のセキュリティ確保）
+      // fail-closed: CRON_SECRET 未設定時は全環境で 401
+      // 本番は validateProductionEnv が起動時に throw、dev/staging はここで拒否
+      // (Vercel Cron / Cloud Scheduler / GitHub Actions の業界標準)
       if (!cronSecret) {
-        if (process.env["NODE_ENV"] === "production") {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        // 開発環境: CRON_SECRET 未設定時のみ認証スキップ
-      } else {
-        const authHeader = req.headers.get("authorization");
-        const expected = `Bearer ${cronSecret}`;
-        if (!authHeader || !timingSafeEqual(authHeader, expected)) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const authHeader = req.headers.get("authorization");
+      const expected = `Bearer ${cronSecret}`;
+      if (!authHeader || !timingSafeEqual(authHeader, expected)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
