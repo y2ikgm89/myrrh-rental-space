@@ -1,6 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
-import { IconCalendar, IconMapPin, IconUsers } from "@tabler/icons-react";
+import {
+  IconCalendar,
+  IconCoin,
+  IconMapPin,
+  IconUsers,
+} from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import {
   formatEventDate,
@@ -85,7 +90,12 @@ export function EventInfoPanel({
       </div>
       {tickets.length > 0 ? (
         <div className="px-8 pb-5 sm:px-10">
-          <p className="mb-2 text-xs text-muted-foreground">参加費</p>
+          <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="text-accent">
+              <IconCoin className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span>参加費</span>
+          </p>
           <TicketHeroList tickets={tickets} />
         </div>
       ) : null}
