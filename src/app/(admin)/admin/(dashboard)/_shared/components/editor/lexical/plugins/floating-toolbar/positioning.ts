@@ -50,9 +50,21 @@ export function setFloatingElemPosition(
     return;
   }
 
-  const floatingElemRect = floatingElem.getBoundingClientRect();
   const anchorElementRect = anchorElem.getBoundingClientRect();
   const editorScrollerRect = scrollerElem.getBoundingClientRect();
+
+  // scroller 幅を超える toolbar は内部で flex-wrap させて多段化する
+  // (Inspector 開閉や狭い viewport で natural width > scroller width となる
+  //  場合、`overflow-y: auto` 由来の `overflow-x: auto` 化で右端が切れる
+  //  silent bug を防ぐ)。maxWidth を計測前に確定する必要があるため
+  //  floatingElemRect の取得はこの後に行う。
+  const maxFloatingWidth = Math.max(
+    0,
+    editorScrollerRect.width - horizontalOffset * 2,
+  );
+  floatingElem.style.maxWidth = `${maxFloatingWidth}px`;
+
+  const floatingElemRect = floatingElem.getBoundingClientRect();
 
   let top = targetRect.top - floatingElemRect.height - verticalGap;
   let left = targetRect.left - horizontalOffset;

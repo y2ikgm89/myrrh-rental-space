@@ -252,7 +252,7 @@ function FloatingToolbar({
   return (
     <div
       ref={popupRef}
-      className="absolute z-50 flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg"
+      className="absolute z-50 flex flex-wrap items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg"
       style={{
         top: 0,
         left: 0,
