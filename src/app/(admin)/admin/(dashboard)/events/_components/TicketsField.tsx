@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconTemplate } from "@tabler/icons-react";
 import {
   Button,
   Input,
@@ -11,6 +11,12 @@ import {
   CardHeader,
   CardTitle,
   Switch,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/admin/components/ui";
 import {
   createDefaultTicket,
@@ -18,9 +24,14 @@ import {
 } from "@/shared/domain/events/ticket-types";
 
 /**
- * 複数チケット種別の入力 UI（Peatix / Eventbrite 流）。
+ * 複数チケット種別 (= 参加費・定員枠) の入力 UI。
  *
- * 例: 「一般 5000円」「学割 3000円」「4人グループ 12000円 (unitSize=4)」。
+ * 属性別の出し分け (一般 / 学生 / シニア / 男女別 等) は EventTicket.name の
+ * free-text 運用が業界 canonical (Peatix / connpass / Eventbrite 全社同パターン)。
+ * 構造化 enum を入れても申込者の属性検証は self-report で運用が回らない上、
+ * 軸を増やすたび schema migration が必要になるため、テンプレ追加ボタン +
+ * placeholder ガイダンスで「どこで何を入力するか」の発見性を担保する。
+ *
  * 型は `@/shared/domain/events/ticket-types` の `EventTicketInput` SSoT を共有する。
  */
 type TicketsFieldProps = {
@@ -29,6 +40,140 @@ type TicketsFieldProps = {
   errors?: string[] | undefined;
   isPending: boolean;
 };
+
+type PresetTicket = Omit<EventTicketInput, "sortOrder">;
+type Preset = {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly items: readonly PresetTicket[];
+};
+
+const PRESETS: readonly Preset[] = [
+  {
+    id: "general-only",
+    label: "一般のみ",
+    description: "シンプルな単一料金",
+    items: [
+      {
+        name: "一般",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+    ],
+  },
+  {
+    id: "age-tier",
+    label: "一般 / 学生 / シニア",
+    description: "年齢層別の 3 区分",
+    items: [
+      {
+        name: "一般",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+      {
+        name: "学生",
+        description: "高校生以上の学生証提示",
+        price: 3000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+      {
+        name: "シニア (65歳以上)",
+        description: "年齢確認書類のご提示",
+        price: 4000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+    ],
+  },
+  {
+    id: "gender",
+    label: "男性 / 女性",
+    description: "性別による出し分け",
+    items: [
+      {
+        name: "男性",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+      {
+        name: "女性",
+        description: null,
+        price: 4000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+    ],
+  },
+  {
+    id: "time-tier",
+    label: "早割 / 通常 / 当日",
+    description: "時期による価格分け",
+    items: [
+      {
+        name: "早割",
+        description: "開催1週間前まで",
+        price: 4000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+      {
+        name: "通常",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+      {
+        name: "当日",
+        description: "受付にて現金のみ",
+        price: 6000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+    ],
+  },
+  {
+    id: "group",
+    label: "個人 / グループ (4名)",
+    description: "1チケット複数人の枠",
+    items: [
+      {
+        name: "個人",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+      {
+        name: "グループ (4名)",
+        description: "1枠で4名様まで",
+        price: 18000,
+        capacity: null,
+        unitSize: 4,
+        isAvailable: true,
+      },
+    ],
+  },
+];
 
 export function TicketsField({
   tickets,
@@ -64,19 +209,69 @@ export function TicketsField({
     onChange(next.map((t, i) => ({ ...t, sortOrder: i })));
   }
 
+  function applyPreset(preset: Preset): void {
+    const isEmptyDraft =
+      tickets.length === 1 &&
+      tickets[0]?.id === undefined &&
+      tickets[0]?.name === "" &&
+      tickets[0]?.price === 0;
+    const baseTickets = isEmptyDraft ? [] : tickets;
+    const offset = baseTickets.length;
+    const additions: EventTicketInput[] = preset.items.map((item, i) => ({
+      ...item,
+      sortOrder: offset + i,
+    }));
+    onChange([...baseTickets, ...additions]);
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>チケット種別</CardTitle>
+        <CardTitle>参加費・定員</CardTitle>
         <p className="text-sm text-muted-foreground">
-          複数のチケット種別を登録できます (一般 / 学割 / グループ等)。1
-          チケットあたりの人数を指定すると「4人で5000円」のようなグループ料金を表現できます。
+          複数の区分 (一般 / 学生 / シニア / 男女別 / 早割 等) を登録できます。
+          属性条件は <strong>区分名</strong> と <strong>説明</strong>{" "}
+          で表現します (例:「学生 (高校生以上)」「女性限定」)。
+          1チケットの人数を変えるとグループ料金 (4名で18,000円 等)
+          も表現できます。
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                <IconTemplate className="mr-1 h-4 w-4" aria-hidden />
+                テンプレから追加
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuLabel>
+                よく使う区分パターン (末尾に追加)
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.id}
+                  onSelect={() => applyPreset(preset)}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <span className="font-medium">{preset.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {preset.description}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <p className="text-xs text-muted-foreground">
+            空のままなら置換、入力済みなら末尾に追加されます。料金・人数は後で調整可能です。
+          </p>
+        </div>
+
         {tickets.length === 0 && (
           <p className="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-            チケット種別が登録されていません。下のボタンから追加してください。
+            参加費区分が登録されていません。テンプレから追加するか、下の「区分を追加」ボタンで作成してください。
           </p>
         )}
 
@@ -127,7 +322,7 @@ export function TicketsField({
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor={`${inputBase}-name`}>チケット名</Label>
+                  <Label htmlFor={`${inputBase}-name`}>区分名</Label>
                   <Input
                     id={`${inputBase}-name`}
                     type="text"
@@ -136,7 +331,7 @@ export function TicketsField({
                       updateTicket(index, { name: e.target.value })
                     }
                     disabled={isPending}
-                    placeholder="例: 一般 / 学割"
+                    placeholder="例: 一般 / 学生 / 女性 / 65歳以上"
                     required
                   />
                 </div>
@@ -176,7 +371,7 @@ export function TicketsField({
                     required
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    例: グループチケットなら 4 (4 人で 1 チケット)
+                    例: グループ枠なら 4 (4 名で 1 チケット)
                   </p>
                 </div>
 
@@ -203,7 +398,7 @@ export function TicketsField({
 
                 <div className="sm:col-span-2">
                   <Label htmlFor={`${inputBase}-description`}>
-                    説明 (任意)
+                    説明 / 条件 (任意)
                   </Label>
                   <Input
                     id={`${inputBase}-description`}
@@ -213,7 +408,7 @@ export function TicketsField({
                       updateTicket(index, { description: e.target.value })
                     }
                     disabled={isPending}
-                    placeholder="例: 学生証提示 / ドリンク付き"
+                    placeholder="例: 高校生以上の学生証提示 / 女性限定 / ドリンク付き"
                   />
                 </div>
 
@@ -242,7 +437,7 @@ export function TicketsField({
           disabled={isPending}
         >
           <IconPlus className="h-4 w-4" aria-hidden />
-          チケット種別を追加
+          区分を追加
         </Button>
 
         {errors && errors.length > 0 && (

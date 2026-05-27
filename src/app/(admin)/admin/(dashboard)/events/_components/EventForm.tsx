@@ -49,7 +49,6 @@ type EventFormProps = {
 
 const EVENT_EDIT_TAB_VALUES = [
   "basic",
-  "schedule",
   "publish",
   "tickets",
   "location",
@@ -68,9 +67,8 @@ function isEventEditTabValue(value: string): value is EventEditTabValue {
 
 const EVENT_EDIT_TAB_LABELS: Record<EventEditTabValue, string> = {
   basic: "基本情報",
-  schedule: "日時",
   publish: "本文・公開",
-  tickets: "チケット",
+  tickets: "参加費・定員",
   location: "会場",
   seo: "SEO",
 };
@@ -194,11 +192,13 @@ export function EventForm({
 
   // タブごとのエラー数（バッジ表示用）
   const tabErrorCount: Record<EventEditTabValue, number> = {
-    basic: [fields.title, fields.slug].filter((f) => fieldHasErrors(f.errors))
-      .length,
-    schedule: [fields.startTime, fields.endTime, fields.capacity].filter((f) =>
-      fieldHasErrors(f.errors),
-    ).length,
+    basic: [
+      fields.title,
+      fields.slug,
+      fields.startTime,
+      fields.endTime,
+      fields.capacity,
+    ].filter((f) => fieldHasErrors(f.errors)).length,
     publish: [
       fields.descriptionJson,
       fields.thumbnailUrl,
@@ -292,21 +292,13 @@ export function EventForm({
           })}
         </TabsList>
 
-        {/* ============ 基本情報 ============ */}
+        {/* ============ 基本情報 (title/slug + 日時/定員) ============ */}
         <TabsContent
           value="basic"
           forceMount
-          className="data-[state=inactive]:hidden"
+          className="space-y-6 data-[state=inactive]:hidden"
         >
           <EventBasicFields fields={fields} isPending={isPending} />
-        </TabsContent>
-
-        {/* ============ 日時 ============ */}
-        <TabsContent
-          value="schedule"
-          forceMount
-          className="data-[state=inactive]:hidden"
-        >
           <EventScheduleFields fields={fields} isPending={isPending} />
         </TabsContent>
 
@@ -330,7 +322,7 @@ export function EventForm({
           />
         </TabsContent>
 
-        {/* ============ チケット ============ */}
+        {/* ============ 参加費・定員 ============ */}
         <TabsContent
           value="tickets"
           forceMount
