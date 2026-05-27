@@ -311,9 +311,9 @@ export function ToolbarPlugin({
       <div
         role="toolbar"
         aria-label="書式・挿入・書き出し"
-        className="flex min-h-10 min-w-0 items-stretch border-b border-border bg-muted/40"
+        className="grid min-h-10 min-w-0 grid-cols-[1fr_auto_1fr] items-stretch border-b border-border bg-muted/40"
       >
-        <div className="min-w-0 flex-1 basis-0 shrink" aria-hidden="true" />
+        <div aria-hidden="true" />
         <div className="flex min-h-10 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide">
           <HistorySection
             canUndo={canUndo}
@@ -395,7 +395,7 @@ export function ToolbarPlugin({
             onOpenPrintPreview={handleOpenPrintPreview}
           />
         </div>
-        <div className="flex min-w-0 flex-1 basis-0 shrink items-center justify-end">
+        <div className="flex items-center justify-end">
           <InspectorControls
             isInspectorAvailable={isInspectorAvailable}
             isInspectorExpanded={isInspectorExpanded}
