@@ -109,19 +109,19 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 
 ## 自動完遂ポリシー
 
-タスク完了点で、ユーザー確認なしで commit → push → PR → CI → squash merge → ローカル sync まで自動進行。「進めて」等の明示承認は **不要**。下記 gate のいずれか fail で停止。
+タスク完了点で、ユーザー確認なしで commit → push → PR → **auto-merge 予約** まで自動進行し**即次タスクに移る**。CI watch で blocking しない（GitHub 側が CI pass + branch protection 満たした時点で自動 squash merge する）。「進めて」等の明示承認は **不要**。下記 gate のいずれか fail で停止。
 
-| Gate      | 内容                                                                    | fail 時                  |
-| --------- | ----------------------------------------------------------------------- | ------------------------ |
-| 1. branch | main 直編集なら `<type>/<topic>` 切替                                   | 自動切替                 |
-| 2. 例外   | 下記停止例外 scan                                                       | 停止                     |
-| 3. 検証   | `bun run validate && bun run build` exit 0                              | 停止                     |
-| 4. commit | 明示ファイル指定 + Conventional Commits + Co-Authored-By                | 停止                     |
-| 5. push   | `git push -u origin <branch>`（lefthook pre-push）                      | 停止                     |
-| 6. PR     | `gh pr create --base main` Summary + Test plan                          | 停止                     |
-| 7. CI     | `gh pr checks --watch` で required 全 pass                              | root cause fix → 再 push |
-| 8. merge  | `gh pr merge --squash --delete-branch`                                  | 停止                     |
-| 9. sync   | `git checkout main && git pull --ff-only`、gone branch は `/clean_gone` | 停止                     |
+| Gate        | 内容                                                                        | fail 時                  |
+| ----------- | --------------------------------------------------------------------------- | ------------------------ |
+| 1. branch   | main 直編集なら `<type>/<topic>` 切替                                       | 自動切替                 |
+| 2. 例外     | 下記停止例外 scan                                                           | 停止                     |
+| 3. 検証     | `bun run validate && bun run build` exit 0                                  | 停止                     |
+| 4. commit   | 明示ファイル指定 + Conventional Commits + Co-Authored-By                    | 停止                     |
+| 5. push     | `git push -u origin <branch>`（lefthook pre-push）                          | 停止                     |
+| 6. PR       | `gh pr create --base main` Summary + Test plan                              | 停止                     |
+| 7. auto-mrg | `gh pr merge --auto --squash --delete-branch` で予約 → 即次タスク           | 停止                     |
+| 8. CI fail  | GitHub 通知 or 次セッション開始時に検出（auto-merge は CI fail なら停まる） | root cause fix → 再 push |
+| 9. sync     | 次セッション開始 or 明示 `git pull --ff-only`、gone branch は `/clean_gone` | 停止                     |
 
 ### 停止例外
 
