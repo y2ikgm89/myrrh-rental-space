@@ -36,7 +36,7 @@
     "postinstall": "bun run db:generate"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1051.0",
+    "@aws-sdk/client-s3": "^3.1054.0",
     "@better-auth/prisma-adapter": "^1.6.11",
     "@conform-to/react": "^1.19.3",
     "@conform-to/zod": "^1.19.3",
@@ -71,7 +71,7 @@
     "better-auth": "^1.6.11",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "date-fns": "^4.2.1",
+    "date-fns": "^4.3.0",
     "googleapis": "^172.0.0",
     "gsap": "^3.15.0",
     "ical-generator": "^10.2.0",
@@ -87,7 +87,7 @@
     "react-compiler-runtime": "^1.0.0",
     "react-dom": "^19.2.6",
     "recharts": "^3.8.1",
-    "resend": "^6.12.3",
+    "resend": "^6.12.4",
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
     "stripe": "^22.1.1",
@@ -98,7 +98,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
-    "@eslint-react/eslint-plugin": "^5.8.3",
+    "@eslint-react/eslint-plugin": "^5.8.5",
     "@lexical/headless": "0.44.0",
     "@lhci/cli": "^0.15.1",
     "@next/eslint-plugin-next": "^16.2.6",
@@ -123,7 +123,7 @@
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.11.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4"
+    "typescript-eslint": "^8.60.0"
   },
   "trustedDependencies": [
     "sharp",
