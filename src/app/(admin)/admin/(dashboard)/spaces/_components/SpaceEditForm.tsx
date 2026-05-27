@@ -702,9 +702,8 @@ export function SpaceEditForm({
                   <LazyLexicalEditor
                     contentJson={descriptionJson}
                     onChange={setDescriptionJson}
-                    height="420px"
+                    height="560px"
                     placeholder="スペースの説明を入力..."
-                    showInspector={false}
                   />
                 </div>
                 {fieldHasErrors(fields.descriptionJson.errors) && (
