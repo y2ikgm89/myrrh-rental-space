@@ -123,11 +123,23 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 | 8. CI fail  | GitHub 通知 or 次セッション開始時に検出（auto-merge は CI fail なら停まる） | root cause fix → 再 push |
 | 9. sync     | 次セッション開始 or 明示 `git pull --ff-only`、gone branch は `/clean_gone` | 停止                     |
 
+### PR 粒度（業界 consensus: Google eng-practices / Atlassian / SmartBear / GitHub / Conventional Commits）
+
+**1 PR = 1 logical change**。行数 soft limit **300 行 / 10 file**（超過は分割検討、`CL size` 業界目安 200-400 LOC）。
+
+| ケース                                                                     | 粒度                                                                        |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 単独 fix / 単独 feat                                                       | 1 PR                                                                        |
+| **fix-of-fix 連鎖**（同 file の続き fix、まだ open + 未 merge）            | **同 branch に追加 commit + push**（新 PR 作成しない、auto-merge 予約継続） |
+| 関連 component の同 motivation 修正（例: spaces + events 両方の price UI） | 1 PR                                                                        |
+| 独立 topic 並列（別 domain / 別 concern）                                  | 別 PR                                                                       |
+| schema / auth / payment / >300 行 / >10 file / 停止例外該当                | 必ず別 PR（rollback 単位、レビュー集中）                                    |
+
 ### 停止例外
 
 - breaking schema (`DROP COLUMN` / 型 narrowing / required 化 / table rename)
 - `.env*` 編集 / 新規 env 変数 / `bun.lock` 予期せぬ変更
-- 10 file 超 / 1000 行超 / `prisma/migrations/*.sql` 含む大規模
+- 10 file 超 / 1000 行超 / `prisma/migrations/*.sql` 含む大規模（PR 粒度 hard limit）
 - 当該タスクと無関係な untracked / modified（並行作業）
 - destructive (`reset --hard` / `migrate reset` / `--no-verify` / hook bypass)
 - 機密情報混入疑い / test fail / 過去 60 分で PR 3 件以上自動 merge（暴走 detect）
