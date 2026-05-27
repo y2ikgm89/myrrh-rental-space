@@ -20,7 +20,7 @@
 | エディタ       | Lexical                        | NodeState API、Portable Text 直列化                                   |
 | Forms          | conform                        | `useActionState` + `executeAdminMutationResult`、`@conform-to/zod/v4` |
 | E2E            | Playwright                     | storage state auth、smoke / 広域 / a11y 分離                          |
-| a11y           | @axe-core/playwright           | WCAG 2.1 AA 自動検証 + 2.5.5 Enhanced (AAA) touch target              |
+| a11y           | @axe-core/playwright           | WCAG 2.2 AA 自動検証 + 2.5.5 Enhanced (AAA) touch target              |
 | Perf 監視      | Lighthouse CI                  | `.lighthouseci/budget.json` で granular gate                          |
 
 ## アーキテクチャ概要
@@ -28,9 +28,8 @@
 ```text
 src/
 ├── app/
-│   ├── (public)/          # 公開ページ（Editorial Magazine テーマ）
+│   ├── (public)/          # 公開ページ（Editorial Magazine テーマ） + preview/{posts,news,pages}
 │   ├── (admin)/           # 管理画面（Swiss Industrial テーマ）
-│   ├── (preview)/         # 管理画面向けプレビュー（ManagedPageSections 共有）
 │   └── api/               # 公開 API / auth / cron / webhooks
 ├── shared/
 │   ├── db/                # Prisma singleton, Better Auth adapter
@@ -45,7 +44,7 @@ src/
 
 **主要な分離原則**:
 
-- **Multiple Root Layouts**: 公開 `(public)/layout.tsx`、管理 `(admin)/layout.tsx`、プレビュー `(preview)/layout.tsx` が独立した html/body/CSS を持ち、跨ぎ遷移はフルページリロード
+- **Multiple Root Layouts**: 公開 `(public)/layout.tsx` と管理 `(admin)/layout.tsx` が独立した html/body/CSS を持ち、跨ぎ遷移はフルページリロード。管理画面向けプレビューは本番同等 chrome 継承のため `(public)/preview/{posts,news,pages}/` 配下で `(public)` root layout を共有（admin auth は `verifyAdminSession()` で明示）
 - **Prisma gateway**: app 層は `@/shared/lib/validations/enums/prisma-types`（browser entry 由来、type-only）経由でのみ Prisma 型にアクセス。runtime 値は `shared/db/` / `shared/domain/` のみ直接 import 可
 - **`executeAdminMutationResult`**: 管理 write 系 Server Actions は認証・権限・監査ログを一括処理
 

@@ -22,7 +22,7 @@
 
 - 静的 shell は `src/app/(public)/layout.tsx`（LenisProvider / MobileNav 等の軽量 shell）
 - 視覚効果はページ単位で GSAP / CSS。旧 `ExperienceShell` 集約パターンは廃止
-- preview は専用 route で分離
+- preview は `src/app/(public)/preview/{posts,news,pages}/` 配下で `(public)` root layout を共有（admin auth は `verifyAdminSession()` で明示）
 - public route group は domain query 経由でデータ取得し、route から `prisma` を直接 import しない
 
 ## キャッシュ

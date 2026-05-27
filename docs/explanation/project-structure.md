@@ -87,5 +87,5 @@ infra / framework integration。auth / env / constants / logger / validation / a
 
 - 公開 root: `/`, `/spaces`, `/posts`, `/news`, `/events`, `/faq`, `/access`, `/contact`, `/[...segments]`
 - 管理 root: `/admin/login`（gate）, `/admin/*`（dashboard）
-- preview root: `/preview/*`（管理画面向け）
+- preview: `/preview/{posts,news,pages}/*`（管理画面向け、`(public)` root layout 配下）
 - API: `/api/*`（auth / webhooks / cron / probe / sitemap / feed）
