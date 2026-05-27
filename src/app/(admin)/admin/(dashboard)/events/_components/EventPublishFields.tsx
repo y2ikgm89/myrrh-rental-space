@@ -244,7 +244,7 @@ export function EventPublishFields({
             disabled={isPending}
             className={EDITOR_PROSE_CLASSES}
             placeholder="イベントの詳細・プログラム・参加要件等を入力..."
-            showInspector={false}
+            height="560px"
           />
           {fields.descriptionJson.errors && (
             <p className="mt-2 text-sm text-destructive">
