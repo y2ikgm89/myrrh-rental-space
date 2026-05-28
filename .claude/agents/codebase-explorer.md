@@ -5,7 +5,7 @@ description: >
   understanding code architecture, tracing symbol references, finding
   implementations, or answering questions about the codebase structure.
   Remembers file locations and patterns across sessions for faster lookups.
-tools: Read, Grep, Glob, LS
+tools: Read, Grep, Glob
 model: haiku
 effort: low
 memory: project
