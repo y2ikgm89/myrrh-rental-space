@@ -19,7 +19,7 @@ import {
   Input,
   Label,
 } from "@/admin/components/ui";
-import { searchPostsForRelationAction } from "@/admin/actions/event";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { useDebouncedCallback } from "@/admin/hooks";
 
 export type RelatedPostOption = {
@@ -61,18 +61,22 @@ export function RelatedPostsField({
 
   const performSearch = useDebouncedCallback((query: string) => {
     startSearchTransition(async () => {
-      const result = await searchPostsForRelationAction({
-        query,
-        includeIds: selectedIds,
+      const params = new URLSearchParams();
+      if (query.length > 0) params.set("q", query);
+      if (selectedIds.length > 0)
+        params.set("includeIds", selectedIds.join(","));
+      const qs = params.toString();
+      const data = await fetchAdminJson<readonly RelatedPostOption[]>(
+        qs.length > 0
+          ? `/admin/api/events/related-posts?${qs}`
+          : `/admin/api/events/related-posts`,
+      );
+      setSearchResults([...data]);
+      setOptionCache((prev) => {
+        const next = new Map(prev);
+        for (const opt of data) next.set(opt.id, opt);
+        return next;
       });
-      if (result.success) {
-        setSearchResults(result.data);
-        setOptionCache((prev) => {
-          const next = new Map(prev);
-          for (const opt of result.data) next.set(opt.id, opt);
-          return next;
-        });
-      }
     });
   }, 250);
 

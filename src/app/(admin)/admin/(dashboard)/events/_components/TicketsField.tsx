@@ -288,7 +288,7 @@ export function TicketsField({
           const capacityRequired = tickets.length > 1;
           return (
             <div
-              key={ticket.id ?? `new-${String(index)}`}
+              key={ticket._key ?? ticket.id ?? `idx-${String(index)}`}
               className="space-y-3 rounded-md border border-border bg-card p-4"
             >
               <div className="flex items-center justify-between gap-2">
