@@ -37,8 +37,8 @@ descriptionPlainText String    @db.Text  // stripHtmlToText(html, 200) 派生
 - **共有ヘルパー**: `@/shared/lib/lexical/description-defaults.ts`（`buildParagraphEditorStateJson` / `buildParagraphHtml`）、`@/shared/lib/lexical/html-to-plain-text.ts`（`stripHtmlToText`）。seed・テスト・Server Action で同じ関数を使い、派生の二重実装を禁止
 - **Server Action**: `renderEditorStateToHtmlLazy(json)` → `stripHtmlToText(html, 200)` で 3 値を一括生成（`src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts` の `buildSpaceCommandInput` が参照実装）
 - **公開表示**: 詳細は `SanitizedHtml` + `*Html`、metadata / OG / JSON-LD / カード / 一覧 / ダイアログは `*PlainText` に統一
-- **RHF 連携**: `register("xxxJson")` ではなく `useController({ control, name: "xxxJson" })` + `<LazyLexicalEditor contentJson={field.value} onChange={field.onChange} />`。編集初期値は `typeof v === "string" ? v : JSON.stringify(v ?? JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON))` で文字列化
-- **Zod スキーマ**: `xxxJson: lexicalJsonSchema`、`defaultValues` には `EMPTY_LEXICAL_EDITOR_STATE_JSON` を渡す
+- **conform 連携**: Lexical の hidden input transit は `useState<string>` で local 管理 + `<input type="hidden" name={fields.xxxJson.name} value={contentJson} />` で送信。`<LazyLexicalEditor contentJson={contentJson} onChange={setContentJson} />` は state を直接受け取る。編集初期値は `typeof v === "string" ? v : JSON.stringify(v ?? JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON))` で文字列化（`SpaceEditForm` / `TermsForm` canonical）
+- **Zod スキーマ**: `xxxJson: lexicalJsonSchema`、`defaultValue` には `EMPTY_LEXICAL_EDITOR_STATE_JSON` を渡す
 
 ## Client-side HTML rendering pattern (Next.js 16 公式準拠)
 

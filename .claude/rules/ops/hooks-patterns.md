@@ -380,7 +380,7 @@ PostToolUse の自動 format hook（`prettier-format.sh` / `eslint-fix.sh` 等�
 1. **`String to replace not found`**: 直前に PostToolUse hook が走った可能性 → Read で実体再確認 → 再 Edit
 2. **2 回連続失敗**: Write で全面書き換えに切替（Edit より高コストだがコスト的に合理的）
 3. **`File has not been read yet`**: 同一会話内で初 Read が必須（Edit ツール仕様）
-4. **`security_reminder_hook.py` false positive**: 同内容を `Write` で書き出すと bypass 可能（hook は Edit に強反応、Write はスルー傾向）
+4. **`String to replace not found` が繰り返す場合**: `Write` で全面書き換えに切替（Edit より高コストだがコスト的に合理的）
 
 ## State 注入 hook の sync 規律
 

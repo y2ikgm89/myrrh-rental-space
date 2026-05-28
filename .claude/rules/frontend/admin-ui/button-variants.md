@@ -137,7 +137,7 @@ Inspector パネルや list 行内など、複数の削除アイコンが密集�
 | destructive solid (disconnect)  | `settings/_components/sections/GoogleBusinessProfileSection.tsx`「連携を解除」             |
 | destructive solid (trash 遷移)  | `terms/page.tsx` の「ゴミ箱」リンク                                                        |
 | destructive-ghost (Inspector)   | `lexical/inspector/panels/CoverInspectorPanel.tsx` の背景画像削除ボタン                    |
-| destructive-ghost (list 内)     | `settings/_components/sections/DiscountSection.tsx` の useFieldArray remove                |
+| destructive-ghost (list 内)     | `settings/_components/sections/DiscountSection.tsx` の conform form.remove                 |
 | ActionDropdown destructive item | `_shared/components/ActionDropdown.tsx`                                                    |
 
 ## 監査 grep

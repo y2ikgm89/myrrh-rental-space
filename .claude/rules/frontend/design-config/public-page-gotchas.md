@@ -97,7 +97,7 @@ paths:
 - **セクションタイプは kebab-case 文字列** — DB の `Section.type` は `String @db.VarChar(64)`
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — Prisma マイグレーション不要
 - **AutoSectionForm は field メタデータなしのフィールドをスキップ**
-- **AutoSectionForm のフィールドに `defaultValue` + `setValue` パターン禁止** — `useController` で RHF 制御
+- **AutoSectionForm のフィールドに `setValue` パターン禁止** — conform `defaultValue` prop + `useInputControl` で制御
 - **新規公開ページ追加は `/create-page-content` スキル**
 - **ホームページセクションの `pageId: null` は廃止済み** — ホームページは slug `"home"` の Page レコード
 - **`/admin/pages/homepage/edit` は廃止済み** — `[slug]/edit` に統合
@@ -125,7 +125,7 @@ paths:
 - **`scrollIntoView({ block: "start" })` は固定ヘッダーを考慮しない** — `getBoundingClientRect().top + scrollY - getHeaderHeight() - margin`
 - **`bg-surface` カード内のインタラクティブ要素は `bg-background` で浮かせる** — コントラスト不足対策
 - **Design System `Input`/`Textarea` の必須マークは `required` prop で自動表示**
-- **`usePublicForm` の action callback 内で `form.setValue()` を呼ばない** — `react-hooks/immutability`
+- **公開フォームの conform action callback 内で `fields` / `form` の参照を再評価しない** — `react-hooks/immutability` ルールが hook 戻り値を同 hook callback 引数内で参照すると TDZ 扱いで検出する。成功後の状態リセットは `form.reset()` を `startTransition` 外で呼ぶか、`lastResult` の変化を `useEffect` で監視する
 - **`Heading` のサイズオーバーライドは `!text-*`** — `!important` プレフィックス必要
 - **JSON-LD は `json-ld.tsx` の共通コンポーネントを使う** — Unicode エスケープ済み
 

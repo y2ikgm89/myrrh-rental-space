@@ -251,7 +251,7 @@ type Props = {
 - `/admin/{resource}` → master（親一覧 + 親 CRUD Dialog）
 - `/admin/{resource}/[parentId]` → detail（親詳細 + 子一覧 + 子 CRUD Dialog）
 
-子の create Dialog は親 context から `parentId` を注入（`<input type="hidden" {...register("parentId")} />`）し、Dialog 内でのカテゴリ変更は許可しない（移動は別途 bulk move Dialog）。参照: `/admin/faq` / `/admin/faq/[categoryId]`
+子の create Dialog は親 context から `parentId` を注入（`<input {...getInputProps(fields.parentId, { type: "hidden" })} />`）し、Dialog 内でのカテゴリ変更は許可しない（移動は別途 bulk move Dialog）。参照: `/admin/faq` / `/admin/faq/[categoryId]`
 
 ---
 

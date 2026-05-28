@@ -39,7 +39,7 @@ import { Activity } from 'react'
 </div>
 ```
 
-**判断基準**: preload / bfcache ユースケース以外では `visibility` / `opacity` 継続推奨。本プロジェクトでは現時点で Activity 採用箇所なし。新規採用時は用途の妥当性を ADR で記録。
+**判断基準**: preload / bfcache ユースケース以外では `visibility` / `opacity` 継続推奨。本プロジェクトでは現時点で Activity 採用箇所なし。新規採用時は用途の妥当性を path-scoped rule 本文 + git log に記録。
 
 ---
 

@@ -24,9 +24,9 @@ paths:
 <label htmlFor="email">メールアドレス</label>
 <input id="email" type="email" />
 
-// OK: React Hook Form + register（id 自動付与）
-<label htmlFor="email">メールアドレス</label>
-<input {...register('email')} id="email" type="email" />
+// OK: conform getInputProps（id / aria 自動付与）
+<label htmlFor={fields.email.id}>メールアドレス</label>
+<input {...getInputProps(fields.email, { type: "email" })} />
 ```
 
 ### エラーメッセージの aria-describedby

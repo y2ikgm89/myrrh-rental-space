@@ -1,5 +1,5 @@
 ---
-description: Zod 高度パターン（useFieldArray + safeParse + Discriminated union default + prefault + Length introspection + .default([]) skip + Read/Write 分離）
+description: Zod 高度パターン（conform 配列フィールド form.insert/remove + safeParse + Discriminated union default + prefault + Length introspection + .default([]) skip + Read/Write 分離）
 paths:
   - src/shared/lib/validations/**
   - src/**/lib/validations/**
@@ -11,17 +11,17 @@ paths:
 
 # Zod 高度パターン
 
-> useFieldArray 連携 / safeParse exact optional / discriminated union default / prefault inner default / Length introspection / .default([]) min skip / Read-side vs Write-side default 分離。
+> conform 配列フィールド (form.insert/remove/reorder) 連携 / safeParse exact optional / discriminated union default / prefault inner default / Length introspection / .default([]) min skip / Read-side vs Write-side default 分離。
 
-## useFieldArray との連携（object[] 必須）
+## conform 動的配列フィールドとの連携（object[] 必須）
 
-RHF の `useFieldArray` は primitive 配列（`string[]`）を管理できない。フォームで配列フィールドを D&D ソートや動的追加/削除する場合は object 配列にすること:
+conform の `form.insert` / `form.remove` / `form.reorder` + `getFieldList()` + `getFieldset()` は primitive 配列（`string[]`）を管理できない。フォームで配列フィールドを D&D ソートや動的追加/削除する場合は object 配列にすること:
 
 ```typescript
-// NG: useFieldArray に渡せない（primitive 配列）
+// NG: getFieldList に渡せない（primitive 配列）
 imageUrls: z.array(z.string().url());
 
-// OK: { url: string }[] — useFieldArray が id フィールドを自動付与して管理
+// OK: { url: string }[] — conform getFieldset が各 entry を管理
 imageUrls: z.array(
   z.object({ url: z.string().url({ error: "有効なURLを入力してください" }) }),
 );

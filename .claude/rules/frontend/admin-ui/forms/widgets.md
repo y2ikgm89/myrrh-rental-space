@@ -24,7 +24,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/admin/components/ui";
   type="single"
   value={currentValue}
   onValueChange={(v) => {
-    if (v) setValue("fieldName", v, { shouldDirty: true });
+    if (v) fieldNameControl.change(v); // useInputControl(fields.fieldName)
   }}
 >
   <ToggleGroupItem value="sm">小</ToggleGroupItem>

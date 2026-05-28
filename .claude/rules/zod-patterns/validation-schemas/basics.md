@@ -76,10 +76,10 @@ export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 
 **Server Action 用スキーマ vs フォーム用スキーマの使い分け**:
 
-| 用途                       | 特徴                              | 例                 |
-| -------------------------- | --------------------------------- | ------------------ |
-| Server Action              | 型厳格（Date, number, UUID 検証） | `updatePostSchema` |
-| フォーム (React Hook Form) | 空文字許可・文字列型              | `postFormSchema`   |
+| 用途               | 特徴                              | 例                 |
+| ------------------ | --------------------------------- | ------------------ |
+| Server Action      | 型厳格（Date, number, UUID 検証） | `updatePostSchema` |
+| フォーム (conform) | 空文字許可・文字列型              | `postFormSchema`   |
 
 ## スキーマ合成
 
