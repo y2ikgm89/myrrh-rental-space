@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLocationById } from "@/admin/queries/location";
 import { getSettings } from "@/admin/queries/settings";
+import { getBlockedDatesForLocation } from "@/shared/domain/blocked-dates/queries";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
@@ -34,12 +35,14 @@ export async function generateMetadata({
 
 export default async function EditLocationPage({ params }: PageProps) {
   const { id } = await params;
-  const [location, settings, socialLinks, fullSettings] = await Promise.all([
-    getLocationById(id),
-    getOrganizationSettings(),
-    getSocialLinkUrls(),
-    getSettings(),
-  ]);
+  const [location, settings, socialLinks, fullSettings, initialBlockedDates] =
+    await Promise.all([
+      getLocationById(id),
+      getOrganizationSettings(),
+      getSocialLinkUrls(),
+      getSettings(),
+      getBlockedDatesForLocation(id),
+    ]);
 
   if (!location) {
     notFound();
@@ -64,6 +67,7 @@ export default async function EditLocationPage({ params }: PageProps) {
         mode="edit"
         globals={globals}
         gbpEnabledGlobally={fullSettings?.googleBusinessProfileEnabled ?? false}
+        initialBlockedDates={initialBlockedDates}
       />
     </AdminDetailLayout>
   );

@@ -51,6 +51,12 @@ import {
   updateLocationAction,
 } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
+import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
+import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
+import {
+  createLocationBlockedDate,
+  deleteLocationBlockedDate,
+} from "@/admin/actions/location-blocked-dates";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
@@ -69,6 +75,7 @@ type LocationFormProps = {
   mode: "create" | "edit";
   globals?: GlobalsMeoFlags;
   gbpEnabledGlobally?: boolean;
+  initialBlockedDates?: readonly BlockedDateData[];
 };
 
 const DEFAULT_GLOBALS: GlobalsMeoFlags = {
@@ -242,6 +249,7 @@ export function LocationForm({
   mode,
   globals = DEFAULT_GLOBALS,
   gbpEnabledGlobally = false,
+  initialBlockedDates = [],
 }: LocationFormProps) {
   const dndContextId = useId();
   const accessLinesDndContextId = useId();
@@ -490,6 +498,7 @@ export function LocationForm({
         <TabsList>
           <TabsTrigger value="basic">基本情報</TabsTrigger>
           <TabsTrigger value="meo">MEO</TabsTrigger>
+          {isEdit && <TabsTrigger value="blocked-dates">臨時休業</TabsTrigger>}
         </TabsList>
 
         <TabsContent
@@ -1126,6 +1135,29 @@ export function LocationForm({
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isEdit && location && (
+          <TabsContent
+            value="blocked-dates"
+            forceMount
+            className="mt-6 data-[state=inactive]:hidden"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>臨時休業 / 急な休み</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BlockedDatesField
+                  entityId={location.id}
+                  initialBlockedDates={initialBlockedDates}
+                  createAction={createLocationBlockedDate}
+                  deleteAction={deleteLocationBlockedDate}
+                  description="この拠点に登録された全スペースの予約を、指定した日付で受け付けません（拠点全体の臨時休業）。"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <div className="flex justify-end gap-4">
