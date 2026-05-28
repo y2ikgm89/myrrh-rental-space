@@ -122,3 +122,36 @@ export function parseDateTimeLocalAsJst(value: string): Date {
   const withSeconds = value.length === 16 ? `${value}:00` : value;
   return new Date(`${withSeconds}+09:00`);
 }
+
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * `<input type="date">` の値 (`"YYYY-MM-DD"`、JST カレンダー日付) を
+ * Prisma `@db.Date` カラム保存用の **UTC 深夜 Date** に変換する。
+ *
+ * `BlockedDate.startDate` / `endDate` 等の `@db.Date` 列は
+ * 「JST カレンダー日付を UTC 深夜で保持」する設計のため、`"2026-12-29"` →
+ * `2026-12-29T00:00:00.000Z` に変換する。サーバ tz / ブラウザ tz に依存しない。
+ *
+ * - 不正な形式は `Invalid Date` を返す
+ *
+ * 時刻つきの予約 datetime (UTC) を JST カレンダー日付に落とす変換は別関数
+ * （`@/shared/domain/reservations/availability` の cascade ロジック）で行う。
+ */
+export function parseJstDateOnly(value: string): Date {
+  if (!DATE_ONLY_REGEX.test(value)) {
+    return new Date(Number.NaN);
+  }
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+/**
+ * Prisma `@db.Date` カラム（UTC 深夜 Date）を `"YYYY-MM-DD"` 文字列に戻す。
+ *
+ * `@db.Date` は UTC 深夜で保持されるため、`toISOString()` の日付部分が
+ * そのまま JST カレンダー日付になる（`parseJstDateOnly` の逆変換）。
+ */
+export function formatJstDateOnly(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return value.toISOString().slice(0, 10);
+}

@@ -751,6 +751,13 @@ export function isValidBlockedDateScope(
   return typeof value === "string" && VALID_BLOCKED_DATE_SCOPES.has(value);
 }
 
+export function getValidBlockedDateScope(
+  value: unknown,
+  defaultScope: BlockedDateScope = BLOCKED_DATE_SCOPE.GLOBAL,
+): BlockedDateScope {
+  return isValidBlockedDateScope(value) ? value : defaultScope;
+}
+
 export const BLOCKED_DATE_SCOPE_LABELS: Record<BlockedDateScope, string> = {
   [BLOCKED_DATE_SCOPE.SPACE]: "スペース",
   [BLOCKED_DATE_SCOPE.LOCATION]: "拠点",
@@ -775,6 +782,13 @@ export function isValidBlockedDateType(
   value: unknown,
 ): value is BlockedDateType {
   return typeof value === "string" && VALID_BLOCKED_DATE_TYPES.has(value);
+}
+
+export function getValidBlockedDateType(
+  value: unknown,
+  defaultType: BlockedDateType = BLOCKED_DATE_TYPE.OTHER,
+): BlockedDateType {
+  return isValidBlockedDateType(value) ? value : defaultType;
 }
 
 export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
