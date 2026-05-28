@@ -229,6 +229,7 @@ model User {
   auditLogs       AuditLog[]
   mediaFiles      Media[]
   customer        Customer?          @relation("CustomerUser")
+  blockedDates    BlockedDate[]
 
   // RBAC: EDITOR用の割り当てページ（中間テーブル）
   pageAssignments UserPageAssignment[]
@@ -399,8 +400,9 @@ model Location {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  spaces Space[]
-  events Event[]
+  spaces       Space[]
+  events       Event[]
+  blockedDates BlockedDate[]
 
   @@index([isPublished, isActive])
   @@index([sortOrder])
@@ -486,6 +488,7 @@ model Space {
   icalTokens   ICalToken[]
   reviews      SpaceReview[]
   events       Event[]
+  blockedDates BlockedDate[]
   location     Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
@@ -497,6 +500,38 @@ model Space {
   @@index([locationId])
   @@index([categoryId])
   @@map("spaces")
+}
+
+/// 臨時休業 / 急な休み（businessHours の曜日別定休日を補完する日付範囲ベースの休業）。
+/// per-space / per-location / global の 3 階層 cascade（additive、override なし）。
+/// scope と type は VarChar + 型ガード SSoT（`@/shared/lib/validations/enums/helpers`）で運用。
+model BlockedDate {
+  id          String   @id @default(uuid()) @db.Uuid
+  /// "SPACE" | "LOCATION" | "GLOBAL"（isValidBlockedDateScope で検証）
+  scope       String   @db.VarChar(16)
+  /// scope=SPACE のみ非 null
+  spaceId     String?  @db.Uuid
+  /// scope=LOCATION のみ非 null
+  locationId  String?  @db.Uuid
+  /// JST カレンダー日付を UTC 深夜で保持。単日休業は startDate=endDate。
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  /// "年末年始" / "設備点検" / "台風 19 号による臨時休業" 等の plain text ラベル
+  reason      String?  @db.VarChar(200)
+  /// "HOLIDAY" | "MAINTENANCE" | "EMERGENCY" | "OTHER"（isValidBlockedDateType で検証）
+  type        String   @db.VarChar(32)
+  createdBy   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  space    Space?    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  creator  User      @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([scope, startDate, endDate])
+  @@index([spaceId, startDate, endDate])
+  @@index([locationId, startDate, endDate])
+  @@map("blocked_dates")
 }
 
 model Reservation {
