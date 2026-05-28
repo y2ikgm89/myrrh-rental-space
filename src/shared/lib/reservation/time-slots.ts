@@ -13,6 +13,8 @@ import "server-only";
 import {
   getBusinessHoursSettingsQuery,
   getReservationsForDateQuery,
+  getSpaceLocationIdQuery,
+  isDateBlocked,
 } from "@/shared/domain/reservations/availability";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "./types";
@@ -56,9 +58,19 @@ export async function getAvailableTimeSlots(
   // 営業時間に基づいて時間枠を生成
   const slots = generateSlotsFromBusinessHours(businessHours, date);
 
-  // 休業日の場合は空配列をそのまま返す
+  // 定休日（営業時間設定）の場合は空配列をそのまま返す
   if (slots.length === 0) {
     return slots;
+  }
+
+  // 臨時休業 / 急な休み（BlockedDate）の 3 階層 cascade チェック。
+  // blocked なら全枠予約不可（空配列）にして公開カレンダーで grey-out させる。
+  const locationId = await getSpaceLocationIdQuery(spaceId);
+  if (locationId !== null) {
+    const blocked = await isDateBlocked(spaceId, locationId, date);
+    if (blocked.blocked) {
+      return [];
+    }
   }
 
   // その日の予約を取得

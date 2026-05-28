@@ -35,9 +35,15 @@ const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
     name: "テストスペース",
     addressDetail: null,
     hourlyPrice: 1000,
+    locationId: "loc-1",
     location: { address: "東京都渋谷区1-1-1" },
   }),
 );
+
+// BlockedDate cascade（ensureDateNotBlocked / isDateBlocked）用。default は未休業。
+const mockBlockedDateFindFirst = mock<
+  () => Promise<{ reason: string | null } | null>
+>(() => Promise.resolve(null));
 
 const mockReservationFindUnique = mock<() => Promise<unknown>>(() =>
   Promise.resolve(null),
@@ -128,6 +134,9 @@ const txClient = {
       Promise.resolve({ count: 0 }),
     ),
   },
+  blockedDate: {
+    findFirst: mockBlockedDateFindFirst,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -157,6 +166,7 @@ mock.module("@/shared/db/prisma", () => ({
       upsert: mockCustomerUpsert,
       update: mockCustomerUpdate,
     },
+    blockedDate: { findFirst: mockBlockedDateFindFirst },
     $transaction: mockTransaction,
   },
 }));
@@ -204,6 +214,8 @@ function resetAllMocks() {
   mockCustomerUpsert.mockClear();
   mockCustomerUpdate.mockClear();
   mockTransaction.mockClear();
+  mockBlockedDateFindFirst.mockClear();
+  mockBlockedDateFindFirst.mockResolvedValue(null);
   (txClient.reservation.findFirst as ReturnType<typeof mock>).mockClear();
 
   // Reset to default implementations
@@ -1162,6 +1174,7 @@ describe("createPublicReservationCommand", () => {
         name: "テストスペース",
         addressDetail: null,
         hourlyPrice: 1000,
+        locationId: "loc-1",
         location: { address: "東京都渋谷区1-1-1" },
       }),
     );
@@ -1255,6 +1268,16 @@ describe("createPublicReservationCommand", () => {
       await expect(createPublicReservationCommand(validInput)).rejects.toThrow(
         "指定されたスペースが見つかりません",
       );
+    });
+
+    test("臨時休業日（BlockedDate）の予約は CONFLICT で拒否", async () => {
+      mockBlockedDateFindFirst.mockResolvedValue({ reason: "年末年始" });
+
+      await expect(
+        createPublicReservationCommand(validInput),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      // blocked のため予約レコードは作成されない
+      expect(mockReservationCreate).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,7 +1,12 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { DomainError } from "@/shared/domain/domain-error";
+import { parseJstDateOnly } from "@/shared/lib/date-format";
+import {
+  ACTIVE_RESERVATION_STATUSES,
+  BLOCKED_DATE_SCOPE,
+} from "@/shared/lib/validations/enums/helpers";
 import {
   parseBusinessHours,
   type BusinessHours,
@@ -11,6 +16,78 @@ import type {
   OverlapCheckResult,
   PrismaTransactionClient,
 } from "@/shared/lib/reservation/types";
+
+export type DateBlockedResult =
+  | { blocked: true; reason: string | null }
+  | { blocked: false };
+
+/**
+ * 指定日が臨時休業 / 急な休み（BlockedDate）かを 3 階層 cascade で判定する。
+ *
+ * GLOBAL / LOCATION（locationId 一致）/ SPACE（spaceId 一致）のいずれかが
+ * 該当すれば blocked（additive、override なし）。`date` は JST カレンダー日付
+ * （"YYYY-MM-DD"）で、`@db.Date`（UTC 深夜保持）と `parseJstDateOnly` で整合する。
+ * reason は GLOBAL → LOCATION → SPACE の優先度で返す。
+ */
+export async function isDateBlocked(
+  spaceId: string,
+  locationId: string,
+  date: string,
+  tx?: PrismaTransactionClient,
+): Promise<DateBlockedResult> {
+  const client = tx ?? prisma;
+  const target = parseJstDateOnly(date);
+
+  const blocked = await client.blockedDate.findFirst({
+    where: {
+      startDate: { lte: target },
+      endDate: { gte: target },
+      OR: [
+        { scope: BLOCKED_DATE_SCOPE.GLOBAL },
+        { scope: BLOCKED_DATE_SCOPE.LOCATION, locationId },
+        { scope: BLOCKED_DATE_SCOPE.SPACE, spaceId },
+      ],
+    },
+    orderBy: { scope: "asc" }, // GLOBAL → LOCATION → SPACE の優先度で reason を採用
+    select: { reason: true },
+  });
+
+  return blocked
+    ? { blocked: true, reason: blocked.reason }
+    : { blocked: false };
+}
+
+/**
+ * blocked date への予約を物理的に防止する。blocked なら DomainError(CONFLICT)。
+ * 公開予約作成フローで `ensureNoOverlap` と並べて呼ぶ（管理画面は override 許容のため対象外）。
+ */
+export async function ensureDateNotBlocked(
+  spaceId: string,
+  locationId: string,
+  date: string,
+  tx?: PrismaTransactionClient,
+): Promise<void> {
+  const result = await isDateBlocked(spaceId, locationId, date, tx);
+  if (result.blocked) {
+    throw new DomainError(
+      result.reason
+        ? `選択された日付は休業日です（${result.reason}）。別の日付をお選びください。`
+        : "選択された日付は休業日です。別の日付をお選びください。",
+      "CONFLICT",
+    );
+  }
+}
+
+/** スペースの所属拠点 ID を取得（blocked date cascade 判定用、PK lookup） */
+export async function getSpaceLocationIdQuery(
+  spaceId: string,
+): Promise<string | null> {
+  const space = await prisma.space.findUnique({
+    where: { id: spaceId },
+    select: { locationId: true },
+  });
+  return space?.locationId ?? null;
+}
 
 export async function getBusinessHoursSettingsQuery(): Promise<BusinessHours | null> {
   const settings = await prisma.settings.findUnique({

@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { CustomerType, ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-customer";
+import { ensureDateNotBlocked } from "@/shared/domain/reservations/availability";
 import {
   CUSTOMER_SELECT,
   buildDateTime,
@@ -18,6 +19,7 @@ const SPACE_SELECT = {
   name: true,
   addressDetail: true,
   hourlyPrice: true,
+  locationId: true,
   location: { select: { address: true } },
 } as const;
 
@@ -55,6 +57,8 @@ export async function createPublicReservationCommand(
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
   }
 
+  await ensureDateNotBlocked(input.spaceId, space.locationId, input.date);
+
   await ensureNoOverlap({
     spaceId: input.spaceId,
     startTime: startDateTime,
@@ -68,6 +72,8 @@ export async function createPublicReservationCommand(
   );
 
   const reservation = await prisma.$transaction(async (tx) => {
+    await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
+
     await ensureNoOverlap(
       {
         spaceId: input.spaceId,
