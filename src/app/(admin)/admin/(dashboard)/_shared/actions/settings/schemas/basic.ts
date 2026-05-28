@@ -14,6 +14,10 @@ import {
   TIME_REGEX,
   collectBusinessHoursWeekIssues,
 } from "@/shared/lib/validations/business-hours";
+import {
+  WEEKDAY_VALUES,
+  MONTHLY_CLOSURE_WEEK_VALUES,
+} from "@/shared/lib/json-validators";
 
 // =============================================================================
 // Basic Schemas
@@ -149,6 +153,11 @@ const businessHoursDayObjectSchema = z.object({
   slots: z.array(timeSlotObjectSchema),
 });
 
+const monthlyClosureObjectSchema = z.object({
+  weekday: z.enum(WEEKDAY_VALUES),
+  week: z.enum(MONTHLY_CLOSURE_WEEK_VALUES),
+});
+
 const businessHoursWeekSchema = z.object({
   monday: businessHoursDayObjectSchema,
   tuesday: businessHoursDayObjectSchema,
@@ -157,6 +166,7 @@ const businessHoursWeekSchema = z.object({
   friday: businessHoursDayObjectSchema,
   saturday: businessHoursDayObjectSchema,
   sunday: businessHoursDayObjectSchema,
+  monthlyClosures: z.array(monthlyClosureObjectSchema).max(20).optional(),
 });
 
 // 各日付は React key の stable ID として機能するため、重複を禁止する

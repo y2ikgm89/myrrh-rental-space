@@ -8,6 +8,7 @@ import type { BlockedDateRange } from "@/shared/domain/reservations/availability
 import {
   getWeekdayKey,
   formatDateString,
+  isMonthlyClosureDate,
 } from "@/shared/lib/reservation/time-slots-utils";
 
 interface CalendarPickerProps {
@@ -41,6 +42,8 @@ export function CalendarPicker({
     if (date < minDate) return true;
     if (isBlockedDay(date)) return true;
     if (!businessHours) return false;
+    // 毎月の繰り返し定休（第N曜日）
+    if (isMonthlyClosureDate(date, businessHours.monthlyClosures)) return true;
     const weekday = getWeekdayKey(date);
     const daySettings = businessHours[weekday];
     return !daySettings.isOpen || daySettings.slots.length === 0;

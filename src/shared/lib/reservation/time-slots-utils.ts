@@ -5,7 +5,10 @@
  * Client Componentからも安全にインポートできます。
  */
 
-import type { BusinessHours } from "@/shared/lib/json-validators";
+import type {
+  BusinessHours,
+  MonthlyClosure,
+} from "@/shared/lib/json-validators";
 import { DEFAULT_BUSINESS_HOURS } from "./constants";
 import type { TimeSlot } from "./types";
 
@@ -36,6 +39,45 @@ const WEEKDAY_KEYS: readonly WeekdayKey[] = [
  */
 export function getWeekdayKey(date: Date): WeekdayKey {
   return WEEKDAY_KEYS[date.getDay()] ?? "sunday";
+}
+
+/**
+ * 指定日が「毎月の繰り返し定休（第N曜日）」に該当するか判定する純粋関数。
+ * 例: `{ weekday: "monday", week: "third" }` は毎月第3月曜に該当。
+ * `week: "last"` はその曜日の月内最終出現。ローカル日付ベース（getDay/getDate）。
+ */
+export function isMonthlyClosureDate(
+  date: Date,
+  closures: readonly MonthlyClosure[] | undefined,
+): boolean {
+  if (!closures || closures.length === 0) return false;
+
+  const weekday = getWeekdayKey(date);
+  const dayOfMonth = date.getDate();
+  // 同曜日の月内 N 回目（1-5）
+  const nthOccurrence = Math.floor((dayOfMonth - 1) / 7) + 1;
+  // 月の日数（翌月 0 日 = 当月末日）
+  const daysInMonth = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
+  // 同曜日の月内最終出現か（7 日後が月をはみ出す）
+  const isLastOccurrence = dayOfMonth + 7 > daysInMonth;
+
+  return closures.some((closure) => {
+    if (closure.weekday !== weekday) return false;
+    if (closure.week === "last") return isLastOccurrence;
+    const targetNth =
+      closure.week === "first"
+        ? 1
+        : closure.week === "second"
+          ? 2
+          : closure.week === "third"
+            ? 3
+            : 4; // "fourth"
+    return targetNth === nthOccurrence;
+  });
 }
 
 /**
@@ -74,6 +116,11 @@ export function generateSlotsFromBusinessHours(
   // 営業時間設定がない場合はフォールバック
   if (!businessHours) {
     return generateFallbackSlots();
+  }
+
+  // 毎月の繰り返し定休（第N曜日）に該当する場合は空配列
+  if (isMonthlyClosureDate(targetDate, businessHours.monthlyClosures)) {
+    return [];
   }
 
   const daySettings = businessHours[weekday];
