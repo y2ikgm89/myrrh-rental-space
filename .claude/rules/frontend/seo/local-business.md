@@ -4,8 +4,8 @@ paths:
   - src/app/(public*)/_shared/lib/seo/json-ld-config.ts
   - src/app/(public*)/_shared/lib/seo/location-json-ld.ts
   - src/app/(public*)/access/**
-  - src/app/(public*)/_components/BusinessInfo*.tsx
-  - src/app/(public*)/_components/Footer*.tsx
+  - src/app/(public)/contact/_components/business-info.tsx
+  - src/app/(public*)/_shared/components/layouts/site-footer.tsx
   - src/shared/lib/settings/public.ts
   - src/shared/domain/settings/**
 ---

@@ -29,27 +29,26 @@ paths:
 
 ### 共有ライブラリ（`src/shared/lib/`）
 
-| ファイル                                     | 理由                                                                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `src/shared/lib/prisma.ts`                   | DB 接続文字列・PrismaClient                                                                          |
-| `src/shared/lib/admin-auth.ts`               | 管理者用 Better Auth 設定・セッション検証                                                            |
-| `src/shared/lib/customer-auth.ts`            | 顧客用 Better Auth 設定・セッション検証                                                              |
-| `src/shared/lib/errors/logger.ts`            | サーバー専用構造化ロガー                                                                             |
-| `src/shared/lib/env/server.ts`               | 全サーバーシークレット（`DATABASE_URL`、`BETTER_AUTH_SECRET` 等）                                    |
-| `src/shared/lib/crypto.ts`                   | `ENCRYPTION_KEY` 読み取り・暗号化/復号化関数                                                         |
-| `src/shared/lib/email.ts`                    | `RESEND_API_KEY` 読み取り・Resend クライアント生成                                                   |
-| `src/shared/lib/email-service.ts`            | Resend + DB アクセス（メール送信サービス）                                                           |
-| `src/shared/lib/google-calendar.ts`          | DB から OAuth シークレットを復号して Google Calendar API 呼び出し                                    |
-| `src/shared/lib/google-oauth-credentials.ts` | `GOOGLE_CLIENT_ID/SECRET` + DB 読み取り                                                              |
-| `src/shared/lib/cloudflare.ts`               | DB から Cloudflare API Token を復号してキャッシュパージ                                              |
-| `src/shared/lib/turnstile.ts`                | DB から Turnstile Secret Key を復号してトークン検証                                                  |
-| `src/shared/lib/calendar-sync.ts`            | DB + Google Calendar API（双方向同期）                                                               |
-| `src/shared/lib/analytics/ga-data-api.ts`    | Google Analytics サービスアカウント認証                                                              |
-| `src/shared/lib/r2/client.ts`                | Cloudflare R2 S3Client singleton・API トークン読み取り                                               |
-| `src/shared/lib/r2/upload.ts`                | `@aws-sdk/client-s3` の `PutObjectCommand` 呼び出し                                                  |
-| `src/shared/lib/r2/delete.ts`                | `@aws-sdk/client-s3` の `DeleteObject` / `DeleteObjectsCommand`                                      |
-| `src/shared/lib/stripe.ts`                   | Stripe SDK 直接 import + DB 復号して `Stripe` クライアント生成（PR #232 で `@/admin/lib/` から移管） |
-| `src/shared/lib/ssrf-guard.ts`               | `node:dns/promises` 直接 import で DNS rebinding 対策（PR #232 で `@/admin/lib/` から移管）          |
+| ファイル                                   | 理由                                                                                                 |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `src/shared/db/prisma.ts`                  | DB 接続文字列・PrismaClient                                                                          |
+| `src/shared/lib/admin-auth.ts`             | 管理者用 Better Auth 設定・セッション検証                                                            |
+| `src/shared/lib/customer-auth.ts`          | 顧客用 Better Auth 設定・セッション検証                                                              |
+| `src/shared/lib/errors/logger.ts`          | サーバー専用構造化ロガー                                                                             |
+| `src/shared/lib/env/server.ts`             | 全サーバーシークレット（`DATABASE_URL`、`BETTER_AUTH_SECRET` 等）                                    |
+| `src/shared/lib/crypto.ts`                 | `ENCRYPTION_KEY` 読み取り・暗号化/復号化関数                                                         |
+| `src/shared/lib/email/send.ts`             | `RESEND_API_KEY` 読み取り・Resend クライアント生成・メール送信 SSoT                                  |
+| `src/shared/lib/google-calendar/index.ts`  | DB から OAuth シークレットを復号して Google Calendar API 呼び出し                                    |
+| `src/shared/lib/cloudflare.ts`             | DB から Cloudflare API Token を復号してキャッシュパージ                                              |
+| `src/shared/lib/turnstile.ts`              | DB から Turnstile Secret Key を復号してトークン検証                                                  |
+| `src/shared/lib/calendar-sync/outbound.ts` | DB + Google Calendar API（双方向同期 outbound）                                                      |
+| `src/shared/lib/calendar-sync/inbound.ts`  | DB + Google Calendar API（双方向同期 inbound）                                                       |
+| `src/shared/lib/analytics/ga-data-api.ts`  | Google Analytics サービスアカウント認証                                                              |
+| `src/shared/lib/r2/client.ts`              | Cloudflare R2 S3Client singleton・API トークン読み取り                                               |
+| `src/shared/lib/r2/upload.ts`              | `@aws-sdk/client-s3` の `PutObjectCommand` 呼び出し                                                  |
+| `src/shared/lib/r2/delete.ts`              | `@aws-sdk/client-s3` の `DeleteObject` / `DeleteObjectsCommand`                                      |
+| `src/shared/lib/stripe.ts`                 | Stripe SDK 直接 import + DB 復号して `Stripe` クライアント生成（PR #232 で `@/admin/lib/` から移管） |
+| `src/shared/lib/ssrf-guard.ts`             | `node:dns/promises` 直接 import で DNS rebinding 対策（PR #232 で `@/admin/lib/` から移管）          |
 
 ### 管理画面ライブラリ（`src/app/(admin)/.../_shared/lib/`）
 
@@ -82,7 +81,7 @@ import "server-only";
 // ファイル先頭に1行追加（JSDocコメントの後、最初のimportの前）
 import "server-only";
 
-import { PrismaClient } from "...";
+import { prisma } from "@/shared/db/prisma";
 ```
 
 ## 追加方法

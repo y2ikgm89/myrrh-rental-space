@@ -4,8 +4,8 @@ paths:
   - "src/app/(public*)/**/*.tsx"
   - "src/app/(admin)/**/*.tsx"
   - "src/shared/contexts/**"
-  - "src/public/components/a11y/**"
-  - "src/public/lib/a11y/**"
+  - "src/app/(public*)/_shared/components/a11y/**"
+  - "src/app/(public*)/_shared/lib/a11y/**"
 ---
 
 # Accessibility — セマンティック HTML / aria-\*
