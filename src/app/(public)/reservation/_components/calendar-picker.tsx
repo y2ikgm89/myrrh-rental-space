@@ -4,18 +4,24 @@ import { useState, type ReactElement } from "react";
 import { DayPicker } from "@daypicker/react";
 import { ja } from "@daypicker/react/locale";
 import type { BusinessHours } from "@/shared/lib/json-validators";
-import { getWeekdayKey } from "@/shared/lib/reservation/time-slots-utils";
+import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
+import {
+  getWeekdayKey,
+  formatDateString,
+} from "@/shared/lib/reservation/time-slots-utils";
 
 interface CalendarPickerProps {
   readonly selectedDate: Date | undefined;
   readonly onSelect: (date: Date | undefined) => void;
   readonly businessHours: BusinessHours | null;
+  readonly blockedRanges?: readonly BlockedDateRange[];
 }
 
 export function CalendarPicker({
   selectedDate,
   onSelect,
   businessHours,
+  blockedRanges = [],
 }: CalendarPickerProps): ReactElement {
   const [minDate] = useState(() => {
     const today = new Date();
@@ -23,8 +29,17 @@ export function CalendarPicker({
     return today;
   });
 
+  const isBlockedDay = (date: Date): boolean => {
+    if (blockedRanges.length === 0) return false;
+    const dateStr = formatDateString(date);
+    return blockedRanges.some(
+      (range) => dateStr >= range.startDate && dateStr <= range.endDate,
+    );
+  };
+
   const isDisabledDay = (date: Date): boolean => {
     if (date < minDate) return true;
+    if (isBlockedDay(date)) return true;
     if (!businessHours) return false;
     const weekday = getWeekdayKey(date);
     const daySettings = businessHours[weekday];

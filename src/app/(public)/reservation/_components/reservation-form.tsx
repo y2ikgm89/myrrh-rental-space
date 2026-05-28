@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useEffectEvent,
   useReducer,
   useRef,
   useState,
@@ -22,9 +23,16 @@ import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
-import { addMinutesToTime } from "@/shared/lib/reservation/time-slots-utils";
+import {
+  addMinutesToTime,
+  formatDateString,
+} from "@/shared/lib/reservation/time-slots-utils";
+import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
 import { submitReservation } from "@/public/actions/reservation";
-import { fetchAvailableSlots } from "@/public/actions/availability";
+import {
+  fetchAvailableSlots,
+  fetchSpaceBlockedDates,
+} from "@/public/actions/availability";
 import type { TurnstileInstance } from "@/shared/components/turnstile-widget";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
@@ -53,13 +61,6 @@ const STEPS_WITHOUT_SPACE = ALL_STEPS.filter((s) => s.number !== 1);
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatDateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 function isCustomerType(value: unknown): value is CustomerType {
   return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
@@ -144,8 +145,30 @@ export function ReservationForm({
   const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const [isFetchingSlots, startSlotTransition] = useTransition();
+  const [blockedRanges, setBlockedRanges] = useState<
+    readonly BlockedDateRange[]
+  >([]);
+  const [, startBlockedTransition] = useTransition();
   const spaceSectionRef = useRef<HTMLElement>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
+
+  // スペースの臨時休業（BlockedDate）範囲を取得してカレンダー grey-out に使う
+  const loadBlockedRanges = (spaceId: string): void => {
+    startBlockedTransition(async () => {
+      const ranges = await fetchSpaceBlockedDates(spaceId);
+      setBlockedRanges(ranges);
+    });
+  };
+
+  // 初期選択済みスペース（?spaceId= / 単一拠点）の blocked 範囲を mount 時に取得
+  const onMountLoadBlocked = useEffectEvent(() => {
+    if (auto.spaceId) {
+      loadBlockedRanges(auto.spaceId);
+    }
+  });
+  useEffect(() => {
+    onMountLoadBlocked();
+  }, []);
 
   const [lastResult, formAction, isPending] = useActionState(
     submitReservation,
@@ -233,13 +256,16 @@ export function ReservationForm({
     const autoSpace =
       loc?.spaces.length === 1 ? (loc.spaces[0]?.id ?? null) : null;
     dispatch({ type: "selectLocation", id, autoSpaceId: autoSpace });
-    if (!autoSpace) {
+    if (autoSpace) {
+      loadBlockedRanges(autoSpace);
+    } else {
       setTimeout(() => scrollToElement(spaceSectionRef.current), 100);
     }
   }
 
   function handleSpaceSelect(id: string) {
     dispatch({ type: "selectSpace", id });
+    loadBlockedRanges(id);
   }
 
   function handleDateChange(date: Date | undefined) {
@@ -496,6 +522,7 @@ export function ReservationForm({
         {renderStepIndicator()}
         <DateTimeSection
           businessHours={businessHours}
+          blockedRanges={blockedRanges}
           slots={state.slots}
           isFetchingSlots={isFetchingSlots}
           spaceCapacity={currentSpace?.capacity ?? 1}

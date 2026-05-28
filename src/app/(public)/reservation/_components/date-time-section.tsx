@@ -3,7 +3,9 @@
 import type { ReactElement } from "react";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
+import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
 import { CalendarPicker } from "./calendar-picker";
+import { ClosureNotice } from "./closure-notice";
 import { TimeSlotGrid } from "./time-slot-grid";
 import { DurationPills } from "./duration-pills";
 import { GuestStepper } from "./guest-stepper";
@@ -24,6 +26,7 @@ function calcMaxDuration(
 
 interface DateTimeSectionProps {
   readonly businessHours: BusinessHours | null;
+  readonly blockedRanges: readonly BlockedDateRange[];
   readonly slots: readonly TimeSlot[];
   readonly isFetchingSlots: boolean;
   readonly spaceCapacity: number;
@@ -39,6 +42,7 @@ interface DateTimeSectionProps {
 
 export function DateTimeSection({
   businessHours,
+  blockedRanges,
   slots,
   isFetchingSlots,
   spaceCapacity,
@@ -62,10 +66,12 @@ export function DateTimeSection({
         <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
           日付を選択
         </p>
+        <ClosureNotice ranges={blockedRanges} />
         <CalendarPicker
           selectedDate={selectedDate}
           onSelect={onDateChange}
           businessHours={businessHours}
+          blockedRanges={blockedRanges}
         />
       </section>
 
