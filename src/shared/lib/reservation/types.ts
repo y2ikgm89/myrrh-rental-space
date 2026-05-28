@@ -24,6 +24,13 @@ export interface PrismaTransactionClient {
       status: ReservationStatus;
     } | null>;
   };
+  blockedDate: {
+    findFirst: (args: {
+      where: Record<string, unknown>;
+      orderBy?: Record<string, unknown>;
+      select?: Record<string, boolean>;
+    }) => Promise<{ reason: string | null } | null>;
+  };
 }
 
 /**
