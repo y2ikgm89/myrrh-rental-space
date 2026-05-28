@@ -8,7 +8,7 @@ paths:
 
 # Zod メタデータと Registry
 
-> Zod 4.3 対応
+> Zod 4 対応
 
 ## メタデータと registry（Zod 4 公式パターン）
 

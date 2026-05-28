@@ -112,8 +112,8 @@ if (error?.name === "invalid_api_key") {
 
 ## Gotchas
 
-- **`better-auth` 1.5.x で Prisma アダプターが別パッケージに分離** — `@better-auth/prisma-adapter` を別途インストール必要（`bun add @better-auth/prisma-adapter`）。import パス `better-auth/adapters/prisma` は変わらずコード修正不要
+- **`better-auth` で Prisma アダプターが別パッケージに分離** — `@better-auth/prisma-adapter` を別途インストール必要（`bun add @better-auth/prisma-adapter`）。import パス `better-auth/adapters/prisma` は変わらずコード修正不要
 - **Resend SDK v3+（v6 含む）は例外を投げない** — `resend.emails.send()` / `resend.domains.list()` 等はすべて `{ data, error }` を返す（ネットワークエラーも含む）。`try/catch` のみでは API エラーをキャッチできない。必ず `const { error } = await resend.xxx()` で `error` をチェックする
 - **Idempotency は 24 時間ウィンドウ** — それを超えた同一 key の送信は新規扱い。リマインダー等「最大 24 時間に 1 回送れば良い」イベントには適合、月次ダイジェストは non-stable suffix（timestamp 等）が必要
 - **`resend.emails.send(payload, options)` の 2 引数形式が推奨** — `idempotencyKey` を payload に inline しても動作するが、`send.ts` は第 2 引数形式で統一（公式 AI onboarding ドキュメント準拠）
-- **Stripe API version `2026-03-25.dahlia`** — stripe SDK v22 の `LatestApiVersion` に合わせる。SDK アップグレード時は `bun run type-check` の型エラーで新バージョン文字列が判明 → `stripe.ts` の `apiVersion` を更新。v22 では `accounts.retrieve()` に `null` 引数が必須
+- **Stripe API version は `src/shared/lib/stripe.ts` の `apiVersion` が SSoT** — SDK アップグレード時は `bun run type-check` の型エラーで新バージョン文字列が判明 → `stripe.ts` の `apiVersion` を更新。現行 SDK では `accounts.retrieve()` に `null` 引数が必須

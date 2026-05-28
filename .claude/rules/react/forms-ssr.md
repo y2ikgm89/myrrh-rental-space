@@ -7,7 +7,7 @@ paths:
 
 # React フォーム・SSR パターン
 
-> React 19.2 / Next.js 16 対応
+> React 19 / Next.js 16 対応
 
 ## Next.js 16 PPR + `new Date()` ビルドエラー
 

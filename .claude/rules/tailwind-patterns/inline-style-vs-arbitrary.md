@@ -6,7 +6,7 @@ paths:
 
 # インラインスタイル vs Tailwind arbitrary properties
 
-> Tailwind CSS 4.2 / specificity 衝突 / responsive reset
+> Tailwind CSS 4 / specificity 衝突 / responsive reset
 
 ## specificity 問題
 

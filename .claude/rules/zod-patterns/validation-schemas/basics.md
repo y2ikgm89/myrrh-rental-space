@@ -9,7 +9,7 @@ paths:
 
 # Zod 基本スキーマ + 合成 + URL + datetime-local
 
-> Zod 4.3 基礎: 基本フィールド / 複合スキーマ / `.extend()` 合成 / URL / datetime-local input 連携 + JST 変換規律。
+> Zod 4 基礎: 基本フィールド / 複合スキーマ / `.extend()` 合成 / URL / datetime-local input 連携 + JST 変換規律。
 
 ## 基本スキーマ定義
 

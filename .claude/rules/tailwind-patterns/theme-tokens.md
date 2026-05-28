@@ -6,7 +6,7 @@ paths:
 
 # Tailwind テーマトークン・セマンティックカラー
 
-> Tailwind CSS 4.2 / CSS-first 設定 / Multiple Root Layouts 対応
+> Tailwind CSS 4 / CSS-first 設定 / Multiple Root Layouts 対応
 
 ## 禁止事項（テーマ・カラー系）
 

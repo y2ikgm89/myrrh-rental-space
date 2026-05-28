@@ -7,9 +7,9 @@ paths:
 
 # React フックパターン
 
-> React 19.2 / React Compiler 1.0 対応
+> React 19 / React Compiler 1.0 対応
 
-> 公式 React 19.2 API: [react.dev](https://react.dev/) / [React Compiler 1.0](https://react.dev/blog/2025/10/07/react-compiler-1)
+> 公式 React 19 API: [react.dev](https://react.dev/) / [React Compiler 1.0](https://react.dev/blog/2025/10/07/react-compiler-1)
 
 ## フックから UI 要素を返すパターン（headless UI）
 

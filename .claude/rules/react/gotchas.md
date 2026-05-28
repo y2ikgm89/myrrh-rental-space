@@ -7,11 +7,11 @@ paths:
 
 # React Gotchas・禁止事項
 
-> React 19.2 / React Compiler 1.0 対応
+> React 19 / React Compiler 1.0 対応
 
-## React 19.2 `<Activity>` — 採用条件
+## React 19 `<Activity>` — 採用条件
 
-`<Activity>` は **React 19.2 で stable 化**（2025-10-01 公式リリース）。`unstable_Activity` ではなく正式 `Activity` として export される。`hidden` でも state 保持 + effect unmount + 低優先レンダー継続という挙動で、navigation preload（BFCache 代替）・back navigation の state 復元・ViewTransition と組合せた preload が公式推奨の用途。
+`<Activity>` は **React 19 で stable 化**（2025-10-01 公式リリース）。`unstable_Activity` ではなく正式 `Activity` として export される。`hidden` でも state 保持 + effect unmount + 低優先レンダー継続という挙動で、navigation preload（BFCache 代替）・back navigation の state 復元・ViewTransition と組合せた preload が公式推奨の用途。
 
 ただし `display: none` で DOM を非表示にするため **CSS transform / opacity アニメーションと非互換**（hidden 中は画面から消えるためアニメーション中の要素が見えない）。
 

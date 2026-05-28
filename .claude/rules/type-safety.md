@@ -6,7 +6,7 @@ paths:
 
 # 型安全ルール
 
-> TypeScript 6.0 / noUncheckedIndexedAccess 有効
+> TypeScript 6 / noUncheckedIndexedAccess 有効
 
 ## tsconfig 必須オプション
 

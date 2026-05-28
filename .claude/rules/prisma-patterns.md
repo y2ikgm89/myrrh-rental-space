@@ -9,7 +9,7 @@ paths:
 
 # Prisma パターンルール
 
-> Prisma 7.8 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
+> Prisma 7 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
 
 ## Better Auth との境界
 
@@ -135,7 +135,7 @@ space.pricePerHour; // number（Decimal ではない）
 - **`prisma.$transaction([...])` 配列形式は pg deprecation を誘発するため禁止** — `@prisma/adapter-pg` + `pg` driver adapter 構成で、pinned PoolClient 上に `BEGIN + N queries + COMMIT` が積まれる瞬間に `pg/lib/client.js` の `_queryQueue.length > 0` チェックが発火し `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` を emit する。独立クエリは `Promise.all`、原子性必須は interactive transaction `prisma.$transaction(async (tx) => { ... })` を使う。ESLint `no-restricted-syntax` で error 検出。例外: `prisma/seed.ts` の一括 `deleteMany`（実行回数限定・原子性必須）
 - **`PrismaPg` adapter 必須** — `scripts/` は Next.js ランタイム外のため `new PrismaClient()` 単独で WASM エンジンが初期化できず `PrismaClientInitializationError`。`new PrismaPg({ connectionString: databaseUrl })` → `new PrismaClient({ adapter })` の順で初期化
 - **`PrismaPg` は接続設定オブジェクトを渡す（Prisma 7 公式推奨）** — `new PrismaPg({ connectionString, max, connectionTimeoutMillis, idleTimeoutMillis })` の config 渡しが公式 README / Prisma 7 サンプルの canonical 形式。`pg.Pool` の生成・dispose は adapter-pg が内部管理する。adapter factory の `connect()` は config 渡しだと内部で `new pg.Pool()` を生成するが、`connect()` 自体は PrismaClient 1 インスタンスのライフタイムにつき 1 回しか呼ばれない（client engine が `connected` state で memoize する公式仕様）。PrismaClient を globalThis singleton で保持していれば Pool も実質 1 インスタンスに収束する。外部 `pg.Pool` を `new Pool()` で生成して `PrismaPg` に渡す旧パターンは廃止 — アプリに不要な `pg` 直接依存が生まれ dual-instance リスクを招くため。`src/shared/db/prisma.ts` が参照実装
-- **Prisma 7.8 の `pg Pool` v7 デフォルト（idle 10s / connect 0s）は Cloud Run で早期切断** — コールドスタート直後に接続が切れる。公式の v6 互換推奨値 `connectionTimeoutMillis: 5_000` / `idleTimeoutMillis: 300_000` を明示指定する（`src/shared/db/prisma.ts` 参照実装）
+- **Prisma 7 の `pg Pool` v7 デフォルト（idle 10s / connect 0s）は Cloud Run で早期切断** — コールドスタート直後に接続が切れる。公式の v6 互換推奨値 `connectionTimeoutMillis: 5_000` / `idleTimeoutMillis: 300_000` を明示指定する（`src/shared/db/prisma.ts` 参照実装）
 - **Prisma Client singleton は `declare global { var __myrrhPrismaGlobalStore: GlobalStore | undefined }` + `(globalThis.__myrrhPrismaGlobalStore ??= {})` ambient global パターン** — `globalThis as unknown as { prisma?: PrismaClient }` cast は `type-safety/assertion-bans.md` §1-7 許可例外外の silent debt のため 2026-05-18 に廃止。**`declare global` で type-safe な ambient declaration を作り `??=` で空 store を遅延初期化**する canonical (TypeScript / Next.js / Prisma の 1 つの公式バリアント)。store には PrismaClient のみ保持する（`pg.Pool` は adapter-pg 内部管理に委譲済）。R2 S3Client (`src/shared/lib/r2/client.ts`) も同パターン (`__myrrhR2GlobalStore`)。新規 server-only singleton 追加時は `declare global` + project prefix (`__myrrh<Service>GlobalStore`) で命名衝突を回避する（`src/shared/db/prisma.ts` 参照実装）
 - **Prisma `log` 設定は本番 `["error"]` / dev `["warn", "error"]` に統一** — `"query"` は dev でも出力量が多くノイズになる。本番で `"warn"` / `"info"` を有効にするとログコスト増（Cloud Logging 料金）
 - **`import type Prisma` はランタイムで使えない** — `Prisma.JsonNull` / `Prisma.DbNull` 等の **runtime sentinel 値** を使う場合は `import { Prisma } from "@generated/prisma/client"` を使用（`type` キーワードなし）。**型のみ**（`Prisma.InputJsonValue` / `Prisma.WhereInput` 等）はゲートウェイ `@/shared/lib/validations/enums/prisma-types` から `import type { Prisma }` で取得可能

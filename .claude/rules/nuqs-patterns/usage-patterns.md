@@ -33,7 +33,7 @@ function SearchForm() {
 **⚠️ options は `.withOptions()` でパーサーにチェーンする（3 引数形式は非対応）**:
 
 ```typescript
-// NG: 3 引数形式（nuqs 2.8.8 非対応 — コンパイルエラー）
+// NG: 3 引数形式（nuqs 2 非対応 — コンパイルエラー）
 useQueryState("tab", parseAsStringLiteral(TAB_VALUES).withDefault("spaces"), {
   history: "push",
   shallow: false,
@@ -151,7 +151,7 @@ export function Results() {
 
 ## 5. クライアントで Server と同一のパーサーマップを import
 
-nuqs 2.8 の `createSearchParamsCache` 戻り値に `keyMap` はない。export したパーサーオブジェクトを Server の `createSearchParamsCache(...)` と Client の `useQueryStates(...)` の両方で使う。
+nuqs の `createSearchParamsCache` 戻り値に `keyMap` はない。export したパーサーオブジェクトを Server の `createSearchParamsCache(...)` と Client の `useQueryStates(...)` の両方で使う。
 
 ```typescript
 'use client'

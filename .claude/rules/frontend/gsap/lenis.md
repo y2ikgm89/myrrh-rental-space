@@ -11,7 +11,7 @@ paths:
 
 # GSAP Lenis・Tailwind 共存
 
-> GSAP 3.14.2 / Lenis 1.3.19 対応
+> GSAP 3 / Lenis 1 対応
 
 ## Lenis スムーススクロール
 

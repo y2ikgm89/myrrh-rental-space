@@ -11,7 +11,7 @@ paths:
 
 # Better Auth セッション取得
 
-> Better Auth 1.6.10 公式 nextCookies + 静的初期化 + Prisma 7 adapter 設定 + Server Components / Server Actions のセッション取得関数 SSoT。
+> Better Auth 公式 nextCookies + 静的初期化 + Prisma 7 adapter 設定 + Server Components / Server Actions のセッション取得関数 SSoT。
 
 ## Better Auth 公式パターン
 

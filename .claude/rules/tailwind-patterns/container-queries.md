@@ -6,7 +6,7 @@ paths:
 
 # Tailwind Container Queries
 
-> Tailwind CSS 4.2 / @container / named container
+> Tailwind CSS 4 / @container / named container
 
 ## Container Queries — 基本パターン
 
