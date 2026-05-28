@@ -112,6 +112,12 @@ const ALL_NAV_ITEMS: readonly NavItem[] = [
     resource: "settings",
   },
   {
+    id: "settings-holidays",
+    label: "設定: 全社休業日",
+    href: "/admin/settings/holidays",
+    resource: "settings",
+  },
+  {
     id: "settings-billing",
     label: "設定: 課金・決済",
     href: "/admin/settings/billing",
