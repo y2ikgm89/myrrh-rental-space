@@ -37,6 +37,10 @@ import {
   RelatedPosts,
   type RelatedPostCardData,
 } from "./_components/related-posts";
+import {
+  RelatedLinks,
+  type RelatedExternalLinkData,
+} from "./_components/related-links";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -181,6 +185,20 @@ export default async function EventDetailPage({
     name: p.title,
     url: `${baseUrl}/posts/${p.slug}`,
   }));
+  const relatedExternalLinks: readonly RelatedExternalLinkData[] =
+    event.relatedExternalLinks.map((link) => ({
+      id: link.id,
+      url: link.url,
+      title: link.title,
+      description: link.description,
+      imageUrl: link.imageUrl,
+    }));
+  const relatedExternalMentions = relatedExternalLinks.map((link) => ({
+    type: "Thing" as const,
+    name: link.title,
+    url: link.url,
+  }));
+  const allMentions = [...relatedPostMentions, ...relatedExternalMentions];
 
   const calendarUrls = buildAddToCalendarUrls({
     summary: event.title,
@@ -233,9 +251,7 @@ export default async function EventDetailPage({
             {...(event.capacity != null
               ? { maximumAttendeeCapacity: event.capacity }
               : {})}
-            {...(relatedPostMentions.length > 0
-              ? { mentions: relatedPostMentions }
-              : {})}
+            {...(allMentions.length > 0 ? { mentions: allMentions } : {})}
           />
         }
         breadcrumb={[
@@ -322,6 +338,7 @@ export default async function EventDetailPage({
       </ArticleLayout>
 
       <RelatedPosts posts={relatedPosts} />
+      <RelatedLinks links={relatedExternalLinks} />
       <RelatedEvents
         excludeEventId={event.id}
         spaceId={event.space?.id ?? null}

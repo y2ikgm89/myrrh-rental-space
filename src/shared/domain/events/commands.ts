@@ -55,6 +55,13 @@ export interface EventCommandInput {
   tickets?: readonly EventTicketInput[];
   /** 関連記事 Post.id の順序付き配列。undefined ならスキップ、[] でクリア。 */
   relatedPostIds?: readonly string[];
+  /** 関連外部リンク。undefined ならスキップ、[] でクリア。順序保持。 */
+  relatedExternalLinks?: readonly {
+    url: string;
+    title: string;
+    description?: string | null;
+    imageUrl?: string | null;
+  }[];
 }
 
 /**
@@ -142,6 +149,19 @@ export async function createEventCommand(data: EventCommandInput) {
           sortOrder: index,
         })),
         skipDuplicates: true,
+      });
+    }
+
+    if (data.relatedExternalLinks && data.relatedExternalLinks.length > 0) {
+      await tx.eventRelatedExternalLink.createMany({
+        data: data.relatedExternalLinks.map((link, index) => ({
+          eventId: created.id,
+          url: link.url,
+          title: link.title,
+          description: link.description ?? null,
+          imageUrl: link.imageUrl ?? null,
+          sortOrder: index,
+        })),
       });
     }
 
@@ -259,6 +279,22 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
             sortOrder: index,
           })),
           skipDuplicates: true,
+        });
+      }
+    }
+
+    if (data.relatedExternalLinks !== undefined) {
+      await tx.eventRelatedExternalLink.deleteMany({ where: { eventId: id } });
+      if (data.relatedExternalLinks.length > 0) {
+        await tx.eventRelatedExternalLink.createMany({
+          data: data.relatedExternalLinks.map((link, index) => ({
+            eventId: id,
+            url: link.url,
+            title: link.title,
+            description: link.description ?? null,
+            imageUrl: link.imageUrl ?? null,
+            sortOrder: index,
+          })),
         });
       }
     }

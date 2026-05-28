@@ -34,6 +34,10 @@ import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
 import { RelatedPostsField, type RelatedPostOption } from "./RelatedPostsField";
 import {
+  ExternalLinksField,
+  type ExternalLinkInput,
+} from "./ExternalLinksField";
+import {
   createDefaultTicket,
   type EventTicketInput,
 } from "@/shared/domain/events/ticket-types";
@@ -150,6 +154,18 @@ export function EventForm({
   const [relatedPostIds, setRelatedPostIds] = useState<string[]>(
     () => event?.relatedPosts.map((r) => r.postId) ?? [],
   );
+  const [relatedExternalLinks, setRelatedExternalLinks] = useState<
+    ExternalLinkInput[]
+  >(
+    () =>
+      event?.relatedExternalLinks.map((link) => ({
+        _key: link.id,
+        url: link.url,
+        title: link.title,
+        description: link.description,
+        imageUrl: link.imageUrl,
+      })) ?? [],
+  );
 
   const boundAction =
     isEdit && event?.id
@@ -219,8 +235,9 @@ export function EventForm({
     location: [fields.locationId, fields.spaceId, fields.addressDetail].filter(
       (f) => fieldHasErrors(f.errors),
     ).length,
-    related: [fields.relatedPostIds].filter((f) => fieldHasErrors(f.errors))
-      .length,
+    related: [fields.relatedPostIds, fields.relatedExternalLinks].filter((f) =>
+      fieldHasErrors(f.errors),
+    ).length,
     seo: [
       fields.ogpTitle,
       fields.ogpDescription,
@@ -283,6 +300,12 @@ export function EventForm({
           value={postId}
         />
       ))}
+      {/* 関連外部リンクは JSON 文字列で transit、schema 側で preprocess する */}
+      <input
+        type="hidden"
+        name={fields.relatedExternalLinks.name}
+        value={JSON.stringify(relatedExternalLinks)}
+      />
 
       {form.errors && form.errors.length > 0 && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -396,17 +419,23 @@ export function EventForm({
           />
         </TabsContent>
 
-        {/* ============ 関連記事 ============ */}
+        {/* ============ 関連記事 + 関連リンク ============ */}
         <TabsContent
           value="related"
           forceMount
-          className="data-[state=inactive]:hidden"
+          className="space-y-6 data-[state=inactive]:hidden"
         >
           <RelatedPostsField
             selectedIds={relatedPostIds}
             initialOptions={relatedPostOptions}
             onChange={setRelatedPostIds}
             isPending={isPending}
+          />
+          <ExternalLinksField
+            links={relatedExternalLinks}
+            onChange={setRelatedExternalLinks}
+            isPending={isPending}
+            errors={fields.relatedExternalLinks.errors ?? undefined}
           />
         </TabsContent>
 
