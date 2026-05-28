@@ -3,6 +3,7 @@ import {
   getEventById,
   getLocationsForEvent,
   getSpacesForEvent,
+  searchPostsForEventRelation,
 } from "@/shared/domain/events/admin-queries";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../../_components/EventForm";
@@ -34,15 +35,16 @@ export async function generateMetadata({
 export default async function EditEventPage({ params }: PageProps) {
   const { id } = await params;
 
-  const [event, locations, spaces] = await Promise.all([
-    getEventById(id),
+  const event = await getEventById(id);
+  if (!event) notFound();
+
+  const [locations, spaces, relatedPostOptions] = await Promise.all([
     getLocationsForEvent(),
     getSpacesForEvent(),
+    searchPostsForEventRelation({
+      includeIds: event.relatedPosts.map((r) => r.postId),
+    }),
   ]);
-
-  if (!event) {
-    notFound();
-  }
 
   return (
     <AdminDetailLayout
@@ -56,6 +58,7 @@ export default async function EditEventPage({ params }: PageProps) {
         event={event}
         locations={locations}
         spaces={spaces}
+        relatedPostOptions={relatedPostOptions}
       />
     </AdminDetailLayout>
   );

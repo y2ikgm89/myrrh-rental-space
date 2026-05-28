@@ -802,11 +802,12 @@ model Post {
   updatedAt          DateTime    @updatedAt
 
   // Relations
-  category PostCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  author   User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  comments PostComment[]
-  versions PostVersion[]
-  postTags PostTagOnPost[]
+  category     PostCategory       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  author       User?              @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  comments     PostComment[]
+  versions     PostVersion[]
+  postTags     PostTagOnPost[]
+  relatedFromEvents EventRelatedPost[]
 
   // OR検索用インデックス
   @@index([title])
@@ -1753,6 +1754,7 @@ model Event {
   deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
   tickets       EventTicket[]
+  relatedPosts  EventRelatedPost[]
 
   @@index([startTime, endTime])
   @@index([status])
@@ -1760,6 +1762,23 @@ model Event {
   @@index([spaceId])
   @@index([deletedAt])
   @@map("events")
+}
+
+/// Event ↔ Post 関連記事（manual curation、業界標準 Airbnb / Eventbrite / Peatix と整合）。
+/// SEO 強化（internal link + JSON-LD mentions）と関連記事カードグリッド表示で利用。
+model EventRelatedPost {
+  eventId   String   @db.VarChar(30)
+  postId    String   @db.Uuid
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, postId])
+  @@index([eventId, sortOrder])
+  @@index([postId])
+  @@map("event_related_posts")
 }
 
 // ==============================================

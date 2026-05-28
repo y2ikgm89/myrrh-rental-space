@@ -275,8 +275,17 @@ export function TicketsField({
           </p>
         )}
 
+        {/* 単一区分のときは基本情報の定員を使えるため枠数は任意 */}
+        {tickets.length > 1 && (
+          <p className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            区分が複数あるため、各区分の <strong>枠数</strong>{" "}
+            は必須です（受付できる人数を区分ごとに分配する必要があります）。
+          </p>
+        )}
+
         {tickets.map((ticket, index) => {
           const inputBase = `event-ticket-${index}`;
+          const capacityRequired = tickets.length > 1;
           return (
             <div
               key={ticket.id ?? `new-${String(index)}`}
@@ -377,7 +386,16 @@ export function TicketsField({
 
                 <div>
                   <Label htmlFor={`${inputBase}-capacity`}>
-                    枠数 (空欄=制限なし)
+                    枠数{" "}
+                    {capacityRequired ? (
+                      <span aria-hidden="true" className="text-destructive">
+                        *
+                      </span>
+                    ) : (
+                      <span className="font-normal text-muted-foreground">
+                        (任意)
+                      </span>
+                    )}
                   </Label>
                   <Input
                     id={`${inputBase}-capacity`}
@@ -393,7 +411,14 @@ export function TicketsField({
                       })
                     }
                     disabled={isPending}
+                    required={capacityRequired}
+                    aria-required={capacityRequired}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {capacityRequired
+                      ? "区分が複数のため必須。各区分で受け付ける人数を入力します。"
+                      : "空欄なら基本情報の定員を使用します。"}
+                  </p>
                 </div>
 
                 <div className="sm:col-span-2">

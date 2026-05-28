@@ -71,7 +71,26 @@ const ticketsSchema = z.preprocess(
   },
   z
     .array(ticketInputSchema)
-    .min(1, { error: "チケット種別を少なくとも1つ登録してください" }),
+    .min(1, { error: "区分を少なくとも1つ登録してください" })
+    /**
+     * 区分が複数あるときは枠数 (capacity) を必須化。
+     *
+     * 単一区分なら基本情報の定員 (Event.capacity) を全枠数として使えるが、
+     * 複数区分のときは各区分の枠数を明示しないと「どの区分から何人受け入れるか」
+     * が決まらず公開申込フォームで在庫管理ができない (Eventbrite / Peatix と同 UX)。
+     */
+    .superRefine((tickets, ctx) => {
+      if (tickets.length <= 1) return;
+      tickets.forEach((ticket, index) => {
+        if (ticket.capacity == null) {
+          ctx.addIssue({
+            code: "custom",
+            message: "区分が複数のときは枠数を入力してください",
+            path: [index, "capacity"],
+          });
+        }
+      });
+    }),
 );
 
 const optionalNullableString = (maxLength: number, error: string) =>
@@ -131,6 +150,27 @@ const eventFormBaseSchema = z.object({
   ogpDescription: optionalNullableString(200, "OGP説明文は200文字以内です"),
   metaDescription: optionalNullableString(160, "メタ説明文は160文字以内です"),
   metaKeywords: optionalNullableString(500, "メタキーワードは500文字以内です"),
+  /**
+   * 関連記事 Post.id の順序付き配列。hidden input `getAll()` で `string[]` 化される
+   * ため preprocess で空文字列を弾く。最大 12 件（UI 3 col × 4 row 上限）。
+   */
+  relatedPostIds: z.preprocess(
+    (value) =>
+      Array.isArray(value)
+        ? value.filter(
+            (v): v is string => typeof v === "string" && v.length > 0,
+          )
+        : value === "" || value == null
+          ? []
+          : value,
+    z
+      .array(z.string().uuid({ error: "無効な記事IDです" }))
+      .max(12, { error: "関連記事は12件まで登録できます" })
+      .refine((arr) => new Set(arr).size === arr.length, {
+        error: "同じ記事を複数登録することはできません",
+      })
+      .default([]),
+  ),
 });
 
 function refineEvent(

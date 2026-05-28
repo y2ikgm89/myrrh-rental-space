@@ -53,6 +53,8 @@ export interface EventCommandInput {
   status: (typeof EventStatus)[keyof typeof EventStatus];
   registrationOpen?: boolean;
   tickets?: readonly EventTicketInput[];
+  /** 関連記事 Post.id の順序付き配列。undefined ならスキップ、[] でクリア。 */
+  relatedPostIds?: readonly string[];
 }
 
 /**
@@ -129,6 +131,17 @@ export async function createEventCommand(data: EventCommandInput) {
           eventId: created.id,
           ...buildTicketWriteData(ticket),
         })),
+      });
+    }
+
+    if (data.relatedPostIds && data.relatedPostIds.length > 0) {
+      await tx.eventRelatedPost.createMany({
+        data: data.relatedPostIds.map((postId, index) => ({
+          eventId: created.id,
+          postId,
+          sortOrder: index,
+        })),
+        skipDuplicates: true,
       });
     }
 
@@ -233,6 +246,20 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       }
       if (toCreate.length > 0) {
         await tx.eventTicket.createMany({ data: toCreate });
+      }
+    }
+
+    if (data.relatedPostIds !== undefined) {
+      await tx.eventRelatedPost.deleteMany({ where: { eventId: id } });
+      if (data.relatedPostIds.length > 0) {
+        await tx.eventRelatedPost.createMany({
+          data: data.relatedPostIds.map((postId, index) => ({
+            eventId: id,
+            postId,
+            sortOrder: index,
+          })),
+          skipDuplicates: true,
+        });
       }
     }
   });
