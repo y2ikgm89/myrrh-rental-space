@@ -27,8 +27,7 @@ paths:
 - **公開カレンダーの曜日色は日 = `text-destructive`、土 = `text-info`** — 日本標準のカレンダー配色。日曜始まり。今日マーカーは `bg-accent text-accent-foreground rounded-full`。曜日ヘッダーは `bg-surface` + 枠線
 - **日本語ラベルのタブ/ナビに `uppercase` 禁止** — `uppercase` は Latin 専用。日本語タブは Journal タブパターン（`text-sm tracking-[0.18em]`、uppercase なし）に合わせる。ヘッダーナビ（`text-[0.75rem] uppercase`）は英語ラベル向け
 - **空状態の CTA は `Button variant="editorial" size="sm"` を使用** — テキストリンクは余白の中で埋もれる。メッセージテキストは `text-muted-foreground`（base サイズ）、ボタンは `space-y-4` で配置
-- **カードグリッドは Container Queries を使う** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。viewport breakpoints (`md:grid-cols-2`) ではなくコンテナ幅に応じて適応。管理画面 dashboard は `@container/main` named container を使用
-- **ページレベルのレイアウト切替は viewport breakpoints を維持** — 2 カラム text+image（ConceptSection）、フォームグリッド（ContactFormSection）等のマクロレイアウトは `md:grid-cols-2` のまま
+- **カードグリッドは Container Queries、マクロレイアウトは viewport breakpoint** — 採用方針の詳細は `tailwind-patterns/container-queries.md` SSoT を参照。
 - **Heading サイズは `text-h1`/`text-h2`/`text-h3`/`text-h4`/`text-hero` クラスを使う** — `@theme` で `--text-*--line-height/letter-spacing/font-weight` が自動適用される
 - **Design System Primitives (Container, Stack, Heading, Badge, Prose, ImageFrame) は Server Component** — `"use client"` は不要
 - **`grid-cols-2` には必ず `grid-cols-1 sm:grid-cols-2` を使う** — 375px 未満でクラムドになる
@@ -143,7 +142,7 @@ paths:
 - **`Post.thumbnailUrl` は `String` 非 nullable（空文字列あり得る）** — フォールバック必須
 - **公開ページのアクションボタンに `rounded-full` 禁止** — Editorial Magazine はシャープエッジが基本
 - **リスト `.map` 内の個別 `<ScrollReveal delay={i*0.08}>` wrap は anti-pattern** — `ScrollRevealGroup` に集約
-- **Structured list の canonical hairline pattern** — `divide-y divide-divider`（editorial 専用 token、外枠 `border-y border-border` は使わない）。`divide-border` 復活禁止 — `--color-border` は visible card / form / input 境界専用で、構造化リストには **常に `divide-divider`**（`--color-divider: oklch(0.92 0.005 60)` — NYTimes / Medium / Kinfolk Journal 標準値準拠の warm hairline）。外枠 `border-y` は editorial flow を分断するため不採用、リスト全体は親 `SectionWrapper` の padding で囲む（→ `tailwind-patterns/theme-tokens/semantic-tokens.md` §editorial hairline divider）
+- **Structured list の canonical hairline pattern** — `divide-y divide-divider`（`divide-border` 復活禁止）。用途別の正解/禁止パターンは `tailwind-patterns/theme-tokens/semantic-tokens.md` §editorial hairline divider SSoT を参照。
 - **news archive は `<ul>/<li>` ではなく `<div className="divide-y divide-divider">`** — event-list / space-grid / news-archive と同形
 
 ## 公開ページ実装 SSoT

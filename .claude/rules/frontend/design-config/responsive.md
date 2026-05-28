@@ -15,23 +15,11 @@ paths:
 
 ## ブレイクポイント policy
 
-public.css / admin.css 両方で **Tailwind default bp 維持 + `--breakpoint-3xl` 追加** の 6 段階構成。完全リセット（`--breakpoint-*: initial`）は shadcn/ui・Radix エコシステム互換性を損なうため不採用。
-
-| bp  | 値       | px   | semantic 用途                                    |
-| --- | -------- | ---- | ------------------------------------------------ |
-| sm  | `40rem`  | 640  | large phone                                      |
-| md  | `48rem`  | 768  | tablet portrait                                  |
-| lg  | `64rem`  | 1024 | tablet landscape / laptop (admin サイドバー出現) |
-| xl  | `80rem`  | 1280 | desktop                                          |
-| 2xl | `96rem`  | 1536 | large desktop                                    |
-| 3xl | `120rem` | 1920 | ultra wide / 2K-4K monitor                       |
+6 段階構成（sm〜3xl）の値・semantic 用途・`--breakpoint-3xl` 追加理由は `tailwind-patterns/responsive-breakpoints.md` SSoT を参照。
 
 ## 採用方針
 
-- **マクロレイアウト**（Hero split, 2 カラム text+image, フォームグリッド）: **viewport breakpoint**（`md:grid-cols-2`）
-- **カードグリッド / ダッシュボード widget**: **Container Queries**（`@container` + `@md:grid-cols-2 @3xl:grid-cols-3`）
-- **管理画面 dashboard**: **named container**（`@container/main` on `MainContent.tsx` → children で `@md/main:` / `@3xl/main:`）— サイドバー折りたたみ時の適応に必須
-- **ultra-wide 対応**: `@3xl` / `3xl:` variant を使用。default `lg:grid-cols-3` の上位として追加
+マクロレイアウトに viewport breakpoint、カードグリッドに Container Queries を使い分ける canonical 方針は `tailwind-patterns/container-queries.md` SSoT を参照。named container（`@container/main`）/ `CARD_GRID_COLS_MAP` も同ファイルに記載。
 
 ## Layout tokens（public.css / admin.css 共通プレフィックス）
 
@@ -56,7 +44,7 @@ public.css / admin.css 両方で **Tailwind default bp 維持 + `--breakpoint-3x
 
 ## WCAG 2.5.5 Enhanced (AAA) 準拠
 
-全 Button / interactive element は **44×44 CSS px 以上**。public Button / admin Button 両方とも sm/md/lg/icon すべて `min-h-11`（44px）以上。
+44×44 CSS px 要件・要素別サイズ基準・`--touch-target-min` token・例外条項・禁止/OK パターンは `frontend/accessibility/touch-text.md` SSoT を参照。このファイルでは `--touch-target-min: 2.75rem` token を Layout tokens 表（下記）にのみ掲載する。
 
 ## Viewport metadata（Next.js 16）
 
