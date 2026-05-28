@@ -1,6 +1,7 @@
 import {
   getLocationsForEvent,
   getSpacesForEvent,
+  searchPostsForEventRelation,
 } from "@/shared/domain/events/admin-queries";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../_components/EventForm";
@@ -11,9 +12,10 @@ export const metadata: Metadata = {
 };
 
 export default async function NewEventPage() {
-  const [locations, spaces] = await Promise.all([
+  const [locations, spaces, relatedPostOptions] = await Promise.all([
     getLocationsForEvent(),
     getSpacesForEvent(),
+    searchPostsForEventRelation({}),
   ]);
 
   return (
@@ -22,7 +24,11 @@ export default async function NewEventPage() {
       title="イベント新規作成"
       subtitle="新しいイベントを作成します"
     >
-      <EventForm locations={locations} spaces={spaces} />
+      <EventForm
+        locations={locations}
+        spaces={spaces}
+        relatedPostOptions={relatedPostOptions}
+      />
     </AdminDetailLayout>
   );
 }

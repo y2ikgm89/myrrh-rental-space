@@ -33,6 +33,10 @@ import { EventCalendarDisclosure } from "./_components/event-calendar-disclosure
 import { EventStatusNotice } from "./_components/event-status-notice";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 import { RelatedEvents } from "./_components/related-events";
+import {
+  RelatedPosts,
+  type RelatedPostCardData,
+} from "./_components/related-posts";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -157,6 +161,27 @@ export default async function EventDetailPage({
     registerAnchorId: REGISTER_ANCHOR_ID,
   } as const;
 
+  const relatedPosts: readonly RelatedPostCardData[] = event.relatedPosts.map(
+    (entry) => ({
+      id: entry.post.id,
+      title: entry.post.title,
+      slug: entry.post.slug,
+      excerpt: entry.post.excerpt,
+      thumbnailUrl: entry.post.thumbnailUrl,
+      publishedAt: entry.post.publishedAt,
+      category: {
+        id: entry.post.category.id,
+        name: entry.post.category.name,
+        slug: entry.post.category.slug,
+      },
+    }),
+  );
+  const relatedPostMentions = relatedPosts.map((p) => ({
+    type: "Article" as const,
+    name: p.title,
+    url: `${baseUrl}/posts/${p.slug}`,
+  }));
+
   const calendarUrls = buildAddToCalendarUrls({
     summary: event.title,
     description:
@@ -207,6 +232,9 @@ export default async function EventDetailPage({
               : {})}
             {...(event.capacity != null
               ? { maximumAttendeeCapacity: event.capacity }
+              : {})}
+            {...(relatedPostMentions.length > 0
+              ? { mentions: relatedPostMentions }
               : {})}
           />
         }
@@ -293,6 +321,7 @@ export default async function EventDetailPage({
         <ArticleFooter url={eventUrl} title={event.title} />
       </ArticleLayout>
 
+      <RelatedPosts posts={relatedPosts} />
       <RelatedEvents
         excludeEventId={event.id}
         spaceId={event.space?.id ?? null}

@@ -150,6 +150,27 @@ const eventFormBaseSchema = z.object({
   ogpDescription: optionalNullableString(200, "OGP説明文は200文字以内です"),
   metaDescription: optionalNullableString(160, "メタ説明文は160文字以内です"),
   metaKeywords: optionalNullableString(500, "メタキーワードは500文字以内です"),
+  /**
+   * 関連記事 Post.id の順序付き配列。hidden input `getAll()` で `string[]` 化される
+   * ため preprocess で空文字列を弾く。最大 12 件（UI 3 col × 4 row 上限）。
+   */
+  relatedPostIds: z.preprocess(
+    (value) =>
+      Array.isArray(value)
+        ? value.filter(
+            (v): v is string => typeof v === "string" && v.length > 0,
+          )
+        : value === "" || value == null
+          ? []
+          : value,
+    z
+      .array(z.string().uuid({ error: "無効な記事IDです" }))
+      .max(12, { error: "関連記事は12件まで登録できます" })
+      .refine((arr) => new Set(arr).size === arr.length, {
+        error: "同じ記事を複数登録することはできません",
+      })
+      .default([]),
+  ),
 });
 
 function refineEvent(

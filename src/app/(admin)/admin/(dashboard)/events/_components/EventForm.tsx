@@ -32,6 +32,7 @@ import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
+import { RelatedPostsField, type RelatedPostOption } from "./RelatedPostsField";
 import {
   createDefaultTicket,
   type EventTicketInput,
@@ -45,6 +46,8 @@ type EventFormProps = {
   event?: EventData;
   locations: LocationOption[];
   spaces: SpaceOption[];
+  /** 関連記事 selector の初期 option 集合 (parent SC で fetch)。 */
+  relatedPostOptions: readonly RelatedPostOption[];
 };
 
 const EVENT_EDIT_TAB_VALUES = [
@@ -52,6 +55,7 @@ const EVENT_EDIT_TAB_VALUES = [
   "publish",
   "tickets",
   "location",
+  "related",
   "seo",
 ] as const satisfies readonly [string, ...string[]];
 
@@ -70,6 +74,7 @@ const EVENT_EDIT_TAB_LABELS: Record<EventEditTabValue, string> = {
   publish: "本文・公開",
   tickets: "参加費・定員",
   location: "会場",
+  related: "関連記事",
   seo: "SEO",
 };
 
@@ -92,6 +97,7 @@ export function EventForm({
   event,
   locations,
   spaces,
+  relatedPostOptions,
 }: EventFormProps): ReactElement {
   const isEdit = Boolean(event);
 
@@ -141,6 +147,9 @@ export function EventForm({
     }
     return [createDefaultTicket(0)];
   });
+  const [relatedPostIds, setRelatedPostIds] = useState<string[]>(
+    () => event?.relatedPosts.map((r) => r.postId) ?? [],
+  );
 
   const boundAction =
     isEdit && event?.id
@@ -210,6 +219,8 @@ export function EventForm({
     location: [fields.locationId, fields.spaceId, fields.addressDetail].filter(
       (f) => fieldHasErrors(f.errors),
     ).length,
+    related: [fields.relatedPostIds].filter((f) => fieldHasErrors(f.errors))
+      .length,
     seo: [
       fields.ogpTitle,
       fields.ogpDescription,
@@ -260,6 +271,18 @@ export function EventForm({
         name={fields.tickets.name}
         value={JSON.stringify(tickets)}
       />
+      {/* 関連記事 Post.id は順序 string[]、getAll() で配列復元 */}
+      {relatedPostIds.length === 0 && (
+        <input type="hidden" name={fields.relatedPostIds.name} value="" />
+      )}
+      {relatedPostIds.map((postId) => (
+        <input
+          key={postId}
+          type="hidden"
+          name={fields.relatedPostIds.name}
+          value={postId}
+        />
+      ))}
 
       {form.errors && form.errors.length > 0 && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -370,6 +393,20 @@ export function EventForm({
                 }
               }
             }}
+          />
+        </TabsContent>
+
+        {/* ============ 関連記事 ============ */}
+        <TabsContent
+          value="related"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <RelatedPostsField
+            selectedIds={relatedPostIds}
+            initialOptions={relatedPostOptions}
+            onChange={setRelatedPostIds}
+            isPending={isPending}
           />
         </TabsContent>
 
