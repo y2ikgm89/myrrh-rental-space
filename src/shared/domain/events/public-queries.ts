@@ -3,7 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus, PostStatus } from "@generated/prisma/enums";
+import { EventStatus } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   safeFetch,
@@ -52,36 +52,6 @@ const publicEventDetailSelect = {
   ogpDescription: true,
   metaDescription: true,
   metaKeywords: true,
-  relatedPosts: {
-    select: {
-      sortOrder: true,
-      post: {
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          excerpt: true,
-          thumbnailUrl: true,
-          publishedAt: true,
-          status: true,
-          category: { select: { id: true, name: true, slug: true } },
-        },
-      },
-    },
-    where: { post: { status: PostStatus.PUBLISHED } },
-    orderBy: { sortOrder: "asc" as const },
-  },
-  relatedExternalLinks: {
-    select: {
-      id: true,
-      url: true,
-      title: true,
-      description: true,
-      imageUrl: true,
-      sortOrder: true,
-    },
-    orderBy: { sortOrder: "asc" as const },
-  },
 };
 
 export async function getPublishedEvents() {

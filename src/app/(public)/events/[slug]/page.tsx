@@ -33,14 +33,6 @@ import { EventCalendarDisclosure } from "./_components/event-calendar-disclosure
 import { EventStatusNotice } from "./_components/event-status-notice";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 import { RelatedEvents } from "./_components/related-events";
-import {
-  RelatedPosts,
-  type RelatedPostCardData,
-} from "./_components/related-posts";
-import {
-  RelatedLinks,
-  type RelatedExternalLinkData,
-} from "./_components/related-links";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -165,41 +157,6 @@ export default async function EventDetailPage({
     registerAnchorId: REGISTER_ANCHOR_ID,
   } as const;
 
-  const relatedPosts: readonly RelatedPostCardData[] = event.relatedPosts.map(
-    (entry) => ({
-      id: entry.post.id,
-      title: entry.post.title,
-      slug: entry.post.slug,
-      excerpt: entry.post.excerpt,
-      thumbnailUrl: entry.post.thumbnailUrl,
-      publishedAt: entry.post.publishedAt,
-      category: {
-        id: entry.post.category.id,
-        name: entry.post.category.name,
-        slug: entry.post.category.slug,
-      },
-    }),
-  );
-  const relatedPostMentions = relatedPosts.map((p) => ({
-    type: "Article" as const,
-    name: p.title,
-    url: `${baseUrl}/posts/${p.slug}`,
-  }));
-  const relatedExternalLinks: readonly RelatedExternalLinkData[] =
-    event.relatedExternalLinks.map((link) => ({
-      id: link.id,
-      url: link.url,
-      title: link.title,
-      description: link.description,
-      imageUrl: link.imageUrl,
-    }));
-  const relatedExternalMentions = relatedExternalLinks.map((link) => ({
-    type: "Thing" as const,
-    name: link.title,
-    url: link.url,
-  }));
-  const allMentions = [...relatedPostMentions, ...relatedExternalMentions];
-
   const calendarUrls = buildAddToCalendarUrls({
     summary: event.title,
     description:
@@ -251,7 +208,6 @@ export default async function EventDetailPage({
             {...(event.capacity != null
               ? { maximumAttendeeCapacity: event.capacity }
               : {})}
-            {...(allMentions.length > 0 ? { mentions: allMentions } : {})}
           />
         }
         breadcrumb={[
@@ -337,8 +293,6 @@ export default async function EventDetailPage({
         <ArticleFooter url={eventUrl} title={event.title} />
       </ArticleLayout>
 
-      <RelatedPosts posts={relatedPosts} />
-      <RelatedLinks links={relatedExternalLinks} />
       <RelatedEvents
         excludeEventId={event.id}
         spaceId={event.space?.id ?? null}

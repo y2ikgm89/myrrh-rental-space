@@ -54,28 +54,17 @@ function buildEventCommandInput(data: EventFormData) {
     descriptionJson: _dropJson,
     descriptionHtml: _dropHtml,
     tickets: rawTickets,
-    relatedPostIds: rawRelatedPostIds,
-    relatedExternalLinks: rawRelatedExternalLinks,
     ...rest
   } = data;
   void _dropJson;
   void _dropHtml;
   const tickets = rawTickets.map((t) => omitUndefined(t));
-  const relatedExternalLinks = rawRelatedExternalLinks.map((link) => ({
-    url: link.url,
-    title: link.title,
-    description: link.description,
-    imageUrl:
-      link.imageUrl == null || link.imageUrl === "" ? null : link.imageUrl,
-  }));
   return omitUndefined({
     ...rest,
     descriptionJson,
     descriptionHtml,
     descriptionPlainText,
     tickets,
-    relatedPostIds: rawRelatedPostIds,
-    relatedExternalLinks,
   });
 }
 
@@ -219,8 +208,6 @@ export async function updateEventAction(
 // =============================================================================
 // id-only mutation actions (unchanged — 単純な id 引数のみ、conform 不要)
 // =============================================================================
-// 関連記事 Post 検索は Route Handler 経由 (公式推奨):
-// → /admin/api/events/related-posts/route.ts
 
 export async function deleteEvent(
   id: string,
