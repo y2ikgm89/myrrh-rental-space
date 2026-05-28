@@ -82,7 +82,11 @@ import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { cn } from "@/shared/lib/cn";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
-import { BlockedDatesField } from "./BlockedDatesField";
+import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
+import {
+  createSpaceBlockedDate,
+  deleteSpaceBlockedDate,
+} from "@/admin/actions/space-blocked-dates";
 
 const SPACE_EDIT_TAB_VALUES = [
   "basic",
@@ -1563,8 +1567,11 @@ export function SpaceEditForm({
               </CardHeader>
               <CardContent>
                 <BlockedDatesField
-                  spaceId={space.id}
+                  entityId={space.id}
                   initialBlockedDates={initialBlockedDates}
+                  createAction={createSpaceBlockedDate}
+                  deleteAction={deleteSpaceBlockedDate}
+                  description="設備故障・点検などで特定の日付を予約不可にします（営業時間の定休日とは別管理）。"
                 />
               </CardContent>
             </Card>

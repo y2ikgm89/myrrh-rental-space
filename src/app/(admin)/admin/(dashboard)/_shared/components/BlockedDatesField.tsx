@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import type { SubmissionResult } from "@conform-to/react";
 import { IconCalendarOff, IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   getFormProps,
@@ -35,16 +36,29 @@ import {
   type BlockedDateType,
 } from "@/shared/lib/validations/enums/helpers";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import { scopedBlockedDateFormSchema } from "@/admin/lib/validations/blocked-date";
-import {
-  createSpaceBlockedDate,
-  deleteSpaceBlockedDate,
-} from "@/admin/actions/space-blocked-dates";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 
+type CreateBlockedDateAction = (
+  entityId: string,
+  prev: SubmissionResult | undefined,
+  formData: FormData,
+) => Promise<SubmissionResult>;
+
+type DeleteBlockedDateAction = (
+  entityId: string,
+  blockedDateId: string,
+) => Promise<MutationResult<{ id: string }>>;
+
 interface BlockedDatesFieldProps {
-  readonly spaceId: string;
+  /** scope=SPACE なら spaceId、scope=LOCATION なら locationId */
+  readonly entityId: string;
   readonly initialBlockedDates: readonly BlockedDateData[];
+  readonly createAction: CreateBlockedDateAction;
+  readonly deleteAction: DeleteBlockedDateAction;
+  /** タブ上部の説明文（scope ごとの伝播範囲を明示） */
+  readonly description: string;
 }
 
 const TYPE_VALUES: readonly BlockedDateType[] = [
@@ -60,8 +74,11 @@ function formatRange(blocked: BlockedDateData): string {
 }
 
 export function BlockedDatesField({
-  spaceId,
+  entityId,
   initialBlockedDates,
+  createAction,
+  deleteAction,
+  description,
 }: BlockedDatesFieldProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,7 +86,7 @@ export function BlockedDatesField({
 
   const handleDelete = (blockedDateId: string): void => {
     startDeleteTransition(async () => {
-      const result = await deleteSpaceBlockedDate(spaceId, blockedDateId);
+      const result = await deleteAction(entityId, blockedDateId);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
@@ -82,9 +99,7 @@ export function BlockedDatesField({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          設備故障・点検などで特定の日付を予約不可にします（営業時間の定休日とは別管理）。
-        </p>
+        <p className="text-sm text-muted-foreground">{description}</p>
         <Button
           type="button"
           variant="default"
@@ -139,7 +154,8 @@ export function BlockedDatesField({
 
       {dialogOpen && (
         <AddBlockedDateDialog
-          spaceId={spaceId}
+          entityId={entityId}
+          createAction={createAction}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />
@@ -149,25 +165,27 @@ export function BlockedDatesField({
 }
 
 interface AddBlockedDateDialogProps {
-  readonly spaceId: string;
+  readonly entityId: string;
+  readonly createAction: CreateBlockedDateAction;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
 }
 
 function AddBlockedDateDialog({
-  spaceId,
+  entityId,
+  createAction,
   open,
   onOpenChange,
 }: AddBlockedDateDialogProps) {
   const router = useRouter();
-  const boundAction = createSpaceBlockedDate.bind(null, spaceId);
+  const boundAction = createAction.bind(null, entityId);
   const [lastResult, action, isPending] = useActionState(
     boundAction,
     undefined,
   );
 
   const [form, fields] = useForm({
-    id: "space-blocked-date-create",
+    id: "blocked-date-create",
     lastResult,
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: scopedBlockedDateFormSchema });
