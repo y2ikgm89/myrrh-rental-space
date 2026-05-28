@@ -18,7 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        # SHA 直 pin (公式 security best practice、詳細は
+        # .claude/rules/ops/ci-workflow.md §8.1)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
       # rhysd/actionlint: GitHub Actions workflow の lint（syntax + expression + shellcheck）
       # 公式: https://github.com/rhysd/actionlint
