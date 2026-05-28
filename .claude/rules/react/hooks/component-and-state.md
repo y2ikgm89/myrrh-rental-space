@@ -1,5 +1,5 @@
 ---
-description: Outer/Inner Component Split (Rules of Hooks 回避) + thin dispatcher 削除 + useReducer cascade + startTransition + form.getValues 非リアクティブ
+description: Outer/Inner Component Split (Rules of Hooks 回避) + thin dispatcher 削除 + useReducer cascade + startTransition + conform fields.x.value リアクティブ
 paths:
   - src/**/*.tsx
   - src/**/*.ts
@@ -7,7 +7,7 @@ paths:
 
 # Component Split + State 管理 hooks
 
-> Outer/Inner gate 分離 / thin dispatcher clean-break / `useReducer` カスケード / `startTransition` イベント駆動 / `form.getValues()` 非リアクティブ。
+> Outer/Inner gate 分離 / thin dispatcher clean-break / `useReducer` カスケード / `startTransition` イベント駆動 / conform `fields.x.value` リアクティブ。
 
 ## Outer/Inner Component Split（gate + hooks 分離パターン）
 
@@ -145,22 +145,17 @@ function handleDateChange(date: Date | undefined) {
 
 **`useEffect` が適切な場面**: 外部ストア同期（`useSyncExternalStore` 代替）、サブスクリプション（WebSocket、イベントリスナー）等、ユーザー操作に起因しない副作用のみ。
 
-## React Hook Form — `form.getValues()` は非リアクティブ
+## conform — `fields.x.value` はリアクティブ
 
-`form.getValues()` はスナップショット読み取りであり、値が変わっても再レンダリングをトリガーしない。**render 中に使うとステールな値を表示する原因になる**。
+conform の `fields.x.value` は render ごとに最新値を返すリアクティブな参照。**render 中に直接使用してよい**。クロスフィールドの値参照は `form.value.fieldName` を使う（`useWatch` / `form.getValues` 等の RHF 固有 API は package.json から削除済）。
 
 ```typescript
-// NG: render 中の getValues（非リアクティブ — 値が更新されてもUIに反映されない）
-<Summary date={form.getValues("date")} />
+// OK: fields.x.value はリアクティブ（値が更新されると再レンダリング）
+<Summary date={fields.date.value ?? ""} />
 
-// OK: useState / useReducer の state を直接使用（リアクティブ）
-<Summary date={state.date ? formatDateString(state.date) : ""} />
-
-// OK: リアクティブに値を監視する必要がある場合は useWatch
-const date = useWatch({ control: form.control, name: "date" });
+// OK: クロスフィールド参照は form.value
+const locationId = form.value?.locationId ?? null;
 ```
-
-**例外**: `handleSubmit` コールバック内、`trigger()` 後の条件判定等、イベントハンドラ内での使用は安全。
 
 ## useOptimistic — UI 選択状態と楽観的サーバー状態の分離
 

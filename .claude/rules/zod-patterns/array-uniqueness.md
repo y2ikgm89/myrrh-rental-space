@@ -22,7 +22,7 @@ const imageUrlsSchema = z
     error: "同じ画像を複数登録することはできません",
   });
 
-// useFieldArray の object[] — 同フィールドで dedupe
+// conform 配列フィールドの object[] — 同フィールドで dedupe
 const buttonsSchema = z
   .array(z.object({ url: z.string(), text: z.string() }))
   .refine((arr) => new Set(arr.map((b) => b.url)).size === arr.length, {

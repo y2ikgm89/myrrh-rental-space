@@ -1,5 +1,5 @@
 ---
-description: React フォーム・SSR パターン（RHF getValues・PPR new Date()・Adjusting State During Render・key remount）
+description: React フォーム・SSR パターン（conform fields.x.value・PPR new Date()・Adjusting State During Render・key remount）
 paths:
   - "src/**/*.tsx"
   - "src/**/*.ts"
@@ -188,7 +188,7 @@ useEffect(() => {
 
 ### 判定基準
 
-子コンポーネントが contenteditable / DOM 直接操作系（spans 配列、blocks 配列、tree 構造等）を扱う場合は **deep-equal 必須**。プリミティブや RHF `register` ベースの input/textarea は React の controlled input が cursor を保つため不要。
+子コンポーネントが contenteditable / DOM 直接操作系（spans 配列、blocks 配列、tree 構造等）を扱う場合は **deep-equal 必須**。プリミティブや conform `getInputProps` ベースの input/textarea は React の controlled input が cursor を保つため不要。
 
 ### 参照実装
 

@@ -41,8 +41,8 @@ paths:
 変更不可な外部エンティティ（例: 予約の顧客）は `CustomerSelector` 等のインタラクティブ UI ではなく、hidden input + アイコン表示を使う:
 
 ```tsx
-{/* RHF の値を保持しつつ表示は読み取り専用 */}
-<input type="hidden" {...register("customerId")} />
+{/* conform で値を保持しつつ表示は読み取り専用 */}
+<input {...getInputProps(fields.customerId, { type: "hidden" })} />
 <div className="space-y-3">
   <div className="flex items-center gap-2">
     <User className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -106,21 +106,24 @@ SEO 設定・OGP・テンプレート編集等のライブプレビューが必�
 親 FK を選ぶと子 FK の選択肢が親に属するものだけにフィルタされる UI（Location → Space、Category → SubCategory 等）:
 
 ```tsx
-const watchedLocationId = useWatch({ control: form.control, name: "locationId" });
-const watchedSpaceId = useWatch({ control: form.control, name: "spaceId" });
-const spacesInLocation = watchedLocationId
-  ? spaces.filter((s) => s.locationId === watchedLocationId)
+// conform: fields.x.value でリアクティブに値を参照（form.value でクロスフィールド参照）
+const locationIdValue = fields.locationId.value ?? null;
+const spaceIdValue = fields.spaceId.value ?? null;
+const spacesInLocation = locationIdValue
+  ? spaces.filter((s) => s.locationId === locationIdValue)
   : [];
 
 // 親変更: 子が新親に属さなければ clear
+// conform では Select の onValueChange で hidden input を dispatch するか、
+// useInputControl(fields.locationId).change(value) で値を更新する
 const handleLocationChange = (value: string) => {
   const nextLocationId = value === EVENT_FORM_NONE_VALUE ? null : value;
-  form.setValue("locationId", nextLocationId, { shouldDirty: true });
-  const currentSpaceId = form.getValues("spaceId");
+  locationIdControl.change(nextLocationId ?? "");
+  const currentSpaceId = fields.spaceId.value ?? null;
   if (currentSpaceId) {
     const currentSpace = spaces.find((s) => s.id === currentSpaceId);
     if (!currentSpace || currentSpace.locationId !== nextLocationId) {
-      form.setValue("spaceId", null, { shouldDirty: true });
+      spaceIdControl.change("");
     }
   }
 };
@@ -128,11 +131,11 @@ const handleLocationChange = (value: string) => {
 // 子選択: 親未設定なら子の parent を auto-set
 const handleSpaceChange = (value: string) => {
   const nextSpaceId = value === EVENT_FORM_NONE_VALUE ? null : value;
-  form.setValue("spaceId", nextSpaceId, { shouldDirty: true });
+  spaceIdControl.change(nextSpaceId ?? "");
   if (nextSpaceId) {
     const selected = spaces.find((s) => s.id === nextSpaceId);
-    if (selected && form.getValues("locationId") !== selected.locationId) {
-      form.setValue("locationId", selected.locationId, { shouldDirty: true });
+    if (selected && (fields.locationId.value ?? null) !== selected.locationId) {
+      locationIdControl.change(selected.locationId);
     }
   }
 };
@@ -140,6 +143,8 @@ const handleSpaceChange = (value: string) => {
 // 子 Select は常時表示 + 状態別 disabled が業界標準
 <SpaceSelect options={spacesInLocation} disabled={!hasLocationSelected || ...} />
 ```
+
+> **conform 補足**: `useInputControl(fields.x)` で `{ value, change, blur, focus }` を取得。値参照はリアクティブ（`fields.x.value`）、クロスフィールド参照は `form.value` から派生。`form.setValue` / `useWatch` / `form.control` は RHF 固有 API で不使用（package.json から削除済）。
 
 **ルール**:
 

@@ -142,7 +142,7 @@ await updateCustomerStats(tx, customerId, "increment");
 
 - **検出**: 公開側で `value.split("\n")` / `\r\n+` 等の改行 split 配列展開している `String? @db.Text` カラム
 - **構造**: 入力が `Textarea`（改行区切り plain text）/ 公開描画が配列の semantic gap
-- **対処**: データ層を `Json @default("[]")` 配列化 + useFieldArray + dnd-kit 入力 UI に揃える
+- **対処**: データ層を `Json @default("[]")` 配列化 + conform `form.insert/remove` + dnd-kit 入力 UI に揃える
 - **業界標準**: Eventbrite / connpass の構造化アクセス入力、shadcn / Linear / Stripe Dashboard の構造化リスト編集
 - **実例**: `Location.access String?` → `Location.accessLines Jsonb` 配列化（migration `20260501040959_location_access_to_jsonb_array`）+ `LocationForm.tsx` に `AccessLinesField` 導入
 
