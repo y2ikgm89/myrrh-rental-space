@@ -802,12 +802,11 @@ model Post {
   updatedAt          DateTime    @updatedAt
 
   // Relations
-  category     PostCategory       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  author       User?              @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  comments     PostComment[]
-  versions     PostVersion[]
-  postTags     PostTagOnPost[]
-  relatedFromEvents EventRelatedPost[]
+  category PostCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  author   User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  comments PostComment[]
+  versions PostVersion[]
+  postTags PostTagOnPost[]
 
   // OR検索用インデックス
   @@index([title])
@@ -1752,10 +1751,8 @@ model Event {
   location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
   deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
-  registrations        EventRegistration[]
-  tickets              EventTicket[]
-  relatedPosts         EventRelatedPost[]
-  relatedExternalLinks EventRelatedExternalLink[]
+  registrations EventRegistration[]
+  tickets       EventTicket[]
 
   @@index([startTime, endTime])
   @@index([status])
@@ -1763,44 +1760,6 @@ model Event {
   @@index([spaceId])
   @@index([deletedAt])
   @@map("events")
-}
-
-/// Event ↔ Post 関連記事（manual curation、業界標準 Airbnb / Eventbrite / Peatix と整合）。
-/// SEO 強化（internal link + JSON-LD mentions）と関連記事カードグリッド表示で利用。
-model EventRelatedPost {
-  eventId   String   @db.VarChar(30)
-  postId    String   @db.Uuid
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@id([eventId, postId])
-  @@index([eventId, sortOrder])
-  @@index([postId])
-  @@map("event_related_posts")
-}
-
-/// Event の外部リンク参考資料（manual curation、メディア掲載記事 / 公式サイトリンク等）。
-/// SEO penalty 回避のため公開ページは rel="nofollow noreferrer" で出力、
-/// JSON-LD mentions[] は schema.org/Thing として記載。
-model EventRelatedExternalLink {
-  id          String   @id @default(cuid()) @db.VarChar(30)
-  eventId     String   @db.VarChar(30)
-  /// 任意ホスト URL（管理者入力、SSRF guard は表示専用のため不要）
-  url         String   @db.VarChar(2000)
-  title       String   @db.VarChar(200)
-  description String?  @db.Text
-  /// プレビュー画像 URL（任意、OGP 風 hero または card thumb）
-  imageUrl    String?  @db.VarChar(500)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  @@index([eventId, sortOrder])
-  @@map("event_related_external_links")
 }
 
 // ==============================================

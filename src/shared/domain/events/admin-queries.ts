@@ -51,21 +51,6 @@ const eventDetailSelect = {
   spaceId: true,
   googleCalendarEventId: true,
   updatedAt: true,
-  relatedPosts: {
-    select: { postId: true, sortOrder: true },
-    orderBy: { sortOrder: "asc" as const },
-  },
-  relatedExternalLinks: {
-    select: {
-      id: true,
-      url: true,
-      title: true,
-      description: true,
-      imageUrl: true,
-      sortOrder: true,
-    },
-    orderBy: { sortOrder: "asc" as const },
-  },
 } satisfies Prisma.EventSelect;
 
 interface GetEventsOptions {
@@ -209,62 +194,4 @@ export async function getLocationsForEvent() {
     select: { id: true, name: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
-}
-
-export type EventRelatedPostOption = {
-  id: string;
-  title: string;
-  slug: string;
-  thumbnailUrl: string;
-  publishedAt: Date | null;
-};
-
-/**
- * 関連記事 selector 用の Post search。title 部分一致で公開記事を絞り込む。
- * 結果は最大 20 件、追加で `includeIds` の既選択分を必ず含めて initial 表示する。
- */
-export async function searchPostsForEventRelation(options: {
-  query?: string;
-  includeIds?: readonly string[];
-}): Promise<EventRelatedPostOption[]> {
-  const trimmedQuery = options.query?.trim() ?? "";
-  const includeIds = options.includeIds ?? [];
-  const filters: Prisma.PostWhereInput[] = [{ status: "PUBLISHED" }];
-  if (trimmedQuery.length > 0) {
-    filters.push({ title: { contains: trimmedQuery, mode: "insensitive" } });
-  }
-  const [searchHits, included] = await Promise.all([
-    prisma.post.findMany({
-      where: { AND: filters },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        thumbnailUrl: true,
-        publishedAt: true,
-      },
-      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-      take: 20,
-    }),
-    includeIds.length > 0
-      ? prisma.post.findMany({
-          where: { id: { in: Array.from(includeIds) } },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            thumbnailUrl: true,
-            publishedAt: true,
-          },
-        })
-      : Promise.resolve<EventRelatedPostOption[]>([]),
-  ]);
-  const seen = new Set<string>();
-  const result: EventRelatedPostOption[] = [];
-  for (const item of [...included, ...searchHits]) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    result.push(item);
-  }
-  return result;
 }

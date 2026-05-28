@@ -89,12 +89,6 @@ interface EventData {
     url?: string;
   };
   maximumAttendeeCapacity?: number;
-  /** 関連エンティティ（関連記事 / 言及される CreativeWork 等）。 */
-  mentions?: ReadonlyArray<{
-    type: "Article" | "Thing" | "CreativeWork";
-    name: string;
-    url: string;
-  }>;
 }
 
 interface BreadcrumbItem {
@@ -362,7 +356,6 @@ export function EventJsonLd({
   location,
   offers,
   maximumAttendeeCapacity,
-  mentions,
 }: EventData): ReactElement {
   const data = {
     "@context": "https://schema.org",
@@ -400,14 +393,6 @@ export function EventJsonLd({
       },
     }),
     ...(maximumAttendeeCapacity !== undefined && { maximumAttendeeCapacity }),
-    ...(mentions &&
-      mentions.length > 0 && {
-        mentions: mentions.map((m) => ({
-          "@type": m.type,
-          name: m.name,
-          url: m.url,
-        })),
-      }),
     organizer: {
       "@type": "Organization",
       name: SITE_DEFAULTS.name,

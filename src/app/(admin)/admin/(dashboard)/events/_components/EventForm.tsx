@@ -32,11 +32,6 @@ import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
-import { RelatedPostsField, type RelatedPostOption } from "./RelatedPostsField";
-import {
-  ExternalLinksField,
-  type ExternalLinkInput,
-} from "./ExternalLinksField";
 import {
   createDefaultTicket,
   type EventTicketInput,
@@ -50,8 +45,6 @@ type EventFormProps = {
   event?: EventData;
   locations: LocationOption[];
   spaces: SpaceOption[];
-  /** 関連記事 selector の初期 option 集合 (parent SC で fetch)。 */
-  relatedPostOptions: readonly RelatedPostOption[];
 };
 
 const EVENT_EDIT_TAB_VALUES = [
@@ -59,7 +52,6 @@ const EVENT_EDIT_TAB_VALUES = [
   "publish",
   "tickets",
   "location",
-  "related",
   "seo",
 ] as const satisfies readonly [string, ...string[]];
 
@@ -78,7 +70,6 @@ const EVENT_EDIT_TAB_LABELS: Record<EventEditTabValue, string> = {
   publish: "本文・公開",
   tickets: "参加費・定員",
   location: "会場",
-  related: "関連記事",
   seo: "SEO",
 };
 
@@ -101,7 +92,6 @@ export function EventForm({
   event,
   locations,
   spaces,
-  relatedPostOptions,
 }: EventFormProps): ReactElement {
   const isEdit = Boolean(event);
 
@@ -152,22 +142,6 @@ export function EventForm({
     }
     return [createDefaultTicket(0)];
   });
-  const [relatedPostIds, setRelatedPostIds] = useState<string[]>(
-    () => event?.relatedPosts.map((r) => r.postId) ?? [],
-  );
-  const [relatedExternalLinks, setRelatedExternalLinks] = useState<
-    ExternalLinkInput[]
-  >(
-    () =>
-      event?.relatedExternalLinks.map((link) => ({
-        _key: link.id,
-        url: link.url,
-        title: link.title,
-        description: link.description,
-        imageUrl: link.imageUrl,
-      })) ?? [],
-  );
-
   const boundAction =
     isEdit && event?.id
       ? updateEventAction.bind(null, event.id)
@@ -236,9 +210,6 @@ export function EventForm({
     location: [fields.locationId, fields.spaceId, fields.addressDetail].filter(
       (f) => fieldHasErrors(f.errors),
     ).length,
-    related: [fields.relatedPostIds, fields.relatedExternalLinks].filter((f) =>
-      fieldHasErrors(f.errors),
-    ).length,
     seo: [
       fields.ogpTitle,
       fields.ogpDescription,
@@ -288,24 +259,6 @@ export function EventForm({
         type="hidden"
         name={fields.tickets.name}
         value={JSON.stringify(tickets)}
-      />
-      {/* 関連記事 Post.id は順序 string[]、getAll() で配列復元 */}
-      {relatedPostIds.length === 0 && (
-        <input type="hidden" name={fields.relatedPostIds.name} value="" />
-      )}
-      {relatedPostIds.map((postId) => (
-        <input
-          key={postId}
-          type="hidden"
-          name={fields.relatedPostIds.name}
-          value={postId}
-        />
-      ))}
-      {/* 関連外部リンクは JSON 文字列で transit、schema 側で preprocess する */}
-      <input
-        type="hidden"
-        name={fields.relatedExternalLinks.name}
-        value={JSON.stringify(relatedExternalLinks)}
       />
 
       {form.errors && form.errors.length > 0 && (
@@ -417,26 +370,6 @@ export function EventForm({
                 }
               }
             }}
-          />
-        </TabsContent>
-
-        {/* ============ 関連記事 + 関連リンク ============ */}
-        <TabsContent
-          value="related"
-          forceMount
-          className="space-y-6 data-[state=inactive]:hidden"
-        >
-          <RelatedPostsField
-            selectedIds={relatedPostIds}
-            initialOptions={relatedPostOptions}
-            onChange={setRelatedPostIds}
-            isPending={isPending}
-          />
-          <ExternalLinksField
-            links={relatedExternalLinks}
-            onChange={setRelatedExternalLinks}
-            isPending={isPending}
-            errors={fields.relatedExternalLinks.errors ?? undefined}
           />
         </TabsContent>
 
