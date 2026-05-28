@@ -139,6 +139,7 @@ export function EventForm({
   const [tickets, setTickets] = useState<EventTicketInput[]>(() => {
     if (event && event.tickets.length > 0) {
       return event.tickets.map((t) => ({
+        _key: t.id,
         id: t.id,
         name: t.name,
         description: t.description,

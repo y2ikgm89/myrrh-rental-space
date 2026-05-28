@@ -30,6 +30,12 @@ export type EventTicketWritableFields = Readonly<
  */
 export type EventTicketInput = EventTicketWritableFields & {
   readonly id?: string;
+  /**
+   * React reconciliation 用の安定 key (UI 専用フィールド)。
+   * Zod の `ticketInputSchema` は宣言しないため `strip` mode で破棄され、
+   * domain command の persistence layer には到達しない。
+   */
+  readonly _key?: string;
 };
 
 /**
@@ -60,6 +66,7 @@ export type EventTicketOption = Readonly<
  */
 export function createDefaultTicket(sortOrder: number): EventTicketInput {
   return {
+    _key: crypto.randomUUID(),
     name: "",
     description: null,
     price: 0,

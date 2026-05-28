@@ -19,12 +19,7 @@ import {
   publishEventCommand,
   updateEventCommand,
 } from "@/shared/domain/events/commands";
-import {
-  getEventById,
-  searchPostsForEventRelation,
-  type EventRelatedPostOption,
-} from "@/shared/domain/events/admin-queries";
-import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { getEventById } from "@/shared/domain/events/admin-queries";
 import { getEventForCalendarSync } from "@/shared/domain/events/calendar-sync";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
@@ -222,45 +217,10 @@ export async function updateEventAction(
 }
 
 // =============================================================================
-// 関連記事 Post search (read-only、Client Component から呼び出し)
-// =============================================================================
-
-const searchPostsForRelationSchema = z.object({
-  query: z.string().max(200).optional(),
-  includeIds: z.array(z.string().uuid()).max(12).optional(),
-});
-
-/**
- * 管理画面の RelatedPostsField から呼ばれる Post 検索 action。
- * 公開記事のみ、最大 20 件 + 既選択 ID を必ず含めて返す。
- */
-export async function searchPostsForRelationAction(input: {
-  query?: string;
-  includeIds?: readonly string[];
-}): Promise<
-  | { success: true; data: EventRelatedPostOption[] }
-  | { success: false; error: string }
-> {
-  const auth = await checkAdminAuth();
-  if (!auth.success) {
-    return { success: false, error: "ログインが必要です" };
-  }
-  const parsed = searchPostsForRelationSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "検索条件が不正です" };
-  }
-  const data = await searchPostsForEventRelation({
-    ...(parsed.data.query !== undefined && { query: parsed.data.query }),
-    ...(parsed.data.includeIds !== undefined && {
-      includeIds: parsed.data.includeIds,
-    }),
-  });
-  return { success: true, data };
-}
-
-// =============================================================================
 // id-only mutation actions (unchanged — 単純な id 引数のみ、conform 不要)
 // =============================================================================
+// 関連記事 Post 検索は Route Handler 経由 (公式推奨):
+// → /admin/api/events/related-posts/route.ts
 
 export async function deleteEvent(
   id: string,
