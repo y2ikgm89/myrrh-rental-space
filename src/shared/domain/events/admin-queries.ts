@@ -55,6 +55,17 @@ const eventDetailSelect = {
     select: { postId: true, sortOrder: true },
     orderBy: { sortOrder: "asc" as const },
   },
+  relatedExternalLinks: {
+    select: {
+      id: true,
+      url: true,
+      title: true,
+      description: true,
+      imageUrl: true,
+      sortOrder: true,
+    },
+    orderBy: { sortOrder: "asc" as const },
+  },
 } satisfies Prisma.EventSelect;
 
 interface GetEventsOptions {

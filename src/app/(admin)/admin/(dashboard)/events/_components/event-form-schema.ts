@@ -151,6 +151,50 @@ const eventFormBaseSchema = z.object({
   metaDescription: optionalNullableString(160, "メタ説明文は160文字以内です"),
   metaKeywords: optionalNullableString(500, "メタキーワードは500文字以内です"),
   /**
+   * 関連外部リンクの JSON 配列。hidden input `JSON.stringify(array)` で transit。
+   * 最大 8 件、url は http(s) のみ、title 必須。
+   */
+  relatedExternalLinks: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+      if (value === "") return [];
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    },
+    z
+      .array(
+        z.object({
+          url: z
+            .string()
+            .url({ error: "有効な URL を入力してください" })
+            .max(2000)
+            .refine(
+              (u) => u.startsWith("http://") || u.startsWith("https://"),
+              {
+                error: "URL は http:// または https:// で始まる必要があります",
+              },
+            ),
+          title: z
+            .string()
+            .min(1, { error: "タイトルは必須です" })
+            .max(200, { error: "タイトルは200文字以内です" }),
+          description: z
+            .string()
+            .max(500, { error: "説明は500文字以内です" })
+            .nullable(),
+          imageUrl: z.string().max(500).nullable(),
+        }),
+      )
+      .max(8, { error: "外部リンクは8件まで登録できます" })
+      .refine((arr) => new Set(arr.map((l) => l.url)).size === arr.length, {
+        error: "同じ URL を複数登録することはできません",
+      })
+      .default([]),
+  ),
+  /**
    * 関連記事 Post.id の順序付き配列。hidden input `getAll()` で `string[]` 化される
    * ため preprocess で空文字列を弾く。最大 12 件（UI 3 col × 4 row 上限）。
    */

@@ -60,11 +60,19 @@ function buildEventCommandInput(data: EventFormData) {
     descriptionHtml: _dropHtml,
     tickets: rawTickets,
     relatedPostIds: rawRelatedPostIds,
+    relatedExternalLinks: rawRelatedExternalLinks,
     ...rest
   } = data;
   void _dropJson;
   void _dropHtml;
   const tickets = rawTickets.map((t) => omitUndefined(t));
+  const relatedExternalLinks = rawRelatedExternalLinks.map((link) => ({
+    url: link.url,
+    title: link.title,
+    description: link.description,
+    imageUrl:
+      link.imageUrl == null || link.imageUrl === "" ? null : link.imageUrl,
+  }));
   return omitUndefined({
     ...rest,
     descriptionJson,
@@ -72,6 +80,7 @@ function buildEventCommandInput(data: EventFormData) {
     descriptionPlainText,
     tickets,
     relatedPostIds: rawRelatedPostIds,
+    relatedExternalLinks,
   });
 }
 

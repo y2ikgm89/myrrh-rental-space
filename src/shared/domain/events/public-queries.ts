@@ -71,6 +71,17 @@ const publicEventDetailSelect = {
     where: { post: { status: PostStatus.PUBLISHED } },
     orderBy: { sortOrder: "asc" as const },
   },
+  relatedExternalLinks: {
+    select: {
+      id: true,
+      url: true,
+      title: true,
+      description: true,
+      imageUrl: true,
+      sortOrder: true,
+    },
+    orderBy: { sortOrder: "asc" as const },
+  },
 };
 
 export async function getPublishedEvents() {
