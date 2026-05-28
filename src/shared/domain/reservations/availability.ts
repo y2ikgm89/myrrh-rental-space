@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { parseJstDateOnly } from "@/shared/lib/date-format";
+import { formatJstDateOnly, parseJstDateOnly } from "@/shared/lib/date-format";
 import {
   ACTIVE_RESERVATION_STATUSES,
   BLOCKED_DATE_SCOPE,
@@ -87,6 +87,49 @@ export async function getSpaceLocationIdQuery(
     select: { locationId: true },
   });
   return space?.locationId ?? null;
+}
+
+export type BlockedDateRange = {
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly reason: string | null;
+};
+
+/**
+ * 公開カレンダー grey-out 用に、スペースに適用される blocked date 範囲を
+ * 3 階層 cascade（GLOBAL + 所属 LOCATION + SPACE）でまとめて取得する。
+ * 終了日が今日（JST）以降の範囲のみ返す（過去の休業は表示不要）。
+ */
+export async function getBlockedDateRangesForSpace(
+  spaceId: string,
+): Promise<BlockedDateRange[]> {
+  const locationId = await getSpaceLocationIdQuery(spaceId);
+
+  const todayJst = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+  }).format(new Date());
+  const todayUtcMidnight = parseJstDateOnly(todayJst);
+
+  const rows = await prisma.blockedDate.findMany({
+    where: {
+      endDate: { gte: todayUtcMidnight },
+      OR: [
+        { scope: BLOCKED_DATE_SCOPE.GLOBAL },
+        ...(locationId !== null
+          ? [{ scope: BLOCKED_DATE_SCOPE.LOCATION, locationId }]
+          : []),
+        { scope: BLOCKED_DATE_SCOPE.SPACE, spaceId },
+      ],
+    },
+    orderBy: { startDate: "asc" },
+    select: { startDate: true, endDate: true, reason: true },
+  });
+
+  return rows.map((row) => ({
+    startDate: formatJstDateOnly(row.startDate),
+    endDate: formatJstDateOnly(row.endDate),
+    reason: row.reason,
+  }));
 }
 
 export async function getBusinessHoursSettingsQuery(): Promise<BusinessHours | null> {

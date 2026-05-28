@@ -5,6 +5,10 @@ const mockBlockedDateFindFirst = mock<
   () => Promise<{ reason: string | null } | null>
 >(() => Promise.resolve(null));
 
+const mockBlockedDateFindMany = mock<
+  () => Promise<{ startDate: Date; endDate: Date; reason: string | null }[]>
+>(() => Promise.resolve([]));
+
 const mockSpaceFindUnique = mock<() => Promise<{ locationId: string } | null>>(
   () => Promise.resolve({ locationId: "loc-1" }),
 );
@@ -13,7 +17,10 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    blockedDate: { findFirst: mockBlockedDateFindFirst },
+    blockedDate: {
+      findFirst: mockBlockedDateFindFirst,
+      findMany: mockBlockedDateFindMany,
+    },
     space: { findUnique: mockSpaceFindUnique },
   },
 }));
@@ -22,6 +29,7 @@ import {
   isDateBlocked,
   ensureDateNotBlocked,
   getSpaceLocationIdQuery,
+  getBlockedDateRangesForSpace,
 } from "@/shared/domain/reservations/availability";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -31,8 +39,10 @@ const DATE = "2026-12-29";
 
 beforeEach(() => {
   mockBlockedDateFindFirst.mockReset();
+  mockBlockedDateFindMany.mockReset();
   mockSpaceFindUnique.mockReset();
   mockBlockedDateFindFirst.mockResolvedValue(null);
+  mockBlockedDateFindMany.mockResolvedValue([]);
   mockSpaceFindUnique.mockResolvedValue({ locationId: LOCATION_ID });
 });
 
@@ -108,5 +118,54 @@ describe("getSpaceLocationIdQuery", () => {
     mockSpaceFindUnique.mockResolvedValue(null);
     const result = await getSpaceLocationIdQuery(SPACE_ID);
     expect(result).toBeNull();
+  });
+});
+
+describe("getBlockedDateRangesForSpace", () => {
+  test("@db.Date を YYYY-MM-DD に整形して返す", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([
+      {
+        startDate: new Date("2026-12-29T00:00:00.000Z"),
+        endDate: new Date("2027-01-03T00:00:00.000Z"),
+        reason: "年末年始",
+      },
+    ]);
+
+    const result = await getBlockedDateRangesForSpace(SPACE_ID);
+
+    expect(result).toEqual([
+      { startDate: "2026-12-29", endDate: "2027-01-03", reason: "年末年始" },
+    ]);
+  });
+
+  test("locationId 解決後に GLOBAL/LOCATION/SPACE の OR + endDate>=today で絞る", async () => {
+    await getBlockedDateRangesForSpace(SPACE_ID);
+
+    expect(mockBlockedDateFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { scope: "GLOBAL" },
+            { scope: "LOCATION", locationId: LOCATION_ID },
+            { scope: "SPACE", spaceId: SPACE_ID },
+          ],
+        }),
+        orderBy: { startDate: "asc" },
+      }),
+    );
+  });
+
+  test("locationId が無いスペースは LOCATION 条件を含めない", async () => {
+    mockSpaceFindUnique.mockResolvedValue(null);
+
+    await getBlockedDateRangesForSpace(SPACE_ID);
+
+    expect(mockBlockedDateFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [{ scope: "GLOBAL" }, { scope: "SPACE", spaceId: SPACE_ID }],
+        }),
+      }),
+    );
   });
 });

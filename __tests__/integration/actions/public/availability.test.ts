@@ -42,9 +42,16 @@ mock.module("@/shared/lib/reservation/time-slots", () => ({
   getAvailableTimeSlots: mockGetAvailableTimeSlots,
 }));
 
+const mockGetBlockedDateRangesForSpace = mock(() =>
+  Promise.resolve([
+    { startDate: "2026-12-29", endDate: "2027-01-03", reason: "年末年始" },
+  ]),
+);
+
 mock.module("@/shared/domain/reservations/availability", () => ({
   getBusinessHoursSettingsQuery: mock(() => Promise.resolve(null)),
   getReservationsForDateQuery: mock(() => Promise.resolve([])),
+  getBlockedDateRangesForSpace: mockGetBlockedDateRangesForSpace,
 }));
 
 // server-only モック（テスト環境で server-only を無効化）
@@ -217,5 +224,57 @@ describe("fetchAvailableSlots", () => {
 
       expect(result).toEqual([]);
     });
+  });
+});
+
+describe("fetchSpaceBlockedDates", () => {
+  beforeEach(() => {
+    mockCheckActionRateLimit.mockClear();
+    mockGetBlockedDateRangesForSpace.mockClear();
+    mockCheckActionRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
+    mockGetBlockedDateRangesForSpace.mockImplementation(() =>
+      Promise.resolve([
+        { startDate: "2026-12-29", endDate: "2027-01-03", reason: "年末年始" },
+      ]),
+    );
+  });
+
+  test("有効な spaceId で blocked 範囲の配列を返す", async () => {
+    const { fetchSpaceBlockedDates } =
+      await import("@/app/(public)/_shared/actions/availability");
+
+    const result = await fetchSpaceBlockedDates(VALID_SPACE_ID);
+
+    expect(result).toEqual([
+      { startDate: "2026-12-29", endDate: "2027-01-03", reason: "年末年始" },
+    ]);
+    expect(mockGetBlockedDateRangesForSpace).toHaveBeenCalledWith(
+      VALID_SPACE_ID,
+    );
+  });
+
+  test("不正な spaceId のとき空配列（domain query は呼ばれない）", async () => {
+    const { fetchSpaceBlockedDates } =
+      await import("@/app/(public)/_shared/actions/availability");
+
+    const result = await fetchSpaceBlockedDates("not-a-uuid");
+
+    expect(result).toEqual([]);
+    expect(mockGetBlockedDateRangesForSpace).not.toHaveBeenCalled();
+  });
+
+  test("レート制限超過時は空配列を返す", async () => {
+    mockCheckActionRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: false, error: "rate limited" }),
+    );
+    const { fetchSpaceBlockedDates } =
+      await import("@/app/(public)/_shared/actions/availability");
+
+    const result = await fetchSpaceBlockedDates(VALID_SPACE_ID);
+
+    expect(result).toEqual([]);
+    expect(mockGetBlockedDateRangesForSpace).not.toHaveBeenCalled();
   });
 });

@@ -39,6 +39,17 @@ export function getWeekdayKey(date: Date): WeekdayKey {
 }
 
 /**
+ * カレンダー上の Date を表示上の暦日 `"YYYY-MM-DD"` に変換する（ローカル日付ベース）。
+ * 予約スロット取得・blocked date 判定で共通利用する SSoT。
+ */
+export function formatDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * 時刻文字列を時・分に分解
  */
 export function parseTime(time: string): { hour: number; minute: number } {
