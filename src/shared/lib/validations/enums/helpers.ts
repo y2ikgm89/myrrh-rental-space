@@ -727,3 +727,59 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
   [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
 };
+
+// =============================================================================
+// BlockedDate Scope / Type（DB VARCHAR 管理 — Prisma enum ではない）
+// =============================================================================
+
+export const BLOCKED_DATE_SCOPE = {
+  SPACE: "SPACE",
+  LOCATION: "LOCATION",
+  GLOBAL: "GLOBAL",
+} as const;
+
+export type BlockedDateScope =
+  (typeof BLOCKED_DATE_SCOPE)[keyof typeof BLOCKED_DATE_SCOPE];
+
+const VALID_BLOCKED_DATE_SCOPES = new Set<string>(
+  Object.values(BLOCKED_DATE_SCOPE),
+);
+
+export function isValidBlockedDateScope(
+  value: unknown,
+): value is BlockedDateScope {
+  return typeof value === "string" && VALID_BLOCKED_DATE_SCOPES.has(value);
+}
+
+export const BLOCKED_DATE_SCOPE_LABELS: Record<BlockedDateScope, string> = {
+  [BLOCKED_DATE_SCOPE.SPACE]: "スペース",
+  [BLOCKED_DATE_SCOPE.LOCATION]: "拠点",
+  [BLOCKED_DATE_SCOPE.GLOBAL]: "全体",
+};
+
+export const BLOCKED_DATE_TYPE = {
+  HOLIDAY: "HOLIDAY",
+  MAINTENANCE: "MAINTENANCE",
+  EMERGENCY: "EMERGENCY",
+  OTHER: "OTHER",
+} as const;
+
+export type BlockedDateType =
+  (typeof BLOCKED_DATE_TYPE)[keyof typeof BLOCKED_DATE_TYPE];
+
+const VALID_BLOCKED_DATE_TYPES = new Set<string>(
+  Object.values(BLOCKED_DATE_TYPE),
+);
+
+export function isValidBlockedDateType(
+  value: unknown,
+): value is BlockedDateType {
+  return typeof value === "string" && VALID_BLOCKED_DATE_TYPES.has(value);
+}
+
+export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
+  [BLOCKED_DATE_TYPE.HOLIDAY]: "休業",
+  [BLOCKED_DATE_TYPE.MAINTENANCE]: "設備点検",
+  [BLOCKED_DATE_TYPE.EMERGENCY]: "緊急休業",
+  [BLOCKED_DATE_TYPE.OTHER]: "その他",
+};

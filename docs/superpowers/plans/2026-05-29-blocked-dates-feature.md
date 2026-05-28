@@ -188,9 +188,17 @@ async function isDateBlocked(
 - [Cal.com — Date overrides](https://cal.com/docs/core-features/availability)
 - NN/g "Calendar Availability UX" — visual disabled state + reason tooltip パターン
 
-## オープン課題 (次セッションで判断)
+## オープン課題 (PR #1 着手時に判断済 — 2026-05-29)
 
-- [ ] 過去日付の blocked date を CRUD で編集可能にすべきか? (監査ログ的には immutable が canonical、ただし誤入力 fix 用に編集枠は残す方が UX 良)
-- [ ] BlockedDate の `reason` を Lexical rich text にすべきか? (`/news` 自動転載を考えると rich text 検討余地、ただし冒頭は plain text で十分)
-- [ ] per-location blocked date は配下 space 個別の例外 (「拠点全体休業だが A 室だけ営業」) を許容するか? (推奨: 不許容 = 単純化、必要なら GLOBAL > LOCATION > SPACE の override 順を文書化)
-- [ ] Cloud Run 環境で DB の `@db.Date` 列のタイムゾーン取り扱い (JST 境界での予約判定との整合性)
+業界調査ベースで全件決定。詳細根拠は下記。
+
+- [x] **過去日付の blocked date を CRUD で編集可能にすべきか?** → **編集可能 (immutable にしない)**。Booking.com Extranet / Airbnb Host Calendar / Google Calendar / Cal.com とも過去の休業エントリを物理的に禁止せず「UI で非推奨表示」のみ。監査証跡は `createdBy` / `createdAt` / `updatedAt` 列 + `executeAdminMutationResult` の監査ログで担保済みのため、別途 immutability 制約は不要。過去日付編集時の warning 表示は PR #5-7 (管理 UI) で実装。
+- [x] **`reason` を Lexical rich text にすべきか?** → **plain text `VarChar(200)` 維持**。Booking.com / Airbnb / Spacemarket の休業理由はすべて短い plain text ラベルで rich text 採用例ゼロ。本プロジェクトの `FaqItem.answer` も plain text 単一列。rich text 化は過剰抽象化 (`code-quality/forbidden-patterns.md §2`)。PR #8 の news 自動転載が必要になっても、news 記事本体が rich text であり reason はその title/excerpt に流すだけで足りる。
+- [x] **per-location 配下 space 個別の例外 (override) を許容するか?** → **不許容 (additive cascade)**。Booking.com の property-level closure は全室適用 (per-room override なし)、Mindbody の location closure も全 resource 適用。cascade は **additive** (GLOBAL / LOCATION / SPACE のいずれかにマッチで blocked)。`orderBy: scope` は理由表示の優先度のみに使い、「LOCATION 休業だが A 室だけ営業」のような減算 override は持たない。
+- [x] **`@db.Date` 列の JST タイムゾーン取り扱い** → **列意味論 = 「JST カレンダー日付を UTC 深夜で保持」**。Prisma は `@db.Date` を JS `Date` の UTC 深夜 (`2026-12-29T00:00:00.000Z`) にマップする。予約 `startTime` は UTC 保存のため素朴な `lte`/`gte` 比較は JST 境界で 1 日ずれる。**PR #2/#3** で `date-format.ts` に SSoT helper を追加: `formatJstDateOnly(date)` (`Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" })` で `"YYYY-MM-DD"`) + `parseJstDateOnly(value)` (`new Date(`${value}T00:00:00.000Z`)`)。`isDateBlocked` は予約 Date を `formatJstDateOnly` → `parseJstDateOnly` で UTC 深夜化してから比較する。既存 `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst` は `datetime-local` 入力用で時刻なし日付には流用しない。
+
+## PR #1 実装メモ (DEVIATION)
+
+- **CHECK 制約追加**: migration.sql に `blocked_dates_scope_target_check` を追加。scope discriminated union (SPACE→spaceId 非null & locationId null / LOCATION→locationId 非null & spaceId null / GLOBAL→両 null) を DB レベルで二重防御。Prisma schema には CHECK を表現しないため manual migration で管理 (Prisma diff は本制約を無視)。
+- **User テーブル FK 参照名**: `User` model は `@@map("user")` (単数) のため FK は `REFERENCES "user"("id")`。
+- **helpers 配置**: `BLOCKED_DATE_SCOPE` / `BLOCKED_DATE_TYPE` 定数 + `isValid*` 型ガード + `*_LABELS` を `enums/helpers.ts` 末尾に `NOTIFICATION_TYPE` パターン準拠で追加。`enums/` に barrel index は存在しないため consumer は `@/shared/lib/validations/enums/helpers` サブパスから直接 import (既存 NOTIFICATION_TYPE と同経路)。
