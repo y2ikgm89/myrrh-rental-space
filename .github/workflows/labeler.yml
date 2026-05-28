@@ -4,6 +4,14 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
 
+# 旧 run を cancel して force-push race condition を回避
+# (2026-05-28 PR #290 で labeler が HttpError → 旧 run が in_progress 中に
+# 新 push trigger で race し API conflict を起こした事例。詳細は
+# .claude/rules/ops/ci-workflow.md §3)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -14,7 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Apply labels from .github/labeler.yml
-        uses: actions/labeler@v6
+        # SHA 直 pin (公式 security best practice、tag force-push 攻撃 + codeload
+        # 404 outage 対策。詳細は .claude/rules/ops/ci-workflow.md §8.1)
+        uses: actions/labeler@f27b608878404679385c85cfa523b85ccb86e213 # v6.1.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/labeler.yml
