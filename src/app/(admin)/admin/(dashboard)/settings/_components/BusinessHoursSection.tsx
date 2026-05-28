@@ -30,6 +30,13 @@ import type {
   BusinessHours,
   BusinessTimeSlot,
 } from "@/admin/actions/settings";
+import {
+  MONTHLY_CLOSURE_WEEK_VALUES,
+  WEEKDAY_VALUES,
+  type MonthlyClosure,
+  type MonthlyClosureWeek,
+  type WeekdayKey,
+} from "@/shared/lib/json-validators";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   DEFAULT_BUSINESS_HOURS,
@@ -49,7 +56,7 @@ interface BusinessHoursSectionProps {
 }
 
 interface DayOfWeek {
-  key: keyof BusinessHours;
+  key: WeekdayKey;
   label: string;
 }
 
@@ -62,6 +69,28 @@ const DAYS_OF_WEEK: readonly DayOfWeek[] = [
   { key: "saturday", label: "土曜日" },
   { key: "sunday", label: "日曜日" },
 ];
+
+const MONTHLY_CLOSURE_WEEK_LABELS: Record<MonthlyClosureWeek, string> = {
+  first: "第1",
+  second: "第2",
+  third: "第3",
+  fourth: "第4",
+  last: "最終",
+};
+
+const WEEKDAY_SHORT_LABELS: Record<MonthlyClosure["weekday"], string> = {
+  sunday: "日曜",
+  monday: "月曜",
+  tuesday: "火曜",
+  wednesday: "水曜",
+  thursday: "木曜",
+  friday: "金曜",
+  saturday: "土曜",
+};
+
+function formatMonthlyClosure(closure: MonthlyClosure): string {
+  return `${MONTHLY_CLOSURE_WEEK_LABELS[closure.week]} ${WEEKDAY_SHORT_LABELS[closure.weekday]}`;
+}
 
 export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   const router = useRouter();
@@ -76,8 +105,8 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
    */
   const businessHoursWithHolidays = (() => {
     const hours = { ...initialBusinessHours };
-    const isBusinessHoursDay = (d: string): d is keyof BusinessHours =>
-      d in hours;
+    const isBusinessHoursDay = (d: string): d is WeekdayKey =>
+      (WEEKDAY_VALUES as readonly string[]).includes(d);
     for (const day of initialRegularHolidays) {
       if (isBusinessHoursDay(day)) {
         hours[day] = {
@@ -103,9 +132,36 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
     useState<TemplateKey>("custom");
   const [slotErrors, setSlotErrors] = useState<SlotError[]>([]);
 
+  // 毎月の繰り返し定休（第N曜日）
+  const [monthlyClosures, setMonthlyClosures] = useState<MonthlyClosure[]>(
+    initialBusinessHours.monthlyClosures ?? [],
+  );
+  const [newClosureWeek, setNewClosureWeek] =
+    useState<MonthlyClosureWeek>("third");
+  const [newClosureWeekday, setNewClosureWeekday] =
+    useState<MonthlyClosure["weekday"]>("monday");
+
+  const handleAddMonthlyClosure = () => {
+    const exists = monthlyClosures.some(
+      (c) => c.week === newClosureWeek && c.weekday === newClosureWeekday,
+    );
+    if (exists) {
+      toast.error("同じ繰り返し定休が既に登録されています");
+      return;
+    }
+    setMonthlyClosures((prev) => [
+      ...prev,
+      { week: newClosureWeek, weekday: newClosureWeekday },
+    ]);
+  };
+
+  const handleRemoveMonthlyClosure = (index: number) => {
+    setMonthlyClosures((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // 特定のスロットのエラーを取得
   const getSlotError = (
-    day: keyof BusinessHours,
+    day: WeekdayKey,
     slotIndex: number,
     field: "openTime" | "closeTime" | "overlap",
   ) => {
@@ -166,7 +222,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   };
 
   // 営業/休業の切り替え
-  const handleIsOpenChange = (day: keyof BusinessHours, isOpen: boolean) => {
+  const handleIsOpenChange = (day: WeekdayKey, isOpen: boolean) => {
     setBusinessHours((prev) => {
       const currentSlots = prev[day].slots;
       const slots =
@@ -181,7 +237,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
 
   // 時間帯の更新（即時検証付き）
   const handleSlotChange = (
-    day: keyof BusinessHours,
+    day: WeekdayKey,
     slotIndex: number,
     field: keyof BusinessTimeSlot,
     value: string,
@@ -202,7 +258,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   };
 
   // 時間帯を追加
-  const handleAddSlot = (day: keyof BusinessHours) => {
+  const handleAddSlot = (day: WeekdayKey) => {
     setBusinessHours((prev) => {
       const daySlots = prev[day].slots;
       const lastSlot = daySlots[daySlots.length - 1];
@@ -222,7 +278,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   };
 
   // 時間帯を削除
-  const handleRemoveSlot = (day: keyof BusinessHours, slotIndex: number) => {
+  const handleRemoveSlot = (day: WeekdayKey, slotIndex: number) => {
     setBusinessHours((prev) => {
       const updated = {
         ...prev,
@@ -257,7 +313,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   };
 
   // ある曜日の設定を全曜日にコピー
-  const copyToAllDays = (sourceDay: keyof BusinessHours) => {
+  const copyToAllDays = (sourceDay: WeekdayKey) => {
     const source = businessHours[sourceDay];
     setBusinessHours((prev) => {
       const updated = { ...prev };
@@ -301,7 +357,10 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
       ).map(({ key }) => key);
 
       const result = await updateBusinessHoursSettings({
-        businessHours,
+        businessHours: {
+          ...businessHours,
+          monthlyClosures: monthlyClosures.length > 0 ? monthlyClosures : [],
+        },
         regularHolidays: regularHolidays.length > 0 ? regularHolidays : null,
         specialHolidays: specialHolidays.length > 0 ? specialHolidays : null,
         holidayNotice: holidayNotice || null,
@@ -497,6 +556,90 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* 毎月の定休（第N曜日） */}
+        <div className="space-y-3">
+          <Label>毎月の定休（第N曜日）</Label>
+          <p className="text-sm text-muted-foreground">
+            「毎月第3月曜」のような繰り返し定休を設定します。該当日は予約を受け付けません。
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={newClosureWeek}
+              onValueChange={(v) => {
+                if (
+                  (MONTHLY_CLOSURE_WEEK_VALUES as readonly string[]).includes(v)
+                ) {
+                  setNewClosureWeek(v as MonthlyClosureWeek);
+                }
+              }}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHLY_CLOSURE_WEEK_VALUES.map((week) => (
+                  <SelectItem key={week} value={week}>
+                    {MONTHLY_CLOSURE_WEEK_LABELS[week]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={newClosureWeekday}
+              onValueChange={(v) => {
+                const found = DAYS_OF_WEEK.find((d) => d.key === v);
+                if (found) setNewClosureWeekday(found.key);
+              }}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DAYS_OF_WEEK.map((day) => (
+                  <SelectItem key={day.key} value={day.key}>
+                    {day.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddMonthlyClosure}
+              disabled={isPending}
+            >
+              <IconPlus className="mr-1 h-4 w-4" />
+              追加
+            </Button>
+          </div>
+          {monthlyClosures.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {monthlyClosures.map((closure, index) => (
+                <li
+                  key={`${closure.week}-${closure.weekday}`}
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 py-1 pl-3 pr-1 text-sm"
+                >
+                  <span>{formatMonthlyClosure(closure)}</span>
+                  <Button
+                    type="button"
+                    variant="destructive-ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label={`${formatMonthlyClosure(closure)}の定休を削除`}
+                    disabled={isPending}
+                    onClick={() => handleRemoveMonthlyClosure(index)}
+                  >
+                    <IconX className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* 特別休業日 */}

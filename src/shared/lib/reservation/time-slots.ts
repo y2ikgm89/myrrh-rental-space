@@ -22,6 +22,7 @@ import {
   getWeekdayKey,
   parseTime,
   generateSlotsFromBusinessHours,
+  isMonthlyClosureDate,
 } from "./time-slots-utils";
 
 /**
@@ -138,6 +139,12 @@ export async function isBusinessDay(
   if (!hours) return true;
 
   const targetDate = new Date(`${date}T00:00:00`);
+
+  // 毎月の繰り返し定休（第N曜日）に該当する日は営業日でない
+  if (isMonthlyClosureDate(targetDate, hours.monthlyClosures)) {
+    return false;
+  }
+
   const weekday = getWeekdayKey(targetDate);
   const daySettings = hours[weekday];
 

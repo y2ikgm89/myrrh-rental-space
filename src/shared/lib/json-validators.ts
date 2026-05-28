@@ -33,8 +33,38 @@ const businessHoursDaySchema = z.object({
   slots: z.array(businessTimeSlotSchema),
 });
 
+/** 曜日キー（businessHours の曜日と一致） */
+export const WEEKDAY_VALUES = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
+/** 月内の第N週（last = 最終週） */
+export const MONTHLY_CLOSURE_WEEK_VALUES = [
+  "first",
+  "second",
+  "third",
+  "fourth",
+  "last",
+] as const;
+
 /**
- * 営業時間（週間）スキーマ
+ * 毎月の繰り返し定休（例: 第3月曜）。
+ * 曜日定休（週次）を補完する月次の繰り返し休業。BlockedDate（単発期間）とは別。
+ */
+const monthlyClosureSchema = z.object({
+  weekday: z.enum(WEEKDAY_VALUES),
+  week: z.enum(MONTHLY_CLOSURE_WEEK_VALUES),
+});
+
+/**
+ * 営業時間（週間）スキーマ。
+ * `monthlyClosures` は毎月の繰り返し定休（後方互換のため default []）。
  */
 const businessHoursSchema = z.object({
   monday: businessHoursDaySchema,
@@ -44,12 +74,17 @@ const businessHoursSchema = z.object({
   friday: businessHoursDaySchema,
   saturday: businessHoursDaySchema,
   sunday: businessHoursDaySchema,
+  monthlyClosures: z.array(monthlyClosureSchema).optional(),
 });
 
 /** 営業時間帯（開始・終了時刻のペア）*/
 export type BusinessTimeSlot = z.infer<typeof businessTimeSlotSchema>;
 export type BusinessHoursDay = z.infer<typeof businessHoursDaySchema>;
 export type BusinessHours = z.infer<typeof businessHoursSchema>;
+export type MonthlyClosure = z.infer<typeof monthlyClosureSchema>;
+export type MonthlyClosureWeek = (typeof MONTHLY_CLOSURE_WEEK_VALUES)[number];
+/** businessHours の曜日キー（monthlyClosures を除外した weekday 限定キー） */
+export type WeekdayKey = (typeof WEEKDAY_VALUES)[number];
 
 /**
  * unknown値をstring[]に安全に変換
