@@ -81,6 +81,8 @@ import type { TaxSettings } from "@/shared/lib/pricing/types";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { cn } from "@/shared/lib/cn";
+import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
+import { BlockedDatesField } from "./BlockedDatesField";
 
 const SPACE_EDIT_TAB_VALUES = [
   "basic",
@@ -88,6 +90,7 @@ const SPACE_EDIT_TAB_VALUES = [
   "media",
   "details",
   "publish",
+  "blocked-dates",
 ] as const satisfies readonly [string, ...string[]];
 
 type SpaceEditTabValue = (typeof SPACE_EDIT_TAB_VALUES)[number];
@@ -106,6 +109,7 @@ const SPACE_EDIT_TAB_LABELS: Record<SpaceEditTabValue, string> = {
   media: "メディア",
   details: "詳細設定",
   publish: "公開・SEO",
+  "blocked-dates": "臨時休業",
 };
 
 const SELECT_NONE_VALUE = "__none__";
@@ -130,6 +134,7 @@ export type SpaceEditFormProps = {
   availableCategories: SpaceEditCategoryOption[];
   taxSettings: TaxSettings;
   reviewsFeatureEnabled: boolean;
+  initialBlockedDates?: readonly BlockedDateData[];
 };
 
 type ImageItem = { key: string; url: string };
@@ -238,6 +243,7 @@ export function SpaceEditForm({
   availableCategories,
   taxSettings = DEFAULT_TAX_SETTINGS,
   reviewsFeatureEnabled,
+  initialBlockedDates = [],
 }: SpaceEditFormProps) {
   const isEdit = mode === "edit";
   const dndContextId = useId();
@@ -476,6 +482,8 @@ export function SpaceEditForm({
       fields.ogpDescription,
       fields.ogpImageUrl,
     ].filter((f) => fieldHasErrors(f.errors)).length,
+    // 臨時休業は独立 CRUD（このフォームの送信対象外）のため常に 0
+    "blocked-dates": 0,
   };
 
   const onTabChange = (value: string) => {
@@ -631,7 +639,9 @@ export function SpaceEditForm({
         className="space-y-4"
       >
         <TabsList className="h-auto flex-wrap gap-1">
-          {SPACE_EDIT_TAB_VALUES.map((tab) => {
+          {SPACE_EDIT_TAB_VALUES.filter(
+            (tab) => tab !== "blocked-dates" || isEdit,
+          ).map((tab) => {
             const errorCount = tabErrorCount[tab];
             return (
               <TabsTrigger
@@ -1539,6 +1549,27 @@ export function SpaceEditForm({
             </Card>
           </div>
         </TabsContent>
+
+        {/* ============ 臨時休業（edit のみ・独立 CRUD） ============ */}
+        {isEdit && space && (
+          <TabsContent
+            value="blocked-dates"
+            forceMount
+            className="data-[state=inactive]:hidden"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>臨時休業 / 急な休み</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BlockedDatesField
+                  spaceId={space.id}
+                  initialBlockedDates={initialBlockedDates}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <div className="sticky bottom-0 z-10 mt-6 -mx-4 border-t bg-background px-4 py-4 md:-mx-6 md:px-6">

@@ -6,6 +6,7 @@ import { getSpaceById } from "@/admin/queries/space";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
+import { getBlockedDatesForSpace } from "@/shared/domain/blocked-dates/queries";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
@@ -34,12 +35,14 @@ export default async function EditSpacePage({ params }: PageProps) {
     availableCategories,
     taxSettings,
     reviewsFeatureEnabled,
+    initialBlockedDates,
   ] = await Promise.all([
     getSpaceById(id),
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
     getTaxSettings(),
     isFeatureEnabled("reviews"),
+    getBlockedDatesForSpace(id),
   ]);
 
   if (!space) notFound();
@@ -74,6 +77,7 @@ export default async function EditSpacePage({ params }: PageProps) {
         availableCategories={availableCategories}
         taxSettings={taxSettings}
         reviewsFeatureEnabled={reviewsFeatureEnabled}
+        initialBlockedDates={initialBlockedDates}
       />
     </AdminDetailLayout>
   );
