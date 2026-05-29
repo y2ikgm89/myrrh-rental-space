@@ -36,7 +36,6 @@ import {
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
 import {
-  RESERVATION_STATUS_LABELS,
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
@@ -176,11 +175,6 @@ export const updateReservationStatus = async (
         status !== ReservationStatus.CONFIRMED &&
         status !== ReservationStatus.CANCELLED
       ) {
-        const oldLabel =
-          RESERVATION_STATUS_LABELS[result.previousStatus] ??
-          result.previousStatus;
-        const newLabel = RESERVATION_STATUS_LABELS[status] ?? status;
-
         fireAndForget(
           sendReservationStatusChangedEmail({
             reservationId: payloadData.reservationId,
@@ -190,8 +184,8 @@ export const updateReservationStatus = async (
             startTime: payloadData.startTime,
             endTime: payloadData.endTime,
             totalPrice: payloadData.totalPrice,
-            oldStatus: oldLabel,
-            newStatus: newLabel,
+            oldStatus: result.previousStatus,
+            newStatus: status,
             icsSequence: payloadData.icsSequence,
             ...(payloadData.location != null
               ? { location: payloadData.location }
@@ -282,12 +276,6 @@ export const restoreReservationStatus = async (
         }
       }
 
-      const oldLabel =
-        RESERVATION_STATUS_LABELS[result.previousStatus] ??
-        result.previousStatus;
-      const newLabel =
-        RESERVATION_STATUS_LABELS[result.targetStatus] ?? result.targetStatus;
-
       fireAndForget(
         sendReservationStatusChangedEmail({
           reservationId: payloadData.reservationId,
@@ -297,8 +285,8 @@ export const restoreReservationStatus = async (
           startTime: payloadData.startTime,
           endTime: payloadData.endTime,
           totalPrice: payloadData.totalPrice,
-          oldStatus: oldLabel,
-          newStatus: newLabel,
+          oldStatus: result.previousStatus,
+          newStatus: result.targetStatus,
           icsSequence: payloadData.icsSequence,
           ...(payloadData.location != null
             ? { location: payloadData.location }

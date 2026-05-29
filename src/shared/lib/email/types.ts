@@ -4,6 +4,8 @@
  * @module shared/lib/email/types
  */
 
+import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+
 export type ReservationEmailData = {
   reservationId: string;
   customerEmail: string;
@@ -88,8 +90,8 @@ export type StatusChangeEmailData = {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
-  oldStatus: string;
-  newStatus: string;
+  oldStatus: ReservationStatus;
+  newStatus: ReservationStatus;
   location?: string;
   icsSequence: number;
 };
