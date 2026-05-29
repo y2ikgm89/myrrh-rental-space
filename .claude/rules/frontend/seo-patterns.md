@@ -87,7 +87,7 @@ paths:
 
 | パス                                   | 内容                                                                                                                                                                           |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@/public/components/seo/JsonLd.tsx`   | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等                                                                   |
+| `@/public/components/seo/json-ld.tsx`  | `GraphJsonLd`, `ArticleJsonLd`, `NewsArticleJsonLd`, `BreadcrumbJsonLd`, `FAQPageJsonLd`, `ProductJsonLd` 等                                                                   |
 | `@/public/lib/seo/json-ld-config.ts`   | `getGraphJsonLdData()`, `getOrganizationJsonLdData()`, `getWebSiteJsonLdData()`, 共有定数（`DAY_MAP`, `DAY_LABELS`, `ATTR_LABELS`）。`getLocalBusinessJsonLdData()` は廃止済み |
 | `@/public/lib/seo/location-json-ld.ts` | `buildLocationLocalBusinessJsonLdData()`, `getAllPublishedLocationsJsonLdData()`, `getLocationJsonLdDataBySlug()` — per-location LocalBusiness JSON-LD                         |
 | `@/public/lib/seo/metadata-factory.ts` | `getSeoSettings()`, `generateArticleMetadata()`                                                                                                                                |

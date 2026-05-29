@@ -3,7 +3,7 @@ description: Accessibility — フォーカス管理 / キーボードナビゲ�
 paths:
   - "src/app/(public*)/**/*.tsx"
   - "src/app/(admin)/**/*.tsx"
-  - "src/public/components/a11y/**"
+  - "src/app/(public*)/_shared/components/a11y/**"
 ---
 
 # Accessibility — フォーカス / キーボードナビ

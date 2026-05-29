@@ -4,8 +4,8 @@ paths:
   - src/app/(public*)/_shared/components/seo/**
   - src/app/(public*)/_shared/lib/seo/**
   - src/app/(public*)/layout.tsx
-  - src/app/(public*)/_components/BusinessInfo*.tsx
-  - src/app/(public*)/_components/Footer*.tsx
+  - src/app/(public)/contact/_components/business-info.tsx
+  - src/app/(public*)/_shared/components/layouts/site-footer.tsx
 ---
 
 # 構造化データ配置（JSON-LD @graph + microdata）

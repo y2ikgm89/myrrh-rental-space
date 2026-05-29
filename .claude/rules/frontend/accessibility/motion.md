@@ -3,7 +3,7 @@ description: Accessibility — prefers-reduced-motion (GSAP matchMedia パター
 paths:
   - "src/app/(public*)/**/*.tsx"
   - "src/app/(public*)/_shared/components/animations/**"
-  - "src/public/hooks/use-motion-preference.ts"
+  - "src/app/(public*)/_shared/hooks/use-motion-preference.ts"
 ---
 
 # Accessibility — prefers-reduced-motion
