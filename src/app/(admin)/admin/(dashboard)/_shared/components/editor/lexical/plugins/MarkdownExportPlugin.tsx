@@ -68,7 +68,7 @@ function MarkdownExportDialog({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5"
+              className="gap-1.5"
               onClick={handleCopy}
             >
               {copied ? (
@@ -84,19 +84,13 @@ function MarkdownExportDialog({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5"
+              className="gap-1.5"
               onClick={handleDownload}
             >
               <IconDownload className="h-3.5 w-3.5" />
               <span className="text-xs">ダウンロード</span>
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onClose}
-            >
+            <Button type="button" variant="ghost" size="icon" onClick={onClose}>
               <IconX className="h-4 w-4" />
             </Button>
           </div>
@@ -133,7 +127,6 @@ export function MarkdownExportPlugin() {
         type="button"
         variant="ghost"
         size="icon"
-        className="h-7 w-7"
         onClick={handleExport}
         title="Markdownエクスポート"
       >

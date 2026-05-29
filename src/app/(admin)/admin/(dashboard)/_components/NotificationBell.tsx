@@ -69,7 +69,7 @@ export function NotificationBell({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="px-2 text-xs"
               disabled={isPending}
               onClick={handleMarkAllAsRead}
             >
