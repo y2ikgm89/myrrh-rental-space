@@ -20,6 +20,7 @@ import {
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getAdminUrl, getAppHost, getAppUrl } from "../constants";
 import {
   ErrorCategory,
@@ -231,8 +232,7 @@ export async function sendReservationStatusChangedEmail(
   const host = getAppHost();
   const organizer = await getIcalOrganizer();
 
-  const isCancelled =
-    data.newStatus === "キャンセル" || data.newStatus === "CANCELLED";
+  const isCancelled = data.newStatus === ReservationStatus.CANCELLED;
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
