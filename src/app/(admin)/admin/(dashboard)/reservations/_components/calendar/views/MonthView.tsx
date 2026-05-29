@@ -138,7 +138,7 @@ export function MonthView({
                       {hiddenCount > 0 && !dayExpanded && (
                         <button
                           type="button"
-                          className="mt-0.5 inline-flex min-h-6 w-full items-center rounded px-1.5 py-0.5 text-left text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="mt-0.5 inline-flex min-h-11 w-full items-center rounded px-1.5 py-0.5 text-left text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={() => toggleExpandDay(dayId)}
                         >
                           + 他 {hiddenCount} 件
@@ -148,7 +148,7 @@ export function MonthView({
                       {dayExpanded && hiddenCount > 0 && (
                         <button
                           type="button"
-                          className="mt-0.5 inline-flex min-h-6 w-full items-center rounded px-1.5 py-0.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="mt-0.5 inline-flex min-h-11 w-full items-center rounded px-1.5 py-0.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={() => toggleExpandDay(dayId)}
                         >
                           折りたたむ

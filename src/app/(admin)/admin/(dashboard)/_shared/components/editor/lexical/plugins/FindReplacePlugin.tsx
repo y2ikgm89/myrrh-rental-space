@@ -237,7 +237,7 @@ function FindIconReplacePanel({
               }
             }}
             placeholder="検索..."
-            className="h-7 pl-7 pr-2 text-xs w-48"
+            className="h-11 pl-7 pr-2 text-xs w-48"
           />
         </div>
 
@@ -251,7 +251,7 @@ function FindIconReplacePanel({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-11 w-11"
           onClick={() => setCaseSensitive(!caseSensitive)}
           title="大文字小文字を区別"
         >
@@ -267,7 +267,7 @@ function FindIconReplacePanel({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-11 w-11"
           onClick={goToPrevious}
           disabled={matchCount === 0}
         >
@@ -277,7 +277,7 @@ function FindIconReplacePanel({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-11 w-11"
           onClick={goToNext}
           disabled={matchCount === 0}
         >
@@ -288,7 +288,7 @@ function FindIconReplacePanel({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-11 w-11"
           onClick={() => setShowIconReplace(!showIconReplace)}
           title="置換"
         >
@@ -299,7 +299,7 @@ function FindIconReplacePanel({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-11 w-11"
           onClick={onClose}
         >
           <IconX className="h-3.5 w-3.5" />
@@ -312,13 +312,13 @@ function FindIconReplacePanel({
             value={replaceText}
             onChange={(e) => setReplaceText(e.target.value)}
             placeholder="置換..."
-            className="h-7 text-xs flex-1"
+            className="h-11 text-xs flex-1"
           />
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 text-xs px-2"
+            className="text-xs px-2"
             onClick={handleIconReplace}
             disabled={matchCount === 0}
           >
@@ -328,7 +328,7 @@ function FindIconReplacePanel({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 text-xs px-2"
+            className="text-xs px-2"
             onClick={handleIconReplaceAll}
             disabled={matchCount === 0}
           >
