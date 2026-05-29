@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/admin/components/ui";
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
 import { updateTermsPublished } from "@/admin/actions/terms";
 import { TermsActionCell } from "./TermsActionCell";
@@ -83,7 +84,10 @@ export function TermsTable({ items }: TermsTableProps) {
                     isPublished={item.isPublished}
                     onToggle={updateTermsPublished}
                     resourceLabel={`${item.title} の公開状態`}
-                    label={{ published: "公開中", unpublished: "下書き" }}
+                    label={{
+                      published: PUBLISH_LABELS.published,
+                      unpublished: PUBLISH_LABELS.draft,
+                    }}
                   />
                 </TableCell>
                 <TableCell>

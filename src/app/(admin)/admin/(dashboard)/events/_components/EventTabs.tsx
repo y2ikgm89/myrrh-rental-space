@@ -5,6 +5,8 @@ import type { Route } from "next";
 import type { EventTabFilter } from "@/shared/lib/nuqs";
 import { NavTabs, type NavTabItem } from "@/admin/components/ui";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // 型・定数
@@ -17,8 +19,8 @@ type EventTabsProps = {
 const TAB_BASE: readonly { value: EventTabFilter; label: string }[] = [
   { value: "open", label: "開催" },
   { value: "past", label: "終了" },
-  { value: "draft", label: "下書き" },
-  { value: "cancelled", label: "キャンセル" },
+  { value: "draft", label: EVENT_STATUS_LABELS[EventStatus.DRAFT] },
+  { value: "cancelled", label: EVENT_STATUS_LABELS[EventStatus.CANCELLED] },
   { value: "all", label: "すべて" },
 ];
 

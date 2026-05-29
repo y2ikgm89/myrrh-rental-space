@@ -5,6 +5,8 @@ import type { Route } from "next";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
 import { NavTabs, type NavTabItem } from "@/admin/components/ui";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // 型・定数
@@ -15,10 +17,22 @@ type ReservationTabsProps = {
 };
 
 const TAB_BASE: readonly { value: ReservationTabFilter; label: string }[] = [
-  { value: "confirmed", label: "確認済み" },
-  { value: "pending", label: "保留中" },
-  { value: "completed", label: "完了" },
-  { value: "cancelled", label: "キャンセル" },
+  {
+    value: "confirmed",
+    label: RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED],
+  },
+  {
+    value: "pending",
+    label: RESERVATION_STATUS_LABELS[ReservationStatus.PENDING],
+  },
+  {
+    value: "completed",
+    label: RESERVATION_STATUS_LABELS[ReservationStatus.COMPLETED],
+  },
+  {
+    value: "cancelled",
+    label: RESERVATION_STATUS_LABELS[ReservationStatus.CANCELLED],
+  },
   { value: "all", label: "すべて" },
 ];
 
