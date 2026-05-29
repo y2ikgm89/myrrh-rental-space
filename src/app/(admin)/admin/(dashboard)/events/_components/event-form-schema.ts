@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
@@ -161,8 +162,8 @@ function refineEvent(
   },
   ctx: z.RefinementCtx,
 ): void {
-  const start = new Date(data.startTime);
-  const end = new Date(data.endTime);
+  const start = parseDateTimeLocalAsJst(data.startTime);
+  const end = parseDateTimeLocalAsJst(data.endTime);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
   if (end <= start) {
     ctx.addIssue({
@@ -176,7 +177,7 @@ function refineEvent(
     typeof data.registrationDeadline === "string" &&
     data.registrationDeadline !== ""
   ) {
-    const deadline = new Date(data.registrationDeadline);
+    const deadline = parseDateTimeLocalAsJst(data.registrationDeadline);
     if (!Number.isNaN(deadline.getTime()) && deadline > start) {
       ctx.addIssue({
         code: "custom",
