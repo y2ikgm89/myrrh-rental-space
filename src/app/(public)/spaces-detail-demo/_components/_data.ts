@@ -106,6 +106,4 @@ export const DEMO_SPACE: DemoSpace = {
   },
 };
 
-export function formatPrice(price: number): string {
-  return `¥${price.toLocaleString()}`;
-}
+export { formatPrice } from "@/shared/lib/pricing/format";
