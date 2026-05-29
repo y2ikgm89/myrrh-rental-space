@@ -103,7 +103,7 @@ export function MonthView({
                         type="button"
                         aria-label={`${format(day, "yyyy年M月d日")} を日表示で開く`}
                         className={cn(
-                          "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-semibold tabular-nums transition-colors",
+                          "flex min-h-11 min-w-11 items-center justify-center rounded-full px-1.5 text-sm font-semibold tabular-nums transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                           "hover:bg-accent",
                           !isCurrentMonth && "text-muted-foreground",
