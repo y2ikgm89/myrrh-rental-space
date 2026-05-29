@@ -44,6 +44,7 @@ import {
   updateICalFeedSettings,
 } from "@/admin/actions/ical-tokens";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { formatDateShort } from "@/shared/lib/date-format";
 import {
   IconCopy,
   IconTrash,
@@ -470,18 +471,12 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                           : "全スペース"}
                         {token.expiresAt && (
                           <span className="ml-2">
-                            ・有効期限:{" "}
-                            {new Date(token.expiresAt).toLocaleDateString(
-                              "ja-JP",
-                            )}
+                            ・有効期限: {formatDateShort(token.expiresAt)}
                           </span>
                         )}
                         {token.lastUsedAt && (
                           <span className="ml-2">
-                            ・最終アクセス:{" "}
-                            {new Date(token.lastUsedAt).toLocaleDateString(
-                              "ja-JP",
-                            )}
+                            ・最終アクセス: {formatDateShort(token.lastUsedAt)}
                           </span>
                         )}
                       </div>

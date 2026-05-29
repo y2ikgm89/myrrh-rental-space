@@ -44,6 +44,7 @@ import { reorderFaqItems, updateFaqItemPublished } from "@/admin/actions/faq";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
+import { formatDateShort } from "@/shared/lib/date-format";
 import { useQueryStates } from "nuqs";
 import {
   adminFaqCategoryDetailSearchParamsParsers,
@@ -136,7 +137,7 @@ function SortableRow({
         className="hidden text-muted-foreground lg:table-cell"
         onClick={() => onEdit(item)}
       >
-        {new Date(item.updatedAt).toLocaleDateString("ja-JP")}
+        {formatDateShort(item.updatedAt)}
       </TableCell>
       <TableCell className="hidden md:table-cell" onClick={stopRowClick}>
         <PublishSwitch
