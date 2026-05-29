@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TIME_REGEX } from "./business-hours";
 
 export const customerReservationEditSchema = z
   .object({
@@ -7,10 +8,10 @@ export const customerReservationEditSchema = z
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
       error: "日付の形式が正しくありません（YYYY-MM-DD）",
     }),
-    startTime: z.string().regex(/^\d{2}:\d{2}$/, {
+    startTime: z.string().regex(TIME_REGEX, {
       error: "時間の形式が正しくありません（HH:MM）",
     }),
-    endTime: z.string().regex(/^\d{2}:\d{2}$/, {
+    endTime: z.string().regex(TIME_REGEX, {
       error: "時間の形式が正しくありません（HH:MM）",
     }),
     numberOfGuests: z.number().int().min(1, { error: "利用人数は1名以上です" }),

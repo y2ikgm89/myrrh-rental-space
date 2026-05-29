@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { TIME_REGEX } from "@/shared/lib/validations/business-hours";
 
 /**
  * ReservationForm / ReservationEditForm (conform) form schema
@@ -23,7 +24,7 @@ const dateStringSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/u, { error: "日付の形式が正しくありません" });
 
-const timeStringSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/u, {
+const timeStringSchema = z.string().regex(TIME_REGEX, {
   error: "時間の形式が正しくありません",
 });
 
