@@ -4,7 +4,7 @@ description: >
   Multiple Root Layouts / PPR 環境のルーティング構造をレビューする。
   新規ページ追加・ルート移行・loading.tsx/not-found.tsx 変更後に使用。
   Suspense boundary 欠落・空ディレクトリ残骸・特殊ファイルの html/body 漏れを検出。
-tools: Read, Grep, Glob, LS
+tools: Read, Grep, Glob
 model: sonnet
 effort: low
 ---

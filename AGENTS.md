@@ -11,7 +11,7 @@
 - 明示的に subagent / 並列調査を依頼されたときだけ `.codex/agents/*.toml` の専門エージェントを使う。各 agent は `name` / `description` / `developer_instructions` を必須とし、狭い read-only / verifier 職能を基本にする。
 - `.codex/rules/*.rules` はサンドボックス外コマンドの承認ルール専用。公式上 experimental なので、`prefix_rule` の `pattern` / `decision` / `justification` / `match` / `not_match` だけでコマンド方針を表し、コーディング規約は置かない。
 - `.codex/hooks.json` は空設定にする。hooks は公式上 experimental かつ Windows support が一時無効なので、検証強制は `lefthook` / CI / このファイルの delivery checklist で担保する。
-- `.claude/*` は残置された Claude Code 用資産として扱う。Codex 作業では参照・同期・正本扱いしない。
+- `.claude/*` は Claude Code 用資産として扱う（Codex 作業では参照・同期・正本扱いしない）。
 - ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/explanation/*`、`docs/how-to/*` の Codex 向け導線から読む。ライブラリ API リファレンスは公式 docs を直接参照する。
 - Codex 資産（`AGENTS.md` / `.agents/skills` / `.codex/agents` / `.codex/rules` / `.codex/hooks.json`）を変更する場合は `codex-instruction-maintenance` と `project-validation` の手順を使い、AGENTS.md には恒久的な全体制約だけを置く。
 
@@ -110,9 +110,9 @@ bun run e2e                                       # 広域 E2E（label opt-in CI
 - Server Components をデフォルトとし、必要時のみ `'use client'` を使う。
 - 入出力は Zod で検証する。エラーメッセージは `{ error: "msg" }` 形式（Zod 4）。
 - 型アサーション (`as`) を避け、型ガード・`satisfies`・Zod `safeParse` を使う。
-- React Compiler 前提。手動 `useMemo` / `useCallback` は、既存パターンか実測上の必要がある場合だけ使う。
+- React Compiler 前提。手動 `useMemo` / `useCallback` / `memo` は原則禁止。実測上必要な escape hatch のみ例外とする。
 - `forwardRef` は使わない。React 19 では ref を通常の prop として扱う。
-- React Hook Form は `watch()` ではなく `useWatch()` を使う。
+- 管理画面 form は conform（`useForm` + `getInputProps` + `useActionState`）を使う。React Hook Form は `package.json` から削除済で新規利用不可。
 - Tailwind CSS 4 は `@theme` とセマンティックトークンを使う。ハードコード色を増やさない。
 - Bun Test を使う。テストは `bun:test` から import する。
 - 命名: コンポーネント `PascalCase.tsx`、ユーティリティ `kebab-case.ts`。
