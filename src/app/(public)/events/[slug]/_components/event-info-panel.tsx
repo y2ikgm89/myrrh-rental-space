@@ -82,7 +82,7 @@ export function EventInfoPanel({
   );
   const body = (
     <>
-      <p className="px-8 pt-7 text-[0.65rem] uppercase tracking-[0.24em] text-muted-foreground sm:px-10">
+      <p className="px-8 pt-7 text-xs uppercase tracking-[0.24em] text-muted-foreground sm:px-10">
         — Event —
       </p>
       <div className="px-8 pb-5 pt-4 sm:px-10">
