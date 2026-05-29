@@ -311,10 +311,10 @@ export function ToolbarPlugin({
       <div
         role="toolbar"
         aria-label="書式・挿入・書き出し"
-        className="grid min-h-10 min-w-0 grid-cols-[1fr_auto_1fr] items-stretch border-b border-border bg-muted/40"
+        className="grid min-h-11 min-w-0 grid-cols-[1fr_auto_1fr] items-stretch border-b border-border bg-muted/40"
       >
         <div aria-hidden="true" />
-        <div className="flex min-h-10 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide">
+        <div className="flex min-h-11 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide">
           <HistorySection
             canUndo={canUndo}
             canRedo={canRedo}
