@@ -58,7 +58,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 - **ドメインコマンドの actor 引数は `{ id; role }` オブジェクト** — 単独 `actorUserId: string` 禁止
 - **GCal outbound sync は attendees 空 + description marker + fireAndForget**（`ical-patterns.md`）
 - **Turnstile** — 未認証公開フォーム必須、認証済みでも高リスク操作は許容、参照系は不要
-- **datetime-local は `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst`** — `new Date(localStr)` は tz 依存で 9h ずれる silent bug
+- **datetime-local は `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst`、`@db.Date`（日付のみ）列は `parseJstDateOnly` / `formatJstDateOnly`** — `new Date(localStr)` は tz 依存で 9h ずれる silent bug（`@db.Date` は「JST カレンダー日付を UTC 深夜保持」）
 - **Section schema canonical は `definitions/<type>/schema.ts`** — `safeParse({})` 成立必須（required field に `.default()`、`ssot-singletons.md`）
 - **`PortableTextSpan[]` / `PortableTextBlock[]` の JSX truthy gate 禁止** — `.length > 0` で gate（空配列も truthy）
 
