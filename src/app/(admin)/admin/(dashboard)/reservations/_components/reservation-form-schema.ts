@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { calculateDurationHours } from "@/shared/lib/date-format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { TIME_REGEX } from "@/shared/lib/validations/business-hours";
@@ -94,7 +95,7 @@ function refineTimeRange(
     });
     return;
   }
-  const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  const diffHours = calculateDurationHours(start, end);
   if (diffHours < 1) {
     ctx.addIssue({
       code: "custom",

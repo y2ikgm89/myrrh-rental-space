@@ -3,6 +3,7 @@ import "server-only";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { InquiryStatus, ReservationStatus } from "@generated/prisma/enums";
+import { formatJstDateString } from "@/shared/lib/date-format";
 
 export type DashboardStats = {
   reservations: {
@@ -70,17 +71,6 @@ const DEFAULT_LIST_LIMIT = 5;
 const MAX_LIST_LIMIT = 50;
 const CHART_WINDOW_DAYS = 30;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-const JST_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-function toJstDateString(date: Date): string {
-  return JST_DATE_FORMATTER.format(date);
-}
 
 function calcChangePercent(current: number, previous: number): number {
   if (previous > 0) {
@@ -307,7 +297,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
 }
 
 export async function getReservationChartData(): Promise<ReservationChartResult> {
-  const todayJstStr = toJstDateString(new Date());
+  const todayJstStr = formatJstDateString(new Date());
   const todayJstMidnightUtc = new Date(`${todayJstStr}T00:00:00+09:00`);
   const oldestJstMidnightUtc = new Date(
     todayJstMidnightUtc.getTime() - (CHART_WINDOW_DAYS - 1) * ONE_DAY_MS,
@@ -345,7 +335,7 @@ export async function getReservationChartData(): Promise<ReservationChartResult>
     const dateUtc = new Date(
       todayJstMidnightUtc.getTime() - index * ONE_DAY_MS,
     );
-    dataMap.set(toJstDateString(dateUtc), { reservations: 0, revenue: 0 });
+    dataMap.set(formatJstDateString(dateUtc), { reservations: 0, revenue: 0 });
   }
 
   for (const stat of dailyStats) {

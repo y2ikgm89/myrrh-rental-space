@@ -155,3 +155,38 @@ export function formatJstDateOnly(date: Date | string): string {
   const value = typeof date === "string" ? new Date(date) : date;
   return value.toISOString().slice(0, 10);
 }
+
+const JST_MACHINE_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * 任意の datetime を JST カレンダー日付の machine 形式 `"YYYY-MM-DD"` に整形する。
+ *
+ * `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" })` で JST 固定の
+ * ISO-like 日付文字列を返す。サーバ tz（Cloud Run UTC）/ ブラウザ tz に依存しない。
+ *
+ * `formatJstDateOnly` との違い: あちらは `@db.Date`（UTC 深夜保持）専用で
+ * `toISOString().slice(0, 10)` を使う。こちらは**時刻つき UTC datetime を
+ * JST カレンダー日付に落とす**用途（dashboard チャート集計 / cron の翌日判定 /
+ * 予約可能性の today 判定）。
+ */
+export function formatJstDateString(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_MACHINE_DATE_FORMATTER.format(value);
+}
+
+const MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
+
+/**
+ * 2 つの Date の差を「時間（hours）」で返す。小数を含む（30 分 = 0.5）。
+ *
+ * 予約の base price 計算 / 表示価格プレビュー / 最小予約時間バリデーション等で
+ * `(end - start) / (1000 * 60 * 60)` の magic number を散らさないための SSoT。
+ */
+export function calculateDurationHours(start: Date, end: Date): number {
+  return (end.getTime() - start.getTime()) / MILLISECONDS_PER_HOUR;
+}

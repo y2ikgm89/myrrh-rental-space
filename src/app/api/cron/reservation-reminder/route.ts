@@ -1,4 +1,5 @@
 import { unstable_rethrow } from "next/navigation";
+import { formatJstDateString } from "@/shared/lib/date-format";
 import { findReservationsForReminderWindow } from "@/shared/domain/reservations/admin-queries";
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -30,15 +31,9 @@ export async function GET(request: Request) {
     }
 
     // JST で翌日の日付を計算（Cloud Run は UTC 環境）
-    const jstFormatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Tokyo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const tomorrowJstStr = jstFormatter.format(tomorrow); // "YYYY-MM-DD"
+    const tomorrowJstStr = formatJstDateString(tomorrow); // "YYYY-MM-DD"
 
     // JST の翌日 00:00:00 〜 23:59:59 を UTC に変換
     const startOfWindow = new Date(`${tomorrowJstStr}T00:00:00+09:00`);

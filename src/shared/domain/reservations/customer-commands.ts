@@ -1,4 +1,5 @@
 import "server-only";
+import { calculateDurationHours } from "@/shared/lib/date-format";
 
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
@@ -198,8 +199,7 @@ export async function updateCustomerReservation(
     });
 
     // 料金の再計算（クーポン・長時間割引含む）
-    const hours =
-      (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
+    const hours = calculateDurationHours(startDateTime, endDateTime);
 
     const spaceDiscount:
       | import("@/shared/lib/pricing/types").SpaceDiscountSettings
