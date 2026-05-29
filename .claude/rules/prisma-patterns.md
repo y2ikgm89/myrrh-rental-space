@@ -15,7 +15,7 @@ paths:
 
 - **アプリ本体**: `src/shared/db/prisma.ts` の **`prisma`**（**`createAppPrismaClient`** 適用済み）。
 - **Better Auth の `prismaAdapter`**: 同ファイルの **`basePrisma`**（拡張前クライアント）だけを `src/shared/db/better-auth-adapter.ts` 経由で渡す。アダプターに拡張済みクライアントを渡さない。
-- 認証設定側では **`experimental.joins: true`** を維持（Prisma アダプター公式推奨）。理由は `.claude/rules/auth-patterns.md` の「Prisma アダプター + Prisma 7」を参照。
+- better-auth `prismaAdapter` は **`{ provider: "postgresql" }` のみ指定**する。`experimental.joins` 等の追加 option は better-auth ^1.6.11 の型定義に存在しない（旧版由来の stale 記述を 2026-05-30 監査で除去）。拡張前 `basePrisma` を渡す原則は上記のとおり。
 
 ## Prisma クライアントの組み立て（拡張の単一ソース）
 
