@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TIME_REGEX } from "./business-hours";
 import {
   customerTypeSchema,
   companyNameSchema,
@@ -10,7 +11,7 @@ const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
   error: "日付の形式が正しくありません（YYYY-MM-DD）",
 });
 
-const timeStringSchema = z.string().regex(/^\d{2}:\d{2}$/, {
+const timeStringSchema = z.string().regex(TIME_REGEX, {
   error: "時間の形式が正しくありません（HH:MM）",
 });
 
