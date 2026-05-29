@@ -134,21 +134,7 @@ Turnstile の siteverify は **token 1 回限り消費** のため通常 retry �
 
 ## Idempotency Key 設計パターン（Resend 例）
 
-| 用途                         | key 形式                                                     |
-| ---------------------------- | ------------------------------------------------------------ |
-| 安定 ID 系                   | `reservation-confirm/${reservationId}`                       |
-| バリエーション別             | `reservation-status/${id}/${newStatus}`                      |
-| アクション別管理者通知       | `reservation-admin/${id}/${action}`                          |
-| 可変コンテンツ（admin 返信） | `inquiry-reply/${id}/${hashForKey(replyMessage)}`            |
-| URL / トークン（reset 等）   | `password-reset/${hashForKey(resetUrl)}`                     |
-| 配信先ごと（全員通知）       | `event-cancelled/${eventId}/${hashForKey(participantEmail)}` |
-
-`hashForKey(value)` は `@/shared/lib/email/send.ts` が export する sha256 先頭 32 文字ヘルパー。email アドレス / resetUrl / トークン等を key に含める場合に使う。
-
-**key を省略してよい場合**:
-
-- webhook / cron 通知のように「発火のたびに新規メール」が正しい挙動
-- idempotency key のベースになる安定した識別子が存在しない
+key 形式一覧・`hashForKey` の用途・省略可能ケースは `resend-patterns.md` §Idempotency Key SSoT を参照。
 
 ## Retry 禁止パターン
 
