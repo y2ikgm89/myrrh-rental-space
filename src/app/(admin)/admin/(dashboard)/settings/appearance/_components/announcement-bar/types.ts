@@ -107,7 +107,7 @@ export type BarListProps = {
   isPending: boolean;
   onEdit: (bar: Serialized<AnnouncementBarData>) => void;
   onCreate: () => void;
-  onToggleActive: (id: string) => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
   onDelete: (id: string) => void;
 };
 
