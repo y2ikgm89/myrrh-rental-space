@@ -47,3 +47,11 @@ export type SidebarItem = {
   icon: ReactNode;
   requiredPermission?: SidebarItemPermission;
 };
+
+/** サイドバーグループ（セクション見出し付きの 5 グループ構成 SSoT） */
+export type SidebarGroup = {
+  /** SR 向け aria-label + 視覚見出しに共通使用するグループ名 */
+  label: string;
+  /** グループ内のナビアイテム */
+  items: SidebarItem[];
+};

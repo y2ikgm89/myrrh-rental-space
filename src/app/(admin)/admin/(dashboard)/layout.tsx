@@ -24,8 +24,8 @@ import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
 import type { ReactElement, ReactNode } from "react";
 import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import {
-  filterSidebarItemsByPermission,
-  SIDEBAR_ITEMS,
+  filterSidebarGroupsByPermission,
+  SIDEBAR_GROUPS,
 } from "./_components/sidebar-items";
 import { hasPermission } from "@/admin/lib/permissions";
 import {
@@ -47,8 +47,8 @@ export default async function DashboardLayout({
   children: ReactNode;
 }): Promise<ReactElement> {
   const user = await requireAdminDashboardAccess();
-  const sidebarItems = filterSidebarItemsByPermission(
-    SIDEBAR_ITEMS,
+  const sidebarGroups = filterSidebarGroupsByPermission(
+    SIDEBAR_GROUPS,
     (permission) =>
       hasPermission(user.role, permission.resource, permission.action),
   );
@@ -70,7 +70,7 @@ export default async function DashboardLayout({
               <div className="min-h-dvh bg-background">
                 {/* レスポンシブサイドバー */}
                 <ResponsiveSidebar
-                  items={sidebarItems}
+                  groups={sidebarGroups}
                   userInfo={
                     <Suspense fallback={<UserInfoSkeleton />}>
                       <UserInfo />

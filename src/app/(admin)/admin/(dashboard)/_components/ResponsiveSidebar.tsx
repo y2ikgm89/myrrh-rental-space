@@ -19,7 +19,7 @@ import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
-import type { SidebarItem } from "@/admin/types/admin-layout";
+import type { SidebarGroup } from "@/admin/types/admin-layout";
 
 const styles = tv({
   slots: {
@@ -40,6 +40,12 @@ const styles = tv({
       "text-lg font-semibold tracking-tight",
     ],
     nav: "flex-1 overflow-y-auto px-3 py-4",
+    navGroup: "space-y-1",
+    navGroupHeading: [
+      // Swiss Industrial: uppercase + wide tracking でセクション見出しを表現
+      // heading 階層を汚さないため <p aria-hidden>。SR は <ul aria-label> 経由で識別
+      "px-3 pb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-sidebar-text-muted",
+    ],
     navItem: [
       "flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sidebar-text-muted cursor-pointer",
       "transition-all duration-200 ease-out",
@@ -100,11 +106,14 @@ function isSidebarItemActive(
 }
 
 type ResponsiveSidebarProps = {
-  items: SidebarItem[];
+  groups: SidebarGroup[];
   userInfo: ReactNode;
 };
 
-export function ResponsiveSidebar({ items, userInfo }: ResponsiveSidebarProps) {
+export function ResponsiveSidebar({
+  groups,
+  userInfo,
+}: ResponsiveSidebarProps) {
   const { sidebarState, closeSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
   const pathname = usePathname();
@@ -184,39 +193,48 @@ export function ResponsiveSidebar({ items, userInfo }: ResponsiveSidebarProps) {
 
         {/* ナビゲーション */}
         <nav className={classes.nav()}>
-          <ul className="space-y-1">
-            {items.map((item) => {
-              const isActive = isSidebarItemActive(
-                item.href,
-                pathname,
-                searchParams,
-              );
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={toAppRoute(item.href)}
-                    className={cn(
-                      classes.navItem(),
-                      isActive && classes.navItemActive(),
-                    )}
-                    onClick={() => effectiveIsMobile && closeSidebar()}
-                  >
-                    <span className={isActive ? "text-sidebar-text" : ""}>
-                      {item.icon}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-sm font-medium",
-                        isActive && "text-sidebar-text",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="space-y-5">
+            {groups.map((group) => (
+              <div key={group.label}>
+                <p className={classes.navGroupHeading()} aria-hidden="true">
+                  {group.label}
+                </p>
+                <ul className={classes.navGroup()} aria-label={group.label}>
+                  {group.items.map((item) => {
+                    const isActive = isSidebarItemActive(
+                      item.href,
+                      pathname,
+                      searchParams,
+                    );
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={toAppRoute(item.href)}
+                          className={cn(
+                            classes.navItem(),
+                            isActive && classes.navItemActive(),
+                          )}
+                          onClick={() => effectiveIsMobile && closeSidebar()}
+                        >
+                          <span className={isActive ? "text-sidebar-text" : ""}>
+                            {item.icon}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-sm font-medium",
+                              isActive && "text-sidebar-text",
+                            )}
+                          >
+                            {item.label}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
         </nav>
 
         {/* ユーザー情報 */}
