@@ -101,13 +101,7 @@ export function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
             <IconKeyboard className="h-4 w-4" />
             <span>キーボードショートカット</span>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={onClose}
-          >
+          <Button type="button" variant="ghost" size="icon" onClick={onClose}>
             <IconX className="h-4 w-4" />
           </Button>
         </div>
