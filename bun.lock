@@ -5,8 +5,7 @@
     "": {
       "name": "myrrh-temp",
       "dependencies": {
-        "@aws-sdk/client-s3": "^3.1051.0",
-        "@better-auth/prisma-adapter": "^1.6.11",
+        "@aws-sdk/client-s3": "^3.1054.0",
         "@conform-to/react": "^1.19.3",
         "@conform-to/zod": "^1.19.3",
         "@daypicker/react": "^10.0.1",
@@ -40,7 +39,7 @@
         "better-auth": "^1.6.11",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
-        "date-fns": "^4.2.1",
+        "date-fns": "^4.3.0",
         "googleapis": "^172.0.0",
         "gsap": "^3.15.0",
         "ical-generator": "^10.2.0",
@@ -53,10 +52,9 @@
         "prisma": "^7.8.0",
         "radix-ui": "^1.4.3",
         "react": "^19.2.6",
-        "react-compiler-runtime": "^1.0.0",
         "react-dom": "^19.2.6",
         "recharts": "^3.8.1",
-        "resend": "^6.12.3",
+        "resend": "^6.12.4",
         "server-only": "^0.0.1",
         "sonner": "^2.0.7",
         "stripe": "^22.1.1",
@@ -67,7 +65,7 @@
       },
       "devDependencies": {
         "@axe-core/playwright": "^4.11.3",
-        "@eslint-react/eslint-plugin": "^5.8.3",
+        "@eslint-react/eslint-plugin": "^5.8.5",
         "@lexical/headless": "0.44.0",
         "@lhci/cli": "^0.15.1",
         "@next/eslint-plugin-next": "^16.2.6",
@@ -78,6 +76,7 @@
         "@types/node": "^25.9.1",
         "@types/react": "^19.2.15",
         "@types/react-dom": "^19.2.3",
+        "axe-core": "^4.11.4",
         "babel-plugin-react-compiler": "1.0.0",
         "eslint": "^10.4.0",
         "eslint-config-prettier": "^10.1.8",
@@ -92,7 +91,7 @@
         "typedoc": "^0.28.19",
         "typedoc-plugin-markdown": "^4.11.0",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.59.4",
+        "typescript-eslint": "^8.60.0",
       },
     },
   },
@@ -1936,8 +1935,6 @@
     "rc9": ["rc9@3.0.1", "", { "dependencies": { "defu": "^6.1.6", "destr": "^2.0.5" } }, "sha512-gMDyleLWVE+i6Sgtc0QbbY6pEKqYs97NGi6isHQPqYlLemPoO8dxQ3uGi0f4NiP98c+jMW6cG1Kx9dDwfvqARQ=="],
 
     "react": ["react@19.2.6", "", {}, "sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q=="],
-
-    "react-compiler-runtime": ["react-compiler-runtime@1.0.0", "", { "peerDependencies": { "react": "^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental" } }, "sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w=="],
 
     "react-day-picker": ["react-day-picker@10.0.1", "", { "dependencies": { "@date-fns/tz": "^1.4.1", "date-fns": "^4.1.0" }, "peerDependencies": { "@types/react": ">=16.8.0", "react": ">=16.8.0" }, "optionalPeers": ["@types/react"] }, "sha512-eNh6BlwcYInWaJtRv18mXQ06Ys/H6rdTZAnTaSdOYJuTpwP1JMCHNd1FDRadA+gbeinq+psdULN5Xnowy9mV8w=="],
 
