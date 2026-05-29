@@ -80,8 +80,11 @@ function buildLexicalContent(text: string) {
 }
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
+// Prisma 7 の pg Pool v7 デフォルト（connect 0s）は遅い接続で seed が失敗し得るため、
+// アプリ本番（src/shared/db/prisma.ts）と同じ connectionTimeoutMillis を明示する。
 const adapter = new PrismaPg({
   connectionString: process.env["DATABASE_URL"],
+  connectionTimeoutMillis: 5_000,
 });
 
 // Prisma Client（アプリ本番と同じ Decimal→number 拡張を適用）
