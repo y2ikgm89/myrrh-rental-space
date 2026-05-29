@@ -12,6 +12,38 @@ function getServerSnapshot(): boolean {
 }
 
 /**
+ * `subscribe` / `getSnapshot` を query 文字列キーで module-level cache する。
+ *
+ * `useSyncExternalStore` は `subscribe` の参照が変化するたびに再 subscribe
+ * (removeEventListener + addEventListener) するため、フック内で毎レンダ新規生成すると
+ * 親の再レンダのたびに matchMedia listener が付け外しされる無駄が生じる。
+ * query ごとに 1 度だけ生成して参照を固定することで再 subscribe を防ぐ
+ * (React Compiler 互換 — useCallback 不使用、ESLint no-restricted-imports と非衝突)。
+ */
+const subscribeCache = new Map<string, (callback: () => void) => () => void>();
+const snapshotCache = new Map<string, () => boolean>();
+
+function getSubscribe(query: string): (callback: () => void) => () => void {
+  const cached = subscribeCache.get(query);
+  if (cached) return cached;
+  const subscribe = (callback: () => void): (() => void) => {
+    const mediaQuery = window.matchMedia(query);
+    mediaQuery.addEventListener("change", callback);
+    return () => mediaQuery.removeEventListener("change", callback);
+  };
+  subscribeCache.set(query, subscribe);
+  return subscribe;
+}
+
+function getSnapshotFor(query: string): () => boolean {
+  const cached = snapshotCache.get(query);
+  if (cached) return cached;
+  const getSnapshot = (): boolean => window.matchMedia(query).matches;
+  snapshotCache.set(query, getSnapshot);
+  return getSnapshot;
+}
+
+/**
  * メディアクエリの状態を監視するフック
  *
  * @param query - メディアクエリ文字列 (例: '(min-width: 1024px)')
@@ -22,22 +54,13 @@ function getServerSnapshot(): boolean {
  * const isDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
  *
  * @remarks
- * `subscribe` / `getSnapshot` は毎レンダ新規生成だが、React 公式
- * `useSyncExternalStore` 仕様で「subscribe 参照変化時に再 subscribe」が
- * 保証されているため機能上問題なし。query 動的変更にも自動追従する。
- * パフォーマンス的には listener が連続 add/remove される副作用があるが、
- * matchMedia は軽量で実害なし。
- * (ESLint `no-restricted-imports` で `useCallback` 全面禁止のため
- * 公式例外パターンは disable comment 不使用で素直に実装)
+ * `subscribe` / `getSnapshot` は query キーで module-level cache し参照を固定する
+ * (上記 §cache 参照)。query 動的変更時はキーが変わり新しい安定参照に切り替わる。
  */
 export function useMediaQuery(query: string): boolean {
-  const subscribe = (callback: () => void) => {
-    const mediaQuery = window.matchMedia(query);
-    mediaQuery.addEventListener("change", callback);
-    return () => mediaQuery.removeEventListener("change", callback);
-  };
-
-  const getSnapshot = () => window.matchMedia(query).matches;
-
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(
+    getSubscribe(query),
+    getSnapshotFor(query),
+    getServerSnapshot,
+  );
 }
