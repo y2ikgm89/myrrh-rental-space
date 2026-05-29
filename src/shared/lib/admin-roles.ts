@@ -8,7 +8,7 @@
  * - `ROLE_LABELS` — 日本語ラベル（permissions.ts が再 export）
  * - `ROLE_DESCRIPTIONS` — UI 表示用のロール説明
  * - `INVITABLE_BY` — 階層制御マップ（誰が誰を招待/編集できるか）
- * - `getInvitableRoles()` / `canInviteRole()` / `canModifyUserRole()` — 階層ヘルパー
+ * - `getInvitableRoles()` / `canInviteRole()` / `canModifyUser()` — 階層ヘルパー
  */
 
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
