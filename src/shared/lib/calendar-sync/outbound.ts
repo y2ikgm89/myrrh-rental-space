@@ -8,6 +8,7 @@
  */
 
 import "server-only";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import {
   clearReservationCalendarEvent,
   getCalendarSyncRuntimeState,
@@ -61,12 +62,7 @@ function formatCalendarEvent(data: ReservationSyncData): CalendarEventParams {
   ];
 
   if (data.totalPrice !== undefined && data.totalPrice !== null) {
-    descriptionLines.push(
-      `料金: ${new Intl.NumberFormat("ja-JP", {
-        style: "currency",
-        currency: "JPY",
-      }).format(data.totalPrice)}`,
-    );
+    descriptionLines.push(`料金: ${formatCurrency(data.totalPrice)}`);
   }
 
   if (data.notes) {

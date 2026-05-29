@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { calculateDurationHours } from "@/shared/lib/date-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
@@ -156,7 +157,7 @@ export function ReservationEditForm({
     ) {
       return null;
     }
-    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    const hours = calculateDurationHours(start, end);
     return selectedSpace.hourlyPrice * hours;
   })();
 

@@ -2,7 +2,11 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { formatJstDateOnly, parseJstDateOnly } from "@/shared/lib/date-format";
+import {
+  formatJstDateOnly,
+  formatJstDateString,
+  parseJstDateOnly,
+} from "@/shared/lib/date-format";
 import {
   ACTIVE_RESERVATION_STATUSES,
   BLOCKED_DATE_SCOPE,
@@ -105,9 +109,7 @@ export async function getBlockedDateRangesForSpace(
 ): Promise<BlockedDateRange[]> {
   const locationId = await getSpaceLocationIdQuery(spaceId);
 
-  const todayJst = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-  }).format(new Date());
+  const todayJst = formatJstDateString(new Date());
   const todayUtcMidnight = parseJstDateOnly(todayJst);
 
   const rows = await prisma.blockedDate.findMany({
