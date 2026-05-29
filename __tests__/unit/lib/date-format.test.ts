@@ -6,6 +6,10 @@ import {
   formatDateTimeFull,
   formatDateTimeLocalInJst,
   parseDateTimeLocalAsJst,
+  parseJstDateOnly,
+  formatJstDateOnly,
+  formatJstDateString,
+  calculateDurationHours,
 } from "@/shared/lib/date-format";
 
 // テスト用の固定日時（タイムゾーン影響を受けにくい日中の時刻）
@@ -372,5 +376,149 @@ describe("format ↔ parse round-trip（JST 同値性）", () => {
     const local = formatDateTimeLocalInJst(utc);
     const restored = parseDateTimeLocalAsJst(local);
     expect(restored.toISOString()).toBe(utc.toISOString());
+  });
+});
+
+// =============================================================================
+// parseJstDateOnly / formatJstDateOnly（@db.Date 列の JST 深夜保持 round-trip）
+// =============================================================================
+
+describe("parseJstDateOnly", () => {
+  describe("正常系", () => {
+    test('"YYYY-MM-DD" を UTC 深夜 Date に変換する', () => {
+      const date = parseJstDateOnly("2026-12-29");
+      expect(date.toISOString()).toBe("2026-12-29T00:00:00.000Z");
+    });
+
+    test("月末日（3月31日）を正しく変換する", () => {
+      expect(parseJstDateOnly("2026-03-31").toISOString()).toBe(
+        "2026-03-31T00:00:00.000Z",
+      );
+    });
+
+    test("うるう年の2月29日を正しく変換する", () => {
+      expect(parseJstDateOnly("2028-02-29").toISOString()).toBe(
+        "2028-02-29T00:00:00.000Z",
+      );
+    });
+
+    test("年始（1月1日）を正しく変換する", () => {
+      expect(parseJstDateOnly("2026-01-01").toISOString()).toBe(
+        "2026-01-01T00:00:00.000Z",
+      );
+    });
+  });
+
+  describe("異常系・エッジケース", () => {
+    test("スラッシュ区切りは Invalid Date を返す", () => {
+      expect(Number.isNaN(parseJstDateOnly("2026/12/29").getTime())).toBe(true);
+    });
+
+    test("時刻付き文字列は Invalid Date を返す（日付のみ専用）", () => {
+      expect(
+        Number.isNaN(parseJstDateOnly("2026-12-29T00:00:00").getTime()),
+      ).toBe(true);
+    });
+
+    test("ゼロ埋めされていない月日は Invalid Date を返す", () => {
+      expect(Number.isNaN(parseJstDateOnly("2026-1-1").getTime())).toBe(true);
+    });
+
+    test("空文字列は Invalid Date を返す", () => {
+      expect(Number.isNaN(parseJstDateOnly("").getTime())).toBe(true);
+    });
+  });
+});
+
+describe("formatJstDateOnly", () => {
+  test("UTC 深夜 Date を YYYY-MM-DD に戻す", () => {
+    const date = new Date("2026-12-29T00:00:00.000Z");
+    expect(formatJstDateOnly(date)).toBe("2026-12-29");
+  });
+
+  test("ISO 文字列入力もサポート", () => {
+    expect(formatJstDateOnly("2026-03-31T00:00:00.000Z")).toBe("2026-03-31");
+  });
+
+  test("parseJstDateOnly との round-trip で同値に戻る", () => {
+    const original = "2026-12-29";
+    expect(formatJstDateOnly(parseJstDateOnly(original))).toBe(original);
+  });
+
+  test("うるう年 round-trip", () => {
+    expect(formatJstDateOnly(parseJstDateOnly("2028-02-29"))).toBe(
+      "2028-02-29",
+    );
+  });
+});
+
+// =============================================================================
+// formatJstDateString（任意 datetime → JST カレンダー日付 machine 形式）
+// =============================================================================
+
+describe("formatJstDateString", () => {
+  test("UTC 00:00 は JST 09:00 で同日扱い", () => {
+    expect(formatJstDateString(new Date("2026-05-30T00:00:00.000Z"))).toBe(
+      "2026-05-30",
+    );
+  });
+
+  test("UTC 夜間は JST で翌日になる（日跨ぎ）", () => {
+    // UTC 20:00 → JST 翌日 05:00
+    expect(formatJstDateString(new Date("2026-05-30T20:00:00.000Z"))).toBe(
+      "2026-05-31",
+    );
+  });
+
+  test("年跨ぎ（UTC 12/31 15:00 → JST 1/1 00:00）", () => {
+    expect(formatJstDateString(new Date("2025-12-31T15:00:00.000Z"))).toBe(
+      "2026-01-01",
+    );
+  });
+
+  test("ISO 文字列入力もサポート", () => {
+    expect(formatJstDateString("2026-05-30T00:00:00.000Z")).toBe("2026-05-30");
+  });
+
+  test("formatJstDateOnly との差異: 夜間 UTC datetime は JST 日跨ぎで 1 日ずれる", () => {
+    // formatJstDateOnly は UTC 日付を slice、formatJstDateString は JST 変換
+    const dt = new Date("2026-05-30T20:00:00.000Z");
+    expect(formatJstDateOnly(dt)).toBe("2026-05-30");
+    expect(formatJstDateString(dt)).toBe("2026-05-31");
+  });
+});
+
+// =============================================================================
+// calculateDurationHours（予約時間差分の SSoT）
+// =============================================================================
+
+describe("calculateDurationHours", () => {
+  test("2 時間差を 2 として返す", () => {
+    const start = new Date("2026-05-30T10:00:00.000Z");
+    const end = new Date("2026-05-30T12:00:00.000Z");
+    expect(calculateDurationHours(start, end)).toBe(2);
+  });
+
+  test("30 分差を 0.5 として返す（小数を含む）", () => {
+    const start = new Date("2026-05-30T10:00:00.000Z");
+    const end = new Date("2026-05-30T10:30:00.000Z");
+    expect(calculateDurationHours(start, end)).toBe(0.5);
+  });
+
+  test("同一時刻は 0 を返す", () => {
+    const t = new Date("2026-05-30T10:00:00.000Z");
+    expect(calculateDurationHours(t, t)).toBe(0);
+  });
+
+  test("日跨ぎ（前日 23:00 → 翌日 01:00）は 2 時間", () => {
+    const start = new Date("2026-05-30T23:00:00.000Z");
+    const end = new Date("2026-05-31T01:00:00.000Z");
+    expect(calculateDurationHours(start, end)).toBe(2);
+  });
+
+  test("end が start より前なら負の値を返す", () => {
+    const start = new Date("2026-05-30T12:00:00.000Z");
+    const end = new Date("2026-05-30T10:00:00.000Z");
+    expect(calculateDurationHours(start, end)).toBe(-2);
   });
 });
