@@ -58,7 +58,7 @@ export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6">
+    <div className="flex h-[calc(100dvh-8rem)] flex-col space-y-6">
       <Breadcrumb
         items={[
           { label: "予約管理", href: "/admin/reservations" },

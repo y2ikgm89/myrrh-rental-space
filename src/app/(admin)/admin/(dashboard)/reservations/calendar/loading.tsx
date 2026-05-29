@@ -9,7 +9,7 @@ import { Skeleton } from "@/admin/components/ui";
 
 export default function CalendarLoading() {
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col gap-4" aria-busy="true">
+    <div className="flex h-[calc(100dvh-8rem)] flex-col gap-4" aria-busy="true">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2">
         <Skeleton className="h-3 w-12" variant="text" />
