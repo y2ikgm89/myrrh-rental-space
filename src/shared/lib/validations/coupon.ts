@@ -10,6 +10,7 @@
  */
 
 import { z } from "zod";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
@@ -113,8 +114,8 @@ export const couponFormSchema = couponFormBaseSchema.superRefine(
     }
     // 有効期限が開始日以降であること
     if (data.validUntil && data.validUntil !== "") {
-      const from = new Date(data.validFrom);
-      const until = new Date(data.validUntil);
+      const from = parseDateTimeLocalAsJst(data.validFrom);
+      const until = parseDateTimeLocalAsJst(data.validUntil);
       if (from > until) {
         ctx.addIssue({
           code: "custom",
