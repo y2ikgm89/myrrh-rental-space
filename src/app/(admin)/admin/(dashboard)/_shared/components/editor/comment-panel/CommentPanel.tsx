@@ -311,7 +311,7 @@ export function CommentPanel({
       {/* サイドパネル - translate-x で表示/非表示のアニメーション */}
       <aside
         className={cn(
-          "fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col transition-transform duration-200",
+          "fixed right-0 top-16 z-50 h-[calc(100dvh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col transition-transform duration-200",
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-label="コメントパネル"
