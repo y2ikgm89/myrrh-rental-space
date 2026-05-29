@@ -105,7 +105,6 @@ function CodeToolbar({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-6 w-6"
         onClick={handleCopy}
         title="コードをコピー"
       >

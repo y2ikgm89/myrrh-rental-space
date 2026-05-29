@@ -384,7 +384,7 @@ function InsertTemplateDialog({
                     type="button"
                     variant="destructive-ghost"
                     size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                    className="opacity-0 group-hover:opacity-100"
                     onClick={() => handleDelete(template.id)}
                     disabled={deletingId === template.id}
                     title="削除"
