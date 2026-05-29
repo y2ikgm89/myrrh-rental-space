@@ -41,6 +41,7 @@ import { DragHandle } from "@/admin/components/ui/sortable";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { SortableColumnHeader, stopRowClick } from "@/admin/components/table";
 import { reorderFaqItems, updateFaqItemPublished } from "@/admin/actions/faq";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import { useQueryStates } from "nuqs";
@@ -143,7 +144,10 @@ function SortableRow({
           isPublished={item.isPublished}
           onToggle={updateFaqItemPublished}
           resourceLabel={`${item.question} の公開状態`}
-          label={{ published: "公開中", unpublished: "下書き" }}
+          label={{
+            published: PUBLISH_LABELS.published,
+            unpublished: PUBLISH_LABELS.draft,
+          }}
         />
       </TableCell>
       <TableCell className="text-right" onClick={stopRowClick}>
