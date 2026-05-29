@@ -1,6 +1,6 @@
 {
   "required_status_checks": {
-    "strict": true,
+    "strict": false,
     "contexts": [
       "Dependency Audit (bun audit)",
       "Lint & Format",

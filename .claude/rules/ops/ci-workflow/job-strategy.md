@@ -181,6 +181,7 @@ gh api repos/<owner>/<repo>/branches/main/protection \
 
 - `contexts:` の値は workflow `name:` と **完全一致** 必須（括弧・空白・記号含め literal match、`Dependency Audit (bun audit)` 等）。drift すると required が無効化（check 未受信扱い）し silent に PR が merge 可能になる
 - 個人 repo は `enforce_admins: false`（緊急 hotfix で admin bypass を残す、組織 repo は別判断）
+- **`strict: false`（up-to-date 必須を OFF）が canonical** — `strict: true` + マージキュー無し + `allow_update_branch: false` の組合せは、main が進むたびに auto-merge ON の behind PR が全停止する（GitHub は behind ブランチを自動更新しない、2026-05-30 監査で 14 PR 滞留を実観測）。PR は file-disjoint 設計 + 各 PR で CI が走るため stale-merge リスクは低い。完全な up-to-date 保証が必要になったら **GitHub merge queue**（CI workflow に `merge_group` トリガー追加 + `changes` job / step-gate の merge_group 対応 + branch protection の merge queue 設定 + 実 queue でのテスト）が公式の代替。merge queue は本 CI の paths-filter + step-gate 構造（→ `../ci-workflow.md` §4.5 の skipped-check silent bug）と慎重に整合させる必要があるため、未検証導入は禁止
 - 設定確認: `gh api repos/<owner>/<repo>/branches/main/protection 2>&1 | head -10` で **raw 出力** を確認（`gh: Branch not protected` 等の stderr が混入するため `python3 -c "import json,sys; json.load(sys.stdin)"` の前に必ず raw 確認）
 - opt-in job（E2E / Visual / Lighthouse）を `contexts:` に含めない（label 付け忘れた PR が永遠に merge 不能になる silent UX bug）
 
