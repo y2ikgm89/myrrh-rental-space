@@ -33,6 +33,7 @@ import type {
 import {
   MONTHLY_CLOSURE_WEEK_VALUES,
   WEEKDAY_VALUES,
+  isMonthlyClosureWeek,
   type MonthlyClosure,
   type MonthlyClosureWeek,
   type WeekdayKey,
@@ -568,10 +569,8 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
             <Select
               value={newClosureWeek}
               onValueChange={(v) => {
-                if (
-                  (MONTHLY_CLOSURE_WEEK_VALUES as readonly string[]).includes(v)
-                ) {
-                  setNewClosureWeek(v as MonthlyClosureWeek);
+                if (isMonthlyClosureWeek(v)) {
+                  setNewClosureWeek(v);
                 }
               }}
               disabled={isPending}

@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import { createTypeGuard } from "@/shared/lib/serialize";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 
 // 読み取り側では重複を silent に除去する（React key の stable ID 保証のため）。
@@ -83,6 +84,10 @@ export type BusinessHoursDay = z.infer<typeof businessHoursDaySchema>;
 export type BusinessHours = z.infer<typeof businessHoursSchema>;
 export type MonthlyClosure = z.infer<typeof monthlyClosureSchema>;
 export type MonthlyClosureWeek = (typeof MONTHLY_CLOSURE_WEEK_VALUES)[number];
+/** MonthlyClosureWeek の型ガード（Select onChange 等の string → enum narrow SSoT）。 */
+export const isMonthlyClosureWeek = createTypeGuard(
+  MONTHLY_CLOSURE_WEEK_VALUES,
+);
 /** businessHours の曜日キー（monthlyClosures を除外した weekday 限定キー） */
 export type WeekdayKey = (typeof WEEKDAY_VALUES)[number];
 
