@@ -12,7 +12,7 @@ const SRC = join(ROOT, "src");
 
 /** z.min(1, { message: }) のようなパターン（error: に統一すべき） */
 const ZOD_DEPRECATED_MESSAGE_ARG =
-  /\.(?:min|max|length|email|uuid)\([^)]*\{\s*message\s*:/;
+  /\.(?:string|number|boolean|min|max|length|email|uuid|url|regex|datetime|int|positive|nonnegative|nonempty|gt|gte|lt|lte|startsWith|endsWith)\([^)]*\{\s*message\s*:/;
 
 function collectTsFiles(dir: string): string[] {
   const out: string[] = [];

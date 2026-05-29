@@ -44,7 +44,7 @@ const businessHoursWeekSchema = z.object({
   sunday: businessHoursDaySchema,
 });
 
-// useFieldArray はオブジェクト配列が必須のため { url: string }[] を使用
+// conform の form.insert/remove はオブジェクト配列が必須のため { url: string }[] を使用
 // Prisma への保存時は Server Action 側で string[] に変換する
 //
 // 各 URL は React key の stable ID として機能するため、重複を禁止する。
@@ -104,7 +104,7 @@ export const locationFormBaseSchema = z.object({
     .max(100, { error: "建物名は100文字以内で入力してください" })
     .nullable()
     .optional(),
-  // useFieldArray 用に object 配列。各 entry は 1 経路（最寄り駅 + 出口 + 徒歩分数 等）
+  // conform の form.insert/remove 用に object 配列。各 entry は 1 経路（最寄り駅 + 出口 + 徒歩分数 等）
   accessLines: z
     .array(
       z.object({
