@@ -47,6 +47,9 @@ export async function generateMetadata({
       space.metaDescription ??
       space.descriptionPlainText ??
       undefined,
+    alternates: {
+      canonical: `${getBaseUrl()}/spaces/${slug}`,
+    },
     openGraph: {
       title: space.ogpTitle ?? space.name,
       description:
