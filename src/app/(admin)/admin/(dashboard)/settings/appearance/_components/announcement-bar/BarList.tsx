@@ -58,7 +58,9 @@ export function BarList({
                     <TableCell>
                       <Switch
                         checked={bar.isActive}
-                        onCheckedChange={() => onToggleActive(bar.id)}
+                        onCheckedChange={(checked) =>
+                          onToggleActive(bar.id, checked)
+                        }
                         disabled={isPending}
                       />
                     </TableCell>

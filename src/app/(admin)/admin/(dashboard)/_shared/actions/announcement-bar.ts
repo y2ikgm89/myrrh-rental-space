@@ -16,7 +16,7 @@ import {
   createAnnouncementBar as createAnnouncementBarCommand,
   deleteAnnouncementBar as deleteAnnouncementBarCommand,
   type AnnouncementBarInput,
-  toggleAnnouncementBarActive as toggleAnnouncementBarActiveCommand,
+  updateAnnouncementBarActive as updateAnnouncementBarActiveCommand,
   updateAnnouncementBar as updateAnnouncementBarCommand,
 } from "@/shared/domain/settings/announcement-bar";
 import { barFormSchema } from "../../settings/appearance/_components/announcement-bar/bar-form-schema";
@@ -50,8 +50,9 @@ export async function deleteAnnouncementBar(
   });
 }
 
-export async function toggleAnnouncementBarActive(
+export async function updateAnnouncementBarActive(
   id: string,
+  isActive: boolean,
 ): Promise<MutationResult> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
@@ -61,7 +62,7 @@ export async function toggleAnnouncementBarActive(
     action: "update",
     resourceId: parsed.data,
     execute: async () => {
-      await toggleAnnouncementBarActiveCommand(parsed.data);
+      await updateAnnouncementBarActiveCommand(parsed.data, isActive);
       return null;
     },
     afterSuccess: invalidateAnnouncementBarCache,

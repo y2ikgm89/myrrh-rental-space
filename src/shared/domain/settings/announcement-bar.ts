@@ -433,20 +433,12 @@ export async function deleteAnnouncementBar(id: string): Promise<void> {
   });
 }
 
-export async function toggleAnnouncementBarActive(id: string): Promise<void> {
-  const bar = await prisma.announcementBar.findUnique({
-    where: { id },
-    select: { id: true, isActive: true },
-  });
-
-  if (!bar) {
-    throw new DomainError("お知らせバーが見つかりません", "NOT_FOUND");
-  }
-
+export async function updateAnnouncementBarActive(
+  id: string,
+  isActive: boolean,
+): Promise<void> {
   await prisma.announcementBar.update({
     where: { id },
-    data: {
-      isActive: !bar.isActive,
-    },
+    data: { isActive },
   });
 }

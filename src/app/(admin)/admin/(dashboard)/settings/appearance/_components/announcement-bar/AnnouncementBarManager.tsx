@@ -11,7 +11,7 @@ import {
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   deleteAnnouncementBar,
-  toggleAnnouncementBarActive,
+  updateAnnouncementBarActive,
 } from "@/admin/actions/announcement-bar";
 import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -114,9 +114,9 @@ export function AnnouncementBarManager({
   };
 
   // Toggle active
-  const handleToggleActive = (id: string) => {
+  const handleToggleActive = (id: string, isActive: boolean) => {
     startTransition(async () => {
-      const result = await toggleAnnouncementBarActive(id);
+      const result = await updateAnnouncementBarActive(id, isActive);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
