@@ -8,99 +8,22 @@ paths:
 
 # Accessibility — prefers-reduced-motion
 
-## prefers-reduced-motion
+全アニメーションは `prefers-reduced-motion` を尊重する（WCAG 2.3.3 / 公開サイト必須）。GSAP は必ず `gsap.matchMedia()` でラップし、reduce 時は不介入（要素は CSS デフォルトで表示）にする。`mm` を使わず直接 `gsap.from(...)` / `gsap.to(...)` するのは NG。
 
-### GSAP matchMedia 必須パターン（パターン A）
+## 実装パターンの SSoT
 
-アニメーションをスキップする場合（reduce 時は GSAP 不介入 → 要素は CSS デフォルトで表示）:
+GSAP matchMedia の具体実装（コード・選択ガイド）は `frontend/gsap/matchmedia/` が SSoT。本ファイルは accessibility 要件の宣言に留める:
 
-```tsx
-"use client";
+- **パターン A**（reduce 時スキップ A-1 / conditions 分岐 A-2）+ **パターン B**（レスポンシブ breakpoint）→ [`../gsap/matchmedia/reduced-motion-and-bp.md`](../gsap/matchmedia/reduced-motion-and-bp.md)
+- **パターン C**（イベント / タイマー駆動、`useMotionPreference` ReactiveRef、`useCallback` 禁止）+ **パターン D**（リスト stagger `ScrollRevealGroup`）→ [`../gsap/matchmedia/events-and-stagger.md`](../gsap/matchmedia/events-and-stagger.md)
 
-import { useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import { gsap } from "@/public/lib/gsap-config";
+## ScrollReveal（パターン A 実装済みコンポーネント）
 
-function AnimatedSection() {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-
-      // NG: mm を使わず直接アニメーション（reduced-motion 無視）
-      // gsap.from(containerRef.current, { opacity: 0, y: 50 })
-
-      // OK: matchMedia でラップ
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.fromTo(
-          containerRef.current,
-          { opacity: 0, y: 50 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            scrollTrigger: { trigger: containerRef.current, start: "top 85%" },
-          },
-        );
-      });
-    },
-    { scope: containerRef },
-  );
-
-  return <div ref={containerRef}>...</div>;
-}
-```
-
-`ScrollReveal` コンポーネントはパターン A 実装済み。直接使用可能:
+`ScrollReveal` / `ScrollRevealGroup` は `gsap.matchMedia` 対応済みのため、追加対応なしで直接使用できる:
 
 ```tsx
-// OK: ScrollReveal は gsap.matchMedia 対応済み
+// OK: ScrollReveal は reduced-motion を自動でスキップ
 <ScrollReveal delay={0.2}>
   <p>このテキストはスクロールで出現</p>
 </ScrollReveal>
-```
-
-### GSAP matchMedia — conditions 分岐（パターン B）
-
-reduce 時も軽量アニメーションを実行する場合:
-
-```tsx
-useGSAP(
-  () => {
-    const mm = gsap.matchMedia();
-    mm.add(
-      {
-        reduce: "(prefers-reduced-motion: reduce)",
-        noPreference: "(prefers-reduced-motion: no-preference)",
-      },
-      (ctx) => {
-        const { reduce } = ctx.conditions ?? {};
-        gsap.to(el, {
-          y: reduce ? 4 : 20, // reduce 時は小さな値
-          repeat: -1,
-          yoyo: true,
-          duration: reduce ? 2 : 0.8,
-        });
-      },
-    );
-  },
-  { scope: ref },
-);
-```
-
-### イベントハンドラでの reduced-motion（パターン C）
-
-```tsx
-import { useMotionPreference } from "@/public/hooks/use-motion-preference";
-
-function MagneticButton() {
-  const motionOk = useMotionPreference(); // gsap.matchMedia ベースの ReactiveRef
-
-  // useCallback 不要（React Compiler 自動メモ化。ref は依存配列と衝突する）
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!motionOk.current) return;
-    gsap.to(buttonRef.current, { x: delta.x * 0.3, y: delta.y * 0.3 });
-  };
-}
 ```
