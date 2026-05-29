@@ -6,7 +6,7 @@ paths:
 
 # Tailwind レスポンシブ Breakpoints
 
-> Tailwind CSS 4.2 / viewport breakpoint 使用基準
+> Tailwind CSS 4 / viewport breakpoint 使用基準
 
 ## breakpoint policy
 

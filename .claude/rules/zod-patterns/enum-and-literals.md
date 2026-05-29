@@ -8,7 +8,7 @@ paths:
 
 # Zod Enum・Literal・型ガード
 
-> Zod 4.3 対応
+> Zod 4 対応
 
 ## Prisma Enum バリデーション
 

@@ -5,7 +5,7 @@ paths:
 
 # Grid Cell Overlap パターン
 
-> Tailwind CSS 4.2 / responsive overlay / Pair Grid
+> Tailwind CSS 4 / responsive overlay / Pair Grid
 
 ## 同 Grid cell overlap（responsive overlay pattern）
 

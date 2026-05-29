@@ -8,7 +8,7 @@ paths:
 
 # Zod 配列 uniqueness 契約
 
-> Zod 4.3 対応
+> Zod 4 対応
 
 ## 配列要素の uniqueness 契約（React key 安全性）
 

@@ -11,7 +11,7 @@ paths:
 
 # GSAP ScrollTrigger パターン
 
-> GSAP 3.14.2 / ScrollTrigger 対応
+> GSAP 3 / ScrollTrigger 対応
 
 ## ScrollTrigger パターン
 
