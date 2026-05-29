@@ -69,6 +69,4 @@ export const DEMO_DURATIONS: readonly { value: number; label: string }[] = [
   { value: 240, label: "4時間" },
 ];
 
-export function formatPrice(yen: number): string {
-  return `¥${yen.toLocaleString("ja-JP")}`;
-}
+export { formatPrice } from "@/shared/lib/pricing/format";
