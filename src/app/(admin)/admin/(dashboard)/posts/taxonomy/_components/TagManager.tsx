@@ -47,6 +47,7 @@ import {
 import { tagFormSchema } from "./taxonomy-schema";
 import type { PostTagData } from "@/shared/domain/posts/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { formatDateShort } from "@/shared/lib/date-format";
 import { useTagFilters } from "../_hooks/use-taxonomy-filters";
 import type { PostTaxonomySortField } from "@/shared/lib/nuqs";
 
@@ -68,11 +69,7 @@ type TagRowProps = {
 function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const formattedDate = new Date(tag.createdAt).toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const formattedDate = formatDateShort(tag.createdAt);
 
   return (
     <TableRow>

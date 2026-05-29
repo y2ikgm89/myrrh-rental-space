@@ -35,6 +35,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { addCustomApiKey, deleteCustomApiKey } from "@/admin/actions/api-keys";
 import type { CustomApiKeyData } from "@/admin/types/api-keys";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 // =============================================================================
 // Types
@@ -231,7 +232,7 @@ export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
                     </div>
                   )}
                   <div className="mt-1 text-xs text-muted-foreground">
-                    作成: {new Date(data.createdAt).toLocaleString("ja-JP")}
+                    作成: {formatDateTimeShort(data.createdAt)}
                   </div>
                 </div>
                 <Button

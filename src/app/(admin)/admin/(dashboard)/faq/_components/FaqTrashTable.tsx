@@ -13,17 +13,13 @@ import type {
   FaqCategoryWithItems,
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { FaqTrashActionCell } from "./FaqTrashActionCell";
 
 type FaqTrashTableProps = {
   readonly categories: readonly FaqCategoryWithItems[];
   readonly items: readonly FaqItemWithCategory[];
 };
-
-function formatDeletedAt(deletedAt: string | null): string {
-  if (!deletedAt) return "-";
-  return new Date(deletedAt).toLocaleString("ja-JP");
-}
 
 export function FaqTrashTable({
   categories,
@@ -80,7 +76,7 @@ export function FaqTrashTable({
                         {category.slug}
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {formatDeletedAt(category.deletedAt)}
+                        {formatDateTimeShort(category.deletedAt)}
                       </TableCell>
                       <TableCell className="text-right">
                         <FaqTrashActionCell
@@ -128,7 +124,7 @@ export function FaqTrashTable({
                         <Badge variant="outline">{item.category.name}</Badge>
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {formatDeletedAt(item.deletedAt)}
+                        {formatDateTimeShort(item.deletedAt)}
                       </TableCell>
                       <TableCell className="text-right">
                         <FaqTrashActionCell

@@ -12,6 +12,7 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { Button } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
+import { formatDateShort } from "@/shared/lib/date-format";
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 import { useNotificationPolling } from "./NotificationPollingProvider";
@@ -31,7 +32,7 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHour < 24) return `${String(diffHour)}時間前`;
   const diffDay = Math.floor(diffHour / 24);
   if (diffDay < 7) return `${String(diffDay)}日前`;
-  return date.toLocaleDateString("ja-JP");
+  return formatDateShort(dateStr);
 }
 
 export function NotificationList({ notifications }: NotificationListProps) {
