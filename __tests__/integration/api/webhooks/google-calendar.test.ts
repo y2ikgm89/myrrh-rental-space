@@ -7,13 +7,6 @@
 import { describe, test, expect } from "bun:test";
 
 describe("POST /api/webhooks/google-calendar", () => {
-  test("エンドポイントが定義されている", async () => {
-    const routeModule =
-      await import("@/app/api/webhooks/google-calendar/route");
-    expect(routeModule.POST).toBeDefined();
-    expect(typeof routeModule.POST).toBe("function");
-  });
-
   test("必須ヘッダーがない場合は400を返す", async () => {
     const routeModule =
       await import("@/app/api/webhooks/google-calendar/route");
