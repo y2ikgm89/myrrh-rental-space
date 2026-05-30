@@ -10,6 +10,11 @@ import {
   formatJstDateOnly,
   formatJstDateString,
   calculateDurationHours,
+  formatTimeShort,
+  formatDateWithWeekday,
+  formatMonthDayTime,
+  formatYearMonth,
+  formatDayWithWeekday,
 } from "@/shared/lib/date-format";
 
 // テスト用の固定日時（タイムゾーン影響を受けにくい日中の時刻）
@@ -520,5 +525,102 @@ describe("calculateDurationHours", () => {
     const start = new Date("2026-05-30T12:00:00.000Z");
     const end = new Date("2026-05-30T10:00:00.000Z");
     expect(calculateDurationHours(start, end)).toBe(-2);
+  });
+});
+
+// =============================================================================
+// 表示用 JST フォーマット helper
+// （formatTimeShort / formatDateWithWeekday / formatMonthDayTime /
+//   formatYearMonth / formatDayWithWeekday）
+// =============================================================================
+
+describe("formatTimeShort", () => {
+  test("UTC 01:00 を JST 10:00 として整形する（tz 非依存）", () => {
+    expect(formatTimeShort(new Date("2026-06-01T01:00:00.000Z"))).toBe("10:00");
+  });
+
+  test("ISO 文字列入力もサポート", () => {
+    expect(formatTimeShort("2026-06-01T01:00:00.000Z")).toBe("10:00");
+  });
+
+  test("UTC 夜間は JST 翌日の時刻として整形する（日跨ぎ）", () => {
+    // UTC 16:00 → JST 翌日 01:00
+    expect(formatTimeShort(new Date("2026-06-01T16:00:00.000Z"))).toBe("01:00");
+  });
+
+  test("午後は 24 時間表記で出力する", () => {
+    // UTC 05:00 → JST 14:00
+    expect(formatTimeShort(new Date("2026-06-01T05:00:00.000Z"))).toBe("14:00");
+  });
+});
+
+describe("formatDateWithWeekday", () => {
+  test("JST の曜日付き日付に整形する", () => {
+    expect(formatDateWithWeekday(new Date("2026-06-01T01:00:00.000Z"))).toBe(
+      "2026年6月1日(月)",
+    );
+  });
+
+  test("UTC 夜間は JST 翌日の曜日として整形する（日跨ぎ）", () => {
+    // UTC 6/1 16:00 → JST 6/2(火)
+    expect(formatDateWithWeekday(new Date("2026-06-01T16:00:00.000Z"))).toBe(
+      "2026年6月2日(火)",
+    );
+  });
+
+  test("ISO 文字列入力もサポート", () => {
+    expect(formatDateWithWeekday("2026-06-01T01:00:00.000Z")).toBe(
+      "2026年6月1日(月)",
+    );
+  });
+});
+
+describe("formatMonthDayTime", () => {
+  test("JST の MM/dd HH:mm（年なし）に整形する", () => {
+    expect(formatMonthDayTime(new Date("2026-06-01T01:00:00.000Z"))).toBe(
+      "06/01 10:00",
+    );
+  });
+
+  test("UTC 夜間は JST 翌日の月日時刻として整形する（日跨ぎ）", () => {
+    expect(formatMonthDayTime(new Date("2026-06-01T16:00:00.000Z"))).toBe(
+      "06/02 01:00",
+    );
+  });
+
+  test("月日が 2 桁ゼロ埋め", () => {
+    // UTC 1/4 23:00 → JST 1/5 08:00
+    expect(formatMonthDayTime(new Date("2026-01-04T23:00:00.000Z"))).toBe(
+      "01/05 08:00",
+    );
+  });
+});
+
+describe("formatYearMonth", () => {
+  test("JST の YYYY年M月 に整形する", () => {
+    expect(formatYearMonth(new Date("2026-06-01T01:00:00.000Z"))).toBe(
+      "2026年6月",
+    );
+  });
+
+  test("UTC 月末夜間は JST 翌月になる（月跨ぎ）", () => {
+    // UTC 5/31 20:00 → JST 6/1 05:00
+    expect(formatYearMonth(new Date("2026-05-31T20:00:00.000Z"))).toBe(
+      "2026年6月",
+    );
+  });
+});
+
+describe("formatDayWithWeekday", () => {
+  test("JST の曜日付き日に整形する", () => {
+    expect(formatDayWithWeekday(new Date("2026-06-01T01:00:00.000Z"))).toBe(
+      "1日(月)",
+    );
+  });
+
+  test("UTC 夜間は JST 翌日になる（日跨ぎ）", () => {
+    expect(formatDayWithWeekday(new Date("2026-06-01T16:00:00.000Z"))).toBe(
+      "2日(火)",
+    );
   });
 });
