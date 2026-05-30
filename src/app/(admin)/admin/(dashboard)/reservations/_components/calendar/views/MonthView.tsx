@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { format, isSameDay, isSameMonth, isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
+import { formatJstDateString } from "@/shared/lib/date-format";
 import { getWeekdayHeaders, getWeekdayColorClass } from "@/admin/lib/calendar";
 import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
 import { EventBadge } from "../EventCell";
@@ -74,12 +75,12 @@ export function MonthView({
           if (!firstDay) return null;
           return (
             <div
-              key={format(firstDay, "yyyy-MM-dd")}
+              key={formatJstDateString(firstDay)}
               className="grid flex-1 grid-cols-7 border-b last:border-b-0"
             >
               {week.map((day, dayIndex) => {
                 const dayEvents = getEventsForDay(day);
-                const dayId = format(day, "yyyy-MM-dd");
+                const dayId = formatJstDateString(day);
                 const dayExpanded = isExpanded(dayId);
                 const visibleEvents = dayExpanded
                   ? dayEvents
