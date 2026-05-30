@@ -10,6 +10,7 @@ import {
 } from "@/public/lib/seo/metadata-factory";
 import { Prose } from "@/public/components/design-system/prose";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
@@ -69,6 +70,9 @@ export async function NewsDetailPageContent({
   const datePublished = toISOString(newsItem.publishedAt) ?? "";
 
   const headings = extractHeadingsFromHtml(newsItem.contentHtml);
+  const resolvedContentHtml = await resolveInternalLinkCards(
+    newsItem.contentHtml,
+  );
   const h2Count = headings.filter((h) => h.level === 2).length;
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 
@@ -117,7 +121,7 @@ export async function NewsDetailPageContent({
       })}
     >
       <Prose variant="editorial" className="max-w-none">
-        <SanitizedHtml html={newsItem.contentHtml} />
+        <SanitizedHtml html={resolvedContentHtml} />
       </Prose>
       <ArticleFooter url={articleUrl} title={newsItem.title} />
     </ArticleLayout>
