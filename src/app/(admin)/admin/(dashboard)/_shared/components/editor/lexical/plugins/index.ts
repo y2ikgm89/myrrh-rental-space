@@ -118,6 +118,7 @@ export { MarkdownExportPlugin } from "./MarkdownExportPlugin";
 export { ButtonPlugin } from "./ButtonPlugin";
 export { PullQuotePlugin } from "./PullQuotePlugin";
 export { BookmarkPlugin } from "./BookmarkPlugin";
+export { LinkCardPlugin } from "./LinkCardPlugin";
 export { StepsPlugin } from "./StepsPlugin";
 export { TabsPlugin } from "./TabsPlugin";
 
