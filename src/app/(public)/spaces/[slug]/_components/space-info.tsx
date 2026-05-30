@@ -1,6 +1,7 @@
 import { IconMapPin } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { parseFacilities } from "@/shared/lib/json-validators";
+import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
 
 interface SpaceInfoProps {
   readonly space: {
@@ -31,8 +32,11 @@ interface SpaceInfoProps {
  *
  * Lead 段落 / Pull-quote / Reviews は page.tsx 側で構築 (この component の責務外)。
  */
-export function SpaceInfo({ space }: SpaceInfoProps) {
+export async function SpaceInfo({ space }: SpaceInfoProps) {
   const facilities = parseFacilities(space.facilities);
+  const resolvedDescriptionHtml = await resolveInternalLinkCards(
+    space.descriptionHtml,
+  );
 
   return (
     <div className="space-y-16">
@@ -46,7 +50,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
             このスペースについて
           </h2>
           <div className="mt-8 [&_p]:text-base [&_p]:leading-[2] [&_p]:text-foreground [&_p+p]:mt-6">
-            <SanitizedHtml html={space.descriptionHtml} />
+            <SanitizedHtml html={resolvedDescriptionHtml} />
           </div>
         </section>
       ) : null}

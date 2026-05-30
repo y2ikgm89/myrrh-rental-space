@@ -11,6 +11,7 @@ import { Prose } from "@/public/components/design-system/prose";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { EventJsonLd } from "@/public/components/seo/json-ld";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
 import {
   getPublishedEventBySlug,
   isEventRegistrationPastDeadline,
@@ -147,6 +148,10 @@ export default async function EventDetailPage({
         ? ({ kind: "deadline-passed" } as const)
         : ({ kind: "closed" } as const);
 
+  const resolvedDescriptionHtml = await resolveInternalLinkCards(
+    event.descriptionHtml,
+  );
+
   const infoPanelProps = {
     startTime: event.startTime,
     endTime: event.endTime,
@@ -240,7 +245,7 @@ export default async function EventDetailPage({
       >
         {event.descriptionHtml.trim() !== "" ? (
           <Prose variant="editorial" className="max-w-none">
-            <SanitizedHtml html={event.descriptionHtml} />
+            <SanitizedHtml html={resolvedDescriptionHtml} />
           </Prose>
         ) : null}
 
