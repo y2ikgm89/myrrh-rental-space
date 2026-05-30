@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatDateShort, formatDateTimeShort } from "@/shared/lib/date-format";
+import {
+  formatDateShort,
+  formatDateTimeShort,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { toast } from "sonner";
 import {
@@ -238,10 +242,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                       <TableCell>
                         {formatDateTimeShort(reservation.startTime)}
                         {" - "}
-                        {new Date(reservation.endTime).toLocaleTimeString(
-                          "ja-JP",
-                          { hour: "2-digit", minute: "2-digit" },
-                        )}
+                        {formatTimeShort(reservation.endTime)}
                       </TableCell>
                       <TableCell>
                         {formatPrice(reservation.totalPrice, "-")}

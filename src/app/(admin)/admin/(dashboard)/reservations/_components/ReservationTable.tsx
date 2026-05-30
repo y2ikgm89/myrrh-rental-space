@@ -15,6 +15,10 @@ import { ReservationActionCell } from "./ReservationActionCell";
 import { ReservationBulkActions } from "./ReservationBulkActions";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { EmptyState } from "@/admin/components/EmptyState";
 import {
   CheckboxCell,
@@ -34,22 +38,6 @@ type ReservationTableProps = {
 // =============================================================================
 // Helper Functions
 // =============================================================================
-
-function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  }).format(new Date(date));
-}
-
-function formatTime(date: string | Date): string {
-  return new Intl.DateTimeFormat("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
-}
 
 function isSelectable(reservation: ReservationWithRelations): boolean {
   if (reservation.deletedAt) return false;
@@ -107,7 +95,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                   <ClickableTableRow
                     key={reservation.id}
                     href={`/admin/reservations/${reservation.id}`}
-                    aria-label={`${formatDate(reservation.startTime)} ${reservation.space.name} の予約を表示`}
+                    aria-label={`${formatDateWithWeekday(reservation.startTime)} ${reservation.space.name} の予約を表示`}
                     {...(reservation.deletedAt
                       ? { className: "opacity-50" }
                       : {})}
@@ -117,17 +105,17 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                         checked={selectedIds.includes(reservation.id)}
                         onChange={() => toggleOne(reservation.id)}
                         disabled={!selectable}
-                        aria-label={`${formatDate(reservation.startTime)} ${reservation.space.name} の予約を選択`}
+                        aria-label={`${formatDateWithWeekday(reservation.startTime)} ${reservation.space.name} の予約を選択`}
                       />
                     </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {formatDate(reservation.startTime)}
+                          {formatDateWithWeekday(reservation.startTime)}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {formatTime(reservation.startTime)} -{" "}
-                          {formatTime(reservation.endTime)}
+                          {formatTimeShort(reservation.startTime)} -{" "}
+                          {formatTimeShort(reservation.endTime)}
                         </div>
                       </div>
                     </TableCell>
@@ -150,7 +138,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                       <PaymentStatusBadge status={reservation.paymentStatus} />
                     </TableCell>
                     <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                      {formatDate(reservation.createdAt)}
+                      {formatDateWithWeekday(reservation.createdAt)}
                     </TableCell>
                     <TableCell
                       className="whitespace-nowrap"

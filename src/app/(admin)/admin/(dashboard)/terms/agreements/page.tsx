@@ -13,6 +13,7 @@ import {
 } from "@/admin/components/ui";
 import { getAdminAgreements } from "@/shared/domain/terms/admin-queries";
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 export const metadata: Metadata = {
   title: "規約同意記録 | Myrrh Rental Space",
@@ -23,18 +24,6 @@ const CONTEXT_LABELS: Record<string, string> = {
   inquiry: "問い合わせ",
   signup: "サインアップ",
 };
-
-function formatDateTime(value: string | Date): string {
-  const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  }).format(date);
-}
 
 export default async function AdminTermsAgreementsPage() {
   const { items, total } = await getAdminAgreements({ perPage: 100 });
@@ -82,7 +71,7 @@ export default async function AdminTermsAgreementsPage() {
                 {items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="whitespace-nowrap text-sm">
-                      {formatDateTime(item.agreedAt)}
+                      {formatDateTimeShort(item.agreedAt)}
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{item.terms.title}</div>

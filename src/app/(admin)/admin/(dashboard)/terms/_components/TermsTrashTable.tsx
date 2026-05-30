@@ -10,16 +10,11 @@ import {
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
 import { TermsTrashActionCell } from "./TermsTrashActionCell";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 interface TermsTrashTableProps {
   readonly items: AdminTermsListItem[];
 }
-
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Asia/Tokyo",
-});
 
 export function TermsTrashTable({ items }: TermsTrashTableProps) {
   if (items.length === 0) {
@@ -57,9 +52,7 @@ export function TermsTrashTable({ items }: TermsTrashTableProps) {
                   {item.slug}
                 </TableCell>
                 <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                  {item.deletedAt
-                    ? dateFormatter.format(new Date(item.deletedAt))
-                    : "—"}
+                  {item.deletedAt ? formatDateTimeShort(item.deletedAt) : "—"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {item.agreementsCount}

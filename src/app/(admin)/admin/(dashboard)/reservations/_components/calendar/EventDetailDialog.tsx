@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import {
   IconClock,
   IconMapPin,
@@ -74,13 +76,11 @@ export function EventDetailDialog({
               <IconClock className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="font-medium">
-                  {format(new Date(event.startTime), "yyyy年M月d日 (E)", {
-                    locale: ja,
-                  })}
+                  {formatDateWithWeekday(event.startTime)}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {format(new Date(event.startTime), "HH:mm")} -{" "}
-                  {format(new Date(event.endTime), "HH:mm")}
+                  {formatTimeShort(event.startTime)} -{" "}
+                  {formatTimeShort(event.endTime)}
                 </div>
               </div>
             </div>
