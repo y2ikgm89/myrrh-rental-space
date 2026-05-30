@@ -190,3 +190,99 @@ const MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
 export function calculateDurationHours(start: Date, end: Date): number {
   return (end.getTime() - start.getTime()) / MILLISECONDS_PER_HOUR;
 }
+
+// =============================================================================
+// 表示用 JST フォーマット helper（admin の date-fns / Intl 直接呼び出し置換用）
+// =============================================================================
+//
+// コンポーネント内の `Intl.DateTimeFormat` 直接呼び出し / date-fns `format()` /
+// `toLocaleTimeString()` は、サーバ (Cloud Run = UTC) で評価されると JST 想定の
+// 表示が 9 時間ずれる silent bug の温床。表示用フォーマットも timeZone: "Asia/Tokyo"
+// 固定の SSoT helper に集約する。
+
+const JST_TIME_SHORT_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Tokyo",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * 任意の datetime を JST の時刻 `"HH:mm"`（24 時間表記）に整形する。
+ *
+ * カレンダー / リストの時刻のみ表示 SSoT。サーバ tz / ブラウザ tz に依存しない。
+ */
+export function formatTimeShort(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_TIME_SHORT_FORMATTER.format(value);
+}
+
+const JST_DATE_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  weekday: "short",
+});
+
+/**
+ * 任意の datetime を JST の曜日付き日付（例 `"2026年6月1日(月)"`）に整形する。
+ *
+ * イベント詳細等の「日付（曜日）」表示 SSoT。
+ */
+export function formatDateWithWeekday(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_DATE_WEEKDAY_FORMATTER.format(value);
+}
+
+const JST_MONTH_DAY_TIME_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * 任意の datetime を JST の `"MM/dd HH:mm"`（年なし月日 + 時刻）に整形する。
+ *
+ * 期間表示（開始 〜 終了）等で年を省略する用途。`formatToParts` で JST 部品を
+ * 取得し、ロケール非依存に `MM/dd HH:mm` で組み立てる。
+ */
+export function formatMonthDayTime(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  const parts = JST_MONTH_DAY_TIME_FORMATTER.formatToParts(value);
+  const lookup = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${lookup("month")}/${lookup("day")} ${lookup("hour")}:${lookup("minute")}`;
+}
+
+const JST_YEAR_MONTH_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "long",
+});
+
+/**
+ * 任意の datetime を JST の `"YYYY年M月"` に整形する（カレンダー月見出し等）。
+ */
+export function formatYearMonth(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_YEAR_MONTH_FORMATTER.format(value);
+}
+
+const JST_DAY_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  day: "numeric",
+  weekday: "short",
+});
+
+/**
+ * 任意の datetime を JST の曜日付き日（例 `"1日(月)"`）に整形する
+ * （カレンダー日ビューの見出し等）。
+ */
+export function formatDayWithWeekday(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_DAY_WEEKDAY_FORMATTER.format(value);
+}
