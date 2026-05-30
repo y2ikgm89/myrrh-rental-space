@@ -5,6 +5,7 @@
  */
 
 import {
+  IconFloatLeft,
   IconLayoutGrid,
   IconPaperclip,
   IconPhoto,
@@ -29,7 +30,7 @@ export const MEDIA_INSERT_ITEMS: readonly InsertItem[] = [
     id: "inline-image",
     type: "dialog",
     label: "インライン画像",
-    icon: IconPhoto,
+    icon: IconFloatLeft,
     keywords: [
       "inline",
       "image",

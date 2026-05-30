@@ -499,7 +499,7 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
                 value={selectedStyle}
                 onValueChange={(v) => isTabsStyle(v) && setSelectedStyle(v)}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -518,7 +518,7 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
                 value={selectedSize}
                 onValueChange={(v) => isTabsSize(v) && setSelectedSize(v)}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -540,7 +540,7 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
                     isTabsFixedWidth(v) && setSelectedFixedWidth(v)
                   }
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

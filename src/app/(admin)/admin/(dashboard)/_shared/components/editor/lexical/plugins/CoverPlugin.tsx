@@ -240,7 +240,7 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
               value={overlayColor}
               onValueChange={handleOverlayColorChange}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -259,7 +259,7 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
               value={String(overlayOpacity)}
               onValueChange={handleOverlayOpacityChange}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -275,7 +275,7 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
           <div className="space-y-2">
             <Label className="text-sm font-medium">最小高さ</Label>
             <Select value={minHeight} onValueChange={handleMinHeightChange}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
