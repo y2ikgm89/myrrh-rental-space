@@ -43,6 +43,7 @@ import { PullQuoteNode } from "../nodes/PullQuoteNode";
 import { PullQuoteTextNode } from "../nodes/PullQuoteTextNode";
 import { PullQuoteCitationNode } from "../nodes/PullQuoteCitationNode";
 import { BookmarkNode } from "../nodes/BookmarkNode";
+import { InternalLinkCardNode } from "../nodes/InternalLinkCardNode";
 import { StepsContainerNode } from "../nodes/StepsContainerNode";
 import { StepItemNode } from "../nodes/StepItemNode";
 import { StepTitleNode } from "../nodes/StepTitleNode";
@@ -146,6 +147,7 @@ export const EDITOR_NODES: ReadonlyArray<
   PullQuoteTextNode,
   PullQuoteCitationNode,
   BookmarkNode,
+  InternalLinkCardNode,
   StepsContainerNode,
   StepItemNode,
   StepTitleNode,
