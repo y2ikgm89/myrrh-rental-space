@@ -35,35 +35,47 @@ import {
 } from "@/shared/lib/sections/registry";
 
 describe("homepage-section re-export", () => {
-  test("スキーマがインポート可能", () => {
-    expect(heroConfigSchema).toBeDefined();
-    expect(heroParallaxConfigSchema).toBeDefined();
-    expect(customConfigSchema).toBeDefined();
-    expect(conceptConfigSchema).toBeDefined();
-    expect(spaceListConfigSchema).toBeDefined();
-    expect(newsListConfigSchema).toBeDefined();
-    expect(postListConfigSchema).toBeDefined();
-    expect(faqListConfigSchema).toBeDefined();
-    expect(featuresConfigSchema).toBeDefined();
-    expect(testimonialConfigSchema).toBeDefined();
-    expect(galleryConfigSchema).toBeDefined();
-    expect(ctaConfigSchema).toBeDefined();
-    expect(contactFormConfigSchema).toBeDefined();
-    expect(mapConfigSchema).toBeDefined();
-    expect(embedConfigSchema).toBeDefined();
-    expect(instagramConfigSchema).toBeDefined();
+  test("各セクションスキーマが空 config で safeParse 成功する（section schema test contract）", () => {
+    expect(heroConfigSchema.safeParse({}).success).toBe(true);
+    expect(heroParallaxConfigSchema.safeParse({}).success).toBe(true);
+    expect(customConfigSchema.safeParse({}).success).toBe(true);
+    expect(conceptConfigSchema.safeParse({}).success).toBe(true);
+    expect(spaceListConfigSchema.safeParse({}).success).toBe(true);
+    expect(newsListConfigSchema.safeParse({}).success).toBe(true);
+    expect(postListConfigSchema.safeParse({}).success).toBe(true);
+    expect(faqListConfigSchema.safeParse({}).success).toBe(true);
+    expect(featuresConfigSchema.safeParse({}).success).toBe(true);
+    expect(testimonialConfigSchema.safeParse({}).success).toBe(true);
+    expect(galleryConfigSchema.safeParse({}).success).toBe(true);
+    expect(ctaConfigSchema.safeParse({}).success).toBe(true);
+    expect(contactFormConfigSchema.safeParse({}).success).toBe(true);
+    expect(mapConfigSchema.safeParse({}).success).toBe(true);
+    expect(embedConfigSchema.safeParse({}).success).toBe(true);
+    expect(instagramConfigSchema.safeParse({}).success).toBe(true);
   });
 
-  test("デフォルト設定にセクションタイプが含まれる", () => {
-    expect(getDefaultConfig("hero")).toBeDefined();
-    expect(getDefaultConfig("hero-parallax")).toBeDefined();
-    expect(getDefaultConfig("custom")).toBeDefined();
-    expect(getDefaultConfig("cta")).toBeDefined();
+  test("CRUDスキーマが空 type 以外の最小 config で safeParse 成功する", () => {
+    const minimalCreate = {
+      type: "hero",
+      title: "test",
+      config: {},
+      design: {},
+    };
+    expect(createSectionSchema.safeParse(minimalCreate).success).toBe(true);
   });
 
-  test("CRUDスキーマがインポート可能", () => {
-    expect(createSectionSchema).toBeDefined();
-    expect(updateSectionSchema).toBeDefined();
+  test("デフォルト設定がオブジェクトを返す", () => {
+    const heroDefault = getDefaultConfig("hero");
+    expect(typeof heroDefault).toBe("object");
+    expect(heroDefault).not.toBeNull();
+
+    const ctaDefault = getDefaultConfig("cta");
+    expect(typeof ctaDefault).toBe("object");
+    expect(ctaDefault).not.toBeNull();
+
+    const customDefault = getDefaultConfig("custom");
+    expect(typeof customDefault).toBe("object");
+    expect(customDefault).not.toBeNull();
   });
 
   test("レジストリにセクション定義が存在する", () => {

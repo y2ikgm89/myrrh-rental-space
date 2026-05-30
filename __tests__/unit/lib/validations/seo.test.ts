@@ -284,10 +284,18 @@ describe("seoOgpFieldsSchema", () => {
     });
 
     test("seoFieldsSchemaとogpFieldsSchemaのフィールドを両方持つ", () => {
-      const result = seoOgpFieldsSchema.safeParse({});
+      const input = {
+        metaDescription: "テスト説明",
+        metaKeywords: "キーワード",
+        ogpTitle: "OGP タイトル",
+        ogpDescription: "OGP 説明",
+        ogpImageUrl: "https://example.com/ogp.jpg",
+      };
+      const result = seoOgpFieldsSchema.safeParse(input);
+      expect(result.success).toBe(true);
       if (result.success) {
-        // merge されたスキーマなのでキーが存在する
-        expect(Object.keys(result.data).length).toBeGreaterThanOrEqual(0);
+        expect(result.data).toHaveProperty("metaDescription", "テスト説明");
+        expect(result.data).toHaveProperty("ogpTitle", "OGP タイトル");
       }
     });
   });
