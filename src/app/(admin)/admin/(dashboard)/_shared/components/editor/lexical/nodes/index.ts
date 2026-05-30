@@ -151,6 +151,15 @@ export {
   bookmarkSiteNameState,
 } from "./BookmarkNode";
 
+// Internal Link Card
+export {
+  InternalLinkCardNode,
+  $createInternalLinkCardNode,
+  $isInternalLinkCardNode,
+  internalLinkCardContentTypeState,
+  internalLinkCardContentIdState,
+} from "./InternalLinkCardNode";
+
 // Steps
 export {
   StepsContainerNode,
