@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { formatMonthDayTime } from "@/shared/lib/date-format";
 import {
   Button,
   Card,
@@ -76,11 +76,9 @@ export function BarList({
                     <TableCell className="text-sm text-muted-foreground">
                       {bar.startAt || bar.endAt ? (
                         <>
-                          {bar.startAt &&
-                            format(new Date(bar.startAt), "MM/dd HH:mm")}
+                          {bar.startAt && formatMonthDayTime(bar.startAt)}
                           {bar.startAt && bar.endAt && " 〜 "}
-                          {bar.endAt &&
-                            format(new Date(bar.endAt), "MM/dd HH:mm")}
+                          {bar.endAt && formatMonthDayTime(bar.endAt)}
                         </>
                       ) : (
                         "常時"
