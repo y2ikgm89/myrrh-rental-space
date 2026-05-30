@@ -1,7 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { calculateDurationHours } from "@/shared/lib/date-format";
+import {
+  calculateDurationHours,
+  formatJstDateString,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
@@ -52,23 +56,6 @@ type ReservationEditFormProps = {
   spaces: SpaceOption[];
 };
 
-/** ISO 8601 文字列 → YYYY-MM-DD（ローカルタイムゾーン） */
-function toLocalDateString(date: string): string {
-  const d = new Date(date);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** ISO 8601 文字列 → HH:MM（ローカルタイムゾーン） */
-function toLocalTimeString(date: string): string {
-  const d = new Date(date);
-  const h = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${min}`;
-}
-
 const STATUS_DESCRIPTIONS: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: "確認待ち",
   [ReservationStatus.CONFIRMED]: "予約が確定済み",
@@ -112,9 +99,11 @@ export function ReservationEditForm({
   const router = useRouter();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
-  const initialDate = toLocalDateString(reservation.startTime);
-  const initialStartTime = toLocalTimeString(reservation.startTime);
-  const initialEndTime = toLocalTimeString(reservation.endTime);
+  // datetime は JST 固定で整形する（ローカル tz 依存だと SSR=UTC / CSR=JST で
+  // hydration mismatch + 海外管理者で tz 非固定になる silent bug）。
+  const initialDate = formatJstDateString(reservation.startTime);
+  const initialStartTime = formatTimeShort(reservation.startTime);
+  const initialEndTime = formatTimeShort(reservation.endTime);
 
   const [spaceId, setSpaceId] = useState<string>(reservation.spaceId);
   const [startTime, setStartTime] = useState<string>(initialStartTime);
