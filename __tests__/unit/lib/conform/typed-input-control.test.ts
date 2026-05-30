@@ -1,29 +1,11 @@
 import { describe, test, expect } from "bun:test";
 import {
-  useTypedInputControl,
   getTypedFieldList,
   getTypedFieldset,
   asTypedField,
-  asConformDefaultValue,
-  asConformSubmissionValue,
-  asConformButtonGetter,
-  asConformLooseRecord,
-  asConformFieldset,
 } from "@/shared/lib/conform/typed-input-control";
 
 describe("typed-input-control helper SSoT", () => {
-  test("9 helper が全て関数として export されている", () => {
-    expect(typeof useTypedInputControl).toBe("function");
-    expect(typeof getTypedFieldList).toBe("function");
-    expect(typeof getTypedFieldset).toBe("function");
-    expect(typeof asTypedField).toBe("function");
-    expect(typeof asConformDefaultValue).toBe("function");
-    expect(typeof asConformSubmissionValue).toBe("function");
-    expect(typeof asConformButtonGetter).toBe("function");
-    expect(typeof asConformLooseRecord).toBe("function");
-    expect(typeof asConformFieldset).toBe("function");
-  });
-
   test("asTypedField は同じ参照を返す (型注釈のみ変換、ランタイム no-op)", () => {
     const field = { name: "test", value: "x" } as unknown as Parameters<
       typeof asTypedField

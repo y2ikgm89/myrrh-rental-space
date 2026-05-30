@@ -621,17 +621,6 @@ describe("Post Admin Action Integration", () => {
   });
 
   describe("LayoutWidth enum テスト", () => {
-    test("LayoutWidth enumの値が存在", () => {
-      // 実際のenum値: XS, SM, MD, LG, XL, FULL, CUSTOM
-      expect(LayoutWidth.XS).toBeDefined();
-      expect(LayoutWidth.SM).toBeDefined();
-      expect(LayoutWidth.MD).toBeDefined();
-      expect(LayoutWidth.LG).toBeDefined();
-      expect(LayoutWidth.XL).toBeDefined();
-      expect(LayoutWidth.FULL).toBeDefined();
-      expect(LayoutWidth.CUSTOM).toBeDefined();
-    });
-
     test("updatePostSettingsSchemaでLayoutWidth使用可能", () => {
       const widths = [
         LayoutWidth.XS,

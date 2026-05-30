@@ -210,16 +210,6 @@ describe("News Admin Action Integration", () => {
   // Note: NewsStatus enum は isPublished (boolean) に移行したため削除
 
   describe("LayoutWidth enum テスト", () => {
-    test("LayoutWidth enumの値が存在", () => {
-      expect(LayoutWidth.XS).toBeDefined();
-      expect(LayoutWidth.SM).toBeDefined();
-      expect(LayoutWidth.MD).toBeDefined();
-      expect(LayoutWidth.LG).toBeDefined();
-      expect(LayoutWidth.XL).toBeDefined();
-      expect(LayoutWidth.FULL).toBeDefined();
-      expect(LayoutWidth.CUSTOM).toBeDefined();
-    });
-
     test("updateNewsSettingsSchemaでLayoutWidth使用可能", () => {
       const widths = [
         LayoutWidth.XS,

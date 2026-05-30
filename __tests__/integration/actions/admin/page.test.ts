@@ -9,7 +9,6 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 
 // page.ts で使用されているスキーマを再現
 const updatePageSeoSchema = z.object({
@@ -366,18 +365,6 @@ describe("Page Admin Action Integration", () => {
         });
         expect(result.success).toBe(false);
       });
-    });
-  });
-
-  describe("LayoutWidth enum テスト", () => {
-    test("LayoutWidth enumの値が存在", () => {
-      expect(LayoutWidth.XS).toBeDefined();
-      expect(LayoutWidth.SM).toBeDefined();
-      expect(LayoutWidth.MD).toBeDefined();
-      expect(LayoutWidth.LG).toBeDefined();
-      expect(LayoutWidth.XL).toBeDefined();
-      expect(LayoutWidth.FULL).toBeDefined();
-      expect(LayoutWidth.CUSTOM).toBeDefined();
     });
   });
 
