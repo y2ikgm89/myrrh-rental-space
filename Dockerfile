@@ -26,11 +26,21 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     SKIP_ENV_VALIDATION=true \
     STANDALONE=true
 
-# NEXT_PUBLIC_* はビルド時にクライアント JS へインライン化される
+# NEXT_PUBLIC_* はビルド時にクライアント JS へインライン化される。
+# ARG はそのままだと宣言ステージ（builder-base）末尾でスコープが切れ、派生する
+# builder ステージの `bun run build` に引き継がれない（Docker 公式仕様）。
+# ENV はレイヤーに焼かれて派生ステージへ継承されるため ARG→ENV 変換が必須
+# （Next.js 公式 Docker パターン）。未変換だとクライアントバンドルに空文字が
+# インライン化され、GA / Turnstile が本番で silent failure になる。
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+    NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 
 # --- Stage 3: Build ---
 FROM builder-base AS builder
