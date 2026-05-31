@@ -63,8 +63,8 @@ export function HeroBackgroundSlideshow({
   priority = false,
 }: HeroBackgroundSlideshowProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
-  const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const layerElsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const videoElsRef = useRef<(HTMLVideoElement | null)[]>([]);
   const activeIndexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const motionOkRef = useMotionPreference();
@@ -86,8 +86,8 @@ export function HeroBackgroundSlideshow({
     const prevIndex = activeIndexRef.current;
     if (prevIndex === nextIndex) return;
 
-    const prevEl = layerRefs.current[prevIndex];
-    const nextEl = layerRefs.current[nextIndex];
+    const prevEl = layerElsRef.current[prevIndex];
+    const nextEl = layerElsRef.current[nextIndex];
     if (!prevEl || !nextEl) return;
 
     if (motionOkRef.current) {
@@ -140,7 +140,7 @@ export function HeroBackgroundSlideshow({
 
     if (kind === "video-file") {
       // R2 mp4: 先頭から再生し直す。onEnded（JSX 側）で advance する
-      const video = videoRefs.current[index];
+      const video = videoElsRef.current[index];
       if (video) {
         video.currentTime = 0;
         void video.play().catch(() => {
@@ -163,7 +163,7 @@ export function HeroBackgroundSlideshow({
 
   // アンマウント時の GSAP cleanup（Pattern C 要件）
   useEffect(() => {
-    const layers = layerRefs.current;
+    const layers = layerElsRef.current;
     return () => {
       for (const el of layers) {
         if (el) {
@@ -182,7 +182,7 @@ export function HeroBackgroundSlideshow({
       if (kinds[0] !== "image") return;
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const img = layerRefs.current[0]?.firstElementChild;
+        const img = layerElsRef.current[0]?.firstElementChild;
         if (img) {
           gsap.fromTo(
             img,
@@ -217,7 +217,7 @@ export function HeroBackgroundSlideshow({
           <div
             key={item.url}
             ref={(el) => {
-              layerRefs.current[i] = el;
+              layerElsRef.current[i] = el;
             }}
             className="absolute inset-0"
             style={{ opacity: isFirst ? 1 : 0 }}
@@ -238,7 +238,7 @@ export function HeroBackgroundSlideshow({
                 loop={kind === "video-embed" ? true : !hasMultiple}
                 {...(kind === "video-file" && {
                   videoRef: (el: HTMLVideoElement | null) => {
-                    videoRefs.current[i] = el;
+                    videoElsRef.current[i] = el;
                   },
                   onEnded: () => handleVideoEnded(i),
                 })}
