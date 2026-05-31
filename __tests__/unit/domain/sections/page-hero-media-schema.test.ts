@@ -42,6 +42,7 @@ describe("pageHeroConfigSchema media variant（背景スライドショー）", 
     const result = pageHeroConfigSchema.safeParse({ variant: "media" });
     expect(result.success).toBe(true);
     if (result.success && result.data.variant === "media") {
+      expect(result.data.scrimEnabled).toBe(true);
       expect(result.data.scrimTone).toBe("dark");
       expect(result.data.scrimOpacity).toBe(40);
       expect("overlay" in result.data).toBe(false);

@@ -14,13 +14,15 @@ import { cn } from "@/shared/lib/cn";
 import type { ScrimTone } from "@/shared/lib/sections/definitions/_shared/scrim";
 
 export function HeroScrim({
+  enabled = true,
   tone,
   opacity,
 }: {
+  readonly enabled?: boolean;
   readonly tone: ScrimTone;
   readonly opacity: number; // 0–100
 }): ReactElement | null {
-  if (opacity <= 0) return null;
+  if (!enabled || opacity <= 0) return null;
   return (
     <div
       aria-hidden="true"
