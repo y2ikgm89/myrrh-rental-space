@@ -43,6 +43,9 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "window", window);
   defineGlobal(globalThis, "document", window.document);
   defineGlobal(globalThis, "navigator", window.navigator);
+  // conform の getFormAction が bare `location` を参照するため global へ載せる
+  // (form.insert/remove の submit 経路で必要)。
+  defineGlobal(globalThis, "location", window.location);
 
   if ("global" in globalThis) {
     const nodeGlobal = globalThis["global"];
@@ -55,6 +58,14 @@ export function installJSDOMForTests(): void {
 
   defineGlobal(globalThis, "Element", window.Element);
   defineGlobal(globalThis, "HTMLElement", window.HTMLElement);
+  // conform の form observation (integrations: getFieldElements) は
+  // form.elements を HTMLInputElement / HTMLSelectElement / HTMLTextAreaElement で
+  // instanceof フィルタするため、これらの constructor を global へ載せる。
+  defineGlobal(globalThis, "HTMLInputElement", window.HTMLInputElement);
+  defineGlobal(globalThis, "HTMLSelectElement", window.HTMLSelectElement);
+  defineGlobal(globalThis, "HTMLTextAreaElement", window.HTMLTextAreaElement);
+  defineGlobal(globalThis, "HTMLButtonElement", window.HTMLButtonElement);
+  defineGlobal(globalThis, "HTMLFormElement", window.HTMLFormElement);
   defineGlobal(globalThis, "SVGElement", window.SVGElement);
   defineGlobal(globalThis, "Node", window.Node);
   defineGlobal(globalThis, "Text", window.Text);

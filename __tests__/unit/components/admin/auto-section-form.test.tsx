@@ -155,6 +155,23 @@ mock.module("@/admin/hooks/use-media-upload", () => ({
 
 const { AutoSectionForm } =
   await import("@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form");
+const { featuresConfigSchema } =
+  await import("@/shared/lib/sections/definitions/features/schema");
+import type { PageSectionData } from "@/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types";
+
+function buildFeaturesSection(): PageSectionData {
+  return {
+    id: "section-test-id",
+    pageId: "page-test-id",
+    type: "features",
+    // items 配列は空 (default []) — AutoArrayField が「追加」ボタンのみ描画
+    config: featuresConfigSchema.parse({}),
+    order: 0,
+    isActive: true,
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+  };
+}
 
 describe("AutoSectionForm", () => {
   let root: Root | undefined;
@@ -175,4 +192,47 @@ describe("AutoSectionForm", () => {
   // CUSTOM section の title + body は config field として AutoSectionForm の
   // 通常 textarea / text input で編集する canonical pattern に統合された
   // (Section.title / contentHtml / contentJson 列削除 migration 適用済)。
+
+  // 配列フィールドの「追加」ボタンは conform 制御関数 (form.insert) を onClick で
+  // 直接呼ぶ。button は type="button"（admin の SubmitButton 規約 = type="submit"
+  // 直書き禁止 に準拠）。クリックで item が実際に追加されることを検証する
+  // (regression guard: 追加ボタンが無反応だった silent bug)。
+  test("配列フィールドの追加ボタンは type=button で、クリックすると item が追加される", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const localRoot = createRoot(container);
+    root = localRoot;
+
+    act(() => {
+      localRoot.render(
+        <AutoSectionForm
+          section={buildFeaturesSection()}
+          onSave={() => undefined}
+          isPending={false}
+        />,
+      );
+    });
+
+    const findAddButton = () =>
+      Array.from(container?.querySelectorAll("button") ?? []).find((button) =>
+        button.textContent?.includes("追加"),
+      );
+
+    const addButton = findAddButton();
+    expect(addButton).toBeDefined();
+    // admin SubmitButton 規約: type="submit" 直書き禁止
+    expect(addButton?.getAttribute("type")).toBe("button");
+
+    // 初期は item ゼロ（空プレースホルダー表示）
+    expect(container.textContent).toContain("アイテムが追加されていません");
+
+    // クリック → conform form.insert → requestSubmit → intent 処理 → item 追加
+    act(() => {
+      addButton?.click();
+    });
+
+    // item が 1 件追加され、空プレースホルダーが消える
+    expect(container.textContent).not.toContain("アイテムが追加されていません");
+    expect(container.textContent).toContain("#1");
+  });
 });
