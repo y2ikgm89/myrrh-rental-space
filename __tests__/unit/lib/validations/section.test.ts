@@ -175,7 +175,6 @@ describe("heroParallaxConfigSchema", () => {
       // Phase 1: tagline は PortableTextSpan[] になり default は空配列
       expect(result.data.tagline).toEqual([]);
       expect(result.data.parallaxSpeed).toBe(0.3);
-      expect(result.data.overlayGradient).toBe(true);
       // canonical schema (`definitions/hero-parallax/schema.ts`) は `createButtonsArraySchema`
       // を使い default は空配列。Hero CTA の seed default は seed.ts / UI 層で別途配線。
       expect(result.data.buttons).toEqual([]);

@@ -40,10 +40,6 @@ export type GapSize = (typeof gapSizeValues)[number];
 export const contentPositionValues = ["center", "left", "bottom-left"] as const;
 export type ContentPosition = (typeof contentPositionValues)[number];
 
-/** オーバーレイスタイル */
-export const overlayStyleValues = ["gradient", "solid", "none"] as const;
-export type OverlayStyle = (typeof overlayStyleValues)[number];
-
 /** セクション高さ (HeroParallax) */
 export const heroParallaxHeightValues = [
   "sm",
@@ -216,12 +212,6 @@ export const contentPositionLabels: Record<ContentPosition, string> = {
   center: "中央",
   left: "左寄せ",
   "bottom-left": "左下",
-};
-
-export const overlayStyleLabels: Record<OverlayStyle, string> = {
-  gradient: "グラデーション",
-  solid: "単色",
-  none: "なし",
 };
 
 export const heroParallaxHeightLabels: Record<HeroParallaxHeight, string> = {
