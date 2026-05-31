@@ -277,23 +277,23 @@ describe("pageHeroConfigSchema", () => {
       }
     });
 
-    test("overlay / overlayOpacity の default が適用される", () => {
+    test("scrimTone / scrimOpacity の default が適用される", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
         media: [{ url: "https://example.com/hero.mp4", alt: "", caption: "" }],
       });
       expect(result.success).toBe(true);
       if (result.success && result.data.variant === "media") {
-        expect(result.data.overlay).toBe(true);
-        expect(result.data.overlayOpacity).toBe(40);
+        expect(result.data.scrimTone).toBe("dark");
+        expect(result.data.scrimOpacity).toBe(40);
       }
     });
 
-    test("overlayOpacity は 0-100 範囲内のみ許容", () => {
+    test("scrimOpacity は 0-100 範囲内のみ許容", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
         media: [{ url: "https://example.com/hero.mp4", alt: "", caption: "" }],
-        overlayOpacity: 150,
+        scrimOpacity: 150,
       });
       expect(result.success).toBe(false);
     });
@@ -388,8 +388,8 @@ describe("zod-introspection / discriminated union 対応", () => {
     expect(keys).toContain("variant");
     expect(keys).toContain("media"); // media variant 固有
     expect(keys).toContain("posterImage");
-    expect(keys).toContain("overlay");
-    expect(keys).toContain("overlayOpacity");
+    expect(keys).toContain("scrimTone");
+    expect(keys).toContain("scrimOpacity");
     expect(keys).toContain("title");
     expect(keys).toContain("description");
     expect(keys).toContain("buttons");

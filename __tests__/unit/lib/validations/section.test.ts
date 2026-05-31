@@ -76,8 +76,8 @@ describe("heroConfigSchema", () => {
         },
       ],
       height: "lg",
-      overlay: true,
-      overlayOpacity: 50,
+      scrimTone: "dark",
+      scrimOpacity: 50,
       variant: "default",
     };
     const result = heroConfigSchema.safeParse(data);
@@ -125,8 +125,8 @@ describe("heroConfigSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.height).toBe("md");
-      expect(result.data.overlay).toBe(true);
-      expect(result.data.overlayOpacity).toBe(40);
+      expect(result.data.scrimTone).toBe("dark");
+      expect(result.data.scrimOpacity).toBe(40);
     }
   });
 });
@@ -965,8 +965,8 @@ describe("型ガード関数", () => {
   test("isHeroConfig", () => {
     const validHero = {
       height: "md",
-      overlay: true,
-      overlayOpacity: 40,
+      scrimTone: "dark",
+      scrimOpacity: 40,
       variant: "default",
       parallaxSpeed: 0.5,
       buttons: [],
@@ -1039,8 +1039,8 @@ describe("getDefaultConfig (registry)", () => {
   test("HEROデフォルト設定", () => {
     const defaultHero = getDefaultConfig(SectionType.HERO);
     expect(defaultHero["height"]).toBe("md");
-    expect(defaultHero["overlay"]).toBe(true);
-    expect(defaultHero["overlayOpacity"]).toBe(40);
+    expect(defaultHero["scrimTone"]).toBe("dark");
+    expect(defaultHero["scrimOpacity"]).toBe(40);
   });
 
   test("CTAデフォルト設定", () => {

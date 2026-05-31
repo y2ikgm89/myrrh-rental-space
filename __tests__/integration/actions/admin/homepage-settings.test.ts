@@ -265,8 +265,8 @@ describe("Homepage Settings Admin Action Integration", () => {
     test("有効な HERO 設定は成功", () => {
       const config = {
         height: "md",
-        overlay: true,
-        overlayOpacity: 40,
+        scrimTone: "dark",
+        scrimOpacity: 40,
         variant: "default",
         parallaxSpeed: 0.5,
       };
@@ -337,8 +337,8 @@ describe("Homepage Settings Admin Action Integration", () => {
     test("HERO のデフォルト設定に必須フィールドが含まれる", () => {
       const config = getDefaultConfig(SectionType.HERO);
       expect(config["height"]).toBeDefined();
-      expect(typeof config["overlay"]).toBe("boolean");
-      expect(typeof config["overlayOpacity"]).toBe("number");
+      expect(typeof config["scrimTone"]).toBe("string");
+      expect(typeof config["scrimOpacity"]).toBe("number");
     });
 
     test("SPACE_LIST のデフォルト設定に必須フィールドが含まれる", () => {

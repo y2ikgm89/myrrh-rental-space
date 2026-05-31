@@ -32,6 +32,7 @@ import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { HeroBackgroundSlideshow } from "./hero-background-slideshow";
+import { HeroScrim, getHeroTextClasses } from "./hero-scrim";
 
 export type MediaHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "media" }>,
@@ -46,10 +47,11 @@ export function MediaHero({
   transition,
   autoPlayInterval,
   posterImage,
-  overlay,
-  overlayOpacity,
+  scrimTone,
+  scrimOpacity,
   buttons,
 }: MediaHeroProps): ReactElement {
+  const text = getHeroTextClasses(scrimTone);
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -112,20 +114,15 @@ export function MediaHero({
         </div>
       ) : null}
 
-      {/* Readability overlay (WCAG 1.4.3) */}
-      {overlay && (
-        <div
-          className="absolute inset-0 bg-foreground"
-          style={{ opacity: overlayOpacity / 100 }}
-          aria-hidden="true"
-        />
-      )}
+      {/* Readability scrim (WCAG 1.4.3) */}
+      <HeroScrim tone={scrimTone} opacity={scrimOpacity} />
 
       {/* Content */}
       <div
         ref={contentRef}
         className={cn(
-          "relative z-10 mx-auto max-w-3xl text-center text-background",
+          "relative z-10 mx-auto max-w-3xl text-center",
+          text.base,
           "ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
           "py-[var(--space-lg)]",
         )}
@@ -133,10 +130,8 @@ export function MediaHero({
         {hasLabel && (
           <p
             className={cn(
-              "mb-6 text-[0.75rem] uppercase tracking-[0.18em] text-background",
-              "[paint-order:stroke_fill]",
-              "[-webkit-text-stroke:0.4px_rgb(0_0_0/0.4)]",
-              "[text-shadow:0_1px_3px_rgb(0_0_0/0.55)]",
+              "mb-6 text-[0.75rem] uppercase tracking-[0.18em]",
+              text.label,
             )}
           >
             <PortableTextSpans spans={label} />
@@ -147,10 +142,8 @@ export function MediaHero({
           <h1
             className={cn(
               "font-heading font-light leading-[1.1] tracking-tight",
-              "text-[clamp(2.5rem,7vw,4.5rem)] text-background",
-              "[paint-order:stroke_fill]",
-              "[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]",
-              "[text-shadow:0_1px_2px_rgb(0_0_0/0.6),0_2px_12px_rgb(0_0_0/0.5)]",
+              "text-[clamp(2.5rem,7vw,4.5rem)]",
+              text.title,
             )}
           >
             <SplitText trigger={false} delay={0.5}>
@@ -163,11 +156,9 @@ export function MediaHero({
           <ScrollReveal delay={0.4}>
             <div
               className={cn(
-                "mx-auto mt-6 max-w-xl text-sm leading-relaxed text-background/90 md:text-base",
+                "mx-auto mt-6 max-w-xl text-sm leading-relaxed md:text-base",
                 "[&_p]:mt-0 [&_p+p]:mt-3",
-                "[paint-order:stroke_fill]",
-                "[-webkit-text-stroke:0.3px_rgb(0_0_0/0.35)]",
-                "[text-shadow:0_1px_2px_rgb(0_0_0/0.55)]",
+                text.subtitle,
               )}
             >
               <PortableText blocks={description} />
