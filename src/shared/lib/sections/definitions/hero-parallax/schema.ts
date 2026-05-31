@@ -7,7 +7,6 @@ import { sectionLayoutSchema } from "../_shared/layout";
 
 const contentPositions = ["center", "left", "bottom-left"] as const;
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
-const overlayStyles = ["gradient", "solid", "none"] as const;
 
 export const heroParallaxConfigSchema = z.object({
   tagline: field.portableTextInline("タグライン", {
@@ -26,10 +25,6 @@ export const heroParallaxConfigSchema = z.object({
     max: 1,
     default: 0.3,
     helpText: "0 で固定、1 で最大スクロール効果",
-    group: "design",
-  }),
-  overlayGradient: field.boolean("グラデーションオーバーレイを重ねる", {
-    default: true,
     group: "design",
   }),
   scrollIndicator: field.boolean("スクロールインジケーターを表示する", {
@@ -52,11 +47,6 @@ export const heroParallaxConfigSchema = z.object({
     default: 80,
     suffix: "svh",
     helpText: "100svh で画面いっぱい",
-    group: "design",
-  }),
-  overlayStyle: field.select("オーバーレイの種類", {
-    options: overlayStyles,
-    default: "gradient",
     group: "design",
   }),
   layout: sectionLayoutSchema,

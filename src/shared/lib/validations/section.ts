@@ -366,7 +366,6 @@ export {
   parseContainerWidth,
   parseGapSize,
   parseContentPosition,
-  parseOverlayStyle,
   parseHeroParallaxHeight,
   parseFeaturesLayout,
   parseFaqInitialOpen,
