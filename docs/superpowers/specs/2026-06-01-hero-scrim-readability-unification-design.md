@@ -1,17 +1,24 @@
 # Hero スクリム / 文字可読性の統一設計
 
 > 2026-06-01 / topic: hero-scrim-readability-unification
-> 目的: hero 系 3 系統で分裂している overlay 実装を、`MediaHero` で実証済みの「スクリムトーン + 3 層テキスト防御」モデルに統一し、文字可読性を一貫保証する。a11y ルール違反の gradient alpha スクリムを撲滅する。破壊的変更可（既存 DB は data migration で見た目を維持）。
+> 目的: 背景メディアにテキストを重ねる hero（`hero` / `page-hero` media variant）の overlay を、`MediaHero` で実証済みの「スクリムトーン + 3 層テキスト防御」モデルに統一し可読性を一貫保証する。あわせて `hero-parallax` の使われていない overlay フィールド群（デッドコード）を撤去する。破壊的変更可（既存 DB は data migration で見た目を維持）。
 
 ## 背景 / 問題
 
-hero の背景メディアにテキストを重ねる系統が 3 つあり、overlay の語彙と可読性の作りがバラバラ。
+hero 系の background + overlay の語彙が分裂している。実装を精査した結果、**テキストを画像の上に重ねるのは 2 系統のみ**で、`hero-parallax` は別構造だった。
 
-| 系統                        | セクション type            | 現状 overlay                                                                                         | 文字可読性防御                                                         | 問題                                                                                                                    |
-| --------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `StandardHeroSection`       | `hero`                     | `bg-background`(白) + `overlayOpacity`、スキーマラベルは「黒い」                                     | なし                                                                   | ラベル↔実装不整合。暗い/派手な画像で `text-foreground`(暗) が読めない                                                   |
-| `HeroSection`(HeroParallax) | `hero-parallax`            | `overlayStyle` = gradient(`from-foreground/70…`) / solid(`/50`) / none + 重複 bool `overlayGradient` | なし                                                                   | **gradient alpha スクリムは axe-core `bgGradient` incomplete → 本番 violation 昇格**（a11y ルール違反）。フィールド重複 |
-| `MediaHero`                 | `page-hero`(media variant) | `bg-foreground`(黒) + `overlayOpacity`                                                               | **あり**（`-webkit-text-stroke` + 多層 `text-shadow`、tone=dark 固定） | 唯一の正解形。ただし tone 固定 + stroke/shadow がインラインハードコード                                                 |
+| 系統                        | セクション type            | 構造                                                                | 現状 overlay                                                                                                 | 文字可読性防御                                                         |
+| --------------------------- | -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `StandardHeroSection`       | `hero`                     | **テキストを画像に重ねる**（中央 / split）                          | `bg-background`(白) + `overlayOpacity`、スキーマラベルは「黒い」(不整合)                                     | **なし**                                                               |
+| `MediaHero`                 | `page-hero`(media variant) | **テキストを画像に重ねる**（中央）                                  | `bg-foreground`(黒) + `overlayOpacity`                                                                       | **あり**（`-webkit-text-stroke` + 多層 `text-shadow`、tone=dark 固定） |
+| `HeroSection`(HeroParallax) | `hero-parallax`            | **2 カラム分割**（左=画像 / 右=白パネルにテキスト）。画像に重ねない | `overlayStyle`(gradient/solid/none) + bool `overlayGradient` を schema に持つが **どのレンダラも参照しない** | 不要（テキストは白背景上）                                             |
+
+確認した事実（grep）:
+
+- `OVERLAY_STYLE_MAP` … インポート元ゼロ（`section-style-maps.ts` の定義のみ）。
+- `config.overlayStyle` / `config.overlayGradient` … `src/app/**` のレンダラで参照ゼロ（`heroParallaxConfigSchema` の定義のみ）。
+- `parseOverlayStyle` … 定義 + `section.ts` re-export のみ、呼び出しゼロ。
+- `HeroSection.tsx` は左画像パネル + 右白パネル構造で、テキストは `bg-background` の白パネル上に置かれる（overlay 不要）。
 
 プロジェクトの a11y ルール（`frontend/accessibility/images-text.md` / `ssot-singletons` 関連）:
 
@@ -22,17 +29,18 @@ hero の背景メディアにテキストを重ねる系統が 3 つあり、ove
 
 **ゴール**
 
-- 3 系統を単一のスクリム + テキスト防御モデルに統一（SSoT 化）。
+- テキストを画像に重ねる 2 系統（`hero` / `page-hero` media）を単一のスクリム + テキスト防御モデルに統一（SSoT 化）。
 - 編集者が「壊れた組み合わせ（明スクリム + 明文字 等）」を作れない foolproof な設定にする。
-- a11y 違反 gradient スクリムを除去。
-- ラベル↔実装不整合と重複フィールド（`overlayGradient`）を解消。
-- 既存 DB セクションの**見た目を維持**（data migration）。
+- `StandardHeroSection` のラベル↔実装不整合（白なのに「黒い」）を解消し、文字防御を獲得させる。
+- `hero-parallax` の未使用 overlay フィールド（`overlayStyle` / `overlayGradient`）と関連デッドインフラ（`OVERLAY_STYLE_MAP` / `overlayStyleValues` / `OverlayStyle` / `overlayStyleLabels` / `parseOverlayStyle`）を撤去。
+- 既存 DB セクションの**見た目を維持**（`hero` / `page-hero` は data migration）。
 
 **非ゴール**
 
+- `hero-parallax` への scrim 追加（テキストは白パネル上で overlay 不要）。
 - `AutoSelectField` への option ラベル localization 機構の追加（既存 select は raw 値表示で統一済み。本設計でも踏襲、helpText で補足）。
 - 自由な CSS 画像フィルタ（blur/grayscale 等）の追加（a11y ルールで blur 非推奨、可読性保証にならないため不採用）。
-- `minimal` 系（背景メディアなし）hero の変更。
+- `minimal` / `editorial-split` / `compact`（背景メディアにテキストを重ねない variant）の変更。
 
 ## モデル（編集者が触る設定）
 
@@ -133,17 +141,17 @@ export function getHeroTextClasses(tone: ScrimTone): {
 
 - **`StandardHeroSection.tsx`**（default / parallax / split）: `config.overlay`/`overlayOpacity` 参照を `HeroScrim tone={config.scrimTone} opacity={config.scrimOpacity}` に置換。title / subtitle / sectionLabel / secondary link に `getHeroTextClasses(config.scrimTone)` を適用（**文字防御を新規獲得**）。`minimal` variant（背景なし）は対象外（現行 `text-foreground` 維持）。
 - **`MediaHero.tsx`**: インラインの `bg-foreground` + ハードコード stroke/shadow を `HeroScrim` + `getHeroTextClasses(scrimTone)` に置換（挙動同一 + tone 対応）。
-- **`HeroSection.tsx`（HeroParallax）**: `OVERLAY_STYLE_MAP` 参照を撤去し `HeroScrim` + `getHeroTextClasses` に統一。`overlayGradient` bool 参照を削除。
+- **`HeroSection.tsx`（hero-parallax）**: 変更なし（overlay フィールドを参照していないため）。
 
 ### 4. スキーマ変更（破壊的）
 
 - `hero/schema.ts`（`heroConfigSchema`）: `overlay` + `overlayOpacity` を削除 → `...createScrimFields()` を spread。
-- `page-hero/schema.ts`（media variant）: 同上。
-- `hero-parallax/schema.ts`（`heroParallaxConfigSchema`）: `overlayStyle` + `overlayGradient` を削除 → `...createScrimFields()` を spread。
-- `validations/section.ts`: `parseOverlayStyle` の re-export を削除。`isHeroConfig` 等の guard は schema 変更に自動追従（`safeParse({})` 成立は維持）。
+- `page-hero/schema.ts`（`mediaSchema`）: `overlay` + `overlayOpacity` を削除 → `...createScrimFields()` を spread。
+- `hero-parallax/schema.ts`（`heroParallaxConfigSchema`）: 未使用の `overlayStyle` + `overlayGradient` を削除（scrim は追加しない）。
 - `validations/section-options.ts`: `overlayStyleValues` / `OverlayStyle` / `overlayStyleLabels` を削除。
 - `validations/section-parsers.ts`: `parseOverlayStyle` / `overlayStyleValues` import / `OverlayStyle` type を削除。
-- `section-style-maps.ts`: `OVERLAY_STYLE_MAP` を削除（gradient alpha スクリム撲滅）。
+- `validations/section.ts`: `parseOverlayStyle` re-export を削除。`isHeroConfig` 等の guard は schema 変更に自動追従（`safeParse({})` 成立は維持）。
+- `section-style-maps.ts`: `OVERLAY_STYLE_MAP` を削除（デッドコード）。
 
 ### 5. データ移行（Prisma data migration）
 
@@ -151,40 +159,37 @@ standalone image migration は bun script ではなく **Prisma data migration**
 
 `Section.config`（JSON）を type 別に変換し、**現状の見た目を維持**:
 
-| 対象 type                              | 旧 → 新                                                                                                                                               |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hero`（白スクリムだった）             | `scrimTone: "light"`、`scrimOpacity: overlay === false ? 0 : (overlayOpacity ?? 40)`。旧 `overlay`/`overlayOpacity` キー削除                          |
-| `page-hero`（media variant、黒だった） | `scrimTone: "dark"`、`scrimOpacity: overlay === false ? 0 : (overlayOpacity ?? 40)`                                                                   |
-| `hero-parallax`                        | `scrimTone: "dark"`、`scrimOpacity`: `overlayStyle === "none" ? 0 : overlayStyle === "solid" ? 50 : 40`。旧 `overlayStyle`/`overlayGradient` キー削除 |
+| 対象 type                              | 旧 → 新                                                                                                                      |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `hero`（白スクリムだった）             | `scrimTone: "light"`、`scrimOpacity: overlay === false ? 0 : (overlayOpacity ?? 40)`。旧 `overlay`/`overlayOpacity` キー削除 |
+| `page-hero`（media variant、黒だった） | `scrimTone: "dark"`、`scrimOpacity: overlay === false ? 0 : (overlayOpacity ?? 40)`。旧キー削除                              |
 
 - migration は冪等（既に `scrimTone` を持つ行はスキップ）。
+- **`hero-parallax` は migration 不要**: `overlayStyle`/`overlayGradient` は Zod object 既定の strip モードで read 時に自動破棄され、レンダリングに影響しない（残存しても無害）。
 - `seed.ts` / `DEFAULT_PAGE_HERO` / `DEFAULT_PAGE_SECTIONS` に旧 overlay キーを持つデフォルトがあれば新キーへ更新。
 
 ### 6. テスト
 
-- `hero` / `page-hero` / `hero-parallax` の各 schema: `safeParse({})` 成立（Section schema test contract）+ `scrimTone:"dark"` / `scrimOpacity:40` の default 適用を assert。型違反（`scrimTone:123`）のみ reject。
+- `hero` / `page-hero`(media) schema: `safeParse({})` 成立（Section schema test contract）+ `scrimTone:"dark"` / `scrimOpacity:40` の default 適用を assert。型違反（`scrimTone:123`）のみ reject。
+- `hero-parallax` schema: `safeParse({})` 成立 + `overlayStyle`/`overlayGradient` キーが消えたことを確認。
 - `getHeroTextClasses(tone)`: dark/light で期待クラス（文字色 + stroke/shadow）を返す unit test。
 - `HeroScrim`: tone→bg クラス、`opacity<=0` で null を返す unit test。
 - `registry.test.ts`: section 総数 22 不変（新規 type 追加なし）。
-- migration マッピングロジック（純粋関数に抽出して）3 type の変換を unit test。
+- migration マッピングロジック（純粋関数に抽出して）hero / page-hero の変換を unit test。
 
 ## a11y 整合
 
-- スクリムは solid color + opacity（semi-transparent）。これは hero title の blessed pattern（semi-transparent scrim + `paint-order:stroke` + 多層 `text-shadow` の 3 層防御）に一致（`MediaHero` 参照実装）。本設計は全 hero を**この実証済み 3 層防御に統一**するため、a11y ルールの「視覚的 prominence > axe-definitive → 3 層防御」に正面から準拠。
-- a11y 違反だった `hero-parallax` の gradient alpha スクリムは**削除**され、純粋な改善。
+- スクリムは solid color + opacity（semi-transparent）。これは hero title の blessed pattern（semi-transparent scrim + `paint-order:stroke` + 多層 `text-shadow` の 3 層防御）に一致（`MediaHero` 参照実装）。本設計は対象 2 系統を**この実証済み 3 層防御に統一**するため、a11y ルールの「視覚的 prominence > axe-definitive → 3 層防御」に正面から準拠。
+- `OVERLAY_STYLE_MAP` の gradient はデッドコード（描画されていない）だが a11y ルール上の地雷なので削除する。
 - 編集後は `audit-a11y` skill（Playwright MCP axe-core）で hero を実機検証する。
 
 ## PR 粒度（実装計画で 2 段に分割）
 
-3 系統 + migration で 10 ファイル / 300 行を超える見込み。schema/migration 規律も踏まえ、writing-plans で以下 2 段に割る:
-
-1. **PR1**: `_shared/scrim.ts` + `hero-scrim.tsx` 新設 + `hero` / `page-hero` 2 系統統一 + 該当 data migration + テスト。
-2. **PR2**: `hero-parallax` 吸収（`overlayStyle`/`overlayGradient`/`OVERLAY_STYLE_MAP`/`section-options`/`section-parsers` 撤去）+ 該当 data migration + テスト。
-
-（注: data migration を 2 PR に分ける場合、各 PR の migration は自分の対象 type のみ変換する冪等スクリプトにする。）
+1. **PR1**: `_shared/scrim.ts` + `hero-scrim.tsx` 新設 + `hero` / `page-hero`(media) 2 系統統一 + data migration（hero / page-hero）+ テスト。
+2. **PR2**: `hero-parallax` の未使用 overlay フィールド + デッドインフラ（`overlayStyle` / `overlayGradient` / `OVERLAY_STYLE_MAP` / `overlayStyleValues` / `OverlayStyle` / `overlayStyleLabels` / `parseOverlayStyle`）撤去 + schema test。migration 不要。
 
 ## リスク / 留意
 
-- **破壊的 config 変更**: 旧キー（`overlay` 等）を参照するコードが残ると runtime 落ち。grep（`overlay`/`overlayOpacity`/`overlayStyle`/`overlayGradient`）で全消費元を洗い出してから削除する。
+- **破壊的 config 変更**: 旧キー（`overlay` 等）を参照するコードが残ると runtime 落ち。grep（`overlay`/`overlayOpacity`/`overlayStyle`/`overlayGradient`/`parseOverlayStyle`/`OVERLAY_STYLE_MAP`）で全消費元を洗い出してから削除する。
 - **`light` tone の白ハロー値は新規**（現行に存在しない）。実画像で `audit-a11y` + 目視確認してから値を確定する。
 - **migration の `Section.config` JSON 操作**は型安全に（`asPrismaInputJsonValue` 系 / 既存 hero-media-array migration の手法を踏襲）。
