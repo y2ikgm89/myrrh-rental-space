@@ -44,6 +44,7 @@ docs/
 __tests__
 __mocks__
 e2e/
+scripts/e2e/
 coverage
 playwright/
 playwright-report/

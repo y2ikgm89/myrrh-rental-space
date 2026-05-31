@@ -14,7 +14,7 @@ paths:
 ```dockerfile
 FROM oven/bun:1.3.13-alpine AS base   # 共通ベース（package.json packageManager と一致、Bun 1.3.14 は Lexical TDZ regression のため見送り）
 FROM base AS deps                      # 依存 + Prisma generate
-FROM base AS builder                   # validate + build
+FROM base AS builder                   # build のみ（型/lint は CI required job が担保）
 FROM base AS runner                    # standalone output + 非root
 ```
 
@@ -42,7 +42,7 @@ COPY . .
 
 **CRITICAL**: `.gitignore` が `generated/` を除外しているため、Cloud Build ソースアップロードにはこのディレクトリが含まれない。deps ステージから明示的にコピーが必要。
 
-## STANDALONE 環境変数
+## STANDALONE 環境変数 + build 専用 DATABASE_URL
 
 `output: 'standalone'` は `STANDALONE=true` 環境変数で条件付き有効化。builder ステージの `ENV` ブロックで設定:
 
@@ -50,8 +50,13 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     SKIP_ENV_VALIDATION=true \
-    STANDALONE=true
+    STANDALONE=true \
+    DATABASE_URL=postgresql://build:build@localhost:5432/build
 ```
+
+**`DATABASE_URL` は build 専用プレースホルダ**: `prisma.config.ts` の `env("DATABASE_URL")` が config ロード時に eager 解決するため `db:generate` / `next build` に必須。ビルドは DB に接続しない（CI も同一のダミー URL を使用、static 生成は `safeFetch` の fallback で成立）。runner ステージは別 `FROM base` のためこの ENV を継承せず、本番は Cloud Run が Secret Manager から実 URL を注入する。server-only 変数のため client バンドルにも焼き込まれない。
+
+**builder の RUN は `bun run build` のみ**: 型チェック・lint は CI の独立 required job がフルリポジトリ（`.dockerignore` が除外する `e2e/` / `scripts/e2e/` / `__tests__` を含む）で実施済み。Docker context は test 系を除外するため `tsc -p tsconfig.test.json` は `scripts/e2e → e2e/fixtures` を解決できず context 不整合になる。`next build` が app の型チェックを内蔵するため build のみで十分。
 
 ```typescript
 // next.config.ts
