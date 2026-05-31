@@ -23,7 +23,6 @@ import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { Button } from "@/public/components/design-system/button";
-import { VideoPlayer } from "@/public/components/design-system/video-player";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
@@ -32,7 +31,7 @@ import { isAppRoute } from "@/shared/lib/typed-routes";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
-import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
+import { HeroBackgroundSlideshow } from "./hero-background-slideshow";
 
 export type MediaHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "media" }>,
@@ -44,6 +43,8 @@ export function MediaHero({
   title,
   description,
   media,
+  transition,
+  autoPlayInterval,
   posterImage,
   overlay,
   overlayOpacity,
@@ -52,8 +53,7 @@ export function MediaHero({
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const hasMedia = media.url.length > 0;
-  const mediaType = hasMedia ? detectMediaSourceType(media.url) : "image";
+  const hasMedia = media.length > 0;
   const hasPoster = posterImage.url.length > 0;
   const hasLabel = label.length > 0;
   const hasTitle = title.length > 0;
@@ -90,38 +90,15 @@ export function MediaHero({
         "pt-[var(--header-height)]",
       )}
     >
-      {/* Background: video > image > poster image > solid foreground fallback */}
-      {hasMedia && mediaType === "video" ? (
-        <div className="absolute inset-0">
-          {hasPoster ? (
-            <Image
-              src={posterImage.url}
-              alt={posterImage.alt}
-              fill
-              sizes="100vw"
-              className="object-cover"
-              priority
-            />
-          ) : null}
-          <div className="absolute inset-0">
-            <VideoPlayer
-              url={media.url}
-              variant="background"
-              {...(hasPoster && { poster: posterImage.url })}
-            />
-          </div>
-        </div>
-      ) : hasMedia && mediaType === "image" ? (
-        <div className="absolute inset-0">
-          <Image
-            src={media.url}
-            alt={media.alt}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            priority
-          />
-        </div>
+      {/* Background: メディアあればスライドショー、なければ poster / solid fallback */}
+      {hasMedia ? (
+        <HeroBackgroundSlideshow
+          items={media}
+          transition={transition}
+          autoPlayInterval={autoPlayInterval}
+          sizes="100vw"
+          priority
+        />
       ) : hasPoster ? (
         <div className="absolute inset-0">
           <Image
