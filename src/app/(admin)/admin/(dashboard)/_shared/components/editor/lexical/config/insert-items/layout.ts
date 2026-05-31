@@ -7,6 +7,7 @@
 
 import {
   IconAlertCircle,
+  IconBackground,
   IconBox,
   IconChevronsDown,
   IconClock,
@@ -15,9 +16,9 @@ import {
   IconLayoutNavbar,
   IconMessageChatbot,
   IconQuote,
+  IconReportMoney,
   IconRowInsertBottom,
   IconShoe,
-  IconTable,
 } from "@tabler/icons-react";
 import { INSERT_CAPTION_BOX_COMMAND } from "../../plugins/CaptionBoxPlugin";
 import { INSERT_COLLAPSIBLE_COMMAND } from "../../plugins/CollapsiblePlugin";
@@ -157,7 +158,7 @@ export const LAYOUT_INSERT_ITEMS: readonly InsertItem[] = [
     id: "cover",
     type: "dialog",
     label: "カバー",
-    icon: IconLayoutNavbar,
+    icon: IconBackground,
     keywords: [
       "cover",
       "hero",
@@ -196,7 +197,7 @@ export const LAYOUT_INSERT_ITEMS: readonly InsertItem[] = [
     id: "pricingTable",
     type: "dialog",
     label: "料金比較表",
-    icon: IconTable,
+    icon: IconReportMoney,
     keywords: ["pricing", "price", "plan", "料金", "比較", "table", "プラン"],
     category: "patterns",
     showInToolbar: false,

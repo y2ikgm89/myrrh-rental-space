@@ -160,7 +160,7 @@ export function FeatureIconListPlugin({
           <div className="space-y-2">
             <Label className="text-sm font-medium block">カラム数</Label>
             <Select value={String(columns)} onValueChange={handleColumnsChange}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -178,7 +178,7 @@ export function FeatureIconListPlugin({
               アクセントカラー
             </Label>
             <Select value={accentColor} onValueChange={handleColorChange}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -194,7 +194,7 @@ export function FeatureIconListPlugin({
           <div className="space-y-2">
             <Label className="text-sm font-medium block">アイコンサイズ</Label>
             <Select value={iconSize} onValueChange={handleIconSizeChange}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

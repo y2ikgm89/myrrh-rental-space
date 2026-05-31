@@ -162,7 +162,7 @@ export function TestimonialPlugin({ isOpen, onClose }: TestimonialPluginProps) {
           <div className="space-y-3">
             <Label className="text-sm font-medium block">カラム数</Label>
             <Select value={String(columns)} onValueChange={handleColumnsChange}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

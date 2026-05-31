@@ -395,7 +395,7 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
                 if (isStepsStyle(v)) setSelectedStyle(v);
               }}
             >
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -416,7 +416,6 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
                 value={stepsLabel}
                 onChange={(e) => setStepsLabel(e.target.value)}
                 placeholder="STEP"
-                className="h-8 text-sm"
               />
             </div>
           )}
@@ -430,7 +429,7 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
                   if (isStepsShape(v)) setShape(v);
                 }}
               >
-                <SelectTrigger className="h-8 text-sm">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -453,7 +452,7 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
                   if (isStepsFill(v)) setFill(v);
                 }}
               >
-                <SelectTrigger className="h-8 text-sm">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -478,7 +477,7 @@ export function StepsPlugin({ isOpen, onClose }: StepsPluginProps) {
                   if (Number.isFinite(v) && v >= 1) setStartNum(v);
                 }}
                 min={1}
-                className="h-8 text-sm w-20"
+                className="w-20"
               />
             </div>
           )}

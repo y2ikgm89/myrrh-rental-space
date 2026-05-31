@@ -105,7 +105,7 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Instagram投稿を埋め込み</DialogTitle>
+          <DialogTitle>Instagram投稿を挿入</DialogTitle>
           <DialogDescription>
             Instagram投稿のURLまたは投稿IDを入力してください
           </DialogDescription>
