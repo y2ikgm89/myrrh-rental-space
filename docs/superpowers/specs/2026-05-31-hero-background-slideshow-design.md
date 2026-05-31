@@ -26,16 +26,25 @@
 | ✅ 共有                      | `createMediaGroupSchema` ファクトリ（配列化）、新 `HeroBackgroundSlideshow` component、`VideoPlayer` 拡張 |
 | ❌ 対象外                    | `page-hero` `editorial-split`（既存カルーセル）/ `minimal` / `compact` variant、`gallery` セクション      |
 
-## データモデル（クリーンブレイク）
+## データモデル（クリーンブレイク・後方互換なし）
 
-共有ファクトリを **配列化** する。後方互換の dual-field は採らない（プロジェクト規約: 後方互換ハック禁止）。
+共有ファクトリを **配列化** する。コード側に旧形式吸収の互換シム（読み取り時 preprocess 等）は **一切残さない**。dual-field も採らない（プロジェクト規約: 後方互換ハック禁止）。既存 DB データは **一度きりの冪等な移行スクリプト** で配列形式へ変換する（公式推奨のクリーンな破壊的変更）。
 
 - ファクトリを `createMediaArraySchema(label)` にリネーム/変更し、`field.array(label, { subGroup: "media", fields: { url: field.media({ accept: "image-or-video" }), alt, caption } })` + 重複禁止 `refine` + `.default([])` を返す（`gallery` の `media` 配列と同型）
 - 消費者は **2 箇所のみ**: `hero.backgroundMedia` / `page-hero.mediaSchema.media`（＝ファクトリ変更でドリフトしない）
-- 旧データ `{ url, alt, caption }`（単一オブジェクト）は **読み取り時 preprocess** で `[{ ... }]` に正規化（`url` 空なら `[]`）。`decodePortableTextInput` と同じ手法でデプロイ移行スクリプト不要
+- スキーマは **純粋な配列**。旧形式 `{ url, alt, caption }` を受理する preprocess / union は **書かない**（互換ハック禁止の徹底）
 - 追加フィールド（両スキーマ・design group）:
   - `transition`: `crossfade` | `ken-burns`（default `crossfade`）
   - `autoPlayInterval`: 画像スライドの表示秒数（default `5`、min `2`、max `20`）
+
+### データ移行スクリプト（一度きり・冪等）
+
+`scripts/migrate-hero-background-media-to-array.ts`（Bun runtime + `bunx --bun prisma` 規約準拠、`node:*` / `dotenv` 不使用）:
+
+- 対象: `Section.type IN ('hero', 'page-hero')` の `config` JSON
+- 変換: `backgroundMedia` / `media` が **単一オブジェクト** `{ url, alt, caption }` なら `[{ ... }]` に変換（`url` 空文字 or 不在なら `[]`）。既に配列なら no-op（冪等）
+- `--dry-run` で対象件数・変換プレビューを出力（実移行兼用、`backfill-oauth-token-encryption.ts` と同方針）
+- デプロイ時に 1 回実行。`schema.prisma` 変更は伴わない（`Section.config` は `Json` 列のため Prisma migration 不要）
 
 ## 描画
 
@@ -83,8 +92,9 @@
 
 ## テスト
 
-- `hero` schema: `safeParse({})` / 配列重複 `refine` / 旧形式 preprocess wrap
+- `hero` schema: `safeParse({})` / 配列重複 `refine` / `.default([])` で空入力が `[]` になること
 - `page-hero` `media` variant schema: 同上
+- 移行スクリプト: 単一オブジェクト → 配列変換 / 既配列の no-op（冪等性）/ `url` 空時 `[]`
 - `VideoPlayer`: `onEnded` / `loop` prop の挙動
 - `registry.test`: セクション数 **22** 不変（新規 section type ではないため）
 
