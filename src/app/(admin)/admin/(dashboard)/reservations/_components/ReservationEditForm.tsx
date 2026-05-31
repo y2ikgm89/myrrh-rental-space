@@ -68,13 +68,15 @@ const ALL_STATUS_OPTIONS: Record<
   string,
   { label: string; description: string }
 > = Object.fromEntries(
-  Object.values(ReservationStatus).map((status) => [
-    status,
-    {
-      label: RESERVATION_STATUS_LABELS[status],
-      description: STATUS_DESCRIPTIONS[status],
-    },
-  ]),
+  Object.values(ReservationStatus).map(
+    (status): [string, { label: string; description: string }] => [
+      status,
+      {
+        label: RESERVATION_STATUS_LABELS[status],
+        description: STATUS_DESCRIPTIONS[status],
+      },
+    ],
+  ),
 );
 
 function getStatusOptionsForCurrent(currentStatus: ReservationStatus) {

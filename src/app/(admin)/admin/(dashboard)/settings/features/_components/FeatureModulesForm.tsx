@@ -62,7 +62,10 @@ export function FeatureModulesForm({
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: Object.fromEntries(
-      moduleDefs.map((mod) => [mod.id, initialValues[mod.id] ? "on" : ""]),
+      moduleDefs.map((mod): [string, string] => [
+        mod.id,
+        initialValues[mod.id] ? "on" : "",
+      ]),
     ),
   });
 
