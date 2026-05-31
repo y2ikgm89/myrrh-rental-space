@@ -388,6 +388,7 @@ describe("zod-introspection / discriminated union 対応", () => {
     expect(keys).toContain("variant");
     expect(keys).toContain("media"); // media variant 固有
     expect(keys).toContain("posterImage");
+    expect(keys).toContain("scrimEnabled");
     expect(keys).toContain("scrimTone");
     expect(keys).toContain("scrimOpacity");
     expect(keys).toContain("title");

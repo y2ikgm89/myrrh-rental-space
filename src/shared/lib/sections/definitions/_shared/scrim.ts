@@ -20,6 +20,12 @@ export type ScrimTone = (typeof SCRIM_TONES)[number];
 /** hero 系の背景スクリム共通フィールド（spread して各 schema に注入） */
 export function createScrimFields() {
   return {
+    scrimEnabled: field.boolean("オーバーレイをかける", {
+      default: true,
+      group: "design",
+      helpText:
+        "背景メディア上に半透明の膜を重ねて文字を読みやすくします。オフにしても濃さの設定値は保持されます",
+    }),
     scrimTone: field.select("オーバーレイのトーン", {
       options: SCRIM_TONES,
       default: "dark",

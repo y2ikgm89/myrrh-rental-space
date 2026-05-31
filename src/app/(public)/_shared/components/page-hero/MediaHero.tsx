@@ -47,6 +47,7 @@ export function MediaHero({
   transition,
   autoPlayInterval,
   posterImage,
+  scrimEnabled,
   scrimTone,
   scrimOpacity,
   buttons,
@@ -115,7 +116,11 @@ export function MediaHero({
       ) : null}
 
       {/* Readability scrim (WCAG 1.4.3) */}
-      <HeroScrim tone={scrimTone} opacity={scrimOpacity} />
+      <HeroScrim
+        enabled={scrimEnabled}
+        tone={scrimTone}
+        opacity={scrimOpacity}
+      />
 
       {/* Content */}
       <div

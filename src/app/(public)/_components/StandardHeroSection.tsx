@@ -378,7 +378,11 @@ export function StandardHeroSection({
         ))}
 
       {/* Readability scrim */}
-      <HeroScrim tone={config.scrimTone} opacity={config.scrimOpacity} />
+      <HeroScrim
+        enabled={config.scrimEnabled}
+        tone={config.scrimTone}
+        opacity={config.scrimOpacity}
+      />
 
       {/* Content */}
       <div

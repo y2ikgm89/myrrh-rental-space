@@ -12,18 +12,34 @@ describe("createScrimFields", () => {
     const result = schema.safeParse({});
     expect(result.success).toBe(true);
     if (result.success) {
+      expect(result.data.scrimEnabled).toBe(true);
       expect(result.data.scrimTone).toBe("dark");
       expect(result.data.scrimOpacity).toBe(40);
     }
   });
 
-  test("有効な tone / opacity を受理する", () => {
-    const result = schema.safeParse({ scrimTone: "light", scrimOpacity: 0 });
+  test("有効な enabled / tone / opacity を受理する", () => {
+    const result = schema.safeParse({
+      scrimEnabled: false,
+      scrimTone: "light",
+      scrimOpacity: 0,
+    });
     expect(result.success).toBe(true);
     if (result.success) {
+      expect(result.data.scrimEnabled).toBe(false);
       expect(result.data.scrimTone).toBe("light");
       expect(result.data.scrimOpacity).toBe(0);
     }
+  });
+
+  test("scrimEnabled はフォーム文字列を coerce する（'on'/'true' → true）", () => {
+    const on = schema.safeParse({ scrimEnabled: "on" });
+    expect(on.success).toBe(true);
+    if (on.success) expect(on.data.scrimEnabled).toBe(true);
+
+    const off = schema.safeParse({ scrimEnabled: "" });
+    expect(off.success).toBe(true);
+    if (off.success) expect(off.data.scrimEnabled).toBe(false);
   });
 
   test("不正な tone は reject", () => {

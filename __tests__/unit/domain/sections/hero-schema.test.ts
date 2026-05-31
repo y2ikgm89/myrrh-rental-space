@@ -54,6 +54,7 @@ describe("heroConfigSchema（背景スライドショー）", () => {
     const result = heroConfigSchema.safeParse({});
     expect(result.success).toBe(true);
     if (result.success) {
+      expect(result.data.scrimEnabled).toBe(true);
       expect(result.data.scrimTone).toBe("dark");
       expect(result.data.scrimOpacity).toBe(40);
       expect("overlay" in result.data).toBe(false);
