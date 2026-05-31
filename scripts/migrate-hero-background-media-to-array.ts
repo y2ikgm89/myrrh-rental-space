@@ -68,7 +68,7 @@ async function main() {
     const nextValue = toMediaArray(current);
     const nextConfig = { ...section.config, [key]: nextValue };
 
-    console.log(
+    console.info(
       `${isDryRun ? "[dry-run] " : ""}convert section ${section.id} (${section.type}.${key}) → ${nextValue.length} item(s)`,
     );
 
@@ -86,7 +86,7 @@ async function main() {
     converted++;
   }
 
-  console.log(
+  console.info(
     `\n${isDryRun ? "[dry-run] " : ""}done: ${converted} converted, ${skipped} skipped (already array / no media)`,
   );
   await prisma.$disconnect();
