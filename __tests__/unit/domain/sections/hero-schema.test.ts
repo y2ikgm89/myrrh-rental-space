@@ -49,4 +49,15 @@ describe("heroConfigSchema（背景スライドショー）", () => {
     const tooFast = heroConfigSchema.safeParse({ autoPlayInterval: 1 });
     expect(tooFast.success).toBe(false);
   });
+
+  test("scrimTone / scrimOpacity の default が適用され、overlay 系キーは持たない", () => {
+    const result = heroConfigSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.scrimTone).toBe("dark");
+      expect(result.data.scrimOpacity).toBe(40);
+      expect("overlay" in result.data).toBe(false);
+      expect("overlayOpacity" in result.data).toBe(false);
+    }
+  });
 });

@@ -47,6 +47,10 @@ import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
 import { HeroBackgroundSlideshow } from "@/public/components/page-hero/hero-background-slideshow";
 import {
+  HeroScrim,
+  getHeroTextClasses,
+} from "@/public/components/page-hero/hero-scrim";
+import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/section-style-helpers";
@@ -179,6 +183,8 @@ export function StandardHeroSection({
     },
     { scope: sectionRef },
   );
+
+  const text = getHeroTextClasses(config.scrimTone);
 
   const isCustomHeight = config.height === "custom";
   const heightClass = isCustomHeight
@@ -371,19 +377,16 @@ export function StandardHeroSection({
           />
         ))}
 
-      {/* Overlay */}
-      {config.overlay && (
-        <div
-          className="absolute inset-0 bg-background"
-          style={{ opacity: config.overlayOpacity / 100 }}
-          aria-hidden="true"
-        />
-      )}
+      {/* Readability scrim */}
+      <HeroScrim tone={config.scrimTone} opacity={config.scrimOpacity} />
 
       {/* Content */}
       <div
         ref={contentRef}
-        className="relative z-10 px-[var(--container-padding)] text-center"
+        className={cn(
+          "relative z-10 px-[var(--container-padding)] text-center",
+          text.base,
+        )}
       >
         {showSectionLabel && (
           <ScrollReveal delay={0.15}>
@@ -397,7 +400,10 @@ export function StandardHeroSection({
           >
             <Heading
               level={1}
-              className={cn("text-page-hero leading-tight tracking-tight")}
+              className={cn(
+                "text-page-hero leading-tight tracking-tight",
+                text.title,
+              )}
             >
               <SplitText trigger={false} delay={0.3}>
                 <PortableTextSpans spans={config.title} />
@@ -409,7 +415,11 @@ export function StandardHeroSection({
         {hasSubtitle && (
           <ScrollReveal delay={0.2}>
             <div
-              className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base [&_p]:mt-0 [&_p+p]:mt-3"
+              className={cn(
+                "mx-auto mt-4 max-w-lg text-sm leading-relaxed md:mt-6 md:text-base",
+                "[&_p]:mt-0 [&_p+p]:mt-3",
+                text.subtitle,
+              )}
               style={getTextStyle(style)}
             >
               <PortableText blocks={config.subtitle} />

@@ -225,7 +225,8 @@ describe("getDefaultConfig", () => {
     // field.text / field.select などにはデフォルト値が設定されている
     expect(typeof config["height"]).toBe("string"); // select デフォルト: "md"
     expect(typeof config["variant"]).toBe("string"); // select デフォルト: "default"
-    expect(typeof config["overlay"]).toBe("boolean"); // boolean デフォルト: true
+    expect(typeof config["scrimTone"]).toBe("string"); // select デフォルト: "dark"
+    expect(typeof config["scrimOpacity"]).toBe("number"); // number デフォルト: 40
   });
 
   test("'hero' のデフォルト config は Zod スキーマで再検証できる", () => {

@@ -37,4 +37,15 @@ describe("pageHeroConfigSchema media variant（背景スライドショー）", 
     });
     expect(result.success).toBe(true);
   });
+
+  test("media variant で scrimTone/scrimOpacity default、overlay 系は持たない", () => {
+    const result = pageHeroConfigSchema.safeParse({ variant: "media" });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.variant === "media") {
+      expect(result.data.scrimTone).toBe("dark");
+      expect(result.data.scrimOpacity).toBe(40);
+      expect("overlay" in result.data).toBe(false);
+      expect("overlayOpacity" in result.data).toBe(false);
+    }
+  });
 });

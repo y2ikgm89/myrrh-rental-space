@@ -4,6 +4,7 @@ import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
 import { createMediaArraySchema, HERO_BG_TRANSITIONS } from "../_shared/media";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { createScrimFields } from "../_shared/scrim";
 
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 
@@ -68,18 +69,7 @@ export const heroConfigSchema = z
       helpText: "ヒーローセクションの見せ方を選びます",
       group: "design",
     }),
-    overlay: field.boolean("画像の上に黒いオーバーレイを重ねる", {
-      default: true,
-      group: "design",
-    }),
-    overlayOpacity: field.number("オーバーレイの濃さ", {
-      min: 0,
-      max: 100,
-      default: 40,
-      suffix: "%",
-      helpText: "0% は透明、100% は完全に黒",
-      group: "design",
-    }),
+    ...createScrimFields(),
     parallaxSpeed: field.number("パララックス速度", {
       min: 0,
       max: 1,
