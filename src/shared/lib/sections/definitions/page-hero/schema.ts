@@ -21,7 +21,7 @@ import { z } from "zod";
 import { field, fieldRegistry } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 import { createButtonsArraySchema } from "../_shared/buttons";
-import { createMediaGroupSchema } from "../_shared/media";
+import { createMediaArraySchema, HERO_BG_TRANSITIONS } from "../_shared/media";
 
 const HERO_TRANSITIONS = [
   "crossfade",
@@ -114,7 +114,21 @@ const mediaSchema = z.object({
     subGroup: "text",
     maxBlocks: 100,
   }),
-  media: createMediaGroupSchema("背景メディア（画像 / 動画）"),
+  media: createMediaArraySchema("背景メディア（画像 / 動画）"),
+  transition: field.select("切り替え演出", {
+    options: HERO_BG_TRANSITIONS,
+    default: "crossfade",
+    group: "design",
+    helpText: "背景メディアが複数のときのスライドショー切り替え方法",
+  }),
+  autoPlayInterval: field.number("自動切り替え間隔", {
+    min: 2,
+    max: 20,
+    default: 5,
+    suffix: "秒",
+    group: "design",
+    helpText: "画像スライドの表示秒数（動画は再生完了で切り替わります）",
+  }),
   posterImage: z
     .object({
       url: field.image("ポスター画像"),

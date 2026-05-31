@@ -17,6 +17,7 @@
  * いずれの境界からも import 可能（Hero 等の Client Component 経由でも安全に使える）。
  */
 
+import type { Ref } from "react";
 import { detectVideoProvider } from "@/shared/lib/video/url-detect";
 import { cn } from "@/shared/lib/cn";
 
@@ -28,18 +29,25 @@ interface VideoPlayerProps {
   readonly poster?: string;
   readonly variant?: VideoPlayerVariant;
   readonly className?: string;
+  /** background variant のみ — false で `<video loop>` を外し `onEnded` を発火させる（default true） */
+  readonly loop?: boolean;
+  /** R2 mp4 の `<video>` のみ — 再生完了で発火（iframe provider では発火しない） */
+  readonly onEnded?: () => void;
+  /** R2 mp4 の `<video>` 要素 ref（スライドショーの先頭巻き戻し制御用） */
+  readonly videoRef?: Ref<HTMLVideoElement>;
 }
 
 function buildYouTubeEmbedSrc(
   videoId: string,
   variant: VideoPlayerVariant,
+  loop: boolean,
 ): string {
   const base = `https://www.youtube.com/embed/${videoId}`;
   if (variant !== "background") return base;
   const params = new URLSearchParams({
     autoplay: "1",
     mute: "1",
-    loop: "1",
+    loop: loop ? "1" : "0",
     controls: "0",
     playsinline: "1",
     modestbranding: "1",
@@ -52,13 +60,14 @@ function buildYouTubeEmbedSrc(
 function buildVimeoEmbedSrc(
   videoId: string,
   variant: VideoPlayerVariant,
+  loop: boolean,
 ): string {
   const base = `https://player.vimeo.com/video/${videoId}`;
   if (variant !== "background") return base;
   const params = new URLSearchParams({
     autoplay: "1",
     muted: "1",
-    loop: "1",
+    loop: loop ? "1" : "0",
     background: "1",
   });
   return `${base}?${params.toString()}`;
@@ -70,6 +79,9 @@ export function VideoPlayer({
   poster,
   variant = "controls",
   className,
+  loop = true,
+  onEnded,
+  videoRef,
 }: VideoPlayerProps) {
   if (url.length === 0) return null;
 
@@ -80,7 +92,7 @@ export function VideoPlayer({
   if (detection.provider === "youtube" && detection.videoId) {
     return (
       <iframe
-        src={buildYouTubeEmbedSrc(detection.videoId, variant)}
+        src={buildYouTubeEmbedSrc(detection.videoId, variant, loop)}
         title={title ?? "YouTube 動画"}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
@@ -93,7 +105,7 @@ export function VideoPlayer({
   if (detection.provider === "vimeo" && detection.videoId) {
     return (
       <iframe
-        src={buildVimeoEmbedSrc(detection.videoId, variant)}
+        src={buildVimeoEmbedSrc(detection.videoId, variant, loop)}
         title={title ?? "Vimeo 動画"}
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
@@ -107,11 +119,13 @@ export function VideoPlayer({
   if (variant === "background") {
     return (
       <video
+        ref={videoRef}
         src={url}
         autoPlay
         muted
-        loop
+        loop={loop}
         playsInline
+        {...(onEnded !== undefined && { onEnded })}
         {...(poster !== undefined && { poster })}
         className={cn("h-full w-full object-cover", className)}
         aria-hidden="true"
