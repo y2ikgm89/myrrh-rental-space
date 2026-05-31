@@ -18,18 +18,18 @@ import {
   getTypedFieldset,
 } from "@/shared/lib/conform/typed-input-control";
 
-// 動的 schema 用の getButtonProps 境界変換型
+// 動的 schema 用の insert/remove 制御関数 境界変換型
 // (ledger §5 conform generic invariance — typed-input-control SSoT helper 経由)。
 // conform の Intent / FieldName は branded type のため、name と defaultValue を
 // 緩めた function signature を helper で集約する。
-type InsertButtonGetter = (opts: {
+// 制御関数を直接呼ぶ（form.insert(...) / form.remove(...)）ことで conform が
+// プログラム的に requestSubmit を発火し intent を処理する。button 自体は
+// type="button"（admin の SubmitButton 規約を侵さず、追加/削除が機能する）。
+type InsertControl = (opts: {
   name: string;
   defaultValue?: Record<string, unknown>;
-}) => Record<string, unknown>;
-type RemoveButtonGetter = (opts: {
-  name: string;
-  index: number;
-}) => Record<string, unknown>;
+}) => void;
+type RemoveControl = (opts: { name: string; index: number }) => void;
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   getArrayConstraints,
@@ -75,6 +75,11 @@ export function AutoArrayField({
   const items = getTypedFieldList(field);
   const canAdd = max === undefined || items.length < max;
   const canRemove = min === undefined || items.length > min;
+
+  // conform 制御関数（branded FieldName 境界を helper で緩める）。
+  // 直接呼び出しで内部 requestSubmit が発火し intent が処理される。
+  const insertItem = asConformButtonGetter<InsertControl>(form.insert);
+  const removeItem = asConformButtonGetter<RemoveControl>(form.remove);
   const constraintHint = (() => {
     if (min !== undefined && max !== undefined) {
       return min === max ? `${min}件必須` : `${min}〜${max}件`;
@@ -119,19 +124,12 @@ export function AutoArrayField({
           ) : null}
         </div>
         <Button
-          // conform の insert/remove intent button は native submit event の
-          // event.submitter から intent を読むため type="submit" 必須。
-          // admin Button の default type="button" だと form が submit されず
-          // intent が conform に届かない (追加/削除が無反応になる silent bug)。
-          type="submit"
+          type="button"
           variant="outline"
           size="sm"
-          {...asConformButtonGetter<InsertButtonGetter>(
-            form.insert.getButtonProps,
-          )({
-            name: field.name,
-            defaultValue: createEmptyItem(),
-          })}
+          onClick={() =>
+            insertItem({ name: field.name, defaultValue: createEmptyItem() })
+          }
           disabled={isPending || !canAdd}
           aria-label={
             !canAdd && max !== undefined
@@ -159,16 +157,10 @@ export function AutoArrayField({
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">#{index + 1}</p>
                 <Button
-                  // insert と同じく conform intent button は type="submit" 必須
-                  type="submit"
+                  type="button"
                   variant="destructive-ghost"
                   size="sm"
-                  {...asConformButtonGetter<RemoveButtonGetter>(
-                    form.remove.getButtonProps,
-                  )({
-                    name: field.name,
-                    index,
-                  })}
+                  onClick={() => removeItem({ name: field.name, index })}
                   disabled={isPending || !canRemove}
                   aria-label={
                     !canRemove && min !== undefined

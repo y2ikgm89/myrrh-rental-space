@@ -193,12 +193,11 @@ describe("AutoSectionForm", () => {
   // 通常 textarea / text input で編集する canonical pattern に統合された
   // (Section.title / contentHtml / contentJson 列削除 migration 適用済)。
 
-  // conform の form.insert.getButtonProps は { name, value, form, formNoValidate }
-  // のみ返し type を含まない。native submit event の event.submitter から intent を
-  // 読むため、配列追加ボタンは type="submit" で描画されなければならない。
-  // admin Button の default type="button" のままだと form が submit されず追加が
-  // 無反応になる (regression guard)。
-  test("配列フィールドの追加ボタンは conform intent 用に type=submit で描画される", () => {
+  // 配列フィールドの「追加」ボタンは conform 制御関数 (form.insert) を onClick で
+  // 直接呼ぶ。button は type="button"（admin の SubmitButton 規約 = type="submit"
+  // 直書き禁止 に準拠）。クリックで item が実際に追加されることを検証する
+  // (regression guard: 追加ボタンが無反応だった silent bug)。
+  test("配列フィールドの追加ボタンは type=button で、クリックすると item が追加される", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     const localRoot = createRoot(container);
@@ -214,15 +213,26 @@ describe("AutoSectionForm", () => {
       );
     });
 
-    const addButton = Array.from(container.querySelectorAll("button")).find(
-      (button) =>
-        button.getAttribute("name") === "__intent__" &&
+    const findAddButton = () =>
+      Array.from(container?.querySelectorAll("button") ?? []).find((button) =>
         button.textContent?.includes("追加"),
-    );
+      );
 
+    const addButton = findAddButton();
     expect(addButton).toBeDefined();
-    expect(addButton?.getAttribute("type")).toBe("submit");
-    // intent value (insert) が conform から付与されていること
-    expect(addButton?.getAttribute("value")).toContain("insert");
+    // admin SubmitButton 規約: type="submit" 直書き禁止
+    expect(addButton?.getAttribute("type")).toBe("button");
+
+    // 初期は item ゼロ（空プレースホルダー表示）
+    expect(container.textContent).toContain("アイテムが追加されていません");
+
+    // クリック → conform form.insert → requestSubmit → intent 処理 → item 追加
+    act(() => {
+      addButton?.click();
+    });
+
+    // item が 1 件追加され、空プレースホルダーが消える
+    expect(container.textContent).not.toContain("アイテムが追加されていません");
+    expect(container.textContent).toContain("#1");
   });
 });

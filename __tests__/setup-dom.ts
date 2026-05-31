@@ -43,6 +43,9 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "window", window);
   defineGlobal(globalThis, "document", window.document);
   defineGlobal(globalThis, "navigator", window.navigator);
+  // conform の getFormAction が bare `location` を参照するため global へ載せる
+  // (form.insert/remove の submit 経路で必要)。
+  defineGlobal(globalThis, "location", window.location);
 
   if ("global" in globalThis) {
     const nodeGlobal = globalThis["global"];

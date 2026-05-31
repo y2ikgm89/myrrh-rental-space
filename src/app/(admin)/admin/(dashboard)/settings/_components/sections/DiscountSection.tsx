@@ -175,19 +175,20 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">割引ルール</p>
                 <Button
-                  // conform intent button は native submit event の event.submitter
-                  // から intent を読むため type="submit" 必須 (default の "button" だと
-                  // form が submit されず「ルールを追加」が無反応になる)。
-                  type="submit"
+                  // conform 制御関数を直接呼ぶ（内部 requestSubmit で intent 処理）。
+                  // button は type="button" のまま（admin SubmitButton 規約を侵さない）。
+                  type="button"
                   variant="outline"
                   size="sm"
-                  {...form.insert.getButtonProps({
-                    name: fields.durationDiscountRules.name,
-                    defaultValue: {
-                      hours: String(maxHours + 2),
-                      discountRate: "5",
-                    },
-                  })}
+                  onClick={() =>
+                    form.insert({
+                      name: fields.durationDiscountRules.name,
+                      defaultValue: {
+                        hours: String(maxHours + 2),
+                        discountRate: "5",
+                      },
+                    })
+                  }
                   disabled={isPending}
                 >
                   <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
@@ -250,14 +251,16 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                         </div>
                       </div>
                       <Button
-                        // insert と同じく conform intent button は type="submit" 必須
-                        type="submit"
+                        // insert と同じく conform 制御関数を直接呼ぶ（type="button"）
+                        type="button"
                         variant="destructive-ghost"
                         size="sm"
-                        {...form.remove.getButtonProps({
-                          name: fields.durationDiscountRules.name,
-                          index,
-                        })}
+                        onClick={() =>
+                          form.remove({
+                            name: fields.durationDiscountRules.name,
+                            index,
+                          })
+                        }
                         disabled={isPending || ruleFields.length <= 1}
                         aria-label={`ルール ${index + 1} を削除`}
                       >
