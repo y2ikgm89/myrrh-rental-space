@@ -35,7 +35,7 @@ import {
   type LinkCardContentType,
   LINK_CARD_TYPE_LABELS,
   isLinkCardContentType,
-} from "../config/link-card-types";
+} from "@/shared/domain/link-cards/content-types";
 
 // =============================================================================
 // State

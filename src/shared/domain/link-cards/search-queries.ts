@@ -4,7 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { EventStatus, PostStatus } from "@generated/prisma/enums";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { parseStringArray } from "@/shared/lib/json-validators";
-import type { LinkCardContentType } from "@/admin/components/editor/lexical/config/link-card-types";
+import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
 
 /**
  * 内部リンクカードの候補検索結果（管理画面ピッカー用、軽量）。
