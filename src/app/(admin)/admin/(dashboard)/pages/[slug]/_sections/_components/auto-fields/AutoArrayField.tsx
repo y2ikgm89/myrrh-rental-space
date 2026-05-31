@@ -119,7 +119,11 @@ export function AutoArrayField({
           ) : null}
         </div>
         <Button
-          type="button"
+          // conform の insert/remove intent button は native submit event の
+          // event.submitter から intent を読むため type="submit" 必須。
+          // admin Button の default type="button" だと form が submit されず
+          // intent が conform に届かない (追加/削除が無反応になる silent bug)。
+          type="submit"
           variant="outline"
           size="sm"
           {...asConformButtonGetter<InsertButtonGetter>(
@@ -155,7 +159,8 @@ export function AutoArrayField({
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">#{index + 1}</p>
                 <Button
-                  type="button"
+                  // insert と同じく conform intent button は type="submit" 必須
+                  type="submit"
                   variant="destructive-ghost"
                   size="sm"
                   {...asConformButtonGetter<RemoveButtonGetter>(

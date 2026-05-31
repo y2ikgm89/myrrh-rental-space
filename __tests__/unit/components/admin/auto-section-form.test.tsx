@@ -155,6 +155,23 @@ mock.module("@/admin/hooks/use-media-upload", () => ({
 
 const { AutoSectionForm } =
   await import("@/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form");
+const { featuresConfigSchema } =
+  await import("@/shared/lib/sections/definitions/features/schema");
+import type { PageSectionData } from "@/app/(admin)/admin/(dashboard)/_shared/actions/page-section-types";
+
+function buildFeaturesSection(): PageSectionData {
+  return {
+    id: "section-test-id",
+    pageId: "page-test-id",
+    type: "features",
+    // items 配列は空 (default []) — AutoArrayField が「追加」ボタンのみ描画
+    config: featuresConfigSchema.parse({}),
+    order: 0,
+    isActive: true,
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+  };
+}
 
 describe("AutoSectionForm", () => {
   let root: Root | undefined;
@@ -175,4 +192,37 @@ describe("AutoSectionForm", () => {
   // CUSTOM section の title + body は config field として AutoSectionForm の
   // 通常 textarea / text input で編集する canonical pattern に統合された
   // (Section.title / contentHtml / contentJson 列削除 migration 適用済)。
+
+  // conform の form.insert.getButtonProps は { name, value, form, formNoValidate }
+  // のみ返し type を含まない。native submit event の event.submitter から intent を
+  // 読むため、配列追加ボタンは type="submit" で描画されなければならない。
+  // admin Button の default type="button" のままだと form が submit されず追加が
+  // 無反応になる (regression guard)。
+  test("配列フィールドの追加ボタンは conform intent 用に type=submit で描画される", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const localRoot = createRoot(container);
+    root = localRoot;
+
+    act(() => {
+      localRoot.render(
+        <AutoSectionForm
+          section={buildFeaturesSection()}
+          onSave={() => undefined}
+          isPending={false}
+        />,
+      );
+    });
+
+    const addButton = Array.from(container.querySelectorAll("button")).find(
+      (button) =>
+        button.getAttribute("name") === "__intent__" &&
+        button.textContent?.includes("追加"),
+    );
+
+    expect(addButton).toBeDefined();
+    expect(addButton?.getAttribute("type")).toBe("submit");
+    // intent value (insert) が conform から付与されていること
+    expect(addButton?.getAttribute("value")).toContain("insert");
+  });
 });

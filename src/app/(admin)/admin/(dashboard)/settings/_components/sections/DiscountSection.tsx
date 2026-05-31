@@ -175,7 +175,10 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">割引ルール</p>
                 <Button
-                  type="button"
+                  // conform intent button は native submit event の event.submitter
+                  // から intent を読むため type="submit" 必須 (default の "button" だと
+                  // form が submit されず「ルールを追加」が無反応になる)。
+                  type="submit"
                   variant="outline"
                   size="sm"
                   {...form.insert.getButtonProps({
@@ -247,7 +250,8 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                         </div>
                       </div>
                       <Button
-                        type="button"
+                        // insert と同じく conform intent button は type="submit" 必須
+                        type="submit"
                         variant="destructive-ghost"
                         size="sm"
                         {...form.remove.getButtonProps({
