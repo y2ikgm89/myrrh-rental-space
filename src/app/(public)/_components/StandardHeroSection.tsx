@@ -31,7 +31,6 @@ import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { cn } from "@/shared/lib/cn";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
-import { VideoPlayer } from "@/public/components/design-system/video-player";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   DURATION,
@@ -46,6 +45,7 @@ import { spansToPlainText } from "@/shared/lib/portable-text";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
+import { HeroBackgroundSlideshow } from "@/public/components/page-hero/hero-background-slideshow";
 import {
   getTitleStyle,
   getTextStyle,
@@ -121,9 +121,13 @@ export function StandardHeroSection({
   const imageRef = useRef<HTMLDivElement>(null);
 
   const variant = config.variant;
-  const mediaUrl = config.backgroundMedia.url;
-  const hasMedia = mediaUrl.length > 0;
-  const mediaType = hasMedia ? detectMediaSourceType(mediaUrl) : "image";
+  const mediaItems = config.backgroundMedia;
+  const hasMedia = mediaItems.length > 0;
+  const firstItem = mediaItems[0];
+  const isSingleImage =
+    mediaItems.length === 1 &&
+    firstItem !== undefined &&
+    detectMediaSourceType(firstItem.url) === "image";
 
   // minimal layout: explicit minimal OR default without background
   const useMinimalLayout =
@@ -155,7 +159,7 @@ export function StandardHeroSection({
         const image = imageRef.current;
         const section = sectionRef.current;
         if (!image || !section) return;
-        if (variant !== "parallax" || mediaType !== "image") return;
+        if (variant !== "parallax" || !isSingleImage) return;
 
         const displacement = config.parallaxSpeed * 200;
         gsap.set(image, { scale: 1.15 });
@@ -314,18 +318,13 @@ export function StandardHeroSection({
           {hasMedia && (
             <div className="relative flex-1">
               <div className="relative aspect-[4/5] w-full overflow-hidden">
-                {mediaType === "video" ? (
-                  <VideoPlayer url={mediaUrl} variant="background" />
-                ) : (
-                  <Image
-                    src={mediaUrl}
-                    alt={config.backgroundMedia.alt}
-                    fill
-                    sizes="50vw"
-                    className="object-cover"
-                    priority
-                  />
-                )}
+                <HeroBackgroundSlideshow
+                  items={mediaItems}
+                  transition={config.transition}
+                  autoPlayInterval={config.autoPlayInterval}
+                  sizes="50vw"
+                  priority
+                />
               </div>
             </div>
           )}
@@ -347,18 +346,14 @@ export function StandardHeroSection({
       )}
       style={customHeightStyle}
     >
-      {/* Background media: video or image (runtime discriminated) */}
+      {/* Background media: 単一画像 + parallax は scrub、それ以外はスライドショー */}
       {hasMedia &&
-        (mediaType === "video" ? (
-          <div className="absolute inset-0">
-            <VideoPlayer url={mediaUrl} variant="background" />
-          </div>
-        ) : (
+        (variant === "parallax" && isSingleImage && firstItem ? (
           <div className="absolute inset-0">
             <div ref={imageRef} className="relative h-full w-full">
               <Image
-                src={mediaUrl}
-                alt={config.backgroundMedia.alt}
+                src={firstItem.url}
+                alt={firstItem.alt}
                 fill
                 sizes="100vw"
                 className="object-cover"
@@ -366,6 +361,14 @@ export function StandardHeroSection({
               />
             </div>
           </div>
+        ) : (
+          <HeroBackgroundSlideshow
+            items={mediaItems}
+            transition={config.transition}
+            autoPlayInterval={config.autoPlayInterval}
+            sizes="100vw"
+            priority
+          />
         ))}
 
       {/* Overlay */}
