@@ -590,15 +590,16 @@ describe("testimonialConfigSchema", () => {
 // =============================================================================
 
 describe("galleryConfigSchema", () => {
-  test("有効なデータでバリデーション成功", () => {
+  test("有効なデータ（画像・動画混在）でバリデーション成功", () => {
     const data = {
-      images: [
+      media: [
         {
           url: "https://example.com/1.jpg",
           alt: "画像1",
           caption: "キャプション1",
         },
-        { url: "https://example.com/2.jpg" },
+        { url: "https://example.com/clip.mp4", alt: "動画1" },
+        { url: "https://www.youtube.com/watch?v=abc123" },
       ],
       gridLayout: "masonry",
       columns: 4,
@@ -608,9 +609,30 @@ describe("galleryConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  // canonical schema (`definitions/gallery/schema.ts`) の images[].url は
-  // `field.image()` で format 検証しない（任意 URL / R2 path を許可するため）。
-  // 不正 URL の判定は UI 層の MediaPicker と公開ページの next/image エラー boundary が担う。
+  test("空 config でも default 値で safeParse 成功する", () => {
+    const result = galleryConfigSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.media).toEqual([]);
+      expect(result.data.gridLayout).toBe("grid");
+      expect(result.data.columns).toBe(3);
+    }
+  });
+
+  test("同一 URL の重複でエラー", () => {
+    const data = {
+      media: [
+        { url: "https://example.com/dup.jpg" },
+        { url: "https://example.com/dup.jpg" },
+      ],
+    };
+    const result = galleryConfigSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  // canonical schema (`definitions/gallery/schema.ts`) の media[].url は
+  // `field.media()` で format 検証しない（任意 URL / R2 path を許可するため）。
+  // 不正 URL の判定は UI 層の MediaPicker と公開ページの next/image / VideoPlayer が担う。
 
   test("columns範囲外でエラー", () => {
     const data = { columns: 7 };
