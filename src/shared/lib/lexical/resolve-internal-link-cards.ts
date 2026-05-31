@@ -9,7 +9,7 @@ import {
 import {
   isLinkCardContentType,
   type LinkCardContentType,
-} from "@/admin/components/editor/lexical/config/link-card-types";
+} from "@/shared/domain/link-cards/content-types";
 import {
   resolveLinkCardsByType,
   type ResolvedLinkCard,

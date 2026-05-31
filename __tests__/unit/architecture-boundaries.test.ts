@@ -629,6 +629,18 @@ describe("architecture boundaries", () => {
     expect(source).not.toContain("consumeAdminLoginToken");
   });
 
+  test("src/shared/ は @/admin・@/public を import しない（依存方向の保護）", () => {
+    // shared は admin / public の双方から参照される下層。逆 import は
+    // 依存方向の逆転（特に値 import は実行時依存）になり shared の再利用性を
+    // 壊す。複数モデル横断の論理種別等の共有 SSoT は shared/domain 側に置く。
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(join(SRC_ROOT, "shared")),
+      /from\s+["']@\/(?:admin|public)(?:\/|["'])/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("next.config.ts は stable typedRoutes を有効にする", () => {
     const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
 

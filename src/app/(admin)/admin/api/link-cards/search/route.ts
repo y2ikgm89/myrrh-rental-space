@@ -2,7 +2,7 @@ import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { LINK_CARD_CONTENT_TYPES } from "@/admin/components/editor/lexical/config/link-card-types";
+import { LINK_CARD_CONTENT_TYPES } from "@/shared/domain/link-cards/content-types";
 import { searchLinkCardCandidates } from "@/shared/domain/link-cards/search-queries";
 import {
   logError,

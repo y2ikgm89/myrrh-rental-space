@@ -5,7 +5,7 @@ import { EventStatus, PostStatus } from "@generated/prisma/enums";
 import { parseStringArray } from "@/shared/lib/json-validators";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
-import type { LinkCardContentType } from "@/admin/components/editor/lexical/config/link-card-types";
+import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
 
 /**
  * 公開描画時に解決された内部リンクカードの表示データ。
