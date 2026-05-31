@@ -175,7 +175,14 @@ function buildTemplate(def: PageTemplateDef): PageTemplate {
 }
 
 export const PAGE_TEMPLATES: Record<string, PageTemplate> = Object.fromEntries(
-  keysOf(TEMPLATE_DEFS).map((id) => [id, buildTemplate(TEMPLATE_DEFS[id])]),
+  // 戻り値をタプル `[string, PageTemplate]` に明示注釈する。注釈が無いと map callback は
+  // `(string | PageTemplate)[]`（配列）を返し、Object.fromEntries が `any` 返却オーバーロード
+  // にマッチして構築全体が `any` 経由になる（型注釈で受けても各値が PageTemplate である検証が
+  // 効かない silent な型安全ギャップ）。タプル注釈で generic オーバーロードにマッチさせる。
+  keysOf(TEMPLATE_DEFS).map((id): [string, PageTemplate] => [
+    id,
+    buildTemplate(TEMPLATE_DEFS[id]),
+  ]),
 );
 
 /** universal セクション一覧（テスト / introspection 用に公開）。 */
