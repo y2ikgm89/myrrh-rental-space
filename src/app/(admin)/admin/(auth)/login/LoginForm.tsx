@@ -190,21 +190,19 @@ export function LoginForm(): ReactElement {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center">
+        <label
+          htmlFor="remember-me"
+          className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors duration-200"
+        >
           <input
             id="remember-me"
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 rounded border-input text-primary focus:ring-primary/50 cursor-pointer transition-colors duration-200"
+            className="h-4 w-4 rounded border-input text-primary focus-visible:ring-primary/50 cursor-pointer transition-colors duration-200"
           />
-          <label
-            htmlFor="remember-me"
-            className="ml-2 block text-sm text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors duration-200"
-          >
-            メールアドレスを保存する
-          </label>
-        </div>
+          メールアドレスを保存する
+        </label>
 
         <Link
           href="/admin/forgot-password"
