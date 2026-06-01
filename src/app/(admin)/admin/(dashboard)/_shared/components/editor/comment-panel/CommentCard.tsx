@@ -96,7 +96,7 @@ export function CommentCard({
   return (
     <div
       className={cn(
-        "rounded-lg border transition-colors",
+        "group rounded-lg border transition-colors",
         isActive
           ? "border-primary bg-primary/5 ring-2 ring-ring/40"
           : "border-border bg-card",
@@ -197,6 +197,9 @@ export function CommentCard({
             onClick={() => onDelete(thread.id)}
             aria-label="削除"
             title="削除"
+            // 削除は副次操作: hover / focus 時のみ表示してクラッタを減らす（解決✓は常時表示）。
+            // opacity 制御のため DOM 上は常に存在 = キーボードで Tab 到達可能（a11y 担保）。
+            className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
           >
             <IconTrash className="h-4 w-4" />
           </Button>
