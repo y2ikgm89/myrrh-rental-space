@@ -50,7 +50,6 @@ export default async function EditTermsPage({ params }: PageProps) {
           requiredAtReservation: terms.requiredAtReservation,
           requiredAtInquiry: terms.requiredAtInquiry,
           showInFooter: terms.showInFooter,
-          footerOrder: terms.footerOrder,
         }}
       />
     </AdminDetailLayout>

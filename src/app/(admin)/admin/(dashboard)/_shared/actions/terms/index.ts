@@ -2,13 +2,16 @@
 
 import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
+import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   createTermsCommand,
   hardDeleteTermsCommand,
+  reorderTermsCommand,
   restoreTermsCommand,
   softDeleteTermsCommand,
   updateTermsCommand,
@@ -16,6 +19,12 @@ import {
 } from "@/shared/domain/terms/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { termsFormSchema } from "../../../terms/_components/terms-form-schema";
+
+const orderedIdsSchema = z
+  .array(z.string().uuid({ error: "IDが不正です" }))
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 function invalidateTermsCaches(slug?: string, previousSlug?: string) {
   updateTag(CACHE_TAGS.TERMS);
@@ -65,6 +74,24 @@ export async function updateTermsPublished(
     execute: async () => updateTermsPublishedCommand(id, isPublished),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
+    },
+  });
+}
+
+export async function reorderTerms(
+  orderedIds: string[],
+): Promise<MutationResult<{ updated: number }>> {
+  const parsed = orderedIdsSchema.safeParse(orderedIds);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "terms",
+    action: "update",
+    execute: async () => reorderTermsCommand(parsed.data),
+    afterSuccess: () => {
+      invalidateTermsCaches();
     },
   });
 }

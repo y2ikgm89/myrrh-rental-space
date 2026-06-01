@@ -34,6 +34,16 @@ const mockDelete = mock<() => Promise<{ id: string }>>(() =>
 const mockAgreementCreateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
+const mockAggregate = mock<
+  () => Promise<{ _max: { footerOrder: number | null } }>
+>(() => Promise.resolve({ _max: { footerOrder: null } }));
+
+type TxClient = {
+  termsDocument: { update: typeof mockUpdate };
+};
+const mockTransaction = mock<
+  (cb: (tx: TxClient) => Promise<unknown>) => Promise<unknown>
+>((cb) => cb({ termsDocument: { update: mockUpdate } }));
 
 mock.module("server-only", () => ({}));
 
@@ -46,16 +56,19 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockCreate,
       update: mockUpdate,
       delete: mockDelete,
+      aggregate: mockAggregate,
     },
     termsAgreement: {
       createMany: mockAgreementCreateMany,
     },
+    $transaction: mockTransaction,
   },
 }));
 
 const {
   createTermsCommand,
   updateTermsCommand,
+  reorderTermsCommand,
   softDeleteTermsCommand,
   restoreTermsCommand,
   recordTermsAgreementsCommand,
@@ -72,7 +85,6 @@ const VALID_INPUT = {
   requiredAtInquiry: false,
   requiredAtSignup: true,
   showInFooter: true,
-  footerOrder: 0,
 };
 
 describe("createTermsCommand", () => {
@@ -81,6 +93,20 @@ describe("createTermsCommand", () => {
     mockFindFirst.mockResolvedValue(null);
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({ id: "id-1", slug: "privacy-policy" });
+    mockAggregate.mockReset();
+    mockAggregate.mockResolvedValue({ _max: { footerOrder: null } });
+  });
+
+  test("footerOrder は末尾に自動採番される（maxOrder + 1）", async () => {
+    mockAggregate.mockResolvedValue({ _max: { footerOrder: 6 } });
+
+    await createTermsCommand(VALID_INPUT);
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ footerOrder: 7 }),
+      }),
+    );
   });
 
   test("公開時は publishedAt が Date インスタンスで設定される", async () => {
@@ -166,6 +192,59 @@ describe("updateTermsCommand", () => {
     const result = await updateTermsCommand("id-1", VALID_INPUT);
 
     expect(result.previousSlug).toBe("old-slug");
+  });
+
+  test("footerOrder は更新しない（位置は reorder のみ）", async () => {
+    mockFindFirst.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy-policy",
+      isPublished: false,
+      publishedAt: null,
+    });
+
+    await updateTermsCommand("id-1", VALID_INPUT);
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({
+          footerOrder: expect.anything(),
+        }),
+      }),
+    );
+  });
+});
+
+describe("reorderTermsCommand", () => {
+  beforeEach(() => {
+    mockUpdate.mockReset();
+    mockUpdate.mockResolvedValue({ id: "id-1", slug: "privacy-policy" });
+  });
+
+  test("orderedIds の順に footerOrder を 0 始まりで再採番する", async () => {
+    await reorderTermsCommand(["id-a", "id-b", "id-c"]);
+
+    expect(mockUpdate).toHaveBeenCalledTimes(3);
+    expect(mockUpdate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { id: "id-a", deletedAt: null },
+        data: { footerOrder: 0 },
+      }),
+    );
+    expect(mockUpdate).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        where: { id: "id-c", deletedAt: null },
+        data: { footerOrder: 2 },
+      }),
+    );
+  });
+
+  test("空配列の場合 update を呼ばない", async () => {
+    const result = await reorderTermsCommand([]);
+
+    expect(result).toEqual({ updated: 0 });
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 
