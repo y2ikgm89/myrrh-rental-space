@@ -74,7 +74,6 @@ function toLocationData(data: LocationFormData) {
     paymentAccepted: data.paymentAccepted || null,
     phoneNumber: data.phoneNumber || null,
     email: data.email || null,
-    sortOrder: data.sortOrder,
     isPublished: data.isPublished,
   };
 }
@@ -116,8 +115,16 @@ export async function createLocation(
     );
   }
 
+  const maxOrder = await prisma.location.aggregate({
+    _max: { sortOrder: true },
+  });
+
   const location = await prisma.location.create({
-    data: toLocationData(data),
+    data: {
+      ...toLocationData(data),
+      // sortOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+      sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
+    },
   });
 
   return { id: location.id, slug: location.slug };

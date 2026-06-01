@@ -336,7 +336,6 @@ export function LocationForm({
           parkingInfo: location.parkingInfo ?? "",
           imageUrls: location.imageUrls.map((url) => ({ url })),
           googleReviewUrl: location.googleReviewUrl ?? "",
-          sortOrder: String(location.sortOrder ?? 0),
         }
       : {
           slug: "",
@@ -347,7 +346,6 @@ export function LocationForm({
           parkingInfo: "",
           imageUrls: [],
           googleReviewUrl: "",
-          sortOrder: "0",
         },
   });
 
@@ -749,23 +747,6 @@ export function LocationForm({
                 {fields.parkingInfo.errors && (
                   <p className="text-sm text-destructive">
                     {fields.parkingInfo.errors.join(", ")}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={fields.sortOrder.id}>並び順</Label>
-                <Input
-                  {...getInputProps(fields.sortOrder, { type: "number" })}
-                  placeholder="0"
-                  disabled={isPending}
-                />
-                <p className="text-xs text-muted-foreground">
-                  数値が小さいほど先頭に表示されます
-                </p>
-                {fields.sortOrder.errors && (
-                  <p className="text-sm text-destructive">
-                    {fields.sortOrder.errors.join(", ")}
                   </p>
                 )}
               </div>

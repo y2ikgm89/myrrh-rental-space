@@ -38,7 +38,6 @@ describe("locationFormSchema", () => {
         saturday: { isOpen: false, slots: [] },
         sunday: { isOpen: false, slots: [] },
       },
-      sortOrder: 1,
       isPublished: true,
     };
 
@@ -53,7 +52,6 @@ describe("locationFormSchema", () => {
       address: "東京都渋谷区1-2-3",
       imageUrl: "https://example.com/image.jpg",
       imageUrls: [],
-      sortOrder: 0,
       isPublished: false,
     };
 
@@ -401,7 +399,7 @@ describe("locationFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  test("sortOrder がデフォルトで0になる", () => {
+  test("sortOrder は schema に含まれない（システム管理）", () => {
     const data = {
       name: "施設名",
       slug: "test-location",
@@ -412,21 +410,8 @@ describe("locationFormSchema", () => {
     const result = locationFormSchema.safeParse(data);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.sortOrder).toBe(0);
+      expect("sortOrder" in result.data).toBe(false);
     }
-  });
-
-  test("sortOrder が負の数の場合エラーになる", () => {
-    const data = {
-      name: "施設名",
-      slug: "test-location",
-      address: "東京都渋谷区1-2-3",
-      imageUrl: "https://example.com/image.jpg",
-      sortOrder: -1,
-    };
-
-    const result = locationFormSchema.safeParse(data);
-    expect(result.success).toBe(false);
   });
 
   test("isPublished がデフォルトで false になる", () => {

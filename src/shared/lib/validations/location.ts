@@ -222,17 +222,7 @@ export const locationFormBaseSchema = z.object({
     .email({ error: "有効なメールアドレスを入力してください" })
     .nullable()
     .optional(),
-  sortOrder: z
-    .preprocess(
-      (value) =>
-        value === "" || value === null || value === undefined
-          ? 0
-          : typeof value === "number"
-            ? value
-            : Number(value),
-      z.number().int().min(0, { error: "並び順は0以上で入力してください" }),
-    )
-    .default(0),
+  // sortOrder はシステム管理（D&D 並び替えが SSoT、手動入力なし）
   isPublished: z
     .preprocess((value) => value === "on" || value === true, z.boolean())
     .default(false),
@@ -294,7 +284,6 @@ export const defaultLocationFormValues: LocationFormInput = {
   paymentAccepted: "",
   phoneNumber: "",
   email: "",
-  sortOrder: 0,
   isPublished: false,
   isActive: true,
 };
