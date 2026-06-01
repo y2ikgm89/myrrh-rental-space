@@ -55,6 +55,11 @@ export const REMOVE_COMMENT_COMMAND: LexicalCommand<string> = createCommand(
 export const CLICK_MARK_COMMAND: LexicalCommand<string> =
   createCommand("CLICK_MARK_COMMAND");
 
+/** コメントカード → 本文: 該当マークへスクロール + フラッシュ（双方向同期）。 */
+export const SCROLL_TO_MARK_COMMAND: LexicalCommand<string> = createCommand(
+  "SCROLL_TO_MARK_COMMAND",
+);
+
 // =============================================================================
 // Utility Functions
 // =============================================================================
@@ -204,6 +209,48 @@ export function CommentPlugin({ onMarkClick }: CommentPluginProps) {
         CLICK_MARK_COMMAND,
         (markId) => {
           handleMarkClick(markId);
+          return true;
+        },
+        COMMAND_PRIORITY_LOW,
+      ),
+      // カード → 本文: 該当マークへスクロール + フラッシュ（選択は変更しない）
+      editor.registerCommand(
+        SCROLL_TO_MARK_COMMAND,
+        (markId) => {
+          let firstKey: string | null = null;
+          editor.read(() => {
+            const nodes = $getMarkNodesInDocument().get(markId);
+            const first = nodes?.[0];
+            if (first) firstKey = first.getKey();
+          });
+          const key = firstKey;
+          if (key) {
+            requestAnimationFrame(() => {
+              const el = editor.getElementByKey(key);
+              if (!el) return;
+              el.scrollIntoView({ block: "center", behavior: "smooth" });
+              // Web Animations API で一回限りのフラッシュ（listener / timeout 不要・自動解除）。
+              // 色は semantic token（--color-primary）を color-mix で参照。
+              el.animate(
+                [
+                  {
+                    boxShadow:
+                      "0 0 0 0 color-mix(in oklch, var(--color-primary) 55%, transparent)",
+                  },
+                  {
+                    boxShadow:
+                      "0 0 0 3px color-mix(in oklch, var(--color-primary) 45%, transparent)",
+                    offset: 0.3,
+                  },
+                  {
+                    boxShadow:
+                      "0 0 0 0 color-mix(in oklch, var(--color-primary) 0%, transparent)",
+                  },
+                ],
+                { duration: 1200, easing: "ease-out" },
+              );
+            });
+          }
           return true;
         },
         COMMAND_PRIORITY_LOW,

@@ -18,7 +18,9 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { IconMessage, IconX } from "@tabler/icons-react";
+import { SCROLL_TO_MARK_COMMAND } from "@/admin/components/editor/lexical/plugins";
 import { Button } from "@/admin/components/ui/button";
 import { Skeleton } from "@/admin/components/ui/skeleton";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
@@ -111,6 +113,7 @@ export function CommentPanel({
   >({});
   const [isLoading, setIsLoading] = useState(true);
 
+  const [editor] = useLexicalComposerContext();
   const cardElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const threads =
@@ -203,8 +206,14 @@ export function CommentPanel({
   }, [activeMarkId]);
 
   const handleToggle = (threadId: string) => {
+    const willExpand = !expandedIds.has(threadId);
     setExpandedIds((prev) => toggleExpanded(prev, threadId));
-    // detail 取得は CommentCard が展開時に onNeedDetail で要求する
+    // detail 取得は CommentCard が展開時に onNeedDetail で要求する。
+    // 展開時はカード → 本文の双方向同期（該当マークへスクロール + フラッシュ）。
+    if (willExpand) {
+      const markId = allThreads.find((t) => t.id === threadId)?.markId;
+      if (markId) editor.dispatchCommand(SCROLL_TO_MARK_COMMAND, markId);
+    }
   };
 
   const collapseAndForget = (threadId: string) => {
