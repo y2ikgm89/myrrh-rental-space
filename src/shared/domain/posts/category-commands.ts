@@ -57,12 +57,17 @@ export async function createPostCategory(
 ): Promise<CreatePostCategoryResult> {
   await ensurePostCategoryUnique(input);
 
+  const maxOrder = await prisma.postCategory.aggregate({
+    _max: { order: true },
+  });
+
   const category = await prisma.postCategory.create({
     data: {
       name: input.name,
       slug: input.slug,
       description: normalizeNullableString(input.description),
-      order: input.order,
+      // order はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+      order: (maxOrder._max.order ?? 0) + 1,
       metaTitle: normalizeNullableString(input.metaTitle),
       metaDescription: normalizeNullableString(input.metaDescription),
       ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
@@ -86,7 +91,7 @@ export async function updatePostCategory(
       name: input.name,
       slug: input.slug,
       description: normalizeNullableString(input.description),
-      order: input.order,
+      // order は変更しない（位置は updatePostCategoryOrder のみが変更）
       metaTitle: normalizeNullableString(input.metaTitle),
       metaDescription: normalizeNullableString(input.metaDescription),
       ogpImageUrl: normalizeNullableString(input.ogpImageUrl),

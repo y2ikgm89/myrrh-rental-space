@@ -74,7 +74,6 @@ export function PostEditor({
       name,
       slug,
       description: null,
-      order: categories.length,
     });
 
     if (!isMutationError(result)) {

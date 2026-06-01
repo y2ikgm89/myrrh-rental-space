@@ -81,7 +81,7 @@ const postCategorySchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
   description: z.string().max(200).nullable().optional(),
-  order: z.number().int().min(0).default(0),
+  // order はシステム管理（D&D 並び替えが SSoT、手動入力なし）
 });
 
 // 有効なUUID
@@ -119,7 +119,6 @@ const VALID_CATEGORY_INPUT = {
   name: "テストカテゴリ",
   slug: "test-category",
   description: "テスト用のカテゴリです",
-  order: 1,
 };
 
 describe("Post Admin Action Integration", () => {
@@ -477,17 +476,6 @@ describe("Post Admin Action Integration", () => {
         });
         expect(result.success).toBe(true);
       });
-
-      test("orderはデフォルト0", () => {
-        const result = postCategorySchema.safeParse({
-          name: "カテゴリ",
-          slug: "category",
-        });
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.order).toBe(0);
-        }
-      });
     });
 
     describe("name", () => {
@@ -575,32 +563,6 @@ describe("Post Admin Action Integration", () => {
           description: null,
         });
         expect(result.success).toBe(true);
-      });
-    });
-
-    describe("order", () => {
-      test("0は許可（最小値）", () => {
-        const result = postCategorySchema.safeParse({
-          ...VALID_CATEGORY_INPUT,
-          order: 0,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("負の値はエラー", () => {
-        const result = postCategorySchema.safeParse({
-          ...VALID_CATEGORY_INPUT,
-          order: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = postCategorySchema.safeParse({
-          ...VALID_CATEGORY_INPUT,
-          order: 1.5,
-        });
-        expect(result.success).toBe(false);
       });
     });
   });

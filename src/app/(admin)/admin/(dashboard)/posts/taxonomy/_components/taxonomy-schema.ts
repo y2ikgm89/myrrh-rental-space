@@ -4,8 +4,9 @@ import { z } from "zod";
 // Base Schema
 //
 // conform `parseWithZod` 経由で FormData 文字列を受けるため、
-// `order` は `z.coerce.number()`、optional 文字列は空文字を許容する設計。
+// optional 文字列は空文字を許容する設計。
 // 空 → null 変換は Server Action の executor で行う（schema は文字列を通すだけ）。
+// `order` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
 // =============================================================================
 
 const baseTaxonomySchema = z.object({
@@ -35,11 +36,6 @@ export const categoryFormSchema = baseTaxonomySchema.extend({
     .min(1, { error: "スラッグは必須です" })
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
-  order: z.coerce
-    .number({ error: "表示順は数値です" })
-    .int()
-    .min(0, { error: "表示順は0以上です" })
-    .default(0),
 });
 
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;

@@ -200,7 +200,7 @@ export const postCategorySchema = z.object({
     .max(50)
     .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
   description: z.string().max(500).nullable().optional(),
-  order: z.number().int().min(0).default(0),
+  // order はシステム管理（D&D 並び替えが SSoT、手動入力なし）
   metaTitle: z.string().max(70).nullable().optional(),
   metaDescription: z.string().max(160).nullable().optional(),
   ogpImageUrl: z
