@@ -20,6 +20,7 @@ import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { SidebarGroup } from "@/admin/types/admin-layout";
+import { isSidebarItemActive } from "./sidebar-active";
 
 const styles = tv({
   slots: {
@@ -77,34 +78,6 @@ const styles = tv({
   },
 });
 
-function isSidebarItemActive(
-  itemHref: string,
-  pathname: string,
-  currentParams: URLSearchParams,
-): boolean {
-  const [itemPath, itemQuery = ""] = itemHref.split("?");
-  if (itemPath === undefined) return false;
-
-  const pathMatches =
-    pathname === itemPath ||
-    (itemPath !== "/admin" && pathname.startsWith(`${itemPath}/`));
-
-  if (!pathMatches) return false;
-
-  if (!itemQuery) {
-    // Bare path: active only if the URL has no `tab` param
-    // (prevents "スペース管理" highlighting when viewing the reviews tab)
-    return !currentParams.has("tab");
-  }
-
-  // Query-bearing item: every key in item's query must match current URL
-  const itemQueryParams = new URLSearchParams(itemQuery);
-  for (const [key, value] of itemQueryParams.entries()) {
-    if (currentParams.get(key) !== value) return false;
-  }
-  return true;
-}
-
 type ResponsiveSidebarProps = {
   groups: SidebarGroup[];
   userInfo: ReactNode;
@@ -118,6 +91,11 @@ export function ResponsiveSidebar({
     useAdminLayout();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // 同じパスを共有する query-bearing 兄弟項目（例: /admin/spaces?tab=reviews）の判定用。
+  // bare path 項目は、この一覧のいずれかが現在 URL に一致するときだけハイライトを譲る。
+  const queryBearingHrefs = groups.flatMap((group) =>
+    group.items.map((item) => item.href).filter((href) => href.includes("?")),
+  );
   // Hydration対策: マウント前はSSR時と同じ値を使用
   // SSR時: sidebarState='expanded', isMobile=false → isOpen=true
   const isOpen = hasMounted ? sidebarState === "expanded" : true;
@@ -205,6 +183,7 @@ export function ResponsiveSidebar({
                       item.href,
                       pathname,
                       searchParams,
+                      queryBearingHrefs,
                     );
                     return (
                       <li key={item.href}>
