@@ -4,7 +4,7 @@ paths:
   - src/app/(public)/spaces/[slug]/page.tsx
   - src/app/(public)/posts/[slug]/page.tsx
   - src/app/(public)/news/[slug]/page.tsx
-  - src/app/(public*)/_shared/components/seo/JsonLd.tsx
+  - src/app/(public*)/_shared/components/seo/json-ld.tsx
 ---
 
 # スペース・記事詳細ページの構造化データ

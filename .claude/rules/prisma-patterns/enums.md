@@ -1,9 +1,7 @@
 ---
 description: Prisma 7 mapped enum の使い方・型ガード SSoT・SelectItem 値・拡張時チェックリスト
 paths:
-  - src/shared/lib/validations/enums.ts
   - src/shared/lib/validations/enums/**
-  - src/shared/generated/prisma/**
   - src/**/actions/**/*.ts
   - src/**/queries/**/*.ts
   - src/shared/domain/**/*.ts

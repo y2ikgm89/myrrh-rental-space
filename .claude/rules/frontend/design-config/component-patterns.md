@@ -2,10 +2,10 @@
 description: 公開ページ component 固有パターン（ヘッダー Grid 3-col / カレンダーヘッダー / Disclosure chevron / Editorial underline reveal / Loading button anti-shift）+ Editorial デザイン Gotchas
 paths:
   - src/app/(public*)/_shared/components/layouts/site-header.tsx
-  - src/app/(public*)/events/_components/calendar-month-nav.tsx
-  - src/app/(public*)/events/_components/month-picker.tsx
+  - src/app/(public*)/_components/event-calendar/calendar-month-nav.tsx
+  - src/app/(public*)/_components/event-calendar/month-picker.tsx
   - src/app/(public*)/_shared/components/ui/logout-button.tsx
-  - src/app/(public*)/_shared/components/ui/button.tsx
+  - src/app/(public*)/_shared/components/design-system/button.tsx
 ---
 
 # Component 固有パターン + Editorial Gotchas

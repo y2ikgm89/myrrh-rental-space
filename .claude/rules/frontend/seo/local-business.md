@@ -6,7 +6,6 @@ paths:
   - src/app/(public*)/access/**
   - src/app/(public)/contact/_components/business-info.tsx
   - src/app/(public*)/_shared/components/layouts/site-footer.tsx
-  - src/shared/lib/settings/public.ts
   - src/shared/domain/settings/**
 ---
 
