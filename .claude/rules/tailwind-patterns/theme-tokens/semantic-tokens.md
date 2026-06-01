@@ -23,7 +23,7 @@ paths:
 | `text-gray-600`            | `text-muted-foreground`                                                 |
 | `bg-gray-100`              | `bg-muted`                                                              |
 | `bg-gray-50`               | `bg-muted/50`                                                           |
-| `bg-white`                 | `bg-card` または `bg-background`                                        |
+| `bg-white`                 | `bg-card`（白い面）/ `bg-background`（ページ地）→ 下記使い分け必読      |
 | `border-gray-200`          | `border-border`                                                         |
 | `hover:bg-gray-100`        | `hover:bg-accent`                                                       |
 | `ring-blue-500`            | `ring-ring`                                                             |
@@ -36,6 +36,20 @@ paths:
 | `text-blue-600`            | `text-primary`                                                          |
 | `shadow-[..rgb(0_0_0/..)]` | `shadow-xs` または `shadow-sm`                                          |
 | inset shadow（くぼみ効果） | `shadow-inner`（arbitrary `shadow-[inset_...]` + hardcoded color 禁止） |
+
+### `bg-card` vs `bg-background` の使い分け（admin）
+
+admin.css は `--color-card: oklch(1 0 0)`（**純白**）と `--color-background: oklch(0.98 0.005 250)`（わずかに青みがかった**オフホワイト**）を別値で持つ。**「白い面」に `bg-background` を使うのは誤用**（白いカード面の上で灰色っぽく沈む silent bug、2026-06-01 にタブ／outline ボタン／ToggleGroup で実発生・修正）。
+
+| 用途                                                                                                       | 正しいトークン  |
+| ---------------------------------------------------------------------------------------------------------- | --------------- |
+| **白い面・浮いた面**: card / 入力欄（Input / Select / Textarea）/ dialog content / popover                 | `bg-card`       |
+| **セグメントコントロールのアクティブ項目**: Tabs / NavTabs / ToggleGroup の `data-[state=active/on]`       | `bg-card`       |
+| **ページ地（canvas）**: layout / dashboard main / 認証ページ背景 / ページ地に同化する sticky header/footer | `bg-background` |
+
+- **セグメントコントロールのアクティブは必ず `bg-card`** — トラックが `bg-muted`（グレー）のため、`bg-background`（0.98）だと差が出ず「選択されていない」ように見える。純白 `bg-card` で浮き上がらせる（→ `frontend/admin-ui-patterns/tabs-headers-tokens.md` / `frontend/admin-ui/button-variants.md`）
+- **入力系コントロールは `bg-card`** — 共有 primitive（`Input` / `Select` / `Textarea`）は `bg-card` 採用済。raw `<input>` / `<select>` / `<textarea>` を直書きする場合も `bg-card` に揃える（primitive 利用が第一推奨）
+- **`bg-background` は「カードの背後に見えるページ地」専用** — raised な UI 要素には使わない
 
 ## 公開ページ（public.css） — Luxury White × Bronze テーマ
 

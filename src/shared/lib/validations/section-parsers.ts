@@ -15,7 +15,6 @@ import {
   containerWidthValues,
   gapSizeValues,
   contentPositionValues,
-  overlayStyleValues,
   heroParallaxHeightValues,
   featuresLayoutValues,
   faqInitialOpenValues,
@@ -48,7 +47,6 @@ import {
   type ContainerWidth,
   type GapSize,
   type ContentPosition,
-  type OverlayStyle,
   type HeroParallaxHeight,
   type FeaturesLayout,
   type FaqInitialOpen,
@@ -164,11 +162,6 @@ export const parseGapSize: (value: string) => GapSize = createParser(
 
 export const parseContentPosition: (value: string) => ContentPosition =
   createParser(contentPositionValues, "center");
-
-export const parseOverlayStyle: (value: string) => OverlayStyle = createParser(
-  overlayStyleValues,
-  "gradient",
-);
 
 export const parseHeroParallaxHeight: (value: string) => HeroParallaxHeight =
   createParser(heroParallaxHeightValues, "lg");

@@ -66,10 +66,10 @@ function TabsTrigger({
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         // 無効状態
         "disabled:pointer-events-none disabled:opacity-50",
-        // アクティブ状態
-        "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+        // アクティブ状態（純白 bg-card で muted トラックから浮き上がらせる）
+        "data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm",
         // ホバー
-        "hover:bg-background/50 data-[state=active]:hover:bg-background",
+        "hover:bg-background/50 data-[state=active]:hover:bg-card",
         className,
       )}
       {...props}

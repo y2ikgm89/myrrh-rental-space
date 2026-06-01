@@ -225,7 +225,9 @@ describe("pageHeroConfigSchema", () => {
     test("最小構成（media URL のみ - 画像）でパース成功", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
-        media: { url: "https://example.com/hero.jpg", alt: "alt" },
+        media: [
+          { url: "https://example.com/hero.jpg", alt: "alt", caption: "" },
+        ],
       });
       expect(result.success).toBe(true);
     });
@@ -233,7 +235,9 @@ describe("pageHeroConfigSchema", () => {
     test("動画 URL（R2 mp4）も受け付ける", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
-        media: { url: "https://example.com/hero.mp4", alt: "video" },
+        media: [
+          { url: "https://example.com/hero.mp4", alt: "video", caption: "" },
+        ],
       });
       expect(result.success).toBe(true);
     });
@@ -241,28 +245,31 @@ describe("pageHeroConfigSchema", () => {
     test("YouTube URL も受け付ける", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
-        media: {
-          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          alt: "yt",
-        },
+        media: [
+          {
+            url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            alt: "yt",
+            caption: "",
+          },
+        ],
       });
       expect(result.success).toBe(true);
     });
 
-    test("media を完全省略でもパース成功（prefault で default 適用）", () => {
+    test("media を完全省略でもパース成功（default [] 適用）", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
       });
       expect(result.success).toBe(true);
       if (result.success && result.data.variant === "media") {
-        expect(result.data.media).toMatchObject({ url: "", alt: "" });
+        expect(result.data.media).toEqual([]);
       }
     });
 
     test("posterImage は省略可能（prefault で default 補完）", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
-        media: { url: "https://example.com/hero.mp4", alt: "" },
+        media: [{ url: "https://example.com/hero.mp4", alt: "", caption: "" }],
       });
       expect(result.success).toBe(true);
       if (result.success && result.data.variant === "media") {
@@ -270,23 +277,23 @@ describe("pageHeroConfigSchema", () => {
       }
     });
 
-    test("overlay / overlayOpacity の default が適用される", () => {
+    test("scrimTone / scrimOpacity の default が適用される", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
-        media: { url: "https://example.com/hero.mp4", alt: "" },
+        media: [{ url: "https://example.com/hero.mp4", alt: "", caption: "" }],
       });
       expect(result.success).toBe(true);
       if (result.success && result.data.variant === "media") {
-        expect(result.data.overlay).toBe(true);
-        expect(result.data.overlayOpacity).toBe(40);
+        expect(result.data.scrimTone).toBe("dark");
+        expect(result.data.scrimOpacity).toBe(40);
       }
     });
 
-    test("overlayOpacity は 0-100 範囲内のみ許容", () => {
+    test("scrimOpacity は 0-100 範囲内のみ許容", () => {
       const result = pageHeroConfigSchema.safeParse({
         variant: "media",
-        media: { url: "https://example.com/hero.mp4", alt: "" },
-        overlayOpacity: 150,
+        media: [{ url: "https://example.com/hero.mp4", alt: "", caption: "" }],
+        scrimOpacity: 150,
       });
       expect(result.success).toBe(false);
     });
@@ -381,8 +388,9 @@ describe("zod-introspection / discriminated union 対応", () => {
     expect(keys).toContain("variant");
     expect(keys).toContain("media"); // media variant 固有
     expect(keys).toContain("posterImage");
-    expect(keys).toContain("overlay");
-    expect(keys).toContain("overlayOpacity");
+    expect(keys).toContain("scrimEnabled");
+    expect(keys).toContain("scrimTone");
+    expect(keys).toContain("scrimOpacity");
     expect(keys).toContain("title");
     expect(keys).toContain("description");
     expect(keys).toContain("buttons");

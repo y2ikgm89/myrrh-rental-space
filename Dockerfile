@@ -24,18 +24,39 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     SKIP_ENV_VALIDATION=true \
-    STANDALONE=true
+    STANDALONE=true \
+    DATABASE_URL=postgresql://build:build@localhost:5432/build
 
-# NEXT_PUBLIC_* はビルド時にクライアント JS へインライン化される
+# DATABASE_URL は build 専用プレースホルダ。prisma.config.ts の env("DATABASE_URL") が
+# config ロード時に eager 解決するため db:generate / next build に必須だが、ビルドは
+# DB に接続しない（CI も同一のダミー URL を使用）。runner ステージは別 FROM のため
+# この ENV を継承せず、本番は Cloud Run が Secret Manager から実 URL を注入する。
+# server-only 変数のため client バンドルにもインライン化されない。
+
+# NEXT_PUBLIC_* はビルド時にクライアント JS へインライン化される。
+# ARG はそのままだと宣言ステージ（builder-base）末尾でスコープが切れ、派生する
+# builder ステージの `bun run build` に引き継がれない（Docker 公式仕様）。
+# ENV はレイヤーに焼かれて派生ステージへ継承されるため ARG→ENV 変換が必須
+# （Next.js 公式 Docker パターン）。未変換だとクライアントバンドルに空文字が
+# インライン化され、GA / Turnstile が本番で silent failure になる。
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+    NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
+
 # --- Stage 3: Build ---
+# 型チェック・lint は CI の独立 required job がフルリポジトリで実施済み
+# （Docker context は .dockerignore で e2e/ __tests__ を除外するため、
+# tsconfig.test.json の tsc は scripts/e2e → e2e/fixtures を解決できず context 不整合）。
+# next build が app の型チェックを内蔵するため、builder は build のみ実行する。
 FROM builder-base AS builder
 RUN --mount=type=secret,id=next_server_actions_encryption_key \
-    sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; bun run type-check && bun run lint && bun run build'
+    sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; bun run build'
 
 # --- Stage 4: Runner ---
 FROM base AS runner

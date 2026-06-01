@@ -63,7 +63,7 @@ paths:
 - **`SectionWrapper` と `Section` Primitive を混同しない** — SectionWrapper（DB 駆動）vs Section Primitive（静的レイアウト用）
 - **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` から `space-list`、`/events` から `event-calendar` を `trailingSections` フィルタで除外
 - **ページ固有 CTA を持つページは `cta` セクションも除外** — `/faq` / `/contact` で重複防止
-- **入力 UI を内包する section type のページ template から同種 listing section を `allowedSectionTypes` 除外必須** — `reservation-form` (Step 1 でスペース選択を内包) は `reservation` template の `allowedSectionTypes` から `space-list` を除外、`contact-form` 等も同種 listing を除外。trailing filter ではなく **`page-templates.ts` で構造的に追加不能化** が canonical (admin の AddSectionDialog 段階で選択肢から外れる)。実例: PR #240 で reservation template `allowedSectionTypes: ["page-hero", "hero", "reservation-form", "space-list", "cta"]` → `["page-hero", "hero", "reservation-form", "cta"]`、UX 上の二重表示 silent bug を構造的に防止
+- **listing / form / calendar セクションは page-specific（opt-in 制）で二重表示を構造防止** — `page-templates.ts` の `UNIVERSAL_SECTION_TYPES`（hero/cta/gallery/embed/concept 等プレゼンテーション系）には含めず、追加を許可するテンプレの `additionalSectionTypes` にのみ宣言する。`reservation`（reservation-form が Step 1 でスペース選択を内包）は `space-list`/`space-showcase` を `additionalSectionTypes` に **入れないだけ** で AddSectionDialog の候補から自動的に外れる（旧: `allowedSectionTypes` を手書きで除外していた PR #240 方式は universal+page-specific モデル化で不要に）。universal セクションは全テンプレで追加可。`__tests__/unit/shared/lib/sections/page-templates.test.ts` が no-orphans + universal/page-specific 排他 + reservation の space-list/showcase 非含有を gate
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須**
 - **hero 直下の一覧セクションは上余白を縮小** — `pt-10 pb-[var(--space-lg)] md:pt-14`
 - **ホームヒーローは `Page.pageHero` のみ** — `homepage-hero` Section type / registry は廃止
@@ -97,6 +97,9 @@ paths:
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — Prisma マイグレーション不要
 - **AutoSectionForm は field メタデータなしのフィールドをスキップ**
 - **AutoSectionForm のフィールドに `setValue` パターン禁止** — conform `defaultValue` prop + `useInputControl` で制御
+- **セクション編集の canonical 構成は「内容 / デザイン」タブ** — `AutoSectionForm` が `content` group を「内容」タブ、`design` + `advanced` group を「デザイン」タブに振り分ける（WordPress ブロックインスペクタ準拠、内容デフォルト）。`design` フィールドが無いセクションは単一ペインにフォールバック。`Tabs` は `forceMount` + `data-[state=inactive]:hidden` で非アクティブタブも DOM 保持必須（Lexical/PortableText state と FormData を切替で失わない silent bug 回避）。`TabsTrigger` は admin primitive の `type="button"` default で form submit を誘発しない
+- **`design` group のフィールドを編集 UI から隠す抑止フラグを section panel に再導入禁止** — 旧 `contentOnly` prop（`SectionEditPanel` が `AutoSectionForm` に渡し design グループ全体を非描画にしていた）は scrim/variant/高さ/transition 等の編集可能フィールドを UI から到達不能にする silent bug の温床だった（2026-06-01 #369/#370 で削除）。新規 design フィールドは適切な group (`design`/`advanced`) を付ければタブに自動表示される。`config.layout` (`sectionLayoutSchema`) は各 `SectionWrapper` が消費する実フィールドでデッドではない（隠さない）
+- **背景メディア上テキストの可読性 scrim はオン/オフ + 濃さの 2 コントロール** — `createScrimFields()` (`definitions/_shared/scrim.ts`) が `scrimEnabled` (boolean, default true) + `scrimTone` + `scrimOpacity` を提供。オフでも濃さ値は保持、文字側 3 層防御は維持。scrim は背景メディアにテキストを重ねる `hero` / `page-hero` media variant のみに付与（gallery/cta 等は無意味なので付けない、WordPress block supports モデル）
 - **新規公開ページ追加は `/create-page-content` スキル**
 - **ホームページセクションの `pageId: null` は廃止済み** — ホームページは slug `"home"` の Page レコード
 - **`/admin/pages/homepage/edit` は廃止済み** — `[slug]/edit` に統合

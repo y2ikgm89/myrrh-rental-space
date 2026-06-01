@@ -21,7 +21,8 @@ import { z } from "zod";
 import { field, fieldRegistry } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
 import { createButtonsArraySchema } from "../_shared/buttons";
-import { createMediaGroupSchema } from "../_shared/media";
+import { createMediaArraySchema, HERO_BG_TRANSITIONS } from "../_shared/media";
+import { createScrimFields } from "../_shared/scrim";
 
 const HERO_TRANSITIONS = [
   "crossfade",
@@ -104,7 +105,7 @@ const minimalSchema = z.object({
  *
  * - `media`: 画像 / 動画どちらでも選択可能（WordPress Cover Block の `mediaUrl` 等価）
  * - `posterImage`: 動画選択時の load 中 / autoplay 失敗時の fallback（画像時は未使用）
- * - `overlay` + `overlayOpacity`: メディア上のテキスト可読性確保（WCAG 1.4.3 准拠）
+ * - `scrimTone` + `scrimOpacity`: メディア上のテキスト可読性確保（WCAG 1.4.3 准拠）
  */
 const mediaSchema = z.object({
   variant: z.literal("media"),
@@ -114,7 +115,21 @@ const mediaSchema = z.object({
     subGroup: "text",
     maxBlocks: 100,
   }),
-  media: createMediaGroupSchema("背景メディア（画像 / 動画）"),
+  media: createMediaArraySchema("背景メディア（画像 / 動画）"),
+  transition: field.select("切り替え演出", {
+    options: HERO_BG_TRANSITIONS,
+    default: "crossfade",
+    group: "design",
+    helpText: "背景メディアが複数のときのスライドショー切り替え方法",
+  }),
+  autoPlayInterval: field.number("自動切り替え間隔", {
+    min: 2,
+    max: 20,
+    default: 5,
+    suffix: "秒",
+    group: "design",
+    helpText: "画像スライドの表示秒数（動画は再生完了で切り替わります）",
+  }),
   posterImage: z
     .object({
       url: field.image("ポスター画像"),
@@ -128,19 +143,7 @@ const mediaSchema = z.object({
       subGroup: "media",
       helpText: "動画選択時の読み込み中・autoplay 失敗時に表示する代替画像",
     }),
-  overlay: field.boolean("テキスト可読性のためのオーバーレイを表示", {
-    default: true,
-    group: "design",
-    helpText: "メディア上に半透明レイヤーを重ねて見出しを読みやすくする",
-  }),
-  overlayOpacity: field.number("オーバーレイの濃さ", {
-    min: 0,
-    max: 100,
-    default: 40,
-    suffix: "%",
-    group: "design",
-    helpText: "0% は透明、100% は完全に黒",
-  }),
+  ...createScrimFields(),
   buttons: createButtonsArraySchema(),
   layout: sectionLayoutSchema,
 });

@@ -11,7 +11,6 @@ import type {
   ContainerWidth,
   GapSize,
   ContentPosition,
-  OverlayStyle,
   GalleryHoverEffect,
   GalleryGap,
 } from "@/shared/lib/validations/section-options";
@@ -76,14 +75,6 @@ export const CONTENT_POSITION_MAP: Record<ContentPosition, string> = {
   center: "items-center justify-center text-center",
   left: "items-center justify-center text-left",
   "bottom-left": "items-end justify-end text-left pb-16",
-};
-
-/** オーバーレイスタイル → CSS */
-export const OVERLAY_STYLE_MAP: Record<OverlayStyle, string> = {
-  gradient:
-    "bg-gradient-to-t from-foreground/70 via-foreground/30 to-foreground/10",
-  solid: "bg-foreground/50",
-  none: "",
 };
 
 /** HeroParallax 高さ → Tailwind/CSS クラス（@theme トークン参照） */

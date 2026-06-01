@@ -2,8 +2,9 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
-import { createMediaGroupSchema } from "../_shared/media";
+import { createMediaArraySchema, HERO_BG_TRANSITIONS } from "../_shared/media";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { createScrimFields } from "../_shared/scrim";
 
 const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 
@@ -21,58 +22,71 @@ const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
  */
 const variantOptions = ["default", "minimal", "split", "parallax"] as const;
 
-export const heroConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "",
-    maxLength: 50,
-    subGroup: "text",
-    helpText: "見出しの上に表示される英語ラベル（例: Spaces / Events）",
-  }),
-  title: field.portableTextInline("見出し", { subGroup: "text" }),
-  subtitle: field.portableTextBlock("サブ見出し", {
-    subGroup: "text",
-  }),
-  backgroundMedia: createMediaGroupSchema("背景メディア（画像 / 動画）"),
-  buttons: createButtonsArraySchema("ボタン"),
-  height: field.select("高さ", {
-    options: heightOptions,
-    default: "md",
-    group: "design",
-  }),
-  heightCustom: field.number("カスタム高さ", {
-    min: 20,
-    max: 100,
-    default: 60,
-    suffix: "svh",
-    helpText: "100svh で画面いっぱい",
-    group: "design",
-  }),
-  variant: field.select("レイアウトの種類", {
-    options: variantOptions,
-    default: "default",
-    helpText: "ヒーローセクションの見せ方を選びます",
-    group: "design",
-  }),
-  overlay: field.boolean("画像の上に黒いオーバーレイを重ねる", {
-    default: true,
-    group: "design",
-  }),
-  overlayOpacity: field.number("オーバーレイの濃さ", {
-    min: 0,
-    max: 100,
-    default: 40,
-    suffix: "%",
-    helpText: "0% は透明、100% は完全に黒",
-    group: "design",
-  }),
-  parallaxSpeed: field.number("パララックス速度", {
-    min: 0,
-    max: 1,
-    default: 0.5,
-    helpText: "0 で固定、1 で最大スクロール効果（variant=parallax 時に有効）",
-    group: "design",
-  }),
-  layout: sectionLayoutSchema,
-});
+export const heroConfigSchema = z
+  .object({
+    sectionLabel: field.text("セクションラベル", {
+      default: "",
+      maxLength: 50,
+      subGroup: "text",
+      helpText: "見出しの上に表示される英語ラベル（例: Spaces / Events）",
+    }),
+    title: field.portableTextInline("見出し", { subGroup: "text" }),
+    subtitle: field.portableTextBlock("サブ見出し", {
+      subGroup: "text",
+    }),
+    backgroundMedia: createMediaArraySchema("背景メディア（画像 / 動画）"),
+    transition: field.select("切り替え演出", {
+      options: HERO_BG_TRANSITIONS,
+      default: "crossfade",
+      group: "design",
+      helpText: "背景メディアが複数のときのスライドショー切り替え方法",
+    }),
+    autoPlayInterval: field.number("自動切り替え間隔", {
+      min: 2,
+      max: 20,
+      default: 5,
+      suffix: "秒",
+      group: "design",
+      helpText: "画像スライドの表示秒数（動画は再生完了で切り替わります）",
+    }),
+    buttons: createButtonsArraySchema("ボタン"),
+    height: field.select("高さ", {
+      options: heightOptions,
+      default: "md",
+      group: "design",
+    }),
+    heightCustom: field.number("カスタム高さ", {
+      min: 20,
+      max: 100,
+      default: 60,
+      suffix: "svh",
+      helpText: "100svh で画面いっぱい",
+      group: "design",
+    }),
+    variant: field.select("レイアウトの種類", {
+      options: variantOptions,
+      default: "default",
+      helpText: "ヒーローセクションの見せ方を選びます",
+      group: "design",
+    }),
+    ...createScrimFields(),
+    parallaxSpeed: field.number("パララックス速度", {
+      min: 0,
+      max: 1,
+      default: 0.5,
+      helpText: "0 で固定、1 で最大スクロール効果（variant=parallax 時に有効）",
+      group: "design",
+    }),
+    layout: sectionLayoutSchema,
+  })
+  .refine(
+    (data) =>
+      new Set(data.backgroundMedia.map((m) => m.url)).size ===
+      data.backgroundMedia.length,
+    {
+      error: "同じメディアを複数登録することはできません",
+      path: ["backgroundMedia"],
+    },
+  );
 
 export type HeroConfig = z.infer<typeof heroConfigSchema>;

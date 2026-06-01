@@ -30,7 +30,8 @@ const buttonVariants = tv({
         "hover:bg-destructive/10 hover:text-destructive",
       ],
       outline: [
-        "border border-input bg-background",
+        // 純白 bg-card で admin の他コントロール（Select / Input / Textarea）と統一
+        "border border-input bg-card",
         "shadow-sm hover:shadow-md",
         "hover:bg-accent hover:text-accent-foreground hover:border-accent",
       ],

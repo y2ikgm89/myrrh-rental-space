@@ -96,6 +96,9 @@ import { <camelCase>Metadata } from "./definitions/<type>/metadata";
 5. **section-defaults.ts** — `get<PascalCase>Config` getter 追加
 6. **SectionRenderer.tsx** — switch case 追加
 7. **section-metadata.ts** — labels/descriptions/icons/categories にエントリ追加（registry 移行完了まで）
+8. **page-templates.ts** — 新規型を必ず分類する（**欠落で `page-templates.test.ts` の no-orphans test が fail**）:
+   - **universal**（hero/cta/gallery/embed/concept 等のプレゼンテーション系、データ結合なし・どのページでも安全） → `UNIVERSAL_SECTION_TYPES` に追加（全テンプレに自動付与）
+   - **page-specific**（listing/form/calendar/location-list 等、特定ページ専用 or 二重表示リスクあり） → 追加を許可するテンプレの `additionalSectionTypes` にのみ追加（universal には入れない、排他）
 
 ## 命名規則
 

@@ -33,25 +33,37 @@ export const sectionCategoryLabels: Record<SectionCategory, string> = {
 /** レジストリから動的生成する labels マップ */
 export const sectionTypeLabels: Partial<Record<string, string>> =
   Object.fromEntries(
-    getAllSectionDefinitions().map((d) => [d.type, d.metadata.label]),
+    getAllSectionDefinitions().map((d): [string, string] => [
+      d.type,
+      d.metadata.label,
+    ]),
   );
 
 /** レジストリから動的生成する descriptions マップ */
 export const sectionTypeDescriptions: Partial<Record<string, string>> =
   Object.fromEntries(
-    getAllSectionDefinitions().map((d) => [d.type, d.metadata.description]),
+    getAllSectionDefinitions().map((d): [string, string] => [
+      d.type,
+      d.metadata.description,
+    ]),
   );
 
 /** レジストリから動的生成する icons マップ */
 export const sectionTypeIcons: Partial<Record<string, string>> =
   Object.fromEntries(
-    getAllSectionDefinitions().map((d) => [d.type, d.metadata.icon]),
+    getAllSectionDefinitions().map((d): [string, string] => [
+      d.type,
+      d.metadata.icon,
+    ]),
   );
 
 /** レジストリから動的生成する categories マップ */
 export const sectionTypeCategories: Partial<Record<string, SectionCategory>> =
   Object.fromEntries(
-    getAllSectionDefinitions().map((d) => [d.type, d.metadata.category]),
+    getAllSectionDefinitions().map((d): [string, SectionCategory] => [
+      d.type,
+      d.metadata.category,
+    ]),
   );
 
 /** カテゴリ順にセクションタイプをグループ化（レジストリ委譲） */
