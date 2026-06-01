@@ -34,7 +34,8 @@ function ToggleGroupItem({
         "text-muted-foreground hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",
-        "data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm",
+        // アクティブ状態は純白 bg-card で muted トラックから浮き上がらせる（Tabs と統一）
+        "data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm",
         className,
       )}
       {...props}
