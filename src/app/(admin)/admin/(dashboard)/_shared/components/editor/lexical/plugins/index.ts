@@ -55,6 +55,7 @@ export {
   ADD_COMMENT_COMMAND,
   REMOVE_COMMENT_COMMAND,
   CLICK_MARK_COMMAND,
+  SCROLL_TO_MARK_COMMAND,
   type AddCommentPayload,
 } from "./CommentPlugin";
 export {
