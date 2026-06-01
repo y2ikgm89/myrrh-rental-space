@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
-import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  RESERVATION_BADGE_VARIANTS,
+  PAYMENT_BADGE_VARIANTS,
+} from "./reservation-badge-variants";
 import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
@@ -45,24 +48,6 @@ interface ReservationCardProps {
 // ---------------------------------------------------------------------------
 // Status helpers
 // ---------------------------------------------------------------------------
-
-type BadgeVariant = "default" | "success" | "warning" | "info";
-
-const RESERVATION_BADGE_VARIANTS: Record<string, BadgeVariant> = {
-  PENDING: "warning",
-  CONFIRMED: "success",
-  COMPLETED: "info",
-  CANCELLED: "default",
-  NO_SHOW: "default",
-};
-
-const PAYMENT_BADGE_VARIANTS: Record<PaymentStatus, BadgeVariant> = {
-  UNPAID: "warning",
-  PENDING: "warning",
-  PAID: "success",
-  REFUNDED: "info",
-  FAILED: "default",
-};
 
 // ---------------------------------------------------------------------------
 // Component
