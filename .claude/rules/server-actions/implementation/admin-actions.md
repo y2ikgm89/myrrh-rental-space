@@ -3,8 +3,8 @@ description: Admin Server Action 実装パターン（Promise.all 並列 / execu
 paths:
   - src/**/_actions/**
   - src/**/actions/**
-  - src/admin/lib/admin-action.ts
-  - src/admin/lib/action-auth.ts
+  - src/app/(admin)/**/_shared/lib/admin-action.ts
+  - src/app/(admin)/**/_shared/lib/action-auth.ts
 ---
 
 # Admin Server Action 実装パターン

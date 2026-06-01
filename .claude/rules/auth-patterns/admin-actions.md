@@ -1,10 +1,6 @@
 ---
 description: 管理画面 Server Action / API Route の認証パターン（executeAdminMutationResult / checkPermission / 監査ログ / EDITOR ロール契約）
 paths:
-  - src/admin/lib/admin-action.ts
-  - src/admin/lib/action-auth.ts
-  - src/admin/lib/permissions.ts
-  - src/admin/lib/audit.ts
   - src/**/actions/**/*.ts
   - src/app/(admin)/**
   - src/app/api/admin/**
