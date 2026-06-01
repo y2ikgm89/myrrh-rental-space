@@ -63,6 +63,8 @@ paths:
 - **lefthook 2.x は `core.hooksPath` 設定済みで `prepare` を exit 1 で失敗** — `bunx lefthook install --reset-hooks-path` で local 設定 unset + 再 install
 - **Goal hook 条件が両カバー選択肢を含むなら AskUserQuestion スキップして即実装** — どちらでも goal 満たすので確認冗長
 - **Playwright MCP HMR キャッシュ罠** — Edit/Write 直後の `browser_navigate` は古い bundle キャッシュ、`browser_evaluate("() => window.location.reload()")` で強制 reload
+- **Playwright UI 検証で作成した dev DB データは検証後に削除** — テキスト選択 → コメント追加等の実フロー検証は dev DB にレコード（コメント/予約/スレッド等）を実際に作る。検証後に `bun -e` の Prisma 直接アクセス（→ §管理画面ログイン URL の config-object 形式）で削除し dev DB を汚さない。未保存の editor state（マーク等）は保存しなければ DB 不変だが、Server Action 経由の作成は即永続化される点に注意
+- **hover/focus 依存 UI の Playwright 計測は pointer 位置に汚染される** — `browser_click` 後はマウスがその要素上に残り `group-hover` が発火したまま。`opacity-0 group-hover:opacity-100` 等の既定非表示を計測するときは先に `browser_hover` で対象外（ツールバー等）へ移動してから `getComputedStyle().opacity` を読む。キーボード経路（`focus-visible`）は実 `Tab` キーで検証する
 - **`bun -e` Prisma 直接アクセス canonical** — `@/shared/db/prisma` は `server-only` で blocked、`new PrismaClient({ adapter: new PrismaPg({ connectionString }) })` の config-object 形式で直接 instantiate（`scripts/generate-login-url.ts` 参照）
 - **handoff memo 完遂時は同セッションで削除 + `MEMORY.md` index 除去** — 残ると次セッション「未完了」と誤読
 - **管理画面ログイン URL は `bun scripts/generate-login-url.ts`** — dev (`NODE_ENV === "development"`) は proxy.ts が Gate bypass + `/admin/login` に SUPER_ADMIN ワンクリックボタン
