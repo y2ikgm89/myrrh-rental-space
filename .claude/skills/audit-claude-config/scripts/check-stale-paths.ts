@@ -16,7 +16,6 @@
  *       prefix 存在チェックで補完する。
  */
 import { Glob } from "bun";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = new TextDecoder()
@@ -80,7 +79,7 @@ let deadGlob = 0;
 let noPaths = 0;
 
 for (const rf of ruleFiles) {
-  const fm = frontmatter(readFileSync(join(root, rf), "utf8"));
+  const fm = frontmatter(await Bun.file(join(root, rf)).text());
   if (!fm) {
     console.info(`NO_FRONTMATTER: ${rf}`);
     continue;
