@@ -358,7 +358,8 @@ describe("Homepage Settings Admin Action Integration", () => {
 
     test("GALLERY のデフォルト設定に必須フィールドが含まれる", () => {
       const config = getDefaultConfig(SectionType.GALLERY);
-      expect(Array.isArray(config["images"])).toBe(true);
+      // clean-break: images（旧・画像配列）→ media（{url, alt, caption?}[] 画像/動画混在）
+      expect(Array.isArray(config["media"])).toBe(true);
       expect(config["layout"]).toBeDefined();
       expect(typeof config["enableLightbox"]).toBe("boolean");
     });

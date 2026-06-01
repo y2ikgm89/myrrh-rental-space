@@ -1,8 +1,8 @@
 import type { SectionMetadata } from "../../types";
 
 export const galleryMetadata: SectionMetadata = {
-  label: "ギャラリー",
-  description: "画像ギャラリーを表示します。",
+  label: "メディアギャラリー",
+  description: "画像・動画のギャラリーを表示します。",
   icon: "IconImages",
   category: "media",
 };

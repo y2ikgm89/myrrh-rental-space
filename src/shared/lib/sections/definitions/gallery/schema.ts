@@ -16,10 +16,10 @@ export const galleryConfigSchema = z
       subGroup: "text",
     }),
     title: field.portableTextInline("見出し", { subGroup: "text" }),
-    images: field.array("画像", {
+    media: field.array("メディア", {
       subGroup: "media",
       fields: {
-        url: field.image("画像"),
+        url: field.media("メディア", { accept: "image-or-video" }),
         alt: field.text("代替テキスト"),
         caption: field.text("キャプション"),
       },
@@ -28,7 +28,7 @@ export const galleryConfigSchema = z
       options: layouts,
       default: "grid",
       group: "design",
-      helpText: "画像の並び方",
+      helpText: "メディアの並び方",
     }),
     columns: field.number("1 行あたりの列数", {
       min: 1,
@@ -37,7 +37,7 @@ export const galleryConfigSchema = z
       suffix: "列",
       group: "design",
     }),
-    gap: field.select("画像の間隔", {
+    gap: field.select("メディアの間隔", {
       options: gaps,
       default: "md",
       group: "design",
@@ -58,11 +58,10 @@ export const galleryConfigSchema = z
     layout: sectionLayoutSchema,
   })
   .refine(
-    (data) =>
-      new Set(data.images.map((i) => i.url)).size === data.images.length,
+    (data) => new Set(data.media.map((m) => m.url)).size === data.media.length,
     {
-      error: "同じ画像を複数登録することはできません",
-      path: ["images"],
+      error: "同じメディアを複数登録することはできません",
+      path: ["media"],
     },
   );
 

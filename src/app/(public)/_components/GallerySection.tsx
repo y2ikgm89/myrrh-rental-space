@@ -23,6 +23,8 @@ import {
 } from "@/public/components/sections/section-style-helpers";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
+import { VideoPlayer } from "@/public/components/design-system/video-player";
+import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import {
   IMAGE_ASPECT_MAP,
@@ -83,9 +85,9 @@ export function GallerySection({
     { scope: gridRef },
   );
 
-  const openLightbox = (index: number) => {
+  const openLightbox = (imageIndex: number) => {
     if (!config.enableLightbox) return;
-    setLightboxIndex(index);
+    setLightboxIndex(imageIndex);
     dialogRef.current?.showModal();
   };
 
@@ -94,16 +96,21 @@ export function GallerySection({
     setLightboxIndex(-1);
   };
 
+  // lightbox は画像のみを対象にする（動画はインライン再生）
+  const imageItems = config.media.filter(
+    (m) => detectMediaSourceType(m.url) !== "video",
+  );
+
   const navigateLightbox = (direction: 1 | -1) => {
     setLightboxIndex((prev) => {
       const next = prev + direction;
-      if (next < 0) return config.images.length - 1;
-      if (next >= config.images.length) return 0;
+      if (next < 0) return imageItems.length - 1;
+      if (next >= imageItems.length) return 0;
       return next;
     });
   };
 
-  if (config.images.length === 0) return <></>;
+  if (config.media.length === 0) return <></>;
 
   const gapClass = GALLERY_GAP_MAP[config.gap] ?? GALLERY_GAP_MAP.md;
   const colKey = Math.min(Math.max(config.columns, 1), 6);
@@ -123,8 +130,8 @@ export function GallerySection({
       : cn("@container grid", getGalleryGridColsClass(colKey), gapClass);
 
   const lightboxImage =
-    lightboxIndex >= 0 && lightboxIndex < config.images.length
-      ? config.images[lightboxIndex]
+    lightboxIndex >= 0 && lightboxIndex < imageItems.length
+      ? imageItems[lightboxIndex]
       : undefined;
 
   return (
@@ -150,56 +157,81 @@ export function GallerySection({
       )}
 
       <div ref={gridRef} className={layoutClass}>
-        {config.images.map((image, index) => (
-          <div
-            key={image.url}
-            data-gallery-item=""
-            className={cn(
-              hoverClasses.wrapper,
-              isCarousel && "min-w-[280px] snap-center md:min-w-[320px]",
-              isMasonry && "mb-4 break-inside-avoid",
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => openLightbox(index)}
+        {config.media.map((item) => {
+          const isVideo = detectMediaSourceType(item.url) === "video";
+          // lightbox の index は画像サブセット内の位置
+          const imageIndex = isVideo
+            ? -1
+            : imageItems.findIndex((m) => m.url === item.url);
+          return (
+            <div
+              key={item.url}
+              data-gallery-item=""
               className={cn(
-                "relative block w-full overflow-hidden",
-                aspectClass,
+                hoverClasses.wrapper,
+                isCarousel && "min-w-[280px] snap-center md:min-w-[320px]",
+                isMasonry && "mb-4 break-inside-avoid",
               )}
-              disabled={!config.enableLightbox}
-              aria-label={image.alt ?? `ギャラリー画像 ${index + 1} を拡大表示`}
             >
-              <Image
-                src={image.url}
-                alt={image.alt ?? ""}
-                width={600}
-                height={400}
-                className={cn(
-                  "h-full w-full object-cover transition-transform duration-500",
-                  hoverEffect === "zoom" && "group-hover:scale-105",
-                )}
-                sizes={`(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
-              />
-              {hoverClasses.overlay && (
+              {isVideo ? (
                 <div
                   className={cn(
-                    "absolute inset-0 bg-foreground/20",
-                    hoverClasses.overlay,
+                    "relative block w-full overflow-hidden",
+                    aspectClass,
                   )}
-                />
+                >
+                  <VideoPlayer
+                    url={item.url}
+                    variant="controls"
+                    {...(item.alt.length > 0 && { title: item.alt })}
+                    className="h-full w-full"
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openLightbox(imageIndex)}
+                  className={cn(
+                    "relative block w-full overflow-hidden",
+                    aspectClass,
+                  )}
+                  disabled={!config.enableLightbox}
+                  aria-label={
+                    item.alt.length > 0 ? item.alt : "ギャラリー画像を拡大表示"
+                  }
+                >
+                  <Image
+                    src={item.url}
+                    alt={item.alt}
+                    width={600}
+                    height={400}
+                    className={cn(
+                      "h-full w-full object-cover transition-transform duration-500",
+                      hoverEffect === "zoom" && "group-hover:scale-105",
+                    )}
+                    sizes={`(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
+                  />
+                  {hoverClasses.overlay && (
+                    <div
+                      className={cn(
+                        "absolute inset-0 bg-foreground/20",
+                        hoverClasses.overlay,
+                      )}
+                    />
+                  )}
+                </button>
               )}
-            </button>
-            {image.caption && (
-              <p
-                className="mt-2 text-xs text-muted-foreground"
-                style={getTextStyle(style)}
-              >
-                {image.caption}
-              </p>
-            )}
-          </div>
-        ))}
+              {item.caption.length > 0 && (
+                <p
+                  className="mt-2 text-xs text-muted-foreground"
+                  style={getTextStyle(style)}
+                >
+                  {item.caption}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Lightbox */}
@@ -242,7 +274,7 @@ export function GallerySection({
 
                 <Image
                   src={lightboxImage.url}
-                  alt={lightboxImage.alt ?? ""}
+                  alt={lightboxImage.alt}
                   width={1200}
                   height={800}
                   className="max-h-[80svh] w-auto object-contain"
@@ -262,7 +294,7 @@ export function GallerySection({
                 </button>
               </div>
 
-              {lightboxImage.caption && (
+              {lightboxImage.caption.length > 0 && (
                 <p className="mt-4 text-center text-sm text-muted-foreground">
                   {lightboxImage.caption}
                 </p>
