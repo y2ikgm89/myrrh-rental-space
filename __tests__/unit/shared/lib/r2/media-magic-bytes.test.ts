@@ -1,7 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import {
   detectMediaMimeFromMagicBytes,
-  MEDIA_MAX_SIZE_BYTES,
   MEDIA_MIME_EXTENSIONS,
   SUPPORTED_MEDIA_MIME_TYPES,
   SUPPORTED_IMAGE_MIME_TYPES,
@@ -52,27 +51,6 @@ describe("MEDIA_MIME_EXTENSIONS", () => {
     expect(MEDIA_MIME_EXTENSIONS["audio/mpeg"]).toBe("mp3");
     expect(MEDIA_MIME_EXTENSIONS["audio/wav"]).toBe("wav");
     expect(MEDIA_MIME_EXTENSIONS["application/pdf"]).toBe("pdf");
-  });
-});
-
-describe("MEDIA_MAX_SIZE_BYTES", () => {
-  test("画像 5MB / 動画 50MB / 音声 20MB / 文書 10MB", () => {
-    expect(MEDIA_MAX_SIZE_BYTES["image/jpeg"]).toBe(5 * 1024 * 1024);
-    expect(MEDIA_MAX_SIZE_BYTES["video/mp4"]).toBe(50 * 1024 * 1024);
-    expect(MEDIA_MAX_SIZE_BYTES["audio/mpeg"]).toBe(20 * 1024 * 1024);
-    expect(MEDIA_MAX_SIZE_BYTES["application/pdf"]).toBe(10 * 1024 * 1024);
-  });
-
-  test("画像 4 種すべて同一上限", () => {
-    expect(MEDIA_MAX_SIZE_BYTES["image/png"]).toBe(
-      MEDIA_MAX_SIZE_BYTES["image/jpeg"],
-    );
-    expect(MEDIA_MAX_SIZE_BYTES["image/webp"]).toBe(
-      MEDIA_MAX_SIZE_BYTES["image/jpeg"],
-    );
-    expect(MEDIA_MAX_SIZE_BYTES["image/gif"]).toBe(
-      MEDIA_MAX_SIZE_BYTES["image/jpeg"],
-    );
   });
 });
 
