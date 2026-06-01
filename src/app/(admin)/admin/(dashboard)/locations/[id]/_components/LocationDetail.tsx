@@ -106,7 +106,6 @@ export function LocationDetail({ location }: LocationDetailProps) {
               className="sm:col-span-2"
             />
           )}
-          <DetailField label="並び順" value={String(location.sortOrder)} />
         </div>
       </DetailSection>
 
