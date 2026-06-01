@@ -74,7 +74,6 @@ export function SectionEditPanel({
           dynamicOptions={dynamicOptions}
           onSave={handleSave}
           isPending={isPending}
-          contentOnly
         />
       </CardContent>
     </Card>
