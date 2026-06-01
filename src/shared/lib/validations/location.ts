@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLUG_REGEX } from "./params";
 import {
   TIME_REGEX,
   collectBusinessHoursWeekIssues,
@@ -67,7 +68,7 @@ export const locationFormBaseSchema = z.object({
     .string()
     .min(1, { error: "スラッグは必須です" })
     .max(255, { error: "スラッグは255文字以内で入力してください" })
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    .regex(SLUG_REGEX, {
       error: "スラッグは小文字英数字とハイフンのみ使用できます",
     }),
   description: z

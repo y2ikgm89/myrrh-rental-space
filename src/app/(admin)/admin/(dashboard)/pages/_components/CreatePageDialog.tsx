@@ -48,6 +48,7 @@ import { Label } from "@/admin/components/ui/label";
 import { createPage } from "@/admin/actions/page";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { createPageSchema } from "@/shared/lib/validations/page";
+import { SLUG_REGEX } from "@/shared/lib/validations/params";
 
 /**
  * タイトルからスラッグを自動生成
@@ -190,7 +191,7 @@ export function CreatePageDialog({
       clearTimeout(slugCheckRef.current);
     }
 
-    if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    if (!slug || !SLUG_REGEX.test(slug)) {
       slugCheckRef.current = setTimeout(() => {
         setSlugStatus("idle");
         setSlugMessage("");
