@@ -6,7 +6,6 @@ paths:
   - src/shared/domain/terms/**
   - src/shared/domain/spaces/**
   - src/shared/domain/sections/**
-  - src/admin/lib/lazy-renderer.ts
   - src/shared/lib/lexical/**
   - src/**/actions/**/*.ts
 ---

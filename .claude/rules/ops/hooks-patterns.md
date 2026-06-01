@@ -2,7 +2,6 @@
 paths:
   - .claude/hooks/**
   - .claude/settings.json
-  - .claude/settings.local.json
 ---
 
 # Claude Code Hooks パターンルール

@@ -5,7 +5,6 @@ paths:
   - src/shared/domain/**/*.ts
   - src/app/api/**
   - prisma/seed.ts
-  - prisma/seed/**
 ---
 
 # Prisma クエリパターン

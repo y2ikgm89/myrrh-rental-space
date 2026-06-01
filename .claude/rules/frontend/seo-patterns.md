@@ -3,8 +3,7 @@ paths:
   - src/app/(public*)/_shared/lib/seo/**
   - src/app/(public*)/_shared/components/seo/**
   - src/app/(public*)/_shared/lib/page-metadata*
-  - src/app/(public*)/*/page.tsx
-  - src/app/(public*)/[*]/page.tsx
+  - src/app/(public*)/**/page.tsx
 ---
 
 # SEO / 構造化データパターンルール
@@ -13,7 +12,7 @@ paths:
 
 ## JsonLd コンポーネント一覧
 
-`@/public/components/seo/JsonLd.tsx` で提供:
+`@/public/components/seo/json-ld.tsx` で提供:
 
 | コンポーネント        | 型                             | 用途                     |
 | --------------------- | ------------------------------ | ------------------------ |
@@ -46,7 +45,7 @@ paths:
    - `getLocalBusinessJsonLdData()` は廃止済み。`getAllPublishedLocationsJsonLdData()` / `getLocationJsonLdDataBySlug()` を使用
 
 3. **JSON-LD 内のエスケープ漏れ禁止**
-   - `JsonLd.tsx` の内部 `JsonLd` コンポーネントを使用（Unicode エスケープ実装済み）
+   - `json-ld.tsx` の内部 `JsonLd` コンポーネントを使用（Unicode エスケープ実装済み）
 
    ```typescript
    // NG: ユーザー入力を直接 JSON-LD に埋め込む（XSS リスク）

@@ -3,7 +3,7 @@ description: 公開ページの Section 描画パターン（ホームページ�
 paths:
   - src/app/(public*)/**
   - src/shared/lib/sections/**
-  - src/app/(admin)/admin/(dashboard)/_shared/components/sections/**
+  - src/app/(admin)/**/edit/_components/**
 ---
 
 # 公開ページ Section パターン
