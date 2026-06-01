@@ -4,7 +4,7 @@ paths:
   - src/**/queries.ts
   - src/**/queries/**
   - src/shared/lib/errors/server*
-  - src/shared/lib/safe-fetch*
+  - src/shared/lib/errors/safe-fetch*
   - src/app/(public*)/**
 ---
 

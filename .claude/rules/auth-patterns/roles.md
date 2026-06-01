@@ -4,8 +4,8 @@ paths:
   - src/shared/lib/admin-roles.ts
   - src/shared/lib/admin-resources.ts
   - src/shared/lib/validations/enums/guards.ts
-  - src/admin/lib/permissions.ts
-  - src/admin/lib/role-guards.ts
+  - src/app/(admin)/**/_shared/lib/permissions.ts
+  - src/app/(admin)/**/_shared/lib/role-guards.ts
   - src/**/components/**/Invite*.tsx
   - src/**/components/**/User*.tsx
 ---

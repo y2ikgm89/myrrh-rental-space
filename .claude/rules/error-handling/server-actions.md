@@ -3,8 +3,8 @@ description: Server Action のエラーパターン（executeAdminMutationResult
 paths:
   - src/**/actions/**
   - src/**/mutations.ts
-  - src/admin/lib/admin-action.ts
-  - src/admin/lib/action-auth.ts
+  - src/app/(admin)/**/_shared/lib/admin-action.ts
+  - src/app/(admin)/**/_shared/lib/action-auth.ts
   - src/shared/lib/action-helpers*
   - src/app/api/**
 ---

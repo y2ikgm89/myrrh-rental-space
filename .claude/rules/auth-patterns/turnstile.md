@@ -4,7 +4,7 @@ paths:
   - src/shared/lib/admin-auth.ts
   - src/shared/lib/turnstile.ts
   - src/shared/lib/turnstile-actions.ts
-  - src/shared/components/TurnstileWidget.tsx
+  - src/shared/components/turnstile-widget.tsx
 ---
 
 # Turnstile 保護エンドポイント
