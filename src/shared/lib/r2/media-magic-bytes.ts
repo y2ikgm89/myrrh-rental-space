@@ -80,32 +80,6 @@ export const MEDIA_MIME_EXTENSIONS: Record<SupportedMediaMimeType, string> = {
 };
 
 // =============================================================================
-// Per-MIME size constraints
-// =============================================================================
-
-/**
- * MIME カテゴリ別の最大ファイルサイズ（bytes）。
- *
- * Cloudflare R2 無料枠 (10 GB) + egress 無料を前提に、画像中心の運用で
- * 個別ファイル size を抑制する。動画 / 音声 / 文書は self-host 上限値。
- * - 画像: 5 MB（高解像度写真 / hero 画像）
- * - 動画: 50 MB（短尺紹介動画 / リール）
- * - 音声: 20 MB（podcast 1 セグメント / BGM）
- * - 文書: 10 MB（PDF パンフレット / 利用規約）
- */
-export const MEDIA_MAX_SIZE_BYTES: Record<SupportedMediaMimeType, number> = {
-  "image/jpeg": 5 * 1024 * 1024,
-  "image/png": 5 * 1024 * 1024,
-  "image/webp": 5 * 1024 * 1024,
-  "image/gif": 5 * 1024 * 1024,
-  "video/mp4": 50 * 1024 * 1024,
-  "video/webm": 50 * 1024 * 1024,
-  "audio/mpeg": 20 * 1024 * 1024,
-  "audio/wav": 20 * 1024 * 1024,
-  "application/pdf": 10 * 1024 * 1024,
-};
-
-// =============================================================================
 // Detection
 // =============================================================================
 

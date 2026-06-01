@@ -11,6 +11,7 @@ import {
   isValidMediaType,
   isValidMediaUsage,
 } from "@/shared/lib/validations/enums/guards";
+import { MAX_FILE_SIZES } from "@/shared/lib/r2/media-size";
 
 // Re-export
 export { MediaType, MediaUsage, isValidMediaType, isValidMediaUsage };
@@ -38,19 +39,6 @@ export const ALLOWED_MIME_TYPES: Record<MediaType, string[]> = {
   AUDIO: ["audio/mpeg", "audio/wav"],
   DOCUMENT: ["application/pdf"],
   OTHER: [],
-};
-
-/**
- * クライアント側 file.size 事前ガード用の上限（bytes）。
- * `r2/media-magic-bytes` の `MEDIA_MAX_SIZE_BYTES` と数値同期。
- * - IMAGE 5MB / VIDEO 50MB / AUDIO 20MB / DOCUMENT 10MB / OTHER 10MB
- */
-export const MAX_FILE_SIZES: Record<MediaType, number> = {
-  IMAGE: 5 * 1024 * 1024,
-  VIDEO: 50 * 1024 * 1024,
-  AUDIO: 20 * 1024 * 1024,
-  DOCUMENT: 10 * 1024 * 1024,
-  OTHER: 10 * 1024 * 1024,
 };
 
 // =============================================================================

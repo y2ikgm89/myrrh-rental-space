@@ -18,7 +18,6 @@ import {
   parseMediaUsageFilter,
   parseMediaUploadFormData,
   parseMediaTagsInput,
-  MAX_FILE_SIZES,
   ALLOWED_MIME_TYPES,
 } from "@/admin/lib/validations/media";
 
@@ -356,13 +355,6 @@ describe("isAllowedFileSize", () => {
 });
 
 describe("constants", () => {
-  test("MAX_FILE_SIZES が canonical SSoT と同期 (画像5MB/動画50MB/音声20MB/文書10MB)", () => {
-    expect(MAX_FILE_SIZES.IMAGE).toBe(5 * 1024 * 1024);
-    expect(MAX_FILE_SIZES.VIDEO).toBe(50 * 1024 * 1024);
-    expect(MAX_FILE_SIZES.AUDIO).toBe(20 * 1024 * 1024);
-    expect(MAX_FILE_SIZES.DOCUMENT).toBe(10 * 1024 * 1024);
-  });
-
   test("ALLOWED_MIME_TYPES が AUDIO enum を canonical で表現する (Phase 4 で AUDIO 派生済)", () => {
     expect(ALLOWED_MIME_TYPES.IMAGE).toContain("image/jpeg");
     expect(ALLOWED_MIME_TYPES.IMAGE).toContain("image/png");

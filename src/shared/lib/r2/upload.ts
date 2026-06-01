@@ -26,12 +26,12 @@ import {
 import { getR2BucketName, getR2Client } from "./client";
 import {
   detectMediaMimeFromMagicBytes,
-  MEDIA_MAX_SIZE_BYTES,
   SUPPORTED_IMAGE_MIME_TYPES,
   SUPPORTED_MEDIA_MIME_TYPES,
   type SupportedImageMimeType,
   type SupportedMediaMimeType,
 } from "./media-magic-bytes";
+import { MEDIA_MAX_SIZE_BYTES } from "./media-size";
 import { buildPublicUrl, generateStorageKey, type StoragePrefix } from "./keys";
 
 // =============================================================================
