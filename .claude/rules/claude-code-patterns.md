@@ -40,6 +40,7 @@ paths:
 ## チェックリスト (新規作成時)
 
 - [ ] rule: `paths:` frontmatter 必須（常時ロード禁止）
+- [ ] rule: `paths:` glob が実在ファイルにマッチ（dir 移動・rename で stale 化 → `/audit-claude-config` の `check-stale-paths.ts` で検出）
 - [ ] skill: SKILL.md 500 行未満、`description` + `when_to_use` 合算 1,536 文字以下、reference は `reference/*.md` 分割
 - [ ] agent: 公式 frontmatter フィールドのみ、独自フィールド禁止
 - [ ] agent `memory: project` 宣言時は `.claude/agent-memory/<name>/` 実体を必ず作成
