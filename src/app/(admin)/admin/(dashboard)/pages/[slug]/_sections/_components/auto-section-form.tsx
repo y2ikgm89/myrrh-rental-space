@@ -29,12 +29,12 @@ import dynamic from "next/dynamic";
 import { z } from "zod";
 import { IconLink, IconPhotoVideo, IconTypography } from "@tabler/icons-react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
   Input,
   Label,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
 } from "@/admin/components/ui";
 import { fieldRegistry } from "@/shared/lib/sections/field-registry";
@@ -209,8 +209,7 @@ export function AutoSectionForm({
   const advancedFields = contentOnly
     ? []
     : fieldsList.filter((f) => f.meta.group === "advanced");
-  const hasAccordionContent =
-    designFields.length > 0 || advancedFields.length > 0;
+  const hasDesignTab = designFields.length > 0 || advancedFields.length > 0;
 
   const renderTopLevelField = (fieldInfo: FieldInfo) => {
     const subFieldMeta = fields[fieldInfo.key];
@@ -238,58 +237,61 @@ export function AutoSectionForm({
     (f) => f.meta.subGroup === undefined || f.meta.subGroup === "other",
   );
 
+  // 「内容」タブの中身（テキスト / メディア / ボタン / その他）
+  const contentBlock = (
+    <div className="space-y-6">
+      {textFields.length > 0 && (
+        <FieldGroupSection title="テキスト" icon={IconTypography}>
+          {textFields.map(renderTopLevelField)}
+        </FieldGroupSection>
+      )}
+
+      {mediaFields.length > 0 && (
+        <FieldGroupSection title="メディア" icon={IconPhotoVideo}>
+          {mediaFields.map(renderTopLevelField)}
+        </FieldGroupSection>
+      )}
+
+      {buttonFields.length > 0 && (
+        <FieldGroupSection title="ボタン・リンク" icon={IconLink}>
+          {buttonFields.map(renderTopLevelField)}
+        </FieldGroupSection>
+      )}
+
+      {otherFields.length > 0 && (
+        <div className="space-y-4">{otherFields.map(renderTopLevelField)}</div>
+      )}
+    </div>
+  );
+
   return (
     <form {...getFormProps(form)} className="space-y-4">
-      {/* Content: 常時展開（Accordion 外） */}
-      <div className="space-y-6">
-        {textFields.length > 0 && (
-          <FieldGroupSection title="テキスト" icon={IconTypography}>
-            {textFields.map(renderTopLevelField)}
-          </FieldGroupSection>
-        )}
-
-        {mediaFields.length > 0 && (
-          <FieldGroupSection title="メディア" icon={IconPhotoVideo}>
-            {mediaFields.map(renderTopLevelField)}
-          </FieldGroupSection>
-        )}
-
-        {buttonFields.length > 0 && (
-          <FieldGroupSection title="ボタン・リンク" icon={IconLink}>
-            {buttonFields.map(renderTopLevelField)}
-          </FieldGroupSection>
-        )}
-
-        {otherFields.length > 0 && (
-          <div className="space-y-4">
-            {otherFields.map(renderTopLevelField)}
-          </div>
-        )}
-      </div>
-
-      {hasAccordionContent && (
-        <Accordion
-          type="multiple"
-          className="border-t border-border"
-          defaultValue={[]}
-        >
-          {designFields.length > 0 && (
-            <AccordionItem value="design">
-              <AccordionTrigger className="px-1">デザイン</AccordionTrigger>
-              <AccordionContent className="space-y-4 px-1 pt-2">
-                {designFields.map(renderTopLevelField)}
-              </AccordionContent>
-            </AccordionItem>
-          )}
-          {advancedFields.length > 0 && (
-            <AccordionItem value="advanced">
-              <AccordionTrigger className="px-1">詳細設定</AccordionTrigger>
-              <AccordionContent className="space-y-4 px-1 pt-2">
+      {hasDesignTab ? (
+        // WordPress ブロックインスペクタ準拠の「内容 / デザイン」タブ。
+        // forceMount + data-[state=inactive]:hidden で非アクティブタブも DOM 保持し、
+        // Lexical / PortableText 等のクライアント状態と FormData を切替で失わない。
+        <Tabs defaultValue="content">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="content">内容</TabsTrigger>
+            <TabsTrigger value="design">デザイン</TabsTrigger>
+          </TabsList>
+          <TabsContent value="content" forceMount>
+            {contentBlock}
+          </TabsContent>
+          <TabsContent value="design" forceMount className="space-y-4">
+            {designFields.map(renderTopLevelField)}
+            {advancedFields.length > 0 && (
+              <div className="space-y-4 border-t border-border pt-4">
+                <p className="text-sm font-medium text-muted-foreground">
+                  詳細設定
+                </p>
                 {advancedFields.map(renderTopLevelField)}
-              </AccordionContent>
-            </AccordionItem>
-          )}
-        </Accordion>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        contentBlock
       )}
 
       <FormActions
