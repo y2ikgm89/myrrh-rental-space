@@ -75,7 +75,7 @@ responsive reset（`md:[...:0]` 等）したい値は **inline style ではな�
 
 ## Tailwind v4 + Turbopack で新規 arbitrary value / responsive variant が HMR 未生成
 
-`md:w-64` / `md:grid-cols-[220px_1fr]` / `gap-y-10` / `space-y-10` / `py-7` / `min-h-[2.6em]` / `min-h-12` 等を**新規追加**すると、computed style で `0px` 等 fallback 値が返り CSS に出力されない silent bug。既存 file で利用済みの class は OK、新規 combo class（特に `md:` variant + arbitrary value の組み合わせ）のみ scan に拾われない。**`@theme` 内の新規 CSS variable も同様に反映されない**（既存 variable は OK、新規 `--space-card-image-width` 等の追加分のみ未反映）。
+`md:w-64` / `md:grid-cols-[220px_1fr]` / `gap-y-10` / `space-y-10` / `py-7` / `min-h-[2.6em]` / `min-h-12` / `group-focus-within:opacity-100` 等を**新規追加**すると、computed style で `0px` 等 fallback 値が返り CSS に出力されない silent bug。既存 file で利用済みの class は OK、新規 combo class（`md:` variant + arbitrary value、`group-hover:` / `group-focus-within:` 等の state variant の組み合わせ）のみ scan に拾われない。**`@theme` 内の新規 CSS variable も同様に反映されない**（既存 variable は OK、新規 `--space-card-image-width` 等の追加分のみ未反映）。**dev server では未反映でも `bun run build`（フルスキャン）では生成される** ため、機能検証は dev HMR の computed style だけに頼らずビルドでも確認する（実例: 2026-06-01 `group-focus-within:opacity-100` が dev HMR で未生成だが `group-hover:` / `focus-visible:` は生成済み、prod build で全生成）。
 
 ### 検出
 

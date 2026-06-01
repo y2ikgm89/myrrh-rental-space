@@ -29,6 +29,27 @@ paths:
 - `@lexical/react` を上げたら **`node_modules/.../LexicalDraggableBlockPlugin` と差分マージ**し、必要ならフォークを更新する。
 - `eslint.config.mjs` の `lexical-draggable-fork` が当該ファイル用のルール緩和を担う。フォークを大きく変えたら **要否を再確認**する。
 
+### エディタ外枠 chrome — フル画面は `flush`、埋め込みは角丸カード
+
+`LexicalEditor` の外枠 `div` は既定で `border border-border rounded-lg overflow-hidden`（角丸カード）。**`flush` prop（`LexicalEditorProps.flush`）で角丸・枠線を外し edge-to-edge** にできる。判定:
+
+- **フル画面インライン編集（`InlineEditorShell` 配下 = Post / News）は `flush` 必須** — 画面全幅・全高で表示されるため、角丸カードだと四角い `EditorHeader` 直下で上部左右が内側にカーブし不格好（`overflow-hidden` が全幅ツールバー上部をクリップ）。
+- **タブ/ダイアログ・フォーム内の埋め込み（Events / Spaces / Pages / Terms の `<Card>` 内）は既定（`flush` 無し）** — 角丸カードで「ここが本文編集領域」と視覚的に区切る（WordPress / Sanity 標準）。
+- `isFullscreen` 時は `flush` の有無に関わらず `rounded-none border-0`（既存挙動）。
+
+新規にエディタを配置するときは「フル画面か埋め込みか」で `flush` を選ぶ（参照: `PostEditor` / `NewsEditor` が `flush`、`TermsForm` / `SpaceEditForm` / `EventPublishFields` が既定）。
+
+### 右パネル（Inspector / Comment 等）は in-flow 帯で統一
+
+エディタ右の追加パネルは **`InspectorSidebar` と同じ in-flow `<aside>` モデルに揃える**（fixed オーバーレイ禁止）。共通契約:
+
+- `shrink-0 h-full min-h-0`（ツールバー下〜カード下端の同じ帯。fixed `top-16` でビューポート全高に被せると Inspector と高さ不一致になる）
+- 展開幅 `w-[420px]`、`border-l border-border`、ヘッダーは `border-b px-2 py-1.5 text-xs`（Inspector と同帯様式）
+- 開閉は `transition-[width]`（0↔420px）でスライド感を出す。閉時は **`inert`** で focusable 子への Tab 漏れを防ぐ（→ `frontend/accessibility/focus-keyboard.md`）
+- **`trailingPanel` は `EditorInner` 内＝`LexicalComposer` 配下で描画される** ため、パネル側で `useLexicalComposerContext()` を呼びコマンドを直接 dispatch できる（新規 prop 不要）。`CommentPanel` の本文マーク同期（`SCROLL_TO_MARK_COMMAND`）がこの経路を使う
+
+参照実装: `comment-panel/CommentPanel.tsx`（Google Docs 型コメントパネル）。新規右パネルは本契約を踏襲し、独自の fixed overlay を作らない。
+
 ### メイン toolbar 外枠は CSS Grid `[1fr_auto_1fr]`（中央配置 + 右固定）
 
 `ToolbarPlugin` の外枠は「左 spacer + 中央ツール群 + 右 InspectorControls」の 3 列構成。**flex 3-spacer は禁止**（右 spacer 内に `shrink-0` な InspectorControls を持つと min-content が圧縮できず、中央の `max-w-full` と衝突して overlap する silent bug）。canonical:

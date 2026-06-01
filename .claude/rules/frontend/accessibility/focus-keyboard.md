@@ -46,6 +46,21 @@ import * as Dialog from "@radix-ui/react-dialog";
 </Dialog.Root>;
 ```
 
+### マウント済みで視覚的に隠す領域は `inert`
+
+state を保持するためアンマウントせず、`width: 0` / `translate` / `opacity` 等で視覚的に隠すパネル（スライドイン sidebar 等）は、隠れている間 **`inert` で非アクティブ化**する。`inert` は子孫を tab 順序から除外し、アクセシビリティツリーからも隠す（[HTML 標準](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert)、React 19 は `inert` 属性対応）。これがないと、視覚的に隠れていても内部の `<button>` 等に Tab で到達できてしまう silent a11y bug になる:
+
+```tsx
+// OK: 閉時は inert で非インタラクティブ化（width 0 で視覚的に隠す + Tab 漏れ防止）
+<aside
+  aria-hidden={!isOpen}
+  inert={!isOpen}
+  className={cn("transition-[width]", isOpen ? "w-[420px]" : "w-0 overflow-hidden")}
+>
+```
+
+`inert` は視覚的キューを自動提供しないため、必ず視覚的にも隠す（`w-0` / `opacity-0` 等）こと。Radix Dialog 等は内部で同等処理を持つため二重適用しない。参照実装: `comment-panel/CommentPanel.tsx`。
+
 ### スキップリンク
 
 `SkipLink` は公開ページ layout.tsx に実装済み。ターゲットの `id="main-content"` を `<main>` に付与する:

@@ -61,6 +61,7 @@ import { Activity } from 'react'
 
 ## Gotchas
 
+- **一回限りの JS 駆動アニメ（フラッシュ/ハイライト等）は `element.animate()`（Web Animations API）を使う** — `setTimeout` でクラス除去は `@eslint-react/web-api-no-leaked-timeout`、`addEventListener("animationend", ...)` は `{ once: true }` でも `@eslint-react/web-api-no-leaked-event-listener`（+ inline listener 警告）に触れる。WAAPI は self-managing で cleanup（timer / listener）不要・[Baseline widely available](https://developer.mozilla.org/en-US/docs/Web/API/Element/animate)。色は CSS 変数を keyframe 値に埋める（`boxShadow: "0 0 0 3px color-mix(in oklch, var(--color-primary) 45%, transparent)"`、ハードコードカラー禁止と整合）。参照実装: `CommentPlugin` の `SCROLL_TO_MARK_COMMAND`（本文マークのフラッシュ）
 - **自動切替コンテンツに `role="alert"` 禁止** — `role="alert"` は暗黙で `aria-live="assertive"` を設定し、切替のたびにスクリーンリーダーが割り込む。カルーセル等には `role="region" aria-live="polite" aria-label="..."` を使用
 - **ダイアログを条件分岐の内側でレンダリング禁止** — early return や三項演算子の片側に `<Dialog>` / `<AlertDialog>` を置くと、他の状態から `open={true}` にしても表示されない。ダイアログはコンポーネント末尾のトップレベルで常にレンダリングする
 - **`FormLabel` は `FormField` の `render` prop 内でのみ使用可能** — `FormLabel` 内部で `useFormField()` を呼ぶため、`FormField` コンテキスト外で使うと `useFormField should be used within <FormField>` ランタイムエラー。プレビューラベル等のフォーム外テキストには `<p className="text-sm font-medium">` を使用

@@ -131,14 +131,16 @@ Inspector パネルや list 行内など、複数の削除アイコンが密集�
 
 ## 参照実装
 
-| パターン                        | ファイル                                                                                   |
-| ------------------------------- | ------------------------------------------------------------------------------------------ |
-| destructive solid (主要)        | `_shared/components/DetailDeleteButton.tsx` / `_shared/components/DeleteConfirmDialog.tsx` |
-| destructive solid (disconnect)  | `settings/_components/sections/GoogleBusinessProfileSection.tsx`「連携を解除」             |
-| destructive solid (trash 遷移)  | `terms/page.tsx` の「ゴミ箱」リンク                                                        |
-| destructive-ghost (Inspector)   | `lexical/inspector/panels/CoverInspectorPanel.tsx` の背景画像削除ボタン                    |
-| destructive-ghost (list 内)     | `settings/_components/sections/DiscountSection.tsx` の conform form.remove                 |
-| ActionDropdown destructive item | `_shared/components/ActionDropdown.tsx`                                                    |
+| パターン                            | ファイル                                                                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| destructive solid (主要)            | `_shared/components/DetailDeleteButton.tsx` / `_shared/components/DeleteConfirmDialog.tsx`                                                               |
+| destructive solid (エディタ header) | `posts/_components/PostEditor.tsx` / `news/_components/NewsEditor.tsx` の「削除」（`EditorHeader` の主要破壊的アクション、`destructive-ghost` ではない） |
+| destructive solid (disconnect)      | `settings/_components/sections/GoogleBusinessProfileSection.tsx`「連携を解除」                                                                           |
+| destructive solid (trash 遷移)      | `terms/page.tsx` の「ゴミ箱」リンク                                                                                                                      |
+| destructive-ghost (Inspector)       | `lexical/inspector/panels/CoverInspectorPanel.tsx` の背景画像削除ボタン                                                                                  |
+| destructive-ghost (高密度カード)    | `comment-panel/CommentCard.tsx` の削除（hover/focus 表示、解決✓は常時）                                                                                  |
+| destructive-ghost (list 内)         | `settings/_components/sections/DiscountSection.tsx` の conform form.remove                                                                               |
+| ActionDropdown destructive item     | `_shared/components/ActionDropdown.tsx`                                                                                                                  |
 
 ## 監査 grep
 
