@@ -28,7 +28,6 @@ const faqCategoryFormSchema = z.object({
     .max(500, { error: "説明は500文字以内で入力してください" })
     .nullable()
     .optional(),
-  order: z.number().int().min(0),
   isActive: z.boolean(),
 });
 
@@ -42,7 +41,6 @@ const faqItemFormSchema = z.object({
     .string()
     .min(1, { error: "回答を入力してください" })
     .max(10000, { error: "回答は10000文字以内で入力してください" }),
-  order: z.number().int().min(0),
   isActive: z.boolean(),
 });
 
@@ -54,7 +52,6 @@ const VALID_FAQ_CATEGORY_INPUT = {
   name: "予約について",
   slug: "reservation",
   description: "予約に関するよくある質問",
-  order: 0,
   isActive: true,
 };
 
@@ -64,7 +61,6 @@ const VALID_FAQ_ITEM_INPUT = {
   question: "予約のキャンセルはいつまで可能ですか？",
   answer:
     "予約日の2日前までキャンセルが可能です。それ以降はキャンセル料が発生します。",
-  order: 0,
   isActive: true,
 };
 
@@ -90,7 +86,6 @@ describe("FAQ Admin Action Integration", () => {
         const input = {
           name: "テスト",
           slug: "test",
-          order: 0,
           isActive: true,
         };
         const result = faqCategoryFormSchema.safeParse(input);
@@ -213,35 +208,6 @@ describe("FAQ Admin Action Integration", () => {
         if (!result.success) {
           expect(result.error.issues[0].message).toContain("500文字以内");
         }
-      });
-    });
-
-    describe("order", () => {
-      test("0以上の整数は許可", () => {
-        const orders = [0, 1, 100, 999];
-        for (const order of orders) {
-          const result = faqCategoryFormSchema.safeParse({
-            ...VALID_FAQ_CATEGORY_INPUT,
-            order,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
-        const result = faqCategoryFormSchema.safeParse({
-          ...VALID_FAQ_CATEGORY_INPUT,
-          order: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = faqCategoryFormSchema.safeParse({
-          ...VALID_FAQ_CATEGORY_INPUT,
-          order: 1.5,
-        });
-        expect(result.success).toBe(false);
       });
     });
 
@@ -377,27 +343,6 @@ describe("FAQ Admin Action Integration", () => {
         if (!result.success) {
           expect(result.error.issues[0].message).toContain("10000文字以内");
         }
-      });
-    });
-
-    describe("order", () => {
-      test("0以上の整数は許可", () => {
-        const orders = [0, 1, 50, 100];
-        for (const order of orders) {
-          const result = faqItemFormSchema.safeParse({
-            ...VALID_FAQ_ITEM_INPUT,
-            order,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
-        const result = faqItemFormSchema.safeParse({
-          ...VALID_FAQ_ITEM_INPUT,
-          order: -1,
-        });
-        expect(result.success).toBe(false);
       });
     });
   });

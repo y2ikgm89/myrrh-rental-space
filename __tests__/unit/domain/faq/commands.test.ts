@@ -201,7 +201,6 @@ const VALID_CATEGORY_INPUT = {
   name: "よくある質問",
   slug: "faq",
   description: "よくある質問一覧",
-  order: 1,
   isActive: true,
 };
 
@@ -209,7 +208,6 @@ const VALID_ITEM_INPUT = {
   categoryId: CATEGORY_ID,
   question: "質問タイトル",
   answer: "回答内容",
-  order: 1,
   isPublished: false,
 };
 
@@ -235,10 +233,10 @@ describe("createFaqCategory", () => {
       expect(mockFaqCategoryCreate).toHaveBeenCalledTimes(1);
     });
 
-    test("order が未設定の場合 maxOrder + 1 で作成する", async () => {
+    test("末尾（maxOrder + 1）に自動採番する", async () => {
       mockFaqCategoryAggregate.mockResolvedValue({ _max: { order: 3 } });
 
-      await createFaqCategory({ ...VALID_CATEGORY_INPUT, order: 0 });
+      await createFaqCategory(VALID_CATEGORY_INPUT);
 
       expect(mockFaqCategoryCreate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -252,7 +250,7 @@ describe("createFaqCategory", () => {
     test("maxOrder が null の場合 order 1 で作成する", async () => {
       mockFaqCategoryAggregate.mockResolvedValue({ _max: { order: null } });
 
-      await createFaqCategory({ ...VALID_CATEGORY_INPUT, order: 0 });
+      await createFaqCategory(VALID_CATEGORY_INPUT);
 
       expect(mockFaqCategoryCreate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -571,10 +569,10 @@ describe("createFaqItem", () => {
       expect(mockFaqItemCreate).toHaveBeenCalledTimes(1);
     });
 
-    test("order が未設定の場合 maxOrder + 1 で作成する", async () => {
+    test("末尾（maxOrder + 1）に自動採番する", async () => {
       mockFaqItemAggregate.mockResolvedValue({ _max: { order: 5 } });
 
-      await createFaqItem({ ...VALID_ITEM_INPUT, order: 0 });
+      await createFaqItem(VALID_ITEM_INPUT);
 
       expect(mockFaqItemCreate).toHaveBeenCalledWith(
         expect.objectContaining({

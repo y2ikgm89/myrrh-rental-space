@@ -85,7 +85,6 @@ export type FaqCategoryCommandInput = {
   slug: string;
   description?: string | null;
   iconEmoji?: string | null;
-  order: number;
   isActive: boolean;
 };
 
@@ -93,7 +92,6 @@ export type FaqItemCommandInput = {
   categoryId: string;
   question: string;
   answer: string;
-  order: number;
   isPublished: boolean;
 };
 
