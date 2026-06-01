@@ -17,7 +17,7 @@ paths:
 | `default`           | primary 塗りつぶし (青)                | 主要 affordance: 保存 / 作成 / 送信 / 招待 / 公開 / 承認 / 接続                                                     |
 | `destructive`       | destructive 塗りつぶし (赤)            | **全 destructive アクション canonical**: 削除 / ゴミ箱遷移 / disconnect / clear / 解除 / リセット / 退会 / 予約取消 |
 | `destructive-ghost` | 赤テキスト + transparent + hover bg/10 | 高密度 UI 専用: Inspector 内の削除アイコン / ボタンが多数並ぶ list 内 (警告疲労回避)                                |
-| `outline`           | 中立 border + transparent bg           | キャンセル / 戻る / 閉じる / プレビュー / エクスポート / インポート / コピー / 接続テスト                           |
+| `outline`           | 中立 border + 純白 bg-card             | キャンセル / 戻る / 閉じる / プレビュー / エクスポート / インポート / コピー / 接続テスト                           |
 | `secondary`         | muted 塗りつぶし                       | 強調を下げた代替アクション                                                                                          |
 | `ghost`             | bg なし + hover accent                 | toolbar / ActionDropdown trigger / 装飾的 icon button (destructive 系は除く)                                        |
 | `link`              | text-primary underline                 | 文中の inline 遷移                                                                                                  |
