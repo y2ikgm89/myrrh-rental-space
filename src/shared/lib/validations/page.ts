@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { SLUG_REGEX } from "./params";
 
 // =============================================================================
 // システムページ定義
@@ -124,7 +125,7 @@ export const createPageSchema = z.object({
     .string()
     .min(1, { error: "スラッグは必須です" })
     .max(100, { error: "スラッグは100文字以内です" })
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    .regex(SLUG_REGEX, {
       error: "スラッグは半角英数字とハイフンのみ使用可能です",
     }),
   title: z
