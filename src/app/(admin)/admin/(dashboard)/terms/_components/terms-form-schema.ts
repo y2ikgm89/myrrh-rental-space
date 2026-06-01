@@ -45,11 +45,7 @@ export const termsFormSchema = z.object({
   requiredAtInquiry: booleanFromCheckbox,
   requiredAtSignup: booleanFromCheckbox,
   showInFooter: booleanFromCheckbox,
-  footerOrder: z.coerce
-    .number({ error: "表示順は数値です" })
-    .int({ error: "整数で入力してください" })
-    .min(0, { error: "0以上で入力してください" })
-    .max(999, { error: "999以下で入力してください" }),
+  // footerOrder はシステム管理（D&D 並び替えが SSoT、手動入力なし）
 });
 
 export type TermsFormSubmitData = z.output<typeof termsFormSchema>;

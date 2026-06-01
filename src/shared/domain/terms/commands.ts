@@ -44,6 +44,11 @@ export async function createTermsCommand(
 
   const { contentJson, contentHtml } = buildContent(input);
 
+  const maxOrder = await prisma.termsDocument.aggregate({
+    where: { deletedAt: null },
+    _max: { footerOrder: true },
+  });
+
   const created = await prisma.termsDocument.create({
     data: {
       type: input.type,
@@ -57,7 +62,8 @@ export async function createTermsCommand(
       requiredAtInquiry: input.requiredAtInquiry,
       requiredAtSignup: input.requiredAtSignup,
       showInFooter: input.showInFooter,
-      footerOrder: input.footerOrder,
+      // footerOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+      footerOrder: (maxOrder._max.footerOrder ?? 0) + 1,
     },
     select: { id: true, slug: true },
   });
@@ -109,12 +115,37 @@ export async function updateTermsCommand(
       requiredAtInquiry: input.requiredAtInquiry,
       requiredAtSignup: input.requiredAtSignup,
       showInFooter: input.showInFooter,
-      footerOrder: input.footerOrder,
+      // footerOrder は変更しない（位置は reorderTermsCommand のみが変更）
     },
     select: { id: true, slug: true },
   });
 
   return { ...updated, previousSlug: existing.slug };
+}
+
+/**
+ * 規約のフッター表示順を D&D 並び替えで更新（footerOrder の SSoT）
+ *
+ * `orderedIds` の並び順で footerOrder を 0 始まりで再採番する。
+ */
+export async function reorderTermsCommand(
+  orderedIds: readonly string[],
+): Promise<{ updated: number }> {
+  if (orderedIds.length === 0) {
+    return { updated: 0 };
+  }
+
+  // Interactive transaction で pg deprecation 回避
+  await prisma.$transaction(async (tx) => {
+    for (const [index, id] of orderedIds.entries()) {
+      await tx.termsDocument.update({
+        where: { id, deletedAt: null },
+        data: { footerOrder: index },
+      });
+    }
+  });
+
+  return { updated: orderedIds.length };
 }
 
 /**

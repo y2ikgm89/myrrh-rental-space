@@ -111,7 +111,6 @@ export function TermsForm({
     defaultValue: {
       slug: initial?.slug ?? "",
       title: initial?.title ?? "",
-      footerOrder: String(initial?.footerOrder ?? 0),
     },
   });
 
@@ -355,28 +354,6 @@ export function TermsForm({
                   name={fields.showInFooter.name}
                   value={showInFooter ? "on" : ""}
                 />
-              </div>
-
-              {/* footerOrder */}
-              <div className="space-y-2">
-                <Label htmlFor={fields.footerOrder.id}>表示順</Label>
-                <Input
-                  {...getInputProps(fields.footerOrder, { type: "number" })}
-                  min={0}
-                  max={999}
-                  disabled={isPending}
-                />
-                <p className="text-xs text-muted-foreground">
-                  小さい順に表示（フッター・一覧）
-                </p>
-                {fields.footerOrder.errors && (
-                  <p
-                    id={fields.footerOrder.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.footerOrder.errors.join(", ")}
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>

@@ -62,18 +62,10 @@ const titleSchema = z
   .min(1, { error: "タイトルを入力してください" })
   .max(100, { error: "タイトルは100文字以内です" });
 
-const footerOrderSchema = z
-  .number()
-  .int({ error: "整数で入力してください" })
-  .min(0, { error: "0以上で入力してください" })
-  .max(999, { error: "999以下で入力してください" });
-
 /**
  * 規約作成・編集フォームスキーマ
  *
- * RHF + `standardSchemaResolver` の input 型互換性のため `.default()` を
- * 使わず、呼び出し側の `defaultValues` で初期値を指定する
- * (`zod-patterns/validation-schemas.md` §RHF 参照)。
+ * `footerOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
  */
 export const termsFormSchema = z.object({
   type: typeSchema,
@@ -87,7 +79,6 @@ export const termsFormSchema = z.object({
   requiredAtInquiry: z.boolean(),
   requiredAtSignup: z.boolean(),
   showInFooter: z.boolean(),
-  footerOrder: footerOrderSchema,
 });
 
 export type TermsFormInput = z.infer<typeof termsFormSchema>;
