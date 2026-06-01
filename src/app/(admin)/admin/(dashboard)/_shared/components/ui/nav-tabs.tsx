@@ -34,7 +34,7 @@ type NavTabsProps<T extends string> = {
  *
  * スタイル契約は `Tabs` primitive（`tabs.tsx` の `TabsList` / `TabsTrigger`）と一致:
  * - 親コンテナ: `min-h-11` + `bg-muted` + `p-1` + `scrollbar-hide`
- * - 子トリガー: `min-h-11` + `px-3 py-2` + active 時 `bg-background` shadow
+ * - 子トリガー: `min-h-11` + `px-3 py-2` + active 時 `bg-card` shadow
  * - WCAG 2.5.5 Enhanced (AAA) 44×44 CSS px 準拠
  *
  * margin（`mb-2` 等）は consumer 側で `className` 経由で付与する。
@@ -66,8 +66,7 @@ export function NavTabs<T extends string>({
                   "inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-all duration-200",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   "hover:bg-background/50",
-                  isActive &&
-                    "bg-background text-foreground shadow-sm hover:bg-background",
+                  isActive && "bg-card text-foreground shadow-sm hover:bg-card",
                 )}
               >
                 {label}
