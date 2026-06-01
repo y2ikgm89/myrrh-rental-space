@@ -4,7 +4,7 @@
  * メディア詳細ダイアログ
  */
 
-import { useState, useTransition, useRef, useId } from "react";
+import { useState, useTransition, useId } from "react";
 import {
   IconCopy,
   IconExternalLink,
@@ -62,7 +62,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
   const [hasChanges, setHasChanges] = useState(false);
 
   // Track which item the form state is for (derived state pattern)
-  const lastItemIdRef = useRef<string | null>(null);
+  const [lastItemId, setLastItemId] = useState<string | null>(null);
   const currentItemId = item?.id ?? null;
 
   const [formData, setFormData] = useState<FormState>(() =>
@@ -71,8 +71,8 @@ export function MediaDetailDialog({ item, onClose }: Props) {
 
   // Derived state: reset form when item changes (React official pattern for adjusting state on prop change)
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  if (currentItemId !== lastItemIdRef.current) {
-    lastItemIdRef.current = currentItemId;
+  if (currentItemId !== lastItemId) {
+    setLastItemId(currentItemId);
     setFormData(getInitialFormState(item));
     setHasChanges(false);
   }
