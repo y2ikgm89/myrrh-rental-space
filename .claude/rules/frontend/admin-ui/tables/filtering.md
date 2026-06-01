@@ -2,7 +2,6 @@
 description: 管理一覧の複数フィルター共存パターン（BaseFilters + useQueryStates）+ 標準フィルターバー順序
 paths:
   - src/app/(admin)/**/*Filters*.tsx
-  - src/admin/components/filters/**
 ---
 
 # 複数フィルター共存パターン + 標準フィルターバー順序

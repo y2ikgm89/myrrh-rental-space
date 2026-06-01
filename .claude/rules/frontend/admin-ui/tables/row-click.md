@@ -2,7 +2,7 @@
 description: ClickableTableRow による行クリック遷移パターン（設計判断 / stopRowClick / destination URL / 禁止パターン）
 paths:
   - src/app/(admin)/**/*Table*.tsx
-  - src/admin/components/table/ClickableTableRow*.tsx
+  - src/app/(admin)/**/_shared/components/table/ClickableTableRow*.tsx
 ---
 
 # テーブル行クリック遷移パターン

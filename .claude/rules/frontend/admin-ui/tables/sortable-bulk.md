@@ -4,8 +4,8 @@ paths:
   - src/app/(admin)/**/*Sortable*.tsx
   - src/app/(admin)/**/*BulkActions*.tsx
   - src/app/(admin)/**/*TableHeader*.tsx
-  - src/admin/components/table/SortableColumnHeader*.tsx
-  - src/admin/components/ui/sortable*.tsx
+  - src/app/(admin)/**/_shared/components/table/SortableColumnHeader*.tsx
+  - src/app/(admin)/**/_shared/components/ui/sortable*.tsx
 ---
 
 # ソータブルリスト + 一括操作 + カラムソート
