@@ -77,7 +77,6 @@ export async function createFaqCategory(
             slug: data.slug,
             description: data.description ? data.description : null,
             iconEmoji: data.iconEmoji ? data.iconEmoji : null,
-            order: data.order,
             isActive: data.isActive,
           }),
         afterSuccess: () => {
@@ -118,7 +117,6 @@ export async function updateFaqCategory(
             slug: data.slug,
             description: data.description ? data.description : null,
             iconEmoji: data.iconEmoji ? data.iconEmoji : null,
-            order: data.order,
             isActive: data.isActive,
           });
           return null;
@@ -192,7 +190,6 @@ export async function createFaqItem(
           categoryId: data.categoryId,
           question: data.question,
           answer: data.answer,
-          order: data.order,
           isPublished: data.isPublished,
         }),
       afterSuccess: () => {
@@ -228,7 +225,6 @@ export async function updateFaqItem(
           categoryId: data.categoryId,
           question: data.question,
           answer: data.answer,
-          order: data.order,
           isPublished: data.isPublished,
         });
         return null;

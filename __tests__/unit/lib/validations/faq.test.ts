@@ -15,7 +15,6 @@ const VALID_FAQ_CATEGORY = {
   name: "よくある質問",
   slug: "general-faq",
   description: "よくある質問カテゴリの説明",
-  order: 0,
   isActive: true,
 };
 
@@ -24,7 +23,6 @@ const VALID_FAQ_ITEM = {
   categoryId: "123e4567-e89b-12d3-a456-426614174000",
   question: "これはテスト質問ですか？",
   answer: "はい、これはテスト回答です。",
-  order: 0,
   isPublished: true,
 };
 
@@ -156,32 +154,6 @@ describe("faqCategoryFormSchema", () => {
     });
   });
 
-  describe("order", () => {
-    test("負の値はエラー", () => {
-      const result = faqCategoryFormSchema.safeParse({
-        ...VALID_FAQ_CATEGORY,
-        order: -1,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("小数はエラー", () => {
-      const result = faqCategoryFormSchema.safeParse({
-        ...VALID_FAQ_CATEGORY,
-        order: 1.5,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("0は許可", () => {
-      const result = faqCategoryFormSchema.safeParse({
-        ...VALID_FAQ_CATEGORY,
-        order: 0,
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
   describe("isActive", () => {
     test("true/falseは許可", () => {
       for (const isActive of [true, false]) {
@@ -283,24 +255,6 @@ describe("faqItemFormSchema", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
         answer: "あ".repeat(5000),
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("order", () => {
-    test("負の値はエラー", () => {
-      const result = faqItemFormSchema.safeParse({
-        ...VALID_FAQ_ITEM,
-        order: -1,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("0は許可", () => {
-      const result = faqItemFormSchema.safeParse({
-        ...VALID_FAQ_ITEM,
-        order: 0,
       });
       expect(result.success).toBe(true);
     });

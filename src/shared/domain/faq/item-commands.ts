@@ -49,7 +49,8 @@ export async function createFaqItem(
       categoryId: input.categoryId,
       question: input.question,
       answer: input.answer,
-      order: input.order || (maxOrder._max.order ?? 0) + 1,
+      // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqItems が SSoT）
+      order: (maxOrder._max.order ?? 0) + 1,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
     },
@@ -68,13 +69,13 @@ export async function updateFaqItem(
     ensureFaqCategoryExists(input.categoryId),
   ]);
 
+  // order は更新対象外。位置は D&D の reorderFaqItems のみが変更する
   await prisma.faqItem.update({
     where: { id, deletedAt: null },
     data: {
       categoryId: input.categoryId,
       question: input.question,
       answer: input.answer,
-      order: input.order,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
     },

@@ -128,7 +128,6 @@ function FaqCategoryCreateDialog({ open, onOpenChange }: CreateProps) {
             slug: "",
             description: "",
             iconEmoji: "",
-            order: "0",
             isActive: "on",
           }}
         />
@@ -204,7 +203,6 @@ function FaqCategoryEditDialog({ open, onOpenChange, category }: EditProps) {
             slug: category.slug,
             description: category.description ?? "",
             iconEmoji: category.iconEmoji ?? "",
-            order: String(category.order),
             isActive: category.isActive ? "on" : "",
           }}
         />
@@ -245,7 +243,6 @@ type FormBodyProps = {
     slug: string;
     description: string;
     iconEmoji: string;
-    order: string;
     isActive: string;
   };
 };
@@ -352,24 +349,6 @@ function FaqCategoryFormBody({
             className="text-xs text-destructive"
           >
             {fields.description.errors.join(", ")}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor={fields.order.id}>表示順</Label>
-        <Input
-          {...getInputProps(fields.order, { type: "number" })}
-          placeholder="0"
-          min={0}
-          disabled={isPending}
-        />
-        <p className="text-xs text-muted-foreground">
-          小さい数字が先に表示されます
-        </p>
-        {fields.order.errors && (
-          <p id={fields.order.errorId} className="text-xs text-destructive">
-            {fields.order.errors.join(", ")}
           </p>
         )}
       </div>

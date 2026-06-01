@@ -66,7 +66,8 @@ export async function createFaqCategory(
       slug: input.slug,
       description: normalizeNullableString(input.description),
       iconEmoji: normalizeNullableString(input.iconEmoji),
-      order: input.order || (maxOrder._max.order ?? 0) + 1,
+      // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqCategories が SSoT）
+      order: (maxOrder._max.order ?? 0) + 1,
       isActive: input.isActive,
     },
     select: { id: true },
@@ -84,6 +85,7 @@ export async function updateFaqCategory(
     ensureFaqCategoryUnique(input.slug, id),
   ]);
 
+  // order は更新対象外。位置は D&D の reorderFaqCategories のみが変更する
   await prisma.faqCategory.update({
     where: { id, deletedAt: null },
     data: {
@@ -91,7 +93,6 @@ export async function updateFaqCategory(
       slug: input.slug,
       description: normalizeNullableString(input.description),
       iconEmoji: normalizeNullableString(input.iconEmoji),
-      order: input.order,
       isActive: input.isActive,
     },
   });
