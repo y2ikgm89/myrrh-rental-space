@@ -74,7 +74,7 @@ export function MobileNav({ authKind }: MobileNavProps) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors focus-visible:outline-none",
+                  "flex min-h-11 flex-col items-center justify-center gap-0.5 px-3 py-1 text-xs transition-colors focus-visible:outline-none",
                   active ? "text-accent" : "text-muted-foreground",
                 )}
               >
