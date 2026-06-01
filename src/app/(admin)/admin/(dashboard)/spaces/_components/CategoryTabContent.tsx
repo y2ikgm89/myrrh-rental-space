@@ -25,9 +25,17 @@ async function CategoryList() {
     }),
   );
 
+  // D&D 並び替えは検索なしのときのみ有効（絞り込み中は順序が部分集合になり破綻するため）
+  const sortable = !params.catSearch;
+  const startIndex = (result.page - 1) * params.catPerPage;
+
   return (
     <>
-      <CategoryTable categories={result.categories} />
+      <CategoryTable
+        categories={result.categories}
+        sortable={sortable}
+        startIndex={startIndex}
+      />
       <Pagination
         pageUrlKey="catPage"
         perPageUrlKey="catPerPage"

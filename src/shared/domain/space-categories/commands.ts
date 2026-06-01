@@ -33,7 +33,6 @@ function toSpaceCategoryData(data: SpaceCategoryFormData) {
     description: data.description || null,
     icon: data.icon || null,
     color: data.color || null,
-    sortOrder: data.sortOrder,
   };
 }
 
@@ -42,8 +41,16 @@ export async function createSpaceCategory(
 ): Promise<{ id: string }> {
   await ensureActiveNameAvailable(data.name);
 
+  const maxOrder = await prisma.spaceCategory.aggregate({
+    _max: { sortOrder: true },
+  });
+
   const category = await prisma.spaceCategory.create({
-    data: toSpaceCategoryData(data),
+    data: {
+      ...toSpaceCategoryData(data),
+      // sortOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+      sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
+    },
   });
 
   return { id: category.id };
