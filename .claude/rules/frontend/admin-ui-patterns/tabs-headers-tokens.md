@@ -49,7 +49,7 @@ const [activeTab, setActiveTab] = useQueryState(
 | タブナビ       | `Link` + 名前空間付きクエリの preserve | タブ切替で他タブのフィルタが汚染されない           |
 | 子のデータ読み | `searchParamsCache.all()` / `get`      | 親で `parse` 済みなら子で二重 `parse` を避ける     |
 
-**実装は `NavTabs` primitive 経由必須**（`@/admin/components/ui` から re-export、`_shared/components/ui/nav-tabs.tsx` が SSoT）。`<nav>` / `<ul>` / トリガー `<Link>` をローカルで直書きする legacy 実装は禁止 — スタイル・WCAG 2.5.5 (44×44) ヒットエリア・`aria-current="page"`・`scrollbar-hide` 契約をすべて primitive が保証する。margin は consumer 側で `className` 経由（例: `<NavTabs className="mb-2" ... />`）。スタイル契約は `Tabs` primitive（`tabs.tsx`）の `TabsList` / `TabsTrigger` と一致（`min-h-11` / `bg-muted` / `px-3 py-2` / active 時 `bg-background shadow-sm`）。参照実装: `SpaceManagementTabs.tsx` / `EventTabs.tsx`。
+**実装は `NavTabs` primitive 経由必須**（`@/admin/components/ui` から re-export、`_shared/components/ui/nav-tabs.tsx` が SSoT）。`<nav>` / `<ul>` / トリガー `<Link>` をローカルで直書きする legacy 実装は禁止 — スタイル・WCAG 2.5.5 (44×44) ヒットエリア・`aria-current="page"`・`scrollbar-hide` 契約をすべて primitive が保証する。margin は consumer 側で `className` 経由（例: `<NavTabs className="mb-2" ... />`）。スタイル契約は `Tabs` primitive（`tabs.tsx`）の `TabsList` / `TabsTrigger` と一致（`min-h-11` / `bg-muted` / `px-3 py-2` / active 時 `bg-card shadow-sm`）。参照実装: `SpaceManagementTabs.tsx` / `EventTabs.tsx`。
 
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧 + フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
 

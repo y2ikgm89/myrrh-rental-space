@@ -125,7 +125,7 @@ export function LibraryTab({
                 className={cn(
                   "inline-flex min-h-11 items-center justify-center rounded-sm px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-card text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
