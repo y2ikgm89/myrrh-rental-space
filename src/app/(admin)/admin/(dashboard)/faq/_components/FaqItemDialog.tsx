@@ -117,7 +117,6 @@ function FaqItemCreateDialog({ open, onOpenChange, categoryId }: CreateProps) {
             categoryId,
             question: "",
             answer: "",
-            order: "0",
             isPublished: "on",
           }}
         />
@@ -191,7 +190,6 @@ function FaqItemEditDialog({ open, onOpenChange, item }: EditProps) {
             categoryId: item.categoryId,
             question: item.question,
             answer: item.answer,
-            order: String(item.order),
             isPublished: item.isPublished ? "on" : "",
           }}
         />
@@ -229,7 +227,6 @@ type FormBodyProps = {
     categoryId: string;
     question: string;
     answer: string;
-    order: string;
     isPublished: string;
   };
 };
@@ -301,24 +298,6 @@ function FaqItemFormBody({
         <p className="text-xs text-muted-foreground">
           プレーンテキストのみ。改行は保持されます（5000 文字以内）。
         </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor={fields.order.id}>表示順</Label>
-        <Input
-          {...getInputProps(fields.order, { type: "number" })}
-          placeholder="0"
-          min={0}
-          disabled={isPending}
-        />
-        <p className="text-xs text-muted-foreground">
-          小さい数字が先に表示されます
-        </p>
-        {fields.order.errors && (
-          <p id={fields.order.errorId} className="text-xs text-destructive">
-            {fields.order.errors.join(", ")}
-          </p>
-        )}
       </div>
 
       <div className="flex items-center gap-4">

@@ -49,7 +49,8 @@ export async function createFaqItem(
       categoryId: input.categoryId,
       question: input.question,
       answer: input.answer,
-      order: input.order || (maxOrder._max.order ?? 0) + 1,
+      // order はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+      order: (maxOrder._max.order ?? 0) + 1,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
     },
@@ -74,7 +75,7 @@ export async function updateFaqItem(
       categoryId: input.categoryId,
       question: input.question,
       answer: input.answer,
-      order: input.order,
+      // order は変更しない（位置は reorderFaqItems のみが変更）
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
     },

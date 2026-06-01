@@ -37,7 +37,7 @@ export const faqCategoryFormSchema = z.object({
     .max(8, { error: "アイコンは1文字の絵文字を入力してください" })
     .nullable()
     .optional(),
-  order: z.number().int().min(0).default(0),
+  // order はシステム管理（D&D 並び替えが SSoT、手動入力なし）
   isActive: z.boolean().default(false),
 });
 
@@ -75,7 +75,7 @@ export const faqItemFormSchema = z.object({
     .string()
     .min(1, { error: "回答を入力してください" })
     .max(5000, { error: "回答は5000文字以内で入力してください" }),
-  order: z.number().int().min(0).default(0),
+  // order はシステム管理（D&D 並び替えが SSoT、手動入力なし）
   isPublished: z.boolean().default(false),
 });
 
