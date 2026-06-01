@@ -130,7 +130,7 @@ export function PostEditor({
         <DialogTrigger asChild>
           <Button
             type="button"
-            variant="destructive-ghost"
+            variant="destructive"
             size="sm"
             disabled={editor.isPending}
           >
