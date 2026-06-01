@@ -371,7 +371,6 @@ describe("postCategorySchema", () => {
     name: "お知らせ",
     slug: "news",
     description: "お知らせカテゴリ",
-    order: 0,
   };
 
   test("有効なデータでバリデーションに成功する", () => {
@@ -412,20 +411,12 @@ describe("postCategorySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("orderフィールドはデフォルトで0", () => {
-    const data = { ...validCategoryData };
-    delete (data as Record<string, unknown>)["order"];
-    const result = postCategorySchema.safeParse(data);
+  test("order は schema に含まれない（システム管理）", () => {
+    const result = postCategorySchema.safeParse(validCategoryData);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.order).toBe(0);
+      expect("order" in result.data).toBe(false);
     }
-  });
-
-  test("orderフィールドは負の値を許可しない", () => {
-    const invalidData = { ...validCategoryData, order: -1 };
-    const result = postCategorySchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
   });
 
   test("SEOフィールドはオプショナルでnullを許可", () => {

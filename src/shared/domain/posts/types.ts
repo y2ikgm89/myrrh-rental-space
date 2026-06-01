@@ -163,7 +163,6 @@ export type PostCategoryMutationInput = {
   name: string;
   slug: string;
   description?: string | null;
-  order: number;
   metaTitle?: string | null;
   metaDescription?: string | null;
   ogpImageUrl?: string | null;

@@ -174,7 +174,6 @@ type CategoryFormDialogProps = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly editingCategory: PostCategoryData | null;
-  readonly defaultOrder: number;
   readonly onSuccess: () => Promise<void>;
 };
 
@@ -182,7 +181,6 @@ function CategoryFormDialog({
   open,
   onOpenChange,
   editingCategory,
-  defaultOrder,
   onSuccess,
 }: CategoryFormDialogProps) {
   const isEdit = editingCategory !== null;
@@ -208,7 +206,6 @@ function CategoryFormDialog({
       name: editingCategory?.name ?? "",
       slug: editingCategory?.slug ?? "",
       description: editingCategory?.description ?? "",
-      order: String(editingCategory?.order ?? defaultOrder),
     },
   });
 
@@ -318,12 +315,6 @@ function CategoryFormDialog({
                 </p>
               )}
             </div>
-
-            <input
-              type="hidden"
-              name={fields.order.name}
-              value={String(editingCategory?.order ?? defaultOrder)}
-            />
           </div>
           <DialogFooter>
             <Button
@@ -541,7 +532,6 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           editingCategory={editingCategory}
-          defaultOrder={categories.length}
           onSuccess={refreshCategories}
         />
       )}

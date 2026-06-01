@@ -49,6 +49,10 @@ const mockPostCategoryDelete = mock<() => Promise<Record<string, unknown>>>(
   () => Promise.resolve({ id: "category-1" }),
 );
 
+const mockPostCategoryAggregate = mock<
+  () => Promise<{ _max: { order: number | null } }>
+>(() => Promise.resolve({ _max: { order: null } }));
+
 const mockPostTagFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
@@ -103,6 +107,7 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockPostCategoryCreate,
       update: mockPostCategoryUpdate,
       delete: mockPostCategoryDelete,
+      aggregate: mockPostCategoryAggregate,
     },
     postTag: {
       findUnique: mockPostTagFindUnique,
@@ -243,7 +248,6 @@ const VALID_CATEGORY_INPUT = {
   name: "テストカテゴリ",
   slug: "test-category",
   description: null,
-  order: 1,
   metaTitle: null,
   metaDescription: null,
   ogpImageUrl: null,
@@ -815,9 +819,11 @@ describe("createPostCategory", () => {
   beforeEach(() => {
     mockPostCategoryFindFirst.mockReset();
     mockPostCategoryCreate.mockReset();
+    mockPostCategoryAggregate.mockReset();
 
     mockPostCategoryFindFirst.mockResolvedValue(null);
     mockPostCategoryCreate.mockResolvedValue({ id: "category-1" });
+    mockPostCategoryAggregate.mockResolvedValue({ _max: { order: null } });
   });
 
   describe("正常系", () => {
@@ -826,6 +832,18 @@ describe("createPostCategory", () => {
 
       expect(result).toEqual({ id: "category-1" });
       expect(mockPostCategoryCreate).toHaveBeenCalledTimes(1);
+    });
+
+    test("order は末尾に自動採番される（maxOrder + 1）", async () => {
+      mockPostCategoryAggregate.mockResolvedValue({ _max: { order: 7 } });
+
+      await createPostCategory(VALID_CATEGORY_INPUT);
+
+      expect(mockPostCategoryCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ order: 8 }),
+        }),
+      );
     });
 
     test("description が空文字の場合 null に正規化される", async () => {

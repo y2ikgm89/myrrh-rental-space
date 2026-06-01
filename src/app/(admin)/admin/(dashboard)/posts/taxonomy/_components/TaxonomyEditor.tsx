@@ -233,7 +233,6 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
       name: data.name,
       slug: data.slug,
       description: data.description ?? "",
-      order: String(data.order),
       metaTitle: data.metaTitle ?? "",
       metaDescription: data.metaDescription ?? "",
       ogpImageUrl: data.ogpImageUrl ?? "",
@@ -410,26 +409,6 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                   className="text-sm text-destructive"
                 >
                   {fields.description.errors.join(", ")}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.order.id}>表示順</Label>
-              <Input
-                {...getInputProps(fields.order, { type: "number" })}
-                placeholder="0"
-                min={0}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                小さい数字が先に表示されます
-              </p>
-              {fields.order.errors && (
-                <p
-                  id={fields.order.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.order.errors.join(", ")}
                 </p>
               )}
             </div>
