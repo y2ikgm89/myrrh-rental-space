@@ -26,7 +26,7 @@ paths:
 
 | 技術           | バージョン         | 互換性                               |
 | -------------- | ------------------ | ------------------------------------ |
-| Lexical        | 0.43.x             | React 17+対応                        |
+| Lexical        | 0.45.x             | React 17+対応                        |
 | React          | 19.2.4             | ✅ peerDependencies対応              |
 | React Compiler | 1.0.0              | ✅ 自動メモ化（useCallback基本不要） |
 | Turbopack      | Next.js 16 default | ✅ optimizePackageImports設定済み    |
