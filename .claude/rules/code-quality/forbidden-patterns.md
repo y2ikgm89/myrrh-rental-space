@@ -182,3 +182,35 @@ export async function updateXxxActive(id: string, isActive: boolean) {
 - ActionDropdown 経由の旧「公開/非公開にする」「有効化/無効化」menu は PublishSwitch 配線時に削除（責務単一化）
 - **Coupon は `CouponStateToggle` 専用 component を使用** — PublishSwitch.label の binary published/unpublished prop を派生 5 状態（active/inactive/expired/limitReached/notStarted）に流用する API abuse 回避のため専用化（PR #155）
 - **多状態 (3+ states) status は `<XxxStatusSelect>` inline Select pattern** — Reservation / Post / Event canonical（PR #159 / #161）。ActionDropdown 経由の publish/cancel/archive menu 復活禁止（状態変更は inline Select で完結）
+
+### 8. 並び替え可能リソースの「表示順」整数を手動入力させない
+
+D&D 並び替え（dnd-kit `reorderXxx`）を持つ admin リソースのフォームに `order` 数値入力を置くのは冗長 + ソート整数のユーザー露出（"0 始まり" の混乱源）。**order はシステム管理に一本化**する。業界標準（Notion / Linear / Sanity / Shopify）はいずれもソート整数を UI に露出せず D&D + 自動採番のみ。
+
+```typescript
+// NG: フォーム / コマンド入力契約に order を持たせ、手動数値入力させる
+const itemFormSchema = z.object({
+  order: z.number().int().min(0).default(0) /* ... */,
+});
+type ItemCommandInput = { order: number /* ... */ };
+await prisma.item.update({ data: { order: input.order /* ... */ } }); // update で位置が動く
+
+// OK: order はシステム管理（フォーム / CommandInput から完全削除）
+// create — 末尾に自動採番
+order: ((maxOrder._max.order ?? 0) + 1,
+  // reorder（D&D が SSoT） — index で 0 始まり再採番
+  await tx.item.update({ where: { id }, data: { order: index } }));
+// update — order を変更しない（位置は reorder のみが変更）
+await prisma.item.update({
+  data: {
+    /* order を含めない */
+  },
+});
+```
+
+- **3 経路の責務分離**: create=末尾自動採番 / reorder=D&D `reorderXxx(orderedIds)` が SSoT / update=order 不変
+- **フォーム schema・CommandInput 契約から `order` を完全削除**（手動入力 UI も削除）。後方互換で optional に残さない
+- `order Int @default(0)` カラムは維持（create で明示設定、update で省略）するため**マイグレーション不要**
+- canonical 実装: FAQ 項目 / カテゴリ（`reorderFaqItems` / `reorderFaqCategories` + `FaqItemDialog` / `FaqCategoryDialog`、PR #397）
+- **判定**: 当該リソースに D&D 並び替え（`*Sortable*` / `reorderXxx`）があるなら手動 order 入力は不要 → 削除。D&D が無い場合は D&D 追加が第一選択（手動 order 入力の存続は最終手段、`frontend/admin-ui/tables/sortable-bulk.md` 参照）
+- 本パターン未適用（フォローアップ候補）: posts/taxonomy `TaxonomyEditor`（CategoryManager に D&D あり）/ terms `TermsForm.footerOrder`（D&D 未実装）

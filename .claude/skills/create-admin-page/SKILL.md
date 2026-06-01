@@ -35,6 +35,7 @@ argument-hint: <resource-name-camelCase>
 
 - **標準**: React 19 `useActionState` + conform `useForm` (`@conform-to/react`) + `parseWithZod` (`@conform-to/zod/v4`)。Server Action は `(prev, formData) => SubmissionResult` signature、`executeConformMutation` SSoT helper 経由で `executeAdminMutationResult` を呼ぶ
 - **React Hook Form は `package.json` から完全削除済** — 新規利用不可
+- **「表示順」(`order`) の手動数値入力を scaffold しない** — D&D 並び替えを持つ（or 追加する）リソースでは order はシステム管理（create=末尾自動採番 / reorder=D&D SSoT / update=不変）、フォーム schema・CommandInput から `order` を除外。ソート整数を UI に露出しない（`code-quality/forbidden-patterns.md` §8、canonical: FAQ）
 - **複雑 form**: DnD・動的配列・MediaPicker・Lexical 統合は ① conform `form.insert/remove/reorder` + dnd-kit + hidden input (LocationForm canonical) または ② useState array + 安定 key + hidden input append + schema preprocess (SpaceEditForm canonical、MediaPicker / IconPickerField 等 external state 連携時) のいずれかを採用。参照実装: `LocationForm` / `SpaceEditForm` (5 tab monolithic 1700 行)
 - **参照実装** (PR #61-#62、admin form 16 件 migration 済):
   - **simple** (settings sections): `MaintenanceSection` / `CookieConsentSection` / `NotificationSection` / `HeaderSection` / `PermalinkSection` / `ReservationSection` / `EmailSection` / `FooterSection` / `TaxSection`
