@@ -228,6 +228,7 @@ export function PostEditor({
           disabled={editor.isPending}
           className={EDITOR_PROSE_CLASSES}
           showToolbar
+          flush
           height="100%"
           onMarkClick={mode === "edit" && post ? editor.selectMark : undefined}
           onAddComment={

@@ -31,6 +31,12 @@ export type LexicalEditorProps = {
   showToolbar?: boolean | undefined;
   /** インスペクターサイドバーを表示するかどうか */
   showInspector?: boolean | undefined;
+  /**
+   * 外枠の角丸・枠線を外して edge-to-edge にする（フル画面インライン編集用）。
+   * InlineEditorShell 配下（Post / News）のように画面全幅・全高で表示する場合に true。
+   * タブ/ダイアログ内の埋め込みエディタ（既定）は角丸カード見た目を維持する。
+   */
+  flush?: boolean | undefined;
   /** エディタの高さ */
   height?: string | undefined;
   /** プレースホルダーテキスト */

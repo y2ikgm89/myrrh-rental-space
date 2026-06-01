@@ -159,6 +159,7 @@ export function NewsEditor({
           disabled={editor.isPending}
           className={EDITOR_PROSE_CLASSES}
           showToolbar
+          flush
           height="100%"
           onMarkClick={mode === "edit" && news ? editor.selectMark : undefined}
           onAddComment={

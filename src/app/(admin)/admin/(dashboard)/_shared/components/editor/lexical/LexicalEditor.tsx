@@ -81,6 +81,7 @@ function EditorInner({
   className,
   showToolbar = true,
   showInspector = true,
+  flush = false,
   height = "300px",
   placeholder = "ここに内容を入力...",
   onMarkClick,
@@ -144,7 +145,9 @@ function EditorInner({
     <InspectorSidebarProvider enabled={inspectorEnabled}>
       <div
         className={cn(
-          "flex flex-col w-full flex-1 min-w-0 min-h-0 bg-card border border-border rounded-lg overflow-hidden",
+          "flex flex-col w-full flex-1 min-w-0 min-h-0 bg-card overflow-hidden",
+          // 埋め込み（タブ/ダイアログ）はカード見た目、フル画面インライン編集は edge-to-edge
+          !flush && "border border-border rounded-lg",
           isFullscreen && "fixed inset-0 rounded-none border-0",
         )}
         style={isFullscreen ? { zIndex: Z_INDEX.editorFullscreen } : { height }}
