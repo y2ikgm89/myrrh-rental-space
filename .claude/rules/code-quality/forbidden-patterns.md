@@ -211,6 +211,20 @@ await prisma.item.update({
 - **3 経路の責務分離**: create=末尾自動採番 / reorder=D&D `reorderXxx(orderedIds)` が SSoT / update=order 不変
 - **フォーム schema・CommandInput 契約から `order` を完全削除**（手動入力 UI も削除）。後方互換で optional に残さない
 - `order Int @default(0)` カラムは維持（create で明示設定、update で省略）するため**マイグレーション不要**
-- canonical 実装: FAQ 項目 / カテゴリ（`reorderFaqItems` / `reorderFaqCategories` + `FaqItemDialog` / `FaqCategoryDialog`、PR #397）
-- **判定**: 当該リソースに D&D 並び替え（`*Sortable*` / `reorderXxx`）があるなら手動 order 入力は不要 → 削除。D&D が無い場合は D&D 追加が第一選択（手動 order 入力の存続は最終手段、`frontend/admin-ui/tables/sortable-bulk.md` 参照）
-- 本パターン未適用（フォローアップ候補）: posts/taxonomy `TaxonomyEditor`（CategoryManager に D&D あり）/ terms `TermsForm.footerOrder`（D&D 未実装）
+- **reorder action は 2 形態**: ① `reorderXxx(orderedIds: string[])` — index で 0 始まり再採番（list が単一ページ・絞り込みなしのとき。FAQ / PostCategory / Terms）/ ② `updateXxxOrder(items: { id; sortOrder }[])` — 呼び出し側が sortOrder を明示（pagination/filter 付き list で `sortOrder = pageOffset + index` を渡す。SpaceCategory / Location）。どちらも interactive transaction（pg deprecation 回避）。read-only 詳細画面でも sort 整数を `DetailField` 等で露出しない（`LocationDetail` の「並び順」表示を削除、PR #404）
+- **判定**: 当該リソースに D&D 並び替え（`*Sortable*` / `reorderXxx`）があるなら手動 order 入力は不要 → 削除。D&D が無い list は D&D 追加が第一選択（手動 order 入力の存続は最終手段、`frontend/admin-ui/tables/sortable-bulk.md` 参照）。reorder backend が既存なら UI 配線のみ、無ければ `reorderXxxCommand` + Server Action を新規追加する
+- **canonical 実装（全 5 リソース適用完了、フォローアップ候補なし）**:
+  - FAQ 項目 / カテゴリ — `reorderFaqItems` / `reorderFaqCategories` + Dialog form（PR #397）
+  - PostCategory — `updatePostCategoryOrder` + `TaxonomyEditor` / `CategoryManager`（PR #400）
+  - SpaceCategory — `updateSpaceCategoryOrder` + `CategoryTable` D&D + filter/pagination guard（PR #401）
+  - Location — `updateLocationOrder` + `LocationTable` D&D + filter/pagination guard（PR #402）
+  - Terms — `reorderTerms` / `reorderTermsCommand`（新規）+ `TermsTable` D&D（PR #403）
+
+**監査 grep**（再発検出、いずれもゼロ件期待）:
+
+```bash
+# フォームの手動 order 数値入力残存
+grep -rnE 'getInputProps\(fields\.(order|sortOrder|footerOrder)' src/app/\(admin\)
+# read-only 詳細での sort 整数露出（DetailField label / 一覧の order 列）
+grep -rnE 'label="(並び順|表示順)"' src/app/\(admin\) --include="*.tsx"
+```

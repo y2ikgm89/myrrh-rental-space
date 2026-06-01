@@ -25,7 +25,17 @@ paths:
 - **transform**: `CSS.Transform.toString()` はスケール含むためレイアウトシフトの原因。`translate3d()` のみ使用
 - **Dialog 配置**: `DeleteConfirmDialog` 等のダイアログは sortable `ref` の div 外（Fragment 兄弟）に配置。dnd-kit が要素を clone する際にポータルが巻き込まれるのを防止
 - **cursor**: ドラッグハンドルは `cursor-grab`、ドラッグ中は `cursor-grabbing` に動的切替
-- **order はシステム管理（手動 order 入力を持たせない）**: create=末尾自動採番（`(maxOrder ?? 0) + 1`）/ reorder=D&D `reorderXxx(orderedIds)` が SSoT（`order: index`）/ update=order 不変。フォーム schema・CommandInput 契約から `order` を完全削除する（ソート整数を UI に露出しない、Notion / Linear / Sanity / Shopify 標準）。詳細と NG/OK は `code-quality/forbidden-patterns.md` §8、canonical 実装は FAQ 項目 / カテゴリ（`reorderFaqItems` / `reorderFaqCategories`、PR #397）
+- **order はシステム管理（手動 order 入力を持たせない）**: create=末尾自動採番（`(maxOrder ?? 0) + 1`）/ reorder=D&D `reorderXxx(orderedIds)` が SSoT（`order: index`）/ update=order 不変。フォーム schema・CommandInput 契約から `order` を完全削除する（ソート整数を UI に露出しない、Notion / Linear / Sanity / Shopify 標準）。詳細と NG/OK + canonical 実装（全 5 リソース）は `code-quality/forbidden-patterns.md` §8
+
+## D&D list-table の filter/pagination ガード（一覧テーブルに D&D を配線するとき）
+
+一覧テーブル（Server Component）を D&D 対応の Client Component 化して並び替えを配線するときの規律。検索・絞り込み・ページネーション付き list で**部分集合を D&D すると global order が破綻する**ため、`sortable` ガードと `startIndex` で防ぐ。
+
+- **`sortable` ガード**: 検索・公開フィルタが有効なときは D&D を無効化（`sortable = !search && !publishFilter`）。`useSortable({ disabled: !sortable })` + 非 sortable 時はドラッグハンドルを空 span に差し替え。filter なし list（Terms 等）は常時 `sortable`
+- **`startIndex` で global order 維持**: ページオフセット（`(page - 1) * perPage`）を親 Server Component から渡し、`updateXxxOrder` には `sortOrder = startIndex + index` を渡す。index 直値（0 始まり）は単一ページ list（`reorderXxx(orderedIds)`）専用
+- **楽観更新 + ロールバック**: `useState` で行を保持し D&D 即時反映 → `startTransition` で reorder action → `isMutationError` なら `setItems([...initialItems])` で戻す。React 19 の「props 変化を render 中に state へ同期」で SC 再 fetch を反映
+- **配線 SSoT**: 親 `*TabContent.tsx`（Server Component）が `sortable` / `startIndex` を計算して Table に渡す
+- **参照実装**: `CategoryTable` + `CategoryTabContent`（SpaceCategory、filter+pagination、PR #401）/ `LocationTable` + `LocationTabContent`（Location、同、PR #402）/ `TermsTable`（filter なし常時 D&D、PR #403）/ `FaqCategoryItemsTable`（`sortBy === "order"` のときのみ sortable）
 
 ## 一括操作（BulkActions）パターン
 
