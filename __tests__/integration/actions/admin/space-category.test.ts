@@ -36,7 +36,7 @@ const spaceCategoryFormSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
-  sortOrder: z.number().int().min(0).default(0),
+  // sortOrder はシステム管理（D&D 並び替えが SSoT、手動入力なし）
 });
 
 // =============================================================================
@@ -48,7 +48,6 @@ const VALID_SPACE_CATEGORY_INPUT = {
   description: "小〜大規模の会議に対応したスペース",
   icon: "meeting-room",
   color: "#3B82F6",
-  sortOrder: 0,
 };
 
 describe("SpaceCategory Admin Action Integration", () => {
@@ -74,7 +73,6 @@ describe("SpaceCategory Admin Action Integration", () => {
           name: "会議室",
           icon: "meeting-room",
           color: "#3B82F6",
-          sortOrder: 0,
         };
         const result = spaceCategoryFormSchema.safeParse(input);
         expect(result.success).toBe(true);
@@ -93,7 +91,6 @@ describe("SpaceCategory Admin Action Integration", () => {
           name: "会議室",
           description: "説明",
           color: "#3B82F6",
-          sortOrder: 0,
         };
         const result = spaceCategoryFormSchema.safeParse(input);
         expect(result.success).toBe(true);
@@ -112,21 +109,9 @@ describe("SpaceCategory Admin Action Integration", () => {
           name: "会議室",
           description: "説明",
           icon: "room",
-          sortOrder: 0,
         };
         const result = spaceCategoryFormSchema.safeParse(input);
         expect(result.success).toBe(true);
-      });
-
-      test("sortOrderはデフォルト値0", () => {
-        const input = {
-          name: "会議室",
-        };
-        const result = spaceCategoryFormSchema.safeParse(input);
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.sortOrder).toBe(0);
-        }
       });
 
       test("最小限のフィールドのみでバリデーション通過", () => {
@@ -262,43 +247,6 @@ describe("SpaceCategory Admin Action Integration", () => {
         }
       });
     });
-
-    describe("sortOrder", () => {
-      test("0以上の整数は許可", () => {
-        const orders = [0, 1, 50, 100, 999];
-        for (const sortOrder of orders) {
-          const result = spaceCategoryFormSchema.safeParse({
-            ...VALID_SPACE_CATEGORY_INPUT,
-            sortOrder,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
-        const result = spaceCategoryFormSchema.safeParse({
-          ...VALID_SPACE_CATEGORY_INPUT,
-          sortOrder: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = spaceCategoryFormSchema.safeParse({
-          ...VALID_SPACE_CATEGORY_INPUT,
-          sortOrder: 1.5,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("文字列はエラー", () => {
-        const result = spaceCategoryFormSchema.safeParse({
-          ...VALID_SPACE_CATEGORY_INPUT,
-          sortOrder: "first",
-        });
-        expect(result.success).toBe(false);
-      });
-    });
   });
 
   describe("境界値テスト", () => {
@@ -358,14 +306,12 @@ describe("SpaceCategory Admin Action Integration", () => {
         description: "",
         icon: "",
         color: "",
-        sortOrder: 0,
       };
 
       expect(defaults.name).toBe("");
       expect(defaults.description).toBe("");
       expect(defaults.icon).toBe("");
       expect(defaults.color).toBe("");
-      expect(defaults.sortOrder).toBe(0);
     });
   });
 

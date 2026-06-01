@@ -11,7 +11,7 @@
  * - icon は `IconPickerField` + `useInputControl` で hidden input sync。
  * - color は `<input type="color">` と `<Input type="text">` の 2 入力を
  *   `useInputControl` で共通 state にバインドし、hidden input で送信値を確定。
- * - sortOrder は `z.coerce.number()` で FormData string を受ける。
+ * - sortOrder はシステム管理（D&D 並び替えが SSoT）のためフォームに持たない。
  */
 
 import type { SubmissionResult } from "@conform-to/react";
@@ -59,14 +59,12 @@ export function CategoryForm({
           description: category.description ?? "",
           icon: category.icon ?? "",
           color: category.color ?? "",
-          sortOrder: String(category.sortOrder),
         }
       : {
           name: "",
           description: "",
           icon: "",
           color: "",
-          sortOrder: "0",
         },
   });
 
@@ -159,24 +157,6 @@ export function CategoryForm({
             </p>
           )}
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor={fields.sortOrder.id}>並び順</Label>
-        <Input
-          {...getInputProps(fields.sortOrder, { type: "number" })}
-          placeholder="0"
-          min={0}
-          disabled={isPending}
-        />
-        <p className="text-xs text-muted-foreground">
-          小さい数字が先に表示されます
-        </p>
-        {fields.sortOrder.errors && (
-          <p id={fields.sortOrder.errorId} className="text-sm text-destructive">
-            {fields.sortOrder.errors.join(", ")}
-          </p>
-        )}
       </div>
 
       {formErrors && formErrors.length > 0 && (

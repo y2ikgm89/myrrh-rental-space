@@ -21,6 +21,10 @@ const mockSpaceCategoryDelete = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "category-1" }),
 );
 
+const mockSpaceCategoryAggregate = mock<
+  () => Promise<{ _max: { sortOrder: number | null } }>
+>(() => Promise.resolve({ _max: { sortOrder: null } }));
+
 const mockTransaction = mock<
   (ops: unknown[]) => Promise<Record<string, unknown>[]>
 >(() => Promise.resolve([]));
@@ -36,6 +40,7 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockSpaceCategoryCreate,
       update: mockSpaceCategoryUpdate,
       delete: mockSpaceCategoryDelete,
+      aggregate: mockSpaceCategoryAggregate,
     },
     $transaction: mockTransaction,
   },
@@ -58,7 +63,6 @@ const VALID_FORM_DATA = {
   description: "ビジネス用途の会議室カテゴリー",
   icon: "building",
   color: "#3B82F6",
-  sortOrder: 1,
 } as const;
 
 const EXISTING_CATEGORY = {
@@ -78,8 +82,10 @@ describe("createSpaceCategory", () => {
   beforeEach(() => {
     mockSpaceCategoryFindFirst.mockReset();
     mockSpaceCategoryCreate.mockReset();
+    mockSpaceCategoryAggregate.mockReset();
     mockSpaceCategoryFindFirst.mockResolvedValue(null);
     mockSpaceCategoryCreate.mockResolvedValue({ id: CATEGORY_ID });
+    mockSpaceCategoryAggregate.mockResolvedValue({ _max: { sortOrder: null } });
   });
 
   describe("正常系", () => {
@@ -97,8 +103,19 @@ describe("createSpaceCategory", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             name: "会議室",
-            sortOrder: 1,
           }),
+        }),
+      );
+    });
+
+    test("sortOrder は末尾に自動採番される（maxOrder + 1）", async () => {
+      mockSpaceCategoryAggregate.mockResolvedValue({ _max: { sortOrder: 4 } });
+
+      await createSpaceCategory(VALID_FORM_DATA);
+
+      expect(mockSpaceCategoryCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ sortOrder: 5 }),
         }),
       );
     });
@@ -246,10 +263,7 @@ describe("updateSpaceCategory", () => {
 
       expect(mockSpaceCategoryUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            name: "会議室",
-            sortOrder: 1,
-          }),
+          data: expect.not.objectContaining({ sortOrder: expect.anything() }),
         }),
       );
     });

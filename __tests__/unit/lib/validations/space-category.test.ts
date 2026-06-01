@@ -8,7 +8,6 @@ describe("spaceCategoryFormSchema", () => {
       description: "カテゴリーの説明",
       icon: "icon-name",
       color: "#ff0000",
-      sortOrder: 1,
     };
 
     const result = spaceCategoryFormSchema.safeParse(validData);
@@ -18,7 +17,6 @@ describe("spaceCategoryFormSchema", () => {
   test("最小限のフィールドで検証を通過する", () => {
     const minimalData = {
       name: "カテゴリー名",
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(minimalData);
@@ -28,7 +26,6 @@ describe("spaceCategoryFormSchema", () => {
   test("name が必須である", () => {
     const data = {
       description: "説明",
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -38,7 +35,6 @@ describe("spaceCategoryFormSchema", () => {
   test("name が空文字列の場合エラーになる", () => {
     const data = {
       name: "",
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -53,7 +49,6 @@ describe("spaceCategoryFormSchema", () => {
   test("name が50文字を超える場合エラーになる", () => {
     const data = {
       name: "a".repeat(51),
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -69,7 +64,6 @@ describe("spaceCategoryFormSchema", () => {
     const data = {
       name: "カテゴリー名",
       description: "a".repeat(501),
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -85,7 +79,6 @@ describe("spaceCategoryFormSchema", () => {
     const data = {
       name: "カテゴリー名",
       description: "",
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -96,7 +89,6 @@ describe("spaceCategoryFormSchema", () => {
     const data = {
       name: "カテゴリー名",
       icon: "a".repeat(51),
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -112,7 +104,6 @@ describe("spaceCategoryFormSchema", () => {
     const data = {
       name: "カテゴリー名",
       icon: "",
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
@@ -126,7 +117,6 @@ describe("spaceCategoryFormSchema", () => {
       const data = {
         name: "カテゴリー名",
         color,
-        sortOrder: 0,
       };
       const result = spaceCategoryFormSchema.safeParse(data);
       expect(result.success).toBe(true);
@@ -140,7 +130,6 @@ describe("spaceCategoryFormSchema", () => {
       const data = {
         name: "カテゴリー名",
         color,
-        sortOrder: 0,
       };
       const result = spaceCategoryFormSchema.safeParse(data);
       expect(result.success).toBe(true);
@@ -161,7 +150,6 @@ describe("spaceCategoryFormSchema", () => {
       const data = {
         name: "カテゴリー名",
         color,
-        sortOrder: 0,
       };
       const result = spaceCategoryFormSchema.safeParse(data);
       expect(result.success).toBe(false);
@@ -177,42 +165,17 @@ describe("spaceCategoryFormSchema", () => {
     const data = {
       name: "カテゴリー名",
       color: "",
-      sortOrder: 0,
     };
 
     const result = spaceCategoryFormSchema.safeParse(data);
     expect(result.success).toBe(true);
   });
 
-  test("sortOrder がデフォルトで0になる", () => {
-    const data = {
-      name: "カテゴリー名",
-    };
-
-    const result = spaceCategoryFormSchema.safeParse(data);
+  test("sortOrder は schema に含まれない（システム管理）", () => {
+    const result = spaceCategoryFormSchema.safeParse({ name: "カテゴリー名" });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.sortOrder).toBe(0);
+      expect("sortOrder" in result.data).toBe(false);
     }
-  });
-
-  test("sortOrder が負の数の場合エラーになる", () => {
-    const data = {
-      name: "カテゴリー名",
-      sortOrder: -1,
-    };
-
-    const result = spaceCategoryFormSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
-  test("sortOrder が整数でない場合エラーになる", () => {
-    const data = {
-      name: "カテゴリー名",
-      sortOrder: 1.5,
-    };
-
-    const result = spaceCategoryFormSchema.safeParse(data);
-    expect(result.success).toBe(false);
   });
 });

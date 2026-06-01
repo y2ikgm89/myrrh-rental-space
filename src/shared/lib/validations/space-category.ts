@@ -26,7 +26,7 @@ export const spaceCategoryFormSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
-  sortOrder: z.coerce.number().int().min(0).default(0),
+  // sortOrder はシステム管理（D&D 並び替えが SSoT、手動入力なし）
 });
 
 export type SpaceCategoryFormInput = z.input<typeof spaceCategoryFormSchema>;
@@ -37,7 +37,6 @@ export const defaultSpaceCategoryFormValues: SpaceCategoryFormInput = {
   description: "",
   icon: "",
   color: "",
-  sortOrder: 0,
 };
 
 // カテゴリー詳細型（スペース数を含む）
