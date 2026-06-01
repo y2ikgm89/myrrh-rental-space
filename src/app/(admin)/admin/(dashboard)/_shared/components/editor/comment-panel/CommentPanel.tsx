@@ -205,6 +205,18 @@ export function CommentPanel({
     if (activeMarkId) scrollToActive(activeMarkId);
   }, [activeMarkId]);
 
+  // ↑/↓: 隣接カードのトグルボタンへフォーカス移動（Google Docs の next/prev comment 相当）
+  const handleNavigate = (threadId: string, dir: -1 | 1) => {
+    const index = threads.findIndex((t) => t.id === threadId);
+    if (index === -1) return;
+    const target = threads[index + dir];
+    if (!target) return;
+    const toggle = cardElementsRef.current
+      .get(target.id)
+      ?.querySelector<HTMLButtonElement>("button[aria-expanded]");
+    toggle?.focus();
+  };
+
   const handleToggle = (threadId: string) => {
     const willExpand = !expandedIds.has(threadId);
     setExpandedIds((prev) => toggleExpanded(prev, threadId));
@@ -438,6 +450,7 @@ export function CommentPanel({
                       isActive={thread.markId === activeMarkId}
                       onToggle={handleToggle}
                       onNeedDetail={ensureDetail}
+                      onNavigate={handleNavigate}
                       {...(thread.status === "ACTIVE" && {
                         onResolve: handleResolve,
                       })}

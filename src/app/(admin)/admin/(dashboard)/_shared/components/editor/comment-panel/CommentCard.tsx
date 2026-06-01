@@ -46,6 +46,8 @@ type CommentCardProps = {
   onToggle: (threadId: string) => void;
   /** 展開時に detail 未取得なら親へ取得を要求する。 */
   onNeedDetail?: (threadId: string) => void;
+  /** ↑/↓ で隣接カードのトグルへフォーカス移動（dir: -1=前 / 1=次）。 */
+  onNavigate?: (threadId: string, dir: -1 | 1) => void;
   onResolve?: (threadId: string) => void;
   onReopen?: (threadId: string) => void;
   onDelete: (threadId: string) => void;
@@ -69,6 +71,7 @@ export function CommentCard({
   isActive,
   onToggle,
   onNeedDetail,
+  onNavigate,
   onResolve,
   onReopen,
   onDelete,
@@ -106,6 +109,15 @@ export function CommentCard({
           aria-expanded={isExpanded}
           aria-controls={panelId}
           onClick={() => onToggle(thread.id)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              onNavigate?.(thread.id, 1);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              onNavigate?.(thread.id, -1);
+            }
+          }}
           className="flex min-h-11 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <IconChevronDown
