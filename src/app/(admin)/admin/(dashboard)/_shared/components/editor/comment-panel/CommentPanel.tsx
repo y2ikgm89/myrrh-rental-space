@@ -335,49 +335,43 @@ export function CommentPanel({
       : "解決済みのコメントはありません";
 
   return (
-    <>
-      {/* モバイル用オーバーレイ */}
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-overlay transition-opacity duration-300 lg:hidden",
-          isOpen
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
-        )}
-        onClick={isOpen ? onClose : undefined}
-        aria-hidden="true"
-      />
-      {/* サイドパネル */}
-      <aside
-        className={cn(
-          "fixed right-0 top-16 z-50 flex h-[calc(100dvh-4rem)] w-full flex-col border-l bg-background shadow-xl transition-transform duration-200 sm:w-96",
-          isOpen ? "translate-x-0" : "translate-x-full",
-        )}
-        aria-label="コメントパネル"
-        aria-hidden={!isOpen}
-      >
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <IconMessage className="h-5 w-5" aria-hidden="true" />
-            <h2 className="font-semibold">コメント</h2>
-          </div>
+    <aside
+      aria-label="コメントパネル"
+      aria-hidden={!isOpen}
+      inert={!isOpen}
+      className={cn(
+        // ブロック設定（Inspector）と同じ in-flow モデル: ツールバー下〜カード下端で h-full、
+        // 開閉は width トランジションで右からのスライド感を維持（fixed オーバーレイ廃止）。
+        "h-full min-h-0 shrink-0 overflow-hidden bg-background transition-[width] duration-200 ease-out",
+        isOpen ? "w-[420px] border-l border-border" : "w-0 border-l-0",
+      )}
+    >
+      {/* 固定幅の内側ラッパー: width アニメーション中も内容がリフローしない */}
+      <div className="flex h-full w-[420px] flex-col">
+        {/* ヘッダー（Inspector と同じ帯: border-b / px-2 py-1.5 / text-xs） */}
+        <div className="flex shrink-0 items-center justify-between gap-1 border-b border-border px-2 py-1.5">
+          <span className="flex items-center gap-1.5 pl-1 text-xs font-medium text-foreground">
+            <IconMessage className="h-4 w-4" aria-hidden="true" />
+            コメント
+          </span>
           {onClose && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
+              className="h-8 w-8 shrink-0"
               onClick={onClose}
               aria-label="コメントパネルを閉じる"
+              title="コメントパネルを閉じる"
             >
-              <IconX className="h-4 w-4" />
+              <IconX className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </div>
 
         {/* 新規コメント入力（pendingComment がある場合） */}
         {pendingComment && (
-          <div className="border-b p-4">
+          <div className="border-b border-border p-3">
             <div className="rounded-lg border border-primary bg-primary/5 p-3">
               <p className="mb-2 text-sm text-muted-foreground">
                 &ldquo;
@@ -403,7 +397,7 @@ export function CommentPanel({
           }}
           className="flex flex-1 flex-col overflow-hidden"
         >
-          <TabsList className="mx-4 mt-3 grid w-auto grid-cols-2">
+          <TabsList className="mx-3 mt-2 grid w-auto grid-cols-2">
             <TabsTrigger value="active" className="gap-1">
               未解決
               {activeCount > 0 && (
@@ -422,7 +416,7 @@ export function CommentPanel({
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-3">
             {isLoading ? (
               <div className="space-y-3">
                 {[0, 1, 2].map((i) => (
@@ -467,7 +461,7 @@ export function CommentPanel({
             )}
           </div>
         </Tabs>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 }

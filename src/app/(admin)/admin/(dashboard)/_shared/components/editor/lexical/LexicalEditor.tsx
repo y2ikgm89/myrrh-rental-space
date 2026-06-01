@@ -298,11 +298,11 @@ function EditorInner({
             <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
           </section>
 
+          {/* 追加パネル（コメント等）。Inspector と同じ in-flow 帯に、その左へ配置 */}
+          {trailingPanel}
+
           {/* インスペクターサイドバー（開閉は InspectorSidebar 内 + ツールバー / ショートカット） */}
           {inspectorEnabled && <InspectorSidebar />}
-
-          {/* 記事設定等の追加パネル（InspectorSidebar の右、ツールバーの下） */}
-          {trailingPanel}
         </div>
       </div>
     </InspectorSidebarProvider>
