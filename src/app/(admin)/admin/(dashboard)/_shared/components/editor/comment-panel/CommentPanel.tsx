@@ -1,25 +1,28 @@
 /**
  * CommentPanel
  *
- * @description エディタコメントのサイドパネル
+ * @description エディタコメントのサイドパネル（Google Docs 型・一覧=詳細同居）
  *
- * コンテンツに紐づくコメントスレッド一覧を表示し、
- * 追加・返信・解決・削除などの操作を提供します。
+ * コンテンツに紐づくコメントスレッドを縦並びカードで表示する。各カードは
+ * その場で展開でき（複数同時展開可）、一覧を見ながら個別スレッドを操作できる。
+ * 本文マーク選択中（activeMarkId）のカードは自動展開 + スクロールされる。
  */
 
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { IconMessage, IconPlus, IconX } from "@tabler/icons-react";
-import { Button } from "@/admin/components/ui/button";
-import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/admin/components/ui/tabs";
+  startTransition,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
+import { toast } from "sonner";
+import { IconMessage, IconX } from "@tabler/icons-react";
+import { Button } from "@/admin/components/ui/button";
+import { Skeleton } from "@/admin/components/ui/skeleton";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { Tabs, TabsList, TabsTrigger } from "@/admin/components/ui/tabs";
 import {
   resolveThread,
   reopenThread,
@@ -35,7 +38,9 @@ import type {
   CommentableContentType,
   ThreadListItem,
 } from "@/admin/types/editor-comment";
-import { CommentThread } from "./CommentThread";
+import { CommentCard } from "./CommentCard";
+import { CommentForm } from "./CommentForm";
+import { toggleExpanded, withActiveExpanded } from "./comment-panel-state";
 
 type CommentPanelProps = {
   /** パネルの表示状態 */
@@ -44,7 +49,6 @@ type CommentPanelProps = {
   contentId: string;
   activeMarkId?: string | null;
   onClose?: () => void;
-  onAddComment?: () => void;
   pendingComment?: {
     markId: string;
     quotedText: string;
@@ -58,6 +62,13 @@ const TAB_VALUE_SET = new Set<string>(TAB_VALUES);
 function isTabValue(value: string): value is TabValue {
   return TAB_VALUE_SET.has(value);
 }
+
+type ThreadsByStatus = {
+  active: ThreadListItem[];
+  resolved: ThreadListItem[];
+};
+
+const EMPTY_THREADS: ThreadsByStatus = { active: [], resolved: [] };
 
 async function fetchCommentThreads(params: {
   contentType: CommentableContentType;
@@ -80,238 +91,245 @@ async function fetchThreadDetail(
   return fetchAdminJson(`/admin/api/editor-comments/threads/${threadId}`);
 }
 
-/**
- * コメントパネルコンポーネント
- *
- * isOpen=false の場合は CSS translate で非表示にする（アニメーション付き）
- */
 export function CommentPanel({
   isOpen,
   contentType,
   contentId,
   activeMarkId,
   onClose,
-  onAddComment,
   pendingComment,
   onPendingCommentSubmit,
 }: CommentPanelProps) {
   const [tab, setTab] = useState<TabValue>("active");
-  const [threads, setThreads] = useState<ThreadListItem[]>([]);
-  const [expandedThread, setExpandedThread] =
-    useState<EditorCommentThread | null>(null);
+  const [threadsByStatus, setThreadsByStatus] =
+    useState<ThreadsByStatus>(EMPTY_THREADS);
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [detailMap, setDetailMap] = useState<
+    Record<string, EditorCommentThread>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
-  const [pendingCommentText, setPendingCommentText] = useState("");
 
-  // スレッド選択
-  const handleSelectThread = async (threadId: string) => {
-    try {
-      const thread = await fetchThreadDetail(threadId);
-      setExpandedThread(thread);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "スレッドの取得に失敗しました",
-      );
-    }
-  };
+  const cardElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // スレッド一覧を取得
+  const threads =
+    tab === "active" ? threadsByStatus.active : threadsByStatus.resolved;
+  const allThreads = [...threadsByStatus.active, ...threadsByStatus.resolved];
+
+  // active カードの展開は render 時に derive（setState 不要）。
+  // ユーザーの手動トグルは expandedIds、active 由来の展開はここで union する。
+  const effectiveExpanded = withActiveExpanded(
+    expandedIds,
+    activeMarkId,
+    allThreads,
+  );
+
+  // 一覧（active / resolved 両方）を取得
   const loadThreads = async () => {
-    setIsLoading(true);
+    const [active, resolved] = await Promise.all([
+      fetchCommentThreads({ contentType, contentId, status: "ACTIVE" }),
+      fetchCommentThreads({ contentType, contentId, status: "RESOLVED" }),
+    ]);
+    setThreadsByStatus({ active, resolved });
+  };
+
+  // detail を lazy fetch（未取得時のみ）
+  const ensureDetail = async (threadId: string) => {
+    if (detailMap[threadId]) return;
     try {
-      const data = await fetchCommentThreads({
-        contentType,
-        contentId,
-        status: tab === "active" ? "ACTIVE" : "RESOLVED",
-      });
-      setThreads(data);
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "スレッド一覧の取得に失敗しました",
-      );
-    } finally {
-      setIsLoading(false);
+      const detail = await fetchThreadDetail(threadId);
+      setDetailMap((prev) => ({ ...prev, [threadId]: detail }));
+    } catch {
+      // 展開時 detail 取得は best-effort（一覧は表示済み）
     }
   };
 
-  // 初回ロード・タブ変更時に再取得
+  // 初回・コンテンツ変更時に一覧取得
   useEffect(() => {
     let ignore = false;
-
     startTransition(async () => {
       setIsLoading(true);
       try {
-        const data = await fetchCommentThreads({
-          contentType,
-          contentId,
-          status: tab === "active" ? "ACTIVE" : "RESOLVED",
-        });
-
-        if (!ignore) {
-          setThreads(data);
-        }
+        const [active, resolved] = await Promise.all([
+          fetchCommentThreads({ contentType, contentId, status: "ACTIVE" }),
+          fetchCommentThreads({ contentType, contentId, status: "RESOLVED" }),
+        ]);
+        if (!ignore) setThreadsByStatus({ active, resolved });
       } catch (error) {
         if (!ignore) {
           toast.error(
             error instanceof Error
               ? error.message
-              : "スレッド一覧の取得に失敗しました",
+              : "コメントの取得に失敗しました",
           );
         }
       } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
+        if (!ignore) setIsLoading(false);
       }
     });
-
     return () => {
       ignore = true;
     };
-  }, [contentType, contentId, tab]);
+  }, [contentType, contentId]);
 
-  // activeMarkId が変更されたら該当スレッドを開く
-  useEffect(() => {
-    if (!activeMarkId) return;
-
-    const thread = threads.find((t) => t.markId === activeMarkId);
-    if (!thread) return;
-
-    // 非同期でスレッド詳細を取得
-    const loadActiveThread = async () => {
-      try {
-        const detail = await fetchThreadDetail(thread.id);
-        startTransition(() => {
-          setExpandedThread(detail);
-        });
-      } catch {
-        // active mark 追従は best-effort
+  // activeMarkId 変化に追従してタブを切り替える（render 時 state 調整）。
+  // 公式「Adjusting state during render」パターン（set-state-in-effect 回避）。
+  const [prevActiveMarkId, setPrevActiveMarkId] = useState(activeMarkId);
+  if (activeMarkId !== prevActiveMarkId) {
+    setPrevActiveMarkId(activeMarkId);
+    if (activeMarkId) {
+      const match = allThreads.find((t) => t.markId === activeMarkId);
+      if (match) {
+        const target = match.status === "RESOLVED" ? "resolved" : "active";
+        if (tab !== target) setTab(target);
       }
-    };
-    loadActiveThread();
-  }, [activeMarkId, threads]);
+    }
+  }
 
-  // スレッド解決
-  const handleResolve = async (threadId: string) => {
+  // activeMarkId 変化時に該当カードへスクロール（副作用は scroll のみ。
+  // detail 取得は CommentCard が onNeedDetail で自律的に要求する）。
+  const scrollToActive = useEffectEvent((markId: string) => {
+    const match = allThreads.find((t) => t.markId === markId);
+    if (!match) return;
+    requestAnimationFrame(() => {
+      cardElementsRef.current
+        .get(match.id)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  });
+  useEffect(() => {
+    if (activeMarkId) scrollToActive(activeMarkId);
+  }, [activeMarkId]);
+
+  const handleToggle = (threadId: string) => {
+    setExpandedIds((prev) => toggleExpanded(prev, threadId));
+    // detail 取得は CommentCard が展開時に onNeedDetail で要求する
+  };
+
+  const collapseAndForget = (threadId: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(threadId);
+      return next;
+    });
+    setDetailMap((prev) => {
+      const { [threadId]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const handleResolve = (threadId: string) => {
     startTransition(async () => {
       const result = await resolveThread(threadId);
-      if (!isMutationError(result)) {
-        toast.success("スレッドを解決しました");
-        // React 19: await後の状態更新は別のstartTransitionでラップ
-        startTransition(() => {
-          loadThreads();
-          setExpandedThread(null);
-        });
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+      toast.success("スレッドを解決しました");
+      collapseAndForget(threadId);
+      startTransition(() => {
+        void loadThreads();
+      });
     });
   };
 
-  // スレッド再オープン
-  const handleReopen = async (threadId: string) => {
+  const handleReopen = (threadId: string) => {
     startTransition(async () => {
       const result = await reopenThread(threadId);
-      if (!isMutationError(result)) {
-        toast.success("スレッドを再オープンしました");
-        // React 19: await後の状態更新は別のstartTransitionでラップ
-        startTransition(() => {
-          loadThreads();
-          setExpandedThread(null);
-        });
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+      toast.success("スレッドを再オープンしました");
+      collapseAndForget(threadId);
+      startTransition(() => {
+        void loadThreads();
+      });
     });
   };
 
-  // スレッド削除
-  const handleDeleteThread = async (threadId: string) => {
+  const handleDeleteThread = (threadId: string) => {
     startTransition(async () => {
       const result = await deleteThread(threadId);
-      if (!isMutationError(result)) {
-        toast.success("スレッドを削除しました");
-        // React 19: await後の状態更新は別のstartTransitionでラップ
-        startTransition(() => {
-          loadThreads();
-          setExpandedThread(null);
-        });
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+      toast.success("スレッドを削除しました");
+      collapseAndForget(threadId);
+      startTransition(() => {
+        void loadThreads();
+      });
     });
   };
 
-  // 返信追加
   const handleAddReply = async (threadId: string, content: string) => {
     const result = await addComment({ threadId, content });
-    if (!isMutationError(result)) {
-      // スレッドを再取得して更新
-      const detail = await fetchThreadDetail(threadId);
-      setExpandedThread(detail);
-      await loadThreads();
-    } else {
+    if (isMutationError(result)) {
       toast.error(result.error);
+      return;
     }
+    const detail = await fetchThreadDetail(threadId);
+    setDetailMap((prev) => ({ ...prev, [threadId]: detail }));
+    await loadThreads();
   };
 
-  // コメント削除
-  const handleDeleteComment = async (commentId: string, threadId: string) => {
-    const result = await deleteComment(commentId);
-    if (!isMutationError(result)) {
-      // スレッドを再取得して更新
+  const handleDeleteComment = (commentId: string, threadId: string) => {
+    startTransition(async () => {
+      const result = await deleteComment(commentId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
       const detail = await fetchThreadDetail(threadId);
-      setExpandedThread(detail);
+      setDetailMap((prev) => ({ ...prev, [threadId]: detail }));
       await loadThreads();
-    } else {
-      toast.error(result.error);
-    }
+    });
   };
 
-  // 新規コメント追加（pending から）
-  const handlePendingCommentSubmit = async () => {
-    const comment = pendingCommentText.trim();
-    if (!pendingComment || !comment) return;
-
+  const handlePendingCommentSubmit = async (content: string) => {
+    if (!pendingComment) return;
     const result = await createCommentThread({
       markId: pendingComment.markId,
       contentType,
       contentId,
       quotedText: pendingComment.quotedText,
-      initialComment: comment,
+      initialComment: content,
     });
-
-    if (!isMutationError(result)) {
-      toast.success("コメントを追加しました");
-      setPendingCommentText("");
-      onPendingCommentSubmit?.(comment);
-      await loadThreads();
-    } else {
+    if (isMutationError(result)) {
       toast.error(result.error);
+      return;
     }
+    toast.success("コメントを追加しました");
+    onPendingCommentSubmit?.(content);
+    await loadThreads();
   };
 
-  // threads are already filtered by tab status from API
-  const threadCount = threads.length;
+  const activeCount = threadsByStatus.active.length;
+  const resolvedCount = threadsByStatus.resolved.length;
+  const emptyMessage =
+    tab === "active"
+      ? "未解決のコメントはありません"
+      : "解決済みのコメントはありません";
 
   return (
     <>
-      {/* モバイル用オーバーレイ - isOpen に連動 */}
+      {/* モバイル用オーバーレイ */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-overlay lg:hidden transition-opacity duration-300",
+          "fixed inset-0 z-40 bg-overlay transition-opacity duration-300 lg:hidden",
           isOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none",
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0",
         )}
         onClick={isOpen ? onClose : undefined}
         aria-hidden="true"
       />
-      {/* サイドパネル - translate-x で表示/非表示のアニメーション */}
+      {/* サイドパネル */}
       <aside
         className={cn(
-          "fixed right-0 top-16 z-50 h-[calc(100dvh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col transition-transform duration-200",
+          "fixed right-0 top-16 z-50 flex h-[calc(100dvh-4rem)] w-full flex-col border-l bg-background shadow-xl transition-transform duration-200 sm:w-96",
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-label="コメントパネル"
@@ -320,236 +338,114 @@ export function CommentPanel({
         {/* ヘッダー */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <IconMessage className="h-5 w-5" />
+            <IconMessage className="h-5 w-5" aria-hidden="true" />
             <h2 className="font-semibold">コメント</h2>
           </div>
-          <div className="flex items-center gap-2">
-            {onAddComment && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onAddComment}
-                className="gap-1"
-              >
-                <IconPlus className="h-3.5 w-3.5" />
-                追加
-              </Button>
-            )}
-            {onClose && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="h-8 w-8"
-              >
-                <IconX className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          {onClose && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="コメントパネルを閉じる"
+            >
+              <IconX className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {/* 新規コメント入力（pendingComment がある場合） */}
         {pendingComment && (
           <div className="border-b p-4">
             <div className="rounded-lg border border-primary bg-primary/5 p-3">
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className="mb-2 text-sm text-muted-foreground">
                 &ldquo;
                 {pendingComment.quotedText.length > 100
                   ? `${pendingComment.quotedText.slice(0, 100)}...`
                   : pendingComment.quotedText}
                 &rdquo;
               </p>
-              <textarea
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              <CommentForm
+                onSubmit={handlePendingCommentSubmit}
                 placeholder="コメントを入力..."
-                rows={3}
-                value={pendingCommentText}
-                onChange={(e) => setPendingCommentText(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    handlePendingCommentSubmit();
-                  }
-                }}
+                autoFocus
               />
-              <div className="mt-2 flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handlePendingCommentSubmit}
-                  disabled={!pendingCommentText.trim()}
-                >
-                  コメント追加
-                </Button>
-              </div>
             </div>
           </div>
         )}
 
-        {/* タブ */}
+        {/* タブ + カードリスト */}
         <Tabs
           value={tab}
           onValueChange={(v) => {
             if (isTabValue(v)) setTab(v);
           }}
-          className="flex-1 flex flex-col"
+          className="flex flex-1 flex-col overflow-hidden"
         >
           <TabsList className="mx-4 mt-3 grid w-auto grid-cols-2">
             <TabsTrigger value="active" className="gap-1">
               未解決
-              {tab === "active" && threadCount > 0 && (
+              {activeCount > 0 && (
                 <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs">
-                  {threadCount}
+                  {activeCount}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="resolved" className="gap-1">
               解決済み
-              {tab === "resolved" && threadCount > 0 && (
+              {resolvedCount > 0 && (
                 <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs">
-                  {threadCount}
+                  {resolvedCount}
                 </span>
               )}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="active" className="flex-1 mt-0 p-0">
-            <ThreadList
-              threads={threads}
-              expandedThread={expandedThread}
-              {...(activeMarkId !== undefined && { activeMarkId })}
-              isLoading={isLoading}
-              emptyMessage="未解決のコメントはありません"
-              onSelectThread={handleSelectThread}
-              onResolve={handleResolve}
-              onDelete={handleDeleteThread}
-              onAddReply={handleAddReply}
-              onDeleteComment={handleDeleteComment}
-            />
-          </TabsContent>
-
-          <TabsContent value="resolved" className="flex-1 mt-0 p-0">
-            <ThreadList
-              threads={threads}
-              expandedThread={expandedThread}
-              {...(activeMarkId !== undefined && { activeMarkId })}
-              isLoading={isLoading}
-              emptyMessage="解決済みのコメントはありません"
-              onSelectThread={handleSelectThread}
-              onReopen={handleReopen}
-              onDelete={handleDeleteThread}
-            />
-          </TabsContent>
+          <div className="flex-1 overflow-y-auto p-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : threads.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                {emptyMessage}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {threads.map((thread) => (
+                  <div
+                    key={thread.id}
+                    ref={(el) => {
+                      if (el) cardElementsRef.current.set(thread.id, el);
+                      else cardElementsRef.current.delete(thread.id);
+                    }}
+                  >
+                    <CommentCard
+                      thread={thread}
+                      detail={detailMap[thread.id]}
+                      isExpanded={effectiveExpanded.has(thread.id)}
+                      isActive={thread.markId === activeMarkId}
+                      onToggle={handleToggle}
+                      onNeedDetail={ensureDetail}
+                      {...(thread.status === "ACTIVE" && {
+                        onResolve: handleResolve,
+                      })}
+                      {...(thread.status === "RESOLVED" && {
+                        onReopen: handleReopen,
+                      })}
+                      onDelete={handleDeleteThread}
+                      onAddReply={handleAddReply}
+                      onDeleteComment={handleDeleteComment}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </Tabs>
       </aside>
     </>
-  );
-}
-
-// =============================================================================
-// Thread List Component
-// =============================================================================
-
-type ThreadListProps = {
-  threads: ThreadListItem[];
-  expandedThread: EditorCommentThread | null;
-  activeMarkId?: string | null;
-  isLoading: boolean;
-  emptyMessage: string;
-  onSelectThread: (threadId: string) => void;
-  onResolve?: (threadId: string) => Promise<void>;
-  onReopen?: (threadId: string) => Promise<void>;
-  onDelete: (threadId: string) => Promise<void>;
-  onAddReply?: (threadId: string, content: string) => Promise<void>;
-  onDeleteComment?: (commentId: string, threadId: string) => Promise<void>;
-};
-
-function ThreadList({
-  threads,
-  expandedThread,
-  activeMarkId,
-  isLoading,
-  emptyMessage,
-  onSelectThread,
-  onResolve,
-  onReopen,
-  onDelete,
-  onAddReply,
-  onDeleteComment,
-}: ThreadListProps) {
-  if (isLoading) {
-    return (
-      <div className="flex-1 h-full overflow-y-auto">
-        <div className="space-y-3 p-4">
-          <div className="text-center text-sm text-muted-foreground py-8">
-            読み込み中...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (threads.length === 0) {
-    return (
-      <div className="flex-1 h-full overflow-y-auto">
-        <div className="space-y-3 p-4">
-          <div className="text-center text-sm text-muted-foreground py-8">
-            {emptyMessage}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (expandedThread) {
-    return (
-      <div className="flex-1 h-full overflow-y-auto">
-        <div className="space-y-3 p-4">
-          <CommentThread
-            thread={expandedThread}
-            isActive={expandedThread.markId === activeMarkId}
-            {...(onResolve && {
-              onResolve: () => onResolve(expandedThread.id),
-            })}
-            {...(onReopen && {
-              onReopen: () => onReopen(expandedThread.id),
-            })}
-            onDelete={() => onDelete(expandedThread.id)}
-            {...(onAddReply && {
-              onAddReply: (content: string) =>
-                onAddReply(expandedThread.id, content),
-            })}
-            {...(onDeleteComment && {
-              onDeleteComment: (commentId: string) =>
-                onDeleteComment(commentId, expandedThread.id),
-            })}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 h-full overflow-y-auto">
-      <div className="space-y-3 p-4">
-        {threads.map((thread) => (
-          <button
-            key={thread.id}
-            type="button"
-            className="w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors"
-            onClick={() => onSelectThread(thread.id)}
-          >
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              &ldquo;{thread.quotedText}&rdquo;
-            </p>
-            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-              <span>{thread.commentCount}件のコメント</span>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }

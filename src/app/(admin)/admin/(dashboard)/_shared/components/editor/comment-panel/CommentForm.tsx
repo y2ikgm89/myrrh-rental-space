@@ -15,12 +15,14 @@ type CommentFormProps = {
   onSubmit: (content: string) => Promise<void>;
   placeholder?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
 };
 
 export function CommentForm({
   onSubmit,
   placeholder = "返信を入力...",
   disabled = false,
+  autoFocus = false,
 }: CommentFormProps) {
   const [content, setContent] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -51,6 +53,7 @@ export function CommentForm({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled || isPending}
+        autoFocus={autoFocus}
         rows={2}
         className="resize-none text-sm"
       />

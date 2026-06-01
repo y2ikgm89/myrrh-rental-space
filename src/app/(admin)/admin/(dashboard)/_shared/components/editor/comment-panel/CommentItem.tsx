@@ -28,11 +28,13 @@ export function CommentItem({
     locale: ja,
   });
 
+  // アバター: 名前イニシャル > IconUser フォールバック
+  const initial = comment.createdByUser?.name?.trim().charAt(0) ?? "";
+
   return (
     <div className="group flex gap-3 py-3">
-      {/* アバター */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-        <IconUser className="h-4 w-4 text-muted-foreground" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+        {initial || <IconUser className="h-4 w-4" aria-hidden="true" />}
       </div>
 
       {/* コンテンツ */}

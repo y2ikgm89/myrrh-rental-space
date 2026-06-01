@@ -3,6 +3,6 @@
  */
 
 export { CommentPanel } from "./CommentPanel";
-export { CommentThread } from "./CommentThread";
+export { CommentCard } from "./CommentCard";
 export { CommentItem } from "./CommentItem";
 export { CommentForm } from "./CommentForm";
