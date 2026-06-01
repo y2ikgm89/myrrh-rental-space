@@ -4,8 +4,8 @@ paths:
   - src/app/(admin)/**/[id]/page.tsx
   - src/app/(admin)/**/edit/page.tsx
   - src/app/(admin)/**/new/page.tsx
-  - src/admin/components/AdminDetailLayout.tsx
-  - src/admin/components/Detail*.tsx
+  - src/app/(admin)/**/_shared/components/AdminDetailLayout.tsx
+  - src/app/(admin)/**/_shared/components/Detail*.tsx
 ---
 
 # 詳細・編集・新規作成ページ標準構造

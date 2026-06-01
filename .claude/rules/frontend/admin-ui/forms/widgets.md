@@ -3,10 +3,9 @@ description: 管理フォーム widget パターン（ToggleGroup / 複合 widge
 paths:
   - src/app/(admin)/**/*Form.tsx
   - src/app/(admin)/**/*Fields.tsx
-  - src/admin/components/ui/toggle-group.tsx
-  - src/admin/components/ui/input.tsx
-  - src/admin/components/media-picker/**
-  - src/admin/components/ui/form*.tsx
+  - src/app/(admin)/**/_shared/components/ui/toggle-group.tsx
+  - src/app/(admin)/**/_shared/components/ui/input.tsx
+  - src/app/(admin)/**/_shared/components/media-picker/**
 ---
 
 # 管理フォーム widget パターン

@@ -2,8 +2,8 @@
 description: ActionDropdown 操作列パターン（外部リンク / Dialog 起動 / インライン制御共存 / 禁止 Button+Link 直書き）
 paths:
   - src/app/(admin)/**/*ActionCell*.tsx
-  - src/admin/components/ActionDropdown*.tsx
-  - src/admin/components/DeleteConfirmDialog.tsx
+  - src/app/(admin)/**/_shared/components/ActionDropdown*.tsx
+  - src/app/(admin)/**/_shared/components/DeleteConfirmDialog.tsx
 ---
 
 # テーブル操作列 ActionDropdown パターン

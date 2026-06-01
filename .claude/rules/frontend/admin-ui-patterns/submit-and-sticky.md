@@ -4,7 +4,7 @@ paths:
   - src/app/(admin)/**/*Form*.tsx
   - src/app/(admin)/**/*Section*.tsx
   - src/app/(admin)/**/page.tsx
-  - src/admin/components/ui/submit-button.tsx
+  - src/app/(admin)/**/_shared/components/ui/SubmitButton.tsx
 ---
 
 # SubmitButton + Sticky 子サイドバー
