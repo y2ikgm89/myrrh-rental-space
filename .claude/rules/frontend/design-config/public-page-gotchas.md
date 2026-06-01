@@ -97,6 +97,9 @@ paths:
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — Prisma マイグレーション不要
 - **AutoSectionForm は field メタデータなしのフィールドをスキップ**
 - **AutoSectionForm のフィールドに `setValue` パターン禁止** — conform `defaultValue` prop + `useInputControl` で制御
+- **セクション編集の canonical 構成は「内容 / デザイン」タブ** — `AutoSectionForm` が `content` group を「内容」タブ、`design` + `advanced` group を「デザイン」タブに振り分ける（WordPress ブロックインスペクタ準拠、内容デフォルト）。`design` フィールドが無いセクションは単一ペインにフォールバック。`Tabs` は `forceMount` + `data-[state=inactive]:hidden` で非アクティブタブも DOM 保持必須（Lexical/PortableText state と FormData を切替で失わない silent bug 回避）。`TabsTrigger` は admin primitive の `type="button"` default で form submit を誘発しない
+- **`design` group のフィールドを編集 UI から隠す抑止フラグを section panel に再導入禁止** — 旧 `contentOnly` prop（`SectionEditPanel` が `AutoSectionForm` に渡し design グループ全体を非描画にしていた）は scrim/variant/高さ/transition 等の編集可能フィールドを UI から到達不能にする silent bug の温床だった（2026-06-01 #369/#370 で削除）。新規 design フィールドは適切な group (`design`/`advanced`) を付ければタブに自動表示される。`config.layout` (`sectionLayoutSchema`) は各 `SectionWrapper` が消費する実フィールドでデッドではない（隠さない）
+- **背景メディア上テキストの可読性 scrim はオン/オフ + 濃さの 2 コントロール** — `createScrimFields()` (`definitions/_shared/scrim.ts`) が `scrimEnabled` (boolean, default true) + `scrimTone` + `scrimOpacity` を提供。オフでも濃さ値は保持、文字側 3 層防御は維持。scrim は背景メディアにテキストを重ねる `hero` / `page-hero` media variant のみに付与（gallery/cta 等は無意味なので付けない、WordPress block supports モデル）
 - **新規公開ページ追加は `/create-page-content` スキル**
 - **ホームページセクションの `pageId: null` は廃止済み** — ホームページは slug `"home"` の Page レコード
 - **`/admin/pages/homepage/edit` は廃止済み** — `[slug]/edit` に統合

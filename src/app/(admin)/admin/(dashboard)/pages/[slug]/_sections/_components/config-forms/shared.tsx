@@ -19,7 +19,6 @@ export interface ConfigFormProps {
   onSave: (payload: ConfigFormSavePayload) => void;
   isPending: boolean;
   onDirtyChange?: ((dirty: boolean) => void) | undefined;
-  contentOnly?: boolean;
   dynamicOptions?: DynamicSectionOptions;
 }
 

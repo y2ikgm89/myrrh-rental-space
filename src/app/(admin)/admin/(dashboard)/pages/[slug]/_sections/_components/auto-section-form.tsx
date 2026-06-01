@@ -96,7 +96,6 @@ export function AutoSectionForm({
   onSave,
   isPending,
   onDirtyChange,
-  contentOnly = false,
   dynamicOptions,
 }: ConfigFormProps) {
   const definition = getSectionDefinition(section.type);
@@ -201,14 +200,11 @@ export function AutoSectionForm({
     );
   }
 
-  // Group 別にフィールドを分離（ADR 0018: content / design / advanced の 3 段階固定）
+  // Group 別にフィールドを分離（content / design / advanced の 3 段階固定）。
+  // content=「内容」タブ、design + advanced=「デザイン」タブに振り分ける。
   const contentFields = fieldsList.filter((f) => f.meta.group === "content");
-  const designFields = contentOnly
-    ? []
-    : fieldsList.filter((f) => f.meta.group === "design");
-  const advancedFields = contentOnly
-    ? []
-    : fieldsList.filter((f) => f.meta.group === "advanced");
+  const designFields = fieldsList.filter((f) => f.meta.group === "design");
+  const advancedFields = fieldsList.filter((f) => f.meta.group === "advanced");
   const hasDesignTab = designFields.length > 0 || advancedFields.length > 0;
 
   const renderTopLevelField = (fieldInfo: FieldInfo) => {
