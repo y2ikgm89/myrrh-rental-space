@@ -75,6 +75,12 @@ for f in .claude/skills/*/SKILL.md; do
   [ "$lines" -ge 500 ] && { echo "OVER 500: $f ($lines 行) — reference/*.md への分割推奨"; over=$((over+1)); }
 done
 [ "$over" -eq 0 ] && echo "OK: 全 SKILL.md 500 行未満"
+
+echo ""
+echo "=== 9. rule paths: glob 実在性（stale glob 検出）==="
+# specific path glob は dir 移動 / file rename で stale 化する。Bun.Glob で git
+# tracked file と照合し DEAD_RULE(auto-load 不発) / DEAD_GLOB(dead-weight) を検出。
+bun .claude/skills/audit-claude-config/scripts/check-stale-paths.ts
 ```
 
 ## Phase 2: 公式 spec WebFetch + diff（必要時のみ）
@@ -103,6 +109,7 @@ WebFetch https://code.claude.com/docs/en/memory "Summarize CLAUDE.md best practi
 | Drift                               | 修正アクション                                                                |
 | ----------------------------------- | ----------------------------------------------------------------------------- |
 | `paths:` 欠落                       | 該当 rule に `paths:` frontmatter 追加（適切な glob）                         |
+| stale glob (`paths` が無マッチ)     | 実在パスへ remap（dir 移動・rename 追従）、冗長 / 消失分は削除                |
 | 独自 frontmatter field              | 公式 field 名に置換 or 削除                                                   |
 | description+when_to_use 1536 字超過 | description 圧縮、details は SKILL 本文に移動                                 |
 | agent-memory drift                  | `memory: project` 削除（未使用）or `MEMORY.md` stub 作成（利用予定）          |
@@ -124,6 +131,7 @@ Phase 1 (local grep):
   ✅ 撤回 pattern 残骸ゼロ
   ✅ CLAUDE.md 169 行 / 200 行
   ✅ SKILL.md 全件 500 行未満
+  ✅ paths: glob 全件実在マッチ (DEAD_RULE=0 DEAD_GLOB=0)
 Phase 2 (official spec diff): [skipped or executed]
   ⚠️  hooks に新 event `XxxYyy` 追加 (v2.1.150) → hooks-patterns.md に追記要
 
