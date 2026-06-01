@@ -17,6 +17,10 @@ const mockLocationDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "location-1" }),
 );
 
+const mockLocationAggregate = mock<
+  () => Promise<{ _max: { sortOrder: number | null } }>
+>(() => Promise.resolve({ _max: { sortOrder: null } }));
+
 const mockTransaction = mock<
   (ops: unknown[]) => Promise<Record<string, unknown>[]>
 >(() => Promise.resolve([]));
@@ -31,6 +35,7 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockLocationCreate,
       update: mockLocationUpdate,
       delete: mockLocationDelete,
+      aggregate: mockLocationAggregate,
     },
     $transaction: mockTransaction,
   },
@@ -99,7 +104,6 @@ const VALID_FORM_DATA = {
   paymentAccepted: null,
   phoneNumber: null,
   email: null,
-  sortOrder: 1,
   isPublished: true,
   isActive: true,
 };
@@ -116,6 +120,10 @@ const EXISTING_LOCATION = {
 describe("createLocation", () => {
   beforeEach(() => {
     mockLocationCreate.mockReset();
+    mockLocationAggregate.mockReset();
+    mockLocationFindUnique.mockReset();
+    mockLocationFindUnique.mockResolvedValue(null);
+    mockLocationAggregate.mockResolvedValue({ _max: { sortOrder: null } });
     mockLocationCreate.mockResolvedValue({
       id: LOCATION_ID,
       slug: "shibuya-space",
@@ -128,6 +136,18 @@ describe("createLocation", () => {
 
       expect(result).toEqual({ id: LOCATION_ID, slug: "shibuya-space" });
       expect(mockLocationCreate).toHaveBeenCalledTimes(1);
+    });
+
+    test("sortOrder は末尾に自動採番される（maxOrder + 1）", async () => {
+      mockLocationAggregate.mockResolvedValue({ _max: { sortOrder: 9 } });
+
+      await createLocation(VALID_FORM_DATA);
+
+      expect(mockLocationCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ sortOrder: 10 }),
+        }),
+      );
     });
 
     test("create が正しいデータで呼ばれる", async () => {
@@ -143,7 +163,6 @@ describe("createLocation", () => {
               "https://example.com/image1.jpg",
               "https://example.com/image2.jpg",
             ],
-            sortOrder: 1,
             isPublished: true,
           }),
         }),

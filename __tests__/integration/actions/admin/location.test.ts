@@ -65,7 +65,7 @@ const locationFormSchema = z.object({
     .url({ error: "有効なURLを入力してください" }),
   imageUrls: imageUrlsSchema,
   businessHours: businessHoursSchema.optional().nullable(),
-  sortOrder: z.number().int().min(0).default(0),
+  // sortOrder はシステム管理（D&D 並び替えが SSoT、手動入力なし）
   isPublished: z.boolean().default(false),
 });
 
@@ -81,7 +81,6 @@ const VALID_LOCATION_INPUT = {
     "https://example.com/images/room2.jpg",
   ],
   businessHours: null,
-  sortOrder: 0,
   isPublished: true,
 };
 
@@ -164,15 +163,6 @@ describe("Location Admin Action Integration", () => {
         expect(result.success).toBe(true);
         if (result.success) {
           expect(result.data.imageUrls).toEqual([]);
-        }
-      });
-
-      test("sortOrderのデフォルトは0", () => {
-        const { sortOrder: _so, ...inputWithoutOrder } = VALID_LOCATION_INPUT;
-        const result = locationFormSchema.safeParse(inputWithoutOrder);
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.sortOrder).toBe(0);
         }
       });
 
@@ -359,35 +349,6 @@ describe("Location Admin Action Integration", () => {
         const result = locationFormSchema.safeParse({
           ...VALID_LOCATION_INPUT,
           imageUrls: ["not-a-url"],
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("sortOrder", () => {
-      test("0以上の整数は許可", () => {
-        const orders = [0, 1, 50, 100];
-        for (const sortOrder of orders) {
-          const result = locationFormSchema.safeParse({
-            ...VALID_LOCATION_INPUT,
-            sortOrder,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
-        const result = locationFormSchema.safeParse({
-          ...VALID_LOCATION_INPUT,
-          sortOrder: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = locationFormSchema.safeParse({
-          ...VALID_LOCATION_INPUT,
-          sortOrder: 1.5,
         });
         expect(result.success).toBe(false);
       });

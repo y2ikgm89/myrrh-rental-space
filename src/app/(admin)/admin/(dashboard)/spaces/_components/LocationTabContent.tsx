@@ -26,9 +26,18 @@ async function LocationList() {
     }),
   );
 
+  // D&D 並び替えは検索・公開フィルタなしのときのみ有効
+  // （絞り込み中は順序が部分集合になり破綻するため）
+  const sortable = !params.locSearch && includeInactive;
+  const startIndex = (result.page - 1) * params.locPerPage;
+
   return (
     <>
-      <LocationTable locations={result.locations} />
+      <LocationTable
+        locations={result.locations}
+        sortable={sortable}
+        startIndex={startIndex}
+      />
       <Pagination
         pageUrlKey="locPage"
         perPageUrlKey="locPerPage"
