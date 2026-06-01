@@ -25,6 +25,7 @@ paths:
 - **transform**: `CSS.Transform.toString()` はスケール含むためレイアウトシフトの原因。`translate3d()` のみ使用
 - **Dialog 配置**: `DeleteConfirmDialog` 等のダイアログは sortable `ref` の div 外（Fragment 兄弟）に配置。dnd-kit が要素を clone する際にポータルが巻き込まれるのを防止
 - **cursor**: ドラッグハンドルは `cursor-grab`、ドラッグ中は `cursor-grabbing` に動的切替
+- **order はシステム管理（手動 order 入力を持たせない）**: create=末尾自動採番（`(maxOrder ?? 0) + 1`）/ reorder=D&D `reorderXxx(orderedIds)` が SSoT（`order: index`）/ update=order 不変。フォーム schema・CommandInput 契約から `order` を完全削除する（ソート整数を UI に露出しない、Notion / Linear / Sanity / Shopify 標準）。詳細と NG/OK は `code-quality/forbidden-patterns.md` §8、canonical 実装は FAQ 項目 / カテゴリ（`reorderFaqItems` / `reorderFaqCategories`、PR #397）
 
 ## 一括操作（BulkActions）パターン
 

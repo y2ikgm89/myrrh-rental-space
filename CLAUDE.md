@@ -72,6 +72,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 - **Multiple Root Layouts で `app/not-found.tsx` 禁止** — `app/global-not-found.tsx` + `experimental.globalNotFound: true`
 - **公開サインインは Better Auth Client API `signIn.email({ callbackURL })`** — Server Action 経由禁止（Router Cache 未更新の silent bug）
 - **Section schema 拡張は `_shared/{buttons,image,layout}.ts` factory 経由** — 独自 inline schema 禁止
+- **並び替え可能リソースの「表示順」(`order`) 手動数値入力禁止** — D&D を持つ admin リソースは order をシステム管理（create=末尾自動採番 / reorder=D&D SSoT / update=不変）、フォーム・CommandInput から削除（`code-quality/forbidden-patterns.md` §8）
 
 ## プロセス
 
