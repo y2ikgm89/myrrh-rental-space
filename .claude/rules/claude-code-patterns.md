@@ -41,6 +41,7 @@ paths:
 
 - [ ] rule: `paths:` frontmatter 必須（常時ロード禁止）
 - [ ] rule: `paths:` glob が実在ファイルにマッチ（dir 移動・rename で stale 化 → `/audit-claude-config` の `check-stale-paths.ts` で検出）
+- [ ] rule: `paths:` glob は rule の**実関心範囲**に絞る（over-broad glob は無関係 file へ rule 全文を注入し context を浪費 → `/audit-claude-config` の `injection-cost.ts` で計測）。例: React component 限定 rule に `src/**/*.ts`（純ロジック）を含めない / auth rule に `src/shared/**` 全体を含めない。狭小化前に concept-grep で「rule を必要とする実在 file」を全網羅できるか coverage 検証する（guidance 喪失防止）。cross-cutting（型アサーション・コード品質等）は `src/**/*.{ts,tsx}` が正当
 - [ ] skill: SKILL.md 500 行未満、`description` + `when_to_use` 合算 1,536 文字以下、reference は `reference/*.md` 分割
 - [ ] agent: 公式 frontmatter フィールドのみ、独自フィールド禁止
 - [ ] agent `memory: project` 宣言時は `.claude/agent-memory/<name>/` 実体を必ず作成
@@ -55,7 +56,7 @@ paths:
 - **MCP ツールはセッション開始前に確定** — 途中変更で MCP プレフィックスが変わりキャッシュ破壊
 - **新規 hook スクリプトは exec form 必須** — MINGW64 で `chmod` deny のため `{"command": "bash", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/script.sh"]}` 形式（Shell form 禁止、詳細は `ops/hooks-patterns.md` §Hook command 形式）
 - **`bash -c` 診断スクリプトは末尾 `exit 0` 必須** — `[ -f ... ] && echo ...` で締めると、最終反復で file 不在時に `[` が exit 1 を返し、`&&` 短絡で last command exit code が 1 となりスクリプト全体が exit 1。並列 tool call all-or-nothing semantics で同 message の他 tool call が **silent cancel** される（実例: 2026-05-27 audit Phase 1 で `find -maxdepth 1 -type d` の最終 dir `zod-patterns/` に対応する top-level `zod-patterns.md` 不在で 5 件の WebFetch が巻き添えキャンセル）。診断系 `bash -c` は末尾 `exit 0` か全 `&&` を `|| true` で締める
-- **path-scoped rule auto-load は context 大量消費** — `.claude/rules/frontend/*.md` は該当ファイル Read 時に system-reminder で一括注入。大規模 plan は context 予算を立て、worktree + rules path Read が多数なら chunk 分割 + session 跨ぎ handoff 判断
+- **path-scoped rule auto-load は context 大量消費** — `.claude/rules/frontend/*.md` は該当ファイル Read 時に system-reminder で一括注入し compaction まで context を占有（公式 context-window 仕様）。glob が広い × rule が大きいほど無関係な編集で恒常的に token を浪費するため、glob は実関心範囲に絞る（→ §チェックリスト + `injection-cost.ts`）。大規模 plan は context 予算を立て、worktree + rules path Read が多数なら chunk 分割 + session 跨ぎ handoff 判断
 - **Implementer subagent thrashing 後は controller 直接続行が canonical** — 再 dispatch は同じ rule 再注入で再 thrashing。controller は rules 読み込み済 + worktree path キャッシュ効くため efficient
 - **Read 直後 parallel Edit batch は途中で race** — 1 turn で N file Read → 同 turn で N+ Edit parallel は最初の 1-2 件のみ成功。安全策: Edit を sequential、または `replace_all: true` で 1 Edit にまとめる
 - **Subagent report は git で独立検証必須** — `git log --oneline -N` + `git show --stat HEAD` で実在確認、報告捏造を検出
