@@ -1,6 +1,9 @@
 ---
 paths:
-  - src/app/**
+  - "src/app/(public*)/**/*.tsx"
+  - "src/app/(admin)/**/*.tsx"
+  - "src/app/(admin)/**/editor/**"
+  - "src/shared/components/**/*.tsx"
 ---
 
 # 外部リンク `rel` 属性ルール

@@ -1,7 +1,22 @@
 ---
 paths:
-  - src/app/**
-  - src/shared/**
+  - src/proxy.ts
+  - src/app/(admin)/**
+  - src/app/api/**
+  - src/app/(public)/login/**
+  - src/app/(public)/mypage/**
+  - src/app/(public)/_shared/**
+  - src/app/(public)/_components/**
+  - src/app/(public)/preview/**
+  - src/app/(public)/layout.tsx
+  - src/shared/domain/**
+  - src/shared/lib/admin-*
+  - src/shared/lib/customer-*
+  - src/shared/lib/command-palette-types*
+  - src/shared/lib/forms/**
+  - src/shared/lib/nuqs/**
+  - src/shared/lib/validations/**
+  - src/shared/types/better-auth.d.ts
 ---
 
 # 認証パターンルール
