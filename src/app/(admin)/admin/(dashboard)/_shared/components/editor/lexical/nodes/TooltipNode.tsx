@@ -57,10 +57,17 @@ export class TooltipNode extends DecoratorNode<ReactElement> {
           if (element.getAttribute("data-tooltip") !== "true") {
             return { node: null };
           }
-          const baseText = element.textContent ?? "";
-          const tooltipText = element.getAttribute("title") ?? "";
+          // 新構造: 子 [data-tooltip-content] に説明文 / [data-tooltip-base] に表示テキスト。
+          // 旧構造（title 属性 + 素のテキスト）も graceful に取り込む。
+          const contentEl = element.querySelector("[data-tooltip-content]");
+          const tooltipText =
+            contentEl?.textContent ?? element.getAttribute("title") ?? "";
+          contentEl?.remove();
+          const baseEl = element.querySelector("[data-tooltip-base]");
+          const baseText = baseEl?.textContent ?? element.textContent ?? "";
           const tooltipNode = $createTooltipNode(baseText, tooltipText);
-          return { node: tooltipNode };
+          // 注入された表示用要素は子として取り込まない
+          return { node: tooltipNode, after: () => [] };
         },
         priority: 1,
       }),
@@ -70,14 +77,26 @@ export class TooltipNode extends DecoratorNode<ReactElement> {
   override exportDOM(): DOMExportOutput {
     const abbr = document.createElement("abbr");
     abbr.setAttribute("data-tooltip", "true");
-    abbr.setAttribute("title", $getState(this, tooltipTextState));
-    abbr.textContent = $getState(this, tooltipBaseTextState);
+    abbr.setAttribute("tabindex", "0");
+
+    const base = document.createElement("span");
+    base.setAttribute("data-tooltip-base", "");
+    base.textContent = $getState(this, tooltipBaseTextState);
+    abbr.appendChild(base);
+
+    const content = document.createElement("span");
+    content.setAttribute("data-tooltip-content", "");
+    content.setAttribute("role", "tooltip");
+    content.textContent = $getState(this, tooltipTextState);
+    abbr.appendChild(content);
+
     return { element: abbr };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const abbr = document.createElement("abbr");
     abbr.setAttribute("data-tooltip", "true");
+    abbr.setAttribute("tabindex", "0");
     return abbr;
   }
 
@@ -93,13 +112,12 @@ export class TooltipNode extends DecoratorNode<ReactElement> {
     const baseText = $getState(this, tooltipBaseTextState);
     const tooltipText = $getState(this, tooltipTextState);
     return (
-      <abbr
-        data-tooltip="true"
-        title={tooltipText}
-        className="cursor-help underline decoration-dotted"
-      >
-        {baseText}
-      </abbr>
+      <>
+        <span data-tooltip-base="">{baseText}</span>
+        <span data-tooltip-content="" role="tooltip">
+          {tooltipText}
+        </span>
+      </>
     );
   }
 }

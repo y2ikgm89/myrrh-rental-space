@@ -1824,13 +1824,58 @@ details[data-collapsible-item]
 /* --------------------------------------------------------------------------
  * Tooltip (abbr[data-tooltip])
  *
- * data-tooltip: ツールチップ付きテキスト
- * title 属性にツールチップの説明文を格納
+ * data-tooltip: ツールチップ付きテキスト（tabindex="0" でフォーカス可能）
+ *   └ [data-tooltip-base]: 表示テキスト（点線下線）
+ *   └ [data-tooltip-content][role="tooltip"]: 説明文（hover / focus で表示）
+ *
+ * 旧実装は title 属性依存でモバイル・キーボードから到達不能だったため、
+ * 説明文を常に DOM に保持（スクリーンリーダー可読）+ hover/focus で視覚表示する
+ * CSS ツールチップに刷新（WCAG 2.2 / WAI-ARIA tooltip pattern 準拠）。
  * -------------------------------------------------------------------------- */
 
 [data-tooltip] {
-  text-decoration: underline dotted;
+  position: relative;
   cursor: help;
+  text-decoration: none;
+  /* インライン要素だが focus ring を見やすく */
+  border-radius: var(--radius-sm);
+}
+
+[data-tooltip] > [data-tooltip-base] {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+[data-tooltip] > [data-tooltip-content] {
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-md);
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    visibility 0.15s ease;
+}
+
+[data-tooltip]:hover > [data-tooltip-content],
+[data-tooltip]:focus-visible > [data-tooltip-content],
+[data-tooltip]:focus-within > [data-tooltip-content] {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* --------------------------------------------------------------------------
