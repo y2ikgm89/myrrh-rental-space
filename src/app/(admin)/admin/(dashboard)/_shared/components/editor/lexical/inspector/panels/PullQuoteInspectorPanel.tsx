@@ -15,13 +15,16 @@ import {
   isPullQuoteStyle,
   quoteStyleState,
   pullQuoteColorState,
+  $pullQuoteHasCitation,
+  $addPullQuoteCitation,
+  $removePullQuoteCitation,
 } from "../../nodes/PullQuoteNode";
 import { type AccentColor } from "../../config/accent-colors";
 import { InspectorHeader } from "../InspectorHeader";
 import { InspectorFields } from "../InspectorFields";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { ColorSwatchPicker } from "../ColorSwatchPicker";
-import { Label } from "@/admin/components/ui";
+import { Label, Switch } from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
@@ -43,9 +46,10 @@ export function PullQuoteInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isPullQuoteNode);
 
-  const { quoteStyle, quoteColor } = editor.read(() => ({
+  const { quoteStyle, quoteColor, hasCitation } = editor.read(() => ({
     quoteStyle: $getState(node, quoteStyleState),
     quoteColor: $getState(node, pullQuoteColorState),
+    hasCitation: $pullQuoteHasCitation(node),
   }));
 
   const handleStyleChange = (value: string) => {
@@ -59,6 +63,13 @@ export function PullQuoteInspectorPanel({
   const handleColorChange = (color: AccentColor) => {
     updateNode((n) => {
       $setState(n, pullQuoteColorState, color);
+    });
+  };
+
+  const handleCitationToggle = (checked: boolean) => {
+    updateNode((n) => {
+      if (checked) $addPullQuoteCitation(n);
+      else $removePullQuoteCitation(n);
     });
   };
 
@@ -87,6 +98,16 @@ export function PullQuoteInspectorPanel({
           onChange={handleColorChange}
           label="アクセントカラー"
         />
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="inspector-pull-quote-citation" className="text-xs">
+            引用元（出典）を表示
+          </Label>
+          <Switch
+            id="inspector-pull-quote-citation"
+            checked={hasCitation}
+            onCheckedChange={handleCitationToggle}
+          />
+        </div>
       </InspectorFields>
     </div>
   );

@@ -22,6 +22,7 @@ import {
 } from "@tabler/icons-react";
 import { INSERT_CAPTION_BOX_COMMAND } from "../../plugins/CaptionBoxPlugin";
 import { INSERT_COLLAPSIBLE_COMMAND } from "../../plugins/CollapsiblePlugin";
+import { INSERT_PULL_QUOTE_COMMAND } from "../../plugins/PullQuotePlugin";
 import { OPEN_GROUP_DIALOG_COMMAND } from "../../plugins/GroupPlugin";
 import { $getSelectionBlockNodes } from "../../lib/selection-helpers";
 import type { InsertItem } from "./types";
@@ -85,14 +86,15 @@ export const LAYOUT_INSERT_ITEMS: readonly InsertItem[] = [
   },
   {
     id: "pullQuote",
-    type: "dialog",
+    type: "command",
     label: "プルクォート",
     icon: IconQuote,
     keywords: ["pullquote", "quote", "inyou", "blockquote", "highlight"],
     category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dialogId: "pullQuote",
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_PULL_QUOTE_COMMAND, undefined),
   },
   {
     id: "collapsible",

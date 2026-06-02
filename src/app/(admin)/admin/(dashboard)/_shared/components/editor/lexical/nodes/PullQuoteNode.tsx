@@ -26,6 +26,10 @@ import {
 } from "lexical";
 import { createEnumGuard } from "../config/type-guards";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
+import {
+  $createPullQuoteCitationNode,
+  PullQuoteCitationNode,
+} from "./PullQuoteCitationNode";
 
 // =============================================================================
 // Types
@@ -207,4 +211,38 @@ export function $isPullQuoteNode(
   node: LexicalNode | null | undefined,
 ): node is PullQuoteNode {
   return node instanceof PullQuoteNode;
+}
+
+// =============================================================================
+// Citation Helpers（出典は任意の子。Inspector の表示トグルから操作する）
+// =============================================================================
+
+/**
+ * PullQuote が出典（PullQuoteCitationNode）を持つか
+ */
+export function $pullQuoteHasCitation(node: PullQuoteNode): boolean {
+  return node
+    .getChildren()
+    .some((child) => child instanceof PullQuoteCitationNode);
+}
+
+/**
+ * PullQuote に出典を追加し、出典段落にフォーカスする（既に存在する場合は何もしない）
+ */
+export function $addPullQuoteCitation(node: PullQuoteNode): void {
+  if ($pullQuoteHasCitation(node)) return;
+  const citation = $createPullQuoteCitationNode();
+  const paragraph = $createParagraphNode();
+  citation.append(paragraph);
+  node.append(citation);
+  paragraph.selectEnd();
+}
+
+/**
+ * PullQuote から出典を削除する
+ */
+export function $removePullQuoteCitation(node: PullQuoteNode): void {
+  for (const child of node.getChildren()) {
+    if (child instanceof PullQuoteCitationNode) child.remove();
+  }
 }
