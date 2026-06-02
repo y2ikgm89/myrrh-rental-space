@@ -86,6 +86,15 @@ echo "=== 9. rule / skill paths: glob 実在性（stale glob 検出）==="
 # skill (paths: 任意=公式 skills#frontmatter-reference) は DEAD_SKILL(auto-activation
 # 不発)/DEAD_SKILL_GLOB を検出する。
 bun ${CLAUDE_SKILL_DIR}/scripts/check-stale-paths.ts
+
+echo ""
+echo "=== 10. rule 注入コスト（context/使用量 退行検出）==="
+# 公式 context-window 仕様: path-scoped rule は matching file Read 時に message
+# history へ全文ロードされ compaction まで context を占有する。glob が広い × rule
+# が大きいほど無関係な編集で大量 token を恒常消費する。代表編集シナリオ別の合計
+# 注入サイズと cost-driver を算出し、閾値超過（1 シナリオ >300KB / 単一 rule >40KB
+# が 4+ シナリオに注入）を warn する。stale-path（実在性）と直交する「広すぎ」検出。
+bun ${CLAUDE_SKILL_DIR}/scripts/injection-cost.ts
 ```
 
 ## Phase 2: 公式 spec WebFetch + diff（必要時のみ）
@@ -111,17 +120,18 @@ WebFetch https://code.claude.com/docs/en/memory "Summarize CLAUDE.md best practi
 
 検出 drift ごとに 1 行アクション:
 
-| Drift                               | 修正アクション                                                                |
-| ----------------------------------- | ----------------------------------------------------------------------------- |
-| `paths:` 欠落                       | 該当 rule に `paths:` frontmatter 追加（適切な glob）                         |
-| stale glob (`paths` が無マッチ)     | 実在パスへ remap（dir 移動・rename 追従）、冗長 / 消失分は削除                |
-| 独自 frontmatter field              | 公式 field 名に置換 or 削除                                                   |
-| description+when_to_use 1536 字超過 | description 圧縮、details は SKILL 本文に移動                                 |
-| agent-memory drift                  | `memory: project` 削除（未使用）or `MEMORY.md` stub 作成（利用予定）          |
-| 撤回 pattern 残骸                   | `git rm -r <path>`、`claude-code-patterns.md` の撤回表で正当化                |
-| CLAUDE.md > 200 行                  | path-scoped rule に退避                                                       |
-| SKILL.md > 500 行                   | `reference/*.md` に詳細を分割、SKILL.md は概要 + ナビに圧縮                   |
-| 公式新 field / event                | `claude-code-patterns.md` / `hooks-patterns.md` の field 表に追記（1 commit） |
+| Drift                               | 修正アクション                                                                                                                |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `paths:` 欠落                       | 該当 rule に `paths:` frontmatter 追加（適切な glob）                                                                         |
+| stale glob (`paths` が無マッチ)     | 実在パスへ remap（dir 移動・rename 追従）、冗長 / 消失分は削除                                                                |
+| 独自 frontmatter field              | 公式 field 名に置換 or 削除                                                                                                   |
+| description+when_to_use 1536 字超過 | description 圧縮、details は SKILL 本文に移動                                                                                 |
+| agent-memory drift                  | `memory: project` 削除（未使用）or `MEMORY.md` stub 作成（利用予定）                                                          |
+| 撤回 pattern 残骸                   | `git rm -r <path>`、`claude-code-patterns.md` の撤回表で正当化                                                                |
+| CLAUDE.md > 200 行                  | path-scoped rule に退避                                                                                                       |
+| SKILL.md > 500 行                   | `reference/*.md` に詳細を分割、SKILL.md は概要 + ナビに圧縮                                                                   |
+| 注入コスト閾値超過                  | broad-glob 大 rule を狭小化（内容無損失）or 内容 trim（domain rule と重複行を圧縮）。`injection-cost.ts` で before/after 計測 |
+| 公式新 field / event                | `claude-code-patterns.md` / `hooks-patterns.md` の field 表に追記（1 commit）                                                 |
 
 ## 出力形式
 
@@ -137,6 +147,7 @@ Phase 1 (local grep):
   ✅ CLAUDE.md 169 行 / 200 行
   ✅ SKILL.md 全件 500 行未満
   ✅ paths: glob 全件実在マッチ (rules DEAD_RULE=0 DEAD_GLOB=0 / skills DEAD_SKILL=0 DEAD_SKILL_GLOB=0)
+  ✅ 注入コスト閾値内 (最大シナリオ <300KB / broad-glob 大 rule なし)
 Phase 2 (official spec diff): [skipped or executed]
   ⚠️  hooks に新 event `XxxYyy` 追加 (v2.1.150) → hooks-patterns.md に追記要
 
