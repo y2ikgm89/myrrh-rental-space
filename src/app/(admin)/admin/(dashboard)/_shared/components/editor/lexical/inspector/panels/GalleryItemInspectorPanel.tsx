@@ -116,7 +116,7 @@ export function GalleryItemInspectorPanel({
             value={alt}
             onChange={(e) => handleAltChange(e.target.value)}
             placeholder="画像の説明"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
 
@@ -129,7 +129,7 @@ export function GalleryItemInspectorPanel({
             value={caption}
             onChange={(e) => handleCaptionChange(e.target.value)}
             placeholder="キャプションテキスト（任意）"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>

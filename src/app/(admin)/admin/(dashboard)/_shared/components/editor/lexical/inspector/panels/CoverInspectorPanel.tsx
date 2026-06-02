@@ -94,24 +94,18 @@ export function CoverInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isCoverNode);
 
-  const backgroundImageUrl = editor
-    .getEditorState()
-    .read(() => $getState(node, backgroundImageUrlState));
-  const overlayColor = editor
-    .getEditorState()
-    .read(() => $getState(node, overlayColorState));
-  const overlayOpacity = editor
-    .getEditorState()
-    .read(() => $getState(node, overlayOpacityState));
-  const minHeight = editor
-    .getEditorState()
-    .read(() => $getState(node, minHeightState));
-  const contentAlign = editor
-    .getEditorState()
-    .read(() => $getState(node, contentAlignState));
-  const contentPosition = editor
-    .getEditorState()
-    .read(() => $getState(node, contentPositionState));
+  const backgroundImageUrl = editor.read(() =>
+    $getState(node, backgroundImageUrlState),
+  );
+  const overlayColor = editor.read(() => $getState(node, overlayColorState));
+  const overlayOpacity = editor.read(() =>
+    $getState(node, overlayOpacityState),
+  );
+  const minHeight = editor.read(() => $getState(node, minHeightState));
+  const contentAlign = editor.read(() => $getState(node, contentAlignState));
+  const contentPosition = editor.read(() =>
+    $getState(node, contentPositionState),
+  );
 
   const imagePicker = useSingleMediaPicker({
     defaultUsage: "POST",
@@ -223,7 +217,7 @@ export function CoverInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">カラー</Label>
           <Select value={overlayColor} onValueChange={handleOverlayColorChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -242,7 +236,7 @@ export function CoverInspectorPanel({
             value={String(overlayOpacity)}
             onValueChange={handleOverlayOpacityChange}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -260,7 +254,7 @@ export function CoverInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">最小高さ</Label>
           <Select value={minHeight} onValueChange={handleMinHeightChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

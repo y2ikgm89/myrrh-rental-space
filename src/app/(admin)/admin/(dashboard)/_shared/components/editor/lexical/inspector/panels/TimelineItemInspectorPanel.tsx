@@ -68,7 +68,7 @@ export function TimelineItemInspectorPanel({
               value={year}
               onChange={(e) => handleYearChange(e.target.value)}
               placeholder="2024"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
 
@@ -78,7 +78,7 @@ export function TimelineItemInspectorPanel({
               value={label}
               onChange={(e) => handleLabelChange(e.target.value)}
               placeholder="ステップのタイトル"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
         </div>

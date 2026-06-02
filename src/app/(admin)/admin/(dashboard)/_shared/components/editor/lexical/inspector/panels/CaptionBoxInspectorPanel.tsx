@@ -71,7 +71,7 @@ export function CaptionBoxInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">レイアウト</Label>
             <Select value={currentStyle} onValueChange={handleStyleChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

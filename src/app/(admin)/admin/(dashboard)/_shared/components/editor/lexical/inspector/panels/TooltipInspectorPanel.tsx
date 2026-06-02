@@ -74,7 +74,7 @@ export function TooltipInspectorPanel({
             id="inspector-tooltip-base"
             value={baseText}
             onChange={(e) => handleBaseChange(e.target.value)}
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
         <div className="space-y-2">

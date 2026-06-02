@@ -152,7 +152,7 @@ export function AudioInspectorPanel({
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="楽曲タイトル"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
 
@@ -165,7 +165,7 @@ export function AudioInspectorPanel({
             value={artist}
             onChange={(e) => handleArtistChange(e.target.value)}
             placeholder="アーティスト名"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>

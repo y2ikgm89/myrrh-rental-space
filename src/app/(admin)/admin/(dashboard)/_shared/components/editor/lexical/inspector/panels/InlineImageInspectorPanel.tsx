@@ -69,14 +69,12 @@ export function InlineImageInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isInlineImageNode);
 
-  const { src, altText, position, width } = editor
-    .getEditorState()
-    .read(() => ({
-      src: $getState(node, inlineSrcState),
-      altText: $getState(node, inlineAltTextState),
-      position: $getState(node, inlinePositionState),
-      width: $getState(node, inlineWidthState),
-    }));
+  const { src, altText, position, width } = editor.read(() => ({
+    src: $getState(node, inlineSrcState),
+    altText: $getState(node, inlineAltTextState),
+    position: $getState(node, inlinePositionState),
+    width: $getState(node, inlineWidthState),
+  }));
 
   const imagePicker = useSingleMediaPicker({
     defaultUsage: "POST",
@@ -150,7 +148,7 @@ export function InlineImageInspectorPanel({
             value={altText}
             onChange={(e) => handleAltTextChange(e.target.value)}
             placeholder="画像の説明"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>
@@ -188,7 +186,7 @@ export function InlineImageInspectorPanel({
             onChange={(e) => handleWidthChange(e.target.value)}
             placeholder="200"
             disabled={position === "full"}
-            className="h-8 text-sm"
+            className="text-sm"
           />
           {position === "full" && (
             <p className="text-xs text-muted-foreground">

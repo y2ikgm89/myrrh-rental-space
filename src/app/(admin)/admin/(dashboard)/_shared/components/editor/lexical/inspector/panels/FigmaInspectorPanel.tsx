@@ -81,7 +81,7 @@ export function FigmaInspectorPanel({
             value={label}
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="デザイン名・説明"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>

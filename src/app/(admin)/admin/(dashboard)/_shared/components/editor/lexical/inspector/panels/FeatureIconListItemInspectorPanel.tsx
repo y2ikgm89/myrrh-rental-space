@@ -32,9 +32,7 @@ export function FeatureIconListItemInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isFeatureIconItemNode);
 
-  const iconName = editor
-    .getEditorState()
-    .read(() => $getState(node, featureIconItemNameState));
+  const iconName = editor.read(() => $getState(node, featureIconItemNameState));
 
   const handleIconNameChange = (value: string) => {
     updateNode((n) => {

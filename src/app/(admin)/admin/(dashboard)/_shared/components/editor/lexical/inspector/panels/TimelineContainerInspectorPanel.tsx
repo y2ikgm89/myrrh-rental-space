@@ -124,7 +124,7 @@ export function TimelineContainerInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">カラー</Label>
             <Select value={accentColorValue} onValueChange={handleColorChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

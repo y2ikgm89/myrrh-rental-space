@@ -43,12 +43,10 @@ export function LayoutInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isLayoutContainerNode);
 
-  const { templateColumns, templateColumnsNarrow } = editor
-    .getEditorState()
-    .read(() => ({
-      templateColumns: $getState(node, templateColumnsState),
-      templateColumnsNarrow: $getState(node, templateColumnsNarrowState),
-    }));
+  const { templateColumns, templateColumnsNarrow } = editor.read(() => ({
+    templateColumns: $getState(node, templateColumnsState),
+    templateColumnsNarrow: $getState(node, templateColumnsNarrowState),
+  }));
 
   const handleWideChange = (value: string) => {
     updateNode((n) => {
@@ -70,7 +68,7 @@ export function LayoutInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">広い画面の列</Label>
           <Select value={templateColumns} onValueChange={handleWideChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -102,7 +100,7 @@ export function LayoutInspectorPanel({
             value={templateColumnsNarrow}
             onValueChange={handleNarrowChange}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

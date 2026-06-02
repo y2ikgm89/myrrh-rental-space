@@ -109,7 +109,7 @@ export function TableInspectorPanel({
                   : undefined
               }
             >
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -192,7 +192,7 @@ export function TableInspectorPanel({
                 })
               }
             >
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

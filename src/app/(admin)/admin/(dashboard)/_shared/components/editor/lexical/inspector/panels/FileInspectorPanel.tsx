@@ -176,7 +176,7 @@ export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
               value={fileName}
               onChange={(e) => handleFileNameChange(e.target.value)}
               placeholder="document.pdf"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
         </InspectorFields>

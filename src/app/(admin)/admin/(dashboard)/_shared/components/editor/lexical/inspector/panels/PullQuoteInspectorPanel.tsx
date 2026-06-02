@@ -81,7 +81,7 @@ export function PullQuoteInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">表示スタイル</Label>
           <Select value={quoteStyle} onValueChange={handleStyleChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

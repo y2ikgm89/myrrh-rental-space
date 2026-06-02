@@ -66,9 +66,8 @@ export function ButtonInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isButtonNode);
 
-  const { label, href, variant, size, alignment, color, openInNewTab } = editor
-    .getEditorState()
-    .read(() => ({
+  const { label, href, variant, size, alignment, color, openInNewTab } =
+    editor.read(() => ({
       label: $getState(node, buttonLabelState),
       href: $getState(node, buttonHrefState),
       variant: $getState(node, buttonVariantState),
@@ -148,7 +147,7 @@ export function ButtonInspectorPanel({
             value={href}
             onChange={(e) => handleHrefChange(e.target.value)}
             placeholder="https://example.com"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
 
@@ -171,7 +170,7 @@ export function ButtonInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">スタイル</Label>
           <Select value={variant} onValueChange={handleVariantChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -187,7 +186,7 @@ export function ButtonInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">サイズ</Label>
           <Select value={size} onValueChange={handleSizeChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -203,7 +202,7 @@ export function ButtonInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">配置</Label>
           <Select value={alignment} onValueChange={handleAlignmentChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
