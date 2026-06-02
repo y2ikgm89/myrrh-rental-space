@@ -138,6 +138,41 @@ export const timelineLabelState = createState("label", {
 });
 
 // =============================================================================
+// TimelineItem DOM helper（createDOM / updateDOM 共通）
+//
+// TimelineItemNode は Lexical の子ノードを持たない（year / label は state）。
+// そのため createDOM の div 内に year / label 要素を手動注入する。
+// GalleryItemNode の applyGalleryItemContent と同じパターン。
+// =============================================================================
+
+function applyTimelineItemContent(
+  host: HTMLElement,
+  year: string,
+  label: string,
+): void {
+  host.querySelectorAll(":scope > [data-tl-meta]").forEach((el) => el.remove());
+
+  const meta = document.createElement("div");
+  meta.setAttribute("data-tl-meta", "");
+
+  if (year) {
+    const yearEl = document.createElement("span");
+    yearEl.setAttribute("data-tl-year", "");
+    yearEl.textContent = year;
+    meta.appendChild(yearEl);
+  }
+
+  if (label) {
+    const labelEl = document.createElement("span");
+    labelEl.setAttribute("data-tl-label", "");
+    labelEl.textContent = label;
+    meta.appendChild(labelEl);
+  }
+
+  host.insertAdjacentElement("afterbegin", meta);
+}
+
+// =============================================================================
 // TimelineItemNode
 // =============================================================================
 
@@ -159,10 +194,37 @@ export class TimelineItemNode extends ElementNode {
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
     div.setAttribute("data-timeline-item", "true");
+    div.setAttribute("data-timeline-year", $getState(this, timelineYearState));
+    div.setAttribute(
+      "data-timeline-label",
+      $getState(this, timelineLabelState),
+    );
+    applyTimelineItemContent(
+      div,
+      $getState(this, timelineYearState),
+      $getState(this, timelineLabelState),
+    );
     return div;
   }
 
-  override updateDOM(): false {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
+    const yearChange = $getStateChange(this, prevNode, timelineYearState);
+    const labelChange = $getStateChange(this, prevNode, timelineLabelState);
+    if (yearChange !== null) {
+      const [newYear] = yearChange;
+      dom.setAttribute("data-timeline-year", newYear);
+    }
+    if (labelChange !== null) {
+      const [newLabel] = labelChange;
+      dom.setAttribute("data-timeline-label", newLabel);
+    }
+    if (yearChange !== null || labelChange !== null) {
+      applyTimelineItemContent(
+        dom,
+        $getState(this, timelineYearState),
+        $getState(this, timelineLabelState),
+      );
+    }
     return false;
   }
 
@@ -180,7 +242,8 @@ export class TimelineItemNode extends ElementNode {
               year: element.getAttribute("data-timeline-year") ?? "",
               label: element.getAttribute("data-timeline-label") ?? "",
             });
-            return { node };
+            // 注入された表示用メタ（data-tl-meta）は子として取り込まない
+            return { node, after: () => [] };
           },
           priority: 2,
         };
@@ -194,6 +257,11 @@ export class TimelineItemNode extends ElementNode {
     div.setAttribute("data-timeline-year", $getState(this, timelineYearState));
     div.setAttribute(
       "data-timeline-label",
+      $getState(this, timelineLabelState),
+    );
+    applyTimelineItemContent(
+      div,
+      $getState(this, timelineYearState),
       $getState(this, timelineLabelState),
     );
     return { element: div };
