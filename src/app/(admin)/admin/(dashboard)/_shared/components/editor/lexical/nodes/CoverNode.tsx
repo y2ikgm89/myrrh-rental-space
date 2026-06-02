@@ -114,8 +114,7 @@ function $convertCoverElement(
     ? bgStyle.replace(/^url\(['"]?/, "").replace(/['"]?\)$/, "")
     : "";
 
-  const overlayColorAttr =
-    element.getAttribute("data-overlay-color") ?? "default";
+  const overlayColorAttr = element.getAttribute("data-color") ?? "default";
   const overlayColor: AccentColor =
     typeof overlayColorAttr === "string" && isAccentColor(overlayColorAttr)
       ? overlayColorAttr
@@ -201,10 +200,7 @@ export class CoverNode extends ElementNode {
   override exportDOM(): DOMExportOutput {
     const element = document.createElement("div");
     element.setAttribute("data-cover", "");
-    element.setAttribute(
-      "data-overlay-color",
-      $getState(this, overlayColorState),
-    );
+    element.setAttribute("data-color", $getState(this, overlayColorState));
     element.setAttribute(
       "data-overlay-opacity",
       String($getState(this, overlayOpacityState)),
@@ -228,7 +224,7 @@ export class CoverNode extends ElementNode {
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
     div.setAttribute("data-cover", "");
-    div.setAttribute("data-overlay-color", $getState(this, overlayColorState));
+    div.setAttribute("data-color", $getState(this, overlayColorState));
     div.setAttribute(
       "data-overlay-opacity",
       String($getState(this, overlayOpacityState)),
@@ -264,7 +260,7 @@ export class CoverNode extends ElementNode {
     );
     if (overlayColorChange !== null) {
       const [newColor] = overlayColorChange;
-      dom.setAttribute("data-overlay-color", newColor);
+      dom.setAttribute("data-color", newColor);
     }
 
     const overlayOpacityChange = $getStateChange(
