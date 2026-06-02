@@ -166,12 +166,19 @@ export class InlineImageNode extends DecoratorNode<ReactElement> {
   }
 
   override exportDOM(): DOMExportOutput {
+    const position = $getState(this, inlinePositionState);
+    const width = $getState(this, inlineWidthState);
     const span = document.createElement("span");
     span.setAttribute("data-inline-image", "true");
     span.setAttribute("data-src", $getState(this, inlineSrcState));
     span.setAttribute("data-alt", $getState(this, inlineAltTextState));
-    span.setAttribute("data-position", $getState(this, inlinePositionState));
-    span.setAttribute("data-width", String($getState(this, inlineWidthState)));
+    span.setAttribute("data-position", position);
+    span.setAttribute("data-width", String(width));
+    // 幅は動的 px 値のため inline style で出力（float / display は CSS の
+    // [data-inline-image][data-position] が担当 → 公開ページで回り込みが復元される）
+    if (position !== "full") {
+      span.setAttribute("style", `width:${String(width)}px;`);
+    }
 
     const img = document.createElement("img");
     img.setAttribute("src", $getState(this, inlineSrcState));

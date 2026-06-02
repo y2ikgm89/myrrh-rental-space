@@ -2543,3 +2543,78 @@ ul:has(> li[data-pricing-feature]) {
   line-height: 1.3;
   color: var(--color-muted-foreground);
 }
+
+/* --------------------------------------------------------------------------
+ * Audio Node（公開ページ）
+ *
+ * data-audio: コンテナ（<div>）
+ *   └ [data-audio-meta]: タイトル / アーティストの注入ラッパー
+ *     └ [data-audio-title-text] / [data-audio-artist-text]
+ *   └ <audio controls>
+ * エディタ内は DecoratorNode（React）で描画されるため、本 CSS は主に公開出力用。
+ * -------------------------------------------------------------------------- */
+
+[data-audio] {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-card);
+}
+
+[data-audio-meta] {
+  margin-bottom: 0.5rem;
+}
+
+[data-audio-title-text] {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+
+[data-audio-artist-text] {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+}
+
+[data-audio] > audio {
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+ * Inline Image Node（公開ページ）
+ *
+ * data-inline-image: インライン画像（<span>）
+ * data-position: left / right（回り込み）/ full（ブロック全幅）
+ * data-width: px 幅（left/right 時に inline style で span に付与済み）
+ * float / display は本 CSS が担当（exportDOM の inline style は width のみ）。
+ * -------------------------------------------------------------------------- */
+
+[data-inline-image] {
+  display: inline-block;
+  max-width: 100%;
+}
+
+[data-inline-image] > img {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+[data-inline-image][data-position="left"] {
+  float: left;
+  margin: 0 1rem 0.5rem 0;
+}
+
+[data-inline-image][data-position="right"] {
+  float: right;
+  margin: 0 0 0.5rem 1rem;
+}
+
+[data-inline-image][data-position="full"] {
+  display: block;
+  width: 100%;
+  margin: 1rem 0;
+}
