@@ -89,6 +89,8 @@ export function MediaPickerDialog({
         {
           id: media.id,
           url: media.url,
+          ...(media.mimeType !== undefined && { mimeType: media.mimeType }),
+          ...(media.size !== undefined && { size: media.size }),
           source: "upload",
         },
       ]);

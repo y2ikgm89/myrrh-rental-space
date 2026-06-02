@@ -14,6 +14,8 @@ import type { SelectionMode, SelectedMedia } from "@/admin/types/media-picker";
 interface UploadedMediaData {
   id: string;
   url: string;
+  mimeType?: string;
+  size?: number;
 }
 
 interface UseMediaSelectionOptions {
@@ -59,6 +61,8 @@ export function useMediaSelection({
           url: media.url,
           ...(media.alt != null && { alt: media.alt }),
           filename: media.filename,
+          mimeType: media.mimeType,
+          size: media.size,
           source: "library",
         },
       ]);
@@ -81,6 +85,8 @@ export function useMediaSelection({
             url: media.url,
             ...(media.alt != null && { alt: media.alt }),
             filename: media.filename,
+            mimeType: media.mimeType,
+            size: media.size,
             source: "library",
           },
         ];
@@ -112,6 +118,8 @@ export function useMediaSelection({
     const uploadedMedia: SelectedMedia = {
       id: media.id,
       url: media.url,
+      ...(media.mimeType !== undefined && { mimeType: media.mimeType }),
+      ...(media.size !== undefined && { size: media.size }),
       source: "upload",
     };
 
