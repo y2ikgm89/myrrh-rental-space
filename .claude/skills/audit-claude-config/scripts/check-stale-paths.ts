@@ -1,11 +1,15 @@
 /**
- * check-stale-paths.ts — path-scoped rule の `paths:` glob が実在ファイルに
+ * check-stale-paths.ts — path-scoped な `paths:` glob が実在ファイルに
  * マッチするかを検証する（audit-claude-config SKILL Phase 1 の stale glob 検出）。
  *
- * 公式仕様 (code.claude.com/docs/en/memory#path-specific-rules) では `paths:` の
- * glob にマッチするファイルを編集したときだけ rule が auto-load される。glob が
- * 実在ファイルにマッチしなければ「dead-weight」（rule は他の有効 glob で load される
- * が、その行は無意味）か、全 glob が dead なら「auto-load 不発」になる。
+ * 対象は 2 層:
+ *   - `.claude/rules/**\/*.md`     — `paths:` 必須（公式 memory#path-specific-rules）
+ *   - `.claude/skills/**\/SKILL.md` — `paths:` 任意（公式 skills#frontmatter-reference）
+ *
+ * 公式仕様では `paths:` の glob にマッチするファイルを編集したときだけ rule が
+ * auto-load / skill が auto-activate される。glob が実在ファイルにマッチしなければ
+ * 「dead-weight」（他の有効 glob で load されるが、その行は無意味）か、全 glob が
+ * dead なら「auto-load / auto-activation 不発」になる。
  *
  * 大規模リファクタ（ディレクトリ移動・ファイル rename）で specific path glob は
  * 容易に stale 化するため、定期監査で検出する。
@@ -70,8 +74,26 @@ const literalPrefix = (g: string) => {
   return i === -1 ? g : g.slice(0, i);
 };
 
+// glob 群の実在判定を rule / skill で共有する
+function checkGlobs(globs: string[]): { ok: string[]; stale: string[] } {
+  const ok: string[] = [];
+  const stale: string[] = [];
+  for (const g of globs) {
+    const gl = new Glob(g);
+    const prefix = literalPrefix(g);
+    const matched =
+      files.some((f) => gl.match(f)) ||
+      (prefix.length >= 3 && hasPrefix(prefix));
+    (matched ? ok : stale).push(g);
+  }
+  return { ok, stale };
+}
+
 const ruleFiles = files.filter(
   (f) => f.startsWith(".claude/rules/") && f.endsWith(".md"),
+);
+const skillFiles = files.filter(
+  (f) => f.startsWith(".claude/skills/") && f.endsWith("/SKILL.md"),
 );
 
 let deadRule = 0;
@@ -90,16 +112,7 @@ for (const rf of ruleFiles) {
     noPaths++;
     continue;
   }
-  const stale: string[] = [];
-  const ok: string[] = [];
-  for (const g of globs) {
-    const gl = new Glob(g);
-    const prefix = literalPrefix(g);
-    const matched =
-      files.some((f) => gl.match(f)) ||
-      (prefix.length >= 3 && hasPrefix(prefix));
-    (matched ? ok : stale).push(g);
-  }
+  const { ok, stale } = checkGlobs(globs);
   if (stale.length) {
     const allDead = ok.length === 0;
     if (allDead) deadRule++;
@@ -111,12 +124,49 @@ for (const rf of ruleFiles) {
   }
 }
 
+// Skills: `paths:` は任意フィールド（公式 code.claude.com/docs/en/skills
+// #frontmatter-reference「When set, Claude loads the skill automatically only
+// when working with files matching the patterns」）。rule と異なり paths: 無しは
+// 正常（description / 手動 `/skill-name` 起動が主経路）のため、設定済みの skill
+// のみ glob 実在を検証する。全 glob dead = path-scoped auto-activation 不発。
+let deadSkill = 0;
+let deadSkillGlob = 0;
+let skillsWithPaths = 0;
+
+for (const sf of skillFiles) {
+  const fm = frontmatter(await Bun.file(join(root, sf)).text());
+  if (!fm) continue;
+  const globs = extractPaths(fm);
+  if (!globs || globs.length === 0) continue; // paths: 任意 → 対象外
+  skillsWithPaths++;
+  const { ok, stale } = checkGlobs(globs);
+  if (stale.length) {
+    const allDead = ok.length === 0;
+    if (allDead) deadSkill++;
+    else deadSkillGlob++;
+    console.info(
+      `${allDead ? "DEAD_SKILL (auto-activation 不発)" : "DEAD_SKILL_GLOB (dead-weight)"}: ${sf}`,
+    );
+    for (const s of stale) console.info(`      ✗ ${s}`);
+  }
+}
+
 console.info("");
 console.info(
   `== stale paths 監査: ${ruleFiles.length} rules / DEAD_RULE=${deadRule} DEAD_GLOB=${deadGlob} NO_PATHS=${noPaths} ==`,
 );
-if (deadRule === 0 && deadGlob === 0 && noPaths === 0) {
-  console.info("✅ 全 rule の paths: glob が実在ファイルにマッチ");
+console.info(
+  `==                   ${skillsWithPaths}/${skillFiles.length} skills (paths: 設定済) / DEAD_SKILL=${deadSkill} DEAD_SKILL_GLOB=${deadSkillGlob} ==`,
+);
+if (
+  deadRule === 0 &&
+  deadGlob === 0 &&
+  noPaths === 0 &&
+  deadSkill === 0 &&
+  deadSkillGlob === 0
+) {
+  console.info("✅ 全 rule / skill の paths: glob が実在ファイルにマッチ");
 }
-// DEAD_RULE / NO_PATHS は auto-load を壊すため exit 1、DEAD_GLOB は dead-weight 警告のみ
-process.exit(deadRule > 0 || noPaths > 0 ? 1 : 0);
+// DEAD_RULE / NO_PATHS / DEAD_SKILL は auto-load/activation を壊すため exit 1、
+// DEAD_GLOB / DEAD_SKILL_GLOB は dead-weight 警告のみ
+process.exit(deadRule > 0 || noPaths > 0 || deadSkill > 0 ? 1 : 0);
