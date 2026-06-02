@@ -40,9 +40,9 @@ export function TableCellInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isCustomTableCellNode);
 
-  const backgroundColor = editor
-    .getEditorState()
-    .read(() => $getState(node, cellBackgroundColorState));
+  const backgroundColor = editor.read(() =>
+    $getState(node, cellBackgroundColorState),
+  );
 
   return (
     <div>

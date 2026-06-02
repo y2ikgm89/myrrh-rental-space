@@ -75,13 +75,11 @@ export function FeatureIconListContainerInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isFeatureIconListContainerNode);
 
-  const { columns, accentColor, iconSize } = editor
-    .getEditorState()
-    .read(() => ({
-      columns: $getState(node, featureIconListColumnsState),
-      accentColor: $getState(node, featureIconListAccentColorState),
-      iconSize: $getState(node, featureIconListIconSizeState),
-    }));
+  const { columns, accentColor, iconSize } = editor.read(() => ({
+    columns: $getState(node, featureIconListColumnsState),
+    accentColor: $getState(node, featureIconListAccentColorState),
+    iconSize: $getState(node, featureIconListIconSizeState),
+  }));
 
   const handleColumnsChange = (value: string) => {
     const parsed = parseInt(value, 10);
@@ -121,7 +119,7 @@ export function FeatureIconListContainerInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">カラム数</Label>
             <Select value={String(columns)} onValueChange={handleColumnsChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -137,7 +135,7 @@ export function FeatureIconListContainerInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">アクセントカラー</Label>
             <Select value={accentColorValue} onValueChange={handleColorChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -153,7 +151,7 @@ export function FeatureIconListContainerInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">アイコンサイズ</Label>
             <Select value={iconSize} onValueChange={handleIconSizeChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

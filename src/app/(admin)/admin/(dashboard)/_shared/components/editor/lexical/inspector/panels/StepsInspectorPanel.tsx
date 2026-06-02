@@ -214,7 +214,7 @@ export function StepsInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">表示スタイル</Label>
           <Select value={stepsStyle} onValueChange={handleStyleChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -234,7 +234,7 @@ export function StepsInspectorPanel({
               value={stepsLabel}
               onChange={(e) => handleLabelChange(e.target.value)}
               placeholder="STEP"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
         )}
@@ -243,7 +243,7 @@ export function StepsInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">バッジ形状</Label>
             <Select value={stepsShape} onValueChange={handleShapeChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -261,7 +261,7 @@ export function StepsInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">塗りつぶし</Label>
             <Select value={stepsFill} onValueChange={handleFillChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -286,7 +286,7 @@ export function StepsInspectorPanel({
                 if (Number.isFinite(v) && v >= 1) handleStartNumberChange(v);
               }}
               min={1}
-              className="h-8 text-sm w-20"
+              className="text-sm w-20"
             />
           </div>
         )}

@@ -195,7 +195,7 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
         <div className="space-y-2">
           <Label className="text-xs">表示スタイル</Label>
           <Select value={tabsStyle} onValueChange={handleStyleChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -210,7 +210,7 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
         <div className="space-y-2">
           <Label className="text-xs">タブ幅</Label>
           <Select value={tabsSize} onValueChange={handleSizeChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -229,7 +229,7 @@ export function TabsInspectorPanel({ nodeKey, node }: TabsInspectorPanelProps) {
               value={tabsFixedWidth}
               onValueChange={handleFixedWidthChange}
             >
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

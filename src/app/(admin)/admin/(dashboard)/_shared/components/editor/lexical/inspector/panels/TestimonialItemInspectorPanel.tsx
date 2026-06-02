@@ -65,15 +65,15 @@ export function TestimonialItemInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isTestimonialItemNode);
 
-  const { authorName, authorTitle, avatarUrl, rating, date } = editor
-    .getEditorState()
-    .read(() => ({
+  const { authorName, authorTitle, avatarUrl, rating, date } = editor.read(
+    () => ({
       authorName: $getState(node, testimonialAuthorNameState),
       authorTitle: $getState(node, testimonialAuthorTitleState),
       avatarUrl: $getState(node, testimonialAvatarUrlState),
       rating: $getState(node, testimonialRatingState),
       date: $getState(node, testimonialDateState),
-    }));
+    }),
+  );
 
   const handleAuthorNameChange = (value: string) => {
     updateNode((n) => {
@@ -138,7 +138,7 @@ export function TestimonialItemInspectorPanel({
               value={authorName}
               onChange={(e) => handleAuthorNameChange(e.target.value)}
               placeholder="山田太郎"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
 
@@ -148,7 +148,7 @@ export function TestimonialItemInspectorPanel({
               value={authorTitle}
               onChange={(e) => handleAuthorTitleChange(e.target.value)}
               placeholder="CEO / 会社名"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
 
@@ -203,7 +203,7 @@ export function TestimonialItemInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">評価（星）</Label>
             <Select value={String(rating)} onValueChange={handleRatingChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -222,7 +222,7 @@ export function TestimonialItemInspectorPanel({
               value={date}
               onChange={(e) => handleDateChange(e.target.value)}
               placeholder="2024-01-01"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
         </div>

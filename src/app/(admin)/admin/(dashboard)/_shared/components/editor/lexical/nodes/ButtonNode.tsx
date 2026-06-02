@@ -155,7 +155,7 @@ function ButtonComponent({
 }): ReactElement | null {
   const [editor] = useLexicalComposerContext();
 
-  const state = editor.getEditorState().read(() => {
+  const state = editor.read(() => {
     const node = $getNodeByKey(nodeKey);
     if (!$isButtonNode(node)) return null;
     return {

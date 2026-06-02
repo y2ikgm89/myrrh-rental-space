@@ -63,30 +63,28 @@ export function CollapsibleInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isCollapsibleContainerNode);
 
-  const { currentStyle, currentColor, collapsibleItems } = editor
-    .getEditorState()
-    .read(() => {
-      const style = $getState(node, collapsibleStyleState);
-      const color = $getState(node, collapsibleColorState);
-      const items: CollapsibleItemInfo[] = [];
-      const children = node.getChildren();
+  const { currentStyle, currentColor, collapsibleItems } = editor.read(() => {
+    const style = $getState(node, collapsibleStyleState);
+    const color = $getState(node, collapsibleColorState);
+    const items: CollapsibleItemInfo[] = [];
+    const children = node.getChildren();
 
-      for (const child of children) {
-        if ($isCollapsibleItemNode(child)) {
-          const titleNode = child.getChildren().find($isCollapsibleTitleNode);
-          items.push({
-            key: child.getKey(),
-            titleText: titleNode ? titleNode.getTextContent() : "",
-          });
-        }
+    for (const child of children) {
+      if ($isCollapsibleItemNode(child)) {
+        const titleNode = child.getChildren().find($isCollapsibleTitleNode);
+        items.push({
+          key: child.getKey(),
+          titleText: titleNode ? titleNode.getTextContent() : "",
+        });
       }
+    }
 
-      return {
-        currentStyle: style,
-        currentColor: color,
-        collapsibleItems: items,
-      };
-    });
+    return {
+      currentStyle: style,
+      currentColor: color,
+      collapsibleItems: items,
+    };
+  });
 
   const canRemove = collapsibleItems.length > MIN_ITEMS;
   const canAdd = collapsibleItems.length < MAX_ITEMS;
@@ -147,7 +145,7 @@ export function CollapsibleInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">種類</Label>
             <Select value={currentStyle} onValueChange={handleStyleChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

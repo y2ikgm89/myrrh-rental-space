@@ -55,15 +55,13 @@ export function PricingPlanInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isPricingPlanNode);
 
-  const { name, price, period, featured, color } = editor
-    .getEditorState()
-    .read(() => ({
-      name: $getState(node, planNameState),
-      price: $getState(node, planPriceState),
-      period: $getState(node, planPeriodState),
-      featured: $getState(node, planFeaturedState),
-      color: $getState(node, planColorState),
-    }));
+  const { name, price, period, featured, color } = editor.read(() => ({
+    name: $getState(node, planNameState),
+    price: $getState(node, planPriceState),
+    period: $getState(node, planPeriodState),
+    featured: $getState(node, planFeaturedState),
+    color: $getState(node, planColorState),
+  }));
 
   const handleNameChange = (value: string) => {
     updateNode((n) => {
@@ -113,7 +111,7 @@ export function PricingPlanInspectorPanel({
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="スタンダード"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
 
@@ -123,7 +121,7 @@ export function PricingPlanInspectorPanel({
               value={price}
               onChange={(e) => handlePriceChange(e.target.value)}
               placeholder="¥9,800"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
 
@@ -133,7 +131,7 @@ export function PricingPlanInspectorPanel({
               value={period}
               onChange={(e) => handlePeriodChange(e.target.value)}
               placeholder="月"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
         </div>
@@ -155,7 +153,7 @@ export function PricingPlanInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">カラー</Label>
             <Select value={accentColorValue} onValueChange={handleColorChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

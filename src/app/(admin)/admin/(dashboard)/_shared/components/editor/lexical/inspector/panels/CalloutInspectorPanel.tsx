@@ -48,9 +48,7 @@ export function CalloutInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isCalloutNode);
 
-  const calloutType = editor
-    .getEditorState()
-    .read(() => $getState(node, calloutTypeState));
+  const calloutType = editor.read(() => $getState(node, calloutTypeState));
 
   const handleTypeChange = (value: string) => {
     if (isCalloutType(value)) {
@@ -68,7 +66,7 @@ export function CalloutInspectorPanel({
         <div className="space-y-2">
           <Label className="text-xs">種類</Label>
           <Select value={calloutType} onValueChange={handleTypeChange}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

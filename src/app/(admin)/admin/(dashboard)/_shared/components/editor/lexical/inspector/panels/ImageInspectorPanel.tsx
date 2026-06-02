@@ -71,16 +71,14 @@ export function ImageInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isImageNode);
 
-  const { src, alt, width, height, alignment, caption } = editor
-    .getEditorState()
-    .read(() => ({
-      src: $getState(node, srcState),
-      alt: $getState(node, altState),
-      width: $getState(node, widthState),
-      height: $getState(node, heightState),
-      alignment: $getState(node, alignmentState),
-      caption: $getState(node, captionState),
-    }));
+  const { src, alt, width, height, alignment, caption } = editor.read(() => ({
+    src: $getState(node, srcState),
+    alt: $getState(node, altState),
+    width: $getState(node, widthState),
+    height: $getState(node, heightState),
+    alignment: $getState(node, alignmentState),
+    caption: $getState(node, captionState),
+  }));
 
   const imagePicker = useSingleMediaPicker({
     defaultUsage: "POST",
@@ -169,7 +167,7 @@ export function ImageInspectorPanel({
             value={alt}
             onChange={(e) => handleAltChange(e.target.value)}
             placeholder="画像の説明"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
 
@@ -221,7 +219,7 @@ export function ImageInspectorPanel({
               value={width ?? ""}
               onChange={(e) => handleWidthChange(e.target.value)}
               placeholder="自動"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -234,7 +232,7 @@ export function ImageInspectorPanel({
               value={height ?? ""}
               onChange={(e) => handleHeightChange(e.target.value)}
               placeholder="自動"
-              className="h-8 text-sm"
+              className="text-sm"
             />
           </div>
         </div>

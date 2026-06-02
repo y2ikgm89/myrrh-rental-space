@@ -95,7 +95,7 @@ export function GroupInspectorPanel({
                 value={activeInCategory ?? ""}
                 onValueChange={handleStyleChange}
               >
-                <SelectTrigger className="h-8 text-sm">
+                <SelectTrigger className="text-sm">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>

@@ -41,14 +41,12 @@ export function BookmarkInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isBookmarkNode);
 
-  const { url, title, description, siteName } = editor
-    .getEditorState()
-    .read(() => ({
-      url: $getState(node, bookmarkUrlState),
-      title: $getState(node, bookmarkTitleState),
-      description: $getState(node, bookmarkDescriptionState),
-      siteName: $getState(node, bookmarkSiteNameState),
-    }));
+  const { url, title, description, siteName } = editor.read(() => ({
+    url: $getState(node, bookmarkUrlState),
+    title: $getState(node, bookmarkTitleState),
+    description: $getState(node, bookmarkDescriptionState),
+    siteName: $getState(node, bookmarkSiteNameState),
+  }));
 
   const handleTitleChange = (value: string) =>
     updateNode((n) => {
@@ -81,7 +79,7 @@ export function BookmarkInspectorPanel({
             id="inspector-bookmark-title"
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
 
@@ -106,7 +104,7 @@ export function BookmarkInspectorPanel({
             id="inspector-bookmark-sitename"
             value={siteName}
             onChange={(e) => handleSiteNameChange(e.target.value)}
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>

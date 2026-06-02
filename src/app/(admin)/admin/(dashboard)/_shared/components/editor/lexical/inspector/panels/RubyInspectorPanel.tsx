@@ -70,7 +70,7 @@ export function RubyInspectorPanel({ nodeKey, node }: RubyInspectorPanelProps) {
             id="inspector-ruby-base"
             value={baseText}
             onChange={(e) => handleBaseChange(e.target.value)}
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
         <div className="space-y-2">
@@ -81,7 +81,7 @@ export function RubyInspectorPanel({ nodeKey, node }: RubyInspectorPanelProps) {
             id="inspector-ruby-text"
             value={rubyText}
             onChange={(e) => handleRubyChange(e.target.value)}
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>

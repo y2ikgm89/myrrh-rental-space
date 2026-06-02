@@ -69,7 +69,7 @@ export function MapEmbedInspectorPanel({
             value={label}
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="アクセスマップ"
-            className="h-8 text-sm"
+            className="text-sm"
           />
         </div>
       </InspectorFields>

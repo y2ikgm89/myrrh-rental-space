@@ -141,7 +141,7 @@ export function TestimonialContainerInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">カラム数</Label>
             <Select value={String(columns)} onValueChange={handleColumnsChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -157,7 +157,7 @@ export function TestimonialContainerInspectorPanel({
           <div className="space-y-2">
             <Label className="text-xs">カラー</Label>
             <Select value={accentColorValue} onValueChange={handleColorChange}>
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
