@@ -4,6 +4,7 @@ description: Claude Code memory（`~/.claude/projects/<slug>/memory/*.md`）と 
 when_to_use: 大規模リファクタ・ファイル移動・機能削除の直後、または「メモリが古い情報を参照している」と感じたとき。
 context: fork
 agent: Explore
+disallowed-tools: AskUserQuestion
 ---
 
 # Memory Staleness 監査

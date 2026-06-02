@@ -4,6 +4,7 @@ description: 公開ページ・マイページと管理画面の連携を包括�
 when_to_use: 新機能（公開フォーム・マイページ・管理 CRUD）追加後、または定期メンテ時。公開↔管理の連携が正しく動作しているか横断確認するとき。
 context: fork
 agent: Explore
+disallowed-tools: AskUserQuestion
 ---
 
 # 公開↔管理連携監査
