@@ -55,6 +55,8 @@ export function FilePlugin({ isOpen, onClose }: DialogPluginProps) {
       const fileNode = $createFileNode({
         url: selected.url,
         fileName: fileName.length > 0 ? fileName : selected.url,
+        ...(selected.mimeType !== undefined && { mime: selected.mimeType }),
+        ...(selected.size !== undefined && { fileSize: selected.size }),
       });
       $insertNodeToNearestRoot(fileNode);
     });

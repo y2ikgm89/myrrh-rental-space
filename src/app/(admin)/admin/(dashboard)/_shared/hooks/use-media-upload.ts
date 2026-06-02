@@ -21,6 +21,8 @@ import type { MediaMetadata } from "@/admin/types/media-picker";
 export interface UploadResult {
   id: string;
   url: string;
+  mimeType?: string;
+  size?: number;
 }
 
 interface UseMediaUploadReturn {
@@ -126,7 +128,8 @@ export function useMediaUpload(): UseMediaUploadReturn {
       }
 
       toast.success("アップロードしました");
-      return result;
+      // mimeType / size はアップロード元 File から付与（応答 payload には含まれない）
+      return { ...result, mimeType: file.type, size: file.size };
     } finally {
       if (isMountedRef.current) {
         setIsUploading(false);

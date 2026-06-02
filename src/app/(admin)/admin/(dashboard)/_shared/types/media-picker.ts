@@ -73,6 +73,10 @@ export interface SelectedMedia {
   alt?: string | undefined;
   /** ファイル名 */
   filename?: string | undefined;
+  /** MIME タイプ（ライブラリ選択 / アップロード時のみ。URL 入力時は undefined） */
+  mimeType?: string | undefined;
+  /** ファイルサイズ（バイト。ライブラリ選択 / アップロード時のみ） */
+  size?: number | undefined;
   /** 選択元 */
   source: "library" | "url" | "upload";
 }
