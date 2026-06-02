@@ -77,9 +77,11 @@ done
 [ "$over" -eq 0 ] && echo "OK: 全 SKILL.md 500 行未満"
 
 echo ""
-echo "=== 9. rule paths: glob 実在性（stale glob 検出）==="
+echo "=== 9. rule / skill paths: glob 実在性（stale glob 検出）==="
 # specific path glob は dir 移動 / file rename で stale 化する。Bun.Glob で git
-# tracked file と照合し DEAD_RULE(auto-load 不発) / DEAD_GLOB(dead-weight) を検出。
+# tracked file と照合し、rule (paths: 必須) は DEAD_RULE(auto-load 不発)/DEAD_GLOB、
+# skill (paths: 任意=公式 skills#frontmatter-reference) は DEAD_SKILL(auto-activation
+# 不発)/DEAD_SKILL_GLOB を検出する。
 bun .claude/skills/audit-claude-config/scripts/check-stale-paths.ts
 ```
 
@@ -131,7 +133,7 @@ Phase 1 (local grep):
   ✅ 撤回 pattern 残骸ゼロ
   ✅ CLAUDE.md 169 行 / 200 行
   ✅ SKILL.md 全件 500 行未満
-  ✅ paths: glob 全件実在マッチ (DEAD_RULE=0 DEAD_GLOB=0)
+  ✅ paths: glob 全件実在マッチ (rules DEAD_RULE=0 DEAD_GLOB=0 / skills DEAD_SKILL=0 DEAD_SKILL_GLOB=0)
 Phase 2 (official spec diff): [skipped or executed]
   ⚠️  hooks に新 event `XxxYyy` 追加 (v2.1.150) → hooks-patterns.md に追記要
 
