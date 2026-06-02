@@ -114,7 +114,9 @@ export class AudioNode extends DecoratorNode<ReactElement> {
               title: element.getAttribute("data-audio-title") ?? "",
               artist: element.getAttribute("data-audio-artist") ?? "",
             });
-            return { node };
+            // title/artist は data 属性から復元するため、注入された
+            // 表示テキスト・audio 要素を子として取り込まない
+            return { node, after: () => [] };
           },
           priority: 2,
         };
@@ -133,13 +135,32 @@ export class AudioNode extends DecoratorNode<ReactElement> {
   }
 
   override exportDOM(): DOMExportOutput {
+    const title = $getState(this, audioTitleState);
+    const artist = $getState(this, audioArtistState);
     const wrapper = document.createElement("div");
     wrapper.setAttribute("data-audio", "true");
-    wrapper.setAttribute("data-audio-title", $getState(this, audioTitleState));
-    wrapper.setAttribute(
-      "data-audio-artist",
-      $getState(this, audioArtistState),
-    );
+    wrapper.setAttribute("data-audio-title", title);
+    wrapper.setAttribute("data-audio-artist", artist);
+
+    // タイトル / アーティストを可視テキストとして出力（公開ページで表示）
+    if (title || artist) {
+      const meta = document.createElement("div");
+      meta.setAttribute("data-audio-meta", "");
+      if (title) {
+        const titleEl = document.createElement("p");
+        titleEl.setAttribute("data-audio-title-text", "");
+        titleEl.textContent = title;
+        meta.appendChild(titleEl);
+      }
+      if (artist) {
+        const artistEl = document.createElement("p");
+        artistEl.setAttribute("data-audio-artist-text", "");
+        artistEl.textContent = artist;
+        meta.appendChild(artistEl);
+      }
+      wrapper.appendChild(meta);
+    }
+
     const audio = document.createElement("audio");
     audio.setAttribute("src", $getState(this, audioUrlState));
     audio.setAttribute("controls", "");
