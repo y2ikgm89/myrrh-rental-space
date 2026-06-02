@@ -97,6 +97,7 @@ export class PricingTableContainerNode extends ElementNode {
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
     div.setAttribute("data-pricing", "true");
+    div.setAttribute("data-pricing-columns", String(this.getChildren().length));
     return div;
   }
 
@@ -118,6 +119,51 @@ export class PricingTableContainerNode extends ElementNode {
   override canInsertTextAfter(): false {
     return false;
   }
+}
+
+// =============================================================================
+// PricingPlan DOM helper（createDOM / updateDOM 共通）
+//
+// PricingPlanNode の name / price / period をヘッダー要素として DOM 注入する。
+// Lexical 子ノード（PricingFeatureNode 群）はその後に Lexical が描画する。
+// GalleryItemNode の applyGalleryItemContent と同じパターン。
+// =============================================================================
+
+function applyPricingPlanHeader(
+  host: HTMLElement,
+  name: string,
+  price: string,
+  period: string,
+): void {
+  host
+    .querySelectorAll(":scope > [data-pricing-header]")
+    .forEach((el) => el.remove());
+
+  const header = document.createElement("div");
+  header.setAttribute("data-pricing-header", "");
+
+  if (name) {
+    const nameEl = document.createElement("div");
+    nameEl.setAttribute("data-pricing-name", "");
+    nameEl.textContent = name;
+    header.appendChild(nameEl);
+  }
+
+  if (price) {
+    const priceEl = document.createElement("div");
+    priceEl.setAttribute("data-pricing-price", "");
+    priceEl.textContent = price;
+    header.appendChild(priceEl);
+  }
+
+  if (period) {
+    const periodEl = document.createElement("div");
+    periodEl.setAttribute("data-pricing-period", "");
+    periodEl.textContent = period;
+    header.appendChild(periodEl);
+  }
+
+  host.insertAdjacentElement("afterbegin", header);
 }
 
 // =============================================================================
@@ -145,24 +191,57 @@ export class PricingPlanNode extends ElementNode {
   override createDOM(_config: EditorConfig): HTMLElement {
     const div = document.createElement("div");
     div.setAttribute("data-pricing-plan", "true");
+    div.setAttribute("data-name", $getState(this, planNameState));
+    div.setAttribute("data-price", $getState(this, planPriceState));
+    div.setAttribute("data-period", $getState(this, planPeriodState));
     div.setAttribute(
       "data-featured",
       String($getState(this, planFeaturedState)),
     );
     div.setAttribute("data-color", $getState(this, planColorState));
+    applyPricingPlanHeader(
+      div,
+      $getState(this, planNameState),
+      $getState(this, planPriceState),
+      $getState(this, planPeriodState),
+    );
     return div;
   }
 
   override updateDOM(prevNode: this, dom: HTMLElement): boolean {
+    const nameChange = $getStateChange(this, prevNode, planNameState);
+    const priceChange = $getStateChange(this, prevNode, planPriceState);
+    const periodChange = $getStateChange(this, prevNode, planPeriodState);
     const featuredChange = $getStateChange(this, prevNode, planFeaturedState);
+    const colorChange = $getStateChange(this, prevNode, planColorState);
+
+    if (nameChange !== null) {
+      const [newName] = nameChange;
+      dom.setAttribute("data-name", newName);
+    }
+    if (priceChange !== null) {
+      const [newPrice] = priceChange;
+      dom.setAttribute("data-price", newPrice);
+    }
+    if (periodChange !== null) {
+      const [newPeriod] = periodChange;
+      dom.setAttribute("data-period", newPeriod);
+    }
     if (featuredChange !== null) {
       const [newFeatured] = featuredChange;
       dom.setAttribute("data-featured", String(newFeatured));
     }
-    const colorChange = $getStateChange(this, prevNode, planColorState);
     if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
+    }
+    if (nameChange !== null || priceChange !== null || periodChange !== null) {
+      applyPricingPlanHeader(
+        dom,
+        $getState(this, planNameState),
+        $getState(this, planPriceState),
+        $getState(this, planPeriodState),
+      );
     }
     return false;
   }
@@ -177,6 +256,10 @@ export class PricingPlanNode extends ElementNode {
           return null;
         return {
           conversion: (element) => {
+            // 注入された表示用ヘッダー（data-pricing-header）は子として取り込まない
+            element
+              .querySelectorAll(":scope > [data-pricing-header]")
+              .forEach((el) => el.remove());
             const colorAttr = element.getAttribute("data-color") ?? "default";
             const node = $createPricingPlanNode({
               name: element.getAttribute("data-name") ?? "",
@@ -204,6 +287,12 @@ export class PricingPlanNode extends ElementNode {
       String($getState(this, planFeaturedState)),
     );
     div.setAttribute("data-color", $getState(this, planColorState));
+    applyPricingPlanHeader(
+      div,
+      $getState(this, planNameState),
+      $getState(this, planPriceState),
+      $getState(this, planPeriodState),
+    );
     return { element: div };
   }
 

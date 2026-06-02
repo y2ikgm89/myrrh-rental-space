@@ -220,6 +220,88 @@ export const testimonialDateState = createState("date", {
 });
 
 // =============================================================================
+// TestimonialItem DOM helper（createDOM / updateDOM 共通）
+//
+// TestimonialItemNode の rating / authorName / authorTitle / avatarUrl / date を
+// blockquote 内に実要素として注入する。
+// 引用本文（Lexical 子ノード）はその後に Lexical が描画するため、
+// CSS の flex order で rating(上) → 引用本文(中) → 著者ブロック(下) の順を制御する。
+// =============================================================================
+
+function buildRatingStars(rating: number): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-testimonial-rating", "");
+  wrapper.setAttribute("aria-label", `評価 ${String(rating)}/5`);
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement("span");
+    star.setAttribute("data-star", i <= rating ? "filled" : "empty");
+    star.setAttribute("aria-hidden", "true");
+    star.textContent = "★";
+    wrapper.appendChild(star);
+  }
+  return wrapper;
+}
+
+function applyTestimonialItemMeta(
+  host: HTMLElement,
+  authorName: string,
+  authorTitle: string,
+  avatarUrl: string,
+  rating: number,
+  date: string,
+): void {
+  host
+    .querySelectorAll(
+      ":scope > [data-testimonial-rating], :scope > [data-testimonial-author]",
+    )
+    .forEach((el) => el.remove());
+
+  // 評価（order: -1 で引用本文より前に表示）
+  const ratingEl = buildRatingStars(rating);
+  host.insertAdjacentElement("afterbegin", ratingEl);
+
+  // 著者ブロック（order: 1 で引用本文より後に表示）
+  const authorBlock = document.createElement("div");
+  authorBlock.setAttribute("data-testimonial-author", "");
+
+  if (avatarUrl) {
+    const img = document.createElement("img");
+    img.setAttribute("data-testimonial-avatar", "");
+    img.setAttribute("src", avatarUrl);
+    img.setAttribute("alt", authorName ? `${authorName}のアバター` : "");
+    img.setAttribute("aria-hidden", "true");
+    authorBlock.appendChild(img);
+  }
+
+  const textBlock = document.createElement("div");
+  textBlock.setAttribute("data-testimonial-author-text", "");
+
+  if (authorName) {
+    const nameEl = document.createElement("span");
+    nameEl.setAttribute("data-testimonial-author-name", "");
+    nameEl.textContent = authorName;
+    textBlock.appendChild(nameEl);
+  }
+
+  if (authorTitle) {
+    const titleEl = document.createElement("span");
+    titleEl.setAttribute("data-testimonial-author-title", "");
+    titleEl.textContent = authorTitle;
+    textBlock.appendChild(titleEl);
+  }
+
+  if (date) {
+    const dateEl = document.createElement("span");
+    dateEl.setAttribute("data-testimonial-date", "");
+    dateEl.textContent = date;
+    textBlock.appendChild(dateEl);
+  }
+
+  authorBlock.appendChild(textBlock);
+  host.appendChild(authorBlock);
+}
+
+// =============================================================================
 // TestimonialItemNode
 // =============================================================================
 
@@ -247,6 +329,12 @@ export class TestimonialItemNode extends ElementNode {
           return null;
         return {
           conversion: (element) => {
+            // 注入された表示用メタ（星評価・著者ブロック）は子として取り込まない
+            element
+              .querySelectorAll(
+                ":scope > [data-testimonial-rating], :scope > [data-testimonial-author]",
+              )
+              .forEach((el) => el.remove());
             const authorName = element.getAttribute("data-author-name") ?? "";
             const authorTitle = element.getAttribute("data-author-title") ?? "";
             const avatarUrl = element.getAttribute("data-avatar-url") ?? "";
@@ -293,6 +381,14 @@ export class TestimonialItemNode extends ElementNode {
       String($getState(this, testimonialRatingState)),
     );
     blockquote.setAttribute("data-date", $getState(this, testimonialDateState));
+    applyTestimonialItemMeta(
+      blockquote,
+      $getState(this, testimonialAuthorNameState),
+      $getState(this, testimonialAuthorTitleState),
+      $getState(this, testimonialAvatarUrlState),
+      $getState(this, testimonialRatingState),
+      $getState(this, testimonialDateState),
+    );
     return blockquote;
   }
 
@@ -302,41 +398,58 @@ export class TestimonialItemNode extends ElementNode {
       prevNode,
       testimonialAuthorNameState,
     );
-    if (authorNameChange !== null) {
-      const [newAuthorName] = authorNameChange;
-      dom.setAttribute("data-author-name", newAuthorName);
-    }
     const authorTitleChange = $getStateChange(
       this,
       prevNode,
       testimonialAuthorTitleState,
     );
-    if (authorTitleChange !== null) {
-      const [newAuthorTitle] = authorTitleChange;
-      dom.setAttribute("data-author-title", newAuthorTitle);
-    }
     const avatarUrlChange = $getStateChange(
       this,
       prevNode,
       testimonialAvatarUrlState,
     );
-    if (avatarUrlChange !== null) {
-      const [newAvatarUrl] = avatarUrlChange;
-      dom.setAttribute("data-avatar-url", newAvatarUrl);
-    }
     const ratingChange = $getStateChange(
       this,
       prevNode,
       testimonialRatingState,
     );
+    const dateChange = $getStateChange(this, prevNode, testimonialDateState);
+
+    if (authorNameChange !== null) {
+      const [newAuthorName] = authorNameChange;
+      dom.setAttribute("data-author-name", newAuthorName);
+    }
+    if (authorTitleChange !== null) {
+      const [newAuthorTitle] = authorTitleChange;
+      dom.setAttribute("data-author-title", newAuthorTitle);
+    }
+    if (avatarUrlChange !== null) {
+      const [newAvatarUrl] = avatarUrlChange;
+      dom.setAttribute("data-avatar-url", newAvatarUrl);
+    }
     if (ratingChange !== null) {
       const [newRating] = ratingChange;
       dom.setAttribute("data-rating", String(newRating));
     }
-    const dateChange = $getStateChange(this, prevNode, testimonialDateState);
     if (dateChange !== null) {
       const [newDate] = dateChange;
       dom.setAttribute("data-date", newDate);
+    }
+    if (
+      authorNameChange !== null ||
+      authorTitleChange !== null ||
+      avatarUrlChange !== null ||
+      ratingChange !== null ||
+      dateChange !== null
+    ) {
+      applyTestimonialItemMeta(
+        dom,
+        $getState(this, testimonialAuthorNameState),
+        $getState(this, testimonialAuthorTitleState),
+        $getState(this, testimonialAvatarUrlState),
+        $getState(this, testimonialRatingState),
+        $getState(this, testimonialDateState),
+      );
     }
     return false;
   }
@@ -361,6 +474,14 @@ export class TestimonialItemNode extends ElementNode {
       String($getState(this, testimonialRatingState)),
     );
     blockquote.setAttribute("data-date", $getState(this, testimonialDateState));
+    applyTestimonialItemMeta(
+      blockquote,
+      $getState(this, testimonialAuthorNameState),
+      $getState(this, testimonialAuthorTitleState),
+      $getState(this, testimonialAvatarUrlState),
+      $getState(this, testimonialRatingState),
+      $getState(this, testimonialDateState),
+    );
     return { element: blockquote };
   }
 
