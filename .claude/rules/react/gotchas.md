@@ -2,7 +2,12 @@
 description: React Gotchas・禁止事項・参考リンク（Activity 禁止・Prisma Symbol エラー・hydration等）
 paths:
   - "src/**/*.tsx"
-  - "src/**/*.ts"
+  - "src/**/use-*.ts"
+  - "src/**/use[A-Z]*.ts"
+  - "src/**/hooks.ts"
+  - "src/**/hooks/**/*.ts"
+  - "src/**/_hooks/**/*.ts"
+  - "src/shared/lib/conform/**"
 ---
 
 # React Gotchas・禁止事項

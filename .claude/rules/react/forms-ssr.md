@@ -2,7 +2,6 @@
 description: React フォーム・SSR パターン（conform fields.x.value・PPR new Date()・Adjusting State During Render・key remount）
 paths:
   - "src/**/*.tsx"
-  - "src/**/*.ts"
 ---
 
 # React フォーム・SSR パターン
