@@ -270,6 +270,22 @@ Floating toolbar の追加・変更、または選択ベースのブロック操
 4. `plugins/Floating*` 内で `function [A-Z][a-zA-Z]*Inner\(` を grep し、定義直後に `export function [A-Z][a-zA-Z]*Plugin` が呼ぶだけの wrapper なら冗長と報告
 5. `(?:const\|let) handle[A-Z][a-zA-Z]* = \(.*\) => \{\s*[a-zA-Z]+\?\.\(` を grep し、optional-call の silent-swallow wrapper を報告
 
+### 17. CSS-first ノードの `[data-*]` スタイルセクション存在（dead UI 検出）
+
+`createDOM` / `exportDOM` が `data-*` を出力するノードは `lexical-content.css` に対応セクションが必須。欠落するとブロックが editor・公開とも無装飾の dead UI になる（2026-06-02 に Cover / Gallery / Timeline / PricingTable / Testimonial で実害）:
+
+| チェック                 | 内容                                                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| CSS セクション存在       | node が `setAttribute("data-X", …)` する各属性が `lexical-content.css` に存在するか（0 件なら dead UI）                        |
+| createDOM/exportDOM 対称 | 表示値を NodeState で持つノードは createDOM だけでなく **exportDOM でも可視 DOM を注入**しているか（公開側不可視の非対称防止） |
+| DecoratorNode exportDOM  | `decorate()` が表示する内容（title / 著者 / float 等）を `exportDOM` が静的 HTML で再現しているか（公開劣化防止）              |
+
+**検出方法**:
+
+1. 各 node ファイルの `setAttribute\("(data-[a-z-]+)"` を grep して属性名を列挙し、各属性を `src/shared/styles/lexical-content.css` で `grep -c` → 0 なら dead UI として報告
+2. ElementNode で表示値を state に持つノードの `exportDOM` が createDOM と同じ注入ヘルパーを呼んでいるか確認（exportDOM 側の注入漏れ = 公開で値不可視を報告）
+3. 詳細は `.claude/rules/frontend/lexical/nodes/styling.md` §CSS-first ノードは CSS セクション必須 / §表示値を NodeState で保持するノードの DOM 注入パターン
+
 ## False positive 防止（例外節の cross-check）
 
 違反を報告する前に、該当 rule ファイル（`.claude/rules/**/*.md`）の「例外」「許可」「sanctioned exception」節を Grep で確認:

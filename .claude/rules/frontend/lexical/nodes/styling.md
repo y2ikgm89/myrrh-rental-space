@@ -58,6 +58,35 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
 }
 ```
 
+## CSS-first ノードは `lexical-content.css` のスタイルセクションが必須（dead UI 防止）
+
+`createDOM` / `exportDOM` が `data-*` 属性のみ出力する CSS-first ノードは、**`lexical-content.css` に対応する `[data-*]` セクションを必ず追加する**。属性を出力しても CSS が無ければ editor・公開ページとも「素の縦積み div（dead UI）」になり、Inspector で編集しても見た目に反映されない。新規 CSS-first ノード追加時は `frontend/lexical/nodes.md` の登録チェックリストの CSS 行を必ず満たすこと。
+
+**検出 grep**（ノードが出力する全 `data-*` 属性が CSS に存在するか）:
+
+```bash
+# 例: 新ノードの属性が lexical-content.css にあるか（0 なら dead UI）
+grep -c "data-<block>" src/shared/styles/lexical-content.css
+```
+
+実例: Cover / Gallery / Timeline / PricingTable / Testimonial は属性を出力しながら CSS が皆無で全ブロック dead UI だった（2026-06-02 に全 5 ブロックの CSS を新規実装、FeatureIconList が手本）。
+
+## 表示値を NodeState で保持するノードの DOM 注入パターン
+
+年・価格・著者・評価・タイトル等の **表示値を NodeState（data 属性）で保持する**ノード（編集可能な子テキストを持たない、または子とメタが別）は、値を **`createDOM` / `updateDOM` / `exportDOM` の 3 メソッドすべてで実 DOM 要素として注入**する（`attr()` 擬似要素ではなく実テキスト要素 = a11y / SEO 対応）。Gallery の `applyGalleryItemContent` / FeatureIconList の SVG 注入が手本。
+
+- **共通ヘルパー** を 1 つ定義し 3 メソッドから呼ぶ。注入要素に `data-*` マーカーを付け、再注入前に `host.querySelectorAll(":scope > [marker]").forEach((el) => el.remove())` で重複防止。
+- **`exportDOM` でも必ず注入する** — createDOM(editor) だけ注入して exportDOM(公開) を data 属性のみにすると、**公開ページで値が不可視になる**（editor だけ直り公開が壊れる非対称バグ。サブエージェント実装で実際に発生 → 2026-06-02 修正）。
+- **`updateDOM`** は関連 state 変化時（`$getStateChange(...) !== null`）にヘルパー再呼び出し。常に `return false`。
+- **`importDOM` は注入メタを子として取り込まない** — 子を持たないノードは `return { node, after: () => [] }`、実子（feature / quote 等）を持つノードは conversion 冒頭で `element.querySelectorAll(":scope > [marker]").forEach((el) => el.remove())` してから default child import に委ねる（注入メタが junk 子ノードとして復元される round-trip バグ防止）。
+- 子と注入メタの**視覚順序は flex `order`** で制御（注入を host 先頭/末尾に置き「メタ → 本文 → フッター」等を表現）。
+
+実装参照: `TimelineNode` / `PricingTableNode` / `TestimonialNode` / `GalleryNode`。
+
+## DecoratorNode の `exportDOM` は `decorate()` の可視内容を再現する
+
+DecoratorNode は editor を React `decorate()` で描画するが、**公開ページは `exportDOM` の静的 HTML + CSS で描画される**。`decorate()` がタイトル・著者・float 等を表示しているのに `exportDOM` がそれらを data 属性のみで出力すると、**公開ページだけ表示が劣化する**（Audio のタイトル/アーティスト消失 / InlineImage の float 喪失。2026-06-02 修正）。`exportDOM` は decorate と同じ可視要素・配置を出力し、`[data-*]` CSS で整える。
+
 ## AccentColor システム
 
 各ブロック（Collapsible / PullQuote / Steps / Tabs）が共有する 10 色アクセントカラーシステム。
