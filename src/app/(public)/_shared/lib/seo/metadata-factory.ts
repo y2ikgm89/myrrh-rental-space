@@ -54,7 +54,9 @@ export function generateArticleMetadata(
       description,
       images: article.image ? [article.image] : undefined,
       type: "article",
+      locale: "ja_JP",
       siteName: options?.siteName || SITE_DEFAULTS.name,
+      ...(options?.canonicalUrl && { url: options.canonicalUrl }),
     },
     twitter: {
       card: "summary_large_image",
