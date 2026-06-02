@@ -7,6 +7,7 @@ user-invocable: true
 allowed-tools: Bash, Grep, Glob, Read, WebFetch
 context: fork
 agent: Explore
+disallowed-tools: AskUserQuestion
 ---
 
 # audit-claude-config — 公式準拠 drift 監査
@@ -147,6 +148,7 @@ Phase 2 (official spec diff): [skipped or executed]
 
 - **なぜ hook ではなく SKILL か** — hook は全 session で context cost が発生。SKILL は `disable-model-invocation: true` で listing budget ゼロ、手動 invoke 時のみ展開
 - **なぜ `context: fork` + `agent: Explore` か** — 監査は大量の grep / Read / WebFetch を伴うが main context に残すのは最終 drift report のみで十分。fork で sweep を Explore subagent（read-only・CLAUDE.md スキップで最リーン）に隔離し、main の context / 後続ターンのトークン消費を抑制（公式 skills#run-skills-in-a-subagent の研究 skill パターン）。read-only sweep+report 型の手動監査（`audit-ssot` / `audit-integration` / `audit-memory-staleness`）に共通適用。`paths:` で自動有効化する inline ガイダンス監査（`audit-cache` 等）は編集毎の subagent 生成を避けるため fork しない
+- **なぜ `disallowed-tools: AskUserQuestion` か** — `agent: Explore` は Edit/Write を持たないが AskUserQuestion は持つ。fork 内で user に質問してもうまく surface せず sweep がストール/往復浪費になるため抑止し、曖昧さは finding として報告して決定的に進める（fork 化した 4 監査に共通適用）
 - **なぜ WebFetch を毎回しないか** — local drift（Phase 1）の方が高頻度で発生。公式 spec 更新は月次オーダーなので Phase 2 は条件付き
 - **なぜ自動修正しないか** — frontmatter / rule 編集は意味的判断（field 採用可否、glob 適用範囲）が必要。SKILL は **報告 + 提案**まで、修正は user / 別 session で実施
 

@@ -4,6 +4,7 @@ description: プロジェクト全体のSSoT違反（ゼロ値型エイリアス
 when_to_use: 大規模リファクタ後、または月次定期メンテ時。SSoT 違反の横断チェックが必要なとき。
 context: fork
 agent: Explore
+disallowed-tools: AskUserQuestion
 ---
 
 # SSOT 監査
