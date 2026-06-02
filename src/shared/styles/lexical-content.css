@@ -2085,3 +2085,95 @@ table[style*="--table-border-color"] th {
   align-items: flex-end;
   text-align: right;
 }
+
+/* --------------------------------------------------------------------------
+ * Gallery Node
+ *
+ * data-gallery: コンテナ（<div>）
+ * data-gallery-columns: 2 / 3 / 4（md+ で指定列数、モバイルは 2 列）
+ * data-gallery-style: grid（等幅セル）/ masonry（CSS multi-column）
+ * data-gallery-item: 各画像（<figure>）。エディタは createDOM が img / placeholder /
+ *   figcaption を注入、公開は exportDOM が <img> + <figcaption> を出力。
+ * -------------------------------------------------------------------------- */
+
+[data-gallery] {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 48rem) {
+  [data-gallery][data-gallery-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  [data-gallery][data-gallery-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* メイソンリーは CSS multi-column（ネイティブ masonry は実験的のため不採用） */
+[data-gallery][data-gallery-style="masonry"] {
+  display: block;
+  column-count: 2;
+  column-gap: 0.75rem;
+}
+
+@media (min-width: 48rem) {
+  [data-gallery][data-gallery-style="masonry"][data-gallery-columns="3"] {
+    column-count: 3;
+  }
+  [data-gallery][data-gallery-style="masonry"][data-gallery-columns="4"] {
+    column-count: 4;
+  }
+}
+
+[data-gallery][data-gallery-style="masonry"] [data-gallery-item] {
+  break-inside: avoid;
+  margin-bottom: 0.75rem;
+}
+
+[data-gallery-item] {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background-color: var(--color-muted);
+}
+
+[data-gallery-item] img {
+  display: block;
+  width: 100%;
+}
+
+/* グリッドは正方形にクロップ、メイソンリーは画像の自然な縦横比を保持 */
+[data-gallery]:not([data-gallery-style="masonry"]) [data-gallery-item] img,
+[data-gallery]:not([data-gallery-style="masonry"])
+  [data-gallery-item]
+  > [data-gallery-placeholder] {
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+[data-gallery][data-gallery-style="masonry"] [data-gallery-item] img {
+  height: auto;
+}
+
+/* エディタ内の画像未選択プレースホルダー */
+[data-gallery-item] > [data-gallery-placeholder] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 8rem;
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+}
+
+[data-gallery-item] > figcaption,
+[data-gallery-item] > [data-gallery-caption] {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-muted-foreground);
+}

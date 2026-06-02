@@ -152,6 +152,49 @@ export const galleryItemCaptionState = createState("caption", {
 });
 
 // =============================================================================
+// GalleryItem DOM helper（createDOM / updateDOM 共通）
+//
+// GalleryItemNode は Lexical の子ノードを持たない（src / alt / caption は state）。
+// そのため createDOM の figure 内に img / placeholder / figcaption を手動注入する。
+// FeatureIconListNode の SVG 注入と同じパターン（data-* マーカーで重複防止）。
+// =============================================================================
+
+function applyGalleryItemContent(
+  figure: HTMLElement,
+  src: string,
+  alt: string,
+  caption: string,
+): void {
+  figure
+    .querySelectorAll(
+      ":scope > [data-gallery-img], :scope > [data-gallery-placeholder], :scope > [data-gallery-caption]",
+    )
+    .forEach((el) => {
+      el.remove();
+    });
+
+  if (src) {
+    const img = document.createElement("img");
+    img.setAttribute("data-gallery-img", "");
+    img.setAttribute("src", src);
+    img.setAttribute("alt", alt);
+    figure.appendChild(img);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.setAttribute("data-gallery-placeholder", "");
+    placeholder.textContent = "画像を選択";
+    figure.appendChild(placeholder);
+  }
+
+  if (caption) {
+    const figcaption = document.createElement("figcaption");
+    figcaption.setAttribute("data-gallery-caption", "");
+    figcaption.textContent = caption;
+    figure.appendChild(figcaption);
+  }
+}
+
+// =============================================================================
 // GalleryItemNode
 // =============================================================================
 
@@ -197,10 +240,34 @@ export class GalleryItemNode extends ElementNode {
   override createDOM(_config: EditorConfig): HTMLElement {
     const figure = document.createElement("figure");
     figure.setAttribute("data-gallery-item", "true");
+    const src = $getState(this, galleryItemSrcState);
+    const alt = $getState(this, galleryItemAltState);
+    const caption = $getState(this, galleryItemCaptionState);
+    figure.setAttribute("data-src", src);
+    figure.setAttribute("data-alt", alt);
+    figure.setAttribute("data-caption", caption);
+    applyGalleryItemContent(figure, src, alt, caption);
     return figure;
   }
 
-  override updateDOM(): false {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
+    const srcChange = $getStateChange(this, prevNode, galleryItemSrcState);
+    const altChange = $getStateChange(this, prevNode, galleryItemAltState);
+    const captionChange = $getStateChange(
+      this,
+      prevNode,
+      galleryItemCaptionState,
+    );
+    if (srcChange === null && altChange === null && captionChange === null) {
+      return false;
+    }
+    const src = $getState(this, galleryItemSrcState);
+    const alt = $getState(this, galleryItemAltState);
+    const caption = $getState(this, galleryItemCaptionState);
+    dom.setAttribute("data-src", src);
+    dom.setAttribute("data-alt", alt);
+    dom.setAttribute("data-caption", caption);
+    applyGalleryItemContent(dom, src, alt, caption);
     return false;
   }
 
