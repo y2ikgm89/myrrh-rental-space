@@ -5,6 +5,8 @@ when_to_use: 公式 docs 更新確認 (月次)、`.claude/{rules,agents,skills,h
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash, Grep, Glob, Read, WebFetch
+context: fork
+agent: Explore
 ---
 
 # audit-claude-config — 公式準拠 drift 監査
@@ -82,7 +84,7 @@ echo "=== 9. rule / skill paths: glob 実在性（stale glob 検出）==="
 # tracked file と照合し、rule (paths: 必須) は DEAD_RULE(auto-load 不発)/DEAD_GLOB、
 # skill (paths: 任意=公式 skills#frontmatter-reference) は DEAD_SKILL(auto-activation
 # 不発)/DEAD_SKILL_GLOB を検出する。
-bun .claude/skills/audit-claude-config/scripts/check-stale-paths.ts
+bun ${CLAUDE_SKILL_DIR}/scripts/check-stale-paths.ts
 ```
 
 ## Phase 2: 公式 spec WebFetch + diff（必要時のみ）
@@ -144,6 +146,7 @@ Phase 2 (official spec diff): [skipped or executed]
 ## 設計判断
 
 - **なぜ hook ではなく SKILL か** — hook は全 session で context cost が発生。SKILL は `disable-model-invocation: true` で listing budget ゼロ、手動 invoke 時のみ展開
+- **なぜ `context: fork` + `agent: Explore` か** — 監査は大量の grep / Read / WebFetch を伴うが main context に残すのは最終 drift report のみで十分。fork で sweep を Explore subagent（read-only・CLAUDE.md スキップで最リーン）に隔離し、main の context / 後続ターンのトークン消費を抑制（公式 skills#run-skills-in-a-subagent の研究 skill パターン）。read-only sweep+report 型の手動監査（`audit-ssot` / `audit-integration` / `audit-memory-staleness`）に共通適用。`paths:` で自動有効化する inline ガイダンス監査（`audit-cache` 等）は編集毎の subagent 生成を避けるため fork しない
 - **なぜ WebFetch を毎回しないか** — local drift（Phase 1）の方が高頻度で発生。公式 spec 更新は月次オーダーなので Phase 2 は条件付き
 - **なぜ自動修正しないか** — frontmatter / rule 編集は意味的判断（field 採用可否、glob 適用範囲）が必要。SKILL は **報告 + 提案**まで、修正は user / 別 session で実施
 
