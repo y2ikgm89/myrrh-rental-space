@@ -117,4 +117,47 @@ if printf '%s' "$COMMAND" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|mo
   deny "Blocked: .env ファイルの読み取りは禁止されています。環境変数は Cloud Run コンソールまたは .env.example を通じて確認してください。"
 fi
 
+# 15. git push deleting a remote branch (--delete / -d flag, or colon-prefixed refspec)
+# Block: git push origin --delete x / git push -d origin x / git push origin :x
+# Allow: git push -u origin <branch> / git push origin src:dst (update)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])git\s+push\s+([^;|&]*\s)?(--delete|-d)\b'; then
+  deny "Blocked: git push --delete/-d によるリモートブランチ削除は禁止されています。ターミナルで直接実行してください。"
+fi
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])git\s+push\s+[^;|&]*\s\+?:[A-Za-z._/-]'; then
+  deny "Blocked: git push <remote> :branch（コロン refspec によるリモートブランチ削除）は禁止されています。ターミナルで直接実行してください。"
+fi
+
+# 16. git config --global / --system (machine-wide config mutation)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])git\s+config\s+[^;|&]*(--global|--system)\b'; then
+  deny "Blocked: git config --global/--system はマシン全体の設定を変更します。ターミナルで直接実行してください。"
+fi
+
+# 17. git remote mutation (add/set-url/remove/rename — can redirect pushes to attacker host)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])git\s+remote\s+(add|set-url|remove|rm|rename)\b'; then
+  deny "Blocked: git remote の変更（add/set-url/remove/rename）は push 先を書き換えうるため禁止されています。ターミナルで直接実行してください。"
+fi
+
+# 18. History-rewriting / ref-destroying git commands
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])git\s+(filter-branch|filter-repo|update-ref\s+[^;|&]*-d|reflog\s+expire|tag\s+-d|stash\s+(drop|clear))\b'; then
+  deny "Blocked: 履歴・ref を破壊する git 操作（filter-branch / filter-repo / update-ref -d / reflog expire / tag -d / stash drop|clear）は禁止されています。ターミナルで直接実行してください。"
+fi
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])git\s+gc\s+[^;|&]*--prune'; then
+  deny "Blocked: git gc --prune は到達不能オブジェクトを即削除します。ターミナルで直接実行してください。"
+fi
+
+# 19. Destructive gh subcommands (repo/secret/release/ssh-key/auth/workflow)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])gh\s+(repo\s+delete|secret\s+(set|delete|remove)|release\s+delete|ssh-key\s+(add|delete)|auth\s+(logout|refresh)|workflow\s+(run|disable|enable))\b'; then
+  deny "Blocked: 破壊的な gh サブコマンド（repo delete / secret set|delete / release delete / ssh-key / auth logout|refresh / workflow run|disable|enable）は禁止されています。ターミナルで直接実行してください。"
+fi
+
+# 20. gh pr merge --admin (bypasses branch protection)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])gh\s+pr\s+merge\s+[^;|&]*--admin\b'; then
+  deny "Blocked: gh pr merge --admin はブランチ保護を回避するため禁止されています。ターミナルで直接実行してください。"
+fi
+
+# 21. gh api with mutating HTTP method (-X/--method DELETE/PUT/POST/PATCH)
+if printf '%s' "$COMMAND" | grep -qiE '(^|[;&|])gh\s+api\s+[^;|&]*(-X|--method)[[:space:]=]+(DELETE|PUT|POST|PATCH)\b'; then
+  deny "Blocked: gh api の変更系メソッド（-X DELETE/PUT/POST/PATCH）は禁止されています。読み取り以外はターミナルで直接実行するか gh pr comment 等の専用サブコマンドを使ってください。"
+fi
+
 exit 0
