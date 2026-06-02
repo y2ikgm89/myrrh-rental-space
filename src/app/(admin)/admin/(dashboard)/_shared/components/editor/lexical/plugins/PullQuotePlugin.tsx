@@ -1,65 +1,80 @@
 /**
  * PullQuote Plugin
  *
- * @description プルクォート（強調引用）の挿入を提供するプラグイン
+ * @description プルクォート（強調引用）の挿入と構造管理を提供するプラグイン
  *
- * ダイアログでスタイルを選択し、PullQuote構造を挿入
+ * Gutenberg / Notion 準拠の「即挿入してインライン編集」パターン。
+ * - INSERT_PULL_QUOTE_COMMAND: 引用テキストのみの最小構造を挿入（出典は任意）
+ * - 構造検証トランスフォーマー（引用テキスト必須・出典は任意・順序保証）
+ * - 矢印キーでの境界脱出 + 引用テキスト ↔ 出典の往復ナビゲーション
+ *
+ * スタイル・アクセントカラー・出典の有無は Inspector パネルで編集する。
  */
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $createParagraphNode,
   $getSelection,
   $isRangeSelection,
+  COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
+  createCommand,
+  type LexicalCommand,
+  type LexicalNode,
   mergeRegister,
 } from "lexical";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createPullQuoteNode,
   $isPullQuoteNode,
-  isPullQuoteStyle,
   PullQuoteNode,
-  type PullQuoteStyle,
-  PULL_QUOTE_STYLES,
 } from "../nodes/PullQuoteNode";
 import {
   $createPullQuoteTextNode,
+  $isPullQuoteTextNode,
   PullQuoteTextNode,
 } from "../nodes/PullQuoteTextNode";
 import {
-  $createPullQuoteCitationNode,
+  $isPullQuoteCitationNode,
   PullQuoteCitationNode,
 } from "../nodes/PullQuoteCitationNode";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  Button,
-  Label,
-} from "@/admin/components/ui";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/admin/components/ui/select";
-import { PULL_QUOTE_STYLE_LABELS } from "../config/node-labels";
+
+// =============================================================================
+// Commands
+// =============================================================================
+
+export const INSERT_PULL_QUOTE_COMMAND: LexicalCommand<void> = createCommand(
+  "INSERT_PULL_QUOTE_COMMAND",
+);
 
 // =============================================================================
 // Utilities
 // =============================================================================
 
 /**
- * 矢印キーでPullQuote境界を脱出
+ * node が container の内側（自身を含む）にあるか
+ */
+function $isInside(node: LexicalNode, container: LexicalNode): boolean {
+  let current: LexicalNode | null = node;
+  while (current) {
+    if (current.getKey() === container.getKey()) return true;
+    current = current.getParent();
+  }
+  return false;
+}
+
+/**
+ * 矢印キーで PullQuote 境界を脱出する。
+ *
+ * - 引用テキスト末尾で下キー → 出典があれば出典先頭へ、無ければブロック直後へ脱出
+ * - 出典末尾で下キー → ブロック直後へ脱出
+ * - 出典先頭で上キー → 引用テキスト末尾へ
+ * - 引用テキスト先頭で上キー → ブロック直前へ脱出
  */
 function $onEscape(direction: "up" | "down"): boolean {
   const selection = $getSelection();
@@ -67,10 +82,9 @@ function $onEscape(direction: "up" | "down"): boolean {
     return false;
   }
 
-  const node = selection.anchor.getNode();
+  const anchorNode = selection.anchor.getNode();
   let pullQuoteNode: PullQuoteNode | null = null;
-  let current = node.getParent();
-
+  let current = anchorNode.getParent();
   while (current) {
     if ($isPullQuoteNode(current)) {
       pullQuoteNode = current;
@@ -78,47 +92,99 @@ function $onEscape(direction: "up" | "down"): boolean {
     }
     current = current.getParent();
   }
-
   if (!pullQuoteNode) return false;
 
-  const isAtStart = selection.anchor.offset === 0;
-  const isAtEnd =
-    selection.anchor.offset === selection.anchor.getNode().getTextContentSize();
+  const textNode = pullQuoteNode.getChildren().find($isPullQuoteTextNode);
+  const citationNode = pullQuoteNode
+    .getChildren()
+    .find($isPullQuoteCitationNode);
 
-  if ((direction === "up" && isAtStart) || (direction === "down" && isAtEnd)) {
-    const paragraph = $createParagraphNode();
-    if (direction === "up") {
-      pullQuoteNode.insertBefore(paragraph);
-    } else {
-      pullQuoteNode.insertAfter(paragraph);
+  const inText = textNode ? $isInside(anchorNode, textNode) : false;
+  const inCitation = citationNode ? $isInside(anchorNode, citationNode) : false;
+
+  const isAtStart = selection.anchor.offset === 0;
+  const isAtEnd = selection.anchor.offset === anchorNode.getTextContentSize();
+
+  if (direction === "up" && isAtStart) {
+    if (inCitation && textNode) {
+      // 出典先頭 → 引用テキスト末尾へ
+      const lastChild = textNode.getLastChild();
+      if (lastChild) {
+        lastChild.selectEnd();
+        return true;
+      }
     }
-    paragraph.select();
-    return true;
+    if (inText) {
+      // 引用テキスト先頭 → ブロック直前へ脱出
+      const paragraph = $createParagraphNode();
+      pullQuoteNode.insertBefore(paragraph);
+      paragraph.select();
+      return true;
+    }
+  }
+
+  if (direction === "down" && isAtEnd) {
+    if (inText && citationNode) {
+      // 引用テキスト末尾 → 出典先頭へ
+      const firstChild = citationNode.getFirstChild();
+      if (firstChild) {
+        firstChild.selectStart();
+        return true;
+      }
+    }
+    if (inText || inCitation) {
+      // 引用テキスト末尾（出典なし）/ 出典末尾 → ブロック直後へ脱出
+      const paragraph = $createParagraphNode();
+      pullQuoteNode.insertAfter(paragraph);
+      paragraph.select();
+      return true;
+    }
   }
 
   return false;
 }
 
 // =============================================================================
-// Types
-// =============================================================================
-
-type PullQuotePluginProps = {
-  isOpen: boolean;
-  onClose: () => void;
-};
-
-// =============================================================================
 // Component
 // =============================================================================
 
-export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
+export function PullQuotePlugin() {
   const [editor] = useLexicalComposerContext();
-  const [selectedStyle, setSelectedStyle] = useState<PullQuoteStyle>("classic");
 
-  // リスナー登録（mergeRegisterで統一）
   useEffect(() => {
+    if (
+      !editor.hasNodes([
+        PullQuoteNode,
+        PullQuoteTextNode,
+        PullQuoteCitationNode,
+      ])
+    ) {
+      throw new Error(
+        "PullQuotePlugin: PullQuoteNode, PullQuoteTextNode, PullQuoteCitationNode が登録されていません",
+      );
+    }
+
     return mergeRegister(
+      // INSERT_PULL_QUOTE_COMMAND — 引用テキストのみの最小構造を挿入（出典は任意）
+      editor.registerCommand(
+        INSERT_PULL_QUOTE_COMMAND,
+        () => {
+          editor.update(() => {
+            const pullQuote = $createPullQuoteNode();
+            const textNode = $createPullQuoteTextNode();
+            const textParagraph = $createParagraphNode();
+            textNode.append(textParagraph);
+            pullQuote.append(textNode);
+
+            $insertNodeToNearestRoot(pullQuote);
+
+            textParagraph.select();
+          });
+          return true;
+        },
+        COMMAND_PRIORITY_EDITOR,
+      ),
+
       // 矢印キーリスナー
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
@@ -130,120 +196,61 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
         () => $onEscape("down"),
         COMMAND_PRIORITY_LOW,
       ),
-      // 構造検証トランスフォーマー: PullQuote
-      editor.registerNodeTransform(PullQuoteNode, (node) => {
-        const children = node.getChildren();
-        const hasTextNode = children.some(
-          (child) => child instanceof PullQuoteTextNode,
-        );
-        const hasCitationNode = children.some(
-          (child) => child instanceof PullQuoteCitationNode,
-        );
 
-        // 必要な子ノードがない場合は追加
-        if (!hasTextNode) {
-          const textNode = $createPullQuoteTextNode();
-          const paragraph = $createParagraphNode();
-          textNode.append(paragraph);
-          node.append(textNode);
+      // 構造検証: PullQuote（引用テキスト必須・出典は任意・順序は text → citation）
+      editor.registerNodeTransform(PullQuoteNode, (node) => {
+        let textNode: PullQuoteTextNode | null = null;
+        let citationNode: PullQuoteCitationNode | null = null;
+
+        for (const child of node.getChildren()) {
+          if (child instanceof PullQuoteTextNode) {
+            // 引用テキストは 1 つだけ残す
+            if (textNode) child.remove();
+            else textNode = child;
+          } else if (child instanceof PullQuoteCitationNode) {
+            // 出典は 1 つだけ残す
+            if (citationNode) child.remove();
+            else citationNode = child;
+          } else {
+            // 想定外の子は除去
+            child.remove();
+          }
         }
-        if (!hasCitationNode) {
-          const citationNode = $createPullQuoteCitationNode();
-          const paragraph = $createParagraphNode();
-          citationNode.append(paragraph);
-          node.append(citationNode);
+
+        // 引用テキストが無ければ先頭に追加
+        if (!textNode) {
+          const newText = $createPullQuoteTextNode();
+          newText.append($createParagraphNode());
+          const first = node.getFirstChild();
+          if (first) first.insertBefore(newText);
+          else node.append(newText);
+          textNode = newText;
+        }
+
+        // 出典は引用テキストの後ろに並べる
+        if (
+          citationNode &&
+          citationNode.getIndexWithinParent() < textNode.getIndexWithinParent()
+        ) {
+          textNode.insertAfter(citationNode);
         }
       }),
-      // PullQuoteTextNodeの構造検証
+
+      // 構造検証: PullQuoteTextNode（空なら段落を補う）
       editor.registerNodeTransform(PullQuoteTextNode, (node) => {
         if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode();
-          node.append(paragraph);
+          node.append($createParagraphNode());
         }
       }),
-      // PullQuoteCitationNodeの構造検証
+
+      // 構造検証: PullQuoteCitationNode（空なら段落を補う）
       editor.registerNodeTransform(PullQuoteCitationNode, (node) => {
         if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode();
-          node.append(paragraph);
+          node.append($createParagraphNode());
         }
       }),
     );
   }, [editor]);
 
-  const resetForm = () => {
-    setSelectedStyle("classic");
-  };
-
-  const handleInsert = () => {
-    editor.update(() => {
-      // PullQuote構造を作成
-      const pullQuote = $createPullQuoteNode(selectedStyle);
-      const textNode = $createPullQuoteTextNode();
-      const textParagraph = $createParagraphNode();
-      textNode.append(textParagraph);
-
-      const citationNode = $createPullQuoteCitationNode();
-      const citationParagraph = $createParagraphNode();
-      citationNode.append(citationParagraph);
-
-      pullQuote.append(textNode);
-      pullQuote.append(citationNode);
-
-      $insertNodeToNearestRoot(pullQuote);
-
-      // テキスト部分を選択
-      textParagraph.selectEnd();
-    });
-
-    resetForm();
-    onClose();
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>プルクォートを挿入</DialogTitle>
-        </DialogHeader>
-
-        <div className="py-4">
-          <Label className="text-sm font-medium mb-3 block">
-            スタイルを選択
-          </Label>
-          <Select
-            value={selectedStyle}
-            onValueChange={(value) => {
-              if (isPullQuoteStyle(value)) setSelectedStyle(value);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PULL_QUOTE_STYLES.map((style) => (
-                <SelectItem key={style} value={style}>
-                  {PULL_QUOTE_STYLE_LABELS[style]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            キャンセル
-          </Button>
-          <Button type="button" onClick={handleInsert}>
-            挿入
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  return null;
 }

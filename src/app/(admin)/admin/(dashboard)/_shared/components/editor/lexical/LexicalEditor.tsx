@@ -48,6 +48,7 @@ import {
   CommentPlugin,
   PageBreakPlugin,
   CollapsiblePlugin,
+  PullQuotePlugin,
   GroupPlugin,
   EmojiPickerPlugin,
   HeadingAnchorPlugin,
@@ -284,6 +285,7 @@ function EditorInner({
             {/* ダイアログ */}
             <DialogRenderer dialogManager={dialogManager} />
             <CollapsiblePlugin />
+            <PullQuotePlugin />
             <GroupPlugin />
             <EmojiPickerPlugin />
             <WordCountPlugin onUpdate={updateWordCount} />
