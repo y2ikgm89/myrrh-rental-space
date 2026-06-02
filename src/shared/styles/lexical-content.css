@@ -1955,3 +1955,133 @@ table[style*="--table-border-color"] th {
   height: 1em;
   flex-shrink: 0;
 }
+
+/* --------------------------------------------------------------------------
+ * Cover Node
+ *
+ * data-cover: コンテナ（<div>、背景画像は inline style background-image）
+ * data-color: AccentColor（オーバーレイ色。default / 未指定は中立の暗いスクリム）
+ * data-overlay-opacity: 0 / 10 / … / 80（オーバーレイ不透明度 %）
+ * data-min-height: sm(200px) / md(300px) / lg(400px) / xl(500px) / full(80svh)
+ * data-content-align: left / center / right（テキスト水平位置）
+ * data-content-position: top / center / bottom（テキスト垂直位置）
+ *
+ * 子要素は見出し（h2 等）+ 段落（直接編集可能）。
+ * 背景画像の上にスクリムを重ね、明るい文字 + text-shadow で可読性を担保する。
+ * -------------------------------------------------------------------------- */
+
+[data-cover] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  margin: 2rem 0;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  /* 画像未設定時のフォールバック背景 */
+  background-color: var(--color-muted);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ---- 最小高さ（挿入ダイアログのラベルと一致） ---- */
+[data-cover][data-min-height="sm"] {
+  min-height: 12.5rem;
+}
+[data-cover][data-min-height="md"] {
+  min-height: 18.75rem;
+}
+[data-cover][data-min-height="lg"] {
+  min-height: 25rem;
+}
+[data-cover][data-min-height="xl"] {
+  min-height: 31.25rem;
+}
+[data-cover][data-min-height="full"] {
+  min-height: 80svh;
+}
+
+/* ---- オーバーレイ（スクリム） ---- */
+[data-cover]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* accent 色。default / 未指定は bronze 化を避け中立の暗いスクリム */
+  background-color: var(--accent, var(--color-foreground));
+}
+[data-cover][data-color="default"]::before {
+  background-color: var(--color-foreground);
+}
+
+[data-cover][data-overlay-opacity="0"]::before {
+  opacity: 0;
+}
+[data-cover][data-overlay-opacity="10"]::before {
+  opacity: 0.1;
+}
+[data-cover][data-overlay-opacity="20"]::before {
+  opacity: 0.2;
+}
+[data-cover][data-overlay-opacity="30"]::before {
+  opacity: 0.3;
+}
+[data-cover][data-overlay-opacity="40"]::before {
+  opacity: 0.4;
+}
+[data-cover][data-overlay-opacity="50"]::before {
+  opacity: 0.5;
+}
+[data-cover][data-overlay-opacity="60"]::before {
+  opacity: 0.6;
+}
+[data-cover][data-overlay-opacity="70"]::before {
+  opacity: 0.7;
+}
+[data-cover][data-overlay-opacity="80"]::before {
+  opacity: 0.8;
+}
+
+/* ---- コンテンツ（見出し + 段落） ---- */
+[data-cover] > * {
+  position: relative;
+  z-index: 1;
+  max-width: 48rem;
+  color: var(--color-background);
+  text-shadow:
+    0 1px 2px oklch(0 0 0 / 0.55),
+    0 2px 12px oklch(0 0 0 / 0.4);
+}
+[data-cover] > :first-child {
+  margin-top: 0;
+}
+[data-cover] > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---- テキスト垂直位置（content-position） ---- */
+[data-cover][data-content-position="top"] {
+  justify-content: flex-start;
+}
+[data-cover][data-content-position="center"] {
+  justify-content: center;
+}
+[data-cover][data-content-position="bottom"] {
+  justify-content: flex-end;
+}
+
+/* ---- テキスト水平位置（content-align） ---- */
+[data-cover][data-content-align="left"] {
+  align-items: flex-start;
+  text-align: left;
+}
+[data-cover][data-content-align="center"] {
+  align-items: center;
+  text-align: center;
+}
+[data-cover][data-content-align="right"] {
+  align-items: flex-end;
+  text-align: right;
+}
