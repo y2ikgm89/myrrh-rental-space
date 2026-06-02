@@ -14,7 +14,7 @@ import {
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { getBaseUrl } from "@/shared/lib/constants";
+import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { parseStringArray } from "@/shared/lib/json-validators";
 import {
   BreadcrumbJsonLd,
@@ -40,21 +40,36 @@ export async function generateMetadata({
   const space = await getSpaceBySlug(slug);
   if (!space) return {};
 
+  const canonicalUrl = `${getBaseUrl()}/spaces/${slug}`;
+  const ogTitle = space.ogpTitle ?? space.name;
+  const ogDescription =
+    space.ogpDescription ?? space.descriptionPlainText ?? undefined;
+  const ogImage = space.ogpImageUrl ?? space.mainImageUrl ?? undefined;
+
   return {
-    title: space.ogpTitle ?? space.name,
+    title: ogTitle,
     description:
       space.ogpDescription ??
       space.metaDescription ??
       space.descriptionPlainText ??
       undefined,
     alternates: {
-      canonical: `${getBaseUrl()}/spaces/${slug}`,
+      canonical: canonicalUrl,
     },
     openGraph: {
-      title: space.ogpTitle ?? space.name,
-      description:
-        space.ogpDescription ?? space.descriptionPlainText ?? undefined,
-      images: space.ogpImageUrl ?? space.mainImageUrl ?? undefined,
+      type: "website",
+      title: ogTitle,
+      description: ogDescription,
+      url: canonicalUrl,
+      locale: "ja_JP",
+      siteName: SITE_DEFAULTS.name,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: ogTitle,
+      description: ogDescription,
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   };
 }
@@ -87,7 +102,7 @@ export default async function SpaceDetailPage({
       <ProductJsonLd
         name={space.name}
         description={space.descriptionPlainText || space.name}
-        image={space.mainImageUrl ?? `${baseUrl}/og-image.png`}
+        image={space.mainImageUrl}
         url={spaceUrl}
         offers={{
           price: space.hourlyPrice,

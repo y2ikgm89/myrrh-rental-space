@@ -70,6 +70,22 @@ export const metadata: Metadata = {
       "application/rss+xml": "/feed.xml",
     },
   },
+  // OG / Twitter のサイト共通ベース。画像は file-based opengraph-image / twitter-image
+  // が自動注入する。各ページの generateMetadata が openGraph を export すると
+  // shallow 置換されるため、siteName / locale 等はページ側でも明示する必要がある。
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    siteName: SITE_DEFAULTS.name,
+    url: "/",
+    title: SITE_DEFAULTS.name,
+    description: SITE_DEFAULTS.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_DEFAULTS.name,
+    description: SITE_DEFAULTS.description,
+  },
 };
 
 export async function generateViewport(): Promise<Viewport> {

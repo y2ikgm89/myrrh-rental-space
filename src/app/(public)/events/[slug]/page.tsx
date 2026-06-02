@@ -23,7 +23,7 @@ import {
 } from "@/shared/domain/events/venue";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
-import { getBaseUrl } from "@/shared/lib/constants";
+import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import {
@@ -73,6 +73,14 @@ export async function generateMetadata({
       title: ogpTitle,
       description: ogpDescription,
       url: canonicalUrl,
+      locale: "ja_JP",
+      siteName: SITE_DEFAULTS.name,
+      ...(ogpImage ? { images: [ogpImage] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: ogpTitle,
+      description: ogpDescription,
       ...(ogpImage ? { images: [ogpImage] } : {}),
     },
   };
