@@ -52,18 +52,21 @@ export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES);
 
 ノード + プラグイン + インスペクターパネルをフル追加する場合の登録箇所（合計 9 箇所）:
 
-| ファイル                                       | 内容                                       | 必須条件                                       |
-| ---------------------------------------------- | ------------------------------------------ | ---------------------------------------------- |
-| `config/nodes.ts`                              | `EDITOR_NODES` に追加                      | 全ノード                                       |
-| `nodes/index.ts`                               | barrel export                              | 全ノード                                       |
-| `config/dialog-registry.ts`                    | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                                  |
-| `config/insert-items.ts`                       | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合              |
-| `plugins/index.ts`                             | Plugin export                              | Plugin あり                                    |
-| `config/inspector-registry.ts`                 | `getInspectableInfoFromRegistry`           | Inspector あり                                 |
-| `inspector/hooks/inspectable-nodes.ts`         | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                                 |
-| `inspector/InspectorSidebar.tsx`               | switch case                                | Inspector あり                                 |
-| `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                 |
-| `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時） |
+| ファイル                                       | 内容                                       | 必須条件                                                                                                                        |
+| ---------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `config/nodes.ts`                              | `EDITOR_NODES` に追加                      | 全ノード                                                                                                                        |
+| `nodes/index.ts`                               | barrel export                              | 全ノード                                                                                                                        |
+| `config/dialog-registry.ts`                    | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                                                                                                                   |
+| `config/insert-items.ts`                       | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合                                                                                               |
+| `plugins/index.ts`                             | Plugin export                              | Plugin あり                                                                                                                     |
+| `config/inspector-registry.ts`                 | `getInspectableInfoFromRegistry`           | Inspector あり                                                                                                                  |
+| `inspector/hooks/inspectable-nodes.ts`         | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                                                                                                                  |
+| `inspector/InspectorSidebar.tsx`               | switch case                                | Inspector あり                                                                                                                  |
+| `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                                                                                                  |
+| `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時）                                                                                  |
+| `shared/styles/lexical-content.css`            | `[data-*]` スタイルセクション              | CSS-first ノード（`data-*` を出力する全ノード）。**欠落で dead UI** → `nodes/styling.md` §CSS-first ノードは CSS セクション必須 |
+
+> **CSS セクションは省略不可** — `createDOM` / `exportDOM` が `data-*` を出力するのに対応 CSS が無いと editor・公開とも無装飾の dead UI になる（2026-06-02 に Cover / Gallery / Timeline / PricingTable / Testimonial で発生・修正）。表示値を NodeState で持つノードの DOM 注入 / round-trip は `nodes/styling.md` §表示値を NodeState で保持するノードの DOM 注入パターン を参照。
 
 ### Inspector 要否の判断基準
 
