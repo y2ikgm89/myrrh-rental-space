@@ -16,7 +16,9 @@
       "Bash(bun run test:unit *)",
       "Bash(bun run test:integration *)",
       "Bash(bun test *)",
-      "Bash(bun outdated *)"
+      "Bash(bun outdated *)",
+      "Bash(git *)",
+      "Bash(gh *)"
     ]
   },
   "enableAllProjectMcpServers": true,
