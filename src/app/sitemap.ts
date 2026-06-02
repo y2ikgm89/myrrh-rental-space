@@ -41,6 +41,7 @@ const BASE_URL = getBaseUrl();
 const STATIC_PAGES = [
   "/",
   "/about",
+  "/access",
   "/contact",
   "/faq",
   "/reservation",

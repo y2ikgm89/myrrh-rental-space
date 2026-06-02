@@ -206,14 +206,6 @@ export function GraphJsonLd({
         ...(webSite.description && { description: webSite.description }),
         url: webSite.url || BASE_URL,
         publisher: { "@id": orgId },
-        potentialAction: {
-          "@type": "SearchAction",
-          target: {
-            "@type": "EntryPoint",
-            urlTemplate: `${webSite.url || BASE_URL}/search?q={search_term_string}`,
-          },
-          "query-input": "required name=search_term_string",
-        },
       },
     ],
   };
@@ -493,14 +485,6 @@ export function WebSiteJsonLd({
     name,
     ...(description && { description }),
     url,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${url}/search?q={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
-    },
   };
 
   return <JsonLd data={data} />;
