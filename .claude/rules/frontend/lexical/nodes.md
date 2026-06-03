@@ -67,6 +67,8 @@ export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES);
 | `shared/styles/lexical-content.css`            | `[data-*]` スタイルセクション              | CSS-first ノード（`data-*` を出力する全ノード）。**欠落で dead UI** → `nodes/styling.md` §CSS-first ノードは CSS セクション必須 |
 
 > **CSS セクションは省略不可** — `createDOM` / `exportDOM` が `data-*` を出力するのに対応 CSS が無いと editor・公開とも無装飾の dead UI になる（2026-06-02 に Cover / Gallery / Timeline / PricingTable / Testimonial で発生・修正）。表示値を NodeState で持つノードの DOM 注入 / round-trip は `nodes/styling.md` §表示値を NodeState で保持するノードの DOM 注入パターン を参照。
+>
+> **CSS が存在してもモバイル非対応は dead UI と同格の対応漏れ** — 多カラム grid の collapse・横長コンテンツの `overflow-x`・埋め込みの `width:100%`・固定 padding の `clamp` 化を必ず定義する（2026-06-03 に Table が CSS 有りで mobile 横溢れ → `nodes/styling.md` §CSS-first ノードはモバイル/レスポンシブ対応必須 で codify）。共有 CSS で片テーマ専用トークンを使う場合は `var(--token, literal)` フォールバック必須（同 §共有 `lexical-content.css` のテーマ専用トークン）。
 
 ### Inspector 要否の判断基準
 
