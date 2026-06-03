@@ -15,6 +15,7 @@ import {
   isPullQuoteStyle,
   quoteStyleState,
   pullQuoteColorState,
+  pullQuoteShowMarkState,
   $pullQuoteHasCitation,
   $addPullQuoteCitation,
   $removePullQuoteCitation,
@@ -46,9 +47,10 @@ export function PullQuoteInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isPullQuoteNode);
 
-  const { quoteStyle, quoteColor, hasCitation } = editor.read(() => ({
+  const { quoteStyle, quoteColor, showMark, hasCitation } = editor.read(() => ({
     quoteStyle: $getState(node, quoteStyleState),
     quoteColor: $getState(node, pullQuoteColorState),
+    showMark: $getState(node, pullQuoteShowMarkState),
     hasCitation: $pullQuoteHasCitation(node),
   }));
 
@@ -63,6 +65,12 @@ export function PullQuoteInspectorPanel({
   const handleColorChange = (color: AccentColor) => {
     updateNode((n) => {
       $setState(n, pullQuoteColorState, color);
+    });
+  };
+
+  const handleMarkToggle = (checked: boolean) => {
+    updateNode((n) => {
+      $setState(n, pullQuoteShowMarkState, checked);
     });
   };
 
@@ -98,6 +106,16 @@ export function PullQuoteInspectorPanel({
           onChange={handleColorChange}
           label="アクセントカラー"
         />
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="inspector-pull-quote-mark" className="text-xs">
+            引用符（“）を表示
+          </Label>
+          <Switch
+            id="inspector-pull-quote-mark"
+            checked={showMark}
+            onCheckedChange={handleMarkToggle}
+          />
+        </div>
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="inspector-pull-quote-citation" className="text-xs">
             引用元（出典）を表示
