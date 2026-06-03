@@ -1,9 +1,15 @@
 ---
 description: Rules of React + eslint-plugin-react-hooks 7.x 統合ルール表 (React Compiler 1.0 互換性条件)
 paths:
-  - src/**/*.tsx
-  - src/**/*.ts
-  - eslint.config.mjs
+  - "src/**/*.tsx"
+  - "src/**/use-*.ts"
+  - "src/**/use[A-Z]*.ts"
+  - "src/**/hooks.ts"
+  - "src/**/hooks/**/*.ts"
+  - "src/**/_hooks/**/*.ts"
+  - "src/**/editor/**/*.ts"
+  - "src/shared/lib/conform/**"
+  - "eslint.config.mjs"
 ---
 
 # Rules of React + ESLint

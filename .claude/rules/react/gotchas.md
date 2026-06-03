@@ -7,6 +7,7 @@ paths:
   - "src/**/hooks.ts"
   - "src/**/hooks/**/*.ts"
   - "src/**/_hooks/**/*.ts"
+  - "src/**/editor/**/*.ts"
   - "src/shared/lib/conform/**"
 ---
 

@@ -1,8 +1,14 @@
 ---
 description: React Compiler エスケープハッチ ('use no memo' / 'use memo') + 動的 component の static-components violation 回避
 paths:
-  - src/**/*.tsx
-  - src/**/*.ts
+  - "src/**/*.tsx"
+  - "src/**/use-*.ts"
+  - "src/**/use[A-Z]*.ts"
+  - "src/**/hooks.ts"
+  - "src/**/hooks/**/*.ts"
+  - "src/**/_hooks/**/*.ts"
+  - "src/**/editor/**/*.ts"
+  - "src/shared/lib/conform/**"
 ---
 
 # React Compiler エスケープハッチ + 動的 component

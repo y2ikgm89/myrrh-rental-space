@@ -1,8 +1,14 @@
 ---
 description: Outer/Inner Component Split (Rules of Hooks 回避) + thin dispatcher 削除 + useReducer cascade + startTransition + conform fields.x.value リアクティブ
 paths:
-  - src/**/*.tsx
-  - src/**/*.ts
+  - "src/**/*.tsx"
+  - "src/**/use-*.ts"
+  - "src/**/use[A-Z]*.ts"
+  - "src/**/hooks.ts"
+  - "src/**/hooks/**/*.ts"
+  - "src/**/_hooks/**/*.ts"
+  - "src/**/editor/**/*.ts"
+  - "src/shared/lib/conform/**"
 ---
 
 # Component Split + State 管理 hooks
