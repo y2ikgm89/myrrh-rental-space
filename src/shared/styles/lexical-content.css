@@ -1165,6 +1165,11 @@ details[data-collapsible-item]
   border-bottom: 2px solid
     color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
   padding: 2rem;
+  /* 上下ボーダーの「枠」を中心に引用を浮かせる editorial 慣習（WordPress
+     core/pullquote / Kinfolk）。text-align は子の引用本文・出典・装飾引用符に
+     継承される。border-left 系（classic/minimal）は左寄せのまま（左ボーダーと
+     テキストの視覚的接続を保つため text-align を付与しない）。 */
+  text-align: center;
 }
 
 /* ---- Minimal Style ---- */
@@ -1178,11 +1183,16 @@ details[data-collapsible-item]
 
 [data-pull-quote-text] {
   font-family: var(--font-serif);
-  font-size: 1.25rem;
-  font-weight: 400;
+  /* --text-pullquote は public.css のみ定義。共有 CSS のため admin (エディタ)
+     コンテキスト用に literal フォールバックをミラーし両環境で同一表示にする
+     （public.css §typography の値と同期）。引用本文を本文(1rem)より大きく
+     強調し、出典(0.875rem)との階層を約 2:1 にする。 */
+  font-size: var(--text-pullquote, clamp(1.5rem, 1.25rem + 1.15vw, 2rem));
+  font-weight: var(--text-pullquote--font-weight, 300);
   font-style: italic;
+  letter-spacing: var(--text-pullquote--letter-spacing, -0.01em);
   color: var(--color-foreground);
-  line-height: 1.625;
+  line-height: var(--text-pullquote--line-height, 1.3);
   /* Prose reset: override @tailwindcss/typography blockquote styles */
   border-left: none;
   padding-left: 0;
