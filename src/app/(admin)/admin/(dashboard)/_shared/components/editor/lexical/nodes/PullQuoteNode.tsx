@@ -24,7 +24,7 @@ import {
   $createParagraphNode,
   $isElementNode,
 } from "lexical";
-import { createEnumGuard } from "../config/type-guards";
+import { createEnumGuard, parseBoolean } from "../config/type-guards";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
 import {
   $createPullQuoteCitationNode,
@@ -64,6 +64,11 @@ export const pullQuoteColorState = createState("pullQuoteColor", {
     typeof v === "string" && isAccentColor(v) ? v : "default",
 });
 
+/** 装飾的な引用符（“）の表示。default は false（ブランド方針: ミニマル） */
+export const pullQuoteShowMarkState = createState("pullQuoteShowMark", {
+  parse: parseBoolean,
+});
+
 // =============================================================================
 // DOM Conversion
 // =============================================================================
@@ -77,7 +82,8 @@ function $convertPullQuoteElement(
   const colorAttr = element.getAttribute("data-color");
   const color: AccentColor =
     colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
-  const node = $createPullQuoteNode(style, color);
+  const showMark = element.getAttribute("data-pull-quote-mark") === "true";
+  const node = $createPullQuoteNode(style, color, showMark);
   return { node };
 }
 
@@ -92,6 +98,7 @@ export class PullQuoteNode extends ElementNode {
       stateConfigs: [
         { flat: true, stateConfig: quoteStyleState },
         { flat: true, stateConfig: pullQuoteColorState },
+        { flat: true, stateConfig: pullQuoteShowMarkState },
       ],
     });
   }
@@ -113,20 +120,24 @@ export class PullQuoteNode extends ElementNode {
   override exportDOM(): DOMExportOutput {
     const quoteStyle = $getState(this, quoteStyleState);
     const color = $getState(this, pullQuoteColorState);
+    const showMark = $getState(this, pullQuoteShowMarkState);
     const element = document.createElement("figure");
     element.setAttribute("data-pull-quote", "true");
     element.setAttribute("data-pull-quote-style", quoteStyle);
     element.setAttribute("data-color", color);
+    if (showMark) element.setAttribute("data-pull-quote-mark", "true");
     return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const quoteStyle = $getState(this, quoteStyleState);
     const color = $getState(this, pullQuoteColorState);
+    const showMark = $getState(this, pullQuoteShowMarkState);
     const element = document.createElement("figure");
     element.setAttribute("data-pull-quote", "true");
     element.setAttribute("data-pull-quote-style", quoteStyle);
     element.setAttribute("data-color", color);
+    if (showMark) element.setAttribute("data-pull-quote-mark", "true");
     return element;
   }
 
@@ -141,6 +152,17 @@ export class PullQuoteNode extends ElementNode {
     if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
+    }
+
+    const showMarkChange = $getStateChange(
+      this,
+      prevNode,
+      pullQuoteShowMarkState,
+    );
+    if (showMarkChange !== null) {
+      const [newShowMark] = showMarkChange;
+      if (newShowMark) dom.setAttribute("data-pull-quote-mark", "true");
+      else dom.removeAttribute("data-pull-quote-mark");
     }
 
     return false;
@@ -194,10 +216,12 @@ export class PullQuoteNode extends ElementNode {
 export function $createPullQuoteNode(
   quoteStyle: PullQuoteStyle = "classic",
   color: AccentColor = "default",
+  showMark = false,
 ): PullQuoteNode {
   const node = $create(PullQuoteNode);
   $setState(node, quoteStyleState, quoteStyle);
   $setState(node, pullQuoteColorState, color);
+  $setState(node, pullQuoteShowMarkState, showMark);
   return node;
 }
 

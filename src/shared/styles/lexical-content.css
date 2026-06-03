@@ -1203,6 +1203,22 @@ details[data-collapsible-item]
   content: "\2014\00A0";
 }
 
+/* ---- Decorative Quote Mark (opt-in, default off) ---- */
+/* Inspector の「引用符を表示」トグルが data-pull-quote-mark="true" を付与したときのみ表示。
+   block-level の serif グリフを引用テキストの直前に置き、3 スタイル共通で重なりなく配置する。 */
+
+[data-pull-quote-mark="true"]::before {
+  content: "\201C";
+  display: block;
+  font-family: var(--font-serif);
+  font-style: normal;
+  font-size: 3rem;
+  line-height: 0.7;
+  color: var(--accent, var(--color-accent));
+  opacity: 0.5;
+  margin-bottom: 0.25rem;
+}
+
 /* --------------------------------------------------------------------------
  * 1e. Page Break
  *
