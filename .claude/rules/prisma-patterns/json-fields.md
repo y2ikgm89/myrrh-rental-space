@@ -87,7 +87,7 @@ const items = await prisma.post.findMany({ ... })
 return toPlainArray(items)
 ```
 
-**注意**: `safeFetch` + `'use cache'` で取得した公開データは同様に `toPlainObject()` でラップする（`server-actions/implementation.md` §公開データ取得パターン 参照）。
+**注意**: `safeFetch` + `'use cache'` で取得した公開データは同様に `toPlainObject()` でラップする（`server-actions/implementation/forms-and-public.md` §公開データ取得パターン 参照）。
 
 ## Date フィールドの Server→Client 境界シリアライゼーション
 

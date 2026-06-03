@@ -151,7 +151,7 @@ export async function createItem(input: ItemInput) {
 
 ## 監査ログ
 
-`executeAdminMutationResult` は `logAction()` を **`fireAndForget`（非ブロッキング）で内部呼び出し**するため、手動呼び出し不要。実行順序は `execute → await afterSuccess → fireAndForget(logAction)` で不変（→ `server-actions/implementation.md` §executeAdminMutationResult 実行順序契約）。監査 write 失敗時は `logError`（category: `DATABASE`, severity: `MEDIUM`）で構造化ログに記録されるが mutation 応答は影響を受けない。
+`executeAdminMutationResult` は `logAction()` を **`fireAndForget`（非ブロッキング）で内部呼び出し**するため、手動呼び出し不要。実行順序は `execute → await afterSuccess → fireAndForget(logAction)` で不変（→ `server-actions/implementation/admin-actions.md` §executeAdminMutationResult 実行順序契約）。監査 write 失敗時は `logError`（category: `DATABASE`, severity: `MEDIUM`）で構造化ログに記録されるが mutation 応答は影響を受けない。
 `resolveAuditResourceId` でリソース ID を動的解決できる:
 
 ```typescript
