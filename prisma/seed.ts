@@ -2400,6 +2400,45 @@ async function seedTerms() {
       requiredAtSignup: false,
       footerOrder: 3,
     },
+    // 利用規約 §1 が「本規約の一部を構成する」と明記する個別規約（支払い規約・施設利用規約）、
+    // および Cookie ポリシー（外部送信規律）・レビュー投稿ガイドラインを掲載ページ化する。
+    // 同意取得を伴わない情報提供ページのため requiredAt* は false（管理画面で個別に有効化可能）。
+    {
+      type: "payment",
+      slug: "payment-terms",
+      title: "支払い規約",
+      requiredAtReservation: false,
+      requiredAtInquiry: false,
+      requiredAtSignup: false,
+      footerOrder: 4,
+    },
+    {
+      type: "rental-terms",
+      slug: "rental-terms",
+      title: "施設利用規約",
+      requiredAtReservation: false,
+      requiredAtInquiry: false,
+      requiredAtSignup: false,
+      footerOrder: 5,
+    },
+    {
+      type: "review-guidelines",
+      slug: "review-guidelines",
+      title: "レビュー投稿ガイドライン",
+      requiredAtReservation: false,
+      requiredAtInquiry: false,
+      requiredAtSignup: false,
+      footerOrder: 6,
+    },
+    {
+      type: "cookie-policy",
+      slug: "cookie-policy",
+      title: "Cookie ポリシー",
+      requiredAtReservation: false,
+      requiredAtInquiry: false,
+      requiredAtSignup: false,
+      footerOrder: 7,
+    },
   ];
 
   for (const t of terms) {
