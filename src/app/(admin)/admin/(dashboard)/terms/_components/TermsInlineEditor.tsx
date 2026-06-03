@@ -18,9 +18,20 @@ import {
   SettingsDialog,
   useTermsEditor,
   termsSettingsPanel,
+  resolveContentWidthPx,
   type TermsSidePanelExtra,
 } from "@/admin/components/editor/inline";
+import { TERMS_CONTENT_WIDTH } from "@/shared/lib/validations/terms";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
+
+/**
+ * エディタ本文の表示幅（px）。公開 `/terms/[slug]` と同じ {@link TERMS_CONTENT_WIDTH}
+ * を解決し、執筆時のエディタ表示幅と公開結果の WYSIWYG を一致させる。
+ */
+const TERMS_EDITOR_CONTENT_WIDTH_PX = resolveContentWidthPx({
+  width: TERMS_CONTENT_WIDTH,
+  customPx: null,
+});
 
 // =============================================================================
 // Types
@@ -147,6 +158,9 @@ export function TermsInlineEditor({
           showToolbar
           flush
           height="100%"
+          {...(TERMS_EDITOR_CONTENT_WIDTH_PX != null && {
+            contentWidth: TERMS_EDITOR_CONTENT_WIDTH_PX,
+          })}
         />
       </InlineEditorShell>
 

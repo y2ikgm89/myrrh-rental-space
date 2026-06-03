@@ -12,10 +12,9 @@ import { ArticleTableOfContents } from "@/public/components/article/article-tabl
 import { Prose } from "@/public/components/design-system/prose";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
 import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
-import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
+import { TERMS_CONTENT_WIDTH } from "@/shared/lib/validations/terms";
 
 const TOC_MIN_H2 = 2;
-const TERMS_CONTENT_WIDTH = LayoutWidth.MD;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
