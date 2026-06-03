@@ -42,7 +42,7 @@ paths:
 ## コンポーネント禁止パターン
 
 - **均一シャドウカード** — `shadow-md`/`hover:shadow-lg` 禁止。カタログカードは `border border-border` + `hover:opacity-85`（画像のみ）
-- **絵文字装飾** — Tabler Icons React SVG を使用（`ui-ux-patterns.md` と同一）
+- **絵文字装飾** — Tabler Icons React SVG を使用
 - **ストックフォト等間隔グリッド** — 画像アスペクト比に変化をつける。hover で `scale-105`
 - **汎用 hero: 中央タイトル + 2 ボタン** — 雑誌カバー風スプリット（左画像 + 右セリフイタリックテキスト）+ 単一 explore リンク
 

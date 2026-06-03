@@ -35,7 +35,7 @@ paths:
 
 ## Frontmatter スキーマ参照
 
-5 層構造（Memory / Rule / Subagent / Skill / Hook）の公式 frontmatter 仕様は [`claude-code-patterns.md`](./claude-code-patterns.md) §公式が定義する 5 層 を SSoT とする。Codex 側 (`AGENTS.md` / `.agents/skills/**` / `.codex/agents/**`) の frontmatter は [`AGENTS.md`](../../AGENTS.md) §Codex Project Assets を参照。
+5 層構造（Memory / Rule / Subagent / Skill / Hook）の公式 frontmatter 仕様は [`claude-code-patterns.md`](./claude-code-patterns.md) §公式 5 層 / frontmatter を SSoT とする。Codex 側 (`AGENTS.md` / `.agents/skills/**` / `.codex/agents/**`) の frontmatter は [`AGENTS.md`](../../AGENTS.md) §Codex Project Assets を参照。
 
 ## 検証
 
