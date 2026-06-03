@@ -1,5 +1,16 @@
 import { z } from "zod";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
+
+/**
+ * 規約本文のコンテンツ幅（固定）。
+ *
+ * 公開 `/terms/[slug]` ページの描画幅と、管理画面 InlineEditor が本文を
+ * 表示する幅（Lexical `contentWidth`）の SSoT。両者がこの値を参照することで
+ * 執筆時のエディタ表示幅と公開結果の WYSIWYG を一致させる。
+ * 規約は可変幅にせず長文ドキュメント向けの MD 固定とする。
+ */
+export const TERMS_CONTENT_WIDTH = LayoutWidth.MD;
 
 /**
  * 規約タイプ — 業務上想定される標準値（VARCHAR 自由文字列）。
