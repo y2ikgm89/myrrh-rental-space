@@ -1,8 +1,14 @@
 ---
 description: React 19 破壊的変更（forwardRef 廃止 / ComponentPropsWithRef）+ Context API の use() フック
 paths:
-  - src/**/*.tsx
-  - src/**/*.ts
+  - "src/**/*.tsx"
+  - "src/**/use-*.ts"
+  - "src/**/use[A-Z]*.ts"
+  - "src/**/hooks.ts"
+  - "src/**/hooks/**/*.ts"
+  - "src/**/_hooks/**/*.ts"
+  - "src/**/editor/**/*.ts"
+  - "src/shared/lib/conform/**"
 ---
 
 # React 19 破壊的変更 + Context API

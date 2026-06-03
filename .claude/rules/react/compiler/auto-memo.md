@@ -1,8 +1,14 @@
 ---
 description: React Compiler 1.0 自動メモ化（useCallback / useMemo / React.memo 廃止）+ useCallback + ref.current 衝突 + useEffectEvent
 paths:
-  - src/**/*.tsx
-  - src/**/*.ts
+  - "src/**/*.tsx"
+  - "src/**/use-*.ts"
+  - "src/**/use[A-Z]*.ts"
+  - "src/**/hooks.ts"
+  - "src/**/hooks/**/*.ts"
+  - "src/**/_hooks/**/*.ts"
+  - "src/**/editor/**/*.ts"
+  - "src/shared/lib/conform/**"
 ---
 
 # React Compiler 1.0 自動メモ化
