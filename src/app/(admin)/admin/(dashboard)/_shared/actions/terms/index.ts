@@ -1,13 +1,10 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   createTermsCommand,
   hardDeleteTermsCommand,
@@ -18,8 +15,10 @@ import {
   updateTermsPublishedCommand,
 } from "@/shared/domain/terms/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { termsFormSchema } from "../../../terms/_components/terms-form-schema";
-import type { TermsFormInput } from "@/shared/lib/validations/terms";
+import {
+  termsFormSchema,
+  type TermsFormInput,
+} from "@/shared/lib/validations/terms";
 
 const orderedIdsSchema = z
   .array(z.string().uuid({ error: "IDが不正です" }))
@@ -110,64 +109,6 @@ export async function restoreTerms(
     },
   });
 }
-
-// =============================================================================
-// Conform `useActionState` 用 Server Actions
-//
-// `(prev, formData) => SubmissionResult` signature。TermsForm (page 遷移付き form)
-// で `<form action={action}>` 経由で利用される。create は新規作成ページ、update は
-// id を bind で部分適用。
-// =============================================================================
-
-export async function createTermsAction(
-  _prev: SubmissionResult | undefined,
-  formData: FormData,
-): Promise<SubmissionResult> {
-  return executeConformMutation(formData, termsFormSchema, async (data) => {
-    const result = await executeAdminMutationResult({
-      resource: "terms",
-      action: "create",
-      execute: async () => createTermsCommand(data),
-      afterSuccess: (output) => {
-        invalidateTermsCaches(output.slug);
-      },
-      resolveAuditResourceId: (output) => output.id,
-    });
-    if (isMutationError(result)) {
-      return { ok: false, error: result.error };
-    }
-    return { ok: true };
-  });
-}
-
-export async function updateTermsAction(
-  id: string,
-  _prev: SubmissionResult | undefined,
-  formData: FormData,
-): Promise<SubmissionResult> {
-  return executeConformMutation(formData, termsFormSchema, async (data) => {
-    const result = await executeAdminMutationResult({
-      resource: "terms",
-      action: "update",
-      resourceId: id,
-      execute: async () => updateTermsCommand(id, data),
-      afterSuccess: (output) => {
-        invalidateTermsCaches(output.slug, output.previousSlug);
-      },
-    });
-    if (isMutationError(result)) {
-      return { ok: false, error: result.error };
-    }
-    return { ok: true };
-  });
-}
-
-// =============================================================================
-// MutationResult 返し Server Actions（InlineEditor 統合用）
-//
-// createTermsAction / updateTermsAction（SubmissionResult 形式）は残す。
-// 以下は MutationResult<{ id: string; slug: string }> を返す版。
-// =============================================================================
 
 export async function createTerms(
   input: TermsFormInput,

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import {
   TERMS_TYPE_VALUES,
   type TermsTypeValue,
@@ -10,7 +9,7 @@ import {
   type BusinessInfo,
 } from "@/shared/lib/terms-templates";
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
-import { TermsForm } from "../_components/TermsForm";
+import { TermsInlineEditor } from "../_components/TermsInlineEditor";
 
 export const metadata: Metadata = {
   title: "規約を新規作成 | Myrrh Rental Space",
@@ -58,24 +57,11 @@ export default async function NewTermsPage({
   }
 
   return (
-    <AdminDetailLayout
-      backHref="/admin/terms"
-      title="規約を新規作成"
-      subtitle={
-        template
-          ? `${template.label} のテンプレートから作成（事業者情報は Settings 値で自動置換済み）`
-          : "新しい規約を白紙から登録します"
-      }
-    >
-      <TermsForm
-        key={typeValue}
-        mode="create"
-        initial={{
-          type: typeValue,
-          ...(initialTitle !== undefined && { title: initialTitle }),
-        }}
-        {...(initialTemplateHtml !== undefined && { initialTemplateHtml })}
-      />
-    </AdminDetailLayout>
+    <TermsInlineEditor
+      key={typeValue}
+      mode="create"
+      {...(initialTemplateHtml !== undefined && { initialTemplateHtml })}
+      {...(initialTitle !== undefined && { initialTitle })}
+    />
   );
 }

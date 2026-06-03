@@ -1,0 +1,172 @@
+"use client";
+
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/admin/components/ui";
+import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import {
+  EditorHeader,
+  InlineEditorShell,
+  SettingsDialog,
+  useTermsEditor,
+  termsSettingsPanel,
+  type TermsSidePanelExtra,
+} from "@/admin/components/editor/inline";
+import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+type TermsInlineEditorProps = {
+  terms?: AdminTermsDetail;
+  mode: "create" | "edit";
+  initialTemplateHtml?: string;
+  initialTitle?: string;
+};
+
+// =============================================================================
+// Component
+// =============================================================================
+
+export function TermsInlineEditor({
+  terms,
+  mode,
+  initialTemplateHtml,
+  initialTitle,
+}: TermsInlineEditorProps) {
+  const editor = useTermsEditor({
+    mode,
+    ...(terms && { terms }),
+    ...(initialTemplateHtml && { initialTemplateHtml }),
+    ...(initialTitle && { initialTitle }),
+  });
+
+  const publishActions =
+    mode === "edit" && terms
+      ? {
+          status: editor.isPublished,
+          onPublish: editor.handlePublish,
+          onUnpublish: editor.handleUnpublish,
+        }
+      : undefined;
+
+  const deleteDialog =
+    mode === "edit" && terms ? (
+      <Dialog
+        open={editor.isDeleteDialogOpen}
+        onOpenChange={editor.setIsDeleteDialogOpen}
+      >
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={editor.isPending}
+          >
+            削除
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>規約を削除しますか？</DialogTitle>
+            <DialogDescription>
+              この操作は取り消せません。本当に削除してもよろしいですか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => editor.setIsDeleteDialogOpen(false)}
+              disabled={editor.isPending}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={editor.handleDelete}
+              disabled={editor.isPending}
+            >
+              {editor.isPending ? "削除中..." : "削除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    ) : undefined;
+
+  const displaySlug = `terms/${editor.slug}`;
+
+  const sidePanelExtraProps = {
+    typeValue: editor.type,
+    onTypeChange: editor.handleTypeChange,
+    isPublishedValue: editor.isPublished,
+    onIsPublishedChange: editor.handleIsPublishedChange,
+    requiredAtReservationValue: editor.requiredAtReservation,
+    onRequiredAtReservationChange: editor.handleRequiredAtReservationChange,
+    requiredAtInquiryValue: editor.requiredAtInquiry,
+    onRequiredAtInquiryChange: editor.handleRequiredAtInquiryChange,
+    requiredAtSignupValue: editor.requiredAtSignup,
+    onRequiredAtSignupChange: editor.handleRequiredAtSignupChange,
+    showInFooterValue: editor.showInFooter,
+    onShowInFooterChange: editor.handleShowInFooterChange,
+  } satisfies TermsSidePanelExtra;
+
+  return (
+    <>
+      <InlineEditorShell
+        onSave={editor.handleSave}
+        isDirty={editor.isDirty}
+        header={
+          <EditorHeader
+            title={editor.title}
+            slug={displaySlug}
+            isDirty={editor.isDirty}
+            isPending={editor.isPending}
+            metadataPanelLabel={termsSettingsPanel.title}
+            onOpenSettings={editor.openSettingsDialog}
+            onSave={editor.handleSave}
+            onBack={editor.handleBack}
+            publishActions={publishActions}
+            extraActions={deleteDialog}
+          />
+        }
+      >
+        <LazyLexicalEditor
+          contentJson={editor.contentJson}
+          onChange={editor.handleContentChange}
+          disabled={editor.isPending}
+          className={EDITOR_PROSE_CLASSES}
+          showToolbar
+          flush
+          height="100%"
+        />
+      </InlineEditorShell>
+
+      <SettingsDialog
+        open={editor.isSettingsDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) editor.closeSettingsDialog();
+        }}
+        config={termsSettingsPanel}
+        injected={{
+          fields: editor.settingsFields,
+          form: editor.settingsForm,
+          disabled: editor.isPending,
+        }}
+        extraProps={sidePanelExtraProps}
+        onSave={editor.handleSaveSettings}
+        onCancel={editor.closeSettingsDialog}
+        isPending={editor.isPending}
+        isDirty={editor.isSettingsDirty}
+      />
+    </>
+  );
+}

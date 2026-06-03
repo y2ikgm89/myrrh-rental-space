@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { getAdminTermsById } from "@/shared/domain/terms/admin-queries";
-import { TermsForm } from "../../_components/TermsForm";
+import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,31 +26,5 @@ export default async function EditTermsPage({ params }: PageProps) {
     notFound();
   }
 
-  return (
-    <AdminDetailLayout
-      backHref="/admin/terms"
-      backLabel="一覧に戻る"
-      title="規約を編集"
-      subtitle={terms.title}
-    >
-      <TermsForm
-        key={terms.id}
-        mode="edit"
-        initial={{
-          id: terms.id,
-          type: terms.type,
-          slug: terms.slug,
-          title: terms.title,
-          contentJson:
-            typeof terms.contentJson === "string"
-              ? terms.contentJson
-              : JSON.stringify(terms.contentJson),
-          isPublished: terms.isPublished,
-          requiredAtReservation: terms.requiredAtReservation,
-          requiredAtInquiry: terms.requiredAtInquiry,
-          showInFooter: terms.showInFooter,
-        }}
-      />
-    </AdminDetailLayout>
-  );
+  return <TermsInlineEditor key={terms.id} mode="edit" terms={terms} />;
 }
