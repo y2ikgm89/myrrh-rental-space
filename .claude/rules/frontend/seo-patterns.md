@@ -72,13 +72,13 @@ paths:
 
 ## noindex 対象ページ
 
-| ページ                   | ファイル                                                                                                                | 方式                                |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| 404                      | `not-found.tsx`                                                                                                         | static metadata                     |
-| プレビュー               | `(public)/preview/posts/[id]/page.tsx`, `(public)/preview/news/[id]/page.tsx`, `(public)/preview/pages/[slug]/page.tsx` | static metadata                     |
-| ログイン                 | `login/page.tsx`                                                                                                        | static metadata                     |
-| 管理者パスワードリセット | `(admin)/admin/(auth)/forgot-password/page.tsx`, `(admin)/admin/(auth)/reset-password/page.tsx`                         | static metadata                     |
-| マイページ               | `mypage/layout.tsx`                                                                                                     | layout metadata（全サブページ継承） |
+| ページ                   | ファイル                                                                                                                                                        | 方式                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 404                      | `not-found.tsx`                                                                                                                                                 | static metadata                     |
+| プレビュー               | `(public)/preview/posts/[id]/page.tsx`, `(public)/preview/news/[id]/page.tsx`, `(public)/preview/terms/[id]/page.tsx`, `(public)/preview/pages/[slug]/page.tsx` | static metadata                     |
+| ログイン                 | `login/page.tsx`                                                                                                                                                | static metadata                     |
+| 管理者パスワードリセット | `(admin)/admin/(auth)/forgot-password/page.tsx`, `(admin)/admin/(auth)/reset-password/page.tsx`                                                                 | static metadata                     |
+| マイページ               | `mypage/layout.tsx`                                                                                                                                             | layout metadata（全サブページ継承） |
 
 **新規認証・プライベートページ追加時は必ず `robots: { index: false, follow: false }` を設定すること。**
 

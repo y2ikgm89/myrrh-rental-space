@@ -22,6 +22,7 @@ import {
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { tryConvertHtmlStringToLexicalJsonString } from "@/admin/components/editor/lexical/html-to-lexical-json";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { getTermsPreviewHref } from "@/shared/lib/preview-routes";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -168,6 +169,25 @@ export function useTermsEditor({
     return asConformSubmissionValue<TermsSettingsFormData>(submission.value);
   };
 
+  // 規約は本文 + 設定を単一 `updateTerms` で保存する (Post / News のような
+  // body / settings 分割を持たない)。edit 系 3 経路 (本文保存 / 設定保存 /
+  // プレビュー) が同一 payload を組むため SSoT helper に集約する。
+  const buildUpdateInput = (
+    settingsData: TermsSettingsFormData,
+    contentHtml: string,
+  ) => ({
+    type: typeValue,
+    slug: settingsData.slug,
+    title: settingsData.title,
+    contentJson,
+    contentHtml,
+    isPublished: Boolean(settingsData.isPublished),
+    requiredAtReservation: Boolean(settingsData.requiredAtReservation),
+    requiredAtInquiry: Boolean(settingsData.requiredAtInquiry),
+    requiredAtSignup: Boolean(settingsData.requiredAtSignup),
+    showInFooter: Boolean(settingsData.showInFooter),
+  });
+
   const handleSave = () => {
     if (core.isPending) return;
 
@@ -214,18 +234,10 @@ export function useTermsEditor({
     core.startTransition(async () => {
       try {
         const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
-        const result = await updateTerms(terms.id, {
-          type: typeValue,
-          slug: settingsData.slug,
-          title: settingsData.title,
-          contentJson,
-          contentHtml,
-          isPublished: Boolean(settingsData.isPublished),
-          requiredAtReservation: Boolean(settingsData.requiredAtReservation),
-          requiredAtInquiry: Boolean(settingsData.requiredAtInquiry),
-          requiredAtSignup: Boolean(settingsData.requiredAtSignup),
-          showInFooter: Boolean(settingsData.showInFooter),
-        });
+        const result = await updateTerms(
+          terms.id,
+          buildUpdateInput(settingsData, contentHtml),
+        );
         if (isMutationError(result)) {
           toast.error(result.error);
           return;
@@ -249,18 +261,10 @@ export function useTermsEditor({
     core.startTransition(async () => {
       try {
         const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
-        const result = await updateTerms(terms.id, {
-          type: typeValue,
-          slug: settingsData.slug,
-          title: settingsData.title,
-          contentJson,
-          contentHtml,
-          isPublished: Boolean(settingsData.isPublished),
-          requiredAtReservation: Boolean(settingsData.requiredAtReservation),
-          requiredAtInquiry: Boolean(settingsData.requiredAtInquiry),
-          requiredAtSignup: Boolean(settingsData.requiredAtSignup),
-          showInFooter: Boolean(settingsData.showInFooter),
-        });
+        const result = await updateTerms(
+          terms.id,
+          buildUpdateInput(settingsData, contentHtml),
+        );
         if (isMutationError(result)) {
           toast.error(result.error);
           return;
@@ -329,6 +333,52 @@ export function useTermsEditor({
           error: getErrorMessage(error),
         });
         toast.error("削除中にエラーが発生しました");
+      }
+    });
+  };
+
+  // プレビューは Next.js 16 公式推奨の server-side fetch パターン。
+  // 設計原則 (WordPress / Notion / Ghost 標準):
+  // - 現在の本文 + 設定を save → 新タブで preview URL を開く (preview 先は DB を fetch)
+  // - create mode は id がないので「先に保存してください」toast
+  //
+  // popup blocker 対策: 動的に `<a target="_blank" rel="noreferrer">` を生成し
+  // `.click()` で navigation。user gesture context 内のため popup blocker を通過する。
+  // `window.open` の noreferrer 指定時の戻り値 null + silent fail を回避する
+  // anchor.click() パターン (usePostEditor / useNewsEditor と統一)。
+  const handlePreview = () => {
+    if (mode === "create" || !terms) {
+      toast.error("プレビューには規約の保存が必要です。先に保存してください。");
+      return;
+    }
+    const settingsData = validateSettings();
+    if (!settingsData) return;
+
+    core.startTransition(async () => {
+      try {
+        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+        const result = await updateTerms(
+          terms.id,
+          buildUpdateInput(settingsData, contentHtml),
+        );
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+        setSavedContentJson(contentJson);
+        router.refresh();
+
+        const url = getTermsPreviewHref(terms.id);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.target = "_blank";
+        anchor.rel = "noreferrer";
+        anchor.click();
+      } catch (error) {
+        logger.error("プレビュー生成中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("プレビューの生成に失敗しました");
       }
     });
   };
@@ -418,6 +468,7 @@ export function useTermsEditor({
     handlePublish,
     handleUnpublish,
     handleDelete,
+    handlePreview,
     handleBack,
     handleContentChange,
     handleIsPublishedChange,

@@ -144,6 +144,7 @@ export function TermsInlineEditor({
             metadataPanelLabel={termsSettingsPanel.title}
             onOpenSettings={editor.openSettingsDialog}
             onSave={editor.handleSave}
+            onPreview={editor.handlePreview}
             onBack={editor.handleBack}
             publishActions={publishActions}
             extraActions={deleteDialog}
