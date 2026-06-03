@@ -1154,7 +1154,10 @@ details[data-collapsible-item]
     var(--accent, var(--color-accent)) 8%,
     var(--color-background)
   );
-  padding: 1.5rem 2rem;
+  /* モバイルで余白を縮小（375px ≒ 縦 20px / 横 21px）、desktop で従来値（24/32px）。
+     clamp 中央値はビューポート追従、上下限で過密・過疎を防ぐ。 */
+  padding: clamp(1.25rem, 1rem + 1.5vw, 1.5rem)
+    clamp(1.25rem, 0.75rem + 2.5vw, 2rem);
 }
 
 /* ---- Modern Style ---- */
@@ -1164,7 +1167,8 @@ details[data-collapsible-item]
     color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
   border-bottom: 2px solid
     color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
-  padding: 2rem;
+  /* モバイルで縮小（375px ≒ 24px）、desktop 32px。 */
+  padding: clamp(1.5rem, 1rem + 2vw, 2rem);
   /* 上下ボーダーの「枠」を中心に引用を浮かせる editorial 慣習（WordPress
      core/pullquote / Kinfolk）。text-align は子の引用本文・出典・装飾引用符に
      継承される。border-left 系（classic/minimal）は左寄せのまま（左ボーダーと
@@ -1176,7 +1180,8 @@ details[data-collapsible-item]
 
 [data-pull-quote-style="minimal"] {
   border-left: 2px solid var(--accent, var(--color-accent));
-  padding: 1rem 0 1rem 1.5rem;
+  /* 左字下げをモバイルで微縮小（375px ≒ 16px）、desktop 24px。縦は据え置き。 */
+  padding: 1rem 0 1rem clamp(1rem, 0.75rem + 1vw, 1.5rem);
 }
 
 /* ---- Text ---- */
