@@ -1940,6 +1940,20 @@ table[style*="--table-border-color"] th {
   border-style: solid;
 }
 
+/* モバイルで横溢れするテーブルを横スクロール可能にする（GitHub markdown 方式）。
+   data-table-style で Lexical 本文テーブルに限定し、shadcn 管理テーブル（独自
+   2 層 overflow ラッパー済）には影響させない。≤768px はエディタが
+   MobileEditorFallback（<1024px は静的プレビュー）のため display:block が
+   ライブ編集 UI を阻害しない。fixedLayout の inline width:100% はそのまま有効。 */
+@media (max-width: 768px) {
+  table[data-table-style] {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
 /* --------------------------------------------------------------------------
  * FeatureIconListNode
  *
