@@ -41,7 +41,7 @@ export function SpaceSelector({
       <div
         role="radiogroup"
         aria-label="スペースを選択"
-        className="@container flex flex-col gap-3 @md:gap-4"
+        className="@container flex flex-col gap-3"
       >
         {spaces.map((space) => {
           const isSelected = space.id === selectedId;

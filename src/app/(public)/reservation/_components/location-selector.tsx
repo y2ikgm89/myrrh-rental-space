@@ -25,7 +25,7 @@ export function LocationSelector({
     <div
       role="radiogroup"
       aria-label="場所を選択"
-      className="@container flex flex-col gap-3 @md:gap-4"
+      className="@container flex flex-col gap-3"
     >
       {locations.map((location) => {
         const isSelected = location.id === selectedId;

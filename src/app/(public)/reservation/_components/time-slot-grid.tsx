@@ -19,13 +19,15 @@ export function TimeSlotGrid({
 }: TimeSlotGridProps): ReactElement {
   if (isLoading) {
     return (
-      <div
-        className="@container grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
-        aria-busy="true"
-      >
-        {Array.from({ length: 12 }, (_, i) => (
-          <div key={i} className="min-h-11 animate-pulse bg-border/30" />
-        ))}
+      <div className="@container">
+        <div
+          className="grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
+          aria-busy="true"
+        >
+          {Array.from({ length: 12 }, (_, i) => (
+            <div key={i} className="min-h-11 animate-pulse bg-border/30" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -39,37 +41,39 @@ export function TimeSlotGrid({
   }
 
   return (
-    <div
-      role="listbox"
-      aria-label="開始時間を選択"
-      className="@container grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
-    >
-      {slots.map((slot) => {
-        const isSelected = slot.time === selectedTime;
-        const isUnavailable = !slot.available;
+    <div className="@container">
+      <div
+        role="listbox"
+        aria-label="開始時間を選択"
+        className="grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
+      >
+        {slots.map((slot) => {
+          const isSelected = slot.time === selectedTime;
+          const isUnavailable = !slot.available;
 
-        return (
-          <button
-            key={slot.time}
-            type="button"
-            role="option"
-            aria-selected={isSelected}
-            aria-disabled={isUnavailable}
-            disabled={isUnavailable}
-            onClick={() => onSelect(slot.time)}
-            className={cn(
-              "min-h-11 border text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              isSelected
-                ? "border-accent bg-accent text-accent-foreground"
-                : isUnavailable
-                  ? "cursor-not-allowed border-border/40 text-muted-foreground/30 line-through"
-                  : "cursor-pointer border-border text-foreground hover:border-foreground/30",
-            )}
-          >
-            {slot.time}
-          </button>
-        );
-      })}
+          return (
+            <button
+              key={slot.time}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              aria-disabled={isUnavailable}
+              disabled={isUnavailable}
+              onClick={() => onSelect(slot.time)}
+              className={cn(
+                "min-h-11 border text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                isSelected
+                  ? "border-accent bg-accent text-accent-foreground"
+                  : isUnavailable
+                    ? "cursor-not-allowed border-border/40 text-muted-foreground/30 line-through"
+                    : "cursor-pointer border-border text-foreground hover:border-foreground/30",
+              )}
+            >
+              {slot.time}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
