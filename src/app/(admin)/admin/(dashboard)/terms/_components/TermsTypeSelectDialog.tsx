@@ -110,42 +110,47 @@ export function TermsTypeSelectDialog() {
             作成する規約の種類を選んでください。標準テンプレートがある場合は本文と事業者情報が自動で投入されます。
           </DialogDescription>
         </DialogHeader>
-        <div className="@container grid grid-cols-1 gap-3 py-4 @md:grid-cols-2 @3xl:grid-cols-3">
-          {TERMS_TYPE_VALUES.map((type) => {
-            const meta = TERMS_TYPE_META[type];
-            const hasTemplate = getTemplatesForType(type).length > 0;
-            const Icon = meta.icon;
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => handleSelect(type)}
-                className="flex min-h-11 flex-col items-start gap-2 rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-label={`${meta.label}を新規作成`}
-              >
-                <div className="flex w-full items-center justify-between">
-                  <div className="rounded-md bg-primary/10 p-2">
-                    <Icon aria-hidden="true" className="h-5 w-5 text-primary" />
+        <div className="@container -mx-1 max-h-[60vh] overflow-y-auto px-1 py-1">
+          <div className="grid grid-cols-1 gap-2.5 @xs:grid-cols-2 @2xl:grid-cols-3">
+            {TERMS_TYPE_VALUES.map((type) => {
+              const meta = TERMS_TYPE_META[type];
+              const hasTemplate = getTemplatesForType(type).length > 0;
+              const Icon = meta.icon;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleSelect(type)}
+                  className="group flex min-h-11 flex-col items-start gap-1.5 rounded-lg border border-border p-3.5 text-left transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label={`${meta.label}を新規作成`}
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="rounded-md bg-primary/10 p-1.5 transition-colors group-hover:bg-primary/15">
+                      <Icon
+                        aria-hidden="true"
+                        className="h-5 w-5 text-primary"
+                      />
+                    </span>
+                    {hasTemplate ? (
+                      <Badge variant="secondary" className="text-xs">
+                        テンプレート
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        白紙
+                      </Badge>
+                    )}
                   </div>
-                  {hasTemplate ? (
-                    <Badge variant="secondary" className="text-xs">
-                      テンプレート
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">
-                      白紙
-                    </Badge>
-                  )}
-                </div>
-                <span className="text-sm font-medium text-foreground">
-                  {meta.label}
-                </span>
-                <span className="line-clamp-2 text-xs text-muted-foreground">
-                  {meta.description}
-                </span>
-              </button>
-            );
-          })}
+                  <span className="text-sm font-medium text-foreground">
+                    {meta.label}
+                  </span>
+                  <span className="line-clamp-2 text-xs text-muted-foreground">
+                    {meta.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
