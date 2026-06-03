@@ -15,6 +15,7 @@ export type {
   SidePanelInjectedProps,
   PostSidePanelExtra,
   NewsSidePanelExtra,
+  TermsSidePanelExtra,
   SEOFormFields,
   OGPFormFields,
   BooleanPublishFormFields,
@@ -26,3 +27,4 @@ export type {
 // 設定ダイアログ定義
 export { postSettingsPanel } from "./post";
 export { newsSettingsPanel } from "./news";
+export { termsSettingsPanel } from "./terms";
