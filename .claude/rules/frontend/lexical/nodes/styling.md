@@ -71,6 +71,39 @@ grep -c "data-<block>" src/shared/styles/lexical-content.css
 
 実例: Cover / Gallery / Timeline / PricingTable / Testimonial は属性を出力しながら CSS が皆無で全ブロック dead UI だった（2026-06-02 に全 5 ブロックの CSS を新規実装、FeatureIconList が手本）。
 
+## CSS-first ノードはモバイル/レスポンシブ対応必須（dead UI と同格）
+
+CSS が存在しても**モバイルで横溢れ・過密**になるブロックは「対応漏れ」とみなす（dead UI と同格の必須要件）。CSS-first ノードの `lexical-content.css` セクションは desktop レイアウトだけでなく狭画面挙動も必ず定義する。`lexical-content.css` は admin / public 両 root layout が import する共有 CSS のため、editor（`<1024px` は `MobileEditorFallback` の静的描画）・公開ページ双方で効く。
+
+| ブロック種別                                                       | 必須パターン                                                                                                                                                                                                      |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 多カラム grid（Gallery / Pricing / Testimonial / FeatureIconList） | mobile-first `grid-template-columns: 1fr`（or 2 列）→ `@media (min-width: 48rem)` で多カラム展開                                                                                                                  |
+| カラム（Layout container）                                         | `@media (max-width: 768px)` で `--lexical-layout-mobile` 列に上書き                                                                                                                                               |
+| 横長コンテンツ（Table 等、列数可変で幅が伸びる）                   | `@media (max-width: 768px)` で `display: block; width: max-content; max-width: 100%; overflow-x: auto`（GitHub markdown 方式）。セレクタは `[data-<node>-*]` 等で当該ノードに限定し shadcn 管理テーブルに非干渉に |
+| 埋め込み iframe（YouTube / X / Instagram 等）                      | `width: 100%` + `max-width: <N>`（固定 max-width 単独は narrow で溢れる）                                                                                                                                         |
+| サイド画像カード（Bookmark / LinkCard）                            | 画像 wrap に `flex-shrink: 0`、テキスト側に `min-width: 0`（テキストのみ収縮）                                                                                                                                    |
+| 固定 padding が大きいブロック（PullQuote / Callout 等）            | 本文を拡大したら padding は `clamp(min, vw 追従, max)` で mobile 縮小（過密回避）                                                                                                                                 |
+
+**起点 grep**（CSS に媒体クエリ / 収縮機構があるかの目視確認）:
+
+```bash
+grep -nE "grid-template-columns|width:|overflow-x|@media" src/shared/styles/lexical-content.css
+```
+
+実例: Table のみ scroll ラッパー・幅制約が無く狭画面でページ全体が横溢れ（2026-06-03 `table[data-table-style]` に mobile `overflow-x` を追加して解消）。PullQuote は本文拡大に伴い padding を `clamp` 化（同日）。
+
+## 共有 `lexical-content.css` のテーマ専用トークンは `var(--token, literal)` フォールバック必須
+
+`lexical-content.css` は admin.css / public.css 双方が import する共有ファイル。両テーマに存在するトークン（`--font-serif` / `--color-foreground` / `--accent` / `--color-muted` 等）は bare 参照可だが、**片テーマにしか定義されていないトークンを bare 参照すると、もう一方（多くは admin = エディタ）で値が解決されず壊れる**。
+
+実例: `--text-pullquote`（+ `--text-pullquote--line-height` / `--font-weight` 等）は public.css のみ定義。引用本文に `font-size: var(--text-pullquote)` を bare 参照すると admin エディタ内で font-size が unset 化する。`var(--text-pullquote, clamp(1.5rem, 1.25rem + 1.15vw, 2rem))` の形で **literal フォールバックを public 値と同期してミラー**し両コンテキストで同一表示にする（2026-06-03）。既存の `var(--accent, var(--color-accent))` と同じパターン。
+
+**判定**: トークン使用前に両定義を確認。片方のみなら fallback 必須。
+
+```bash
+grep -n "<token>" "src/app/(admin)/_styles/admin.css" "src/app/(public)/_styles/public.css"
+```
+
 ## 表示値を NodeState で保持するノードの DOM 注入パターン
 
 年・価格・著者・評価・タイトル等の **表示値を NodeState（data 属性）で保持する**ノード（編集可能な子テキストを持たない、または子とメタが別）は、値を **`createDOM` / `updateDOM` / `exportDOM` の 3 メソッドすべてで実 DOM 要素として注入**する（`attr()` 擬似要素ではなく実テキスト要素 = a11y / SEO 対応）。Gallery の `applyGalleryItemContent` / FeatureIconList の SVG 注入が手本。
