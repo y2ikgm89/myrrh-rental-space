@@ -71,6 +71,24 @@ export type NewsSidePanelExtra = {
 };
 
 /**
+ * 利用規約エディタの設定ダイアログにのみ渡す追加データ
+ */
+export type TermsSidePanelExtra = {
+  typeValue: string;
+  onTypeChange: (value: string) => void;
+  isPublishedValue: boolean;
+  onIsPublishedChange: (value: boolean) => void;
+  requiredAtReservationValue: boolean;
+  onRequiredAtReservationChange: (value: boolean) => void;
+  requiredAtInquiryValue: boolean;
+  onRequiredAtInquiryChange: (value: boolean) => void;
+  requiredAtSignupValue: boolean;
+  onRequiredAtSignupChange: (value: boolean) => void;
+  showInFooterValue: boolean;
+  onShowInFooterChange: (value: boolean) => void;
+};
+
+/**
  * セクション `render` に渡すコンテキスト（conform fields/form + コンテンツ種別固有の extra）
  */
 export type SidePanelRenderContext<

@@ -8,7 +8,11 @@
  */
 
 // 設定ダイアログ定義
-export { postSettingsPanel, newsSettingsPanel } from "./content-types";
+export {
+  postSettingsPanel,
+  newsSettingsPanel,
+  termsSettingsPanel,
+} from "./content-types";
 
 // 型定義
 export type {
@@ -16,6 +20,7 @@ export type {
   TagOption,
   PostSidePanelExtra,
   NewsSidePanelExtra,
+  TermsSidePanelExtra,
   SidePanelDefinition,
   SidePanelInjectedProps,
   SidePanelRenderContext,
@@ -33,6 +38,7 @@ export {
 export {
   usePostEditor,
   useNewsEditor,
+  useTermsEditor,
   resolveContentWidthPx,
 } from "./hooks/index";
 

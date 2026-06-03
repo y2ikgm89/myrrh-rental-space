@@ -19,6 +19,7 @@ import {
 } from "@/shared/domain/terms/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { termsFormSchema } from "../../../terms/_components/terms-form-schema";
+import type { TermsFormInput } from "@/shared/lib/validations/terms";
 
 const orderedIdsSchema = z
   .array(z.string().uuid({ error: "IDが不正です" }))
@@ -158,5 +159,51 @@ export async function updateTermsAction(
       return { ok: false, error: result.error };
     }
     return { ok: true };
+  });
+}
+
+// =============================================================================
+// MutationResult 返し Server Actions（InlineEditor 統合用）
+//
+// createTermsAction / updateTermsAction（SubmissionResult 形式）は残す。
+// 以下は MutationResult<{ id: string; slug: string }> を返す版。
+// =============================================================================
+
+export async function createTerms(
+  input: TermsFormInput,
+): Promise<MutationResult<{ id: string; slug: string }>> {
+  const parsed = termsFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "terms",
+    action: "create",
+    execute: async () => createTermsCommand(parsed.data),
+    afterSuccess: (data) => {
+      invalidateTermsCaches(data.slug);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+}
+
+export async function updateTerms(
+  id: string,
+  input: TermsFormInput,
+): Promise<MutationResult<{ id: string; slug: string }>> {
+  const parsed = termsFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "terms",
+    action: "update",
+    resourceId: id,
+    execute: async () => updateTermsCommand(id, parsed.data),
+    afterSuccess: (data) => {
+      invalidateTermsCaches(data.slug, data.previousSlug);
+    },
   });
 }
