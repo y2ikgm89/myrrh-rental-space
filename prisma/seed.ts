@@ -46,6 +46,12 @@ import {
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
+import {
+  applyBusinessInfo,
+  getTemplatesForType,
+  type BusinessInfo,
+} from "../src/shared/lib/terms-templates";
+import { type TermsTypeValue } from "../src/shared/lib/validations/terms";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -61,21 +67,6 @@ function buildSeedDescription(text: string) {
     ),
     descriptionHtml,
     descriptionPlainText: stripHtmlToText(descriptionHtml, 200),
-  };
-}
-
-/**
- * 単純な Lexical JSON / HTML を改行保持で生成（seedTerms 用）
- */
-function buildLexicalContent(text: string) {
-  const paragraphs = text.split(/\n+/u).filter((line) => line.length > 0);
-  const html = paragraphs.map((p) => buildParagraphHtml(p)).join("");
-  const json = paragraphs[0]
-    ? buildParagraphEditorStateJson(paragraphs.join(" "))
-    : buildParagraphEditorStateJson(text);
-  return {
-    json: parsePrismaInputJson(json, "seed lexical JSON が不正です"),
-    html,
   };
 }
 
@@ -2348,14 +2339,35 @@ async function seedPages() {
 
 async function seedTerms() {
   const settings = await prisma.settings.findFirst();
-  const businessName = settings?.businessName ?? "Myrrh Rental Space";
 
-  const terms = [
+  // 法令準拠テンプレート（terms-templates.ts）のプレースホルダー差し込み用事業者情報。
+  // Settings 未設定のフィールドはテンプレート側のプレースホルダーがそのまま残る。
+  const businessInfo: BusinessInfo = {
+    businessName: settings?.businessName ?? "Myrrh Rental Space",
+    representativeName: settings?.representativeName ?? null,
+    invoiceNumber: settings?.invoiceNumber ?? null,
+    email: settings?.email ?? null,
+    phoneNumber: settings?.phoneNumber ?? null,
+    postalCode: settings?.postalCode ?? null,
+    prefecture: settings?.prefecture ?? null,
+    city: settings?.city ?? null,
+    streetAddress: settings?.streetAddress ?? null,
+    buildingName: settings?.buildingName ?? null,
+  };
+
+  const terms: ReadonlyArray<{
+    type: TermsTypeValue;
+    slug: string;
+    title: string;
+    requiredAtReservation: boolean;
+    requiredAtInquiry: boolean;
+    requiredAtSignup: boolean;
+    footerOrder: number;
+  }> = [
     {
       type: "terms-of-use",
       slug: "terms-of-use",
       title: "利用規約",
-      contentText: `${businessName}の利用規約\n\n本規約は、${businessName}が提供するサービスのご利用条件を定めるものです。\n本サービスをご利用いただくお客様には、本規約に同意していただくものとします。`,
       requiredAtReservation: true,
       requiredAtInquiry: false,
       requiredAtSignup: true,
@@ -2365,7 +2377,6 @@ async function seedTerms() {
       type: "privacy-policy",
       slug: "privacy-policy",
       title: "プライバシーポリシー",
-      contentText: `${businessName}のプライバシーポリシー\n\n本ポリシーは、${businessName}が取得する個人情報の取り扱いについて定めるものです。\nお客様の個人情報は、関連法令に従い適切に管理いたします。`,
       requiredAtReservation: false,
       requiredAtInquiry: true,
       requiredAtSignup: true,
@@ -2375,7 +2386,6 @@ async function seedTerms() {
       type: "cancellation",
       slug: "cancellation-policy",
       title: "キャンセルポリシー",
-      contentText: `${businessName}のキャンセルポリシー\n\n予約のキャンセルについては、以下の条件に従って対応いたします。\n詳細は管理画面で編集してください。`,
       requiredAtReservation: true,
       requiredAtInquiry: false,
       requiredAtSignup: false,
@@ -2385,7 +2395,6 @@ async function seedTerms() {
       type: "commercial-transaction",
       slug: "commercial-transaction",
       title: "特定商取引法に基づく表記",
-      contentText: `特定商取引法に基づく表記\n\n販売事業者: ${businessName}\nその他の表記事項は管理画面で編集してください。`,
       requiredAtReservation: false,
       requiredAtInquiry: false,
       requiredAtSignup: false,
@@ -2394,8 +2403,18 @@ async function seedTerms() {
   ];
 
   for (const t of terms) {
-    const { json: contentJson, html: contentHtml } = buildLexicalContent(
-      t.contentText,
+    const template = getTemplatesForType(t.type)[0];
+    if (!template) {
+      console.warn(`⚠️ Skipped terms (no template): ${t.type}`);
+      continue;
+    }
+    // contentHtml: 法令準拠テンプレートに事業者情報を差し込んだリッチ HTML（公開ページ描画の SSoT）。
+    const contentHtml = applyBusinessInfo(template.content, businessInfo);
+    // contentJson: Lexical エディタ用の段落近似（HTML→Lexical 変換は DOM 依存で client 完結のため、
+    // seed では plain text 段落化で近似する。公開ページは contentHtml を描画するため表示に影響しない）。
+    const contentJson = parsePrismaInputJson(
+      buildParagraphEditorStateJson(stripHtmlToText(contentHtml, 20000)),
+      "seed terms contentJson が不正です",
     );
     await prisma.termsDocument.upsert({
       where: { slug: t.slug },
@@ -2424,7 +2443,7 @@ async function seedTerms() {
         footerOrder: t.footerOrder,
       },
     });
-    console.log(`✅ Upserted terms: ${t.title}`);
+    console.log(`✅ Upserted terms (template-based): ${t.title}`);
   }
 }
 
