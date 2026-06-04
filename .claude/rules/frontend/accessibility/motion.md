@@ -48,14 +48,16 @@ GSAP matchMedia の具体実装（コード・選択ガイド）は `frontend/gs
 - 自動送りは **GSAP 単一 tween** で進捗バーを `scaleX 0→1` させ `onComplete` で前進すると、進捗の可視化と送りタイミングが完全同期する（`setInterval` 不要、タブ非表示は rAF 停止で自然に一時停止）。hover / pause / focus は `tween.pause()` / `resume()` で制御。Pattern C（`gsap.to` 直接 + `killTweensOf` cleanup）に準拠
 - スライドピッカーは APG **grouped buttons**（`role="group"` + 各 `<button>` + 現在スライド `aria-disabled`）。`role="tab"` 単独使用は禁止（→ `semantics/html-elements.md` §カルーセルのスライドピッカー）
 
-参照実装: `_shared/components/page-hero/EditorialSplitHero.tsx`（進捗バー + 停止ボタン + hover/focus 停止 + reduced-motion off、2026-06-04 確立の canonical）。
+参照実装（canonical 準拠）:
+
+- `_shared/components/page-hero/EditorialSplitHero.tsx`（進捗バー + 停止ボタン + hover/focus 停止 + reduced-motion off、2026-06-04 確立の canonical）
+- `_components/space-showcase/_spaces-carousel.tsx`（center-stage carousel。`setInterval` 自動送りを GSAP 単一 tween 進捗バー + 再生/停止ボタン + APG grouped buttons に全面移行、`autoPlayInterval` config 駆動で interval 可変・0 で自動回転無効、後者は pause ボタン非表示で進捗バーを現在地インジケーターとして静止表示。2026-06-05 追随）
 
 ### 同 pattern 適用対象（自動回転を持つが停止手段が不完全 — 要追随）
 
 新規カルーセル追加時はこの canonical に揃える。下記既存コンポーネントも同 pattern へ追随する（design 影響があるため個別判断）:
 
 - `_shared/components/page-hero/hero-background-slideshow.tsx` — 全面背景スライドショー。停止ボタン・hover/focus 停止なし（reduced-motion off のみ）→ 2.2.2 未達
-- `_components/space-showcase/_spaces-carousel.tsx` — hover/focus 停止 + reduced-motion off + tab 非表示停止はあるが**明示的停止ボタンなし** → タッチ/マウス専用ユーザーに手段なし（2.2.2 partial）
 - `_shared/components/announcement-bar/announcement-bar.tsx` — `pauseOnHover` が設定依存 + 明示停止ボタン・reduced-motion 連動なし
 
 検出 grep（自動送りするが明示的 pause/再生コントロールを持たない疑いを精査）:
