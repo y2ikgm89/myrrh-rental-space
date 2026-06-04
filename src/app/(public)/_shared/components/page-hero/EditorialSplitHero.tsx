@@ -196,6 +196,8 @@ export function EditorialSplitHero({
   const activeIndexRef = useRef(0);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const progressFillsRef = useRef<(HTMLSpanElement | null)[]>([]);
+  const progressTweenRef = useRef<ReturnType<typeof gsap.to> | null>(null);
 
   const resolvedImages =
     images.length > 0 ? images : editorialSplitHeroDefaults.images;
@@ -283,40 +285,52 @@ export function EditorialSplitHero({
   // 自動回転を実際に動かす条件。reduced-motion / 単一画像 / ユーザー停止で無効。
   const autoPlayEnabled = isPlaying && !reduceMotion && hasMultiple;
 
-  const onAutoPlayTick = useEffectEvent(() => {
-    if (isHoveredRef.current) return; // ホバー中は前進しない（APG）
-    crossfadeTo((activeIndexRef.current + 1) % count, true);
+  // 進捗バーを GSAP で駆動し、満了で次スライドへ前進（setInterval を兼ねる）。
+  // 「進捗の可視化」と「自動送りのタイミング」を単一 tween で完全同期させる。
+  // タブ非表示中は rAF が止まるため tween も自然に停止する。
+  const runProgress = useEffectEvent(() => {
+    progressTweenRef.current?.kill();
+    progressTweenRef.current = null;
+    for (const el of progressFillsRef.current) {
+      if (el) gsap.set(el, { scaleX: 0, transformOrigin: "left center" });
+    }
+    const activeFill = progressFillsRef.current[activeIndexRef.current];
+    if (!activeFill) return;
+    if (!autoPlayEnabled) {
+      // 停止中 / reduced-motion: アクティブバーは満杯で静止（現在地を明示）
+      gsap.set(activeFill, { scaleX: 1, transformOrigin: "left center" });
+      return;
+    }
+    const tween = gsap.to(activeFill, {
+      scaleX: 1,
+      duration: AUTO_ADVANCE_MS / 1000,
+      ease: EASE.none,
+      onComplete: () => {
+        crossfadeTo((activeIndexRef.current + 1) % count, true);
+      },
+    });
+    progressTweenRef.current = tween;
+    if (isHoveredRef.current) tween.pause(); // ホバー中なら停止状態で開始
   });
 
+  // アクティブスライド or 再生条件が変わるたびに進捗バーを再構築。
   useEffect(() => {
-    if (!autoPlayEnabled) return;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const start = () => {
-      clearInterval(timer);
-      timer = setInterval(onAutoPlayTick, AUTO_ADVANCE_MS);
-    };
-    const stop = () => clearInterval(timer);
-    // タブ非表示中は停止（無駄な回転・通知抑制）
-    const handleVisibility = () => {
-      if (document.hidden) stop();
-      else start();
-    };
-    start();
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [autoPlayEnabled]);
+    runProgress();
+  }, [activeIndex, autoPlayEnabled]);
 
   useEffect(() => {
     const els = imageElsRef.current;
+    const fills = progressFillsRef.current;
     return () => {
+      progressTweenRef.current?.kill();
       for (const el of els) {
         if (el) {
           gsap.killTweensOf(el);
           if (el.firstElementChild) gsap.killTweensOf(el.firstElementChild);
         }
+      }
+      for (const fill of fills) {
+        if (fill) gsap.killTweensOf(fill);
       }
     };
   }, []);
@@ -336,12 +350,14 @@ export function EditorialSplitHero({
     }
   };
 
-  // ホバー中は一時停止（離れたら再開）
+  // ホバー中は進捗バー（=自動送り）を一時停止（離れたら再開）
   const handlePointerEnter = () => {
     isHoveredRef.current = true;
+    progressTweenRef.current?.pause();
   };
   const handlePointerLeave = () => {
     isHoveredRef.current = false;
+    if (isPlaying) progressTweenRef.current?.resume();
   };
   // フォーカスがカルーセルに入ったら回転停止（APG: ユーザーの明示操作まで再開しない）
   const handleFocusCapture = () => {
@@ -465,49 +481,71 @@ export function EditorialSplitHero({
           </p>
         ) : null}
 
-        {hasMultiple && !reduceMotion ? (
-          <button
-            type="button"
-            onClick={() => setIsPlaying((prev) => !prev)}
-            aria-label={
-              isPlaying ? "スライドショーを一時停止" : "スライドショーを再生"
-            }
-            className="absolute bottom-6 right-4 z-20 flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center text-background [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.55))]"
-          >
-            {isPlaying ? (
-              <IconPlayerPauseFilled className="h-5 w-5" aria-hidden="true" />
-            ) : (
-              <IconPlayerPlayFilled className="h-5 w-5" aria-hidden="true" />
-            )}
-          </button>
-        ) : null}
-
         {hasMultiple ? (
-          <div
-            className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2"
-            role="group"
-            aria-label="表示するスライドを選択"
-          >
-            {resolvedImages.map((img, i) => (
+          <div className="absolute inset-x-0 bottom-6 z-20 flex items-center justify-center gap-3">
+            <div
+              className="flex items-center gap-1.5"
+              role="group"
+              aria-label="表示するスライドを選択"
+            >
+              {resolvedImages.map((img, i) => (
+                <button
+                  key={img.url}
+                  type="button"
+                  aria-label={`${i + 1}枚目を表示`}
+                  aria-disabled={i === activeIndex}
+                  onClick={() => handleDotClick(i)}
+                  className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center"
+                >
+                  <span
+                    className={cn(
+                      "relative block h-[3px] overflow-hidden rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition-[width] duration-500",
+                      i === activeIndex ? "w-10" : "w-4",
+                    )}
+                  >
+                    {/* track */}
+                    <span
+                      className="absolute inset-0 rounded-full bg-background/40"
+                      aria-hidden="true"
+                    />
+                    {/* progress fill — GSAP が scaleX 0→1 で駆動 */}
+                    <span
+                      ref={(el) => {
+                        progressFillsRef.current[i] = el;
+                      }}
+                      className="absolute inset-0 rounded-full bg-accent"
+                      style={{ transform: "scaleX(0)" }}
+                      aria-hidden="true"
+                    />
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {!reduceMotion ? (
               <button
-                key={img.url}
                 type="button"
-                aria-label={`${i + 1}枚目を表示`}
-                aria-disabled={i === activeIndex}
-                onClick={() => handleDotClick(i)}
-                className="min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] flex items-center justify-center"
+                onClick={() => setIsPlaying((prev) => !prev)}
+                aria-label={
+                  isPlaying
+                    ? "スライドショーを一時停止"
+                    : "スライドショーを再生"
+                }
+                className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center text-background [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.5))]"
               >
-                <span
-                  className={cn(
-                    "block h-1.5 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.4)] transition-all duration-500",
-                    i === activeIndex
-                      ? "w-6 bg-background"
-                      : "w-1.5 bg-background/70",
-                  )}
-                  aria-hidden
-                />
+                {isPlaying ? (
+                  <IconPlayerPauseFilled
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <IconPlayerPlayFilled
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
+                )}
               </button>
-            ))}
+            ) : null}
           </div>
         ) : null}
 
