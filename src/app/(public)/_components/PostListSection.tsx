@@ -73,7 +73,7 @@ export function PostListSection({
     if (mode.categorySlug) preservedQuery["category"] = mode.categorySlug;
 
     return (
-      <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
+      <section className="pt-10 pb-[var(--space-md)] md:pt-14">
         <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
           <BlogLayout>
             <Suspense fallback={null}>

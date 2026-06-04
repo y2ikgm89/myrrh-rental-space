@@ -127,7 +127,8 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           },
         ],
         layout: {
-          padding: "lg",
+          // content セクションは md(85/48px)に統一（lg/xl は hero/dramatic 専用）。
+          padding: "md",
           containerWidth: "lg",
           animateOnScroll: "fade-up",
         },
@@ -212,7 +213,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         cardStyle: "bordered",
         imageAspect: "4:3",
         layout: {
-          padding: "lg",
+          padding: "md",
           containerWidth: "full",
           animateOnScroll: "fade-up",
         },
@@ -283,7 +284,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           },
         ],
         layout: {
-          padding: "lg",
+          // 交互リズム: showcase(md) → features(none) → cta(md) で各境界を
+          // 単側 --space-md(85/48px)に揃え、連続 padded セクションの二重計上を解消。
+          padding: "none",
           containerWidth: "lg",
           animateOnScroll: "fade-up",
         },
@@ -313,7 +316,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           },
         ],
         layout: {
-          padding: "lg",
+          padding: "md",
           containerWidth: "md",
           animateOnScroll: "fade-up",
         },
