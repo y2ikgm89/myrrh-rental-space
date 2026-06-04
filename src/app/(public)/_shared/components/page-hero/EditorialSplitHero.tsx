@@ -616,8 +616,8 @@ export function EditorialSplitHero({
         </ScrollReveal>
 
         {buttons.length > 0 && (
-          <ScrollReveal delay={0.4}>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4 md:mt-10">
+          <ScrollReveal delay={0.4} className="mt-10 md:mt-12">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
               {buttons.map((btn) => (
                 <Button
                   key={btn.url}
