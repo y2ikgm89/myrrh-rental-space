@@ -37,6 +37,7 @@ import {
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { getPostPreviewHref } from "@/shared/lib/preview-routes";
+import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { PostData } from "@/shared/domain/posts/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -269,45 +270,53 @@ export function usePostEditor({
     });
   };
 
+  // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
+  // 「保存して作成」と「未保存プレビュー (auto-draft)」の両経路が共有する。
+  const createDraftPost = async (
+    settingsData: PostSettingsFormData,
+  ): Promise<string | null> => {
+    const settingsPayload = toSettingsSubmitPayload(settingsData);
+    try {
+      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+      const result = await createPost({
+        title: settingsPayload.title,
+        slug: settingsPayload.slug,
+        excerpt: settingsPayload.excerpt,
+        contentJson,
+        contentHtml,
+        thumbnailUrl: settingsPayload.thumbnailUrl,
+        categoryId: settingsPayload.categoryId,
+        tags: settingsPayload.tags,
+        metaDescription: settingsPayload.metaDescription,
+        metaKeywords: settingsPayload.metaKeywords,
+        ogpTitle: settingsPayload.ogpTitle,
+        ogpDescription: settingsPayload.ogpDescription,
+      });
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return null;
+      }
+      return result.id;
+    } catch (error) {
+      logger.error("作成中にエラーが発生しました", {
+        error: getErrorMessage(error),
+      });
+      toast.error("作成中にエラーが発生しました");
+      return null;
+    }
+  };
+
   const onCreateBoth = () => {
     const settingsData = validateSettings();
     if (!settingsData) {
       setIsSettingsDialogOpen(true);
       return;
     }
-
     core.startTransition(async () => {
-      const settingsPayload = toSettingsSubmitPayload(settingsData);
-      try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
-        const result = await createPost({
-          title: settingsPayload.title,
-          slug: settingsPayload.slug,
-          excerpt: settingsPayload.excerpt,
-          contentJson,
-          contentHtml,
-          thumbnailUrl: settingsPayload.thumbnailUrl,
-          categoryId: settingsPayload.categoryId,
-          tags: settingsPayload.tags,
-          metaDescription: settingsPayload.metaDescription,
-          metaKeywords: settingsPayload.metaKeywords,
-          ogpTitle: settingsPayload.ogpTitle,
-          ogpDescription: settingsPayload.ogpDescription,
-        });
-
-        if (isMutationError(result)) {
-          toast.error(result.error);
-          return;
-        }
-
-        toast.success("投稿記事を作成しました");
-        router.push(`/admin/posts/${result.id}`);
-      } catch (error) {
-        logger.error("作成中にエラーが発生しました", {
-          error: getErrorMessage(error),
-        });
-        toast.error("作成中にエラーが発生しました");
-      }
+      const id = await createDraftPost(settingsData);
+      if (!id) return;
+      toast.success("投稿記事を作成しました");
+      router.push(`/admin/posts/${id}`);
     });
   };
 
@@ -384,22 +393,26 @@ export function usePostEditor({
     });
   };
 
-  // プレビューは Next.js 16 公式推奨の server-side fetch パターン。
-  // 設計原則 (WordPress / Notion / Ghost 標準):
-  // - 本文 (contentJson) のみ save → 新タブで preview URL を開く
-  // - 設定 (title / slug / category 等) の更新は SettingsDialog の「保存」ボタン専任
-  // - 設定 validation を preview の入口に挟まない (preview は draft 可視化目的)
-  // - create mode は id がないので「先に保存してください」toast
-  //
-  // popup blocker 対策: 動的に `<a target="_blank" rel="noreferrer">` を生成し
-  // `.click()` で navigation。user gesture context 内のため popup blocker を通過する。
-  // `window.open` で開いた window は `noreferrer` 指定時に戻り値 null + browsing
-  // context 分離となり `.location.href` write が silent fail するため anchor.click()
-  // パターンを採用 (HTML Living Standard 準拠 + admin 全 `window.open` に noreferrer
-  // 必須の architecture-boundaries 規律と整合)。
+  // プレビューは Next.js Draft Mode 相当の server-side fetch パターン
+  // (preview route が published filter なし + cache なしで未公開データを表示)。
+  // WordPress auto-draft 整合:
+  // - create mode: 入力済み内容を下書き (非公開) として自動保存 → preview → edit へ遷移
+  //   (以降の保存は更新)。title / slug 未入力なら設定ダイアログを開く。
+  // - edit mode: 本文を保存 → preview。
+  // 別タブ起動は `openPreviewTab` (anchor.click) で popup blocker + noreferrer を両立。
   const handlePreview = () => {
     if (mode === "create" || !post) {
-      toast.error("プレビューには記事の保存が必要です。先に保存してください。");
+      const settingsData = validateSettings();
+      if (!settingsData) {
+        setIsSettingsDialogOpen(true);
+        return;
+      }
+      core.startTransition(async () => {
+        const id = await createDraftPost(settingsData);
+        if (!id) return;
+        openPreviewTab(getPostPreviewHref(id));
+        router.push(`/admin/posts/${id}`);
+      });
       return;
     }
 
@@ -414,16 +427,9 @@ export function usePostEditor({
           toast.error(bodyResult.error);
           return;
         }
-
         setSavedContentJson(contentJson);
         router.refresh();
-
-        const url = getPostPreviewHref(post.id);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.target = "_blank";
-        anchor.rel = "noreferrer";
-        anchor.click();
+        openPreviewTab(getPostPreviewHref(post.id));
       } catch (error) {
         logger.error("プレビュー生成中にエラーが発生しました", {
           error: getErrorMessage(error),
