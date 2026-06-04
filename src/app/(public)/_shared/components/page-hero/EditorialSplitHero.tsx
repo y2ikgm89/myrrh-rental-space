@@ -548,25 +548,6 @@ export function EditorialSplitHero({
             ) : null}
           </div>
         ) : null}
-
-        {/* Photo credit: image-independent contrast を solid scrim で保証。
-         * 旧 `text-background/80` + `text-shadow` は背景 image が axe scan 時に
-         * 未 load の場合に card-bg (#f6f1ed) 上で 1.06:1 偽陽性となる flake の
-         * 温床。alpha 値 (`bg-foreground/70` 等) では axe が parent image を
-         * walk して bgGradient incomplete を継続するため、**solid `bg-foreground`**
-         * で axe-definitive な contrast 13.4:1 (text-background on foreground) を
-         * 確定保証する (Instagram / Pinterest の image attribution overlay と同等の
-         * 業界標準パターン)。2026-05-15 a11y flake root cause fix。 */}
-        <span
-          className={cn(
-            "pointer-events-none absolute z-20 inline-flex items-center",
-            "rounded-sm bg-foreground px-2 py-0.5",
-            "text-[0.625rem] uppercase tracking-[0.15em] text-background",
-            "bottom-[max(1rem,env(safe-area-inset-bottom,0px))] left-[var(--container-padding-start)]",
-          )}
-        >
-          Photography — Myrrh Studio, 2026
-        </span>
       </div>
 
       <div
