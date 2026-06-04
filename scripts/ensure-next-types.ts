@@ -63,3 +63,25 @@ for (const path of required) {
     process.exit(1);
   }
 }
+
+// `.next/dev/types/` は `next dev`（Turbopack）のみが生成する dev 専用の型成果物で、
+// `next typegen`（`.next/types/` を生成）では再生成されない。dev server と
+// standalone な type-check（CI / lefthook / Stop hook）を並行実行すると
+// `.next/dev/types/routes.d.ts` 等が書き込み競合で破損し、以降 dev server を
+// 停止しても破損ファイルが残って tsc が読み続けて失敗する（CI には存在しない
+// ため CI は緑なのにローカルだけ赤になる silent block）。tsconfig の
+// `.next/dev/types/**/*.ts` include は Next.js 16 が自動管理する公式構成のため
+// 除去できない。代わりにここで dev 専用成果物を消し、tsc を CI と同じく
+// `.next/types/` のみで決定論的に検証する（自己修復）。`.next/dev/types` 不在
+// （CI / 初回）は no-op。
+try {
+  const devTypesGlob = new Bun.Glob("**/*.ts");
+  for (const path of devTypesGlob.scanSync({
+    cwd: ".next/dev/types",
+    absolute: true,
+  })) {
+    await Bun.file(path).delete();
+  }
+} catch {
+  // `.next/dev/types` が存在しない場合は何もしない
+}
