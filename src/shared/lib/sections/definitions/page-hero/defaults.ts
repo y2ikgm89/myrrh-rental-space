@@ -7,7 +7,7 @@
 import { createBlock, createSpan } from "@/shared/lib/portable-text";
 import type { PageHeroConfig } from "./schema";
 
-export const DEFAULT_PAGE_HERO: PageHeroConfig = {
+export const DEFAULT_PAGE_HERO = {
   variant: "editorial-split",
   label: [createSpan("Volume One — Spring 2026")],
   title: [createSpan("Where silence works.")],
@@ -60,4 +60,4 @@ export const DEFAULT_PAGE_HERO: PageHeroConfig = {
     hideOnDesktop: false,
     animateOnScroll: "fade-up",
   },
-};
+} satisfies PageHeroConfig;
