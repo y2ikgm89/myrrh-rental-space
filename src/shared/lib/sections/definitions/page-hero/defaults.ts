@@ -43,6 +43,15 @@ export const DEFAULT_PAGE_HERO: PageHeroConfig = {
       backgroundColor: "",
       textColor: "",
     },
+    {
+      label: [createSpan("View spaces")],
+      url: "/spaces",
+      variant: "secondary",
+      size: "lg",
+      openInNewTab: false,
+      backgroundColor: "",
+      textColor: "",
+    },
   ],
   layout: {
     padding: "md",
