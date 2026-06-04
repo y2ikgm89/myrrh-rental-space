@@ -10,14 +10,18 @@ import {
   useState,
   useEffect,
   useEffectEvent,
+  useSyncExternalStore,
   type ReactElement,
   type TouchEvent as ReactTouchEvent,
 } from "react";
 import Image from "next/image";
+import {
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
+} from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
@@ -80,6 +84,20 @@ export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
 
 const AUTO_ADVANCE_MS = 6000;
 const SWIPE_THRESHOLD_PX = 50;
+
+// useSyncExternalStore subscribers for prefers-reduced-motion media query.
+// Module-scope so React keeps a stable reference across renders.
+function subscribeReduceMotion(callback: () => void): () => void {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+function getReduceMotionSnapshot(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+function getReduceMotionServerSnapshot(): boolean {
+  return false;
+}
 
 function transitionCrossfade(
   prevEl: HTMLDivElement,
@@ -176,10 +194,8 @@ export function EditorialSplitHero({
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageElsRef = useRef<(HTMLDivElement | null)[]>([]);
   const activeIndexRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
-  const motionOkRef = useMotionPreference();
 
   const resolvedImages =
     images.length > 0 ? images : editorialSplitHeroDefaults.images;
@@ -187,6 +203,18 @@ export function EditorialSplitHero({
   const hasMultiple = count > 1;
 
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // reduced-motion（React 19 公式: matchMedia は useSyncExternalStore で購読）
+  const reduceMotion = useSyncExternalStore(
+    subscribeReduceMotion,
+    getReduceMotionSnapshot,
+    getReduceMotionServerSnapshot,
+  );
+
+  // 自動回転の再生状態（ユーザーの明示操作 / フォーカス侵入で false）
+  const [isPlaying, setIsPlaying] = useState(true);
+  // ホバー中の一時停止（一過性 — 離れたら再開、isPlaying は変えない）
+  const isHoveredRef = useRef(false);
 
   useGSAP(
     () => {
@@ -233,7 +261,7 @@ export function EditorialSplitHero({
     { scope: imageContainerRef },
   );
 
-  const crossfadeTo = (nextIndex: number) => {
+  const crossfadeTo = (nextIndex: number, animate: boolean) => {
     const prevIndex = activeIndexRef.current;
     if (prevIndex === nextIndex) return;
 
@@ -241,7 +269,7 @@ export function EditorialSplitHero({
     const nextEl = imageElsRef.current[nextIndex];
     if (!prevEl || !nextEl) return;
 
-    if (motionOkRef.current) {
+    if (animate) {
       const transitionFn = TRANSITIONS[transition];
       transitionFn(prevEl, nextEl);
     } else {
@@ -252,29 +280,34 @@ export function EditorialSplitHero({
     setActiveIndex(nextIndex);
   };
 
-  const stopTimer = () => {
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
+  // 自動回転を実際に動かす条件。reduced-motion / 単一画像 / ユーザー停止で無効。
+  const autoPlayEnabled = isPlaying && !reduceMotion && hasMultiple;
 
-  const startTimer = () => {
-    stopTimer();
-    if (!hasMultiple) return;
-    timerRef.current = setInterval(() => {
-      crossfadeTo((activeIndexRef.current + 1) % count);
-    }, AUTO_ADVANCE_MS);
-  };
-
-  const onTimerStart = useEffectEvent(() => {
-    startTimer();
+  const onAutoPlayTick = useEffectEvent(() => {
+    if (isHoveredRef.current) return; // ホバー中は前進しない（APG）
+    crossfadeTo((activeIndexRef.current + 1) % count, true);
   });
 
   useEffect(() => {
-    onTimerStart();
-    return stopTimer;
-  }, [hasMultiple, count]);
+    if (!autoPlayEnabled) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      clearInterval(timer);
+      timer = setInterval(onAutoPlayTick, AUTO_ADVANCE_MS);
+    };
+    const stop = () => clearInterval(timer);
+    // タブ非表示中は停止（無駄な回転・通知抑制）
+    const handleVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    start();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [autoPlayEnabled]);
 
   useEffect(() => {
     const els = imageElsRef.current;
@@ -289,8 +322,30 @@ export function EditorialSplitHero({
   }, []);
 
   const handleDotClick = (index: number) => {
-    crossfadeTo(index);
-    startTimer();
+    crossfadeTo(index, !reduceMotion);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!hasMultiple) return;
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      crossfadeTo((activeIndexRef.current - 1 + count) % count, !reduceMotion);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      crossfadeTo((activeIndexRef.current + 1) % count, !reduceMotion);
+    }
+  };
+
+  // ホバー中は一時停止（離れたら再開）
+  const handlePointerEnter = () => {
+    isHoveredRef.current = true;
+  };
+  const handlePointerLeave = () => {
+    isHoveredRef.current = false;
+  };
+  // フォーカスがカルーセルに入ったら回転停止（APG: ユーザーの明示操作まで再開しない）
+  const handleFocusCapture = () => {
+    setIsPlaying(false);
   };
 
   const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
@@ -316,8 +371,8 @@ export function EditorialSplitHero({
 
     const direction = deltaX < 0 ? 1 : -1;
     const nextIndex = (activeIndexRef.current + direction + count) % count;
-    crossfadeTo(nextIndex);
-    startTimer();
+    setIsPlaying(false); // スワイプ操作後は自動回転を止める
+    crossfadeTo(nextIndex, !reduceMotion);
   };
 
   const padXMobile =
@@ -336,14 +391,26 @@ export function EditorialSplitHero({
       <div
         ref={imageContainerRef}
         className={cn(
-          "relative col-start-1 row-start-1 aspect-[4/3] overflow-hidden bg-card",
+          "relative col-start-1 row-start-1 aspect-[4/3] overflow-hidden bg-card outline-none",
           "md:aspect-auto md:row-span-2 md:min-h-0",
+          hasMultiple &&
+            "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset",
         )}
         role={hasMultiple ? "region" : undefined}
         aria-roledescription={hasMultiple ? "carousel" : undefined}
         aria-label={
           hasMultiple ? `ヒーロー画像 — ${count}枚` : resolvedImages[0]?.alt
         }
+        aria-live={
+          !hasMultiple ? undefined : autoPlayEnabled ? "off" : "polite"
+        }
+        {...(hasMultiple && {
+          tabIndex: 0,
+          onKeyDown: handleKeyDown,
+          onFocusCapture: handleFocusCapture,
+          onPointerEnter: handlePointerEnter,
+          onPointerLeave: handlePointerLeave,
+        })}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -356,6 +423,11 @@ export function EditorialSplitHero({
             className="absolute inset-0"
             style={{ opacity: i === 0 ? 1 : 0 }}
             aria-hidden={i !== activeIndex}
+            {...(hasMultiple && {
+              role: "group",
+              "aria-roledescription": "スライド",
+              "aria-label": `${i + 1} / ${count}`,
+            })}
           >
             <Image
               src={img.url}
@@ -393,19 +465,35 @@ export function EditorialSplitHero({
           </p>
         ) : null}
 
+        {hasMultiple && !reduceMotion ? (
+          <button
+            type="button"
+            onClick={() => setIsPlaying((prev) => !prev)}
+            aria-label={
+              isPlaying ? "スライドショーを一時停止" : "スライドショーを再生"
+            }
+            className="absolute bottom-6 right-4 z-20 flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center text-background [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.55))]"
+          >
+            {isPlaying ? (
+              <IconPlayerPauseFilled className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <IconPlayerPlayFilled className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
+
         {hasMultiple ? (
           <div
             className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2"
-            role="tablist"
-            aria-label="画像選択"
+            role="group"
+            aria-label="表示するスライドを選択"
           >
             {resolvedImages.map((img, i) => (
               <button
                 key={img.url}
                 type="button"
-                role="tab"
-                aria-selected={i === activeIndex}
-                aria-label={`画像 ${i + 1}`}
+                aria-label={`${i + 1}枚目を表示`}
+                aria-disabled={i === activeIndex}
                 onClick={() => handleDotClick(i)}
                 className="min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] flex items-center justify-center"
               >
