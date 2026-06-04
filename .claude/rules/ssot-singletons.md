@@ -203,7 +203,7 @@ paths:
 主要 token 群:
 
 - Breakpoint: `--breakpoint-3xl: 120rem`
-- Header: `--header-height`（mobile-md 分岐）
+- Header: `--header-height`（mobile-md 分岐）/ `--hero-header-offset`（hero 被り補正 = transparent: header-height / solid: 0px、`#main-content` で設定。hero pt は `--header-height` 直書き禁止 → `design-config/responsive.md`）
 - Hero/Modal/Lightbox/Dropdown: `--hero-min-height` / `--modal-max-height` / `--lightbox-max-{height,width}` / `--dropdown-min-width`
 - Prose/Container: `--prose-{narrow,medium}` / `--container-{measure,header-max,max,padding}` / `--container-editorial`
 - Touch target: `--touch-target-min`

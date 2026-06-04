@@ -56,6 +56,15 @@ paths:
 - **`PageLayout` `cta` prop（SiteCTA）の直前セクションは `pb-[var(--space-lg)]` 必須**
 - **Container 内 section divider は `<Container>` の中の `<div>` に border を付ける**
 
+## 余白の二重計上 (double-counting) 禁止
+
+「補正用の余白」と「基本の余白」が別々の場所で同じ間隔を足し、合算で過大な死に余白になる silent bug の頻出パターン。**1 つの間隔は 1 箇所でだけ表現**する。検出は `getBoundingClientRect()` 実測か「ヘッダー直下/要素間の空白が異様に広い」で気付く。
+
+- **hero の被り補正 pt は `--hero-header-offset` 経由**（`--header-height` 直書き禁止） — hero は透過ヘッダー前提で `pt-[var(--header-height)]` を持つが、`<main>` の負マージン (`-header-height`) で相殺されるのは透過モードのみ。solid モード（`@default(solid)`）は負マージンが無く、in-flow ヘッダー直下に更に header-height 分の pt が乗って約 56-64px の死に帯になる。`pt-[var(--hero-header-offset)]` / `pt-[calc(var(--hero-header-offset)+1rem)]` を使う（SSoT は `design-config/responsive.md` Layout tokens）。新規 hero variant も同様（実例: PR #446）
+- **`SectionWrapper` を `skipContainer` で full-bleed する section は `skipPadding` も併用** — `SectionWrapper` は `layout.padding`（default `md`）で外側 `<section>` に py を付与する SSoT。`skipContainer` で画像を横 full-bleed にしても `skipPadding` を付けないと、外側 py が full-bleed 画像の上下に死に帯を作り、かつ内部 text 列の py と二重計上される。full-bleed split は両方指定する（実例: `ConceptSection` split、PR #447）
+- **`space-y-*` コンテナ + 各子の `border-t pt-*` divider は gap の二重計上** — `space-y` の margin（要素間ギャップ）と、子要素自身の divider `pt`（border 下の余白）が両方効き、要素間が合算で過大になる（実例: `/access` チャプター間が `space-y-28`(112px) + `pt-24`(96px) = 約 208px）。divider 前後は `space-y`（=線の上）と `pt`（=線の下）で**均衡**させ、合計が過大にならない一段ずつの値にする
+- **横長リストカードはモバイルで `flex-col` 縦積み（画像上）** — `flex items-start` で固定幅画像（`w-32`=128px 等）を左に置く横長カードは、モバイルで写真が小さく視認性不足。`flex flex-col gap-4 md:flex-row md:items-start` + 画像 `w-full md:w-64` + `sizes` を `100vw`（mobile）/ 固定（md+）に切替え、モバイルは画像フル幅→詳細縦積みにする（実例: `/spaces` `SpaceCard` horizontal、PR #448）
+
 ## Page-First Architecture（公開ページ）
 
 - **`SpaceCard` の `imageUrls` prop は optional** — 1 枚以下は `ImageFrame`、2 枚以上で `ImageCarousel`
