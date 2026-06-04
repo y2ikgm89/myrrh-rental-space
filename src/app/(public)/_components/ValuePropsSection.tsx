@@ -103,7 +103,7 @@ export function ValuePropsSection({
           item.icon && isStaticIcon(item.icon)
             ? createElement(STATIC_ICON_MAP[item.icon], {
                 className: "text-accent",
-                size: 22,
+                size: 26,
                 strokeWidth: 1.2,
                 "aria-hidden": "true",
               })
@@ -117,12 +117,12 @@ export function ValuePropsSection({
             {iconElement}
             <div className="flex flex-col items-center gap-1.5">
               {item.eyebrow ? (
-                <span className="font-heading text-[0.7rem] italic tracking-[0.08em] text-accent/70">
+                <span className="font-heading text-xs italic tracking-[0.08em] text-accent">
                   {item.eyebrow}
                 </span>
               ) : null}
               {item.title.length > 0 ? (
-                <span className="text-sm tracking-[0.02em] text-foreground">
+                <span className="text-[0.9375rem] tracking-[0.02em] text-foreground">
                   <PortableTextSpans spans={item.title} />
                 </span>
               ) : null}
