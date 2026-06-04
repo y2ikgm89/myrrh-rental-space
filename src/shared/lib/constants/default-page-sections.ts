@@ -283,7 +283,10 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           },
         ],
         layout: {
-          padding: "lg",
+          // 交互リズム復元: showcase(lg) → features(none) → cta(lg) で
+          // 各セクション境界を均一な単側余白(--space-lg)に揃え、
+          // 連続 padded セクションによる二重計上(260px desktop)を解消する。
+          padding: "none",
           containerWidth: "lg",
           animateOnScroll: "fade-up",
         },
