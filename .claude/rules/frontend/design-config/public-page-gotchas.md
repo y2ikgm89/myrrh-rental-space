@@ -35,6 +35,7 @@ paths:
 - **カード・セクションパディングは `p-4 sm:p-6`** — `p-6` 固定はモバイルで過剰。空状態は `p-6 md:p-12`
 - **見出しマージンは `mb-4 md:mb-8`** — `mb-8` 固定はモバイルで過剰
 - **アクションボタン群は `flex-col sm:flex-row gap-2 sm:gap-3`** — モバイルで横並びだとはみ出す
+- **中央寄せ bar（announcement / toolbar）+ サイドコントロールは絶対配置せず flex in-flow** — コントロールを `absolute` で float させ、中央コンテンツを `mx-N` 固定 margin で避ける構成は、margin が全コントロールの footprint（indicator / arrows / dismiss）を予約しきれず、狭幅で長文がコントロール下に潜り込む silent overlap になる（`mx-8`=32px が右側コントロール 〜124px を予約できず重なった実例）。**コントロール = `shrink-0` の in-flow sibling、中央コンテンツ = `flex-1 min-w-0` で残余幅を占有 + 折り返し/truncate** にすると重なりが構造的に不可能になり responsive も自動成立する。装飾的 indicator は狭幅で `hidden sm:inline-block`、バー高さ可変は既存 `ResizeObserver` が追従。検出は `getBoundingClientRect()` 実測（static class 確認では不可、`accessibility/touch-text.md` §Playwright MCP 実測）。実例: `AnnouncementBar` 絶対配置全廃 → flex in-flow（PR #450、touch-target overlap 側は `accessibility/touch-text.md` §partially obscured と整合）
 - **テキストリンクのタッチターゲットは `px-3 py-1.5` 以上** — 素の `<a>` テキストは 44px 未満。`rounded-md` + padding で確保
 - **CSS media queries は modern syntax を使う** — `@media (width < 48rem)` を使用。`@media (max-width: 767px)` のハードコードは禁止
 - **DB VARCHAR で管理する非 Prisma enum は `enums/helpers.ts` に `as const` 定数を定義** — `CANCELLED_BY.CUSTOMER` / `CANCELLED_BY.ADMIN` のパターン

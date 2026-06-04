@@ -138,7 +138,7 @@ grep -rnE 'tracking-\[0\.[0-9]+em\]' src/app/\(public\)/ --include="*.tsx" \
 
 ## `target-size` partially obscured 罠（隣接 button overlap）
 
-44×44px hit area を個別に確保していても、`right-2` + `right-2` 等で**隣接要素と位置が重なる**と Lighthouse / axe-core は「Target has insufficient size because it is partially obscured」と判定して target-size violation を出す。canonical: 隣接 button は 44px 以上の間隔で分離（`right-2` (dismiss 44px) + `right-14` (next arrow 44px) で 44px clear space）。実例: 2026-05-13 AnnouncementBar で next arrow / dismiss が両方 `right-2` で重なり全 5 公開 page で target-size 0 違反、`right-14` + `right-2` 分離で解消（commit `77b2eaef`）。
+44×44px hit area を個別に確保していても、`right-2` + `right-2` 等で**隣接要素と位置が重なる**と Lighthouse / axe-core は「Target has insufficient size because it is partially obscured」と判定して target-size violation を出す。**canonical: コントロールを絶対配置せず flex の in-flow sibling にする**（in-flow 要素は重なり得ず partially obscured が構造的に起きない。各 button は `shrink-0 h-11 w-11`、間は `gap-1` で隣接非重複）。絶対配置が不可避な場合のみ fallback で 44px 以上の間隔分離（`right-2` (dismiss) + `right-14` (next arrow) で 44px clear space）。実例: AnnouncementBar は当初 next arrow / dismiss が両方 `right-2` で重なり全 5 公開 page で target-size 0 違反 → `right-14` + `right-2` 絶対配置分離で解消（2026-05-13、commit `77b2eaef`）→ さらにモバイルで message が絶対配置コントロール下に潜り込む text 重なり bug が発覚し、**絶対配置を全廃して flex in-flow 化で両方を構造解消**（2026-06-04 PR #450、`right-*` 分離も不要化）。中央寄せ bar + サイドコントロールの layout 規律は `design-config/public-page-gotchas.md` §公開ページ レスポンシブ標準 を参照。
 
 ## Playwright MCP 実測でしか検出できない違反パターン
 
