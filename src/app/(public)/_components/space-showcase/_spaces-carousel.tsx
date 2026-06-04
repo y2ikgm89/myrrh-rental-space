@@ -4,10 +4,10 @@
  * SpacesCarousel — Center-stage overlapping card carousel
  *
  * Editorial homepage carousel with 3 layered z-index/scale/opacity per side.
- * Autoplay (clamped to MIN_INTERVAL_S, 0 disables), pause on hover/focus,
- * prefers-reduced-motion auto-pause, keyboard ArrowLeft/Right, touch swipe,
- * dot navigation. WAI-ARIA APG carousel pattern (role="region" +
- * aria-roledescription="carousel").
+ * 自動送りは GSAP 単一 tween で進捗バー（scaleX 0→1）を駆動し onComplete で前進する
+ * （進捗の可視化と送りタイミングを完全同期、setInterval 不使用、タブ非表示は rAF 停止で自然に一時停止）。
+ * 明示的な一時停止/再生ボタン + hover/focus 停止 + reduced-motion off で WCAG 2.2.2 を満たす。
+ * スライドピッカーは APG grouped buttons（role="group" + 各 button + 現在スライド aria-disabled）。
  */
 
 import {
@@ -24,6 +24,8 @@ import {
   IconArrowRight,
   IconChevronLeft,
   IconChevronRight,
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
 } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
@@ -36,6 +38,8 @@ import {
 } from "@/public/components/sections/section-style-helpers";
 import { useAriaLiveOptional } from "@/shared/contexts";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { gsap } from "@/public/lib/gsap-config";
+import { EASE } from "@/public/lib/animations";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { cn } from "@/shared/lib/cn";
 import { getCardStyle, shortestStep, wrapIndex } from "./_carousel-math";
@@ -52,7 +56,6 @@ const REPEATS = 51;
 const VISIBLE_COUNT = 5;
 const SWIPE_THRESHOLD = 40;
 const MIN_INTERVAL_S = 3;
-const RESUME_AFTER_INTERACTION_MS = 8_000;
 
 interface CardDims {
   readonly width: number;
@@ -138,34 +141,38 @@ export function SpacesCarousel({
   const activeIndex = wrapIndex(scrollIndex, safeCount);
   const activeSpace = spaces[activeIndex];
 
-  // Pause management
-  const pausedByUserRef = useRef(false);
-  const resumeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // 自動回転の再生状態（ユーザーの明示操作 / フォーカス侵入で false、再生は停止ボタンのみ）
+  const [isPlaying, setIsPlaying] = useState(true);
+  // ホバー中の一時停止（一過性 — 離れたら再開、isPlaying は変えない）
   const isHoveredRef = useRef(false);
-  const isFocusedRef = useRef(false);
+  // 進捗バー fill 要素（GSAP が scaleX 0→1 で駆動）と駆動中の tween 参照
+  const progressFillsRef = useRef<(HTMLSpanElement | null)[]>([]);
+  const progressTweenRef = useRef<ReturnType<typeof gsap.to> | null>(null);
 
-  const pauseForInteraction = () => {
-    pausedByUserRef.current = true;
-    clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => {
-      pausedByUserRef.current = false;
-    }, RESUME_AFTER_INTERACTION_MS);
-  };
-
-  const navigate = (direction: 1 | -1) => {
+  // 自動送り（progress tween onComplete 経由）専用の前進。isPlaying は変えない。
+  const advance = (direction: 1 | -1) => {
     if (isTransitioningRef.current) return;
     isTransitioningRef.current = true;
-    pauseForInteraction();
     setScrollIndex((prev) => prev + direction);
     setTimeout(() => {
       isTransitioningRef.current = false;
     }, TRANSITION_MS);
   };
 
+  // ユーザー操作の前進（矢印 / キーボード）は自動回転を止める。
+  const handlePrev = () => {
+    setIsPlaying(false);
+    advance(-1);
+  };
+  const handleNext = () => {
+    setIsPlaying(false);
+    advance(1);
+  };
+
   const jumpTo = (i: number) => {
+    setIsPlaying(false);
     if (isTransitioningRef.current || i === scrollIndex) return;
     isTransitioningRef.current = true;
-    pauseForInteraction();
     setScrollIndex(i);
     setTimeout(() => {
       isTransitioningRef.current = false;
@@ -173,11 +180,11 @@ export function SpacesCarousel({
   };
 
   const jumpToDot = (targetReal: number) => {
+    setIsPlaying(false);
     if (isTransitioningRef.current) return;
     const step = shortestStep(activeIndex, targetReal, safeCount);
     if (step === 0) return;
     isTransitioningRef.current = true;
-    pauseForInteraction();
     setScrollIndex((prev) => prev + step);
     setTimeout(() => {
       isTransitioningRef.current = false;
@@ -187,15 +194,16 @@ export function SpacesCarousel({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
-      navigate(-1);
+      handlePrev();
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
-      navigate(1);
+      handleNext();
     }
   };
 
   const onSwipe = useEffectEvent((direction: 1 | -1) => {
-    navigate(direction);
+    setIsPlaying(false);
+    advance(direction);
   });
 
   // Touch swipe — non-passive so move can preventDefault during horizontal drag.
@@ -272,68 +280,70 @@ export function SpacesCarousel({
     ? ""
     : "transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]";
 
-  // Autoplay timer
-  const intervalMs =
+  // 自動送りの間隔（config 駆動）。MIN_INTERVAL_S 未満は自動回転無効。
+  const autoPlayIntervalMs =
     config.autoPlayInterval >= MIN_INTERVAL_S
       ? config.autoPlayInterval * 1000
       : 0;
-  const autoPlayEnabled = intervalMs > 0 && count > 1 && !reduceMotion;
+  const autoPlayConfigured = autoPlayIntervalMs > 0 && count > 1;
+  const autoPlayEnabled = isPlaying && !reduceMotion && autoPlayConfigured;
 
-  const onAutoPlayTick = useEffectEvent(() => {
-    if (
-      isTransitioningRef.current ||
-      pausedByUserRef.current ||
-      isHoveredRef.current ||
-      isFocusedRef.current
-    )
+  // 進捗バーを GSAP 単一 tween で駆動し、満了で次スライドへ前進（setInterval を兼ねる）。
+  // 「進捗の可視化」と「自動送りのタイミング」を完全同期させる。
+  // タブ非表示中は rAF が止まるため tween も自然に停止する。
+  const runProgress = useEffectEvent(() => {
+    progressTweenRef.current?.kill();
+    progressTweenRef.current = null;
+    for (const el of progressFillsRef.current) {
+      if (el) gsap.set(el, { scaleX: 0, transformOrigin: "left center" });
+    }
+    const activeFill = progressFillsRef.current[activeIndex];
+    if (!activeFill) return;
+    if (!autoPlayEnabled) {
+      // 停止中 / reduced-motion: アクティブバーは満杯で静止（現在地を明示）
+      gsap.set(activeFill, { scaleX: 1, transformOrigin: "left center" });
       return;
-    setScrollIndex((prev) => prev + 1);
-    isTransitioningRef.current = true;
-    setTimeout(() => {
-      isTransitioningRef.current = false;
-    }, TRANSITION_MS);
+    }
+    const tween = gsap.to(activeFill, {
+      scaleX: 1,
+      duration: autoPlayIntervalMs / 1000,
+      ease: EASE.none,
+      onComplete: () => {
+        advance(1);
+      },
+    });
+    progressTweenRef.current = tween;
+    if (isHoveredRef.current) tween.pause(); // ホバー中なら停止状態で開始
   });
 
+  // アクティブスライド or 再生条件が変わるたびに進捗バーを再構築。
   useEffect(() => {
-    if (!autoPlayEnabled) return;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const start = () => {
-      clearInterval(timer);
-      timer = setInterval(onAutoPlayTick, intervalMs);
-    };
-    const stop = () => clearInterval(timer);
+    runProgress();
+  }, [activeIndex, autoPlayEnabled]);
 
-    const handleVisibility = () => {
-      if (document.hidden) {
-        stop();
-      } else {
-        start();
+  // アンマウント時の GSAP cleanup（Pattern C 要件）
+  useEffect(() => {
+    const fills = progressFillsRef.current;
+    return () => {
+      progressTweenRef.current?.kill();
+      for (const fill of fills) {
+        if (fill) gsap.killTweensOf(fill);
       }
     };
-
-    start();
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [autoPlayEnabled, intervalMs]);
-
-  useEffect(() => {
-    return () => clearTimeout(resumeTimerRef.current);
   }, []);
 
+  // ホバー中は進捗バー（=自動送り）を一時停止（離れたら再開）
   const handlePointerEnter = () => {
     isHoveredRef.current = true;
+    progressTweenRef.current?.pause();
   };
   const handlePointerLeave = () => {
     isHoveredRef.current = false;
+    if (isPlaying) progressTweenRef.current?.resume();
   };
-  const handleFocusIn = () => {
-    isFocusedRef.current = true;
-  };
-  const handleFocusOut = () => {
-    isFocusedRef.current = false;
+  // フォーカスがカルーセルに入ったら回転停止（APG: ユーザーの明示操作まで再開しない）
+  const handleFocusCapture = () => {
+    setIsPlaying(false);
   };
 
   if (count === 0) return null;
@@ -375,8 +385,6 @@ export function SpacesCarousel({
       <div
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
-        onFocusCapture={handleFocusIn}
-        onBlurCapture={handleFocusOut}
       >
         <div
           ref={carouselRef}
@@ -387,6 +395,7 @@ export function SpacesCarousel({
           aria-live={autoPlayEnabled ? "off" : "polite"}
           tabIndex={0}
           onKeyDown={handleKeyDown}
+          onFocusCapture={handleFocusCapture}
         >
           <div
             className="relative flex items-center justify-center"
@@ -477,7 +486,7 @@ export function SpacesCarousel({
           <button
             type="button"
             aria-label="前のスペース"
-            onClick={() => navigate(-1)}
+            onClick={handlePrev}
             className="absolute left-4 top-1/2 z-30 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:left-8"
           >
             <IconChevronLeft
@@ -488,7 +497,7 @@ export function SpacesCarousel({
           <button
             type="button"
             aria-label="次のスペース"
-            onClick={() => navigate(1)}
+            onClick={handleNext}
             className="absolute right-4 top-1/2 z-30 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:right-8"
           >
             <IconChevronRight
@@ -543,26 +552,70 @@ export function SpacesCarousel({
               <IconArrowRight className="h-3 w-3" aria-hidden="true" />
             </Link>
 
-            <div className="mt-6 flex items-center justify-center gap-2">
-              {spaces.map((space, i) => (
+            <div className="relative mt-6 flex items-center justify-center">
+              <div
+                className="flex items-center gap-1.5"
+                role="group"
+                aria-label="表示するスライドを選択"
+              >
+                {spaces.map((space, i) => (
+                  <button
+                    key={space.id}
+                    type="button"
+                    aria-label={`${space.name}へ移動`}
+                    aria-disabled={i === activeIndex}
+                    onClick={() => jumpToDot(i)}
+                    className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center"
+                  >
+                    <span
+                      className={cn(
+                        "relative block h-[3px] overflow-hidden rounded-full transition-[width] duration-500",
+                        i === activeIndex ? "w-10" : "w-4",
+                      )}
+                    >
+                      {/* track */}
+                      <span
+                        className="absolute inset-0 rounded-full bg-foreground/15"
+                        aria-hidden="true"
+                      />
+                      {/* progress fill — GSAP が scaleX 0→1 で駆動 */}
+                      <span
+                        ref={(el) => {
+                          progressFillsRef.current[i] = el;
+                        }}
+                        className="absolute inset-0 rounded-full bg-accent"
+                        style={{ transform: "scaleX(0)" }}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {autoPlayConfigured && !reduceMotion ? (
                 <button
-                  key={space.id}
                   type="button"
-                  aria-label={`${space.name}へ移動`}
-                  aria-current={i === activeIndex ? "true" : undefined}
-                  onClick={() => jumpToDot(i)}
-                  className="relative flex min-h-11 items-center justify-center px-1"
+                  onClick={() => setIsPlaying((prev) => !prev)}
+                  aria-label={
+                    isPlaying
+                      ? "スライドショーを一時停止"
+                      : "スライドショーを再生"
+                  }
+                  className="absolute right-0 flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center text-muted-foreground transition-colors duration-200 hover:text-foreground"
                 >
-                  <span
-                    className={cn(
-                      "block h-2 rounded-full transition-all duration-300 md:h-1.5",
-                      i === activeIndex
-                        ? "w-8 bg-accent md:w-6"
-                        : "w-2 bg-foreground/20 md:w-1.5",
-                    )}
-                  />
+                  {isPlaying ? (
+                    <IconPlayerPauseFilled
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <IconPlayerPlayFilled
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
+                  )}
                 </button>
-              ))}
+              ) : null}
             </div>
           </div>
         ) : null}

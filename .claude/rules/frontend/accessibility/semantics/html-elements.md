@@ -219,4 +219,4 @@ function InfoSection({ icon: Icon, label, children }) {
 </div>
 ```
 
-参照実装: `_shared/components/page-hero/EditorialSplitHero.tsx`（grouped buttons + 進捗バー + 停止ボタン、2026-06-04）。
+参照実装: `_shared/components/page-hero/EditorialSplitHero.tsx`（grouped buttons + 進捗バー + 停止ボタン、2026-06-04）/ `_components/space-showcase/_spaces-carousel.tsx`（同 pattern を center-stage carousel に適用、2026-06-05）。
