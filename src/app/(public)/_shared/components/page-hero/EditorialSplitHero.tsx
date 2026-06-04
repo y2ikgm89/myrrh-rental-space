@@ -610,7 +610,7 @@ export function EditorialSplitHero({
         )}
       >
         <ScrollReveal delay={0.3}>
-          <div className="max-w-[28rem] text-base leading-[1.9] text-muted-foreground md:text-lg [&_p]:mt-0 [&_p+p]:mt-4">
+          <div className="max-w-lg text-xl text-muted-foreground md:text-2xl [&_p]:mt-0 [&_p+p]:mt-5">
             <PortableText blocks={description} />
           </div>
         </ScrollReveal>
