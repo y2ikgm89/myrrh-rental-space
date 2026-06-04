@@ -103,7 +103,7 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
       ref={sectionRef}
       data-hero=""
       className={cn(
-        "relative overflow-hidden pt-[var(--header-height)]",
+        "relative overflow-hidden pt-[var(--hero-header-offset)]",
         heightClass,
       )}
       style={customHeightStyle}

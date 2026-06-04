@@ -90,7 +90,7 @@ export function MediaHero({
       className={cn(
         "relative flex items-center justify-center overflow-hidden bg-foreground",
         "min-h-[var(--hero-min-height)] md:min-h-[var(--hero-min-height-lg)]",
-        "pt-[var(--header-height)]",
+        "pt-[var(--hero-header-offset)]",
       )}
     >
       {/* Background: メディアあればスライドショー、なければ poster / solid fallback */}
