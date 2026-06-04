@@ -482,7 +482,7 @@ export function EditorialSplitHero({
         ) : null}
 
         {hasMultiple ? (
-          <div className="absolute inset-x-0 bottom-6 z-20 flex items-center justify-center gap-3">
+          <div className="absolute inset-x-0 bottom-6 z-20 flex items-center justify-center">
             <div
               className="flex items-center gap-1.5"
               role="group"
@@ -531,7 +531,7 @@ export function EditorialSplitHero({
                     ? "スライドショーを一時停止"
                     : "スライドショーを再生"
                 }
-                className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center text-background [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.5))]"
+                className="absolute right-2 flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center text-background [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.5))]"
               >
                 {isPlaying ? (
                   <IconPlayerPauseFilled
