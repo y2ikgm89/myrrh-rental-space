@@ -129,16 +129,31 @@ const validateSettings = (): PostSettingsFormData | null => {
 4. 設定 form schema は conform 互換の **in-place preprocess pattern** で定義 (`@/admin/lib/validations/<entity>.ts` に追加、`tags` は JSON.stringify transit、`contentWidth` は string ↔ enum、`isPublished` は checkbox "on" ↔ boolean、`publishedAt` は datetime-local など)
 5. Hook (`use<Entity>Editor`) は本文を useState + 設定を conform `useForm` で管理 (`usePostEditor.ts` / `useNewsEditor.ts` 参照)
 
-## プレビューハンドラ — `anchor.click()` pattern (popup blocker + noreferrer 両立)
+## プレビューハンドラ — auto-draft + `openPreviewTab` pattern (WordPress / Next.js Draft Mode 整合)
 
-`usePostEditor` / `useNewsEditor` の `handlePreview` は **動的 `<a target="_blank" rel="noreferrer">` 生成 + `.click()` で navigation** を canonical pattern とする (2026-05-20 PR #170 確立):
+`usePostEditor` / `useNewsEditor` / `useTermsEditor` の `handlePreview` は **「現在の内容を保存 → 別タブで preview を開く」** を canonical pattern とする。preview route (`(public)/preview/{posts,news,terms}/[id]`) は published filter なし + cache なしで未公開データを表示する **Next.js Draft Mode 相当**で、保存済み draft を fetch する。WordPress / Ghost / Sanity の「下書きを永続化してプレビュー」モデルと整合 (2026-06-04 auto-draft 統一。旧「create は『先に保存してください』toast」は廃止)。
+
+### create mode — auto-draft
+
+create では preview 時に入力内容を下書き (非公開) として自動保存し、`[id]` の edit ページへ遷移する (以降の保存は更新)。WordPress auto-draft と同型。`title` / `slug` 未入力なら設定ダイアログを開く (データモデル上 slug 必須):
 
 ```tsx
 const handlePreview = () => {
   if (mode === "create" || !post) {
-    toast.error("プレビューには記事の保存が必要です。先に保存してください。");
+    const settingsData = validateSettings();
+    if (!settingsData) {
+      setIsSettingsDialogOpen(true);
+      return;
+    }
+    core.startTransition(async () => {
+      const id = await createDraftPost(settingsData); // 「保存して作成」と共有する SSoT
+      if (!id) return;
+      openPreviewTab(getPostPreviewHref(id));
+      router.push(`/admin/posts/${id}`); // create → edit へ遷移
+    });
     return;
   }
+  // edit mode — 本文保存 → preview
   core.startTransition(async () => {
     const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
     const result = await updatePostBody(post.id, { contentJson, contentHtml });
@@ -148,24 +163,24 @@ const handlePreview = () => {
     }
     setSavedContentJson(contentJson);
     router.refresh();
-
-    const url = getPostPreviewHref(post.id);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer"; // admin の全 _blank に noreferrer 必須 (architecture-boundaries 規律)
-    anchor.click();
+    openPreviewTab(getPostPreviewHref(post.id));
   });
 };
 ```
 
-**設計理由**:
+### `createDraft{Post,News,Terms}` SSoT
 
-- `window.open(url, "_blank", "noreferrer")` は browsing context 分離で戻り値 `null` になり、`previewWindow.location.href = url` を後から write しても silent fail
-- `window.open("about:blank", "_blank")` を `noreferrer` なしで開く方式は admin `_blank` 規律違反 (architecture-boundaries.test.ts で CI fail)
-- 動的 anchor の `.click()` は **user gesture context 内**で発火するため popup blocker を通過、かつ HTML Living Standard 準拠で `rel="noreferrer"` も維持される
+create-mode の下書き作成は各 hook の `createDraft*(settingsData): Promise<string | null>` に集約し、「保存して作成」(`onCreateBoth` / terms `handleSave` の create branch) と「未保存プレビュー」の両経路で共有する (重複排除、→ `code-quality/forbidden-patterns.md` §5)。成功時は新規 id、失敗時は null (toast 済) を返す。terms の作成後遷移は posts / news と統一して `/admin/terms/[id]/edit`。
 
-**保存 → preview の順序契約**: ① `updatePostBody({ contentJson, contentHtml })` で DB 永続化 ② `setSavedContentJson` で local state 同期 ③ `router.refresh()` で Next.js cache 無効化 ④ `anchor.click()` で別タブ navigation。`(public)/preview/posts/[id]` SC が `getPostByIdForPreview(id)` で最新 DB 値を fetch するため、preview 表示は常に保存済み draft と一致する。
+### `openPreviewTab` SSoT (popup blocker + noreferrer 両立)
+
+別タブ起動は **`@/admin/lib/open-external-tab` の `openPreviewTab(url)`** を使う (3 hook 共通)。動的 `<a target="_blank" rel="noreferrer">` 生成 + `.click()` で、`await` 後でも user gesture を引き継ぎ popup blocker を通過し、HTML Living Standard 準拠で noreferrer も維持する。`window.open(url, "_blank", "noreferrer")` は戻り値 `null` + browsing context 分離で `.location` write が silent fail するため使わない (同期呼び出し専用の `openExternalTab` は別途あり、PageActions が gesture 内で使用)。hook 内のインライン anchor 生成は禁止。
+
+**保存 → preview の順序契約 (edit mode)**: ① `updatePostBody({ contentJson, contentHtml })` で DB 永続化 ② `setSavedContentJson` で local state 同期 ③ `router.refresh()` で Next.js cache 無効化 ④ `openPreviewTab(...)` で別タブ navigation。`(public)/preview/posts/[id]` SC が `getPostByIdForPreview(id)` で最新 DB 値を fetch するため、preview 表示は常に保存済み draft と一致する。
+
+### pages は対象外 / orphan draft
+
+pages は「未公開下書きページ」のライフサイクルを持たない別モデルのため auto-draft 非対象 (`PageActions.handlePreview` は保存済み状態を同期 `openExternalTab` で開く)。auto-draft で preview 後に放棄すると下書きが残るが、これは管理者が意図的に作る通常の下書きと同等 (一覧表示・削除可能) で、匿名 auto-draft とは異なるため **GC は当面追加しない (YAGNI)**。
 
 ## `ContentTypeId` と固定ページ
 
