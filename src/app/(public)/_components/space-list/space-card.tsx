@@ -68,15 +68,15 @@ export async function SpaceCard({
     return (
       <Link
         href={`/spaces/${slug}`}
-        className="group flex items-start gap-4 py-6 md:gap-8 md:py-10"
+        className="group flex flex-col gap-4 py-6 md:flex-row md:items-start md:gap-8 md:py-10"
       >
         <ImageFrame
           src={mainImageUrl}
           alt={name}
           fill
           aspect="landscape"
-          sizes="(min-width: 768px) 16rem, 8rem"
-          className="w-32 shrink-0 md:w-64"
+          sizes="(min-width: 768px) 16rem, 100vw"
+          className="w-full shrink-0 md:w-64"
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
