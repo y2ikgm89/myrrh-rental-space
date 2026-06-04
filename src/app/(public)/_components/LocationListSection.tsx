@@ -231,7 +231,7 @@ function LocationChapter({
       id={anchorId}
       className={cn(
         "scroll-mt-[calc(var(--header-height)+2rem)] space-y-12",
-        showSectionDivider && "border-t border-border pt-20 md:pt-24",
+        showSectionDivider && "border-t border-border pt-12 md:pt-16",
       )}
       itemScope
       itemType="https://schema.org/Place"
@@ -628,7 +628,7 @@ export function LocationListSection({
 
       {showGlobalContact && (
         <ScrollReveal>
-          <div className="border-b border-border pb-16 md:pb-20">
+          <div className="border-b border-border pb-12 md:pb-16">
             <GlobalContactBlock
               headline={spansToPlainText(config.globalContactHeadline)}
               businessInfo={businessInfo}
@@ -640,8 +640,8 @@ export function LocationListSection({
       {entries.length > 0 && (
         <div
           className={cn(
-            "space-y-20 md:space-y-28",
-            (showOverview || showGlobalContact) && "pt-16 md:pt-20",
+            "space-y-16 md:space-y-20",
+            (showOverview || showGlobalContact) && "pt-12 md:pt-16",
           )}
         >
           {entries.map((entry, i) => (

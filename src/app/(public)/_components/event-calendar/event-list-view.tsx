@@ -40,7 +40,7 @@ export function EventListView({ events }: EventListViewProps) {
 
       <section className="mt-10" aria-label={`${monthLabel}のイベント`}>
         {monthEvents.length === 0 ? (
-          <div className="py-16 text-center md:py-20">
+          <div className="py-12 text-center md:py-16">
             <p className="text-muted-foreground">
               {monthLabel}にイベントはありません。
             </p>

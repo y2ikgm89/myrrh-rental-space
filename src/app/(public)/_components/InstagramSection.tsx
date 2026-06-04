@@ -59,7 +59,7 @@ export function InstagramSection({
 
       {displayPosts.length === 0 ? (
         <ScrollReveal>
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground md:py-16">
             <IconBrandInstagram
               className="mb-4 h-10 w-10 text-muted-foreground/40"
               aria-hidden="true"

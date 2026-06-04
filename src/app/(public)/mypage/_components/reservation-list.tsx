@@ -34,7 +34,7 @@ interface ReservationListProps {
 export function ReservationList({ items }: ReservationListProps) {
   if (items.length === 0) {
     return (
-      <div className="space-y-4 py-16 text-center md:py-24">
+      <div className="space-y-4 py-12 text-center md:py-16">
         <p className="text-muted-foreground">予約がありません</p>
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Button variant="editorial" size="sm" href="/spaces">
