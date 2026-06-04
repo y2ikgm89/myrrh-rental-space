@@ -73,10 +73,10 @@ const DROPDOWN_LINK_CLASS =
   "flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
 
 const MOBILE_PARENT_CLASS =
-  "inline-flex items-center gap-2 font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:outline-none";
+  "inline-flex min-h-11 items-center gap-2 font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:outline-none";
 
 const MOBILE_CHILD_CLASS =
-  "inline-flex items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+  "inline-flex min-h-11 items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
 
 /**
  * 指定された URL が現在のパスと一致するか判定する。
@@ -470,48 +470,56 @@ export function Header({
                 </Dialog.Close>
               </div>
 
-              <nav className="flex flex-1 flex-col items-center justify-center gap-8">
-                {items.map((item) => (
-                  <MobileNavItem
-                    key={item.id}
-                    item={item}
-                    onNavigate={closeMenu}
-                  />
-                ))}
-                {authSlot && (
-                  <div aria-hidden="true" className="h-px w-16 bg-border/60" />
-                )}
-                {authSlot?.variant === "authenticated" && (
-                  <>
+              <nav
+                aria-label="メインメニュー"
+                className="flex flex-1 flex-col overflow-y-auto"
+              >
+                <div className="flex min-h-full flex-col items-center justify-center gap-6 px-5 py-8">
+                  {items.map((item) => (
+                    <MobileNavItem
+                      key={item.id}
+                      item={item}
+                      onNavigate={closeMenu}
+                    />
+                  ))}
+                  {authSlot && (
+                    <div
+                      aria-hidden="true"
+                      className="h-px w-16 bg-border/60"
+                    />
+                  )}
+                  {authSlot?.variant === "authenticated" && (
+                    <>
+                      <Link
+                        href={toAppRoute(authSlot.mypageHref)}
+                        onClick={closeMenu}
+                        className={MOBILE_PARENT_CLASS}
+                      >
+                        {authSlot.mypageLabel}
+                      </Link>
+                      <LogoutButton
+                        variant="mobile-nav"
+                        onBeforeLogout={closeMenu}
+                      />
+                    </>
+                  )}
+                  {authSlot?.variant === "guest" && (
                     <Link
-                      href={toAppRoute(authSlot.mypageHref)}
+                      href={toAppRoute(authSlot.loginHref)}
                       onClick={closeMenu}
                       className={MOBILE_PARENT_CLASS}
                     >
-                      {authSlot.mypageLabel}
+                      {authSlot.loginLabel}
                     </Link>
-                    <LogoutButton
-                      variant="mobile-nav"
-                      onBeforeLogout={closeMenu}
-                    />
-                  </>
-                )}
-                {authSlot?.variant === "guest" && (
+                  )}
                   <Link
-                    href={toAppRoute(authSlot.loginHref)}
+                    href="/reservation"
                     onClick={closeMenu}
-                    className={MOBILE_PARENT_CLASS}
+                    className="inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-[0.75rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
                   >
-                    {authSlot.loginLabel}
+                    Reserve
                   </Link>
-                )}
-                <Link
-                  href="/reservation"
-                  onClick={closeMenu}
-                  className="inline-flex items-center justify-center border border-foreground px-5 py-2.5 text-[0.75rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
-                >
-                  Reserve
-                </Link>
+                </div>
               </nav>
             </Dialog.Content>
           </Dialog.Portal>

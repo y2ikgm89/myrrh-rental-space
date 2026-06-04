@@ -551,7 +551,7 @@ export function SpacesCarousel({
                   aria-label={`${space.name}へ移動`}
                   aria-current={i === activeIndex ? "true" : undefined}
                   onClick={() => jumpToDot(i)}
-                  className="relative flex items-center justify-center py-3 md:py-2"
+                  className="relative flex min-h-11 items-center justify-center px-1"
                 >
                   <span
                     className={cn(
