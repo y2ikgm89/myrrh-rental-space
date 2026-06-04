@@ -1,15 +1,22 @@
 /**
- * ホーム features(order=3「選ばれる理由」) セクションの過大な上下余白を是正する一回限りスクリプト
+ * ホーム content セクションの過大な上下余白を是正する一回限りスクリプト
  *
- * home の content セクションは showcase(lg) → features(lg) → cta(lg) と padded セクションが
- * 連続し、各境界で pb+pt が二重計上されて desktop 260px / mobile 130px の死に余白が生じていた。
- * features(order=3) の layout.padding を lg → none にして交互リズム
- * (showcase:padded → features:none → cta:padded) を復元し、全境界を単側 --space-lg(130/65px) に揃える。
+ * home の content セクションは features(lg) → value-props(none) → showcase(lg) →
+ * features(lg) → cta(lg) と padded セクションが連続し、各境界で pb+pt が二重計上されて
+ * desktop 260px / mobile 130px の死に余白が生じていた。
+ *
+ * 規約「--space-lg/xl は hero/dramatic 専用」に整合させ、content セクションを md に統一 +
+ * 交互リズム(padded→none→padded)を復元する:
+ *   order 0 features      lg → md
+ *   order 2 space-showcase lg → md
+ *   order 3 features      lg → none   (showcase/cta の md と交互配置)
+ *   order 4 cta           lg → md
+ * これで全境界が単側 --space-md(85/48px) に揃う。
  *
  * seed は既存セクションの config を更新しないため別途バックフィルが必要
  * (DEFAULT_PAGE_SECTIONS.home の同変更は fresh seed のみに反映される)。
  *
- * 冪等 — layout.padding が旧 default "lg" のセクションのみ "none" に更新する
+ * 冪等 — layout.padding が旧 default "lg" のセクションのみ是正する
  * (admin が手動変更済みの値は上書きしない)。
  *
  * 使用方法:
@@ -33,9 +40,20 @@ const isDryRun = process.argv.slice(2).includes("--dry-run");
 const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
-// 旧 default のみ是正対象 (admin 手動変更を保護)
+// 旧 default "lg" のみ是正対象 (admin 手動変更を保護)
 const OLD_PADDING = "lg";
-const NEW_PADDING = "none";
+
+// order → { type, 新 padding }
+const TARGETS: ReadonlyArray<{
+  order: number;
+  type: string;
+  padding: string;
+}> = [
+  { order: 0, type: "features", padding: "md" },
+  { order: 2, type: "space-showcase", padding: "md" },
+  { order: 3, type: "features", padding: "none" },
+  { order: 4, type: "cta", padding: "md" },
+];
 
 async function main() {
   const page = await prisma.page.findFirst({
@@ -47,50 +65,55 @@ async function main() {
     return;
   }
 
-  const target = await prisma.section.findFirst({
-    where: { pageId: page.id, order: 3, type: "features" },
-    select: { id: true, config: true },
-  });
-  if (!target) {
-    console.log(
-      "⚠️ home の features(order=3) セクションが見つかりません — スキップ",
-    );
-    return;
-  }
+  let migrated = 0;
+  let skipped = 0;
 
-  const config = target.config;
-  if (!isRecord(config)) {
-    console.log("⚠️ config が object ではありません — スキップ");
-    return;
-  }
-  const layout = isRecord(config["layout"]) ? config["layout"] : {};
-  const current = layout["padding"];
-
-  if (current !== OLD_PADDING) {
-    console.log(
-      `⏭️  既に padding="${current ?? "(none)"}" のためスキップ (旧 default "${OLD_PADDING}" のみ是正)`,
-    );
-    return;
-  }
-
-  const nextConfig = {
-    ...config,
-    layout: { ...layout, padding: NEW_PADDING },
-  };
-
-  console.log(
-    `${isDryRun ? "[dry-run] " : ""}home features(order=3) padding "${OLD_PADDING}" → "${NEW_PADDING}" (section ${target.id})`,
-  );
-
-  if (!isDryRun) {
-    await prisma.section.update({
-      where: { id: target.id },
-      data: { config: nextConfig },
+  for (const target of TARGETS) {
+    const section = await prisma.section.findFirst({
+      where: { pageId: page.id, order: target.order, type: target.type },
+      select: { id: true, config: true },
     });
+    if (!section || !isRecord(section.config)) {
+      console.log(
+        `⏭️  order=${target.order} (${target.type}) が見つからない/不正 — スキップ`,
+      );
+      skipped++;
+      continue;
+    }
+    const config = section.config;
+    const layout = isRecord(config["layout"]) ? config["layout"] : {};
+    const current = layout["padding"];
+
+    if (current !== OLD_PADDING) {
+      console.log(
+        `⏭️  order=${target.order} (${target.type}) は padding="${current ?? "(none)"}" のためスキップ`,
+      );
+      skipped++;
+      continue;
+    }
+
+    console.log(
+      `${isDryRun ? "[dry-run] " : ""}order=${target.order} (${target.type}) padding "${OLD_PADDING}" → "${target.padding}" (section ${section.id})`,
+    );
+
+    if (!isDryRun) {
+      await prisma.section.update({
+        where: { id: section.id },
+        data: {
+          config: {
+            ...config,
+            layout: { ...layout, padding: target.padding },
+          },
+        },
+      });
+    }
+    migrated++;
   }
 
   console.log(
-    `✅ home section spacing backfill done${isDryRun ? " (dry-run)" : ""}`,
+    `✅ home section spacing backfill done — migrated: ${migrated}, skipped: ${skipped}${
+      isDryRun ? " (dry-run)" : ""
+    }`,
   );
 }
 
