@@ -117,7 +117,7 @@ OKLCH 形式。Luxury White × Bronze。
 
 1. **Hero** — 雑誌カバー風スプリット（左画像 + 右セリフイタリック見出し）
 2. **HowItWorks** — ご利用の流れ 3 ステップ + バリュープロップ帯（1 セクションに統合）
-3. **Spaces** — Center Stage Carousel（重なりカードスタック、無限スクロール、detail パネル + ドットナビ）
+3. **Spaces** — Center Stage Carousel（重なりカードスタック、無限スクロール、detail パネル + 進捗バー + 再生/停止ボタン）
 4. **Features** — 番号付き editorial リスト（01, 02, ...）
 5. **CTA** — 日本語見出し + ボーダーボタン
 

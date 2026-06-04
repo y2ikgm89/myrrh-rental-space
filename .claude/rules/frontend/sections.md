@@ -17,9 +17,9 @@ paths:
 - **ホームページ Spaces セクションは SC + CC 分離** — `spaces-section.tsx`（SC: ヘッダー + CTA）が `spaces-carousel.tsx`（CC: Center Stage Carousel）を呼ぶ
   - **重なり**: 中央カード `z-30/scale-1`、隣 `z-20/scale-0.9` のカードスタック
   - **無限スクロール**: 51 回繰り返しで実装
-  - **UI**: detail パネル + ドットインジケーター
-  - **操作**: 矢印 / スワイプ / キーボード / ドット
-  - **自動回転**: `autoPlayInterval` 秒。hover / focus / reduced-motion / tab 非表示で停止、ユーザー操作後 8 秒一時停止
+  - **UI**: detail パネル + 進捗バー（GSAP tween 駆動、APG grouped buttons）+ 再生/停止ボタン
+  - **操作**: 矢印 / スワイプ / キーボード / 進捗バー（スライドピッカー）
+  - **自動回転**: `autoPlayInterval` 秒（`MIN_INTERVAL_S` 未満 / 0 で無効）。GSAP 単一 tween で進捗バー `scaleX 0→1` を駆動し `onComplete` で前進（送りタイミングと可視化を完全同期、`setInterval` 不使用、tab 非表示は rAF 停止で自然に一時停止）。明示的な再生/停止ボタン + hover/focus で停止、reduced-motion で自動回転オフ。ユーザー操作（矢印 / スワイプ / キーボード / ピッカー）で停止し**再生ボタンまで再開しない**（APG 準拠、canonical は `accessibility/motion.md` §自動回転・自動更新コンテンツ）
 
 ## Seed と Section config
 
