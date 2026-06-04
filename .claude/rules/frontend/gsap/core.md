@@ -58,6 +58,7 @@ paths:
 
 - **`gsap.from(el, { opacity: 0 })` 禁止 — `gsap.fromTo` を使用** — `gsap.from` は要素に `opacity: 0` をインラインセットするため、GSAP が発火しない場合（SSR、reduced-motion、ScrollTrigger 未到達）にコンテンツが不可視のまま。`gsap.fromTo(el, { opacity: 0 }, { opacity: 1 })` なら CSS デフォルト `opacity: 1` が保持される
 - **`ScrollReveal` ラッパー内のカードに `border-b last:border-b-0` 禁止** — `:last-child` を壊し、全カードで最後の線が消える。親要素に `divide-y divide-border` を使用
+- **`ScrollReveal` の子（または `className`）に `mt-auto` 等の親 flex 依存の遅延レイアウトを使うと `opacity:0` で永久待機** — `ScrollReveal` は要素自身を ScrollTrigger の trigger にする。`md:mt-auto`（flex セル底寄せ）等で位置が初期レンダリング後に確定する場合、ScrollTrigger の初期計算時に最終位置が未確定で start 判定がずれ、fold 内でも発火せず要素が `opacity:0` + `translateY(24px)` のまま不可視になる silent bug（CTA ボタンが消える等、`getComputedStyle(wrapper).opacity === "0"` で検出）。**対処: 位置が初期レンダリングで確定する固定マージン（`mt-12 md:mt-16` 等）を使う**（`mt-auto` での底寄せは不可）。実例: 2026-06-04 `EditorialSplitHero` の CTA ボタンを `md:mt-auto` で底寄せ → opacity 0 待機 → 固定 `md:mt-16` に変更して解消
 - **テキストの DOM 分割（SplitText 風）は禁止** — `<span class="inline-block">` に分割すると日本語テキストが縦折れ + SSR ↔ Client の hydration mismatch。SplitText はコンテナ全体の fade-up のみ
 - **Cormorant Garamond の letter-spacing は負値または 0** — 正の letter-spacing は日本語フォールバック（Noto Sans JP）にも適用され横に広がる。`-0.01em` 以下を使用
 - **`font-heading` (Cormorant Garamond) で数字+漢字の混合テキスト禁止** — ベースラインがずれる。`font-sans` + `tracking-wide` で可読性確保
