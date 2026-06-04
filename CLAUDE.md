@@ -68,6 +68,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 - **カードグリッドは Container Queries、マクロは viewport breakpoint** — `@md:grid-cols-2 @3xl:grid-cols-3`
 - **arbitrary sizing は @theme token 経由** — `--hero-min-height` 等、3 回以上で @theme 昇格
 - **画像 overlay は solid scrim 必須** — alpha scrim は axe-core `bgGradient` incomplete → production violation 昇格
+- **自動回転カルーセル/スライドショーは WCAG 2.2.2 停止手段必須** — 明示的な一時停止/再生 + hover/focus 停止 + reduced-motion で自動回転オフ（hover/reduce のみでは不十分）。slide picker は APG grouped buttons（`role="tab"` 単独禁止）。自動回転を廃止し手動のみなら対象外（`accessibility/motion.md` / `accessibility/semantics/html-elements.md`）
 - **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須 / spinner-only 禁止** — `Skeleton` 経由、admin は `FormLoading` / `EditorLoading` / `DetailLoading` SSoT
 - **Multiple Root Layouts で `app/not-found.tsx` 禁止** — `app/global-not-found.tsx` + `experimental.globalNotFound: true`
 - **公開サインインは Better Auth Client API `signIn.email({ callbackURL })`** — Server Action 経由禁止（Router Cache 未更新の silent bug）

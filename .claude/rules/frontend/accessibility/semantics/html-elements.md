@@ -192,3 +192,31 @@ function InfoSection({ icon: Icon, label, children }) {
   </Tabs.Content>
 </Tabs.Root>
 ```
+
+### カルーセルのスライドピッカーも `role="tab"` 単独は誤用
+
+カルーセル / スライドショーのドット・サムネは「同一位置のコンテンツを差し替える」ため一見 tab に見えるが、[W3C ARIA APG Carousel](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/) は **grouped buttons**（`role="group"` + 各 `<button>` + 現在スライド `aria-disabled="true"`）を canonical とする。背景画像だけ差し替えて前景テキストが共通のスライドショーでは特に、「タブごとに別パネル内容」を含意する tab は意味的に不適切。
+
+`role="tab"` を使うなら **APG tablist 完全準拠**（各スライドを `role="tabpanel"` 化 + tab↔panel の `aria-controls` / `aria-labelledby` 相互参照 + 矢印キーで tab 間移動）が必須。`tabpanel` 関連付け無しの裸 `role="tab"` は壊れた ARIA（SR が「タブだがパネルが無い」と解釈）。自動回転を伴う場合の停止手段は WCAG 2.2.2（→ `accessibility/motion.md` §自動回転・自動更新コンテンツ）も併せて必須。
+
+```tsx
+// NG: tabpanel 関連付けなしの裸 role="tab"（壊れた ARIA）
+<div role="tablist">
+  {slides.map((s, i) => (
+    <button role="tab" aria-selected={i === active} onClick={() => go(i)} />
+  ))}
+</div>
+
+// OK: APG grouped buttons（スライドショーの canonical）
+<div role="group" aria-label="表示するスライドを選択">
+  {slides.map((s, i) => (
+    <button
+      aria-label={`${i + 1}枚目を表示`}
+      aria-disabled={i === active}
+      onClick={() => go(i)}
+    />
+  ))}
+</div>
+```
+
+参照実装: `_shared/components/page-hero/EditorialSplitHero.tsx`（grouped buttons + 進捗バー + 停止ボタン、2026-06-04）。
