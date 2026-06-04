@@ -215,7 +215,7 @@ export function StandardHeroSection({
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex items-end overflow-hidden bg-background pb-6 pt-[calc(var(--header-height)+1rem)] md:pb-10 md:pt-[calc(var(--header-height)+1.5rem)]"
+        className="relative flex items-end overflow-hidden bg-background pb-6 pt-[calc(var(--hero-header-offset)+1rem)] md:pb-10 md:pt-[calc(var(--hero-header-offset)+1.5rem)]"
       >
         <Container className="relative w-full !max-w-6xl text-center">
           {showSectionLabel && (
@@ -271,7 +271,7 @@ export function StandardHeroSection({
         ref={sectionRef}
         data-hero=""
         className={cn(
-          "relative overflow-hidden pt-[var(--header-height)]",
+          "relative overflow-hidden pt-[var(--hero-header-offset)]",
           heightClass,
         )}
         style={customHeightStyle}
@@ -347,7 +347,7 @@ export function StandardHeroSection({
       ref={sectionRef}
       data-hero=""
       className={cn(
-        "relative flex items-center justify-center overflow-hidden pt-[var(--header-height)]",
+        "relative flex items-center justify-center overflow-hidden pt-[var(--hero-header-offset)]",
         heightClass,
       )}
       style={customHeightStyle}

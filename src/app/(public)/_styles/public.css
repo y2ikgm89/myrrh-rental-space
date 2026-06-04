@@ -277,6 +277,21 @@
     margin-top: var(--header-height, 64px);
   }
 
+  /* Hero top-offset compensation (transparent vs solid header).
+     Transparent header: heroes extend behind it because <main> has a negative
+     margin-top of -header-height, so each hero re-adds header-height as top
+     padding to clear its content below the overlapping header.
+     Solid header: it is in-flow and <main> has no negative margin, so the
+     compensation MUST be 0 — otherwise a full header-height band of dead
+     whitespace appears above the hero content (the [data-hero] pt double-counts
+     the header height that the in-flow header already occupies). */
+  #main-content {
+    --hero-header-offset: 0px;
+  }
+  #main-content[data-header-transparent] {
+    --hero-header-offset: var(--header-height, 64px);
+  }
+
   /* Lenis smooth scroll (desktop only) */
   html.lenis {
     height: auto;
