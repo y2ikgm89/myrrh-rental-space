@@ -23,6 +23,7 @@ import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lex
 import { tryConvertHtmlStringToLexicalJsonString } from "@/admin/components/editor/lexical/html-to-lexical-json";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { getTermsPreviewHref } from "@/shared/lib/preview-routes";
+import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -188,6 +189,30 @@ export function useTermsEditor({
     showInFooter: Boolean(settingsData.showInFooter),
   });
 
+  // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
+  // 「保存して作成」と「未保存プレビュー (auto-draft)」の両経路が共有する。
+  const createDraftTerms = async (
+    settingsData: TermsSettingsFormData,
+  ): Promise<string | null> => {
+    try {
+      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
+      const result = await createTerms(
+        buildUpdateInput(settingsData, contentHtml),
+      );
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return null;
+      }
+      return result.id;
+    } catch (error) {
+      logger.error("作成中にエラーが発生しました", {
+        error: getErrorMessage(error),
+      });
+      toast.error("作成中にエラーが発生しました");
+      return null;
+    }
+  };
+
   const handleSave = () => {
     if (core.isPending) return;
 
@@ -198,32 +223,10 @@ export function useTermsEditor({
         return;
       }
       core.startTransition(async () => {
-        try {
-          const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
-          const result = await createTerms({
-            type: typeValue,
-            slug: settingsData.slug,
-            title: settingsData.title,
-            contentJson,
-            contentHtml,
-            isPublished: Boolean(settingsData.isPublished),
-            requiredAtReservation: Boolean(settingsData.requiredAtReservation),
-            requiredAtInquiry: Boolean(settingsData.requiredAtInquiry),
-            requiredAtSignup: Boolean(settingsData.requiredAtSignup),
-            showInFooter: Boolean(settingsData.showInFooter),
-          });
-          if (isMutationError(result)) {
-            toast.error(result.error);
-            return;
-          }
-          toast.success("規約を作成しました");
-          router.push("/admin/terms");
-        } catch (error) {
-          logger.error("作成中にエラーが発生しました", {
-            error: getErrorMessage(error),
-          });
-          toast.error("作成中にエラーが発生しました");
-        }
+        const id = await createDraftTerms(settingsData);
+        if (!id) return;
+        toast.success("規約を作成しました");
+        router.push(`/admin/terms/${id}/edit`);
       });
       return;
     }
@@ -337,20 +340,29 @@ export function useTermsEditor({
     });
   };
 
-  // プレビューは Next.js 16 公式推奨の server-side fetch パターン。
-  // 設計原則 (WordPress / Notion / Ghost 標準):
-  // - 現在の本文 + 設定を save → 新タブで preview URL を開く (preview 先は DB を fetch)
-  // - create mode は id がないので「先に保存してください」toast
-  //
-  // popup blocker 対策: 動的に `<a target="_blank" rel="noreferrer">` を生成し
-  // `.click()` で navigation。user gesture context 内のため popup blocker を通過する。
-  // `window.open` の noreferrer 指定時の戻り値 null + silent fail を回避する
-  // anchor.click() パターン (usePostEditor / useNewsEditor と統一)。
+  // プレビューは Next.js Draft Mode 相当の server-side fetch パターン
+  // (preview route が published filter なし + cache なしで未公開データを表示)。
+  // WordPress auto-draft 整合:
+  // - create mode: 入力済み内容を下書き (非公開) として自動保存 → preview → edit へ遷移
+  //   (以降の保存は更新)。title / slug 未入力なら設定ダイアログを開く。
+  // - edit mode: 現在の本文 + 設定を保存 → preview。
+  // 別タブ起動は `openPreviewTab` (anchor.click) で popup blocker + noreferrer を両立。
   const handlePreview = () => {
     if (mode === "create" || !terms) {
-      toast.error("プレビューには規約の保存が必要です。先に保存してください。");
+      const settingsData = validateSettings();
+      if (!settingsData) {
+        setIsSettingsDialogOpen(true);
+        return;
+      }
+      core.startTransition(async () => {
+        const id = await createDraftTerms(settingsData);
+        if (!id) return;
+        openPreviewTab(getTermsPreviewHref(id));
+        router.push(`/admin/terms/${id}/edit`);
+      });
       return;
     }
+
     const settingsData = validateSettings();
     if (!settingsData) return;
 
@@ -367,13 +379,7 @@ export function useTermsEditor({
         }
         setSavedContentJson(contentJson);
         router.refresh();
-
-        const url = getTermsPreviewHref(terms.id);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.target = "_blank";
-        anchor.rel = "noreferrer";
-        anchor.click();
+        openPreviewTab(getTermsPreviewHref(terms.id));
       } catch (error) {
         logger.error("プレビュー生成中にエラーが発生しました", {
           error: getErrorMessage(error),
