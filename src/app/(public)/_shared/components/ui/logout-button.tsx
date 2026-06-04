@@ -30,7 +30,7 @@ const VARIANT_CLASS: Record<LogoutButtonVariant, string> = {
   "desktop-nav":
     "relative inline-flex items-center gap-1.5 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 disabled:opacity-50",
   "mobile-nav":
-    "inline-flex items-center gap-2 border border-border px-5 py-2.5 font-heading text-base font-light italic tracking-[0.08em] text-foreground transition-colors hover:border-foreground hover:text-muted-foreground focus-visible:border-foreground focus-visible:outline-none disabled:opacity-50",
+    "inline-flex min-h-11 items-center gap-2 border border-border px-5 py-2.5 font-heading text-base font-light italic tracking-[0.08em] text-foreground transition-colors hover:border-foreground hover:text-muted-foreground focus-visible:border-foreground focus-visible:outline-none disabled:opacity-50",
 };
 
 const ICON_CLASS: Record<LogoutButtonVariant, string> = {
