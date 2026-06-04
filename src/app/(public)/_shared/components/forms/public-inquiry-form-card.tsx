@@ -187,7 +187,10 @@ export function PublicInquiryFormCard({
   if (submitted) {
     return (
       <div
-        className={cn("border border-border px-8 py-16 text-center", className)}
+        className={cn(
+          "border border-border px-8 py-12 text-center md:py-16",
+          className,
+        )}
         role="status"
         aria-live="polite"
       >

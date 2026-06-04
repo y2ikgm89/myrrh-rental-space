@@ -413,7 +413,7 @@ export function ReservationForm({
 
   if (state.submitted) {
     return (
-      <div className="py-16 text-center">
+      <div className="py-12 text-center md:py-16">
         <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
           Confirmed
         </p>

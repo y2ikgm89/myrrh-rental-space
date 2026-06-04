@@ -39,7 +39,7 @@ export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
   return (
     <SectionWrapper style={style} layout={config.layout}>
       {hasTitle && (
-        <div className="mb-12 flex items-end justify-between md:mb-20">
+        <div className="mb-12 flex items-end justify-between md:mb-16">
           <div>
             <ScrollReveal>
               {config.sectionLabel ? (
