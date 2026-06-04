@@ -101,10 +101,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
     !hasCustomText && "text-white",
     linkHoverClass,
   );
-  const messageSpanClassName = cn(
-    "inline-flex items-center gap-1.5 text-center",
-    !hasCustomText && "text-white",
-  );
+  const messageSpanClassName = cn("min-w-0", !hasCustomText && "text-white");
 
   return (
     <div
@@ -137,7 +134,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           type="button"
           onClick={goPrev}
           className={cn(
-            "absolute left-2 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="前のお知らせ"
@@ -146,10 +143,12 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         </button>
       )}
 
-      {/* Content with CSS animation */}
-      <div className="mx-8 flex min-h-[1.5rem] items-center justify-center gap-2 overflow-hidden">
+      {/* Content with CSS animation — flex-1 で残余幅を占有し、コントロールは
+       * shrink-0 で in-flow 配置。テキストは折り返し可（重なり構造的に不可、
+       * バー高さは ResizeObserver が再計算）。 */}
+      <div className="flex min-h-[1.5rem] min-w-0 flex-1 items-center justify-center overflow-hidden">
         <div
-          className="flex items-center gap-2"
+          className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center"
           style={
             isTransitioning
               ? { animation: getTransitionAnimation(settings.animation) }
@@ -160,7 +159,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           <span className={messageSpanClassName}>
             <PortableTextSpans
               spans={currentBar.message}
-              iconClassName="h-4 w-4 shrink-0"
+              iconClassName="mr-1.5 inline-block h-4 w-4 align-[-0.125em]"
             />
           </span>
           {linkUrl != null &&
@@ -182,28 +181,29 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         </div>
       </div>
 
-      {/* Indicator — Next arrow が right-14 (56-100px from right) を占めるため
-       * right-28 (112px) に配置して overlap を回避 (axe color-contrast bgOverlap)。
-       * カルーセル位置は aria-live message 切替で伝達されるため aria-hidden で
-       * AT redundancy 排除。decorative のため pointer-events-none。 */}
+      {/* Indicator — flex フローで text と next arrow の間に配置（in-flow のため
+       * overlap 不可、shrink-0 で潰れ防止、tabular-nums で桁幅安定）。狭い
+       * モバイル幅では装飾 indicator を隠して message の折返しを抑制（hidden
+       * sm:inline-block、decorative なので情報欠落なし）。カルーセル位置は
+       * aria-live message 切替で伝達されるため aria-hidden で AT redundancy
+       * 排除。decorative のため pointer-events-none。 */}
       {settings.showIndicator && showNav && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute right-28 text-xs"
+          className="pointer-events-none hidden shrink-0 text-xs tabular-nums sm:inline-block"
         >
           {currentIndex + 1}/{total}
         </span>
       )}
 
-      {/* Next arrow — WCAG 2.5.5 Enhanced 44×44px hit area
-       * Dismiss button が right-2 を占めるため right-14 で重なり回避（partially
-       * obscured 違反防止）。 */}
+      {/* Next arrow — WCAG 2.5.5 Enhanced 44×44px hit area。flex in-flow + gap で
+       * 隣接 button と非重複（partially obscured 違反を構造的に回避）。 */}
       {settings.showArrows && showNav && (
         <button
           type="button"
           onClick={goNext}
           className={cn(
-            "absolute right-14 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="次のお知らせ"
@@ -217,7 +217,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         type="button"
         onClick={() => dismissBar(currentBar.id)}
         className={cn(
-          "absolute right-2 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors",
+          "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
           !hasCustomText && "hover:bg-foreground/10",
         )}
         aria-label="閉じる"

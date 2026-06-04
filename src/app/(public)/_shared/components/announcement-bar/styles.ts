@@ -120,7 +120,7 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
       design === AnnouncementBarDesignStyle.striped);
 
   const className = cn(
-    "relative flex items-center justify-center px-4 py-2 text-sm",
+    "relative flex items-center gap-1 px-2 py-2 text-sm",
     settings.sticky && "sticky top-0 z-41",
     config.container,
     !hasCustomBg && config.containerWithBg,
