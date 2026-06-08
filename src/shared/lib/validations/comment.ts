@@ -38,17 +38,14 @@ export const userCommentSchema = z.object({
  * Server Actionで使用
  */
 export const createCommentSchema = z.object({
-  postId: z.string().uuid({ error: "無効な記事IDです" }),
-  parentCommentId: z
-    .string()
-    .uuid({ error: "無効なコメントIDです" })
-    .optional(),
+  postId: z.uuid({ error: "無効な記事IDです" }),
+  parentCommentId: z.uuid({ error: "無効なコメントIDです" }).optional(),
   content: z
     .string()
     .min(1, { error: "コメントを入力してください" })
     .max(2000, { error: "コメントは2000文字以内で入力してください" }),
   guestName: z.string().max(100).optional(),
-  guestEmail: z.string().email().optional(),
+  guestEmail: z.email().optional(),
 });
 
 export type GuestCommentInput = z.input<typeof guestCommentSchema>;

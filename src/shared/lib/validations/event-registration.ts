@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 const eventRegistrationBaseSchema = z.object({
-  eventId: z.string().uuid({ error: "イベントIDは必須です" }),
+  eventId: z.uuid({ error: "イベントIDは必須です" }),
   ticketId: z.string().min(1, { error: "チケット種別は必須です" }),
   name: z
     .string()
     .min(1, { error: "お名前は必須です" })
     .max(100, { error: "お名前は100文字以内です" }),
-  email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
+  email: z.email({ error: "有効なメールアドレスを入力してください" }),
   phone: z.string().max(20).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
 });

@@ -19,11 +19,11 @@ conform の `form.insert` / `form.remove` / `form.reorder` + `getFieldList()` + 
 
 ```typescript
 // NG: getFieldList に渡せない（primitive 配列）
-imageUrls: z.array(z.string().url());
+imageUrls: z.array(z.url());
 
 // OK: { url: string }[] — conform getFieldset が各 entry を管理
 imageUrls: z.array(
-  z.object({ url: z.string().url({ error: "有効なURLを入力してください" }) }),
+  z.object({ url: z.url({ error: "有効なURLを入力してください" }) }),
 );
 ```
 

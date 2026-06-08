@@ -22,7 +22,7 @@ import { z } from "zod";
 // .meta() は z.globalRegistry に登録する shorthand
 const userSchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
     age: z.number().int(),
   })
   .meta({

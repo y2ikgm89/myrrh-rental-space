@@ -37,7 +37,7 @@ export const customerFormSchema = z.object({
     .max(100, { error: "会社名は100文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
-  email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
+  email: z.email({ error: "有効なメールアドレスを入力してください" }),
   phoneNumber: z
     .string()
     .max(20, { error: "電話番号は20文字以内で入力してください" })
@@ -96,7 +96,7 @@ export type CustomerFormData = z.output<typeof customerFormSchema>;
  * 顧客ステータス更新スキーマ
  */
 export const updateCustomerStatusSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   status: z.enum(CustomerStatus),
 });
 
@@ -108,7 +108,7 @@ export type UpdateCustomerStatusInput = z.infer<
  * 顧客メモ更新スキーマ
  */
 export const updateCustomerNotesSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   notes: z.string().max(2000).nullable(),
 });
 

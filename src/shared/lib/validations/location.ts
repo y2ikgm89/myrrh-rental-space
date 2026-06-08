@@ -50,9 +50,7 @@ const businessHoursWeekSchema = z.object({
 //
 // 各 URL は React key の stable ID として機能するため、重複を禁止する。
 const imageUrlsSchema = z
-  .array(
-    z.object({ url: z.string().url({ error: "有効なURLを入力してください" }) }),
-  )
+  .array(z.object({ url: z.url({ error: "有効なURLを入力してください" }) }))
   .max(10, { error: "画像は最大10枚までです" })
   .refine((arr) => new Set(arr.map((item) => item.url)).size === arr.length, {
     error: "同じ画像を複数登録することはできません",
@@ -198,7 +196,6 @@ export const locationFormBaseSchema = z.object({
     .nullable()
     .optional(),
   googleReviewUrl: z
-    .string()
     .url({ error: "有効なURLを入力してください" })
     .nullable()
     .optional(),
@@ -218,7 +215,6 @@ export const locationFormBaseSchema = z.object({
     .nullable()
     .optional(),
   email: z
-    .string()
     .email({ error: "有効なメールアドレスを入力してください" })
     .nullable()
     .optional(),

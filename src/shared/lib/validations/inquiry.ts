@@ -20,9 +20,7 @@ export const publicInquirySchema = z
       .string()
       .min(1, { error: "名は必須です" })
       .max(50, { error: "名は50文字以内で入力してください" }),
-    email: z
-      .string()
-      .email({ error: "有効なメールアドレスを入力してください" }),
+    email: z.email({ error: "有効なメールアドレスを入力してください" }),
     subject: z
       .string()
       .min(1, { error: "件名は必須です" })
@@ -34,7 +32,7 @@ export const publicInquirySchema = z
         error: "お問い合わせ内容は5000文字以内で入力してください",
       }),
     agreedTermsIds: z
-      .array(z.string().uuid({ error: "規約IDが不正です" }))
+      .array(z.uuid({ error: "規約IDが不正です" }))
       .default([])
       .refine((ids) => new Set(ids).size === ids.length, {
         error: "同じ規約に複数回同意することはできません",
