@@ -39,11 +39,11 @@ export const isProduction = (): boolean => {
 export const serverEnv = createEnv({
   server: {
     // Database（必須）
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.url(),
 
     // Better Auth（必須）
     BETTER_AUTH_SECRET: z.string().min(32),
-    BETTER_AUTH_URL: z.string().url().optional(),
+    BETTER_AUTH_URL: z.url().optional(),
 
     // Email (Resend)
     RESEND_API_KEY: z.string().optional(),
@@ -67,7 +67,7 @@ export const serverEnv = createEnv({
     // Instagram API
     INSTAGRAM_APP_ID: z.string().optional(),
     INSTAGRAM_APP_SECRET: z.string().optional(),
-    INSTAGRAM_REDIRECT_URI: z.string().url().optional(),
+    INSTAGRAM_REDIRECT_URI: z.url().optional(),
 
     // Turnstile
     TURNSTILE_SECRET_KEY: z.string().optional(),
@@ -105,7 +105,7 @@ export const serverEnv = createEnv({
     R2_ACCESS_KEY_ID: z.string().optional(),
     R2_SECRET_ACCESS_KEY: z.string().optional(),
     R2_BUCKET_NAME: z.string().optional(),
-    R2_PUBLIC_URL: z.string().url().optional(),
+    R2_PUBLIC_URL: z.url().optional(),
 
     // Node environment
     NODE_ENV: z

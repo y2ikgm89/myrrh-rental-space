@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const spaceReviewSchema = z.object({
-  reservationId: z.string().uuid({ error: "予約IDが不正です" }),
+  reservationId: z.uuid({ error: "予約IDが不正です" }),
   rating: z
     .number()
     .int()
@@ -23,7 +23,7 @@ export const spaceReviewSchema = z.object({
 export type SpaceReviewInput = z.infer<typeof spaceReviewSchema>;
 
 export const reviewReplySchema = z.object({
-  reviewId: z.string().uuid({ error: "レビューIDが不正です" }),
+  reviewId: z.uuid({ error: "レビューIDが不正です" }),
   replyBody: z
     .string({ error: "返信内容を入力してください" })
     .min(1, { error: "返信内容を入力してください" })

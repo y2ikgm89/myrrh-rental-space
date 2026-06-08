@@ -262,7 +262,7 @@ export function validateSectionConfig(
 // =============================================================================
 
 export const createSectionSchema = z.object({
-  pageId: z.string().uuid().optional(),
+  pageId: z.uuid().optional(),
   type: z.enum(SECTION_TYPE_VALUES, {
     error: "有効なセクションタイプを選択してください",
   }),
@@ -283,7 +283,7 @@ export const updateSectionOrderSchema = z.object({
   sections: z
     .array(
       z.object({
-        id: z.string().uuid(),
+        id: z.uuid(),
         order: z.number().int().min(0),
       }),
     )

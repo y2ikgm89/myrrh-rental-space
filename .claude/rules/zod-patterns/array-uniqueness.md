@@ -17,7 +17,7 @@ paths:
 ```typescript
 // primitive string[] — .refine() で重複拒否
 const imageUrlsSchema = z
-  .array(z.string().url())
+  .array(z.url())
   .refine((arr) => new Set(arr).size === arr.length, {
     error: "同じ画像を複数登録することはできません",
   });
