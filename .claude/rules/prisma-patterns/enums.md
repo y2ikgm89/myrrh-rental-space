@@ -30,7 +30,7 @@ const defaultValue = CalendarSyncMethod.polling
 
 **注意**: `@map` enum の TS 値はスキーマメンバー名（例: `post_name`）。DB マッピング値（例: `post-name`）ではない。
 
-**Prisma 7 既知バグ（v7.2.0〜）**: mapped enum 値を Prisma Client 操作に渡すとランタイムエラーが発生する場合がある（[#28591](https://github.com/prisma/prisma/issues/28591)）。修正が出るまでは本コードベースの既存パターンに従い、enum 定数を使用し続ける。
+**mapped enum と Prisma Client（installed 7.8.0 で正常動作）**: enum 定数（`DiscountType.none` 等）を Prisma Client 操作（`where` / `data` 句）に渡す利用は installed 7.8.0 で正常動作する（本コードベースの全 enum 利用 + integration test suite で実証済）。過去 v7.2.0 系で報告された mapped enum のランタイム差異（[#28591](https://github.com/prisma/prisma/issues/28591)）は 7.8.0 では再現しない。enum 定数を使う方針は型安全 + 文字列 drift 防止のため引き続き維持する。
 
 ## 2. 型ガードは enums/{guards,helpers} に集約（Single Source of Truth）
 
