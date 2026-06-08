@@ -49,7 +49,10 @@ const lexicalJsonSchema = z.string().refine(
 
 ```typescript
 import { z } from "zod";
-import { PostStatus, LayoutWidth } from "@/shared/generated/prisma/enums";
+import {
+  PostStatus,
+  LayoutWidth,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { seoOgpFieldsSchema } from "@/shared/lib/validations/seo";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 

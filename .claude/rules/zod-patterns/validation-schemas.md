@@ -74,16 +74,16 @@ const schema = z.fromJSONSchema({
 
 ## ファイル配置
 
-| パス                                  | 内容                                                        |
-| ------------------------------------- | ----------------------------------------------------------- |
-| `@/shared/lib/validations/enums.ts`   | Prisma enum 型ガード（`isValid*` / `getValid*`）、re-export |
-| `@/shared/lib/validations/seo.ts`     | SEO/OGP 共通スキーマ（Server Action 用 + フォーム用）       |
-| `@/shared/lib/validations/section.ts` | セクション設定スキーマ                                      |
-| `@/shared/lib/validations/lexical.ts` | Lexical EditorState JSON バリデーション                     |
-| `@/shared/lib/validations/params.ts`  | URL パラメータバリデーション（slugParamSchema 等）          |
-| `@/shared/lib/validations/`           | その他共有スキーマ                                          |
-| `@/admin/lib/validations/`            | 管理画面専用スキーマ                                        |
-| `@/public/lib/validations/`           | 公開ページ専用スキーマ                                      |
+| パス                                              | 内容                                                                               |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `@/shared/lib/validations/enums/{guards,helpers}` | Prisma enum 型ガード（`isValid*`、guards）/ デフォルト取得（`getValid*`、helpers） |
+| `@/shared/lib/validations/seo.ts`                 | SEO/OGP 共通スキーマ（Server Action 用 + フォーム用）                              |
+| `@/shared/lib/validations/section.ts`             | セクション設定スキーマ                                                             |
+| `@/shared/lib/validations/lexical.ts`             | Lexical EditorState JSON バリデーション                                            |
+| `@/shared/lib/validations/params.ts`              | URL パラメータバリデーション（slugParamSchema 等）                                 |
+| `@/shared/lib/validations/`                       | その他共有スキーマ                                                                 |
+| `@/admin/lib/validations/`                        | 管理画面専用スキーマ                                                               |
+| `@/public/lib/validations/`                       | 公開ページ専用スキーマ                                                             |
 
 ## 禁止事項
 
