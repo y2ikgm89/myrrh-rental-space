@@ -17,8 +17,8 @@ const timeStringSchema = z.string().regex(TIME_REGEX, {
 
 export const publicReservationSchema = z
   .object({
-    locationId: z.string().uuid({ error: "場所を選択してください" }),
-    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
+    locationId: z.uuid({ error: "場所を選択してください" }),
+    spaceId: z.uuid({ error: "スペースを選択してください" }),
     date: dateStringSchema,
     startTime: timeStringSchema,
     endTime: timeStringSchema,
@@ -37,9 +37,7 @@ export const publicReservationSchema = z
       .string()
       .min(1, { error: "名は必須です" })
       .max(50, { error: "名は50文字以内で入力してください" }),
-    email: z
-      .string()
-      .email({ error: "有効なメールアドレスを入力してください" }),
+    email: z.email({ error: "有効なメールアドレスを入力してください" }),
     phoneNumber: z
       .string()
       .max(20, { error: "電話番号は20文字以内で入力してください" })
@@ -51,7 +49,7 @@ export const publicReservationSchema = z
       .optional()
       .or(z.literal("")),
     agreedTermsIds: z
-      .array(z.string().uuid({ error: "規約IDが不正です" }))
+      .array(z.uuid({ error: "規約IDが不正です" }))
       .default([])
       .refine((ids) => new Set(ids).size === ids.length, {
         error: "同じ規約に複数回同意することはできません",

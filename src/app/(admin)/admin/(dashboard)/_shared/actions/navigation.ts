@@ -31,7 +31,7 @@ import {
   socialFormSchema,
 } from "../../settings/appearance/_components/navigation/nav-form-schema";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 function invalidateNavigationCache(): void {
   updateTag(CACHE_TAGS.NAVIGATION);

@@ -30,7 +30,7 @@ const INVITABLE_ROLES = [Role.ADMIN, Role.EDITOR, Role.VIEWER] as const;
  * 階層チェック（actor が target を招待可能か）はドメインコマンド層で行う。
  */
 export const createInvitationSchema = z.object({
-  email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
+  email: z.email({ error: "有効なメールアドレスを入力してください" }),
   role: z.enum(INVITABLE_ROLES),
   name: z.string().max(100).optional(),
 });

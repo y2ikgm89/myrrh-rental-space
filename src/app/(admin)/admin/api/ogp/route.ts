@@ -20,7 +20,7 @@ const OGP_FETCH_HEADERS = {
 const MAX_OGP_REDIRECTS = 3;
 
 const requestSchema = z.object({
-  url: z.string().url({ error: "有効なURLを入力してください" }),
+  url: z.url({ error: "有効なURLを入力してください" }),
 });
 
 type OgpData = {

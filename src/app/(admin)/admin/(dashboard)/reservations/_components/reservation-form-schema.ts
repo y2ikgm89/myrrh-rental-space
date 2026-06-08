@@ -114,7 +114,7 @@ export const createReservationFormSchema = z
     mode: customerModeSchema,
     customerId: z.string().optional().or(z.literal("")),
     customerData: newCustomerObjectSchema.optional(),
-    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
+    spaceId: z.uuid({ error: "スペースを選択してください" }),
     date: dateStringSchema,
     startTime: timeStringSchema,
     endTime: timeStringSchema,
@@ -177,11 +177,11 @@ export type CreateReservationFormData = z.output<
 
 export const updateReservationFormSchema = z
   .object({
-    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
+    spaceId: z.uuid({ error: "スペースを選択してください" }),
     date: dateStringSchema,
     startTime: timeStringSchema,
     endTime: timeStringSchema,
-    customerId: z.string().uuid({ error: "顧客IDが不正です" }),
+    customerId: z.uuid({ error: "顧客IDが不正です" }),
     totalPrice: totalPriceSchema,
     couponCode: couponCodeSchema,
     status: z.enum(ReservationStatus).default(ReservationStatus.CONFIRMED),

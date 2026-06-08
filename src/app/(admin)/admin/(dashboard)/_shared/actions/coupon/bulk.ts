@@ -15,7 +15,7 @@ import {
 
 const bulkInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "クーポンIDが不正です" }))
+    .array(z.uuid({ error: "クーポンIDが不正です" }))
     .min(1, { error: "1件以上選択してください" })
     .max(100, { error: "一度に処理できるのは100件までです" })
     .refine((ids) => new Set(ids).size === ids.length, {

@@ -23,17 +23,17 @@ import {
   type UpdateSectionContentInput,
 } from "@/shared/lib/validations/section";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 const createPageSectionSchema = z.object({
-  pageId: z.string().uuid({ error: "ページIDが不正です" }),
+  pageId: z.uuid({ error: "ページIDが不正です" }),
   type: z.string().min(1, { error: "セクションタイプは必須です" }),
 });
 
 const reorderPageSectionsSchema = z.object({
-  pageId: z.string().uuid({ error: "ページIDが不正です" }),
+  pageId: z.uuid({ error: "ページIDが不正です" }),
   orderedIds: z
-    .array(z.string().uuid())
+    .array(z.uuid())
     .min(1, { error: "最低1つのセクションIDを指定してください" })
     .refine((ids) => new Set(ids).size === ids.length, {
       error: "重複するセクションIDが含まれます",

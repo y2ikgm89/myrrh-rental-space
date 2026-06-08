@@ -42,17 +42,17 @@ import {
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 
 const updateStatusSchema = z.object({
-  id: z.string().uuid({ error: "IDが不正です" }),
+  id: z.uuid({ error: "IDが不正です" }),
   status: z.enum(ReservationStatus),
 });
 
 const updateNotesSchema = z.object({
-  id: z.string().uuid({ error: "IDが不正です" }),
+  id: z.uuid({ error: "IDが不正です" }),
   notes: z.string().max(1000).nullable(),
 });
 
 const restoreStatusSchema = z.object({
-  id: z.string().uuid({ error: "IDが不正です" }),
+  id: z.uuid({ error: "IDが不正です" }),
   targetStatus: z.enum(ReservationStatus),
 });
 
@@ -335,7 +335,7 @@ export const updateReservationNotes = async (
 export const deleteReservation = async (
   id: string,
 ): Promise<MutationResult> => {
-  const parsed = z.string().uuid({ error: "IDが不正です" }).safeParse(id);
+  const parsed = z.uuid({ error: "IDが不正です" }).safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   let deleteResult:
@@ -374,7 +374,7 @@ export const deleteReservation = async (
 export const restoreReservation = async (
   id: string,
 ): Promise<MutationResult> => {
-  const parsed = z.string().uuid({ error: "IDが不正です" }).safeParse(id);
+  const parsed = z.uuid({ error: "IDが不正です" }).safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   let restoreResult:
@@ -401,7 +401,7 @@ export const restoreReservation = async (
 export async function updateCustomerFromReservation(
   reservationId: string,
 ): Promise<MutationResult<{ customerId: string }>> {
-  const parsed = z.string().uuid().safeParse(reservationId);
+  const parsed = z.uuid().safeParse(reservationId);
   if (!parsed.success) return createMutationError("無効な予約IDです");
 
   return executeAdminMutationResult({

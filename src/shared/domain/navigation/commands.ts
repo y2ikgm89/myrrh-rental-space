@@ -12,7 +12,7 @@ import {
 
 export const navigationItemInputSchema = z.object({
   type: z.enum(NavigationType),
-  parentId: z.string().uuid().nullable().optional(),
+  parentId: z.uuid().nullable().optional(),
   /**
    * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在）。
    * icon-only モード（span token ゼロ）は NN/g 準拠で UI 層が拒否する想定。
@@ -30,9 +30,9 @@ export const navigationItemInputSchema = z.object({
 export const navigationOrderInputSchema = z
   .array(
     z.object({
-      id: z.string().uuid(),
+      id: z.uuid(),
       order: z.number().int().min(0),
-      parentId: z.string().uuid().nullable().optional(),
+      parentId: z.uuid().nullable().optional(),
     }),
   )
   .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
@@ -54,7 +54,7 @@ export const socialLinkInputSchema = z.object({
 export const socialLinkOrderInputSchema = z
   .array(
     z.object({
-      id: z.string().uuid(),
+      id: z.uuid(),
       order: z.number().int().min(0),
     }),
   )

@@ -19,7 +19,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendReviewReplyEmail } from "@/shared/lib/email/review-emails";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 
-const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
+const idSchema = z.uuid({ error: "レビューIDが不正です" });
 
 type ReviewTarget = { spaceId: string; spaceSlug: string };
 

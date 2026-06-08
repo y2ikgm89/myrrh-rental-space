@@ -3,8 +3,8 @@ import { TIME_REGEX } from "./business-hours";
 
 export const customerReservationEditSchema = z
   .object({
-    reservationId: z.string().uuid({ error: "予約IDが不正です" }),
-    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
+    reservationId: z.uuid({ error: "予約IDが不正です" }),
+    spaceId: z.uuid({ error: "スペースを選択してください" }),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
       error: "日付の形式が正しくありません（YYYY-MM-DD）",
     }),

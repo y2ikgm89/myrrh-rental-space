@@ -11,7 +11,7 @@ import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
 // タグ ID は React key として使われるため、重複を禁止する
 const tagsSchema = z
-  .array(z.string().uuid({ error: "タグIDが不正です" }))
+  .array(z.uuid({ error: "タグIDが不正です" }))
   .refine((ids) => new Set(ids).size === ids.length, {
     error: "同じタグを複数選択することはできません",
   })
@@ -80,7 +80,7 @@ export const createPostSchema = z
     contentJson: lexicalJsonSchema,
     contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
-    categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
+    categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
   })
   .extend(seoOgpFieldsSchema.shape);
@@ -118,7 +118,7 @@ export const updatePostSettingsSchema = z
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
-    categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
+    categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
     status: z.enum(PostStatus),
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
@@ -171,7 +171,7 @@ export const postSettingsFormSchema = z
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
-    categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
+    categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsFormSchema,
     status: z.enum(PostStatus),
     publishedAt: publishedAtFormSchema,
@@ -204,7 +204,6 @@ export const postCategorySchema = z.object({
   metaTitle: z.string().max(70).nullable().optional(),
   metaDescription: z.string().max(160).nullable().optional(),
   ogpImageUrl: z
-    .string()
     .url()
     .nullable()
     .optional()
@@ -235,7 +234,6 @@ export const postTagSchema = z.object({
   metaTitle: z.string().max(70).nullable().optional(),
   metaDescription: z.string().max(160).nullable().optional(),
   ogpImageUrl: z
-    .string()
     .url()
     .nullable()
     .optional()

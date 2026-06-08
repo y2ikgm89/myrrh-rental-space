@@ -102,7 +102,7 @@ export async function updateMedia(
   });
 }
 
-const singleIdSchema = z.string().uuid();
+const singleIdSchema = z.uuid();
 
 export async function deleteMedia(id: string): Promise<MutationResult> {
   const parsed = singleIdSchema.safeParse(id);
@@ -123,7 +123,7 @@ export async function deleteMedia(id: string): Promise<MutationResult> {
 }
 
 const bulkDeleteSchema = z
-  .array(z.string().uuid())
+  .array(z.uuid())
   .min(1)
   .refine((ids) => new Set(ids).size === ids.length, {
     error: "同じIDを複数指定することはできません",

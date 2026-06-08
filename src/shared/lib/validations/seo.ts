@@ -53,7 +53,7 @@ export const ogpFieldsSchema = z.object({
     .max(SEO_LIMITS.OGP_DESCRIPTION)
     .nullable()
     .optional(),
-  ogpImageUrl: z.string().url().nullable().optional(),
+  ogpImageUrl: z.url().nullable().optional(),
 });
 
 /**

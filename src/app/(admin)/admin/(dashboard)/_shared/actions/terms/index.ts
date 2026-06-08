@@ -21,7 +21,7 @@ import {
 } from "@/shared/lib/validations/terms";
 
 const orderedIdsSchema = z
-  .array(z.string().uuid({ error: "IDが不正です" }))
+  .array(z.uuid({ error: "IDが不正です" }))
   .refine((ids) => new Set(ids).size === ids.length, {
     error: "同じIDを複数指定することはできません",
   });

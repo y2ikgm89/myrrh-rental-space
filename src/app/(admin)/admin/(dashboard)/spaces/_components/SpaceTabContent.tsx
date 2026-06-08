@@ -27,7 +27,7 @@ async function SpaceList() {
     isPublished = false;
   }
 
-  const locationParsed = z.string().uuid().safeParse(params.spLocationId);
+  const locationParsed = z.uuid().safeParse(params.spLocationId);
   const locationId = locationParsed.success ? locationParsed.data : undefined;
 
   let uncategorizedOnly: boolean | undefined;
@@ -35,7 +35,7 @@ async function SpaceList() {
   if (params.spCategoryId === ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED) {
     uncategorizedOnly = true;
   } else if (params.spCategoryId !== "") {
-    const categoryParsed = z.string().uuid().safeParse(params.spCategoryId);
+    const categoryParsed = z.uuid().safeParse(params.spCategoryId);
     if (categoryParsed.success) {
       categoryId = categoryParsed.data;
     }

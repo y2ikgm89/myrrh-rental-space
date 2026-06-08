@@ -17,7 +17,7 @@ Prisma 7 の `@map` enum は TypeScript 側で `as const` オブジェクトと�
 **文字列リテラルではなく enum 定数を使用すること**:
 
 ```typescript
-import { DiscountType, CalendarSyncMethod } from '@/shared/generated/prisma/client'
+import { DiscountType, CalendarSyncMethod } from '@/shared/lib/validations/enums/prisma-types'
 
 // NG: 文字列リテラル比較
 if (space.discountType === 'none') { ... }
@@ -32,9 +32,9 @@ const defaultValue = CalendarSyncMethod.polling
 
 **Prisma 7 既知バグ（v7.2.0〜）**: mapped enum 値を Prisma Client 操作に渡すとランタイムエラーが発生する場合がある（[#28591](https://github.com/prisma/prisma/issues/28591)）。修正が出るまでは本コードベースの既存パターンに従い、enum 定数を使用し続ける。
 
-## 2. 型ガードは enums.ts に集約（Single Source of Truth）
+## 2. 型ガードは enums/{guards,helpers} に集約（Single Source of Truth）
 
-全 Prisma enum の型ガード（`isValid*`）とデフォルト値取得（`getValid*`）は `enums.ts` に一元化。
+全 Prisma enum の型ガード（`isValid*`）は `enums/guards.ts`、デフォルト値取得（`getValid*`）は `enums/helpers.ts` に一元化。
 **ローカルファイルに型ガードを定義しない**:
 
 ```typescript
@@ -42,8 +42,9 @@ const defaultValue = CalendarSyncMethod.polling
 const VALID_TYPES = new Set<string>(Object.values(DiscountType))
 function isDiscountType(value: unknown): value is DiscountType { ... }
 
-// OK: enums.ts から import
-import { isValidDiscountType, getValidDiscountType } from '@/shared/lib/validations/enums'
+// OK: enums/guards・enums/helpers から import
+import { isValidDiscountType } from '@/shared/lib/validations/enums/guards'
+import { getValidDiscountType } from '@/shared/lib/validations/enums/helpers'
 
 // 使用例（SelectionBox / Select の onChange）
 onChange={(value) => {
@@ -58,7 +59,7 @@ const type = getValidDiscountType(rawValue, DiscountType.percentage)  // カス�
 内部実装（参考）— `Set` による O(1) ルックアップ:
 
 ```typescript
-// enums.ts 内部（編集禁止。パターン参照のみ）
+// enums/guards.ts 内部（編集禁止。パターン参照のみ）
 const VALID_DISCOUNT_TYPES = new Set<string>(Object.values(DiscountType));
 
 export function isValidDiscountType(value: unknown): value is DiscountType {
@@ -75,7 +76,7 @@ export function isValidDiscountType(value: unknown): value is DiscountType {
 export type SpaceDiscountType = DiscountType;
 
 // OK: Prisma enum を直接使用
-import { DiscountType } from "@/shared/generated/prisma/client";
+import { DiscountType } from "@/shared/lib/validations/enums/prisma-types";
 type Foo = { discountType: DiscountType };
 ```
 
@@ -91,23 +92,24 @@ type Foo = { discountType: DiscountType };
 
 ## 5. 禁止事項（enum 関連）
 
-| 禁止                                                               | 代替                                              |
-| ------------------------------------------------------------------ | ------------------------------------------------- |
-| `'none'`, `'polling'` 等の文字列リテラル比較                       | `DiscountType.none`, `CalendarSyncMethod.polling` |
-| `new Set(['none', 'percentage', 'fixed'])`                         | `enums.ts` の `isValid*` / `getValid*` を使用     |
-| `export type Foo = 'a' \| 'b'`（Prisma enum と同じ値）             | Prisma enum を直接使用                            |
-| `.default('none')` （Zod スキーマ）                                | `.default(DiscountType.none)`                     |
-| ローカルファイルに `isValid*` / `new Set(Object.values(...))` 定義 | `enums.ts` から import                            |
-| `export type Foo = PrismaEnum`（不要な型エイリアス）               | Prisma enum を直接使用                            |
-| `z.nativeEnum(DiscountType)` （Zod 4 非推奨）                      | `z.enum(DiscountType)`                            |
+| 禁止                                                               | 代替                                                                 |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `'none'`, `'polling'` 等の文字列リテラル比較                       | `DiscountType.none`, `CalendarSyncMethod.polling`                    |
+| `new Set(['none', 'percentage', 'fixed'])`                         | `enums/guards` の `isValid*` / `enums/helpers` の `getValid*` を使用 |
+| `export type Foo = 'a' \| 'b'`（Prisma enum と同じ値）             | Prisma enum を直接使用                                               |
+| `.default('none')` （Zod スキーマ）                                | `.default(DiscountType.none)`                                        |
+| ローカルファイルに `isValid*` / `new Set(Object.values(...))` 定義 | `enums/guards` から import                                           |
+| `export type Foo = PrismaEnum`（不要な型エイリアス）               | Prisma enum を直接使用                                               |
+| `z.nativeEnum(DiscountType)` （Zod 4 非推奨）                      | `z.enum(DiscountType)`                                               |
 
 ## 6. 配置規則（enum 関連）
 
-| ファイル                            | 内容                                                                                             |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `@/shared/generated/prisma/client`  | Prisma 生成 enum 定数（自動生成、編集禁止）                                                      |
-| `@/shared/lib/validations/enums.ts` | 全 enum の型ガード（`isValid*`）、デフォルト値取得（`getValid*`）、re-export、フィルターヘルパー |
-| 各ドメインファイル                  | enum 定数の import のみ。型ガードは `enums.ts` から import                                       |
+| ファイル                                      | 内容                                                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `@/shared/lib/validations/enums/prisma-types` | Prisma enum 定数の client-safe gateway（`@generated/prisma/enums` を re-export、app / shared-lib はここ経由） |
+| `@/shared/lib/validations/enums/guards`       | 全 enum の型ガード（`isValid*`）                                                                              |
+| `@/shared/lib/validations/enums/helpers`      | デフォルト値取得（`getValid*`）・`*_LABELS` / `*_ICONS` 等のラベル・アイコン SSoT                             |
+| 各ドメインファイル                            | enum 定数は gateway 経由 import。型ガードは `enums/guards`、デフォルト取得は `enums/helpers`                  |
 
 ## 7. Enum 拡張時のチェックリスト
 

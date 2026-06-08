@@ -11,8 +11,8 @@ import { z } from "zod";
 export const clientEnv = createEnv({
   client: {
     // Base URLs
-    NEXT_PUBLIC_BASE_URL: z.string().url(),
-    NEXT_PUBLIC_APP_URL: z.string().url(),
+    NEXT_PUBLIC_BASE_URL: z.url(),
+    NEXT_PUBLIC_APP_URL: z.url(),
 
     // Turnstile (optional)
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),

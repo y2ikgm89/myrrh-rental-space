@@ -37,7 +37,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
-const idSchema = z.string().uuid({ error: "顧客IDが不正です" });
+const idSchema = z.uuid({ error: "顧客IDが不正です" });
 
 /**
  * 顧客新規作成 — conform `useActionState` 統合経路。
@@ -204,8 +204,8 @@ export async function mergeCustomers(
     transferredRegistrations: number;
   }>
 > {
-  const sourceValid = z.string().uuid().safeParse(sourceId);
-  const targetValid = z.string().uuid().safeParse(targetId);
+  const sourceValid = z.uuid().safeParse(sourceId);
+  const targetValid = z.uuid().safeParse(targetId);
   if (!sourceValid.success || !targetValid.success) {
     return { error: "無効な顧客IDです" };
   }

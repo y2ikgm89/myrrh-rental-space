@@ -24,7 +24,7 @@ const createBlockTemplateSchema = z.object({
   nodeJson: z.record(z.string(), z.unknown()).or(z.array(z.unknown())),
 });
 
-const idSchema = z.string().uuid({ error: "テンプレートIDが不正です" });
+const idSchema = z.uuid({ error: "テンプレートIDが不正です" });
 type CreateBlockTemplateInput = z.infer<typeof createBlockTemplateSchema>;
 
 export async function createBlockTemplate(

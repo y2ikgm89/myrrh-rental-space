@@ -49,7 +49,10 @@ const lexicalJsonSchema = z.string().refine(
 
 ```typescript
 import { z } from "zod";
-import { PostStatus, LayoutWidth } from "@/shared/generated/prisma/enums";
+import {
+  PostStatus,
+  LayoutWidth,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { seoOgpFieldsSchema } from "@/shared/lib/validations/seo";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
@@ -67,7 +70,7 @@ export const updatePostSchema = z
       .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
     contentJson: lexicalJsonSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
-    tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
+    tags: z.array(z.uuid({ error: "タグIDが不正です" })).default([]),
   })
   .extend(seoOgpFieldsSchema.shape); // SEO/OGPフィールドを合成
 
@@ -106,7 +109,7 @@ const extendedSchema = baseSchema.extend(additionalFields.shape);
 
 ```typescript
 // 空文字列も許可するURL（フォーム用）
-const optionalUrlSchema = z.string().url().optional().or(z.literal(""));
+const optionalUrlSchema = z.url().optional().or(z.literal(""));
 
 // nullable + 空文字も許可（DB nullable フィールドのフォーム用）
 const imageUrlSchema = z

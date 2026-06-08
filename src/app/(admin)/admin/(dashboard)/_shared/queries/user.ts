@@ -14,7 +14,7 @@ import type {
 } from "@/shared/domain/users/types";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "ユーザーIDが不正です" });
+const idSchema = z.uuid({ error: "ユーザーIDが不正です" });
 
 export async function getUsers(
   params: UserListParams = {},

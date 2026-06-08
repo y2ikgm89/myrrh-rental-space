@@ -19,7 +19,7 @@ import type { ICalFeedSettingsData } from "@/shared/domain/settings/types";
 
 const createTokenSchema = z.object({
   name: z.string().min(1, { error: "トークン名は必須です" }).max(100),
-  spaceId: z.string().uuid().nullable(),
+  spaceId: z.uuid().nullable(),
   expiresInDays: z.number().int().min(0).nullable(),
 });
 
@@ -29,7 +29,7 @@ const icalFeedSettingsSchema = z.object({
 });
 
 const deleteTokenSchema = z.object({
-  id: z.string().uuid({ error: "トークンIDの形式が不正です" }),
+  id: z.uuid({ error: "トークンIDの形式が不正です" }),
 });
 
 function invalidateSettingsCache(): void {

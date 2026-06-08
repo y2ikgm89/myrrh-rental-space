@@ -6,13 +6,14 @@
  * hero セクション / page-hero media variant の共有背景描画。複数の画像・動画を
  * クロスフェード（または ken-burns）で切り替える。
  *
- * - 画像スライド: autoPlayInterval 秒で次へ
+ * - 画像 / 埋込スライド: autoPlayInterval 秒で次へ（GSAP delayedCall 駆動、pause/resume 可能）
  * - R2 mp4 スライド: loop を外し再生完了 (onEnded) で次へ + 切替時に先頭巻き戻し
  * - YouTube / Vimeo スライド: 終了検知不可のため autoPlayInterval 秒フォールバック
  * - スライドショー全体でループ（最後 → 最初）
  * - メディア 1 件: 自動送りなし（動画は loop 背景 / 画像は静止）
- * - prefers-reduced-motion: 先頭スライドのみ静止表示、自動送りなし
- * - GSAP Pattern C（ref + gsap.to + useMotionPreference + killTweensOf cleanup）
+ * - WCAG 2.2.2: 明示的な再生/停止ボタン + hover 一時停止 + prefers-reduced-motion で自動送りオフ
+ *   （reduced-motion は useSyncExternalStore で render に反映、停止コントロールは autoPlay 構成時のみ表示）
+ * - GSAP Pattern C（ref + gsap.to / gsap.delayedCall + useMotionPreference + killTweensOf cleanup）
  */
 
 import {
@@ -20,10 +21,15 @@ import {
   useEffectEvent,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactElement,
 } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
+import {
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
+} from "@tabler/icons-react";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { VideoPlayer } from "@/public/components/design-system/video-player";
@@ -55,6 +61,21 @@ function slideKind(url: string): SlideKind {
     : "video-embed";
 }
 
+// prefers-reduced-motion を render に反映する購読（React 19 公式パターン、module-scope
+// subscriber で参照安定）。`useMotionPreference`（ref）は event-time 読み用だが、
+// 自動送りの有効/無効と停止ボタンの表示を render に反映するには reactive state が要る。
+function subscribeReduceMotion(callback: () => void): () => void {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+function getReduceMotionSnapshot(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+function getReduceMotionServerSnapshot(): boolean {
+  return false;
+}
+
 export function HeroBackgroundSlideshow({
   items,
   transition,
@@ -66,21 +87,28 @@ export function HeroBackgroundSlideshow({
   const layerElsRef = useRef<(HTMLDivElement | null)[]>([]);
   const videoElsRef = useRef<(HTMLVideoElement | null)[]>([]);
   const activeIndexRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceCallRef = useRef<ReturnType<typeof gsap.delayedCall> | null>(
+    null,
+  );
+  const isHoveredRef = useRef(false);
   const motionOkRef = useMotionPreference();
 
   const count = items.length;
   const hasMultiple = count > 1;
   const [activeIndex, setActiveIndex] = useState(0);
+  // 自動回転の再生状態（再生ボタンでのみ再開、hover は一過性で isPlaying を変えない）
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const reduceMotion = useSyncExternalStore(
+    subscribeReduceMotion,
+    getReduceMotionSnapshot,
+    getReduceMotionServerSnapshot,
+  );
 
   const kinds = items.map((it) => slideKind(it.url));
-
-  const clearTimer = () => {
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
+  // 自動送りが構成上可能か（複数メディア）。reduced-motion / 一時停止は別ゲート。
+  const autoRotateConfigured = hasMultiple;
+  const autoRotateEnabled = isPlaying && !reduceMotion && autoRotateConfigured;
 
   const goTo = (nextIndex: number) => {
     const prevIndex = activeIndexRef.current;
@@ -130,13 +158,20 @@ export function HeroBackgroundSlideshow({
     goTo((activeIndexRef.current + 1) % count);
   };
 
-  // アクティブスライドが変わるたびに送りタイミングを再スケジュール
+  // アクティブスライド / 再生条件が変わるたびに送りを再スケジュール
   const scheduleActive = useEffectEvent(() => {
-    clearTimer();
-    if (!hasMultiple || !motionOkRef.current) return;
+    advanceCallRef.current?.kill();
+    advanceCallRef.current = null;
 
     const index = activeIndexRef.current;
     const kind = kinds[index];
+
+    if (!autoRotateEnabled) {
+      // 停止中 / reduced-motion: 動画は一時停止して現在地を静止表示
+      const video = videoElsRef.current[index];
+      if (video && kind === "video-file") video.pause();
+      return;
+    }
 
     if (kind === "video-file") {
       // R2 mp4: 先頭から再生し直す。onEnded（JSX 側）で advance する
@@ -144,27 +179,33 @@ export function HeroBackgroundSlideshow({
       if (video) {
         video.currentTime = 0;
         void video.play().catch(() => {
-          // autoplay 失敗時は interval フォールバック
-          timerRef.current = setTimeout(advance, autoPlayInterval * 1000);
+          // autoplay 失敗時は delayedCall フォールバック
+          advanceCallRef.current = gsap.delayedCall(autoPlayInterval, advance);
+          if (isHoveredRef.current) advanceCallRef.current.pause();
         });
       }
       return;
     }
 
-    // 画像 / YouTube・Vimeo 埋込: 固定秒で送る
-    timerRef.current = setTimeout(advance, autoPlayInterval * 1000);
+    // 画像 / YouTube・Vimeo 埋込: GSAP delayedCall で固定秒送り（hover で pause/resume 可能）
+    advanceCallRef.current = gsap.delayedCall(autoPlayInterval, advance);
+    if (isHoveredRef.current) advanceCallRef.current.pause();
   });
 
   useEffect(() => {
     scheduleActive();
-    return clearTimer;
-    // activeIndex 変化で再スケジュール
-  }, [activeIndex, hasMultiple, autoPlayInterval]);
+    return () => {
+      advanceCallRef.current?.kill();
+      advanceCallRef.current = null;
+    };
+    // activeIndex / 再生条件 / interval 変化で再スケジュール
+  }, [activeIndex, autoRotateEnabled, autoPlayInterval]);
 
   // アンマウント時の GSAP cleanup（Pattern C 要件）
   useEffect(() => {
     const layers = layerElsRef.current;
     return () => {
+      advanceCallRef.current?.kill();
       for (const el of layers) {
         if (el) {
           gsap.killTweensOf(el);
@@ -205,11 +246,41 @@ export function HeroBackgroundSlideshow({
   );
 
   const handleVideoEnded = (index: number) => {
-    if (index === activeIndexRef.current) advance();
+    if (
+      index === activeIndexRef.current &&
+      autoRotateEnabled &&
+      !isHoveredRef.current
+    ) {
+      advance();
+    }
+  };
+
+  // ホバー中は自動送りを一時停止（離れたら再開、isPlaying は変えない — WCAG 2.2.2）
+  const handlePointerEnter = () => {
+    if (!autoRotateConfigured) return;
+    isHoveredRef.current = true;
+    advanceCallRef.current?.pause();
+    const video = videoElsRef.current[activeIndexRef.current];
+    if (video && kinds[activeIndexRef.current] === "video-file") video.pause();
+  };
+  const handlePointerLeave = () => {
+    if (!autoRotateConfigured) return;
+    isHoveredRef.current = false;
+    if (!autoRotateEnabled) return;
+    advanceCallRef.current?.resume();
+    const video = videoElsRef.current[activeIndexRef.current];
+    if (video && kinds[activeIndexRef.current] === "video-file") {
+      void video.play().catch(() => {});
+    }
   };
 
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <div
+      ref={containerRef}
+      className="absolute inset-0"
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+    >
       {items.map((item, i) => {
         const kind = kinds[i];
         const isFirst = i === 0;
@@ -247,6 +318,23 @@ export function HeroBackgroundSlideshow({
           </div>
         );
       })}
+
+      {autoRotateConfigured && !reduceMotion ? (
+        <button
+          type="button"
+          onClick={() => setIsPlaying((prev) => !prev)}
+          aria-label={
+            isPlaying ? "スライドショーを一時停止" : "スライドショーを再生"
+          }
+          className="absolute bottom-4 right-4 z-30 inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-full bg-foreground/55 text-background backdrop-blur-sm transition-colors duration-200 hover:bg-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background"
+        >
+          {isPlaying ? (
+            <IconPlayerPauseFilled className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <IconPlayerPlayFilled className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -22,7 +22,7 @@ import {
   DiscountType,
   TaxRateType,
   PostStatus,
-} from "@/shared/generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // NG: z.nativeEnum() — プロジェクト規範で禁止
 z.nativeEnum(DiscountType);
@@ -53,17 +53,19 @@ taxRateType: z.enum(TaxRateType).default(TaxRateType.standard);
 
 ## 型ガードパターン
 
-### Prisma Enum型ガード（enums.ts から import — ローカル定義禁止）
+### Prisma Enum型ガード（enums/guards から import — ローカル定義禁止）
 
-全Prisma enumの型ガードは `@/shared/lib/validations/enums.ts` に集約。ローカル定義禁止:
+全Prisma enumの型ガードは `@/shared/lib/validations/enums/guards` に集約。ローカル定義禁止:
 
 ```typescript
 import {
   isValidDiscountType,
-  getValidDiscountType,
   isValidPostStatus,
+} from '@/shared/lib/validations/enums/guards'
+import {
+  getValidDiscountType,
   getValidPostStatus,
-} from '@/shared/lib/validations/enums'
+} from '@/shared/lib/validations/enums/helpers'
 
 // isValid* — boolean判定（UIイベントハンドラ等）
 onValueChange={(value) => {
@@ -112,4 +114,4 @@ function isStringArray(value: unknown): value is string[] {
    - `z.enum(DiscountType).default('none')` → `.default(DiscountType.none)`
 
 6. **ローカルファイルへの Prisma enum 型ガード定義禁止**
-   - `isValid*` / `getValid*` は `@/shared/lib/validations/enums.ts` から import
+   - `isValid*` は `@/shared/lib/validations/enums/guards`、`getValid*` は `@/shared/lib/validations/enums/helpers` から import

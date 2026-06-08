@@ -25,7 +25,7 @@ import {
   purgePostCaches,
 } from "./cache-helpers";
 
-const idSchema = z.string().uuid({ error: "投稿IDが不正です" });
+const idSchema = z.uuid({ error: "投稿IDが不正です" });
 
 /**
  * 投稿記事 新規作成（既存 RHF callback 用、互換維持）。

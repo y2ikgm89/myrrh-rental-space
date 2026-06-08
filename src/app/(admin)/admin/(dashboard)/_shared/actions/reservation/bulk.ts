@@ -36,7 +36,7 @@ type BulkResult = { succeeded: number; skipped: number; failed: number };
 // =============================================================================
 
 const bulkIdsSchema = z
-  .array(z.string().uuid({ error: "予約IDが不正です" }))
+  .array(z.uuid({ error: "予約IDが不正です" }))
   .min(1, { error: "1件以上選択してください" });
 
 // =============================================================================

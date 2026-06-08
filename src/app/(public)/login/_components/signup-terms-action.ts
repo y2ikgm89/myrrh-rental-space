@@ -21,7 +21,7 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 const inputSchema = z.object({
   termsIds: z
-    .array(z.string().uuid({ error: "規約IDが不正です" }))
+    .array(z.uuid({ error: "規約IDが不正です" }))
     .max(50, { error: "同意できる規約数を超えています" })
     .refine((ids) => new Set(ids).size === ids.length, {
       error: "同じ規約に複数回同意することはできません",

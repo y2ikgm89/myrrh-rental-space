@@ -29,7 +29,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-const idSchema = z.string().uuid({ error: "ユーザーIDが不正です" });
+const idSchema = z.uuid({ error: "ユーザーIDが不正です" });
 const updateRoleSchema = z.object({
   id: idSchema,
   role: z.enum(Role),

@@ -114,21 +114,21 @@ space.pricePerHour; // number（Decimal ではない）
 
 ## ファイル配置
 
-| パス                                      | 内容                                                                                                                                                                |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@/shared/generated/prisma/client`        | Prisma 生成クライアント・enum（自動生成、編集禁止）                                                                                                                 |
-| `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                                                                                                                  |
-| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`prisma` インスタンス・Decimal 変換型                                                                                                   |
-| `@/shared/db/prisma-input-json.ts`        | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし）                                                                                          |
-| `@generated/prisma/enums`                 | Prisma enum 定数（client-safe・gateway 経由で値再 export）                                                                                                          |
-| `@generated/prisma/browser`               | client-safe な `Prisma` 名前空間 **型のみ**（gateway が type-only re-export 用に使用）                                                                              |
-| `@generated/prisma/client`                | server-only な `Prisma` 名前空間 **値**（`JsonNull` / `DbNull` / `join` / `sql` / `raw`）・`PrismaClient` クラス（`shared/db/` / `shared/domain/` のみ直接 import） |
-| `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                                                                                                                        |
-| `@/shared/lib/serialize.ts`               | `toPlainObject`、`toPlainArray`、`keysOf`                                                                                                                           |
-| `@/shared/lib/validations/enums.ts`       | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export                                                                                          |
-| `@/shared/lib/errors/logger-core.ts`      | スクリプト可能な `logError`                                                                                                                                         |
-| `@/shared/lib/errors/logger.ts`           | Next Server 専用（`server-only` + `logger-core` re-export）                                                                                                         |
-| `@/admin/lib/lazy-renderer.ts`            | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                                                                                                               |
+| パス                                              | 内容                                                                                                                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@generated/prisma/client`                        | Prisma 生成クライアント・enum（自動生成、編集禁止）                                                                                                                 |
+| `@/shared/db/create-app-prisma-client.ts`         | `$extends` 正本・`AppPrismaClient`                                                                                                                                  |
+| `@/shared/db/prisma.ts`                           | `server-only` シングルトン・`prisma` インスタンス・Decimal 変換型                                                                                                   |
+| `@/shared/db/prisma-input-json.ts`                | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし）                                                                                          |
+| `@generated/prisma/enums`                         | Prisma enum 定数（client-safe・gateway 経由で値再 export）                                                                                                          |
+| `@generated/prisma/browser`                       | client-safe な `Prisma` 名前空間 **型のみ**（gateway が type-only re-export 用に使用）                                                                              |
+| `@generated/prisma/client`                        | server-only な `Prisma` 名前空間 **値**（`JsonNull` / `DbNull` / `join` / `sql` / `raw`）・`PrismaClient` クラス（`shared/db/` / `shared/domain/` のみ直接 import） |
+| `@/shared/lib/json-validators.ts`                 | JSON フィールド Zod スキーマ・型・パース関数                                                                                                                        |
+| `@/shared/lib/serialize.ts`                       | `toPlainObject`、`toPlainArray`、`keysOf`                                                                                                                           |
+| `@/shared/lib/validations/enums/{guards,helpers}` | enum 型ガード（`isValid*`、guards）・デフォルト値取得（`getValid*`、helpers）                                                                                       |
+| `@/shared/lib/errors/logger-core.ts`              | スクリプト可能な `logError`                                                                                                                                         |
+| `@/shared/lib/errors/logger.ts`                   | Next Server 専用（`server-only` + `logger-core` re-export）                                                                                                         |
+| `@/admin/lib/lazy-renderer.ts`                    | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                                                                                                               |
 
 ## Gotchas
 

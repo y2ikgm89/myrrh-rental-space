@@ -13,7 +13,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 
-const eventIdSchema = z.string().uuid({ error: "eventId が不正です" });
+const eventIdSchema = z.uuid({ error: "eventId が不正です" });
 
 export async function GET(request: Request): Promise<Response> {
   try {
