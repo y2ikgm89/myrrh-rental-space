@@ -15,7 +15,7 @@ import type {
 } from "@/shared/domain/news/types";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "お知らせIDが不正です" });
+const idSchema = z.uuid({ error: "お知らせIDが不正です" });
 
 export async function getNewsList(
   filters: NewsFilters = {},

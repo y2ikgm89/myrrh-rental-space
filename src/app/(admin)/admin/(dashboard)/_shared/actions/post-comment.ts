@@ -18,7 +18,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-const commentIdSchema = z.string().uuid({ error: "コメントIDが不正です" });
+const commentIdSchema = z.uuid({ error: "コメントIDが不正です" });
 const commentIdsSchema = z
   .array(commentIdSchema)
   .min(1, { error: "削除するコメントを選択してください" });

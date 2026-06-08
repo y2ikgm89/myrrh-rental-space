@@ -40,10 +40,7 @@ export const contactInfoFormSchema = z.object({
   phoneNumber: z.string().max(20, { error: "20文字以内で入力してください" }),
   faxNumber: z.string().max(20, { error: "20文字以内で入力してください" }),
   email: z.union([
-    z
-      .string()
-      .email({ error: "有効なメールアドレスを入力してください" })
-      .max(100),
+    z.email({ error: "有効なメールアドレスを入力してください" }).max(100),
     z.literal(""),
   ]),
   postalCode: z.string().max(10, { error: "10文字以内で入力してください" }),

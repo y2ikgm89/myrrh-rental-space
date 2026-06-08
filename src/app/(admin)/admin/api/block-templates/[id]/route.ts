@@ -17,7 +17,7 @@ import {
 } from "@/shared/lib/route-responses";
 
 const paramsSchema = z.object({
-  id: z.string().uuid({ error: "テンプレートIDが不正です" }),
+  id: z.uuid({ error: "テンプレートIDが不正です" }),
 });
 
 export async function GET(

@@ -10,9 +10,7 @@ const searchSchema = z.object({
   contentType: z
     .string()
     .refine(isCommentableContentType, { error: "contentType が無効です" }),
-  contentId: z
-    .string()
-    .uuid({ error: "contentId は有効な UUID である必要があります" }),
+  contentId: z.uuid({ error: "contentId は有効な UUID である必要があります" }),
   status: z.enum(["ACTIVE", "RESOLVED"]).optional(),
 });
 

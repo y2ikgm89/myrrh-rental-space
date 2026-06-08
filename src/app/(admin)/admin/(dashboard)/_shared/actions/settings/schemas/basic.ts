@@ -110,7 +110,6 @@ export const contactInfoSchema = z.object({
     .max(20, { error: "FAX番号は20文字以内で入力してください" })
     .nullable(),
   email: z
-    .string()
     .email({ error: "有効なメールアドレスを入力してください" })
     .max(100, { error: "メールアドレスは100文字以内で入力してください" })
     .nullable()

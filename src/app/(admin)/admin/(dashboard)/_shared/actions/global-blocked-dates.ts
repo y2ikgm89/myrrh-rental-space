@@ -16,7 +16,7 @@ import {
 } from "@/shared/domain/blocked-dates/commands";
 import { scopedBlockedDateFormSchema } from "@/admin/lib/validations/blocked-date";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 function invalidateGlobalBlockedCaches(): void {
   updateTag(CACHE_TAGS.SPACES);

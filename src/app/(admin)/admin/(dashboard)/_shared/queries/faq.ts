@@ -20,7 +20,7 @@ import type {
 } from "@/shared/domain/faq/types";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 export async function getFaqCategories(): Promise<FaqCategoryListResult> {
   await requireAdminPermission("faq", "read");

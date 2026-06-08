@@ -56,10 +56,7 @@ const messageSchema = z
 
 export const barFormSchema = z.object({
   message: messageSchema,
-  linkUrl: z
-    .string()
-    .url({ error: "有効なURLを入力してください" })
-    .or(z.literal("")),
+  linkUrl: z.url({ error: "有効なURLを入力してください" }).or(z.literal("")),
   linkText: z.string().max(50, { error: "リンクテキストは50文字以内" }),
   isActive: z.preprocess(
     (value) => value === "on" || value === true,

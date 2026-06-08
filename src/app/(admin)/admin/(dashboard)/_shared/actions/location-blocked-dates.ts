@@ -16,7 +16,7 @@ import {
 } from "@/shared/domain/blocked-dates/commands";
 import { scopedBlockedDateFormSchema } from "@/admin/lib/validations/blocked-date";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 /**
  * 拠点の臨時休業を追加する（scope=LOCATION 固定）。配下の全スペースに伝播する。

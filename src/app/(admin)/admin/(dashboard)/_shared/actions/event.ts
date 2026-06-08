@@ -36,7 +36,7 @@ import {
 } from "../../events/_components/event-form-schema";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-const idSchema = z.string().uuid({ error: "イベントIDが不正です" });
+const idSchema = z.uuid({ error: "イベントIDが不正です" });
 
 /**
  * EventFormData (conform parsed output: Lexical JSON string + 事前 render 済み HTML)

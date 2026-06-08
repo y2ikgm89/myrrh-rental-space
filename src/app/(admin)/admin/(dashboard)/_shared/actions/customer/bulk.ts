@@ -20,7 +20,7 @@ import {
 
 const bulkInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "顧客IDが不正です" }))
+    .array(z.uuid({ error: "顧客IDが不正です" }))
     .min(1, { error: "1件以上選択してください" })
     .max(100, { error: "一度に処理できるのは100件までです" })
     .refine((ids) => new Set(ids).size === ids.length, {
@@ -71,7 +71,7 @@ export async function bulkDeleteCustomers(
 
 const bulkStatusInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "顧客IDが不正です" }))
+    .array(z.uuid({ error: "顧客IDが不正です" }))
     .min(1, { error: "1件以上選択してください" })
     .max(100, { error: "一度に処理できるのは100件までです" }),
   newStatus: z.enum(CustomerStatus),

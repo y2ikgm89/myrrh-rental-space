@@ -16,7 +16,7 @@ import type {
 import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "お問い合わせIDが不正です" });
+const idSchema = z.uuid({ error: "お問い合わせIDが不正です" });
 
 export async function getInquiries(
   filters: InquiryFilters = {},

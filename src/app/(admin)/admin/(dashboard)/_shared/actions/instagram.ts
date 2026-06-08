@@ -25,9 +25,9 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { DomainError } from "@/shared/domain/domain-error";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 const orderedIdsSchema = z
-  .array(z.string().uuid({ error: "IDが不正です" }))
+  .array(z.uuid({ error: "IDが不正です" }))
   .refine((ids) => new Set(ids).size === ids.length, {
     error: "同じIDを複数指定することはできません",
   });

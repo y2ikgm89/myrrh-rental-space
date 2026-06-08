@@ -18,16 +18,14 @@ import {
   resolveThreadCommand,
 } from "@/shared/domain/editor-comments/commands";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 const createThreadSchema = z.object({
   markId: z.string().min(1, { error: "markId は必須です" }),
   contentType: z
     .string()
     .refine(isCommentableContentType, { error: "contentType が無効です" }),
-  contentId: z
-    .string()
-    .uuid({ error: "contentId は有効な UUID である必要があります" }),
+  contentId: z.uuid({ error: "contentId は有効な UUID である必要があります" }),
   quotedText: z
     .string()
     .min(1, { error: "引用テキストは必須です" })
@@ -39,9 +37,7 @@ const createThreadSchema = z.object({
 });
 
 const addCommentSchema = z.object({
-  threadId: z
-    .string()
-    .uuid({ error: "threadId は有効な UUID である必要があります" }),
+  threadId: z.uuid({ error: "threadId は有効な UUID である必要があります" }),
   content: z
     .string()
     .min(1, { error: "コメントは必須です" })

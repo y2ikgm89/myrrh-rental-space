@@ -37,7 +37,7 @@ const nullableUuidWithSentinel = (sentinel: string) =>
   z.preprocess(
     (value) =>
       value === "" || value === sentinel || value === undefined ? null : value,
-    z.string().uuid({ error: "無効なID形式です" }).nullable().optional(),
+    z.uuid({ error: "無効なID形式です" }).nullable().optional(),
   );
 
 const ticketInputSchema = z.object({

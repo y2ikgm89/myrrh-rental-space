@@ -13,7 +13,7 @@ import type {
 } from "@/shared/domain/coupons/types";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "クーポンIDが不正です" });
+const idSchema = z.uuid({ error: "クーポンIDが不正です" });
 
 export async function getCoupons(
   filters: CouponFilters = {},

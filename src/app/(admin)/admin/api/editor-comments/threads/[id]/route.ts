@@ -5,7 +5,7 @@ import { getThreadDetailQuery } from "@/shared/domain/editor-comments/queries";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
 
 const paramsSchema = z.object({
-  id: z.string().uuid({ error: "threadId は有効な UUID である必要があります" }),
+  id: z.uuid({ error: "threadId は有効な UUID である必要があります" }),
 });
 
 type RouteContext = {
