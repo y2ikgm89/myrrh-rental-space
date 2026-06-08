@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useSyncExternalStore, useRef } from "react";
 import Link from "next/link";
-import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
+  IconX,
+} from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { isAppRoute } from "@/shared/lib/typed-routes";
@@ -22,19 +28,45 @@ function isWithinDisplayPeriod(bar: AnnouncementBarItem): boolean {
   return startAt !== null && endAt !== null && now >= startAt && now <= endAt;
 }
 
+// prefers-reduced-motion を render に反映する購読（React 19 公式パターン、module-scope
+// subscriber で参照安定）。自動回転の停止と停止ボタンの表示を render に反映する。
+function subscribeReduceMotion(callback: () => void): () => void {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+function getReduceMotionSnapshot(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+function getReduceMotionServerSnapshot(): boolean {
+  return false;
+}
+
 interface AnnouncementBarProps {
   readonly bars: AnnouncementBarItem[];
   readonly settings: CarouselSettings;
 }
 
 export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
-  const [isPaused, setIsPaused] = useState(false);
+  // 自動回転の再生状態（再生ボタン / focus 侵入で制御）と hover 一過性停止を分離
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dismissedIds = useDismissedBars();
+
+  const reduceMotion = useSyncExternalStore(
+    subscribeReduceMotion,
+    getReduceMotionSnapshot,
+    getReduceMotionServerSnapshot,
+  );
 
   const visibleBars = bars.filter(
     (bar) => !dismissedIds.includes(bar.id) && isWithinDisplayPeriod(bar),
   );
+
+  // 自動回転の停止条件（WCAG 2.2.2）: 明示停止 / reduced-motion / hover（pauseOnHover 設定時）
+  const isPaused =
+    !isPlaying || reduceMotion || (settings.pauseOnHover && isHovered);
 
   const {
     currentIndex,
@@ -89,6 +121,11 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
   const { className, style, linkHoverClass, hasCustomText } =
     computeBarStyles(settings);
   const showNav = total > 1;
+  // 自動回転が実際に進行中か（aria-live の off/polite 切替）。停止コントロールは
+  // autoPlay 構成 + 複数 + reduced-motion でない場合のみ表示（reduced-motion 時は
+  // そもそも自動送りが起きないため停止ボタンは不要）。
+  const autoRotating = settings.autoPlay && showNav && !isPaused;
+  const showPlayPause = settings.autoPlay && showNav && !reduceMotion;
 
   // CTA リンク用の派生値（typedoc の narrowing を JSX 外で確定させる）
   const linkUrl = currentBar.linkUrl;
@@ -109,10 +146,11 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
       className={className}
       style={style}
       role="region"
-      aria-live="polite"
+      aria-live={autoRotating ? "off" : "polite"}
       aria-label="お知らせ"
-      onMouseEnter={() => settings.pauseOnHover && setIsPaused(true)}
-      onMouseLeave={() => settings.pauseOnHover && setIsPaused(false)}
+      onMouseEnter={() => settings.pauseOnHover && setIsHovered(true)}
+      onMouseLeave={() => settings.pauseOnHover && setIsHovered(false)}
+      onFocusCapture={() => setIsPlaying(false)}
     >
       {/* Glass shimmer overlay */}
       {settings.designStyle === AnnouncementBarDesignStyle.glass &&
@@ -209,6 +247,31 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           aria-label="次のお知らせ"
         >
           <IconChevronRight className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Play/Pause — WCAG 2.2.2 (Pause, Stop, Hide) の明示的な停止/再生コントロール。
+       * autoPlay 構成かつ複数件のときのみ表示（reduced-motion 時は自動送り自体が
+       * 起きないため非表示）。in-flow shrink-0 で隣接コントロールと非重複。 */}
+      {showPlayPause && (
+        <button
+          type="button"
+          onClick={() => setIsPlaying((prev) => !prev)}
+          className={cn(
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
+            !hasCustomText && "hover:bg-foreground/10",
+          )}
+          aria-label={
+            isPlaying
+              ? "お知らせの自動切替を一時停止"
+              : "お知らせの自動切替を再生"
+          }
+        >
+          {isPlaying ? (
+            <IconPlayerPauseFilled className="h-4 w-4" />
+          ) : (
+            <IconPlayerPlayFilled className="h-4 w-4" />
+          )}
         </button>
       )}
 
