@@ -52,13 +52,12 @@ GSAP matchMedia の具体実装（コード・選択ガイド）は `frontend/gs
 
 - `_shared/components/page-hero/EditorialSplitHero.tsx`（進捗バー + 停止ボタン + hover/focus 停止 + reduced-motion off、2026-06-04 確立の canonical）
 - `_components/space-showcase/_spaces-carousel.tsx`（center-stage carousel。`setInterval` 自動送りを GSAP 単一 tween 進捗バー + 再生/停止ボタン + APG grouped buttons に全面移行、`autoPlayInterval` config 駆動で interval 可変・0 で自動回転無効、後者は pause ボタン非表示で進捗バーを現在地インジケーターとして静止表示。2026-06-05 追随）
+- `_shared/components/page-hero/hero-background-slideshow.tsx`（全面背景スライドショー。`setTimeout` 単独送りを GSAP `delayedCall` に置換 + 明示的な再生/停止ボタン + hover 一時停止 + reduced-motion で自動送りオフ。背景レイヤーのみでスライドピッカーを持たないため grouped buttons は対象外。2026-06-09 追随）
+- `_shared/components/announcement-bar/announcement-bar.tsx`（お知らせカルーセル。明示的な再生/停止ボタン + keyboard focus 侵入で停止 + reduced-motion gate を追加、hover 停止は `pauseOnHover` 設定依存、`aria-live` を回転中 off / 停止時 polite に切替。2026-06-09 追随）
 
-### 同 pattern 適用対象（自動回転を持つが停止手段が不完全 — 要追随）
+### 同 pattern 適用対象（新規カルーセル追加時）
 
-新規カルーセル追加時はこの canonical に揃える。下記既存コンポーネントも同 pattern へ追随する（design 影響があるため個別判断）:
-
-- `_shared/components/page-hero/hero-background-slideshow.tsx` — 全面背景スライドショー。停止ボタン・hover/focus 停止なし（reduced-motion off のみ）→ 2.2.2 未達
-- `_shared/components/announcement-bar/announcement-bar.tsx` — `pauseOnHover` が設定依存 + 明示停止ボタン・reduced-motion 連動なし
+新規カルーセル追加時はこの canonical に揃える。2026-06-09 時点で公開ページの自動回転コンポーネント（`spaces-carousel` / `EditorialSplitHero` / `hero-background-slideshow` / `announcement-bar`）はすべて canonical 準拠済み（要追随リストは解消）。
 
 検出 grep（自動送りするが明示的 pause/再生コントロールを持たない疑いを精査）:
 
