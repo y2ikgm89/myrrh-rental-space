@@ -69,7 +69,8 @@ if (!result.success) {
 UI コンポーネントの `onChange` は `string` を返すため `enums.ts` の型ガードで絞り込む:
 
 ```typescript
-import { isValidDiscountType, getValidDiscountType } from '@/shared/lib/validations/enums'
+import { isValidDiscountType } from '@/shared/lib/validations/enums/guards'
+import { getValidDiscountType } from '@/shared/lib/validations/enums/helpers'
 
 // NG: 型アサーション
 onValueChange={(value) => setType(value as DiscountType)}
