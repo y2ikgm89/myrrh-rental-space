@@ -44,15 +44,15 @@ import { createUser } from "./user";
 
 ## ユーティリティ
 
-| 関数                | シグネチャ                                                                          | ファイル                              | 用途                                            |
-| ------------------- | ----------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------- |
-| `keysOf()`          | `<T extends object>(obj: T) => (keyof T)[]`                                         | `src/shared/lib/serialize.ts`         | 型安全な Object.keys（`as` なし）               |
-| `entriesOf()`       | `<T extends object>(obj: T) => [keyof T, T[keyof T]][]`                             | `src/shared/lib/serialize.ts`         | 型安全な Object.entries                         |
-| `filterTruthy()`    | `<T>(arr: readonly (T \| false \| null \| undefined)[]) => T[]`                     | `src/shared/lib/serialize.ts`         | `arr.filter(Boolean) as T[]` の型安全代替       |
-| `createTypeGuard()` | `<T extends string>(allowedValues: readonly T[]) => (value: unknown) => value is T` | `src/shared/lib/serialize.ts`         | const 配列から Set-based 型ガード関数を生成     |
-| `isRecord()`        | `(value: unknown) => value is Record<string, unknown>`                              | `src/shared/lib/serialize.ts`         | オブジェクト型ガード（`as Record<...>` の代替） |
-| `isValid*()`        | —                                                                                   | `src/shared/lib/validations/enums.ts` | Prisma enum 型ガード                            |
-| `getValid*()`       | —                                                                                   | `src/shared/lib/validations/enums.ts` | デフォルト値付き enum 取得                      |
+| 関数                | シグネチャ                                                                          | ファイル                                      | 用途                                            |
+| ------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------- |
+| `keysOf()`          | `<T extends object>(obj: T) => (keyof T)[]`                                         | `src/shared/lib/serialize.ts`                 | 型安全な Object.keys（`as` なし）               |
+| `entriesOf()`       | `<T extends object>(obj: T) => [keyof T, T[keyof T]][]`                             | `src/shared/lib/serialize.ts`                 | 型安全な Object.entries                         |
+| `filterTruthy()`    | `<T>(arr: readonly (T \| false \| null \| undefined)[]) => T[]`                     | `src/shared/lib/serialize.ts`                 | `arr.filter(Boolean) as T[]` の型安全代替       |
+| `createTypeGuard()` | `<T extends string>(allowedValues: readonly T[]) => (value: unknown) => value is T` | `src/shared/lib/serialize.ts`                 | const 配列から Set-based 型ガード関数を生成     |
+| `isRecord()`        | `(value: unknown) => value is Record<string, unknown>`                              | `src/shared/lib/serialize.ts`                 | オブジェクト型ガード（`as Record<...>` の代替） |
+| `isValid*()`        | —                                                                                   | `src/shared/lib/validations/enums/guards.ts`  | Prisma enum 型ガード                            |
+| `getValid*()`       | —                                                                                   | `src/shared/lib/validations/enums/helpers.ts` | デフォルト値付き enum 取得                      |
 
 ## Gotchas
 
