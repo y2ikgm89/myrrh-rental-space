@@ -16,7 +16,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
-const idSchema = z.string().uuid();
+const idSchema = z.uuid();
 
 type RouteContext = {
   params: Promise<{ id: string }>;

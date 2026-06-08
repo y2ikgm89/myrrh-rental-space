@@ -162,7 +162,6 @@ export async function cancelEventRegistration(
 
   // 2. UUID validation
   const idValidation = z
-    .string()
     .uuid({ error: "申込IDが不正です" })
     .safeParse(registrationId);
   if (!idValidation.success) return createMutationError("申込IDが不正です");

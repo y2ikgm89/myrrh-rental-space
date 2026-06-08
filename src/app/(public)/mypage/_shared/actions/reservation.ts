@@ -31,7 +31,7 @@ import {
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { z } from "zod";
 
-const reservationIdSchema = z.string().uuid({ error: "予約IDが不正です" });
+const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
 
 export async function cancelReservationAction(
   reservationId: string,
