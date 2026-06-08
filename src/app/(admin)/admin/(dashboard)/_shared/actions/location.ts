@@ -24,15 +24,15 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-const idSchema = z.string().uuid({ error: "場所IDが不正です" });
+const idSchema = z.uuid({ error: "場所IDが不正です" });
 const publishSchema = z.object({
-  id: z.string().uuid({ error: "場所IDが不正です" }),
+  id: z.uuid({ error: "場所IDが不正です" }),
   isPublished: z.boolean(),
 });
 const locationOrderSchema = z
   .array(
     z.object({
-      id: z.string().uuid({ error: "場所IDが不正です" }),
+      id: z.uuid({ error: "場所IDが不正です" }),
       sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
     }),
   )

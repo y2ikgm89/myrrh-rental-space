@@ -18,11 +18,11 @@ import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const updateStatusSchema = z.object({
-  id: z.string().uuid({ error: "お問い合わせIDが不正です" }),
+  id: z.uuid({ error: "お問い合わせIDが不正です" }),
   status: z.enum(InquiryStatus),
 });
 
-const idSchema = z.string().uuid({ error: "お問い合わせIDが不正です" });
+const idSchema = z.uuid({ error: "お問い合わせIDが不正です" });
 
 export async function updateInquiryStatus(
   id: string,
@@ -69,7 +69,7 @@ export async function deleteInquiry(id: string): Promise<MutationResult> {
 }
 
 const replySchema = z.object({
-  id: z.string().uuid({ error: "お問い合わせIDが不正です" }),
+  id: z.uuid({ error: "お問い合わせIDが不正です" }),
   replyMessage: z.string().min(1, { error: "回答内容を入力してください" }),
 });
 
@@ -121,8 +121,8 @@ export async function replyToInquiry(
 }
 
 const updateCustomerSchema = z.object({
-  inquiryId: z.string().uuid({ error: "お問い合わせIDが不正です" }),
-  customerId: z.string().uuid({ error: "顧客IDが不正です" }).nullable(),
+  inquiryId: z.uuid({ error: "お問い合わせIDが不正です" }),
+  customerId: z.uuid({ error: "顧客IDが不正です" }).nullable(),
 });
 
 export async function updateInquiryCustomer(

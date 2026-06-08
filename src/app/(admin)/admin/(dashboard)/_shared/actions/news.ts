@@ -34,9 +34,9 @@ import {
   type UpdateNewsSettingsInput,
 } from "@/admin/lib/validations/news";
 
-const idSchema = z.string().uuid({ error: "お知らせIDが不正です" });
+const idSchema = z.uuid({ error: "お知らせIDが不正です" });
 const versionSchema = z.object({
-  newsId: z.string().uuid({ error: "お知らせIDが不正です" }),
+  newsId: z.uuid({ error: "お知らせIDが不正です" }),
   version: z.number().int().positive({ error: "バージョンが不正です" }),
 });
 

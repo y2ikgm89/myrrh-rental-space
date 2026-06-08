@@ -22,7 +22,7 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-const invitationIdSchema = z.string().uuid({ error: "招待IDが不正です" });
+const invitationIdSchema = z.uuid({ error: "招待IDが不正です" });
 
 export async function sendInvitation(
   _prev: SubmissionResult | undefined,

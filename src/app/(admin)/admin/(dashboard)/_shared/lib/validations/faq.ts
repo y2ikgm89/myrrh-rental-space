@@ -47,7 +47,7 @@ export type FaqCategoryFormInput = z.infer<typeof faqCategoryFormSchema>;
 // ============================================================================
 
 export const bulkFaqItemIdsSchema = z
-  .array(z.string().uuid({ error: "IDが不正です" }))
+  .array(z.uuid({ error: "IDが不正です" }))
   .min(1, { error: "対象を選択してください" })
   .refine((ids) => new Set(ids).size === ids.length, {
     error: "同じIDを複数指定することはできません",
@@ -55,7 +55,7 @@ export const bulkFaqItemIdsSchema = z
 
 export const bulkMoveFaqItemsSchema = z.object({
   ids: bulkFaqItemIdsSchema,
-  newCategoryId: z.string().uuid({ error: "移動先カテゴリを選択してください" }),
+  newCategoryId: z.uuid({ error: "移動先カテゴリを選択してください" }),
 });
 
 export type BulkMoveFaqItemsInput = z.infer<typeof bulkMoveFaqItemsSchema>;
@@ -65,7 +65,7 @@ export type BulkMoveFaqItemsInput = z.infer<typeof bulkMoveFaqItemsSchema>;
 // =============================================================================
 
 export const faqItemFormSchema = z.object({
-  categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
+  categoryId: z.uuid({ error: "カテゴリを選択してください" }),
   question: z
     .string()
     .min(1, { error: "質問を入力してください" })

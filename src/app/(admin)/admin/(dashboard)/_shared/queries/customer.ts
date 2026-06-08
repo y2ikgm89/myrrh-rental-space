@@ -17,7 +17,7 @@ import type {
 } from "@/shared/domain/customers/types";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "顧客IDが不正です" });
+const idSchema = z.uuid({ error: "顧客IDが不正です" });
 
 export async function getCustomers(
   filters: CustomerFilters = {},

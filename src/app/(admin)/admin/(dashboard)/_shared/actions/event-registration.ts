@@ -25,7 +25,7 @@ import {
 } from "@/shared/lib/validations/event-registration";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 type CreateRegistrationResult = {
   id: string;

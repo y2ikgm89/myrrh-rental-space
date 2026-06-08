@@ -26,11 +26,11 @@ import {
 } from "@/shared/domain/space-categories/commands";
 import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
 
-const idSchema = z.string().uuid({ error: "カテゴリーIDが不正です" });
+const idSchema = z.uuid({ error: "カテゴリーIDが不正です" });
 const categoryOrderSchema = z
   .array(
     z.object({
-      id: z.string().uuid({ error: "カテゴリーIDが不正です" }),
+      id: z.uuid({ error: "カテゴリーIDが不正です" }),
       sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
     }),
   )

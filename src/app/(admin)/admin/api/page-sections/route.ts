@@ -5,7 +5,7 @@ import { getPageSectionsQuery } from "@/shared/domain/sections/admin-queries";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
 
 const searchSchema = z.object({
-  pageId: z.string().uuid({ error: "pageId が不正です" }),
+  pageId: z.uuid({ error: "pageId が不正です" }),
 });
 
 export async function GET(request: Request) {

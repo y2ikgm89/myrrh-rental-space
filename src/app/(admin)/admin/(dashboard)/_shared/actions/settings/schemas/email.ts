@@ -9,9 +9,9 @@ import { z } from "zod";
 // =============================================================================
 
 export const emailSettingsSchema = z.object({
-  senderEmail: z.string().email().max(100).nullable().or(z.literal("")),
+  senderEmail: z.email().max(100).nullable().or(z.literal("")),
   senderName: z.string().max(100).nullable(),
-  replyToEmail: z.string().email().max(100).nullable().or(z.literal("")),
+  replyToEmail: z.email().max(100).nullable().or(z.literal("")),
   sendReservationConfirmationEmail: z.boolean(),
   sendAdminNotificationEmail: z.boolean(),
   notificationEmailAddresses: z.string().max(500).nullable(),

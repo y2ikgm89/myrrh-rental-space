@@ -61,7 +61,7 @@ const imageUrlsSchema = z.preprocess(
     return value;
   },
   z
-    .array(z.string().url({ error: "有効なURLを入力してください" }))
+    .array(z.url({ error: "有効なURLを入力してください" }))
     .max(10, { error: "画像は最大10枚までです" })
     .refine((arr) => new Set(arr).size === arr.length, {
       error: "同じ画像を複数登録することはできません",
@@ -234,7 +234,7 @@ export const spaceFormBaseSchema = z
     categoryId: z
       .preprocess(
         emptyToNull,
-        z.string().uuid({ error: "カテゴリーIDが無効です" }).nullable(),
+        z.uuid({ error: "カテゴリーIDが無効です" }).nullable(),
       )
       .optional(),
     // 割引設定

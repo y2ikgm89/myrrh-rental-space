@@ -13,7 +13,7 @@ import type {
 } from "@/shared/domain/post-comments/types";
 import { requireAdminPermission } from "./_helpers";
 
-const commentIdSchema = z.string().uuid({ error: "コメントIDが不正です" });
+const commentIdSchema = z.uuid({ error: "コメントIDが不正です" });
 
 export type {
   AdminCommentData,

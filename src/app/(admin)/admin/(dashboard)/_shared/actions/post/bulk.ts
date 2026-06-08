@@ -14,7 +14,7 @@ import {
 } from "./cache-helpers";
 
 const bulkIdsSchema = z
-  .array(z.string().uuid({ error: "投稿IDが不正です" }))
+  .array(z.uuid({ error: "投稿IDが不正です" }))
   .min(1, { error: "1件以上選択してください" });
 
 export async function bulkTogglePostPublished(

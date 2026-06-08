@@ -17,7 +17,7 @@ const filtersSchema = z.object({
   perPage: z.number().int().positive().max(100).optional().default(50),
   action: z.enum(AuditAction).or(z.literal("ALL")).optional().default("ALL"),
   resource: z.string().optional().default(""),
-  userId: z.string().uuid().optional().default(""),
+  userId: z.uuid().optional().default(""),
   dateFrom: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "開始日の形式が不正です" })

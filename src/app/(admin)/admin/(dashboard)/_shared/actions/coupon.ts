@@ -24,7 +24,7 @@ import {
 } from "@/shared/domain/coupons/commands";
 import { couponFormSchema } from "@/shared/lib/validations/coupon";
 
-const idSchema = z.string().uuid({ error: "クーポンIDが不正です" });
+const idSchema = z.uuid({ error: "クーポンIDが不正です" });
 
 export async function createCoupon(
   _prev: SubmissionResult | undefined,

@@ -21,7 +21,7 @@ import { ErrorCategory } from "@/shared/lib/errors";
 
 const bulkInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "お問い合わせIDが不正です" }))
+    .array(z.uuid({ error: "お問い合わせIDが不正です" }))
     .min(1, { error: "1件以上選択してください" })
     .max(100, { error: "一度に処理できるのは100件までです" }),
 });
@@ -51,7 +51,7 @@ export async function bulkDeleteInquiries(
 
 const bulkStatusInputSchema = z.object({
   ids: z
-    .array(z.string().uuid({ error: "お問い合わせIDが不正です" }))
+    .array(z.uuid({ error: "お問い合わせIDが不正です" }))
     .min(1, { error: "1件以上選択してください" })
     .max(100, { error: "一度に処理できるのは100件までです" }),
   newStatus: z.enum(InquiryStatus),

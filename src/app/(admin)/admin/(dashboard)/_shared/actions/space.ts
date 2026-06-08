@@ -29,7 +29,7 @@ import {
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
+const idSchema = z.uuid({ error: "IDが不正です" });
 
 function revalidateSpaces(...ids: string[]): void {
   updateTag(CACHE_TAGS.SPACES);

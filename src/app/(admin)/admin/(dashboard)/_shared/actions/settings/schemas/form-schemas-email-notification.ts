@@ -9,18 +9,12 @@ import { z } from "zod";
 
 export const emailFormSchema = z.object({
   senderEmail: z.union([
-    z
-      .string()
-      .email({ error: "有効なメールアドレスを入力してください" })
-      .max(100),
+    z.email({ error: "有効なメールアドレスを入力してください" }).max(100),
     z.literal(""),
   ]),
   senderName: z.string().max(100, { error: "100文字以内で入力してください" }),
   replyToEmail: z.union([
-    z
-      .string()
-      .email({ error: "有効なメールアドレスを入力してください" })
-      .max(100),
+    z.email({ error: "有効なメールアドレスを入力してください" }).max(100),
     z.literal(""),
   ]),
   sendReservationConfirmationEmail: z.boolean(),

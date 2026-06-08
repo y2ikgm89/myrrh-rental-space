@@ -6,7 +6,7 @@ const signedLoginTokenPattern = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
  * 認証用入力スキーマ（クライアント/サーバー共通）
  */
 export const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1),
 });
 

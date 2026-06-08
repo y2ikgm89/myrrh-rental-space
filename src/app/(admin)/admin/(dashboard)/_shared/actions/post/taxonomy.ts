@@ -28,11 +28,11 @@ import {
   purgePostArchive,
 } from "./cache-helpers";
 
-const idSchema = z.string().uuid({ error: "カテゴリ/タグIDが不正です" });
+const idSchema = z.uuid({ error: "カテゴリ/タグIDが不正です" });
 const postCategoryOrderSchema = z
   .array(
     z.object({
-      id: z.string().uuid({ error: "カテゴリIDが不正です" }),
+      id: z.uuid({ error: "カテゴリIDが不正です" }),
       order: z.number().int().min(0, { error: "順序が不正です" }),
     }),
   )
