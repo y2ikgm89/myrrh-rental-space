@@ -21,8 +21,8 @@ import {
 } from "@/shared/lib/errors/server";
 
 const querySchema = z.object({
-  email: z.string().email(),
-  excludeId: z.string().uuid().optional(),
+  email: z.email(),
+  excludeId: z.uuid().optional(),
 });
 
 export async function GET(request: Request): Promise<NextResponse> {

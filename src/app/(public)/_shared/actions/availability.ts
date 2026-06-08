@@ -11,11 +11,11 @@ import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { publicQueryRateLimiter } from "@/shared/lib/rate-limit";
 
 const fetchSlotsSchema = z.object({
-  spaceId: z.string().uuid(),
+  spaceId: z.uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-const spaceIdSchema = z.string().uuid();
+const spaceIdSchema = z.uuid();
 
 export async function fetchAvailableSlots(
   spaceId: string,
