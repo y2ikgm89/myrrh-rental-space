@@ -31,7 +31,7 @@ import type {
   HeroTransition,
   PageHeroConfig,
 } from "@/shared/lib/sections/definitions/page-hero";
-import { createBlock, createSpan } from "@/shared/lib/portable-text";
+import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero/defaults";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 
@@ -40,47 +40,9 @@ export type EditorialSplitHeroProps = Omit<
   "variant"
 >;
 
-export interface HeroImage {
-  readonly url: string;
-  readonly alt: string;
-}
-
-const DEFAULT_IMAGE: HeroImage = {
-  url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
-  alt: "自然光が差し込む開放的なレンタルスペース",
-};
-
-export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
-  label: [createSpan("Volume One — Spring 2026")],
-  title: [createSpan("Where silence works.")],
-  description: [
-    createBlock([
-      createSpan(
-        "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
-      ),
-    ]),
-  ],
-  images: [DEFAULT_IMAGE],
-  transition: "crossfade",
-  buttons: [
-    {
-      label: [createSpan("Reserve a space")],
-      url: "/reservation",
-      variant: "primary",
-      size: "lg",
-      openInNewTab: false,
-      backgroundColor: "",
-      textColor: "",
-    },
-  ],
-  layout: {
-    padding: "md",
-    containerWidth: "lg",
-    hideOnMobile: false,
-    hideOnDesktop: false,
-    animateOnScroll: "fade-up",
-  },
-};
+// prop default は seed 正本 DEFAULT_PAGE_HERO から導出（SSoT、drift 防止）。
+// 旧 editorialSplitHeroDefaults / HeroImage / DEFAULT_IMAGE のローカル定義は廃止。
+const { variant: _variant, ...editorialSplitHeroDefaults } = DEFAULT_PAGE_HERO;
 
 const AUTO_ADVANCE_MS = 6000;
 const SWIPE_THRESHOLD_PX = 50;
