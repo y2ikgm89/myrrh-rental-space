@@ -128,4 +128,4 @@ WHERE "contentJson" IS NOT NULL
   AND "contentJson"->'root'->'children' = '[]'::jsonb;
 ```
 
-対象テーブル: `news.contentJson` / `news_versions.contentJson` / `posts.contentJson` / `post_versions.contentJson` / `sections.contentJson` / `faq_items.answerJson` / `terms_versions.contentJson`。`block_templates.nodeJson` は EditorState 全体とは限らないため、条件を絞るか手動確認する。本番実行前にバックアップとステージングでの検証必須。
+対象テーブル: `news.contentJson` / `news_versions.contentJson` / `posts.contentJson` / `post_versions.contentJson` / `sections.contentJson` / `terms_versions.contentJson`（`faq_items` は `answer` プレーンテキスト単一列のため Lexical JSON 列を持たず対象外）。`block_templates.nodeJson` は EditorState 全体とは限らないため、条件を絞るか手動確認する。本番実行前にバックアップとステージングでの検証必須。
