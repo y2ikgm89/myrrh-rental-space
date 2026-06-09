@@ -65,6 +65,8 @@ type FaqCategoryItemsTableProps = {
 
 type SortableRowProps = {
   readonly item: FaqItemWithCategory;
+  readonly categoryId: string;
+  readonly allCategories: readonly { id: string; name: string }[];
   readonly selected: boolean;
   readonly onToggle: (id: string) => void;
   readonly onEdit: (item: FaqItemWithCategory) => void;
@@ -73,6 +75,8 @@ type SortableRowProps = {
 
 function SortableRow({
   item,
+  categoryId,
+  allCategories,
   selected,
   onToggle,
   onEdit,
@@ -139,7 +143,7 @@ function SortableRow({
       >
         {formatDateShort(item.updatedAt)}
       </TableCell>
-      <TableCell className="hidden md:table-cell" onClick={stopRowClick}>
+      <TableCell onClick={stopRowClick}>
         <PublishSwitch
           id={item.id}
           isPublished={item.isPublished}
@@ -155,7 +159,8 @@ function SortableRow({
         <FaqItemActionCell
           id={item.id}
           question={item.question}
-          isPublished={item.isPublished}
+          categoryId={categoryId}
+          categories={allCategories}
           onEdit={() => onEdit(item)}
         />
       </TableCell>
@@ -327,9 +332,7 @@ export function FaqCategoryItemsTable({
                       >
                         更新日時
                       </SortableColumnHeader>
-                      <TableHead className="hidden md:table-cell">
-                        公開状態
-                      </TableHead>
+                      <TableHead>公開状態</TableHead>
                       <TableHead className="text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -338,6 +341,8 @@ export function FaqCategoryItemsTable({
                       <SortableRow
                         key={item.id}
                         item={item}
+                        categoryId={categoryId}
+                        allCategories={allCategories}
                         selected={selectedIds.includes(item.id)}
                         onToggle={toggleSelection}
                         onEdit={onEditItem}
