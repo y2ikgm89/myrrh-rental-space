@@ -69,3 +69,4 @@ paths:
 - **`bun -e` Prisma 直接アクセス canonical** — `@/shared/db/prisma` は `server-only` で blocked、`new PrismaClient({ adapter: new PrismaPg({ connectionString }) })` の config-object 形式で直接 instantiate（`scripts/generate-login-url.ts` 参照）
 - **handoff memo 完遂時は同セッションで削除 + `MEMORY.md` index 除去** — 残ると次セッション「未完了」と誤読
 - **管理画面ログイン URL は `bun scripts/generate-login-url.ts`** — dev (`NODE_ENV === "development"`) は proxy.ts が Gate bypass + `/admin/login` に SUPER_ADMIN ワンクリックボタン
+- **並列プリミティブ選択は `.claude/rules/parallel-orchestration.md` が SSoT** — main / fork / named-subagent / background / worktree隔離 / agent-team / Workflow の選択マトリクス。要点: ① `/fork`（v2.1.161 既定有効）は同一コンテキスト side task に安い（親キャッシュ共有）、`CLAUDE_CODE_FORK_SUBAGENT=1` グローバル化は逆効果で非設定 ② background subagent（`background:true`/Ctrl+B/`claude agents`）は持続的並列の選択肢 ③ agent-teams は experimental につき不採用 ④ `Workflow` tool（ハーネス提供・公式 docs 外）は多次元監査/レビューの決定論的 fan-out で opt-in（常時 ON にしない）

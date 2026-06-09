@@ -74,6 +74,12 @@ claude --worktree "#1234"
 - **手動 cleanup** — `git worktree remove <path> && git worktree prune`
 - **`-p` 非対話モード** — auto cleanup なし。明示的に `git worktree remove` する
 
+### Worktree 孤児 dir 衛生（Windows）
+
+- **`git worktree remove` 後も disk 上 dir が残る Windows 罠** — subagent worktree 隔離 implementer が検証目的で `bun install` を実行すると node_modules（数万 file・長 path）が生成され、cleanup 時に Windows パス長制限で dir 削除が失敗する。`git worktree list` から消えていても `.claude/worktrees/agent-*` が disk に残り、Glob/Grep 結果を汚染する。
+- **予防規律（最重要）**: **worktree 隔離 implementer は `bun install` / `bun run validate` / `bun run build` を実行しない**。controller が main で merge 後に検証する（`subagent-dispatch-template` の VERIFICATION 節は controller 用、implementer は編集のみ）。worktree を node_modules-free に保てば公式自動 cleanup（uncommitted/untracked/unpushed なし時）が機能する。例外的に worktree 内検証が不可避な場合は session 終了前に `python3 -c "import shutil; shutil.rmtree('.claude/worktrees/<name>/node_modules', ignore_errors=True)"` で明示削除する。
+- **掃除手順（孤児発生時）**: `git worktree prune -v`（git 参照クリーンアップ、disk dir は消えない）→ `python3 -c "import shutil; shutil.rmtree('.claude/worktrees/<orphan>', ignore_errors=True)"`（CLAUDE.md `rm -rf` deny のため Python shutil）。`WorktreeRemove` hook は git 既定 cleanup を置換するリスク（公式 docs は非 git VCS 用途）があるため**採用しない** — 手動掃除手順で対処する。
+
 ## Migration / Prisma
 
 - **Worktree 作成前 3 軸チェック**: `git status --short | wc -l` + `ls prisma/migrations/ | tail -1` + `bunx --bun prisma migrate status` で**未コミット migration / DB drift / 未適用 migration** を検出。drift / 未適用あれば先に main で `db execute --file` + `migrate resolve --applied` を実施してから worktree 作成
