@@ -11,6 +11,7 @@
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { detectStaleFaqItems } from "@/shared/domain/faq/analytics-commands";
+import { FAQ_STALE_DAYS } from "@/shared/domain/faq/constants";
 import {
   createNotificationCommand,
   hasRecentNotificationOfType,
@@ -28,7 +29,7 @@ import { logger } from "@/shared/lib/logger";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 
-const STALE_DAYS = 180;
+const STALE_DAYS = FAQ_STALE_DAYS;
 const MAX_ITEMS = 20;
 /** 同 type の通知を重複生成しないためのルックバック日数（週次スケジュールより 1 日短い） */
 const DEDUP_DAYS = 6;

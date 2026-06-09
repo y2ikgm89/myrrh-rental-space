@@ -76,6 +76,8 @@ async function CategoryDetailContent({
           : params.status === "draft"
             ? false
             : undefined,
+      quickFilter:
+        params.quickFilter === "all" ? undefined : params.quickFilter,
     }),
     { page: params.page, limit: params.perPage },
     { sortBy: params.sortBy, sortOrder: params.sortOrder },

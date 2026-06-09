@@ -53,6 +53,7 @@ import {
 import type { FaqItemWithCategory } from "@/shared/domain/faq/types";
 import { FaqItemActionCell } from "./FaqItemActionCell";
 import { FaqBulkActions } from "./FaqBulkActions";
+import { FaqHelpfulnessBadge } from "./FaqHelpfulnessBadge";
 
 type FaqCategoryItemsTableProps = {
   readonly categoryId: string;
@@ -136,6 +137,15 @@ function SortableRow({
         onClick={() => onEdit(item)}
       >
         {item.viewCount.toLocaleString("ja-JP")}
+      </TableCell>
+      <TableCell
+        className="hidden text-right lg:table-cell"
+        onClick={() => onEdit(item)}
+      >
+        <FaqHelpfulnessBadge
+          helpful={item.helpfulCount}
+          notHelpful={item.notHelpfulCount}
+        />
       </TableCell>
       <TableCell
         className="hidden text-muted-foreground lg:table-cell"
@@ -242,7 +252,7 @@ export function FaqCategoryItemsTable({
           ? prev.sortOrder === "asc"
             ? "desc"
             : "asc"
-          : column === "viewCount"
+          : column === "viewCount" || column === "helpful"
             ? "desc"
             : "asc",
       page: 1,
@@ -322,6 +332,15 @@ export function FaqCategoryItemsTable({
                         className="hidden text-right lg:table-cell"
                       >
                         閲覧数
+                      </SortableColumnHeader>
+                      <SortableColumnHeader
+                        column="helpful"
+                        currentSortBy={currentSortBy}
+                        currentSortOrder="desc"
+                        onSort={handleSort}
+                        className="hidden text-right lg:table-cell"
+                      >
+                        役立ち
                       </SortableColumnHeader>
                       <SortableColumnHeader
                         column="updatedAt"

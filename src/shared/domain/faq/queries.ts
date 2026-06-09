@@ -1,6 +1,11 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import {
+  FAQ_LOW_RATED_MIN_NOT_HELPFUL,
+  FAQ_RECENT_DAYS,
+  FAQ_STALE_DAYS,
+} from "@/shared/domain/faq/constants";
 import type {
   FaqCategoryListResult,
   FaqCategoryWithItems,
@@ -135,7 +140,8 @@ type FaqItemWhere = {
   category: { deletedAt: null };
   categoryId?: string;
   isPublished?: boolean;
-  updatedAt?: { gte?: Date; lte?: Date };
+  updatedAt?: { gte?: Date; lt?: Date };
+  notHelpfulCount?: { gte: number };
   OR?: Array<{
     question?: { contains: string; mode: "insensitive" };
     answer?: { contains: string; mode: "insensitive" };
@@ -156,14 +162,18 @@ function buildFaqItemWhere(filters: FaqItemFilters): FaqItemWhere {
     where.isPublished = filters.isPublished;
   }
 
-  if (filters.quickFilter === "drafts") {
-    where.isPublished = false;
-  } else if (filters.quickFilter === "recent") {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    where.updatedAt = { gte: sevenDaysAgo };
+  if (filters.quickFilter === "recent") {
+    const recentThreshold = new Date(
+      Date.now() - FAQ_RECENT_DAYS * 24 * 60 * 60 * 1000,
+    );
+    where.updatedAt = { gte: recentThreshold };
   } else if (filters.quickFilter === "stale") {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    where.updatedAt = { lte: thirtyDaysAgo };
+    const staleThreshold = new Date(
+      Date.now() - FAQ_STALE_DAYS * 24 * 60 * 60 * 1000,
+    );
+    where.updatedAt = { lt: staleThreshold };
+  } else if (filters.quickFilter === "low-rated") {
+    where.notHelpfulCount = { gte: FAQ_LOW_RATED_MIN_NOT_HELPFUL };
   }
 
   if (filters.search) {
@@ -180,6 +190,7 @@ type FaqItemOrderBy =
   | Array<{ category: { order: "asc" | "desc" } } | { order: "asc" | "desc" }>
   | Array<{ updatedAt: "asc" | "desc" }>
   | Array<{ viewCount: "asc" | "desc" } | { updatedAt: "desc" }>
+  | Array<{ helpfulCount: "asc" | "desc" } | { updatedAt: "desc" }>
   | Array<{ createdAt: "asc" | "desc" }>;
 
 function buildFaqItemOrderBy(sort: FaqItemSort | undefined): FaqItemOrderBy {
@@ -190,6 +201,9 @@ function buildFaqItemOrderBy(sort: FaqItemSort | undefined): FaqItemOrderBy {
     case "viewCount":
       // 閲覧数ソート時は tie-breaker として updatedAt desc で新しい項目を優先
       return [{ viewCount: order }, { updatedAt: "desc" }];
+    case "helpful":
+      // 役立ち度ソート時も tie-breaker として updatedAt desc を付与
+      return [{ helpfulCount: order }, { updatedAt: "desc" }];
     case "createdAt":
       return [{ createdAt: order }];
     case "order":

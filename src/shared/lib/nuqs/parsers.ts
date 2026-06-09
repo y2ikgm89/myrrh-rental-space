@@ -472,13 +472,27 @@ const adminFaqItemSortByValues = [
   "order",
   "updatedAt",
   "viewCount",
+  "helpful",
   "createdAt",
 ] as const;
 export type AdminFaqItemSortBy = (typeof adminFaqItemSortByValues)[number];
 
+// コンテンツ健全性の絞り込み軸（公開ステータスとは独立）
+const adminFaqItemQuickFilterValues = [
+  "all",
+  "recent",
+  "stale",
+  "low-rated",
+] as const;
+export type AdminFaqItemQuickFilter =
+  (typeof adminFaqItemQuickFilterValues)[number];
+
 export const adminFaqCategoryDetailSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsStringLiteral(adminFaqItemStatusValues).withDefault("all"),
+  quickFilter: parseAsStringLiteral(adminFaqItemQuickFilterValues).withDefault(
+    "all",
+  ),
   // 初回ランディングは "order" 昇順（管理者が手動設定した並び順）
   sortBy: parseAsStringLiteral(adminFaqItemSortByValues).withDefault("order"),
   sortOrder: parseAsStringLiteral(sortOrders).withDefault("asc"),
