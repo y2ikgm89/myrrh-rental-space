@@ -90,6 +90,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 
 - **Implementer dispatch は `subagent-dispatch-template` SKILL 経由**、implementer は sonnet 以上（haiku 禁止）、完了報告は git で独立検証
 - **Worktree は公式 `claude --worktree <name>`** — `.claude/worktrees/<name>/` + `.worktreeinclude` で gitignored copy、終了時 changes なしで自動 cleanup。Subagent 隔離は `isolation: worktree`
+- **並列プリミティブ選択（main / fork / subagent / background / worktree / Workflow）は `.claude/rules/parallel-orchestration.md` が SSoT** — `/fork` は同一コンテキスト side task の安い並列（親キャッシュ共有）。`Workflow` tool（ハーネス提供）は多次元監査/レビューの fan-out 用で **opt-in（明示「use a workflow」/ ultracode 時のみ、常時 ON にしない）**。agent-teams は experimental につき不採用
 
 ### ワークフロー
 

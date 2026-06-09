@@ -158,7 +158,7 @@ grep -n "<deleted-symbol>" <file>  # 出力ゼロを確認
 - **Read は offset/limit 部分読み必須** — 先頭 80 行以内、ファイル全文 (200+ 行) read 禁止
 - **Grep は `output_mode: files_with_matches` を default**、`head_limit ≤ 30`
 - **layer cross-cutting scope は分割** — 「全 API routes」「Server Action 全般」「auth flow 全層」等は narrow scope (path prefix + 5-10 file) に分けて dispatch
-- **並列 dispatch は 3 件まで** — 4 件以上は逐次（[issue #23463](https://github.com/anthropics/claude-code/issues/23463): 7 並列で parent context overflow）
+- **並列 dispatch は 3 件まで** — 4 件以上は逐次（[issue #23463](https://github.com/anthropics/claude-code/issues/23463): 7 並列で parent context overflow）。**この手動上限は `Agent` tool 直 dispatch 時のみ。多次元監査/レビュー/migration の決定論的 fan-out はハーネス提供 `Workflow` tool（自動上限 min(16,cores-2) + token 予算 + 構造化スキーマ + adversarial verify）が canonical。並列プリミティブ選択は `.claude/rules/parallel-orchestration.md` が SSoT**
 - **最終 report は < 50 findings**、中間 search log を含めない
 
 ### 違反検出時の abort 規律
