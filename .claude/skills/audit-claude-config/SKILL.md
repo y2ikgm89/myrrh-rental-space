@@ -34,7 +34,7 @@ done | sort -u
 
 echo ""
 echo "=== 3. Skill frontmatter 独自フィールド検出 ==="
-echo "公式 field: name/description/when_to_use/argument-hint/arguments/disable-model-invocation/user-invocable/allowed-tools/model/effort/context/agent/hooks/paths/shell"
+echo "公式 field: name/description/when_to_use/argument-hint/arguments/disable-model-invocation/user-invocable/allowed-tools/disallowed-tools/model/effort/context/agent/hooks/paths/shell"
 echo "実使用 field:"
 for f in .claude/skills/*/SKILL.md; do
   awk '/^---$/{c++; next} c==1' "$f" | grep -E '^[a-zA-Z_-]+:' | sed 's/:.*//'
