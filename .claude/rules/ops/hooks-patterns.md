@@ -13,15 +13,15 @@ paths:
 
 プロジェクトで実使用 → 詳細セクション参照。未使用 → 公式 docs 参照。新規 hook 追加時は本表を canonical 比較対象とする。
 
-| カテゴリ                 | プロジェクト使用中                   | プロジェクト未使用（公式参照）                                                       |
-| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------ |
-| Session lifecycle        | `SessionStart`                       | `Setup` / `SessionEnd`                                                               |
-| Per-turn                 | `UserPromptSubmit` / `Stop`          | `UserPromptExpansion` / `StopFailure`                                                |
-| Tool execution           | `PreToolUse` / `PostToolUse`         | `PostToolUseFailure` / `PostToolBatch` / `PermissionRequest` / `PermissionDenied`    |
-| Agent/Task               | `PostToolUse matcher: Agent`（代替） | `SubagentStart` / `SubagentStop` / `TaskCreated` / `TaskCompleted` / `TeammateIdle`  |
-| File/Config/Compact      | `PreCompact`                         | `FileChanged` / `ConfigChange` / `CwdChanged` / `InstructionsLoaded` / `PostCompact` |
-| Notification/Elicitation | `Notification`                       | `Elicitation` / `ElicitationResult`                                                  |
-| Worktree                 | —                                    | `WorktreeCreate` / `WorktreeRemove`                                                  |
+| カテゴリ             | プロジェクト使用中                   | プロジェクト未使用（公式参照）                                                       |
+| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------ |
+| Session lifecycle    | `SessionStart`                       | `Setup` / `SessionEnd`                                                               |
+| Per-turn             | `UserPromptSubmit` / `Stop`          | `UserPromptExpansion` / `StopFailure`                                                |
+| Tool execution       | `PreToolUse` / `PostToolUse`         | `PostToolUseFailure` / `PostToolBatch` / `PermissionRequest` / `PermissionDenied`    |
+| Agent/Task           | `PostToolUse matcher: Agent`（代替） | `SubagentStart` / `SubagentStop` / `TaskCreated` / `TaskCompleted` / `TeammateIdle`  |
+| File/Config/Compact  | `PreCompact`                         | `FileChanged` / `ConfigChange` / `CwdChanged` / `InstructionsLoaded` / `PostCompact` |
+| Notification/Display | `Notification`                       | `Elicitation` / `ElicitationResult` / `MessageDisplay`（v2.1.X+ display-only）       |
+| Worktree             | —                                    | `WorktreeCreate` / `WorktreeRemove`                                                  |
 
 **新規追加判断**: 未使用 events の採用は context cost と便益のトレードオフを記述したうえで `.claude/settings.json` に書く。`InstructionsLoaded` は path-scoped rule の debug 用途で有用候補（実装した場合は `additionalContext` 不可・ログ専用）。
 
@@ -43,8 +43,10 @@ paths:
 - **`effort`** — common input field（tool-use context 内）。`level: "low" | "medium" | "high" | "xhigh" | "max"`
 - **`CLAUDE_EFFORT`** env — Bash + hook commands 内で現在の effort level を参照
 - **`CLAUDE_ENV_FILE`** env — `SessionStart` / `Setup` / `CwdChanged` / `FileChanged` hooks の persistent environment
+- **`CLAUDE_CODE_REMOTE`** env（全 hook）— web 環境では `"true"`。terminal 専用挙動（`terminalSequence` 等）の分岐に使う
+- **`MessageDisplay`** event（v2.1.X+、上記イベント表に収録）— assistant message 表示中に発火、`hookSpecificOutput.displayContent` で**画面表示テキストのみ**置換（transcript / Claude の view 不変・block 不可）
 
-`effort` / `CLAUDE_EFFORT` / `CLAUDE_ENV_FILE` は現状プロジェクト未使用。採用時は本セクションを更新する。
+`effort` / `CLAUDE_EFFORT` / `CLAUDE_ENV_FILE` / `CLAUDE_CODE_REMOTE` / `MessageDisplay` は現状プロジェクト未使用。採用時は本セクションを更新する。
 
 ## Notification hook 公式 terminalSequence パターン
 
