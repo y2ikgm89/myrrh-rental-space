@@ -65,7 +65,7 @@ export async function createFaqCategory(
       name: input.name,
       slug: input.slug,
       description: normalizeNullableString(input.description),
-      iconEmoji: normalizeNullableString(input.iconEmoji),
+      icon: normalizeNullableString(input.icon),
       // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqCategories が SSoT）
       order: (maxOrder._max.order ?? 0) + 1,
       isActive: input.isActive,
@@ -92,7 +92,7 @@ export async function updateFaqCategory(
       name: input.name,
       slug: input.slug,
       description: normalizeNullableString(input.description),
-      iconEmoji: normalizeNullableString(input.iconEmoji),
+      icon: normalizeNullableString(input.icon),
       isActive: input.isActive,
     },
   });

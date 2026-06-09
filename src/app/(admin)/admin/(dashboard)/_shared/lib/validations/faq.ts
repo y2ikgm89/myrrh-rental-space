@@ -32,9 +32,9 @@ export const faqCategoryFormSchema = z.object({
     .max(500, { error: "説明は500文字以内で入力してください" })
     .nullable()
     .optional(),
-  iconEmoji: z
+  icon: z
     .string()
-    .max(8, { error: "アイコンは1文字の絵文字を入力してください" })
+    .max(50, { error: "アイコン名は50文字以内で入力してください" })
     .nullable()
     .optional(),
   isActive: z.boolean().default(false),

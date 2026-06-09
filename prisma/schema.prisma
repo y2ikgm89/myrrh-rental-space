@@ -1065,7 +1065,7 @@ model FaqCategory {
   name        String
   slug        String    @unique
   description String?   @db.Text
-  iconEmoji   String?   @db.VarChar(8)
+  icon        String? // キュレーション済みアイコン名（任意、SpaceCategory.icon と同方式）
   order       Int       @default(0)
   isActive    Boolean   @default(true)
   deletedAt   DateTime?

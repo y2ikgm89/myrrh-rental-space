@@ -33,6 +33,7 @@ import {
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { DragHandle } from "@/admin/components/ui/sortable";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { reorderFaqCategories } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -92,10 +93,11 @@ function SortableCategoryCard({ category }: SortableCardProps) {
         className="flex min-w-0 flex-1 items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
         aria-label={`${category.name}の質問を管理`}
       >
-        {category.iconEmoji && (
-          <span className="text-2xl" aria-hidden="true">
-            {category.iconEmoji}
-          </span>
+        {category.icon && (
+          <CuratedIcon
+            name={category.icon}
+            className="h-6 w-6 shrink-0 text-muted-foreground"
+          />
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

@@ -14,6 +14,7 @@ import type {
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { FaqTrashActionCell } from "./FaqTrashActionCell";
 
 type FaqTrashTableProps = {
@@ -64,10 +65,11 @@ export function FaqTrashTable({
                     <TableRow key={category.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {category.iconEmoji && (
-                            <span className="text-lg" aria-hidden="true">
-                              {category.iconEmoji}
-                            </span>
+                          {category.icon && (
+                            <CuratedIcon
+                              name={category.icon}
+                              className="h-5 w-5 shrink-0 text-muted-foreground"
+                            />
                           )}
                           <span className="font-medium">{category.name}</span>
                         </div>
