@@ -122,8 +122,8 @@ paths:
 - **FAQ 項目とカテゴリはソフトデリート** — `deletedAt: null` ガードが queries.ts 全クエリに必須
 - **FAQ 項目の回答はプレーンテキスト単一列（`answer`）** — Lexical 3 カラム構成は廃止済み
 - **FAQ bulk 操作は `updateMany` または interactive `$transaction`**
-- **FAQ 管理 UI は master-detail 構造**
-- **FAQ テーブル行クリックと checkbox/drag/ActionCell の click 衝突** — `onClick={stopPropagation}` + `PointerSensor` `distance: 8`
+- **FAQ 管理 UI は master-detail 構造 + 分析可視化 + 横断レビュー** — カテゴリ一覧 (`/admin/faq`) → カテゴリ詳細 (`/admin/faq/[categoryId]`) の master-detail に加え、公開投票 `helpfulCount`/`notHelpfulCount` を質問テーブルの「役立ち度」カラム (`FaqHelpfulnessBadge`、評価率 + 👍/👎、不評優位は `text-destructive`) で可視化 + `helpful` ソート。コンテンツ健全性は `quickFilter`（recent/stale/low-rated、公開ステータスとは独立軸）で絞り込み。カテゴリ横断の「対応すべき項目」は `/admin/faq/review`（master-detail を壊さず、既存 `getFaqItems` の `categoryId` 省略 = cross-category 対応で実現）+ ランディングに健全性チップ（0 件は非表示）。しきい値 SSoT は `@/shared/domain/faq/constants`（→ `ssot-singletons.md`）。**死蔵データ可視化が設計意図**（Zendesk votes/Content Cues・Intercom reactions/Articles report と整合）
+- **FAQ テーブル行クリックと checkbox/drag/ActionCell の click 衝突** — `stopRowClick`（`@/admin/components/table`）+ `PointerSensor` `distance: 8`
 - **Admin 一覧にカラムソート追加は 5 ステップ** — parsers / domain query / page.tsx parse / Table Header / table 本体
 - **`parseAsSortOrder` 共有 default は `"desc"`** — 手動 order 系カラムは parser map で override 必須
 - **Nullable 列のソートは `{ sort, nulls: "last" }` + tie-breaker 必須**

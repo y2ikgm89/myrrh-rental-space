@@ -68,10 +68,10 @@ export async function updateItem(
 
 ## AdminDetailLayout vs InlineEditorShell の使い分け
 
-| パターン                             | 適用場面                                         | ページ例                                                    |
-| ------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------- |
-| `AdminDetailLayout`                  | 標準の詳細・編集・新規作成ページ                 | customers/[id], spaces/[id]/edit, staff/new                 |
-| `InlineEditorShell` + `EditorHeader` | フルスクリーンエディタ（Lexical/コンテンツ編集） | posts/[id], news/[id], terms/[id]/edit, faq/items/[id]/edit |
+| パターン                             | 適用場面                                         | ページ例                                    |
+| ------------------------------------ | ------------------------------------------------ | ------------------------------------------- |
+| `AdminDetailLayout`                  | 標準の詳細・編集・新規作成ページ                 | customers/[id], spaces/[id]/edit, staff/new |
+| `InlineEditorShell` + `EditorHeader` | フルスクリーンエディタ（Lexical/コンテンツ編集） | posts/[id], news/[id], terms/[id]/edit      |
 
 **禁止**: InlineEditorShell を使うページに AdminDetailLayout をラップすること（二重ヘッダーになる）
 
