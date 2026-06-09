@@ -6,12 +6,14 @@ import {
   getDeletedFaqItems as getDeletedFaqItemsQuery,
   getFaqCategories as getFaqCategoriesQuery,
   getFaqCategoryById as getFaqCategoryByIdQuery,
+  getFaqHealthSummary as getFaqHealthSummaryQuery,
   getFaqItemById as getFaqItemByIdQuery,
   getFaqItems as getFaqItemsQuery,
 } from "@/shared/domain/faq/queries";
 import type {
   FaqCategoryListResult,
   FaqCategoryWithItems,
+  FaqHealthSummary,
   FaqItemFilters,
   FaqItemListResult,
   FaqItemPagination,
@@ -47,6 +49,11 @@ export async function getFaqItems(
 ): Promise<FaqItemListResult> {
   await requireAdminPermission("faq", "read");
   return getFaqItemsQuery(filters, pagination, sort);
+}
+
+export async function getFaqHealthSummary(): Promise<FaqHealthSummary> {
+  await requireAdminPermission("faq", "read");
+  return getFaqHealthSummaryQuery();
 }
 
 export async function getFaqItemById(

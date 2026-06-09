@@ -9,6 +9,7 @@ import {
 import type {
   FaqCategoryListResult,
   FaqCategoryWithItems,
+  FaqHealthSummary,
   FaqItemFilters,
   FaqItemListResult,
   FaqItemPagination,
@@ -238,6 +239,33 @@ export async function getFaqItems(
     limit,
     totalPages: Math.ceil(total / limit),
   };
+}
+
+/**
+ * カテゴリ横断のヘルスサマリー（ランディングの「対応すべき件数」表示用）。
+ * 件数のみを並列集計する軽量クエリ。
+ */
+export async function getFaqHealthSummary(): Promise<FaqHealthSummary> {
+  const base = { deletedAt: null, category: { deletedAt: null } } as const;
+  const staleThreshold = new Date(
+    Date.now() - FAQ_STALE_DAYS * 24 * 60 * 60 * 1000,
+  );
+
+  const [draftCount, staleCount, lowRatedCount] = await Promise.all([
+    prisma.faqItem.count({ where: { ...base, isPublished: false } }),
+    prisma.faqItem.count({
+      where: { ...base, isPublished: true, updatedAt: { lt: staleThreshold } },
+    }),
+    prisma.faqItem.count({
+      where: {
+        ...base,
+        isPublished: true,
+        notHelpfulCount: { gte: FAQ_LOW_RATED_MIN_NOT_HELPFUL },
+      },
+    }),
+  ]);
+
+  return { draftCount, staleCount, lowRatedCount };
 }
 
 export async function getFaqItemById(
