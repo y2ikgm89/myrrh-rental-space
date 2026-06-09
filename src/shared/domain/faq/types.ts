@@ -58,9 +58,14 @@ export type FaqItemListResult = {
   totalPages: number;
 };
 
-export type FaqItemQuickFilter = "all" | "drafts" | "recent" | "stale";
+export type FaqItemQuickFilter = "all" | "recent" | "stale" | "low-rated";
 
-export type FaqItemSortBy = "order" | "updatedAt" | "viewCount" | "createdAt";
+export type FaqItemSortBy =
+  | "order"
+  | "updatedAt"
+  | "viewCount"
+  | "createdAt"
+  | "helpful";
 export type FaqItemSortOrder = "asc" | "desc";
 
 export type FaqItemFilters = {

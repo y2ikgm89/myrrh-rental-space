@@ -29,6 +29,25 @@ const STATUS_OPTIONS = [
   { value: "draft", label: PUBLISH_LABELS.draft },
 ] as const;
 
+// コンテンツ健全性の絞り込み（公開ステータスとは独立した軸）
+const QUICK_FILTER_OPTIONS = [
+  { value: "all", label: "状態で絞り込み: なし" },
+  { value: "recent", label: "最近更新（7日以内）" },
+  { value: "stale", label: "未更新（180日以上）" },
+  { value: "low-rated", label: "要改善（不評あり）" },
+] as const;
+
+function isQuickFilter(
+  value: string,
+): value is "all" | "recent" | "stale" | "low-rated" {
+  return (
+    value === "all" ||
+    value === "recent" ||
+    value === "stale" ||
+    value === "low-rated"
+  );
+}
+
 export function FaqCategoryItemsFilters() {
   const [, startTransition] = useTransition();
   const [params, setParams] = useQueryStates(
@@ -50,15 +69,25 @@ export function FaqCategoryItemsFilters() {
     }
   };
 
+  const handleQuickFilterChange = (value: string) => {
+    if (isQuickFilter(value)) {
+      void setParams({ quickFilter: value, page: 1 });
+    }
+  };
+
   const handleReset = () => {
     void setParams({
       search: null,
       status: null,
+      quickFilter: null,
       page: null,
     });
   };
 
-  const hasFilters = params.search !== "" || params.status !== "all";
+  const hasFilters =
+    params.search !== "" ||
+    params.status !== "all" ||
+    params.quickFilter !== "all";
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -69,6 +98,24 @@ export function FaqCategoryItemsFilters() {
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="w-full sm:w-52">
+        <Select
+          value={params.quickFilter}
+          onValueChange={handleQuickFilterChange}
+        >
+          <SelectTrigger aria-label="コンテンツ状態で絞り込み">
+            <SelectValue placeholder="状態" />
+          </SelectTrigger>
+          <SelectContent>
+            {QUICK_FILTER_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
