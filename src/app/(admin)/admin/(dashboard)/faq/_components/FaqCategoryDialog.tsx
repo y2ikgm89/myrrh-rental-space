@@ -45,6 +45,7 @@ import {
   Switch,
   Textarea,
 } from "@/admin/components/ui";
+import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { createFaqCategory, updateFaqCategory } from "@/admin/actions/faq";
 import { faqCategoryFormSchema } from "@/admin/lib/validations/faq";
 import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
@@ -127,7 +128,7 @@ function FaqCategoryCreateDialog({ open, onOpenChange }: CreateProps) {
             name: "",
             slug: "",
             description: "",
-            iconEmoji: "",
+            icon: "",
             isActive: "on",
           }}
         />
@@ -202,7 +203,7 @@ function FaqCategoryEditDialog({ open, onOpenChange, category }: EditProps) {
             name: category.name,
             slug: category.slug,
             description: category.description ?? "",
-            iconEmoji: category.iconEmoji ?? "",
+            icon: category.icon ?? "",
             isActive: category.isActive ? "on" : "",
           }}
         />
@@ -242,7 +243,7 @@ type FormBodyProps = {
     name: string;
     slug: string;
     description: string;
-    iconEmoji: string;
+    icon: string;
     isActive: string;
   };
 };
@@ -268,7 +269,9 @@ function FaqCategoryFormBody({
 
   const nameControl = useInputControl(fields.name);
   const slugControl = useInputControl(fields.slug);
+  const iconControl = useInputControl(fields.icon);
   const isActiveControl = useInputControl(fields.isActive);
+  const iconValue = iconControl.value ?? "";
   const isActive = isActiveControl.value === "on";
 
   const formErrors = form.errors;
@@ -280,6 +283,7 @@ function FaqCategoryFormBody({
         name={fields.isActive.name}
         value={isActiveControl.value ?? ""}
       />
+      <input type="hidden" name={fields.icon.name} value={iconValue} />
 
       <div className="space-y-2">
         <Label htmlFor={fields.name.id}>カテゴリ名 *</Label>
@@ -320,17 +324,19 @@ function FaqCategoryFormBody({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={fields.iconEmoji.id}>アイコン（絵文字）</Label>
-        <Input
-          {...getInputProps(fields.iconEmoji, { type: "text" })}
-          placeholder="例: 🏠 🎯 ⭐"
-          maxLength={4}
+        <Label htmlFor={fields.icon.id}>アイコン</Label>
+        <IconPickerField
+          id={fields.icon.id}
+          value={iconValue}
+          onChange={(name) => iconControl.change(name)}
           disabled={isPending}
-          className="w-24 text-center text-xl"
+          {...(fields.icon.errors && {
+            "aria-describedby": fields.icon.errorId,
+          })}
         />
-        {fields.iconEmoji.errors && (
-          <p id={fields.iconEmoji.errorId} className="text-xs text-destructive">
-            {fields.iconEmoji.errors.join(", ")}
+        {fields.icon.errors && (
+          <p id={fields.icon.errorId} className="text-xs text-destructive">
+            {fields.icon.errors.join(", ")}
           </p>
         )}
       </div>

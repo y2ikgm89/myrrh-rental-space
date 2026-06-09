@@ -22,7 +22,7 @@ type FaqCategoryRecord = {
   name: string;
   slug: string;
   description: string | null;
-  iconEmoji: string | null;
+  icon: string | null;
   order: number;
   isActive: boolean;
   deletedAt: Date | null;
@@ -84,7 +84,7 @@ export type FaqCategoryCommandInput = {
   name: string;
   slug: string;
   description?: string | null;
-  iconEmoji?: string | null;
+  icon?: string | null;
   isActive: boolean;
 };
 

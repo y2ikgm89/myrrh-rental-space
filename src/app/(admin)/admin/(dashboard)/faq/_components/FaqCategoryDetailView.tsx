@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { Badge, Button } from "@/admin/components/ui";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type {
   FaqCategoryWithItems,
@@ -62,10 +63,11 @@ export function FaqCategoryDetailView({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            {category.iconEmoji && (
-              <span className="text-2xl" aria-hidden="true">
-                {category.iconEmoji}
-              </span>
+            {category.icon && (
+              <CuratedIcon
+                name={category.icon}
+                className="h-6 w-6 shrink-0 text-muted-foreground"
+              />
             )}
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {category.name}

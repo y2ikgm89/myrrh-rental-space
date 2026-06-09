@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
+import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
@@ -253,10 +254,11 @@ export function FaqListSection({
                       id={`faq-category-${category.id}`}
                       className="flex items-center gap-3 font-heading text-xl font-light tracking-[0.02em] text-foreground md:text-2xl"
                     >
-                      {category.iconEmoji && (
-                        <span className="text-2xl" aria-hidden="true">
-                          {category.iconEmoji}
-                        </span>
+                      {category.icon && (
+                        <CuratedIcon
+                          name={category.icon}
+                          className="h-6 w-6 shrink-0 text-accent"
+                        />
                       )}
                       {category.name}
                     </h2>

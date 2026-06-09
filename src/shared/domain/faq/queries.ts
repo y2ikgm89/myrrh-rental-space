@@ -46,7 +46,7 @@ const CATEGORY_SELECT = {
   name: true,
   slug: true,
   description: true,
-  iconEmoji: true,
+  icon: true,
   order: true,
   isActive: true,
   deletedAt: true,

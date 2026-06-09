@@ -181,7 +181,7 @@ export type PublicFaqCategoryWithItems = {
   readonly slug: string;
   readonly name: string;
   readonly description: string | null;
-  readonly iconEmoji: string | null;
+  readonly icon: string | null;
   readonly items: ReadonlyArray<{
     readonly id: string;
     readonly question: string;
@@ -217,7 +217,7 @@ export async function getPublishedFaqCategoriesWithItems(): Promise<
           slug: true,
           name: true,
           description: true,
-          iconEmoji: true,
+          icon: true,
           items: {
             where: {
               isPublished: true,

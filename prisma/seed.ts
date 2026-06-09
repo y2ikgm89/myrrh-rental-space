@@ -2497,6 +2497,7 @@ async function seedFaq() {
         name: "ご予約について",
         slug: "reservation",
         description: "予約に関するよくあるご質問",
+        icon: "IconCalendarEvent",
         order: 0,
       },
       items: [
@@ -2529,6 +2530,7 @@ async function seedFaq() {
         name: "お支払いについて",
         slug: "payment",
         description: "料金・お支払いに関するご質問",
+        icon: "IconBuildingStore",
         order: 1,
       },
       items: [
@@ -2556,6 +2558,7 @@ async function seedFaq() {
         name: "設備・備品について",
         slug: "facilities",
         description: "スペースの設備に関するご質問",
+        icon: "IconSettings",
         order: 2,
       },
       items: [

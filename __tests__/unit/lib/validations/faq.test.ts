@@ -154,6 +154,37 @@ describe("faqCategoryFormSchema", () => {
     });
   });
 
+  describe("icon", () => {
+    test("有効なアイコン名は許可", () => {
+      const result = faqCategoryFormSchema.safeParse({
+        ...VALID_FAQ_CATEGORY,
+        icon: "IconCalendarEvent",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("null / undefined / 空文字は許可（未選択）", () => {
+      for (const icon of [null, undefined, ""]) {
+        const result = faqCategoryFormSchema.safeParse({
+          ...VALID_FAQ_CATEGORY,
+          icon,
+        });
+        expect(result.success).toBe(true);
+      }
+    });
+
+    test("50文字超過はエラー", () => {
+      const result = faqCategoryFormSchema.safeParse({
+        ...VALID_FAQ_CATEGORY,
+        icon: "a".repeat(51),
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain("50文字以内");
+      }
+    });
+  });
+
   describe("isActive", () => {
     test("true/falseは許可", () => {
       for (const isActive of [true, false]) {

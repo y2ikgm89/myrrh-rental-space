@@ -76,7 +76,7 @@ export async function createFaqCategory(
             name: data.name,
             slug: data.slug,
             description: data.description ? data.description : null,
-            iconEmoji: data.iconEmoji ? data.iconEmoji : null,
+            icon: data.icon ? data.icon : null,
             isActive: data.isActive,
           }),
         afterSuccess: () => {
@@ -116,7 +116,7 @@ export async function updateFaqCategory(
             name: data.name,
             slug: data.slug,
             description: data.description ? data.description : null,
-            iconEmoji: data.iconEmoji ? data.iconEmoji : null,
+            icon: data.icon ? data.icon : null,
             isActive: data.isActive,
           });
           return null;
