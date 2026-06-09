@@ -9,19 +9,69 @@
  */
 
 import { useState } from "react";
-import { IconPlus, IconSettings, IconTrash } from "@tabler/icons-react";
+import {
+  IconClock,
+  IconPencil,
+  IconPlus,
+  IconSettings,
+  IconThumbDown,
+  IconTrash,
+} from "@tabler/icons-react";
+import type { TablerIcon } from "@tabler/icons-react";
 import Link from "next/link";
-import { Button } from "@/admin/components/ui";
-import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import type { Route } from "next";
+import { Badge, Button } from "@/admin/components/ui";
+import { toAppRoute } from "@/shared/lib/typed-routes";
+import type {
+  FaqCategoryWithItems,
+  FaqHealthSummary,
+} from "@/shared/domain/faq/types";
 import { FaqCategoryGrid } from "./FaqCategoryGrid";
 import { FaqCategoryDialog } from "./FaqCategoryDialog";
 
 type FaqCategoryListViewProps = {
   readonly categories: readonly FaqCategoryWithItems[];
+  readonly summary: FaqHealthSummary;
 };
 
-export function FaqCategoryListView({ categories }: FaqCategoryListViewProps) {
+type HealthChip = {
+  readonly filter: "draft" | "stale" | "low-rated";
+  readonly label: string;
+  readonly count: number;
+  readonly icon: TablerIcon;
+};
+
+export function FaqCategoryListView({
+  categories,
+  summary,
+}: FaqCategoryListViewProps) {
   const [createOpen, setCreateOpen] = useState(false);
+
+  // 対応すべき件数（0 件のものは表示しない＝健全なら何も出さない）
+  const allChips: readonly HealthChip[] = [
+    {
+      filter: "draft",
+      label: "下書き",
+      count: summary.draftCount,
+      icon: IconPencil,
+    },
+    {
+      filter: "stale",
+      label: "未更新",
+      count: summary.staleCount,
+      icon: IconClock,
+    },
+    {
+      filter: "low-rated",
+      label: "要改善",
+      count: summary.lowRatedCount,
+      icon: IconThumbDown,
+    },
+  ];
+  const healthChips = allChips.filter((chip) => chip.count > 0);
+
+  const reviewHref = (filter: HealthChip["filter"]): Route =>
+    toAppRoute(`/admin/faq/review?filter=${filter}`);
 
   return (
     <>
@@ -53,6 +103,32 @@ export function FaqCategoryListView({ categories }: FaqCategoryListViewProps) {
           </Button>
         </div>
       </div>
+
+      {healthChips.length > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-2"
+          aria-label="対応が必要な質問"
+        >
+          <span className="text-xs text-muted-foreground">対応が必要:</span>
+          {healthChips.map(({ filter, label, count, icon: ChipIcon }) => (
+            <Button
+              key={filter}
+              asChild
+              type="button"
+              variant="outline"
+              size="sm"
+            >
+              <Link href={reviewHref(filter)}>
+                <ChipIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                {label}
+                <Badge variant="secondary" className="ml-2">
+                  {count}
+                </Badge>
+              </Link>
+            </Button>
+          ))}
+        </div>
+      )}
 
       <FaqCategoryGrid
         categories={categories}

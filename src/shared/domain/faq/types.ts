@@ -50,6 +50,18 @@ export type FaqCategoryListResult = {
   total: number;
 };
 
+/**
+ * カテゴリ横断の「対応すべき件数」サマリー（管理画面ランディングのヘルス表示用）。
+ * - draftCount: 下書き（非公開）項目
+ * - staleCount: 長期間更新されていない公開項目（FAQ_STALE_DAYS 基準）
+ * - lowRatedCount: 「役に立たなかった」票が付いた公開項目
+ */
+export type FaqHealthSummary = {
+  draftCount: number;
+  staleCount: number;
+  lowRatedCount: number;
+};
+
 export type FaqItemListResult = {
   items: FaqItemWithCategory[];
   total: number;

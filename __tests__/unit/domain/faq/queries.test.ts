@@ -18,7 +18,8 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-const { getFaqItems } = await import("@/shared/domain/faq/queries");
+const { getFaqItems, getFaqHealthSummary } =
+  await import("@/shared/domain/faq/queries");
 
 const CATEGORY_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -80,6 +81,42 @@ describe("getFaqItems — quickFilter / sort のクエリ構築", () => {
           orderBy: [{ helpfulCount: "desc" }, { updatedAt: "desc" }],
         }),
       );
+    });
+  });
+});
+
+describe("getFaqHealthSummary — 横断ヘルス集計", () => {
+  beforeEach(() => {
+    mockFaqItemCount.mockClear();
+  });
+
+  test("下書き / 未更新 / 要改善 を 3 件並列集計する", async () => {
+    const summary = await getFaqHealthSummary();
+
+    expect(mockFaqItemCount).toHaveBeenCalledTimes(3);
+    expect(summary).toEqual({
+      draftCount: 0,
+      staleCount: 0,
+      lowRatedCount: 0,
+    });
+
+    // 下書き = 非公開
+    expect(mockFaqItemCount).toHaveBeenCalledWith({
+      where: expect.objectContaining({ isPublished: false }),
+    });
+    // 未更新 = 公開中 + updatedAt が古い
+    expect(mockFaqItemCount).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        isPublished: true,
+        updatedAt: { lt: expect.any(Date) },
+      }),
+    });
+    // 要改善 = 公開中 + notHelpfulCount >= しきい値
+    expect(mockFaqItemCount).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        isPublished: true,
+        notHelpfulCount: { gte: FAQ_LOW_RATED_MIN_NOT_HELPFUL },
+      }),
     });
   });
 });

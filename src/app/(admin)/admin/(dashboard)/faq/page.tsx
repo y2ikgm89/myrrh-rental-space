@@ -12,7 +12,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import type { Metadata } from "next";
-import { getFaqCategories } from "@/admin/queries/faq";
+import { getFaqCategories, getFaqHealthSummary } from "@/admin/queries/faq";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { FaqCategoryListView } from "./_components/FaqCategoryListView";
 
@@ -22,8 +22,11 @@ export const metadata: Metadata = {
 
 async function FaqCategoryListContent() {
   await connection();
-  const { categories } = await getFaqCategories();
-  return <FaqCategoryListView categories={categories} />;
+  const [{ categories }, summary] = await Promise.all([
+    getFaqCategories(),
+    getFaqHealthSummary(),
+  ]);
+  return <FaqCategoryListView categories={categories} summary={summary} />;
 }
 
 export default function FaqPage() {

@@ -512,6 +512,29 @@ export async function loadAdminFaqCategoryDetailSearchParams(
   return adminFaqCategoryDetailSearchParamsCache.all();
 }
 
+// FAQ レビュー（カテゴリ横断の「対応すべき項目」一覧）の絞り込み軸
+const adminFaqReviewFilterValues = ["draft", "stale", "low-rated"] as const;
+export type AdminFaqReviewFilter = (typeof adminFaqReviewFilterValues)[number];
+
+export const adminFaqReviewSearchParamsParsers = {
+  filter: parseAsStringLiteral(adminFaqReviewFilterValues).withDefault("draft"),
+  search: parseAsQuery,
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+};
+
+const adminFaqReviewSearchParamsCache = createSearchParamsCache(
+  adminFaqReviewSearchParamsParsers,
+);
+
+/** 管理画面 FAQ レビューページの検索パラメータローダー */
+export async function loadAdminFaqReviewSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminFaqReviewSearchParamsCache.parse(searchParams);
+  return adminFaqReviewSearchParamsCache.all();
+}
+
 const adminInquirySearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
