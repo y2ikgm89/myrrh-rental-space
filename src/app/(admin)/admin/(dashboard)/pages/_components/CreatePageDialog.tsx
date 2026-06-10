@@ -47,22 +47,9 @@ import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
 import { createPage } from "@/admin/actions/page";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { generateSlug } from "@/shared/lib/slug";
 import { createPageSchema } from "@/shared/lib/validations/page";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
-
-/**
- * タイトルからスラッグを自動生成
- * 英数字のみ抽出してkebab-caseに変換
- */
-function generateSlugFromTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "") // 英数字・スペース・ハイフン以外を除去
-    .trim()
-    .replace(/\s+/g, "-") // スペース → ハイフン
-    .replace(/-+/g, "-") // 連続ハイフン → 単一
-    .replace(/^-|-$/g, ""); // 先頭・末尾のハイフン除去
-}
 
 type SlugStatus = "idle" | "checking" | "available" | "unavailable";
 
@@ -174,7 +161,7 @@ export function CreatePageDialog({
   // タイトル変更時にスラッグ自動生成 (useEffectEvent で slugControl 参照を deps 除外)
   const syncSlugFromTitle = useEffectEvent(() => {
     if (!isManualSlug && title) {
-      const generated = generateSlugFromTitle(title);
+      const generated = generateSlug(title, "page", 100);
       if (generated && generated !== slug) {
         slugControl.change(generated);
       }
