@@ -1,7 +1,6 @@
 ---
 paths:
   - src/shared/db/**
-  - src/**/actions/**/*.ts
   - src/**/queries/**/*.ts
   - src/app/api/**
   - prisma/**

@@ -13,7 +13,7 @@ paths:
   - src/shared/lib/turnstile*
   - src/shared/lib/validations/enums/guards*
   - src/app/(admin)/**/_shared/lib/**
-  - src/**/actions/**/*.ts
+  - src/app/(admin)/**/_shared/actions/**
 ---
 
 # SSOT 定数・シングルトン（認証・RBAC）

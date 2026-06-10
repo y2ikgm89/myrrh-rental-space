@@ -7,7 +7,6 @@ paths:
   - src/shared/domain/spaces/**
   - src/shared/domain/sections/**
   - src/shared/lib/lexical/**
-  - src/**/actions/**/*.ts
 ---
 
 # Lexical JSON Primary パターン

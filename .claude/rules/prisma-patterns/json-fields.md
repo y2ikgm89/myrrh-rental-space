@@ -6,7 +6,6 @@ paths:
   - src/shared/db/**
   - src/shared/domain/**/*.ts
   - src/**/queries/**/*.ts
-  - src/**/actions/**/*.ts
 ---
 
 # Prisma JSON フィールドの型安全化

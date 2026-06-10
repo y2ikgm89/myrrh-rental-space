@@ -8,7 +8,10 @@ paths:
   - docs/how-to/docker.md
   - docs/how-to/cloudflare.md
   - docs/how-to/cron-schedule.md
-  - src/**
+  - src/proxy.ts
+  - src/middleware.ts
+  - src/app/api/**
+  - src/instrumentation.ts
   - .github/workflows/**
 ---
 
