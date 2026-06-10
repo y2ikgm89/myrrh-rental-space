@@ -8,7 +8,6 @@ paths:
   - src/shared/components/**
   - src/shared/lib/lexical/**
   - "src/**/*lexical*"
-  - src/**/*.css
 ---
 
 # SSOT 定数・シングルトン（UI コンポーネント・デザイントークン）

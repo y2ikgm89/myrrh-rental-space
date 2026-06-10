@@ -59,7 +59,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 - **GCal outbound sync は attendees 空 + description marker + fireAndForget**（`ical-patterns.md`）
 - **Turnstile** — 未認証公開フォーム必須、認証済みでも高リスク操作は許容、参照系は不要
 - **datetime-local は `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst`、`@db.Date`（日付のみ）列は `parseJstDateOnly` / `formatJstDateOnly`** — `new Date(localStr)` は tz 依存で 9h ずれる silent bug（`@db.Date` は「JST カレンダー日付を UTC 深夜保持」）
-- **Section schema canonical は `definitions/<type>/schema.ts`** — `safeParse({})` 成立必須（required field に `.default()`、`ssot-singletons.md`）
+- **Section schema canonical は `definitions/<type>/schema.ts`** — `safeParse({})` 成立必須（required field に `.default()`、`ssot-sections-features.md`）
 - **`PortableTextSpan[]` / `PortableTextBlock[]` の JSX truthy gate 禁止** — `.length > 0` で gate（空配列も truthy）
 
 ### UI / UX
@@ -161,7 +161,7 @@ Multiple Root Layouts: `(admin)/` `(public)/` で CSS・認証・レイアウト
 
 ## SSoT / Claude Code 公式準拠
 
-- 主要 SSoT singleton: `.claude/rules/ssot-singletons.md`（src/prisma 編集時 auto-load）
+- 主要 SSoT singleton: `.claude/rules/ssot-*.md`（5 ドメイン別 rule、path-scoped auto-load）
 - 監査例外: `.claude/rules/audit-exceptions.md`
 - `.claude/` 配下は 5 層構造（Memory / Rules / Subagents / Skills / Hooks）のみ — `claude-code-patterns.md`（`.claude/**` 編集時 auto-load）
 - 全 rule docs は path-scoped frontmatter 必須（常時 load 禁止）

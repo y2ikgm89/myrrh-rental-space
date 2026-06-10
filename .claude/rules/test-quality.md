@@ -87,7 +87,7 @@ test("タイトル必須バリデーション", () => {
 });
 ```
 
-`isXxxConfig` 型ガード test も同方針: 空 config / `title: ""` は valid（default 適用）、type 違反のみ false を返す。`createTypedConfigGetterFromSchema` の fallback chain (`safeParse({})` 成立必須）に寄り添う設計（→ `ssot-singletons.md` §Section schema 重複）。
+`isXxxConfig` 型ガード test も同方針: 空 config / `title: ""` は valid（default 適用）、type 違反のみ false を返す。`createTypedConfigGetterFromSchema` の fallback chain (`safeParse({})` 成立必須）に寄り添う設計（→ `ssot-sections-features.md` §Section schema）。
 
 ## 必須事項
 

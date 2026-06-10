@@ -205,4 +205,4 @@ shadcn `<Input>` (`@/admin/components/ui`) は **`leadingIcon` / `trailingIcon` 
 - 対応 fieldType: **text / url / number** のみ。`field.textarea` / `field.boolean` / `field.select` / `field.image` / `field.icon` は型は受け付けるが silent ignore（`Textarea` 系は icon adornment 業界標準的に稀のため）
 - AutoSectionForm の `case "text" | "url" | "number"` + AutoArrayField の `ArrayItemField` (items[] 内 text/url) で配線済み
 
-**Curation 必須**: `leadingIcon` / `trailingIcon` に渡す名前は `@/shared/lib/icon-curation.ts` の `ICON_CATEGORIES` に登録必須 — 未登録は `getCuratedIconComponent()` で undefined → icon 描画されない silent bug（`field.url()` の default `IconLink` も同 curation に登録済み）。詳細 → `ssot-singletons.md` §IconPickerField エントリ。
+**Curation 必須**: `leadingIcon` / `trailingIcon` に渡す名前は `@/shared/lib/icon-curation.ts` の `ICON_CATEGORIES` に登録必須 — 未登録は `getCuratedIconComponent()` で undefined → icon 描画されない silent bug（`field.url()` の default `IconLink` も同 curation に登録済み）。詳細 → `ssot-ui-components.md` §IconPickerField エントリ。
