@@ -1,7 +1,6 @@
 ---
 description: Tailwind 4 CSS-first 設定（@theme + OKLCH カラー + Typography SSoT + @keyframes）+ Multiple Root Layouts による admin / public CSS 分離
 paths:
-  - src/**/*.css
   - src/app/(admin)/_styles/admin*.css
   - src/app/(public)/_styles/public*.css
   - src/shared/styles/**
