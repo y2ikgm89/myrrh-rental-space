@@ -4,14 +4,16 @@
  * 初期データを作成する（Prisma 7 ベストプラクティス準拠）
  *
  * 使用方法:
- *   bun prisma/seed.ts                                      # 引数なし = --demo（migrate reset の既定）
- *   bun prisma/seed.ts --admin <email> <password> [name]  # 管理者のみ
- *   bun prisma/seed.ts --demo                              # デモデータ生成（既存スキップ）
- *   bun prisma/seed.ts --fresh <email> <password> [name]   # 全削除 + 再作成
- *   bun prisma/seed.ts --all <email> <password> [name]     # 全て生成
+ *   bun prisma/seed.ts                                             # 引数なし = --demo（migrate reset の既定）
+ *   bun prisma/seed.ts --admin <email> <password> [name]         # 管理者のみ
+ *   bun prisma/seed.ts --production <email> <password> [name]    # 本番用テンプレート（デモデータなし）
+ *   bun prisma/seed.ts --demo                                     # デモデータ生成（既存スキップ）
+ *   bun prisma/seed.ts --fresh <email> <password> [name]          # 全削除 + 再作成
+ *   bun prisma/seed.ts --all <email> <password> [name]            # 全て生成
  *
  * 例:
  *   bun prisma/seed.ts --admin admin@example.com mypassword123 "Administrator"
+ *   bun prisma/seed.ts --production owner@example.com mypassword123 "オーナー名"
  *   bun prisma/seed.ts --demo
  *   bun prisma/seed.ts --fresh admin@example.com mypassword123
  *   bun prisma/seed.ts --all admin@example.com mypassword123
@@ -4600,6 +4602,56 @@ async function seedDemo() {
   await seedInstagramPosts();
 }
 
+// =============================================================================
+// Production Seed（本番用テンプレート）
+// デモ・テスト用の運用データ（顧客・予約・問い合わせ等）を含まない。
+// 管理画面から本番データに上書きすることを前提としたテンプレート構成。
+// =============================================================================
+
+async function seedProduction(email: string, password: string, name: string) {
+  await seedAdmin(email, password, name);
+
+  console.log("");
+  console.log("📦 Creating production template data...");
+  console.log("");
+
+  // Phase 1: 基本設定
+  await seedSettings();
+
+  // Phase 2: マスターデータ
+  await seedLocations();
+  await seedSpaceCategories();
+
+  // Phase 3: スペース（テンプレート）
+  await seedSpaces();
+
+  // Phase 4: コンテンツ（テンプレート）
+  await seedNews();
+  await seedPages();
+  await seedFaq();
+  await seedTerms();
+
+  // Phase 5: サイト設定
+  await seedNavigation();
+  await seedAnnouncementBar();
+  await seedSocialLinks();
+  await seedSystemPageSections();
+
+  // Phase 6: バージョン履歴（news のみ）
+  await seedNewsVersions();
+
+  console.log("");
+  console.log(
+    "📝 テンプレートデータが作成されました。管理画面で本番データに更新してください:",
+  );
+  console.log("   /admin/settings  — 会社名・住所・連絡先");
+  console.log("   /admin/locations — 実際の拠点情報");
+  console.log("   /admin/spaces    — 実際のスペース・料金");
+  console.log("   /admin/pages     — 公開ページのコンテンツ");
+  console.log("   /admin/faq       — FAQコンテンツ");
+  console.log("   /admin/news      — お知らせ");
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -4629,6 +4681,12 @@ async function main() {
       process.exit(1);
     }
     await seedAdmin(arg1, arg2, arg3 ?? "Administrator");
+  } else if (mode === "--production") {
+    if (!arg1 || !arg2) {
+      console.error("Error: --production requires <email> and <password>");
+      process.exit(1);
+    }
+    await seedProduction(arg1, arg2, arg3 ?? "Administrator");
   } else if (mode === "--demo") {
     await seedDemo();
   } else if (mode === "--fresh") {
