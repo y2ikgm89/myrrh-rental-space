@@ -1190,13 +1190,13 @@ describe("createPublicReservationCommand", () => {
       expect(result.payload.spaceName).toBe("テストスペース");
     });
 
-    test("ステータスは常に PENDING", async () => {
+    test("ステータスは常に CONFIRMED（Stripe なし自動確定）", async () => {
       await createPublicReservationCommand(validInput);
 
       expect(mockReservationCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            status: ReservationStatus.PENDING,
+            status: ReservationStatus.CONFIRMED,
           }),
         }),
       );

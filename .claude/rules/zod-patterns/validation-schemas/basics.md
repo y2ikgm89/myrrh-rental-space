@@ -3,7 +3,6 @@ description: Zod 基本スキーマ + 複合スキーマ + スキーマ合成 (.
 paths:
   - src/shared/lib/validations/**
   - src/**/lib/validations/**
-  - src/**/actions/**/*.ts
   - src/shared/domain/**
 ---
 

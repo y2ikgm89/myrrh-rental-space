@@ -6,7 +6,6 @@ paths:
   - src/app/**/layout.tsx
   - src/app/**/page.tsx
   - src/**/lib/auth/**
-  - src/**/actions/**/*.ts
 ---
 
 # Better Auth セッション取得

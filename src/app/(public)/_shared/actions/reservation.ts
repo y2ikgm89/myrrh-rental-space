@@ -14,7 +14,10 @@ import {
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
-import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
+import {
+  sendReservationAdminNotification,
+  sendReservationConfirmationEmail,
+} from "@/shared/lib/email/reservation-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
@@ -104,6 +107,14 @@ export async function submitReservation(
           ),
           {
             operation: "sendReservationAdminNotification",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
+
+        fireAndForget(
+          sendReservationConfirmationEmail(omitUndefined(result.payload)),
+          {
+            operation: "sendReservationConfirmationEmail",
             category: ErrorCategory.EXTERNAL_API,
           },
         );

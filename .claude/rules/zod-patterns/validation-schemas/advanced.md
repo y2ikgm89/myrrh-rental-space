@@ -3,7 +3,6 @@ description: Zod 高度パターン（conform 配列フィールド form.insert/
 paths:
   - src/shared/lib/validations/**
   - src/**/lib/validations/**
-  - src/**/actions/**/*.ts
   - src/shared/domain/**
   - src/shared/lib/json-validators.ts
   - src/shared/lib/sections/definitions/**
