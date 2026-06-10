@@ -377,10 +377,11 @@ export const field = {
   /**
    * URL 入力（有効な URL または空文字列を許容）
    *
-   * `z.string().url()` は空文字を拒否するため、空文字列は `z.literal("")` で別途許可する。
+   * `z.url()` は空文字を拒否するため、空文字列は `z.literal("")` で別途許可する。
    */
   url(label: string, opts?: StringFieldOpts) {
-    return applyStringConstraints(z.string().url(), opts ?? {})
+    return z
+      .url()
       .or(z.literal(""))
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
