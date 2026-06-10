@@ -41,12 +41,12 @@ env:
 
 ```yaml
 # NG: hardcode（9+ 箇所で drift する）
-- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
   with:
     bun-version: "1.3.13"
 
 # OK: package.json#packageManager (bun@X.Y.Z) を SSoT
-- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
   with:
     bun-version-file: package.json
 ```
@@ -123,7 +123,7 @@ jobs:
 `oven-sh/setup-bun@v2` は **デフォルトで node_modules を cache しない**（[公式 issue #54](https://github.com/oven-sh/setup-bun/issues/54)）。`actions/cache@v5` で `~/.bun/install/cache` を `bun.lock` ハッシュで cache すると各 job の install が大幅短縮。並列 job 数 ×30s の wall clock 削減効果。
 
 ```yaml
-- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
   with:
     bun-version-file: package.json
 
@@ -188,7 +188,7 @@ GitHub-hosted runner の Node.js 20 deprecation（2026-06 強制 Node 24 化、2
 | `actions/labeler`                  | `@v5`        | **`@v6`**               | input 互換（config 形式は v5 で確立、`changed-files-labels-limit` 新規 input）                                                                                                                                           |
 | `actions/stale`                    | `@v9`        | **`@v10`**              | input 互換、runner v2.327.1+ 必須                                                                                                                                                                                        |
 | `peter-evans/create-pull-request`  | `@v6`        | **`@v8`**               | input 互換、runner v2.327.1+ 必須                                                                                                                                                                                        |
-| `oven-sh/setup-bun`                | SHA pin      | `@ecf28ddc... # v2.1.3` | tag → SHA 直 pin に移行（GitHub Actions 公式 security best practice）。tag は force-push 攻撃リスク + codeload tarball 404 outage で全 job が `Set up job` 段階 fail する silent risk。PR #256 で 10 箇所一括 SHA pin 化 |
+| `oven-sh/setup-bun`                | SHA pin      | `@0c5077e5... # v2.2.0` | tag → SHA 直 pin に移行（GitHub Actions 公式 security best practice）。tag は force-push 攻撃リスク + codeload tarball 404 outage で全 job が `Set up job` 段階 fail する silent risk。PR #256 で 10 箇所一括 SHA pin 化 |
 | `preactjs/compressed-size-action`  | `@v2`        | `@v2` (現行)            | major version 据置                                                                                                                                                                                                       |
 | `rhysd/actionlint`                 | bash dl      | bash dl                 | curl で latest を取得（version pin なし）                                                                                                                                                                                |
 
@@ -209,7 +209,7 @@ GitHub Actions 公式 [security guide](https://docs.github.com/en/actions/securi
 
 ```yaml
 # OK: SHA 直 pin + コメントで version 記録
-- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
 # NG: tag 参照（force-push + outage リスク）
@@ -259,7 +259,7 @@ function applySecurityHeaders(
 ```yaml
 # OK: setup-bun を先に走らせて PATH に bun を通す
 - uses: actions/checkout@v6
-- uses: oven-sh/setup-bun@ecf28ddc73e819eb6fa29df6b34ef8921c743461 # v2.1.3
+- uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
   with:
     bun-version-file: package.json
 - uses: preactjs/compressed-size-action@v2
