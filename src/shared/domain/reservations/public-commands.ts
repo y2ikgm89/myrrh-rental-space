@@ -104,7 +104,7 @@ export async function createPublicReservationCommand(
         endTime: endDateTime,
         totalPrice: basePrice,
         basePrice,
-        status: ReservationStatus.PENDING,
+        status: ReservationStatus.CONFIRMED,
         notes: input.notes || null,
         userId: input.userId || null,
         // Guest contact info (予約時の入力を記録)
