@@ -49,6 +49,7 @@ import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField"
 import { createFaqCategory, updateFaqCategory } from "@/admin/actions/faq";
 import { faqCategoryFormSchema } from "@/admin/lib/validations/faq";
 import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import { generateSlug } from "@/shared/lib/slug";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 type FaqCategoryDialogProps = {
@@ -63,22 +64,6 @@ export function FaqCategoryDialog(props: FaqCategoryDialogProps) {
     return <FaqCategoryEditDialog {...props} category={props.category} />;
   }
   return <FaqCategoryCreateDialog {...props} />;
-}
-
-// =============================================================================
-// 名前 → スラッグ自動生成 (create mode only)
-// =============================================================================
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 100);
 }
 
 // =============================================================================
@@ -295,7 +280,7 @@ function FaqCategoryFormBody({
             const value = e.target.value;
             nameControl.change(value);
             if (autoSlugFromName) {
-              slugControl.change(slugify(value));
+              slugControl.change(generateSlug(value, "category", 100));
             }
           }}
         />

@@ -286,3 +286,15 @@ export function formatDayWithWeekday(date: Date | string): string {
   const value = typeof date === "string" ? new Date(date) : date;
   return JST_DAY_WEEKDAY_FORMATTER.format(value);
 }
+
+const JST_MONTH_DAY_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  month: "long",
+  day: "numeric",
+  weekday: "short",
+});
+
+export function formatMonthDayWithWeekday(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_MONTH_DAY_WEEKDAY_FORMATTER.format(value);
+}

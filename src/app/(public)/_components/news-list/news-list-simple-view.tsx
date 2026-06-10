@@ -29,6 +29,7 @@ import type { NewsListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { formatDateShort } from "@/shared/lib/date-format";
 
 export interface NewsData {
   readonly id: string;
@@ -42,17 +43,6 @@ interface NewsListSimpleViewProps {
   readonly config: NewsListConfig;
   readonly news: readonly NewsData[];
   readonly style: SectionStylePayload;
-}
-
-function formatDate(date: string | null): string {
-  if (!date) return "";
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-    .format(new Date(date))
-    .replaceAll("/", ".");
 }
 
 export function NewsListSimpleView({
@@ -140,7 +130,7 @@ export function NewsListSimpleView({
                 className="text-sm tabular-nums text-muted-foreground"
                 style={getTextStyle(style)}
               >
-                {formatDate(item.publishedAt)}
+                {formatDateShort(item.publishedAt)?.replace(/\//g, ".") ?? ""}
               </time>
               <h3 className="mt-2 font-heading text-base font-light tracking-tight transition-colors group-hover:text-foreground md:text-lg">
                 {item.title}
@@ -157,7 +147,7 @@ export function NewsListSimpleView({
                 className="shrink-0 text-sm tabular-nums text-muted-foreground"
                 style={getTextStyle(style)}
               >
-                {formatDate(item.publishedAt)}
+                {formatDateShort(item.publishedAt)?.replace(/\//g, ".") ?? ""}
               </time>
               <h3 className="text-sm transition-colors duration-200 group-hover:text-foreground md:text-base">
                 {item.title}
