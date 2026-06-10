@@ -36,3 +36,8 @@ function useDialog() {
 }
 {picker.dialogElement}
 ```
+
+## 詳細パターン
+
+- `hooks/component-and-state.md` — Outer/Inner Split / useReducer cascade / startTransition / conform fields
+- `hooks/external-store.md` — useSyncExternalStore (sessionStorage / localStorage) + 楽観的 local state

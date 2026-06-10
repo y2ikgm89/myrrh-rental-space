@@ -1,8 +1,6 @@
 ---
 description: セマンティックカラートークン（admin Swiss Industrial / public Luxury Bronze）+ ハードコードカラー → トークン代替表 + ユーティリティクラス（@layer / カスタムアニメーション / Border Radius）
 paths:
-  - src/**/*.tsx
-  - src/**/*.css
   - src/app/(admin)/_styles/admin*.css
   - src/app/(public)/_styles/public*.css
 ---

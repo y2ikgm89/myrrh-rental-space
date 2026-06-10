@@ -1,7 +1,6 @@
 ---
 description: useSyncExternalStore（sessionStorage / localStorage）+ 楽観的 local state 併用 + signature-based dismissable persistence
 paths:
-  - "src/**/*.tsx"
   - "src/**/use-*.ts"
   - "src/**/use[A-Z]*.ts"
   - "src/**/hooks.ts"

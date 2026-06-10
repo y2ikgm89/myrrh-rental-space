@@ -19,7 +19,6 @@ import {
   IconPalette,
   IconCreditCard,
   IconToggleLeft,
-  IconCalendarOff,
 } from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
@@ -67,17 +66,10 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
   },
   {
     title: "ビジネス設定",
-    description: "事業者情報・営業時間・予約",
+    description: "事業者情報・営業時間・予約・休業日",
     href: "/admin/settings/business",
     icon: IconBuilding,
-    items: ["事業者情報", "営業時間", "予約"],
-  },
-  {
-    title: "全社休業日",
-    description: "全スペース・全拠点に適用する臨時休業（年末年始・災害等）",
-    href: "/admin/settings/holidays",
-    icon: IconCalendarOff,
-    items: ["臨時休業", "急な休み"],
+    items: ["事業者情報", "営業時間", "予約", "休業日"],
   },
   {
     title: "課金・決済",
