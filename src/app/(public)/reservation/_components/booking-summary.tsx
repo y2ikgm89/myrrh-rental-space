@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { Heading } from "@/public/components/design-system/heading";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { formatMonthDayWithWeekday } from "@/shared/lib/date-format";
 
 interface BookingSummaryProps {
   readonly locationName: string;
@@ -20,19 +21,6 @@ interface BookingSummaryProps {
   readonly guests: number;
   readonly price: number | null;
   readonly onEdit?: () => void;
-}
-
-function formatDateJa(dateStr: string): string {
-  try {
-    const date = new Date(`${dateStr}T00:00:00`);
-    return date.toLocaleDateString("ja-JP", {
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 function formatDurationLabel(start: string, end: string): string {
@@ -107,7 +95,7 @@ export function BookingSummary({
         <SummaryRow
           icon={<IconCalendarEvent size={16} />}
           label="日付"
-          value={formatDateJa(date)}
+          value={formatMonthDayWithWeekday(date)}
         />
         <SummaryRow
           icon={<IconClock size={16} />}
