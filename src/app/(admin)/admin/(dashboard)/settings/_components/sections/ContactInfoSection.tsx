@@ -125,6 +125,16 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
                 placeholder="info@example.com"
                 disabled={isPending}
               />
+              <p className="text-xs text-muted-foreground">
+                フッターや連絡先ページに表示される代表メールです。メール送信元は
+                <Link
+                  href="/admin/settings/notifications?tab=resend"
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  通知設定
+                </Link>
+                で設定します。
+              </p>
               {fields.email.errors && (
                 <p
                   id={fields.email.errorId}
