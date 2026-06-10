@@ -9,6 +9,7 @@
 import { IconCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import type { MediaData } from "@/admin/types/media-picker";
+import { formatBytes } from "../../../lib/utils";
 
 interface MediaItemProps {
   media: MediaData;
@@ -87,12 +88,4 @@ export function MediaItem({
       {isSelected && <IconCheck className="h-5 w-5 shrink-0 text-primary" />}
     </button>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
