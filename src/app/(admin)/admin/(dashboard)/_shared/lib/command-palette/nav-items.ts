@@ -114,7 +114,7 @@ const ALL_NAV_ITEMS: readonly NavItem[] = [
   {
     id: "settings-holidays",
     label: "設定: 全社休業日",
-    href: "/admin/settings/holidays",
+    href: "/admin/settings/business?tab=holidays",
     resource: "settings",
   },
   {
