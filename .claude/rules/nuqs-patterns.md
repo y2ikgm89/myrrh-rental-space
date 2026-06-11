@@ -100,6 +100,7 @@ const { params, setCategory } = useFilterParamsWithCategory({
 
 4. **パーサーの重複定義禁止**
    - `@/shared/lib/nuqs/parsers.ts` に集約。各ドメインファイルにはパーサーを定義しない（→ `nuqs-patterns/parsers.md`）
+   - **`search-params.ts` と `parsers.ts` の命名衝突禁止** — `@/public/lib/search-params.ts` の `xxxSearchParamsParsers` と同名 parser を `parsers.ts` に private 定義すると import ゼロのデッドコードになる。`loadXxxSearchParams` ローダー追加前に `grep -r "loadXxxSearchParams" src/` で実際の消費者を確認する（実例: `loadNewsSearchParams` は消費者ゼロで削除済み、`newsSearchParams` は `search-params.ts` が SSoT）
 
 5. **パーサーマップは `export` 必須**
    - Client Component（`useQueryStates`）と Server（`createSearchParamsCache`）で同一パーサーマップを共有するため、全パーサーマップを `export const` で定義する。`const` のまま非 export にしない
@@ -146,12 +147,12 @@ const { params, setCategory } = useFilterParamsWithCategory({
 
 ## ファイル配置
 
-| パス                                 | 内容                                                       |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `@/shared/lib/nuqs/parsers.ts`       | 共有パーサー定義・キャッシュ・ローダー関数・パーサーマップ |
-| `@/shared/lib/nuqs/index.ts`         | barrel（`parsers.ts` を re-export）                        |
-| `@/public/lib/search-params.ts`      | 公開ページ専用のシンプルなキャッシュ定義                   |
-| `@/admin/hooks/use-filter-params.ts` | 管理画面フィルター共通フック                               |
+| パス                                 | 内容                                                        |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `@/shared/lib/nuqs/parsers.ts`       | 共有パーサー定義・キャッシュ・ローダー関数・パーサーマップ  |
+| `@/shared/lib/nuqs/index.ts`         | barrel（`parsers.ts` を re-export）                         |
+| `@/public/lib/search-params.ts`      | 公開ページ専用キャッシュ（loader 関数なし・直 export のみ） |
+| `@/admin/hooks/use-filter-params.ts` | 管理画面フィルター共通フック                                |
 
 ## 参考
 

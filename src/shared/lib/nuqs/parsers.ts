@@ -116,23 +116,6 @@ export async function loadBlogSearchParams(
   return blogSearchParamsCache.all();
 }
 
-const newsSearchParamsParsers = {
-  q: parseAsQuery,
-  page: parseAsPage,
-  perPage: parseAsPerPage,
-  sort: parseAsSortOrder,
-};
-
-const newsSearchParamsCache = createSearchParamsCache(newsSearchParamsParsers);
-
-/** ニュース検索パラメータローダー */
-export async function loadNewsSearchParams(
-  searchParams: Promise<SearchParams>,
-) {
-  await newsSearchParamsCache.parse(searchParams);
-  return newsSearchParamsCache.all();
-}
-
 // ============================================================
 // 管理画面: イベント詳細 — 参加者一覧
 // ============================================================
@@ -559,7 +542,6 @@ const reservationSortByValues = ["startTime", "createdAt"] as const;
 /** 管理画面 予約一覧のタブ（ステータスで分類） */
 export const reservationTabFilterValues = [
   "confirmed",
-  "pending",
   "completed",
   "cancelled",
   "all",

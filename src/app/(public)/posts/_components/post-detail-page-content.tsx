@@ -97,10 +97,7 @@ export async function PostDetailPageContent({
           meta={
             <>
               {datePublished ? (
-                <time
-                  dateTime={datePublished}
-                  className="font-heading text-sm font-light"
-                >
+                <time dateTime={datePublished}>
                   {formatSerializedDate(datePublished)}
                 </time>
               ) : null}

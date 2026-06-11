@@ -422,7 +422,7 @@ async function seedSettings() {
 // Locations
 // =============================================================================
 
-async function seedLocations() {
+async function seedLocations(overridePublished?: boolean) {
   const locations = [
     {
       name: "本館",
@@ -533,10 +533,14 @@ async function seedLocations() {
 
   // upsert で idempotent 化（name @unique が SSoT キー）
   for (const loc of locations) {
+    const locationData =
+      overridePublished !== undefined
+        ? { ...loc, isPublished: overridePublished }
+        : loc;
     await prisma.location.upsert({
       where: { name: loc.name },
-      create: loc,
-      update: loc,
+      create: locationData,
+      update: locationData,
     });
   }
 
@@ -595,7 +599,7 @@ async function seedSpaceCategories() {
 // Spaces (with Location/Category relations)
 // =============================================================================
 
-async function seedSpaces() {
+async function seedSpaces(overridePublished?: boolean) {
   // 先にLocation/Categoryを取得
   const locations = await prisma.location.findMany({
     orderBy: { sortOrder: "asc" },
@@ -631,7 +635,7 @@ async function seedSpaces() {
         { name: "空調", iconName: "IconAirConditioning" },
         { name: "電源タップ", iconName: "IconChargingPile" },
       ],
-      isPublished: true,
+      isPublished: overridePublished ?? true,
       isActive: true,
       ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
       ...(meetingRoom?.id != null ? { categoryId: meetingRoom.id } : {}),
@@ -657,7 +661,7 @@ async function seedSpaces() {
         { name: "空調", iconName: "IconAirConditioning" },
         { name: "可動式テーブル", iconName: "IconArmchair" },
       ],
-      isPublished: true,
+      isPublished: overridePublished ?? true,
       isActive: true,
       ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
       ...(seminarRoom?.id != null ? { categoryId: seminarRoom.id } : {}),
@@ -683,7 +687,7 @@ async function seedSpaces() {
         { name: "複合機", iconName: "IconCamera" },
         { name: "空調", iconName: "IconAirConditioning" },
       ],
-      isPublished: true,
+      isPublished: overridePublished ?? true,
       isActive: true,
       ...(annex?.id != null ? { locationId: annex.id } : {}),
       ...(coworking?.id != null ? { categoryId: coworking.id } : {}),
@@ -2054,7 +2058,7 @@ async function seedDevCustomerAndReservations() {
 // News
 // =============================================================================
 
-async function seedNews() {
+async function seedNews(overridePublished?: boolean) {
   const newsItems: Prisma.NewsCreateInput[] = [
     {
       slug: "year-end-business-hours",
@@ -2275,7 +2279,16 @@ async function seedNews() {
     },
   ];
 
-  for (const news of newsItems) {
+  const processedNewsItems =
+    overridePublished !== undefined
+      ? newsItems.map((item) => ({
+          ...item,
+          isPublished: overridePublished,
+          ...(overridePublished === false ? { publishedAt: null } : {}),
+        }))
+      : newsItems;
+
+  for (const news of processedNewsItems) {
     const existing = await prisma.news.findUnique({
       where: { slug: news.slug },
     });
@@ -2339,7 +2352,7 @@ async function seedPages() {
 // Terms (clean-break rebuild — VARCHAR type, single document per type)
 // =============================================================================
 
-async function seedTerms() {
+async function seedTerms(overridePublished?: boolean) {
   const settings = await prisma.settings.findFirst();
 
   // 法令準拠テンプレート（terms-templates.ts）のプレースホルダー差し込み用事業者情報。
@@ -2475,8 +2488,10 @@ async function seedTerms() {
         title: t.title,
         contentJson,
         contentHtml,
-        isPublished: true,
-        publishedAt: new Date(),
+        isPublished: overridePublished ?? true,
+        ...(overridePublished === false
+          ? { publishedAt: null }
+          : { publishedAt: new Date() }),
         requiredAtReservation: t.requiredAtReservation,
         requiredAtInquiry: t.requiredAtInquiry,
         requiredAtSignup: t.requiredAtSignup,
@@ -2492,7 +2507,7 @@ async function seedTerms() {
 // FAQ
 // =============================================================================
 
-async function seedFaq() {
+async function seedFaq(overridePublished?: boolean) {
   const faqData = [
     {
       category: {
@@ -2613,8 +2628,10 @@ async function seedFaq() {
             question: item.question,
             answer: item.answer,
             order: i,
-            isPublished: true,
-            publishedAt: new Date(),
+            isPublished: overridePublished ?? true,
+            ...(overridePublished === false
+              ? { publishedAt: null }
+              : { publishedAt: new Date() }),
           },
         });
         console.log(`✅ Created FAQ item: ${item.question.slice(0, 30)}...`);
@@ -4618,24 +4635,25 @@ async function seedProduction(email: string, password: string, name: string) {
   // Phase 1: 基本設定
   await seedSettings();
 
-  // Phase 2: マスターデータ
-  await seedLocations();
+  // Phase 2: マスターデータ（下書きとして作成 — 管理画面で実際の情報に更新後に公開する）
+  await seedLocations(false);
   await seedSpaceCategories();
 
-  // Phase 3: スペース（テンプレート）
-  await seedSpaces();
+  // Phase 3: スペース（下書きとして作成 — 管理画面で内容更新後に公開する）
+  await seedSpaces(false);
 
-  // Phase 4: コンテンツ（テンプレート）
-  await seedNews();
+  // Phase 4: コンテンツ（下書きとして作成 — 管理画面で内容更新後に公開する）
+  await seedNews(false);
   await seedPages();
-  await seedFaq();
-  await seedTerms();
+  await seedFaq(false);
+  await seedTerms(false);
 
   // Phase 5: サイト設定
   await seedNavigation();
   await seedAnnouncementBar();
   await seedSocialLinks();
   await seedSystemPageSections();
+  await seedBlockTemplates();
 
   // Phase 6: バージョン履歴（news のみ）
   await seedNewsVersions();
