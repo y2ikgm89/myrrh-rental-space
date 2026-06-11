@@ -13,7 +13,7 @@ bun run validate                              # 作業中 type-check + lint
 bun run validate && bun run build             # コミット前必須
 bun run test:unit / test:integration / e2e    # per-directory バッチ
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
-bun run db:seed                               # Seed
+bun run db:seed                               # Seed（デモデータ込み）/ `-- --production` で本番クリーン seed
 bun outdated && bun update                    # 依存更新（メジャーは upgrade-deps SKILL 経由、後 validate 必須）
 ```
 

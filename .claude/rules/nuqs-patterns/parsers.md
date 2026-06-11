@@ -154,3 +154,12 @@ const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
   shallow: false,
 });
 ```
+
+## parsers.ts vs search-params.ts の責務境界
+
+| ファイル           | 責務                                                                          | 形式                                                                                |
+| ------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `parsers.ts`       | 管理画面 + 複数ページ共有のフル機能パーサー（sort / perPage / status 等含む） | `xxxSearchParamsParsers` + `createSearchParamsCache` + `loadXxxSearchParams` loader |
+| `search-params.ts` | 公開ページ専用のシンプルな `page` + `q` キャッシュ                            | `xxxSearchParamsParsers` + `xxxSearchParams` を直 export（loader 関数なし）         |
+
+**命名衝突による deadzcode の罠**: `search-params.ts` で `newsSearchParamsParsers` / `newsSearchParams` を export している場合、`parsers.ts` に private `newsSearchParamsParsers` + `loadNewsSearchParams` を追加すると import ゼロのデッドコードになる。`parsers.ts` でローダーを追加する前に `grep -r "loadXxxSearchParams" src/` で実際の消費者（page.tsx）を確認する。
