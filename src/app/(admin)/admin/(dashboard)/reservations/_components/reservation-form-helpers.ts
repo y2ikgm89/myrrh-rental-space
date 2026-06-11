@@ -1,4 +1,8 @@
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  CREATABLE_RESERVATION_STATUSES,
+  RESERVATION_STATUS_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 export type SpaceOption = {
   id: string;
@@ -20,18 +24,20 @@ export type NewCustomerData = {
   phoneNumber?: string;
 };
 
-export const RESERVATION_STATUS_OPTIONS = [
-  {
-    value: ReservationStatus.CONFIRMED,
-    label: "確定",
-    description: "予約が確定済み",
-  },
-  {
-    value: ReservationStatus.PENDING,
-    label: "保留",
-    description: "確認待ち",
-  },
-];
+const RESERVATION_STATUS_DESCRIPTIONS: Partial<
+  Record<ReservationStatus, string>
+> = {
+  [ReservationStatus.CONFIRMED]: "予約が確定済み",
+  [ReservationStatus.PENDING]: "確認待ち",
+};
+
+export const RESERVATION_STATUS_OPTIONS = CREATABLE_RESERVATION_STATUSES.map(
+  (s) => ({
+    value: s,
+    label: RESERVATION_STATUS_LABELS[s],
+    description: RESERVATION_STATUS_DESCRIPTIONS[s] ?? "",
+  }),
+);
 
 /** 時間オプション（9:00-21:00、1時間刻み） */
 export const TIME_OPTIONS = Array.from({ length: 13 }, (_, i) => {

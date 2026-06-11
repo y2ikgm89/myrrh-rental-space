@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
