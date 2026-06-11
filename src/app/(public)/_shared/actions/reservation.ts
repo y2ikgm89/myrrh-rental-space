@@ -100,24 +100,16 @@ export async function submitReservation(
           notifications: true,
         });
 
-        fireAndForget(
-          sendReservationAdminNotification(
-            omitUndefined(result.payload),
-            "new",
-          ),
-          {
-            operation: "sendReservationAdminNotification",
-            category: ErrorCategory.EXTERNAL_API,
-          },
-        );
+        const payload = omitUndefined(result.payload);
+        fireAndForget(sendReservationAdminNotification(payload, "new"), {
+          operation: "sendReservationAdminNotification",
+          category: ErrorCategory.EXTERNAL_API,
+        });
 
-        fireAndForget(
-          sendReservationConfirmationEmail(omitUndefined(result.payload)),
-          {
-            operation: "sendReservationConfirmationEmail",
-            category: ErrorCategory.EXTERNAL_API,
-          },
-        );
+        fireAndForget(sendReservationConfirmationEmail(payload), {
+          operation: "sendReservationConfirmationEmail",
+          category: ErrorCategory.EXTERNAL_API,
+        });
 
         fireAndForget(
           createNotificationCommand({

@@ -13,7 +13,6 @@ type ReservationWhereInput = Prisma.ReservationWhereInput;
  * 予約一覧のタブ別 where 句。
  *
  * - confirmed: CONFIRMED (来店予定)
- * - pending: PENDING (確認待ち、要対応)
  * - completed: COMPLETED (利用済み)
  * - cancelled: CANCELLED または NO_SHOW (終了)
  * - all: 制約なし
@@ -22,8 +21,6 @@ function buildTabWhere(tab: ReservationTabFilter): ReservationWhereInput {
   switch (tab) {
     case "confirmed":
       return { status: ReservationStatus.CONFIRMED };
-    case "pending":
-      return { status: ReservationStatus.PENDING };
     case "completed":
       return { status: ReservationStatus.COMPLETED };
     case "cancelled":
@@ -45,8 +42,6 @@ function getDefaultSort(tab: ReservationTabFilter): {
   switch (tab) {
     case "confirmed":
       return { sortBy: "startTime", sortOrder: "asc" };
-    case "pending":
-      return { sortBy: "createdAt", sortOrder: "desc" };
     case "completed":
       return { sortBy: "startTime", sortOrder: "desc" };
     case "cancelled":

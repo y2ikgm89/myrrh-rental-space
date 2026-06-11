@@ -4636,6 +4636,7 @@ async function seedProduction(email: string, password: string, name: string) {
   await seedAnnouncementBar();
   await seedSocialLinks();
   await seedSystemPageSections();
+  await seedBlockTemplates();
 
   // Phase 6: バージョン履歴（news のみ）
   await seedNewsVersions();
