@@ -460,23 +460,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   access: [
     {
-      type: "hero",
-      config: {
-        sectionLabel: "Access",
-        title: [
-          {
-            _key: crypto.randomUUID(),
-            _type: "span" as const,
-            text: "アクセス",
-          },
-        ],
-        subtitle: block("最寄り駅・駐車場・営業時間をご案内します。"),
-        variant: "minimal",
-      },
-      order: 0,
-      isActive: true,
-    },
-    {
       type: "location-list",
       config: {
         sectionLabel: "Locations",
@@ -484,7 +467,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           {
             _key: crypto.randomUUID(),
             _type: "span" as const,
-            text: "全拠点のご案内",
+            text: "アクセス",
           },
         ],
         mode: "all",
@@ -503,7 +486,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ],
         chapterLayout: "alternating",
       },
-      order: 1,
+      order: 0,
       isActive: true,
     },
     {
@@ -520,7 +503,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           { text: "お問い合わせ", url: "/contact", variant: "primary" },
         ],
       },
-      order: 2,
+      order: 1,
       isActive: true,
     },
   ],
