@@ -595,7 +595,7 @@ async function seedSpaceCategories() {
 // Spaces (with Location/Category relations)
 // =============================================================================
 
-async function seedSpaces() {
+async function seedSpaces(overridePublished?: boolean) {
   // 先にLocation/Categoryを取得
   const locations = await prisma.location.findMany({
     orderBy: { sortOrder: "asc" },
@@ -631,7 +631,7 @@ async function seedSpaces() {
         { name: "空調", iconName: "IconAirConditioning" },
         { name: "電源タップ", iconName: "IconChargingPile" },
       ],
-      isPublished: true,
+      isPublished: overridePublished ?? true,
       isActive: true,
       ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
       ...(meetingRoom?.id != null ? { categoryId: meetingRoom.id } : {}),
@@ -657,7 +657,7 @@ async function seedSpaces() {
         { name: "空調", iconName: "IconAirConditioning" },
         { name: "可動式テーブル", iconName: "IconArmchair" },
       ],
-      isPublished: true,
+      isPublished: overridePublished ?? true,
       isActive: true,
       ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
       ...(seminarRoom?.id != null ? { categoryId: seminarRoom.id } : {}),
@@ -683,7 +683,7 @@ async function seedSpaces() {
         { name: "複合機", iconName: "IconCamera" },
         { name: "空調", iconName: "IconAirConditioning" },
       ],
-      isPublished: true,
+      isPublished: overridePublished ?? true,
       isActive: true,
       ...(annex?.id != null ? { locationId: annex.id } : {}),
       ...(coworking?.id != null ? { categoryId: coworking.id } : {}),
@@ -2054,7 +2054,7 @@ async function seedDevCustomerAndReservations() {
 // News
 // =============================================================================
 
-async function seedNews() {
+async function seedNews(overridePublished?: boolean) {
   const newsItems: Prisma.NewsCreateInput[] = [
     {
       slug: "year-end-business-hours",
@@ -2275,7 +2275,16 @@ async function seedNews() {
     },
   ];
 
-  for (const news of newsItems) {
+  const processedNewsItems =
+    overridePublished !== undefined
+      ? newsItems.map((item) => ({
+          ...item,
+          isPublished: overridePublished,
+          ...(overridePublished === false ? { publishedAt: null } : {}),
+        }))
+      : newsItems;
+
+  for (const news of processedNewsItems) {
     const existing = await prisma.news.findUnique({
       where: { slug: news.slug },
     });
@@ -4622,11 +4631,11 @@ async function seedProduction(email: string, password: string, name: string) {
   await seedLocations();
   await seedSpaceCategories();
 
-  // Phase 3: スペース（テンプレート）
-  await seedSpaces();
+  // Phase 3: スペース（下書きとして作成 — 管理画面で内容更新後に公開する）
+  await seedSpaces(false);
 
-  // Phase 4: コンテンツ（テンプレート）
-  await seedNews();
+  // Phase 4: コンテンツ（下書きとして作成 — 管理画面で内容更新後に公開する）
+  await seedNews(false);
   await seedPages();
   await seedFaq();
   await seedTerms();
