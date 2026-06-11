@@ -22,10 +22,6 @@ const TAB_BASE: readonly { value: ReservationTabFilter; label: string }[] = [
     label: RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED],
   },
   {
-    value: "pending",
-    label: RESERVATION_STATUS_LABELS[ReservationStatus.PENDING],
-  },
-  {
     value: "completed",
     label: RESERVATION_STATUS_LABELS[ReservationStatus.COMPLETED],
   },
