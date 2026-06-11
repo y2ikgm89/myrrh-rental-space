@@ -67,6 +67,8 @@ steps:
     id: test
     waitFor: ["-"]
     entrypoint: sh
+    env:
+      - "DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder"
     args:
       - -c
       - |
