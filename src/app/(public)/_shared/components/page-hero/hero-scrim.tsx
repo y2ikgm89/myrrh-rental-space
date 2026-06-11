@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Hero 背景スクリム + テキスト可読性防御の共有 SSoT（client-safe pure module）
  *

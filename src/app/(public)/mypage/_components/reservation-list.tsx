@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/public/components/design-system/button";
 import { Stack } from "@/public/components/design-system/stack";
 import { ReservationCard } from "./reservation-card";

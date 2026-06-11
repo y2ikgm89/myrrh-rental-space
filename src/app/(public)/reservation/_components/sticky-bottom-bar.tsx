@@ -1,5 +1,3 @@
-"use client";
-
 import type { ReactNode, ReactElement } from "react";
 
 interface StickyBottomBarProps {
