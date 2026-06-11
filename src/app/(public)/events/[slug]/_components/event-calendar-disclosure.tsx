@@ -1,5 +1,9 @@
 import type { ReactElement } from "react";
-import { IconBrandGoogle, IconCalendarPlus } from "@tabler/icons-react";
+import {
+  IconBrandGoogle,
+  IconCalendarPlus,
+  IconChevronDown,
+} from "@tabler/icons-react";
 import type { AddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { OutlookLogo } from "@/public/components/ui/icons/outlook-logo";
 
@@ -27,6 +31,10 @@ export function EventCalendarDisclosure({
         <span className="ml-1 text-xs text-muted-foreground/70">
           （予約しなくても追加できます）
         </span>
+        <IconChevronDown
+          className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+          aria-hidden="true"
+        />
       </summary>
       <ul
         role="list"
