@@ -422,7 +422,7 @@ async function seedSettings() {
 // Locations
 // =============================================================================
 
-async function seedLocations() {
+async function seedLocations(overridePublished?: boolean) {
   const locations = [
     {
       name: "本館",
@@ -533,10 +533,14 @@ async function seedLocations() {
 
   // upsert で idempotent 化（name @unique が SSoT キー）
   for (const loc of locations) {
+    const locationData =
+      overridePublished !== undefined
+        ? { ...loc, isPublished: overridePublished }
+        : loc;
     await prisma.location.upsert({
       where: { name: loc.name },
-      create: loc,
-      update: loc,
+      create: locationData,
+      update: locationData,
     });
   }
 
@@ -2348,7 +2352,7 @@ async function seedPages() {
 // Terms (clean-break rebuild — VARCHAR type, single document per type)
 // =============================================================================
 
-async function seedTerms() {
+async function seedTerms(overridePublished?: boolean) {
   const settings = await prisma.settings.findFirst();
 
   // 法令準拠テンプレート（terms-templates.ts）のプレースホルダー差し込み用事業者情報。
@@ -2484,8 +2488,10 @@ async function seedTerms() {
         title: t.title,
         contentJson,
         contentHtml,
-        isPublished: true,
-        publishedAt: new Date(),
+        isPublished: overridePublished ?? true,
+        ...(overridePublished === false
+          ? { publishedAt: null }
+          : { publishedAt: new Date() }),
         requiredAtReservation: t.requiredAtReservation,
         requiredAtInquiry: t.requiredAtInquiry,
         requiredAtSignup: t.requiredAtSignup,
@@ -2501,7 +2507,7 @@ async function seedTerms() {
 // FAQ
 // =============================================================================
 
-async function seedFaq() {
+async function seedFaq(overridePublished?: boolean) {
   const faqData = [
     {
       category: {
@@ -2622,8 +2628,10 @@ async function seedFaq() {
             question: item.question,
             answer: item.answer,
             order: i,
-            isPublished: true,
-            publishedAt: new Date(),
+            isPublished: overridePublished ?? true,
+            ...(overridePublished === false
+              ? { publishedAt: null }
+              : { publishedAt: new Date() }),
           },
         });
         console.log(`✅ Created FAQ item: ${item.question.slice(0, 30)}...`);
@@ -4627,8 +4635,8 @@ async function seedProduction(email: string, password: string, name: string) {
   // Phase 1: 基本設定
   await seedSettings();
 
-  // Phase 2: マスターデータ
-  await seedLocations();
+  // Phase 2: マスターデータ（下書きとして作成 — 管理画面で実際の情報に更新後に公開する）
+  await seedLocations(false);
   await seedSpaceCategories();
 
   // Phase 3: スペース（下書きとして作成 — 管理画面で内容更新後に公開する）
@@ -4637,8 +4645,8 @@ async function seedProduction(email: string, password: string, name: string) {
   // Phase 4: コンテンツ（下書きとして作成 — 管理画面で内容更新後に公開する）
   await seedNews(false);
   await seedPages();
-  await seedFaq();
-  await seedTerms();
+  await seedFaq(false);
+  await seedTerms(false);
 
   // Phase 5: サイト設定
   await seedNavigation();
