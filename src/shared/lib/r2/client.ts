@@ -26,7 +26,6 @@ declare global {
 }
 
 const globalStore: GlobalStore = (globalThis.__myrrhR2GlobalStore ??= {});
-const isProduction = serverEnv.NODE_ENV === "production";
 
 /**
  * R2 S3 API エンドポイント URL を構築する。
@@ -74,9 +73,7 @@ export function getR2Client(): S3Client {
     },
   });
 
-  if (!isProduction) {
-    globalStore.r2Client = client;
-  }
+  globalStore.r2Client = client;
   return client;
 }
 
