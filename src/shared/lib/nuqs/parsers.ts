@@ -559,7 +559,6 @@ const reservationSortByValues = ["startTime", "createdAt"] as const;
 /** 管理画面 予約一覧のタブ（ステータスで分類） */
 export const reservationTabFilterValues = [
   "confirmed",
-  "pending",
   "completed",
   "cancelled",
   "all",

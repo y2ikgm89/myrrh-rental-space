@@ -10,6 +10,16 @@ const PaymentStatus = {
 } as const;
 type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
+// ReservationStatus 定数（@generated/prisma/enums から Prisma enum を再現）
+const ReservationStatus = {
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+} as const;
+type ReservationStatus =
+  (typeof ReservationStatus)[keyof typeof ReservationStatus];
+
 // Prisma モック関数（mock.module より先に定義）
 const mockReservationFindFirst = mock<
   () => Promise<{ id: string; paymentStatus: PaymentStatus } | null>
@@ -43,6 +53,7 @@ mock.module("@/shared/db/prisma", () => ({
 
 mock.module("@generated/prisma/enums", () => ({
   PaymentStatus,
+  ReservationStatus,
 }));
 
 import {
@@ -64,6 +75,7 @@ const FULFILL_DATA = {
   totalPrice: 5000,
   notes: null,
   paymentStatus: PaymentStatus.PAID,
+  status: ReservationStatus.CONFIRMED,
   icsSequence: 0,
   customer: {
     email: "customer@example.com",

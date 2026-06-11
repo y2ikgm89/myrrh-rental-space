@@ -10,6 +10,7 @@ const PAYMENT_EMAIL_SELECT = {
   totalPrice: true,
   notes: true,
   paymentStatus: true,
+  status: true,
   icsSequence: true,
   customer: {
     select: {

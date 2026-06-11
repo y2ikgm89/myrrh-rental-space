@@ -46,6 +46,7 @@ import { getStripeSettings } from "@/shared/domain/settings/queries/integration"
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // POST /api/webhooks/stripe
@@ -201,6 +202,8 @@ async function fulfillPaymentAtomically(
   if (!reservation) return;
 
   invalidateReservationCache(reservationId);
+
+  if (reservation.status === ReservationStatus.CONFIRMED) return;
 
   fireAndForget(
     sendReservationConfirmationEmail(
