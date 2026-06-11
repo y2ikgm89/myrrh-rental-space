@@ -51,37 +51,39 @@ export function FeaturesNumberedSteps({
         </div>
       )}
 
-      <ScrollRevealGroup className="grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 md:gap-12">
-        {config.items.map((step, i) => (
-          <div key={spansToPlainText(step.title)} className="text-center">
-            {step.icon ? (
-              <div className="mb-5 flex justify-center">
-                <DynamicTablerIcon
-                  iconName={step.icon}
-                  className="text-accent"
-                  size={36}
-                  strokeWidth={1}
-                  aria-hidden="true"
-                />
-              </div>
-            ) : null}
-            <span
-              className="mb-4 block font-heading text-[2.5rem] font-light italic text-accent/50"
-              aria-hidden="true"
-            >
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <h3 className="font-heading text-xl font-light tracking-[0.01em]">
-              <PortableTextSpans spans={step.title} />
-            </h3>
-            {step.description.length > 0 ? (
-              <div className="mt-3 text-sm leading-[1.8] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3">
-                <PortableText blocks={step.description} />
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </ScrollRevealGroup>
+      <div className="@container">
+        <ScrollRevealGroup className="grid grid-cols-1 gap-10 @md:grid-cols-3 @md:gap-8 @lg:gap-12">
+          {config.items.map((step, i) => (
+            <div key={spansToPlainText(step.title)} className="text-center">
+              {step.icon ? (
+                <div className="mb-5 flex justify-center">
+                  <DynamicTablerIcon
+                    iconName={step.icon}
+                    className="text-accent"
+                    size={36}
+                    strokeWidth={1}
+                    aria-hidden="true"
+                  />
+                </div>
+              ) : null}
+              <span
+                className="mb-4 block font-heading text-[2.5rem] font-light italic text-accent/50"
+                aria-hidden="true"
+              >
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="font-heading text-xl font-light tracking-[0.01em]">
+                <PortableTextSpans spans={step.title} />
+              </h3>
+              {step.description.length > 0 ? (
+                <div className="mt-3 text-sm leading-[1.8] text-muted-foreground [&_p]:mt-0 [&_p+p]:mt-3">
+                  <PortableText blocks={step.description} />
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </ScrollRevealGroup>
+      </div>
     </SectionWrapper>
   );
 }
