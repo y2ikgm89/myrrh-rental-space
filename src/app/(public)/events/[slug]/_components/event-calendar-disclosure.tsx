@@ -25,7 +25,7 @@ export function EventCalendarDisclosure({
 }: EventCalendarDisclosureProps): ReactElement {
   return (
     <details className="group mt-12 border-y border-border py-6">
-      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+      <summary className="flex w-full min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
         <IconCalendarPlus className="h-4 w-4" aria-hidden="true" />
         <span>カレンダーに追加する</span>
         <span className="ml-1 text-xs text-muted-foreground/70">
