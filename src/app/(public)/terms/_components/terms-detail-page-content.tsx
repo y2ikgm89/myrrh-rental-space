@@ -38,7 +38,7 @@ export async function TermsDetailPageContent({
 
   const publishedAtIso = toISOString(terms.publishedAt);
   const headerMeta = publishedAtIso ? (
-    <time dateTime={publishedAtIso} className="font-heading text-sm font-light">
+    <time dateTime={publishedAtIso}>
       {formatSerializedDate(publishedAtIso)} 施行
     </time>
   ) : null;
