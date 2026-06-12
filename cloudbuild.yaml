@@ -62,7 +62,8 @@ steps:
       - -c
       - docker pull ${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:cache || true
 
-  # Step 2: Run unit tests (DB不要のテストのみ)
+  # Step 2: Type-check + unit tests (DB不要のテストのみ)
+  # type-check を CI で実行し、Docker ビルド内の TypeScript チェック（OOM 原因）を skip する
   - name: "oven/bun:1.3.13"
     id: test
     waitFor: ["-"]
@@ -73,7 +74,7 @@ steps:
       - -c
       - |
         bun install --frozen-lockfile
-        bun run db:generate
+        bun run type-check
         bun run test:unit
 
   # Step 3: Build image (validate + build inside Docker, deps installed once)
