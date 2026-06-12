@@ -86,7 +86,7 @@ export async function PostDetailPageContent({
           {...(post.author ? { author: { name: post.author.name } } : {})}
         />
       }
-      breadcrumb={[{ label: "ブログ", href: "/posts" }, { label: post.title }]}
+      breadcrumb={[{ label: "ブログ", href: "/blog" }, { label: post.title }]}
       contentWidth={layoutConfig.contentWidth}
       contentWidthCustom={layoutConfig.contentWidthCustom}
       heroPosition="in-grid"

@@ -45,7 +45,7 @@ export function getPublicPageHref(slug: string): string {
  * @returns 本番 public URL 相当 (preview でなければそのまま返す)
  */
 export function normalizePreviewPathname(pathname: string): string {
-  if (pathname.startsWith("/preview/posts/")) return "/posts";
+  if (pathname.startsWith("/preview/posts/")) return "/blog";
   if (pathname.startsWith("/preview/news/")) return "/news";
   if (pathname.startsWith("/preview/terms/")) return "/terms";
   if (pathname.startsWith("/preview/pages/")) {

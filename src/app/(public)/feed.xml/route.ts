@@ -30,7 +30,7 @@ export async function GET(): Promise<Response> {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>ブログ</title>
-    <link>${baseUrl}/posts</link>
+    <link>${baseUrl}/blog</link>
     <description>最新のブログ記事</description>
     <language>ja</language>
     <atom:link href="${baseUrl}/feed.xml" rel="self" type="application/rss+xml" />

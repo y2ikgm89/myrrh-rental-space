@@ -93,10 +93,11 @@ export async function getPublishedPostsList(
   perPage: number = PAGINATION_DEFAULTS.public.default,
   search: string = "",
   categorySlug: string = "",
+  tagSlug: string = "",
 ) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.PERMALINK);
+  cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.PERMALINK, CACHE_TAGS.POST_TAGS);
 
   const skip = (page - 1) * perPage;
 
@@ -111,6 +112,7 @@ export async function getPublishedPostsList(
         }
       : {}),
     ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+    ...(tagSlug ? { postTags: { some: { tag: { slug: tagSlug } } } } : {}),
   };
 
   const [{ posts, totalCount }, settings] = await Promise.all([
@@ -261,4 +263,77 @@ export async function getPostCategories() {
   });
 
   return toPlainArray(categories);
+}
+
+export async function getPostCategoryBySlug(slug: string) {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.POST_CATEGORIES);
+
+  if (!slugParamSchema.safeParse(slug).success) return null;
+
+  const category = await safeFetch({
+    fetch: () =>
+      prisma.postCategory.findFirst({
+        where: { slug },
+        select: { id: true, name: true, slug: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPostCategoryBySlug",
+  });
+
+  return category ? toPlainObject(category) : null;
+}
+
+export async function getPostTagBySlug(slug: string) {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.POST_TAGS);
+
+  if (!slugParamSchema.safeParse(slug).success) return null;
+
+  const tag = await safeFetch({
+    fetch: () =>
+      prisma.postTag.findFirst({
+        where: { slug },
+        select: { id: true, name: true, slug: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPostTagBySlug",
+  });
+
+  return tag ? toPlainObject(tag) : null;
+}
+
+export async function getAllPublishedTags() {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.POST_TAGS, CACHE_TAGS.POSTS);
+
+  const tags = await safeFetch({
+    fetch: () =>
+      prisma.postTag.findMany({
+        where: {
+          posts: {
+            some: {
+              post: {
+                status: PostStatus.PUBLISHED,
+              },
+            },
+          },
+        },
+        select: { id: true, name: true, slug: true },
+        orderBy: { name: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getAllPublishedTags",
+  });
+
+  return toPlainArray(tags);
 }

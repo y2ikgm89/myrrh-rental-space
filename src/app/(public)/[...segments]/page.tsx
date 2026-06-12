@@ -2,18 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
-import {
-  PostDetailPageContent,
-  buildPostMetadata,
-} from "../posts/_components/post-detail-page-content";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPublishedPost } from "@/shared/domain/posts/queries";
-import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 import { getPageSections } from "@/shared/domain/sections/queries";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
@@ -34,17 +26,7 @@ export async function generateMetadata({
     }
   }
 
-  const settings = await getPermalinkSettings();
-  if (settings?.postUrlPrefixEnabled ?? true) {
-    return { title: "ページが見つかりません" };
-  }
-
-  const route = resolvePostDetailRoute(segments);
-  if (!route) {
-    return { title: "ページが見つかりません" };
-  }
-
-  return buildPostMetadata(route.slug);
+  return { title: "ページが見つかりません" };
 }
 
 export default async function DynamicPage({ params }: PageProps) {
@@ -73,23 +55,5 @@ export default async function DynamicPage({ params }: PageProps) {
     }
   }
 
-  const settings = await getPermalinkSettings();
-  if (settings?.postUrlPrefixEnabled ?? true) {
-    notFound();
-  }
-
-  // post-detail 経路のみ posts feature gate を適用（custom page 経路は CMS-managed のため未 gate）
-  await requireFeatureEnabled("posts");
-
-  const route = resolvePostDetailRoute(segments);
-  if (!route) {
-    notFound();
-  }
-
-  const post = await getPublishedPost(route.slug);
-  if (!post) {
-    notFound();
-  }
-
-  return <PostDetailPageContent post={post} />;
+  notFound();
 }
