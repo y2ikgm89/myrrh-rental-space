@@ -613,6 +613,15 @@ export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
   [RegistrationStatus.CANCELLED]: "キャンセル済み",
 };
 
+// =============================================================================
+// TaxRateType Labels
+// =============================================================================
+
+export const TAX_RATE_LABELS: Record<TaxRateType, string> = {
+  [TaxRateType.standard]: "標準税率",
+  [TaxRateType.reduced]: "軽減税率",
+};
+
 export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
   [PaymentStatus.UNPAID]: "secondary",
   [PaymentStatus.PENDING]: "warning",

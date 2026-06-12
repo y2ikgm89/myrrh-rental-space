@@ -12,9 +12,13 @@ import {
   PAYMENT_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ICONS,
+  TAX_RATE_LABELS,
   CANCELLED_BY,
 } from "@/shared/lib/validations/enums/helpers";
-import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import {
+  isValidReservationStatus,
+  isValidTaxRateType,
+} from "@/shared/lib/validations/enums/guards";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { getAppUrl } from "@/shared/lib/constants";
@@ -70,15 +74,6 @@ interface ReservationDetailProps {
 }
 
 // ---------------------------------------------------------------------------
-// Status helpers
-// ---------------------------------------------------------------------------
-
-const TAX_RATE_LABELS: Record<string, string> = {
-  standard: "標準税率",
-  reduced: "軽減税率",
-};
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -127,6 +122,10 @@ export function ReservationDetail({
   const durationDiscount = durationDiscountAmount ?? 0;
   const hasDiscount = couponDiscount > 0 || durationDiscount > 0;
   const hasTax = taxAmount != null && taxAmount > 0;
+  const taxRateLabel =
+    taxRateType && isValidTaxRateType(taxRateType)
+      ? TAX_RATE_LABELS[taxRateType]
+      : taxRateType;
   const statusLabel = isValidReservationStatus(reservation.status)
     ? RESERVATION_STATUS_LABELS[reservation.status]
     : reservation.status;
@@ -206,7 +205,7 @@ export function ReservationDetail({
         {hasTax && (
           <>
             <DetailRow
-              label={`消費税${taxRateType ? `(${TAX_RATE_LABELS[taxRateType] ?? taxRateType}${taxRate != null ? ` ${taxRate}%` : ""})` : ""}`}
+              label={`消費税${taxRateType ? `(${taxRateLabel}${taxRate != null ? ` ${taxRate}%` : ""})` : ""}`}
             >
               {formatPrice(taxAmount)}
             </DetailRow>
