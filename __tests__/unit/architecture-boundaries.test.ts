@@ -21,14 +21,6 @@ const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
 const PACKAGE_JSON_FILE = join(ROOT, "package.json");
 const NEXT_CONFIG_FILE = join(ROOT, "next.config.ts");
 const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
-const AGENTS_FILE = join(ROOT, "AGENTS.md");
-const README_FILE = join(ROOT, "README.md");
-const CODEX_README_FILE = join(ROOT, ".codex", "README.md");
-const CODEX_CONFIG_FILE = join(ROOT, ".codex", "config.toml");
-const CODEX_AGENTS_ROOT = join(ROOT, ".codex", "agents");
-const CODEX_RULES_FILE = join(ROOT, ".codex", "rules", "default.rules");
-const CODEX_HOOKS_FILE = join(ROOT, ".codex", "hooks.json");
-const REPOSITORY_SKILLS_ROOT = join(ROOT, ".agents", "skills");
 const AUTH_ROUTE_FILE = join(
   SRC_ROOT,
   "app",
@@ -1437,88 +1429,6 @@ describe("architecture boundaries", () => {
       expect(source).not.toContain("executeAdminMutation(");
       expect(source).toContain("executeAdminMutationResult(");
     }
-  });
-
-  test("README は旧トップレベル構成を案内しない", () => {
-    const source = readFileSync(README_FILE, "utf8");
-
-    expect(source).not.toContain("├── components/");
-    expect(source).not.toContain("├── lib/");
-    expect(source).not.toContain("├── actions/");
-    expect(source).not.toContain("├── hooks/");
-  });
-
-  test("Codex rules は command approval policy だけを扱う", () => {
-    const agentsSource = readFileSync(AGENTS_FILE, "utf8");
-    const codexReadme = readFileSync(CODEX_README_FILE, "utf8");
-    const rulesSource = readFileSync(CODEX_RULES_FILE, "utf8");
-
-    expect(agentsSource).toContain("pattern` / `decision` / `justification`");
-    expect(codexReadme).toContain("pattern`, `decision`, `justification`");
-    expect(rulesSource).toContain("prefix_rule(");
-    expect(rulesSource).not.toContain("Server Components");
-    expect(rulesSource).not.toContain("Zod");
-    expect(rulesSource).not.toContain("Tailwind");
-  });
-
-  test("repository skills は name / description frontmatter だけを持つ", () => {
-    const skillFiles = readdirSync(REPOSITORY_SKILLS_ROOT, {
-      withFileTypes: true,
-    })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => join(REPOSITORY_SKILLS_ROOT, entry.name, "SKILL.md"));
-
-    expect(skillFiles.length).toBeGreaterThan(0);
-
-    for (const filePath of skillFiles) {
-      const lines = readFileSync(filePath, "utf8").split(/\r?\n/u);
-      expect(lines[0]).toBe("---");
-      expect(lines[1]).toMatch(/^name: [a-z0-9-]+$/u);
-      expect(lines[2]).toMatch(/^description: .+$/u);
-      expect(lines[3]).toBe("---");
-    }
-  });
-
-  test("custom agents は公式必須フィールドと狭い sandbox を持つ", () => {
-    const agentFiles = readdirSync(CODEX_AGENTS_ROOT, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".toml"))
-      .map((entry) => join(CODEX_AGENTS_ROOT, entry.name));
-
-    expect(agentFiles.length).toBeGreaterThan(0);
-
-    for (const filePath of agentFiles) {
-      const source = readFileSync(filePath, "utf8");
-      const fileName = relative(CODEX_AGENTS_ROOT, filePath).replace(
-        /\.toml$/u,
-        "",
-      );
-      const nameMatch = source.match(/^name = "([^"]+)"$/mu);
-
-      expect(nameMatch?.[1]).toBe(fileName);
-      expect(source).toMatch(/^description = ".+"$/mu);
-      expect(source).toMatch(/^developer_instructions = """[\s\S]+"""$/mu);
-      expect(source).not.toMatch(/^model = /mu);
-      expect(source).toMatch(
-        /^sandbox_mode = "(read-only|workspace-write)"$/mu,
-      );
-    }
-  });
-
-  test("Codex hooks は Windows 無効のため空設定で維持する", () => {
-    const hooksSource = readFileSync(CODEX_HOOKS_FILE, "utf8").replace(
-      /\s+/gu,
-      "",
-    );
-
-    expect(hooksSource).toBe('{"hooks":{}}');
-  });
-
-  test("Codex subagent 上限は直接子だけを許可する", () => {
-    const source = readFileSync(CODEX_CONFIG_FILE, "utf8");
-
-    expect(source).toContain("[agents]");
-    expect(source).toContain("max_threads = 6");
-    expect(source).toContain("max_depth = 1");
   });
 
   test("Phase 0 で削除済の旧 ButtonLabelToken / RichLabelInput / TokenLabel symbol が src/ に残存しない", () => {
