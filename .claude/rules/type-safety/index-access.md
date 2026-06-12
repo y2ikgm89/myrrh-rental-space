@@ -122,3 +122,10 @@ const style = TYPE_STYLES[type] ?? DEFAULT_TYPE_STYLE;
 const style = TYPE_STYLES[type];
 if (!style) return;
 ```
+
+## Gotchas
+
+- **`Object.fromEntries(arr.map(x => [k, v]))` は tuple 注釈なしで `any` に落ちる** — `.map(x => [k, v])` 戻り値は TS 仕様で `(K | V)[]` に推論。`Iterable<readonly any[]>` 第 2 オーバーロードにマッチし **全体が `any`** になる silent な型安全ホール。**必ず `.map((x): [string, V] => [k, v])` と tuple 注釈**する（2026-06-01 PAGE_TEMPLATES / section-metadata 他 7 箇所一括修正）
+- **`exactOptionalPropertyTypes` 下で optional boolean prop に三項演算子禁止** — `disabled={cond ? !isDirty : undefined}` は型エラー（`boolean | undefined` は `boolean?` と非互換）。条件スプレッド `{...(cond && { disabled: !isDirty })}` を使用
+- **`z.array(...).default([])` は `z.input` 型を optional 化する（Zod 4 公式挙動）** — conform `useForm` + `parseWithZod` は `z.output` を返すため `.default()` を schema に残したまま安全。React Hook Form は削除済
+- **`__tests__/` は type-check 対象**（`tsconfig.test.json`）— `bun run type-check` が `tsc -p tsconfig.test.json` も実行し、テスト内型エラーを検出
