@@ -182,7 +182,7 @@ paths:
 
 ## 関連 Prisma / Decimal
 
-- **Prisma `Decimal` と `createAppPrismaClient`** — アプリ標準の `prisma`（`src/shared/db/prisma.ts`）は `createAppPrismaClient` により対象モデルの金額等が **読み取り結果で `number`**。集計や拡張前クライアント経由では `Number()` が必要なことがある（→ `prisma-patterns.md`）
+- **Prisma `Decimal` と `createAppPrismaClient`** — アプリ標準の `prisma`（`src/shared/db/prisma.ts`）は `createAppPrismaClient` により対象モデルの金額等が **読み取り結果で `number`**。集計や拡張前クライアント経由では `Number()` が必要なことがある（→ `prisma-patterns/queries.md` §Decimal 自動変換）
 - **`prisma/seed.ts` と `logger`** — seed は `@/shared/db/prisma` を import しない（`server-only`）。Prisma は `createAppPrismaClient(new PrismaClient({ adapter }))`。共有ドメインコードが `@/shared/lib/errors/logger` を引くと seed が落ちる → `logger-core` を使う
 - **Prisma JSON フィールド（`imageUrls`, `facilities`）は `unknown` で受け取る** — `Array.isArray()` + type guard filter でランタイムパース。`as string[]` 禁止
 - **`Prisma.XxxGetPayload` は `$extends` 前の型を返す** — 拡張クライアントの戻り値型は `Awaited<ReturnType<typeof prisma.xxx.findMany<{ select: typeof xxxSelect }>>>[number]`

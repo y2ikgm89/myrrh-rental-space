@@ -228,7 +228,7 @@ export async function delete<ResourcePascal>(
 
 - **`'use server'` ファイルは `import 'server-only'` 不要** — `'use server'` ディレクティブで境界制御済み
 - **`'use server'` ファイルは async 関数のみ export 可** — `type` / `interface` / 非 async const の export 禁止（Next.js 16 公式仕様、Turbopack server-actions bundler の制約）。型は `<file>-types.ts` に退避
-- **Date フィールドは `string` 型で宣言** — Server→Client 境界シリアライゼーション（`prisma-patterns.md` 参照）
+- **Date フィールドは `string` 型で宣言** — Server→Client 境界シリアライゼーション（`prisma-patterns/queries.md` 参照）
 - **`executeAdminMutationResult` の `resource` / `action` は `permissions.ts` の定義と一致させる**
 - **`CACHE_TAGS.<NAME_UPPER>` が存在しない場合は `cache.ts` に追加してから `updateTag` を呼ぶ**
 - **conform Zod 4 専用 subpath**: `@conform-to/zod/v4` から `parseWithZod` を import する（`@conform-to/zod` ルートは Zod v3 用で Zod 4 と非互換）
