@@ -1,56 +1,15 @@
 ---
-description: Lexical 記事表示・公開 UI・マイページ・予約カレンダー・管理画面共通コンポーネント・@theme デザイントークン SSoT
+description: 管理画面の共通 UI コンポーネント・予約カレンダーの SSoT
 paths:
   - "src/app/(admin)/**"
-  - "src/app/(public)/**"
-  - src/admin/**
-  - src/public/**
-  - src/shared/components/**
-  - src/shared/lib/lexical/**
-  - "src/**/*lexical*"
+  - src/shared/lib/conform/**
 ---
 
-# SSOT 定数・シングルトン（UI コンポーネント・デザイントークン）
+# SSOT — 管理画面 UI コンポーネント
 
-プロジェクト全体で単一定義を厳守する定数・シングルトン一覧。ローカル再定義・重複定義は禁止。
+プロジェクト全体で単一定義を厳守する定数・シングルトン。ローカル再定義・重複定義は禁止。
 
-## Lexical / 記事表示
-
-| 定数/変数                                                                                                     | 場所                                                                                        | メモ                                                                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ArticleLayout` / `ArticleHeader` / `ArticleFooter` / `ArticleTagList`                                        | `@/public/components/{layouts,ui}/article-*`                                                | 公開詳細 4 系統（events / news / posts / terms / preview）統一ラッパー SSoT。**spaces 詳細は Variant E 構造に移行し ArticleLayout 経由を廃止**（→ `frontend/design-config/public-page-gotchas.md`） |
-| `SanitizedHtml` (`hydrateLexicalTabs` 内蔵)                                                                   | `@/shared/components/SanitizedHtml`                                                         | 管理者入力 HTML 表示 + Lexical 静的 HTML の client hydration SSoT。`<a target="_blank">` を含む HTML を表示する全箇所で必須。生の `dangerouslySetInnerHTML` 直書き禁止                              |
-| `extractHeadingsFromHtml` / `injectHeadingAnchors` / `slugifyHeading` / `HeadingEntry`                        | `@/shared/lib/html/extract-headings`                                                        | 公開記事詳細の目次生成 SSoT（GFM / rehype-slug 互換）。posts / news / terms 共通                                                                                                                    |
-| `CustomHeadingNode` / `anchorIdState` / `HeadingAnchorPlugin`                                                 | `@/admin/.../lexical/nodes,plugins`                                                         | `HeadingNode` の NodeState 拡張 + Node Replacement。`HeadingAnchorPlugin` が `anchorId` 自動生成                                                                                                    |
-| `$getSelectionBlockNodes` / `$isMultiBlockSelection`                                                          | `@/admin/.../lexical/lib/selection-helpers`                                                 | 選択の「ブロック粒度」を求める SSoT。Floating Text FT ↔ Block FT の排他制御。ローカル再実装禁止                                                                                                     |
-| `EDITORIAL_PROSE_CLASSES` / `EDITOR_PROSE_CLASSES`                                                            | `@/shared/lib/styles/prose`                                                                 | 公開 `Prose` Primitive と Lexical エディタの prose スタイル SSoT。Lexical `theme.ts` の heading/paragraph 等 utility は削除し外側 prose に委譲。直接書きクラスセット禁止                            |
-| `[data-button-*]` セレクタ群 (`lexical-content.css` §1f)                                                      | `src/shared/styles/lexical-content.css`                                                     | Lexical 本文 Button の視覚 SSoT。Node の `decorate()` / `exportDOM()` は data-attribute only（→ `lexical/nodes.md`）。新 Lexical Node で公開 Primitive と一致が必要な場合は同パターン踏襲必須       |
-| `InlineIconNode` / `$createInlineIconNode` / `$isInlineIconNode` / `inlineIconNameState` / `InlineIconPlugin` | `@/admin/.../lexical/nodes/InlineIconNode` + `@/admin/.../lexical/plugins/InlineIconPlugin` | 本文中の inline curated icon 挿入 SSoT。`/` ComponentPicker → `IconPickerDialog` → 選択。並立 inline-icon ノードの追加禁止                                                                          |
-
-## 公開 UI / スクロール / アニメ
-
-| 定数/変数                                                             | 場所                                                                                                        | メモ                                                                                                                                               |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Skeleton` (public)                                                   | `@/public/components/design-system/skeleton`                                                                | 公開ページ loading.tsx の base primitive SSoT。spinner-only fallback 禁止（→ `frontend/loading-skeleton.md`）                                      |
-| `scrollToElement` / `scrollToElementById` / `scrollToTop`             | `@/public/lib/scroll`                                                                                       | `--header-height` 補正 + `prefers-reduced-motion` で `behavior: "instant"` 切替                                                                    |
-| `ScrollReveal` / `ScrollRevealGroup`                                  | `@/public/components/animations/scroll-reveal`                                                              | 入場演出 SSoT。`.map` リストは `ScrollRevealGroup`（stagger）。個別 wrap は fold 外 opacity:0 の silent bug（→ `frontend/gsap/scroll-trigger.md`） |
-| `CARD_GRID_COLS_MAP` / `getCardGridColsClass`                         | `@/public/lib/section-style-maps`                                                                           | 公開 Section カード列数 SSoT。`@container` + `@md:grid-cols-2 @3xl:grid-cols-3` の container query。consumer 側で親に `@container` 付与必須        |
-| `GRID_COLS_MAP` / `GALLERY_GRID_COLS_MAP`                             | `@/public/lib/section-style-maps`                                                                           | InstagramSection / NewsListSection / GallerySection の列数 SSoT。viewport breakpoint 復活禁止                                                      |
-| `HERO_PARALLAX_HEIGHT_MAP` / `StandardHeroSection.HEIGHT_MAP`         | `@/public/lib/section-style-maps` / `_components/StandardHeroSection.tsx`                                   | Hero 高さ SSoT。`@theme` token 参照、arbitrary svh 復活禁止                                                                                        |
-| `getTitleClasses` / `getTitleStyle` / `getTextStyle` / `titleSizeMap` | `@/public/components/sections/section-style-helpers`                                                        | section title / text style 算出 SSoT（pure module）。`SectionWrapper.tsx` からの re-export 禁止                                                    |
-| `--text-page-hero` / `StandardHeroSection` 全 5 variant h1            | `(public)/_styles/public.css` + `_components/StandardHeroSection.tsx`                                       | 内部ページ hero h1 専用 scale SSoT（`clamp(2.25rem, 1.75rem + 2vw, 3.5rem)`）。hero h1 への `text-h1` 等他 scale 上書き禁止                        |
-| `NavigationItem.label` (ButtonLabelToken[]) / `TokenLabel` 共有 SC    | `prisma/schema.prisma` + `@/shared/domain/navigation/{queries,commands}` + `@/shared/components/TokenLabel` | ヘッダー/フッターメニュー項目の rich label SSoT。`label Json` で `ButtonLabelToken[]` を保持。`mobile-nav.tsx` は完全 hardcoded で対象外           |
-| `TokenLabel` 共有 Server Component                                    | `@/shared/components/TokenLabel`                                                                            | `ButtonLabelToken[]` を順次 render する SSoT。各 consumer 内で `tokens.map(...)` の重複実装禁止                                                    |
-
-## マイページ 共通コンポーネント
-
-| 定数/変数                  | 場所                                               | メモ                                                                                          |
-| -------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `IncompleteProfileNotice`  | `mypage/_components/incomplete-profile-notice.tsx` | 顧客プロフィール未完成時の警告 SSoT。layout で MypageNav 直後に配置、page 個別実装禁止        |
-| `MypageSkeleton`           | `mypage/_components/mypage-skeleton.tsx`           | mypage `loading.tsx` 共通 placeholder。variant: `list` / `detail` / `form`、単一 spinner 禁止 |
-| `ReservationTabs` (mypage) | `mypage/_components/reservation-tabs.tsx`          | 公開マイページの予約 active/past Tabs 分離 SSoT。**admin 側の `ReservationTabs` とは別実装**  |
-
-## 管理画面 予約カレンダー
+## 予約カレンダー
 
 | 定数/変数                                                    | 場所                                                       | メモ                                                                                                                                                                                                            |
 | ------------------------------------------------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -59,7 +18,7 @@ paths:
 | `getStatusColorClass()`                                      | `@/admin/lib/calendar/calendar-domain`                     | 予約ステータス → カレンダー bg + border-l + text 色クラス SSoT。ハードコード inline 上書き禁止                                                                                                                  |
 | `EventCell` / `EventBadge`                                   | `reservations/_components/calendar/EventCell.tsx`          | 全ビュー共通のイベント描画 SSoT。新ビュー追加時もこの 2 component を必ず再利用（直書き禁止）                                                                                                                    |
 
-## 管理画面 共通コンポーネント
+## 共通コンポーネント
 
 | 定数/変数                                                                                                                                                                                                          | 場所                                                                                                                                                                                                                                                                                                                              | メモ                                                                                                                                                                                                                                                                             |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -80,31 +39,3 @@ paths:
 | `PublishSwitch` (admin table binary status SSoT)                                                                                                                                                                   | `@/admin/components/ui` (`_shared/components/ui/PublishSwitch.tsx`)                                                                                                                                                                                                                                                               | binary `isPublished` / `isActive` の inline toggle SSoT（8 resource 統一済）。`toggleXxx*` DB 読込反転型禁止。**Coupon は `CouponStateToggle` 専用**                                                                                                                             |
 | `CouponStateToggle` / `COUPON_STATUS_CONFIG`                                                                                                                                                                       | `@/admin/(dashboard)/coupons/_components/{CouponStateToggle,CouponStatusBadge}.tsx`                                                                                                                                                                                                                                               | Coupon 専用 binary 制御 + 派生 5 状態 component。新規 derived-state 系 toggle は本 pattern 踏襲                                                                                                                                                                                  |
 | `<XxxStatusSelect>` family — `ReservationStatusSelect` / `PostStatusSelect` / `EventStatusSelect`                                                                                                                  | 各 admin 配下 `_components/<Xxx>StatusSelect.tsx`                                                                                                                                                                                                                                                                                 | 多状態（3+ states）status の inline Select pattern SSoT。Status 列の TableCell 内に直接配置。ActionDropdown 経由の publish / cancel / archive menu 禁止                                                                                                                          |
-
-## デザイントークン（@theme）
-
-レスポンシブ @theme tokens は `(public)/_styles/public.css` / `(admin)/_styles/admin.css` の `@theme` ブロックが SSoT。
-詳細 token 一覧と利用ガイドは `frontend/project-design-config.md` §レスポンシブ設計 を参照。
-
-主要 token 群:
-
-- Breakpoint: `--breakpoint-3xl: 120rem`
-- Header: `--header-height`（mobile-md 分岐）/ `--hero-header-offset`（hero 被り補正 = transparent: header-height / solid: 0px、`#main-content` で設定。hero pt は `--header-height` 直書き禁止 → `design-config/responsive.md`）
-- Hero/Modal/Lightbox/Dropdown: `--hero-min-height` / `--modal-max-height` / `--lightbox-max-{height,width}` / `--dropdown-min-width`
-- Prose/Container: `--prose-{narrow,medium}` / `--container-{measure,header-max,max,padding}` / `--container-editorial`
-- Touch target: `--touch-target-min`
-- Fluid typography: `--text-*`
-- **セクション縦余白（公開・管理の SectionWrapper）**: `--space-3xs` … `--space-2xl` を `pt/pb-[var(--space-{sm,md,lg,xl})]` で参照。旧 `--spacing-section` / `--spacing-section-compact` は **廃止**（`architecture-boundaries.test.ts` で検出）
-- **ブロック・カード用（レイアウトブロック）**: public `--spacing-block` / admin `--spacing-card`
-
-### ホームヒーロー（Section row, order=-1）
-
-ホーム hero は `Page.pageHero` JSON column ではなく **`Section` table の `type='page-hero'` row（order=-1）として保存**される（schema 上 Page に pageHero 列は存在しない）。挿入は `prisma/seed.ts` の idempotent ブロックが `DEFAULT_PAGE_HERO` で行い、`DEFAULT_PAGE_SECTIONS.home` には**含めない**例外。SectionRenderer は `case SectionType.PAGE_HERO` で `<PageHero config={config} />` に dispatch。
-
-| 定数/変数              | 場所                                                   | メモ                                                                                                                                                                                                          |
-| ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pageHeroConfigSchema` | `@/shared/lib/sections/definitions/page-hero/schema`   | `Section.config` JSON（type='page-hero'）の正本                                                                                                                                                               |
-| `DEFAULT_PAGE_HERO`    | `@/shared/lib/sections/definitions/page-hero/defaults` | seed.ts idempotent insert + restore migration の正本値                                                                                                                                                        |
-| `<PageHero />`         | `@/public/components/page-hero/PageHero`               | variant dispatch（editorial-split / compact / minimal / media）。`SectionRenderer` の `case SectionType.PAGE_HERO` から委譲される。media variant は `detectMediaSourceType()` で image/video に派生し出し分け |
-
-**新規 arbitrary 値（`[65ch]` / `[85vh]` / `[90svh]` / `[12rem]` 等）を追加する前に既存 token を grep し、不足なら `@theme` に追加してから `min-h-[var(--hero-min-height)]` 等の CSS var 参照形式で利用する。**
