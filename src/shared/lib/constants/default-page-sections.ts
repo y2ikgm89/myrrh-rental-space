@@ -462,8 +462,14 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     {
       type: "location-list",
       config: {
-        sectionLabel: "",
-        title: [],
+        sectionLabel: "Locations",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "アクセス",
+          },
+        ],
         mode: "all",
         locationSlugs: [],
         overviewNavEnabled: true,
