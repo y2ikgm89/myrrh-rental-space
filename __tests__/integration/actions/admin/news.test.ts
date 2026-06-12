@@ -362,30 +362,6 @@ describe("News Admin Action Integration", () => {
     });
   });
 
-  describe("NewsVersionData型テスト", () => {
-    test("NewsVersionData型の構造", () => {
-      type NewsVersionData = {
-        id: string;
-        newsId: string;
-        version: number;
-        content: string;
-        createdAt: Date;
-        createdBy: string | null;
-      };
-
-      const version: NewsVersionData = {
-        id: "550e8400-e29b-41d4-a716-446655440001",
-        newsId: "550e8400-e29b-41d4-a716-446655440000",
-        version: 1,
-        content: "<p>バージョン1の本文</p>",
-        createdAt: new Date(),
-        createdBy: "550e8400-e29b-41d4-a716-446655440002",
-      };
-
-      expect(version.version).toBe(1);
-    });
-  });
-
   // 注: 権限チェック（hasPermission, canAccessAdmin, checkReadPermission）のテストは
   // __tests__/unit/lib/permissions.test.ts で網羅的にテスト済み
 });

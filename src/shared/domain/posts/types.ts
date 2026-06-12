@@ -45,16 +45,6 @@ type PostRecord = {
   author: PostAuthorRecord | null;
 };
 
-type PostVersionRecord = {
-  id: string;
-  postId: string;
-  version: number;
-  contentHtml: string;
-  contentJson: unknown;
-  createdAt: Date;
-  createdBy: string | null;
-};
-
 type PostCategoryRecord = {
   id: string;
   name: string;
@@ -88,7 +78,6 @@ type PostTagRecord = {
 
 export type PostData = Serialized<PostRecord>;
 export type PostListData = Omit<PostData, "contentHtml" | "contentJson">;
-export type PostVersionData = Serialized<PostVersionRecord>;
 export type PostCategoryData = Serialized<PostCategoryRecord>;
 export type PostTagData = Serialized<PostTagRecord>;
 
@@ -192,15 +181,6 @@ export type DeletePostResult = {
 };
 
 export type PublishPostResult = {
-  slug: string;
-  version: number;
-};
-
-export type CreatePostBackupResult = {
-  version: number;
-};
-
-export type RestorePostVersionResult = {
   slug: string;
 };
 

@@ -13,18 +13,6 @@ const mockNewsUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
 const mockNewsDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "news-1" }),
 );
-const mockNewsVersionFindFirst = mock<
-  () => Promise<Record<string, unknown> | null>
->(() => Promise.resolve(null));
-const mockNewsVersionFindUnique = mock<
-  () => Promise<Record<string, unknown> | null>
->(() => Promise.resolve(null));
-const mockNewsVersionCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "version-1" }),
-);
-const mockTransaction = mock<(ops: unknown[]) => Promise<unknown[]>>((ops) =>
-  Promise.resolve(ops as unknown[]),
-);
 
 mock.module("server-only", () => ({}));
 
@@ -36,12 +24,6 @@ mock.module("@/shared/db/prisma", () => ({
       update: mockNewsUpdate,
       delete: mockNewsDelete,
     },
-    newsVersion: {
-      findFirst: mockNewsVersionFindFirst,
-      findUnique: mockNewsVersionFindUnique,
-      create: mockNewsVersionCreate,
-    },
-    $transaction: mockTransaction,
   },
 }));
 
@@ -84,15 +66,12 @@ import {
   deleteNews,
   publishNews,
   unpublishNews,
-  createNewsBackup,
-  restoreNewsVersion,
 } from "@/shared/domain/news/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // テスト用定数
 const NEWS_ID = "news-1";
 const NEWS_SLUG = "test-news";
-const USER_ID = "user-1";
 
 const EXISTING_NEWS = {
   id: NEWS_ID,
@@ -403,46 +382,51 @@ describe("publishNews", () => {
     id: NEWS_ID,
     slug: NEWS_SLUG,
     publishedAt: null,
-    contentHtml: "<p>コンテンツ</p>",
-    contentJson: { root: { children: [] } },
   };
 
   beforeEach(() => {
     mockNewsFindUnique.mockReset();
-    mockNewsVersionFindFirst.mockReset();
-    mockTransaction.mockReset();
+    mockNewsUpdate.mockReset();
     mockNewsFindUnique.mockResolvedValue(NEWS_FOR_PUBLISH);
-    mockNewsVersionFindFirst.mockResolvedValue(null);
-    mockTransaction.mockResolvedValue([{}, {}]);
+    mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
   });
 
   describe("正常系", () => {
-    test("お知らせを公開し slug と version を返す（初回公開）", async () => {
-      const result = await publishNews(NEWS_ID, USER_ID);
+    test("お知らせを公開し slug を返す（初回公開）", async () => {
+      const result = await publishNews(NEWS_ID);
 
-      expect(result).toEqual({ slug: NEWS_SLUG, version: 1 });
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ slug: NEWS_SLUG });
+      expect(mockNewsUpdate).toHaveBeenCalledTimes(1);
     });
 
-    test("既存バージョンがある場合はバージョンがインクリメントされる", async () => {
-      mockNewsVersionFindFirst.mockResolvedValue({ version: 3 });
+    test("update が isPublished: true で呼ばれる", async () => {
+      await publishNews(NEWS_ID);
 
-      const result = await publishNews(NEWS_ID, USER_ID);
-
-      expect(result).toEqual({ slug: NEWS_SLUG, version: 4 });
+      expect(mockNewsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublished: true,
+          }),
+        }),
+      );
     });
 
-    test("既に publishedAt がある場合は上書きしない（$transaction に渡すデータ確認）", async () => {
+    test("既に publishedAt がある場合は上書きしない", async () => {
       const existingPublishedAt = new Date("2024-01-01");
       mockNewsFindUnique.mockResolvedValue({
         ...NEWS_FOR_PUBLISH,
         publishedAt: existingPublishedAt,
       });
 
-      await publishNews(NEWS_ID, USER_ID);
+      await publishNews(NEWS_ID);
 
-      // $transaction が呼ばれることを確認
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockNewsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            publishedAt: existingPublishedAt,
+          }),
+        }),
+      );
     });
   });
 
@@ -450,19 +434,17 @@ describe("publishNews", () => {
     test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
       mockNewsFindUnique.mockResolvedValue(null);
 
-      await expect(publishNews("non-existent", USER_ID)).rejects.toMatchObject({
+      await expect(publishNews("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "お知らせが見つかりません",
       });
     });
 
-    test("お知らせが見つからない場合 $transaction が呼ばれない", async () => {
+    test("お知らせが見つからない場合 update が呼ばれない", async () => {
       mockNewsFindUnique.mockResolvedValue(null);
 
-      await expect(publishNews("non-existent", USER_ID)).rejects.toThrow(
-        DomainError,
-      );
-      expect(mockTransaction).not.toHaveBeenCalled();
+      await expect(publishNews("non-existent")).rejects.toThrow(DomainError);
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -512,185 +494,6 @@ describe("unpublishNews", () => {
       mockNewsFindUnique.mockResolvedValue(null);
 
       await expect(unpublishNews("non-existent")).rejects.toThrow(DomainError);
-      expect(mockNewsUpdate).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// ============================================================================
-// createNewsBackup
-// ============================================================================
-
-describe("createNewsBackup", () => {
-  const NEWS_FOR_BACKUP = {
-    id: NEWS_ID,
-    contentHtml: "<p>コンテンツ</p>",
-    contentJson: { root: { children: [] } },
-  };
-
-  beforeEach(() => {
-    mockNewsFindUnique.mockReset();
-    mockNewsVersionFindFirst.mockReset();
-    mockNewsVersionCreate.mockReset();
-    mockNewsFindUnique.mockResolvedValue(NEWS_FOR_BACKUP);
-    mockNewsVersionFindFirst.mockResolvedValue(null);
-    mockNewsVersionCreate.mockResolvedValue({ id: "version-1" });
-  });
-
-  describe("正常系", () => {
-    test("バックアップを作成し version を返す（初回）", async () => {
-      const result = await createNewsBackup(NEWS_ID, USER_ID);
-
-      expect(result).toEqual({ version: 1 });
-      expect(mockNewsVersionCreate).toHaveBeenCalledTimes(1);
-    });
-
-    test("既存バージョンがある場合はバージョンがインクリメントされる", async () => {
-      mockNewsVersionFindFirst.mockResolvedValue({ version: 2 });
-
-      const result = await createNewsBackup(NEWS_ID, USER_ID);
-
-      expect(result).toEqual({ version: 3 });
-    });
-
-    test("newsVersion.create が正しい newsId で呼ばれる", async () => {
-      await createNewsBackup(NEWS_ID, USER_ID);
-
-      expect(mockNewsVersionCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            newsId: NEWS_ID,
-            createdBy: USER_ID,
-          }),
-        }),
-      );
-    });
-
-    test("contentJson が null の場合も正常にバックアップできる", async () => {
-      mockNewsFindUnique.mockResolvedValue({
-        ...NEWS_FOR_BACKUP,
-        contentJson: null,
-      });
-
-      const result = await createNewsBackup(NEWS_ID, USER_ID);
-
-      expect(result).toEqual({ version: 1 });
-    });
-  });
-
-  describe("異常系", () => {
-    test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
-
-      await expect(
-        createNewsBackup("non-existent", USER_ID),
-      ).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "お知らせが見つかりません",
-      });
-    });
-
-    test("お知らせが見つからない場合 newsVersion.create が呼ばれない", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
-
-      await expect(createNewsBackup("non-existent", USER_ID)).rejects.toThrow(
-        DomainError,
-      );
-      expect(mockNewsVersionCreate).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// ============================================================================
-// restoreNewsVersion
-// ============================================================================
-
-describe("restoreNewsVersion", () => {
-  const VERSION_DATA = {
-    contentHtml: "<p>バージョン1のコンテンツ</p>",
-    contentJson: { root: { children: [] } },
-  };
-
-  beforeEach(() => {
-    mockNewsVersionFindUnique.mockReset();
-    mockNewsFindUnique.mockReset();
-    mockNewsUpdate.mockReset();
-    mockNewsVersionFindUnique.mockResolvedValue(VERSION_DATA);
-    mockNewsFindUnique.mockResolvedValue({ slug: NEWS_SLUG });
-    mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
-  });
-
-  describe("正常系", () => {
-    test("バージョンを復元し slug を返す", async () => {
-      const result = await restoreNewsVersion(NEWS_ID, 1);
-
-      expect(result).toEqual({ slug: NEWS_SLUG });
-      expect(mockNewsUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    test("update が isPublished: false で呼ばれる", async () => {
-      await restoreNewsVersion(NEWS_ID, 1);
-
-      expect(mockNewsUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            isPublished: false,
-          }),
-        }),
-      );
-    });
-
-    test("update が正しいコンテンツで呼ばれる", async () => {
-      await restoreNewsVersion(NEWS_ID, 1);
-
-      expect(mockNewsUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            contentHtml: VERSION_DATA.contentHtml,
-          }),
-        }),
-      );
-    });
-
-    test("contentJson が null のバージョンも復元できる", async () => {
-      mockNewsVersionFindUnique.mockResolvedValue({
-        ...VERSION_DATA,
-        contentJson: null,
-      });
-
-      const result = await restoreNewsVersion(NEWS_ID, 2);
-
-      expect(result).toEqual({ slug: NEWS_SLUG });
-    });
-  });
-
-  describe("異常系", () => {
-    test("バージョンが存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsVersionFindUnique.mockResolvedValue(null);
-
-      await expect(restoreNewsVersion(NEWS_ID, 999)).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "バージョンが見つかりません",
-      });
-    });
-
-    test("お知らせが存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
-
-      await expect(restoreNewsVersion("non-existent", 1)).rejects.toMatchObject(
-        {
-          code: "NOT_FOUND",
-          message: "お知らせが見つかりません",
-        },
-      );
-    });
-
-    test("バージョンが見つからない場合 update が呼ばれない", async () => {
-      mockNewsVersionFindUnique.mockResolvedValue(null);
-
-      await expect(restoreNewsVersion(NEWS_ID, 999)).rejects.toThrow(
-        DomainError,
-      );
       expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
   });

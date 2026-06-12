@@ -4,14 +4,12 @@ import { z } from "zod";
 import {
   getNewsById as getNewsByIdQuery,
   getNewsList as getNewsListQuery,
-  getNewsVersions as getNewsVersionsQuery,
 } from "@/shared/domain/news/admin-queries";
 import type {
   GetNewsListResult,
   NewsData,
   NewsFilters,
   NewsPagination,
-  NewsVersionData,
 } from "@/shared/domain/news/types";
 import { requireAdminPermission } from "./_helpers";
 
@@ -34,17 +32,4 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
   }
 
   return getNewsByIdQuery(validated.data);
-}
-
-export async function getNewsVersions(
-  newsId: string,
-): Promise<NewsVersionData[]> {
-  await requireAdminPermission("news", "read");
-
-  const validated = idSchema.safeParse(newsId);
-  if (!validated.success) {
-    return [];
-  }
-
-  return getNewsVersionsQuery(validated.data);
 }

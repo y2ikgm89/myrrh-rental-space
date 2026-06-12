@@ -216,56 +216,26 @@ export async function deletePost(id: string): Promise<DeletePostResult> {
   };
 }
 
-export async function publishPost(
-  id: string,
-  userId: string,
-): Promise<PublishPostResult> {
-  const [post, latestVersion] = await Promise.all([
-    prisma.post.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        slug: true,
-        publishedAt: true,
-        contentHtml: true,
-        contentJson: true,
-      },
-    }),
-    prisma.postVersion.findFirst({
-      where: { postId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
+export async function publishPost(id: string): Promise<PublishPostResult> {
+  const post = await prisma.post.findUnique({
+    where: { id },
+    select: { id: true, slug: true, publishedAt: true },
+  });
 
   if (!post) {
     throw new DomainError("投稿記事が見つかりません", "NOT_FOUND");
   }
 
-  const version = (latestVersion?.version ?? 0) + 1;
-
-  await prisma.$transaction(async (tx) => {
-    await tx.post.update({
-      where: { id },
-      data: {
-        status: PostStatus.PUBLISHED,
-        publishedAt: post.publishedAt ?? new Date(),
-      },
-    });
-    await tx.postVersion.create({
-      data: omitUndefined({
-        postId: id,
-        version,
-        contentHtml: post.contentHtml,
-        contentJson: post.contentJson ?? undefined,
-        createdBy: userId,
-      }),
-    });
+  await prisma.post.update({
+    where: { id },
+    data: {
+      status: PostStatus.PUBLISHED,
+      publishedAt: post.publishedAt ?? new Date(),
+    },
   });
 
   return {
     slug: post.slug,
-    version,
   };
 }
 

@@ -235,8 +235,6 @@ model User {
   pageAssignments UserPageAssignment[]
 
   // FK: createdBy / resolvedBy / deletedBy リレーション
-  createdNewsVersions     NewsVersion[]          @relation("NewsVersionCreator")
-  createdPostVersions     PostVersion[]          @relation("PostVersionCreator")
   createdCommentThreads   EditorCommentThread[]  @relation("CommentThreadCreator")
   resolvedCommentThreads  EditorCommentThread[]  @relation("CommentThreadResolver")
   createdEditorComments   EditorComment[]        @relation("EditorCommentCreator")
@@ -759,33 +757,11 @@ model News {
   ogpDescription String?
   ogpImageUrl    String?
 
-  // Relations
-  versions NewsVersion[]
-
   // OR検索用インデックス
   @@index([title])
   @@index([isPublished, publishedAt])
   @@index([createdAt])
   @@map("news")
-}
-
-/// Newsのバージョン履歴
-model NewsVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  newsId String @db.Uuid
-  version     Int // 自動インクリメント（News内でユニーク）
-  contentHtml String   @db.Text @map("content") // HTMLスナップショット
-  contentJson Json? // Lexical EditorState JSON
-  createdAt   DateTime @default(now())
-  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
-
-  // Relations
-  news    News  @relation(fields: [newsId], references: [id], onDelete: Cascade)
-  creator User? @relation("NewsVersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-
-  @@unique([newsId, version])
-  @@index([newsId, createdAt])
-  @@map("news_versions")
 }
 
 model AnnouncementBar {
@@ -840,7 +816,6 @@ model Post {
   category PostCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   author   User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
   comments PostComment[]
-  versions PostVersion[]
   postTags PostTagOnPost[]
 
   // OR検索用インデックス
@@ -862,25 +837,6 @@ model PostTagOnPost {
   @@id([postId, tagId])
   @@index([tagId])
   @@map("post_tag_on_posts")
-}
-
-/// Postのバージョン履歴
-model PostVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  postId String @db.Uuid
-  version     Int // 自動インクリメント（Post内でユニーク）
-  contentHtml String   @db.Text @map("content") // HTMLスナップショット
-  contentJson Json? // Lexical EditorState JSON
-  createdAt   DateTime @default(now())
-  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
-
-  // Relations
-  post    Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  creator User? @relation("PostVersionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-
-  @@unique([postId, version])
-  @@index([postId, createdAt])
-  @@map("post_versions")
 }
 
 model PostCategory {

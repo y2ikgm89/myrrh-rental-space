@@ -351,7 +351,7 @@ export function usePostEditor({
         return;
       }
 
-      toast.success(`公開しました（バージョン ${result.version}）`);
+      toast.success("公開しました");
       setStatusValue(PostStatus.PUBLISHED);
       router.refresh();
     });

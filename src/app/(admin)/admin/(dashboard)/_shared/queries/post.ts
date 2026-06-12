@@ -8,7 +8,6 @@ import {
   getPosts as getPostsQuery,
   getPostTagById as getPostTagByIdQuery,
   getPostTags as getPostTagsQuery,
-  getPostVersions as getPostVersionsQuery,
 } from "@/shared/domain/posts/admin-queries";
 import type {
   GetPostsResult,
@@ -17,7 +16,6 @@ import type {
   PostFilters,
   PostPagination,
   PostTagData,
-  PostVersionData,
 } from "@/shared/domain/posts/types";
 import { requireAdminPermission } from "./_helpers";
 
@@ -40,19 +38,6 @@ export async function getPostById(id: string): Promise<PostData | null> {
   }
 
   return getPostByIdQuery(validated.data);
-}
-
-export async function getPostVersions(
-  postId: string,
-): Promise<PostVersionData[]> {
-  await requireAdminPermission("post", "read");
-
-  const validated = idSchema.safeParse(postId);
-  if (!validated.success) {
-    return [];
-  }
-
-  return getPostVersionsQuery(validated.data);
 }
 
 export async function getPostCategories(): Promise<PostCategoryData[]> {

@@ -6,10 +6,8 @@ import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   createNews as createNewsCommand,
-  createNewsBackup as createNewsBackupCommand,
   deleteNews as deleteNewsCommand,
   publishNews as publishNewsCommand,
-  restoreNewsVersion as restoreNewsVersionCommand,
   unpublishNews as unpublishNewsCommand,
   updateNewsBody as updateNewsBodyCommand,
   updateNewsSettings as updateNewsSettingsCommand,
@@ -35,10 +33,6 @@ import {
 } from "@/admin/lib/validations/news";
 
 const idSchema = z.uuid({ error: "お知らせIDが不正です" });
-const versionSchema = z.object({
-  newsId: z.uuid({ error: "お知らせIDが不正です" }),
-  version: z.number().int().positive({ error: "バージョンが不正です" }),
-});
 
 function purgeNewsCaches(...slugs: Array<string | undefined>): void {
   const uniqueSlugs = [
@@ -311,9 +305,9 @@ export async function updateNewsPublished(
     resource: "news",
     action: "publish",
     resourceId: validated.data,
-    execute: async (user) => {
+    execute: async () => {
       if (isPublished) {
-        const result = await publishNewsCommand(validated.data, user.id);
+        const result = await publishNewsCommand(validated.data);
         affectedSlug = result.slug;
       } else {
         const result = await unpublishNewsCommand(validated.data);
@@ -329,57 +323,6 @@ export async function updateNewsPublished(
       invalidateNewsCollectionCaches();
       updateTag(getCacheTag.news.detail(affectedSlug));
       purgeNewsCaches(affectedSlug);
-    },
-  });
-}
-
-export async function createNewsBackup(
-  id: string,
-): Promise<MutationResult<{ version: number }>> {
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationMutationError(validated.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "news",
-    action: "update",
-    resourceId: validated.data,
-    execute: async (user) => createNewsBackupCommand(validated.data, user.id),
-  });
-}
-
-export async function restoreNewsVersion(
-  newsId: string,
-  version: number,
-): Promise<MutationResult<{ version: number }>> {
-  const parsed = versionSchema.safeParse({ newsId, version });
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  let restoredNewsSlug: string | null = null;
-
-  return executeAdminMutationResult({
-    resource: "news",
-    action: "update",
-    resourceId: parsed.data.newsId,
-    execute: async () => {
-      const result = await restoreNewsVersionCommand(
-        parsed.data.newsId,
-        parsed.data.version,
-      );
-      restoredNewsSlug = result.slug;
-      return { version: parsed.data.version };
-    },
-    afterSuccess: () => {
-      if (!restoredNewsSlug) {
-        return;
-      }
-
-      invalidateNewsCollectionCaches();
-      updateTag(getCacheTag.news.detail(restoredNewsSlug));
-      purgeNewsCaches(restoredNewsSlug);
     },
   });
 }

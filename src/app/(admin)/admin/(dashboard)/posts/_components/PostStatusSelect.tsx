@@ -34,7 +34,7 @@ type PostStatusSelectProps = {
  * - PublishSwitch (binary) では表現不可な多状態 status の canonical
  *
  * 既存 action 経路:
- * - PUBLISHED への遷移: `publishPost` (PostVersion 作成 + publishedAt 設定)
+ * - PUBLISHED への遷移: `publishPost` (publishedAt 設定)
  * - DRAFT への遷移: `unpublishPost`
  * - ARCHIVED への遷移: `archivePost`
  *

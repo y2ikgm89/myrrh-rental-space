@@ -12,7 +12,6 @@ import type {
   PostFilters,
   PostPagination,
   PostTagData,
-  PostVersionData,
 } from "@/shared/domain/posts/types";
 
 function buildPostWhere(filters: PostFilters): PostWhereInput {
@@ -146,29 +145,6 @@ export async function getPostById(id: string): Promise<PostData | null> {
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
   };
-}
-
-export async function getPostVersions(
-  postId: string,
-): Promise<PostVersionData[]> {
-  const versions = await prisma.postVersion.findMany({
-    where: { postId },
-    select: {
-      id: true,
-      postId: true,
-      version: true,
-      contentHtml: true,
-      contentJson: true,
-      createdAt: true,
-      createdBy: true,
-    },
-    orderBy: { version: "desc" },
-  });
-
-  return versions.map((version) => ({
-    ...version,
-    createdAt: version.createdAt.toISOString(),
-  }));
 }
 
 export async function getPostCategories(): Promise<PostCategoryData[]> {

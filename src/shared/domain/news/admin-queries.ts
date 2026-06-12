@@ -11,7 +11,6 @@ import type {
   NewsFilters,
   NewsListItem,
   NewsPagination,
-  NewsVersionData,
 } from "@/shared/domain/news/types";
 
 function buildNewsWhere(filters: NewsFilters): NewsWhereInput {
@@ -137,27 +136,4 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
     createdAt: news.createdAt.toISOString(),
     updatedAt: news.updatedAt.toISOString(),
   };
-}
-
-export async function getNewsVersions(
-  newsId: string,
-): Promise<NewsVersionData[]> {
-  const versions = await prisma.newsVersion.findMany({
-    where: { newsId },
-    select: {
-      id: true,
-      newsId: true,
-      version: true,
-      contentHtml: true,
-      contentJson: true,
-      createdAt: true,
-      createdBy: true,
-    },
-    orderBy: { version: "desc" },
-  });
-
-  return versions.map((version) => ({
-    ...version,
-    createdAt: version.createdAt.toISOString(),
-  }));
 }

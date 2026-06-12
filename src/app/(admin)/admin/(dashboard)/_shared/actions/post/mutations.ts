@@ -282,23 +282,21 @@ export async function deletePost(id: string): Promise<MutationResult> {
   });
 }
 
-export async function publishPost(
-  id: string,
-): Promise<MutationResult<{ version: number }>> {
+export async function publishPost(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);
   }
 
-  let publishedPost: { slug: string; version: number } | null = null;
+  let publishedPost: { slug: string } | null = null;
 
   return executeAdminMutationResult({
     resource: "post",
     action: "publish",
     resourceId: validated.data,
-    execute: async (user) => {
-      publishedPost = await postCommands.publishPost(validated.data, user.id);
-      return { version: publishedPost.version };
+    execute: async () => {
+      publishedPost = await postCommands.publishPost(validated.data);
+      return null;
     },
     afterSuccess: async () => {
       if (!publishedPost) {
