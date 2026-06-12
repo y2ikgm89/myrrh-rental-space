@@ -7,8 +7,6 @@
 export {
   generatePostUrl,
   generatePostListUrl,
-  generateCategoryUrl,
-  generateTagUrl,
   getUrlPattern,
   extractSlugFromUrl,
   matchesPostUrl,

@@ -10,7 +10,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 
-interface PostCardData {
+export interface PostCardData {
   id: string;
   slug: string;
   url: string;

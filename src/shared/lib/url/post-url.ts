@@ -113,31 +113,6 @@ export function generatePostListUrl(
 }
 
 /**
- * カテゴリページのURLを生成
- *
- * @param categorySlug - カテゴリスラッグ
- * @param prefix - プレフィックス（'/posts' または ''）
- * @returns カテゴリページURL
- */
-export function generateCategoryUrl(
-  categorySlug: string,
-  prefix: string,
-): string {
-  return `${prefix}/category/${categorySlug}`;
-}
-
-/**
- * タグページのURLを生成
- *
- * @param tagSlug - タグスラッグ
- * @param prefix - プレフィックス（'/posts' または ''）
- * @returns タグページURL
- */
-export function generateTagUrl(tagSlug: string, prefix: string): string {
-  return `${prefix}/tag/${tagSlug}`;
-}
-
-/**
  * URLパターンを生成（プレビュー用）
  *
  * @param structure - パーマリンク構造
