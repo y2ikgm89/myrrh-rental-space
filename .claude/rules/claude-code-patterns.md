@@ -41,7 +41,7 @@ paths:
 
 - [ ] rule: `paths:` frontmatter 必須（常時ロード禁止）
 - [ ] rule: `paths:` glob が実在ファイルにマッチ（dir 移動・rename で stale 化 → `/audit-claude-config` の `check-stale-paths.ts` で検出）
-- [ ] rule: `paths:` glob は rule の**実関心範囲**に絞る（over-broad glob は無関係 file へ rule 全文を注入し context を浪費 → `/audit-claude-config` の `injection-cost.ts` で計測）。例: React component 限定 rule に `src/**/*.ts`（純ロジック）を含めない / auth rule に `src/shared/**` 全体を含めない。狭小化前に concept-grep で「rule を必要とする実在 file」を全網羅できるか coverage 検証する（guidance 喪失防止）。cross-cutting（型アサーション・コード品質等）は `src/**/*.{ts,tsx}` が正当
+- [ ] rule: `paths:` glob は rule の**実関心範囲**に絞る（over-broad glob は無関係 file へ rule 全文を注入し context を浪費 → `/audit-claude-config` の `injection-cost.ts` で計測）。例: React component 限定 rule に `src/**/*.ts`（純ロジック）を含めない / auth rule に `src/shared/**` 全体を含めない。狭小化前に concept-grep で「rule を必要とする実在 file」を全網羅できるか coverage 検証する（guidance 喪失防止）。cross-cutting（型アサーション・コード品質等）は `src/**/*.{ts,tsx}` が正当。**ただし `src/**/\*.{ts,tsx}` を使う rule は 1 ファイル 100 行以内必須\*\*（超過時は narrow-path detail file に分割）— 現状 20 ファイル・2270 行超の injection が auto-compact を加速する根本原因（2026-06-12 実測）。詳細例・grep コマンドを narrow-path sub-file へ移動し本体は概要のみに保つ
 - [ ] skill: SKILL.md 500 行未満、`description` + `when_to_use` 合算 1,536 文字以下、reference は `reference/*.md` 分割
 - [ ] agent: 公式 frontmatter フィールドのみ、独自フィールド禁止
 - [ ] agent `memory: project` 宣言時は `.claude/agent-memory/<name>/` 実体を必ず作成
