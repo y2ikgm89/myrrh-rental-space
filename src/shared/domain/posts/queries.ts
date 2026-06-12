@@ -276,7 +276,15 @@ export async function getPostCategoryBySlug(slug: string) {
     fetch: () =>
       prisma.postCategory.findFirst({
         where: { slug },
-        select: { id: true, name: true, slug: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          metaTitle: true,
+          metaDescription: true,
+          ogpImageUrl: true,
+        },
       }),
     fallback: null,
     category: ErrorCategory.DATABASE,
@@ -298,7 +306,15 @@ export async function getPostTagBySlug(slug: string) {
     fetch: () =>
       prisma.postTag.findFirst({
         where: { slug },
-        select: { id: true, name: true, slug: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          metaTitle: true,
+          metaDescription: true,
+          ogpImageUrl: true,
+        },
       }),
     fallback: null,
     category: ErrorCategory.DATABASE,

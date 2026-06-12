@@ -86,8 +86,9 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
   posts: {
     id: "posts",
     label: "ブログ",
-    description: "/posts のブログ記事一覧・詳細",
-    publicRoutes: ["/posts"],
+    description:
+      "/blog のブログ記事一覧・詳細（カテゴリ / タグ別アーカイブ含む）",
+    publicRoutes: ["/posts", "/blog", "/category", "/tag"],
     pageSlugs: ["posts"],
     sectionTypes: ["post-list"],
     templates: ["blog-archive"],

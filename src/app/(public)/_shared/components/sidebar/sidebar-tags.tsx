@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import type { SidebarTagItem } from "@/shared/domain/sidebar/queries";
+import { buildTagPath } from "@/shared/domain/posts/routing";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface SidebarTagsProps {
   tags: readonly SidebarTagItem[];
@@ -16,7 +18,7 @@ export function SidebarTags({ tags }: SidebarTagsProps): ReactElement {
         {tags.map((tag) => (
           <Link
             key={tag.id}
-            href={`/posts?tag=${tag.slug}`}
+            href={toAppRoute(buildTagPath(tag.slug))}
             className="border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             {tag.name}

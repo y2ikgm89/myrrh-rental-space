@@ -49,3 +49,20 @@ export function buildPostCanonicalPath(
 ): string {
   return generatePostUrl(post, getPostPermalinkConfig(settings));
 }
+
+/**
+ * カテゴリ別アーカイブの正規パス。
+ *
+ * 記事詳細が `/blog/{slug}` 固定なのに対し、分類アーカイブはトップレベルの
+ * `/category/{slug}` に置く（`RESERVED_POST_SEGMENTS` で予約済み）。
+ */
+export function buildCategoryPath(slug: string): string {
+  return `/category/${slug}`;
+}
+
+/**
+ * タグ別アーカイブの正規パス（トップレベル `/tag/{slug}`）。
+ */
+export function buildTagPath(slug: string): string {
+  return `/tag/${slug}`;
+}

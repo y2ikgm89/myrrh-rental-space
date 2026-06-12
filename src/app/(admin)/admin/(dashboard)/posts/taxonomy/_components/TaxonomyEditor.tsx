@@ -85,12 +85,12 @@ type TaxonomyEditorProps = CategoryEditorProps | TagEditorProps;
 const CONFIG = {
   category: {
     label: "カテゴリ",
-    urlPrefix: "/posts/category/",
+    urlPrefix: "/category/",
     backUrl: "/admin/posts?tab=categories",
   },
   tag: {
     label: "タグ",
-    urlPrefix: "/posts/tag/",
+    urlPrefix: "/tag/",
     backUrl: "/admin/posts?tab=tags",
   },
 } satisfies Record<

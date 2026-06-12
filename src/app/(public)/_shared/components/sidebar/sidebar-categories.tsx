@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import type { SidebarCategoryItem } from "@/shared/domain/sidebar/queries";
+import { buildCategoryPath } from "@/shared/domain/posts/routing";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 
 interface SidebarCategoriesProps {
   categories: readonly SidebarCategoryItem[];
@@ -18,7 +20,7 @@ export function SidebarCategories({
         {categories.map((cat) => (
           <li key={cat.id}>
             <Link
-              href={`/posts?category=${cat.slug}`}
+              href={toAppRoute(buildCategoryPath(cat.slug))}
               className="flex items-center justify-between text-sm transition-colors hover:text-foreground"
             >
               <span>{cat.name}</span>
