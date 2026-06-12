@@ -7,7 +7,7 @@ paths:
 # コード品質ルール
 
 > 形骸化実装・過剰抽象化・後方互換ハック・デッドコードの禁止と最小実装の原則。
-> ドメイン Gotchas（外部 API / cache / framework 固有）は path-scoped rule に分散済み（→ `api-routes.md` / `auth-patterns.md` / `resend-patterns.md` / `external-api-retry-patterns.md` / `ical-patterns.md` / `prisma-patterns.md` / `react/gotchas.md` / `server-actions/use-cache.md` / `tailwind-patterns/*` / `frontend/project-design-config.md`）。
+> ドメイン Gotchas（外部 API / cache / framework 固有）は path-scoped rule に分散済み（→ `api-routes.md` / `auth-patterns.md` / `resend-patterns.md` / `external-api-retry-patterns.md` / `ical-patterns.md` / `prisma-patterns/client-setup.md` / `prisma-patterns/queries.md` / `react/gotchas.md` / `server-actions/use-cache.md` / `tailwind-patterns/*` / `frontend/project-design-config.md`）。
 
 ## 必須事項
 

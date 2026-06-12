@@ -82,7 +82,7 @@ const _oldFunction = () => {}; // 削除すべき
 // removed: export function legacyHelper() { ... }
 
 // NG: 不要な re-export
-export type { OldType as NewType }; // 型エイリアスは不要（prisma-patterns.md 参照）
+export type { OldType as NewType }; // 型エイリアスは不要（prisma-patterns/queries.md 参照）
 
 // OK: 不要なコードは完全削除。参照元も更新
 // 削除前: export function legacyHelper() { ... }

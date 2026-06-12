@@ -21,7 +21,7 @@ API 仕様不明時は `context7` で React / Next.js / Prisma / Zod 公式 quer
 
 ## 必須チェック
 
-詳細は path-scoped rule (`type-safety` / `react/*` / `zod-patterns/*` / `server-actions/*` / `prisma-patterns` / `tailwind-patterns/*` / `nuqs-patterns` / `auth-patterns/*` / `test-quality` / `bun-patterns`) が auto-load されるので、本 agent は重要パターンの reminder と grep スクリプトのみ:
+詳細は path-scoped rule (`type-safety` / `react/*` / `zod-patterns/*` / `server-actions/*` / `prisma-patterns/*` / `tailwind-patterns/*` / `nuqs-patterns` / `auth-patterns/*` / `test-quality` / `bun-patterns`) が auto-load されるので、本 agent は重要パターンの reminder と grep スクリプトのみ:
 
 ### Type safety
 

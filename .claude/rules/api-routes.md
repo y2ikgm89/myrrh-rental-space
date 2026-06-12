@@ -77,7 +77,7 @@ Checkout Session は5イベントで処理する（[公式](https://docs.stripe.
 
 **べき等性ガード必須** — 処理前に現在の `paymentStatus` をチェックし、既に処理済みならスキップ（Webhook 重複配信対策）
 
-**atomic claim パターン必須** — `findUnique → update` の 2 ステップ idempotency は並行配信で race window が残り、確認メール / 監査ログが二重実行される。`updateMany({ where: { status: { not: TARGET } } })` の `count` 判定で claim 成否を gate する（→ `prisma-patterns.md` §状態遷移の atomic claim）
+**atomic claim パターン必須** — `findUnique → update` の 2 ステップ idempotency は並行配信で race window が残り、確認メール / 監査ログが二重実行される。`updateMany({ where: { status: { not: TARGET } } })` の `count` 判定で claim 成否を gate する（→ `prisma-patterns/queries.md` §Gotchas の atomic claim）
 
 ````
 
