@@ -674,7 +674,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                     type="button"
                     onClick={() => handleRemoveHoliday(date)}
                     disabled={isPending}
-                    className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+                    className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
                   >
                     <IconX className="h-3 w-3" />
                   </button>
