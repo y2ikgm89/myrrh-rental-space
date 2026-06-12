@@ -68,14 +68,10 @@ const eslintConfig = defineConfig([
         ...globals.node,
       },
     },
-    settings: {
-      "import-x/resolver": {
-        typescript: true,
-      },
-    },
     rules: {
-      // Next.js recommended
-      ...nextPlugin.configs.recommended.rules,
+      // Next.js core-web-vitals
+      // configs["core-web-vitals"].rules は内部で {...recommendedRules, ...coreWebVitalsRules}
+      // と展開され recommended を完全に内包するため、recommended.rules の spread は冗長。
       ...nextPlugin.configs["core-web-vitals"].rules,
 
       // React Hooks (React Compiler ルール含む)
