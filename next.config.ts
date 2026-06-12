@@ -79,6 +79,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  // TypeScript は cloudbuild.yaml の test step で検証済みのため Docker ビルド内ではスキップ
+  // (Docker build 内で tsc が OOM Kill される問題を回避)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
   // Partial Prerendering (PPR) - 静的シェル + 動的コンテンツのハイブリッドレンダリング
   // use cache ディレクティブによる明示的キャッシュ制御を有効化

@@ -94,7 +94,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({ url: `${BASE_URL}/news`, lastModified: latestNewsUpdate });
   }
   if (enabled.has("posts")) {
-    entries.push({ url: `${BASE_URL}/posts`, lastModified: latestPostUpdate });
+    entries.push({ url: `${BASE_URL}/blog`, lastModified: latestPostUpdate });
   }
   if (enabled.has("events")) {
     entries.push({
