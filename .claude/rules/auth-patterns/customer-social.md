@@ -4,7 +4,6 @@ paths:
   - src/shared/lib/customer-auth.ts
   - src/shared/lib/customer-auth-client.ts
   - src/shared/domain/customers/**
-  - src/app/(public)/**
   - src/app/(public)/login/**
   - src/app/(public)/mypage/**
   - src/app/api/customer-auth/**
