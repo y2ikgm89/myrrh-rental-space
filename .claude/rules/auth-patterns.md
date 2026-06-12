@@ -2,20 +2,26 @@
 paths:
   - src/proxy.ts
   - src/app/(admin)/**
-  - src/app/api/**
+  - src/app/api/auth/**
+  - src/app/api/customer-auth/**
+  - src/app/api/admin/**
+  - src/app/api/webhooks/google-calendar/**
   - src/app/(public)/login/**
   - src/app/(public)/mypage/**
   - src/app/(public)/_shared/**
   - src/app/(public)/_components/**
   - src/app/(public)/preview/**
   - src/app/(public)/layout.tsx
-  - src/shared/domain/**
+  - src/shared/domain/auth/**
+  - src/shared/domain/customers/**
+  - src/shared/domain/users/**
+  - src/shared/domain/staff-invitations/**
+  - src/shared/domain/admin-login-tokens/**
+  - src/shared/domain/audit/**
+  - src/shared/domain/audit-log/**
   - src/shared/lib/admin-*
   - src/shared/lib/customer-*
   - src/shared/lib/command-palette-types*
-  - src/shared/lib/forms/**
-  - src/shared/lib/nuqs/**
-  - src/shared/lib/validations/**
   - src/shared/types/better-auth.d.ts
 ---
 
