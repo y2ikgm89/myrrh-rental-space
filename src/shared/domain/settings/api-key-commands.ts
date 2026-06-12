@@ -209,7 +209,7 @@ export async function deleteCustomApiKey(id: string): Promise<void> {
     throw new DomainError("指定されたAPIキーが見つかりません", "NOT_FOUND");
   }
 
-  delete existing[id];
+  const { [id]: _removed, ...rest } = existing;
 
-  await upsertSettings({ customApiKeys: existing });
+  await upsertSettings({ customApiKeys: rest });
 }
