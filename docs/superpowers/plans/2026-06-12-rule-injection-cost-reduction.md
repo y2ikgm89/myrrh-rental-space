@@ -31,22 +31,20 @@ path-scoped rule は glob マッチ file を Read/Edit した瞬間に全文が 
 
 ## PR ロードマップ
 
-- [x] **PR-1 trim cross-cutting**（branch `refactor/reduce-rule-injection-cost`, commit 07ea3203）
-  - assertion-bans 322→62 / auto-memo 151→62 / container-queries 138→70 / index-access に Gotchas 移行 / claude-code-patterns に「100 行以内」ルール追加
-  - **決定**: `type-safety.md`(64 行)・`code-quality.md`(70 行) は**削除しない** — 両方 100 行準拠 + ユニーク内容（tsconfig 表 / utilities 表 / 最小変更原則）。commit の「残作業 削除」は却下
-- [ ] **PR-2 split ssot-ui-components.md** — sub-scope: lexical / 公開UI / mypage / admin予約カレンダー / admin共通 / @theme トークン / home-hero
-- [ ] **PR-3 split public-page-gotchas.md** — フォーム / レスポンシブ・余白 / Page-First / blog サイドバー / 料金・リンク
-- [ ] **PR-4 split auth-patterns.md** — admin / public-customer / sessions の union glob 分解
-- [ ] **PR-5 split SSoT giants** — ssot-sections-features / ssot-db-domain / prisma-patterns の admin-edit vs public-consume 分離
-- [ ] **PR-6 narrow redundant broad globs**
-  - `auth-patterns/customer-social.md`: `src/app/(public)/**` 除去（login/mypage/customer-auth で十分）
-  - `auth-patterns/sessions.md`: `src/app/**/page.tsx` `**/layout.tsx` を admin/mypage/login へ
-  - `nuqs-patterns.md` / `nuqs-patterns/usage-patterns.md`: `src/app/**` を nuqs 実利用 path へ
-  - `react/forms-ssr.md`: `src/**/*.tsx` を form 系 path へ
-  - `forbidden-patterns.md`: trim（PR-1 で扱わなければここ）
+- [x] **PR-1 trim cross-cutting**（#515 MERGED）— assertion-bans 322→62 / auto-memo 151→62 / container-queries 138→70 / index-access に Gotchas 移行 / claude-code-patterns に「100 行以内」ルール。`type-safety.md`(64)・`code-quality.md`(70) は 100 行準拠 + ユニーク内容のため**削除せず維持**（commit の「残作業 削除」却下）
+- [x] **PR-2 split ssot-ui-components.md**（#516 MERGED）— lexical-article / public / admin(+calendar) / design-tokens の 4 分割。stale `src/admin|public/**` → `(admin|public)/**`。**公開 98K→87K / Lexical 70K→58K / 管理 84K→76K tok**
+- [x] **PR-3 narrow customer-social**（#517、`(public)/**` 除去）— 公開 92K→89K tok（PR-6 の一部を先行）
+- [ ] **PR-4 narrow auth-patterns.md broad globs**（split ではなく **narrow** が適切）— auth-patterns は admin/customer 横断の一般 auth grab-bag で sub-scope 分割不可。だが glob に**非 auth の over-broad** が混入: `src/shared/domain/**`（全 domain）/ `src/app/api/**`（全 API）/ `src/shared/lib/validations/**` / `nuqs/**` / `forms/**`。これらを auth 関連 path（`domain/auth/**` `domain/customers/**` `api/{auth,admin,customer-auth}/**` 等）へ narrow。Server Action / domain query / API route の 4 シナリオに効く高 value。**要 coverage 検証**（本文が一般 domain/api/validation を参照していないか grep）
+- [ ] **PR-5 split SSoT giants** — ssot-sections-features(24.5KB) / ssot-db-domain(19KB) / prisma-patterns(21KB)。各 H2 を admin-edit vs public-consume / query-vs-command で narrow glob 化（ssot-ui-components と同手法）
+- [ ] **PR-6 split public-page-gotchas.md(36KB)** — ⚠️ **grab-bag・難所**。同一 `(public*)/**` 配下に「全公開ページ共通(responsive/spacing/architecture/FAQ/counter、§レスポンシブ標準+§余白+§Page-First core)」「detail 限定(ArticleLayout/EventInfoPanel/Variant E/formatEventDate/Prose、本文 行 90-102 + 136)」「blog 限定(§ブログサイドバー + 行 103-105 BlogLayout/posts/SearchBar)」「form 限定(§公開フォーム UI 統一 + §フィルタ Select SSoT + §autoComplete + 行 141)」が混在。**同一 glob のサブ分割はコスト削減ゼロ**。narrow glob を割り当てられる部分のみ `public-page-gotchas/{forms,article-detail,blog}.md` に抽出 + core(残り)は `(public*)/**` のまま維持し file 名据置（inbound ref: touch-text/responsive/foundations が `public-page-gotchas.md` を参照、file 残せば破損なし）。core ~20KB は marketing/list 編集で残るが detail/form/blog 専用 ~16KB が外れる。bullet 単位の慎重仕分け要（fresh context 推奨）
+- [ ] **PR-7 trim forbidden-patterns.md** — 230 行 cross-cutting(`src/**/*.{ts,tsx}`、7 シナリオ)を 100 行ルールへ trim（詳細例を narrow-path sub-file へ）
+- [ ] **却下: nuqs / sessions glob narrow** — nuqs は 58 file に散在（page/layout/\_components/\_shared/components/\_shared/hooks/\_hooks/calendar/hooks/domain）、sessions は admin/layout/action/api 横断で**いずれも genuine broad**。naive narrow は coverage 損失。trim で対処するなら別途検討
 
-## 進捗メモ
+## 進捗メモ（実装知見）
 
-- 各 split は「元 rule の各 H2 セクション → 最も narrow な sub-scope glob を割り当て → concept-grep で対象 file を全網羅できるか検証 → sub-file 作成 → 元 file 削除 → CLAUDE.md / cross-ref 更新」。
-- `type-safety.md` への 7 参照（lexical 系 SKILL / nuqs parsers）は「型アサーション禁止 = `type-safety/assertion-bans.md`」へ更新すると正確（type-safety.md 自体は残すので破損ではない、精度向上のみ）。
-- auto-mode で `.claude/rules/` の Edit/Write は通る。`git rm`（削除）は過去 block 実績あり → user 認可済（「出来ることを全て」）。
+- **同一 glob のサブ分割はコスト削減ゼロ** — split が効くのは sub-file に元より narrow な glob を割り当てられる時のみ（react/compiler/\* が同一 glob で分割済=効果なしの前例）。public-page-gotchas / auth-patterns はこの理由で「分割」より「narrow glob 抽出 / 非該当 glob 除去」が本質
+- **stale `src/admin/**` `src/public/**` glob 群** — 実体は `src/app/(admin|public)/**`。`@/admin`→`(admin)/admin/(dashboard)/_shared`, `@/public`→`(public)/_shared`。他 rule にも残存（ssot-datetime-media / ssot-sections-features の `src/public/...`、deployment-patterns の `src/middleware.ts`=現 `src/proxy.ts`）→ check-stale-paths.ts で DEAD_GLOB として検出可
+- split 手順: 各 H2 → narrow sub-scope glob 割当 → concept-grep で coverage 検証 → sub-file 作成 → 元 file 削除(`git rm` OK) → inbound ref 更新（`docs/`+`.claude/`+`AGENTS.md`+`CLAUDE.md` を grep）→ `check-stale-paths.ts` で DEAD_RULE=0 / 新規 DEAD_GLOB=0 → `injection-cost.ts` before/after
+- `type-safety.md` への 7 参照（lexical 系 SKILL / nuqs parsers）は「型アサーション禁止 = `type-safety/assertion-bans.md`」へ更新すると正確（type-safety.md 自体は残すので破損ではない、精度向上のみ）
+- lefthook pre-commit が staged .md の table を prettier 整形（Edit drift 注意、PostToolUse prettier は .md 除外済）。auto-mode で `.claude/rules/` の Edit/Write/`git rm` 全て通る（user「出来ることを全て」認可済）
+- **独立 PR は更新済み main から branch**（前 PR の同 file 衝突回避）。.md docs は build 非依存、CI Build job が auto-merge gate で最終検証
