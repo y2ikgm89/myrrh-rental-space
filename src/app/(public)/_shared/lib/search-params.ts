@@ -47,7 +47,6 @@ export const newsSearchParams = createSearchParamsCache(
 export const postsSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   q: parseAsString.withDefault(""),
-  category: parseAsString.withDefault(""),
 };
 
 export const postsSearchParams = createSearchParamsCache(

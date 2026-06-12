@@ -338,15 +338,10 @@ export async function SectionRenderer({
       if (config.displayLayout === "archive") {
         const sp = searchParams
           ? await postsSearchParams.parse(searchParams)
-          : { page: 1, q: "", category: "" };
+          : { page: 1, q: "" };
         const currentPage = Math.max(1, sp.page);
         const [postsResult, categories] = await Promise.all([
-          getPublishedPostsList(
-            currentPage,
-            POSTS_ARCHIVE_PER_PAGE,
-            sp.q,
-            sp.category,
-          ),
+          getPublishedPostsList(currentPage, POSTS_ARCHIVE_PER_PAGE, sp.q),
           getPostCategories(),
         ]);
         return (
@@ -360,7 +355,6 @@ export async function SectionRenderer({
               currentPage,
               totalPages: postsResult.totalPages,
               query: sp.q,
-              categorySlug: sp.category,
             }}
           />
         );
