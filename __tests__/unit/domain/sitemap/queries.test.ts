@@ -9,6 +9,12 @@ const mockNewsFindMany = mock<() => Promise<unknown[]>>(() =>
 const mockPostFindMany = mock<() => Promise<unknown[]>>(() =>
   Promise.resolve([]),
 );
+const mockPostCategoryFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+const mockPostTagFindMany = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
 const mockPageFindMany = mock<() => Promise<unknown[]>>(() =>
   Promise.resolve([]),
 );
@@ -25,6 +31,8 @@ mock.module("@/shared/db/prisma", () => ({
     space: { findMany: mockSpaceFindMany },
     news: { findMany: mockNewsFindMany },
     post: { findMany: mockPostFindMany },
+    postCategory: { findMany: mockPostCategoryFindMany },
+    postTag: { findMany: mockPostTagFindMany },
     page: { findMany: mockPageFindMany },
     event: { findMany: mockEventFindMany },
     termsDocument: { findMany: mockTermsFindMany },
@@ -47,15 +55,19 @@ describe("getSitemapContentData", () => {
     mockSpaceFindMany.mockReset();
     mockNewsFindMany.mockReset();
     mockPostFindMany.mockReset();
+    mockPostCategoryFindMany.mockReset();
+    mockPostTagFindMany.mockReset();
     mockPageFindMany.mockReset();
     mockEventFindMany.mockReset();
     mockTermsFindMany.mockReset();
   });
 
-  test("6 model 全て空でも { spaces, news, posts, customPages, events, terms } を返す", async () => {
+  test("8 model 全て空でも { spaces, news, posts, postCategories, postTags, customPages, events, terms } を返す", async () => {
     mockSpaceFindMany.mockResolvedValueOnce([]);
     mockNewsFindMany.mockResolvedValueOnce([]);
     mockPostFindMany.mockResolvedValueOnce([]);
+    mockPostCategoryFindMany.mockResolvedValueOnce([]);
+    mockPostTagFindMany.mockResolvedValueOnce([]);
     mockPageFindMany.mockResolvedValueOnce([]);
     mockEventFindMany.mockResolvedValueOnce([]);
     mockTermsFindMany.mockResolvedValueOnce([]);
@@ -66,6 +78,8 @@ describe("getSitemapContentData", () => {
       spaces: [],
       news: [],
       posts: [],
+      postCategories: [],
+      postTags: [],
       customPages: [],
       events: [],
       terms: [],
@@ -92,6 +106,21 @@ describe("getSitemapContentData", () => {
         select: expect.objectContaining({
           category: { select: { slug: true } },
         }),
+      }),
+    );
+  });
+
+  test("postCategory / postTag は公開記事を持つもののみ（published filter）", async () => {
+    await getSitemapContentData();
+
+    expect(mockPostCategoryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { posts: { some: { status: "PUBLISHED" } } },
+      }),
+    );
+    expect(mockPostTagFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { posts: { some: { post: { status: "PUBLISHED" } } } },
       }),
     );
   });

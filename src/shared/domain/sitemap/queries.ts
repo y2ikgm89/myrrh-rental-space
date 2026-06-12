@@ -22,6 +22,16 @@ export type SitemapPost = {
   } | null;
 };
 
+export type SitemapPostCategory = {
+  slug: string;
+  updatedAt: Date;
+};
+
+export type SitemapPostTag = {
+  slug: string;
+  updatedAt: Date;
+};
+
 export type SitemapCustomPage = {
   slug: string;
   updatedAt: Date;
@@ -41,11 +51,22 @@ export async function getSitemapContentData(): Promise<{
   spaces: SitemapSpace[];
   news: SitemapNews[];
   posts: SitemapPost[];
+  postCategories: SitemapPostCategory[];
+  postTags: SitemapPostTag[];
   customPages: SitemapCustomPage[];
   events: SitemapEvent[];
   terms: SitemapTerms[];
 }> {
-  const [spaces, news, posts, customPages, events, terms] = await Promise.all([
+  const [
+    spaces,
+    news,
+    posts,
+    postCategories,
+    postTags,
+    customPages,
+    events,
+    terms,
+  ] = await Promise.all([
     prisma.space.findMany({
       where: { isPublished: true, isActive: true },
       select: { slug: true, updatedAt: true },
@@ -68,6 +89,16 @@ export async function getSitemapContentData(): Promise<{
           },
         },
       },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.postCategory.findMany({
+      where: { posts: { some: { status: PostStatus.PUBLISHED } } },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.postTag.findMany({
+      where: { posts: { some: { post: { status: PostStatus.PUBLISHED } } } },
+      select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.page.findMany({
@@ -98,6 +129,8 @@ export async function getSitemapContentData(): Promise<{
     spaces,
     news,
     posts,
+    postCategories,
+    postTags,
     customPages,
     events,
     terms,

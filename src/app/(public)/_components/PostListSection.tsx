@@ -52,7 +52,6 @@ export type PostListMode =
       readonly currentPage: number;
       readonly totalPages: number;
       readonly query: string;
-      readonly categorySlug: string;
     };
 
 interface PostListSectionProps {
@@ -67,10 +66,9 @@ export function PostListSection({
   mode,
 }: PostListSectionProps): ReactElement {
   if (mode.kind === "archive") {
-    const hasFilters = Boolean(mode.query || mode.categorySlug);
+    const hasFilters = Boolean(mode.query);
     const preservedQuery: Record<string, string | undefined> = {};
     if (mode.query) preservedQuery["q"] = mode.query;
-    if (mode.categorySlug) preservedQuery["category"] = mode.categorySlug;
 
     return (
       <section className="pt-10 pb-[var(--space-md)] md:pt-14">

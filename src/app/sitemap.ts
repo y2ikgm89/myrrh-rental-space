@@ -13,7 +13,11 @@
 import type { MetadataRoute } from "next";
 import { getSitemapContentData } from "@/shared/domain/sitemap/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
+import {
+  buildPostCanonicalPath,
+  buildCategoryPath,
+  buildTagPath,
+} from "@/shared/domain/posts/routing";
 import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import {
   getFeatureFilterContext,
@@ -59,7 +63,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getSitemapContentData(),
     getFeatureFilterContext(),
   ]);
-  const { spaces, news, posts, customPages, events, terms } = content;
+  const {
+    spaces,
+    news,
+    posts,
+    postCategories,
+    postTags,
+    customPages,
+    events,
+    terms,
+  } = content;
   const { enabled, disabledRoutes } = featureCtx;
 
   // 各コンテンツタイプの最新更新日を取得
@@ -127,6 +140,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       entries.push({
         url: `${BASE_URL}${buildPostCanonicalPath(post, permalinkSettings ?? undefined)}`,
         lastModified: post.updatedAt,
+      });
+    }
+    for (const category of postCategories) {
+      entries.push({
+        url: `${BASE_URL}${buildCategoryPath(category.slug)}`,
+        lastModified: category.updatedAt,
+      });
+    }
+    for (const tag of postTags) {
+      entries.push({
+        url: `${BASE_URL}${buildTagPath(tag.slug)}`,
+        lastModified: tag.updatedAt,
       });
     }
   }

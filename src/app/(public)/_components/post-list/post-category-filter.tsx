@@ -1,10 +1,8 @@
-"use client";
-
 import type { ReactElement } from "react";
-import { useQueryStates } from "nuqs";
-import { useTransition } from "react";
+import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
-import { postsSearchParamsParsers } from "@/public/lib/search-params";
+import { toAppRoute } from "@/shared/lib/typed-routes";
+import { buildCategoryPath } from "@/shared/domain/posts/routing";
 
 interface CategoryOption {
   readonly id: string;
@@ -14,64 +12,53 @@ interface CategoryOption {
 
 interface PostCategoryFilterProps {
   readonly categories: readonly CategoryOption[];
+  /**
+   * 現在表示中のカテゴリ slug（`/category/{slug}` ページ）。
+   * 一覧（`/posts`）では未指定で "All" が active になる。
+   */
+  readonly activeSlug?: string;
 }
 
+const CHIP_BASE =
+  "inline-flex min-h-11 items-center px-5 py-2 text-[0.6875rem] uppercase tracking-[0.18em] transition-all duration-300";
+const CHIP_ACTIVE = "bg-accent text-accent-foreground";
+const CHIP_INACTIVE =
+  "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30";
+
+/**
+ * カテゴリ絞り込みナビ（パスベース）。
+ *
+ * 各カテゴリは `/category/{slug}` への Link。絞り込みは URL パスで表現するため
+ * client state（旧 nuqs `?category=`）は持たない server component。
+ */
 export function PostCategoryFilter({
   categories,
+  activeSlug,
 }: PostCategoryFilterProps): ReactElement {
-  const [params, setParams] = useQueryStates(postsSearchParamsParsers, {
-    history: "push",
-    shallow: false,
-  });
-  const [isPending, startTransition] = useTransition();
-
-  const activeCategory = params.category;
-
-  function handleFilter(categorySlug: string | null) {
-    startTransition(() => {
-      void setParams({ category: categorySlug ?? "", page: 1 });
-    });
-  }
-
   return (
-    <nav
-      aria-label="カテゴリフィルタ"
-      className={cn(
-        "mb-8 transition-opacity duration-300",
-        isPending && "opacity-60",
-      )}
-    >
+    <nav aria-label="カテゴリフィルタ" className="mb-8">
       <ul className="flex flex-wrap gap-3" role="list">
         <li>
-          <button
-            type="button"
-            onClick={() => handleFilter(null)}
-            aria-pressed={!activeCategory}
-            className={cn(
-              "inline-flex min-h-11 items-center px-5 py-2 text-[0.6875rem] uppercase tracking-[0.18em] transition-all duration-300",
-              !activeCategory
-                ? "bg-accent text-accent-foreground"
-                : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
-            )}
+          <Link
+            href="/posts"
+            aria-current={activeSlug ? undefined : "page"}
+            className={cn(CHIP_BASE, activeSlug ? CHIP_INACTIVE : CHIP_ACTIVE)}
           >
             All
-          </button>
+          </Link>
         </li>
         {categories.map((cat) => (
           <li key={cat.id}>
-            <button
-              type="button"
-              onClick={() => handleFilter(cat.slug)}
-              aria-pressed={activeCategory === cat.slug}
+            <Link
+              href={toAppRoute(buildCategoryPath(cat.slug))}
+              aria-current={activeSlug === cat.slug ? "page" : undefined}
               className={cn(
-                "inline-flex min-h-11 items-center px-5 py-2 text-[0.6875rem] uppercase tracking-[0.18em] transition-all duration-300",
-                activeCategory === cat.slug
-                  ? "bg-accent text-accent-foreground"
-                  : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                CHIP_BASE,
+                activeSlug === cat.slug ? CHIP_ACTIVE : CHIP_INACTIVE,
               )}
             >
               {cat.name}
-            </button>
+            </Link>
           </li>
         ))}
       </ul>
