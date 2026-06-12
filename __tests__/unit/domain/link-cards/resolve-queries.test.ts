@@ -78,7 +78,7 @@ describe("resolveLinkCardsByType", () => {
     const card = map.get("p1");
     expect(card?.title).toBe("記事");
     expect(card?.excerpt).toBe("概要");
-    expect(card?.href).toBe("/posts/a-b");
+    expect(card?.href).toBe("/blog/a-b");
   });
 
   test("news: isPublished フィルタ + href は /news/<slug>", async () => {

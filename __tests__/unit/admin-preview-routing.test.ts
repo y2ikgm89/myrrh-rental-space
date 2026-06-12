@@ -26,7 +26,7 @@ describe("preview routing", () => {
   });
 
   test("preview pathname は本番 public URL に正規化される", () => {
-    expect(normalizePreviewPathname("/preview/posts/abc-123")).toBe("/posts");
+    expect(normalizePreviewPathname("/preview/posts/abc-123")).toBe("/blog");
     expect(normalizePreviewPathname("/preview/news/xyz-789")).toBe("/news");
     expect(normalizePreviewPathname("/preview/terms/trm-456")).toBe("/terms");
     expect(normalizePreviewPathname("/preview/pages/about")).toBe("/about");
