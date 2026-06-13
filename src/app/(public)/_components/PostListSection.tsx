@@ -86,7 +86,7 @@ export function PostListSection({
             <Pagination
               currentPage={mode.currentPage}
               totalPages={mode.totalPages}
-              basePath="/posts"
+              basePath="/blog"
               {...(Object.keys(preservedQuery).length > 0
                 ? { preservedQuery }
                 : {})}

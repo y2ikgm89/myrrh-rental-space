@@ -96,7 +96,7 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
   });
 
   test("ブログ一覧ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.posts);
+    await page.goto(urls.blog);
     await page.waitForLoadState("networkidle");
 
     const results = await buildAxeScanner(page).analyze();

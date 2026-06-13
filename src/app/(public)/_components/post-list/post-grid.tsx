@@ -39,7 +39,7 @@ export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
             : "記事がまだありません。"}
         </p>
         {hasFilters && (
-          <Button variant="editorial" size="sm" href="/posts">
+          <Button variant="editorial" size="sm" href="/blog">
             フィルタを解除
           </Button>
         )}

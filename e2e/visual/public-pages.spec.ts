@@ -83,7 +83,7 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
   });
 
   test("ブログ一覧ページ - full page snapshot", async ({ page }) => {
-    await page.goto(urls.posts);
+    await page.goto(urls.blog);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(500);
 

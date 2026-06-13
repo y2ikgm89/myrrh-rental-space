@@ -353,7 +353,7 @@ export function purgeSpaceCache(spaceId?: string): Promise<PurgeResult> {
 
 /** 投稿関連のキャッシュをパージ */
 export function purgePostCache(slug?: string): Promise<PurgeResult> {
-  return purgeContentCache("/posts", slug);
+  return purgeContentCache("/blog", slug);
 }
 
 /** ニュース関連のキャッシュをパージ */

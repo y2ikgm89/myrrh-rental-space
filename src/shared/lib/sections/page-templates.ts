@@ -122,7 +122,7 @@ const TEMPLATE_DEFS = {
     label: "ブログ一覧",
     description: "ブログ記事一覧",
     additionalSectionTypes: ["post-list"],
-    defaultSections: DEFAULT_PAGE_SECTIONS["posts"] ?? [],
+    defaultSections: DEFAULT_PAGE_SECTIONS["blog"] ?? [],
     requiredSectionTypes: ["post-list"],
   },
   "events-archive": {
@@ -218,7 +218,7 @@ const SLUG_TO_TEMPLATE: Record<string, string> = {
   contact: "contact",
   faq: "faq",
   news: "news-archive",
-  posts: "blog-archive",
+  blog: "blog-archive",
   events: "events-archive",
   spaces: "spaces-archive",
   reservation: "reservation",
