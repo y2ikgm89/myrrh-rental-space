@@ -1,8 +1,10 @@
 import type { ReactElement } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { SearchParams } from "nuqs/server";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
+import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyCancelToken } from "@/shared/lib/reservation-cancel-token";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
@@ -14,6 +16,12 @@ import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { GuestCancelForm } from "./_components/guest-cancel-form";
+
+// トークンゲートのユーティリティページ。検索結果に出さない（mypage / login と同方針）。
+export const metadata: Metadata = {
+  title: "予約のキャンセル",
+  robots: { index: false, follow: false },
+};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -170,10 +178,12 @@ export default async function GuestCancelPage({
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <Stack gap="lg" className="mx-auto max-w-2xl">
-      <Heading level={1}>予約のキャンセル</Heading>
-      {children}
-    </Stack>
+    <PageLayout variant="form">
+      <Stack gap="lg" className="mx-auto max-w-2xl">
+        <Heading level={1}>予約のキャンセル</Heading>
+        {children}
+      </Stack>
+    </PageLayout>
   );
 }
 
