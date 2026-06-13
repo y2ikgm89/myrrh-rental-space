@@ -111,7 +111,7 @@ import {
 } from "@/shared/lib/portable-text";
 import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 
-/** /posts archive variant のページあたり件数（旧 page.tsx の `POSTS_PER_PAGE`） */
+/** /blog archive variant のページあたり件数（旧 page.tsx の `POSTS_PER_PAGE`） */
 const POSTS_ARCHIVE_PER_PAGE = 12;
 /** /news archive variant のページあたり件数（旧 page.tsx の `NEWS_PER_PAGE`） */
 const NEWS_ARCHIVE_PER_PAGE = 20;
