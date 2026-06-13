@@ -78,7 +78,6 @@ import {
   updateGoogleCalendarSettings,
   recordGoogleCalendarConnectionSuccess,
   recordGoogleCalendarConnectionError,
-  enableGoogleCalendarOAuth,
   clearGoogleCalendarServiceAccount,
   updateTwoWaySyncSettings,
   saveGoogleCalendarWebhookToken,
@@ -598,36 +597,6 @@ describe("recordGoogleCalendarConnectionError", () => {
           }),
         }),
       );
-    });
-  });
-});
-
-// =============================================================================
-// enableGoogleCalendarOAuth
-// =============================================================================
-
-describe("enableGoogleCalendarOAuth", () => {
-  beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
-  });
-
-  describe("正常系", () => {
-    test("Google Calendar OAuth を有効化できる", async () => {
-      await enableGoogleCalendarOAuth();
-
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: "singleton" },
-          update: { googleCalendarOAuthEnabled: true },
-        }),
-      );
-    });
-
-    test("戻り値が void（undefined）", async () => {
-      const result = await enableGoogleCalendarOAuth();
-      expect(result).toBeUndefined();
     });
   });
 });

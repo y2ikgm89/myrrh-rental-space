@@ -3,7 +3,7 @@
 /**
  * Google Calendar設定セクション
  *
- * サービスアカウント連携、OAuth連携、iCal/Add to Calendar設定。
+ * サービスアカウント連携、iCal/Add to Calendar設定。
  */
 
 import { useActionState, useEffect, useState, useTransition } from "react";

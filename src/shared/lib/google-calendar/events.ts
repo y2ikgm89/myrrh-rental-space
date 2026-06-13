@@ -14,7 +14,6 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
 import { getServiceAccountClient } from "./service-account";
-import { getOAuthClient } from "./oauth";
 
 /**
  * `reminderMinutes` を Google Calendar `reminders` オブジェクトに変換する。
@@ -208,56 +207,6 @@ export async function deleteCalendarEvent(
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: { operation: "deleteCalendarEvent", eventId },
-    });
-    return {
-      success: false,
-      error: formatGoogleApiError(error),
-    };
-  }
-}
-
-/**
- * OAuth連携された管理者の個人カレンダーにイベントを作成
- *
- * 個人カレンダーでは Meet は常に生成可能（OAuth コンテキスト）。
- */
-export async function createOAuthCalendarEvent(
-  userId: string,
-  params: CalendarEventParams,
-): Promise<CalendarEventResult> {
-  const client = await getOAuthClient(userId);
-  if (!client) {
-    return { success: false, error: "OAuth is not connected" };
-  }
-
-  const settings = await getGoogleCalendarSettings();
-
-  try {
-    const requestBody = buildEventBody(params, settings, {
-      withMeet: settings.meetEnabled,
-    });
-    const response = await withGoogleApiRetry(() =>
-      client.events.insert({
-        calendarId: "primary",
-        requestBody,
-        ...(settings.meetEnabled ? { conferenceDataVersion: 1 } : {}),
-      }),
-    );
-
-    return omitUndefined({
-      success: true,
-      eventId: response.data.id ?? undefined,
-      eventUrl: response.data.htmlLink ?? undefined,
-    });
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "createOAuthCalendarEvent",
-        userId,
-        summary: params.summary,
-      },
     });
     return {
       success: false,

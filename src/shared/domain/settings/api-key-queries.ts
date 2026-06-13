@@ -217,7 +217,8 @@ export async function getIntegrationHealthSummary(): Promise<{
     select: {
       resendApiKey: true,
       stripeSecretKey: true,
-      googleCalendarOAuthEnabled: true,
+      googleCalendarEnabled: true,
+      googleCalendarConnectionStatus: true,
       turnstileSecretKey: true,
     },
   });
@@ -229,7 +230,10 @@ export async function getIntegrationHealthSummary(): Promise<{
     stripe: Boolean(
       settings?.stripeSecretKey && safeDecrypt(settings.stripeSecretKey),
     ),
-    googleCalendar: settings?.googleCalendarOAuthEnabled ?? false,
+    googleCalendar: Boolean(
+      settings?.googleCalendarEnabled &&
+      settings?.googleCalendarConnectionStatus === "connected",
+    ),
     turnstile: Boolean(
       settings?.turnstileSecretKey && safeDecrypt(settings.turnstileSecretKey),
     ),

@@ -90,18 +90,6 @@ export async function clearReservationCalendarEvent(
   });
 }
 
-export async function saveReservationOAuthCalendarEvent(input: {
-  reservationId: string;
-  eventId: string;
-}): Promise<void> {
-  await prisma.reservation.update({
-    where: { id: input.reservationId, deletedAt: null },
-    data: {
-      googleCalendarOAuthEventId: input.eventId,
-    },
-  });
-}
-
 export async function getFailedCalendarSyncReservations(
   limit: number = 50,
 ): Promise<FailedCalendarSyncReservation[]> {

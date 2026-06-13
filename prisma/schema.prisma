@@ -560,7 +560,6 @@ model Reservation {
 
   // Google Calendar Sync
   googleCalendarEventId      String? // 共有カレンダーのイベントID
-  googleCalendarOAuthEventId String? // OAuth連携（管理者個人）のイベントID
   calendarSyncedAt           DateTime? // 最終同期日時
   calendarSyncError          String?   @db.Text // 同期エラーメッセージ
 
@@ -1283,10 +1282,6 @@ model Settings {
   googleCalendarId                 String? // 共有カレンダーID
   googleCalendarLastTestedAt       DateTime?
   googleCalendarConnectionStatus   String? // 'connected' | 'error'
-
-  // OAuth連携（管理者個人カレンダー用）
-  googleCalendarOAuthEnabled Boolean @default(false)
-  // ※ access_token/refresh_tokenはAccountテーブルに保存
 
   // Google Business Profile sync
   googleBusinessProfileEnabled Boolean @default(false)
