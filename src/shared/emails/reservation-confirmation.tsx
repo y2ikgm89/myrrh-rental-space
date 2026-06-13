@@ -22,6 +22,7 @@ type Props = {
   reservationId: string;
   notes?: string;
   addToCalendarLinks?: AddToCalendarUrls;
+  cancelUrl?: string;
 };
 
 export function ReservationConfirmationEmail({
@@ -34,6 +35,7 @@ export function ReservationConfirmationEmail({
   reservationId,
   notes,
   addToCalendarLinks,
+  cancelUrl,
 }: Props) {
   return (
     <Html>
@@ -92,6 +94,19 @@ export function ReservationConfirmationEmail({
                 {" | "}
                 <Link href={addToCalendarLinks.ics} style={calendarLink}>
                   iCal (.ics)
+                </Link>
+              </Text>
+            </Section>
+          )}
+
+          {cancelUrl && (
+            <Section style={cancelSection}>
+              <Text style={cancelDescription}>
+                ご予約のキャンセルはこちらのリンクから行えます（期限内のみ有効）:
+              </Text>
+              <Text style={cancelLinkText}>
+                <Link href={cancelUrl} style={cancelLink}>
+                  予約をキャンセルする
                 </Link>
               </Text>
             </Section>
@@ -195,6 +210,29 @@ const calendarLinks = {
 
 const calendarLink = {
   color: "#0066cc",
+  textDecoration: "underline",
+};
+
+const cancelSection = {
+  backgroundColor: "#fff8f8",
+  borderRadius: "8px",
+  padding: "16px 20px",
+  margin: "24px 0",
+};
+
+const cancelDescription = {
+  fontSize: "14px",
+  color: "#484848",
+  marginBottom: "8px",
+};
+
+const cancelLinkText = {
+  fontSize: "14px",
+  lineHeight: "24px",
+};
+
+const cancelLink = {
+  color: "#cc3333",
   textDecoration: "underline",
 };
 
