@@ -1,8 +1,9 @@
 /**
  * TaxonomyArchiveView — カテゴリ / タグ別アーカイブの共通描画（Server Component）
  *
- * `/category/[slug]` と `/tag/[slug]` が共有する。見出し（分類名 + 説明）+ PostGrid +
- * Pagination を BlogLayout で包む。分類は URL パスで確定済みのため、`/posts` archive と
+ * `/category/[slug]` と `/tag/[slug]` が共有する。見出し（分類名 + 説明）は `/posts` の
+ * hero(minimal) セクションに揃えた全幅・中央寄せ。その下の PostGrid + Pagination を
+ * BlogLayout（サイドバー）で包む。分類は URL パスで確定済みのため、`/posts` archive と
  * 違いカテゴリフィルタ UI は持たない（絞り込みは専用ページへの遷移で表現する）。
  */
 
@@ -53,18 +54,20 @@ export function TaxonomyArchiveView({
       />
       <section className="pt-10 pb-[var(--space-md)] md:pt-14">
         <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
-          <BlogLayout>
-            <header className="mb-8">
-              <SectionLabel>{eyebrow}</SectionLabel>
-              <Heading level={1} accent className="mt-3">
+          <header className="mb-10 text-center md:mb-14">
+            <SectionLabel>{eyebrow}</SectionLabel>
+            <div className="mt-4">
+              <Heading level={1} className="text-page-hero tracking-tight">
                 {title}
               </Heading>
-              {description ? (
-                <p className="mt-4 leading-relaxed text-muted-foreground">
-                  {description}
-                </p>
-              ) : null}
-            </header>
+            </div>
+            {description ? (
+              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
+                {description}
+              </p>
+            ) : null}
+          </header>
+          <BlogLayout>
             <PostGrid posts={posts} hasFilters={false} />
             <Pagination
               currentPage={currentPage}
