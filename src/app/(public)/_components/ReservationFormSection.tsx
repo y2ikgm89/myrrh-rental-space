@@ -131,7 +131,6 @@ export async function ReservationFormSection({
           turnstileSiteKey={turnstileSiteKey}
           prefillData={prefillData}
           initialSpaceId={initialSpaceId}
-          isLoggedIn={user != null}
           requiredTerms={requiredTerms}
         />
       </div>

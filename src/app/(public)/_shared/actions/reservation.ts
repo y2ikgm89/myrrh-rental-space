@@ -2,6 +2,7 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import {
   checkActionRateLimit,
@@ -21,7 +22,12 @@ import {
 import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { ErrorCategory } from "@/shared/lib/errors/server";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
@@ -33,12 +39,18 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
+
+const COMPLETE_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function submitReservation(
   _prev: SubmissionResult | undefined,
   formData: FormData,
 ): Promise<SubmissionResult> {
-  return executeConformMutation(
+  let completeToken: string | null = null;
+  let succeeded = false;
+
+  const submissionResult = await executeConformMutation(
     formData,
     publicReservationSchema,
     async (data) => {
@@ -133,6 +145,25 @@ export async function submitReservation(
           },
         );
 
+        // 完了ページ用トークン（任意）。失敗しても予約成立は損なわず、トークン無しの
+        // 汎用完了表示にフォールバックする。
+        try {
+          completeToken = createCompleteToken(
+            result.id,
+            new Date(Date.now() + COMPLETE_TOKEN_TTL_MS),
+          );
+        } catch (tokenError) {
+          logError(normalizeError(tokenError), {
+            category: ErrorCategory.UNKNOWN,
+            severity: ErrorSeverity.LOW,
+            context: {
+              operation: "createReservationCompleteToken",
+              reservationId: result.id,
+            },
+          });
+        }
+
+        succeeded = true;
         return { ok: true };
       } catch (error) {
         if (error instanceof DomainError) {
@@ -142,4 +173,15 @@ export async function submitReservation(
       }
     },
   );
+
+  // 成功時は PRG で完了ページへ遷移（GET 副作用なし・リロード安全）。
+  if (succeeded) {
+    redirect(
+      completeToken
+        ? `/reservation/complete?token=${completeToken}`
+        : "/reservation/complete",
+    );
+  }
+
+  return submissionResult;
 }

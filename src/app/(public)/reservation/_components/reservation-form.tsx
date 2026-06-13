@@ -10,12 +10,10 @@ import {
   useTransition,
   type ReactElement,
 } from "react";
-import Link from "next/link";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { asConformFieldset } from "@/shared/lib/conform/typed-input-control";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { formatPrice } from "@/shared/lib/pricing/format";
-import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
@@ -111,7 +109,6 @@ interface ReservationFormProps {
   readonly businessHours: BusinessHours | null;
   readonly turnstileSiteKey: string | null;
   readonly prefillData?: PrefillData | undefined;
-  readonly isLoggedIn?: boolean | undefined;
   readonly initialSpaceId?: string | undefined;
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
 }
@@ -121,7 +118,6 @@ export function ReservationForm({
   businessHours,
   turnstileSiteKey,
   prefillData,
-  isLoggedIn = false,
   initialSpaceId,
   requiredTerms = [],
 }: ReservationFormProps): ReactElement {
@@ -138,7 +134,6 @@ export function ReservationForm({
     guests: 1,
     slots: EMPTY_SLOTS,
     step: preSelected ? 2 : 1,
-    submitted: false,
     errorMessage: null,
   });
 
@@ -229,12 +224,10 @@ export function ReservationForm({
   const visibleSteps = hideStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
   const displayStep = hideStep1 ? state.step - 1 : state.step;
 
-  // --- Render 中 state sync: 成功 / エラー検出 ---
+  // --- Render 中 state sync: エラー検出（成功時はサーバーが完了ページへ redirect）---
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
-    if (lastResult && lastResult.initialValue === null) {
-      dispatch({ type: "setSubmitted" });
-    } else if (lastResult?.status === "error") {
+    if (lastResult?.status === "error") {
       const formErrors = lastResult.error?.[""];
       if (formErrors !== undefined && formErrors !== null && formErrors[0]) {
         dispatch({ type: "setError", message: formErrors[0] });
@@ -408,31 +401,6 @@ export function ReservationForm({
       <p className="py-12 text-center text-muted-foreground">
         現在予約可能なスペースがありません
       </p>
-    );
-  }
-
-  if (state.submitted) {
-    return (
-      <div className="py-12 text-center md:py-16">
-        <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
-          Confirmed
-        </p>
-        <Heading level={2}>ご予約を受け付けました</Heading>
-        <p className="mt-6 max-w-[var(--prose-narrow)] mx-auto leading-relaxed text-muted-foreground">
-          確認メールをお送りしましたのでご確認ください。
-        </p>
-        {!isLoggedIn ? (
-          <p className="mt-8 text-sm text-muted-foreground">
-            次回から入力を省略するにはアカウント連携がおすすめです。{" "}
-            <Link
-              href="/login"
-              className="text-accent underline transition-colors hover:text-foreground"
-            >
-              アカウント連携はこちら
-            </Link>
-          </p>
-        ) : null}
-      </div>
     );
   }
 

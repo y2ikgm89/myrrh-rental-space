@@ -15,7 +15,6 @@ export type SelectionState = {
   guests: number;
   slots: TimeSlot[];
   step: 1 | 2 | 3;
-  submitted: boolean;
   errorMessage: string | null;
 };
 
@@ -28,7 +27,6 @@ export type SelectionAction =
   | { type: "selectDuration"; minutes: number | null }
   | { type: "setGuests"; count: number }
   | { type: "goToStep"; step: 1 | 2 | 3 }
-  | { type: "setSubmitted" }
   | { type: "setError"; message: string };
 
 export function selectionReducer(
@@ -73,8 +71,6 @@ export function selectionReducer(
       return { ...state, guests: action.count };
     case "goToStep":
       return { ...state, step: action.step, errorMessage: null };
-    case "setSubmitted":
-      return { ...state, submitted: true };
     case "setError":
       return { ...state, errorMessage: action.message };
   }

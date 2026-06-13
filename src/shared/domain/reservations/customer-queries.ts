@@ -75,6 +75,29 @@ export async function getReservationForGuestCancel(reservationId: string) {
   });
 }
 
+export async function getReservationForCompletion(reservationId: string) {
+  return prisma.reservation.findFirst({
+    where: { id: reservationId, deletedAt: null },
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+      totalPrice: true,
+      guestLastName: true,
+      guestFirstName: true,
+      space: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          location: { select: { address: true } },
+        },
+      },
+    },
+  });
+}
+
 export async function getReservationForCalendar(params: {
   reservationId: string;
   customerId: string;
