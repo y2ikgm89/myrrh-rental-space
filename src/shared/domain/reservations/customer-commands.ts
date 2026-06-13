@@ -2,11 +2,10 @@ import "server-only";
 import { calculateDurationHours } from "@/shared/lib/date-format";
 
 import { prisma } from "@/shared/db/prisma";
-import { ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";
-import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
@@ -22,11 +21,6 @@ type CommandResult<T> =
 
 type CancelPayload = { reservationId: string };
 type UpdatePayload = { reservationId: string };
-
-const CANCELLABLE_STATUSES: readonly ReservationStatus[] = [
-  ReservationStatus.PENDING,
-  ReservationStatus.CONFIRMED,
-];
 
 // ---------------------------------------------------------------------------
 // Cancel
@@ -48,39 +42,48 @@ export async function cancelCustomerReservation(
       return { success: false, error: "予約が見つかりません" };
     }
 
-    if (!CANCELLABLE_STATUSES.includes(reservation.status)) {
-      return { success: false, error: "この予約はキャンセルできません" };
+    const result = await applyCancellation(tx, reservation, {
+      deadlineHours,
+      now: reservationDeadlineNow(),
+      cancellationReason,
+    });
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
 
-    if (
-      !isWithinDeadline(
-        reservation.startTime,
-        deadlineHours,
-        reservationDeadlineNow(),
-      )
-    ) {
-      return {
-        success: false,
-        error: `キャンセル期限（${String(deadlineHours)}時間前）を過ぎています`,
-      };
-    }
+    return { success: true, payload: { reservationId } };
+  });
+}
 
-    await tx.reservation.update({
+/**
+ * トークン経由の予約キャンセル（ゲスト用）
+ *
+ * 確認メールのキャンセルリンクから呼ばれる。本人性は検証済みトークンが担保するため、
+ * customerId による所有権フィルタは行わず reservationId だけで予約を特定する。
+ * 状態・期限の判定とクーポン戻しは会員経路と同じ {@link applyCancellation} を共有する。
+ */
+export async function cancelReservationByToken(
+  reservationId: string,
+  deadlineHours: number,
+  cancellationReason: string | null = null,
+): Promise<CommandResult<CancelPayload>> {
+  return prisma.$transaction(async (tx) => {
+    const reservation = await tx.reservation.findFirst({
       where: { id: reservationId, deletedAt: null },
-      data: {
-        status: ReservationStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancelledByType: CANCELLED_BY.CUSTOMER,
-        icsSequence: { increment: 1 },
-        ...(cancellationReason ? { cancellationReason } : {}),
-      },
+      select: { id: true, status: true, startTime: true, couponId: true },
     });
 
-    if (reservation.couponId) {
-      await tx.coupon.updateMany({
-        where: { id: reservation.couponId, usageCount: { gt: 0 } },
-        data: { usageCount: { decrement: 1 } },
-      });
+    if (!reservation) {
+      return { success: false, error: "予約が見つかりません" };
+    }
+
+    const result = await applyCancellation(tx, reservation, {
+      deadlineHours,
+      now: reservationDeadlineNow(),
+      cancellationReason,
+    });
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
 
     return { success: true, payload: { reservationId } };

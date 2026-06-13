@@ -18,6 +18,8 @@ import {
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
+import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { createCancelToken } from "@/shared/lib/reservation-cancel-token";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -53,10 +55,13 @@ export async function sendReservationConfirmationEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, deadlineSettings, organizer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getReservationDeadlineSettings(),
+    getIcalOrganizer(),
+  ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -85,6 +90,16 @@ export async function sendReservationConfirmationEmail(
         icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}`,
       })
     : undefined;
+
+  // キャンセルリンク（キャンセル期限前のみ有効なトークンを発行）
+  const cancelDeadline = new Date(
+    data.startTime.getTime() -
+      deadlineSettings.cancellationDeadlineHours * 60 * 60 * 1000,
+  );
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/reservation/cancel?token=${createCancelToken(data.reservationId, cancelDeadline)}`
+      : undefined;
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -125,6 +140,7 @@ export async function sendReservationConfirmationEmail(
           reservationId: data.reservationId.slice(0, 8).toUpperCase(),
           notes: data.notes,
           addToCalendarLinks,
+          cancelUrl,
         }),
       ),
       attachments,
