@@ -3,20 +3,23 @@
  *
  * 初期データを作成する（Prisma 7 ベストプラクティス準拠）
  *
- * 使用方法:
- *   bun prisma/seed.ts                                             # 引数なし = --demo（migrate reset の既定）
- *   bun prisma/seed.ts --admin <email> <password> [name]         # 管理者のみ
- *   bun prisma/seed.ts --production <email> <password> [name]    # 本番用テンプレート（デモデータなし）
- *   bun prisma/seed.ts --demo                                     # デモデータ生成（既存スキップ）
- *   bun prisma/seed.ts --fresh <email> <password> [name]          # 全削除 + 再作成
- *   bun prisma/seed.ts --all <email> <password> [name]            # 全て生成
+ * 使用方法（dev / prod を明確に分離）:
+ *   bun prisma/seed.ts                          # DEV（既定・冪等）: 完全な開発環境を構築
+ *   bun prisma/seed.ts --dev                    #   ↑ の明示エイリアス
+ *   bun prisma/seed.ts --reset                  # DEV: 全削除してから再構築（破壊的・開発専用）
+ *   bun prisma/seed.ts --production <email> <password> [name]   # PROD: 本番テンプレート（デモ/テストなし）
+ *
+ * DEV（引数なし）が構築するもの:
+ *   - ログイン可能な固定アカウント: admin@example.com / admin123（ADMIN）,
+ *     superadmin@example.com / superadmin123（SUPER_ADMIN）, editor / viewer
+ *   - 全デモデータ（スペース・予約・ブログ・イベント・FAQ 等）
+ *   - 全 feature module を ON（管理画面の表示確認用）
+ *   ※ `prisma migrate reset` / `prisma db seed` の既定経路（prisma.config.ts: migrations.seed）
  *
  * 例:
- *   bun prisma/seed.ts --admin admin@example.com mypassword123 "Administrator"
+ *   bun prisma/seed.ts
+ *   bun prisma/seed.ts --reset
  *   bun prisma/seed.ts --production owner@example.com mypassword123 "オーナー名"
- *   bun prisma/seed.ts --demo
- *   bun prisma/seed.ts --fresh admin@example.com mypassword123
- *   bun prisma/seed.ts --all admin@example.com mypassword123
  */
 
 // Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
@@ -366,7 +369,7 @@ function resolveSeedFeatureModules(): Record<string, boolean> {
   return buildInitialFeatureModules(disabled);
 }
 
-async function seedSettings() {
+async function seedSettings(options: { resetFeatureModules?: boolean } = {}) {
   const settingsData = {
     siteName: "Myrrh Rental Space",
     siteDescription:
@@ -401,15 +404,20 @@ async function seedSettings() {
     replyToEmail: "support@example.com",
   };
 
-  // featureModules は「create only」で書き込む（既存 install の toggle 編集を保持）。
+  const featureModules = resolveSeedFeatureModules();
+
+  // featureModules は既定で「create only」（既存 install の管理画面トグル編集を保持）。
+  // dev seed のみ resetFeatureModules:true で update 経路にも書き込み、全機能を ON に揃える。
   // SSoT: FEATURE_MODULES_LIST registry + SEED_FEATURE_MODULES_DISABLED env var。
   await prisma.settings.upsert({
     where: { id: "singleton" },
-    update: settingsData,
+    update: options.resetFeatureModules
+      ? { ...settingsData, featureModules }
+      : settingsData,
     create: {
       id: "singleton",
       ...settingsData,
-      featureModules: resolveSeedFeatureModules(),
+      featureModules,
     },
   });
 
@@ -3170,7 +3178,7 @@ async function seedSystemPageSections() {
 // =============================================================================
 
 async function seedEvents() {
-  // Location は seedLocations で先に作られている前提（seedAll / seedDemo で呼び出し順保証）
+  // Location は seedLocations で先に作られている前提（seedDev で呼び出し順保証）
   const locationsByName = new Map(
     (await prisma.location.findMany({ select: { id: true, name: true } })).map(
       (l) => [l.name, l.id],
@@ -4379,16 +4387,29 @@ async function seedUserPageAssignments() {
 // Main
 // =============================================================================
 
-async function seedAll(email: string, password: string, name: string) {
-  await seedAdmin(email, password, name);
+/**
+ * DEV（既定）: 完全な開発環境を冪等に構築する。
+ *
+ * 固定 dev アカウント（admin@example.com=ADMIN / superadmin@example.com=SUPER_ADMIN
+ * ほか editor・viewer）を最初に作成するため、admin 不在による blog/staff の skip
+ * （chicken-and-egg）が起きない。各 seedX は upsert / skipDuplicates で冪等のため
+ * 再実行しても安全。feature module は dev では全 ON に強制する
+ * （seedSettings の resetFeatureModules）。
+ *
+ * `prisma migrate reset` / `prisma db seed`（引数なし）の既定経路。
+ */
+async function seedDev() {
+  // 固定 dev 認証情報（ローカル専用・公開既知）。createOrUpdate で冪等。
+  // ADMIN ロールは seedBlog 等の author lookup（role:"ADMIN"）の前提でもある。
+  await seedAdmin("admin@example.com", "admin123", "管理者");
   await seedStaffUsers();
 
   console.log("");
   console.log("📦 Creating demo data...");
   console.log("");
 
-  // Phase 1: 基本設定
-  await seedSettings();
+  // Phase 1: 基本設定（dev は feature module を全 ON に強制）
+  await seedSettings({ resetFeatureModules: true });
 
   // Phase 2: マスターデータ
   await seedLocations();
@@ -4432,72 +4453,6 @@ async function seedAll(email: string, password: string, name: string) {
   await seedUserPageAssignments();
 
   // Phase 10: 監査・規約同意・レートリミット・Instagram
-  await seedAuditLog();
-  await seedLoginAttempts();
-  await seedEditorComments();
-  await seedInstagramPosts();
-}
-
-async function seedDemo() {
-  console.log("📦 Creating demo data (skip existing)...");
-  console.log("");
-
-  // 基本設定
-  await seedSettings();
-
-  // マスターデータ
-  await seedLocations();
-  await seedSpaceCategories();
-
-  // スペース
-  await seedSpaces();
-
-  // コンテンツ
-  await seedNews();
-  await seedPages();
-  await seedFaq();
-  await seedTerms();
-  await seedSystemPageSections();
-  await seedNavigation();
-  await seedAnnouncementBar();
-  await seedSocialLinks();
-
-  // 顧客・問い合わせ・クーポン
-  await seedCustomers();
-  await seedInquiries();
-  await seedCoupons();
-
-  // スタッフユーザー・ブログ (admin必須)
-  const adminUser = await prisma.user.findFirst({
-    where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
-  });
-  if (adminUser) {
-    await seedStaffUsers();
-    await seedBlogTags();
-    await seedBlog();
-    await seedBlogComments();
-  } else {
-    console.log("⚠️ No admin user found. Skipping staff users and blog seed.");
-    console.log(
-      "   Create an admin first: bun prisma/seed.ts --admin <email> <password>",
-    );
-  }
-
-  // 予約
-  await seedReservations();
-  await seedDevCustomerAndReservations();
-
-  // イベント
-  await seedEvents();
-
-  // 新機能（レビュー・通知・メディア・ブロック・ページ権限）
-  await seedSpaceReviews();
-  await seedAdminNotifications();
-  await seedMedia();
-  await seedBlockTemplates();
-  await seedUserPageAssignments();
-
-  // 監査・規約同意・レートリミット・Instagram
   await seedAuditLog();
   await seedLoginAttempts();
   await seedEditorComments();
@@ -4554,62 +4509,37 @@ async function seedProduction(email: string, password: string, name: string) {
 
 async function main() {
   const args = process.argv.slice(2);
-
-  if (args.length === 0) {
-    // prisma migrate reset / prisma db seed: 引数なしはデモデータのみ（管理者は別途 --admin）
-    console.log("");
-    console.log("🌱 prisma seed（引数なし）→ --demo 相当を実行します");
-    console.log("");
-    await seedDemo();
-    console.log("");
-    console.log("✨ Seed completed successfully!");
-    return;
-  }
-
   const mode = args[0];
-  const arg1 = args[1];
-  const arg2 = args[2];
-  const arg3 = args[3];
 
   console.log("");
   console.log("🌱 Starting seed...");
   console.log("");
 
-  if (mode === "--admin") {
-    if (!arg1 || !arg2) {
-      console.error("Error: --admin requires <email> and <password>");
-      process.exit(1);
-    }
-    await seedAdmin(arg1, arg2, arg3 ?? "Administrator");
-  } else if (mode === "--production") {
-    if (!arg1 || !arg2) {
-      console.error("Error: --production requires <email> and <password>");
-      process.exit(1);
-    }
-    await seedProduction(arg1, arg2, arg3 ?? "Administrator");
-  } else if (mode === "--demo") {
-    await seedDemo();
-  } else if (mode === "--fresh") {
-    if (!arg1 || !arg2) {
-      console.error("Error: --fresh requires <email> and <password>");
-      process.exit(1);
-    }
+  if (!mode || mode === "--dev") {
+    // DEV（既定）: prisma migrate reset / prisma db seed の既定経路。
+    await seedDev();
+  } else if (mode === "--reset") {
+    // DEV: 全削除してから再構築（破壊的・開発専用）。
     await clearAllData();
-    await seedAll(arg1, arg2, arg3 ?? "Administrator");
-  } else if (mode === "--all") {
-    if (!arg1 || !arg2) {
-      console.error("Error: --all requires <email> and <password>");
+    await seedDev();
+  } else if (mode === "--production") {
+    const email = args[1];
+    const password = args[2];
+    const name = args[3];
+    if (!email || !password) {
+      console.error("Error: --production requires <email> and <password>");
+      console.error(
+        "Usage: bun prisma/seed.ts --production <email> <password> [name]",
+      );
       process.exit(1);
     }
-    await seedAll(arg1, arg2, arg3 ?? "Administrator");
+    await seedProduction(email, password, name ?? "Administrator");
   } else {
-    // Legacy mode
-    if (mode && arg1 && !mode.startsWith("--")) {
-      await seedAdmin(mode, arg1, arg2 ?? "Administrator");
-    } else {
-      console.error("Unknown option:", mode);
-      process.exit(1);
-    }
+    console.error(`Unknown option: ${mode}`);
+    console.error(
+      "Usage: bun prisma/seed.ts [--dev | --reset | --production <email> <password> [name]]",
+    );
+    process.exit(1);
   }
 
   console.log("");

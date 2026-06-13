@@ -33,7 +33,7 @@ bun dev
 
 ### 初回ログイン
 
-- **管理者**: `bun prisma/seed.ts --admin <email> <password>` で作成、または seed 完了時に表示されるデフォルト admin
+- **管理者**: `bun run db:seed`（dev 既定）が固定アカウントを自動作成し、ログイン URL を表示します。`admin@example.com` / `admin123`（ADMIN）または `superadmin@example.com` / `superadmin123`（SUPER_ADMIN）。本番用の管理者は `bun prisma/seed.ts --production <email> <password>` で作成。
 - **顧客**: `/login` ページの「テスト顧客でログイン」ボタン（dev 限定）
 
 ## ブランチ戦略
