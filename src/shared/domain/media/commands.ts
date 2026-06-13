@@ -5,7 +5,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { STORAGE_PREFIXES } from "@/shared/lib/r2/keys";
 import { MEDIA_VALIDATION, uploadFile } from "@/shared/lib/r2/upload";
 import { deriveMediaTypeFromMime } from "@/shared/lib/r2/media-type-derivation";
-import { deleteFile, deleteFiles } from "@/shared/lib/r2/delete";
+import { deleteFile } from "@/shared/lib/r2/delete";
 import type { MediaUsage } from "@generated/prisma/enums";
 
 export async function uploadMediaCommand(input: {
@@ -130,30 +130,4 @@ export async function deleteMediaCommand(id: string): Promise<void> {
     where: { id },
     data: { isActive: false },
   });
-}
-
-export async function bulkDeleteMediaCommand(
-  ids: string[],
-): Promise<{ deleted: number }> {
-  if (ids.length === 0) {
-    return { deleted: 0 };
-  }
-
-  const mediaItems = await prisma.media.findMany({
-    where: { id: { in: ids }, isActive: true },
-    select: { id: true, storagePath: true },
-  });
-
-  if (mediaItems.length === 0) {
-    throw new DomainError("削除対象が見つかりません", "NOT_FOUND");
-  }
-
-  await deleteFiles(mediaItems.map((media) => media.storagePath));
-
-  await prisma.media.updateMany({
-    where: { id: { in: ids } },
-    data: { isActive: false },
-  });
-
-  return { deleted: mediaItems.length };
 }

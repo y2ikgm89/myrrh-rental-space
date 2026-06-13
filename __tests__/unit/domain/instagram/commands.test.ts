@@ -113,11 +113,7 @@ import {
   connectInstagramOAuthAccount,
   refreshInstagramAccessToken,
   disconnectInstagram,
-  addInstagramPost,
-  removeInstagramPost,
-  reorderInstagramPosts,
 } from "@/shared/domain/instagram/commands";
-import { DomainError } from "@/shared/domain/domain-error";
 
 // テスト用定数
 const VALID_SETTINGS_INPUT = {
@@ -130,8 +126,6 @@ const VALID_SETTINGS_INPUT = {
 };
 
 const VALID_TOKEN = "IGQV_valid_access_token_that_is_long_enough_for_testing";
-const POST_ID = "post-1";
-const INSTAGRAM_POST_URL = "https://www.instagram.com/p/ABCdef123/";
 
 describe("updateInstagramSettings", () => {
   beforeEach(() => {
@@ -342,170 +336,6 @@ describe("disconnectInstagram", () => {
         }),
       );
       expect(mockInstagramPostDeleteMany).toHaveBeenCalledTimes(1);
-    });
-  });
-});
-
-describe("addInstagramPost", () => {
-  beforeEach(() => {
-    mockInstagramPostFindUnique.mockReset();
-    mockInstagramPostAggregate.mockReset();
-    mockInstagramPostCreate.mockReset();
-    mockInstagramPostFindUnique.mockResolvedValue(null);
-    mockInstagramPostAggregate.mockResolvedValue({ _max: { sortOrder: null } });
-    mockInstagramPostCreate.mockResolvedValue(undefined);
-  });
-
-  describe("正常系", () => {
-    test("有効な Instagram 投稿 URL で追加できる", async () => {
-      await expect(
-        addInstagramPost(INSTAGRAM_POST_URL),
-      ).resolves.toBeUndefined();
-
-      expect(mockInstagramPostCreate).toHaveBeenCalledTimes(1);
-    });
-
-    test("既存投稿がない場合 sortOrder が 0 になる", async () => {
-      mockInstagramPostAggregate.mockResolvedValueOnce({
-        _max: { sortOrder: null },
-      });
-
-      await addInstagramPost(INSTAGRAM_POST_URL);
-
-      expect(mockInstagramPostCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            sortOrder: 0,
-          }),
-        }),
-      );
-    });
-
-    test("既存投稿がある場合 sortOrder が +1 になる", async () => {
-      mockInstagramPostAggregate.mockResolvedValueOnce({
-        _max: { sortOrder: 4 },
-      });
-
-      await addInstagramPost(INSTAGRAM_POST_URL);
-
-      expect(mockInstagramPostCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            sortOrder: 5,
-          }),
-        }),
-      );
-    });
-
-    test("reel URL も追加できる", async () => {
-      const reelUrl = "https://www.instagram.com/reel/XYZabc456/";
-
-      await expect(addInstagramPost(reelUrl)).resolves.toBeUndefined();
-
-      expect(mockInstagramPostCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            postId: "XYZabc456",
-            postUrl: reelUrl,
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("無効な URL は DomainError（VALIDATION）をスローする", async () => {
-      await expect(
-        addInstagramPost("https://www.example.com/invalid"),
-      ).rejects.toMatchObject({
-        code: "VALIDATION",
-        message: "Instagram投稿URLからIDを抽出できませんでした",
-      });
-
-      expect(mockInstagramPostCreate).not.toHaveBeenCalled();
-    });
-
-    test("既に追加済みの投稿は CONFLICT エラーをスローする", async () => {
-      mockInstagramPostFindUnique.mockResolvedValueOnce({ id: POST_ID });
-
-      await expect(addInstagramPost(INSTAGRAM_POST_URL)).rejects.toMatchObject({
-        code: "CONFLICT",
-        message: "この投稿は既に追加されています",
-      });
-
-      expect(mockInstagramPostCreate).not.toHaveBeenCalled();
-    });
-  });
-});
-
-describe("removeInstagramPost", () => {
-  beforeEach(() => {
-    mockInstagramPostFindUnique.mockReset();
-    mockInstagramPostDelete.mockReset();
-    mockInstagramPostFindUnique.mockResolvedValue(null);
-    mockInstagramPostDelete.mockResolvedValue(undefined);
-  });
-
-  describe("正常系", () => {
-    test("存在する投稿を削除できる", async () => {
-      mockInstagramPostFindUnique.mockResolvedValueOnce({ id: POST_ID });
-
-      await expect(removeInstagramPost(POST_ID)).resolves.toBeUndefined();
-
-      expect(mockInstagramPostDelete).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: POST_ID },
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("存在しない投稿は NOT_FOUND エラーをスローする", async () => {
-      mockInstagramPostFindUnique.mockResolvedValueOnce(null);
-
-      await expect(removeInstagramPost("non-existent")).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "指定された投稿が見つかりません",
-      });
-
-      expect(mockInstagramPostDelete).not.toHaveBeenCalled();
-    });
-  });
-});
-
-describe("reorderInstagramPosts", () => {
-  beforeEach(() => {
-    mockTransaction.mockReset();
-    mockInstagramPostUpdate.mockReset();
-    mockTransaction.mockImplementation((updates: Promise<void>[]) =>
-      Promise.all(updates),
-    );
-    mockInstagramPostUpdate.mockResolvedValue(undefined);
-  });
-
-  describe("正常系", () => {
-    test("複数の投稿を並び替えできる", async () => {
-      const ids = ["post-1", "post-2", "post-3"];
-
-      await expect(reorderInstagramPosts(ids)).resolves.toBeUndefined();
-
-      expect(mockInstagramPostUpdate).toHaveBeenCalledTimes(3);
-    });
-
-    test("1件の投稿でも並び替えできる", async () => {
-      await expect(reorderInstagramPosts(["post-1"])).resolves.toBeUndefined();
-    });
-  });
-
-  describe("異常系", () => {
-    test("空配列は VALIDATION エラーをスローする", async () => {
-      await expect(reorderInstagramPosts([])).rejects.toMatchObject({
-        code: "VALIDATION",
-        message: "並び順のIDリストが必要です",
-      });
-
-      expect(mockInstagramPostUpdate).not.toHaveBeenCalled();
     });
   });
 });

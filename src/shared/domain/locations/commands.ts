@@ -201,20 +201,3 @@ export async function deleteLocation(id: string): Promise<{ id: string }> {
 
   return { id };
 }
-
-export async function hardDeleteLocation(id: string): Promise<{ id: string }> {
-  const location = await ensureLocationExists(id);
-
-  if (location.spaces > 0) {
-    throw new DomainError(
-      `この場所には${location.spaces}件のスペースが紐づいています。`,
-      "CONFLICT",
-    );
-  }
-
-  await prisma.location.delete({
-    where: { id },
-  });
-
-  return { id };
-}

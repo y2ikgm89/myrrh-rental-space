@@ -19,7 +19,6 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createSpaceCategory as createSpaceCategoryCommand,
   deleteSpaceCategory as deleteSpaceCategoryCommand,
-  hardDeleteSpaceCategory as hardDeleteSpaceCategoryCommand,
   updateSpaceCategory as updateSpaceCategoryCommand,
   updateSpaceCategoryActive as updateSpaceCategoryActiveCommand,
   updateSpaceCategoryOrder as updateSpaceCategoryOrderCommand,
@@ -150,25 +149,5 @@ export async function updateSpaceCategoryActive(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SPACE_CATEGORIES);
     },
-  });
-}
-
-export async function hardDeleteSpaceCategory(
-  id: string,
-): Promise<MutationResult<{ id: string }>> {
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationMutationError(validated.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "spaceCategory",
-    action: "delete",
-    resourceId: validated.data,
-    execute: async () => hardDeleteSpaceCategoryCommand(validated.data),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACE_CATEGORIES);
-    },
-    resolveAuditResourceId: (result) => result.id,
   });
 }

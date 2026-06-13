@@ -155,33 +155,3 @@ export async function updateSpaceCategoryActive(
 
   return { id, isActive };
 }
-
-export async function hardDeleteSpaceCategory(
-  id: string,
-): Promise<{ id: string }> {
-  const category = await prisma.spaceCategory.findUnique({
-    where: { id },
-    include: {
-      _count: {
-        select: { spaces: true },
-      },
-    },
-  });
-
-  if (!category) {
-    throw new DomainError("カテゴリーが見つかりません", "NOT_FOUND");
-  }
-
-  if (category._count.spaces > 0) {
-    throw new DomainError(
-      `このカテゴリーには${category._count.spaces}件のスペースが紐づいています。`,
-      "CONFLICT",
-    );
-  }
-
-  await prisma.spaceCategory.delete({
-    where: { id },
-  });
-
-  return { id };
-}

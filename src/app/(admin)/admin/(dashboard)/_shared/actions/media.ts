@@ -11,7 +11,6 @@ import type {
   MutationResult,
 } from "@/shared/lib/mutation-result";
 import {
-  bulkDeleteMediaCommand,
   deleteMediaCommand,
   updateMediaCommand,
   uploadMediaCommand,
@@ -118,29 +117,6 @@ export async function deleteMedia(id: string): Promise<MutationResult> {
     },
     afterSuccess: () => {
       revalidateMedia(id);
-    },
-  });
-}
-
-const bulkDeleteSchema = z
-  .array(z.uuid())
-  .min(1)
-  .refine((ids) => new Set(ids).size === ids.length, {
-    error: "同じIDを複数指定することはできません",
-  });
-
-export async function bulkDeleteMedia(
-  ids: string[],
-): Promise<MutationResult<{ deleted: number }>> {
-  const parsed = bulkDeleteSchema.safeParse(ids);
-  if (!parsed.success) return createValidationMutationError(parsed.error);
-
-  return executeAdminMutationResult({
-    resource: "media",
-    action: "delete",
-    execute: async () => bulkDeleteMediaCommand(parsed.data),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.MEDIA);
     },
   });
 }

@@ -247,25 +247,6 @@ export async function clearGoogleCalendarServiceAccount(): Promise<void> {
   });
 }
 
-export async function disconnectGoogleCalendarOAuth(
-  userId: string,
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await tx.account.deleteMany({
-      where: {
-        userId,
-        providerId: "google",
-      },
-    });
-
-    await tx.settings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", googleCalendarOAuthEnabled: false },
-      update: { googleCalendarOAuthEnabled: false },
-    });
-  });
-}
-
 export async function updateTwoWaySyncSettings(
   data: TwoWaySyncSettingsInput,
 ): Promise<void> {

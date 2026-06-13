@@ -47,7 +47,6 @@ import {
   updateLocationPublished,
   updateLocationOrder,
   deleteLocation,
-  hardDeleteLocation,
 } from "@/shared/domain/locations/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 // Prisma 実体から JsonNull を取得し、実装と同じ参照で比較する
@@ -533,105 +532,6 @@ describe("deleteLocation", () => {
       const result = await deleteLocation(LOCATION_ID);
 
       expect(result).toEqual({ id: LOCATION_ID });
-    });
-  });
-});
-
-// =============================================================================
-// hardDeleteLocation（物理削除）
-// =============================================================================
-
-describe("hardDeleteLocation", () => {
-  beforeEach(() => {
-    mockLocationFindUnique.mockReset();
-    mockLocationDelete.mockReset();
-    mockLocationFindUnique.mockResolvedValue(null);
-    mockLocationDelete.mockResolvedValue({ id: LOCATION_ID });
-  });
-
-  describe("正常系", () => {
-    test("スペースが紐づいていない場所を物理削除できる", async () => {
-      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
-
-      const result = await hardDeleteLocation(LOCATION_ID);
-
-      expect(result).toEqual({ id: LOCATION_ID });
-    });
-
-    test("delete が正しい where 条件で呼ばれる", async () => {
-      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
-
-      await hardDeleteLocation(LOCATION_ID);
-
-      expect(mockLocationDelete).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: LOCATION_ID },
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("存在しない場所 ID で NOT_FOUND エラーをスローする", async () => {
-      mockLocationFindUnique.mockResolvedValue(null);
-
-      await expect(hardDeleteLocation("non-existent")).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "場所が見つかりません",
-      });
-    });
-
-    test("スペースが紐づいている場合は CONFLICT エラーをスローする", async () => {
-      mockLocationFindUnique.mockResolvedValue({
-        id: LOCATION_ID,
-        _count: { spaces: 2 },
-      });
-
-      await expect(hardDeleteLocation(LOCATION_ID)).rejects.toMatchObject({
-        code: "CONFLICT",
-        message: expect.stringContaining("2件のスペース"),
-      });
-    });
-
-    test("スペースが紐づいている場合は delete が呼ばれない", async () => {
-      mockLocationFindUnique.mockResolvedValue({
-        id: LOCATION_ID,
-        _count: { spaces: 1 },
-      });
-
-      await expect(hardDeleteLocation(LOCATION_ID)).rejects.toThrow(
-        DomainError,
-      );
-
-      expect(mockLocationDelete).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("deleteLocation との違い", () => {
-    test("hardDeleteLocation は delete（物理削除）を使い update（論理削除）は使わない", async () => {
-      mockLocationFindUnique.mockReset();
-      mockLocationDelete.mockReset();
-      mockLocationUpdate.mockReset();
-      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
-      mockLocationDelete.mockResolvedValue({ id: LOCATION_ID });
-
-      await hardDeleteLocation(LOCATION_ID);
-
-      expect(mockLocationDelete).toHaveBeenCalledTimes(1);
-      expect(mockLocationUpdate).not.toHaveBeenCalled();
-    });
-
-    test("deleteLocation は update（論理削除）を使い delete（物理削除）は使わない", async () => {
-      mockLocationFindUnique.mockReset();
-      mockLocationUpdate.mockReset();
-      mockLocationDelete.mockReset();
-      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
-      mockLocationUpdate.mockResolvedValue({ id: LOCATION_ID });
-
-      await deleteLocation(LOCATION_ID);
-
-      expect(mockLocationUpdate).toHaveBeenCalledTimes(1);
-      expect(mockLocationDelete).not.toHaveBeenCalled();
     });
   });
 });

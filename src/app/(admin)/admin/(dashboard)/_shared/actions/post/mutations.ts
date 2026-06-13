@@ -1,24 +1,19 @@
 "use server";
 
-import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   createPostSchema,
-  postBodyFormSchema,
-  postSettingsFormSchema,
   updatePostBodySchema,
   updatePostSettingsSchema,
   type CreatePostInput,
   type UpdatePostSettingsInput,
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import * as postCommands from "@/shared/domain/posts/post-commands";
 import { getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   invalidatePostCollectionCaches,
@@ -60,94 +55,6 @@ export async function createPost(
     },
     resolveAuditResourceId: (result) => result.id,
   });
-}
-
-/**
- * 投稿記事の本文（Lexical エディタの contentJson / 派生 contentHtml）のみを更新する
- * conform 用 Server Action。`(prev, formData) => SubmissionResult` signature で
- * `useActionState` から呼び出す。id 必要のため呼び出し側で `bind(null, post.id)` 部分適用。
- */
-export async function updatePostBodyAction(
-  id: string,
-  _prev: SubmissionResult | undefined,
-  formData: FormData,
-): Promise<SubmissionResult> {
-  return executeConformMutation(formData, postBodyFormSchema, async (data) => {
-    const result = await executeAdminMutationResult({
-      resource: "post",
-      action: "update",
-      resourceId: id,
-      execute: async () => {
-        const updated = await postCommands.updatePostBody(id, {
-          contentJson: data.contentJson,
-          contentHtml: data.contentHtml,
-        });
-        return updated;
-      },
-      afterSuccess: async (updated) => {
-        await invalidatePostCollectionCaches();
-        updateTag(getCacheTag.posts.detail(updated.slug));
-        await purgePostCaches(updated.slug);
-      },
-    });
-    return isMutationError(result)
-      ? { ok: false, error: result.error }
-      : { ok: true };
-  });
-}
-
-/**
- * 投稿記事の設定（メタデータ・分類・タグ・SEO/OGP・レイアウト）のみを更新する
- * conform 用 Server Action。
- */
-export async function updatePostSettingsAction(
-  id: string,
-  _prev: SubmissionResult | undefined,
-  formData: FormData,
-): Promise<SubmissionResult> {
-  return executeConformMutation(
-    formData,
-    postSettingsFormSchema,
-    async (data) => {
-      const result = await executeAdminMutationResult({
-        resource: "post",
-        action: "update",
-        resourceId: id,
-        execute: async () => {
-          const updated = await postCommands.updatePostSettings(
-            id,
-            omitUndefined({
-              title: data.title,
-              slug: data.slug,
-              excerpt: data.excerpt,
-              thumbnailUrl: data.thumbnailUrl,
-              ogpImageUrl: data.ogpImageUrl,
-              categoryId: data.categoryId,
-              tags: data.tags,
-              metaDescription: data.metaDescription,
-              metaKeywords: data.metaKeywords,
-              ogpTitle: data.ogpTitle,
-              ogpDescription: data.ogpDescription,
-              contentWidth: data.contentWidth ?? null,
-              contentWidthCustom: data.contentWidthCustom ?? null,
-            }),
-          );
-          return updated;
-        },
-        afterSuccess: async (updated) => {
-          await invalidatePostCollectionCaches();
-          updateTag(getCacheTag.posts.detail(updated.oldSlug));
-          if (updated.slug !== updated.oldSlug) {
-            updateTag(getCacheTag.posts.detail(updated.slug));
-          }
-          await purgePostCaches(updated.oldSlug, updated.slug);
-        },
-      });
-      return isMutationError(result)
-        ? { ok: false, error: result.error }
-        : { ok: true };
-    },
-  );
 }
 
 /**
