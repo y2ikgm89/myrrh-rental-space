@@ -91,9 +91,7 @@ export { updateEmailSettings, updateNotificationSettings } from "./email";
 export {
   updateGoogleCalendarSettings,
   testGoogleCalendarConnectionAction,
-  testGoogleCalendarOAuthAction,
   clearGoogleCalendarServiceAccount,
-  disconnectGoogleCalendarOAuth,
   updateTwoWaySyncSettings,
   setupCalendarWebhook,
   stopCalendarWebhook,

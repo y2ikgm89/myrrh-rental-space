@@ -21,13 +21,10 @@ mock.module("@/shared/lib/google-calendar", () => ({
   updateCalendarEvent: mockUpdate,
   deleteCalendarEvent: mockDelete,
   // 他の export もスタブで返す（テスト汚染防止）
-  createOAuthCalendarEvent: mock(() => Promise.resolve({ success: true })),
   getCalendarEvent: mock(() => Promise.resolve(null)),
   getServiceAccountClient: mock(() => Promise.resolve(null)),
   encryptServiceAccountJson: mock(() => Promise.resolve("")),
   extractServiceAccountEmail: mock(() => ""),
-  getOAuthClient: mock(() => Promise.resolve(null)),
-  testOAuthConnection: mock(() => Promise.resolve({ success: false })),
   fetchCalendarChanges: mock(() => Promise.resolve({ items: [] })),
   setupWebhookWatch: mock(() => Promise.resolve({ success: false })),
   stopWebhookWatch: mock(() => Promise.resolve()),

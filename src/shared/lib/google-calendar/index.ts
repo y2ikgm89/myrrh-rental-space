@@ -18,13 +18,10 @@ export {
   extractServiceAccountEmail,
 } from "./service-account";
 
-export { getOAuthClient, testOAuthConnection } from "./oauth";
-
 export {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
-  createOAuthCalendarEvent,
   getCalendarEvent,
 } from "./events";
 

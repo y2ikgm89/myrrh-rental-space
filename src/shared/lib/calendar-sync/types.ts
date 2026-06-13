@@ -37,7 +37,6 @@ export interface EventSyncData {
 export interface SyncResult {
   success: boolean;
   eventId?: string;
-  oauthEventId?: string;
   error?: string;
 }
 

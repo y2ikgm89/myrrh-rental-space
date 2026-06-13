@@ -222,14 +222,6 @@ export async function recordGoogleCalendarConnectionError(): Promise<void> {
   });
 }
 
-export async function enableGoogleCalendarOAuth(): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", googleCalendarOAuthEnabled: true },
-    update: { googleCalendarOAuthEnabled: true },
-  });
-}
-
 export async function clearGoogleCalendarServiceAccount(): Promise<void> {
   await prisma.settings.upsert({
     where: { id: "singleton" },
@@ -244,25 +236,6 @@ export async function clearGoogleCalendarServiceAccount(): Promise<void> {
       googleCalendarConnectionStatus: null,
       googleCalendarLastTestedAt: null,
     },
-  });
-}
-
-export async function disconnectGoogleCalendarOAuth(
-  userId: string,
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await tx.account.deleteMany({
-      where: {
-        userId,
-        providerId: "google",
-      },
-    });
-
-    await tx.settings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", googleCalendarOAuthEnabled: false },
-      update: { googleCalendarOAuthEnabled: false },
-    });
   });
 }
 

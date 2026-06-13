@@ -16,7 +16,6 @@ import {
   markReservationCalendarSyncError,
   markReservationCalendarSyncSuccess,
   markReservationCalendarSyncUpdated,
-  saveReservationOAuthCalendarEvent,
 } from "@/shared/domain/reservations/calendar-sync";
 import {
   logError,
@@ -29,7 +28,6 @@ import {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
-  createOAuthCalendarEvent,
   isGoogleCalendarEnabled,
   type CalendarEventParams,
 } from "@/shared/lib/google-calendar";
@@ -234,51 +232,6 @@ export async function deleteCalendarSync(
         operation: "deleteCalendarSync",
         reservationId,
         eventId,
-      },
-    });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-}
-
-/**
- * 管理者の個人カレンダーにも同期（OAuth連携時）
- *
- * 管理者がOAuthで個人カレンダーを連携している場合、
- * 予約イベントを個人カレンダーにも追加します。
- *
- * @param adminUserId - 管理者ユーザーID
- * @param data - 予約同期データ
- * @returns 同期結果
- */
-export async function syncToAdminCalendar(
-  adminUserId: string,
-  data: ReservationSyncData,
-): Promise<SyncResult> {
-  try {
-    const eventParams = formatCalendarEvent(data);
-    const result = await createOAuthCalendarEvent(adminUserId, eventParams);
-
-    if (result.success && result.eventId) {
-      await saveReservationOAuthCalendarEvent({
-        reservationId: data.reservationId,
-        eventId: result.eventId,
-      });
-
-      return { success: true, oauthEventId: result.eventId };
-    }
-
-    return omitUndefined({ success: false, error: result.error });
-  } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "syncToAdminCalendar",
-        adminUserId,
-        reservationId: data.reservationId,
       },
     });
     return {
