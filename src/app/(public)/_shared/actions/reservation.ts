@@ -18,6 +18,7 @@ import {
   sendReservationAdminNotification,
   sendReservationConfirmationEmail,
 } from "@/shared/lib/email/reservation-emails";
+import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
@@ -108,6 +109,13 @@ export async function submitReservation(
 
         fireAndForget(sendReservationConfirmationEmail(payload), {
           operation: "sendReservationConfirmationEmail",
+          category: ErrorCategory.EXTERNAL_API,
+        });
+
+        // 公開予約は作成時点で CONFIRMED のため、ここで Google Calendar に同期する。
+        // 連携が無効・未接続なら syncReservationToCalendar 内で no-op になる。
+        fireAndForget(syncReservationToCalendar(payload), {
+          operation: "syncReservationToCalendar",
           category: ErrorCategory.EXTERNAL_API,
         });
 
