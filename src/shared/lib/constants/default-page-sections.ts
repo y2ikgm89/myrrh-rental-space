@@ -541,7 +541,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     },
   ],
 
-  posts: [
+  blog: [
     {
       type: "hero",
       config: {

@@ -14,7 +14,7 @@ interface PostCategoryFilterProps {
   readonly categories: readonly CategoryOption[];
   /**
    * 現在表示中のカテゴリ slug（`/category/{slug}` ページ）。
-   * 一覧（`/posts`）では未指定で "All" が active になる。
+   * 一覧（`/blog`）では未指定で "All" が active になる。
    */
   readonly activeSlug?: string;
 }
@@ -40,7 +40,7 @@ export function PostCategoryFilter({
       <ul className="flex flex-wrap gap-3" role="list">
         <li>
           <Link
-            href="/posts"
+            href="/blog"
             aria-current={activeSlug ? undefined : "page"}
             className={cn(CHIP_BASE, activeSlug ? CHIP_INACTIVE : CHIP_ACTIVE)}
           >

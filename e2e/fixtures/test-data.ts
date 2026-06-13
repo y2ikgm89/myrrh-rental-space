@@ -91,7 +91,7 @@ export const urls = {
   home: "/",
   spaces: "/spaces",
   reservation: "/reservation",
-  posts: "/posts",
+  blog: "/blog",
   news: "/news",
   contact: "/contact",
   events: "/events",

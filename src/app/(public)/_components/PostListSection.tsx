@@ -5,7 +5,7 @@
  * PostGrid + Pagination を BlogLayout で包んだアーカイブ表示を、
  * それ以外（grid / list）のときは既存の PostListSimpleView (CC) を描画する。
  *
- * 公開ページ /posts は本セクションの "archive" variant に統一テンプレート化されており、
+ * 公開ページ /blog は本セクションの "archive" variant に統一テンプレート化されており、
  * SectionRenderer は searchParams を受け取って paginated データ + categories を
  * fetch して `mode={{ kind: "archive", ... }}` で渡す。
  */
@@ -86,7 +86,7 @@ export function PostListSection({
             <Pagination
               currentPage={mode.currentPage}
               totalPages={mode.totalPages}
-              basePath="/posts"
+              basePath="/blog"
               {...(Object.keys(preservedQuery).length > 0
                 ? { preservedQuery }
                 : {})}

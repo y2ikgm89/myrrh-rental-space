@@ -18,7 +18,7 @@ const POPULAR_DESTINATIONS: ReadonlyArray<{
   readonly href:
     | "/spaces"
     | "/events"
-    | "/posts"
+    | "/blog"
     | "/news"
     | "/faq"
     | "/contact";
@@ -27,7 +27,7 @@ const POPULAR_DESTINATIONS: ReadonlyArray<{
 }> = [
   { href: "/spaces", label: "スペース", description: "貸切可能な空間一覧" },
   { href: "/events", label: "イベント", description: "開催予定・参加申込" },
-  { href: "/posts", label: "ブログ", description: "最新の記事・コラム" },
+  { href: "/blog", label: "ブログ", description: "最新の記事・コラム" },
   { href: "/news", label: "お知らせ", description: "運営からのお知らせ" },
   { href: "/faq", label: "よくある質問", description: "利用方法・料金" },
   { href: "/contact", label: "お問い合わせ", description: "ご質問・ご要望" },

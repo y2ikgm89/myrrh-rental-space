@@ -2954,7 +2954,7 @@ async function seedNavigation() {
     { label: t("ホーム"), url: "/", order: 0 },
     { label: t("スペース"), url: "/spaces", order: 1 },
     { label: t("イベント"), url: "/events", order: 2 },
-    { label: t("ブログ"), url: "/posts", order: 3 },
+    { label: t("ブログ"), url: "/blog", order: 3 },
     { label: t("お知らせ"), url: "/news", order: 4 },
     { label: t("よくある質問"), url: "/faq", order: 5 },
     { label: t("アクセス"), url: "/access", order: 6 },
@@ -3151,7 +3151,7 @@ async function seedSystemPageSections() {
     "contact",
     "faq",
     "news",
-    "posts",
+    "blog",
     "reservation",
     "spaces",
   ];

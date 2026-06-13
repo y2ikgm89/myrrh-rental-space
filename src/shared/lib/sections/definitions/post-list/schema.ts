@@ -29,7 +29,7 @@ export const postListConfigSchema = z.object({
     subGroup: "button",
   }),
   viewAllUrl: field.text("「すべて見る」リンク先 URL", {
-    default: "/posts",
+    default: "/blog",
     maxLength: 200,
     subGroup: "button",
   }),

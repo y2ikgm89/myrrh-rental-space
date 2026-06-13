@@ -75,6 +75,27 @@ export async function ensurePageSectionsCommand(
 export async function bootstrapSystemPagesCommand(
   db: AppPrismaClient,
 ): Promise<void> {
+  // 旧 slug "posts"（ブログ一覧）を "blog" に冪等 rename。
+  // 一覧 URL 移行（/posts → /blog）で SYSTEM_PAGES の slug を変更したため、
+  // 既存環境の DB ページ（管理者が編集したセクション含む）を保持したまま
+  // slug / template を揃える。"blog" が既に存在する環境では何もしない。
+  const legacyPostsPage = await db.page.findUnique({
+    where: { slug: "posts" },
+    select: { id: true },
+  });
+  if (legacyPostsPage) {
+    const existingBlogPage = await db.page.findUnique({
+      where: { slug: "blog" },
+      select: { id: true },
+    });
+    if (!existingBlogPage) {
+      await db.page.update({
+        where: { id: legacyPostsPage.id },
+        data: { slug: "blog", template: resolveTemplateForSlug("blog") },
+      });
+    }
+  }
+
   for (const definition of SYSTEM_PAGES) {
     try {
       const existingPage = await db.page.findUnique({

@@ -269,7 +269,7 @@ describe("SYSTEM_PAGES", () => {
     expect(slugs).toContain("reservation");
     expect(slugs).toContain("spaces");
     expect(slugs).toContain("contact");
-    expect(slugs).toContain("posts");
+    expect(slugs).toContain("blog");
     expect(slugs).toContain("news");
     expect(slugs).toContain("terms");
     expect(slugs).not.toContain("journal");

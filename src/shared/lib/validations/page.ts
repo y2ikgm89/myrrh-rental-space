@@ -49,7 +49,7 @@ export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
     title: "アクセス",
     description: "最寄り駅・駐車場・営業時間のご案内",
   },
-  { slug: "posts", title: "ブログ", description: "ブログ記事一覧" },
+  { slug: "blog", title: "ブログ", description: "ブログ記事一覧" },
   { slug: "news", title: "お知らせ", description: "ニュース・お知らせ一覧" },
   { slug: "terms", title: "利用規約", description: "ご利用にあたっての規約" },
 ];
