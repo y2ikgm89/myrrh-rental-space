@@ -8,7 +8,7 @@ import { testReservations, urls, reservationFactory } from "./fixtures";
  * Covers validation, availability checking, and duplicate booking prevention.
  *
  * Prerequisites:
- * - Database should be seeded with test spaces (bun prisma/seed.ts --demo)
+ * - Database should be seeded with test spaces (bun run db:seed)
  * - Turnstile CAPTCHA should be configured or mocked in test environment
  */
 
