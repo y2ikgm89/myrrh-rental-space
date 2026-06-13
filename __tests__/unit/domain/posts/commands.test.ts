@@ -17,18 +17,6 @@ const mockPostDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "post-1" }),
 );
 
-const mockPostVersionFindFirst = mock<
-  () => Promise<Record<string, unknown> | null>
->(() => Promise.resolve(null));
-
-const mockPostVersionFindUnique = mock<
-  () => Promise<Record<string, unknown> | null>
->(() => Promise.resolve(null));
-
-const mockPostVersionCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "version-1" }),
-);
-
 const mockPostCategoryFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
@@ -95,11 +83,6 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockPostCreate,
       update: mockPostUpdate,
       delete: mockPostDelete,
-    },
-    postVersion: {
-      findFirst: mockPostVersionFindFirst,
-      findUnique: mockPostVersionFindUnique,
-      create: mockPostVersionCreate,
     },
     postCategory: {
       findUnique: mockPostCategoryFindUnique,
@@ -169,10 +152,6 @@ import {
   archivePost,
 } from "@/shared/domain/posts/post-commands";
 import {
-  createPostBackup,
-  restorePostVersion,
-} from "@/shared/domain/posts/version-commands";
-import {
   createPostCategory,
   updatePostCategory,
   deletePostCategory,
@@ -191,7 +170,6 @@ const POST_SLUG = "my-post";
 const CATEGORY_ID = "category-1";
 const TAG_ID = "tag-1";
 const USER_ID = "user-1";
-const VERSION = 1;
 
 const VALID_CREATE_INPUT = {
   title: "テスト投稿",
@@ -240,8 +218,6 @@ const EXISTING_POST_WITH_CONTENT = {
   id: POST_ID,
   slug: POST_SLUG,
   publishedAt: null,
-  contentHtml: "<p>テスト</p>",
-  contentJson: '{"root":{}}',
 };
 
 const VALID_CATEGORY_INPUT = {
@@ -537,29 +513,18 @@ describe("deletePost", () => {
 describe("publishPost", () => {
   beforeEach(() => {
     mockPostFindUnique.mockReset();
-    mockPostVersionFindFirst.mockReset();
     mockPostUpdate.mockReset();
-    mockPostVersionCreate.mockReset();
-    mockTransaction.mockReset();
 
     mockPostFindUnique.mockResolvedValue(EXISTING_POST_WITH_CONTENT);
-    mockPostVersionFindFirst.mockResolvedValue(null);
-    mockTransaction.mockResolvedValue([]);
+    mockPostUpdate.mockResolvedValue({ id: POST_ID });
   });
 
   describe("正常系", () => {
-    test("投稿を公開するとスラッグとバージョンを返す", async () => {
-      const result = await publishPost(POST_ID, USER_ID);
+    test("投稿を公開するとスラッグを返す", async () => {
+      const result = await publishPost(POST_ID);
 
-      expect(result).toEqual({ slug: POST_SLUG, version: 1 });
-    });
-
-    test("既存バージョンがある場合はインクリメントされる", async () => {
-      mockPostVersionFindFirst.mockResolvedValue({ version: 3 });
-
-      const result = await publishPost(POST_ID, USER_ID);
-
-      expect(result.version).toBe(4);
+      expect(result).toEqual({ slug: POST_SLUG });
+      expect(mockPostUpdate).toHaveBeenCalledTimes(1);
     });
 
     test("初回公開時は publishedAt が設定される", async () => {
@@ -568,10 +533,10 @@ describe("publishPost", () => {
         publishedAt: null,
       });
 
-      const result = await publishPost(POST_ID, USER_ID);
+      const result = await publishPost(POST_ID);
 
-      expect(result).toEqual({ slug: POST_SLUG, version: 1 });
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ slug: POST_SLUG });
+      expect(mockPostUpdate).toHaveBeenCalledTimes(1);
     });
 
     test("再公開時は既存の publishedAt が維持される", async () => {
@@ -581,9 +546,16 @@ describe("publishPost", () => {
         publishedAt: existingDate,
       });
 
-      const result = await publishPost(POST_ID, USER_ID);
+      const result = await publishPost(POST_ID);
 
-      expect(result).toEqual({ slug: POST_SLUG, version: 1 });
+      expect(result).toEqual({ slug: POST_SLUG });
+      expect(mockPostUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            publishedAt: existingDate,
+          }),
+        }),
+      );
     });
   });
 
@@ -591,7 +563,7 @@ describe("publishPost", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
       mockPostFindUnique.mockResolvedValue(null);
 
-      await expect(publishPost(POST_ID, USER_ID)).rejects.toMatchObject({
+      await expect(publishPost(POST_ID)).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "投稿記事が見つかりません",
       });
@@ -680,130 +652,6 @@ describe("archivePost", () => {
       mockPostFindUnique.mockResolvedValue(null);
 
       await expect(archivePost("non-existent")).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "投稿記事が見つかりません",
-      });
-    });
-  });
-});
-
-// =============================================================================
-// createPostBackup
-// =============================================================================
-
-describe("createPostBackup", () => {
-  beforeEach(() => {
-    mockPostFindUnique.mockReset();
-    mockPostVersionFindFirst.mockReset();
-    mockPostVersionCreate.mockReset();
-
-    mockPostFindUnique.mockResolvedValue({
-      id: POST_ID,
-      contentHtml: "<p>テスト</p>",
-      contentJson: '{"root":{}}',
-    });
-    mockPostVersionFindFirst.mockResolvedValue(null);
-    mockPostVersionCreate.mockResolvedValue({ id: "version-1" });
-  });
-
-  describe("正常系", () => {
-    test("バックアップを作成するとバージョン番号を返す", async () => {
-      const result = await createPostBackup(POST_ID, USER_ID);
-
-      expect(result).toEqual({ version: 1 });
-      expect(mockPostVersionCreate).toHaveBeenCalledTimes(1);
-    });
-
-    test("既存バージョンがある場合はインクリメントされる", async () => {
-      mockPostVersionFindFirst.mockResolvedValue({ version: 5 });
-
-      const result = await createPostBackup(POST_ID, USER_ID);
-
-      expect(result).toEqual({ version: 6 });
-    });
-
-    test("バージョン作成時に正しい postId と userId が渡される", async () => {
-      await createPostBackup(POST_ID, USER_ID);
-
-      expect(mockPostVersionCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            postId: POST_ID,
-            createdBy: USER_ID,
-            version: 1,
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
-
-      await expect(
-        createPostBackup("non-existent", USER_ID),
-      ).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "投稿記事が見つかりません",
-      });
-    });
-  });
-});
-
-// =============================================================================
-// restorePostVersion
-// =============================================================================
-
-describe("restorePostVersion", () => {
-  beforeEach(() => {
-    mockPostVersionFindUnique.mockReset();
-    mockPostFindUnique.mockReset();
-    mockPostUpdate.mockReset();
-
-    mockPostVersionFindUnique.mockResolvedValue({
-      contentHtml: "<p>バージョン1</p>",
-      contentJson: '{"root":{}}',
-    });
-    mockPostFindUnique.mockResolvedValue({ slug: POST_SLUG });
-    mockPostUpdate.mockResolvedValue({ id: POST_ID });
-  });
-
-  describe("正常系", () => {
-    test("バージョンを復元するとスラッグを返す", async () => {
-      const result = await restorePostVersion(POST_ID, VERSION);
-
-      expect(result).toEqual({ slug: POST_SLUG });
-      expect(mockPostUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    test("復元後は status が DRAFT になる", async () => {
-      await restorePostVersion(POST_ID, VERSION);
-
-      expect(mockPostUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: "DRAFT",
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("バージョンが存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostVersionFindUnique.mockResolvedValue(null);
-
-      await expect(restorePostVersion(POST_ID, 999)).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "バージョンが見つかりません",
-      });
-    });
-
-    test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
-
-      await expect(restorePostVersion(POST_ID, VERSION)).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "投稿記事が見つかりません",
       });

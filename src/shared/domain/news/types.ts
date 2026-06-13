@@ -20,18 +20,7 @@ type NewsRecord = {
   ogpImageUrl: string | null;
 };
 
-type NewsVersionRecord = {
-  id: string;
-  newsId: string;
-  version: number;
-  contentHtml: string;
-  contentJson: unknown;
-  createdAt: Date;
-  createdBy: string | null;
-};
-
 export type NewsData = Serialized<NewsRecord>;
-export type NewsVersionData = Serialized<NewsVersionRecord>;
 export type NewsListItem = NewsData & {
   publishedAtLabel: string | null;
   createdAtLabel: string;
@@ -104,14 +93,5 @@ export type DeleteNewsResult = {
 };
 
 export type PublishNewsResult = {
-  slug: string;
-  version: number;
-};
-
-export type CreateNewsBackupResult = {
-  version: number;
-};
-
-export type RestoreNewsVersionResult = {
   slug: string;
 };

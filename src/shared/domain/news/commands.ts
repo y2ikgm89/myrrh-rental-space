@@ -10,11 +10,9 @@ import {
 } from "@/shared/lib/slug-validation";
 import type {
   CreateNewsCommandInput,
-  CreateNewsBackupResult,
   CreateNewsResult,
   DeleteNewsResult,
   PublishNewsResult,
-  RestoreNewsVersionResult,
   UpdateNewsBodyCommandInput,
   UpdateNewsSettingsCommandInput,
   UpdateNewsResult,
@@ -155,56 +153,26 @@ export async function deleteNews(id: string): Promise<DeleteNewsResult> {
   };
 }
 
-export async function publishNews(
-  id: string,
-  userId: string,
-): Promise<PublishNewsResult> {
-  const [news, latestVersion] = await Promise.all([
-    prisma.news.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        slug: true,
-        publishedAt: true,
-        contentHtml: true,
-        contentJson: true,
-      },
-    }),
-    prisma.newsVersion.findFirst({
-      where: { newsId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
+export async function publishNews(id: string): Promise<PublishNewsResult> {
+  const news = await prisma.news.findUnique({
+    where: { id },
+    select: { id: true, slug: true, publishedAt: true },
+  });
 
   if (!news) {
     throw new DomainError("お知らせが見つかりません", "NOT_FOUND");
   }
 
-  const version = (latestVersion?.version ?? 0) + 1;
-
-  await prisma.$transaction(async (tx) => {
-    await tx.news.update({
-      where: { id },
-      data: {
-        isPublished: true,
-        publishedAt: news.publishedAt ?? new Date(),
-      },
-    });
-    await tx.newsVersion.create({
-      data: omitUndefined({
-        newsId: id,
-        version,
-        contentHtml: news.contentHtml,
-        contentJson: news.contentJson ?? undefined,
-        createdBy: userId,
-      }),
-    });
+  await prisma.news.update({
+    where: { id },
+    data: {
+      isPublished: true,
+      publishedAt: news.publishedAt ?? new Date(),
+    },
   });
 
   return {
     slug: news.slug,
-    version,
   };
 }
 
@@ -216,80 +184,6 @@ export async function unpublishNews(id: string): Promise<DeleteNewsResult> {
     data: {
       isPublished: false,
     },
-  });
-
-  return {
-    slug: news.slug,
-  };
-}
-
-export async function createNewsBackup(
-  id: string,
-  userId: string,
-): Promise<CreateNewsBackupResult> {
-  const [news, latestVersion] = await Promise.all([
-    prisma.news.findUnique({
-      where: { id },
-      select: { id: true, contentHtml: true, contentJson: true },
-    }),
-    prisma.newsVersion.findFirst({
-      where: { newsId: id },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    }),
-  ]);
-
-  if (!news) {
-    throw new DomainError("お知らせが見つかりません", "NOT_FOUND");
-  }
-
-  const version = (latestVersion?.version ?? 0) + 1;
-
-  await prisma.newsVersion.create({
-    data: omitUndefined({
-      newsId: id,
-      version,
-      contentHtml: news.contentHtml,
-      contentJson: news.contentJson ?? undefined,
-      createdBy: userId,
-    }),
-  });
-
-  return { version };
-}
-
-export async function restoreNewsVersion(
-  newsId: string,
-  version: number,
-): Promise<RestoreNewsVersionResult> {
-  const [versionData, news] = await Promise.all([
-    prisma.newsVersion.findUnique({
-      where: {
-        newsId_version: { newsId, version },
-      },
-      select: { contentHtml: true, contentJson: true },
-    }),
-    prisma.news.findUnique({
-      where: { id: newsId },
-      select: { slug: true },
-    }),
-  ]);
-
-  if (!versionData) {
-    throw new DomainError("バージョンが見つかりません", "NOT_FOUND");
-  }
-
-  if (!news) {
-    throw new DomainError("お知らせが見つかりません", "NOT_FOUND");
-  }
-
-  await prisma.news.update({
-    where: { id: newsId },
-    data: omitUndefined({
-      contentHtml: versionData.contentHtml,
-      contentJson: versionData.contentJson ?? undefined,
-      isPublished: false,
-    }),
   });
 
   return {

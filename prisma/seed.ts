@@ -106,10 +106,8 @@ async function clearAllData() {
     // BlockTemplate（Lexical 再利用ブロック）
     await tx.blockTemplate.deleteMany();
 
-    // コメント・バージョン履歴
+    // コメント
     await tx.postComment.deleteMany();
-    await tx.postVersion.deleteMany();
-    await tx.newsVersion.deleteMany();
 
     // 予約関連
     await tx.termsAgreement.deleteMany();
@@ -4339,115 +4337,6 @@ async function seedLoginAttempts() {
 }
 
 // =============================================================================
-// Post / News Versions（記事バージョン履歴・version 1 スナップショット）
-// =============================================================================
-
-async function seedPostVersions() {
-  const existingCount = await prisma.postVersion.count();
-  if (existingCount > 0) {
-    console.log(
-      `⏭️ Skipped post versions (${existingCount.toString()} already exist)`,
-    );
-    return;
-  }
-
-  const posts = await prisma.post.findMany({
-    select: {
-      id: true,
-      title: true,
-      contentHtml: true,
-      contentJson: true,
-      authorId: true,
-    },
-  });
-
-  if (posts.length === 0) {
-    console.log("⚠️ No posts found. Skipping post versions seed.");
-    return;
-  }
-
-  let created = 0;
-  for (const post of posts) {
-    // `@@unique([postId, version])` があるため upsert で idempotent 化
-    await prisma.postVersion.upsert({
-      where: { postId_version: { postId: post.id, version: 1 } },
-      update: {},
-      create: {
-        postId: post.id,
-        version: 1,
-        contentHtml: post.contentHtml,
-        ...(post.contentJson !== null
-          ? {
-              contentJson: asPrismaInputJsonValue(
-                post.contentJson,
-                "seed post version contentJson が不正です",
-              ),
-            }
-          : {}),
-        ...(post.authorId !== null ? { createdBy: post.authorId } : {}),
-      },
-    });
-    created++;
-  }
-
-  console.log(`✅ Upserted ${created.toString()} post versions (version 1)`);
-}
-
-async function seedNewsVersions() {
-  const existingCount = await prisma.newsVersion.count();
-  if (existingCount > 0) {
-    console.log(
-      `⏭️ Skipped news versions (${existingCount.toString()} already exist)`,
-    );
-    return;
-  }
-
-  const admin = await prisma.user.findFirst({
-    where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
-    select: { id: true },
-  });
-
-  const newsItems = await prisma.news.findMany({
-    select: {
-      id: true,
-      title: true,
-      contentHtml: true,
-      contentJson: true,
-    },
-  });
-
-  if (newsItems.length === 0) {
-    console.log("⚠️ No news found. Skipping news versions seed.");
-    return;
-  }
-
-  let created = 0;
-  for (const news of newsItems) {
-    await prisma.newsVersion.upsert({
-      where: { newsId_version: { newsId: news.id, version: 1 } },
-      update: {},
-      create: {
-        newsId: news.id,
-        version: 1,
-        contentHtml: news.contentHtml,
-        ...(news.contentJson !== null
-          ? {
-              contentJson: asPrismaInputJsonValue(
-                news.contentJson,
-                "seed news version contentJson が不正です",
-              ),
-            }
-          : {}),
-        ...(admin?.id ? { createdBy: admin.id } : {}),
-      },
-    });
-    created++;
-  }
-
-  console.log(`✅ Upserted ${created.toString()} news versions (version 1)`);
-}
-
-// =============================================================================
 // User Page Assignments（EDITOR のページ別編集権限）
 // =============================================================================
 
@@ -4542,9 +4431,7 @@ async function seedAll(email: string, password: string, name: string) {
   await seedBlockTemplates();
   await seedUserPageAssignments();
 
-  // Phase 10: 監査・バージョン履歴・規約同意・レートリミット・Instagram
-  await seedPostVersions();
-  await seedNewsVersions();
+  // Phase 10: 監査・規約同意・レートリミット・Instagram
   await seedAuditLog();
   await seedLoginAttempts();
   await seedEditorComments();
@@ -4610,9 +4497,7 @@ async function seedDemo() {
   await seedBlockTemplates();
   await seedUserPageAssignments();
 
-  // 監査・バージョン履歴・規約同意・レートリミット・Instagram
-  await seedPostVersions();
-  await seedNewsVersions();
+  // 監査・規約同意・レートリミット・Instagram
   await seedAuditLog();
   await seedLoginAttempts();
   await seedEditorComments();
@@ -4654,9 +4539,6 @@ async function seedProduction(email: string, password: string, name: string) {
   await seedSocialLinks();
   await seedSystemPageSections();
   await seedBlockTemplates();
-
-  // Phase 6: バージョン履歴（news のみ）
-  await seedNewsVersions();
 
   console.log("");
   console.log(
