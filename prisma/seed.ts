@@ -817,6 +817,18 @@ async function seedBlogTags() {
     { name: "イベント", slug: "event" },
     { name: "初心者向け", slug: "beginner" },
     { name: "お知らせ", slug: "announcement" },
+    // seedBlog の記事 tagNames が参照するタグ。全て SLUG_REGEX 準拠の ASCII slug。
+    // ここに無い name を記事 tagNames で使うと seedBlog が throw する
+    // （slug=name の日本語 slug が /tag/[slug] で 404 になる不具合の再発防止）。
+    { name: "会場選び", slug: "venue-selection" },
+    { name: "生産性", slug: "productivity" },
+    { name: "研修", slug: "training" },
+    { name: "IT企業", slug: "it-company" },
+    { name: "トレンド", slug: "trend" },
+    { name: "オフィス", slug: "office" },
+    { name: "働き方改革", slug: "workstyle-reform" },
+    { name: "アーカイブ", slug: "archive" },
+    { name: "サービス変更", slug: "service-change" },
   ];
 
   await prisma.postTag.createMany({
@@ -2825,9 +2837,14 @@ async function seedBlog() {
       // タグを先にfindOrCreate
       const tagIds = await Promise.all(
         tagNames.map(async (name: string) => {
-          let tag = await prisma.postTag.findFirst({ where: { name } });
+          const tag = await prisma.postTag.findFirst({ where: { name } });
           if (!tag) {
-            tag = await prisma.postTag.create({ data: { name, slug: name } });
+            // 不正 slug（slug=name の日本語）の暗黙生成を禁止する。記事 tagNames は
+            // 必ず seedBlogTags に有効な ASCII slug（SLUG_REGEX 準拠）付きで定義する。
+            throw new Error(
+              `seedBlog: タグ "${name}" が seedBlogTags に未定義です。` +
+                "有効な slug 付きで seedBlogTags に追加してください。",
+            );
           }
           return tag.id;
         }),
