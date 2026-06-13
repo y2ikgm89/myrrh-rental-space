@@ -57,6 +57,11 @@ export function verifyCancelToken(
 ): VerifyCancelTokenResult {
   const ciphertext = Buffer.from(token, "base64url").toString("utf8");
 
+  // purpose を明示検証（予約完了トークン等の他用途トークンの流用を拒否）
+  if (ciphertext.split(":")[1] !== PURPOSE) {
+    return { valid: false, reason: "invalid" };
+  }
+
   let raw: string;
   try {
     raw = decrypt(ciphertext);

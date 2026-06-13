@@ -158,6 +158,14 @@ mock.module("@/shared/lib/admin-auth", () => ({
   DASHBOARD_ROLES: [],
 }));
 
+// next/navigation redirect モック（本番では throw して以降を中断するが、テストでは
+// no-op にして submitReservation の戻り値と redirect 先 URL を検証する）
+const mockRedirect = mock((_url: string) => undefined);
+
+mock.module("next/navigation", () => ({
+  redirect: mockRedirect,
+}));
+
 // server-only モック
 mock.module("server-only", () => ({}));
 
@@ -254,6 +262,7 @@ describe("submitReservation", () => {
     mockSyncReservationToCalendar.mockClear();
     mockUpdateTag.mockClear();
     mockGetCurrentUser.mockClear();
+    mockRedirect.mockClear();
 
     mockValidateTurnstile.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
@@ -296,6 +305,17 @@ describe("submitReservation", () => {
 
       expect(result.initialValue).toBeNull();
       expect(result.status).not.toBe("error");
+    });
+
+    test("予約成功時に完了ページ (/reservation/complete) へ redirect する", async () => {
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockRedirect).toHaveBeenCalledTimes(1);
+      const target = mockRedirect.mock.calls[0]?.[0];
+      expect(target).toMatch(/^\/reservation\/complete/u);
     });
 
     test("createPublicReservationCommand がパース済みデータを引数に呼ばれる", async () => {
