@@ -78,6 +78,14 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
 }));
 
+const mockSyncReservationToCalendar = mock(() =>
+  Promise.resolve({ success: true }),
+);
+
+mock.module("@/shared/lib/calendar-sync/outbound", () => ({
+  syncReservationToCalendar: mockSyncReservationToCalendar,
+}));
+
 const mockUpdateTag = mock(() => undefined);
 
 mock.module("next/cache", () => ({
@@ -243,6 +251,7 @@ describe("submitReservation", () => {
     mockCreatePublicReservationCommand.mockClear();
     mockVerifySpaceBelongsToLocation.mockClear();
     mockSendReservationAdminNotification.mockClear();
+    mockSyncReservationToCalendar.mockClear();
     mockUpdateTag.mockClear();
     mockGetCurrentUser.mockClear();
 
@@ -296,6 +305,22 @@ describe("submitReservation", () => {
       await submitReservation(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreatePublicReservationCommand).toHaveBeenCalledTimes(1);
+    });
+
+    test("予約作成成功時に syncReservationToCalendar が payload を引数に呼ばれる", async () => {
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockSyncReservationToCalendar).toHaveBeenCalledTimes(1);
+      expect(mockSyncReservationToCalendar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reservationId: "reservation-001",
+          spaceName: "テストスペース",
+          customerEmail: "yamada@example.com",
+        }),
+      );
     });
 
     test("updateTag が複数のキャッシュタグに対して呼ばれる", async () => {
