@@ -76,7 +76,6 @@ import {
   uploadMediaCommand,
   updateMediaCommand,
   deleteMediaCommand,
-  bulkDeleteMediaCommand,
 } from "@/shared/domain/media/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -463,98 +462,6 @@ describe("deleteMediaCommand", () => {
 
       expect(mockDeleteFile).not.toHaveBeenCalled();
       expect(mockMediaUpdate).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// =============================================================================
-// bulkDeleteMediaCommand
-// =============================================================================
-
-describe("bulkDeleteMediaCommand", () => {
-  beforeEach(() => {
-    mockMediaFindMany.mockReset();
-    mockMediaUpdateMany.mockReset();
-    mockDeleteFiles.mockReset();
-
-    mockMediaFindMany.mockResolvedValue([
-      { id: "media-1", storagePath: "media/image1.jpg" },
-      { id: "media-2", storagePath: "media/image2.jpg" },
-    ]);
-    mockMediaUpdateMany.mockResolvedValue({ count: 2 });
-    mockDeleteFiles.mockResolvedValue({ success: true });
-  });
-
-  describe("正常系", () => {
-    test("複数のメディアをまとめて削除できる", async () => {
-      const result = await bulkDeleteMediaCommand(["media-1", "media-2"]);
-
-      expect(result).toEqual({ deleted: 2 });
-      expect(mockDeleteFiles).toHaveBeenCalledTimes(1);
-      expect(mockMediaUpdateMany).toHaveBeenCalledTimes(1);
-    });
-
-    test("空配列を渡すと即座に deleted: 0 を返す", async () => {
-      const result = await bulkDeleteMediaCommand([]);
-
-      expect(result).toEqual({ deleted: 0 });
-      expect(mockMediaFindMany).not.toHaveBeenCalled();
-      expect(mockDeleteFiles).not.toHaveBeenCalled();
-    });
-
-    test("1件だけ削除できる", async () => {
-      mockMediaFindMany.mockResolvedValue([
-        { id: "media-1", storagePath: "media/image1.jpg" },
-      ]);
-      mockMediaUpdateMany.mockResolvedValue({ count: 1 });
-
-      const result = await bulkDeleteMediaCommand(["media-1"]);
-
-      expect(result).toEqual({ deleted: 1 });
-    });
-
-    test("deleteFiles に正しいパス一覧が渡される", async () => {
-      await bulkDeleteMediaCommand(["media-1", "media-2"]);
-
-      expect(mockDeleteFiles).toHaveBeenCalledWith([
-        "media/image1.jpg",
-        "media/image2.jpg",
-      ]);
-    });
-
-    test("updateMany が isActive: false で呼ばれる", async () => {
-      await bulkDeleteMediaCommand(["media-1", "media-2"]);
-
-      expect(mockMediaUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: { in: ["media-1", "media-2"] } },
-          data: { isActive: false },
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("全 ID が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockMediaFindMany.mockResolvedValue([]);
-
-      await expect(
-        bulkDeleteMediaCommand(["non-existent-1", "non-existent-2"]),
-      ).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "削除対象が見つかりません",
-      });
-    });
-
-    test("削除対象が見つからない場合はストレージ削除も updateMany も呼ばれない", async () => {
-      mockMediaFindMany.mockResolvedValue([]);
-
-      await expect(bulkDeleteMediaCommand(["non-existent"])).rejects.toThrow(
-        DomainError,
-      );
-
-      expect(mockDeleteFiles).not.toHaveBeenCalled();
-      expect(mockMediaUpdateMany).not.toHaveBeenCalled();
     });
   });
 });

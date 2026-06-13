@@ -3,10 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { InstagramMediaType } from "@generated/prisma/enums";
 import { encrypt } from "@/shared/lib/crypto";
-import {
-  extractInstagramShortcode,
-  type InstagramSettingsInput,
-} from "@/shared/lib/validations/instagram";
+import type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
 import { DomainError } from "@/shared/domain/domain-error";
 import { testInstagramConnection } from "@/shared/lib/instagram";
 import type { InstagramMediaItem } from "@/shared/lib/instagram";
@@ -150,68 +147,6 @@ export async function disconnectInstagram(): Promise<void> {
   });
 
   await prisma.instagramPost.deleteMany({});
-}
-
-export async function addInstagramPost(url: string): Promise<void> {
-  const shortcode = extractInstagramShortcode(url);
-  if (!shortcode) {
-    throw new DomainError(
-      "Instagram投稿URLからIDを抽出できませんでした",
-      "VALIDATION",
-    );
-  }
-
-  const existing = await prisma.instagramPost.findUnique({
-    where: { postId: shortcode },
-  });
-  if (existing) {
-    throw new DomainError("この投稿は既に追加されています", "CONFLICT");
-  }
-
-  const maxOrderResult = await prisma.instagramPost.aggregate({
-    _max: { sortOrder: true },
-  });
-  const nextOrder = (maxOrderResult._max?.sortOrder ?? -1) + 1;
-
-  await prisma.instagramPost.create({
-    data: {
-      postId: shortcode,
-      postUrl: url,
-      mediaType: InstagramMediaType.IMAGE,
-      permalink: url,
-      sortOrder: nextOrder,
-    },
-  });
-}
-
-export async function removeInstagramPost(id: string): Promise<void> {
-  const post = await prisma.instagramPost.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!post) {
-    throw new DomainError("指定された投稿が見つかりません", "NOT_FOUND");
-  }
-
-  await prisma.instagramPost.delete({
-    where: { id },
-  });
-}
-
-export async function reorderInstagramPosts(ids: string[]): Promise<void> {
-  if (ids.length === 0) {
-    throw new DomainError("並び順のIDリストが必要です", "VALIDATION");
-  }
-
-  await Promise.all(
-    ids.map((id, index) =>
-      prisma.instagramPost.update({
-        where: { id },
-        data: { sortOrder: index },
-      }),
-    ),
-  );
 }
 
 /**

@@ -17,8 +17,6 @@ import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-qu
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
   clearGoogleCalendarWebhook,
-  disconnectGoogleCalendarOAuth as disconnectGoogleCalendarOAuthCommand,
-  enableGoogleCalendarOAuth,
   recordGoogleCalendarConnectionError,
   recordGoogleCalendarConnectionSuccess,
   saveGoogleCalendarWebhook,
@@ -36,7 +34,6 @@ import {
 import {
   setupWebhookWatch,
   stopWebhookWatch,
-  testOAuthConnection,
   testServiceAccountConnection,
 } from "@/shared/lib/google-calendar";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
@@ -151,53 +148,12 @@ export async function testGoogleCalendarConnectionAction(
   });
 }
 
-export async function testGoogleCalendarOAuthAction(): Promise<
-  MutationResult<{ calendarName: string }>
-> {
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async (user) => {
-      const result = await testOAuthConnection(user.id);
-      if (!result.success) {
-        throw new DomainError(
-          result.error ?? "OAuth接続テストに失敗しました",
-          "VALIDATION",
-        );
-      }
-
-      await enableGoogleCalendarOAuth();
-
-      return {
-        calendarName: result.calendarName ?? "",
-      };
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
-  });
-}
-
 export async function clearGoogleCalendarServiceAccount(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "update",
     execute: async () => {
       await clearGoogleCalendarServiceAccountCommand();
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
-  });
-}
-
-export async function disconnectGoogleCalendarOAuth(): Promise<MutationResult> {
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async (user) => {
-      await disconnectGoogleCalendarOAuthCommand(user.id);
       return null;
     },
     afterSuccess: () => {

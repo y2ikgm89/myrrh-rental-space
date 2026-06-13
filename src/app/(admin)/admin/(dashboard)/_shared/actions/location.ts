@@ -12,7 +12,6 @@ import { locationFormSchema } from "@/shared/lib/validations/location";
 import {
   createLocation as createLocationCommand,
   deleteLocation as deleteLocationCommand,
-  hardDeleteLocation as hardDeleteLocationCommand,
   updateLocation as updateLocationCommand,
   updateLocationOrder as updateLocationOrderCommand,
   updateLocationPublished as updateLocationPublishedCommand,
@@ -194,26 +193,6 @@ export async function deleteLocation(
     action: "delete",
     resourceId: validated.data,
     execute: async () => deleteLocationCommand(validated.data),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
-    },
-    resolveAuditResourceId: (result) => result.id,
-  });
-}
-
-export async function hardDeleteLocation(
-  id: string,
-): Promise<MutationResult<{ id: string }>> {
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationMutationError(validated.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "location",
-    action: "delete",
-    resourceId: validated.data,
-    execute: async () => hardDeleteLocationCommand(validated.data),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.LOCATIONS);
     },

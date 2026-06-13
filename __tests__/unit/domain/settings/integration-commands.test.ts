@@ -80,7 +80,6 @@ import {
   recordGoogleCalendarConnectionError,
   enableGoogleCalendarOAuth,
   clearGoogleCalendarServiceAccount,
-  disconnectGoogleCalendarOAuth,
   updateTwoWaySyncSettings,
   saveGoogleCalendarWebhookToken,
   saveGoogleCalendarWebhook,
@@ -661,70 +660,6 @@ describe("clearGoogleCalendarServiceAccount", () => {
 
     test("戻り値が void（undefined）", async () => {
       const result = await clearGoogleCalendarServiceAccount();
-      expect(result).toBeUndefined();
-    });
-  });
-});
-
-// =============================================================================
-// disconnectGoogleCalendarOAuth
-// =============================================================================
-
-describe("disconnectGoogleCalendarOAuth", () => {
-  beforeEach(() => {
-    mockTransactionFn.mockReset();
-    // トランザクションのコールバックを実際に実行するモック
-    mockTransactionFn.mockImplementation(
-      async (fn: Parameters<typeof mockTransactionFn>[0]) => {
-        const mockTx = {
-          account: {
-            deleteMany: mock(() => Promise.resolve({ count: 1 })),
-          },
-          settings: {
-            upsert: mock(() => Promise.resolve({ id: "singleton" })),
-          },
-        };
-        await fn(mockTx);
-      },
-    );
-  });
-
-  describe("正常系", () => {
-    test("OAuth アカウントを削除してカレンダーOAuthを無効化できる", async () => {
-      await disconnectGoogleCalendarOAuth("user-1");
-
-      expect(mockTransactionFn).toHaveBeenCalledTimes(1);
-    });
-
-    test("userId が正しいアカウント削除条件で使用される", async () => {
-      let deleteManyArgs: unknown = null;
-      mockTransactionFn.mockImplementation(
-        async (fn: Parameters<typeof mockTransactionFn>[0]) => {
-          const mockDeleteMany = mock(
-            (args: unknown) => (
-              (deleteManyArgs = args),
-              Promise.resolve({ count: 1 })
-            ),
-          );
-          const mockTx = {
-            account: { deleteMany: mockDeleteMany },
-            settings: {
-              upsert: mock(() => Promise.resolve({ id: "singleton" })),
-            },
-          };
-          await fn(mockTx);
-        },
-      );
-
-      await disconnectGoogleCalendarOAuth("user-abc");
-
-      expect(deleteManyArgs).toMatchObject({
-        where: { userId: "user-abc", providerId: "google" },
-      });
-    });
-
-    test("戻り値が void（undefined）", async () => {
-      const result = await disconnectGoogleCalendarOAuth("user-1");
       expect(result).toBeUndefined();
     });
   });

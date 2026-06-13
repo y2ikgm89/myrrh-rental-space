@@ -61,38 +61,6 @@ export async function createPostCategory(
   });
 }
 
-export async function updatePostCategory(
-  id: string,
-  input: PostCategoryInput,
-): Promise<MutationResult> {
-  const validatedId = idSchema.safeParse(id);
-  if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
-  }
-
-  const parsed = postCategorySchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "post",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async () => {
-      await categoryCommands.updatePostCategory(
-        validatedId.data,
-        omitUndefined(parsed.data),
-      );
-      return null;
-    },
-    afterSuccess: async () => {
-      await invalidatePostCategoryCaches();
-      await purgePostArchive();
-    },
-  });
-}
-
 export async function deletePostCategory(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
@@ -152,38 +120,6 @@ export async function createPostTag(
       await invalidatePostTagCaches();
     },
     resolveAuditResourceId: (result) => result.id,
-  });
-}
-
-export async function updatePostTag(
-  id: string,
-  input: PostTagInput,
-): Promise<MutationResult> {
-  const validatedId = idSchema.safeParse(id);
-  if (!validatedId.success) {
-    return createValidationMutationError(validatedId.error);
-  }
-
-  const parsed = postTagSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "post",
-    action: "update",
-    resourceId: validatedId.data,
-    execute: async () => {
-      await tagCommands.updatePostTag(
-        validatedId.data,
-        omitUndefined(parsed.data),
-      );
-      return null;
-    },
-    afterSuccess: async () => {
-      await invalidatePostTagCaches();
-      await purgePostArchive();
-    },
   });
 }
 

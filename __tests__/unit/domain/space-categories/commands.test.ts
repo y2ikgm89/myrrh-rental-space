@@ -51,7 +51,6 @@ import {
   updateSpaceCategory,
   updateSpaceCategoryOrder,
   deleteSpaceCategory,
-  hardDeleteSpaceCategory,
 } from "@/shared/domain/space-categories/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -526,121 +525,6 @@ describe("deleteSpaceCategory", () => {
       await expect(deleteSpaceCategory(CATEGORY_ID)).rejects.toMatchObject({
         message: expect.stringContaining("5件のスペース"),
       });
-    });
-  });
-});
-
-// =============================================================================
-// hardDeleteSpaceCategory（物理削除）
-// =============================================================================
-
-describe("hardDeleteSpaceCategory", () => {
-  beforeEach(() => {
-    mockSpaceCategoryFindUnique.mockReset();
-    mockSpaceCategoryDelete.mockReset();
-    mockSpaceCategoryUpdate.mockReset();
-    mockSpaceCategoryFindUnique.mockResolvedValue(null);
-    mockSpaceCategoryDelete.mockResolvedValue({ id: CATEGORY_ID });
-  });
-
-  describe("正常系", () => {
-    test("スペースが紐づいていないカテゴリーを物理削除できる", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue(
-        EXISTING_CATEGORY_WITH_COUNT,
-      );
-
-      const result = await hardDeleteSpaceCategory(CATEGORY_ID);
-
-      expect(result).toEqual({ id: CATEGORY_ID });
-    });
-
-    test("delete が正しい where 条件で呼ばれる", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue(
-        EXISTING_CATEGORY_WITH_COUNT,
-      );
-
-      await hardDeleteSpaceCategory(CATEGORY_ID);
-
-      expect(mockSpaceCategoryDelete).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: CATEGORY_ID },
-        }),
-      );
-    });
-  });
-
-  describe("異常系", () => {
-    test("存在しない ID で NOT_FOUND エラーをスローする", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue(null);
-
-      await expect(
-        hardDeleteSpaceCategory("non-existent"),
-      ).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "カテゴリーが見つかりません",
-      });
-    });
-
-    test("スペースが紐づいている場合は CONFLICT エラーをスローする", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue({
-        id: CATEGORY_ID,
-        _count: { spaces: 2 },
-      });
-
-      await expect(hardDeleteSpaceCategory(CATEGORY_ID)).rejects.toMatchObject({
-        code: "CONFLICT",
-        message: expect.stringContaining("2件のスペース"),
-      });
-    });
-
-    test("スペースが紐づいている場合は delete が呼ばれない", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue({
-        id: CATEGORY_ID,
-        _count: { spaces: 1 },
-      });
-
-      await expect(hardDeleteSpaceCategory(CATEGORY_ID)).rejects.toThrow(
-        DomainError,
-      );
-
-      expect(mockSpaceCategoryDelete).not.toHaveBeenCalled();
-    });
-
-    test("エラーメッセージにスペース件数が含まれる", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue({
-        id: CATEGORY_ID,
-        _count: { spaces: 4 },
-      });
-
-      await expect(hardDeleteSpaceCategory(CATEGORY_ID)).rejects.toMatchObject({
-        message: expect.stringContaining("4件のスペース"),
-      });
-    });
-  });
-
-  describe("deleteSpaceCategory との違い", () => {
-    test("hardDeleteSpaceCategory は delete（物理削除）を使い update（論理削除）は使わない", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue(
-        EXISTING_CATEGORY_WITH_COUNT,
-      );
-      mockSpaceCategoryDelete.mockResolvedValue({ id: CATEGORY_ID });
-
-      await hardDeleteSpaceCategory(CATEGORY_ID);
-
-      expect(mockSpaceCategoryDelete).toHaveBeenCalledTimes(1);
-      expect(mockSpaceCategoryUpdate).not.toHaveBeenCalled();
-    });
-
-    test("deleteSpaceCategory は update（論理削除）を使い delete（物理削除）は使わない", async () => {
-      mockSpaceCategoryFindUnique.mockResolvedValue(
-        EXISTING_CATEGORY_WITH_COUNT,
-      );
-      mockSpaceCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
-
-      await deleteSpaceCategory(CATEGORY_ID);
-
-      expect(mockSpaceCategoryUpdate).toHaveBeenCalledTimes(1);
-      expect(mockSpaceCategoryDelete).not.toHaveBeenCalled();
     });
   });
 });
