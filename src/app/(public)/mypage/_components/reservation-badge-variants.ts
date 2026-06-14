@@ -4,8 +4,7 @@ import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types"
  * 公開マイページの予約 / 支払いステータス Badge variant SSoT。
  *
  * 公開 Badge は `default | success | warning | info`（admin shadcn の
- * `*_BADGE_VARIANTS` とは別の variant 型）のため、`public-page-gotchas.md`
- * §公開 Badge と管理 Badge の variant 型は異なる に従い公開側で独自定義する。
+ * `*_BADGE_VARIANTS` とは別の variant 型）のため、公開側で独自定義する。
  * 予約詳細（reservation-detail）と予約カード（reservation-card）の両方が本
  * SSoT を参照し、ReservationStatus / PaymentStatus 拡張時の配色 drift を防ぐ。
  */

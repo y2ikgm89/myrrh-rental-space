@@ -878,7 +878,7 @@ describe("architecture boundaries", () => {
 
   test("shared/ の外に Prisma 直 import を残さない", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
-    // AGENTS.md §Architecture Boundaries: app 層からの Prisma 直 import 禁止
+    // app 層からの Prisma 直 import 禁止（CLAUDE.md のアーキテクチャ境界）
     // (calendar-sync $queryRaw は @/shared/domain/calendar-sync/locks helper に集約済、例外なし)
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles
@@ -1632,7 +1632,7 @@ describe("architecture boundaries", () => {
   });
 
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
-    // §5 SDK 境界 cast の helper 強制 (assertion-bans.md §5)
+    // §5 SDK 境界 cast の helper 強制
     // - LocationSchema.parse (googleapis Schema$Location)
     // - CreateEmailOptionsSchema.parse (resend CreateEmailOptions)
     // - toAppRoute / safeToAppRoute (Next.js Route<string>)
@@ -1666,9 +1666,9 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("type-safety ledger は廃止済（assertion-bans.md §1-7 の permanent exception に統合）", () => {
+  test("type-safety ledger は廃止済（permanent exception は本 boundaries テストに直接定義）", () => {
     // 2026-05-18 削除: documented-exceptions-ledger.md は Phase 1 完遂 (SDK / Prisma JSON / Route cast 構造解消)
-    // + Phase 3-C 完遂 (RHF 完全削除) に伴い、assertion-bans.md §1-7 で permanent exception を直接定義する形に一本化
+    // + Phase 3-C 完遂 (RHF 完全削除) に伴い、permanent exception を本 boundaries テストに直接定義する形に一本化
     const ledgerFile = join(
       ROOT,
       ".claude",

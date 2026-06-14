@@ -1,8 +1,6 @@
 /**
- * 管理画面: admin-ui-patterns で禁止されている Tailwind パレット直指定が
+ * 管理画面: セマンティックトークン規約で禁止されている Tailwind パレット直指定が
  * src/app/(admin) に混入していないことを静的に検証する。
- *
- * @see AGENTS.md §Required Coding Rules（セマンティックトークン）
  */
 
 import { describe, expect, test } from "bun:test";

@@ -64,7 +64,6 @@ export async function getPagesListQuery(
   }
 
   // Tie-breaker: 非 updatedAt ソート時は updatedAt desc で安定化
-  // (gotchas.md §Nullable 列のソート の安定ソートポリシー)
   const orderBy: Prisma.PageOrderByWithRelationInput[] =
     sortBy === "updatedAt"
       ? [{ updatedAt: sortOrder }]
@@ -105,7 +104,7 @@ export async function getPageBySlugQuery(
  * EDITOR の `userPageAssignment` チェック用に slug から page UUID を解決する。
  *
  * `executeAdminMutationResult` の `resolveResourceId` callback から呼ばれ、
- * 認証後に軽量 `findUnique` で `id` のみを取得する（→ `auth-patterns.md`）。
+ * 認証後に軽量 `findUnique` で `id` のみを取得する。
  */
 export async function getPageIdBySlugQuery(
   slug: string,

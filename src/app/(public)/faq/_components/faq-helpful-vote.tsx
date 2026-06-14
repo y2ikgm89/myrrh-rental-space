@@ -57,12 +57,10 @@ async function sendVote(id: string, vote: VoteValue): Promise<void> {
 }
 
 // localStorage は変更通知を持たないため subscribe は no-op
-// react-patterns.md §useSyncExternalStore 準拠
 const subscribe = () => () => {};
 
 // SSR/ハイドレーション時のフォールバック値 — プリミティブ null は
 // 呼び出しごとに同一参照（Object.is）のため getServerSnapshot の参照安定性を満たす
-// react-patterns.md §getServerSnapshot の参照安定性 準拠
 const getServerSnapshot = (): VoteValue | null => null;
 
 type FaqHelpfulVoteProps = {
@@ -78,7 +76,6 @@ export function FaqHelpfulVote({
 }: FaqHelpfulVoteProps): ReactElement {
   // useRef でスナップショットをキャッシュ（getSnapshot は毎レンダーで呼ばれるため、
   // 参照安定性のために初回読み取り結果を保持する）
-  // react-patterns.md §useSyncExternalStore 参照
   const snapshotRef = useRef<VoteValue | null>(null);
   const storedVote = useSyncExternalStore(
     subscribe,

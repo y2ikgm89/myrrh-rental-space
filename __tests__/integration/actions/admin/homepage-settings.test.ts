@@ -311,12 +311,12 @@ describe("Homepage Settings Admin Action Integration", () => {
     });
 
     test("全 SectionType の safeParse({}) 契約が成立する（fallback chain 互換）", () => {
-      // test-quality.md §Section schema test contract:
+      // Section schema test contract:
       // 「全 schema は safeParse({}) 成立必須」が architectural contract。
       //
       // 例外: page-hero は discriminated union（variant: editorial-split /
       // compact / minimal）のため、discriminator value 不在で safeParse は
-      // 失敗する設計（`ssot-singletons.md` §page-hero）。AutoSectionForm が
+      // 失敗する設計。AutoSectionForm が
       // `useWatch` + form.reset で discriminator を補ってから schema を通す。
       const SKIP_DISCRIMINATED_UNIONS = new Set(["page-hero"]);
       for (const type of Object.values(SectionType)) {

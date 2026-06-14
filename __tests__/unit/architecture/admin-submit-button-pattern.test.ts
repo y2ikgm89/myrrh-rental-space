@@ -23,7 +23,7 @@ const SUBMIT_BUTTON_IMPL = join(
 );
 
 /**
- * admin-ui-patterns.md §SubmitButton 適用対象外（複合条件 disabled 等）
+ * SubmitButton 適用対象外（複合条件 disabled 等）。
  * これらのファイルは `<Button type="submit" disabled={complexCondition}>` を保持する
  */
 const SUBMIT_BUTTON_ALLOWLIST = new Set<string>([

@@ -5,7 +5,7 @@
  * セッションレベル advisory lock helper。route handler スコープで取得し
  * `finally` で確実に解放する責務を呼び出し側が持つ。
  *
- * AGENTS.md §Architecture Boundaries の app 層からの Prisma 直 import 禁止
+ * CLAUDE.md のアーキテクチャ境界（app 層からの Prisma 直 import 禁止）
  * 規約を遵守するため、`pg_try_advisory_lock` / `pg_advisory_unlock` の
  * raw query は本 module に集約される (元 `calendar-sync` 例外を完全解消)。
  */

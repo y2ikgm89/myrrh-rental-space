@@ -3,7 +3,7 @@
 /**
  * ページ一覧テーブルヘッダー
  *
- * カラム順は admin-ui-patterns.md の canonical 順序に従う:
+ * カラム順は canonical 順序に従う:
  * checkbox → タイトル → 種別 → スラッグ → 構成 → 更新日時 → ステータス → 操作
  */
 

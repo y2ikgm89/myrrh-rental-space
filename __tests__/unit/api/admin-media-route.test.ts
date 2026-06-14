@@ -34,7 +34,7 @@ describe("admin media route", () => {
   });
 
   test("GET のバリデーションエラーは最初の error だけを返す", async () => {
-    // 認証成功後にバリデーションを実行する（セキュア順序 → gotchas.md §セキュリティ）
+    // 認証成功後にバリデーションを実行する（セキュア順序）
     mockCheckPermission.mockResolvedValue({
       success: true,
       user: { id: "admin-user" },
