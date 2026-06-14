@@ -1159,7 +1159,6 @@ model Settings {
 
   // Permalink Settings (パーマリンク設定)
   postPermalinkStructure PostPermalinkStructure @default(post_name)
-  postUrlPrefixEnabled   Boolean                @default(true) // true: /posts/slug, false: /slug
 
   // Analytics Settings（Enum化）
   analyticsType         AnalyticsType? // ga4 | gtm | null

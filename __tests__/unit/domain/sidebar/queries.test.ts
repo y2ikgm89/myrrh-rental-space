@@ -40,7 +40,7 @@ mock.module("@/shared/domain/settings/queries/display", () => ({
 
 // 公開 URL 生成ヘルパー
 mock.module("@/shared/domain/posts/routing", () => ({
-  buildPostCanonicalPath: (p: { slug: string }) => `/posts/${p.slug}`,
+  buildPostCanonicalPath: (p: { slug: string }) => `/blog/${p.slug}`,
 }));
 
 const { getSidebarData } = await import("@/shared/domain/sidebar/queries");
@@ -105,7 +105,7 @@ describe("getSidebarData", () => {
     expect(result.recentPosts[0]).toMatchObject({
       id: "p1",
       title: "最新記事",
-      url: "/posts/post-1",
+      url: "/blog/post-1",
     });
     expect(result.popularPosts).toHaveLength(1);
     expect(result.popularPosts[0]?.id).toBe("p2");
@@ -176,6 +176,6 @@ describe("getSidebarData", () => {
     const result = await getSidebarData(widgets, 1, 0);
 
     expect(result.recentPosts[0]?.publishedAt).toBeNull();
-    expect(result.recentPosts[0]?.url).toBe("/posts/draft");
+    expect(result.recentPosts[0]?.url).toBe("/blog/draft");
   });
 });

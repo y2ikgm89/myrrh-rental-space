@@ -60,7 +60,6 @@ export type ContactInfoFormInput = z.infer<typeof contactInfoFormSchema>;
 
 export const permalinkFormSchema = z.object({
   postPermalinkStructure: z.enum(PostPermalinkStructure),
-  postUrlPrefixEnabled: z.boolean(),
 });
 
 export type PermalinkFormInput = z.infer<typeof permalinkFormSchema>;

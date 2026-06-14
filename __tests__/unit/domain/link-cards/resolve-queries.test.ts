@@ -27,7 +27,6 @@ mock.module("@/shared/db/prisma", () => ({
 mock.module("@/shared/domain/settings/queries/display", () => ({
   getPermalinkSettings: mock(() =>
     Promise.resolve({
-      postUrlPrefixEnabled: true,
       postPermalinkStructure: "post_name",
     }),
   ),

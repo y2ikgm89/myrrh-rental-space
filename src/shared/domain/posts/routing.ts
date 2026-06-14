@@ -25,7 +25,6 @@ const RESERVED_POST_SEGMENTS = new Set([
 ]);
 
 export interface PermalinkSettingsLike {
-  postUrlPrefixEnabled?: boolean | null;
   postPermalinkStructure?: PostPermalinkStructure | null;
 }
 
@@ -39,7 +38,6 @@ export function getPostPermalinkConfig(
   return {
     structure:
       settings?.postPermalinkStructure ?? PostPermalinkStructure.post_name,
-    prefix: "/blog",
   };
 }
 

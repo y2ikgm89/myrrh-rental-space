@@ -143,7 +143,6 @@ export type SettingsData = {
   sidebarPopularCount: number;
   sidebarTocEnabled: boolean;
   postPermalinkStructure: PostPermalinkStructure | null;
-  postUrlPrefixEnabled: boolean;
   headerScrollBehavior: HeaderScrollBehavior;
   headerBackgroundMode: HeaderBackgroundMode;
   footerTagline: string | null;

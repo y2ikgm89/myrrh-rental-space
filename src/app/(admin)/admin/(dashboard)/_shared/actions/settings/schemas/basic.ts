@@ -317,7 +317,6 @@ export type ReservationSettingsInput = z.infer<
 
 export const permalinkSettingsSchema = z.object({
   postPermalinkStructure: z.enum(PostPermalinkStructure),
-  postUrlPrefixEnabled: z.boolean(),
 });
 
 export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>;

@@ -128,7 +128,6 @@ export type ReservationSettingsInput = {
 
 export type PermalinkSettingsInput = {
   postPermalinkStructure: PostPermalinkStructure;
-  postUrlPrefixEnabled: boolean;
 };
 
 export type HeaderSettingsInput = {

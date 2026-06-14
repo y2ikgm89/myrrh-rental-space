@@ -1,8 +1,9 @@
 /**
  * 投稿URL生成ユーティリティ
  *
- * パーマリンク設定に基づいて投稿記事のURLを生成します。
- * postUrlPrefixEnabled 設定により、/posts/ プレフィックスの有無を制御します。
+ * 投稿記事の正規URL（`/blog` 配下）を生成します。
+ * URL 構造（シンプル / 日付+記事名 / カテゴリ+記事名）は
+ * postPermalinkStructure 設定で切り替わります。
  *
  * @module shared/lib/url/post-url
  */
@@ -25,13 +26,20 @@ export interface PostUrlData {
 /** パーマリンク設定 */
 export interface PermalinkConfig {
   structure: PostPermalinkStructure;
-  /** プレフィックス（'/posts' または ''） */
-  prefix?: string;
 }
 
 // =============================================================================
 // URL Generation
 // =============================================================================
+
+/**
+ * 記事URLの base prefix。
+ *
+ * 記事一覧・詳細は `/blog` 配下に固定（ブログ URL 統一の確定仕様）。
+ * URL 構造（日付・カテゴリ階層）は `PostPermalinkStructure` で切り替わるが、
+ * base prefix は設定に依存しない。
+ */
+const POST_URL_PREFIX = "/blog";
 
 /**
  * 投稿記事のURLを生成
@@ -42,17 +50,14 @@ export interface PermalinkConfig {
  *
  * @example
  * ```ts
- * // プレフィックス有効 + post_name: /posts/article-title
- * generatePostUrl(post, { structure: 'post_name', prefix: '/posts' })
+ * // post_name: /blog/article-title
+ * generatePostUrl(post, { structure: 'post_name' })
  *
- * // プレフィックス無効 + post_name: /article-title
- * generatePostUrl(post, { structure: 'post_name', prefix: '' })
+ * // date_name: /blog/2026/01/article-title
+ * generatePostUrl(post, { structure: 'date_name' })
  *
- * // プレフィックス有効 + date_name: /posts/2026/01/article-title
- * generatePostUrl(post, { structure: 'date_name', prefix: '/posts' })
- *
- * // プレフィックス有効 + category_name: /posts/category-slug/article-title
- * generatePostUrl(post, { structure: 'category_name', prefix: '/posts' })
+ * // category_name: /blog/category-slug/article-title
+ * generatePostUrl(post, { structure: 'category_name' })
  * ```
  */
 export function generatePostUrl(
@@ -60,7 +65,7 @@ export function generatePostUrl(
   config: PermalinkConfig,
 ): string {
   const { slug, publishedAt, category } = post;
-  const { structure, prefix = "/posts" } = config;
+  const { structure } = config;
 
   let path: string;
   switch (structure) {
@@ -86,5 +91,5 @@ export function generatePostUrl(
       path = `/${slug}`;
   }
 
-  return `${prefix}${path}`;
+  return `${POST_URL_PREFIX}${path}`;
 }
