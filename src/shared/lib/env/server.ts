@@ -72,40 +72,6 @@ export const serverEnv = createEnv({
     // Turnstile
     TURNSTILE_SECRET_KEY: z.string().optional(),
 
-    // Cloudflare origin lock（任意 - オプトイン）
-    // 設定すると、Cloudflare が Transform Rule で注入する `x-origin-verify`
-    // シークレットヘッダーが一致するリクエストの cf-connecting-ip のみを信頼し、
-    // *.run.app への直アクセス（Cloudflare バイパス）によるレート制限 IP 偽装を防ぐ。
-    // 判定ロジックは src/shared/lib/rate-limit.ts の resolveClientIp。
-    //
-    // ⚠️ 有効化順序（重要）— env を Cloudflare ルールより先に設定すると、
-    // ヘッダー未注入の全トラフィックが direct-untrusted バケットに集約され、
-    // rate-limit 系（/api/auth 等）が一斉 429 になる footgun がある。必ず順守:
-    //   1. シークレット生成（PowerShell / CSPRNG・64 hex。openssl rand -hex 32 の代替）:
-    //        $b=[byte[]]::new(32);[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
-    //        $secret=($b|%{$_.ToString('x2')}) -join ''
-    //   2. 先に Cloudflare Transform Rule で全 origin リクエストに
-    //      `x-origin-verify: $secret` を「Set」（上書き）注入する（app はまだ未チェック）。
-    //   3. Secret Manager に登録（PowerShell の stdin pipe は CRLF が混入し secret を壊すため一時ファイル経由）:
-    //        $t=[IO.Path]::GetTempFileName();[IO.File]::WriteAllText($t,$secret)
-    //        gcloud secrets create CLOUDFLARE_ORIGIN_SECRET --data-file="$t"; Remove-Item $t -Force
-    //   4. cloudbuild.yaml の --update-secrets に追加し再デプロイ（app がチェック開始、
-    //      ヘッダーは既に存在）。
-    //
-    // 無停止ローテーション（カンマ区切りで複数値を許容）:
-    //   env を `"<old>,<new>"`（両受理）→ Cloudflare 注入値を new に切替 →
-    //   env を `"<new>"` に縮退。
-    //
-    // 検証: 有効化後、通常ドメイン経由のアクセスが正常応答することを確認し、
-    //   `*.run.app` を直叩き（例 `curl https://<svc>.run.app/api/auth/get-session` を連打）
-    //   すると direct-untrusted に合算され短時間で 429 になる＝直アクセスが隔離された証跡。
-    CLOUDFLARE_ORIGIN_SECRET: z
-      .string()
-      .min(32, {
-        error: "CLOUDFLARE_ORIGIN_SECRET must be at least 32 characters",
-      })
-      .optional(),
-
     // Encryption（本番必須 - ランタイム検証）
     // API キーの暗号化に使用
     ENCRYPTION_KEY: z
@@ -163,7 +129,6 @@ export const serverEnv = createEnv({
     INSTAGRAM_APP_SECRET: process.env["INSTAGRAM_APP_SECRET"],
     INSTAGRAM_REDIRECT_URI: process.env["INSTAGRAM_REDIRECT_URI"],
     TURNSTILE_SECRET_KEY: process.env["TURNSTILE_SECRET_KEY"],
-    CLOUDFLARE_ORIGIN_SECRET: process.env["CLOUDFLARE_ORIGIN_SECRET"],
     ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
