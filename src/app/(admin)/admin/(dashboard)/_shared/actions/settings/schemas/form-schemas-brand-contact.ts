@@ -2,7 +2,6 @@
  * 設定セクション用フォームスキーマ — サイト一般（基本・連絡先・パーマリンク・メンテ・事業者）
  */
 import { z } from "zod";
-import { PostPermalinkStructure } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Site > General > 基本情報
@@ -53,16 +52,6 @@ export const contactInfoFormSchema = z.object({
 });
 
 export type ContactInfoFormInput = z.infer<typeof contactInfoFormSchema>;
-
-// =============================================================================
-// Site > General > パーマリンク設定
-// =============================================================================
-
-export const permalinkFormSchema = z.object({
-  postPermalinkStructure: z.enum(PostPermalinkStructure),
-});
-
-export type PermalinkFormInput = z.infer<typeof permalinkFormSchema>;
 
 // =============================================================================
 // Site > General > メンテナンス

@@ -30,7 +30,6 @@ import {
   HeaderBackgroundMode,
   CalendarSyncMethod,
   EditorCommentStatus,
-  PostPermalinkStructure,
   PaymentStatus,
   RegistrationStatus,
   EventStatus,
@@ -61,7 +60,6 @@ import {
   isValidHeaderBackgroundMode,
   isValidCalendarSyncMethod,
   isValidEditorCommentStatus,
-  isValidPostPermalinkStructure,
   isValidPaymentStatus,
   isValidNewsStatusFilter,
   type NewsStatusFilter,
@@ -284,13 +282,6 @@ export function getValidEditorCommentStatus(
   fallback: EditorCommentStatus = EditorCommentStatus.ACTIVE,
 ): EditorCommentStatus {
   return value && isValidEditorCommentStatus(value) ? value : fallback;
-}
-
-export function getValidPostPermalinkStructure(
-  value: string | null | undefined,
-  fallback: PostPermalinkStructure = PostPermalinkStructure.post_name,
-): PostPermalinkStructure {
-  return value && isValidPostPermalinkStructure(value) ? value : fallback;
 }
 
 export function getValidPaymentStatus(

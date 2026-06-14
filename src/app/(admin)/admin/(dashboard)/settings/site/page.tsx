@@ -1,7 +1,7 @@
 /**
  * サイト基本設定ページ
  *
- * 一般設定（基本情報 + 連絡先）・SEO・投稿（パーマリンク）。
+ * 一般設定（基本情報 + 連絡先）・SEO。
  * レイアウト / ヘッダー / フッター / サイドバー / ナビゲーション / お知らせバーは
  * /admin/settings/appearance に集約済み。
  *
@@ -20,7 +20,6 @@ import {
   ContactInfoSection,
   SeoSection,
   RobotsTxtSection,
-  PermalinkSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
@@ -57,11 +56,6 @@ async function SiteSettingsContent(): Promise<ReactElement> {
         </div>
       ),
     },
-    {
-      value: "post",
-      label: "投稿",
-      content: <PermalinkSection settings={settings} />,
-    },
   ];
 
   return <SettingsTabs tabs={tabs} defaultTab="general" />;
@@ -83,10 +77,7 @@ function SiteSettingsLoading(): ReactElement {
 
 export default async function SiteSettingsPage(): Promise<ReactElement> {
   return (
-    <SettingsLayout
-      title="サイト基本"
-      description="一般設定・連絡先・SEO・投稿"
-    >
+    <SettingsLayout title="サイト基本" description="一般設定・連絡先・SEO">
       <Suspense fallback={<SiteSettingsLoading />}>
         <SiteSettingsContent />
       </Suspense>

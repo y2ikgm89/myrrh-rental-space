@@ -9,7 +9,6 @@ import type {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
   LayoutWidth,
-  PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
 } from "@generated/prisma/enums";
@@ -124,10 +123,6 @@ export type ReservationSettingsInput = {
   maxReservationDuration: number;
   cancellationDeadlineHours: number;
   modificationDeadlineHours: number;
-};
-
-export type PermalinkSettingsInput = {
-  postPermalinkStructure: PostPermalinkStructure;
 };
 
 export type HeaderSettingsInput = {
@@ -348,16 +343,6 @@ export async function updateSidebarSettings(
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
-  });
-}
-
-export async function updatePermalinkSettings(
-  data: PermalinkSettingsInput,
-): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
   });
 }
 

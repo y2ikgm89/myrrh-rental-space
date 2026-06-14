@@ -15,9 +15,6 @@ export { MaintenanceSection } from "./MaintenanceSection";
 export { CookieConsentSection } from "./CookieConsentSection";
 export { StripeSection } from "./StripeSection";
 
-// Posts Settings
-export { PermalinkSection } from "./PermalinkSection";
-
 // External Service API Keys
 export { ResendSection } from "./ResendSection";
 export { TurnstileSection } from "./TurnstileSection";
