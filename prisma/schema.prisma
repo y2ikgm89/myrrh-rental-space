@@ -596,6 +596,10 @@ model Reservation {
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
 
+  // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
+  // 二重送信防止のため送信前に atomic claim で now を立て、送信失敗時は null に戻す。
+  reminderSentAt DateTime?
+
   @@index([spaceId])
   @@index([customerId])
   @@index([userId])

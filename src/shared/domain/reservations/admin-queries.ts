@@ -405,7 +405,12 @@ export async function getReservationStatus(id: string) {
   });
 }
 
-/** 予約リマインダー cron 用: 指定日時窓内のアクティブ予約とメール用関連を取得 */
+/**
+ * 予約リマインダー cron 用: 指定日時窓内のアクティブ予約とメール用関連を取得。
+ *
+ * `reminderSentAt: null` でリマインダー未送信のみに絞る（冪等性の第一段 dedup）。
+ * 二重送信レースは送信前の atomic claim（`claimReservationReminder`）で防ぐ。
+ */
 export async function findReservationsForReminderWindow(
   startOfWindow: Date,
   endOfWindow: Date,
@@ -415,6 +420,7 @@ export async function findReservationsForReminderWindow(
       startTime: { gte: startOfWindow, lte: endOfWindow },
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       deletedAt: null,
+      reminderSentAt: null,
     },
     select: {
       id: true,
