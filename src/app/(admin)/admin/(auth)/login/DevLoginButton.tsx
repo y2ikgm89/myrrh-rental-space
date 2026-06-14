@@ -4,14 +4,14 @@
  * 開発環境限定 — SUPER_ADMIN として 1 クリックでログインするボタン。
  *
  * - 本番では `page.tsx` 側で `process.env["NODE_ENV"] !== "production"` 判定で非表示。
- * - Better Auth Client API `signIn.email({ callbackURL })` で公式パターンに準拠。
- *   Router Cache + Set-Cookie の自動 invalidation を Next.js 統合に委ねる。
+ *   `devAdminLoginAction` 側でも early return する二重防御。
+ * - 認証情報は server-only モジュールに置き、クライアントバンドルに出さない。
+ * - サインインはサーバーアクションで完結し、成功時に `redirect("/admin")` する。
  * - seed (`prisma/seed.ts`) で superadmin が作成済みである前提。
  */
 
 import { useState, useTransition, type ReactElement } from "react";
-import { signIn } from "@/shared/lib/admin-auth-client";
-import { DEV_ADMIN_CREDENTIALS } from "./dev-login-credentials";
+import { devAdminLoginAction } from "./dev-login-action";
 
 export function DevLoginButton(): ReactElement {
   const [isPending, startTransition] = useTransition();
@@ -20,24 +20,8 @@ export function DevLoginButton(): ReactElement {
   const handleClick = () => {
     setError(null);
     startTransition(async () => {
-      await signIn.email({
-        email: DEV_ADMIN_CREDENTIALS.email,
-        password: DEV_ADMIN_CREDENTIALS.password,
-        callbackURL: "/admin",
-        fetchOptions: {
-          onError: (ctx) => {
-            if (ctx.response.status === 429) {
-              setError(
-                "リクエストが多すぎます。しばらく待ってからお試しください。",
-              );
-            } else {
-              setError(
-                "テストログインに失敗しました（seed の SUPER_ADMIN が存在しない可能性があります）",
-              );
-            }
-          },
-        },
-      });
+      const result = await devAdminLoginAction();
+      if (result?.error) setError(result.error);
     });
   };
 

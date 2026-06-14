@@ -1,6 +1,11 @@
+import "server-only";
+
 /**
- * dev-login 専用テスト顧客の credentials（client + server 両方で参照）。
- * 本番環境では ensureDevUserAction が早期 return するため実際には使用されない。
+ * dev-login 専用テスト顧客の credentials（server 専用）。
+ *
+ * `server-only` でクライアントバンドルへの混入を構造的に禁止する
+ * （Next.js 公式推奨。dev 専用値・秘匿値をクライアント JS に出さない）。
+ * 利用は `dev-login-action.ts` のサーバーアクション内のみ。
  */
 export const DEV_CUSTOMER_CREDENTIALS = {
   email: "dev-customer@example.com",
