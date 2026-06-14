@@ -6,6 +6,7 @@ import { describe, test, expect } from "bun:test";
 import {
   createRateLimiter,
   getClientIp,
+  resolveClientIp,
   checkRateLimit,
 } from "@/shared/lib/rate-limit";
 
@@ -124,6 +125,100 @@ describe("getClientIp", () => {
   test("ヘッダーがない場合は 'unknown' を返す", () => {
     const req = createRequest({});
     expect(getClientIp(req)).toBe("unknown");
+  });
+});
+
+describe("resolveClientIp（信頼境界 / origin lock）", () => {
+  // ヘッダー名 → 値のアクセサ（小文字キーで照合）
+  function makeGetHeader(headers: Record<string, string>) {
+    return (name: string): string | null => headers[name.toLowerCase()] ?? null;
+  }
+
+  const SECRET = "x".repeat(40);
+
+  describe("origin lock 無効（CLOUDFLARE_ORIGIN_SECRET 未設定）", () => {
+    test("cf-connecting-ip を優先（従来挙動）", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({
+          "cf-connecting-ip": "1.2.3.4",
+          "x-forwarded-for": "5.6.7.8",
+        }),
+        undefined,
+      );
+      expect(ip).toBe("1.2.3.4");
+    });
+
+    test("x-forwarded-for の先頭にフォールバック", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({ "x-forwarded-for": "10.0.0.1, 10.0.0.2" }),
+        undefined,
+      );
+      expect(ip).toBe("10.0.0.1");
+    });
+
+    test("ヘッダー無しは unknown", () => {
+      expect(resolveClientIp(makeGetHeader({}), undefined)).toBe("unknown");
+    });
+  });
+
+  describe("origin lock 有効（CLOUDFLARE_ORIGIN_SECRET 設定済み）", () => {
+    test("x-origin-verify 一致時は cf-connecting-ip を信頼", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": SECRET,
+          "cf-connecting-ip": "1.2.3.4",
+        }),
+        SECRET,
+      );
+      expect(ip).toBe("1.2.3.4");
+    });
+
+    test("x-origin-verify が無い直アクセスは direct-untrusted に集約（cf-connecting-ip を偽装しても無効）", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({ "cf-connecting-ip": "6.6.6.6" }),
+        SECRET,
+      );
+      expect(ip).toBe("direct-untrusted");
+    });
+
+    test("x-origin-verify が不一致なら direct-untrusted（偽装シークレット拒否）", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": "wrong-secret-value",
+          "cf-connecting-ip": "6.6.6.6",
+        }),
+        SECRET,
+      );
+      expect(ip).toBe("direct-untrusted");
+    });
+
+    test("Cloudflare 経由でも cf-connecting-ip が無ければ direct-untrusted（保守的）", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({ "x-origin-verify": SECRET }),
+        SECRET,
+      );
+      expect(ip).toBe("direct-untrusted");
+    });
+
+    test("異なるクライアントは Cloudflare 経由で独立した IP に解決される", () => {
+      const a = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": SECRET,
+          "cf-connecting-ip": "1.1.1.1",
+        }),
+        SECRET,
+      );
+      const b = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": SECRET,
+          "cf-connecting-ip": "2.2.2.2",
+        }),
+        SECRET,
+      );
+      expect(a).toBe("1.1.1.1");
+      expect(b).toBe("2.2.2.2");
+      expect(a).not.toBe(b);
+    });
   });
 });
 

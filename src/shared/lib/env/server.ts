@@ -72,6 +72,22 @@ export const serverEnv = createEnv({
     // Turnstile
     TURNSTILE_SECRET_KEY: z.string().optional(),
 
+    // Cloudflare origin lock（任意 - オプトイン）
+    // 設定すると、Cloudflare が Transform Rule で注入する `x-origin-verify`
+    // シークレットヘッダーが一致するリクエストの cf-connecting-ip のみを信頼し、
+    // *.run.app への直アクセス（Cloudflare バイパス）によるレート制限 IP 偽装を防ぐ。
+    // 有効化手順:
+    //   1. openssl rand -hex 32 等で生成し Secret Manager に登録
+    //   2. cloudbuild.yaml の --update-secrets / availableSecrets に追加
+    //   3. Cloudflare Transform Rule で全 origin リクエストに
+    //      `x-origin-verify: <secret>` を「Set」（上書き）で注入
+    CLOUDFLARE_ORIGIN_SECRET: z
+      .string()
+      .min(32, {
+        error: "CLOUDFLARE_ORIGIN_SECRET must be at least 32 characters",
+      })
+      .optional(),
+
     // Encryption（本番必須 - ランタイム検証）
     // API キーの暗号化に使用
     ENCRYPTION_KEY: z
@@ -129,6 +145,7 @@ export const serverEnv = createEnv({
     INSTAGRAM_APP_SECRET: process.env["INSTAGRAM_APP_SECRET"],
     INSTAGRAM_REDIRECT_URI: process.env["INSTAGRAM_REDIRECT_URI"],
     TURNSTILE_SECRET_KEY: process.env["TURNSTILE_SECRET_KEY"],
+    CLOUDFLARE_ORIGIN_SECRET: process.env["CLOUDFLARE_ORIGIN_SECRET"],
     ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
