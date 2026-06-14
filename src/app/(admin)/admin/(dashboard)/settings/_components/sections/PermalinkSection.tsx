@@ -33,21 +33,14 @@ type PermalinkSectionProps = {
   };
 };
 
+// 記事詳細ルートは単一動的セグメント /blog/[slug] のみのため、選択できる構造は
+// post_name（/blog/{slug}）に限る。date_name / category_name は多セグメント URL を
+// 生成するが対応する catch-all ルートが無く、選ぶと全記事が 404 になっていたため撤去した。
 const PERMALINK_OPTIONS: SelectionBoxOption[] = [
   {
     value: PostPermalinkStructure.post_name,
     label: "シンプル",
-    description: "記事名のみのシンプルなURL",
-  },
-  {
-    value: PostPermalinkStructure.date_name,
-    label: "日付+記事名",
-    description: "公開日が含まれるURL",
-  },
-  {
-    value: PostPermalinkStructure.category_name,
-    label: "カテゴリ+記事名",
-    description: "カテゴリ階層を含むURL",
+    description: "記事名のみのシンプルなURL（/blog/記事スラッグ）",
   },
 ];
 
@@ -81,17 +74,8 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
     }
   }, [lastResult, router]);
 
-  const getPreviewUrl = () => {
-    switch (structure.value) {
-      case PostPermalinkStructure.date_name:
-        return "/blog/2026/01/article-title";
-      case PostPermalinkStructure.category_name:
-        return "/blog/technology/article-title";
-      case PostPermalinkStructure.post_name:
-      default:
-        return "/blog/article-title";
-    }
-  };
+  // 記事 URL は /blog/{slug} 固定（多セグメント permalink は非対応）。
+  const getPreviewUrl = () => "/blog/article-title";
 
   const formErrors = form.errors;
 
