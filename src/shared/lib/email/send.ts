@@ -58,12 +58,12 @@ export type SendEmailParams = {
 /**
  * メールを送信する。
  *
- * `RESEND_API_KEY` 未設定時は no-op（`{ success: true }` を返す）。
+ * env / 管理画面のいずれにも Resend API キーが無い場合は no-op（`{ success: true }` を返す）。
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
-  if (!isEmailEnabled()) return { success: true };
+  if (!(await isEmailEnabled())) return { success: true };
 
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) return { success: true };
 
   const {

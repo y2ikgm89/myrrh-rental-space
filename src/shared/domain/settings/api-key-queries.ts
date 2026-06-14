@@ -8,6 +8,7 @@ import {
   maskTurnstileKey,
 } from "@/shared/lib/api-keys";
 import { safeDecrypt } from "@/shared/lib/crypto";
+import { serverEnv } from "@/shared/lib/env/server";
 import type {
   CloudflareConfig,
   CustomApiKeyData,
@@ -43,6 +44,27 @@ export async function getResendConfig(): Promise<ResendConfig> {
     lastTestedAt: settings?.resendLastTestedAt || null,
     connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
   };
+}
+
+/**
+ * 送信経路で実際に使う Resend API キーを返す（管理画面で設定された暗号化キーを復号）。
+ *
+ * Turnstile / Google Maps / Cloudflare と同じ `getDecrypted*` パターン。env を正本とする
+ * フォールバックの DB 側として `@/shared/lib/email/client` から参照される（env-OR-DB）。
+ */
+export async function getDecryptedResendApiKey(): Promise<string | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      resendApiKey: true,
+    },
+  });
+
+  if (!settings?.resendApiKey) {
+    return null;
+  }
+
+  return safeDecrypt(settings.resendApiKey);
 }
 
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
@@ -224,8 +246,11 @@ export async function getIntegrationHealthSummary(): Promise<{
   });
 
   return {
+    // 送信経路（client.ts）と同じ env-OR-DB ソースで判定する。env キーが正本のため
+    // env のみ設定／DB のみ設定のどちらでも「接続済み」を正しく反映する（health が嘘をつかない）。
     resend: Boolean(
-      settings?.resendApiKey && safeDecrypt(settings.resendApiKey),
+      serverEnv.RESEND_API_KEY ||
+      (settings?.resendApiKey && safeDecrypt(settings.resendApiKey)),
     ),
     stripe: Boolean(
       settings?.stripeSecretKey && safeDecrypt(settings.stripeSecretKey),
