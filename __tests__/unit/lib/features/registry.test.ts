@@ -74,10 +74,17 @@ describe("FEATURE_MODULES routing alignment (legacy /posts → /blog 移行)", (
     expect(posts.publicRoutes).not.toContain("/posts");
   });
 
-  test("pageSlugs はすべて実在のシステムページ slug を指す（events 除く）", () => {
-    // events はアーカイブページで SYSTEM_PAGES に slug を持たない既知の例外（別途調査）
-    const systemBacked = FEATURE_MODULES_LIST.filter((id) => id !== "events");
-    for (const id of systemBacked) {
+  test('events module は system page slug "events" を指す', () => {
+    // events も spaces/news/blog 同様 Page-backed システムページ。
+    // SYSTEM_PAGES への追加漏れで pageSlugs が宙吊りになる退行を防ぐ。
+    expect(FEATURE_MODULES.events.pageSlugs).toEqual(["events"]);
+    expect(SYSTEM_PAGE_SLUGS).toContain("events");
+  });
+
+  test("pageSlugs はすべて実在のシステムページ slug を指す", () => {
+    // 全 module の pageSlugs が SYSTEM_PAGES に実在する slug を指す不変条件。
+    // posts→blog / events 追加漏れと同種の「存在しない Page slug」退行を回帰防止。
+    for (const id of FEATURE_MODULES_LIST) {
       for (const slug of FEATURE_MODULES[id].pageSlugs) {
         expect(SYSTEM_PAGE_SLUGS).toContain(slug);
       }

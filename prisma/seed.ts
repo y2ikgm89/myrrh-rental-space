@@ -3152,6 +3152,7 @@ async function seedSystemPageSections() {
     "faq",
     "news",
     "blog",
+    "events",
     "reservation",
     "spaces",
   ];
