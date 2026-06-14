@@ -8,7 +8,6 @@ import {
   AnalyticsType,
   HeaderScrollBehavior,
   HeaderBackgroundMode,
-  PostPermalinkStructure,
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
   TIME_REGEX,
@@ -310,16 +309,6 @@ export const reservationSettingsSchema = z.object({
 export type ReservationSettingsInput = z.infer<
   typeof reservationSettingsSchema
 >;
-
-// =============================================================================
-// Permalink Schemas
-// =============================================================================
-
-export const permalinkSettingsSchema = z.object({
-  postPermalinkStructure: z.enum(PostPermalinkStructure),
-});
-
-export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>;
 
 // =============================================================================
 // Feature Modules（Sanity / Stripe Capabilities 流の declarative composition）

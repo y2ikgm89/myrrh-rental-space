@@ -33,7 +33,6 @@ import {
   HeaderBackgroundMode,
   CalendarSyncMethod,
   EditorCommentStatus,
-  PostPermalinkStructure,
   PaymentStatus,
   EventStatus,
   RegistrationStatus,
@@ -91,9 +90,6 @@ const VALID_CALENDAR_SYNC_METHODS = new Set<string>(
 );
 const VALID_EDITOR_COMMENT_STATUSES = new Set<string>(
   Object.values(EditorCommentStatus),
-);
-const VALID_POST_PERMALINK_STRUCTURES = new Set<string>(
-  Object.values(PostPermalinkStructure),
 );
 const VALID_PAYMENT_STATUSES = new Set<string>(Object.values(PaymentStatus));
 const VALID_EVENT_STATUSES = new Set<string>(Object.values(EventStatus));
@@ -251,14 +247,6 @@ export function isValidEditorCommentStatus(
   value: unknown,
 ): value is EditorCommentStatus {
   return typeof value === "string" && VALID_EDITOR_COMMENT_STATUSES.has(value);
-}
-
-export function isValidPostPermalinkStructure(
-  value: unknown,
-): value is PostPermalinkStructure {
-  return (
-    typeof value === "string" && VALID_POST_PERMALINK_STRUCTURES.has(value)
-  );
 }
 
 export function isValidPaymentStatus(value: unknown): value is PaymentStatus {

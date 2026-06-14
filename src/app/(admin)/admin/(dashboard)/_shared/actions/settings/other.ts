@@ -31,7 +31,6 @@ import {
   cookieConsentSettingsSchema,
   reservationSettingsSchema,
   announcementBarCarouselSettingsSchema,
-  permalinkSettingsSchema,
   headerSettingsSchema,
   footerSettingsSchema,
   featureModulesSettingsSchema,
@@ -178,38 +177,6 @@ export async function updateAnnouncementBarCarouselSettings(
       updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
     },
   });
-}
-
-/**
- * パーマリンク設定の更新 — conform `useActionState` 統合経路。
- */
-export async function updatePermalinkSettings(
-  _prev: SubmissionResult | undefined,
-  formData: FormData,
-): Promise<SubmissionResult> {
-  return executeConformMutation(
-    formData,
-    permalinkSettingsSchema,
-    async (data) => {
-      const result = await executeAdminMutationResult({
-        resource: "settings",
-        action: "update",
-        execute: async () => {
-          await settingsCommands.updatePermalinkSettings(data);
-          return null;
-        },
-        afterSuccess: () => {
-          updateTag(CACHE_TAGS.PERMALINK);
-          updateTag(CACHE_TAGS.POSTS);
-          updateTag(CACHE_TAGS.SIDEBAR_DATA);
-        },
-      });
-      if (isMutationError(result)) {
-        return { ok: false, error: result.error };
-      }
-      return { ok: true };
-    },
-  );
 }
 
 /**

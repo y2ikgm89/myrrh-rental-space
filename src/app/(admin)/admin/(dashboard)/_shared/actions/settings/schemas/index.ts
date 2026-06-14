@@ -33,8 +33,6 @@ export {
   type CookieConsentSettingsInput,
   reservationSettingsSchema,
   type ReservationSettingsInput,
-  permalinkSettingsSchema,
-  type PermalinkSettingsInput,
   featureModulesSettingsSchema,
   type FeatureModulesSettingsInput,
   sidebarSettingsSchema,
