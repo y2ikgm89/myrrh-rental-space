@@ -84,6 +84,11 @@ COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 # - Edge runtime 用 wasm-compiler-edge（Cloud Run + Bun では未参照）
 # - Browser stub（runtime/index-browser.* と root の index-browser.js / edge.*）
 # - generator-build/（`prisma generate` 専用、runner で未起動）
+#
+# prune は Prisma 内部の runtime ファイル名（無保証・minor bump で変わりうる）に依存する。
+# 末尾の `test -f` で、生成 client が dynamic import する postgresql query_compiler の存在を
+# ビルド時に保証する。将来 Prisma がレイアウトを変えて必要ファイルが消えた場合、silent に
+# 壊れた image を出荷せず**ビルドを fail**させて顕在化させるためのガード。
 RUN find ./node_modules/@prisma/client/runtime \
     \( -name 'query_compiler_*.cockroachdb.*' \
     -o -name 'query_compiler_*.mysql.*' \
@@ -96,7 +101,9 @@ RUN find ./node_modules/@prisma/client/runtime \
     rm -rf ./node_modules/@prisma/client/generator-build && \
     rm -f ./node_modules/@prisma/client/edge.js \
           ./node_modules/@prisma/client/edge.d.ts \
-          ./node_modules/@prisma/client/index-browser.js
+          ./node_modules/@prisma/client/index-browser.js && \
+    test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.mjs && \
+    test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs
 # Prisma CLI + schema / migrations — Cloud Run Job 側で `bunx --bun prisma migrate deploy` を実行するため
 # 同一 image を Cloud Run service と migrate Job で共有する（cloudbuild.yaml の migrate-update/execute 参照）。
 # standalone trace には `prisma` パッケージが含まれないため明示コピーが必須。
