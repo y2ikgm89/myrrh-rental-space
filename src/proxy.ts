@@ -93,16 +93,18 @@ function buildCsp(
   //   CSP3 仕様上 nonce で認可できず、本番では全て遮断される（実ブラウザでホームページに
   //   39 件の "inline style ... has been blocked" を確認）。style インジェクションは
   //   script より低リスクのため、Next.js 公式の非 nonce 例に倣い 'unsafe-inline' を許可する。
-  // - connect-src / img-src: GA4 は region1/2/3.google-analytics.com 等の地域別エンドポイントへ
-  //   収集ビーコンを送るためワイルドカードが必要。Microsoft Clarity は *.clarity.ms /
-  //   c.bing.com へデータをアップロードする。
+  // - connect-src / img-src: strict-dynamic は script-src のみ作用するため、ビーコン送信先は
+  //   明示許可が必要。GA4 は *.google-analytics.com（地域別 region1/2/3 を包含）/
+  //   *.analytics.google.com に加え、gtag.js / GTM が設定取得・収集に使う *.googletagmanager.com
+  //   も connect-src / img-src に必要（Google 公式 Tag Platform CSP ガイド準拠）。
+  //   Microsoft Clarity は *.clarity.ms / c.bing.com へデータをアップロードする。
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.clarity.ms;
+    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
-    connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
+    connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
     frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com https://www.google.com;
     object-src 'none';
     base-uri 'self';
