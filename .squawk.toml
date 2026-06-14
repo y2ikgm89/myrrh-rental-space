@@ -1,0 +1,65 @@
+# Squawk — Postgres マイグレーション安全 linter の設定
+# 強制点: CI `migration-safety` job（.github/workflows/ci.yml）が変更された
+# prisma/migrations/**/migration.sql に対して実行する。詳細規約は
+# .claude/rules/migrations.md（expand / contract）が SSoT。
+#
+# スコープ方針（重要）:
+#   このゲートが守る対象は **Risk 1 = 後方互換を壊す破壊的スキーマ変更**。
+#   Cloud Run のローリング切替窓（migrate 完了〜新リビジョン ready）で
+#   「旧コードが破壊済み新スキーマを叩く」と unknown column 等で 500 になる。
+#   → 旧コードを壊しうる変更（列/テーブル削除・リネーム・型変更・既存列への
+#     NOT NULL 追加）のみを error にする。
+#
+#   squawk はデフォルトで 36 rule 全有効（opt-in は require-table-schema のみ）で、
+#   lock / 型スタイル系（prefer-timestamptz / require-concurrent-index-creation 等）が
+#   Prisma 生成 SQL に対し大量に誤発火する。これらは Risk 1 ではなく、低トラフィック
+#   単一インスタンス（Cloud Run min0/max1）構成では過剰なため除外する。
+#   将来マルチインスタンス化（高トラフィックでロック競合が問題化）した場合は、
+#   require-concurrent-index-creation 等の lock 系を再有効化して再評価する。
+
+# 本番 / CI の Postgres バージョン（cloudbuild.yaml・ci.yml ともに postgres:16）
+pg_version = "16.0"
+
+# Prisma は各マイグレーションを 1 トランザクションで適用する（PostgreSQL は
+# transactional DDL）。transaction 前提の rule 判定を実態に合わせる。
+assume_in_transaction = true
+
+# 有効に残す rule（= Risk 1：旧コードが新スキーマで壊れる変更）:
+#   ban-drop-column / ban-drop-table / ban-drop-database
+#   renaming-column / renaming-table / changing-column-type
+#   adding-not-nullable-field / adding-required-field
+#   syntax-error（パース不能＝解析不可能なファイルを検出する安全網）
+# 上記以外のデフォルト rule をすべて無効化する（require-table-schema は opt-in で元々無効）。
+excluded_rules = [
+  # --- 追加系（後方互換 or PG11+ で安全。Risk 1 ではない） ---
+  "adding-field-with-default",         # PG11+ は default 付き追加が安全（rewrite なし）
+  "adding-foreign-key-constraint",     # ロック懸念であり旧コード 500 ではない
+  "adding-serial-primary-key-field",   # ロック / rewrite 懸念、Risk 1 ではない
+  "disallowed-unique-constraint",      # 既存データ違反なら migrate 自体が失敗→窓は生じない
+  # --- lock / 並行性（低トラフィック単一インスタンスでは過剰） ---
+  "ban-concurrent-index-creation-in-transaction",
+  "require-concurrent-index-creation",
+  "require-concurrent-index-deletion",
+  "require-concurrent-partition-detach",
+  "require-concurrent-reindex",
+  "constraint-missing-not-valid",
+  "require-timeout-settings",
+  "ban-uncommitted-transaction",
+  "transaction-nesting",
+  "prefer-repack",
+  # --- 型 / スタイル（Prisma 生成物に誤発火。Risk 1 と無関係） ---
+  "prefer-timestamptz",
+  "prefer-bigint-over-int",
+  "prefer-bigint-over-smallint",
+  "prefer-text-field",
+  "ban-char-field",
+  "prefer-identity",
+  "prefer-robust-stmts",
+  "require-enum-value-ordering",
+  "identifier-too-long",
+  # --- その他（Risk 1 の窓を作らない） ---
+  "ban-drop-not-null",                 # nullable 化は DB レベル 500 を起こさない
+  "ban-truncate-cascade",
+  "ban-create-domain-with-constraint",
+  "ban-alter-domain-with-add-constraint",
+]
