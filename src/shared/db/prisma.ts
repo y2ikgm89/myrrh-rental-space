@@ -70,12 +70,23 @@ const isProduction = serverEnv.NODE_ENV === "production";
  * - `connectionTimeoutMillis: 5_000` (v6 connect_timeout)
  * - `idleTimeoutMillis: 300_000` (v6 max_idle_connection_lifetime)
  * v7 デフォルト（idle 10s）は短すぎて Cloud Run のコールドスタート直後に切断される。
+ *
+ * サーバー側クエリ／トランザクション上限（プール枯渇対策）:
+ * - `statement_timeout` … 1 クエリの最大実行時間。これが無いと runaway / lock 待ちの
+ *   1 クエリが接続を無制限に占有し、concurrency=80 / pool=10 の単一インスタンスで
+ *   残り接続を巻き込み acquire timeout 由来の 500 を誘発する。
+ * - `idle_in_transaction_session_timeout` … トランザクション内でアイドル放置された
+ *   接続を打ち切り、ハングした BEGIN がプールを食い潰すのを防ぐ。
+ * いずれも `pg.Pool` が全 client に転送する（node-postgres 公式）。値は正規の
+ * 管理レポート／エクスポートより十分長い 15s に設定（runaway のみを打ち切る）。
  */
 const adapter = new PrismaPg({
   connectionString: serverEnv.DATABASE_URL,
   connectionTimeoutMillis: 5_000,
   idleTimeoutMillis: 300_000,
   max: serverEnv.DATABASE_POOL_MAX ?? 10,
+  statement_timeout: 15_000,
+  idle_in_transaction_session_timeout: 15_000,
 });
 
 /**
