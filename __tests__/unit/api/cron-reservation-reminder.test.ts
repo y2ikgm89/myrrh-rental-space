@@ -6,7 +6,15 @@ const mockFindReservationsForReminderWindow = mock<
   () => Promise<Record<string, unknown>[]>
 >(() => Promise.resolve([]));
 
-const mockSendReservationReminderEmail = mock<() => Promise<void>>(() =>
+const mockSendReservationReminderEmail = mock<
+  () => Promise<{ success: boolean; error?: string }>
+>(() => Promise.resolve({ success: true }));
+
+const mockClaimReservationReminder = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
+const mockReleaseReservationReminderClaim = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 
@@ -38,6 +46,15 @@ mock.module("@/shared/lib/email/reminder-emails", () => ({
   sendReservationReminderEmail: (
     ...args: Parameters<typeof mockSendReservationReminderEmail>
   ) => mockSendReservationReminderEmail(...args),
+}));
+
+mock.module("@/shared/domain/reservations/reminder-commands", () => ({
+  claimReservationReminder: (
+    ...args: Parameters<typeof mockClaimReservationReminder>
+  ) => mockClaimReservationReminder(...args),
+  releaseReservationReminderClaim: (
+    ...args: Parameters<typeof mockReleaseReservationReminderClaim>
+  ) => mockReleaseReservationReminderClaim(...args),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -157,14 +174,18 @@ describe("GET /api/cron/reservation-reminder", () => {
   beforeEach(() => {
     mockFindReservationsForReminderWindow.mockReset();
     mockSendReservationReminderEmail.mockReset();
+    mockClaimReservationReminder.mockReset();
+    mockReleaseReservationReminderClaim.mockReset();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
     mockUnstableRethrow.mockReset();
 
-    // デフォルト: 認証通過、予約なし、メール送信成功
+    // デフォルト: 認証通過、予約なし、claim 成功、メール送信成功
     mockAuthorizeCronRequest.mockReturnValue(null);
     mockFindReservationsForReminderWindow.mockResolvedValue([]);
-    mockSendReservationReminderEmail.mockResolvedValue(undefined);
+    mockClaimReservationReminder.mockResolvedValue(true);
+    mockReleaseReservationReminderClaim.mockResolvedValue(undefined);
+    mockSendReservationReminderEmail.mockResolvedValue({ success: true });
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
@@ -205,6 +226,8 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toEqual({ sent: 1, skipped: 0, total: 1 });
+    // 送信前に atomic claim を取得する
+    expect(mockClaimReservationReminder).toHaveBeenCalledWith("res-1");
     expect(mockSendReservationReminderEmail).toHaveBeenCalledTimes(1);
     expect(mockSendReservationReminderEmail).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -214,6 +237,8 @@ describe("GET /api/cron/reservation-reminder", () => {
         spaceName: "テストスペース",
       }),
     );
+    // 成功時は claim を release しない
+    expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
   });
 
   test("顧客メールなし → skipped=1", async () => {
@@ -242,7 +267,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockSendReservationReminderEmail).not.toHaveBeenCalled();
   });
 
-  test("メール送信エラー → skipped=1 + logError 呼び出し", async () => {
+  test("メール送信が例外をスロー → claim を release + skipped=1 + logError", async () => {
     const reservation = makeReservation();
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
     const emailError = new Error("SMTP connection failed");
@@ -253,6 +278,8 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
+    // 例外時は次回再送できるよう claim を解放する
+    expect(mockReleaseReservationReminderClaim).toHaveBeenCalledWith("res-1");
     expect(mockLogError).toHaveBeenCalledTimes(1);
     expect(mockLogError).toHaveBeenCalledWith(
       emailError,
@@ -263,6 +290,43 @@ describe("GET /api/cron/reservation-reminder", () => {
         }),
       }),
     );
+  });
+
+  test("claim 失敗（二重起動 / 既送信）→ メール送信せず skipped=1", async () => {
+    const reservation = makeReservation();
+    mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
+    // 別の cron 実行が既に claim 済み（または前回送信済み）
+    mockClaimReservationReminder.mockResolvedValue(false);
+
+    const response = await GET(makeRequest("Bearer test-secret"));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
+    expect(mockClaimReservationReminder).toHaveBeenCalledWith("res-1");
+    // claim 取得できなければメールは送らない（重複送信防止の要）
+    expect(mockSendReservationReminderEmail).not.toHaveBeenCalled();
+    // claim していないので release もしない
+    expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
+  });
+
+  test("メール送信が success:false → claim を release + skipped=1", async () => {
+    const reservation = makeReservation();
+    mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
+    // sendEmail は失敗時に throw せず { success: false } を返す
+    mockSendReservationReminderEmail.mockResolvedValue({
+      success: false,
+      error: "メール送信に失敗しました",
+    });
+
+    const response = await GET(makeRequest("Bearer test-secret"));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
+    expect(mockSendReservationReminderEmail).toHaveBeenCalledTimes(1);
+    // 送信失敗時は次回再送できるよう claim を解放する
+    expect(mockReleaseReservationReminderClaim).toHaveBeenCalledWith("res-1");
   });
 
   test("複数予約: 成功2 + スキップ1 (メールなし)", async () => {
