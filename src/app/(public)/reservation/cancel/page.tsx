@@ -64,7 +64,7 @@ export default async function GuestCancelPage({
     return <InvalidLinkView />;
   }
 
-  if (!CANCELLABLE_STATUSES.has(reservation.status as never)) {
+  if (!CANCELLABLE_STATUSES.has(reservation.status)) {
     return (
       <Layout>
         <div className="border border-border p-6 text-center">
