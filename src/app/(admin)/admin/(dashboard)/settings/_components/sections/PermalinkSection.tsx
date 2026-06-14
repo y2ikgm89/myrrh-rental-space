@@ -19,7 +19,6 @@ import {
   CardTitle,
   SelectionBox,
   SubmitButton,
-  Switch,
 } from "@/admin/components/ui";
 import type { SelectionBoxOption } from "@/admin/components/ui";
 import { updatePermalinkSettings } from "@/admin/actions/settings";
@@ -31,7 +30,6 @@ import { getValidPostPermalinkStructure } from "@/shared/lib/validations/enums/h
 type PermalinkSectionProps = {
   settings: {
     postPermalinkStructure: PostPermalinkStructure | null;
-    postUrlPrefixEnabled: boolean;
   };
 };
 
@@ -71,13 +69,10 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
       postPermalinkStructure: getValidPostPermalinkStructure(
         settings.postPermalinkStructure,
       ),
-      postUrlPrefixEnabled: settings.postUrlPrefixEnabled ? "on" : "",
     },
   });
 
   const structure = useInputControl(fields.postPermalinkStructure);
-  const prefixEnabled = useInputControl(fields.postUrlPrefixEnabled);
-  const isPrefixOn = prefixEnabled.value === "on";
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -87,15 +82,14 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
   }, [lastResult, router]);
 
   const getPreviewUrl = () => {
-    const prefix = isPrefixOn ? "/posts" : "";
     switch (structure.value) {
       case PostPermalinkStructure.date_name:
-        return `${prefix}/2026/01/article-title`;
+        return "/blog/2026/01/article-title";
       case PostPermalinkStructure.category_name:
-        return `${prefix}/technology/article-title`;
+        return "/blog/technology/article-title";
       case PostPermalinkStructure.post_name:
       default:
-        return `${prefix}/article-title`;
+        return "/blog/article-title";
     }
   };
 
@@ -109,44 +103,6 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
           <CardDescription>投稿記事のURL構造を設定します</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <label
-                className="text-base font-medium"
-                htmlFor={fields.postUrlPrefixEnabled.id}
-              >
-                /posts/ プレフィックス
-              </label>
-              <p className="text-sm text-muted-foreground">
-                URLに /posts/ を含める（推奨）
-              </p>
-            </div>
-            <Switch
-              id={fields.postUrlPrefixEnabled.id}
-              checked={isPrefixOn}
-              onCheckedChange={(checked) =>
-                prefixEnabled.change(checked ? "on" : "")
-              }
-              onBlur={prefixEnabled.blur}
-              disabled={isPending}
-            />
-            <input
-              type="hidden"
-              name={fields.postUrlPrefixEnabled.name}
-              value={isPrefixOn ? "on" : ""}
-            />
-          </div>
-
-          {!isPrefixOn && (
-            <div className="rounded-md border border-warning/20 bg-warning/10 p-4">
-              <p className="text-sm text-warning-foreground">
-                プレフィックスを無効にすると、投稿のスラッグがルートレベルで使用されます。
-                既存の静的ページ（about, contact
-                等）や予約パスと衝突しないよう注意してください。
-              </p>
-            </div>
-          )}
-
           <div className="space-y-1.5">
             <label
               className="block text-sm font-medium text-foreground"

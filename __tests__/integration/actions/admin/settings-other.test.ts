@@ -78,7 +78,6 @@ const announcementBarCarouselSettingsSchema = z.object({
 
 const permalinkSettingsSchema = z.object({
   postPermalinkStructure: z.enum(PostPermalinkStructure),
-  postUrlPrefixEnabled: z.boolean(),
 });
 
 const robotsTxtSettingsSchema = z.object({
@@ -133,7 +132,6 @@ const VALID_ANNOUNCEMENT_BAR_INPUT = {
 
 const VALID_PERMALINK_INPUT = {
   postPermalinkStructure: PostPermalinkStructure.post_name,
-  postUrlPrefixEnabled: true,
 };
 
 const VALID_SIDEBAR_INPUT = {
@@ -649,18 +647,6 @@ describe("Settings Other Admin Action Integration", () => {
         expect(result.success).toBe(false);
       });
     });
-
-    describe("postUrlPrefixEnabled", () => {
-      test("booleanは許可", () => {
-        for (const value of [true, false]) {
-          const result = permalinkSettingsSchema.safeParse({
-            ...VALID_PERMALINK_INPUT,
-            postUrlPrefixEnabled: value,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-    });
   });
 
   // ===========================================================================
@@ -812,9 +798,7 @@ describe("Settings Other Admin Action Integration", () => {
     });
 
     test("permalinkSettingsSchema: postPermalinkStructure欠落はエラー", () => {
-      const result = permalinkSettingsSchema.safeParse({
-        postUrlPrefixEnabled: true,
-      });
+      const result = permalinkSettingsSchema.safeParse({});
       expect(result.success).toBe(false);
     });
   });

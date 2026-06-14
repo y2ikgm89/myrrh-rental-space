@@ -137,12 +137,10 @@ export async function getPermalinkSettings() {
       prisma.settings.findUnique({
         where: { id: "singleton" },
         select: {
-          postUrlPrefixEnabled: true,
           postPermalinkStructure: true,
         },
       }),
     fallback: {
-      postUrlPrefixEnabled: true,
       postPermalinkStructure: PostPermalinkStructure.post_name,
     },
     category: ErrorCategory.DATABASE,
@@ -151,9 +149,4 @@ export async function getPermalinkSettings() {
   });
 
   return toPlainObject(result);
-}
-
-export async function getPostUrlPrefix(): Promise<string> {
-  const settings = await getPermalinkSettings();
-  return (settings?.postUrlPrefixEnabled ?? true) ? "/posts" : "";
 }
