@@ -146,6 +146,22 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Legacy URL redirects（恒久 308）
+  // ブログ一覧 URL を /posts → /blog に統一した移行。公開済み URL の被リンク / SEO 評価を
+  // 新 URL に引き継ぐため、Google 公式推奨どおりサーバー側の恒久リダイレクトを張る。
+  // 公式: https://developers.google.com/search/docs/crawling-indexing/301-redirects
+  //   （permanent: true → 308。検索エンジン / クライアントに恒久キャッシュさせる）
+  async redirects() {
+    return [
+      { source: "/posts", destination: "/blog", permanent: true },
+      {
+        source: "/posts/:path*",
+        destination: "/blog/:path*",
+        permanent: true,
+      },
+    ];
+  },
+
   // Cache-Control（セキュリティヘッダーは proxy.ts に集約）
   async headers() {
     return [

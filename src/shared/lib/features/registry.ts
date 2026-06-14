@@ -88,8 +88,10 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     label: "ブログ",
     description:
       "/blog のブログ記事一覧・詳細（カテゴリ / タグ別アーカイブ含む）",
-    publicRoutes: ["/posts", "/blog", "/category", "/tag"],
-    pageSlugs: ["posts"],
+    // /blog に URL 統一済み。旧 /posts は next.config の 308 redirect で /blog へ誘導
+    publicRoutes: ["/blog", "/category", "/tag"],
+    // system page slug は "blog"（旧 "posts" は SYSTEM_PAGES に存在しない）
+    pageSlugs: ["blog"],
     sectionTypes: ["post-list"],
     templates: ["blog-archive"],
     cronPaths: [],

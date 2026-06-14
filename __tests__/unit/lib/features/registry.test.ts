@@ -7,6 +7,7 @@ import {
   parseDisabledFeatureModulesEnv,
   type FeatureModule,
 } from "@/shared/lib/features/registry";
+import { SYSTEM_PAGE_SLUGS } from "@/shared/lib/validations/page";
 
 describe("FEATURE_MODULES_LIST", () => {
   test("9 module を含む", () => {
@@ -59,6 +60,27 @@ describe("FEATURE_MODULES metadata", () => {
       expect(Array.isArray(def.sectionTypes)).toBe(true);
       expect(Array.isArray(def.templates)).toBe(true);
       expect(Array.isArray(def.cronPaths)).toBe(true);
+    }
+  });
+});
+
+describe("FEATURE_MODULES routing alignment (legacy /posts → /blog 移行)", () => {
+  test("posts module は /blog に統一され /posts 残骸を持たない", () => {
+    const posts = FEATURE_MODULES.posts;
+    // pageSlugs は実 system page slug "blog" を指す（旧 "posts" は存在しない）
+    expect(posts.pageSlugs).toEqual(["blog"]);
+    // publicRoutes は /blog 系のみ。/posts は next.config の 308 redirect で処理する
+    expect(posts.publicRoutes).toContain("/blog");
+    expect(posts.publicRoutes).not.toContain("/posts");
+  });
+
+  test("pageSlugs はすべて実在のシステムページ slug を指す（events 除く）", () => {
+    // events はアーカイブページで SYSTEM_PAGES に slug を持たない既知の例外（別途調査）
+    const systemBacked = FEATURE_MODULES_LIST.filter((id) => id !== "events");
+    for (const id of systemBacked) {
+      for (const slug of FEATURE_MODULES[id].pageSlugs) {
+        expect(SYSTEM_PAGE_SLUGS).toContain(slug);
+      }
     }
   });
 });
