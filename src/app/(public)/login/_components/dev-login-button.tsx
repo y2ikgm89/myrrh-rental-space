@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { getErrorMessage } from "@/shared/lib/errors";
-import { signIn } from "@/shared/lib/customer-auth-client";
-import { ensureDevUserAction } from "./dev-login-action";
-import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
+import { devCustomerLoginAction } from "./dev-login-action";
 
 export function DevLoginButton() {
   const [isPending, startTransition] = useTransition();
@@ -13,28 +10,10 @@ export function DevLoginButton() {
   const handleClick = () => {
     setError(null);
     startTransition(async () => {
-      try {
-        // 1. Server Action でテストユーザーの存在確認 + 作成（idempotent）
-        const ensureResult = await ensureDevUserAction();
-        if (!ensureResult.success) {
-          setError(ensureResult.error);
-          return;
-        }
-        // 2. Better Auth Client API でサインイン
-        //    callbackURL で自動 redirect → Set-Cookie + Router Cache 自動更新（公式パターン）
-        await signIn.email({
-          email: DEV_CUSTOMER_CREDENTIALS.email,
-          password: DEV_CUSTOMER_CREDENTIALS.password,
-          callbackURL: "/mypage",
-          fetchOptions: {
-            onError: (ctx) => {
-              setError(ctx.error.message ?? "テストログインに失敗しました");
-            },
-          },
-        });
-      } catch (err) {
-        setError(getErrorMessage(err));
-      }
+      // ユーザー作成 + サインインはすべてサーバーアクション内で完結する。
+      // 認証情報はクライアントに出さず、成功時はサーバー側 redirect("/mypage") で遷移。
+      const result = await devCustomerLoginAction();
+      if (result?.error) setError(result.error);
     });
   };
 

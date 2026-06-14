@@ -1,29 +1,33 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { customerAuth } from "@/shared/lib/customer-auth";
 import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
 
 /**
- * dev テストユーザーの存在確認と作成のみ担当する Server Action。
- * サインイン自体は Better Auth 公式推奨パターンに従い Client `signIn.email` で実施
- * （Router Cache + Set-Cookie の自動 invalidation を Next.js 統合に委ねるため）。
+ * dev 専用テスト顧客でのログイン（ユーザー作成 + サインインをサーバー側で完結）。
+ *
+ * - 認証情報は server-only モジュールに置き、クライアントバンドルに出さない。
+ * - サインインは `customerAuth.api.signInEmail` をサーバー側で実行し、
+ *   `nextCookies()` プラグインが Set-Cookie を自動処理する（Better Auth 公式パターン）。
+ * - 成功時はサーバー側 `redirect("/mypage")` でナビゲートする。
+ * - CI E2E は production build + `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` opt-in で利用。
+ *   staging / production には build env 不在のため絶対伝播しない（build env 限定）。
  */
-export async function ensureDevUserAction(): Promise<
-  { success: true } | { success: false; error: string }
-> {
-  // CI E2E は production build + `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` opt-in で
-  // DevLoginButton を表示する pattern（→ `auth-patterns/customer-social.md`）。
-  // server action 側も同 opt-in を尊重しないと「ボタンは出るが押しても失敗」する
-  // silent UX bug。staging / production には絶対伝播しない（build env 限定）。
+export async function devCustomerLoginAction(): Promise<{
+  error: string;
+} | void> {
   if (
     process.env["NODE_ENV"] === "production" &&
     process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] !== "1"
   ) {
-    return { success: false, error: "本番環境では利用できません" };
+    return { error: "本番環境では利用できません" };
   }
 
   const reqHeaders = await headers();
+
+  // 1. テストユーザーの存在確認 + 作成（idempotent）
   try {
     await customerAuth.api.signUpEmail({
       body: {
@@ -36,5 +40,19 @@ export async function ensureDevUserAction(): Promise<
   } catch {
     // ユーザー既存の場合は 400 で throw されるので無視（idempotent）
   }
-  return { success: true };
+
+  // 2. サーバー側サインイン（nextCookies が Set-Cookie を自動処理）
+  try {
+    await customerAuth.api.signInEmail({
+      body: {
+        email: DEV_CUSTOMER_CREDENTIALS.email,
+        password: DEV_CUSTOMER_CREDENTIALS.password,
+      },
+      headers: reqHeaders,
+    });
+  } catch {
+    return { error: "テストログインに失敗しました" };
+  }
+
+  redirect("/mypage");
 }
