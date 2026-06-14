@@ -44,7 +44,7 @@ export interface SectionListItemProps {
    * 削除ボタンを表示するが disabled にし、tooltip でこの理由を表示する。
    * `canDelete=true` のときのみ有効。`canDelete=false`（page-hero 等）の場合は
    * 従来通り削除メニューアイテム自体を非表示にする。
-   * spec §5.2: PAGE_TEMPLATES.requiredSectionTypes に含まれる section で使用。
+   * PAGE_TEMPLATES.requiredSectionTypes に含まれる section で使用。
    */
   readonly disableDeleteReason?: string;
 }

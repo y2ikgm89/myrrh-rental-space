@@ -18,8 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        # SHA 直 pin (公式 security best practice、詳細は
-        # .claude/rules/ops/ci-workflow.md §8.1)
+        # SHA 直 pin（公式 security best practice。tag force-push 攻撃 + codeload 404 outage 対策）
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
       # rhysd/actionlint: GitHub Actions workflow の lint（syntax + expression + shellcheck）

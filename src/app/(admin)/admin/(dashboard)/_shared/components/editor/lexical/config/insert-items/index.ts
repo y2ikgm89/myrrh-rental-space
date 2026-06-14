@@ -18,7 +18,7 @@
  * - **dialog**: `editor.update` の **外** で `openDialog(dialogId)` を同期呼び出し
  *   （React state side-effect のため editor.update 内で起動しない）
  *
- * @remarks Lexical 内部の barrel export として許容（`.claude/rules/gotchas.md` §Lexical 例外）。
+ * @remarks Lexical 内部の barrel export として許容（外部公開 API ではなく editor 内部の集約）。
  */
 
 import type { LexicalEditor } from "lexical";

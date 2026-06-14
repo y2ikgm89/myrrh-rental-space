@@ -50,11 +50,8 @@ export function MobileEditorFallback({
             <code className="rounded bg-muted px-1 py-0.5 text-foreground">
               EMPTY_LEXICAL_EDITOR_STATE_JSON
             </code>{" "}
-            を渡すか、{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-foreground">
-              .claude/rules/prisma-patterns/lexical-storage.md
-            </code>{" "}
-            §レガシー行の一括修正 に従ってデータを修正してください。
+            を渡すか、有効な Lexical EditorState JSON
+            でデータを修正してください。
           </p>
         </div>
       ) : previewHtml ? (

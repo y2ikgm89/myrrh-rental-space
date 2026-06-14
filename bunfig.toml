@@ -1,7 +1,7 @@
 # Bun 設定ファイル
 # https://bun.com/docs/runtime/bunfig
 #
-# Bun 1.3.x 公式仕様準拠。詳細運用は .claude/rules/bun-patterns.md。
+# Bun 1.3.x 公式仕様準拠。運用方針は以下の通り。
 #
 # - install: `bun install --frozen-lockfile` (CI) / `bun install` (local) でデフォルト動作
 # - run: package.json scripts は `bunx --bun <bin>` で bun runtime を明示

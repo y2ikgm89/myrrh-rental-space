@@ -1,7 +1,7 @@
 # =============================================================================
 #  .gcloudignore
 #  Cloud Build ソースアップロードから除外。`.gitignore` を継承。
-#  Reference: .claude/rules/ops/deployment/secrets-and-ignore.md
+#  秘密情報（.env*）はソースアップロードに含めない。
 # =============================================================================
 
 #!include:.gitignore

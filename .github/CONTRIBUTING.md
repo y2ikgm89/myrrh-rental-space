@@ -147,7 +147,7 @@ PR template（[`pull_request_template.md`](./pull_request_template.md)）を埋�
 
 ## 品質ゲート
 
-CI で実行される必須 / opt-in job の SSoT は [`.claude/rules/ops/ci-workflow.md`](../.claude/rules/ops/ci-workflow.md)。重い job（E2E / Visual / Lighthouse）は PR label / `workflow_dispatch` で opt-in。
+CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job（E2E / Visual / Lighthouse）は PR label / `workflow_dispatch` で opt-in。
 
 ## セキュリティ
 
