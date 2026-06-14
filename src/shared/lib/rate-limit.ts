@@ -24,6 +24,8 @@
  */
 
 import { LRUCache } from "lru-cache";
+import { serverEnv } from "@/shared/lib/env/server";
+import { timingSafeEqual } from "@/shared/lib/timing-safe-equal";
 
 export interface RateLimitResult {
   success: boolean;
@@ -126,25 +128,75 @@ export function createRateLimiter(
 }
 
 /**
- * リクエストからIPアドレスを取得
+ * Cloudflare をバイパスした直アクセスを集約する固定バケットキー。
+ *
+ * origin lock 有効時、`x-origin-verify` シークレットが一致しない（= Cloudflare
+ * 経由を証明できない）リクエストは全てこのキーに合算される。これにより
+ * IP ローテーションによる制限回避と、他ユーザー bucket の汚染（lockout）を
+ * 同時に無効化する。
  */
-export function getClientIp(request: Request): string {
-  // Cloudflare
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
-  if (cfConnectingIp) return cfConnectingIp;
+const DIRECT_UNTRUSTED_BUCKET = "direct-untrusted";
 
-  // X-Forwarded-For（プロキシ経由）
-  const xForwardedFor = request.headers.get("x-forwarded-for");
-  if (xForwardedFor) {
-    const ips = xForwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0] ?? "unknown";
+/** Cloudflare Transform Rule が注入する origin 検証ヘッダー名 */
+const ORIGIN_VERIFY_HEADER = "x-origin-verify";
+
+/**
+ * ヘッダーアクセサからレート制限用のクライアント識別子（IP）を解決する純粋関数。
+ *
+ * **信頼境界（H3 対策）:**
+ * Cloud Run の ingress が制限されていない場合、`*.run.app` へ直接到達でき
+ * `cf-connecting-ip` / `x-forwarded-for` は偽装可能。`originSecret` が設定されて
+ * いる場合のみ、Cloudflare が `x-origin-verify` に注入したシークレットが一致する
+ * リクエスト（= Cloudflare 経由が証明されたもの）の `cf-connecting-ip` を信頼する。
+ * 一致しない直アクセスは {@link DIRECT_UNTRUSTED_BUCKET} に集約する。
+ *
+ * `originSecret` が未設定（default）の場合は従来どおり
+ * `cf-connecting-ip` → `x-forwarded-for[0]` → `x-real-ip` の順で best-effort 解決し、
+ * 既存挙動を保つ（安全側のデフォルト = origin lock はオプトイン）。
+ *
+ * @param getHeader - ヘッダー名から値（無ければ null）を返すアクセサ
+ * @param originSecret - `serverEnv.CLOUDFLARE_ORIGIN_SECRET`（未設定なら undefined）
+ */
+export function resolveClientIp(
+  getHeader: (name: string) => string | null,
+  originSecret: string | undefined,
+): string {
+  if (originSecret) {
+    const provided = getHeader(ORIGIN_VERIFY_HEADER);
+    const viaCloudflare =
+      provided !== null && timingSafeEqual(provided, originSecret);
+    if (viaCloudflare) {
+      const cfConnectingIp = getHeader("cf-connecting-ip");
+      if (cfConnectingIp) return cfConnectingIp;
+    }
+    // Cloudflare をバイパスした直アクセス: 偽装ヘッダーを信頼しない
+    return DIRECT_UNTRUSTED_BUCKET;
   }
 
-  // X-Real-IP
-  const xRealIp = request.headers.get("x-real-ip");
+  // origin lock 無効（default）: 従来の best-effort 解決
+  const cfConnectingIp = getHeader("cf-connecting-ip");
+  if (cfConnectingIp) return cfConnectingIp;
+
+  const xForwardedFor = getHeader("x-forwarded-for");
+  if (xForwardedFor) {
+    const first = xForwardedFor.split(",")[0]?.trim();
+    if (first) return first;
+  }
+
+  const xRealIp = getHeader("x-real-ip");
   if (xRealIp) return xRealIp;
 
   return "unknown";
+}
+
+/**
+ * リクエストからレート制限用のクライアント識別子を取得（proxy 用）
+ */
+export function getClientIp(request: Request): string {
+  return resolveClientIp(
+    (name) => request.headers.get(name),
+    serverEnv.CLOUDFLARE_ORIGIN_SECRET,
+  );
 }
 
 // デフォルトのAPI用レート制限（100リクエスト/分/IP）
@@ -199,23 +251,14 @@ export async function checkRateLimit(
 }
 
 /**
- * Server Action 用のIP取得（headers() 経由）
+ * Server Action 用のIP取得（headers() 経由）。proxy 用 {@link getClientIp} と
+ * 同じ信頼境界ロジック（{@link resolveClientIp}）を共有する。
  */
 export async function getClientIpFromHeaders(): Promise<string> {
   const { headers } = await import("next/headers");
   const hdrs = await headers();
-
-  const cfConnectingIp = hdrs.get("cf-connecting-ip");
-  if (cfConnectingIp) return cfConnectingIp;
-
-  const xForwardedFor = hdrs.get("x-forwarded-for");
-  if (xForwardedFor) {
-    const ips = xForwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0] ?? "unknown";
-  }
-
-  const xRealIp = hdrs.get("x-real-ip");
-  if (xRealIp) return xRealIp;
-
-  return "unknown";
+  return resolveClientIp(
+    (name) => hdrs.get(name),
+    serverEnv.CLOUDFLARE_ORIGIN_SECRET,
+  );
 }
