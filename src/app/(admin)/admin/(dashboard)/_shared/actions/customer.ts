@@ -14,7 +14,7 @@ import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { checkPermission } from "@/admin/lib/action-auth";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   customerFormSchema,
@@ -231,7 +231,9 @@ export async function mergeCustomers(
 export async function searchCustomersAction(
   query: string,
 ): Promise<Awaited<ReturnType<typeof searchCustomers>>> {
-  const auth = await checkAdminAuth();
+  // 顧客 PII 検索は customer:read 権限必須。checkAdminAuth は認証のみで全ダッシュボード
+  // ロール（customer:read を持たない EDITOR 含む）を通すため RBAC バイパスになる。
+  const auth = await checkPermission("customer", "read");
   if (!auth.success) return [];
   return searchCustomers(query);
 }
