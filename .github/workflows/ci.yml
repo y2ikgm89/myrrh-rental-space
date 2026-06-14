@@ -44,6 +44,10 @@ env:
   # ubuntu-latest は 16 GB RAM 確保されているため 4 GB 割当で確実に賄える。
   NODE_OPTIONS: "--max-old-space-size=4096"
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+  # 実 DB 必須の統合テスト（イベント overbooking TOCTOU 等）が接続するテスト DB。
+  # 未設定だと当該テストは describe ごと skip される（dev DB 誤汚染防止の安全弁）。
+  # unit-tests job が postgres service + `prisma migrate deploy` 済みのため同値を渡す。
+  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
   # server.ts の z.string().min(32) と整合（短い値だと将来 server env を読むテストで破綻する）
   BETTER_AUTH_SECRET: test-secret-key-for-ci-0123456789abcdef0123456789ab
   BETTER_AUTH_URL: http://localhost:3000
