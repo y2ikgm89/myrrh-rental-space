@@ -123,12 +123,12 @@ export function AutoSectionForm({
 
   // conform useForm: callback-based form（onSave 起動）
   // 動的 schema のため defaultValue / onValidate の戻り値 / form.update に境界変換が必要
-  // (型 ledger §5/§7 と同列の generic invariance 対応)
+  // (conform generic invariance 境界対応。方針: .claude/rules/type-safety.md)
   const [form, fields] = useForm<Record<string, unknown>>({
     id: `auto-section-${section.id}`,
     // defaultValue: 内部的に boolean/number/array/object を含むが、conform は runtime で
     // FormData string にシリアライズするため実害なし
-    // (ledger §5 — typed-input-control SSoT helper 経由)
+    // (typed-input-control SSoT helper 経由。方針: .claude/rules/type-safety.md)
     defaultValue: asConformLooseRecord(defaultConfig),
     onValidate({ formData }) {
       // schema が未定義のケースも parseWithZod 経由で Submission を返す（reply 等の API 完備のため）

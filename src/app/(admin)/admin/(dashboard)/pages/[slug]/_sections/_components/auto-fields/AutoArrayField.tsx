@@ -19,7 +19,7 @@ import {
 } from "@/shared/lib/conform/typed-input-control";
 
 // 動的 schema 用の insert/remove 制御関数 境界変換型
-// (ledger §5 conform generic invariance — typed-input-control SSoT helper 経由)。
+// (conform generic invariance — typed-input-control SSoT helper 経由。方針: .claude/rules/type-safety.md)。
 // conform の Intent / FieldName は branded type のため、name と defaultValue を
 // 緩めた function signature を helper で集約する。
 // 制御関数を直接呼ぶ（form.insert(...) / form.remove(...)）ことで conform が

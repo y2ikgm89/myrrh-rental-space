@@ -129,7 +129,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const isBodyDirty = contentJson !== savedContentJson;
 
   // 設定 — conform useForm
-  // ledger §5 conform generic invariance — typed-input-control SSoT helper 経由
+  // conform generic invariance — typed-input-control SSoT helper 経由（方針: .claude/rules/type-safety.md）
   const [settingsForm, settingsFields] = useForm<NewsSettingsFormData>({
     id: "news-settings-form",
     constraint: getZodConstraint(newsSettingsFormSchema),

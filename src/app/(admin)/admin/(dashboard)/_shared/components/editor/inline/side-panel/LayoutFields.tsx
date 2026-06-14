@@ -10,7 +10,7 @@
  * `FieldMetadata<T>` は invariant のため、Pure Component に値・error 文字列・
  * callback のみを渡し、Connected ラッパーで型ブリッジする。境界 cast は
  * `@/shared/lib/conform/typed-input-control` の `useTypedInputControl` helper
- * 内に集約済 (assertion-bans.md §6)。
+ * 内に集約済（方針: .claude/rules/type-safety.md）。
  */
 
 import { type FieldMetadata } from "@conform-to/react";
@@ -138,7 +138,7 @@ export function LayoutFields({
  *
  * `FieldMetadata<T>` の generic invariance を Pure Component に Pure 値で
  * 透過する。境界 cast は `useTypedInputControl` helper 内に集約済
- * (assertion-bans.md §6)。
+ * （方針: .claude/rules/type-safety.md）。
  */
 export function LayoutFieldsConnected<TForm extends Record<string, unknown>>({
   fields,
