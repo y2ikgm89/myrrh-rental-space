@@ -89,13 +89,7 @@ docs(agents): document Prisma re-export gateway rules
 
 ### 1. 計画作成（大規模変更）
 
-大きな機能追加・破壊的変更は事前に計画を作成：
-
-```bash
-# docs/superpowers/plans/YYYY-MM-DD-<name>.md を docs/templates/plan.md からコピー
-```
-
-詳細は [`docs/superpowers/plans/`](../docs/superpowers/plans/) と [`docs/templates/`](../docs/templates/) を参照。
+大きな機能追加・破壊的変更は、PR description に設計意図・トレードオフ・移行手順を明記してから着手する（過去の判断は git log / 関連 PR で辿る）。
 
 ### 2. 実装
 
