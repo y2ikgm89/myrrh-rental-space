@@ -5,7 +5,6 @@ import { prisma } from "@/shared/db/prisma";
 import {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
-  PostPermalinkStructure,
 } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
@@ -13,7 +12,6 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { toPlainObject } from "@/shared/lib/serialize";
 import {
   isValidHeaderBackgroundMode,
   isValidHeaderScrollBehavior,
@@ -125,28 +123,4 @@ export async function getFooterSettings(): Promise<FooterSettings> {
       useLogo: result?.useFooterLogo ?? true,
     },
   };
-}
-
-export async function getPermalinkSettings() {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.PERMALINK);
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          postPermalinkStructure: true,
-        },
-      }),
-    fallback: {
-      postPermalinkStructure: PostPermalinkStructure.post_name,
-    },
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getPermalinkSettings",
-  });
-
-  return toPlainObject(result);
 }

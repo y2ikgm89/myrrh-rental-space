@@ -11,7 +11,6 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { SidebarWidget } from "@/shared/lib/validations/sidebar";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 
 // ---------------------------------------------------------------------------
@@ -80,82 +79,77 @@ export async function getSidebarData(
     category: { select: { name: true, slug: true } },
   } as const;
 
-  const [recentRaw, popularRaw, categoriesRaw, tagsRaw, permalinkSettings] =
-    await Promise.all([
-      needRecent
-        ? safeFetch({
-            fetch: () =>
-              prisma.post.findMany({
-                where: publishedWhere,
-                select: postSelect,
-                orderBy: { publishedAt: "desc" },
-                take: recentCount,
-              }),
-            fallback: [],
-            category: ErrorCategory.DATABASE,
-            severity: ErrorSeverity.LOW,
-            operationName: "getSidebarRecentPosts",
-          })
-        : Promise.resolve([]),
+  const [recentRaw, popularRaw, categoriesRaw, tagsRaw] = await Promise.all([
+    needRecent
+      ? safeFetch({
+          fetch: () =>
+            prisma.post.findMany({
+              where: publishedWhere,
+              select: postSelect,
+              orderBy: { publishedAt: "desc" },
+              take: recentCount,
+            }),
+          fallback: [],
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          operationName: "getSidebarRecentPosts",
+        })
+      : Promise.resolve([]),
 
-      needPopular
-        ? safeFetch({
-            fetch: () =>
-              prisma.post.findMany({
-                where: publishedWhere,
-                select: postSelect,
-                orderBy: { viewCount: "desc" },
-                take: popularCount,
-              }),
-            fallback: [],
-            category: ErrorCategory.DATABASE,
-            severity: ErrorSeverity.LOW,
-            operationName: "getSidebarPopularPosts",
-          })
-        : Promise.resolve([]),
+    needPopular
+      ? safeFetch({
+          fetch: () =>
+            prisma.post.findMany({
+              where: publishedWhere,
+              select: postSelect,
+              orderBy: { viewCount: "desc" },
+              take: popularCount,
+            }),
+          fallback: [],
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          operationName: "getSidebarPopularPosts",
+        })
+      : Promise.resolve([]),
 
-      needCategories
-        ? safeFetch({
-            fetch: () =>
-              prisma.postCategory.findMany({
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  _count: {
-                    select: {
-                      posts: { where: publishedWhere },
-                    },
+    needCategories
+      ? safeFetch({
+          fetch: () =>
+            prisma.postCategory.findMany({
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                _count: {
+                  select: {
+                    posts: { where: publishedWhere },
                   },
                 },
-                orderBy: { name: "asc" },
-              }),
-            fallback: [],
-            category: ErrorCategory.DATABASE,
-            severity: ErrorSeverity.LOW,
-            operationName: "getSidebarCategories",
-          })
-        : Promise.resolve([]),
+              },
+              orderBy: { name: "asc" },
+            }),
+          fallback: [],
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          operationName: "getSidebarCategories",
+        })
+      : Promise.resolve([]),
 
-      needTags
-        ? safeFetch({
-            fetch: () =>
-              prisma.postTag.findMany({
-                where: { posts: { some: { post: publishedWhere } } },
-                select: { id: true, name: true, slug: true },
-                orderBy: { name: "asc" },
-              }),
-            fallback: [],
-            category: ErrorCategory.DATABASE,
-            severity: ErrorSeverity.LOW,
-            operationName: "getSidebarTags",
-          })
-        : Promise.resolve([]),
-
-      needRecent || needPopular
-        ? getPermalinkSettings()
-        : Promise.resolve(null),
-    ]);
+    needTags
+      ? safeFetch({
+          fetch: () =>
+            prisma.postTag.findMany({
+              where: { posts: { some: { post: publishedWhere } } },
+              select: { id: true, name: true, slug: true },
+              orderBy: { name: "asc" },
+            }),
+          fallback: [],
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          operationName: "getSidebarTags",
+        })
+      : Promise.resolve([]),
+  ]);
 
   const mapPost = (p: {
     id: string;
@@ -167,7 +161,7 @@ export async function getSidebarData(
   }): SidebarPostItem => ({
     id: p.id,
     title: p.title,
-    url: buildPostCanonicalPath(p, permalinkSettings ?? undefined),
+    url: buildPostCanonicalPath(p),
     publishedAt: p.publishedAt?.toISOString() ?? null,
     thumbnailUrl: p.thumbnailUrl,
     category: p.category,

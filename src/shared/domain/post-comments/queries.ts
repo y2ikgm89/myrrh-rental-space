@@ -3,7 +3,6 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import type {
   AdminCommentData,
   CommentFilters,
@@ -18,28 +17,25 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 
-function toAdminCommentData(
-  comment: {
+function toAdminCommentData(comment: {
+  id: string;
+  content: string;
+  userId: string | null;
+  guestName: string | null;
+  guestEmail: string | null;
+  parentCommentId: string | null;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+  createdAt: Date;
+  user: { id: string; name: string | null } | null;
+  post: {
     id: string;
-    content: string;
-    userId: string | null;
-    guestName: string | null;
-    guestEmail: string | null;
-    parentCommentId: string | null;
-    isDeleted: boolean;
-    deletedAt: Date | null;
-    createdAt: Date;
-    user: { id: string; name: string | null } | null;
-    post: {
-      id: string;
-      title: string;
-      slug: string;
-      publishedAt: Date | null;
-      category: { slug: string } | null;
-    };
-  },
-  permalinkSettings: Awaited<ReturnType<typeof getPermalinkSettings>>,
-): AdminCommentData {
+    title: string;
+    slug: string;
+    publishedAt: Date | null;
+    category: { slug: string } | null;
+  };
+}): AdminCommentData {
   return {
     id: comment.id,
     content: comment.content,
@@ -47,14 +43,11 @@ function toAdminCommentData(
     postId: comment.post.id,
     postTitle: comment.post.title,
     postSlug: comment.post.slug,
-    postUrl: buildPostCanonicalPath(
-      {
-        slug: comment.post.slug,
-        publishedAt: comment.post.publishedAt,
-        category: comment.post.category,
-      },
-      permalinkSettings ?? undefined,
-    ),
+    postUrl: buildPostCanonicalPath({
+      slug: comment.post.slug,
+      publishedAt: comment.post.publishedAt,
+      category: comment.post.category,
+    }),
     parentCommentId: comment.parentCommentId,
     isDeleted: comment.isDeleted,
     deletedAt: comment.deletedAt?.toISOString() ?? null,
@@ -93,7 +86,7 @@ export async function getAdminComments(
   }
 
   try {
-    const [total, comments, permalinkSettings] = await Promise.all([
+    const [total, comments] = await Promise.all([
       prisma.postComment.count({ where }),
       prisma.postComment.findMany({
         where,
@@ -133,13 +126,10 @@ export async function getAdminComments(
         skip,
         take: limit,
       }),
-      getPermalinkSettings(),
     ]);
 
     return {
-      comments: comments.map((comment) =>
-        toAdminCommentData(comment, permalinkSettings),
-      ),
+      comments: comments.map((comment) => toAdminCommentData(comment)),
       total,
       page,
       limit,

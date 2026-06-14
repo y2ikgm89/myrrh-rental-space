@@ -7,7 +7,6 @@ import type {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
   LayoutWidth,
-  PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
 } from "@generated/prisma/enums";
@@ -142,7 +141,6 @@ export type SettingsData = {
   sidebarRecentCount: number;
   sidebarPopularCount: number;
   sidebarTocEnabled: boolean;
-  postPermalinkStructure: PostPermalinkStructure | null;
   headerScrollBehavior: HeaderScrollBehavior;
   headerBackgroundMode: HeaderBackgroundMode;
   footerTagline: string | null;

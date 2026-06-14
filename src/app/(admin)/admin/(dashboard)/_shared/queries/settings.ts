@@ -55,13 +55,6 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
   return announcementBar.getAnnouncementBarCarouselSettings();
 }
 
-export async function getPermalinkSettings(): Promise<{
-  postPermalinkStructure: string;
-}> {
-  await requireAdminPermission("settings", "read");
-  return adminQueries.getAdminPermalinkSettings();
-}
-
 export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData | null> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getGoogleCalendarSettings();

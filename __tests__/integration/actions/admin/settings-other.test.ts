@@ -8,7 +8,6 @@
  * - cookieConsentSettingsSchema（Cookie同意設定）
  * - reservationSettingsSchema（予約設定）
  * - announcementBarCarouselSettingsSchema（お知らせバーカルーセル設定）
- * - permalinkSettingsSchema（パーマリンク設定）
  * - sidebarSettingsSchema（サイドバー設定）
  * - robotsTxtSettingsSchema（robots.txt設定）
  */
@@ -18,7 +17,6 @@ import { z } from "zod";
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-  PostPermalinkStructure,
 } from "@generated/prisma/enums";
 import {
   DEFAULT_SIDEBAR_WIDGETS,
@@ -76,10 +74,6 @@ const announcementBarCarouselSettingsSchema = z.object({
   announcementBarSticky: z.boolean(),
 });
 
-const permalinkSettingsSchema = z.object({
-  postPermalinkStructure: z.enum(PostPermalinkStructure),
-});
-
 const robotsTxtSettingsSchema = z.object({
   robotsTxtEnabled: z.boolean(),
   robotsTxtCustom: z
@@ -128,10 +122,6 @@ const VALID_ANNOUNCEMENT_BAR_INPUT = {
   announcementBarGradientAnimation: false,
   announcementBarGlassAnimation: false,
   announcementBarSticky: false,
-};
-
-const VALID_PERMALINK_INPUT = {
-  postPermalinkStructure: PostPermalinkStructure.post_name,
 };
 
 const VALID_SIDEBAR_INPUT = {
@@ -616,40 +606,6 @@ describe("Settings Other Admin Action Integration", () => {
   });
 
   // ===========================================================================
-  // permalinkSettingsSchema
-  // ===========================================================================
-
-  describe("permalinkSettingsSchema バリデーション", () => {
-    describe("正常系", () => {
-      test("有効なデータはバリデーション通過", () => {
-        const result = permalinkSettingsSchema.safeParse(VALID_PERMALINK_INPUT);
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("postPermalinkStructure", () => {
-      test("有効なパーマリンク構造", () => {
-        const validStructures = Object.values(PostPermalinkStructure);
-        for (const structure of validStructures) {
-          const result = permalinkSettingsSchema.safeParse({
-            ...VALID_PERMALINK_INPUT,
-            postPermalinkStructure: structure,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("無効なパーマリンク構造はエラー", () => {
-        const result = permalinkSettingsSchema.safeParse({
-          ...VALID_PERMALINK_INPUT,
-          postPermalinkStructure: "numeric",
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  // ===========================================================================
   // sidebarSettingsSchema
   // ===========================================================================
 
@@ -794,11 +750,6 @@ describe("Settings Other Admin Action Integration", () => {
         sidebarRecentCount: 5,
         sidebarPopularCount: 5,
       });
-      expect(result.success).toBe(false);
-    });
-
-    test("permalinkSettingsSchema: postPermalinkStructure欠落はエラー", () => {
-      const result = permalinkSettingsSchema.safeParse({});
       expect(result.success).toBe(false);
     });
   });

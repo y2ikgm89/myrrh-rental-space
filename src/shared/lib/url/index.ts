@@ -4,8 +4,4 @@
  * @module shared/lib/url
  */
 
-export {
-  generatePostUrl,
-  type PostUrlData,
-  type PermalinkConfig,
-} from "./post-url";
+export { generatePostUrl, type PostUrlData } from "./post-url";

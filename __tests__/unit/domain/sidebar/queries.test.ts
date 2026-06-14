@@ -33,11 +33,6 @@ mock.module("@generated/prisma/enums", () => ({
   PostStatus: { PUBLISHED: "PUBLISHED", DRAFT: "DRAFT" },
 }));
 
-// permalink settings は単純な passthrough mock（routing.ts で使用）
-mock.module("@/shared/domain/settings/queries/display", () => ({
-  getPermalinkSettings: () => Promise.resolve(null),
-}));
-
 // 公開 URL 生成ヘルパー
 mock.module("@/shared/domain/posts/routing", () => ({
   buildPostCanonicalPath: (p: { slug: string }) => `/blog/${p.slug}`,

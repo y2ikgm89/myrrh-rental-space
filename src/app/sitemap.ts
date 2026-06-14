@@ -18,7 +18,6 @@ import {
   buildCategoryPath,
   buildTagPath,
 } from "@/shared/domain/posts/routing";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import {
   getFeatureFilterContext,
   isUrlDisabled,
@@ -57,9 +56,8 @@ const STATIC_PAGES = [
 // =============================================================================
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // 設定 / 全データ / Feature filter を並列取得
-  const [permalinkSettings, content, featureCtx] = await Promise.all([
-    getPermalinkSettings(),
+  // 全データ / Feature filter を並列取得
+  const [content, featureCtx] = await Promise.all([
     getSitemapContentData(),
     getFeatureFilterContext(),
   ]);
@@ -138,7 +136,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("posts")) {
     for (const post of posts) {
       entries.push({
-        url: `${BASE_URL}${buildPostCanonicalPath(post, permalinkSettings ?? undefined)}`,
+        url: `${BASE_URL}${buildPostCanonicalPath(post)}`,
         lastModified: post.updatedAt,
       });
     }
