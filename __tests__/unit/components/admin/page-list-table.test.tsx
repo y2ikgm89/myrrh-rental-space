@@ -21,8 +21,7 @@ function Passthrough({
 // `@/admin/components/ui` barrel の全 export を stub する。
 // `mock.module` は registered に対して **完全モック**として上書きするため、
 // 一部だけ含めると後続テスト / 連鎖 import で
-// `Export named 'X' not found` が発生する（→ `bun-patterns.md` §mock.module の
-// グローバルスコープ干渉）。
+// `Export named 'X' not found` が発生する（mock.module のグローバルスコープ干渉）。
 const PassEl = ({
   children,
   ...props

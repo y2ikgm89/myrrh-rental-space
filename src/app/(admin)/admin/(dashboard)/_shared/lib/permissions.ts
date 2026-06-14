@@ -75,7 +75,7 @@ export function userHasPermission(
  *   でしか成立しない。slug や section ID を渡すと常に拒否される silent bug。
  * - section 等の **page 子リソース**で `checkResourceAccess: true` を使う場合は、
  *   `executeAdminMutationResult` の `resolveResourceId` callback で子 ID から
- *   親 page UUID を解決してから渡す（→ `auth-patterns.md`）。
+ *   親 page UUID を解決してから渡す。
  *
  * EDITOR の権限自体（`ROLE_PERMISSIONS.EDITOR`）は page / media / blockTemplate(read)
  * / notification(read) に絞られているため、他 resource はそもそも `hasPermission`

@@ -80,7 +80,6 @@ export function DeletedPagesDialog() {
    * イベントハンドラ内で startTransition により実行する。
    *
    * 旧パターン: useEffect([isOpen]) でダイアログ開閉に依存した暗黙的データ取得
-   * Rule: react/hooks/component-and-state.md §startTransition
    */
   const handleOpenChange = (next: boolean) => {
     setIsOpen(next);

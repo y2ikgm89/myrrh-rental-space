@@ -878,7 +878,7 @@ describe("architecture boundaries", () => {
 
   test("shared/ の外に Prisma 直 import を残さない", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
-    // AGENTS.md §Architecture Boundaries: app 層からの Prisma 直 import 禁止
+    // app 層からの Prisma 直 import 禁止（CLAUDE.md のアーキテクチャ境界）
     // (calendar-sync $queryRaw は @/shared/domain/calendar-sync/locks helper に集約済、例外なし)
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles

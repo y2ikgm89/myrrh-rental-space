@@ -98,7 +98,7 @@ async function clearAllData() {
   console.log("🗑️  Clearing all data...");
   console.log("");
 
-  // 依存関係の逆順で削除（interactive transaction — gotchas.md §トランザクション準拠）
+  // 依存関係の逆順で削除（interactive transaction）
   await prisma.$transaction(async (tx) => {
     // SpaceReview（FK: reservation / customer / space / user）
     await tx.spaceReview.deleteMany();

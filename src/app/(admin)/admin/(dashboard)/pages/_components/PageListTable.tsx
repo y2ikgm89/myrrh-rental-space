@@ -3,7 +3,7 @@
 /**
  * ページ一覧テーブル
  *
- * カラム順（admin-ui-patterns.md §テーブルカラム順序、canonical 順序）:
+ * カラム順（canonical 順序）:
  *   checkbox → タイトル → 種別 → スラッグ(sm+) → セクション数(md+) → 更新日時(md+) → ステータス → 操作
  *
  * - 空状態は `EmptyState` を表示し CreatePageDialog を起動する

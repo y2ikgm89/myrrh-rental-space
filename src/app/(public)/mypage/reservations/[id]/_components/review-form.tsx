@@ -51,7 +51,6 @@ type ReviewFormInnerProps = Omit<
  * - 両方 ON → ReviewFormInner
  *
  * precedence: global が上位 (WordPress / Ghost pattern)
- * → `react/hooks/component-and-state.md` §Outer/Inner Component Split 準拠
  */
 export function ReviewForm({
   reservationId,

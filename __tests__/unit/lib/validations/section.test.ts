@@ -430,8 +430,7 @@ describe("faqListConfigSchema", () => {
 
   // canonical schema (`definitions/faq-list/schema.ts`) の items[].question / answer は
   // `field.text()` / `field.textarea()` で min/max を schema 層に課さない。
-  // 必須・最大長検証は admin form の useFormAction + zodResolver が UI 層で担う設計
-  // （test-quality.md §Section schema test contract）。
+  // 必須・最大長検証は admin form の useFormAction + zodResolver が UI 層で担う設計。
 });
 
 // =============================================================================
@@ -686,8 +685,7 @@ describe("ctaConfigSchema", () => {
   // architectural contract: 全 section schema は safeParse({}) 成立必須
   // （`createTypedConfigGetterFromSchema` の fallback chain が空 config からの
   // 復元を要求するため）。タイトル等の "必須" 制約は UI 層 (admin form) で行い、
-  // schema 層は permissive で default 値を適用する。SSoT 詳細: ssot-singletons.md
-  // §Section schema 重複。
+  // schema 層は permissive で default 値を適用する。
   test("空 config でも default 値で safeParse 成功する", () => {
     const result = ctaConfigSchema.safeParse({});
     expect(result.success).toBe(true);

@@ -1,6 +1,6 @@
 /**
  * Zod 4: スキーマ引数で非推奨の `message:` が src に残っていないことを検証する。
- * AGENTS.md §Required Coding Rules: `{ error: "..." }` 形式。
+ * error メッセージは `{ error: "..." }` 形式を使う。
  */
 
 import { describe, expect, test } from "bun:test";

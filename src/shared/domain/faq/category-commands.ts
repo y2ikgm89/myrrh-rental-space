@@ -100,7 +100,6 @@ export async function updateFaqCategory(
 
 /**
  * カテゴリをソフトデリート。配下に未削除の質問が残っている場合は拒否。
- * gotchas.md §ソフトデリート 参照
  */
 export async function deleteFaqCategory(id: string): Promise<void> {
   const category = await prisma.faqCategory.findFirst({
@@ -196,7 +195,7 @@ export async function reorderFaqCategories(
     return;
   }
 
-  // Interactive transaction で pg deprecation 回避（gotchas.md §トランザクション）
+  // Interactive transaction で pg deprecation 回避
   await prisma.$transaction(async (tx) => {
     for (const [index, id] of orderedIds.entries()) {
       await tx.faqCategory.update({

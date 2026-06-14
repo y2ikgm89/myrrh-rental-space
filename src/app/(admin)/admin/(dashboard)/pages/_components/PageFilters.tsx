@@ -3,7 +3,7 @@
 /**
  * ページ管理フィルター
  *
- * 標準フィルターバーパターン（admin-ui-patterns.md §標準フィルターバー順序）:
+ * 標準フィルターバーパターン:
  *   検索 | ステータス | 種別
  *
  * - `useDebouncedCallback` で検索入力を 300ms debounce

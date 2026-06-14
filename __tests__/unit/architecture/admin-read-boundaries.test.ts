@@ -68,7 +68,6 @@ describe("admin read boundaries", () => {
   });
 
   // connection() は Suspense 内 async SC で必須のため、blanket-forbid はしない
-  // （admin-ui-patterns.md §管理画面 Suspense 内 async SC には `connection()` 配置 参照）
 
   test("legacy /api/admin/media を削除し、canonical /admin/api/media のみ残す", () => {
     expect(
