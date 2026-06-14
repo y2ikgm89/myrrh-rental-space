@@ -155,10 +155,10 @@ CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./w
 
 ## ハードルール
 
-ハードルールの SSoT は [`AGENTS.md`](../AGENTS.md)（Codex 用）と [`CLAUDE.md`](../CLAUDE.md)（Claude Code 用）です。本 CONTRIBUTING には複製しません（drift 防止）。
+ハードルールの SSoT は [`CLAUDE.md`](../CLAUDE.md) です（[`AGENTS.md`](../AGENTS.md) は Codex 等向けのエントリポイントで、内容は CLAUDE.md を参照）。本 CONTRIBUTING には複製しません（drift 防止）。
 
 ## 質問・サポート
 
-- プロジェクト固有の疑問: [`AGENTS.md`](../AGENTS.md) + [`.agents/skills/`](../.agents/skills/) を先に読む
-- 実装パターン: [`docs/explanation/`](../docs/explanation/)（設計の「なぜ」）/ [`docs/how-to/`](../docs/how-to/)（手順）を参照（過去の判断は git log で辿る）。ライブラリ API は公式 docs を直接参照
+- プロジェクト固有の疑問: [`CLAUDE.md`](../CLAUDE.md) + [`.claude/skills/`](../.claude/skills/) を先に読む
+- 実装パターン・設計の「なぜ」: [`CLAUDE.md`](../CLAUDE.md) / [`.claude/rules/`](../.claude/rules/) を参照（過去の判断は git log で辿る）。ライブラリ API は公式 docs を直接参照
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡
