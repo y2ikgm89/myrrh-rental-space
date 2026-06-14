@@ -17,14 +17,14 @@ import {
  * (既存 LayoutFields / AutoBooleanField の `typeof control.value === "string"`
  * パターンと同等)。
  *
- * ledger §5 conform `FieldMetadata<T>` generic invariance の唯一の許可場所。
+ * conform `FieldMetadata<T>` generic invariance の唯一の許可場所（方針: .claude/rules/type-safety.md）。
  * helper 外部で `as unknown as FieldMetadata<...>` を書くことは禁止。
  * 検知は `__tests__/unit/architecture-boundaries.test.ts` の grep gate。
  */
 export function useTypedInputControl(
   field: FieldMetadata<unknown>,
 ): ReturnType<typeof useInputControl<string>> {
-  // §5 generic invariance — 唯一の境界 cast
+  // generic invariance 境界 — 唯一の境界 cast
   return useInputControl(field as unknown as FieldMetadata<string>);
 }
 
@@ -39,7 +39,7 @@ export function useTypedInputControl(
 export function getTypedFieldList<T>(
   field: FieldMetadata<unknown>,
 ): ReadonlyArray<FieldMetadata<T>> {
-  // §5 generic invariance — 唯一の境界 cast
+  // generic invariance 境界 — 唯一の境界 cast
   const items = (field as unknown as FieldMetadata<unknown[]>).getFieldList();
   return items as unknown as ReadonlyArray<FieldMetadata<T>>;
 }
@@ -55,7 +55,7 @@ export function getTypedFieldList<T>(
 export function getTypedFieldset<T extends Record<string, unknown>>(
   field: FieldMetadata<unknown>,
 ): { readonly [K in keyof T]: FieldMetadata<T[K]> } {
-  // §5 generic invariance — 唯一の境界 cast
+  // generic invariance 境界 — 唯一の境界 cast
   const fieldset = (
     field as unknown as FieldMetadata<Record<string, unknown>>
   ).getFieldset();
@@ -73,7 +73,7 @@ export function getTypedFieldset<T extends Record<string, unknown>>(
 export function asTypedField<T>(
   field: FieldMetadata<unknown>,
 ): FieldMetadata<T> {
-  // §5 generic invariance — 唯一の境界 cast
+  // generic invariance 境界 — 唯一の境界 cast
   return field as unknown as FieldMetadata<T>;
 }
 
@@ -87,7 +87,7 @@ export function asTypedField<T>(
  * 用途: `defaultValue: asConformDefaultValue<PostSettingsFormData>(toSettingsFormData(post))`
  */
 export function asConformDefaultValue<T>(value: unknown): DefaultValue<T> {
-  // §5 generic invariance — DefaultValue<T> の string-only 制約境界
+  // generic invariance 境界 — DefaultValue<T> の string-only 制約境界
   return value as DefaultValue<T>;
 }
 
@@ -101,7 +101,7 @@ export function asConformDefaultValue<T>(value: unknown): DefaultValue<T> {
  * 用途: `return asConformSubmissionValue<PostSettingsFormData>(submission.value)`
  */
 export function asConformSubmissionValue<T>(value: unknown): T {
-  // §5 generic invariance — preprocess input/output mismatch 境界
+  // generic invariance 境界 — preprocess input/output mismatch 境界
   return value as T;
 }
 
@@ -115,7 +115,7 @@ export function asConformSubmissionValue<T>(value: unknown): T {
  * 用途: `const insert = asConformButtonGetter<InsertButtonGetter>(form.insert.getButtonProps)`
  */
 export function asConformButtonGetter<T>(getter: unknown): T {
-  // §5 generic invariance — branded Intent / FieldName 境界
+  // generic invariance 境界 — branded Intent / FieldName 境界
   return getter as T;
 }
 
@@ -131,7 +131,7 @@ export function asConformButtonGetter<T>(getter: unknown): T {
 export function asConformLooseRecord(
   value: unknown,
 ): Record<string, string | null | undefined> {
-  // §5 generic invariance — runtime string serialization 境界
+  // generic invariance 境界 — runtime string serialization 境界
   return value as Record<string, string | null | undefined>;
 }
 
@@ -145,6 +145,6 @@ export function asConformLooseRecord(
  * 用途: `<CustomerStep fields={asConformFieldset<ReservationFormFields>(fields)} />`
  */
 export function asConformFieldset<T>(fields: unknown): T {
-  // §5 generic invariance — Fieldset object 全体の cast
+  // generic invariance 境界 — Fieldset object 全体の cast
   return fields as T;
 }
