@@ -47,7 +47,6 @@ export {
   CalendarSyncMethod,
   AnalyticsType,
   DiscountCombinationMode,
-  PostPermalinkStructure,
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   InstagramFeedLayout,

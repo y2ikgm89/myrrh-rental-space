@@ -4,7 +4,6 @@ import { prisma } from "@/shared/db/prisma";
 import {
   CalendarSyncMethod,
   DiscountCombinationMode,
-  PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
 } from "@generated/prisma/enums";
@@ -395,22 +394,6 @@ export async function getRobotsTxtSettings(): Promise<RobotsTxtData> {
     robotsTxtCustom,
     defaultRobotsTxt: DEFAULT_ROBOTS_TXT,
     warnings: robotsTxtCustom ? checkRobotsTxtWarnings(robotsTxtCustom) : [],
-  };
-}
-
-export async function getAdminPermalinkSettings(): Promise<{
-  postPermalinkStructure: PostPermalinkStructure;
-}> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      postPermalinkStructure: true,
-    },
-  });
-
-  return {
-    postPermalinkStructure:
-      settings?.postPermalinkStructure ?? PostPermalinkStructure.post_name,
   };
 }
 

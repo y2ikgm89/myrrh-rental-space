@@ -4,7 +4,6 @@ import { prisma } from "@/shared/db/prisma";
 import { EventStatus, PostStatus } from "@generated/prisma/enums";
 import { parseStringArray } from "@/shared/lib/json-validators";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
 
 /**
@@ -49,21 +48,18 @@ export async function resolveLinkCardsByType(
 async function resolvePostCards(
   ids: string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
-  const [rows, permalinkSettings] = await Promise.all([
-    prisma.post.findMany({
-      where: { id: { in: ids }, status: PostStatus.PUBLISHED },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        excerpt: true,
-        thumbnailUrl: true,
-        publishedAt: true,
-        category: { select: { slug: true } },
-      },
-    }),
-    getPermalinkSettings(),
-  ]);
+  const rows = await prisma.post.findMany({
+    where: { id: { in: ids }, status: PostStatus.PUBLISHED },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      excerpt: true,
+      thumbnailUrl: true,
+      publishedAt: true,
+      category: { select: { slug: true } },
+    },
+  });
 
   const map = new Map<string, ResolvedLinkCard>();
   for (const r of rows) {
@@ -73,14 +69,11 @@ async function resolvePostCards(
       title: r.title,
       excerpt: r.excerpt ?? null,
       thumbnailUrl: r.thumbnailUrl ?? null,
-      href: buildPostCanonicalPath(
-        {
-          slug: r.slug,
-          publishedAt: r.publishedAt,
-          category: r.category,
-        },
-        permalinkSettings ?? undefined,
-      ),
+      href: buildPostCanonicalPath({
+        slug: r.slug,
+        publishedAt: r.publishedAt,
+        category: r.category,
+      }),
     });
   }
   return map;

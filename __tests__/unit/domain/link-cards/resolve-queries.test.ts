@@ -24,14 +24,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/domain/settings/queries/display", () => ({
-  getPermalinkSettings: mock(() =>
-    Promise.resolve({
-      postPermalinkStructure: "post_name",
-    }),
-  ),
-}));
-
 const { resolveLinkCardsByType } =
   await import("@/shared/domain/link-cards/resolve-queries");
 

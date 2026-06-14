@@ -2,7 +2,6 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { toPlainObject } from "@/shared/lib/serialize";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 
 const postDetailSelect = {
@@ -34,18 +33,15 @@ const postDetailSelect = {
  * 本番 `PostDetailPageContent` をそのまま再利用可能にする canonical 整形。
  */
 export async function getPostByIdForPreview(id: string) {
-  const [post, settings] = await Promise.all([
-    prisma.post.findUnique({
-      where: { id },
-      select: postDetailSelect,
-    }),
-    getPermalinkSettings(),
-  ]);
+  const post = await prisma.post.findUnique({
+    where: { id },
+    select: postDetailSelect,
+  });
 
   if (!post) return null;
 
   return toPlainObject({
     ...post,
-    url: buildPostCanonicalPath(post, settings ?? undefined),
+    url: buildPostCanonicalPath(post),
   });
 }

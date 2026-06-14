@@ -16,7 +16,6 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 
 const postListSelect = {
@@ -78,13 +77,10 @@ function attachPostUrl<
     publishedAt?: Date | null;
     category?: { slug: string } | null;
   },
->(
-  post: T,
-  settings: Awaited<ReturnType<typeof getPermalinkSettings>>,
-): T & { url: string } {
+>(post: T): T & { url: string } {
   return {
     ...post,
-    url: buildPostCanonicalPath(post, settings ?? undefined),
+    url: buildPostCanonicalPath(post),
   };
 }
 
@@ -97,7 +93,7 @@ export async function getPublishedPostsList(
 ) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.PERMALINK, CACHE_TAGS.POST_TAGS);
+  cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.POST_TAGS);
 
   const skip = (page - 1) * perPage;
 
@@ -115,41 +111,34 @@ export async function getPublishedPostsList(
     ...(tagSlug ? { postTags: { some: { tag: { slug: tagSlug } } } } : {}),
   };
 
-  const [{ posts, totalCount }, settings] = await Promise.all([
-    (async () => {
-      const [records, count] = await Promise.all([
-        safeFetch({
-          fetch: () =>
-            prisma.post.findMany({
-              where,
-              select: postListSelect,
-              orderBy: { publishedAt: "desc" },
-              skip,
-              take: perPage,
-            }),
-          fallback: [],
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.LOW,
-          operationName: "getPublishedPostsList",
+  const [posts, totalCount] = await Promise.all([
+    safeFetch({
+      fetch: () =>
+        prisma.post.findMany({
+          where,
+          select: postListSelect,
+          orderBy: { publishedAt: "desc" },
+          skip,
+          take: perPage,
         }),
-        safeFetch({
-          fetch: () => prisma.post.count({ where }),
-          fallback: 0,
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.LOW,
-          operationName: "getPublishedPostsCount",
-        }),
-      ]);
-
-      return { posts: records, totalCount: count };
-    })(),
-    getPermalinkSettings(),
+      fallback: [],
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getPublishedPostsList",
+    }),
+    safeFetch({
+      fetch: () => prisma.post.count({ where }),
+      fallback: 0,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getPublishedPostsCount",
+    }),
   ]);
 
   return {
     posts: toPlainArray(
       posts.map((post) => {
-        const mapped = attachPostUrl(post, settings);
+        const mapped = attachPostUrl(post);
         return {
           ...mapped,
           publishedAt: mapped.publishedAt?.toISOString() ?? null,
@@ -165,78 +154,68 @@ export async function getPublishedPostsList(
 export async function getPublishedPost(slug: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(
-    CACHE_TAGS.POSTS,
-    CACHE_TAGS.PERMALINK,
-    getCacheTag.posts.detail(slug),
-  );
+  cacheTag(CACHE_TAGS.POSTS, getCacheTag.posts.detail(slug));
 
   if (!slugParamSchema.safeParse(slug).success) return null;
 
-  const [result, settings] = await Promise.all([
-    safeFetch({
-      fetch: () =>
-        prisma.post.findFirst({
-          where: {
-            slug,
-            status: PostStatus.PUBLISHED,
-          },
-          select: postDetailSelect,
-        }),
-      fallback: null,
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      operationName: "getPublishedPost",
-    }),
-    getPermalinkSettings(),
-  ]);
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.post.findFirst({
+        where: {
+          slug,
+          status: PostStatus.PUBLISHED,
+        },
+        select: postDetailSelect,
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedPost",
+  });
 
   if (!result) return null;
 
-  return toPlainObject(attachPostUrl(result, settings));
+  return toPlainObject(attachPostUrl(result));
 }
 
 export async function getPublishedPosts(maxItems: number, categoryId?: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.PERMALINK);
+  cacheTag(CACHE_TAGS.POSTS);
 
-  const [posts, settings] = await Promise.all([
-    safeFetch({
-      fetch: () =>
-        prisma.post.findMany({
-          where: {
-            status: PostStatus.PUBLISHED,
-            ...(categoryId ? { categoryId } : {}),
-          },
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            excerpt: true,
-            thumbnailUrl: true,
-            publishedAt: true,
-            category: {
-              select: {
-                name: true,
-                slug: true,
-              },
+  const posts = await safeFetch({
+    fetch: () =>
+      prisma.post.findMany({
+        where: {
+          status: PostStatus.PUBLISHED,
+          ...(categoryId ? { categoryId } : {}),
+        },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          excerpt: true,
+          thumbnailUrl: true,
+          publishedAt: true,
+          category: {
+            select: {
+              name: true,
+              slug: true,
             },
           },
-          orderBy: { publishedAt: "desc" },
-          take: maxItems,
-        }),
-      fallback: [],
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      operationName: "getPublishedPosts",
-    }),
-    getPermalinkSettings(),
-  ]);
+        },
+        orderBy: { publishedAt: "desc" },
+        take: maxItems,
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedPosts",
+  });
 
   return toPlainArray(
     posts.map((post) => {
-      const mapped = attachPostUrl(post, settings);
+      const mapped = attachPostUrl(post);
       return {
         ...mapped,
         publishedAt: mapped.publishedAt?.toISOString() ?? null,

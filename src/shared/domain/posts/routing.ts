@@ -1,9 +1,4 @@
-import { PostPermalinkStructure } from "@generated/prisma/enums";
-import {
-  generatePostUrl,
-  type PermalinkConfig,
-  type PostUrlData,
-} from "@/shared/lib/url";
+import { generatePostUrl, type PostUrlData } from "@/shared/lib/url";
 
 const RESERVED_POST_SEGMENTS = new Set([
   "about",
@@ -24,28 +19,12 @@ const RESERVED_POST_SEGMENTS = new Set([
   "preview",
 ]);
 
-export interface PermalinkSettingsLike {
-  postPermalinkStructure?: PostPermalinkStructure | null;
-}
-
 export function isReservedPostSegment(segment: string): boolean {
   return RESERVED_POST_SEGMENTS.has(segment.toLowerCase());
 }
 
-export function getPostPermalinkConfig(
-  settings: PermalinkSettingsLike | undefined,
-): PermalinkConfig {
-  return {
-    structure:
-      settings?.postPermalinkStructure ?? PostPermalinkStructure.post_name,
-  };
-}
-
-export function buildPostCanonicalPath(
-  post: PostUrlData,
-  settings: PermalinkSettingsLike | undefined,
-): string {
-  return generatePostUrl(post, getPostPermalinkConfig(settings));
+export function buildPostCanonicalPath(post: PostUrlData): string {
+  return generatePostUrl(post);
 }
 
 /**
