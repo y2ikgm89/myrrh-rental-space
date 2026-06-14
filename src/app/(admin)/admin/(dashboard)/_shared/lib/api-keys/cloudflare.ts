@@ -4,11 +4,36 @@
  * Cloudflare接続テストとキャッシュパージ設定管理
  */
 
+import { z } from "zod";
+
 import type { ApiKeyTestResult } from "@/admin/types/api-keys";
 import {
   isValidCloudflareZoneId,
   isValidCloudflareApiToken,
 } from "@/admin/lib/validations/api-keys";
+
+/**
+ * Zone 詳細取得 API レスポンスのうち接続テストで参照するフィールドのみを検証する schema。
+ * 外部 API レスポンスは `unknown` で受けて `safeParse` で narrow する
+ * （`@/shared/lib/turnstile` / `@/shared/lib/cloudflare` と同方針）。
+ */
+const cloudflareZoneResponseSchema = z.object({
+  success: z.boolean(),
+  result: z
+    .object({
+      name: z.string().optional(),
+      plan: z.object({ name: z.string().optional() }).optional(),
+    })
+    .nullish(),
+  errors: z
+    .array(
+      z.object({
+        code: z.number().optional(),
+        message: z.string().optional(),
+      }),
+    )
+    .optional(),
+});
 
 /**
  * Cloudflare APIへの接続をテスト
@@ -49,7 +74,15 @@ export async function testCloudflareConnection(
       signal: AbortSignal.timeout(10000), // 10秒タイムアウト
     });
 
-    const data = await response.json();
+    const rawData: unknown = await response.json();
+    const parsed = cloudflareZoneResponseSchema.safeParse(rawData);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: "Cloudflare API から予期しない形式の応答が返されました",
+      };
+    }
+    const data = parsed.data;
 
     if (data.success) {
       const zoneName = data.result?.name || "Unknown";
