@@ -81,10 +81,15 @@ export const serverEnv = createEnv({
     // ⚠️ 有効化順序（重要）— env を Cloudflare ルールより先に設定すると、
     // ヘッダー未注入の全トラフィックが direct-untrusted バケットに集約され、
     // rate-limit 系（/api/auth 等）が一斉 429 になる footgun がある。必ず順守:
-    //   1. 先に Cloudflare Transform Rule で全 origin リクエストに
-    //      `x-origin-verify: <secret>` を「Set」（上書き）注入する（app はまだ未チェック）。
-    //   2. `openssl rand -hex 32` で生成し Secret Manager に登録。
-    //   3. cloudbuild.yaml の --update-secrets に追加し再デプロイ（app がチェック開始、
+    //   1. シークレット生成（PowerShell / CSPRNG・64 hex。openssl rand -hex 32 の代替）:
+    //        $b=[byte[]]::new(32);[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+    //        $secret=($b|%{$_.ToString('x2')}) -join ''
+    //   2. 先に Cloudflare Transform Rule で全 origin リクエストに
+    //      `x-origin-verify: $secret` を「Set」（上書き）注入する（app はまだ未チェック）。
+    //   3. Secret Manager に登録（PowerShell の stdin pipe は CRLF が混入し secret を壊すため一時ファイル経由）:
+    //        $t=[IO.Path]::GetTempFileName();[IO.File]::WriteAllText($t,$secret)
+    //        gcloud secrets create CLOUDFLARE_ORIGIN_SECRET --data-file="$t"; Remove-Item $t -Force
+    //   4. cloudbuild.yaml の --update-secrets に追加し再デプロイ（app がチェック開始、
     //      ヘッダーは既に存在）。
     //
     // 無停止ローテーション（カンマ区切りで複数値を許容）:

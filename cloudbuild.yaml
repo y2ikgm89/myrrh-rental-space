@@ -53,15 +53,19 @@ substitutions:
   # *.run.app への直アクセスによる IP 偽装を無効化する（src/shared/lib/rate-limit.ts）。
   # 未設定なら従来の best-effort 解決で挙動不変（safe-by-default）。
   #
-  # 有効化手順:
-  #   1. openssl rand -hex 32 で生成し Secret Manager に登録:
-  #      gcloud secrets create CLOUDFLARE_ORIGIN_SECRET --data-file=- <<< "$(openssl rand -hex 32)"
-  #   2. 下行のコメントを解除（substitution）:
+  # 有効化手順（順序重要 — env を Cloudflare ルールより先に有効化すると、ヘッダー未注入の
+  # 全トラフィックが direct-untrusted に集約され rate-limit 系が一斉 429 になる footgun がある）:
+  #   1. シークレット生成（PowerShell / CSPRNG・64 hex）:
+  #        $b=[byte[]]::new(32);[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+  #        $secret=($b|%{$_.ToString('x2')}) -join ''
+  #   2. 先に Cloudflare Transform Rule で全 origin リクエストに
+  #      x-origin-verify: $secret を「Set」（上書き）注入する。
+  #   3. Secret Manager に登録（PowerShell の stdin pipe は CRLF 混入のため一時ファイル経由）:
+  #        $t=[IO.Path]::GetTempFileName();[IO.File]::WriteAllText($t,$secret)
+  #        gcloud secrets create CLOUDFLARE_ORIGIN_SECRET --data-file="$t"; Remove-Item $t -Force
+  #   4. 下の substitution を解除し、deploy の --update-secrets 末尾に追記して再デプロイ:
   #        _CLOUDFLARE_ORIGIN_SECRET_VERSION: "1"
-  #   3. deploy ステップの --update-secrets 末尾に追記:
   #        ,CLOUDFLARE_ORIGIN_SECRET=CLOUDFLARE_ORIGIN_SECRET:${_CLOUDFLARE_ORIGIN_SECRET_VERSION}
-  #   4. Cloudflare Transform Rule で全 origin リクエストに
-  #      x-origin-verify: <secret> を「Set」（上書き）注入する。
   # ---------------------------------------------------------------------------
   # _CLOUDFLARE_ORIGIN_SECRET_VERSION: "1"
 
