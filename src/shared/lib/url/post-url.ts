@@ -1,9 +1,12 @@
 /**
  * 投稿URL生成ユーティリティ
  *
- * 投稿記事の正規URL（`/blog` 配下）を生成します。
- * URL 構造（シンプル / 日付+記事名 / カテゴリ+記事名）は
- * postPermalinkStructure 設定で切り替わります。
+ * 投稿記事の正規URL（`/blog/{slug}` 固定）を生成します。
+ *
+ * 記事ルートは単一動的セグメント `/blog/[slug]` のみで、多セグメント permalink
+ * （`/blog/yyyy/mm/slug` 等）を受ける catch-all ルートは存在しません。そのため
+ * `postPermalinkStructure` の値に依らず、ルータブルな唯一の形 `/blog/{slug}` を返します
+ * （設定・enum・カラムの撤去はスキーマ migration を伴うため別対応）。
  *
  * @module shared/lib/url/post-url
  */
@@ -42,54 +45,20 @@ export interface PermalinkConfig {
 const POST_URL_PREFIX = "/blog";
 
 /**
- * 投稿記事のURLを生成
+ * 投稿記事のURLを生成する。
+ *
+ * 記事詳細ルートは `/blog/[slug]`（単一動的セグメント）のみのため、構造設定に依らず
+ * 常に `/blog/{slug}` を返す。多セグメント permalink を生成すると catch-all 不在で
+ * 記事カード・サイドバー・関連記事・sitemap が一斉に 404 になるため、ここで一元的に
+ * ルータブルな形へ正規化する。
  *
  * @param post - 記事データ
- * @param config - パーマリンク設定
- * @returns 生成されたURL（先頭に/を含む相対パス）
- *
- * @example
- * ```ts
- * // post_name: /blog/article-title
- * generatePostUrl(post, { structure: 'post_name' })
- *
- * // date_name: /blog/2026/01/article-title
- * generatePostUrl(post, { structure: 'date_name' })
- *
- * // category_name: /blog/category-slug/article-title
- * generatePostUrl(post, { structure: 'category_name' })
- * ```
+ * @param _config - パーマリンク設定（現在の routing では未使用。後方互換のため受け取る）
+ * @returns 生成されたURL（`/blog/{slug}`）
  */
 export function generatePostUrl(
   post: PostUrlData,
-  config: PermalinkConfig,
+  _config: PermalinkConfig,
 ): string {
-  const { slug, publishedAt, category } = post;
-  const { structure } = config;
-
-  let path: string;
-  switch (structure) {
-    case PostPermalinkStructure.date_name: {
-      // /2026/01/article-title
-      const date = publishedAt ? new Date(publishedAt) : new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      path = `/${year}/${month}/${slug}`;
-      break;
-    }
-
-    case PostPermalinkStructure.category_name: {
-      // /category-slug/article-title
-      const categorySlug = category?.slug ?? "uncategorized";
-      path = `/${categorySlug}/${slug}`;
-      break;
-    }
-
-    case PostPermalinkStructure.post_name:
-    default:
-      // /article-title
-      path = `/${slug}`;
-  }
-
-  return `${POST_URL_PREFIX}${path}`;
+  return `${POST_URL_PREFIX}/${post.slug}`;
 }
