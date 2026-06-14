@@ -216,14 +216,14 @@ const eslintConfig = defineConfig([
       "no-console": "off",
     },
   },
-  // Lexical DraggableBlock フォーク（@lexical/react 由来のパターン・@ts-nocheck を許容）
+  // Lexical DraggableBlock フォーク（@lexical/react 由来のパターンを許容）。
+  // fork コードが React Compiler / @eslint-react ルールに抵触するため緩和する。
   {
     name: "lexical-draggable-fork",
     files: [
       "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/lexical-draggable-block-plugin.ts",
     ],
     rules: {
-      "@typescript-eslint/ban-ts-comment": "off",
       "react-hooks/refs": "off",
       "@eslint-react/use-state": "off",
       "@eslint-react/web-api-no-leaked-event-listener": "off",
