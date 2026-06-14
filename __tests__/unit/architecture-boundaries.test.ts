@@ -1632,7 +1632,7 @@ describe("architecture boundaries", () => {
   });
 
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
-    // §5 SDK 境界 cast の helper 強制
+    // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
     // - LocationSchema.parse (googleapis Schema$Location)
     // - CreateEmailOptionsSchema.parse (resend CreateEmailOptions)
     // - toAppRoute / safeToAppRoute (Next.js Route<string>)
@@ -1654,7 +1654,7 @@ describe("architecture boundaries", () => {
   });
 
   test("Phase 1 Prisma JSON cast は asPrismaInputJsonValue helper 経由（as Prisma.InputJsonValue 0 件）", () => {
-    // §2 Prisma JSON 型 — `as Prisma.InputJsonValue` は禁止
+    // Prisma JSON 型 — `as Prisma.InputJsonValue` は禁止（方針: .claude/rules/type-safety.md）
     // helper: asPrismaInputJsonValue / parsePrismaInputJson / clonePrismaInputJson (@/shared/db/prisma-input-json)
     // `as Prisma.InputJsonObject` (data field) と `satisfies + as Prisma.InputJsonArray` (navigation token) のみ許容
     const sourceFiles = collectSourceFiles(SRC_ROOT);
@@ -1666,18 +1666,26 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("type-safety ledger は廃止済（permanent exception は本 boundaries テストに直接定義）", () => {
-    // 2026-05-18 削除: documented-exceptions-ledger.md は Phase 1 完遂 (SDK / Prisma JSON / Route cast 構造解消)
-    // + Phase 3-C 完遂 (RHF 完全削除) に伴い、permanent exception を本 boundaries テストに直接定義する形に一本化
-    const ledgerFile = join(
-      ROOT,
-      ".claude",
-      "rules",
-      "type-safety",
-      "documented-exceptions-ledger.md",
-    );
+  test("廃止済の型安全 ledger / assertion-bans を再導入しない（方針は .claude/rules/type-safety.md に集約）", () => {
+    // 2026-05-18 に旧 .claude/rules/type-safety/{documented-exceptions-ledger,assertion-bans}.md を廃止。
+    // SDK / Prisma JSON / Route cast の構造解消 + RHF 完全削除に伴い、型アサーション方針は
+    // .claude/rules/type-safety.md（単一ファイル）に一本化済み。旧ファイルの復活を gate する。
+    const retiredDocs = [
+      join(
+        ROOT,
+        ".claude",
+        "rules",
+        "type-safety",
+        "documented-exceptions-ledger.md",
+      ),
+      join(ROOT, ".claude", "rules", "type-safety", "assertion-bans.md"),
+    ];
 
-    expect(existsSync(ledgerFile)).toBe(false);
+    expect(retiredDocs.filter(existsSync)).toEqual([]);
+    // 後継 SSoT は存在すること
+    expect(existsSync(join(ROOT, ".claude", "rules", "type-safety.md"))).toBe(
+      true,
+    );
   });
 
   test("Phase 4 で PortableTextBlock[] 化済の long-form フィールドは schema で string を受け付けない", async () => {
@@ -1757,8 +1765,8 @@ describe("architecture boundaries", () => {
   });
 });
 
-describe("assertion-bans §5 conform FieldMetadata generic invariance gate", () => {
-  test("§5 FieldMetadata cast は typed-input-control helper 内部のみ許可", () => {
+describe("conform FieldMetadata generic invariance gate（方針: .claude/rules/type-safety.md）", () => {
+  test("`as unknown as FieldMetadata` cast は typed-input-control helper 内部のみ許可", () => {
     const glob = new Bun.Glob("**/*.{ts,tsx}");
     const allowedFile = join(
       SRC_ROOT,
@@ -1781,7 +1789,7 @@ describe("assertion-bans §5 conform FieldMetadata generic invariance gate", () 
   }, 30000);
 });
 
-describe("assertion-bans §3 SectionConfig union widening cast (構造解消済)", () => {
+describe("SectionConfig union widening cast 構造解消済（方針: .claude/rules/type-safety.md）", () => {
   test("`as SectionConfig` cast は src/ 全体で 0 件", () => {
     const glob = new Bun.Glob("**/*.{ts,tsx}");
     const pattern = /\bas\s+SectionConfig\b/;

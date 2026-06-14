@@ -4107,7 +4107,9 @@ async function seedEditorComments() {
     orderBy: { createdAt: "asc" },
     select: { id: true },
   });
-  if (posts.length < 3) {
+  // noUncheckedIndexedAccess 下で posts[0..2] を narrow するため分割代入ガードで取り出す
+  const [post0, post1, post2] = posts;
+  if (!post0 || !post1 || !post2) {
     console.log(
       "⚠️ Fewer than 3 posts available. Skipping editor comments seed.",
     );
@@ -4126,7 +4128,7 @@ async function seedEditorComments() {
     {
       markId: "seed-mark-active",
       contentType: "post",
-      contentId: posts[0]!.id,
+      contentId: post0.id,
       quotedText: "セミナーを開催する際、会場選びは成功の鍵",
       status: "ACTIVE",
       comments: [
@@ -4137,7 +4139,7 @@ async function seedEditorComments() {
     {
       markId: "seed-mark-resolved",
       contentType: "post",
-      contentId: posts[1]!.id,
+      contentId: post1.id,
       quotedText: "会議が長引いてしまう、なかなか結論が出ない",
       status: "RESOLVED",
       comments: [
@@ -4148,7 +4150,7 @@ async function seedEditorComments() {
     {
       markId: "seed-mark-deleted",
       contentType: "post",
-      contentId: posts[2]!.id,
+      contentId: post2.id,
       quotedText: "IT企業様の社内研修",
       status: "DELETED",
       comments: [

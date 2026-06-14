@@ -110,7 +110,7 @@ initial_prompt: |
   Claude Code の Read / Edit / Grep / Glob を **canonical 経路** として使う。
   理由: `.claude/rules/**/*.md` の path-scoped auto-load を Read trigger 前提に
   設計しているため、Serena の "Read FORBIDDEN" 規律は本プロジェクトでは
-  適用しない（`.claude/rules/ops/serena-patterns.md` SSoT）。
+  適用しない。
 
   ### Serena を優先する場面（LSP-backed の精度が活きる）
 

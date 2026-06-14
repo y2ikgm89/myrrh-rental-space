@@ -335,11 +335,8 @@ function LexicalInvalidContentJsonNotice() {
           <code className="rounded bg-muted px-1 py-0.5 text-foreground">
             EMPTY_LEXICAL_EDITOR_STATE_JSON
           </code>{" "}
-          を渡してください。DB に古い形式が残る場合は{" "}
-          <code className="rounded bg-muted px-1 py-0.5 text-foreground">
-            .claude/rules/prisma-patterns/lexical-storage.md
-          </code>{" "}
-          §レガシー行の一括修正 を参照してください。
+          を渡してください。DB に古い形式が残る場合は有効な Lexical EditorState
+          JSON へ移行してください。
         </p>
       </div>
     </div>

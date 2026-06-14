@@ -7,7 +7,7 @@
  * localStorage で投票済みフラグを永続化し、同じ項目への重複投票を防止する。
  *
  * React 19 公式推奨パターン: localStorage のような **変更通知を持たない外部ストア** は
- * `useSyncExternalStore` で読み取る（`.claude/rules/react-patterns.md` §useSyncExternalStore）。
+ * `useSyncExternalStore` で読み取る。
  * `useState` lazy initializer で `window.localStorage` を読むと SSR と client 初回 render で
  * 値が食い違い hydration mismatch を起こす。
  */

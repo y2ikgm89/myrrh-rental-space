@@ -60,7 +60,7 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
 
   // 利用可能な section type を計算
   // - page-hero は既存にあれば除外
-  // - PAGE_TEMPLATES[page.template].allowedSectionTypes でフィルタ（spec §5.1）
+  // - PAGE_TEMPLATES[page.template].allowedSectionTypes でフィルタ
   // - template が未知の場合は全 type 許容（Page.template が unknown の fallback）
   const template = getPageTemplate(page.template);
   const allowedSet = template

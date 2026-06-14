@@ -122,6 +122,22 @@ const eslintConfig = defineConfig([
           varsIgnorePattern: "^_",
         },
       ],
+
+      // 型アサーション規律の構造固定（type 情報不要な構文ルール）。
+      // 方針の SSoT は .claude/rules/type-safety.md。`as` 型アサーションの
+      // SSoT helper 集約は __tests__/unit/architecture-boundaries.test.ts の
+      // grep gate が担保し、こちらは「非null assertion 禁止」「angle-bracket
+      // assertion 禁止」を lint で前倒し検出する ratchet（現状 0 違反）。
+      // 注: assertionStyle:"never" にすると正当な `as` literal narrowing が
+      //     一律違反化し disable 散布を招くため採用しない（as は許可）。
+      "@typescript-eslint/no-non-null-assertion": "error",
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        {
+          assertionStyle: "as",
+          objectLiteralTypeAssertions: "allow",
+        },
+      ],
     },
   },
   {
@@ -200,14 +216,14 @@ const eslintConfig = defineConfig([
       "no-console": "off",
     },
   },
-  // Lexical DraggableBlock フォーク（@lexical/react 由来のパターン・@ts-nocheck を許容）
+  // Lexical DraggableBlock フォーク（@lexical/react 由来のパターンを許容）。
+  // fork コードが React Compiler / @eslint-react ルールに抵触するため緩和する。
   {
     name: "lexical-draggable-fork",
     files: [
       "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/lexical-draggable-block-plugin.ts",
     ],
     rules: {
-      "@typescript-eslint/ban-ts-comment": "off",
       "react-hooks/refs": "off",
       "@eslint-react/use-state": "off",
       "@eslint-react/web-api-no-leaked-event-listener": "off",

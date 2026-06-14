@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         機能提案ありがとうございます。**既存機能の変更を伴う場合は破壊的変更の影響も記載してください。**
-        大きな機能は実装前に `docs/superpowers/plans/` に計画書を作成することを推奨します。
+        大きな機能は実装前に PR description で設計意図・トレードオフを整理することを推奨します。
 
   - type: textarea
     id: problem

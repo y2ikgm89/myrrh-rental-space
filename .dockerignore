@@ -1,7 +1,7 @@
 # =============================================================================
 #  .dockerignore
 #  Docker ビルドコンテキストから除外。`generated/` は deps ステージで再生成。
-#  Reference: .claude/rules/ops/deployment/secrets-and-ignore.md
+#  秘密情報（.env*）はビルドコンテキストに含めない。
 # =============================================================================
 
 # Dependencies / Build output

@@ -33,8 +33,8 @@ export function FaqItemActionCell({
   const [moveOpen, setMoveOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // 公開状態の切替は同じ行の PublishSwitch（公開状態列）に一本化（責務単一化、
-  // code-quality/forbidden-patterns.md §7）。ActionDropdown には publish トグルを置かない。
+  // 公開状態の切替は同じ行の PublishSwitch（公開状態列）に一本化（責務単一化）。
+  // ActionDropdown には publish トグルを置かない。
 
   const canMove = categories.length > 1;
 
