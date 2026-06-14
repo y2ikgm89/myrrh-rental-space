@@ -220,6 +220,53 @@ describe("resolveClientIp（信頼境界 / origin lock）", () => {
       expect(a).not.toBe(b);
     });
   });
+
+  describe("無停止ローテーション（カンマ区切りで複数シークレット受理）", () => {
+    const OLD = "o".repeat(40);
+    const NEW = "n".repeat(40);
+    const SPEC = `${OLD},${NEW}`;
+
+    test("旧シークレットのヘッダーを受理（移行前の Cloudflare 注入値）", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": OLD,
+          "cf-connecting-ip": "1.2.3.4",
+        }),
+        SPEC,
+      );
+      expect(ip).toBe("1.2.3.4");
+    });
+
+    test("新シークレットのヘッダーを受理（移行後の Cloudflare 注入値）", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": NEW,
+          "cf-connecting-ip": "1.2.3.4",
+        }),
+        SPEC,
+      );
+      expect(ip).toBe("1.2.3.4");
+    });
+
+    test("どちらにも一致しない値は direct-untrusted", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({
+          "x-origin-verify": "neither-secret-value-aaaaaaaaaaaaaaaa",
+          "cf-connecting-ip": "6.6.6.6",
+        }),
+        SPEC,
+      );
+      expect(ip).toBe("direct-untrusted");
+    });
+
+    test("空要素（余分なカンマ/空白）は許容シークレットにならない", () => {
+      const ip = resolveClientIp(
+        makeGetHeader({ "x-origin-verify": "", "cf-connecting-ip": "6.6.6.6" }),
+        ` ${OLD} , , `,
+      );
+      expect(ip).toBe("direct-untrusted");
+    });
+  });
 });
 
 describe("checkRateLimit", () => {

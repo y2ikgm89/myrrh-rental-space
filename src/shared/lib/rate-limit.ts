@@ -141,6 +141,29 @@ const DIRECT_UNTRUSTED_BUCKET = "direct-untrusted";
 const ORIGIN_VERIFY_HEADER = "x-origin-verify";
 
 /**
+ * 提供された `x-origin-verify` 値が、許容シークレットのいずれかに一致するか
+ * を定数時間で判定する。
+ *
+ * `secretSpec` はカンマ区切りで複数シークレットを許容する。これは**無停止
+ * ローテーション**のオーバーラップ窓のため:
+ *   1. env を `"<old>,<new>"` にして再デプロイ（両方を受理）
+ *   2. Cloudflare Transform Rule の注入値を old→new へ切替
+ *   3. env を `"<new>"` に縮退して再デプロイ
+ * これによりローテーション中も正規トラフィックが {@link DIRECT_UNTRUSTED_BUCKET}
+ * に落ちない。どの候補が一致したかのタイミング差を抑えるため早期 return しない。
+ */
+function matchesOriginSecret(provided: string, secretSpec: string): boolean {
+  let matched = false;
+  for (const candidate of secretSpec.split(",")) {
+    const trimmed = candidate.trim();
+    if (trimmed.length > 0 && timingSafeEqual(provided, trimmed)) {
+      matched = true;
+    }
+  }
+  return matched;
+}
+
+/**
  * ヘッダーアクセサからレート制限用のクライアント識別子（IP）を解決する純粋関数。
  *
  * **信頼境界（H3 対策）:**
@@ -155,7 +178,8 @@ const ORIGIN_VERIFY_HEADER = "x-origin-verify";
  * 既存挙動を保つ（安全側のデフォルト = origin lock はオプトイン）。
  *
  * @param getHeader - ヘッダー名から値（無ければ null）を返すアクセサ
- * @param originSecret - `serverEnv.CLOUDFLARE_ORIGIN_SECRET`（未設定なら undefined）
+ * @param originSecret - `serverEnv.CLOUDFLARE_ORIGIN_SECRET`（未設定なら undefined）。
+ *   ローテーション時はカンマ区切りで複数値を許容する。
  */
 export function resolveClientIp(
   getHeader: (name: string) => string | null,
@@ -164,7 +188,7 @@ export function resolveClientIp(
   if (originSecret) {
     const provided = getHeader(ORIGIN_VERIFY_HEADER);
     const viaCloudflare =
-      provided !== null && timingSafeEqual(provided, originSecret);
+      provided !== null && matchesOriginSecret(provided, originSecret);
     if (viaCloudflare) {
       const cfConnectingIp = getHeader("cf-connecting-ip");
       if (cfConnectingIp) return cfConnectingIp;

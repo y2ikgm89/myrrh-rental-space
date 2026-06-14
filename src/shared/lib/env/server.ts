@@ -76,11 +76,24 @@ export const serverEnv = createEnv({
     // 設定すると、Cloudflare が Transform Rule で注入する `x-origin-verify`
     // シークレットヘッダーが一致するリクエストの cf-connecting-ip のみを信頼し、
     // *.run.app への直アクセス（Cloudflare バイパス）によるレート制限 IP 偽装を防ぐ。
-    // 有効化手順:
-    //   1. openssl rand -hex 32 等で生成し Secret Manager に登録
-    //   2. cloudbuild.yaml の --update-secrets / availableSecrets に追加
-    //   3. Cloudflare Transform Rule で全 origin リクエストに
-    //      `x-origin-verify: <secret>` を「Set」（上書き）で注入
+    // 判定ロジックは src/shared/lib/rate-limit.ts の resolveClientIp。
+    //
+    // ⚠️ 有効化順序（重要）— env を Cloudflare ルールより先に設定すると、
+    // ヘッダー未注入の全トラフィックが direct-untrusted バケットに集約され、
+    // rate-limit 系（/api/auth 等）が一斉 429 になる footgun がある。必ず順守:
+    //   1. 先に Cloudflare Transform Rule で全 origin リクエストに
+    //      `x-origin-verify: <secret>` を「Set」（上書き）注入する（app はまだ未チェック）。
+    //   2. `openssl rand -hex 32` で生成し Secret Manager に登録。
+    //   3. cloudbuild.yaml の --update-secrets に追加し再デプロイ（app がチェック開始、
+    //      ヘッダーは既に存在）。
+    //
+    // 無停止ローテーション（カンマ区切りで複数値を許容）:
+    //   env を `"<old>,<new>"`（両受理）→ Cloudflare 注入値を new に切替 →
+    //   env を `"<new>"` に縮退。
+    //
+    // 検証: 有効化後、通常ドメイン経由のアクセスが正常応答することを確認し、
+    //   `*.run.app` を直叩き（例 `curl https://<svc>.run.app/api/auth/get-session` を連打）
+    //   すると direct-untrusted に合算され短時間で 429 になる＝直アクセスが隔離された証跡。
     CLOUDFLARE_ORIGIN_SECRET: z
       .string()
       .min(32, {
