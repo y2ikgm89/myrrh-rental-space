@@ -2,7 +2,6 @@
  * サイドバーアクティブ判定（query-bearing href 対応）
  *
  * `"use client"` 境界外の純粋ロジック（テスト可能・React 非依存）。
- * 詳細な設計指針は `.claude/rules/frontend/admin-ui/navigation.md` を参照。
  */
 
 /**

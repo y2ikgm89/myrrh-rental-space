@@ -20,8 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Stale
-        # SHA 直 pin (公式 security best practice、詳細は
-        # .claude/rules/ops/ci-workflow.md §8.1)
+        # SHA 直 pin（公式 security best practice。tag force-push 攻撃 + codeload 404 outage 対策）
         uses: actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899 # v10.3.0
         with:
           # ------------------------------------------------------------
