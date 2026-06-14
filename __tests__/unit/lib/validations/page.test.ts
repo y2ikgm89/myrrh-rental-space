@@ -259,7 +259,7 @@ describe("createPageSchema", () => {
 
 describe("SYSTEM_PAGES", () => {
   test("システムページが正しく定義されている", () => {
-    expect(SYSTEM_PAGES.length).toBe(10);
+    expect(SYSTEM_PAGES.length).toBe(11);
 
     const slugs = SYSTEM_PAGES.map((p) => p.slug);
     expect(slugs).toContain("home");
@@ -271,6 +271,7 @@ describe("SYSTEM_PAGES", () => {
     expect(slugs).toContain("contact");
     expect(slugs).toContain("blog");
     expect(slugs).toContain("news");
+    expect(slugs).toContain("events");
     expect(slugs).toContain("terms");
     expect(slugs).not.toContain("journal");
   });

@@ -51,6 +51,11 @@ export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
   },
   { slug: "blog", title: "ブログ", description: "ブログ記事一覧" },
   { slug: "news", title: "お知らせ", description: "ニュース・お知らせ一覧" },
+  {
+    slug: "events",
+    title: "イベント",
+    description: "イベントカレンダー・一覧",
+  },
   { slug: "terms", title: "利用規約", description: "ご利用にあたっての規約" },
 ];
 
