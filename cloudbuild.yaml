@@ -45,6 +45,25 @@ substitutions:
   _NEXT_PUBLIC_GA_MEASUREMENT_ID: ""
   # Server-only env vars
   _BETTER_AUTH_URL: ""
+  # ---------------------------------------------------------------------------
+  # H3 origin lock 有効化（任意 / オプトイン）— レート制限 IP 偽装対策
+  #
+  # CLOUDFLARE_ORIGIN_SECRET を設定すると、proxy が Cloudflare 注入の
+  # x-origin-verify ヘッダー一致リクエストの cf-connecting-ip のみを信頼し、
+  # *.run.app への直アクセスによる IP 偽装を無効化する（src/shared/lib/rate-limit.ts）。
+  # 未設定なら従来の best-effort 解決で挙動不変（safe-by-default）。
+  #
+  # 有効化手順:
+  #   1. openssl rand -hex 32 で生成し Secret Manager に登録:
+  #      gcloud secrets create CLOUDFLARE_ORIGIN_SECRET --data-file=- <<< "$(openssl rand -hex 32)"
+  #   2. 下行のコメントを解除（substitution）:
+  #        _CLOUDFLARE_ORIGIN_SECRET_VERSION: "1"
+  #   3. deploy ステップの --update-secrets 末尾に追記:
+  #        ,CLOUDFLARE_ORIGIN_SECRET=CLOUDFLARE_ORIGIN_SECRET:${_CLOUDFLARE_ORIGIN_SECRET_VERSION}
+  #   4. Cloudflare Transform Rule で全 origin リクエストに
+  #      x-origin-verify: <secret> を「Set」（上書き）注入する。
+  # ---------------------------------------------------------------------------
+  # _CLOUDFLARE_ORIGIN_SECRET_VERSION: "1"
 
 options:
   logging: CLOUD_LOGGING_ONLY
