@@ -84,13 +84,25 @@ function buildCsp(
 ): string {
   const isDev = serverEnv.NODE_ENV === "development";
   const mediaSource = getConfiguredMediaSource();
+  // CSP ディレクティブの方針:
+  // - script-src: nonce + strict-dynamic を厳格維持。Next.js が自前 script と
+  //   @next/third-parties / Clarity のローダーに nonce を付与し、strict-dynamic が
+  //   そこから派生する script を許可する（host allowlist 不要）。
+  // - style-src: 'unsafe-inline' を許可。nonce は <style> 要素のみ認可し、インライン
+  //   style 属性（next/image fill・React の style prop・アニメーション初期値など）は
+  //   CSP3 仕様上 nonce で認可できず、本番では全て遮断される（実ブラウザでホームページに
+  //   39 件の "inline style ... has been blocked" を確認）。style インジェクションは
+  //   script より低リスクのため、Next.js 公式の非 nonce 例に倣い 'unsafe-inline' を許可する。
+  // - connect-src / img-src: GA4 は region1/2/3.google-analytics.com 等の地域別エンドポイントへ
+  //   収集ビーコンを送るためワイルドカードが必要。Microsoft Clarity は *.clarity.ms /
+  //   c.bing.com へデータをアップロードする。
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""};
-    style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`};
-    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.clarity.ms;
     font-src 'self';
-    connect-src 'self' https://api.stripe.com https://www.google-analytics.com https://analytics.google.com${isDev ? " ws://localhost:*" : ""};
+    connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
     frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com https://www.google.com;
     object-src 'none';
     base-uri 'self';
