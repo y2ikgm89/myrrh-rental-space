@@ -7,8 +7,7 @@ import { sectionLayoutSchema } from "../_shared/layout";
  * 予約フォームセクション設定
  *
  * 既存の `reservation/_components/reservation-form.tsx` を Section に内包する。
- * Configurable 項目は spec docs/superpowers/specs/2026-05-05-page-template-architecture-design.md
- * §3.2 reservation-form Section に準拠。
+ * Configurable 項目は以下:
  *
  * - `defaultSpaceId`: URL `?spaceId=` 未指定時の事前選択スペース ID
  * - `skipStep1`: スペース選択ステップ (Step 1) 省略フラグ（form 側未対応 — 将来対応）

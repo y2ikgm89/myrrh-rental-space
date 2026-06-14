@@ -9,8 +9,7 @@
 #   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL
 #
 # Required Cloud Run Job (created once per project):
-#   prisma-migrate — `bunx prisma migrate deploy` を実行する独立 Job。
-#   初回作成手順は docs/how-to/deploy.md §8 を参照。
+#   prisma-migrate — `bunx prisma migrate deploy` を実行する独立 Job（プロジェクト毎に初回 1 回手動作成）。
 
 substitutions:
   _REGION: asia-northeast1
@@ -25,8 +24,7 @@ substitutions:
   _CONCURRENCY: "80"
   _TIMEOUT: "300"
   _DATABASE_POOL_MAX: "10"
-  # Dedicated service account email (Cloud Run runtime + Prisma migrate Job 共通)
-  # 作成手順: docs/how-to/deploy.md §4
+  # Dedicated service account email (Cloud Run runtime + Prisma migrate Job 共通、初回 1 回手動作成)
   _SERVICE_ACCOUNT: ""
   # Secret versions (固定バージョン推奨)
   _DATABASE_URL_SECRET_VERSION: "1"
