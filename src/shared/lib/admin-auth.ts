@@ -290,8 +290,14 @@ async function resolveRequestHeaders(
 /** セッション検証（cache() でリクエスト単位メモ化） */
 const verifySession = cache(
   async (requestHeaders?: Headers): Promise<AdminUser> => {
+    // 管理者の認可は常にライブ DB のロール / セッションで判定する。
+    // cookieCache（maxAge 5 分）を信頼すると、降格（updateUserRole）・アカウント削除・
+    // セッション失効が反映されるまで最大 5 分、署名済み cookie 内の古いロールで
+    // dashboard / 管理 mutation を通してしまう。`disableCookieCache` で DB を強制参照し、
+    // 同時に cookieCache を refresh する（cache() で request 単位 1 回に集約）。
     const session = await adminAuth.api.getSession({
       headers: await resolveRequestHeaders(requestHeaders),
+      query: { disableCookieCache: true },
     });
     const user = getAdminSessionUser(session);
     if (!user) {
@@ -326,8 +332,10 @@ export const verifyAdminSession = cache(
 /** 現在の管理者ユーザー取得（リダイレクトなし） */
 export const getCurrentAdminUser = cache(
   async (requestHeaders?: Headers): Promise<AdminUser | undefined> => {
+    // 権限判定（isAdmin 等）に使うため、verifySession と同様にライブ DB を強制参照する。
     const session = await adminAuth.api.getSession({
       headers: await resolveRequestHeaders(requestHeaders),
+      query: { disableCookieCache: true },
     });
     return getAdminSessionUser(session) ?? undefined;
   },
@@ -345,7 +353,9 @@ export const isAdmin = cache(
 export async function getAdminSession(
   requestHeaders?: Headers,
 ): Promise<AdminSession | null> {
+  // Server Actions の認可判定にも使われるためライブ DB を強制参照する。
   return adminAuth.api.getSession({
     headers: await resolveRequestHeaders(requestHeaders),
+    query: { disableCookieCache: true },
   });
 }
