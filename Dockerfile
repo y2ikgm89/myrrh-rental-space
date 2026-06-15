@@ -105,12 +105,30 @@ RUN find ./node_modules/@prisma/client/runtime \
           ./node_modules/@prisma/client/index-browser.js && \
     test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.mjs && \
     test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs
-# Prisma CLI + schema / migrations — Cloud Run Job 側で `bunx --bun prisma migrate deploy` を実行するため
-# 同一 image を Cloud Run service と migrate Job で共有する（cloudbuild.yaml の migrate-update/execute 参照）。
-# standalone trace には `prisma` パッケージが含まれないため明示コピーが必須。
-COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# runner は Cloud Run service 専用。ランタイムは @prisma/client（上でコピー）＋ generated のみ
+# 参照し、Prisma CLI（node_modules/prisma）も prisma/ ソース（schema / migrations）も使わない。
+# migrate deploy は専用の migrator ステージ（完全な node_modules）が担う（末尾参照）。
 
 USER nextjs
 EXPOSE 8080
 CMD ["bun", "server.js"]
+
+# --- Stage 5: Migrator (Cloud Run Job: `prisma migrate deploy`) ---
+# slim な runner と違い、Prisma CLI は TypeScript の prisma.config.ts を c12 / jiti /
+# deepmerge-ts でロードするため依存一式が必要。これらは @prisma/config / prisma CLI の
+# 依存だがトップレベル node_modules に在り、runner の `COPY @prisma` / `COPY prisma` では
+# 同梱されない。不完全な node_modules では `bunx` が実行時にパッケージを再ダウンロードし、
+# その不整合コンテキストで config ローダ（c12/jiti）が解決できず prisma.config.ts を
+# 読めない → datasource.url 未解決で migrate deploy が exit(1)。これが OOM(#597) /
+# studio-core tarball flake(#598) / 今回の config 未ロードの共通原因。
+#
+# 対策: migrate を deps ステージ（bun install 済みの完全な node_modules）の上で実行し、
+# 実行時の再ダウンロードを構造的に排除する。CI（.github/workflows/ci.yml の
+# `bunx --bun prisma migrate deploy`）と同一環境のため確実に config をロードできる。
+FROM deps AS migrator
+WORKDIR /app
+# deps は package.json / bun.lock / prisma/（schema + migrations）/ 完全な node_modules /
+# generated を保持済み。root の prisma.config.ts（datasource.url = env("DATABASE_URL")）
+# だけ追加で必要。
+COPY prisma.config.ts ./
+CMD ["bunx", "--bun", "prisma", "migrate", "deploy"]
