@@ -82,7 +82,7 @@ export async function registerForEvent(
           customerId,
         });
 
-        invalidateEventCaches({ notifications: true });
+        invalidateEventCaches();
 
         fireAndForget(
           (async () => {
@@ -179,7 +179,7 @@ export async function cancelEventRegistration(
     );
 
     // 5. Invalidate cache
-    invalidateEventCaches({ notifications: true });
+    invalidateEventCaches();
 
     // 顧客統計が変わる場合は CUSTOMERS も無効化
     updateTag(CACHE_TAGS.CUSTOMERS);

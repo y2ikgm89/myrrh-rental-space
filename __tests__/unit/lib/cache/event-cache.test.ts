@@ -20,19 +20,4 @@ describe("invalidateEventCaches", () => {
     expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.EVENTS);
     expect(updateTagMock).toHaveBeenCalledTimes(1);
   });
-
-  test("notifications 指定時は NOTIFICATIONS も無効化する", () => {
-    invalidateEventCaches({ notifications: true });
-
-    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.EVENTS);
-    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
-    expect(updateTagMock).toHaveBeenCalledTimes(2);
-  });
-
-  test("notifications false なら NOTIFICATIONS を無効化しない", () => {
-    invalidateEventCaches({ notifications: false });
-
-    expect(updateTagMock).not.toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
-    expect(updateTagMock).toHaveBeenCalledTimes(1);
-  });
 });

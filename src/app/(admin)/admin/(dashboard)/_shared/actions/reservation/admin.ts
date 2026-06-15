@@ -152,7 +152,6 @@ export async function createReservationAction(
             mutationPayload.customerId,
             {
               coupons: true,
-              notifications: true,
             },
           );
         },
@@ -275,7 +274,6 @@ export async function updateReservationAction(
 
           invalidateReservationCaches(id, mutationPayload.customerId, {
             coupons: true,
-            notifications: true,
           });
         },
       });

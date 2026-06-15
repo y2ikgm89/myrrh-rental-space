@@ -121,7 +121,6 @@ export async function submitInquiry(
           category: ErrorCategory.DATABASE,
         },
       );
-      updateTag(CACHE_TAGS.NOTIFICATIONS);
 
       return { ok: true };
     } catch (error) {

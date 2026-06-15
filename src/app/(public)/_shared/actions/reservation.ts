@@ -110,7 +110,6 @@ export async function submitReservation(
 
         invalidateReservationCaches(result.id, result.customerId ?? null, {
           coupons: true,
-          notifications: true,
         });
 
         const payload = omitUndefined(result.payload);

@@ -50,37 +50,24 @@ describe("invalidateReservationCaches", () => {
       expect(updateTagMock).toHaveBeenCalledTimes(5);
     });
 
-    test("options.notifications で NOTIFICATIONS を追加無効化する", () => {
-      invalidateReservationCaches(RESERVATION_ID, null, {
-        notifications: true,
-      });
-
-      expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
-      expect(updateTagMock).toHaveBeenCalledTimes(5);
-    });
-
-    test("全オプション + customerId 有効時は 7 タグを無効化する", () => {
+    test("全オプション + customerId 有効時は 6 タグを無効化する", () => {
       invalidateReservationCaches(RESERVATION_ID, CUSTOMER_ID, {
         coupons: true,
-        notifications: true,
       });
 
-      expect(updateTagMock).toHaveBeenCalledTimes(7);
+      expect(updateTagMock).toHaveBeenCalledTimes(6);
       expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.COUPONS);
-      expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
       expect(updateTagMock).toHaveBeenCalledWith(
         getCacheTag.customers.detail(CUSTOMER_ID),
       );
     });
 
-    test("オプションが false なら COUPONS / NOTIFICATIONS は無効化しない", () => {
+    test("オプションが false なら COUPONS は無効化しない", () => {
       invalidateReservationCaches(RESERVATION_ID, null, {
         coupons: false,
-        notifications: false,
       });
 
       expect(updateTagMock).not.toHaveBeenCalledWith(CACHE_TAGS.COUPONS);
-      expect(updateTagMock).not.toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
       expect(updateTagMock).toHaveBeenCalledTimes(4);
     });
   });
