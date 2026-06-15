@@ -4,8 +4,7 @@ import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { logPermissionDenied, logRoleChange } from "@/admin/lib/audit";
+import { logRoleChange } from "@/admin/lib/audit";
 import {
   createUserSchema,
   updateUserSchema,
@@ -17,14 +16,8 @@ import {
   updateUser as updateUserCommand,
   updateUserRole as updateUserRoleCommand,
 } from "@/shared/domain/users/commands";
-import { isDomainError } from "@/shared/domain/domain-error";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-} from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -117,48 +110,37 @@ export async function updateUserRole(
   id: string,
   role: Role,
 ): Promise<MutationResult> {
-  const auth = await checkAdminAuth();
-  if (!auth.success) {
-    return { error: auth.error.error };
-  }
-  if (auth.user.role !== Role.SUPER_ADMIN) {
-    void logPermissionDenied(auth.user.id, "role", "update");
-    return { error: "SUPER_ADMIN権限が必要です" };
-  }
-
   const parsed = updateRoleSchema.safeParse({ id, role });
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
 
-  try {
-    const result = await updateUserRoleCommand(
-      parsed.data.id,
-      parsed.data.role,
-      { id: auth.user.id, role: auth.user.role },
-    );
-
-    void logRoleChange(
-      auth.user.id,
-      parsed.data.id,
-      result.oldRole,
-      result.newRole,
-    );
-
-    updateTag(CACHE_TAGS.STAFF);
-    updateTag(getCacheTag.staff.detail(parsed.data.id));
-
-    return null;
-  } catch (error) {
-    if (isDomainError(error)) {
-      return { error: error.message };
-    }
-
-    logError(error, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: "updateUserRole", userId: parsed.data.id },
-    });
-    throw error;
-  }
+  // user:manage は RBAC マトリクス上 SUPER_ADMIN 専用（admin-permissions.ts）。
+  // wrapper が auth → RBAC → execute → afterSuccess(cache) → 監査ログの順序契約を
+  // 担保するため、auth / 権限 / DomainError 変換を手書きしない。
+  return executeAdminMutationResult({
+    resource: "user",
+    action: "manage",
+    resourceId: parsed.data.id,
+    execute: async (user) => {
+      const result = await updateUserRoleCommand(
+        parsed.data.id,
+        parsed.data.role,
+        { id: user.id, role: user.role },
+      );
+      // ロール変更の before/after をドメイン監査として記録（wrapper の汎用
+      // logAction に加えて old/new role を残す）。
+      void logRoleChange(
+        user.id,
+        parsed.data.id,
+        result.oldRole,
+        result.newRole,
+      );
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.STAFF);
+      updateTag(getCacheTag.staff.detail(parsed.data.id));
+    },
+  });
 }
