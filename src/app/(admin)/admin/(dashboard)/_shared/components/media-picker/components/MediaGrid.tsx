@@ -23,13 +23,18 @@ interface MediaGridProps {
  *
  * Suspenseフォールバック用のスケルトン
  */
+// 固定長 skeleton 用の安定キー（配列 index をキーにしない: @eslint-react/no-array-index-key）
+const SKELETON_KEYS = Array.from(
+  { length: 12 },
+  (_, i) => `media-grid-skeleton-${i}`,
+);
+
 export function MediaGridSkeleton() {
   return (
     <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
-      {Array.from({ length: 12 }).map((_, i) => (
+      {SKELETON_KEYS.map((key) => (
         <div
-          /* eslint-disable-next-line @eslint-react/no-array-index-key */
-          key={i}
+          key={key}
           className="aspect-square animate-pulse rounded-lg bg-muted"
         />
       ))}
