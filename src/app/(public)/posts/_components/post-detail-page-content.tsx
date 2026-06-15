@@ -1,6 +1,9 @@
 import type { ReactElement, ReactNode } from "react";
 import type { Metadata } from "next";
-import { ArticleJsonLd } from "@/public/components/seo/json-ld";
+import {
+  ArticleJsonLd,
+  BreadcrumbJsonLd,
+} from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
@@ -74,70 +77,78 @@ export async function PostDetailPageContent({
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 
   return (
-    <ArticleLayout
-      {...(banner !== undefined && { banner })}
-      jsonLd={
-        <ArticleJsonLd
-          headline={post.title}
-          description={post.metaDescription ?? post.excerpt}
-          image={post.thumbnailUrl}
-          url={articleUrl}
-          datePublished={datePublished}
-          {...(post.author ? { author: { name: post.author.name } } : {})}
-        />
-      }
-      breadcrumb={[{ label: "ブログ", href: "/blog" }, { label: post.title }]}
-      contentWidth={layoutConfig.contentWidth}
-      contentWidthCustom={layoutConfig.contentWidthCustom}
-      heroPosition="in-grid"
-      hero={
-        <ArticleHeader
-          {...(post.category?.name && { eyebrow: post.category.name })}
-          title={post.title}
-          meta={
-            <>
-              {datePublished ? (
-                <time dateTime={datePublished}>
-                  {formatSerializedDate(datePublished)}
-                </time>
-              ) : null}
-              {datePublished && post.author?.name ? (
-                <span aria-hidden="true" className="text-border">
-                  ·
-                </span>
-              ) : null}
-              {post.author?.name ? <span>{post.author.name}</span> : null}
-            </>
-          }
-          {...(post.thumbnailUrl && {
-            media: (
-              <ImageFrame
-                src={post.thumbnailUrl}
-                alt={post.title}
-                aspect="video"
-                fill
-                sizes="(min-width: 1024px) 60vw, 100vw"
-                rounded
-              />
-            ),
-          })}
-        />
-      }
-      {...(showToc && {
-        toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
-        mobileToc: (
-          <ArticleTableOfContents variant="mobile" headings={headings} />
-        ),
-      })}
-    >
-      <Prose variant="editorial" className="max-w-none">
-        <SanitizedHtml html={resolvedContentHtml} />
-      </Prose>
-      <ArticleFooter
-        url={articleUrl}
-        title={post.title}
-        tags={post.postTags.map((postTag) => postTag.tag)}
+    <>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "ブログ", url: `${baseUrl}/blog` },
+          { name: post.title, url: articleUrl },
+        ]}
       />
-    </ArticleLayout>
+      <ArticleLayout
+        {...(banner !== undefined && { banner })}
+        jsonLd={
+          <ArticleJsonLd
+            headline={post.title}
+            description={post.metaDescription ?? post.excerpt}
+            image={post.thumbnailUrl}
+            url={articleUrl}
+            datePublished={datePublished}
+            {...(post.author ? { author: { name: post.author.name } } : {})}
+          />
+        }
+        breadcrumb={[{ label: "ブログ", href: "/blog" }, { label: post.title }]}
+        contentWidth={layoutConfig.contentWidth}
+        contentWidthCustom={layoutConfig.contentWidthCustom}
+        heroPosition="in-grid"
+        hero={
+          <ArticleHeader
+            {...(post.category?.name && { eyebrow: post.category.name })}
+            title={post.title}
+            meta={
+              <>
+                {datePublished ? (
+                  <time dateTime={datePublished}>
+                    {formatSerializedDate(datePublished)}
+                  </time>
+                ) : null}
+                {datePublished && post.author?.name ? (
+                  <span aria-hidden="true" className="text-border">
+                    ·
+                  </span>
+                ) : null}
+                {post.author?.name ? <span>{post.author.name}</span> : null}
+              </>
+            }
+            {...(post.thumbnailUrl && {
+              media: (
+                <ImageFrame
+                  src={post.thumbnailUrl}
+                  alt={post.title}
+                  aspect="video"
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  rounded
+                />
+              ),
+            })}
+          />
+        }
+        {...(showToc && {
+          toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
+          mobileToc: (
+            <ArticleTableOfContents variant="mobile" headings={headings} />
+          ),
+        })}
+      >
+        <Prose variant="editorial" className="max-w-none">
+          <SanitizedHtml html={resolvedContentHtml} />
+        </Prose>
+        <ArticleFooter
+          url={articleUrl}
+          title={post.title}
+          tags={post.postTags.map((postTag) => postTag.tag)}
+        />
+      </ArticleLayout>
+    </>
   );
 }
