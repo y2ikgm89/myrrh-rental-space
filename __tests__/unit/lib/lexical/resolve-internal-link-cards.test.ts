@@ -47,7 +47,7 @@ describe("resolveInternalLinkCards", () => {
             title: "A & B <script>",
             excerpt: "概要",
             thumbnailUrl: "https://x/t.jpg",
-            href: "/posts/a-b",
+            href: "/blog/a-b",
           },
         ],
       ]),
@@ -55,7 +55,7 @@ describe("resolveInternalLinkCards", () => {
     const html = `<p>x</p>${PLACEHOLDER("post", "p1")}`;
     const out = await resolveInternalLinkCards(html);
     expect(out).toContain('data-internal-link-card-resolved="true"');
-    expect(out).toContain('href="/posts/a-b"');
+    expect(out).toContain('href="/blog/a-b"');
     expect(out).toContain("A &amp; B &lt;script&gt;");
     expect(out).toContain("https://x/t.jpg");
     expect(out).toContain("概要");
