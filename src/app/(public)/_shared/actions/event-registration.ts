@@ -82,10 +82,7 @@ export async function registerForEvent(
           customerId,
         });
 
-        invalidateEventCaches(result.registration.eventId, result.event.slug, {
-          registrations: true,
-          notifications: true,
-        });
+        invalidateEventCaches({ notifications: true });
 
         fireAndForget(
           (async () => {
@@ -182,10 +179,7 @@ export async function cancelEventRegistration(
     );
 
     // 5. Invalidate cache
-    invalidateEventCaches(registration.eventId, registration.event.slug, {
-      registrations: true,
-      notifications: true,
-    });
+    invalidateEventCaches({ notifications: true });
 
     // 顧客統計が変わる場合は CUSTOMERS も無効化
     updateTag(CACHE_TAGS.CUSTOMERS);

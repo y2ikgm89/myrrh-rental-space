@@ -4,7 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { EventStatus } from "@generated/prisma/enums";
-import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   safeFetch,
   ErrorCategory,
@@ -154,7 +154,7 @@ export function isEventRegistrationPastDeadline(event: {
 export async function getPublishedEventBySlug(slug: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.EVENTS, getCacheTag.events.slug(slug));
+  cacheTag(CACHE_TAGS.EVENTS);
 
   const event = await safeFetch({
     fetch: () =>

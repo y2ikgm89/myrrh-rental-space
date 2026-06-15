@@ -77,15 +77,6 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
-// event registration queries モック（deleteAccount で影響イベント ID を取得）
-const mockGetEventIdsByCustomerId = mock(
-  (): Promise<string[]> => Promise.resolve([]),
-);
-
-mock.module("@/shared/domain/events/registration-queries", () => ({
-  getEventIdsByCustomerId: mockGetEventIdsByCustomerId,
-}));
-
 // auth モック
 const mockDeleteUser = mock(() => Promise.resolve(undefined));
 const mockGetSession = mock(

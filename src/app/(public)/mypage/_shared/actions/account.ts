@@ -5,7 +5,6 @@ import { updateTag } from "next/cache";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { getEventIdsByCustomerId } from "@/shared/domain/events/registration-queries";
 import {
   createMutationError,
   type MutationResult,
@@ -53,11 +52,6 @@ export async function deleteAccountAction(
 
   const customer = await getCustomerByUserId(session.user.id);
 
-  // 削除前に影響を受けるイベント ID を取得（削除後は customerId から逆引き不可）
-  const affectedEventIds = customer
-    ? await getEventIdsByCustomerId(customer.id)
-    : [];
-
   try {
     await customerAuth.api.deleteUser({
       headers: await headers(),
@@ -71,10 +65,6 @@ export async function deleteAccountAction(
     updateTag(CACHE_TAGS.EVENTS);
     if (customer) {
       updateTag(getCacheTag.customers.detail(customer.id));
-    }
-    for (const eventId of affectedEventIds) {
-      updateTag(getCacheTag.events.detail(eventId));
-      updateTag(getCacheTag.eventRegistrations.list(eventId));
     }
 
     return null;

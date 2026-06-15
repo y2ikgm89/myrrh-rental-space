@@ -12,7 +12,7 @@ import { getEventDetailsForEmail } from "@/shared/domain/events/registration-que
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -54,8 +54,6 @@ export async function adminCancelRegistration(
     },
     afterSuccess: (data) => {
       updateTag(CACHE_TAGS.EVENTS);
-      updateTag(getCacheTag.events.detail(data.eventId));
-      updateTag(getCacheTag.eventRegistrations.list(data.eventId));
 
       fireAndForget(
         createNotificationCommand({
