@@ -159,13 +159,6 @@ enum DiscountCombinationMode {
   both
 }
 
-// @map required: hyphens in DB values
-enum PostPermalinkStructure {
-  post_name     @map("post-name")
-  date_name     @map("date-name")
-  category_name @map("category-name")
-}
-
 enum AnnouncementBarAnimation {
   fade
   slideX
@@ -1160,9 +1153,6 @@ model Settings {
   sidebarRecentCount  Int     @default(5) // 新着記事の表示件数
   sidebarPopularCount Int     @default(5) // 人気記事の表示件数
   sidebarTocEnabled   Boolean @default(true) // 公開記事詳細ページの目次サイドバー表示（グローバル）
-
-  // Permalink Settings (パーマリンク設定)
-  postPermalinkStructure PostPermalinkStructure @default(post_name)
 
   // Analytics Settings（Enum化）
   analyticsType         AnalyticsType? // ga4 | gtm | null

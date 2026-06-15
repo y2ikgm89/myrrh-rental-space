@@ -105,11 +105,6 @@ const ALL_ENUMS = {
   CalendarSyncMethod: { polling: "polling", webhook: "webhook", both: "both" },
   AnalyticsType: { ga4: "ga4", gtm: "gtm" },
   DiscountCombinationMode: { best: "best", both: "both" },
-  PostPermalinkStructure: {
-    post_name: "post_name",
-    date_name: "date_name",
-    category_name: "category_name",
-  },
   AnnouncementBarAnimation: {
     fade: "fade",
     slideX: "slideX",

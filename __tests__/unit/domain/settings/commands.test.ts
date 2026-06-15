@@ -49,11 +49,6 @@ mock.module("@generated/prisma/enums", () => ({
     FULL: "FULL",
     CUSTOM: "CUSTOM",
   },
-  PostPermalinkStructure: {
-    post_name: "post_name",
-    date_name: "date_name",
-    category_name: "category_name",
-  },
 }));
 
 mock.module("@/shared/domain/settings/robots-txt", () => ({

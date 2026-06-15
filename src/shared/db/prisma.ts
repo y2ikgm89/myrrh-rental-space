@@ -100,14 +100,6 @@ const basePrisma =
   new PrismaClient({
     adapter,
     log: isProduction ? ["error"] : ["warn", "error"],
-    // expand/contract（postPermalinkStructure 列/enum 撤去）の expand フェーズ。
-    // settings は select 無しの全列取得（getOrCreateSettings の upsert 等）が多く、列を
-    // DROP すると migrate 完了〜新リビジョン ready の窓で旧クライアントが消えた列を SELECT し
-    // 500 になる（.claude/rules/migrations.md）。global omit で全 settings クエリの SELECT 対象
-    // から外し、本 expand が本番に行き渡った後に contract（列/enum DROP migration）を別 PR で
-    // 行えば無停止になる。$extends 通過後も omit が有効なことは実 SQL で検証済み。
-    // ⚠️ contract migration と同時にこの omit を撤去すること（列消滅後は型エラーになる）。
-    omit: { settings: { postPermalinkStructure: true } },
   });
 
 if (!isProduction) {
