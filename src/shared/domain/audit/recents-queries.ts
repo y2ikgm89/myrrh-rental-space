@@ -1,5 +1,7 @@
 "use cache";
 
+import "server-only";
+
 import { cacheLife, cacheTag } from "next/cache";
 import { CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import { prisma } from "@/shared/db/prisma";
