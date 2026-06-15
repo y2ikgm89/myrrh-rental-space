@@ -49,13 +49,17 @@ describe("invalidateReviewCaches", () => {
     expect(updateTagMock).toHaveBeenCalledTimes(6);
   });
 
-  test("全オプション + slug 有効時は 8 タグを無効化する", () => {
+  test("全オプション + slug 有効時は 7 タグを無効化する", () => {
     invalidateReviewCaches(SPACE_ID, SPACE_SLUG, {
       customerId: CUSTOMER_ID,
-      notifications: true,
     });
 
-    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
-    expect(updateTagMock).toHaveBeenCalledTimes(8);
+    expect(updateTagMock).toHaveBeenCalledWith(
+      getCacheTag.spaces.detail(SPACE_SLUG),
+    );
+    expect(updateTagMock).toHaveBeenCalledWith(
+      getCacheTag.customers.detail(CUSTOMER_ID),
+    );
+    expect(updateTagMock).toHaveBeenCalledTimes(7);
   });
 });

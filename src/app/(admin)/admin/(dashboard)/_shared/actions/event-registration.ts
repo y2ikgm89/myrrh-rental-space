@@ -68,7 +68,6 @@ export async function adminCancelRegistration(
           category: ErrorCategory.DATABASE,
         },
       );
-      updateTag(CACHE_TAGS.NOTIFICATIONS);
 
       fireAndForget(
         (async () => {

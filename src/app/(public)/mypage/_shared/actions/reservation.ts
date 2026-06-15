@@ -73,7 +73,6 @@ export async function cancelReservationAction(
 
     invalidateReservationCaches(parsedId.data, customer.id, {
       coupons: true,
-      notifications: true,
     });
 
     // Create admin notification (fire-and-forget)
@@ -146,7 +145,6 @@ export async function updateReservationAction(
 
         invalidateReservationCaches(data.reservationId, customer.id, {
           coupons: true,
-          notifications: true,
         });
 
         fireAndForget(

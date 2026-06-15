@@ -8,7 +8,6 @@
  * 重複通知抑制: 直近 `DEDUP_DAYS` 日以内に同 type の通知があればスキップ（再実行・頻度緩和対応）
  */
 
-import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { detectStaleFaqItems } from "@/shared/domain/faq/analytics-commands";
 import { FAQ_STALE_DAYS } from "@/shared/domain/faq/constants";
@@ -16,7 +15,6 @@ import {
   createNotificationCommand,
   hasRecentNotificationOfType,
 } from "@/shared/domain/notifications/commands";
-import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { serverEnv } from "@/shared/lib/env/server";
@@ -77,8 +75,6 @@ export async function GET(request: Request) {
       title: `${stale.length} 件の FAQ が ${STALE_DAYS} 日以上更新されていません`,
       message: `長期間更新されていない公開中の FAQ があります。内容の見直しをご検討ください。\n\n${sample}${more}`,
     });
-
-    revalidateTag(CACHE_TAGS.NOTIFICATIONS, CACHE_LIFE.DYNAMIC_DATA);
 
     logger.info("FAQ stale check completed", {
       detected: stale.length,

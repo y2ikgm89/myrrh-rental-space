@@ -67,7 +67,6 @@ export async function cancelGuestReservationAction(
 
     invalidateReservationCaches(verified.reservationId, null, {
       coupons: true,
-      notifications: true,
     });
 
     // 管理者向け in-app 通知（fire-and-forget）— 会員セルフキャンセルと同方針

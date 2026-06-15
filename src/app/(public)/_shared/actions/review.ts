@@ -61,7 +61,6 @@ export async function submitReview(
 
       invalidateReviewCaches(result.spaceId, result.spaceSlug, {
         customerId: customer.id,
-        notifications: true,
       });
 
       fireAndForget(

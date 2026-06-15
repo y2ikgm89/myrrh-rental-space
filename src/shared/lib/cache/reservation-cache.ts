@@ -6,7 +6,6 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 type InvalidateReservationCachesOptions = {
   readonly coupons?: boolean;
-  readonly notifications?: boolean;
 };
 
 export function invalidateReservationCaches(
@@ -23,8 +22,5 @@ export function invalidateReservationCaches(
   }
   if (options.coupons) {
     updateTag(CACHE_TAGS.COUPONS);
-  }
-  if (options.notifications) {
-    updateTag(CACHE_TAGS.NOTIFICATIONS);
   }
 }

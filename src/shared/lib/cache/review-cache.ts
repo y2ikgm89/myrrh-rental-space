@@ -6,7 +6,6 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 type InvalidateReviewCachesOptions = {
   readonly customerId?: string;
-  readonly notifications?: boolean;
 };
 
 /**
@@ -31,8 +30,5 @@ export function invalidateReviewCaches(
   if (options.customerId) {
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.detail(options.customerId));
-  }
-  if (options.notifications) {
-    updateTag(CACHE_TAGS.NOTIFICATIONS);
   }
 }

@@ -152,8 +152,6 @@ export const CACHE_TAGS = {
   FEATURE_MODULES: "feature-modules",
   /** イベント */
   EVENTS: "events",
-  /** 管理通知 */
-  NOTIFICATIONS: "notifications",
 } as const;
 
 /**

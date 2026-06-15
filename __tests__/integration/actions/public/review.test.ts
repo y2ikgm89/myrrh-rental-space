@@ -251,7 +251,7 @@ describe("submitReview", () => {
       expect(mockInvalidateReviewCaches).toHaveBeenCalledWith(
         "space-001",
         "test-space",
-        { customerId: "customer-001", notifications: true },
+        { customerId: "customer-001" },
       );
     });
 

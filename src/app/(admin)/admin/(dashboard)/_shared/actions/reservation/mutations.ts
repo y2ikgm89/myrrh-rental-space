@@ -205,7 +205,6 @@ export const updateReservationStatus = async (
         result.previousStatus !== ReservationStatus.CANCELLED;
       invalidateReservationCaches(id, result.customerId, {
         coupons: isCancellation && result.couponId !== null,
-        notifications: isCancellation,
       });
     },
   });
@@ -300,9 +299,7 @@ export const restoreReservationStatus = async (
         },
       );
 
-      invalidateReservationCaches(id, result.customerId, {
-        notifications: true,
-      });
+      invalidateReservationCaches(id, result.customerId);
     },
   });
 };

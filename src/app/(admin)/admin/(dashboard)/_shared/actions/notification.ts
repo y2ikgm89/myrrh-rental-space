@@ -1,8 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -28,9 +26,6 @@ export async function markNotificationAsRead(
       await markAsReadCommand(parsed.data);
       return null;
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.NOTIFICATIONS);
-    },
   });
 }
 
@@ -43,9 +38,6 @@ export async function markAllNotificationsAsRead(): Promise<
     execute: async () => {
       await markAllAsReadCommand();
       return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.NOTIFICATIONS);
     },
   });
 }
@@ -63,9 +55,6 @@ export async function deleteNotification(
     execute: async () => {
       await deleteNotificationCommand(parsed.data);
       return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.NOTIFICATIONS);
     },
   });
 }
