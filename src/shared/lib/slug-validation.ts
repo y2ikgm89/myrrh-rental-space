@@ -39,17 +39,27 @@ const RESERVED_PATHS: ReadonlySet<string> = new Set([
   "admin",
   "api",
   "_next",
-  // Public routes (fixed)
+  // Public routes (fixed) — システムページ slug。seed は本チェックを通らないため
+  // ここに列挙しても seed は阻害されず、カスタムページが奪うことだけを防ぐ。
   "about",
   "contact",
   "faq",
   "news",
+  "blog",
+  "events",
+  "access",
   "reservation",
   "spaces",
   "terms",
   "privacy",
+  // 旧ブログ一覧 URL（/blog へ 308 redirect されるため実体ページ作成は無意味）
   "posts",
   "p",
+  // 分類アーカイブ / プレビューのルートプレフィックス（システムページではないが
+  // /category/[slug]・/tag/[slug]・/preview/* と衝突するため予約）
+  "category",
+  "tag",
+  "preview",
   // SEO/Static
   "sitemap.xml",
   "robots.txt",

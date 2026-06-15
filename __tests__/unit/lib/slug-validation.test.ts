@@ -83,6 +83,30 @@ describe("isReservedPath", () => {
       expect(isReservedPath("p")).toBe(true);
     });
 
+    test('"blog" は予約済みパス（/posts→/blog 移行後の一覧ルート）', () => {
+      expect(isReservedPath("blog")).toBe(true);
+    });
+
+    test('"events" は予約済みパス（システムページ）', () => {
+      expect(isReservedPath("events")).toBe(true);
+    });
+
+    test('"access" は予約済みパス（システムページ）', () => {
+      expect(isReservedPath("access")).toBe(true);
+    });
+
+    test('"category" は予約済みパス（分類アーカイブルート）', () => {
+      expect(isReservedPath("category")).toBe(true);
+    });
+
+    test('"tag" は予約済みパス（分類アーカイブルート）', () => {
+      expect(isReservedPath("tag")).toBe(true);
+    });
+
+    test('"preview" は予約済みパス（プレビュールート）', () => {
+      expect(isReservedPath("preview")).toBe(true);
+    });
+
     test('"sitemap.xml" は予約済みパス', () => {
       expect(isReservedPath("sitemap.xml")).toBe(true);
     });
