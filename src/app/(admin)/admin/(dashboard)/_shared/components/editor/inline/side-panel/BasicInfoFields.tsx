@@ -13,6 +13,7 @@ import {
   type FieldMetadata,
 } from "@conform-to/react";
 import { Button, Input, Label, Textarea } from "@/admin/components/ui";
+import { generatePostUrl } from "@/shared/lib/url";
 
 type BasicInfoFieldsProps = {
   titleField: FieldMetadata<string>;
@@ -68,7 +69,8 @@ export function BasicInfoFields({
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          URLに使用されます: /posts/{slugPreview || "article-slug"}
+          URLに使用されます:{" "}
+          {generatePostUrl({ slug: slugPreview || "article-slug" })}
         </p>
         {slugError && <p className="text-sm text-destructive">{slugError}</p>}
       </div>
