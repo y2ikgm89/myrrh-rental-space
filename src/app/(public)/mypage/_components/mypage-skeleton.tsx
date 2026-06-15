@@ -1,4 +1,5 @@
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 type MypageSkeletonProps = {
   readonly variant?: "list" | "detail" | "form";
@@ -57,8 +58,8 @@ export function MypageSkeleton({ variant = "list" }: MypageSkeletonProps) {
   // list (default)
   return (
     <div className="space-y-4" aria-busy="true" aria-live="polite">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="space-y-3 border border-border p-5">
+      {skeletonKeys(3, "mypage-card").map((key) => (
+        <div key={key} className="space-y-3 border border-border p-5">
           <Skeleton className="h-3 w-24" variant="text" />
           <Skeleton className="h-6 w-2/3" variant="text" />
           <Skeleton className="h-4 w-1/3" variant="text" />

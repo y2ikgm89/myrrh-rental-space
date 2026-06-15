@@ -4,6 +4,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function EventDetailLoading() {
   return (
@@ -29,8 +30,8 @@ export default function EventDetailLoading() {
 
           {/* Event info card */}
           <div className="space-y-4 border border-border p-6">
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="flex gap-3">
+            {skeletonKeys(4, "event-info").map((key) => (
+              <div key={key} className="flex gap-3">
                 <Skeleton className="h-5 w-5 shrink-0" />
                 <div className="flex-1 space-y-1">
                   <Skeleton className="h-3 w-16" variant="text" />

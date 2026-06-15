@@ -7,6 +7,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function NewsLoading() {
   return (
@@ -32,9 +33,9 @@ export default function NewsLoading() {
 
           {/* News list with hairline dividers (8 rows) */}
           <div className="divide-y divide-divider">
-            {Array.from({ length: 8 }, (_, i) => (
+            {skeletonKeys(8, "news-row").map((key) => (
               <article
-                key={i}
+                key={key}
                 className="flex flex-col gap-2 py-5 sm:flex-row sm:items-baseline sm:gap-6"
               >
                 <Skeleton className="h-3 w-24 shrink-0" variant="text" />

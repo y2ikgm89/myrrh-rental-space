@@ -1,4 +1,5 @@
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 /**
  * 管理画面 新規作成・編集ページの共通フォームローディング UI。
@@ -25,8 +26,8 @@ export default function FormLoading() {
       <div className="rounded-lg border bg-card p-6">
         <div className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2">
-            {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} className="space-y-2">
+            {skeletonKeys(6, "form-field-primary").map((key) => (
+              <div key={key} className="space-y-2">
                 <Skeleton className="h-3 w-24" variant="text" />
                 <Skeleton className="h-11 w-full" />
               </div>
@@ -45,8 +46,8 @@ export default function FormLoading() {
         <div className="space-y-5">
           <Skeleton className="h-6 w-32" variant="text" />
           <div className="grid gap-6 sm:grid-cols-2">
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="space-y-2">
+            {skeletonKeys(4, "form-field-secondary").map((key) => (
+              <div key={key} className="space-y-2">
                 <Skeleton className="h-3 w-24" variant="text" />
                 <Skeleton className="h-11 w-full" />
               </div>

@@ -7,6 +7,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function ReservationLoading() {
   return (
@@ -29,8 +30,8 @@ export default function ReservationLoading() {
             className="flex items-center justify-between gap-2"
             aria-label="ステップインジケーター"
           >
-            {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className="flex flex-1 items-center gap-3">
+            {skeletonKeys(3, "step").map((key, i) => (
+              <div key={key} className="flex flex-1 items-center gap-3">
                 <Skeleton className="h-10 w-10" variant="circle" />
                 <Skeleton className="hidden h-4 w-20 sm:block" variant="text" />
                 {i < 2 && <Skeleton className="h-px flex-1" />}
@@ -44,9 +45,9 @@ export default function ReservationLoading() {
 
             {/* Space selector cards (3) */}
             <div className="space-y-3">
-              {Array.from({ length: 3 }, (_, i) => (
+              {skeletonKeys(3, "space-option").map((key) => (
                 <div
-                  key={i}
+                  key={key}
                   className="flex items-center gap-4 border border-border p-4"
                 >
                   <Skeleton className="h-20 w-20 shrink-0" />

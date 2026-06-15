@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
 
 interface TimeSlotGridProps {
@@ -24,8 +25,8 @@ export function TimeSlotGrid({
           className="grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
           aria-busy="true"
         >
-          {Array.from({ length: 12 }, (_, i) => (
-            <div key={i} className="min-h-11 animate-pulse bg-border/30" />
+          {skeletonKeys(12, "time-slot").map((key) => (
+            <div key={key} className="min-h-11 animate-pulse bg-border/30" />
           ))}
         </div>
       </div>

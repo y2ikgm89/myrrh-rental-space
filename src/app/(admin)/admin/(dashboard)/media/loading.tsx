@@ -6,6 +6,7 @@
  */
 
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function MediaLoading() {
   return (
@@ -28,8 +29,8 @@ export default function MediaLoading() {
 
       {/* Media grid (3 / 4 / 6 col responsive) */}
       <div className="grid grid-cols-2 gap-3 @md/main:grid-cols-3 @2xl/main:grid-cols-4 @4xl/main:grid-cols-6">
-        {Array.from({ length: 18 }, (_, i) => (
-          <div key={i} className="space-y-2">
+        {skeletonKeys(18, "media-item").map((key) => (
+          <div key={key} className="space-y-2">
             <Skeleton className="aspect-square w-full" />
             <Skeleton className="h-3 w-3/4" variant="text" />
             <Skeleton className="h-3 w-1/2" variant="text" />

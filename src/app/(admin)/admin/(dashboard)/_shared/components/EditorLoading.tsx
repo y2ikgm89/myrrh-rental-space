@@ -1,4 +1,5 @@
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 /**
  * Lexical エディタ系（posts / news / terms / pages）の共通ローディング UI。
@@ -33,8 +34,8 @@ export default function EditorLoading() {
         <div className="flex-1 px-10 py-6">
           {/* Toolbar */}
           <div className="mb-6 flex flex-wrap gap-1 border-b pb-3">
-            {Array.from({ length: 12 }, (_, i) => (
-              <Skeleton key={i} className="h-9 w-9" />
+            {skeletonKeys(12, "toolbar-btn").map((key) => (
+              <Skeleton key={key} className="h-9 w-9" />
             ))}
           </div>
 
@@ -62,8 +63,8 @@ export default function EditorLoading() {
           <div className="space-y-6">
             <Skeleton className="h-6 w-32" variant="text" />
             <div className="space-y-4">
-              {Array.from({ length: 5 }, (_, i) => (
-                <div key={i} className="space-y-2">
+              {skeletonKeys(5, "inspector-field").map((key) => (
+                <div key={key} className="space-y-2">
                   <Skeleton className="h-3 w-24" variant="text" />
                   <Skeleton className="h-11 w-full" />
                 </div>

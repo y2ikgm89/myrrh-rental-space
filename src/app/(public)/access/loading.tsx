@@ -4,6 +4,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function AccessLoading() {
   return (
@@ -22,8 +23,8 @@ export default function AccessLoading() {
       <Container>
         <div className="space-y-[var(--space-xl)] py-[var(--space-lg)]">
           {/* 2 Location chapters */}
-          {Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className="space-y-8">
+          {skeletonKeys(2, "access-chapter").map((key) => (
+            <div key={key} className="space-y-8">
               {/* Chapter header */}
               <div className="space-y-3 text-center">
                 <Skeleton className="mx-auto h-3 w-24" variant="text" />

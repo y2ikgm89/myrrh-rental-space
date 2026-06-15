@@ -6,6 +6,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function EventsLoading() {
   return (
@@ -35,9 +36,9 @@ export default function EventsLoading() {
 
           {/* Event list (5 items with hairline dividers) */}
           <div className="divide-y divide-divider">
-            {Array.from({ length: 5 }, (_, i) => (
+            {skeletonKeys(5, "event-item").map((key) => (
               <article
-                key={i}
+                key={key}
                 className="flex flex-col gap-4 py-6 sm:flex-row sm:items-start sm:gap-8"
               >
                 <Skeleton className="aspect-[4/3] w-full shrink-0 sm:h-32 sm:w-48" />
