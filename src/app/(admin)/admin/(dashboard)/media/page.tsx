@@ -57,13 +57,18 @@ export default async function MediaPage({ searchParams }: PageProps) {
   );
 }
 
+// 固定長 skeleton 用の安定キー（配列 index をキーにしない: @eslint-react/no-array-index-key）
+const MEDIA_SKELETON_KEYS = Array.from(
+  { length: 12 },
+  (_, i) => `media-skeleton-${i}`,
+);
+
 function MediaGridSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-4 @md/main:grid-cols-3 @2xl/main:grid-cols-4 @4xl/main:grid-cols-6">
-      {Array.from({ length: 12 }).map((_, i) => (
+      {MEDIA_SKELETON_KEYS.map((key) => (
         <div
-          /* eslint-disable-next-line @eslint-react/no-array-index-key */
-          key={i}
+          key={key}
           className="aspect-square bg-muted animate-pulse rounded-lg"
         />
       ))}

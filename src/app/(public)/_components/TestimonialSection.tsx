@@ -158,7 +158,7 @@ export function TestimonialSection({
 
             return (
               <div
-                /* eslint-disable-next-line @eslint-react/no-array-index-key */
+                /* eslint-disable-next-line @eslint-react/no-array-index-key -- 静的 config を一度きり描画し並び替え/挿入/削除なし・item に安定 ID 無しのため index が妥当 */
                 key={index}
                 data-testimonial-card=""
                 className={cn(
