@@ -55,6 +55,15 @@ substitutions:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  # 既定ワーカー（e2-standard-2 = 2 vCPU / 8 GB）では、test step の `tsc --noEmit` 二重型
+  # チェックが pull-cache の巨大 `:cache` 展開と同一 VM 上でメモリピークを迎えた瞬間に枯渇し、
+  # VM ごと死亡してビルドが `INTERNAL_ERROR` で停止した（#600 commit で 2/2 再現・各ステップ
+  # status が記録される前に VM 落ち＝ユーザープロセスの非ゼロ終了による FAILURE ではなく
+  # ワーカー自体の不調）。通常ピークは 8 GB 内（#598/#599 は通過）だが境界で時々超過する。
+  # default pool で 8 GB 超を選べる唯一のマシンタイプが E2_HIGHCPU_32（32 vCPU / 32 GB）。
+  # RAM headroom を与えて境界 OOM を排除し、後段 build-image の `next build`（本来の最大メモリ
+  # 消費）も並列化で高速化する。https://cloud.google.com/build/docs/build-config-file-schema
+  machineType: E2_HIGHCPU_32
   env:
     - DOCKER_BUILDKIT=1
 
