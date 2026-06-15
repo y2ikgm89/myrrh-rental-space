@@ -28,7 +28,10 @@ import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
-import { spansToPlainText } from "@/shared/lib/portable-text";
+import {
+  blocksToPlainText,
+  spansToPlainText,
+} from "@/shared/lib/portable-text";
 
 interface TestimonialSectionProps {
   readonly config: TestimonialConfig;
@@ -158,8 +161,10 @@ export function TestimonialSection({
 
             return (
               <div
-                /* eslint-disable-next-line @eslint-react/no-array-index-key -- 静的 config を一度きり描画し並び替え/挿入/削除なし・item に安定 ID 無しのため index が妥当 */
-                key={index}
+                // content 由来の安定キー（ValuePropsSection と同方針・index に依存しない）
+                key={`${spansToPlainText(item.authorName)}-${blocksToPlainText(
+                  item.content,
+                ).slice(0, 60)}`}
                 data-testimonial-card=""
                 className={cn(
                   cardClasses,
