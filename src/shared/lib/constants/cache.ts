@@ -177,7 +177,6 @@ export const getCacheTag = {
   posts: {
     list: () => CACHE_TAGS.POSTS,
     detail: (slug: string) => `${CACHE_TAGS.POSTS}-${slug}`,
-    comments: (slug: string) => `${CACHE_TAGS.POST_COMMENTS}-${slug}`,
     tags: () => CACHE_TAGS.POST_TAGS,
     tagPage: (slug: string) => `${CACHE_TAGS.POST_TAGS}-${slug}`,
   },
@@ -249,9 +248,6 @@ export const getCacheTag = {
   },
   auditLogs: {
     recent: (userId: string) => `audit-logs:recent:${userId}`,
-  },
-  locations: {
-    detail: (slug: string) => `${CACHE_TAGS.LOCATIONS}-${slug}`,
   },
 } as const;
 

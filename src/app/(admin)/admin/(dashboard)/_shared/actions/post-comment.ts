@@ -15,7 +15,7 @@ import {
   restoreComment as restoreCommentCommand,
 } from "@/shared/domain/post-comments/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const commentIdSchema = z.uuid({ error: "コメントIDが不正です" });
@@ -36,9 +36,8 @@ export async function deleteCommentAdmin(
     action: "delete",
     resourceId: validated.data,
     execute: async (user) => deleteCommentCommand(validated.data, user.id),
-    afterSuccess: (result) => {
+    afterSuccess: () => {
       updateTag(CACHE_TAGS.POST_COMMENTS);
-      updateTag(getCacheTag.posts.comments(result.postSlug));
     },
   });
 }
@@ -55,11 +54,8 @@ export async function deleteCommentsAdmin(
     resource: "post",
     action: "delete",
     execute: async (user) => deleteCommentsCommand(validated.data, user.id),
-    afterSuccess: (result) => {
+    afterSuccess: () => {
       updateTag(CACHE_TAGS.POST_COMMENTS);
-      for (const slug of result.postSlugs) {
-        updateTag(getCacheTag.posts.comments(slug));
-      }
     },
   });
 }
@@ -77,9 +73,8 @@ export async function restoreCommentAdmin(
     action: "update",
     resourceId: validated.data,
     execute: async () => restoreCommentCommand(validated.data),
-    afterSuccess: (result) => {
+    afterSuccess: () => {
       updateTag(CACHE_TAGS.POST_COMMENTS);
-      updateTag(getCacheTag.posts.comments(result.postSlug));
     },
   });
 }

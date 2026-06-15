@@ -19,7 +19,7 @@ import {
 import { syncLocationToGbpCommand } from "@/shared/domain/locations/gbp-sync-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
@@ -61,7 +61,6 @@ export async function createLocationAction(
         execute: async () => createLocationCommand(data),
         afterSuccess: (payload) => {
           updateTag(CACHE_TAGS.LOCATIONS);
-          updateTag(getCacheTag.locations.detail(payload.slug));
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
             operation: "syncLocationToGbp",
             category: ErrorCategory.EXTERNAL_API,
@@ -117,7 +116,6 @@ export async function updateLocationAction(
         execute: async () => updateLocationCommand(locationId, data),
         afterSuccess: (payload) => {
           updateTag(CACHE_TAGS.LOCATIONS);
-          updateTag(getCacheTag.locations.detail(payload.slug));
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
             operation: "syncLocationToGbp",
             category: ErrorCategory.EXTERNAL_API,

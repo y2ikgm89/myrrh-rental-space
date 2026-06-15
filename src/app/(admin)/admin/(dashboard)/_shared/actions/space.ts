@@ -35,8 +35,10 @@ function revalidateSpaces(...ids: string[]): void {
   updateTag(CACHE_TAGS.SPACES);
   // Review stats depend on Space.reviewsEnabled — invalidate when any space mutates
   updateTag(CACHE_TAGS.REVIEWS);
+  // 公開スペース詳細 getSpaceBySlug は slug でタグ付けされるため、id 基準の
+  // spaces.detail は噛まない。詳細ページの無効化は SPACES コレクションタグが担い、
+  // review 連動の slug 単位無効化は invalidateReviewCaches が担う。
   for (const id of [...new Set(ids)]) {
-    updateTag(getCacheTag.spaces.detail(id));
     updateTag(getCacheTag.reviews.space(id));
     updateTag(getCacheTag.reviews.stats(id));
     fireAndForget(purgeSpaceCache(id), {
