@@ -10,6 +10,7 @@
 #
 # Required Cloud Run Job (created once per project):
 #   prisma-migrate — `bunx prisma migrate deploy` を実行する独立 Job（プロジェクト毎に初回 1 回手動作成）。
+#   メモリは Step 5 が毎デプロイ `--memory=${_MIGRATE_MEMORY}` で宣言的に再適用する（作成時の値に依存しない）。
 
 substitutions:
   _REGION: asia-northeast1
@@ -17,6 +18,10 @@ substitutions:
   _REPOSITORY: myrrh-rental-space
   _AR_HOST: asia-northeast1-docker.pkg.dev
   _MIGRATE_JOB_NAME: prisma-migrate
+  # migrate Job のメモリ。512Mi だと `bunx prisma migrate deploy` の依存解決フェーズが
+  # マイグレーション数の増加とともに OOM（signal 11）→ デプロイ全停止を起こす。
+  # Step 5 で毎デプロイ宣言的に再適用し、手動作成時の値ドリフトを防ぐ。
+  _MIGRATE_MEMORY: 1Gi
   _MEMORY: 1Gi
   _CPU: "1"
   _MIN_INSTANCES: "0"
@@ -115,6 +120,7 @@ steps:
       - ${_MIGRATE_JOB_NAME}
       - --region=${_REGION}
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
+      - --memory=${_MIGRATE_MEMORY}
 
   # Step 6: Execute Prisma migration (fail 時はデプロイ全体を止める)
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
