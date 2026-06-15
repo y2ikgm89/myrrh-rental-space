@@ -1,6 +1,19 @@
 import type { ReactElement } from "react";
 import { Skeleton } from "@/public/components/design-system/skeleton";
 
+// 固定長 skeleton 用の安定キー（配列 index をキーにしない: @eslint-react/no-array-index-key）
+const BODY_LINE_KEYS = [
+  "b1",
+  "b2",
+  "b3",
+  "b4",
+  "b5",
+  "b6",
+  "b7",
+  "b8",
+] as const;
+const TOC_LINE_KEYS = ["t1", "t2", "t3", "t4", "t5"] as const;
+
 export default function BlogPostLoading(): ReactElement {
   return (
     <div>
@@ -17,15 +30,15 @@ export default function BlogPostLoading(): ReactElement {
       <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)] pb-16">
         <div className="grid gap-12 lg:grid-cols-[1fr_280px]">
           <div className="space-y-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-4 w-full last:w-4/5" />
+            {BODY_LINE_KEYS.map((key) => (
+              <Skeleton key={key} className="h-4 w-full last:w-4/5" />
             ))}
           </div>
           <div className="hidden lg:block">
             <div className="sticky top-6 space-y-2">
               <Skeleton className="h-5 w-24" />
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-4 w-full" />
+              {TOC_LINE_KEYS.map((key) => (
+                <Skeleton key={key} className="h-4 w-full" />
               ))}
             </div>
           </div>
