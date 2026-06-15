@@ -11,6 +11,7 @@
  */
 
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function DashboardLoading() {
   return (
@@ -35,15 +36,15 @@ export default function DashboardLoading() {
       <div className="rounded-lg border bg-card">
         {/* Table header */}
         <div className="grid grid-cols-4 gap-4 border-b px-6 py-3">
-          {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-4 w-24" variant="text" />
+          {skeletonKeys(4, "col").map((key) => (
+            <Skeleton key={key} className="h-4 w-24" variant="text" />
           ))}
         </div>
         {/* Table rows */}
         <div className="divide-y">
-          {Array.from({ length: 5 }, (_, i) => (
+          {skeletonKeys(5, "row").map((key) => (
             <div
-              key={i}
+              key={key}
               className="grid grid-cols-4 items-center gap-4 px-6 py-4"
             >
               <Skeleton className="h-4 w-32" variant="text" />

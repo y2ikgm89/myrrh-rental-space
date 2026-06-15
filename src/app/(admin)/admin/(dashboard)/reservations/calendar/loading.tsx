@@ -6,6 +6,7 @@
  */
 
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function CalendarLoading() {
   return (
@@ -50,16 +51,16 @@ export default function CalendarLoading() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
         {/* Day labels */}
         <div className="grid shrink-0 grid-cols-7 border-b">
-          {Array.from({ length: 7 }, (_, i) => (
-            <div key={i} className="px-3 py-2">
+          {skeletonKeys(7, "day-label").map((key) => (
+            <div key={key} className="px-3 py-2">
               <Skeleton className="h-4 w-8" variant="text" />
             </div>
           ))}
         </div>
         {/* Week rows */}
         <div className="grid flex-1 grid-cols-7 grid-rows-6 divide-x divide-y">
-          {Array.from({ length: 42 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-1 p-2">
+          {skeletonKeys(42, "cal-cell").map((key, i) => (
+            <div key={key} className="flex flex-col gap-1 p-2">
               <Skeleton className="h-3 w-6" variant="text" />
               {i % 5 === 0 && <Skeleton className="h-5 w-full" />}
               {i % 7 === 3 && <Skeleton className="h-5 w-full" />}

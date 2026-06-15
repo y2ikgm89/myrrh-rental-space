@@ -1,4 +1,5 @@
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 /**
  * 管理画面 詳細ページの共通ローディング UI。
@@ -29,9 +30,9 @@ export default function DetailLoading() {
       {/* Detail card with field rows */}
       <div className="rounded-lg border bg-card p-6">
         <div className="space-y-5">
-          {Array.from({ length: 6 }, (_, i) => (
+          {skeletonKeys(6, "detail-field").map((key) => (
             <div
-              key={i}
+              key={key}
               className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:gap-4"
             >
               <Skeleton className="h-4 w-32 shrink-0" variant="text" />

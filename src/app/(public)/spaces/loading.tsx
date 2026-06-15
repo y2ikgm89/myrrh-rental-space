@@ -6,6 +6,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function SpacesLoading() {
   return (
@@ -33,8 +34,8 @@ export default function SpacesLoading() {
           {/* Space card grid (4 cards, catalog) */}
           <div className="@container">
             <div className="grid gap-6 @md:grid-cols-2 @md:gap-8 @3xl:grid-cols-3">
-              {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="space-y-3 border border-border">
+              {skeletonKeys(4, "space-card").map((key) => (
+                <div key={key} className="space-y-3 border border-border">
                   <Skeleton className="aspect-[3/2] w-full rounded-none" />
                   <div className="space-y-3 p-5">
                     <Skeleton className="h-5 w-3/4" variant="text" />

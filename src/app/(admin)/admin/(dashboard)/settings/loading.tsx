@@ -6,6 +6,7 @@
  */
 
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function SettingsLoading() {
   return (
@@ -18,8 +19,8 @@ export default function SettingsLoading() {
 
       {/* Category cards (1/2/3 col responsive) */}
       <div className="grid gap-4 @md/main:grid-cols-2 @3xl/main:grid-cols-3">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="space-y-3 rounded-lg border bg-card p-6">
+        {skeletonKeys(8, "settings-card").map((key) => (
+          <div key={key} className="space-y-3 rounded-lg border bg-card p-6">
             <div className="flex items-start gap-3">
               <Skeleton className="h-10 w-10 shrink-0" />
               <div className="flex-1 space-y-2">

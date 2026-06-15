@@ -10,6 +10,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function GuestCancelLoading() {
   return (
@@ -24,9 +25,9 @@ export default function GuestCancelLoading() {
             <Skeleton className="h-4 w-24" variant="text" />
           </div>
           <div className="px-4 sm:px-6">
-            {Array.from({ length: 3 }, (_, i) => (
+            {skeletonKeys(3, "summary-row").map((key) => (
               <div
-                key={i}
+                key={key}
                 className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-none"
               >
                 <Skeleton className="h-4 w-20" variant="text" />

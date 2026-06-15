@@ -1,5 +1,6 @@
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function BlogLoading() {
   return (
@@ -35,8 +36,8 @@ export default function BlogLoading() {
           {/* Post grid (6 cards, 1/2/3 col responsive) */}
           <div className="@container">
             <div className="grid gap-6 @sm:grid-cols-2 @sm:gap-8 @3xl:grid-cols-3">
-              {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className="space-y-3 border border-border">
+              {skeletonKeys(6, "blog-card").map((key) => (
+                <div key={key} className="space-y-3 border border-border">
                   <Skeleton className="aspect-[4/3] w-full rounded-none" />
                   <div className="space-y-3 p-5">
                     <Skeleton className="h-3 w-20" variant="text" />

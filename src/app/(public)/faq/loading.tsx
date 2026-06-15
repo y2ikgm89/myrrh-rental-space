@@ -6,6 +6,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function FaqLoading() {
   return (
@@ -25,9 +26,9 @@ export default function FaqLoading() {
         <div className="mx-auto max-w-3xl py-10 md:py-14">
           {/* Accordion rows */}
           <div className="divide-y divide-divider">
-            {Array.from({ length: 6 }, (_, i) => (
+            {skeletonKeys(6, "faq-row").map((key) => (
               <div
-                key={i}
+                key={key}
                 className="flex items-center justify-between gap-4 py-5"
               >
                 <Skeleton className="h-5 flex-1" variant="text" />

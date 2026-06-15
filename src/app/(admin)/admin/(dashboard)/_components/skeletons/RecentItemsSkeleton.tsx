@@ -4,6 +4,7 @@
 
 import { Card, CardContent, CardHeader } from "@/admin/components/ui/card";
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 function RecentItemCard() {
   return (
@@ -17,8 +18,8 @@ function RecentItemCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="flex items-center gap-4">
+          {skeletonKeys(5, "recent-row").map((key) => (
+            <div key={key} className="flex items-center gap-4">
               <Skeleton className="h-4 w-20" variant="text" />
               <Skeleton className="h-4 w-32" variant="text" />
               <Skeleton className="ml-auto h-5 w-14 rounded-full" />

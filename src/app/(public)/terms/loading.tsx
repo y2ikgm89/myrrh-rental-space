@@ -6,6 +6,7 @@
 
 import { Container } from "@/public/components/design-system/container";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function TermsListLoading() {
   return (
@@ -28,8 +29,8 @@ export default function TermsListLoading() {
 
           {/* List rows */}
           <ul className="divide-y divide-divider">
-            {Array.from({ length: 4 }, (_, i) => (
-              <li key={i} className="space-y-2 py-6">
+            {skeletonKeys(4, "terms-row").map((key) => (
+              <li key={key} className="space-y-2 py-6">
                 <Skeleton className="h-3 w-32" variant="text" />
                 <Skeleton className="h-6 w-2/3" variant="text" />
               </li>

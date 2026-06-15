@@ -9,6 +9,7 @@
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { Skeleton } from "@/public/components/design-system/skeleton";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function ReservationCompleteLoading() {
   return (
@@ -27,9 +28,9 @@ export default function ReservationCompleteLoading() {
             <Skeleton className="h-6 w-1/2" variant="text" />
           </div>
           <div className="px-4 sm:px-6">
-            {Array.from({ length: 4 }, (_, i) => (
+            {skeletonKeys(4, "summary-row").map((key) => (
               <div
-                key={i}
+                key={key}
                 className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-none"
               >
                 <Skeleton className="h-4 w-20" variant="text" />

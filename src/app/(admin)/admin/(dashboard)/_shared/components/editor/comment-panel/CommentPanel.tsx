@@ -35,6 +35,7 @@ import {
 } from "@/admin/actions/editor-comment";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import type {
   EditorCommentThread,
   CommentableContentType,
@@ -419,8 +420,8 @@ export function CommentPanel({
           <div className="flex-1 overflow-y-auto p-3">
             {isLoading ? (
               <div className="space-y-3">
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
+                {skeletonKeys(3, "comment").map((key) => (
+                  <Skeleton key={key} className="h-20 w-full" />
                 ))}
               </div>
             ) : threads.length === 0 ? (

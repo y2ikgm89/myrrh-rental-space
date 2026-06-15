@@ -6,6 +6,7 @@
  */
 
 import { Skeleton } from "@/admin/components/ui";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function FaqLoading() {
   return (
@@ -24,9 +25,9 @@ export default function FaqLoading() {
 
       {/* Category list (DnD cards) */}
       <div className="space-y-3">
-        {Array.from({ length: 6 }, (_, i) => (
+        {skeletonKeys(6, "faq-card").map((key) => (
           <div
-            key={i}
+            key={key}
             className="flex items-center gap-4 rounded-lg border bg-card p-4"
           >
             {/* Drag handle */}

@@ -56,6 +56,7 @@ import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
+import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import "./_styles/public.css";
 
 export const metadata: Metadata = {
@@ -291,9 +292,9 @@ export default async function PublicRootLayout({
                 >
                   <div className="h-5 w-24 animate-pulse bg-surface" />
                   <nav className="ml-auto hidden gap-6 md:flex">
-                    {Array.from({ length: 4 }, (_, i) => (
+                    {skeletonKeys(4, "nav-item").map((key) => (
                       <div
-                        key={i}
+                        key={key}
                         className="h-3 w-14 animate-pulse bg-surface"
                       />
                     ))}
