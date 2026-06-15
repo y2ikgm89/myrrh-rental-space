@@ -40,6 +40,28 @@ describe("invalidateEventCaches", () => {
     expect(updateTagMock).toHaveBeenCalledTimes(2);
   });
 
+  test("previousSlug 指定（rename）時は旧 slug の events.slug も無効化する", () => {
+    invalidateEventCaches(EVENT_ID, "new-festival", {
+      previousSlug: EVENT_SLUG,
+    });
+
+    expect(updateTagMock).toHaveBeenCalledWith(
+      getCacheTag.events.slug("new-festival"),
+    );
+    expect(updateTagMock).toHaveBeenCalledWith(
+      getCacheTag.events.slug(EVENT_SLUG),
+    );
+    // EVENTS + detail + 新 slug + 旧 slug = 4
+    expect(updateTagMock).toHaveBeenCalledTimes(4);
+  });
+
+  test("previousSlug が現 slug と同一なら旧 slug を二重無効化しない", () => {
+    invalidateEventCaches(EVENT_ID, EVENT_SLUG, { previousSlug: EVENT_SLUG });
+
+    // EVENTS + detail + slug = 3（旧=新でスキップ）
+    expect(updateTagMock).toHaveBeenCalledTimes(3);
+  });
+
   test("options.registrations で eventRegistrations.list を追加無効化する", () => {
     invalidateEventCaches(EVENT_ID, EVENT_SLUG, { registrations: true });
 

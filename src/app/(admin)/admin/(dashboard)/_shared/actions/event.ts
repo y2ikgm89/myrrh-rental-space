@@ -175,12 +175,12 @@ export async function updateEventAction(
         resourceId: validId,
         execute: async () => {
           const commandInput = buildEventCommandInput(data);
-          await updateEventCommand(validId, commandInput);
-          return null;
+          return updateEventCommand(validId, commandInput);
         },
-        afterSuccess: () => {
-          invalidateEventCaches(validId, data.slug, {
+        afterSuccess: ({ oldSlug, slug }) => {
+          invalidateEventCaches(validId, slug, {
             registrations: true,
+            previousSlug: oldSlug,
           });
           fireAndForget(syncEventOutbound(validId), {
             operation: "syncEventOutbound.update",
