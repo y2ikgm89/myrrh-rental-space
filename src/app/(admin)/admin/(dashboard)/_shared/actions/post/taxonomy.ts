@@ -1,6 +1,5 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -14,7 +13,6 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import * as categoryCommands from "@/shared/domain/posts/category-commands";
 import * as tagCommands from "@/shared/domain/posts/tag-commands";
-import { CACHE_TAGS } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -137,9 +135,10 @@ export async function deletePostTag(id: string): Promise<MutationResult> {
       await tagCommands.deletePostTag(validated.data);
       return null;
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.POST_TAGS);
-    },
+    // create / update と対称に POSTS + POST_TAGS + SIDEBAR_DATA を無効化する。
+    // POST_TAGS のみだと記事詳細のタグチップ・サイドバーのタグウィジェットが
+    // 削除済みタグを残し、/tag/{slug} への 404 リンクが残留する。
+    afterSuccess: invalidatePostTagCaches,
   });
 }
 
