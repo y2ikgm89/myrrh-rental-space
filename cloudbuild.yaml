@@ -76,7 +76,8 @@ steps:
     args:
       - -c
       - |
-        bun install --frozen-lockfile
+        set -e
+        sh scripts/bun-ci-install.sh
         bun run type-check
         bun run test:unit
 

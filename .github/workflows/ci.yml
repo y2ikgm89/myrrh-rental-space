@@ -178,7 +178,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.code == 'true'
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容
       - name: Run bun audit
@@ -225,7 +225,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.code == 'true'
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       # Prettier format check を全ファイル対象で実行（lefthook が pre-commit で
       # auto-fix する前提だが、CI でも最終ゲートとして検証）
@@ -263,7 +263,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.code == 'true'
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -314,7 +314,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.code == 'true'
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -382,7 +382,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.code == 'true'
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Cache Playwright browsers
         if: needs.changes.outputs.code == 'true'
@@ -494,7 +494,7 @@ jobs:
             bun-deps-${{ runner.os }}-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       # Playwright browsers は大きい (chromium ~130MB)。hash ベースで cache
       - name: Cache Playwright browsers
@@ -593,7 +593,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.code == 'true'
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -693,7 +693,7 @@ jobs:
             bun-deps-${{ runner.os }}-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -759,7 +759,7 @@ jobs:
             bun-deps-${{ runner.os }}-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -836,7 +836,7 @@ jobs:
             bun-deps-${{ runner.os }}-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Install Playwright browsers
         run: bunx playwright install chromium --with-deps
@@ -984,7 +984,7 @@ jobs:
             bun-deps-${{ runner.os }}-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: sh scripts/bun-ci-install.sh
 
       - name: Generate API documentation
         run: bun run docs
