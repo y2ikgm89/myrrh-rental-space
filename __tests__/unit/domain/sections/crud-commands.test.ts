@@ -43,9 +43,9 @@ const mockSectionDelete = mock<() => Promise<Record<string, unknown>>>(() =>
 const mockSectionAggregate = mock<
   () => Promise<{ _max: { order: number | null } }>
 >(() => Promise.resolve({ _max: { order: null } }));
-const mockPageFindUnique = mock<() => Promise<{ slug: string } | null>>(() =>
-  Promise.resolve({ slug: "test-page" }),
-);
+const mockPageFindUnique = mock<
+  () => Promise<{ slug: string; template: string } | null>
+>(() => Promise.resolve({ slug: "test-page", template: "content" }));
 
 mock.module("server-only", () => ({}));
 
@@ -122,9 +122,10 @@ beforeEach(() => {
   mockSectionDelete.mockReset();
   mockSectionAggregate.mockReset();
   mockPageFindUnique.mockReset();
-  // 各 test の前にデフォルトで page.findUnique は { slug } を返す
+  // 各 test の前にデフォルトで page.findUnique は { slug, template } を返す
+  // template="content" は universal + marketing を許可（cta / page-hero は universal）
   mockPageFindUnique.mockImplementation(() =>
-    Promise.resolve({ slug: "test-page" }),
+    Promise.resolve({ slug: "test-page", template: "content" }),
   );
 });
 
@@ -221,6 +222,51 @@ describe("createPageSectionCommand", () => {
       }),
     );
   });
+
+  test("存在しないページは NOT_FOUND", async () => {
+    mockPageFindUnique.mockImplementationOnce(() => Promise.resolve(null));
+
+    await expect(
+      createPageSectionCommand({ pageId: PAGE_ID, type: "cta" }),
+    ).rejects.toThrow("ページが見つかりません");
+  });
+
+  test("テンプレートの許可外 type は VALIDATION エラー（サーバー権威 floor）", async () => {
+    // reservation テンプレートは reservation-form のみ追加可・space-list は除外
+    mockPageFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({ slug: "reservation", template: "reservation" }),
+    );
+
+    await expect(
+      createPageSectionCommand({ pageId: PAGE_ID, type: "space-list" }),
+    ).rejects.toThrow("このページに追加できないセクションタイプです");
+    // 許可外は create まで到達しない
+    expect(mockSectionCreate).not.toHaveBeenCalled();
+  });
+
+  test("未知テンプレートは制限しない（クライアント fallback と同挙動）", async () => {
+    mockPageFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({ slug: "legacy", template: "totally-unknown" }),
+    );
+    mockSectionAggregate.mockImplementationOnce(() =>
+      Promise.resolve({ _max: { order: 2 } }),
+    );
+    mockSectionCreate.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: "new-space-list",
+        pageId: PAGE_ID,
+        page: { slug: "legacy" },
+      }),
+    );
+
+    const result = await createPageSectionCommand({
+      pageId: PAGE_ID,
+      type: "space-list",
+    });
+
+    expect(result.id).toBe("new-space-list");
+    expect(mockSectionCreate).toHaveBeenCalled();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -242,7 +288,7 @@ describe("deletePageSectionCommand", () => {
         id: SECTION_ID,
         pageId: PAGE_ID,
         type: "page-hero",
-        page: { slug: "test-page" },
+        page: { slug: "test-page", template: "home" },
       }),
     );
 
@@ -251,13 +297,30 @@ describe("deletePageSectionCommand", () => {
     );
   });
 
+  test("テンプレートの必須セクションは削除不可（CONFLICT・サーバー権威 floor）", async () => {
+    // reservation テンプレートは reservation-form を必須（削除不可）にする
+    mockSectionFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: SECTION_ID,
+        pageId: PAGE_ID,
+        type: "reservation-form",
+        page: { slug: "reservation", template: "reservation" },
+      }),
+    );
+
+    await expect(deletePageSectionCommand(SECTION_ID)).rejects.toThrow(
+      "このセクションはページの必須要素のため削除できません",
+    );
+    expect(mockSectionDelete).not.toHaveBeenCalled();
+  });
+
   test("通常 section は削除成功", async () => {
     mockSectionFindUnique.mockImplementationOnce(() =>
       Promise.resolve({
         id: SECTION_ID,
         pageId: PAGE_ID,
         type: "cta",
-        page: { slug: "test-page" },
+        page: { slug: "test-page", template: "content" },
       }),
     );
     mockSectionDelete.mockImplementationOnce(() => Promise.resolve({}));
