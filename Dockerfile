@@ -12,7 +12,8 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 COPY package.json bun.lock ./
 COPY prisma ./prisma/
-RUN bun install --frozen-lockfile && \
+COPY scripts/bun-ci-install.sh ./scripts/bun-ci-install.sh
+RUN sh ./scripts/bun-ci-install.sh && \
     bunx --bun prisma generate --schema=./prisma/schema.prisma
 
 # --- Stage 2: Build Prep ---
