@@ -5,6 +5,10 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
+import {
+  getPageTemplate,
+  isRequiredSectionForTemplate,
+} from "@/shared/lib/sections/page-templates";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import {
   validateSectionConfig,
@@ -23,7 +27,7 @@ async function ensurePageSectionExists(id: string) {
       id: true,
       pageId: true,
       type: true,
-      page: { select: { slug: true } },
+      page: { select: { slug: true, template: true } },
     },
   });
 
@@ -36,6 +40,7 @@ async function ensurePageSectionExists(id: string) {
     pageId: section.pageId,
     type: section.type,
     pageSlug: section.page.slug,
+    pageTemplate: section.page.template,
   };
 }
 
@@ -97,6 +102,23 @@ export async function createPageSectionCommand(input: {
     throw new DomainError("不正なセクションタイプです", "VALIDATION");
   }
 
+  // ページのテンプレートが許可するセクションのみ追加可能（サーバー権威 floor）。
+  // PageEditor のクライアントフィルタと同挙動: テンプレートが未知の場合は制限しない。
+  const page = await prisma.page.findUnique({
+    where: { id: input.pageId },
+    select: { template: true },
+  });
+  if (!page) {
+    throw new DomainError("ページが見つかりません", "NOT_FOUND");
+  }
+  const template = getPageTemplate(page.template);
+  if (template && !template.allowedSectionTypes.includes(input.type)) {
+    throw new DomainError(
+      "このページに追加できないセクションタイプです",
+      "VALIDATION",
+    );
+  }
+
   // page-hero は 1 ページに 1 つ制約
   if (input.type === "page-hero") {
     const existing = await prisma.section.findFirst({
@@ -149,6 +171,14 @@ export async function deletePageSectionCommand(
   const existing = await ensurePageSectionExists(id);
   if (existing.type === "page-hero") {
     throw new DomainError("ヒーローは削除できません", "CONFLICT");
+  }
+  // テンプレートの必須（core）セクションは削除不可（サーバー権威 floor）。
+  // SectionListSidebar のクライアント disable と同じ requiredSectionTypes を強制する。
+  if (isRequiredSectionForTemplate(existing.pageTemplate, existing.type)) {
+    throw new DomainError(
+      "このセクションはページの必須要素のため削除できません",
+      "CONFLICT",
+    );
   }
   await prisma.section.delete({ where: { id } });
   return { id, pageId: existing.pageId, pageSlug: existing.pageSlug };
