@@ -26,8 +26,9 @@ const bulkInputSchema = z.object({
 function invalidateSpaceCachesForIds(ids: string[]): void {
   updateTag(CACHE_TAGS.SPACES);
   updateTag(CACHE_TAGS.REVIEWS);
+  // 公開スペース詳細は slug でタグ付けされるため id 基準の spaces.detail は噛まない。
+  // 詳細ページの無効化は SPACES コレクションタグが担う。
   for (const id of [...new Set(ids)]) {
-    updateTag(getCacheTag.spaces.detail(id));
     updateTag(getCacheTag.reviews.space(id));
     updateTag(getCacheTag.reviews.stats(id));
     fireAndForget(purgeSpaceCache(id), {
