@@ -36,10 +36,8 @@ export async function bulkPublishEvents(
     resource: "event",
     action: "publish",
     execute: async () => bulkPublishEventsCommand(parsed.data, publish),
-    afterSuccess: (data) => {
-      for (const target of data.affectedTargets) {
-        invalidateEventCaches(target.id, target.slug, { registrations: true });
-      }
+    afterSuccess: () => {
+      invalidateEventCaches();
     },
   });
 }
@@ -55,10 +53,8 @@ export async function bulkSoftDeleteEvents(
     action: "delete",
     execute: async (user) =>
       bulkSoftDeleteEventsCommand(parsed.data, { id: user.id }),
-    afterSuccess: (data) => {
-      for (const target of data.affectedTargets) {
-        invalidateEventCaches(target.id, target.slug, { registrations: true });
-      }
+    afterSuccess: () => {
+      invalidateEventCaches();
     },
   });
 }
@@ -84,9 +80,7 @@ export async function bulkSetStatusEvents(
     execute: async () =>
       bulkSetStatusEventsCommand(parsed.data.ids, parsed.data.newStatus),
     afterSuccess: (data) => {
-      for (const id of data.affectedIds) {
-        invalidateEventCaches(id, null, { registrations: true });
-      }
+      invalidateEventCaches();
       if (
         data.newStatus === EventStatus.CANCELLED &&
         data.affectedIds.length > 0

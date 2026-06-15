@@ -152,8 +152,6 @@ export const CACHE_TAGS = {
   FEATURE_MODULES: "feature-modules",
   /** イベント */
   EVENTS: "events",
-  /** イベント参加登録 */
-  EVENT_REGISTRATIONS: "event-registrations",
   /** 管理通知 */
   NOTIFICATIONS: "notifications",
 } as const;
@@ -237,14 +235,6 @@ export const getCacheTag = {
   reviews: {
     space: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-space-${spaceId}`,
     stats: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-stats-${spaceId}`,
-  },
-  events: {
-    list: () => CACHE_TAGS.EVENTS,
-    detail: (id: string) => `${CACHE_TAGS.EVENTS}-${id}`,
-    slug: (slug: string) => `${CACHE_TAGS.EVENTS}-slug-${slug}`,
-  },
-  eventRegistrations: {
-    list: (eventId: string) => `${CACHE_TAGS.EVENT_REGISTRATIONS}-${eventId}`,
   },
   auditLogs: {
     recent: (userId: string) => `audit-logs:recent:${userId}`,

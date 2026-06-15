@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 const updateTagMock = mock<(tag: string) => void>(() => {});
 mock.module("next/cache", () => ({ updateTag: updateTagMock }));
@@ -7,77 +7,32 @@ mock.module("next/cache", () => ({ updateTag: updateTagMock }));
 const { invalidateEventCaches } =
   await import("@/shared/lib/cache/event-cache");
 
-const EVENT_ID = "evt-1";
-const EVENT_SLUG = "summer-festival";
-
 describe("invalidateEventCaches", () => {
   beforeEach(() => {
     updateTagMock.mockClear();
   });
 
-  test("基本: EVENTS + events.detail を無効化する（slug なし）", () => {
-    invalidateEventCaches(EVENT_ID, null);
+  test("基本: EVENTS collection タグのみを無効化する", () => {
+    invalidateEventCaches();
+
+    // イベント公開ページ（一覧・詳細）の唯一の cacheTag が EVENTS のため、
+    // これ一つで全イベントページが更新される。
+    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.EVENTS);
+    expect(updateTagMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("notifications 指定時は NOTIFICATIONS も無効化する", () => {
+    invalidateEventCaches({ notifications: true });
 
     expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.EVENTS);
-    expect(updateTagMock).toHaveBeenCalledWith(
-      getCacheTag.events.detail(EVENT_ID),
-    );
-    expect(updateTagMock).toHaveBeenCalledTimes(2);
-  });
-
-  test("slug 指定時は events.slug も無効化する（公開ページ用）", () => {
-    invalidateEventCaches(EVENT_ID, EVENT_SLUG);
-
-    expect(updateTagMock).toHaveBeenCalledWith(
-      getCacheTag.events.slug(EVENT_SLUG),
-    );
-    expect(updateTagMock).toHaveBeenCalledTimes(3);
-  });
-
-  test("slug が undefined でも無効化しない（null と同じ挙動）", () => {
-    invalidateEventCaches(EVENT_ID, undefined);
-
-    expect(updateTagMock).toHaveBeenCalledTimes(2);
-  });
-
-  test("previousSlug 指定（rename）時は旧 slug の events.slug も無効化する", () => {
-    invalidateEventCaches(EVENT_ID, "new-festival", {
-      previousSlug: EVENT_SLUG,
-    });
-
-    expect(updateTagMock).toHaveBeenCalledWith(
-      getCacheTag.events.slug("new-festival"),
-    );
-    expect(updateTagMock).toHaveBeenCalledWith(
-      getCacheTag.events.slug(EVENT_SLUG),
-    );
-    // EVENTS + detail + 新 slug + 旧 slug = 4
-    expect(updateTagMock).toHaveBeenCalledTimes(4);
-  });
-
-  test("previousSlug が現 slug と同一なら旧 slug を二重無効化しない", () => {
-    invalidateEventCaches(EVENT_ID, EVENT_SLUG, { previousSlug: EVENT_SLUG });
-
-    // EVENTS + detail + slug = 3（旧=新でスキップ）
-    expect(updateTagMock).toHaveBeenCalledTimes(3);
-  });
-
-  test("options.registrations で eventRegistrations.list を追加無効化する", () => {
-    invalidateEventCaches(EVENT_ID, EVENT_SLUG, { registrations: true });
-
-    expect(updateTagMock).toHaveBeenCalledWith(
-      getCacheTag.eventRegistrations.list(EVENT_ID),
-    );
-    expect(updateTagMock).toHaveBeenCalledTimes(4);
-  });
-
-  test("全オプション有効時は 5 タグを無効化する", () => {
-    invalidateEventCaches(EVENT_ID, EVENT_SLUG, {
-      registrations: true,
-      notifications: true,
-    });
-
     expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
-    expect(updateTagMock).toHaveBeenCalledTimes(5);
+    expect(updateTagMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("notifications false なら NOTIFICATIONS を無効化しない", () => {
+    invalidateEventCaches({ notifications: false });
+
+    expect(updateTagMock).not.toHaveBeenCalledWith(CACHE_TAGS.NOTIFICATIONS);
+    expect(updateTagMock).toHaveBeenCalledTimes(1);
   });
 });

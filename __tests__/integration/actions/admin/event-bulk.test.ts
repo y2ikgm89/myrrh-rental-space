@@ -225,7 +225,7 @@ describe("bulkPublishEvents", () => {
       );
     });
 
-    test("成功後に affectedTargets ごとに invalidateEventCaches が呼ばれる", async () => {
+    test("成功後に invalidateEventCaches で EVENTS collection を一括無効化する", async () => {
       mockBulkPublishEventsCommand.mockImplementationOnce(() =>
         Promise.resolve({
           count: 2,
@@ -244,17 +244,10 @@ describe("bulkPublishEvents", () => {
 
       await bulkPublishEvents([VALID_UUID_1, VALID_UUID_2], true);
 
-      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(2);
-      expect(mockInvalidateEventCaches).toHaveBeenCalledWith(
-        VALID_UUID_1,
-        "event-1",
-        { registrations: true },
-      );
-      expect(mockInvalidateEventCaches).toHaveBeenCalledWith(
-        VALID_UUID_2,
-        "event-2",
-        { registrations: true },
-      );
+      // collection タグ EVENTS の単一無効化で全イベントページが更新されるため、
+      // affectedTargets 件数によらず 1 回・引数なしで呼ぶ
+      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(1);
+      expect(mockInvalidateEventCaches).toHaveBeenCalledWith();
     });
   });
 
@@ -353,7 +346,7 @@ describe("bulkSoftDeleteEvents", () => {
       );
     });
 
-    test("成功後に affectedTargets ごとに invalidateEventCaches が呼ばれる", async () => {
+    test("成功後に invalidateEventCaches で EVENTS collection を一括無効化する", async () => {
       mockBulkSoftDeleteEventsCommand.mockImplementationOnce(() =>
         Promise.resolve({
           count: 2,
@@ -370,12 +363,9 @@ describe("bulkSoftDeleteEvents", () => {
 
       await bulkSoftDeleteEvents([VALID_UUID_1, VALID_UUID_2]);
 
-      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(2);
-      expect(mockInvalidateEventCaches).toHaveBeenCalledWith(
-        VALID_UUID_1,
-        "event-1",
-        { registrations: true },
-      );
+      // collection タグ EVENTS の単一無効化で全イベントページが更新されるため 1 回でよい
+      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(1);
+      expect(mockInvalidateEventCaches).toHaveBeenCalledWith();
     });
   });
 
@@ -547,7 +537,7 @@ describe("bulkSetStatusEvents", () => {
       expect(mockFireAndForget).not.toHaveBeenCalled();
     });
 
-    test("afterSuccess で affectedIds ごとに invalidateEventCaches が呼ばれる", async () => {
+    test("afterSuccess で invalidateEventCaches を 1 回呼ぶ", async () => {
       mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
         count: 2,
         newStatus: EventStatus.CANCELLED,
@@ -563,7 +553,8 @@ describe("bulkSetStatusEvents", () => {
         EventStatus.CANCELLED,
       );
 
-      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(2);
+      // collection タグ EVENTS の単一無効化で全イベントページが更新されるため 1 回でよい
+      expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(1);
     });
   });
 });

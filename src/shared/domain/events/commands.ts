@@ -254,10 +254,6 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       category: ErrorCategory.EXTERNAL_API,
     });
   }
-
-  // rename 時に旧 slug 詳細キャッシュを無効化できるよう、永続化後の slug と
-  // 旧 slug を呼び出し側に返す（ensureUniqueSlug 適用後の実 slug を含む）。
-  return { oldSlug: existing.slug, slug };
 }
 
 export async function deleteEventCommand(id: string) {

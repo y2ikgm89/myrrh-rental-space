@@ -393,7 +393,7 @@ describe("updateEventCommand", () => {
         .mockImplementationOnce(() => Promise.resolve(existingEvent))
         .mockImplementationOnce(() => Promise.resolve(null)); // 新スラッグは重複なし
 
-      const result = await updateEventCommand("event-1", {
+      await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         slug: "new-slug",
       });
@@ -403,8 +403,6 @@ describe("updateEventCommand", () => {
           data: expect.objectContaining({ slug: "new-slug" }),
         }),
       );
-      // rename 時は旧 slug / 新 slug の両方を呼び出し側に返す（cache 無効化用）
-      expect(result).toEqual({ oldSlug: "old-slug", slug: "new-slug" });
     });
 
     test("スラッグが変更されていない場合、同じスラッグで更新される", async () => {

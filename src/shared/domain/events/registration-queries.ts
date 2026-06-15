@@ -48,17 +48,6 @@ export async function getEventRegistrations(
   return { registrations, total, confirmedCount, page, perPage };
 }
 
-export async function getEventIdsByCustomerId(
-  customerId: string,
-): Promise<string[]> {
-  const rows = await prisma.eventRegistration.findMany({
-    where: { customerId },
-    select: { eventId: true },
-    distinct: ["eventId"],
-  });
-  return rows.map((row) => row.eventId);
-}
-
 export async function getRegistrationCount(eventId: string) {
   const result = await prisma.eventRegistration.aggregate({
     where: { eventId, status: RegistrationStatus.CONFIRMED },

@@ -118,7 +118,7 @@ export async function createEventAction(
           return { id: event.id, slug: event.slug };
         },
         afterSuccess: (payload) => {
-          invalidateEventCaches(payload.id, payload.slug);
+          invalidateEventCaches();
           fireAndForget(syncEventOutbound(payload.id), {
             operation: "syncEventOutbound.create",
             category: ErrorCategory.EXTERNAL_API,
@@ -175,13 +175,11 @@ export async function updateEventAction(
         resourceId: validId,
         execute: async () => {
           const commandInput = buildEventCommandInput(data);
-          return updateEventCommand(validId, commandInput);
+          await updateEventCommand(validId, commandInput);
+          return null;
         },
-        afterSuccess: ({ oldSlug, slug }) => {
-          invalidateEventCaches(validId, slug, {
-            registrations: true,
-            previousSlug: oldSlug,
-          });
+        afterSuccess: () => {
+          invalidateEventCaches();
           fireAndForget(syncEventOutbound(validId), {
             operation: "syncEventOutbound.update",
             category: ErrorCategory.EXTERNAL_API,
@@ -211,9 +209,7 @@ export async function updateEventAction(
 
 export async function deleteEvent(
   id: string,
-): Promise<
-  MutationResult<{ slug: string | null; googleCalendarEventId: string | null }>
-> {
+): Promise<MutationResult<{ googleCalendarEventId: string | null }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -225,12 +221,11 @@ export async function deleteEvent(
       const event = await getEventById(validated.data);
       await deleteEventCommand(validated.data);
       return {
-        slug: event?.slug ?? null,
         googleCalendarEventId: event?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
-      invalidateEventCaches(validated.data, data.slug, { registrations: true });
+      invalidateEventCaches();
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
@@ -242,9 +237,7 @@ export async function deleteEvent(
   });
 }
 
-export async function publishEvent(
-  id: string,
-): Promise<MutationResult<string | null>> {
+export async function publishEvent(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -253,12 +246,11 @@ export async function publishEvent(
     action: "publish",
     resourceId: validated.data,
     execute: async () => {
-      const event = await getEventById(validated.data);
       await publishEventCommand(validated.data);
-      return event?.slug ?? null;
+      return null;
     },
-    afterSuccess: (slug) => {
-      invalidateEventCaches(validated.data, slug, { registrations: true });
+    afterSuccess: () => {
+      invalidateEventCaches();
       fireAndForget(syncEventOutbound(validated.data), {
         operation: "syncEventOutbound.publish",
         category: ErrorCategory.EXTERNAL_API,
@@ -278,7 +270,7 @@ export async function duplicateEvent(
     action: "create",
     execute: async () => duplicateEventCommand(validated.data),
     afterSuccess: (data) => {
-      invalidateEventCaches(data.id, data.slug);
+      invalidateEventCaches();
       fireAndForget(syncEventOutbound(data.id), {
         operation: "syncEventOutbound.duplicate",
         category: ErrorCategory.EXTERNAL_API,
@@ -290,9 +282,7 @@ export async function duplicateEvent(
 
 export async function cancelEvent(
   id: string,
-): Promise<
-  MutationResult<{ slug: string | null; googleCalendarEventId: string | null }>
-> {
+): Promise<MutationResult<{ googleCalendarEventId: string | null }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -304,12 +294,11 @@ export async function cancelEvent(
       const event = await getEventById(validated.data);
       await cancelEventCommand(validated.data);
       return {
-        slug: event?.slug ?? null,
         googleCalendarEventId: event?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
-      invalidateEventCaches(validated.data, data.slug, { registrations: true });
+      invalidateEventCaches();
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
@@ -323,9 +312,7 @@ export async function cancelEvent(
 
 export async function archiveEvent(
   id: string,
-): Promise<
-  MutationResult<{ slug: string | null; googleCalendarEventId: string | null }>
-> {
+): Promise<MutationResult<{ googleCalendarEventId: string | null }>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -337,12 +324,11 @@ export async function archiveEvent(
       const event = await getEventById(validated.data);
       await archiveEventCommand(validated.data);
       return {
-        slug: event?.slug ?? null,
         googleCalendarEventId: event?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
-      invalidateEventCaches(validated.data, data.slug, { registrations: true });
+      invalidateEventCaches();
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
