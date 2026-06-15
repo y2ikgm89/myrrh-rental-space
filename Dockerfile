@@ -59,7 +59,35 @@ FROM builder-base AS builder
 RUN --mount=type=secret,id=next_server_actions_encryption_key \
     sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; bun run build'
 
-# --- Stage 4: Runner ---
+# --- Stage 4: Migrator (Cloud Run Job: `prisma migrate deploy`) ---
+# slim な runner と違い、Prisma CLI は TypeScript の prisma.config.ts を c12 / jiti /
+# deepmerge-ts でロードするため依存一式が必要。これらは @prisma/config / prisma CLI の
+# 依存だがトップレベル node_modules に在り、runner の `COPY @prisma` では同梱されない。
+# 不完全な node_modules では `bunx` が実行時にパッケージを再ダウンロードし、その不整合
+# コンテキストで config ローダ（c12/jiti）が解決できず prisma.config.ts を読めない →
+# datasource.url 未解決で migrate deploy が exit(1)。これが OOM(#597) / studio-core
+# tarball flake(#598) / config 未ロード(#599) の共通原因。
+#
+# 対策: migrate を deps ステージ（bun install 済みの完全な node_modules）の上で実行し、
+# 実行時の再ダウンロードを構造的に排除する。CI（.github/workflows/ci.yml の
+# `bunx --bun prisma migrate deploy`）と同一環境のため確実に config をロードできる。
+#
+# このステージは runner より前に置き、runner を Dockerfile 末尾（=`--target` 未指定時の
+# 既定ビルド対象）に保つ。cloudbuild は両ステージを `--target` で明示選択する
+# （build-image→runner / build-migrator→migrator）が、素の `docker build .` でも service
+# イメージが出る安全側に倒す。#599 で migrator を末尾に置いたため `--target` 未指定の
+# build-image が migrator を service タグでビルドし、service が migrate を実行して exit(0)
+# →ポート未待受で起動プローブ失敗、という回帰が起きた。その再発防止。
+FROM deps AS migrator
+WORKDIR /app
+# deps は package.json / bun.lock / prisma/（schema + migrations）/ 完全な node_modules /
+# generated を保持済み。root の prisma.config.ts（datasource.url = env("DATABASE_URL")）
+# だけ追加で必要。
+COPY prisma.config.ts ./
+CMD ["bunx", "--bun", "prisma", "migrate", "deploy"]
+
+# --- Stage 5: Runner (Cloud Run service) ---
+# Dockerfile 末尾 = `docker build` の既定ターゲット。cloudbuild は `--target=runner` で明示選択。
 FROM base AS runner
 
 RUN apk add --no-cache libc6-compat && \
@@ -107,28 +135,8 @@ RUN find ./node_modules/@prisma/client/runtime \
     test -f ./node_modules/@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs
 # runner は Cloud Run service 専用。ランタイムは @prisma/client（上でコピー）＋ generated のみ
 # 参照し、Prisma CLI（node_modules/prisma）も prisma/ ソース（schema / migrations）も使わない。
-# migrate deploy は専用の migrator ステージ（完全な node_modules）が担う（末尾参照）。
+# migrate deploy は専用の migrator ステージ（上記 Stage 4・完全な node_modules）が担う。
 
 USER nextjs
 EXPOSE 8080
 CMD ["bun", "server.js"]
-
-# --- Stage 5: Migrator (Cloud Run Job: `prisma migrate deploy`) ---
-# slim な runner と違い、Prisma CLI は TypeScript の prisma.config.ts を c12 / jiti /
-# deepmerge-ts でロードするため依存一式が必要。これらは @prisma/config / prisma CLI の
-# 依存だがトップレベル node_modules に在り、runner の `COPY @prisma` / `COPY prisma` では
-# 同梱されない。不完全な node_modules では `bunx` が実行時にパッケージを再ダウンロードし、
-# その不整合コンテキストで config ローダ（c12/jiti）が解決できず prisma.config.ts を
-# 読めない → datasource.url 未解決で migrate deploy が exit(1)。これが OOM(#597) /
-# studio-core tarball flake(#598) / 今回の config 未ロードの共通原因。
-#
-# 対策: migrate を deps ステージ（bun install 済みの完全な node_modules）の上で実行し、
-# 実行時の再ダウンロードを構造的に排除する。CI（.github/workflows/ci.yml の
-# `bunx --bun prisma migrate deploy`）と同一環境のため確実に config をロードできる。
-FROM deps AS migrator
-WORKDIR /app
-# deps は package.json / bun.lock / prisma/（schema + migrations）/ 完全な node_modules /
-# generated を保持済み。root の prisma.config.ts（datasource.url = env("DATABASE_URL")）
-# だけ追加で必要。
-COPY prisma.config.ts ./
-CMD ["bunx", "--bun", "prisma", "migrate", "deploy"]
