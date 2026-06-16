@@ -17,17 +17,30 @@ const fetchSlotsSchema = z.object({
 
 const spaceIdSchema = z.uuid();
 
+/**
+ * 時間枠取得の結果。`ok:false`（レート制限/不正入力による取得失敗）と
+ * `ok:true` かつ空配列（=その日は本当に枠が無い）を呼び出し側で区別できるよう、
+ * 空配列のフォールバックではなく判別可能なユニオンを返す。
+ */
+export type FetchSlotsResult =
+  | { readonly ok: true; readonly slots: TimeSlot[] }
+  | { readonly ok: false; readonly reason: "rate_limit" | "invalid" };
+
 export async function fetchAvailableSlots(
   spaceId: string,
   date: string,
-): Promise<TimeSlot[]> {
+): Promise<FetchSlotsResult> {
   const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
-  if (!rateLimit.success) return [];
+  if (!rateLimit.success) return { ok: false, reason: "rate_limit" };
 
   const parsed = fetchSlotsSchema.safeParse({ spaceId, date });
-  if (!parsed.success) return [];
+  if (!parsed.success) return { ok: false, reason: "invalid" };
 
-  return getAvailableTimeSlots(parsed.data.spaceId, parsed.data.date);
+  const slots = await getAvailableTimeSlots(
+    parsed.data.spaceId,
+    parsed.data.date,
+  );
+  return { ok: true, slots };
 }
 
 /**

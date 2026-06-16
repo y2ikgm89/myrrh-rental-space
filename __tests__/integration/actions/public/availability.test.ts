@@ -92,8 +92,8 @@ describe("fetchAvailableSlots", () => {
 
       const result = await fetchAvailableSlots(VALID_SPACE_ID, VALID_DATE);
 
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBe(3);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.slots.length).toBe(3);
     });
 
     test("getAvailableTimeSlots が spaceId と date を引数に呼ばれる", async () => {
@@ -115,7 +115,7 @@ describe("fetchAvailableSlots", () => {
 
       const result = await fetchAvailableSlots(VALID_SPACE_ID, VALID_DATE);
 
-      const firstSlot = result[0];
+      const firstSlot = result.ok ? result.slots[0] : undefined;
       expect(firstSlot).toBeDefined();
       if (firstSlot) {
         expect(firstSlot).toHaveProperty("time");
@@ -123,7 +123,7 @@ describe("fetchAvailableSlots", () => {
       }
     });
 
-    test("利用可能な時間枠がない場合は空配列を返す", async () => {
+    test("利用可能な時間枠がない場合は ok:true かつ空の slots を返す", async () => {
       mockGetAvailableTimeSlots.mockImplementation(() => Promise.resolve([]));
 
       const { fetchAvailableSlots } =
@@ -131,12 +131,12 @@ describe("fetchAvailableSlots", () => {
 
       const result = await fetchAvailableSlots(VALID_SPACE_ID, VALID_DATE);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: true, slots: [] });
     });
   });
 
   describe("異常系: レート制限", () => {
-    test("レート制限超過時は空配列を返す", async () => {
+    test("レート制限超過時は ok:false reason:rate_limit を返す", async () => {
       mockCheckActionRateLimit.mockImplementation(() =>
         Promise.resolve({
           success: false as const,
@@ -150,7 +150,7 @@ describe("fetchAvailableSlots", () => {
 
       const result = await fetchAvailableSlots(VALID_SPACE_ID, VALID_DATE);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: false, reason: "rate_limit" });
     });
 
     test("レート制限超過時は getAvailableTimeSlots が呼ばれない", async () => {
@@ -171,13 +171,13 @@ describe("fetchAvailableSlots", () => {
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("spaceId が無効な UUID のとき空配列を返す", async () => {
+    test("spaceId が無効な UUID のとき ok:false reason:invalid を返す", async () => {
       const { fetchAvailableSlots } =
         await import("@/app/(public)/_shared/actions/availability");
 
       const result = await fetchAvailableSlots("not-a-uuid", VALID_DATE);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: false, reason: "invalid" });
     });
 
     test("spaceId が無効な UUID のとき getAvailableTimeSlots が呼ばれない", async () => {
@@ -189,13 +189,13 @@ describe("fetchAvailableSlots", () => {
       expect(mockGetAvailableTimeSlots).not.toHaveBeenCalled();
     });
 
-    test("date が YYYY-MM-DD 形式でないとき空配列を返す", async () => {
+    test("date が YYYY-MM-DD 形式でないとき ok:false reason:invalid を返す", async () => {
       const { fetchAvailableSlots } =
         await import("@/app/(public)/_shared/actions/availability");
 
       const result = await fetchAvailableSlots(VALID_SPACE_ID, "2025/06/01");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: false, reason: "invalid" });
     });
 
     test("date が不正な形式のとき getAvailableTimeSlots が呼ばれない", async () => {
@@ -207,22 +207,22 @@ describe("fetchAvailableSlots", () => {
       expect(mockGetAvailableTimeSlots).not.toHaveBeenCalled();
     });
 
-    test("spaceId が空文字列のとき空配列を返す", async () => {
+    test("spaceId が空文字列のとき ok:false reason:invalid を返す", async () => {
       const { fetchAvailableSlots } =
         await import("@/app/(public)/_shared/actions/availability");
 
       const result = await fetchAvailableSlots("", VALID_DATE);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: false, reason: "invalid" });
     });
 
-    test("date が空文字列のとき空配列を返す", async () => {
+    test("date が空文字列のとき ok:false reason:invalid を返す", async () => {
       const { fetchAvailableSlots } =
         await import("@/app/(public)/_shared/actions/availability");
 
       const result = await fetchAvailableSlots(VALID_SPACE_ID, "");
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ ok: false, reason: "invalid" });
     });
   });
 });

@@ -28,7 +28,9 @@ interface DateTimeSectionProps {
   readonly businessHours: BusinessHours | null;
   readonly blockedRanges: readonly BlockedDateRange[];
   readonly slots: readonly TimeSlot[];
+  readonly slotsError: boolean;
   readonly isFetchingSlots: boolean;
+  readonly onRetrySlots: () => void;
   readonly spaceCapacity: number;
   readonly selectedDate: Date | undefined;
   readonly selectedStartTime: string | null;
@@ -44,7 +46,9 @@ export function DateTimeSection({
   businessHours,
   blockedRanges,
   slots,
+  slotsError,
   isFetchingSlots,
+  onRetrySlots,
   spaceCapacity,
   selectedDate,
   selectedStartTime,
@@ -86,6 +90,8 @@ export function DateTimeSection({
             selectedTime={selectedStartTime}
             onSelect={onStartTimeChange}
             isLoading={isFetchingSlots}
+            hasError={slotsError}
+            onRetry={onRetrySlots}
           />
         </section>
       ) : null}

@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
 import { skeletonKeys } from "@/shared/lib/skeleton-keys";
+import { Button } from "@/public/components/design-system/button";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
 
 interface TimeSlotGridProps {
@@ -10,6 +11,9 @@ interface TimeSlotGridProps {
   readonly selectedTime: string | null;
   readonly onSelect: (time: string) => void;
   readonly isLoading: boolean;
+  /** 枠取得が失敗した（レート制限/取得エラー）。満枠とは区別して再試行を促す。 */
+  readonly hasError: boolean;
+  readonly onRetry: () => void;
 }
 
 export function TimeSlotGrid({
@@ -17,6 +21,8 @@ export function TimeSlotGrid({
   selectedTime,
   onSelect,
   isLoading,
+  hasError,
+  onRetry,
 }: TimeSlotGridProps): ReactElement {
   if (isLoading) {
     return (
@@ -29,6 +35,19 @@ export function TimeSlotGrid({
             <div key={key} className="min-h-11 animate-pulse bg-border/30" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="space-y-3 py-4 text-center" role="status">
+        <p className="text-sm text-muted-foreground">
+          時間帯を取得できませんでした。少し時間をおいて再試行してください。
+        </p>
+        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
+          再試行
+        </Button>
       </div>
     );
   }
