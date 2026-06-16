@@ -16,7 +16,6 @@ export type SelectionState = {
   slots: TimeSlot[];
   /** 時間枠の取得に失敗した（レート制限/取得エラー）。満枠（slots 空）とは区別する。 */
   slotsError: boolean;
-  step: 1 | 2 | 3;
   errorMessage: string | null;
 };
 
@@ -29,7 +28,7 @@ export type SelectionAction =
   | { type: "selectStartTime"; time: string | null }
   | { type: "selectDuration"; minutes: number | null }
   | { type: "setGuests"; count: number }
-  | { type: "goToStep"; step: 1 | 2 | 3 }
+  | { type: "clearError" }
   | { type: "setError"; message: string };
 
 export function selectionReducer(
@@ -77,8 +76,8 @@ export function selectionReducer(
       return { ...state, duration: action.minutes };
     case "setGuests":
       return { ...state, guests: action.count };
-    case "goToStep":
-      return { ...state, step: action.step, errorMessage: null };
+    case "clearError":
+      return { ...state, errorMessage: null };
     case "setError":
       return { ...state, errorMessage: action.message };
   }
