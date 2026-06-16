@@ -343,7 +343,9 @@ export function Header({
       ref={headerRef}
       role="banner"
       className={cn(
-        "sticky top-[var(--announcement-bar-height,0px)] z-40 transition-[background-color,backdrop-filter,box-shadow,border-color,translate] duration-300",
+        // pt-[var(--header-safe-top)]: edge-to-edge 時にノッチを避ける（announcement
+        // bar が在るときは 0 に補正。ResizeObserver が含めて --header-height を再公開）。
+        "sticky top-[var(--announcement-bar-height,0px)] z-40 pt-[var(--header-safe-top)] transition-[background-color,backdrop-filter,box-shadow,border-color,translate] duration-300",
         backgroundMode === HeaderBackgroundMode.transparent
           ? "bg-transparent"
           : "bg-background",

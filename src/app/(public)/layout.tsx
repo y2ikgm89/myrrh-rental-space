@@ -94,6 +94,9 @@ export async function generateViewport(): Promise<Viewport> {
   return {
     width: "device-width",
     initialScale: 1,
+    // edge-to-edge（ノッチ/ホームインジケータ下まで描画）。各 fixed/edge 要素は
+    // env(safe-area-inset-*) でセーフエリアを避ける（非ノッチ端末では inset=0 で無変化）。
+    viewportFit: "cover",
     interactiveWidget: "resizes-visual",
     // "only light" で Chrome Auto Dark Theme / Samsung 強制ダークの自動反転を
     // opt-out（"light" 単独では止まらない）。OKLCH ライト配色の機械反転を防止。
