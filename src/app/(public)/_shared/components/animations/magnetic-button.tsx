@@ -142,11 +142,15 @@ export function MagneticButton(props: MagneticButtonProps): ReactElement {
         href={href}
         className={baseClassName}
         {...(hasInlineStyle && { style: inlineStyle })}
-        {...(openInNewTab && { target: "_blank" as const })}
+        {...(openInNewTab && {
+          target: "_blank" as const,
+          rel: "noopener noreferrer",
+        })}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {content}
+        {openInNewTab && <span className="sr-only">（新しいタブで開く）</span>}
       </Link>
     );
   }

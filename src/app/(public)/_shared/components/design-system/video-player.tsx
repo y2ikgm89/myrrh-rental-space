@@ -137,6 +137,9 @@ export function VideoPlayer({
     <video
       src={url}
       controls
+      // playsInline で iOS Safari のタップ再生時の強制フルスクリーンを防止し、
+      // 記事/ギャラリーのインライン再生体験を保つ（background variant と統一）。
+      playsInline
       preload="metadata"
       {...(poster !== undefined && { poster })}
       className={cn("h-full w-full bg-foreground", className)}

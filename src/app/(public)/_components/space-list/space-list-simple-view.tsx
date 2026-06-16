@@ -96,7 +96,7 @@ export function SpaceListSimpleView({
   const isList = config.displayLayout === "list";
 
   const layoutClass = isCarousel
-    ? "flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
+    ? "flex gap-6 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
     : isList
       ? "flex flex-col gap-4"
       : cn("@container grid gap-6", getCardGridColsClass(colKey));
