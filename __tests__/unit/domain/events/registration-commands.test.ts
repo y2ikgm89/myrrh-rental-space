@@ -42,19 +42,32 @@ const mockRegistrationCreate = mock<() => Promise<Record<string, unknown>>>(
       icsSequence: 0,
     }),
 );
+// 本番コードは先頭で advisory xact lock を tx.$executeRaw で取得する。戻り値（影響行数）は
+// 使わないため 0 を返すだけのスタブで足りる。
+const mockExecuteRaw = mock<(...args: unknown[]) => Promise<number>>(() =>
+  Promise.resolve(0),
+);
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/db/prisma", () => ({
-  prisma: {
+// createEventRegistrationCommand は定員集計〜create を prisma.$transaction(async (tx) => {...})
+// に閉じるため、$transaction が同じモデル mock を載せた tx を callback に渡すよう模す。
+mock.module("@/shared/db/prisma", () => {
+  const tx = {
+    $executeRaw: mockExecuteRaw,
     event: { findFirst: mockEventFindFirst },
     eventTicket: { findFirst: mockTicketFindFirst },
     eventRegistration: {
       aggregate: mockRegistrationAggregate,
       create: mockRegistrationCreate,
     },
-  },
-}));
+  };
+  return {
+    prisma: {
+      $transaction: (cb: (client: typeof tx) => Promise<unknown>) => cb(tx),
+    },
+  };
+});
 
 mock.module("@generated/prisma/enums", () => ({
   EventStatus,
