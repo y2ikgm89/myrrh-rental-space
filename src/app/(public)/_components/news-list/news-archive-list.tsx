@@ -15,6 +15,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { Button } from "@/public/components/design-system/button";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -29,13 +30,25 @@ interface NewsItemData {
 
 interface NewsListProps {
   items: readonly NewsItemData[];
+  /** 検索クエリ。0 件時の文言と「検索を解除」導線の出し分けに使う。 */
+  query?: string;
 }
 
-export function NewsList({ items }: NewsListProps): ReactElement {
+export function NewsList({ items, query = "" }: NewsListProps): ReactElement {
   if (items.length === 0) {
+    const hasQuery = query.length > 0;
     return (
-      <div className="py-[var(--space-lg)] text-center">
-        <p className="text-muted-foreground">お知らせはまだありません。</p>
+      <div className="space-y-6 py-[var(--space-lg)] text-center" role="status">
+        <p className="text-muted-foreground">
+          {hasQuery
+            ? "条件に一致するお知らせが見つかりませんでした"
+            : "お知らせはまだありません。"}
+        </p>
+        {hasQuery && (
+          <Button variant="editorial" size="sm" href="/news">
+            検索を解除
+          </Button>
+        )}
       </div>
     );
   }
