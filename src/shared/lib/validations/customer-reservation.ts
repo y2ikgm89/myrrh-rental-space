@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TIME_REGEX } from "./business-hours";
+import { formatJstDateString } from "@/shared/lib/date-format";
 
 export const customerReservationEditSchema = z
   .object({
@@ -24,7 +25,12 @@ export const customerReservationEditSchema = z
       return end > start;
     },
     { error: "終了時間は開始時間より後にしてください", path: ["endTime"] },
-  );
+  )
+  // JST の今日以降のみ許可（クライアント min 属性のバイパス対策。サーバー権威）。
+  .refine((data) => data.date >= formatJstDateString(new Date()), {
+    error: "過去の日付は選択できません",
+    path: ["date"],
+  });
 
 export type CustomerReservationEditInput = z.input<
   typeof customerReservationEditSchema
