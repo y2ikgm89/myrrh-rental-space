@@ -27,8 +27,9 @@ export const EDITORIAL_PROSE_CLASSES = cn(
   "prose-headings:tracking-[0.01em]",
   // 本文段落
   "prose-p:text-foreground",
-  // リンク: bronze accent、下線なし、hover で accent-light
-  "prose-a:text-accent prose-a:no-underline hover:prose-a:text-accent-light",
+  // リンク: bronze accent、下線なし、hover で下線（accent-light は AA 未達のため
+  // 色変更でなく下線で affordance を出し、本文リンク色は AA 準拠の accent を維持）
+  "prose-a:text-accent prose-a:no-underline hover:prose-a:underline",
   "prose-a:transition-colors",
   // 引用: serif italic light + accent border
   "prose-blockquote:font-heading prose-blockquote:italic prose-blockquote:font-light",

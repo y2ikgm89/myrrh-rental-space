@@ -41,6 +41,11 @@
   --color-accent-light: oklch(0.62 0.07 60);
   --color-accent-foreground: oklch(0.985 0 0);
 
+  /* 評価スター（レビュー）の色。`text-rating` utility の SSoT。
+   * bg-background(oklch 0.985) 上で WCAG 1.4.11 非テキストコントラスト 3:1 を満たす
+   * 暖色ゴールド。これまで token 未定義で `text-rating` が無効化され星が無色だった。 */
+  --color-rating: oklch(0.6 0.14 80);
+
   --color-card: oklch(0.96 0.008 60);
   --color-card-foreground: oklch(0.18 0.015 60);
   --color-popover: oklch(0.96 0.008 60);
@@ -53,6 +58,9 @@
   --color-destructive: oklch(0.5 0.18 25);
   --color-success-foreground: oklch(0.985 0 0);
   --color-warning-foreground: oklch(0.18 0.015 60);
+  /* 淡色 tint バッジ(bg-warning/10)上の前景用。--color-warning(oklch 0.58)は
+   * その上で約3.68:1 と AA(4.5:1)未達のため、テキスト用に暗いゴールドを用意する。 */
+  --color-warning-strong: oklch(0.45 0.13 85);
   --color-destructive-foreground: oklch(0.985 0 0);
   --color-info: oklch(0.52 0.12 250);
   --color-info-foreground: oklch(0.985 0 0);

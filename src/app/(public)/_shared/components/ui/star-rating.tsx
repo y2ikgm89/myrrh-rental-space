@@ -106,7 +106,7 @@ function InteractiveStars({
             key={i}
             type="button"
             aria-label={`${starValue}星`}
-            className="rounded-sm p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={() => onChange(starValue)}
             onMouseEnter={() => setHoverRating(starValue)}
           >
