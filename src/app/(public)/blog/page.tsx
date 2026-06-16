@@ -4,7 +4,7 @@ import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/section-renderer";
+import { SectionStack } from "@/public/components/sections/section-stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
@@ -47,14 +47,11 @@ export default async function BlogPage({
           { name: "ブログ", url: `${baseUrl}/blog` },
         ]}
       />
-      {sections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          searchParams={searchParams}
-          pageSlug="blog"
-        />
-      ))}
+      <SectionStack
+        sections={sections}
+        searchParams={searchParams}
+        pageSlug="blog"
+      />
     </PageLayout>
   );
 }

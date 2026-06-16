@@ -10,7 +10,7 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/section-renderer";
+import { SectionStack } from "@/public/components/sections/section-stack";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getInquiryDefaultsForCurrentCustomer } from "@/shared/domain/inquiries/customer-defaults";
 
@@ -30,14 +30,11 @@ export default async function ContactPage(): Promise<ReactElement> {
 
   return (
     <>
-      {sections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          pageSlug="contact"
-          inquiryDefaults={inquiryDefaults}
-        />
-      ))}
+      <SectionStack
+        sections={sections}
+        pageSlug="contact"
+        inquiryDefaults={inquiryDefaults}
+      />
     </>
   );
 }

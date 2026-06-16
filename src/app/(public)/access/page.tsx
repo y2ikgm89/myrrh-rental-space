@@ -11,7 +11,7 @@ import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { SectionRenderer } from "@/public/components/sections/section-renderer";
+import { SectionStack } from "@/public/components/sections/section-stack";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { getAllPublishedLocationsJsonLdData } from "@/public/lib/seo";
@@ -36,9 +36,7 @@ export default async function AccessPage(): Promise<ReactElement> {
 
   return (
     <PageLayout variant="content">
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} pageSlug="access" />
-      ))}
+      <SectionStack sections={sections} pageSlug="access" />
 
       <Suspense fallback={null}>
         <AccessChaptersJsonLd />

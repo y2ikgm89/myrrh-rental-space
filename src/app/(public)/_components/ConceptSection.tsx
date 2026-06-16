@@ -117,12 +117,7 @@ export function ConceptSection({
   }
 
   return (
-    <SectionWrapper
-      style={style}
-      layout={config.layout}
-      skipContainer
-      skipPadding
-    >
+    <SectionWrapper style={style} layout={config.layout} skipContainer>
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Image — full bleed, no container padding */}
         <div
