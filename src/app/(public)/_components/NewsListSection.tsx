@@ -65,7 +65,7 @@ export function NewsListSection({
               <SearchBar placeholder="お知らせを検索..." />
             </div>
           </Suspense>
-          <NewsList items={mode.items} />
+          <NewsList items={mode.items} query={mode.query} />
           <Pagination
             currentPage={mode.currentPage}
             totalPages={mode.totalPages}
