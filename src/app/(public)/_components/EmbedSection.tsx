@@ -76,7 +76,16 @@ export function EmbedSection({
 
         <ScrollReveal>
           {config.embedUrl ? (
-            <div className={cn("overflow-hidden", radiusClass, aspectClass)}>
+            // embedUrl の iframe は高さを持たないため、aspectRatio="auto"(空クラス)
+            // のままだと h-full が置換要素既定の 150px に潰れる。URL 埋め込みでは
+            // auto を 16:9 にフォールバックして高さを確定する。
+            <div
+              className={cn(
+                "overflow-hidden",
+                radiusClass,
+                aspectClass || ASPECT_RATIO_MAP["16:9"],
+              )}
+            >
               <iframe
                 src={config.embedUrl}
                 className="h-full w-full border-0"
