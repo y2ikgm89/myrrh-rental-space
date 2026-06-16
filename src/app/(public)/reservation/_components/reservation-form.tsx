@@ -10,6 +10,7 @@ import {
   useTransition,
   type ReactElement,
 } from "react";
+import { useQueryState, parseAsInteger } from "nuqs";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { asConformFieldset } from "@/shared/lib/conform/typed-input-control";
 import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
@@ -134,9 +135,18 @@ export function ReservationForm({
     guests: 1,
     slots: EMPTY_SLOTS,
     slotsError: false,
-    step: preSelected ? 2 : 1,
     errorMessage: null,
   });
+
+  // ステップは URL クエリ (?step=) を SSoT にする。ブラウザの戻る/進むがそのまま
+  // 前/次ステップ移動になり、誤って戻ってもフロー全体を離脱しない（reducer の
+  // 選択内容は SPA 遷移中マウントされたまま保持）。shallow 既定で server 再フェッチ無し。
+  const [urlStep, setUrlStep] = useQueryState(
+    "step",
+    parseAsInteger.withDefault(preSelected ? 2 : 1).withOptions({
+      history: "push",
+    }),
+  );
 
   const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
@@ -222,8 +232,15 @@ export function ReservationForm({
     state.duration != null &&
     endTime != null;
 
+  // URL の step を「現在到達可能な最大ステップ」でクランプする。
+  // リロードで reducer がリセットされても ?step=3 のまま step3 を描画せず、
+  // 前提未充足なら手前に戻す。hideStep1 のときは最小ステップが 2。
+  const minStep = hideStep1 ? 2 : 1;
+  const maxStep = isStep2Complete ? 3 : isStep1Complete ? 2 : minStep;
+  const step = Math.min(Math.max(urlStep, minStep), maxStep) as 1 | 2 | 3;
+
   const visibleSteps = hideStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
-  const displayStep = hideStep1 ? state.step - 1 : state.step;
+  const displayStep = hideStep1 ? step - 1 : step;
 
   // --- Render 中 state sync: エラー検出（成功時はサーバーが完了ページへ redirect）---
   if (lastResult !== previousResult) {
@@ -329,7 +346,8 @@ export function ReservationForm({
 
   // --- Navigation ---
   function goToStep(target: 1 | 2 | 3) {
-    dispatch({ type: "goToStep", step: target });
+    void setUrlStep(target);
+    dispatch({ type: "clearError" });
     scrollToTop();
   }
 
@@ -420,7 +438,7 @@ export function ReservationForm({
   }
 
   // --- Step 3: Customer info (form 送信ステップ) ---
-  if (state.step === 3) {
+  if (step === 3) {
     return (
       <form {...getFormProps(form)} action={formAction} className="space-y-10">
         {/* Hidden inputs for reducer state-driven values (set via dispatch in earlier steps) */}
@@ -499,7 +517,7 @@ export function ReservationForm({
   }
 
   // --- Step 2: Date & Time ---
-  if (state.step === 2 && state.spaceId) {
+  if (step === 2 && state.spaceId) {
     return (
       <div className="space-y-10">
         {renderStepIndicator()}
