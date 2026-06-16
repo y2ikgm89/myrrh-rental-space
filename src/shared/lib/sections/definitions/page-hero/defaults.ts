@@ -54,7 +54,6 @@ export const DEFAULT_PAGE_HERO = {
     },
   ],
   layout: {
-    padding: "md",
     containerWidth: "lg",
     hideOnMobile: false,
     hideOnDesktop: false,

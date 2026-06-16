@@ -28,14 +28,6 @@ const MAX_WIDTH_MAP = {
   full: "max-w-full",
 } as const;
 
-const PADDING_MAP = {
-  none: "",
-  sm: "py-[var(--space-sm)]",
-  md: "py-[var(--space-md)] md:py-[var(--space-lg)]",
-  lg: "py-[var(--space-lg)] md:py-[var(--space-xl)]",
-  xl: "py-[var(--space-xl)] md:py-[var(--space-2xl)]",
-} as const;
-
 interface CustomSectionProps {
   readonly config: CustomConfig;
   readonly style: SectionStylePayload;
@@ -47,48 +39,40 @@ export function CustomSection({
 }: CustomSectionProps): ReactElement {
   const maxWidthClass =
     MAX_WIDTH_MAP[config.layout.containerWidth] ?? MAX_WIDTH_MAP.lg;
-  const paddingClass = PADDING_MAP[config.layout.padding] ?? PADDING_MAP.md;
   const hasTitle = config.title.length > 0;
   const hasBody = config.body.length > 0;
 
   return (
-    <SectionWrapper
-      style={style}
-      layout={config.layout}
-      skipPadding
-      skipContainer
-    >
-      <div className={paddingClass}>
-        <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
-          {hasTitle && (
-            <div className="mb-8 md:mb-12">
-              <ScrollReveal>
-                {config.sectionLabel && (
-                  <SectionLabel>{config.sectionLabel}</SectionLabel>
-                )}
-                <div className="mt-4" style={getTitleStyle(style)}>
-                  <Heading
-                    level={2}
-                    className={cn(getTitleClasses(style), "tracking-tight")}
-                  >
-                    {config.title}
-                  </Heading>
-                </div>
-              </ScrollReveal>
-            </div>
-          )}
-
-          {hasBody && (
+    <SectionWrapper style={style} layout={config.layout} skipContainer>
+      <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
+        {hasTitle && (
+          <div className="mb-8 md:mb-12">
             <ScrollReveal>
-              <div style={getTextStyle(style)}>
-                <SanitizedHtml
-                  html={config.body}
-                  className="prose prose-neutral max-w-none"
-                />
+              {config.sectionLabel && (
+                <SectionLabel>{config.sectionLabel}</SectionLabel>
+              )}
+              <div className="mt-4" style={getTitleStyle(style)}>
+                <Heading
+                  level={2}
+                  className={cn(getTitleClasses(style), "tracking-tight")}
+                >
+                  {config.title}
+                </Heading>
               </div>
             </ScrollReveal>
-          )}
-        </div>
+          </div>
+        )}
+
+        {hasBody && (
+          <ScrollReveal>
+            <div style={getTextStyle(style)}>
+              <SanitizedHtml
+                html={config.body}
+                className="prose prose-neutral max-w-none"
+              />
+            </div>
+          </ScrollReveal>
+        )}
       </div>
     </SectionWrapper>
   );

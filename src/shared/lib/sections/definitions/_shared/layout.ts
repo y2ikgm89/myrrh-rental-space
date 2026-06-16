@@ -5,13 +5,14 @@
 // 全 23 sections に `layout: sectionLayoutSchema` として注入され、
 // AutoSectionForm の Accordion 「デザイン」グループ内に統一表示される。
 // 公開側は SectionWrapper が config.layout を読み取り、
-// 上下余白 / コンテナ幅 / モバイル/デスクトップ非表示 / 入場アニメーションを統一適用する。
+// コンテナ幅 / モバイル/デスクトップ非表示 / 入場アニメーションを統一適用する。
+// セクション間の上下余白は SectionStack（親コンテナの統一 gap）が SSoT のため
+// ここでは扱わない。
 
 import { z } from "zod";
 
 import { field, fieldRegistry } from "../../field-registry";
 
-export const LAYOUT_PADDING_VALUES = ["none", "sm", "md", "lg", "xl"] as const;
 export const LAYOUT_CONTAINER_WIDTH_VALUES = [
   "sm",
   "md",
@@ -26,7 +27,6 @@ export const LAYOUT_ANIMATE_VALUES = [
   "scale",
 ] as const;
 
-export type LayoutPadding = (typeof LAYOUT_PADDING_VALUES)[number];
 export type LayoutContainerWidth =
   (typeof LAYOUT_CONTAINER_WIDTH_VALUES)[number];
 export type LayoutAnimate = (typeof LAYOUT_ANIMATE_VALUES)[number];
@@ -39,11 +39,6 @@ export type LayoutAnimate = (typeof LAYOUT_ANIMATE_VALUES)[number];
  */
 export const sectionLayoutSchema = z
   .object({
-    padding: field.select("上下余白", {
-      options: LAYOUT_PADDING_VALUES,
-      default: "md",
-      helpText: "セクション上下のスペース",
-    }),
     containerWidth: field.select("コンテナ幅", {
       options: LAYOUT_CONTAINER_WIDTH_VALUES,
       default: "lg",

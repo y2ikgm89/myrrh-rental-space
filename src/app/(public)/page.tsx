@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 
-import { SectionRenderer } from "@/public/components/sections/section-renderer";
+import { SectionStack } from "@/public/components/sections/section-stack";
 import { WebSiteJsonLd } from "@/public/components/seo/json-ld";
 import { getWebSiteJsonLdData } from "@/public/lib/seo";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
@@ -36,9 +36,7 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} pageSlug="home" />
-      ))}
+      <SectionStack sections={sections} pageSlug="home" />
     </>
   );
 }

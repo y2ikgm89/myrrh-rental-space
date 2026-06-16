@@ -17,7 +17,6 @@ import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import type {
-  LayoutPadding,
   LayoutContainerWidth,
   LayoutAnimate,
   SectionLayoutConfig,
@@ -27,14 +26,9 @@ import type {
 // Mapping tables — Layout
 // =============================================================================
 
-/** layout.padding → 上下 py-* クラス（@theme --space-* token 参照） */
-const LAYOUT_PADDING_CLASSES: Record<LayoutPadding, string> = {
-  none: "py-0",
-  sm: "py-[var(--space-sm)]",
-  md: "py-[var(--space-md)]",
-  lg: "py-[var(--space-lg)]",
-  xl: "py-[var(--space-xl)]",
-};
+// セクション間の上下余白は SectionStack（親コンテナの統一 gap）が SSoT。
+// SectionWrapper は内側 padding を持たない（背景塗りセクションが導入されたら
+// 背景の内側余白だけここで復活させる想定）。
 
 /** layout.containerWidth → max-w-* クラス */
 const LAYOUT_CONTAINER_WIDTH_CLASSES: Record<LayoutContainerWidth, string> = {
@@ -46,30 +40,8 @@ const LAYOUT_CONTAINER_WIDTH_CLASSES: Record<LayoutContainerWidth, string> = {
 };
 
 // =============================================================================
-// Mapping tables — SectionStylePayload (background / spacing / typography)
+// Mapping tables — SectionStylePayload (background / typography)
 // =============================================================================
-
-const paddingTopMap: Record<
-  NonNullable<SectionStylePayload["spacing"]["paddingTop"]>,
-  string
-> = {
-  none: "",
-  sm: "pt-[var(--space-sm)]",
-  md: "pt-[var(--space-md)]",
-  lg: "pt-[var(--space-lg)]",
-  xl: "pt-[var(--space-xl)]",
-};
-
-const paddingBottomMap: Record<
-  NonNullable<SectionStylePayload["spacing"]["paddingBottom"]>,
-  string
-> = {
-  none: "",
-  sm: "pb-[var(--space-sm)]",
-  md: "pb-[var(--space-md)]",
-  lg: "pb-[var(--space-lg)]",
-  xl: "pb-[var(--space-xl)]",
-};
 
 const backgroundMap: Record<
   NonNullable<SectionStylePayload["background"]["type"]>,
@@ -115,8 +87,6 @@ interface SectionWrapperProps {
   readonly layout?: SectionLayoutConfig;
   /** 追加の inline style（config.backgroundColor 等） */
   readonly styleProp?: CSSProperties;
-  /** セクション固有のデフォルト padding を上書きしたくない場合に true */
-  readonly skipPadding?: boolean;
   /** コンテナ div を省略する場合に true（Hero 等の特殊レイアウト用） */
   readonly skipContainer?: boolean;
 }
@@ -127,19 +97,8 @@ export function SectionWrapper({
   className,
   layout,
   styleProp,
-  skipPadding,
   skipContainer,
 }: SectionWrapperProps) {
-  // ---- padding ----
-  const paddingClass = skipPadding
-    ? ""
-    : layout
-      ? LAYOUT_PADDING_CLASSES[layout.padding]
-      : cn(
-          paddingTopMap[style.spacing.paddingTop],
-          paddingBottomMap[style.spacing.paddingBottom],
-        );
-
   // ---- containerWidth ----
   const maxWidthClass = layout
     ? LAYOUT_CONTAINER_WIDTH_CLASSES[layout.containerWidth]
@@ -196,7 +155,6 @@ export function SectionWrapper({
     <section
       className={cn(
         "relative",
-        paddingClass,
         bgClass,
         alignClass,
         visibilityClass,

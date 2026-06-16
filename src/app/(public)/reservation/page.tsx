@@ -12,7 +12,7 @@ import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/section-renderer";
+import { SectionStack } from "@/public/components/sections/section-stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
@@ -35,14 +35,11 @@ export default async function ReservationPage({
 
   return (
     <PageLayout variant="content">
-      {sections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          searchParams={searchParams}
-          pageSlug="reservation"
-        />
-      ))}
+      <SectionStack
+        sections={sections}
+        searchParams={searchParams}
+        pageSlug="reservation"
+      />
     </PageLayout>
   );
 }

@@ -213,7 +213,6 @@ describe("customConfigSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.sectionLabel).toBe("Contents");
-      expect(result.data.layout.padding).toBe("md");
       expect(result.data.layout.containerWidth).toBe("lg");
     }
   });

@@ -10,13 +10,6 @@
 // Payload schema for code-owned public section rendering styles.
 // ---------------------------------------------------------------------------
 
-export type SectionStyleSpacingStep = "none" | "sm" | "md" | "lg" | "xl";
-
-export interface SectionStyleSpacing {
-  readonly paddingTop: SectionStyleSpacingStep;
-  readonly paddingBottom: SectionStyleSpacingStep;
-}
-
 export type SectionStyleBackgroundType =
   | "default"
   | "surface"
@@ -64,7 +57,6 @@ export interface SectionStyleAnimation {
 }
 
 export interface SectionStylePayload {
-  readonly spacing: SectionStyleSpacing;
   readonly background: SectionStyleBackground;
   readonly container: SectionStyleContainer;
   readonly typography: SectionStyleTypography;
@@ -73,7 +65,6 @@ export interface SectionStylePayload {
 }
 
 export const DEFAULT_SECTION_STYLE: SectionStylePayload = Object.freeze({
-  spacing: { paddingTop: "md", paddingBottom: "md" },
   background: { type: "default", overlayOpacity: 0 },
   container: { maxWidth: "xl" },
   typography: { titleSize: "md", textAlign: "left" },
@@ -81,7 +72,6 @@ export const DEFAULT_SECTION_STYLE: SectionStylePayload = Object.freeze({
 } satisfies SectionStylePayload);
 
 const CTA_SECTION_STYLE: SectionStylePayload = Object.freeze({
-  spacing: { paddingTop: "md", paddingBottom: "md" },
   background: { type: "default", overlayOpacity: 0 },
   container: { maxWidth: "lg" },
   typography: { titleSize: "xl", textAlign: "center" },
@@ -89,7 +79,6 @@ const CTA_SECTION_STYLE: SectionStylePayload = Object.freeze({
 } satisfies SectionStylePayload);
 
 const HERO_ADJACENT_STYLE: SectionStylePayload = Object.freeze({
-  spacing: { paddingTop: "sm", paddingBottom: "lg" },
   background: { type: "default", overlayOpacity: 0 },
   container: { maxWidth: "xl" },
   typography: { titleSize: "lg", textAlign: "left" },
@@ -97,7 +86,6 @@ const HERO_ADJACENT_STYLE: SectionStylePayload = Object.freeze({
 } satisfies SectionStylePayload);
 
 const FULL_BLEED_STYLE: SectionStylePayload = Object.freeze({
-  spacing: { paddingTop: "none", paddingBottom: "none" },
   background: { type: "default", overlayOpacity: 0 },
   container: { maxWidth: "full" },
   typography: { titleSize: "lg", textAlign: "center" },

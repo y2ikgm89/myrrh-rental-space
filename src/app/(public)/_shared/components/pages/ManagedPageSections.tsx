@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import type { PublicSection } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "../sections/section-renderer";
+import { SectionStack } from "../sections/section-stack";
 
 interface ManagedPageSectionsProps {
   readonly sections: readonly PublicSection[];
@@ -12,19 +12,14 @@ interface ManagedPageSectionsProps {
   readonly pageSlug?: string;
 }
 
-export async function ManagedPageSections({
+export function ManagedPageSections({
   sections,
   pageSlug,
-}: ManagedPageSectionsProps): Promise<ReactElement> {
+}: ManagedPageSectionsProps): ReactElement {
   return (
-    <>
-      {sections.map((section) => (
-        <SectionRenderer
-          key={section.id}
-          section={section}
-          {...(pageSlug ? { pageSlug } : {})}
-        />
-      ))}
-    </>
+    <SectionStack
+      sections={sections}
+      {...(pageSlug !== undefined ? { pageSlug } : {})}
+    />
   );
 }
