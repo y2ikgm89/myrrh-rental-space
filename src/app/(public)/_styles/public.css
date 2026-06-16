@@ -140,6 +140,14 @@
   --text-eyebrow--letter-spacing: 0.18em;
   --text-eyebrow--font-weight: 500;
 
+  /* Eyebrow (large) — hero / header overline (12px)。
+   * 通常 eyebrow より一回り大きく目立たせる hero/ヘッダーの overline 用。
+   * これまで各所で text-[0.75rem] uppercase tracking-[0.18em] を直書きしていた分の SSoT。 */
+  --text-eyebrow-lg: 0.75rem;
+  --text-eyebrow-lg--line-height: 1;
+  --text-eyebrow-lg--letter-spacing: 0.18em;
+  --text-eyebrow-lg--font-weight: 500;
+
   /* Pullquote — editorial highlight (24→32px, aligned with h2) */
   --text-pullquote: clamp(1.5rem, 1.25rem + 1.15vw, 2rem);
   --text-pullquote--line-height: 1.3;

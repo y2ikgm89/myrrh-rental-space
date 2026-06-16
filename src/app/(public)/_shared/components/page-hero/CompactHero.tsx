@@ -49,7 +49,7 @@ export function CompactHero({
           "py-[var(--space-md)]",
         )}
       >
-        <p className="text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-eyebrow-lg uppercase text-muted-foreground">
           <PortableTextSpans spans={label} />
         </p>
         <h1 className="mt-4 font-heading text-[clamp(2rem,5vw,3rem)] font-light tracking-tight">

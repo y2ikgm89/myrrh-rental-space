@@ -50,7 +50,7 @@ export function ArticleTableOfContents({
   if (variant === "mobile") {
     return (
       <details className="group my-8 border border-border bg-surface/40">
-        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-4 px-4 py-3 text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-4 px-4 py-3 text-eyebrow uppercase text-muted-foreground transition-colors hover:text-foreground">
           <span>Contents / 目次</span>
           <svg
             aria-hidden="true"
@@ -80,9 +80,7 @@ export function ArticleTableOfContents({
       className="sticky top-[calc(var(--header-height)+2rem)] flex max-h-[calc(100svh-var(--header-height)-4rem)] flex-col"
     >
       <div className="space-y-3 pb-5">
-        <p className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
-          Contents
-        </p>
+        <p className="text-eyebrow uppercase text-muted-foreground">Contents</p>
         <ArticleReadingProgress />
       </div>
       <div className="-mr-3 flex-1 overflow-y-auto pr-3">

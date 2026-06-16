@@ -6,7 +6,7 @@ import { SearchBar } from "@/public/components/ui/search-bar";
 export function SidebarSearch(): ReactElement {
   return (
     <div>
-      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-eyebrow uppercase text-muted-foreground">
         Search
       </h2>
       <SearchBar placeholder="記事を検索..." />

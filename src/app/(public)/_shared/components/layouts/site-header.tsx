@@ -67,7 +67,7 @@ const HIDE_THRESHOLD = 150;
  * hover / focus-visible / aria-current=page（現在ページ）で同じ表示 → 一貫した視覚フィードバック。
  */
 const DESKTOP_NAV_LINK_CLASS =
-  "relative inline-flex items-center gap-1.5 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 aria-[current=page]:text-foreground aria-[current=page]:after:origin-left aria-[current=page]:after:scale-x-100";
+  "relative inline-flex items-center gap-1.5 whitespace-nowrap text-eyebrow-lg uppercase text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 aria-[current=page]:text-foreground aria-[current=page]:after:origin-left aria-[current=page]:after:scale-x-100";
 
 const DROPDOWN_LINK_CLASS =
   "flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
@@ -365,7 +365,7 @@ export function Header({
                 <NavigationMenu.Item key={item.id}>
                   {item.children.length > 0 ? (
                     <>
-                      <NavigationMenu.Trigger className="group relative inline-flex items-center gap-1 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:text-foreground data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100">
+                      <NavigationMenu.Trigger className="group relative inline-flex items-center gap-1 whitespace-nowrap text-eyebrow-lg uppercase text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:text-foreground data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100">
                         <PortableTextSpans
                           spans={item.label}
                           iconClassName="h-3.5 w-3.5 shrink-0"
@@ -424,7 +424,7 @@ export function Header({
             variant="editorial"
             size="sm"
             href="/reservation"
-            className="text-[0.75rem] uppercase tracking-[0.18em]"
+            className="text-eyebrow-lg uppercase"
           >
             Reserve
           </Button>
@@ -515,7 +515,7 @@ export function Header({
                   <Link
                     href="/reservation"
                     onClick={closeMenu}
-                    className="inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-[0.75rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
+                    className="inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-eyebrow-lg uppercase text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
                   >
                     Reserve
                   </Link>
