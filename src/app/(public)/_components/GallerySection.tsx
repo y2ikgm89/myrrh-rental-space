@@ -7,7 +7,7 @@
  * Lightbox via native <dialog> element. useGSAP stagger reveal.
  */
 
-import { useRef, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import Image from "next/image";
 import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
@@ -52,7 +52,34 @@ export function GallerySection({
 }: GallerySectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const touchStartXRef = useRef<number | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const isLightboxOpen = lightboxIndex >= 0;
+
+  // iOS Safari は <dialog> 表示中も背後 body がスクロールできてしまう（WebKit）。
+  // position:fixed 方式で body をロックし、閉じたら元のスクロール位置に復帰する。
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    return () => {
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.width = prev.width;
+      body.style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isLightboxOpen]);
 
   useGSAP(
     () => {
@@ -108,6 +135,24 @@ export function GallerySection({
       if (next >= imageItems.length) return 0;
       return next;
     });
+  };
+
+  // キーボード（←/→）での画像送り。Escape は native <dialog> が処理。
+  const handleLightboxKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
+    if (imageItems.length <= 1) return;
+    if (e.key === "ArrowLeft") navigateLightbox(-1);
+    else if (e.key === "ArrowRight") navigateLightbox(1);
+  };
+
+  // タッチスワイプでの画像送り（モバイルの主操作）。
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || imageItems.length <= 1) return;
+    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartXRef.current;
+    if (Math.abs(dx) > 50) navigateLightbox(dx < 0 ? 1 : -1);
+    touchStartXRef.current = null;
   };
 
   if (config.media.length === 0) return <></>;
@@ -238,17 +283,18 @@ export function GallerySection({
       {config.enableLightbox && (
         <dialog
           ref={dialogRef}
-          className="fixed inset-0 z-50 m-0 h-full w-full max-h-full max-w-full bg-background/95 backdrop:bg-background/80"
+          className="fixed inset-0 z-50 m-0 h-full w-full max-h-full max-w-full overscroll-contain bg-background/95 backdrop:bg-background/80"
           onClick={(e) => {
             if (e.target === dialogRef.current) closeLightbox();
           }}
+          onKeyDown={handleLightboxKeyDown}
         >
           {lightboxImage && (
-            <div className="flex h-full w-full flex-col items-center justify-center p-4">
+            <div className="relative flex h-full w-full flex-col items-center justify-center p-4">
               <button
                 type="button"
                 onClick={closeLightbox}
-                className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="閉じる"
               >
                 <IconX
@@ -258,11 +304,13 @@ export function GallerySection({
                 />
               </button>
 
-              <div className="relative flex max-h-[80svh] max-w-[90vw] items-center">
+              {/* 前/次ナビは画面内端に配置（旧 -left-14/-right-14 はモバイルで画面外）。
+                  複数画像のときのみ表示し、タッチはスワイプ・キーボードは ←/→ でも送れる。 */}
+              {imageItems.length > 1 && (
                 <button
                   type="button"
                   onClick={() => navigateLightbox(-1)}
-                  className="absolute -left-14 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="absolute left-2 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="前の画像"
                 >
                   <IconChevronLeft
@@ -271,19 +319,28 @@ export function GallerySection({
                     aria-hidden="true"
                   />
                 </button>
+              )}
 
+              <div
+                className="flex max-h-[80svh] max-w-[90vw] items-center"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
                 <Image
                   src={lightboxImage.url}
                   alt={lightboxImage.alt}
                   width={1200}
                   height={800}
+                  sizes="90vw"
                   className="max-h-[80svh] w-auto object-contain"
                 />
+              </div>
 
+              {imageItems.length > 1 && (
                 <button
                   type="button"
                   onClick={() => navigateLightbox(1)}
-                  className="absolute -right-14 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="absolute right-2 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label="次の画像"
                 >
                   <IconChevronRight
@@ -292,7 +349,7 @@ export function GallerySection({
                     aria-hidden="true"
                   />
                 </button>
-              </div>
+              )}
 
               {lightboxImage.caption.length > 0 && (
                 <p className="mt-4 text-center text-sm text-muted-foreground">
