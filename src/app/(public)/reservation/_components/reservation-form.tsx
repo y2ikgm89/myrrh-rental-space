@@ -133,6 +133,7 @@ export function ReservationForm({
     duration: null,
     guests: 1,
     slots: EMPTY_SLOTS,
+    slotsError: false,
     step: preSelected ? 2 : 1,
     errorMessage: null,
   });
@@ -261,18 +262,32 @@ export function ReservationForm({
     loadBlockedRanges(id);
   }
 
+  // 時間枠の取得（成功=setSlots / 失敗=setSlotsError）。日付選択と再試行で共有。
+  function loadSlots(spaceId: string, date: Date) {
+    const dateStr = formatDateString(date);
+    startSlotTransition(async () => {
+      const result = await fetchAvailableSlots(spaceId, dateStr);
+      if (result.ok) {
+        dispatch({ type: "setSlots", slots: result.slots });
+      } else {
+        dispatch({ type: "setSlotsError" });
+      }
+    });
+  }
+
   function handleDateChange(date: Date | undefined) {
     dispatch({ type: "selectDate", date });
     if (date) {
       scrollToSectionAfterRender("reservation-time-slots");
       if (state.spaceId) {
-        const spaceId = state.spaceId;
-        const dateStr = formatDateString(date);
-        startSlotTransition(async () => {
-          const result = await fetchAvailableSlots(spaceId, dateStr);
-          dispatch({ type: "setSlots", slots: result });
-        });
+        loadSlots(state.spaceId, date);
       }
+    }
+  }
+
+  function handleRetrySlots() {
+    if (state.spaceId && state.date) {
+      loadSlots(state.spaceId, state.date);
     }
   }
 
@@ -492,7 +507,9 @@ export function ReservationForm({
           businessHours={businessHours}
           blockedRanges={blockedRanges}
           slots={state.slots}
+          slotsError={state.slotsError}
           isFetchingSlots={isFetchingSlots}
+          onRetrySlots={handleRetrySlots}
           spaceCapacity={currentSpace?.capacity ?? 1}
           selectedDate={state.date}
           selectedStartTime={state.startTime}
