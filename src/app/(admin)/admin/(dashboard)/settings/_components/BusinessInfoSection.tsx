@@ -121,7 +121,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
         <CardHeader>
           <CardTitle>事業者情報</CardTitle>
           <CardDescription>
-            事業者の基本情報を設定します（特定商取引法表示などに使用）
+            事業者の基本情報を設定します（特定商取引法表示などに使用）。
+            各項目は任意です。個人事業主などで法人番号・インボイス登録番号が
+            無い場合は、空欄のまま保存できます。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
