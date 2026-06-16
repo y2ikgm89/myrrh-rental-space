@@ -332,12 +332,20 @@ function CalendarGrid({
           const eventTitles = cell.isCurrentMonth
             ? getDayEventTitles(cell.day, cell.month, cell.year)
             : [];
+          // 支援技術向けに日付・今日・選択・イベント有無を読み上げる
+          // （cell.month は 0-indexed なので +1）。視覚は色/丸印のみだった。
+          const ariaLabel = `${String(cell.year)}年${String(cell.month + 1)}月${String(cell.day)}日${
+            isToday ? "（今日）" : ""
+          }${hasEvents ? ` イベント${String(eventTitles.length)}件` : ""}`;
 
           return (
             <button
               key={`${String(cell.year)}-${String(cell.month)}-${String(cell.day)}`}
               type="button"
               disabled={!cell.isCurrentMonth}
+              aria-label={ariaLabel}
+              aria-pressed={cell.isCurrentMonth ? isSelected : undefined}
+              aria-current={isToday ? "date" : undefined}
               onClick={() => onSelectDay(cell.day)}
               className={cn(
                 "relative flex min-h-[5.5rem] flex-col border-b border-r border-border p-1.5 text-left transition-colors sm:min-h-[7rem] sm:p-2",
