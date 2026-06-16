@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { ReactElement } from "react";
 import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
@@ -18,6 +19,9 @@ type PageProps = {
 export default async function AdminResetPasswordPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
+  // PPR + strict-dynamic CSP 下で静的シェルの script に nonce を付与するため完全動的化。
+  await connection();
+
   const user = await getCurrentAdminUser();
   if (user) redirect("/admin");
 

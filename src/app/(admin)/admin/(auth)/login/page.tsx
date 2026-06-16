@@ -11,6 +11,7 @@
 
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { LoginForm } from "./LoginForm";
@@ -23,6 +24,12 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage(): Promise<ReactElement> {
+  // PPR(cacheComponents) + strict-dynamic CSP では、静的シェルのスクリプトに
+  // nonce が付かず CSP で全ブロックされ、クライアント JS が一切起動しない。
+  // 公開ページ・ダッシュボードと同様に connection() で完全動的化し、毎リクエストの
+  // nonce を全 script に付与する（リポジトリ全ページ共通の規約）。
+  await connection();
+
   const session = await getAdminSession();
   const user = getAdminSessionUser(session);
 

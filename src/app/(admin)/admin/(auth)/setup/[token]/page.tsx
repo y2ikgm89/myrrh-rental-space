@@ -5,6 +5,7 @@
  */
 
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import type { ReactElement } from "react";
 import { validateInvitationToken } from "@/admin/queries/staff-invitation";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -21,6 +22,9 @@ type Props = {
 export default async function SetupPage({
   params,
 }: Props): Promise<ReactElement> {
+  // PPR + strict-dynamic CSP 下で静的シェルの script に nonce を付与するため完全動的化。
+  await connection();
+
   const { token } = await params;
 
   // トークン検証
