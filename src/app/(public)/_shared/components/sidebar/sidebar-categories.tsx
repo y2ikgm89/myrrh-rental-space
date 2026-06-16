@@ -13,7 +13,7 @@ export function SidebarCategories({
 }: SidebarCategoriesProps): ReactElement {
   return (
     <div>
-      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-eyebrow uppercase text-muted-foreground">
         Categories
       </h2>
       <ul className="space-y-3">

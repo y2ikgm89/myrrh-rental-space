@@ -27,7 +27,7 @@ export function MinimalHero({
       )}
     >
       {eyebrow ? (
-        <p className="text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-eyebrow-lg uppercase text-muted-foreground">
           {eyebrow}
         </p>
       ) : null}

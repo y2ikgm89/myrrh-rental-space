@@ -24,7 +24,7 @@ export function SidebarPostList({
 
   return (
     <div>
-      <h2 className="mb-4 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 text-eyebrow uppercase text-muted-foreground">
         {label}
       </h2>
       <ul className={isStacked ? "space-y-7" : "space-y-5"}>
@@ -106,7 +106,7 @@ function MetaBlock({ post, layout }: MetaBlockProps): ReactElement {
 
   return (
     <div className={cn(isStacked ? undefined : "min-w-0")}>
-      <div className="mb-1 flex items-center gap-1 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="mb-1 flex items-center gap-1 text-eyebrow uppercase text-muted-foreground">
         {post.category ? (
           <>
             <span className="truncate">{post.category.name}</span>

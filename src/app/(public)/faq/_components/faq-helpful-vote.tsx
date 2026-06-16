@@ -115,7 +115,7 @@ export function FaqHelpfulVote({
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-      <span className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <span className="text-eyebrow uppercase text-muted-foreground">
         この回答は役に立ちましたか？
       </span>
       <div className="flex items-center gap-2">

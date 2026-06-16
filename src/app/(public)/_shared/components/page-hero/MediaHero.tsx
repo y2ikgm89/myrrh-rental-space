@@ -133,12 +133,7 @@ export function MediaHero({
         )}
       >
         {hasLabel && (
-          <p
-            className={cn(
-              "mb-6 text-[0.75rem] uppercase tracking-[0.18em]",
-              text.label,
-            )}
-          >
+          <p className={cn("mb-6 text-eyebrow-lg uppercase", text.label)}>
             <PortableTextSpans spans={label} />
           </p>
         )}

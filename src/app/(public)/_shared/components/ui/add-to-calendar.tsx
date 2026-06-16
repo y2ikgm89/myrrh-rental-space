@@ -38,7 +38,7 @@ export function AddToCalendar({
     >
       <p
         id="add-to-calendar-label"
-        className="text-[0.6875rem] uppercase tracking-[0.18em] text-muted-foreground"
+        className="text-eyebrow uppercase text-muted-foreground"
       >
         {label}
       </p>

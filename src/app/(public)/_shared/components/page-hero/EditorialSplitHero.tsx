@@ -429,7 +429,7 @@ export function EditorialSplitHero({
 
         {hasMultiple ? (
           <p
-            className="pointer-events-none absolute top-6 right-6 z-20 text-[0.75rem] uppercase tracking-[0.18em] tabular-nums text-background"
+            className="pointer-events-none absolute top-6 right-6 z-20 text-eyebrow-lg uppercase tabular-nums text-background"
             style={{
               paintOrder: "stroke fill",
               WebkitTextStroke: "0.4px rgba(0,0,0,0.5)",
@@ -526,7 +526,7 @@ export function EditorialSplitHero({
       >
         <p
           className={cn(
-            "mb-6 text-[0.75rem] uppercase tracking-[0.18em]",
+            "mb-6 text-eyebrow-lg uppercase",
             "text-background",
             "[paint-order:stroke_fill]",
             "[-webkit-text-stroke:0.4px_rgb(0_0_0/0.4)]",

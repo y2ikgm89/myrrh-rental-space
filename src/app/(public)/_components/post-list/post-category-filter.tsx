@@ -20,7 +20,7 @@ interface PostCategoryFilterProps {
 }
 
 const CHIP_BASE =
-  "inline-flex min-h-11 items-center px-5 py-2 text-[0.6875rem] uppercase tracking-[0.18em] transition-all duration-300";
+  "inline-flex min-h-11 items-center px-5 py-2 text-eyebrow uppercase transition-all duration-300";
 const CHIP_ACTIVE = "bg-accent text-accent-foreground";
 const CHIP_INACTIVE =
   "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30";
