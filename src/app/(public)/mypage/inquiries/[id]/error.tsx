@@ -16,7 +16,7 @@ export default function InquiryDetailError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center px-5 md:px-8">
+    <div className="flex min-h-[40svh] flex-col items-center justify-center px-5 md:px-8">
       <div className="w-full max-w-md text-center">
         <h1 className="mb-3 font-heading text-2xl font-light tracking-tight text-foreground">
           エラーが発生しました

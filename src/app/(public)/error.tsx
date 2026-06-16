@@ -28,7 +28,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
     : "/contact?subject=" + encodeURIComponent("システムエラー");
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 md:px-8">
+    <div className="flex min-h-[60svh] flex-col items-center justify-center px-5 md:px-8">
       <div className="w-full max-w-md text-center">
         <div className="mb-8">
           <svg

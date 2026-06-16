@@ -13,7 +13,7 @@ export default function NewsDetailError({
   return (
     <main id="main-content">
       <Container>
-        <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-6 text-center">
+        <div className="flex min-h-[60svh] flex-col items-center justify-center space-y-6 text-center">
           <Heading level={1}>記事の読み込みに失敗しました</Heading>
           <p className="text-muted-foreground">
             しばらく経ってから再度お試しください。
