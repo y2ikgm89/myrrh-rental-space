@@ -13,7 +13,7 @@ export default function ContactError({
   return (
     <main id="main-content">
       <Container>
-        <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-6 text-center">
+        <div className="flex min-h-[60svh] flex-col items-center justify-center space-y-6 text-center">
           <Heading level={1}>
             お問い合わせページの読み込みに失敗しました
           </Heading>

@@ -13,7 +13,7 @@ export default function MypageSettingsError({
 }) {
   return (
     <Container>
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex min-h-[60svh] items-center justify-center">
         <Stack gap="md" className="text-center">
           <Heading level={1}>設定を読み込めません</Heading>
           <p className="text-muted-foreground">

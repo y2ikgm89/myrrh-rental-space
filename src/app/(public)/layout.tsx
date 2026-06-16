@@ -95,7 +95,9 @@ export async function generateViewport(): Promise<Viewport> {
     width: "device-width",
     initialScale: 1,
     interactiveWidget: "resizes-visual",
-    colorScheme: "light",
+    // "only light" で Chrome Auto Dark Theme / Samsung 強制ダークの自動反転を
+    // opt-out（"light" 単独では止まらない）。OKLCH ライト配色の機械反転を防止。
+    colorScheme: "only light",
     themeColor: footerSettings.themeColor,
   };
 }

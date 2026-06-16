@@ -13,7 +13,7 @@ export default function ReservationCompleteError({
 }) {
   return (
     <Container>
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex min-h-[60svh] items-center justify-center">
         <Stack gap="md" className="text-center">
           <Heading level={1}>完了ページを表示できません</Heading>
           <p className="text-muted-foreground">

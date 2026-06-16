@@ -194,9 +194,11 @@
   --hero-min-height: 60svh;
   --hero-min-height-lg: 80svh;
   --hero-min-height-xl: 85svh;
-  --modal-max-height: 85vh;
-  --modal-max-height-lg: 90vh;
-  --modal-max-height-xl: 95vh;
+  /* dvh で iOS Safari / Android Chrome の動的ツールバー表示時もはみ出さない
+   * （lightbox の svh と整合。旧 vh は large viewport 基準で下端が隠れうる）。 */
+  --modal-max-height: 85dvh;
+  --modal-max-height-lg: 90dvh;
+  --modal-max-height-xl: 95dvh;
   --lightbox-max-height: 90svh;
   --lightbox-max-width: 90vw;
   --dropdown-min-width: 12rem;
@@ -634,6 +636,13 @@
   }
 
   .rdp-theme .rdp-day_button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* 月送りナビ矢印もモバイルでは 44px に拡大（日セルと統一・誤タップ防止）。 */
+  .rdp-theme .rdp-button_previous,
+  .rdp-theme .rdp-button_next {
     width: 2.75rem;
     height: 2.75rem;
   }
