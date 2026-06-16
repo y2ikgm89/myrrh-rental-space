@@ -234,7 +234,7 @@ type UpdateInputShape = {
 const VALID_UPDATE_INPUT: UpdateInputShape = {
   reservationId: VALID_RESERVATION_ID,
   spaceId: VALID_SPACE_ID,
-  date: "2025-08-01",
+  date: "2099-12-31",
   startTime: "10:00",
   endTime: "12:00",
   numberOfGuests: 5,
@@ -797,7 +797,7 @@ describe("updateReservationAction", () => {
       const result = customerReservationEditSchema.safeParse({
         reservationId: VALID_RESERVATION_ID,
         spaceId: VALID_SPACE_ID,
-        date: "2025-08-01",
+        date: "2099-12-31",
         startTime: "10:00",
         endTime: "12:00",
         numberOfGuests: 1,

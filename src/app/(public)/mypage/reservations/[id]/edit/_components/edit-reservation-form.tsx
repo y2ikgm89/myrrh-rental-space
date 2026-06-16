@@ -15,6 +15,7 @@ import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
+import { formatJstDateString } from "@/shared/lib/date-format";
 import { updateReservationAction } from "../../../../_shared/actions/reservation";
 import {
   TurnstileWidget,
@@ -81,6 +82,8 @@ export function EditReservationForm({
   const router = useRouter();
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const turnstileRef = useRef<TurnstileInstance>(null);
+  // ネイティブ date picker の下限（JST 今日）。mount 時に一度だけ評価（render 純粋性）。
+  const [minDate] = useState(() => formatJstDateString(new Date()));
 
   const spaceOptions = spaces.map((s) => ({
     value: s.id,
@@ -186,6 +189,9 @@ export function EditReservationForm({
           error: fields.date.errors[0],
         })}
         {...getInputProps(fields.date, { type: "date" })}
+        // ネイティブ date picker（iOS ホイール / Android カレンダー）で過去日を
+        // 選択不可にする。JST の今日を下限に設定（サーバー側 refine と二重防御）。
+        min={minDate}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
