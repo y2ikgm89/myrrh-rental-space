@@ -3,24 +3,17 @@
  */
 import { z } from "zod";
 import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
+import { optionalText } from "./form-schema-helpers";
 
 // =============================================================================
 // Site > SEO > メタ情報
 // =============================================================================
 
 export const metaFormSchema = z.object({
-  defaultMetaDescription: z
-    .string()
-    .max(160, { error: "160文字以内で入力してください" }),
-  defaultMetaKeywords: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  defaultOgpTitle: z
-    .string()
-    .max(60, { error: "60文字以内で入力してください" }),
-  defaultOgpDescription: z
-    .string()
-    .max(160, { error: "160文字以内で入力してください" }),
+  defaultMetaDescription: optionalText(160),
+  defaultMetaKeywords: optionalText(500),
+  defaultOgpTitle: optionalText(60),
+  defaultOgpDescription: optionalText(160),
 });
 
 export type MetaFormInput = z.infer<typeof metaFormSchema>;
@@ -32,16 +25,10 @@ export type MetaFormInput = z.infer<typeof metaFormSchema>;
 /** analyticsType: フォームでは "none" を使い、送信時に null に変換する */
 export const analyticsFormSchema = z.object({
   analyticsType: z.union([z.enum(AnalyticsType), z.literal("none")]),
-  googleAnalyticsId: z
-    .string()
-    .max(50, { error: "50文字以内で入力してください" }),
-  googleTagManagerId: z
-    .string()
-    .max(50, { error: "50文字以内で入力してください" }),
-  gaPropertyId: z.string().max(20, { error: "20文字以内で入力してください" }),
-  microsoftClarityId: z
-    .string()
-    .max(50, { error: "50文字以内で入力してください" }),
+  googleAnalyticsId: optionalText(50),
+  googleTagManagerId: optionalText(50),
+  gaPropertyId: optionalText(20),
+  microsoftClarityId: optionalText(50),
 });
 
 export type AnalyticsFormInput = z.infer<typeof analyticsFormSchema>;
@@ -51,12 +38,8 @@ export type AnalyticsFormInput = z.infer<typeof analyticsFormSchema>;
 // =============================================================================
 
 export const searchVerificationFormSchema = z.object({
-  googleSearchConsoleId: z
-    .string()
-    .max(100, { error: "100文字以内で入力してください" }),
-  bingWebmasterToolsId: z
-    .string()
-    .max(100, { error: "100文字以内で入力してください" }),
+  googleSearchConsoleId: optionalText(100),
+  bingWebmasterToolsId: optionalText(100),
 });
 
 export type SearchVerificationFormInput = z.infer<

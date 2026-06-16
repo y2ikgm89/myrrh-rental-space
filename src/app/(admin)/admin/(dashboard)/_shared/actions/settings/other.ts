@@ -27,15 +27,18 @@ import {
   type SidebarSettings,
 } from "@/shared/lib/validations/sidebar";
 import {
-  maintenanceSettingsSchema,
-  cookieConsentSettingsSchema,
   reservationSettingsSchema,
   announcementBarCarouselSettingsSchema,
   headerSettingsSchema,
-  footerSettingsSchema,
   featureModulesSettingsSchema,
   type AnnouncementBarCarouselSettingsInput,
 } from "./schemas";
+import { emptyToNull } from "./schemas/form-schema-helpers";
+import { maintenanceFormSchema } from "./schemas/form-schemas-brand-contact";
+import {
+  cookieConsentFormSchema,
+  footerFormSchema,
+} from "./schemas/form-schemas-privacy-appearance";
 
 /**
  * メンテナンス設定の更新 — conform `useActionState` 統合経路。
@@ -49,13 +52,16 @@ export async function updateMaintenanceSettings(
 ): Promise<SubmissionResult> {
   return executeConformMutation(
     formData,
-    maintenanceSettingsSchema,
+    maintenanceFormSchema,
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
         action: "update",
         execute: async () => {
-          await settingsCommands.updateMaintenanceSettings(data);
+          await settingsCommands.updateMaintenanceSettings({
+            maintenanceMode: data.maintenanceMode,
+            maintenanceMessage: emptyToNull(data.maintenanceMessage),
+          });
           return null;
         },
         afterSuccess: () => {
@@ -81,13 +87,19 @@ export async function updateCookieConsentSettings(
 ): Promise<SubmissionResult> {
   return executeConformMutation(
     formData,
-    cookieConsentSettingsSchema,
+    cookieConsentFormSchema,
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
         action: "update",
         execute: async () => {
-          await settingsCommands.updateCookieConsentSettings(data);
+          await settingsCommands.updateCookieConsentSettings({
+            cookieConsentEnabled: data.cookieConsentEnabled,
+            cookieConsentMessage: emptyToNull(data.cookieConsentMessage),
+            cookieConsentAcceptText: emptyToNull(data.cookieConsentAcceptText),
+            cookieConsentRejectText: emptyToNull(data.cookieConsentRejectText),
+            cookieConsentPolicyUrl: emptyToNull(data.cookieConsentPolicyUrl),
+          });
           return null;
         },
         afterSuccess: () => {
@@ -216,28 +228,31 @@ export async function updateFooterSettings(
   _prev: SubmissionResult | undefined,
   formData: FormData,
 ): Promise<SubmissionResult> {
-  return executeConformMutation(
-    formData,
-    footerSettingsSchema,
-    async (data) => {
-      const result = await executeAdminMutationResult({
-        resource: "settings",
-        action: "update",
-        execute: async () => {
-          await settingsCommands.updateFooterSettings(data);
-          return null;
-        },
-        afterSuccess: () => {
-          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-          updateTag(CACHE_TAGS.SOCIAL_LINKS);
-        },
-      });
-      if (isMutationError(result)) {
-        return { ok: false, error: result.error };
-      }
-      return { ok: true };
-    },
-  );
+  return executeConformMutation(formData, footerFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "update",
+      execute: async () => {
+        await settingsCommands.updateFooterSettings({
+          footerTagline: emptyToNull(data.footerTagline),
+          footerNavigationLabel: data.footerNavigationLabel,
+          footerContactLabel: data.footerContactLabel,
+          footerHoursLabel: data.footerHoursLabel,
+          footerShowSocialLinks: data.footerShowSocialLinks,
+          themeColor: data.themeColor,
+        });
+        return null;
+      },
+      afterSuccess: () => {
+        updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+        updateTag(CACHE_TAGS.SOCIAL_LINKS);
+      },
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
 }
 
 /**

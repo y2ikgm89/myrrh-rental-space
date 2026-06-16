@@ -27,14 +27,9 @@ import {
   analyticsFormSchema,
   searchVerificationFormSchema,
 } from "./schemas/form-schemas-seo-analytics";
+import { emptyToNull } from "./schemas/form-schema-helpers";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidAnalyticsType } from "@/shared/lib/validations/enums/guards";
-
-function emptyToNull(value: string | undefined): string | null {
-  if (value === undefined) return null;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
 
 /**
  * 基本情報更新 — conform `useActionState` 統合経路。
@@ -95,12 +90,12 @@ export async function updateLayoutSettings(
           containerWidth: data.containerWidth,
           containerWidthCustom:
             data.containerWidth === LayoutWidth.CUSTOM
-              ? parseInt(data.containerWidthCustom, 10) || null
+              ? parseInt(data.containerWidthCustom ?? "", 10) || null
               : null,
           contentWidth: data.contentWidth,
           contentWidthCustom:
             data.contentWidth === LayoutWidth.CUSTOM
-              ? parseInt(data.contentWidthCustom, 10) || null
+              ? parseInt(data.contentWidthCustom ?? "", 10) || null
               : null,
         });
         return null;

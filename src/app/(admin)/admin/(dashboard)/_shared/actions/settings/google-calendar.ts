@@ -79,7 +79,8 @@ export async function updateGoogleCalendarSettings(
             icalAttachmentEnabled: data.icalAttachmentEnabled,
             addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
             googleCalendarMeetEnabled: data.googleCalendarMeetEnabled,
-            googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
+            googleCalendarReminderMinutes:
+              data.googleCalendarReminderMinutes ?? null,
           });
           return null;
         },

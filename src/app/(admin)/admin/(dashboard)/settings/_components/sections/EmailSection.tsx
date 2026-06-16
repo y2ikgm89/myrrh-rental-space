@@ -37,7 +37,9 @@ interface EmailSectionProps {
 }
 
 type EmailSwitchProps = {
-  field: FieldMetadata<boolean>;
+  // switchBoolean()（z.boolean().default(false)）の z.input は boolean | undefined。
+  // control は実体の "on" / "" 文字列を読むため挙動は不変。
+  field: FieldMetadata<boolean | undefined>;
   label: string;
   disabled: boolean;
 };

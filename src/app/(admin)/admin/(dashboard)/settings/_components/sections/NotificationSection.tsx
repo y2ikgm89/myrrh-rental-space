@@ -31,7 +31,9 @@ interface NotificationSectionProps {
 }
 
 type NotificationToggleProps = {
-  field: FieldMetadata<boolean>;
+  // switchBoolean()（z.boolean().default(false)）の z.input は boolean | undefined。
+  // control は実体の "on" / "" 文字列を読むため挙動は不変。
+  field: FieldMetadata<boolean | undefined>;
   title: string;
   description: string;
   disabled: boolean;
