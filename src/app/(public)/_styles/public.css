@@ -242,6 +242,18 @@
   }
 }
 
+/* edge-to-edge（viewport-fit=cover）のヘッダー上端セーフエリア補正。
+   announcement bar が在るときはバーが既にノッチ分を確保している（その高さは
+   --announcement-bar-height に inset 込みで公開される）ため、ヘッダー側はその分を
+   差し引いて 0 にし二重計上を防ぐ。バーが無いときは inset 全量をヘッダーが負担する。
+   非ノッチ端末では env=0 となり常に 0px（無変化）。 */
+:root {
+  --header-safe-top: max(
+    0px,
+    env(safe-area-inset-top, 0px) - var(--announcement-bar-height, 0px)
+  );
+}
+
 /* ==========================================================================
  * Base Layer
  * ========================================================================== */

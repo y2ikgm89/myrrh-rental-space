@@ -120,7 +120,10 @@ export function computeBarStyles(settings: CarouselSettings): BarStyles {
       design === AnnouncementBarDesignStyle.striped);
 
   const className = cn(
-    "relative flex items-center gap-1 px-2 py-2 text-sm",
+    // edge-to-edge: 最上部要素なのでノッチ分を上 padding で確保（inset=0 で無変化）。
+    // この高さは ResizeObserver で --announcement-bar-height に公開され、ヘッダーの
+    // top オフセット/上 inset 補正がこれを差し引いて二重計上を防ぐ。
+    "relative flex items-center gap-1 px-2 py-2 pt-[calc(0.5rem_+_env(safe-area-inset-top,0px))] text-sm",
     settings.sticky && "sticky top-0 z-41",
     config.container,
     !hasCustomBg && config.containerWithBg,

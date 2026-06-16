@@ -284,7 +284,7 @@ export function StandardHeroSection({
       >
         <div
           ref={contentRef}
-          className="relative z-10 mx-auto flex min-h-full max-w-6xl flex-col items-center px-[var(--container-padding)] md:flex-row"
+          className="relative z-10 mx-auto flex min-h-full max-w-6xl flex-col items-center ps-[var(--container-padding-start)] pe-[var(--container-padding-end)] md:flex-row"
         >
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
             {showSectionLabel && (
@@ -394,7 +394,7 @@ export function StandardHeroSection({
       <div
         ref={contentRef}
         className={cn(
-          "relative z-10 px-[var(--container-padding)] text-center",
+          "relative z-10 ps-[var(--container-padding-start)] pe-[var(--container-padding-end)] text-center",
           text.base,
         )}
       >

@@ -62,7 +62,8 @@ export function MobileNav({ authKind }: MobileNavProps) {
   return (
     <nav
       aria-label="モバイルナビゲーション"
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background md:hidden"
+      // edge-to-edge: 背景は画面下端まで、操作項目はホームインジケータ帯を避ける。
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background pb-[env(safe-area-inset-bottom,0px)] md:hidden"
     >
       <ul className="flex items-center justify-around py-2">
         {items.map((item) => {

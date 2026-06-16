@@ -123,9 +123,9 @@ export function CookieConsentBanner({
       role="dialog"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-description"
-      // モバイルは下部固定ナビ(bottom-0 z-50)の上に積み、重なりを回避。
-      // デスクトップはナビが無い(md:hidden)ため bottom-0 に戻す。
-      className="fixed inset-x-0 bottom-16 z-50 p-4 md:bottom-0"
+      // モバイルは下部固定ナビ(高さ4rem + ホームインジケータ inset)の上に積む。
+      // デスクトップはナビが無い(md:hidden)ため inset 分だけ持ち上げる。
+      className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom,0px))] z-50 p-4 md:bottom-[env(safe-area-inset-bottom,0px)]"
     >
       <div className="mx-auto max-w-4xl border bg-background p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

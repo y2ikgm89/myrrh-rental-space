@@ -44,7 +44,7 @@ export function StickyBottomBar({
   return (
     <div
       ref={ref}
-      className="fixed inset-x-0 bottom-16 z-40 border-t border-border bg-background/95 px-[var(--container-padding)] pb-3 pt-3 backdrop-blur-sm transition-transform duration-150 md:hidden"
+      className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom,0px))] z-40 border-t border-border bg-background/95 px-[var(--container-padding)] pb-3 pt-3 backdrop-blur-sm transition-transform duration-150 md:hidden"
     >
       {children}
     </div>
