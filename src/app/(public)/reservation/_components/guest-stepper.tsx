@@ -10,7 +10,9 @@ const STEP_BUTTON_CLASS = cn(
 );
 
 const NUMBER_INPUT_CLASS = cn(
-  "h-11 w-14 border border-border bg-transparent text-center text-sm",
+  // text-base(16px) でモバイルの iOS Safari フォーカス時オートズームを防止、
+  // md 以上は従来の text-sm(14px) を維持。
+  "h-11 w-14 border border-border bg-transparent text-center text-base md:text-sm",
   "focus-visible:border-accent focus-visible:outline-none",
 );
 
