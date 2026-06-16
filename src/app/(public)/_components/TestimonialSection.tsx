@@ -65,7 +65,7 @@ const LAYOUT_CLASS = {
   grid: "@container",
   list: "flex flex-col gap-6 max-w-3xl mx-auto",
   carousel:
-    "flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8",
+    "flex gap-6 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8",
 } as const;
 
 const GRID_INNER_CLASS = "grid gap-6 @md:grid-cols-2 @3xl:grid-cols-3";

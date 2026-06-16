@@ -123,7 +123,9 @@ export function CookieConsentBanner({
       role="dialog"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-description"
-      className="fixed inset-x-0 bottom-0 z-50 p-4"
+      // モバイルは下部固定ナビ(bottom-0 z-50)の上に積み、重なりを回避。
+      // デスクトップはナビが無い(md:hidden)ため bottom-0 に戻す。
+      className="fixed inset-x-0 bottom-16 z-50 p-4 md:bottom-0"
     >
       <div className="mx-auto max-w-4xl border bg-background p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

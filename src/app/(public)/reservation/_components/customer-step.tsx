@@ -219,6 +219,7 @@ export function CustomerStep({
                       className="text-accent underline transition-colors hover:text-foreground"
                     >
                       {term.title}
+                      <span className="sr-only">（新しいタブで開く）</span>
                     </a>
                     に同意します
                   </span>

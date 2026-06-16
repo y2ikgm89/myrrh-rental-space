@@ -86,7 +86,10 @@ function HeroButtons({
         <Link
           href={toAppRoute(secondary.url)}
           className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-          {...(secondary.openInNewTab && { target: "_blank" as const })}
+          {...(secondary.openInNewTab && {
+            target: "_blank" as const,
+            rel: "noopener noreferrer",
+          })}
           {...((secondary.backgroundColor || secondary.textColor) && {
             style: {
               ...(secondary.backgroundColor && {
@@ -97,6 +100,9 @@ function HeroButtons({
           })}
         >
           {spansToPlainText(secondary.label)}
+          {secondary.openInNewTab && (
+            <span className="sr-only">（新しいタブで開く）</span>
+          )}
           <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
         </Link>
       )}
