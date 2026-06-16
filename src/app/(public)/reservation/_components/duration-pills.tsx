@@ -50,7 +50,8 @@ export function DurationPills({
             aria-selected={isSelected}
             onClick={() => onSelect(minutes)}
             className={cn(
-              "flex-shrink-0 border px-5 py-2 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              // min-h-11 で 44px タッチ標的を確保し、同フロー内の TimeSlot/Stepper と統一。
+              "inline-flex min-h-11 flex-shrink-0 items-center justify-center border px-5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               isSelected
                 ? "border-accent bg-accent text-accent-foreground"
                 : "border-border text-foreground hover:border-foreground/30",
