@@ -11,6 +11,7 @@
 - `bun run dev` — 開発サーバー（Turbopack）。**手動管理。Claude から起動・kill しない**
 - `bun run type-check` / `bun run lint` / `bun run format`
 - `bun run test:unit` / `bun run test:integration` / `bun run e2e`
+  - **フルスイートは必ず `bun run test:*`（per-file isolation runner）。`bun test <ディレクトリ>` や引数なし `bun test` を直接叩かない** — `mock.module()` が process-global に漏れて cross-file 汚染を起こす公式仕様のため、全 309 ファイルを 1 プロセスで回すと約 **310 件が偽 fail**（実体は緑。`bun run test:*` なら 0 fail）。単一ファイルの debug 用 `bun test <file>` は安全。
 - `bun run db:migrate`（開発マイグレーション）/ `bun run db:generate` / `bun run db:studio`
 
 パッケージ管理・スクリプト実行は **Bun** のみ（`npm` / `yarn` / `pnpm` は使わない）。
