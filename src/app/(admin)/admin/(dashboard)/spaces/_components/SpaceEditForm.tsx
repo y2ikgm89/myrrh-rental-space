@@ -257,7 +257,7 @@ export function SpaceEditForm({
     "section",
     parseAsStringLiteral(SPACE_EDIT_TAB_VALUES)
       .withDefault("basic")
-      .withOptions({ history: "push", shallow: true }),
+      .withOptions({ history: "replace", shallow: true }),
   );
 
   // 基本情報

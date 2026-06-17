@@ -100,7 +100,7 @@ export function EventForm({
     "section",
     parseAsStringLiteral(EVENT_EDIT_TAB_VALUES)
       .withDefault("basic")
-      .withOptions({ history: "push", shallow: true }),
+      .withOptions({ history: "replace", shallow: true }),
   );
 
   // Controlled state（hidden input 経由で送信）

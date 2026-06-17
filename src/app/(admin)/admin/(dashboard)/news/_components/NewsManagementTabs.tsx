@@ -39,7 +39,7 @@ export function NewsManagementTabs({
     "tab",
     parseAsStringLiteral(TAB_VALUES)
       .withDefault("posts")
-      .withOptions({ history: "push", shallow: true }),
+      .withOptions({ history: "replace", shallow: true }),
   );
 
   const handleTabChange = (value: string) => {

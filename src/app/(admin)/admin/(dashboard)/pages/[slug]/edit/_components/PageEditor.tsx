@@ -41,7 +41,7 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
     "tab",
     parseAsStringLiteral(PAGE_EDIT_TAB_VALUES)
       .withDefault("content")
-      .withOptions({ history: "push", shallow: true }),
+      .withOptions({ history: "replace", shallow: true }),
   );
 
   const [activeSectionIdRaw, setActiveSectionId] = useQueryState(
