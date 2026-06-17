@@ -103,7 +103,7 @@ const nextConfig: NextConfig = {
     // コンテンツが「一手前のタブのまま残る」stale を起こす。これは Next.js 16 の既知 OPEN
     // フレームワークバグで、nuqs（shallow:false→router.replace）も <Suspense key={tab}> も無罪、
     // 原因は Next 側のルーターキャッシュ層。F5（完全ナビ）では正しく表示されるのが切り分けの証左。
-    // 参照: vercel/next.js#86577 / #88535 / #93210, 47ng/nuqs#1273
+    // 参照（いずれも未修正 OPEN）: vercel/next.js#86577 / #88535, 47ng/nuqs#1273
     // 上流修正（Vercel 担当者が next@canary で類似ルータバグ修正済と言及）が安定版に入ったら再評価する。
     // ナビゲーション後のフォーカス管理改善（active element を blur、ブラウザ標準挙動に準拠）
     appNewScrollHandler: true,
