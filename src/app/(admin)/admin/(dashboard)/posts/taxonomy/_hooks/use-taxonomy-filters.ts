@@ -53,11 +53,15 @@ export type TagFilterParams = {
 };
 
 export function useCategoryFilters() {
+  // 検索は純クライアント処理（CategoryManager が全件 props を .filter()）。
+  // サーバ getPostCategories() は無引数・全件返却で search を honor しないため、
+  // shallow:false は同一全件の無駄な RSC 再取得を招く → shallow:true。
+  // history は #629 の方針（フィルタ=push 維持）に従う。
   const [params, setParams] = useQueryStates(
     postTaxonomyCategorySearchParamsParsers,
     {
       history: "push",
-      shallow: false,
+      shallow: true,
     },
   );
 
@@ -82,11 +86,15 @@ export function useCategoryFilters() {
 }
 
 export function useTagFilters() {
+  // 検索/ソート/未使用フィルタは純クライアント処理（TagManager が全件 props を
+  // .filter()/.sort()）。サーバ getPostTags() は無引数・全件返却で filter/sort を
+  // honor しないため、shallow:false は同一全件の無駄な RSC 再取得を招く → shallow:true。
+  // history は #629 の方針（フィルタ=push 維持）に従う。
   const [params, setParams] = useQueryStates(
     postTaxonomyTagSearchParamsParsers,
     {
       history: "push",
-      shallow: false,
+      shallow: true,
     },
   );
 
