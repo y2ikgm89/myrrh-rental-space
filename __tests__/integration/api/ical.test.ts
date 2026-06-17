@@ -197,9 +197,9 @@ describe("GET /api/ical/[token]", () => {
       expect(response.headers.get("Content-Type")).toBe(
         "text/calendar; charset=utf-8",
       );
-      expect(response.headers.get("Cache-Control")).toBe(
-        "private, max-age=3600",
-      );
+      // トークン保護フィードは no-store（next.config /api と一致する defense-in-depth）。
+      // 旧 max-age=3600 は config に上書きされ実行時 dead だった。
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       const body = await response.text();
       expect(body).toContain("VCALENDAR");
     });

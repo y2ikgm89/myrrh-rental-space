@@ -161,7 +161,11 @@ export async function GET(
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
         "Content-Disposition": buildICalContentDisposition(icalToken.name),
-        "Cache-Control": "private, max-age=3600",
+        // トークン保護された予約フィード。共有・ブラウザ両キャッシュへの保存を禁止。
+        // ※ Next.js の precedence 上 next.config の /api 指定（private, no-store）が
+        //   この値を上書きする（旧 max-age=3600 は実行時 dead だった）。config と一致させた
+        //   defense-in-depth。外部カレンダーはポーリングで再取得するため no-store でも購読は機能する。
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {

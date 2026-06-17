@@ -175,6 +175,11 @@ const nextConfig: NextConfig = {
   // - private 値は canonical な `private, no-store`（RFC 9111 §5.2.2.5 / MDN: no-store が共有・
   //   ブラウザ両キャッシュへの保存を禁止。`no-cache` / `must-revalidate` の併記は冗長）。origin で
   //   no-store を返すことで、保護が Cloudflare 除外ルールのみに依存する単一障害点を排除する。
+  // - レイヤー間 precedence（実証済 / Next.js 16.2.9・Node runtime・next start）:
+  //   proxy.ts > next.config headers() > Route Handler の Response ヘッダー。
+  //   つまり Route Handler に Cache-Control を書いても next.config が上書きするため、
+  //   API も含め Cache-Control 方針は next.config を SSoT とする（per-route はここに一致させる
+  //   defense-in-depth に留める）。公式 "Execution order"（headers → proxy → filesystem routes）と整合。
   async headers() {
     return [
       // 公開ページ（積極的キャッシュ - Cloudflare CDN連携）。必ず先頭に置く。
@@ -218,10 +223,12 @@ const nextConfig: NextConfig = {
         source: "/contact/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // API Routes（共有キャッシュ禁止。private で CDN への保存を抑止）
+      // API Routes（認証 / PII を含むレスポンスがある。origin で no-store）。
+      // Next.js の precedence 上ここが API の Cache-Control の唯一の実効レイヤー＝SSoT
+      // （Route Handler 側の Cache-Control は config が上書きする＝上記コメント参照）。
       {
         source: "/api/:path*",
-        headers: [{ key: "Cache-Control", value: "private, no-cache" }],
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
     ];
   },
