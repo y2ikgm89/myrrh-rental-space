@@ -21,22 +21,14 @@ import {
 } from "@/shared/domain/settings/commands";
 
 import {
-  contactInfoFormSchema,
   businessHoursSettingsSchema,
   type BusinessHoursSettingsInput,
 } from "./schemas";
-import { businessInfoFormSchema } from "./schemas/form-schemas-brand-contact";
-
-/**
- * `""` → `null` 変換 helper（conform `parseWithZod` 経由の FormData では
- * 空フィールドが `""` で届くため、domain command 渡し前に null 化する。
- * 共有 `emptyToNull` は client 側 helper のため server からは再定義）。
- */
-function emptyToNull(value: string | undefined): string | null {
-  if (value === undefined) return null;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
+import {
+  businessInfoFormSchema,
+  contactInfoFormSchema,
+} from "./schemas/form-schemas-brand-contact";
+import { emptyToNull } from "./schemas/form-schema-helpers";
 
 /**
  * 事業者情報更新 — conform `useActionState` 統合経路。

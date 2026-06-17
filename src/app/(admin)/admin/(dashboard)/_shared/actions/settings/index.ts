@@ -33,26 +33,14 @@ export type {
 // =============================================================================
 
 export type {
-  BasicInfoInput,
-  BusinessInfoInput,
-  ContactInfoInput,
   BusinessHoursSettingsInput,
-  MetaSettingsInput,
-  AnalyticsSettingsInput,
-  SearchVerificationInput,
-  LayoutSettingsInput,
-  EmailSettingsInput,
-  NotificationSettingsInput,
   GoogleCalendarSettingsInput,
   TwoWaySyncSettingsInput,
-  MaintenanceSettingsInput,
-  CookieConsentSettingsInput,
   ReservationSettingsInput,
   AnnouncementBarCarouselSettingsInput,
   DiscountSettingsInput,
   DurationDiscountRuleInput,
   HeaderSettingsInput,
-  FooterSettingsInput,
 } from "./schemas";
 
 // =============================================================================

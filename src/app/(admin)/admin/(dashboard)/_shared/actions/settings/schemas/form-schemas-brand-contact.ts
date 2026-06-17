@@ -1,32 +1,26 @@
 /**
  * 設定セクション用フォームスキーマ — サイト一般（基本・連絡先・パーマリンク・メンテ・事業者）
+ *
+ * 任意テキストは {@link optionalText}、Switch 由来 boolean は {@link switchBoolean} を使う
+ * （conform の空→undefined 変換に整合させ「空欄保存 / OFF 保存」を許容する）。
  */
 import { z } from "zod";
+import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
 // Site > General > 基本情報
 // =============================================================================
 
 export const basicInfoFormSchema = z.object({
-  siteName: z.string().max(100, { error: "100文字以内で入力してください" }),
-  siteDescription: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  faviconUrl: z.string().max(500, { error: "500文字以内で入力してください" }),
-  defaultOgpImageUrl: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  headerLogoUrl: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  footerLogoUrl: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  footerCopyright: z
-    .string()
-    .max(200, { error: "200文字以内で入力してください" }),
-  useHeaderLogo: z.boolean(),
-  useFooterLogo: z.boolean(),
+  siteName: optionalText(100),
+  siteDescription: optionalText(500),
+  faviconUrl: optionalText(500),
+  defaultOgpImageUrl: optionalText(500),
+  headerLogoUrl: optionalText(500),
+  footerLogoUrl: optionalText(500),
+  footerCopyright: optionalText(200),
+  useHeaderLogo: switchBoolean(),
+  useFooterLogo: switchBoolean(),
 });
 
 export type BasicInfoFormInput = z.infer<typeof basicInfoFormSchema>;
@@ -81,10 +75,8 @@ export type ContactInfoFormInput = z.infer<typeof contactInfoFormSchema>;
 // =============================================================================
 
 export const maintenanceFormSchema = z.object({
-  maintenanceMode: z.boolean(),
-  maintenanceMessage: z
-    .string()
-    .max(1000, { error: "1000文字以内で入力してください" }),
+  maintenanceMode: switchBoolean(),
+  maintenanceMessage: optionalText(1000),
 });
 
 export type MaintenanceFormInput = z.infer<typeof maintenanceFormSchema>;

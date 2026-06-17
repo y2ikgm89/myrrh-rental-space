@@ -17,7 +17,11 @@ import {
   updateNotificationSettings as updateNotificationSettingsCommand,
 } from "@/shared/domain/settings/commands";
 
-import { emailSettingsSchema, notificationSettingsSchema } from "./schemas";
+import { emptyToNull } from "./schemas/form-schema-helpers";
+import {
+  emailFormSchema,
+  notificationFormSchema,
+} from "./schemas/form-schemas-email-notification";
 
 /**
  * メール設定の更新 — conform `useActionState` 統合経路。
@@ -26,12 +30,22 @@ export async function updateEmailSettings(
   _prev: SubmissionResult | undefined,
   formData: FormData,
 ): Promise<SubmissionResult> {
-  return executeConformMutation(formData, emailSettingsSchema, async (data) => {
+  return executeConformMutation(formData, emailFormSchema, async (data) => {
     const result = await executeAdminMutationResult({
       resource: "settings",
       action: "update",
       execute: async () => {
-        await updateEmailSettingsCommand(data);
+        await updateEmailSettingsCommand({
+          senderEmail: emptyToNull(data.senderEmail),
+          senderName: emptyToNull(data.senderName),
+          replyToEmail: emptyToNull(data.replyToEmail),
+          sendReservationConfirmationEmail:
+            data.sendReservationConfirmationEmail,
+          sendAdminNotificationEmail: data.sendAdminNotificationEmail,
+          notificationEmailAddresses: emptyToNull(
+            data.notificationEmailAddresses,
+          ),
+        });
         return null;
       },
       afterSuccess: () => {
@@ -56,7 +70,7 @@ export async function updateNotificationSettings(
 ): Promise<SubmissionResult> {
   return executeConformMutation(
     formData,
-    notificationSettingsSchema,
+    notificationFormSchema,
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",

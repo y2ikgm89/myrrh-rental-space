@@ -1,5 +1,8 @@
 /**
  * 設定セクション用フォームスキーマ — セキュリティ・連携（Stripe / Calendar / Instagram 等）
+ *
+ * 任意テキストは {@link optionalText}、Switch 由来 boolean は {@link switchBoolean} を使い、
+ * conform の空→undefined 変換に整合させる（空欄保存 / OFF 保存を許容する）。
  */
 import { z } from "zod";
 import {
@@ -14,18 +17,15 @@ import {
   isValidWebhookSecret,
   keysHaveMatchingMode,
 } from "@/shared/lib/stripe-shared";
+import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
 // Site > Security > Turnstile
 // =============================================================================
 
 export const turnstileFormSchema = z.object({
-  turnstileSiteKey: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
-  turnstileSecretKey: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
+  turnstileSiteKey: optionalText(500),
+  turnstileSecretKey: optionalText(500),
 });
 
 export type TurnstileFormInput = z.infer<typeof turnstileFormSchema>;
@@ -35,9 +35,7 @@ export type TurnstileFormInput = z.infer<typeof turnstileFormSchema>;
 // =============================================================================
 
 export const googleMapsFormSchema = z.object({
-  googleMapsApiKey: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" }),
+  googleMapsApiKey: optionalText(500),
 });
 
 export type GoogleMapsFormInput = z.infer<typeof googleMapsFormSchema>;
@@ -47,8 +45,8 @@ export type GoogleMapsFormInput = z.infer<typeof googleMapsFormSchema>;
 // =============================================================================
 
 export const icalFeedFormSchema = z.object({
-  icalFeedEnabled: z.boolean(),
-  icalFeedIncludeCustomerInfo: z.boolean(),
+  icalFeedEnabled: switchBoolean(),
+  icalFeedIncludeCustomerInfo: switchBoolean(),
 });
 
 export type ICalFeedFormInput = z.infer<typeof icalFeedFormSchema>;
@@ -58,7 +56,7 @@ export type ICalFeedFormInput = z.infer<typeof icalFeedFormSchema>;
 // =============================================================================
 
 export const discountFormSchema = z.object({
-  durationDiscountEnabled: z.boolean(),
+  durationDiscountEnabled: switchBoolean(),
   // hours は割引マップのキーとして機能するため、重複を禁止する
   durationDiscountRules: z
     .array(
@@ -72,8 +70,8 @@ export const discountFormSchema = z.object({
       { error: "同じ時間数の割引ルールを複数登録することはできません" },
     ),
   discountCombinationMode: z.enum(DiscountCombinationMode),
-  showOriginalPrice: z.boolean(),
-  discountWarningEnabled: z.boolean(),
+  showOriginalPrice: switchBoolean(),
+  discountWarningEnabled: switchBoolean(),
 });
 
 export type DiscountFormInput = z.infer<typeof discountFormSchema>;
@@ -84,21 +82,23 @@ export type DiscountFormInput = z.infer<typeof discountFormSchema>;
 
 export const stripeFormSchema = z
   .object({
-    stripeEnabled: z.boolean(),
-    stripeTestMode: z.boolean(),
+    stripeEnabled: switchBoolean(),
+    stripeTestMode: switchBoolean(),
     stripePublishableKey: z
       .string()
       .max(200, { error: "公開可能キーは200文字以内で入力してください" })
       .refine((val) => !val || isValidPublishableKey(val), {
         error: "公開可能キーは pk_test_ または pk_live_ で始まる必要があります",
-      }),
+      })
+      .optional(),
     stripeSecretKey: z
       .string()
       .max(200, { error: "シークレットキーは200文字以内で入力してください" })
       .refine((val) => !val || isValidSecretKey(val), {
         error:
           "シークレットキーは sk_test_ または sk_live_ で始まる必要があります",
-      }),
+      })
+      .optional(),
     stripeWebhookSecret: z
       .string()
       .max(200, {
@@ -106,7 +106,8 @@ export const stripeFormSchema = z
       })
       .refine((val) => !val || isValidWebhookSecret(val), {
         error: "Webhookシークレットは whsec_ で始まる必要があります",
-      }),
+      })
+      .optional(),
     stripeCurrency: z.enum(SUPPORTED_CURRENCY_VALUES),
   })
   .refine(
@@ -133,7 +134,7 @@ export type StripeFormInput = z.infer<typeof stripeFormSchema>;
 // =============================================================================
 
 export const resendFormSchema = z.object({
-  resendApiKey: z.string(),
+  resendApiKey: z.string().optional(),
 });
 
 export type ResendFormInput = z.infer<typeof resendFormSchema>;
@@ -143,8 +144,8 @@ export type ResendFormInput = z.infer<typeof resendFormSchema>;
 // =============================================================================
 
 export const cloudflareFormSchema = z.object({
-  cloudflareZoneId: z.string(),
-  cloudflareApiToken: z.string(),
+  cloudflareZoneId: z.string().optional(),
+  cloudflareApiToken: z.string().optional(),
 });
 
 export type CloudflareFormInput = z.infer<typeof cloudflareFormSchema>;
@@ -154,17 +155,18 @@ export type CloudflareFormInput = z.infer<typeof cloudflareFormSchema>;
 // =============================================================================
 
 export const googleCalendarFormSchema = z.object({
-  googleCalendarEnabled: z.boolean(),
-  googleCalendarId: z.string(),
-  serviceAccountJson: z.string(),
-  icalAttachmentEnabled: z.boolean(),
-  addToCalendarLinksEnabled: z.boolean(),
-  googleCalendarMeetEnabled: z.boolean(),
+  googleCalendarEnabled: switchBoolean(),
+  googleCalendarId: z.string().optional(),
+  serviceAccountJson: z.string().optional(),
+  icalAttachmentEnabled: switchBoolean(),
+  addToCalendarLinksEnabled: switchBoolean(),
+  googleCalendarMeetEnabled: switchBoolean(),
   /**
    * フォーム上では null=既定 / 0=無効 / N=N分前
-   * `number | null` にすることで `<input type="number">` 空欄も許容する
+   * `<input type="number">` の空欄は conform で undefined になるため `.nullish()`
+   * （null/undefined どちらも許容）。送信時に `?? null` で正規化する。
    */
-  googleCalendarReminderMinutes: z.number().int().min(0).max(40320).nullable(),
+  googleCalendarReminderMinutes: z.number().int().min(0).max(40320).nullish(),
 });
 
 export type GoogleCalendarFormInput = z.infer<typeof googleCalendarFormSchema>;
@@ -174,7 +176,7 @@ export type GoogleCalendarFormInput = z.infer<typeof googleCalendarFormSchema>;
 // =============================================================================
 
 export const twoWaySyncFormSchema = z.object({
-  enabled: z.boolean(),
+  enabled: switchBoolean(),
   syncMethod: z.enum(CalendarSyncMethod),
   pollingIntervalMin: z.number().int().min(1).max(60),
 });
@@ -186,12 +188,12 @@ export type TwoWaySyncFormInput = z.infer<typeof twoWaySyncFormSchema>;
 // =============================================================================
 
 export const instagramFeedFormSchema = z.object({
-  feedEnabled: z.boolean(),
+  feedEnabled: switchBoolean(),
   feedLayout: z.enum(InstagramFeedLayout),
   feedColumns: z.number().int().min(2).max(6),
   feedMaxItems: z.number().int().min(1).max(24),
-  showCaption: z.boolean(),
-  showViewAll: z.boolean(),
+  showCaption: switchBoolean(),
+  showViewAll: switchBoolean(),
 });
 
 export type InstagramFeedFormInput = z.infer<typeof instagramFeedFormSchema>;

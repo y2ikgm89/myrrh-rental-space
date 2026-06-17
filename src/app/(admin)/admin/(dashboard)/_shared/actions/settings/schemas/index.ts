@@ -7,30 +7,10 @@
  */
 
 export {
-  basicInfoSchema,
-  type BasicInfoInput,
-  businessInfoSchema,
-  type BusinessInfoInput,
-  contactInfoSchema,
-  type ContactInfoInput,
   businessHoursSettingsSchema,
   type BusinessHoursSettingsInput,
-  metaSettingsSchema,
-  type MetaSettingsInput,
-  analyticsSettingsSchema,
-  type AnalyticsSettingsInput,
-  searchVerificationSchema,
-  type SearchVerificationInput,
-  layoutSettingsSchema,
-  type LayoutSettingsInput,
   headerSettingsSchema,
   type HeaderSettingsInput,
-  footerSettingsSchema,
-  type FooterSettingsInput,
-  maintenanceSettingsSchema,
-  type MaintenanceSettingsInput,
-  cookieConsentSettingsSchema,
-  type CookieConsentSettingsInput,
   reservationSettingsSchema,
   type ReservationSettingsInput,
   featureModulesSettingsSchema,
@@ -50,13 +30,6 @@ export {
   taxSettingsSchema,
   type TaxSettingsInput,
 } from "./discount";
-
-export {
-  emailSettingsSchema,
-  type EmailSettingsInput,
-  notificationSettingsSchema,
-  type NotificationSettingsInput,
-} from "./email";
 
 export {
   googleCalendarSettingsSchema,
