@@ -6,6 +6,7 @@ export function formatDate(
 
   const value = typeof date === "string" ? new Date(date) : date;
   const options: Intl.DateTimeFormatOptions = {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -25,6 +26,7 @@ export function formatDateShort(
   if (!date) return "-";
   const value = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -37,6 +39,7 @@ export function formatDateTimeShort(
   if (!date) return "-";
   const value = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -51,6 +54,7 @@ export function formatDateTimeFull(
   if (!date) return "-";
   const value = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

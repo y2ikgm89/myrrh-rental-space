@@ -624,3 +624,40 @@ describe("formatDayWithWeekday", () => {
     );
   });
 });
+
+// =============================================================================
+// 表示フォーマットの TZ 非依存性（サーバ UTC / クライアント JST のハイドレーション
+// 不整合 React #418 回帰ガード）
+//
+// formatDate / formatDateShort / formatDateTimeShort / formatDateTimeFull は
+// timeZone を固定しないとランタイムのローカル TZ で整形され、サーバ (Cloud Run = UTC)
+// とクライアント (ブラウザ = JST) で異なるテキストになる。client component で
+// createdAt / updatedAt 等を描画するとハイドレーション不整合 (#418) を起こし、
+// その配下の Link / button のクリックが無反応になる。
+//
+// 日跨ぎする UTC 入力 (20:00Z = 翌日 05:00 JST) で JST 固定出力を pin する。
+// CI / 本番は UTC のため、timeZone 固定が外れるとこのブロックが落ちる。
+// =============================================================================
+
+describe("表示フォーマットの TZ 非依存性（#418 ハイドレーション回帰）", () => {
+  // UTC 2026-06-01 20:00 → JST 2026-06-02 05:00（火曜）
+  const CROSS_DAY_UTC = new Date("2026-06-01T20:00:00.000Z");
+
+  test("formatDate は JST カレンダー日付で整形する（UTC 当日に退行しない）", () => {
+    expect(formatDate(CROSS_DAY_UTC)).toContain("2026年6月2日");
+  });
+
+  test("formatDateShort は JST 日付 YYYY/MM/DD で整形する", () => {
+    expect(formatDateShort(CROSS_DAY_UTC)).toBe("2026/06/02");
+  });
+
+  test("formatDateTimeShort は JST 日時で整形する", () => {
+    expect(formatDateTimeShort(CROSS_DAY_UTC)).toMatch(/^2026\/06\/02\s05:00$/);
+  });
+
+  test("formatDateTimeFull は JST 日付・曜日で整形する（火曜）", () => {
+    const result = formatDateTimeFull(CROSS_DAY_UTC);
+    expect(result).toContain("2026/06/02");
+    expect(result).toContain("火");
+  });
+});
