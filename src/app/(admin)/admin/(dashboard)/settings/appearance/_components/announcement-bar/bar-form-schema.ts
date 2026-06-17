@@ -56,8 +56,17 @@ const messageSchema = z
 
 export const barFormSchema = z.object({
   message: messageSchema,
-  linkUrl: z.url({ error: "有効なURLを入力してください" }).or(z.literal("")),
-  linkText: z.string().max(50, { error: "リンクテキストは50文字以内" }),
+  // 任意項目（リンク・日時）。conform `parseWithZod` は空入力を undefined に
+  // 変換するため、`.or(z.literal(""))` だけでは undefined を取りこぼして弾かれる。
+  // `.optional()` で undefined を許容し、空 → null 化は Server Action 側で行う。
+  linkUrl: z
+    .url({ error: "有効なURLを入力してください" })
+    .or(z.literal(""))
+    .optional(),
+  linkText: z
+    .string()
+    .max(50, { error: "リンクテキストは50文字以内" })
+    .optional(),
   isActive: z.preprocess(
     (value) => value === "on" || value === true,
     z.boolean(),
@@ -70,11 +79,13 @@ export const barFormSchema = z.object({
   startAt: z
     .string()
     .datetime({ local: true, error: "有効な日時を入力してください" })
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .optional(),
   endAt: z
     .string()
     .datetime({ local: true, error: "有効な日時を入力してください" })
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .optional(),
 });
 
 export type BarFormSubmitData = z.infer<typeof barFormSchema>;
