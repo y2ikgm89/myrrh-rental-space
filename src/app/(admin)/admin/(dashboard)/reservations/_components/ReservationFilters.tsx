@@ -15,7 +15,7 @@ export function ReservationFilters() {
   const [params, setParams] = useQueryStates(
     adminReservationSearchParamsParsers,
     {
-      history: "push",
+      history: "replace",
       shallow: false,
     },
   );

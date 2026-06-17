@@ -23,7 +23,7 @@ import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 
 export function CouponFilters() {
   const [params, setParams] = useQueryStates(adminCouponSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

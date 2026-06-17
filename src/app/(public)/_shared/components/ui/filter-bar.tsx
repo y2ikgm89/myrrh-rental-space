@@ -35,8 +35,10 @@ export function FilterBar({
   locations,
   resultCount,
 }: FilterBarProps): ReactElement {
+  // history: replace は nuqs 公式デフォルト（push はタブ/モーダル等ナビ風UI専用）。
+  // フィルタはデータ絞り込みのため履歴を汚さない replace を採用。
   const [params, setParams] = useQueryStates(spaceSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
   const [isPending, startTransition] = useTransition();

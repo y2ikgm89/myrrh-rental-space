@@ -33,7 +33,7 @@ export function NotificationFilters() {
   const [params, setParams] = useQueryStates(
     adminNotificationSearchParamsParsers,
     {
-      history: "push",
+      history: "replace",
       shallow: false,
     },
   );

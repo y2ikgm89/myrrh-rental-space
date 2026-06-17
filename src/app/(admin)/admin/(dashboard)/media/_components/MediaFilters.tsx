@@ -26,7 +26,7 @@ export function MediaFilters() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [params, setParams] = useQueryStates(adminMediaSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

@@ -53,7 +53,7 @@ export function FaqCategoryItemsFilters() {
   const [params, setParams] = useQueryStates(
     adminFaqCategoryDetailSearchParamsParsers,
     {
-      history: "push",
+      history: "replace",
       shallow: false,
       startTransition,
     },

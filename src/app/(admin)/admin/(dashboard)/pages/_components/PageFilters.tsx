@@ -8,7 +8,7 @@
  *
  * - `useDebouncedCallback` で検索入力を 300ms debounce
  * - Select の sentinel は parser のデフォルト値 `"all"` と一致
- * - 状態は `useQueryStates({ history: "push", shallow: false })` で URL 同期
+ * - 状態は `useQueryStates({ history: "replace", shallow: false })` で URL 同期
  */
 
 import { useQueryStates } from "nuqs";
@@ -30,7 +30,7 @@ import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 export function PageFilters() {
   const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

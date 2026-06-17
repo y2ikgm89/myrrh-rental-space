@@ -38,7 +38,7 @@ const CUSTOMER_TYPE_OPTIONS: { value: CustomerTypeFilter; label: string }[] = [
 
 export function CustomerFilters() {
   const [params, setParams] = useQueryStates(adminCustomerSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

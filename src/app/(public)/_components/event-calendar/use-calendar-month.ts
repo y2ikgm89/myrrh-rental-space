@@ -25,6 +25,9 @@ export function useCalendarMonth(): CalendarMonthState {
   const [today] = useState(() => getJSTDateParts(new Date()));
   const [nowMs] = useState(() => Date.now());
 
+  // history: push は意図的。月送り（prev/next）は時系列のナビゲーションであり、
+  // ブラウザの戻る＝前月が自然な体験（nuqs 公式の navigation-like 該当）。
+  // フィルタ系の replace 統一とは別カテゴリ。
   const [{ y: urlYear, m: urlMonth }, setParams] = useQueryStates(
     eventsSearchParamsParsers,
     { history: "push", shallow: true },

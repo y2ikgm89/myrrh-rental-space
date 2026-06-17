@@ -18,7 +18,7 @@ export function CustomerTableHeader({
   onToggleAll,
 }: CustomerTableHeaderProps = {}) {
   const [params, setParams] = useQueryStates(adminCustomerSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

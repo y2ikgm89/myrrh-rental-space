@@ -23,7 +23,7 @@ export function LocationFilters() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [params, setParams] = useQueryStates(adminSpaceSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 
