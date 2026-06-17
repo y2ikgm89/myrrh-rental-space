@@ -59,8 +59,6 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
-  const params = await loadAdminReservationSearchParams(searchParams);
-
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -96,7 +94,7 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
       </div>
 
       {/* タブ（ステータス別分類） */}
-      <ReservationTabs activeTab={params.tab} />
+      <ReservationTabs />
 
       {/* フィルター（期間 + 検索） */}
       <Suspense fallback={<LoadingState variant="inline" />}>

@@ -26,6 +26,7 @@ import type {
   FaqItemSort,
 } from "@/shared/domain/faq/types";
 import { FaqReviewView } from "../_components/FaqReviewView";
+import { FaqReviewFilterTabs } from "../_components/FaqReviewFilterTabs";
 
 export const metadata: Metadata = {
   title: "FAQレビュー | FAQ管理 | Myrrh Rental Space",
@@ -124,6 +125,8 @@ export default function FaqReviewPage({
           カテゴリを横断して、見直しが必要な質問をまとめて確認します
         </p>
       </div>
+
+      <FaqReviewFilterTabs />
 
       <Suspense fallback={<LoadingState />}>
         <FaqReviewContent searchParams={searchParams} />
