@@ -27,8 +27,10 @@ export function EventsViewSwitcher({
   listView,
   calendarView,
 }: EventsViewSwitcherProps) {
+  // タブ切替は履歴に積まない（戻るで前ページへ戻れるようにする）。#629 のタブ方針に統一。
+  // 両 Content は forceMount でクライアント常駐＝サーバ再フェッチ不要のため shallow:true。
   const [{ view }, setParams] = useQueryStates(eventsSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: true,
   });
 

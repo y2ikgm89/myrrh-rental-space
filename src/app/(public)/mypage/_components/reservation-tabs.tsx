@@ -1,21 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { Tabs } from "radix-ui";
+import { useQueryStates } from "nuqs";
 import { cn } from "@/shared/lib/cn";
+import {
+  mypageReservationsSearchParamsParsers,
+  isMypageReservationTab,
+} from "@/public/lib/search-params";
 import { ReservationList } from "./reservation-list";
 import type { ReservationListItem } from "./reservation-list";
 
 interface ReservationTabsProps {
   readonly activeItems: readonly ReservationListItem[];
   readonly pastItems: readonly ReservationListItem[];
-}
-
-const TAB_VALUES = ["active", "past"] as const;
-type TabValue = (typeof TAB_VALUES)[number];
-const TAB_VALUE_SET = new Set<string>(TAB_VALUES);
-function isTabValue(value: string): value is TabValue {
-  return TAB_VALUE_SET.has(value);
 }
 
 const TAB_TRIGGER_CLASS = cn(
@@ -29,15 +26,22 @@ export function ReservationTabs({
   activeItems,
   pastItems,
 }: ReservationTabsProps) {
-  const [tab, setTab] = useState<TabValue>(
-    activeItems.length > 0 ? "active" : "past",
+  // タブ選択を URL に反映（共有/リロード復元/戻る進む対応）。
+  // 両 Content は forceMount でクライアント常駐＝サーバ再フェッチ不要のため shallow:true。
+  // 履歴は #629 のタブ方針に合わせ replace（戻るボタンを壊さない）。
+  const [{ tab }, setParams] = useQueryStates(
+    mypageReservationsSearchParamsParsers,
+    { history: "replace", shallow: true },
   );
+
+  // URL 未指定時は予約状況で初期タブを決める（これからの予約が無ければ過去を表示）。
+  const activeTab = tab ?? (activeItems.length > 0 ? "active" : "past");
 
   return (
     <Tabs.Root
-      value={tab}
+      value={activeTab}
       onValueChange={(v) => {
-        if (isTabValue(v)) setTab(v);
+        if (isMypageReservationTab(v)) void setParams({ tab: v });
       }}
     >
       <Tabs.List

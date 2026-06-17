@@ -78,3 +78,20 @@ export const reservationSearchParamsParsers = {
 export const reservationSearchParams = createSearchParamsCache(
   reservationSearchParamsParsers,
 );
+
+export const MYPAGE_RESERVATION_TABS = ["active", "past"] as const;
+export type MypageReservationTab = (typeof MYPAGE_RESERVATION_TABS)[number];
+
+const mypageReservationTabSet = new Set<string>(MYPAGE_RESERVATION_TABS);
+export function isMypageReservationTab(
+  value: string,
+): value is MypageReservationTab {
+  return mypageReservationTabSet.has(value);
+}
+
+// withDefault を付けない（URL 未指定 = null）。初期タブは予約状況で動的決定するため、
+// 既定値を固定せず消費側で `?? (active があれば active / なければ past)` に委ねる。
+// クライアント常駐タブのみで描画完結するためサーバ用 cache は不要。
+export const mypageReservationsSearchParamsParsers = {
+  tab: parseAsStringLiteral(MYPAGE_RESERVATION_TABS),
+};
