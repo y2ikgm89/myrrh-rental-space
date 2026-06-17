@@ -53,7 +53,7 @@ export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
     "tab",
     parseAsStringLiteral(tabValues)
       .withDefault(firstTab)
-      .withOptions({ history: "push", shallow: true }),
+      .withOptions({ history: "replace", shallow: true }),
   );
 
   return (
