@@ -80,6 +80,9 @@ export async function GET(request: Request): Promise<Response> {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
+        // 顧客 PII の一括出力。共有・ブラウザ両キャッシュへの保存を禁止
+        // （RFC 9111 §5.2.2.5 / .ics・calendar エンドポイントと同じ canonical な指定）
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {
