@@ -100,7 +100,7 @@ export function PostTable({ posts }: PostTableProps) {
                     <Badge variant="outline">{post.category.name}</Badge>
                   </TableCell>
                   <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
-                    {post.viewCount.toLocaleString()}
+                    {post.viewCount.toLocaleString("ja-JP")}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {post.publishedAt

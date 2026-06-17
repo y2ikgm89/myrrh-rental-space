@@ -293,14 +293,17 @@ export function formatSerializedDate(
   // Invalid Date チェック
   if (Number.isNaN(date.getTime())) return "";
 
-  return date.toLocaleDateString(
-    "ja-JP",
-    options ?? {
+  return date.toLocaleDateString("ja-JP", {
+    // timeZone を固定しないとサーバ(UTC)とクライアント(JST)で日付が食い違い
+    // client component の render で呼ぶと hydration mismatch (#418/#425) を起こす。
+    // 呼び出し側 options が timeZone を明示した場合のみ上書きを許す。
+    timeZone: "Asia/Tokyo",
+    ...(options ?? {
       year: "numeric",
       month: "long",
       day: "numeric",
-    },
-  );
+    }),
+  });
 }
 
 /**

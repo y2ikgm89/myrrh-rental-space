@@ -44,7 +44,7 @@ export function StatusBar({ wordCount, saveStatus }: StatusBarProps) {
     >
       {charCount > 0 && (
         <>
-          <span>文字数: {charCount.toLocaleString()}</span>
+          <span>文字数: {charCount.toLocaleString("ja-JP")}</span>
           <span className="text-border">|</span>
           <span>読了目安: 約{readingTimeMinutes}分</span>
         </>

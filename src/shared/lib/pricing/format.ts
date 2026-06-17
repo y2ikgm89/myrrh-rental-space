@@ -94,7 +94,7 @@ export function formatDiscountAmount(type: CouponType, value: number): string {
   if (type === CouponType.PERCENTAGE) {
     return `${value}%OFF`;
   }
-  return `\u00A5${value.toLocaleString()}OFF`;
+  return `\u00A5${value.toLocaleString("ja-JP")}OFF`;
 }
 
 /** 割引サマリーを生成（表示用） */
@@ -105,15 +105,15 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
     const label =
       calculation.appliedSpaceDiscount.type === DiscountType.percentage
         ? `${calculation.appliedSpaceDiscount.value}%OFF`
-        : `\u00A5${calculation.appliedSpaceDiscount.value.toLocaleString()}OFF`;
+        : `\u00A5${calculation.appliedSpaceDiscount.value.toLocaleString("ja-JP")}OFF`;
     summaries.push(
-      `スペース割引（${label}）: -\u00A5${calculation.spaceDiscount.toLocaleString()}`,
+      `スペース割引（${label}）: -\u00A5${calculation.spaceDiscount.toLocaleString("ja-JP")}`,
     );
   }
 
   if (calculation.appliedDurationRule) {
     summaries.push(
-      `長時間割引（${calculation.appliedDurationRule.hours}時間以上）: -\u00A5${calculation.durationDiscount.toLocaleString()}`,
+      `長時間割引（${calculation.appliedDurationRule.hours}時間以上）: -\u00A5${calculation.durationDiscount.toLocaleString("ja-JP")}`,
     );
   }
 
@@ -123,7 +123,7 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
       calculation.appliedCoupon.discountValue,
     );
     summaries.push(
-      `クーポン「${calculation.appliedCoupon.code}」${couponLabel}: -\u00A5${calculation.couponDiscount.toLocaleString()}`,
+      `クーポン「${calculation.appliedCoupon.code}」${couponLabel}: -\u00A5${calculation.couponDiscount.toLocaleString("ja-JP")}`,
     );
   }
 
