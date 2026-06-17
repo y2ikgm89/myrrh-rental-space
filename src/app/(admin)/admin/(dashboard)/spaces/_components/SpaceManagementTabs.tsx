@@ -1,20 +1,10 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useQueryState } from "nuqs";
 import type { ReactNode } from "react";
-import type { Route } from "next";
 import type { AdminSpaceManagementTab } from "@/shared/lib/constants";
-import { NavTabs, type NavTabItem } from "@/admin/components/ui";
-import { toAppRoute } from "@/shared/lib/typed-routes";
-
-// =============================================================================
-// 型・定数
-// =============================================================================
-
-type SpaceManagementTabsProps = {
-  activeTab: AdminSpaceManagementTab;
-  children: ReactNode;
-};
+import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
+import { cn } from "@/shared/lib/cn";
 
 const TAB_BASE: readonly { value: AdminSpaceManagementTab; label: string }[] = [
   { value: "spaces", label: "スペース" },
@@ -23,50 +13,46 @@ const TAB_BASE: readonly { value: AdminSpaceManagementTab; label: string }[] = [
   { value: "reviews", label: "レビュー" },
 ];
 
-function hrefForTab(
-  tab: AdminSpaceManagementTab,
-  current: URLSearchParams,
-): Route {
-  const next = new URLSearchParams(current.toString());
-  next.set("tab", tab);
-  const qs = next.toString();
-  return toAppRoute(qs ? `/admin/spaces?${qs}` : "/admin/spaces");
+interface SpaceManagementTabsProps {
+  children: ReactNode;
 }
 
-// =============================================================================
-// コンポーネント
-// =============================================================================
-
-/**
- * スペース管理のタブナビゲーション。
- *
- * 共通 `NavTabs` primitive 経由で実装（WAI-ARIA APG: ページ遷移は `role="tab"` ではなく
- * `nav` + `aria-current="page"`、`accessibility/semantics/html-elements.md` §nav vs tab 区別）。
- * `nuqs` ではなく `Link` + `URLSearchParams` で `tab` を切り替える（フルナビで RSC が
- * アクティブタブのみ再取得）。各タブ内のフィルタは `adminSpaceSearchParamsParsers`
- * （nuqs）とキーを共有する。アクションボタンはページヘッダー（page.tsx）に配置。
- */
-export function SpaceManagementTabs({
-  activeTab,
-  children,
-}: SpaceManagementTabsProps) {
-  const searchParams = useSearchParams();
-  const items: readonly NavTabItem<AdminSpaceManagementTab>[] = TAB_BASE.map(
-    ({ value, label }) => ({
-      value,
-      label,
-      href: hrefForTab(value, searchParams),
+export function SpaceManagementTabs({ children }: SpaceManagementTabsProps) {
+  const [tab, setTab] = useQueryState(
+    "tab",
+    adminSpaceSearchParamsParsers.tab.withOptions({
+      history: "replace",
+      shallow: false,
     }),
   );
 
   return (
     <div className="w-full">
-      <NavTabs
-        items={items}
-        activeValue={activeTab}
-        ariaLabel="スペース管理ナビゲーション"
-        className="mb-2"
-      />
+      <nav aria-label="スペース管理ナビゲーション" className="mb-2">
+        <ul className="inline-flex min-h-11 w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground scrollbar-hide">
+          {TAB_BASE.map(({ value, label }) => {
+            const isActive = tab === value;
+            return (
+              <li key={value}>
+                <button
+                  type="button"
+                  onClick={() => void setTab(value)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-all duration-200",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    "hover:bg-background/50",
+                    isActive &&
+                      "bg-card text-foreground shadow-sm hover:bg-card",
+                  )}
+                >
+                  {label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
       <div>{children}</div>
     </div>
   );

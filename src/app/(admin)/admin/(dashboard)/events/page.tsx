@@ -83,7 +83,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
       </div>
 
       {/* タブ（時間軸 + ステータスで分類） */}
-      <EventTabs activeTab={params.tab} />
+      <EventTabs />
 
       {/* フィルター */}
       <EventFilters />

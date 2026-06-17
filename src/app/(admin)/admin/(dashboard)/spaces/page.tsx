@@ -78,7 +78,7 @@ export default async function SpacesPage({ searchParams }: PageProps) {
         <HeaderAction tab={tab} />
       </div>
 
-      <SpaceManagementTabs activeTab={tab}>{tabPanel(tab)}</SpaceManagementTabs>
+      <SpaceManagementTabs>{tabPanel(tab)}</SpaceManagementTabs>
     </div>
   );
 }

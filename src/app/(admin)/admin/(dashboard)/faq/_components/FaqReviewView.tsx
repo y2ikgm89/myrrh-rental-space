@@ -7,12 +7,11 @@
  * カテゴリを横断した「対応すべき質問」のフラット一覧を表示し、
  * 各行の編集は所属カテゴリにスコープした FaqItemDialog で完結する。
  *
- * フィルタ切替は NavTabs（ページ遷移 = WAI-ARIA nav + aria-current）。
+ * フィルタ切替は FaqReviewFilterTabs（nuqs shallow:false で RSC 再取得）。
  */
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Route } from "next";
 import {
   Badge,
   PublishSwitch,
@@ -22,12 +21,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  NavTabs,
-  type NavTabItem,
 } from "@/admin/components/ui";
 import { stopRowClick } from "@/admin/components/table";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { toAppRoute } from "@/shared/lib/typed-routes";
 import { updateFaqItemPublished } from "@/admin/actions/faq";
 import { formatDateShort } from "@/shared/lib/date-format";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
@@ -44,21 +40,11 @@ type FaqReviewViewProps = {
   readonly totalItems: number;
 };
 
-const FILTER_TABS: readonly { value: AdminFaqReviewFilter; label: string }[] = [
-  { value: "draft", label: "下書き" },
-  { value: "stale", label: "未更新" },
-  { value: "low-rated", label: "要改善" },
-];
-
 const EMPTY_MESSAGE: Record<AdminFaqReviewFilter, string> = {
   draft: "未公開の質問はありません",
   stale: "長期間更新されていない公開中の質問はありません",
   "low-rated": "「役に立たなかった」票が付いた質問はありません",
 };
-
-function hrefForFilter(filter: AdminFaqReviewFilter): Route {
-  return toAppRoute(`/admin/faq/review?filter=${filter}`);
-}
 
 export function FaqReviewView({
   filter,
@@ -76,18 +62,8 @@ export function FaqReviewView({
     setDialogOpen(true);
   };
 
-  const tabs: readonly NavTabItem<AdminFaqReviewFilter>[] = FILTER_TABS.map(
-    ({ value, label }) => ({ value, label, href: hrefForFilter(value) }),
-  );
-
   return (
     <div className="space-y-4">
-      <NavTabs
-        items={tabs}
-        activeValue={filter}
-        ariaLabel="レビュー対象の絞り込み"
-      />
-
       {items.length === 0 ? (
         <EmptyState message={EMPTY_MESSAGE[filter]} />
       ) : (
