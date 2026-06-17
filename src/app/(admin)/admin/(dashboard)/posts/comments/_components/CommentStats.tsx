@@ -20,7 +20,9 @@ export function CommentStats({ stats }: Props) {
           <IconMessageCircle className="w-4 h-4" />
           <span className="text-sm font-medium">総コメント数</span>
         </div>
-        <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
+        <p className="text-2xl font-bold">
+          {stats.total.toLocaleString("ja-JP")}
+        </p>
       </div>
 
       {/* 今日のコメント */}
@@ -30,7 +32,7 @@ export function CommentStats({ stats }: Props) {
           <span className="text-sm font-medium">今日のコメント</span>
         </div>
         <p className="text-2xl font-bold text-primary">
-          {stats.today.toLocaleString()}
+          {stats.today.toLocaleString("ja-JP")}
         </p>
       </div>
 
@@ -41,7 +43,7 @@ export function CommentStats({ stats }: Props) {
           <span className="text-sm font-medium">削除済み</span>
         </div>
         <p className="text-2xl font-bold text-destructive">
-          {stats.deleted.toLocaleString()}
+          {stats.deleted.toLocaleString("ja-JP")}
         </p>
       </div>
     </div>
