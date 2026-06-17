@@ -91,10 +91,38 @@ async function SeoContent() {
 }
 
 // ==============================================================================
+// タブパネル（アクティブタブのみ描画）
+// ==============================================================================
+
+function tabPanel(tab: "posts" | "meta", searchParams: SearchParams) {
+  switch (tab) {
+    case "posts":
+      return (
+        <div className="space-y-6">
+          <Suspense fallback={<LoadingState variant="inline" />}>
+            <NewsFilters />
+          </Suspense>
+          <Suspense fallback={<LoadingState />}>
+            <NewsList searchParams={searchParams} />
+          </Suspense>
+        </div>
+      );
+    case "meta":
+      return (
+        <Suspense fallback={<LoadingState />}>
+          <SeoContent />
+        </Suspense>
+      );
+  }
+}
+
+// ==============================================================================
 // メインページコンポーネント
 // ==============================================================================
 
 export default async function NewsPage({ searchParams }: PageProps) {
+  const { tab } = await loadAdminNewsSearchParams(searchParams);
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -115,23 +143,15 @@ export default async function NewsPage({ searchParams }: PageProps) {
         </Button>
       </div>
 
-      <NewsManagementTabs
-        postsContent={
-          <div className="space-y-6">
-            <Suspense fallback={<LoadingState variant="inline" />}>
-              <NewsFilters />
-            </Suspense>
-            <Suspense fallback={<LoadingState />}>
-              <NewsList searchParams={searchParams} />
-            </Suspense>
-          </div>
-        }
-        seoContent={
-          <Suspense fallback={<LoadingState />}>
-            <SeoContent />
-          </Suspense>
-        }
-      />
+      <div className="space-y-4">
+        <NewsManagementTabs />
+        {/* タブ依存パネルは Suspense 動的ホールで描画し `shallow:false` ソフトナビ時に
+            request 時再ストリーム。`key={tab}` でタブ切替ごとに subtree を作り直す
+            （events / reservations / spaces と同じ公式 PPR パターン）。 */}
+        <Suspense key={tab} fallback={<LoadingState />}>
+          {tabPanel(tab, searchParams)}
+        </Suspense>
+      </div>
     </div>
   );
 }

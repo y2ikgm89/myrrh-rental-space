@@ -1,72 +1,68 @@
 "use client";
 
 import { useQueryState, parseAsStringLiteral } from "nuqs";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/admin/components/ui/tabs";
-import type { ReactNode } from "react";
+import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
-// 型定義
+// 型・定数
 // =============================================================================
 
-type TabValue = "posts" | "meta";
+type NewsManagementTab = "posts" | "meta";
 
-const TAB_VALUES: [TabValue, ...TabValue[]] = ["posts", "meta"];
-const TAB_VALUES_SET = new Set<string>(TAB_VALUES);
+const TAB_VALUES: [NewsManagementTab, ...NewsManagementTab[]] = [
+  "posts",
+  "meta",
+];
 
-function isValidTabValue(value: string): value is TabValue {
-  return TAB_VALUES_SET.has(value);
-}
-
-interface NewsManagementTabsProps {
-  postsContent: ReactNode;
-  seoContent: ReactNode;
-}
+const TAB_BASE: readonly { value: NewsManagementTab; label: string }[] = [
+  { value: "posts", label: "記事一覧" },
+  { value: "meta", label: "メタ情報" },
+];
 
 // =============================================================================
 // コンポーネント
 // =============================================================================
 
-export function NewsManagementTabs({
-  postsContent,
-  seoContent,
-}: NewsManagementTabsProps) {
-  const [activeTab, setActiveTab] = useQueryState(
+/**
+ * お知らせ管理のタブバー（ナビゲーションのみ）。
+ *
+ * タブ依存のパネル本体は **page 側の `<Suspense key={tab}>` 動的ホール**で描画する
+ * （events / reservations / spaces と同じ公式 PPR パターン）。`shallow:false` で
+ * タブ切替ごとにアクティブタブのみ RSC 再ストリーム。
+ * @see https://nextjs.org/docs/app/getting-started/cache-components
+ */
+export function NewsManagementTabs() {
+  const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral(TAB_VALUES)
       .withDefault("posts")
-      .withOptions({ history: "replace", shallow: true }),
+      .withOptions({ history: "replace", shallow: false }),
   );
 
-  const handleTabChange = (value: string) => {
-    if (isValidTabValue(value)) void setActiveTab(value);
-  };
-
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="mb-2">
-        <TabsTrigger value="posts">記事一覧</TabsTrigger>
-        <TabsTrigger value="meta">メタ情報</TabsTrigger>
-      </TabsList>
-
-      <TabsContent
-        value="posts"
-        forceMount
-        className="data-[state=inactive]:hidden"
-      >
-        {postsContent}
-      </TabsContent>
-      <TabsContent
-        value="meta"
-        forceMount
-        className="data-[state=inactive]:hidden"
-      >
-        {seoContent}
-      </TabsContent>
-    </Tabs>
+    <nav aria-label="お知らせ管理ナビゲーション">
+      <ul className="inline-flex min-h-11 w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground scrollbar-hide">
+        {TAB_BASE.map(({ value, label }) => {
+          const isActive = tab === value;
+          return (
+            <li key={value}>
+              <button
+                type="button"
+                onClick={() => void setTab(value)}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "inline-flex min-h-11 cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-all duration-200",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "hover:bg-background/50",
+                  isActive && "bg-card text-foreground shadow-sm hover:bg-card",
+                )}
+              >
+                {label}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

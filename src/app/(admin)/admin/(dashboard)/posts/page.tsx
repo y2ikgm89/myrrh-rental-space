@@ -146,10 +146,59 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 // ==============================================================================
+// タブパネル（アクティブタブのみ描画）
+// ==============================================================================
+
+function tabPanel(
+  tab: "posts" | "categories" | "tags" | "comments",
+  searchParams: SearchParams,
+) {
+  switch (tab) {
+    case "posts":
+      return (
+        <div className="space-y-6">
+          <Suspense fallback={<LoadingState variant="inline" />}>
+            <PostFiltersWrapper />
+          </Suspense>
+          <Suspense fallback={<LoadingState />}>
+            <PostList searchParams={searchParams} />
+          </Suspense>
+        </div>
+      );
+    case "categories":
+      return (
+        <Suspense fallback={<LoadingState />}>
+          <CategoryContent />
+        </Suspense>
+      );
+    case "tags":
+      return (
+        <Suspense fallback={<LoadingState />}>
+          <TagContent />
+        </Suspense>
+      );
+    case "comments":
+      return (
+        <div className="space-y-6">
+          <Suspense fallback={<LoadingState />}>
+            <CommentStatsWrapper />
+          </Suspense>
+          <CommentFilters />
+          <Suspense fallback={<LoadingState />}>
+            <CommentList searchParams={searchParams} />
+          </Suspense>
+        </div>
+      );
+  }
+}
+
+// ==============================================================================
 // メインページコンポーネント
 // ==============================================================================
 
 export default async function PostsPage({ searchParams }: PageProps) {
+  const { tab } = await loadAdminPostSearchParams(searchParams);
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -170,39 +219,15 @@ export default async function PostsPage({ searchParams }: PageProps) {
         </Button>
       </div>
 
-      <PostsManagementTabs
-        postsContent={
-          <div className="space-y-6">
-            <Suspense fallback={<LoadingState variant="inline" />}>
-              <PostFiltersWrapper />
-            </Suspense>
-            <Suspense fallback={<LoadingState />}>
-              <PostList searchParams={searchParams} />
-            </Suspense>
-          </div>
-        }
-        categoriesContent={
-          <Suspense fallback={<LoadingState />}>
-            <CategoryContent />
-          </Suspense>
-        }
-        tagsContent={
-          <Suspense fallback={<LoadingState />}>
-            <TagContent />
-          </Suspense>
-        }
-        commentsContent={
-          <div className="space-y-6">
-            <Suspense fallback={<LoadingState />}>
-              <CommentStatsWrapper />
-            </Suspense>
-            <CommentFilters />
-            <Suspense fallback={<LoadingState />}>
-              <CommentList searchParams={searchParams} />
-            </Suspense>
-          </div>
-        }
-      />
+      <div className="space-y-4">
+        <PostsManagementTabs />
+        {/* タブ依存パネルは Suspense 動的ホールで描画し `shallow:false` ソフトナビ時に
+            request 時再ストリーム。`key={tab}` でタブ切替ごとに subtree を作り直す
+            （events / reservations / spaces と同じ公式 PPR パターン）。 */}
+        <Suspense key={tab} fallback={<LoadingState />}>
+          {tabPanel(tab, searchParams)}
+        </Suspense>
+      </div>
     </div>
   );
 }
