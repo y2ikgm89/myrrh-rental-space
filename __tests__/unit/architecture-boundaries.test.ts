@@ -653,20 +653,46 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   }, 30000);
 
-  test("next.config.ts の Cache-Control catch-all は先に定義し、個別 no-store を後勝ちにする", () => {
+  test("next.config.ts の Cache-Control: catch-all を先頭に、認証/PII ルートを後勝ち no-store にする", () => {
     const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
-    const catchAllIndex = source.indexOf('source: "/:path*"');
 
+    // 指定位置の直後にある Cache-Control の value 文字列を取り出す
+    const valueAfter = (fromIndex: number): string => {
+      const valueIndex = source.indexOf("value:", fromIndex);
+      const open = source.indexOf('"', valueIndex);
+      const close = source.indexOf('"', open + 1);
+      return source.slice(open + 1, close);
+    };
+
+    const catchAllIndex = source.indexOf('source: "/:path*"');
     expect(catchAllIndex).toBeGreaterThanOrEqual(0);
+    // catch-all は公開キャッシュ（エッジキャッシュ維持のため no-store にしない）
+    expect(valueAfter(catchAllIndex)).toBe(
+      "public, s-maxage=3600, stale-while-revalidate=3600",
+    );
+
+    // 認証・個人情報を含むルートは origin で no-store（RFC 9111 / MDN）。
+    // Cloudflare 除外ルールへの単一依存を排除する defense-in-depth。
+    // すべて catch-all より後ろに定義し last-match-wins で上書きさせる。
     for (const specificSource of [
       'source: "/admin/:path*"',
       'source: "/reservation/:path*"',
-      'source: "/api/:path*"',
+      'source: "/mypage/:path*"',
+      'source: "/login/:path*"',
+      'source: "/preview/:path*"',
+      'source: "/contact/:path*"',
     ]) {
       const specificIndex = source.indexOf(specificSource);
       expect(specificIndex).toBeGreaterThanOrEqual(0);
       expect(catchAllIndex).toBeLessThan(specificIndex);
+      expect(valueAfter(specificIndex)).toBe("private, no-store");
     }
+
+    // API は共有キャッシュ禁止（private）。catch-all より後ろに定義する。
+    const apiIndex = source.indexOf('source: "/api/:path*"');
+    expect(apiIndex).toBeGreaterThanOrEqual(0);
+    expect(catchAllIndex).toBeLessThan(apiIndex);
+    expect(valueAfter(apiIndex)).toContain("private");
   });
 
   test("media.example.com placeholder を runtime 設定に残さない", () => {
