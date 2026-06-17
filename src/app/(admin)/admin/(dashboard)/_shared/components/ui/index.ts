@@ -92,9 +92,6 @@ export {
 
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 
-export { NavTabs } from "./nav-tabs";
-export type { NavTabItem } from "./nav-tabs";
-
 export { Checkbox } from "./checkbox";
 export type { CheckboxProps } from "./checkbox";
 

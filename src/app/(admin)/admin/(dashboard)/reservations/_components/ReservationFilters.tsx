@@ -8,7 +8,7 @@ import { Input } from "@/admin/components/ui";
 /**
  * 予約管理一覧のフィルター（期間 + 検索）。
  *
- * ステータス絞り込みは `ReservationTabs` (`<NavTabs>`) に移管済み (PR で clean break)。
+ * ステータス絞り込みは `ReservationTabs`（nuqs `useQueryStates` shallow:false）に移管済み。
  * Filter は他テーブル (Event canonical) と同型の構造に整合。
  */
 export function ReservationFilters() {

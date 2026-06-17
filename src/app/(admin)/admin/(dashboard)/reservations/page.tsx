@@ -59,6 +59,8 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
+  const params = await loadAdminReservationSearchParams(searchParams);
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -101,8 +103,8 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
         <ReservationFilters />
       </Suspense>
 
-      {/* 予約一覧 */}
-      <Suspense fallback={<LoadingState />}>
+      {/* 予約一覧（タブ切替ごとに subtree を作り直す＝events と同じ Pattern A の keyed 動的ホール） */}
+      <Suspense key={params.tab} fallback={<LoadingState />}>
         <ReservationList searchParams={searchParams} />
       </Suspense>
     </div>
