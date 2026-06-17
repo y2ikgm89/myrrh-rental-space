@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IconCheck } from "@tabler/icons-react";
@@ -21,6 +21,13 @@ type NotificationListProps = {
   notifications: SerializedAdminNotificationData[];
 };
 
+// hydration 完了を SSR 安全に検出する（useState + useEffect の set-state-in-effect を
+// 避ける React 19 公式パターン。share-buttons.tsx と同型）。
+// SSR と hydration 初回 render は false、hydration 後に true。
+const subscribeNoop = (): (() => void) => () => {};
+const getHydratedSnapshot = (): boolean => true;
+const getServerSnapshot = (): boolean => false;
+
 function formatRelativeTime(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -39,6 +46,15 @@ export function NotificationList({ notifications }: NotificationListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { refresh } = useNotificationPolling();
+  // 相対時刻は現在時刻 (new Date()) 依存でサーバ(SSR時刻)とクライアント(hydration時刻)
+  // で食い違い #418/#425 を起こす。hydration 済みか SSR 安全に判定し、初回 render
+  // (=SSR と一致) は決定的な絶対日付 (formatDateShort = JST 固定) を出し、hydration 後に
+  // 相対時刻へ切替える。
+  const isHydrated = useSyncExternalStore(
+    subscribeNoop,
+    getHydratedSnapshot,
+    getServerSnapshot,
+  );
 
   if (notifications.length === 0) {
     return (
@@ -85,7 +101,9 @@ export function NotificationList({ notifications }: NotificationListProps) {
                     {typeLabel}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(notification.createdAt)}
+                    {isHydrated
+                      ? formatRelativeTime(notification.createdAt)
+                      : formatDateShort(notification.createdAt)}
                   </span>
                 </div>
                 <p className="mt-1 text-sm font-medium text-foreground">
