@@ -75,9 +75,15 @@ export async function updateStripeSettings(
   const updateData: Record<string, unknown> = {
     stripeEnabled: data.stripeEnabled,
     stripeTestMode: data.stripeTestMode,
-    stripePublishableKey: data.stripePublishableKey || null,
     stripeCurrency: data.stripeCurrency,
   };
+
+  // 公開可能キーは管理 UI で「変更」ボタンによりロックされる公開キー。ロック中の保存は
+  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（シークレットキーと同じ意味論）。
+  // クリアは clearStripeKeys（「キーをクリア」ボタン）経由で行う。
+  if (data.stripePublishableKey) {
+    updateData["stripePublishableKey"] = data.stripePublishableKey;
+  }
 
   if (data.stripeSecretKey) {
     try {
@@ -159,12 +165,19 @@ export async function updateGoogleCalendarSettings(
 ): Promise<void> {
   const updateData: Record<string, unknown> = {
     googleCalendarEnabled: data.googleCalendarEnabled,
-    googleCalendarId: normalizeNullableString(data.googleCalendarId),
     icalAttachmentEnabled: data.icalAttachmentEnabled,
     addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
     googleCalendarMeetEnabled: data.googleCalendarMeetEnabled,
     googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
   };
+
+  // カレンダーID は管理 UI で「変更」ボタンによりロックされる公開識別子。ロック中の保存は
+  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（サービスアカウントと同じ意味論）。
+  if (data.googleCalendarId) {
+    updateData["googleCalendarId"] = normalizeNullableString(
+      data.googleCalendarId,
+    );
+  }
 
   if (data.serviceAccountJson) {
     if (!parseGoogleServiceAccountCredentials(data.serviceAccountJson)) {

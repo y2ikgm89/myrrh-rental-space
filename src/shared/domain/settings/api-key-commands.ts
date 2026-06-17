@@ -63,7 +63,10 @@ export async function updateTurnstileSettings(data: {
 }): Promise<void> {
   const updateData: Record<string, unknown> = {};
 
-  if (data.turnstileSiteKey !== undefined) {
+  // Site Key は管理 UI で「変更」ボタンによりロックされる公開キー。ロック中の保存は
+  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（Secret Key と同じ意味論）。
+  // クリアは clearTurnstileSettings（「クリア」ボタン）経由で行う。
+  if (data.turnstileSiteKey) {
     updateData["turnstileSiteKey"] = data.turnstileSiteKey;
   }
 
@@ -133,7 +136,10 @@ export async function updateCloudflareSettings(data: {
 }): Promise<void> {
   const updateData: Record<string, unknown> = {};
 
-  if (data.cloudflareZoneId !== undefined) {
+  // Zone ID は管理 UI で「変更」ボタンによりロックされる公開識別子。ロック中の保存は
+  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（API Token と同じ意味論）。
+  // クリアは clearCloudflareSettings（「クリア」ボタン）経由で行う。
+  if (data.cloudflareZoneId) {
     updateData["cloudflareZoneId"] = data.cloudflareZoneId;
   }
 

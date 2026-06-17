@@ -63,6 +63,7 @@ export function GoogleCalendarSection({
     calendarName?: string;
     accountEmail?: string;
   } | null>(null);
+  const [showCalendarIdInput, setShowCalendarIdInput] = useState(false);
   const [showServiceAccountInput, setShowServiceAccountInput] = useState(false);
 
   const [lastResult, action, isPending] = useActionState(
@@ -119,6 +120,7 @@ export function GoogleCalendarSection({
   if (lastResult !== previousLastResult) {
     setPreviousLastResult(lastResult);
     if (lastResult && lastResult.initialValue === null) {
+      setShowCalendarIdInput(false);
       setShowServiceAccountInput(false);
     }
   }
@@ -270,14 +272,33 @@ export function GoogleCalendarSection({
             {/* カレンダーID */}
             <div className="space-y-2">
               <Label htmlFor={fields.googleCalendarId.id}>カレンダーID</Label>
-              <Input
-                {...getInputProps(fields.googleCalendarId, { type: "text" })}
-                placeholder="example@group.calendar.google.com"
-                disabled={isPending}
-              />
+              {settings.googleCalendarId && !showCalendarIdInput ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={settings.googleCalendarId}
+                    disabled
+                    className="font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCalendarIdInput(true)}
+                  >
+                    変更
+                  </Button>
+                </div>
+              ) : (
+                <Input
+                  {...getInputProps(fields.googleCalendarId, { type: "text" })}
+                  placeholder="example@group.calendar.google.com"
+                  disabled={isPending}
+                />
+              )}
               <p className="text-xs text-muted-foreground">
                 Google
-                Calendarの「設定」→「カレンダーの統合」からIDをコピーしてください
+                Calendarの「設定」→「カレンダーの統合」からIDをコピーしてください。誤って書き換えないよう、保存済みの場合は「変更」を押してから編集します。
               </p>
               {fields.googleCalendarId.errors && (
                 <p

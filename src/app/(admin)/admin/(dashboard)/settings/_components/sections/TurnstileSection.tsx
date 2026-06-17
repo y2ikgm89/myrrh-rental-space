@@ -56,6 +56,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
     message: string;
     note?: string;
   } | null>(null);
+  const [showSiteKeyInput, setShowSiteKeyInput] = useState(false);
   const [showSecretKeyInput, setShowSecretKeyInput] = useState(false);
 
   const [lastResult, action, isPending] = useActionState(
@@ -89,6 +90,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
   if (lastResult !== previousLastResult) {
     setPreviousLastResult(lastResult);
     if (isSuccess) {
+      setShowSiteKeyInput(false);
       setShowSecretKeyInput(false);
     }
   }
@@ -181,19 +183,38 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor={fields.turnstileSiteKey.id}>Site Key</Label>
-            <Input
-              id={fields.turnstileSiteKey.id}
-              name={fields.turnstileSiteKey.name}
-              value={siteKey}
-              onChange={(e) => siteKeyControl.change(e.target.value)}
-              onBlur={siteKeyControl.blur}
-              type="text"
-              placeholder="0x..."
-              disabled={isBusy}
-              className="font-mono"
-            />
+            {config.siteKey && !showSiteKeyInput ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={config.siteKey}
+                  disabled
+                  className="font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSiteKeyInput(true)}
+                >
+                  変更
+                </Button>
+              </div>
+            ) : (
+              <Input
+                id={fields.turnstileSiteKey.id}
+                name={fields.turnstileSiteKey.name}
+                value={siteKey}
+                onChange={(e) => siteKeyControl.change(e.target.value)}
+                onBlur={siteKeyControl.blur}
+                type="text"
+                placeholder="0x..."
+                disabled={isBusy}
+                className="font-mono"
+              />
+            )}
             <p className="text-xs text-muted-foreground">
-              公開キー（クライアント側で使用）
+              公開キー（クライアント側で使用）。誤って書き換えないよう、保存済みの場合は「変更」を押してから編集します。
             </p>
             {fields.turnstileSiteKey.errors && (
               <p
