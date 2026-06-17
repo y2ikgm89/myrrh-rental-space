@@ -66,12 +66,7 @@ export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
         ))}
       </TabsList>
       {tabs.map((tab) => (
-        <TabsContent
-          key={tab.value}
-          value={tab.value}
-          forceMount
-          className="data-[state=inactive]:hidden"
-        >
+        <TabsContent key={tab.value} value={tab.value}>
           {tab.content}
         </TabsContent>
       ))}

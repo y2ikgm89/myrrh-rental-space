@@ -57,6 +57,20 @@ interface TwoWaySyncSectionProps {
 const POLLING_INTERVAL_OPTIONS = [1, 5, 10, 15, 30, 60] as const;
 
 export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
+  // Google Calendar が有効かつ接続済みのときだけフォーム本体をマウントする。
+  // conform の useForm / useInputControl と <form> を必ず同時にマウントさせることで、
+  // 「useInputControl is unable to find form」警告（フックは動くが <form> 未描画）を防ぐ。
+  if (
+    !settings.googleCalendarEnabled ||
+    settings.googleCalendarConnectionStatus !== "connected"
+  ) {
+    return null;
+  }
+
+  return <TwoWaySyncSectionForm settings={settings} />;
+}
+
+function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
   const router = useRouter();
   const confirmDialog = useConfirm();
   const [actionPending, startActionTransition] = useTransition();
@@ -103,14 +117,6 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
       router.refresh();
     }
   }, [lastResult, router]);
-
-  // Google Calendarが有効でない場合は表示しない
-  if (
-    !settings.googleCalendarEnabled ||
-    settings.googleCalendarConnectionStatus !== "connected"
-  ) {
-    return null;
-  }
 
   const handleSetupWebhook = () => {
     startActionTransition(async () => {
