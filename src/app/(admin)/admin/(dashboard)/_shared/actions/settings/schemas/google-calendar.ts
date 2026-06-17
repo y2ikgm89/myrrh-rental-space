@@ -1,9 +1,13 @@
 /**
  * Google Calendar設定のZodスキーマ
+ *
+ * 設定保存フォームの検証は `form-schemas-security-integrations.ts` の
+ * `googleCalendarFormSchema` / `twoWaySyncFormSchema` が担う（conform 経路）。
+ * ここは接続テスト用の `googleCalendarConnectionTestSchema`
+ * （object 入力で `safeParse` する LIVE スキーマ）のみを定義する。
  */
 
 import { z } from "zod";
-import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // =============================================================================
@@ -12,13 +16,6 @@ import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/g
 
 const CALENDAR_ID_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const optionalCalendarIdSchema = z
-  .string()
-  .max(200)
-  .refine((value) => value === "primary" || CALENDAR_ID_REGEX.test(value), {
-    error: "カレンダーIDの形式が無効です",
-  });
-
 const requiredCalendarIdSchema = z
   .string()
   .min(1, { error: "カレンダーIDを入力してください" })
@@ -26,33 +23,6 @@ const requiredCalendarIdSchema = z
   .refine((value) => value === "primary" || CALENDAR_ID_REGEX.test(value), {
     error: "カレンダーIDの形式が無効です",
   });
-
-export const googleCalendarSettingsSchema = z.object({
-  googleCalendarEnabled: z.boolean(),
-  googleCalendarId: optionalCalendarIdSchema.nullable(),
-  serviceAccountJson: z
-    .string()
-    .nullable()
-    .refine(
-      (value) =>
-        value === null || parseGoogleServiceAccountCredentials(value) !== null,
-      { error: "サービスアカウントJSONの形式が無効です" },
-    ), // 新規入力時のみ
-  icalAttachmentEnabled: z.boolean(),
-  addToCalendarLinksEnabled: z.boolean(),
-  googleCalendarMeetEnabled: z.boolean(),
-  /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知（最大 40320 = 4週間） */
-  googleCalendarReminderMinutes: z
-    .number()
-    .int()
-    .min(0, { error: "0 以上で入力してください" })
-    .max(40320, { error: "40320（4週間）以下で入力してください" })
-    .nullable(),
-});
-
-export type GoogleCalendarSettingsInput = z.infer<
-  typeof googleCalendarSettingsSchema
->;
 
 export const googleCalendarConnectionTestSchema = z.object({
   serviceAccountJson: z
@@ -67,11 +37,3 @@ export const googleCalendarConnectionTestSchema = z.object({
 export type GoogleCalendarConnectionTestInput = z.infer<
   typeof googleCalendarConnectionTestSchema
 >;
-
-export const twoWaySyncSettingsSchema = z.object({
-  enabled: z.boolean(),
-  syncMethod: z.enum(CalendarSyncMethod),
-  pollingIntervalMin: z.number().int().min(1).max(60),
-});
-
-export type TwoWaySyncSettingsInput = z.infer<typeof twoWaySyncSettingsSchema>;

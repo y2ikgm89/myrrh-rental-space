@@ -34,12 +34,8 @@ export type {
 
 export type {
   BusinessHoursSettingsInput,
-  GoogleCalendarSettingsInput,
-  TwoWaySyncSettingsInput,
   ReservationSettingsInput,
   AnnouncementBarCarouselSettingsInput,
-  DiscountSettingsInput,
-  DurationDiscountRuleInput,
   HeaderSettingsInput,
 } from "./schemas";
 
