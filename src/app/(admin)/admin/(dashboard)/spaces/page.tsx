@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import type { Metadata } from "next";
@@ -5,6 +6,7 @@ import type { SearchParams } from "nuqs/server";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import type { AdminSpaceManagementTab } from "@/shared/lib/constants";
 import { Button } from "@/admin/components/ui";
+import { LoadingState } from "@/admin/components/LoadingState";
 import { CreateCategoryDialog } from "../space-categories/_components/CreateCategoryDialog";
 import { SpaceManagementTabs } from "./_components/SpaceManagementTabs";
 import { SpaceTabContent } from "./_components/SpaceTabContent";
@@ -78,7 +80,15 @@ export default async function SpacesPage({ searchParams }: PageProps) {
         <HeaderAction tab={tab} />
       </div>
 
-      <SpaceManagementTabs>{tabPanel(tab)}</SpaceManagementTabs>
+      <div className="space-y-4">
+        <SpaceManagementTabs />
+        {/* タブ依存パネルは Suspense 動的ホールで描画し、`shallow:false` ソフトナビ時に
+            request 時再ストリームさせる。`key={tab}` でタブ切替ごとに subtree を作り直す
+            （events / reservations と同じ公式 PPR パターン）。 */}
+        <Suspense key={tab} fallback={<LoadingState />}>
+          {tabPanel(tab)}
+        </Suspense>
+      </div>
     </div>
   );
 }
