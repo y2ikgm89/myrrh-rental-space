@@ -161,8 +161,13 @@ export const spaceFormBaseSchema = z
       .min(1, { error: "名前を入力してください" })
       .max(100, { error: "名前は100文字以内で入力してください" }),
     descriptionJson: lexicalJsonSchema,
-    /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
-    descriptionHtml: z.string(),
+    /**
+     * クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML。
+     * 空説明（render エラー時の catch 等）で空文字が来うるが、conform は空入力を undefined 化するため
+     * bare `z.string()` だと弾かれる。`.default("")` で空を許容する（descriptionJson が空コンテンツを
+     * 許容するのと整合）。
+     */
+    descriptionHtml: z.string().default(""),
     addressDetail: z.preprocess(
       (value) => {
         if (typeof value === "string" && value.trim() === "") return undefined;

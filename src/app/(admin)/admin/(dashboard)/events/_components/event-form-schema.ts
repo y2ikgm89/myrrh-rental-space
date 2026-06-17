@@ -111,8 +111,13 @@ const eventFormBaseSchema = z.object({
     .max(100, { error: "スラッグは100文字以内です" }),
   /** Lexical EditorState JSON 文字列（hidden input transit） */
   descriptionJson: lexicalJsonSchema,
-  /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML（hidden input transit） */
-  descriptionHtml: z.string(),
+  /**
+   * クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML（hidden input transit）。
+   * 空説明（render エラー時の catch 等）で空文字が来うるが、conform は空入力を undefined 化するため
+   * bare `z.string()` だと弾かれる。`.default("")` で空を許容する（descriptionJson が空コンテンツを
+   * 許容するのと整合）。
+   */
+  descriptionHtml: z.string().default(""),
   thumbnailUrl: z.preprocess(
     (value) => (value === "" ? null : value),
     z.string().nullable().optional(),
