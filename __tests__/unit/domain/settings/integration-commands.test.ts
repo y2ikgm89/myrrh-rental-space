@@ -199,7 +199,9 @@ describe("updateStripeSettings", () => {
       );
     });
 
-    test("stripePublishableKey が null の場合 null として保存される", async () => {
+    test("stripePublishableKey が null の場合は既存値を維持する（update に含めない）", async () => {
+      // 公開可能キーはロック中の保存で空送信になるため、null（空）は「既存維持」。
+      // クリアは clearStripeKeys 経由で行う（[[lockable-integration-key-fields]]）。
       await updateStripeSettings({
         stripeEnabled: true,
         stripeTestMode: false,
@@ -207,12 +209,12 @@ describe("updateStripeSettings", () => {
         stripeCurrency: "jpy",
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            stripePublishableKey: null,
-          }),
-        }),
+      const lastCall = mockSettingsUpsert.mock.calls.at(-1) as unknown as
+        | [{ update?: Record<string, unknown> }]
+        | undefined;
+      const updateArg = lastCall?.[0]?.update;
+      expect(Object.keys(updateArg ?? {})).not.toContain(
+        "stripePublishableKey",
       );
     });
 
@@ -418,7 +420,8 @@ describe("updateGoogleCalendarSettings", () => {
       );
     });
 
-    test("空文字の googleCalendarId が null に正規化される", async () => {
+    test("空文字の googleCalendarId は既存値を維持する（update に含めない）", async () => {
+      // カレンダーIDはロック中の保存で空送信になるため、空は「既存維持」。
       await updateGoogleCalendarSettings({
         googleCalendarEnabled: false,
         googleCalendarId: "",
@@ -429,13 +432,11 @@ describe("updateGoogleCalendarSettings", () => {
         googleCalendarReminderMinutes: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            googleCalendarId: null,
-          }),
-        }),
-      );
+      const lastCall = mockSettingsUpsert.mock.calls.at(-1) as unknown as
+        | [{ update?: Record<string, unknown> }]
+        | undefined;
+      const updateArg = lastCall?.[0]?.update;
+      expect(Object.keys(updateArg ?? {})).not.toContain("googleCalendarId");
     });
 
     test("有効な googleCalendarId はそのまま保持される", async () => {

@@ -67,6 +67,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
     message: string;
     mode?: "test" | "live";
   } | null>(null);
+  const [showPublishableKeyInput, setShowPublishableKeyInput] = useState(false);
   const [showSecretKeyInput, setShowSecretKeyInput] = useState(false);
   const [showWebhookSecretInput, setShowWebhookSecretInput] = useState(false);
 
@@ -110,6 +111,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
   if (lastResult !== previousLastResult) {
     setPreviousLastResult(lastResult);
     if (lastResult && lastResult.initialValue === null) {
+      setShowPublishableKeyInput(false);
       setShowSecretKeyInput(false);
       setShowWebhookSecretInput(false);
     }
@@ -257,15 +259,35 @@ export function StripeSection({ settings }: StripeSectionProps) {
               <Label htmlFor={fields.stripePublishableKey.id}>
                 公開可能キー
               </Label>
-              <Input
-                {...getInputProps(fields.stripePublishableKey, {
-                  type: "text",
-                })}
-                placeholder={testMode ? "pk_test_..." : "pk_live_..."}
-                disabled={isPending}
-              />
+              {settings.stripePublishableKey && !showPublishableKeyInput ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={settings.stripePublishableKey}
+                    disabled
+                    className="font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPublishableKeyInput(true)}
+                  >
+                    変更
+                  </Button>
+                </div>
+              ) : (
+                <Input
+                  {...getInputProps(fields.stripePublishableKey, {
+                    type: "text",
+                  })}
+                  className="font-mono"
+                  placeholder={testMode ? "pk_test_..." : "pk_live_..."}
+                  disabled={isPending}
+                />
+              )}
               <p className="text-xs text-muted-foreground">
-                Stripeダッシュボードの「開発者」&gt;「APIキー」から取得できます
+                Stripeダッシュボードの「開発者」&gt;「APIキー」から取得できます。誤って書き換えないよう、保存済みの場合は「変更」を押してから編集します。
               </p>
               {fields.stripePublishableKey.errors && (
                 <p
