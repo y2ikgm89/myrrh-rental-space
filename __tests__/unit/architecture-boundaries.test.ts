@@ -688,11 +688,13 @@ describe("architecture boundaries", () => {
       expect(valueAfter(specificIndex)).toBe("private, no-store");
     }
 
-    // API は共有キャッシュ禁止（private）。catch-all より後ろに定義する。
+    // API も origin で no-store。Next.js の precedence 上 next.config headers() が
+    // Route Handler の Cache-Control を上書きする（実証済: config > route handler）ため、
+    // API の Cache-Control 方針は next.config を SSoT とする。catch-all より後ろに定義する。
     const apiIndex = source.indexOf('source: "/api/:path*"');
     expect(apiIndex).toBeGreaterThanOrEqual(0);
     expect(catchAllIndex).toBeLessThan(apiIndex);
-    expect(valueAfter(apiIndex)).toContain("private");
+    expect(valueAfter(apiIndex)).toBe("private, no-store");
   });
 
   test("media.example.com placeholder を runtime 設定に残さない", () => {
