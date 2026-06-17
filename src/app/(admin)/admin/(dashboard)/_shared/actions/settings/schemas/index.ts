@@ -22,22 +22,14 @@ export {
 } from "./basic";
 
 export {
-  durationDiscountRuleSchema,
-  type DurationDiscountRuleInput,
-  discountSettingsSchema,
-  type DiscountSettingsInput,
   taxDisplayModeSchema,
   taxSettingsSchema,
   type TaxSettingsInput,
 } from "./discount";
 
 export {
-  googleCalendarSettingsSchema,
-  type GoogleCalendarSettingsInput,
   googleCalendarConnectionTestSchema,
   type GoogleCalendarConnectionTestInput,
-  twoWaySyncSettingsSchema,
-  type TwoWaySyncSettingsInput,
 } from "./google-calendar";
 
 export {
