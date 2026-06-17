@@ -22,7 +22,7 @@ export function EventTableHeader({
   onToggleAll,
 }: EventTableHeaderProps) {
   const [params, setParams] = useQueryStates(adminEventSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

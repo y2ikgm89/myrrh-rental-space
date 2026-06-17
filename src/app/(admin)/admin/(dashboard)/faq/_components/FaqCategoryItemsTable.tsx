@@ -207,7 +207,7 @@ export function FaqCategoryItemsTable({
   const [, setParams] = useQueryStates(
     adminFaqCategoryDetailSearchParamsParsers,
     {
-      history: "push",
+      history: "replace",
       shallow: false,
       startTransition,
     },

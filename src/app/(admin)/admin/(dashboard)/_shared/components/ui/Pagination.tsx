@@ -103,7 +103,7 @@ export function Pagination({
     },
     {
       shallow: false,
-      history: "push",
+      history: "replace",
       startTransition,
     },
   );

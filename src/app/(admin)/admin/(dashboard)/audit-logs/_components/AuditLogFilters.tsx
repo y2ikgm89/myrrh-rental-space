@@ -30,7 +30,7 @@ const RESOURCE_OPTIONS = [
 
 export function AuditLogFilters() {
   const [params, setParams] = useQueryStates(adminAuditLogSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

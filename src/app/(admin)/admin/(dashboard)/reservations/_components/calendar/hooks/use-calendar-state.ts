@@ -24,6 +24,10 @@ interface UseCalendarStateOptions {
 }
 
 export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
+  // history: push は意図的。日付ナビ（goNext/goPrevious）とビュー切替は時系列・
+  // 表示の探索ナビゲーションで、戻る＝前の期間が自然（nuqs 公式の navigation-like 該当）。
+  // 同一 useQueryStates に同居する spaceId/status も push を共有する。
+  // 純粋なフィルタ専用画面の replace 統一とは別カテゴリ。
   const [params, setParams] = useQueryStates(adminCalendarSearchParamsParsers, {
     history: "push",
     shallow: false,

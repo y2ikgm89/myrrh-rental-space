@@ -112,13 +112,15 @@ function useBaseFilterParams(options: {
 }): BaseFilterReturn {
   const { debounceMs, defaultStatus, defaultPerPage } = options;
 
+  // history: replace は nuqs 公式デフォルト（push はタブ/モーダル等ナビ風UI専用）。
+  // shallow:false でサーバ（RSC）に絞り込み結果を再取得させる。
   const [params, setParams] = useQueryStates(
     {
       ...adminCustomerSearchParamsParsers,
       status: parseAsString.withDefault(defaultStatus),
       perPage: parseAsInteger.withDefault(defaultPerPage),
     },
-    { history: "push", shallow: false },
+    { history: "replace", shallow: false },
   );
 
   const setSearch = (value: string) => {
@@ -174,6 +176,8 @@ function useCategoryFilterParams(options: {
 }): CategoryFilterReturn {
   const { debounceMs, defaultStatus, defaultPerPage } = options;
 
+  // history: replace は nuqs 公式デフォルト（push はタブ/モーダル等ナビ風UI専用）。
+  // shallow:false でサーバ（RSC）に絞り込み結果を再取得させる。
   const [params, setParams] = useQueryStates(
     {
       ...adminCustomerSearchParamsParsers,
@@ -181,7 +185,7 @@ function useCategoryFilterParams(options: {
       perPage: parseAsInteger.withDefault(defaultPerPage),
       categoryId: parseAsString.withDefault(""),
     },
-    { history: "push", shallow: false },
+    { history: "replace", shallow: false },
   );
 
   const setSearch = (value: string) => {

@@ -17,7 +17,7 @@ export function PostTableHeader({
   onToggleAll,
 }: PostTableHeaderProps) {
   const [params, setParams] = useQueryStates(adminPostSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

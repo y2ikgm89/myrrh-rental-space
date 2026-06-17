@@ -7,7 +7,7 @@ import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
 export function StaffTableHeader() {
   const [params, setParams] = useQueryStates(adminUserSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

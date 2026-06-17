@@ -24,7 +24,7 @@ const STATUS_OPTIONS: readonly StatusOption[] = [
 
 export function CommentFilters() {
   const [params, setParams] = useQueryStates(adminPostSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

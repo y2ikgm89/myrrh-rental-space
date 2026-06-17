@@ -29,7 +29,7 @@ const RATING_OPTIONS = [
 
 export function ReviewFilters() {
   const [params, setParams] = useQueryStates(adminSpaceSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

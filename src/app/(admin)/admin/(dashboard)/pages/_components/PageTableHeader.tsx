@@ -25,7 +25,7 @@ export function PageTableHeader({
   onToggleAll,
 }: PageTableHeaderProps) {
   const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

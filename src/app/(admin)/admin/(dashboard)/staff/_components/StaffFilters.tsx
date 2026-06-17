@@ -15,7 +15,7 @@ import { DASHBOARD_ROLES, ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 export function StaffFilters() {
   const [params, setParams] = useQueryStates(adminUserSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 

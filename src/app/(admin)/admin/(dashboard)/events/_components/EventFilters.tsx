@@ -27,7 +27,7 @@ const EVENT_STATUS_OPTIONS = [
 
 export function EventFilters() {
   const [params, setParams] = useQueryStates(adminEventSearchParamsParsers, {
-    history: "push",
+    history: "replace",
     shallow: false,
   });
 
