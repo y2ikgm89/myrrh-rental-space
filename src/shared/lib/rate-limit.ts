@@ -126,25 +126,48 @@ export function createRateLimiter(
 }
 
 /**
- * リクエストからIPアドレスを取得
+ * ヘッダからクライアント IP を抽出する共通ロジック（getClientIp / getClientIpFromHeaders で共有）。
+ *
+ * ⚠ セキュリティ前提（重要・infra 依存）:
+ * `cf-connecting-ip` / `x-forwarded-for` / `x-real-ip` はいずれも**クライアントが詐称可能**な
+ * ヘッダ。本番の ingress が **Cloudflare 限定**（Cloud Run へ直接到達不可）であることを前提に、
+ * その場合のみ Cloudflare が `cf-connecting-ip` を実クライアント IP で上書きするため詐称不可になる。
+ * origin が Cloudflare をバイパスして直接到達可能だと、攻撃者がこれらのヘッダを回転させて
+ * rate limiter のバケット（authMutation 20/15分・public-form 5/分・login-token 等）や
+ * Turnstile remoteip を回避できる。
+ *
+ * → infra 側で「ingress = Cloudflare 限定」を保証すること（Cloud Run の ingress 制限 +
+ * Cloudflare egress IP 許可、または Authenticated Origin Pulls）。マルチ ingress を許す構成に
+ * する場合は、Cloudflare Transform Rule で注入する共有シークレットヘッダを timing-safe 比較で
+ * 検証してから `cf-connecting-ip` を信頼する方式へ移行する（現状その infra は未配備のため、
+ * 検証コードを入れると全リクエストが platform 接続 IP=Cloudflare の IP に集約され rate limiter が
+ * 実質グローバル化して壊れるため未実装）。`x-forwarded-for` / `x-real-ip` フォールバックは
+ * Cloudflare 不在の環境（ローカル開発・直 proxy）向け。
  */
-export function getClientIp(request: Request): string {
-  // Cloudflare
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
+function extractClientIp(getHeader: (name: string) => string | null): string {
+  // Cloudflare（ingress が Cloudflare 限定なら上書き済みで信頼可能）
+  const cfConnectingIp = getHeader("cf-connecting-ip");
   if (cfConnectingIp) return cfConnectingIp;
 
-  // X-Forwarded-For（プロキシ経由）
-  const xForwardedFor = request.headers.get("x-forwarded-for");
+  // X-Forwarded-For（Cloudflare 不在のプロキシ環境向けフォールバック）
+  const xForwardedFor = getHeader("x-forwarded-for");
   if (xForwardedFor) {
     const ips = xForwardedFor.split(",").map((ip) => ip.trim());
     return ips[0] ?? "unknown";
   }
 
   // X-Real-IP
-  const xRealIp = request.headers.get("x-real-ip");
+  const xRealIp = getHeader("x-real-ip");
   if (xRealIp) return xRealIp;
 
   return "unknown";
+}
+
+/**
+ * リクエストからIPアドレスを取得（信頼前提は extractClientIp の docstring 参照）
+ */
+export function getClientIp(request: Request): string {
+  return extractClientIp((name) => request.headers.get(name));
 }
 
 // デフォルトのAPI用レート制限（100リクエスト/分/IP）
@@ -204,18 +227,5 @@ export async function checkRateLimit(
 export async function getClientIpFromHeaders(): Promise<string> {
   const { headers } = await import("next/headers");
   const hdrs = await headers();
-
-  const cfConnectingIp = hdrs.get("cf-connecting-ip");
-  if (cfConnectingIp) return cfConnectingIp;
-
-  const xForwardedFor = hdrs.get("x-forwarded-for");
-  if (xForwardedFor) {
-    const ips = xForwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0] ?? "unknown";
-  }
-
-  const xRealIp = hdrs.get("x-real-ip");
-  if (xRealIp) return xRealIp;
-
-  return "unknown";
+  return extractClientIp((name) => hdrs.get(name));
 }
