@@ -21,6 +21,10 @@ const SORT_COLUMN_MAP = {
   usageCount: Prisma.raw('"usageCount"'),
 } satisfies Record<NonNullable<CouponPagination["sortBy"]>, Prisma.Sql>;
 
+// raw SQL は物理テーブル名で実行される。Coupon モデルは @@map("coupons")
+// （schema.prisma）でマップされているため、テーブル名を一箇所に集約してドリフトを防ぐ。
+const COUPONS_TABLE = Prisma.raw('"coupons"');
+
 const couponDateFormatter = new Intl.DateTimeFormat("ja-JP", {
   year: "numeric",
   month: "2-digit",
@@ -193,14 +197,14 @@ export async function getCoupons(
       sortOrder === "asc" ? Prisma.raw("ASC") : Prisma.raw("DESC");
     const countResult = await prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count
-      FROM "Coupon"
+      FROM ${COUPONS_TABLE}
       ${whereSql}
     `;
 
     total = Number(countResult[0]?.count ?? 0n);
     coupons = await prisma.$queryRaw<Coupon[]>`
       SELECT *
-      FROM "Coupon"
+      FROM ${COUPONS_TABLE}
       ${whereSql}
       ORDER BY ${sortColumn} ${sortDirection}
       LIMIT ${limit}
