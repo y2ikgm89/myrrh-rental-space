@@ -24,8 +24,7 @@ const contentWidthCustomFormSchema = z.preprocess((v) => {
   return null;
 }, z.number().int().min(320).max(1920).nullable().optional());
 
-const publishedAtFormSchema = z
-  .string()
+const publishedAtFormSchema = z.iso
   .datetime({ local: true })
   .or(z.literal(""))
   .nullable()

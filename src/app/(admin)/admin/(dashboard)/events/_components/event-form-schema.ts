@@ -122,14 +122,15 @@ const eventFormBaseSchema = z.object({
     (value) => (value === "" ? null : value),
     z.string().nullable().optional(),
   ),
-  startTime: z
-    .string()
-    .datetime({ local: true, error: "有効な日時を入力してください" }),
-  endTime: z
-    .string()
-    .datetime({ local: true, error: "有効な日時を入力してください" }),
-  registrationDeadline: z
-    .string()
+  startTime: z.iso.datetime({
+    local: true,
+    error: "有効な日時を入力してください",
+  }),
+  endTime: z.iso.datetime({
+    local: true,
+    error: "有効な日時を入力してください",
+  }),
+  registrationDeadline: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .nullable()

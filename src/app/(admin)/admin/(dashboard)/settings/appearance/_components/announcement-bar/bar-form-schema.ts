@@ -76,13 +76,11 @@ export const barFormSchema = z.object({
     .int()
     .min(0, { error: "優先度は0以上です" })
     .max(100, { error: "優先度は100以下です" }),
-  startAt: z
-    .string()
+  startAt: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .optional(),
-  endAt: z
-    .string()
+  endAt: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .optional(),

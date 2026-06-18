@@ -198,14 +198,12 @@ export const announcementBarInputSchema = z.object({
   // contract に統一。command 層で `parseDateTimeLocalAsJst` を通して JST 固定で UTC 化
   // （サーバ tz / ブラウザ tz 非依存）。空文字は `.or(z.literal(""))` で許容、normalize
   // 関数で null 化。
-  startAt: z
-    .string()
+  startAt: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .nullable()
     .optional(),
-  endAt: z
-    .string()
+  endAt: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .nullable()
