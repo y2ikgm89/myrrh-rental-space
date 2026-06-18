@@ -13,7 +13,7 @@ export default function ReservationLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero (compact variant) */}
-      <section className="bg-background py-[var(--spacing-xl)]">
+      <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-16" variant="text" />

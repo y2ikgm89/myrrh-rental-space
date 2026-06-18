@@ -518,7 +518,7 @@ export function EditorialSplitHero({
           "relative z-10 flex flex-col justify-end",
           "col-start-1 row-start-1 pointer-events-none",
           padXMobile,
-          "pb-[calc(var(--spacing-md)+env(safe-area-inset-bottom,0px))]",
+          "pb-[calc(var(--spacing-fluid-md)+env(safe-area-inset-bottom,0px))]",
           "md:col-start-2 md:row-start-1 md:pointer-events-auto",
           "md:bg-background md:pt-16 md:pb-6",
           padXDesktop,
@@ -566,7 +566,7 @@ export function EditorialSplitHero({
         className={cn(
           "col-start-1 row-start-2 flex flex-col bg-background pt-8",
           padXMobile,
-          "pb-[calc(var(--spacing-md)+env(safe-area-inset-bottom,0px))]",
+          "pb-[calc(var(--spacing-fluid-md)+env(safe-area-inset-bottom,0px))]",
           "md:col-start-2 md:row-start-2 md:pt-6 md:pb-16",
           padXDesktop,
         )}

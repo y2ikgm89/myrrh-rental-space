@@ -13,7 +13,7 @@ export default function Loading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero placeholder（中央寄せ minimal variant 相当） */}
-      <section className="bg-background py-[var(--spacing-xl)]">
+      <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-24" variant="text" />
@@ -25,7 +25,7 @@ export default function Loading() {
 
       {/* Body content placeholder */}
       <Container>
-        <div className="space-y-6 py-[var(--spacing-lg)]">
+        <div className="space-y-6 py-[var(--spacing-fluid-lg)]">
           <Skeleton className="h-6 w-48" variant="text" />
           <div className="space-y-3">
             <Skeleton className="h-4 w-full" variant="text" />

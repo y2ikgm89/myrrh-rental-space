@@ -52,7 +52,7 @@ export function TaxonomyArchiveView({
           { name: title, url: `${baseUrl}${basePath}` },
         ]}
       />
-      <section className="pt-10 pb-[var(--spacing-md)] md:pt-14">
+      <section className="pt-10 pb-[var(--spacing-fluid-md)] md:pt-14">
         <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
           <header className="mb-10 text-center md:mb-14">
             <SectionLabel>{eyebrow}</SectionLabel>

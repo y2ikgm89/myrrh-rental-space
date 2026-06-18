@@ -23,7 +23,7 @@ export function MinimalHero({
       className={cn(
         "bg-background",
         "ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
-        "py-[var(--spacing-lg)]",
+        "py-[var(--spacing-fluid-lg)]",
       )}
     >
       {eyebrow ? (

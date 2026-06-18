@@ -10,7 +10,7 @@ export default function EventDetailLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero (compact) */}
-      <section className="bg-background py-[var(--spacing-lg)]">
+      <section className="bg-background py-[var(--spacing-fluid-lg)]">
         <Container>
           <div className="mx-auto max-w-3xl space-y-4 text-center">
             <Skeleton className="mx-auto h-3 w-20" variant="text" />
@@ -24,7 +24,7 @@ export default function EventDetailLoading() {
       </section>
 
       <Container>
-        <div className="mx-auto max-w-3xl space-y-10 py-[var(--spacing-lg)]">
+        <div className="mx-auto max-w-3xl space-y-10 py-[var(--spacing-fluid-lg)]">
           {/* Hero image */}
           <Skeleton className="aspect-video w-full" />
 

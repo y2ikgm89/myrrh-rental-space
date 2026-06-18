@@ -4,7 +4,7 @@
  * セクション間の余白は「各セクションが持つ padding」ではなく、この親コンテナの
  * 統一 gap が唯一の源泉。これにより:
  *   - どのセクションが `null` を返しても（データ無し / feature 無効）、
- *     並び替えても、見える隣接セクション間は常に一定（--spacing-md）。
+ *     並び替えても、見える隣接セクション間は常に一定（--spacing-fluid-md）。
  *   - padding 加算による二重余白も、両側 padding 無しによるゼロ余白も
  *     構造的に発生しない（flex gap は実在の子要素の間にだけ入る）。
  *
@@ -35,7 +35,7 @@ export function SectionStack({
   inquiryDefaults,
 }: SectionStackProps): ReactElement {
   return (
-    <div className="flex flex-col gap-[var(--spacing-md)]">
+    <div className="flex flex-col gap-[var(--spacing-fluid-md)]">
       {sections.map((section) => (
         <SectionRenderer
           key={section.id}
