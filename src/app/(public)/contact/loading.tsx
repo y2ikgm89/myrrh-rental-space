@@ -9,7 +9,7 @@ export default function ContactLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero */}
-      <section className="bg-background py-[var(--space-xl)]">
+      <section className="bg-background py-[var(--spacing-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-16" variant="text" />
@@ -20,7 +20,7 @@ export default function ContactLoading() {
       </section>
 
       <Container>
-        <div className="mx-auto max-w-2xl space-y-6 py-[var(--space-lg)]">
+        <div className="mx-auto max-w-2xl space-y-6 py-[var(--spacing-lg)]">
           {/* Form fields */}
           <div className="space-y-6 border border-border p-6 sm:p-8">
             {/* name + email */}

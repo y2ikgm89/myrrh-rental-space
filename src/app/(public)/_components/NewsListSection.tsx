@@ -58,7 +58,7 @@ export function NewsListSection({
     if (mode.query) preservedQuery["q"] = mode.query;
 
     return (
-      <section className="pt-10 pb-[var(--space-md)] md:pt-14">
+      <section className="pt-10 pb-[var(--spacing-md)] md:pt-14">
         <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
           <Suspense fallback={null}>
             <div className="mb-8 max-w-md">

@@ -9,7 +9,7 @@ export default function AboutLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero */}
-      <section className="bg-background py-[var(--space-xl)]">
+      <section className="bg-background py-[var(--spacing-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-16" variant="text" />
@@ -20,7 +20,7 @@ export default function AboutLoading() {
       </section>
 
       <Container>
-        <div className="space-y-[var(--space-lg)] py-[var(--space-lg)]">
+        <div className="space-y-[var(--spacing-lg)] py-[var(--spacing-lg)]">
           {/* Concept section 1: text + image */}
           <div className="grid gap-8 md:grid-cols-2 md:gap-12 md:items-center">
             <div className="space-y-4">

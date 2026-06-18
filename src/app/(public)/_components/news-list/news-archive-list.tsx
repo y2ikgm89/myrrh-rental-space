@@ -38,7 +38,10 @@ export function NewsList({ items, query = "" }: NewsListProps): ReactElement {
   if (items.length === 0) {
     const hasQuery = query.length > 0;
     return (
-      <div className="space-y-6 py-[var(--space-lg)] text-center" role="status">
+      <div
+        className="space-y-6 py-[var(--spacing-lg)] text-center"
+        role="status"
+      >
         <p className="text-muted-foreground">
           {hasQuery
             ? "条件に一致するお知らせが見つかりませんでした"

@@ -10,7 +10,7 @@ export default function AccessLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero */}
-      <section className="bg-background py-[var(--space-xl)]">
+      <section className="bg-background py-[var(--spacing-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-16" variant="text" />
@@ -21,7 +21,7 @@ export default function AccessLoading() {
       </section>
 
       <Container>
-        <div className="space-y-[var(--space-xl)] py-[var(--space-lg)]">
+        <div className="space-y-[var(--spacing-xl)] py-[var(--spacing-lg)]">
           {/* 2 Location chapters */}
           {skeletonKeys(2, "access-chapter").map((key) => (
             <div key={key} className="space-y-8">

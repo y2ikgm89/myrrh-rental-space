@@ -129,7 +129,7 @@ export function MediaHero({
           "relative z-10 mx-auto max-w-3xl text-center",
           text.base,
           "ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
-          "py-[var(--space-lg)]",
+          "py-[var(--spacing-lg)]",
         )}
       >
         {hasLabel && (

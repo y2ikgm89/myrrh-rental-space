@@ -12,7 +12,7 @@ const gapClasses = {
   lg: "gap-8",
   xl: "gap-12",
   "2xl": "gap-16",
-  section: "gap-[var(--space-lg)]",
+  section: "gap-[var(--spacing-lg)]",
 } as const satisfies Record<StackGap, string>;
 
 interface StackProps {

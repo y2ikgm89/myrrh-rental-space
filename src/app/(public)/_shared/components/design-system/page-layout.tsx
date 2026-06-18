@@ -39,10 +39,10 @@ export function PageLayout({
   }
 
   // content — hero / セクション群 / cta を統一 gap の縦スタックで並べる。
-  // セクション間の余白（SectionStack の gap）と同じ --space-md を使い、
+  // セクション間の余白（SectionStack の gap）と同じ --spacing-md を使い、
   // hero↔本文↔cta の境界も一定の余白に揃える。
   return (
-    <div className={cn("flex flex-col gap-[var(--space-md)]", className)}>
+    <div className={cn("flex flex-col gap-[var(--spacing-md)]", className)}>
       {hero}
       {children}
       {cta}

@@ -32,7 +32,10 @@ interface PostGridProps {
 export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
   if (posts.length === 0) {
     return (
-      <div className="space-y-6 py-[var(--space-lg)] text-center" role="status">
+      <div
+        className="space-y-6 py-[var(--spacing-lg)] text-center"
+        role="status"
+      >
         <p className="text-muted-foreground">
           {hasFilters
             ? "条件に一致する記事が見つかりませんでした"
