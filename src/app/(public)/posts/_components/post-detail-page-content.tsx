@@ -18,7 +18,10 @@ import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
-import { getPostLayoutSettings } from "@/shared/domain/settings/queries/site";
+import {
+  getSiteLayoutSettings,
+  mergeContentLayout,
+} from "@/shared/domain/settings/queries/site";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
@@ -63,10 +66,13 @@ export async function PostDetailPageContent({
   post: PublishedPost;
   banner?: ReactNode;
 }): Promise<ReactElement> {
-  const [layoutConfig, sidebarSettings] = await Promise.all([
-    getPostLayoutSettings(post.id),
+  const [siteLayout, sidebarSettings] = await Promise.all([
+    getSiteLayoutSettings(),
     getSidebarSettings(),
   ]);
+  // 個別 contentWidth は post 本体（getPublishedPost）由来で、post 編集時に
+  // 記事キャッシュタグで無効化される。別 cached source を持たず純関数でマージする。
+  const layoutConfig = mergeContentLayout(siteLayout, post);
   const baseUrl = getBaseUrl();
   const articleUrl = `${baseUrl}${post.url}`;
   const datePublished = toISOString(post.publishedAt) ?? "";

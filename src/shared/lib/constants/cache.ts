@@ -224,8 +224,6 @@ export const getCacheTag = {
   },
   layoutSettings: {
     site: () => CACHE_TAGS.LAYOUT_SETTINGS,
-    post: (postId: string) => `${CACHE_TAGS.LAYOUT_SETTINGS}-post-${postId}`,
-    news: (newsId: string) => `${CACHE_TAGS.LAYOUT_SETTINGS}-news-${newsId}`,
   },
   pageSeo: {
     detail: (slug: string) => `${CACHE_TAGS.PAGE_SEO}-${slug}`,

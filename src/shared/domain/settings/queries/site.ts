@@ -4,14 +4,13 @@ import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import type { AnalyticsType } from "@generated/prisma/enums";
 import { LayoutWidth } from "@generated/prisma/enums";
-import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainObject } from "@/shared/lib/serialize";
-import { idParamSchema } from "@/shared/lib/validations/params";
 import type { LayoutConfig } from "@/shared/types/layout";
 
 export interface SeoSettings {
@@ -230,85 +229,29 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   };
 }
 
-export async function getPostLayoutSettings(
-  postId: string,
-): Promise<LayoutConfig> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(
-    getCacheTag.layoutSettings.site(),
-    getCacheTag.layoutSettings.post(postId),
-  );
-
-  if (!idParamSchema.safeParse(postId).success) {
-    return FALLBACK_LAYOUT_CONFIG;
-  }
-
-  const [siteSettings, postSettings] = await Promise.all([
-    getSiteLayoutSettings(),
-    safeFetch({
-      fetch: () =>
-        prisma.post.findUnique({
-          where: { id: postId },
-          select: {
-            contentWidth: true,
-            contentWidthCustom: true,
-          },
-        }),
-      fallback: null,
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      operationName: "getPostLayoutSettings",
-    }),
-  ]);
-
+/**
+ * サイト全体のレイアウト設定に、記事 / お知らせ個別の contentWidth 上書きをマージする純関数。
+ *
+ * 個別の contentWidth / contentWidthCustom は記事 / お知らせ本体クエリ
+ * （getPublishedPost / getPublishedNewsItem）が既に select・キャッシュ無効化している。
+ * かつて存在した getPostLayoutSettings / getNewsLayoutSettings は同じ列を別クエリで再取得し
+ * 独自タグ（layoutSettings.post/news）でキャッシュしていたが、編集後の mutation がそのタグを
+ * 無効化しておらず read-your-writes ラグを起こしていた。重複した cached source を廃し、
+ * 個別レイアウトの無効化を記事本体のキャッシュタグへ一本化する（SSoT）。
+ */
+export function mergeContentLayout(
+  siteSettings: LayoutConfig,
+  override: {
+    contentWidth: LayoutWidth | null;
+    contentWidthCustom: number | null;
+  },
+): LayoutConfig {
   return {
     containerWidth: siteSettings.containerWidth,
     containerWidthCustom: siteSettings.containerWidthCustom,
-    contentWidth: postSettings?.contentWidth ?? siteSettings.contentWidth,
+    contentWidth: override.contentWidth ?? siteSettings.contentWidth,
     contentWidthCustom:
-      postSettings?.contentWidthCustom ?? siteSettings.contentWidthCustom,
-  };
-}
-
-export async function getNewsLayoutSettings(
-  newsId: string,
-): Promise<LayoutConfig> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(
-    getCacheTag.layoutSettings.site(),
-    getCacheTag.layoutSettings.news(newsId),
-  );
-
-  if (!idParamSchema.safeParse(newsId).success) {
-    return FALLBACK_LAYOUT_CONFIG;
-  }
-
-  const [siteSettings, newsSettings] = await Promise.all([
-    getSiteLayoutSettings(),
-    safeFetch({
-      fetch: () =>
-        prisma.news.findUnique({
-          where: { id: newsId },
-          select: {
-            contentWidth: true,
-            contentWidthCustom: true,
-          },
-        }),
-      fallback: null,
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-      operationName: "getNewsLayoutSettings",
-    }),
-  ]);
-
-  return {
-    containerWidth: siteSettings.containerWidth,
-    containerWidthCustom: siteSettings.containerWidthCustom,
-    contentWidth: newsSettings?.contentWidth ?? siteSettings.contentWidth,
-    contentWidthCustom:
-      newsSettings?.contentWidthCustom ?? siteSettings.contentWidthCustom,
+      override.contentWidthCustom ?? siteSettings.contentWidthCustom,
   };
 }
 

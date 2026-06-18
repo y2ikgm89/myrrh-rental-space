@@ -14,7 +14,10 @@ import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
-import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
+import {
+  getSiteLayoutSettings,
+  mergeContentLayout,
+} from "@/shared/domain/settings/queries/site";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { formatSerializedDate, toISOString } from "@/shared/lib/serialize";
 import { extractHeadingsFromHtml } from "@/shared/lib/html/extract-headings";
@@ -61,10 +64,13 @@ export async function NewsDetailPageContent({
   newsItem: PublishedNewsItem;
   banner?: ReactNode;
 }): Promise<ReactElement> {
-  const [layoutConfig, sidebarSettings] = await Promise.all([
-    getNewsLayoutSettings(newsItem.id),
+  const [siteLayout, sidebarSettings] = await Promise.all([
+    getSiteLayoutSettings(),
     getSidebarSettings(),
   ]);
+  // 個別 contentWidth は newsItem 本体（getPublishedNewsItem）由来で、編集時に
+  // お知らせキャッシュタグで無効化される。別 cached source を持たず純関数でマージする。
+  const layoutConfig = mergeContentLayout(siteLayout, newsItem);
   const baseUrl = getBaseUrl();
   const articleUrl = `${baseUrl}${newsItem.url}`;
   const datePublished = toISOString(newsItem.publishedAt) ?? "";
