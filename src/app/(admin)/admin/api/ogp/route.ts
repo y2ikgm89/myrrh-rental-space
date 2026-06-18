@@ -19,6 +19,50 @@ const OGP_FETCH_HEADERS = {
 
 const MAX_OGP_REDIRECTS = 3;
 
+// OGP メタタグは <head> 内にあるため 2MB あれば十分。content-length を信用せず
+// ストリーム読み取り中も上限を強制し、悪意あるリダイレクト先が巨大ボディを返して
+// 単一インスタンス Cloud Run コンテナを OOM させる経路を塞ぐ（defense-in-depth）。
+const MAX_OGP_BYTES = 2 * 1024 * 1024;
+
+// response.text() は仕様上常に UTF-8 でデコードする（content-type charset を無視）ため、
+// TextDecoder("utf-8") でのストリーム読み取りは挙動を変えずサイズ上限のみ追加する。
+async function readBodyWithLimit(
+  response: Response,
+  maxBytes: number,
+): Promise<string> {
+  // content-length が宣言されていればダウンロード前に拒否する。
+  const declared = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new OgpFetchError("レスポンスが大きすぎます", 413);
+  }
+
+  const body = response.body;
+  if (!body) return "";
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new OgpFetchError("レスポンスが大きすぎます", 413);
+    }
+    chunks.push(value);
+  }
+
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8").decode(merged);
+}
+
 const requestSchema = z.object({
   url: z.url({ error: "有効なURLを入力してください" }),
 });
@@ -129,7 +173,7 @@ export async function POST(request: Request) {
       return jsonError(`URLの取得に失敗しました: ${response.status}`);
     }
 
-    const html = await response.text();
+    const html = await readBodyWithLimit(response, MAX_OGP_BYTES);
     const imageRaw = extractImage(html);
 
     const ogpData: OgpData = {
