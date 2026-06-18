@@ -18,7 +18,7 @@ export default function LoginLoading(): ReactElement {
       <Container variant="narrow">
         <Stack
           gap="lg"
-          className="mx-auto max-w-sm pb-[var(--spacing-block)]"
+          className="mx-auto max-w-sm pb-[var(--spacing-region)]"
           aria-busy="true"
           aria-label="読み込み中"
         >

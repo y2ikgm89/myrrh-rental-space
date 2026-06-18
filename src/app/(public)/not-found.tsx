@@ -37,7 +37,7 @@ export default function PublicNotFound() {
   return (
     <main id="main-content">
       <Container>
-        <div className="flex min-h-[60svh] flex-col items-center justify-center py-[var(--spacing-lg)]">
+        <div className="flex min-h-[60svh] flex-col items-center justify-center py-[var(--spacing-fluid-lg)]">
           <Stack gap="lg" className="items-center text-center">
             <span
               className="font-heading text-8xl font-bold text-border"

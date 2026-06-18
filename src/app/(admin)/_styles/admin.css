@@ -213,14 +213,14 @@
   /* --------------------------------------------------------------------------
    * Spacing — public と同系の fluid scale（プレビュー整合用）
    * -------------------------------------------------------------------------- */
-  --spacing-3xs: clamp(0.25rem, 0.198rem + 0.221vw, 0.5rem);
-  --spacing-2xs: clamp(0.5rem, 0.397rem + 0.442vw, 1rem);
-  --spacing-xs: clamp(1rem, 0.793rem + 0.884vw, 2rem);
-  --spacing-sm: clamp(2rem, 1.586rem + 1.768vw, 4rem);
-  --spacing-md: clamp(3rem, 2.171rem + 3.536vw, 7rem);
-  --spacing-lg: clamp(4rem, 2.55rem + 6.188vw, 11rem);
-  --spacing-xl: clamp(5rem, 2.929rem + 8.84vw, 15rem);
-  --spacing-2xl: clamp(6rem, 3.308rem + 11.491vw, 19rem);
+  --spacing-fluid-3xs: clamp(0.25rem, 0.198rem + 0.221vw, 0.5rem);
+  --spacing-fluid-2xs: clamp(0.5rem, 0.397rem + 0.442vw, 1rem);
+  --spacing-fluid-xs: clamp(1rem, 0.793rem + 0.884vw, 2rem);
+  --spacing-fluid-sm: clamp(2rem, 1.586rem + 1.768vw, 4rem);
+  --spacing-fluid-md: clamp(3rem, 2.171rem + 3.536vw, 7rem);
+  --spacing-fluid-lg: clamp(4rem, 2.55rem + 6.188vw, 11rem);
+  --spacing-fluid-xl: clamp(5rem, 2.929rem + 8.84vw, 15rem);
+  --spacing-fluid-2xl: clamp(6rem, 3.308rem + 11.491vw, 19rem);
   --container-editorial: 50rem;
   --container-padding-start: max(
     var(--container-padding),
@@ -230,7 +230,7 @@
     var(--container-padding),
     env(safe-area-inset-right, 0px)
   );
-  --spacing-block: clamp(1.5rem, 3vw, 2.5rem);
+  --spacing-region: clamp(1.5rem, 3vw, 2.5rem);
   --spacing-card: clamp(1rem, 2vw, 1.5rem);
 
   /* --------------------------------------------------------------------------

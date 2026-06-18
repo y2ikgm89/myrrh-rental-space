@@ -33,7 +33,7 @@ export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
   if (posts.length === 0) {
     return (
       <div
-        className="space-y-6 py-[var(--spacing-lg)] text-center"
+        className="space-y-6 py-[var(--spacing-fluid-lg)] text-center"
         role="status"
       >
         <p className="text-muted-foreground">

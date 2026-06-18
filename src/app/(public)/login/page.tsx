@@ -44,7 +44,7 @@ export default async function LoginPage({
       <LoginHero />
 
       <Container variant="narrow">
-        <Stack gap="lg" className="mx-auto max-w-sm pb-[var(--spacing-block)]">
+        <Stack gap="lg" className="mx-auto max-w-sm pb-[var(--spacing-region)]">
           {errorMessage != null && (
             <div
               className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive text-center"

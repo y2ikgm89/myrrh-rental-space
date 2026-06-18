@@ -121,7 +121,7 @@ export function ArticleLayout({
           </Container>
         </div>
       ) : null}
-      <Container className="pt-10 pb-[var(--spacing-md)] md:pt-14">
+      <Container className="pt-10 pb-[var(--spacing-fluid-md)] md:pt-14">
         <article>
           {heroPosition === "full-width" ? heroBlock : null}
           {toc ? (

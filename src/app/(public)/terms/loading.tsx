@@ -23,7 +23,7 @@ export default function TermsListLoading() {
       </div>
 
       <Container>
-        <div className="mx-auto max-w-[var(--container-measure)] space-y-8 py-[var(--spacing-lg)]">
+        <div className="mx-auto max-w-[var(--container-measure)] space-y-8 py-[var(--spacing-fluid-lg)]">
           {/* h1 */}
           <Skeleton className="h-10 w-48 md:h-12 md:w-64" variant="text" />
 

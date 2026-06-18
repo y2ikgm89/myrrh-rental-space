@@ -21,7 +21,7 @@ export function PageLayout({
 }: PageLayoutProps) {
   if (variant === "dashboard") {
     return (
-      <Container className={cn("py-[var(--spacing-block)]", className)}>
+      <Container className={cn("py-[var(--spacing-region)]", className)}>
         {children}
       </Container>
     );
@@ -31,7 +31,7 @@ export function PageLayout({
     return (
       <>
         {hero}
-        <Container className={cn("py-[var(--spacing-block)]", className)}>
+        <Container className={cn("py-[var(--spacing-region)]", className)}>
           {children}
         </Container>
       </>
@@ -39,10 +39,12 @@ export function PageLayout({
   }
 
   // content — hero / セクション群 / cta を統一 gap の縦スタックで並べる。
-  // セクション間の余白（SectionStack の gap）と同じ --spacing-md を使い、
+  // セクション間の余白（SectionStack の gap）と同じ --spacing-fluid-md を使い、
   // hero↔本文↔cta の境界も一定の余白に揃える。
   return (
-    <div className={cn("flex flex-col gap-[var(--spacing-md)]", className)}>
+    <div
+      className={cn("flex flex-col gap-[var(--spacing-fluid-md)]", className)}
+    >
       {hero}
       {children}
       {cta}
