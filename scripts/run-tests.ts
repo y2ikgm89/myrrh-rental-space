@@ -74,7 +74,8 @@ const failures: Failure[] = [];
 const t0All = performance.now();
 
 for (let i = 0; i < files.length; i++) {
-  const file = files[i]!;
+  const file = files[i];
+  if (file === undefined) continue;
   const t0 = performance.now();
   const proc = Bun.spawnSync(["bun", "test", file], {
     stdout: "inherit",
