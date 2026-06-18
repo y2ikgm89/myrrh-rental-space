@@ -99,7 +99,7 @@ export function UserActions({ user }: Props) {
       />
 
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>ロールを変更</DialogTitle>
             <DialogDescription>

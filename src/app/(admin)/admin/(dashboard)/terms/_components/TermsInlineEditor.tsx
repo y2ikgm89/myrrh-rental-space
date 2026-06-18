@@ -86,7 +86,7 @@ export function TermsInlineEditor({
             削除
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>規約を削除しますか？</DialogTitle>
             <DialogDescription>

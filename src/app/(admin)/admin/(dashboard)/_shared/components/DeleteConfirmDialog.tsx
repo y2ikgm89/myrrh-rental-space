@@ -54,7 +54,7 @@ export function DeleteConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="max-w-sm">
         <AlertDialogHeader>
           <AlertDialogTitle>{displayTitle}</AlertDialogTitle>
           <AlertDialogDescription>{displayDescription}</AlertDialogDescription>

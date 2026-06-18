@@ -78,7 +78,7 @@ export function NewsEditor({
             削除
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>お知らせを削除しますか？</DialogTitle>
             <DialogDescription>

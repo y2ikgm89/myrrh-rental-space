@@ -112,7 +112,7 @@ export function ReservationStatusSelect({
           if (!open) setPendingTerminal(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>
               ステータスを「

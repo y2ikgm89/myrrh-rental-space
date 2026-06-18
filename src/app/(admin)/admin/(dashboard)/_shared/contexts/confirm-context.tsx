@@ -68,8 +68,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmContext value={{ confirm }}>
       {children}
+      {/* 確認ダイアログは短文＋ボタンのみ。Dialog 既定の max-w-lg は広すぎるため
+          AlertDialog 用途に合わせ max-w-sm に締める（width だけ上書き、footer はそのまま）。 */}
       <AlertDialog open={open} onOpenChange={(v) => !v && handleCancel()}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>{options.title}</AlertDialogTitle>
             {options.description && (
