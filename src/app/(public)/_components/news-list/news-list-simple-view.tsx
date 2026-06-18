@@ -162,7 +162,7 @@ export function NewsListSimpleView({
           <div className="mt-8 text-center">
             <Link
               href={toAppRoute(config.viewAllUrl)}
-              className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+              className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
             >
               <PortableTextSpans spans={config.viewAllText} />
               <span aria-hidden="true">{" →"}</span>

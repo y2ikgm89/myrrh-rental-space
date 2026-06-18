@@ -32,7 +32,7 @@ export function SiteCTA({
           <ScrollReveal>
             <Stack gap="md" className="items-center">
               {label ? (
-                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
                   {label}
                 </span>
               ) : null}

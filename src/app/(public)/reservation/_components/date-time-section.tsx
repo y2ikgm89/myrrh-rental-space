@@ -67,7 +67,7 @@ export function DateTimeSection({
     <div role="group" aria-label="日時選択" className="space-y-10">
       {/* Calendar */}
       <section id="reservation-calendar">
-        <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-4 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
           日付を選択
         </p>
         <ClosureNotice ranges={blockedRanges} />
@@ -82,7 +82,7 @@ export function DateTimeSection({
       {/* Time slots */}
       {selectedDate ? (
         <section id="reservation-time-slots">
-          <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="mb-4 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
             時間帯を選択
           </p>
           <TimeSlotGrid
@@ -99,7 +99,7 @@ export function DateTimeSection({
       {/* Row 2: Duration pills */}
       {selectedStartTime ? (
         <section id="reservation-duration">
-          <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="mb-4 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
             利用時間
           </p>
           <DurationPills
@@ -113,7 +113,7 @@ export function DateTimeSection({
       {/* Row 3: Guest count */}
       {selectedDuration ? (
         <section id="reservation-guests">
-          <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="mb-4 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
             利用人数
           </p>
           <GuestStepper

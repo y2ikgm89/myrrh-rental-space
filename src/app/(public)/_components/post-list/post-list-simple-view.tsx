@@ -159,7 +159,7 @@ export function PostListSimpleView({
             </div>
             <div className={cn("p-4 md:p-5", isList && "flex-1")}>
               {post.categoryName && (
-                <span className="text-xs uppercase tracking-[0.18em] text-accent">
+                <span className="text-xs uppercase tracking-eyebrow text-accent">
                   {post.categoryName}
                 </span>
               )}
@@ -182,7 +182,7 @@ export function PostListSimpleView({
           <div className="mt-10 text-center">
             <Link
               href={toAppRoute(config.viewAllUrl)}
-              className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+              className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
             >
               <PortableTextSpans spans={config.viewAllText} />
               <span aria-hidden="true">{" →"}</span>

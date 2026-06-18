@@ -174,7 +174,7 @@ export function MediaHero({
                   key={btn.url}
                   variant="editorial"
                   href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                  className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
+                  className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-eyebrow"
                   {...(btn.openInNewTab && { target: "_blank" as const })}
                   label={btn.label}
                 />

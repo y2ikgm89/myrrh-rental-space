@@ -115,7 +115,7 @@ export function CustomerStep({
       </div>
 
       <div className="mt-8 border border-border p-6 sm:p-8">
-        <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-8 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
           {customerType === CustomerType.CORPORATE
             ? "ご担当者情報"
             : "お客様情報"}

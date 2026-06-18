@@ -45,7 +45,7 @@ export default async function TermsListPage() {
                   href={`/terms/${item.slug}`}
                   className="group block transition-colors hover:bg-accent/5"
                 >
-                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="text-xs uppercase tracking-eyebrow text-muted-foreground">
                     {TERMS_TYPE_LABELS[item.type] ?? item.type}
                   </div>
                   <div className="mt-2 font-heading text-xl font-light text-foreground transition-colors group-hover:text-accent">

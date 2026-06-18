@@ -134,7 +134,7 @@ export function EventCard({ variant, event, isPast = false }: EventCardProps) {
         <span className="text-[2rem] font-light leading-none text-foreground md:text-[2.5rem]">
           {day}
         </span>
-        <span className="mt-1.5 text-base tracking-[0.18em] text-muted-foreground">
+        <span className="mt-1.5 text-base tracking-eyebrow text-muted-foreground">
           {weekday}
         </span>
       </div>

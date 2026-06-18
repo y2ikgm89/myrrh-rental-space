@@ -85,7 +85,7 @@ function HeroButtons({
       {secondary && (
         <Link
           href={toAppRoute(secondary.url)}
-          className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+          className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
           {...(secondary.openInNewTab && {
             target: "_blank" as const,
             rel: "noopener noreferrer",

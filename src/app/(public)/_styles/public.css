@@ -133,6 +133,11 @@
   --tracking-tight: -0.02em;
   --tracking-normal: 0;
   --tracking-wide: 0.1em;
+  /* Eyebrow（uppercase ラベル）の letter-spacing SSoT。
+   * 各所で直書きされていた arbitrary な tracking-[0.18em]/[0.24em] を named utility
+   * tracking-eyebrow / tracking-eyebrow-wide に統一する（値は不変＝視覚変化なし）。 */
+  --tracking-eyebrow: 0.18em;
+  --tracking-eyebrow-wide: 0.24em;
 
   /* Eyebrow — uppercase section label (11px) */
   --text-eyebrow: 0.6875rem;

@@ -295,7 +295,7 @@ function CalendarGrid({
           <div
             key={label}
             className={cn(
-              "border-b border-r border-border bg-surface py-3 text-center text-sm font-medium tracking-[0.18em]",
+              "border-b border-r border-border bg-surface py-3 text-center text-sm font-medium tracking-eyebrow",
               idx === 0
                 ? "text-destructive"
                 : idx === 6
