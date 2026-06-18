@@ -208,7 +208,7 @@ function EventRegistrationCard({
           </Button>
 
           <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-            <DialogContent>
+            <DialogContent className="max-w-sm">
               <DialogHeader>
                 <DialogTitle>申込キャンセルの確認</DialogTitle>
                 <DialogDescription>

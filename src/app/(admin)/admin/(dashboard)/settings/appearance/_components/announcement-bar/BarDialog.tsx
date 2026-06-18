@@ -301,7 +301,7 @@ export function DeleteDialog({
 }: DeleteDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>お知らせバーを削除しますか？</DialogTitle>
           <DialogDescription>

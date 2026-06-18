@@ -141,7 +141,7 @@ export function EventStatusSelect({
           if (!open) setPendingTerminal(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>
               ステータスを「

@@ -212,7 +212,7 @@ export function AccountLinking({
               アカウントを削除する
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>アカウント削除の確認</DialogTitle>
               <DialogDescription>
