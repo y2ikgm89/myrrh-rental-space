@@ -81,7 +81,7 @@ export async function SpaceCard({
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
             {categoryName ? (
-              <p className="text-xs uppercase tracking-[0.18em] text-accent">
+              <p className="text-xs uppercase tracking-eyebrow text-accent">
                 {categoryName}
               </p>
             ) : null}
@@ -135,7 +135,7 @@ export async function SpaceCard({
             ) : (
               <span />
             )}
-            <span className="flex items-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
+            <span className="flex items-center gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors group-hover:text-foreground">
               詳細
               <IconArrowRight
                 className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
@@ -175,7 +175,7 @@ export async function SpaceCard({
       {/* Content */}
       <div className="p-4 sm:p-5">
         {categoryName ? (
-          <p className="text-xs uppercase tracking-[0.18em] text-accent">
+          <p className="text-xs uppercase tracking-eyebrow text-accent">
             {categoryName}
           </p>
         ) : null}

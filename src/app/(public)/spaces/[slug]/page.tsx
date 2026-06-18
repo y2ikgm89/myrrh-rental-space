@@ -132,7 +132,7 @@ export default async function SpaceDetailPage({
       <article className="mx-auto max-w-[var(--container-max)] px-6 pt-12 md:px-12 md:pt-16">
         {/* Hero header: Kinfolk magazine cover pattern (中央寄せ eyebrow + serif h1 + meta) */}
         <header className="text-center">
-          <p className="text-xs uppercase tracking-[0.24em] text-accent">
+          <p className="text-xs uppercase tracking-eyebrow-wide text-accent">
             — Space —
           </p>
           <h1 className="mt-5 font-heading text-4xl font-light leading-tight tracking-tight md:text-5xl">
@@ -197,7 +197,7 @@ export default async function SpaceDetailPage({
               <dl className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
                 {reviewStats.totalCount > 0 ? (
                   <div>
-                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-muted-foreground">
                       <IconStar
                         className="h-3.5 w-3.5 fill-accent text-accent"
                         aria-hidden="true"
@@ -213,7 +213,7 @@ export default async function SpaceDetailPage({
                   </div>
                 ) : null}
                 <div>
-                  <dt className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  <dt className="flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-muted-foreground">
                     <IconUsers className="h-3.5 w-3.5" aria-hidden="true" />
                     収容人数
                   </dt>
@@ -223,7 +223,7 @@ export default async function SpaceDetailPage({
                 </div>
                 {space.area ? (
                   <div>
-                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-muted-foreground">
                       <IconRuler2 className="h-3.5 w-3.5" aria-hidden="true" />
                       広さ
                     </dt>
@@ -234,7 +234,7 @@ export default async function SpaceDetailPage({
                 ) : null}
                 {space.location ? (
                   <div>
-                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-muted-foreground">
                       <IconMapPin className="h-3.5 w-3.5" aria-hidden="true" />
                       所在地
                     </dt>
@@ -245,7 +245,7 @@ export default async function SpaceDetailPage({
                 ) : null}
                 {space.category ? (
                   <div>
-                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    <dt className="flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-muted-foreground">
                       <IconCategory
                         className="h-3.5 w-3.5"
                         aria-hidden="true"

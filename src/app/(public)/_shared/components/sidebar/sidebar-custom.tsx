@@ -8,7 +8,7 @@ interface SidebarCustomProps {
 }
 
 const SIDEBAR_CTA_CLASS =
-  "mt-3 inline-flex min-h-11 items-center justify-center border border-foreground px-4 text-xs uppercase tracking-[0.18em] transition-colors hover:bg-accent hover:text-accent-foreground";
+  "mt-3 inline-flex min-h-11 items-center justify-center border border-foreground px-4 text-xs uppercase tracking-eyebrow transition-colors hover:bg-accent hover:text-accent-foreground";
 
 export function SidebarCustom({ widget }: SidebarCustomProps): ReactElement {
   return (

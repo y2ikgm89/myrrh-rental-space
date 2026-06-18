@@ -132,7 +132,7 @@ export function SocialLoginButtons({
 
       {requiredTerms.length > 0 && (
         <div className="space-y-3 border border-border p-4">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
             ご利用規約への同意
           </p>
           {requiredTerms.map((term) => {

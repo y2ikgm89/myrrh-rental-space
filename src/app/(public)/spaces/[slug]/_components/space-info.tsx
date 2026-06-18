@@ -43,7 +43,7 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
       {/* About: flat description (drop-cap なし) */}
       {space.descriptionHtml ? (
         <section>
-          <p className="text-xs uppercase tracking-[0.24em] text-accent">
+          <p className="text-xs uppercase tracking-eyebrow-wide text-accent">
             — About this space —
           </p>
           <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
@@ -58,7 +58,7 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
       {/* Amenities: 中央寄せ editorial grid */}
       {facilities.length > 0 ? (
         <section className="border-y border-divider py-12">
-          <p className="text-xs uppercase tracking-[0.24em] text-accent">
+          <p className="text-xs uppercase tracking-eyebrow-wide text-accent">
             — Amenities —
           </p>
           <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">
@@ -74,7 +74,7 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
 
       {/* Access: editorial list + italic 駐車場 */}
       <section>
-        <p className="text-xs uppercase tracking-[0.24em] text-accent">
+        <p className="text-xs uppercase tracking-eyebrow-wide text-accent">
           — Access —
         </p>
         <h2 className="mt-4 font-heading text-2xl font-light md:text-3xl">

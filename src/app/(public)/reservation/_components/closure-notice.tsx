@@ -33,7 +33,7 @@ export function ClosureNotice({
       role="note"
       className="mb-6 border border-border bg-surface p-4 text-sm text-muted-foreground"
     >
-      <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-foreground">
+      <p className="mb-2 text-xs font-medium uppercase tracking-eyebrow text-foreground">
         臨時休業のお知らせ
       </p>
       <ul className="space-y-1">

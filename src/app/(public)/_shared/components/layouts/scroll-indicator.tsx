@@ -46,7 +46,7 @@ export function ScrollIndicator(): ReactElement {
       ref={ref}
       className="flex flex-col items-center gap-2 text-muted-foreground"
     >
-      <span className="text-xs uppercase tracking-[0.18em]">Scroll</span>
+      <span className="text-xs uppercase tracking-eyebrow">Scroll</span>
       <div className="h-10 w-px bg-gradient-to-b from-primary/50 to-transparent" />
     </div>
   );

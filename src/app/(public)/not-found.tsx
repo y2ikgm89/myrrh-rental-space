@@ -65,7 +65,7 @@ export default function PublicNotFound() {
             </Stack>
 
             <div className="@container w-full max-w-2xl pt-8">
-              <h2 className="mb-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              <h2 className="mb-4 text-xs uppercase tracking-eyebrow text-muted-foreground">
                 よく訪問されるページ
               </h2>
               <ul className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @md:grid-cols-3">

@@ -110,14 +110,14 @@ export function SpaceDetailDialog({
             {/* Facilities */}
             {facilities.length > 0 ? (
               <div className="space-y-2 border-t border-border pt-4">
-                <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <span className="text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
                   設備
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {facilities.map((f) => (
                     <span
                       key={f.name}
-                      className="inline-flex items-center gap-1.5 border border-border px-2 py-1 text-xs tracking-[0.18em] text-muted-foreground"
+                      className="inline-flex items-center gap-1.5 border border-border px-2 py-1 text-xs tracking-eyebrow text-muted-foreground"
                     >
                       {f.iconName ? (
                         <CuratedIcon name={f.iconName} className="h-3 w-3" />

@@ -59,7 +59,7 @@ export function CustomerTypeToggle({
 
   return (
     <fieldset>
-      <legend className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+      <legend className="mb-2 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
         ご利用区分
       </legend>
       <div

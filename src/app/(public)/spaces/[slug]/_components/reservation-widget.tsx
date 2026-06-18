@@ -62,7 +62,7 @@ export function ReservationWidget({
 
   return (
     <div className="border border-accent bg-background">
-      <p className="px-8 pt-7 text-xs uppercase tracking-[0.24em] text-muted-foreground sm:px-10">
+      <p className="px-8 pt-7 text-xs uppercase tracking-eyebrow-wide text-muted-foreground sm:px-10">
         — Reservation —
       </p>
       <div className="px-8 pb-5 pt-4 sm:px-10">
@@ -80,7 +80,7 @@ export function ReservationWidget({
             <span className="text-3xl font-medium leading-none tabular-nums text-foreground">
               {hourly.value}
             </span>
-            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
               / hour
             </span>
             {hourly.taxLabel ? (
@@ -99,7 +99,7 @@ export function ReservationWidget({
             <span className="text-xl font-medium leading-none tabular-nums text-foreground">
               {daily.value}
             </span>
-            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
               / day
             </span>
             {daily.taxLabel ? (
@@ -133,13 +133,13 @@ export function ReservationWidget({
       <div className="space-y-2 px-8 pb-7 sm:px-10">
         <Link
           href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
-          className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-xs uppercase tracking-[0.18em] text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-xs uppercase tracking-eyebrow text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Reserve this space
         </Link>
         <Link
           href="/contact"
-          className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-6 text-xs uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-6 text-xs uppercase tracking-eyebrow text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Inquiry
         </Link>

@@ -239,7 +239,7 @@ function LocationChapter({
       <meta itemProp="name" content={location.name} />
 
       <header className="space-y-3 text-center">
-        <p className="font-heading text-base italic tracking-[0.18em] text-accent">
+        <p className="font-heading text-base italic tracking-eyebrow text-accent">
           Location {indexLabel}
         </p>
         <h2 className="text-h1 font-heading italic text-foreground">
@@ -277,7 +277,7 @@ function LocationChapter({
             itemType="https://schema.org/PostalAddress"
           >
             <div className="border-b border-border pb-3">
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
                 Address / 住所
               </p>
             </div>
@@ -291,7 +291,7 @@ function LocationChapter({
               href={mapsHref}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex min-h-11 items-center gap-2 text-sm uppercase tracking-[0.18em] text-foreground"
+              className="group inline-flex min-h-11 items-center gap-2 text-sm uppercase tracking-eyebrow text-foreground"
             >
               <IconMapPin className="h-4 w-4 text-accent" aria-hidden="true" />
               <span className="border-b border-foreground pb-0.5 transition-opacity group-hover:opacity-60">
@@ -307,7 +307,7 @@ function LocationChapter({
           {transitLines.length > 0 && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
                   Routes / アクセス
                 </p>
               </div>
@@ -337,7 +337,7 @@ function LocationChapter({
       {hoursDisplay.length > 0 && (
         <div className="mx-auto max-w-2xl space-y-6">
           <div className="border-b border-border pb-3">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
               Hours / 営業時間
             </p>
           </div>
@@ -371,7 +371,7 @@ function LocationChapter({
           {location.parkingInfo && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
                   Parking / 駐車場
                 </p>
               </div>
@@ -384,7 +384,7 @@ function LocationChapter({
           {amenityKeys.length > 0 && (
             <div className="space-y-6">
               <div className="border-b border-border pb-3">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
                   Amenities / 設備
                 </p>
               </div>
@@ -416,7 +416,7 @@ function LocationChapter({
       {location.address && (
         <div className="space-y-4">
           <div className="border-b border-border pb-3">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
               Map / マップ
             </p>
           </div>
@@ -443,7 +443,7 @@ function LocationsOverviewBlock({
 
   return (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
         Our Locations / 拠点一覧
       </p>
       <h2 className="text-h2 mt-4 font-heading italic text-foreground">
@@ -503,7 +503,7 @@ function GlobalContactBlock({
       <meta itemProp="name" content={businessInfo.name} />
 
       <div className="text-center">
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-sm font-medium uppercase tracking-eyebrow text-muted-foreground">
           Get in Touch
         </p>
         <h2 className="text-h2 mt-3 font-heading italic text-foreground">

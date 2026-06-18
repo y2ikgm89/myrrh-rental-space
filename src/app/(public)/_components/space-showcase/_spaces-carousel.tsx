@@ -539,7 +539,7 @@ export function SpacesCarousel({
               <Button
                 variant="editorial"
                 href={toAppRoute(`/spaces/${activeSpace.slug}`)}
-                className="text-xs uppercase tracking-[0.18em]"
+                className="text-xs uppercase tracking-eyebrow"
               >
                 View Details
               </Button>

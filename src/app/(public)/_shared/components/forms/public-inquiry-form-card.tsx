@@ -198,7 +198,7 @@ export function PublicInquiryFormCard({
           className="mx-auto h-10 w-10 text-accent"
           aria-hidden="true"
         />
-        <p className="mt-6 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+        <p className="mt-6 text-xs font-medium uppercase tracking-eyebrow text-accent">
           Sent
         </p>
         <p className="mt-4 font-heading text-h3 font-light">
@@ -272,7 +272,7 @@ export function PublicInquiryFormCard({
 
           <div className="border border-border p-6 sm:p-8">
             <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
                 {customerType === CustomerType.CORPORATE
                   ? "ご担当者情報"
                   : "お客様情報"}

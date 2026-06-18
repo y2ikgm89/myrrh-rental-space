@@ -17,7 +17,7 @@ export function MaintenancePage({
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-5 md:px-8">
       <div className="animate-maintenance-in w-full max-w-sm text-center">
         {/* ブランドロゴ */}
-        <p className="font-heading text-xl tracking-[0.18em] text-foreground">
+        <p className="font-heading text-xl tracking-eyebrow text-foreground">
           {SITE_DEFAULTS.name.split(" ")[0]?.toUpperCase() ?? "MYRRH"}
         </p>
 

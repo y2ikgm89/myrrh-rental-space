@@ -67,7 +67,7 @@ export default async function ReservationCompletePage({
   return (
     <Layout>
       <div className="text-center">
-        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+        <p className="mb-3 text-xs font-medium uppercase tracking-eyebrow text-accent">
           Confirmed
         </p>
         <Heading level={1}>ご予約ありがとうございます</Heading>

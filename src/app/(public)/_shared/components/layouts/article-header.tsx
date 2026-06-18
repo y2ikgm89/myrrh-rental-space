@@ -50,7 +50,7 @@ export function ArticleHeader({
           <p
             className={cn(
               "text-[0.7rem] uppercase text-accent",
-              isCenter ? "tracking-[0.24em]" : "tracking-[0.18em]",
+              isCenter ? "tracking-eyebrow-wide" : "tracking-eyebrow",
             )}
           >
             {isCenter ? `— ${eyebrow} —` : eyebrow}

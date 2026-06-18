@@ -553,7 +553,7 @@ export function ReservationForm({
       {renderStepIndicator()}
 
       <section>
-        <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mb-1 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
           場所を選択
         </p>
         <p className="mb-4 text-sm text-muted-foreground">
@@ -590,7 +590,7 @@ export function ReservationForm({
 
       {state.locationId != null && currentSpaces.length > 1 ? (
         <section ref={spaceSectionRef} className="animate-section-enter">
-          <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="mb-1 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
             スペースを選択
           </p>
           <p className="mb-4 text-sm text-muted-foreground">
