@@ -633,6 +633,19 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("shared/domain は bare な Date.toLocale* を使わず date-format SSoT を経由する", () => {
+    // Cloud Run のプロセス TZ は UTC。timeZone 指定なしの toLocale*String は JST 想定の
+    // 時刻を 9h ずらして整形し、reservation.notes 等に永続保存される（#418 サガで根絶した
+    // TZ ドリフトの再発）。日付/時刻整形は Asia/Tokyo を固定した @/shared/lib/date-format の
+    // ヘルパーに一本化する。Number.toLocaleString()（通貨整形・引数なし）は対象外。
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(join(SRC_ROOT, "shared", "domain")),
+      /\.toLocale(?:Date|Time)String\(|\.toLocaleString\(\s*["']ja/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("next.config.ts は stable typedRoutes を有効にする", () => {
     const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
 

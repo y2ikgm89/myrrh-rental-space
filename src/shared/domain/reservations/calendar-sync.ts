@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { CalendarSyncMethod, ReservationStatus } from "@generated/prisma/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import { formatDateTimeFull, formatTimeShort } from "@/shared/lib/date-format";
 
 export type FailedCalendarSyncReservation = {
   id: string;
@@ -222,7 +223,7 @@ export async function cancelReservationFromCalendar(input: {
   reservationId: string;
   existingNotes: string | null;
 }): Promise<void> {
-  const syncNote = `[Google Calendarで削除] ${new Date().toLocaleString("ja-JP")}`;
+  const syncNote = `[Google Calendarで削除] ${formatDateTimeFull(new Date())}`;
   const newNotes = input.existingNotes
     ? `${input.existingNotes}\n${syncNote}`
     : syncNote;
@@ -272,9 +273,9 @@ export async function applyCalendarTimeChange(input: {
 
     if (overlappingReservation) {
       const rejectionNote =
-        `[カレンダー同期エラー] ${new Date().toLocaleString("ja-JP")}\n` +
+        `[カレンダー同期エラー] ${formatDateTimeFull(new Date())}\n` +
         `時間変更が重複のため拒否されました。\n` +
-        `試行時間: ${input.startTime.toLocaleString("ja-JP")} - ${input.endTime.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}\n` +
+        `試行時間: ${formatDateTimeFull(input.startTime)} - ${formatTimeShort(input.endTime)}\n` +
         `重複予約ID: ${overlappingReservation.id.slice(0, 8).toUpperCase()}`;
 
       const newNotes = input.existingNotes
