@@ -29,6 +29,14 @@ const legacyPrismaRestrictedImport = {
     "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
 };
 
+// db barrel `@/shared/db` は db 層（src/shared/db/**）の外から import 禁止。
+// 利用側は `@/shared/db/prisma` を直接 import する（db-and-domain.md）。
+const dbBarrelRestrictedImport = {
+  name: "@/shared/db",
+  message:
+    "barrel '@/shared/db' は db 層の外から import しないでください。'@/shared/db/prisma' を使ってください。",
+};
+
 const publicDbRestrictedImports = [
   {
     name: "@/shared/db",
@@ -151,6 +159,7 @@ const eslintConfig = defineConfig([
           paths: [
             ...reactCompilerRestrictedImports,
             legacyPrismaRestrictedImport,
+            dbBarrelRestrictedImport,
           ],
         },
       ],
@@ -211,7 +220,8 @@ const eslintConfig = defineConfig([
   // ファイル固有設定
   {
     name: "console-allowed",
-    files: ["src/shared/lib/logger.ts", "prisma/seed.ts"],
+    // logger / seed / scripts は CLI・出力用途で console を許可する。
+    files: ["src/shared/lib/logger.ts", "prisma/seed.ts", "scripts/**/*.ts"],
     rules: {
       "no-console": "off",
     },
@@ -257,6 +267,15 @@ const eslintConfig = defineConfig([
     "generated/**",
     "__tests__/**",
     ".worktrees/**",
+    // .claude は設定・スキル・git worktree 置き場で lint 対象外。worktree 内に
+    // 別 tsconfig が同梱されると `eslint .` 時に typescript-eslint が
+    // tsconfigRootDir を一意に決められず全ファイル parse error になるため必須。
+    ".claude/**",
+    // scratch / 生成物（lint 対象外）
+    ".remember/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 

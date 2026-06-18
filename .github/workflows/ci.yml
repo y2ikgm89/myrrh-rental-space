@@ -328,7 +328,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: bunx --bun prisma migrate deploy
 
-      # per-file isolation 実行（scripts/run-tests.mjs）必須:
+      # per-file isolation 実行（scripts/run-tests.ts）必須:
       # mock.module() は process グローバルに live binding を残すため、複数 test
       # ファイルを同一 bun test 起動で実行すると干渉する（公式 docs の guidance）。
       # 各 *.test.ts を独立 bun サブプロセスで起動して干渉を物理的に排除する。
