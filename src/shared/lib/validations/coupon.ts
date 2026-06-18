@@ -3,7 +3,7 @@
  *
  * 設計方針:
  * - `validFrom` / `validUntil` は `<input type="datetime-local">` の value
- *   形式（`"YYYY-MM-DDTHH:mm"`）を受け取る `z.string().datetime({ local: true })` に統一
+ *   形式（`"YYYY-MM-DDTHH:mm"`）を受け取る `z.iso.datetime({ local: true })` に統一
  *   （`zod-patterns/validation-schemas.md` §datetime-local input との連携）
  * - 受信した文字列は domain command 側で `parseDateTimeLocalAsJst()` を通して
  *   JST 固定で UTC Date に変換する（サーバ tz / ブラウザ tz に依存しない）
@@ -77,13 +77,13 @@ export const couponFormBaseSchema = z.object({
   // `local: true` は `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）
   // と full ISO（Z 付き）の両方を許容する Zod 4 公式オプション。
   // 実体（UTC Date）への変換は domain command 側で `parseDateTimeLocalAsJst` 経由で行う。
-  validFrom: z
-    .string()
-    .datetime({ local: true, error: "有効開始日を入力してください" }),
+  validFrom: z.iso.datetime({
+    local: true,
+    error: "有効開始日を入力してください",
+  }),
   // 空欄 = 無期限。`<input type="datetime-local">` が未入力時 `""` を返すため
   // `.or(z.literal(""))` で許容、command 層で falsy 判定により null 化。
-  validUntil: z
-    .string()
+  validUntil: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .nullable()
