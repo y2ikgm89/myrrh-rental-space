@@ -312,7 +312,7 @@ export default async function PublicRootLayout({
 
             <main
               id="main-content"
-              className="flex-1 pb-[var(--space-md)]"
+              className="flex-1 pb-[var(--spacing-md)]"
               {...(isTransparent && {
                 "data-header-transparent": "",
                 style: {

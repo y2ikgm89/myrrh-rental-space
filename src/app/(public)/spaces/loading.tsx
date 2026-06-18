@@ -12,7 +12,7 @@ export default function SpacesLoading() {
   return (
     <main id="main-content" aria-busy="true">
       {/* Page hero */}
-      <section className="bg-background py-[var(--space-xl)]">
+      <section className="bg-background py-[var(--spacing-xl)]">
         <Container>
           <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
             <Skeleton className="h-3 w-16" variant="text" />

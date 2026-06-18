@@ -24,7 +24,7 @@ export default function NewsDetailLoading() {
       </div>
 
       <Container>
-        <article className="mx-auto max-w-[var(--container-measure)] space-y-12 py-[var(--space-lg)]">
+        <article className="mx-auto max-w-[var(--container-measure)] space-y-12 py-[var(--spacing-lg)]">
           {/* Article header */}
           <header className="space-y-6">
             <Skeleton className="h-10 w-11/12 md:h-12" variant="text" />

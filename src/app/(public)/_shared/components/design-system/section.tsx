@@ -17,10 +17,10 @@ const borderClasses = {
 } as const satisfies Record<SectionBorder, string>;
 
 const spacingClasses = {
-  // 規約「--space-lg/xl は hero/dramatic 専用」に整合。SiteCTA / related-* の
+  // 規約「--spacing-lg/xl は hero/dramatic 専用」に整合。SiteCTA / related-* の
   // セクション間余白を md(85/48px) に統一し、直前セクション pb との二重計上で
   // 生じる過大な空白(desktop 216px+)を解消する。
-  default: "py-[var(--space-md)]",
+  default: "py-[var(--spacing-md)]",
   compact: "py-[var(--spacing-block)]",
   none: "",
 } as const satisfies Record<SectionSpacing, string>;

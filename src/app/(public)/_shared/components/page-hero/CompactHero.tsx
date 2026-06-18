@@ -46,7 +46,7 @@ export function CompactHero({
         className={cn(
           "flex flex-col justify-center bg-background",
           "ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
-          "py-[var(--space-md)]",
+          "py-[var(--spacing-md)]",
         )}
       >
         <p className="text-eyebrow-lg uppercase text-muted-foreground">
