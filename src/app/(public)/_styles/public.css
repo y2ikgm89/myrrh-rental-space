@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 @import "../../../shared/styles/lexical-content.css";
 @plugin "@tailwindcss/typography";
 

@@ -377,7 +377,7 @@ export function Header({
                           aria-hidden="true"
                         />
                       </NavigationMenu.Trigger>
-                      <NavigationMenu.Content className="absolute top-full mt-2 min-w-[180px] rounded-md border border-border bg-background p-2 shadow-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+                      <NavigationMenu.Content className="absolute top-full mt-2 min-w-[180px] rounded-md border border-border bg-background p-2 shadow-lg">
                         {item.children.map((child) => (
                           <NavItemLink
                             key={child.id}
@@ -445,8 +445,8 @@ export function Header({
             />
           </Dialog.Trigger>
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 md:hidden" />
-            <Dialog.Content className="fixed inset-0 z-50 flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 md:hidden">
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl md:hidden" />
+            <Dialog.Content className="fixed inset-0 z-50 flex flex-col md:hidden">
               <Dialog.Title className="sr-only">
                 ナビゲーションメニュー
               </Dialog.Title>
