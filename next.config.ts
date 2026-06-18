@@ -110,22 +110,14 @@ const nextConfig: NextConfig = {
     // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
     // 公式: https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
     globalNotFound: true,
-    // Optimize package imports - tree shaking for barrel exports
+    // Optimize package imports - barrel export の tree shaking。
+    // NOTE: Turbopack（このプロジェクトの dev/build バンドラ）は import を自動解析するため
+    // この設定は本来不要（公式: "not required when using Turbopack"）。webpack フォールバック
+    // 時のみ効く。date-fns / recharts / @tabler/icons-react は Next.js が既定で最適化するため
+    // 記載しない。Radix は個別 @radix-ui/react-* ではなく統合バレル radix-ui を import している。
     optimizePackageImports: [
-      // Icons (@tabler/icons-react is optimized by Next.js by default)
-      // Date utilities
-      "date-fns",
-      // UI components (Radix)
-      "@radix-ui/react-accordion",
-      "@radix-ui/react-alert-dialog",
-      "@radix-ui/react-dialog",
-      "@radix-ui/react-dropdown-menu",
-      "@radix-ui/react-label",
-      "@radix-ui/react-select",
-      "@radix-ui/react-slot",
-      "@radix-ui/react-switch",
-      "@radix-ui/react-tabs",
-      "@radix-ui/react-tooltip",
+      // UI primitives（実際に import している統合バレル）
+      "radix-ui",
       // Rich text editor (Lexical)
       "lexical",
       "@lexical/code",
@@ -137,8 +129,6 @@ const nextConfig: NextConfig = {
       "@lexical/selection",
       "@lexical/table",
       "@lexical/utils",
-      // Charts
-      "recharts",
       // Animation
       "gsap",
       "gsap/ScrollTrigger",
