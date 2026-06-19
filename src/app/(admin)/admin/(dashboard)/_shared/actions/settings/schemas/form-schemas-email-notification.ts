@@ -29,7 +29,26 @@ export const emailFormSchema = z.object({
   sendReservationConfirmationEmail: switchBoolean(),
   // 通知先スタッフ（User.id 配列）。チェックボックス群を conform が配列に集約する。
   notificationStaffIds: z.array(z.string()).optional(),
-  notificationEmailAddresses: optionalText(500),
+  // カスタム通知先（カンマ区切り）。長さ＋各アドレスの形式を検証する（多層防御）。
+  notificationEmailAddresses: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" })
+    .optional()
+    .superRefine((value, ctx) => {
+      if (!value) return;
+      for (const part of value
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean)) {
+        if (!z.email().safeParse(part).success) {
+          ctx.addIssue({
+            code: "custom",
+            message: `不正なメールアドレスが含まれています: ${part}`,
+          });
+          break;
+        }
+      }
+    }),
 });
 
 export type EmailFormInput = z.infer<typeof emailFormSchema>;
