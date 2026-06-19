@@ -36,11 +36,37 @@ const mockNormalizeError = mock<(e: unknown) => Error>((e: unknown) =>
   e instanceof Error ? e : new Error(String(e)),
 );
 
+type DeliverySettings = {
+  sendReservationConfirmationEmail: boolean;
+  notifyNewReservation: boolean;
+  notifyReservationChange: boolean;
+  notifyReservationCancel: boolean;
+  notifyNewInquiry: boolean;
+  replyToEmail: string | null;
+};
+
+const DELIVERY_DEFAULTS: DeliverySettings = {
+  sendReservationConfirmationEmail: true,
+  notifyNewReservation: true,
+  notifyReservationChange: true,
+  notifyReservationCancel: true,
+  notifyNewInquiry: true,
+  replyToEmail: null,
+};
+
+const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
+  Promise.resolve(DELIVERY_DEFAULTS),
+);
+
 // 2. mock.module — import より前
 mock.module("@/shared/lib/email/client", () => ({
   isEmailEnabled: mockIsEmailEnabled,
   getResendClient: mockGetResendClient,
   getFromAddress: mockGetFromAddress,
+}));
+
+mock.module("@/shared/domain/settings/queries/notification", () => ({
+  getEmailDeliverySettings: mockGetEmailDeliverySettings,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -89,6 +115,8 @@ beforeEach(() => {
   mockIsEmailEnabled.mockReturnValue(true);
   mockGetResendClient.mockReturnValue({ emails: { send: mockResendSend } });
   mockGetFromAddress.mockReturnValue("テストサービス <noreply@example.com>");
+  mockGetEmailDeliverySettings.mockReset();
+  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
   mockNormalizeError.mockImplementation((e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
   );
@@ -179,6 +207,44 @@ describe("sendEmail()", () => {
       const result = await sendEmail(BASE_PARAMS);
 
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe("返信先(reply-to)注入", () => {
+    test("settings.replyToEmail が payload に replyTo として注入される", async () => {
+      mockGetEmailDeliverySettings.mockResolvedValue({
+        ...DELIVERY_DEFAULTS,
+        replyToEmail: "info@myrrh.example.com",
+      });
+
+      await sendEmail(BASE_PARAMS);
+
+      expect(mockResendSend).toHaveBeenCalledWith(
+        expect.objectContaining({ replyTo: "info@myrrh.example.com" }),
+      );
+    });
+
+    test("replyToEmail が未設定なら replyTo を付与しない", async () => {
+      await sendEmail(BASE_PARAMS);
+
+      const firstCall = mockResendSend.mock.calls[0];
+      expect(firstCall?.[0]).not.toHaveProperty("replyTo");
+    });
+
+    test("payload が replyTo を明示していれば設定値より優先する", async () => {
+      mockGetEmailDeliverySettings.mockResolvedValue({
+        ...DELIVERY_DEFAULTS,
+        replyToEmail: "settings@example.com",
+      });
+
+      await sendEmail({
+        ...BASE_PARAMS,
+        payload: { ...VALID_PAYLOAD, replyTo: "override@example.com" },
+      });
+
+      expect(mockResendSend).toHaveBeenCalledWith(
+        expect.objectContaining({ replyTo: "override@example.com" }),
+      );
     });
   });
 

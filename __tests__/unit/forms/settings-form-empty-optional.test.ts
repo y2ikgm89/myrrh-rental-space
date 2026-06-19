@@ -377,11 +377,8 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     expectSuccess(
       emailFormSchema,
       emptyKeys([
-        "senderEmail",
-        "senderName",
         "replyToEmail",
         "sendReservationConfirmationEmail",
-        "sendAdminNotificationEmail",
         "notificationEmailAddresses",
       ]),
       "email",
@@ -390,14 +387,11 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
 
   test("メール設定: 不正メールはエラー（任意だが形式は検証）", () => {
     const fd = emptyKeys([
-      "senderEmail",
-      "senderName",
       "replyToEmail",
       "sendReservationConfirmationEmail",
-      "sendAdminNotificationEmail",
       "notificationEmailAddresses",
     ]);
-    fd.set("senderEmail", "invalid-email");
+    fd.set("replyToEmail", "invalid-email");
     expect(parseWithZod(fd, { schema: emailFormSchema }).status).toBe("error");
   });
 
@@ -409,6 +403,8 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         "notifyReservationChange",
         "notifyReservationCancel",
         "notifyNewInquiry",
+        "notifyEventRegistration",
+        "notifyEventCancellation",
       ]),
       "notification",
     );

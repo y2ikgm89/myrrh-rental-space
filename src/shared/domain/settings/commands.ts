@@ -89,11 +89,8 @@ export type BusinessHoursSettingsInput = {
 };
 
 export type EmailSettingsInput = {
-  senderEmail: string | null;
-  senderName: string | null;
   replyToEmail: string | null;
   sendReservationConfirmationEmail: boolean;
-  sendAdminNotificationEmail: boolean;
   notificationEmailAddresses: string | null;
 };
 
@@ -102,6 +99,8 @@ export type NotificationSettingsInput = {
   notifyReservationChange: boolean;
   notifyReservationCancel: boolean;
   notifyNewInquiry: boolean;
+  notifyEventRegistration: boolean;
+  notifyEventCancellation: boolean;
 };
 
 export type MaintenanceSettingsInput = {
@@ -277,7 +276,6 @@ export async function updateEmailSettings(
 ): Promise<void> {
   const updateData = {
     ...data,
-    senderEmail: normalizeNullableString(data.senderEmail),
     replyToEmail: normalizeNullableString(data.replyToEmail),
   };
 

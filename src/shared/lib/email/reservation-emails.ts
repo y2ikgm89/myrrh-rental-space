@@ -15,6 +15,7 @@ import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confir
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import {
   getCalendarEmailSettings,
+  getEmailDeliverySettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
@@ -49,6 +50,10 @@ import type {
 export async function sendReservationConfirmationEmail(
   data: ReservationEmailData,
 ): Promise<EmailResult> {
+  const { sendReservationConfirmationEmail: enabled } =
+    await getEmailDeliverySettings();
+  if (!enabled) return { success: true };
+
   const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
@@ -339,6 +344,14 @@ export async function sendReservationAdminNotification(
   data: ReservationEmailData,
   action: "new" | "update" | "cancel",
 ): Promise<EmailResult> {
+  const toggles = await getEmailDeliverySettings();
+  const enabledByAction = {
+    new: toggles.notifyNewReservation,
+    update: toggles.notifyReservationChange,
+    cancel: toggles.notifyReservationCancel,
+  }[action];
+  if (!enabledByAction) return { success: true };
+
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { success: true };
 
