@@ -22,7 +22,6 @@ import {
   LayoutWidth,
   DiscountCombinationMode,
   CalendarSyncMethod,
-  InstagramFeedLayout,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { SUPPORTED_CURRENCY_VALUES } from "@/shared/lib/stripe-shared";
 import {
@@ -51,7 +50,6 @@ import {
   cloudflareFormSchema,
   googleCalendarFormSchema,
   twoWaySyncFormSchema,
-  instagramFeedFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import {
   emailFormSchema,
@@ -91,7 +89,6 @@ function emptyKeys(keys: readonly string[]): FormData {
 
 const CURRENCY = SUPPORTED_CURRENCY_VALUES[0] ?? "jpy";
 const SYNC_METHOD = Object.values(CalendarSyncMethod)[0] as string;
-const IG_LAYOUT = Object.values(InstagramFeedLayout)[0] as string;
 const DISCOUNT_MODE = Object.values(DiscountCombinationMode)[0] as string;
 
 describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform の空→undefined 変換）", () => {
@@ -351,21 +348,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         pollingIntervalMin: "5",
       }),
       "twoWaySync",
-    );
-  });
-
-  test("Instagram フィード: 全 Switch OFF でも success", () => {
-    expectSuccess(
-      instagramFeedFormSchema,
-      form({
-        feedEnabled: "",
-        feedLayout: IG_LAYOUT,
-        feedColumns: "3",
-        feedMaxItems: "9",
-        showCaption: "",
-        showViewAll: "",
-      }),
-      "instagramFeed",
     );
   });
 

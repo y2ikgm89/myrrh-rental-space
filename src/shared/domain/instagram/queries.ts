@@ -2,7 +2,6 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { InstagramFeedLayout } from "@generated/prisma/enums";
 import { safeDecrypt } from "@/shared/lib/crypto";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
@@ -11,7 +10,6 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
-import { getValidInstagramFeedLayout } from "@/shared/lib/validations/enums/helpers";
 import { getTokenExpiryDays, shouldRefreshToken } from "@/shared/lib/instagram";
 import type {
   InstagramConfig,
@@ -27,12 +25,6 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
       instagramUserId: true,
       instagramUsername: true,
       instagramAccountType: true,
-      instagramFeedEnabled: true,
-      instagramFeedLayout: true,
-      instagramFeedColumns: true,
-      instagramFeedMaxItems: true,
-      instagramShowCaption: true,
-      instagramShowViewAll: true,
     },
   });
 
@@ -55,14 +47,6 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
     tokenExpiresAt: tokenExpiresAt?.toISOString() ?? null,
     tokenExpiryDays,
     shouldRefreshToken: needsRefresh,
-    feedEnabled: settings?.instagramFeedEnabled ?? false,
-    feedLayout: getValidInstagramFeedLayout(
-      settings?.instagramFeedLayout ?? InstagramFeedLayout.grid,
-    ),
-    feedColumns: settings?.instagramFeedColumns ?? 4,
-    feedMaxItems: settings?.instagramFeedMaxItems ?? 8,
-    showCaption: settings?.instagramShowCaption ?? false,
-    showViewAll: settings?.instagramShowViewAll ?? true,
   };
 }
 

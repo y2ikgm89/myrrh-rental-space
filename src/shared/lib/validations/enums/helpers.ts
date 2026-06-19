@@ -23,7 +23,6 @@ import {
   TaxInputMode,
   DiscountCombinationMode,
   AnalyticsType,
-  InstagramFeedLayout,
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   HeaderScrollBehavior,
@@ -53,7 +52,6 @@ import {
   isValidTaxInputMode,
   isValidDiscountCombinationMode,
   isValidAnalyticsType,
-  isValidInstagramFeedLayout,
   isValidAnnouncementBarAnimation,
   isValidAnnouncementBarDesignStyle,
   isValidHeaderScrollBehavior,
@@ -233,13 +231,6 @@ export function getValidAnalyticsType(
   value: string | null | undefined,
 ): AnalyticsType | null {
   return value && isValidAnalyticsType(value) ? value : null;
-}
-
-export function getValidInstagramFeedLayout(
-  value: string | null | undefined,
-  fallback: InstagramFeedLayout = InstagramFeedLayout.grid,
-): InstagramFeedLayout {
-  return value && isValidInstagramFeedLayout(value) ? value : fallback;
 }
 
 export function getValidAnnouncementBarAnimation(

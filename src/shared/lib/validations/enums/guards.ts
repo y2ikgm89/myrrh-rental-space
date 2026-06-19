@@ -26,7 +26,6 @@ import {
   TaxInputMode,
   DiscountCombinationMode,
   AnalyticsType,
-  InstagramFeedLayout,
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   HeaderScrollBehavior,
@@ -70,9 +69,6 @@ const VALID_DISCOUNT_COMBINATION_MODES = new Set<string>(
   Object.values(DiscountCombinationMode),
 );
 const VALID_ANALYTICS_TYPES = new Set<string>(Object.values(AnalyticsType));
-const VALID_INSTAGRAM_FEED_LAYOUTS = new Set<string>(
-  Object.values(InstagramFeedLayout),
-);
 const VALID_ANNOUNCEMENT_BAR_ANIMATIONS = new Set<string>(
   Object.values(AnnouncementBarAnimation),
 );
@@ -201,12 +197,6 @@ export function isValidDiscountCombinationMode(
 
 export function isValidAnalyticsType(value: unknown): value is AnalyticsType {
   return typeof value === "string" && VALID_ANALYTICS_TYPES.has(value);
-}
-
-export function isValidInstagramFeedLayout(
-  value: unknown,
-): value is InstagramFeedLayout {
-  return typeof value === "string" && VALID_INSTAGRAM_FEED_LAYOUTS.has(value);
 }
 
 export function isValidAnnouncementBarAnimation(

@@ -15,7 +15,6 @@ import { disconnectInstagram } from "@/admin/actions/instagram";
 import type { InstagramConfig } from "@/shared/domain/instagram/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { ConnectionCard } from "./instagram/ConnectionCard";
-import { FeedSettingsCard } from "./instagram/FeedSettingsCard";
 
 interface InstagramSectionProps {
   config: InstagramConfig;
@@ -52,11 +51,6 @@ export function InstagramSection({ config }: InstagramSectionProps) {
         isPending={isPending}
         onDisconnect={handleDisconnect}
       />
-
-      {/* フィード設定カード（連携済みの場合のみ表示） */}
-      {config.isConnected && (
-        <FeedSettingsCard config={config} parentIsPending={isPending} />
-      )}
     </div>
   );
 }

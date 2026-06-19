@@ -49,7 +49,6 @@ export {
   DiscountCombinationMode,
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-  InstagramFeedLayout,
   InstagramMediaType,
   EventStatus,
   RegistrationStatus,

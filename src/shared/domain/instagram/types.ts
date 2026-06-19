@@ -1,4 +1,3 @@
-import type { InstagramFeedLayout } from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type InstagramPostRecord = {
@@ -19,12 +18,6 @@ export type InstagramConfig = {
   tokenExpiresAt: string | null;
   tokenExpiryDays: number | null;
   shouldRefreshToken: boolean;
-  feedEnabled: boolean;
-  feedLayout: InstagramFeedLayout;
-  feedColumns: number;
-  feedMaxItems: number;
-  showCaption: boolean;
-  showViewAll: boolean;
 };
 
 export type InstagramPostData = Serialized<InstagramPostRecord>;
