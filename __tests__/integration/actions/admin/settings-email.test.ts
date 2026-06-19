@@ -69,14 +69,28 @@ describe("emailFormSchema（実体）", () => {
     ).toBe("error");
   });
 
-  test("通知先 500 文字は success / 501 文字は error（境界）", () => {
+  test("カスタム通知先: 有効メール（複数カンマ区切り）は success", () => {
     expect(
-      parseWithZod(form({ notificationEmailAddresses: "a".repeat(500) }), {
-        schema: emailFormSchema,
-      }).status,
+      parseWithZod(
+        form({ notificationEmailAddresses: "a@example.com, b@example.com" }),
+        { schema: emailFormSchema },
+      ).status,
     ).toBe("success");
+  });
+
+  test("カスタム通知先: 不正なアドレスを含むと error（各アドレス検証）", () => {
     expect(
-      parseWithZod(form({ notificationEmailAddresses: "a".repeat(501) }), {
+      parseWithZod(
+        form({ notificationEmailAddresses: "a@example.com, not-an-email" }),
+        { schema: emailFormSchema },
+      ).status,
+    ).toBe("error");
+  });
+
+  test("カスタム通知先: 500 文字超は error（長さ上限・全て有効メールでも）", () => {
+    const long = Array(45).fill("a@example.com").join(","); // ≈629 文字 > 500
+    expect(
+      parseWithZod(form({ notificationEmailAddresses: long }), {
         schema: emailFormSchema,
       }).status,
     ).toBe("error");

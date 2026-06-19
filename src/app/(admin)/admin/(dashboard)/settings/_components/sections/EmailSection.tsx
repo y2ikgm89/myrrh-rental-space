@@ -6,7 +6,7 @@
  * 送信者情報、返信先、通知先メールアドレスの設定
  */
 
-import { useEffect, useActionState } from "react";
+import { useEffect, useActionState, useState, useId } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -31,6 +31,8 @@ import { updateEmailSettings } from "@/admin/actions/settings";
 import { emailFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
+import { EmailChips } from "./EmailChips";
+import { NotificationStaffPicker } from "./NotificationStaffPicker";
 
 type StaffOption = {
   id: string;
@@ -95,6 +97,19 @@ export function EmailSection({ settings, staff }: EmailSectionProps) {
       notificationEmailAddresses: settings.notificationEmailAddresses ?? "",
     },
   });
+
+  const [staffIds, setStaffIds] = useState<string[]>(
+    settings.notificationStaffIds,
+  );
+  const [customTokens, setCustomTokens] = useState<string[]>(() =>
+    (settings.notificationEmailAddresses ?? "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+  );
+  const customLabelId = useId();
+  const customHelpId = useId();
+  const noRecipients = staffIds.length === 0 && customTokens.length === 0;
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -199,54 +214,36 @@ export function EmailSection({ settings, staff }: EmailSectionProps) {
             <span className="block text-sm font-medium text-foreground">
               通知を受け取るスタッフ
             </span>
-            {staff.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                スタッフが登録されていません（スタッフ管理から追加できます）。
-              </p>
-            ) : (
-              <div className="space-y-2 rounded-lg border p-3">
-                {staff.map((s) => (
-                  <label
-                    key={s.id}
-                    className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      name="notificationStaffIds"
-                      value={s.id}
-                      defaultChecked={settings.notificationStaffIds.includes(
-                        s.id,
-                      )}
-                      disabled={isPending}
-                      className="size-4 rounded border-input"
-                    />
-                    <span className="font-medium">{s.name}</span>
-                    <span className="text-muted-foreground">{s.email}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <NotificationStaffPicker
+              staff={staff}
+              value={staffIds}
+              onChange={setStaffIds}
+              disabled={isPending}
+            />
             <p className="text-xs text-muted-foreground">
               チェックしたスタッフの現在のメールアドレスに通知が届きます（メール変更・退職に自動で追従）。
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <label
+            <span
+              id={customLabelId}
               className="block text-sm font-medium text-foreground"
-              htmlFor={fields.notificationEmailAddresses.id}
             >
               その他の通知先（スタッフ以外）
-            </label>
-            <Input
-              {...getInputProps(fields.notificationEmailAddresses, {
-                type: "text",
-              })}
-              placeholder="info@example.com, manager@example.com"
+            </span>
+            <EmailChips
+              name="notificationEmailAddresses"
+              value={customTokens}
+              onChange={setCustomTokens}
               disabled={isPending}
+              placeholder="info@example.com を入力して Enter"
+              labelledBy={customLabelId}
+              describedBy={customHelpId}
             />
-            <p className="text-xs text-muted-foreground">
-              スタッフ以外に通知したいアドレスをカンマ区切りで指定（共有メールや外部担当者など）。
+            <p id={customHelpId} className="text-xs text-muted-foreground">
+              スタッフ以外に通知したいアドレス（共有メール・外部担当者など）。入力して
+              Enter／カンマで追加、× で削除できます。
             </p>
             {fields.notificationEmailAddresses.errors &&
               fields.notificationEmailAddresses.errors.length > 0 && (
@@ -258,6 +255,12 @@ export function EmailSection({ settings, staff }: EmailSectionProps) {
                 </p>
               )}
           </div>
+
+          {noRecipients && (
+            <p className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
+              通知先が未設定です。このままだと予約・お問い合わせ等の管理者通知は誰にも届きません。
+            </p>
+          )}
 
           <fieldset className="rounded-lg border p-4 space-y-3">
             <legend className="px-1 text-sm font-medium">送信設定</legend>
