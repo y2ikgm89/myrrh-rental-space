@@ -99,7 +99,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
 
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
   const initialRegularHolidays = settings.regularHolidays ?? [];
-  const initialSpecialHolidays: string[] = [];
 
   /**
    * 定休日設定を営業時間に反映
@@ -122,10 +121,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   const [businessHours, setBusinessHours] = useState<BusinessHours>(
     businessHoursWithHolidays,
   );
-  const [specialHolidays, setSpecialHolidays] = useState<string[]>(
-    initialSpecialHolidays,
-  );
-  const [newHolidayDate, setNewHolidayDate] = useState("");
   const [holidayNotice, setHolidayNotice] = useState(
     settings.holidayNotice || "",
   );
@@ -328,21 +323,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
     });
   };
 
-  const handleAddHoliday = () => {
-    if (!newHolidayDate) return;
-    if (specialHolidays.includes(newHolidayDate)) {
-      setNewHolidayDate("");
-      return;
-    }
-    const updated = [...specialHolidays, newHolidayDate].sort();
-    setSpecialHolidays(updated);
-    setNewHolidayDate("");
-  };
-
-  const handleRemoveHoliday = (dateToRemove: string) => {
-    setSpecialHolidays((prev) => prev.filter((date) => date !== dateToRemove));
-  };
-
   const handleSave = () => {
     // 保存前に最終バリデーション
     const errors = validateSlots(businessHours);
@@ -363,7 +343,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           monthlyClosures: monthlyClosures.length > 0 ? monthlyClosures : [],
         },
         regularHolidays: regularHolidays.length > 0 ? regularHolidays : null,
-        specialHolidays: specialHolidays.length > 0 ? specialHolidays : null,
         holidayNotice: holidayNotice || null,
       });
 
@@ -639,52 +618,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
               ))}
             </ul>
           )}
-        </div>
-
-        {/* 特別休業日 */}
-        <div className="space-y-3">
-          <Label>特別休業日</Label>
-          <div className="flex gap-2">
-            <Input
-              type="date"
-              value={newHolidayDate}
-              onChange={(e) => setNewHolidayDate(e.target.value)}
-              disabled={isPending}
-              className="w-48"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleAddHoliday}
-              disabled={isPending || !newHolidayDate}
-            >
-              <IconPlus className="h-4 w-4" />
-            </Button>
-          </div>
-          {specialHolidays.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {specialHolidays.map((date) => (
-                <div
-                  key={date}
-                  className="flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-sm"
-                >
-                  <span>{date}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveHoliday(date)}
-                    disabled={isPending}
-                    className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
-                  >
-                    <IconX className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            年末年始・お盆・祝日などを登録できます。
-          </p>
         </div>
 
         {/* 休業日のお知らせ */}
