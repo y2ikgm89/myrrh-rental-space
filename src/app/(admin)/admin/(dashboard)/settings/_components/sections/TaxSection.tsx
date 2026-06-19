@@ -33,10 +33,7 @@ import {
 } from "@/admin/components/ui";
 import { updateTaxSettings, type TaxSettings } from "@/admin/actions/settings";
 import { taxFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
-import {
-  TaxDisplayMode,
-  TaxInputMode,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 
 interface TaxSectionProps {
   settings: TaxSettings;
@@ -113,11 +110,8 @@ export function TaxSection({ settings }: TaxSectionProps) {
       taxReducedRate: String(settings.reducedRate),
       taxDisplayModeAdmin: settings.displayModeAdmin,
       taxDisplayModePublic: settings.displayModePublic,
-      taxInputMode: settings.inputMode,
     },
   });
-
-  const inputMode = useInputControl(fields.taxInputMode);
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -199,56 +193,6 @@ export function TaxSection({ settings }: TaxSectionProps) {
                   </p>
                 )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>価格入力モード</CardTitle>
-          <CardDescription>
-            管理画面での価格入力方法を設定します
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <label
-              className="block text-sm font-medium text-foreground"
-              htmlFor={fields.taxInputMode.id}
-            >
-              価格の入力方法
-            </label>
-            <Select
-              value={inputMode.value ?? ""}
-              onValueChange={(v) => inputMode.change(v)}
-              disabled={isPending}
-            >
-              <SelectTrigger
-                id={fields.taxInputMode.id}
-                className="w-full sm:w-[300px]"
-                onBlur={inputMode.blur}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={TaxInputMode.tax_excluded}>
-                  税抜き価格で入力
-                </SelectItem>
-                <SelectItem value={TaxInputMode.tax_included}>
-                  税込み価格で入力
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <input
-              type="hidden"
-              name={fields.taxInputMode.name}
-              value={inputMode.value ?? ""}
-            />
-            <p className="text-xs text-muted-foreground">
-              {inputMode.value === TaxInputMode.tax_excluded
-                ? "入力した価格は税抜き価格として保存され、表示時に税込み価格が計算されます"
-                : "入力した価格は税込み価格として扱われ、内部で税抜き価格に換算して保存されます"}
-            </p>
           </div>
         </CardContent>
       </Card>

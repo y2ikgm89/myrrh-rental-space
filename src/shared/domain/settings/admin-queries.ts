@@ -5,7 +5,6 @@ import {
   CalendarSyncMethod,
   DiscountCombinationMode,
   TaxDisplayMode,
-  TaxInputMode,
 } from "@generated/prisma/enums";
 import type {
   DiscountSettingsData,
@@ -106,7 +105,6 @@ function toSettingsData(
     taxReducedRate: settings.taxReducedRate,
     taxDisplayModeAdmin: settings.taxDisplayModeAdmin,
     taxDisplayModePublic: settings.taxDisplayModePublic,
-    taxInputMode: settings.taxInputMode,
   });
 }
 
@@ -357,7 +355,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
       taxReducedRate: true,
       taxDisplayModeAdmin: true,
       taxDisplayModePublic: true,
-      taxInputMode: true,
     },
   });
 
@@ -370,10 +367,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
     reducedRate: settings.taxReducedRate,
     displayModeAdmin: parseTaxDisplayMode(settings.taxDisplayModeAdmin),
     displayModePublic: parseTaxDisplayMode(settings.taxDisplayModePublic),
-    inputMode:
-      settings.taxInputMode === TaxInputMode.tax_included
-        ? TaxInputMode.tax_included
-        : TaxInputMode.tax_excluded,
   };
 }
 

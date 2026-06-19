@@ -11,7 +11,7 @@ import {
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
-import { TaxDisplayMode, TaxInputMode } from "@generated/prisma/enums";
+import { TaxDisplayMode } from "@generated/prisma/enums";
 import { isValidTaxDisplayMode } from "@/shared/lib/validations/enums/guards";
 
 function parseTaxDisplayMode(value: string): TaxDisplayMode {
@@ -31,7 +31,6 @@ export async function getPublicTaxSettings(): Promise<TaxSettings> {
           taxReducedRate: true,
           taxDisplayModeAdmin: true,
           taxDisplayModePublic: true,
-          taxInputMode: true,
         },
       }),
     fallback: null,
@@ -49,9 +48,5 @@ export async function getPublicTaxSettings(): Promise<TaxSettings> {
     reducedRate: plain.taxReducedRate,
     displayModeAdmin: parseTaxDisplayMode(plain.taxDisplayModeAdmin),
     displayModePublic: parseTaxDisplayMode(plain.taxDisplayModePublic),
-    inputMode:
-      plain.taxInputMode === TaxInputMode.tax_included
-        ? TaxInputMode.tax_included
-        : TaxInputMode.tax_excluded,
   };
 }

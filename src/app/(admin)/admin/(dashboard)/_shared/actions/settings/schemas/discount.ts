@@ -7,10 +7,7 @@
  */
 
 import { z } from "zod";
-import {
-  TaxDisplayMode,
-  TaxInputMode,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Tax Schemas
@@ -23,7 +20,6 @@ export const taxSettingsSchema = z.object({
   taxReducedRate: z.coerce.number().min(0).max(100),
   taxDisplayModeAdmin: taxDisplayModeSchema,
   taxDisplayModePublic: taxDisplayModeSchema,
-  taxInputMode: z.enum(TaxInputMode),
 });
 
 export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>;

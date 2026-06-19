@@ -5,7 +5,6 @@
 import {
   TaxRateType,
   TaxDisplayMode,
-  TaxInputMode,
 } from "@/shared/lib/validations/enums/prisma-types";
 import type { TaxSettings } from "./types";
 
@@ -17,7 +16,6 @@ export const DEFAULT_TAX_SETTINGS: TaxSettings = {
   reducedRate: 8,
   displayModeAdmin: TaxDisplayMode.both,
   displayModePublic: TaxDisplayMode.tax_included,
-  inputMode: TaxInputMode.tax_excluded,
 };
 
 /**

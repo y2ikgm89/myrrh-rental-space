@@ -14,7 +14,6 @@ import { z } from "zod";
 import {
   DiscountCombinationMode,
   TaxDisplayMode,
-  TaxInputMode,
 } from "@generated/prisma/enums";
 
 // =============================================================================
@@ -41,7 +40,6 @@ const taxSettingsSchema = z.object({
   taxReducedRate: z.coerce.number().min(0).max(100),
   taxDisplayModeAdmin: taxDisplayModeSchema,
   taxDisplayModePublic: taxDisplayModeSchema,
-  taxInputMode: z.enum(TaxInputMode),
 });
 
 // =============================================================================
@@ -65,7 +63,6 @@ const VALID_TAX_SETTINGS_INPUT = {
   taxReducedRate: 8,
   taxDisplayModeAdmin: TaxDisplayMode.tax_excluded,
   taxDisplayModePublic: TaxDisplayMode.tax_included,
-  taxInputMode: TaxInputMode.tax_excluded,
 };
 
 // =============================================================================
@@ -423,40 +420,6 @@ describe("Settings Discount Admin Action Integration", () => {
         const result = taxSettingsSchema.safeParse({
           ...VALID_TAX_SETTINGS_INPUT,
           taxDisplayModeAdmin: "invalid",
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("taxInputMode", () => {
-      test("tax_excludedは許可", () => {
-        const result = taxSettingsSchema.safeParse({
-          ...VALID_TAX_SETTINGS_INPUT,
-          taxInputMode: "tax_excluded",
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("tax_includedは許可", () => {
-        const result = taxSettingsSchema.safeParse({
-          ...VALID_TAX_SETTINGS_INPUT,
-          taxInputMode: "tax_included",
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("bothはエラー（taxInputModeはtax_excluded/tax_includedのみ）", () => {
-        const result = taxSettingsSchema.safeParse({
-          ...VALID_TAX_SETTINGS_INPUT,
-          taxInputMode: "both",
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("無効な値はエラー", () => {
-        const result = taxSettingsSchema.safeParse({
-          ...VALID_TAX_SETTINGS_INPUT,
-          taxInputMode: "auto",
         });
         expect(result.success).toBe(false);
       });
