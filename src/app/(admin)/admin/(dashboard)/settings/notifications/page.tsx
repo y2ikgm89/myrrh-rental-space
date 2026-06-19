@@ -11,7 +11,10 @@
 
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { getSettings } from "@/admin/queries/settings";
+import {
+  getSettings,
+  getNotificationStaffCandidates,
+} from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import { EmailSection, NotificationSection } from "../_components/sections";
@@ -19,7 +22,10 @@ import type { ReactElement } from "react";
 
 async function NotificationsSettingsContent(): Promise<ReactElement> {
   await connection();
-  const settings = await getSettings();
+  const [settings, staff] = await Promise.all([
+    getSettings(),
+    getNotificationStaffCandidates(),
+  ]);
 
   if (!settings) {
     return (
@@ -33,7 +39,7 @@ async function NotificationsSettingsContent(): Promise<ReactElement> {
     {
       value: "email",
       label: "メール",
-      content: <EmailSection settings={settings} />,
+      content: <EmailSection settings={settings} staff={staff} />,
     },
     {
       value: "notification",

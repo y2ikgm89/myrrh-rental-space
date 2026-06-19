@@ -105,11 +105,28 @@ describe("emailFormSchema（実体）", () => {
     ).toBe("error");
   });
 
-  test("送信元フィールドはスキーマに含まれる（sendAdminNotificationEmail は撤去済み）", () => {
+  test("送信元・通知先スタッフがスキーマに含まれる（sendAdminNotificationEmail は撤去済み）", () => {
     const keys = Object.keys(emailFormSchema.shape);
     expect(keys).toContain("senderEmail");
     expect(keys).toContain("senderName");
+    expect(keys).toContain("notificationStaffIds");
     expect(keys).not.toContain("sendAdminNotificationEmail");
+  });
+
+  test("notificationStaffIds は複数チェックを配列に集約する", () => {
+    const fd = new FormData();
+    fd.append("notificationStaffIds", "id-1");
+    fd.append("notificationStaffIds", "id-2");
+    const r = parseWithZod(fd, { schema: emailFormSchema });
+    expect(r.status).toBe("success");
+    if (r.status === "success" && r.value) {
+      expect(r.value.notificationStaffIds).toEqual(["id-1", "id-2"]);
+    }
+  });
+
+  test("notificationStaffIds 未指定でも success（任意）", () => {
+    const r = parseWithZod(new FormData(), { schema: emailFormSchema });
+    expect(r.status).toBe("success");
   });
 });
 

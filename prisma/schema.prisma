@@ -1191,13 +1191,15 @@ model Settings {
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
   taxInputMode         TaxInputMode   @default(tax_excluded)
 
-  // Notification Settings（管理者通知のイベント別トグル。宛先は notificationEmailAddresses）
+  // Notification Settings（管理者通知のイベント別トグル）
   notifyNewReservation       Boolean @default(true)
   notifyReservationChange    Boolean @default(true)
   notifyReservationCancel    Boolean @default(true)
   notifyNewInquiry           Boolean @default(true)
   notifyEventRegistration    Boolean @default(true)
   notifyEventCancellation    Boolean @default(true)
+  // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール(カンマ区切り)
+  notificationStaffIds       Json?
   notificationEmailAddresses String?
 
   // Other Settings

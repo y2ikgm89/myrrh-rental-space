@@ -41,3 +41,11 @@ export type UserStats = {
   users: number;
   recentUsers: number;
 };
+
+/** 通知先ピッカー用のスタッフ候補（管理ロールのユーザー最小情報）。 */
+export type NotificationStaffCandidate = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+};

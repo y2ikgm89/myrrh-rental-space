@@ -32,8 +32,15 @@ import { emailFormSchema } from "@/admin/actions/settings/schemas/form-schemas-e
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 
+type StaffOption = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 interface EmailSectionProps {
   settings: Serialized<SettingsData>;
+  staff: StaffOption[];
 }
 
 type EmailSwitchProps = {
@@ -64,7 +71,7 @@ function EmailSwitch({ field, label, disabled }: EmailSwitchProps) {
   );
 }
 
-export function EmailSection({ settings }: EmailSectionProps) {
+export function EmailSection({ settings, staff }: EmailSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateEmailSettings,
@@ -84,6 +91,7 @@ export function EmailSection({ settings }: EmailSectionProps) {
       replyToEmail: settings.replyToEmail ?? "",
       sendReservationConfirmationEmail:
         settings.sendReservationConfirmationEmail ? "on" : "",
+      notificationStaffIds: settings.notificationStaffIds,
       notificationEmailAddresses: settings.notificationEmailAddresses ?? "",
     },
   });
@@ -188,21 +196,57 @@ export function EmailSection({ settings }: EmailSectionProps) {
           </div>
 
           <div className="space-y-1.5">
+            <span className="block text-sm font-medium text-foreground">
+              通知を受け取るスタッフ
+            </span>
+            {staff.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                スタッフが登録されていません（スタッフ管理から追加できます）。
+              </p>
+            ) : (
+              <div className="space-y-2 rounded-lg border p-3">
+                {staff.map((s) => (
+                  <label
+                    key={s.id}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      name="notificationStaffIds"
+                      value={s.id}
+                      defaultChecked={settings.notificationStaffIds.includes(
+                        s.id,
+                      )}
+                      disabled={isPending}
+                      className="size-4 rounded border-input"
+                    />
+                    <span className="font-medium">{s.name}</span>
+                    <span className="text-muted-foreground">{s.email}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              チェックしたスタッフの現在のメールアドレスに通知が届きます（メール変更・退職に自動で追従）。
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
             <label
               className="block text-sm font-medium text-foreground"
               htmlFor={fields.notificationEmailAddresses.id}
             >
-              通知先メールアドレス
+              その他の通知先（スタッフ以外）
             </label>
             <Input
               {...getInputProps(fields.notificationEmailAddresses, {
                 type: "text",
               })}
-              placeholder="admin1@example.com, admin2@example.com"
+              placeholder="info@example.com, manager@example.com"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              カンマ区切りで複数指定可能。予約・お問い合わせの通知を受け取るアドレス
+              スタッフ以外に通知したいアドレスをカンマ区切りで指定（共有メールや外部担当者など）。
             </p>
             {fields.notificationEmailAddresses.errors &&
               fields.notificationEmailAddresses.errors.length > 0 && (

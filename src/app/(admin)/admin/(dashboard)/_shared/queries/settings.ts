@@ -2,6 +2,8 @@ import "server-only";
 
 import * as adminQueries from "@/shared/domain/settings/admin-queries";
 import * as announcementBar from "@/shared/domain/settings/announcement-bar";
+import { getNotificationStaffCandidates as getNotificationStaffCandidatesQuery } from "@/shared/domain/users/queries";
+import type { NotificationStaffCandidate } from "@/shared/domain/users/types";
 import type {
   BusinessHours,
   BusinessHoursDay,
@@ -34,6 +36,14 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
 export async function getSettings(): Promise<Serialized<SettingsData>> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getAdminSettings();
+}
+
+/** 通知先ピッカー用のスタッフ候補（メール・通知設定で利用）。 */
+export async function getNotificationStaffCandidates(): Promise<
+  NotificationStaffCandidate[]
+> {
+  await requireAdminPermission("settings", "read");
+  return getNotificationStaffCandidatesQuery();
 }
 
 export async function getDiscountSettings(): Promise<DiscountSettingsData> {

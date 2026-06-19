@@ -27,6 +27,8 @@ export const emailFormSchema = z.object({
     ])
     .optional(),
   sendReservationConfirmationEmail: switchBoolean(),
+  // 通知先スタッフ（User.id 配列）。チェックボックス群を conform が配列に集約する。
+  notificationStaffIds: z.array(z.string()).optional(),
   notificationEmailAddresses: optionalText(500),
 });
 

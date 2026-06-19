@@ -4,11 +4,39 @@ import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import type {
+  NotificationStaffCandidate,
   UserData,
   UserListParams,
   UserListResult,
   UserStats,
 } from "@/shared/domain/users/types";
+
+/** 通知先に指定できる管理ロール（公開ユーザー・顧客を除く）。 */
+const NOTIFICATION_STAFF_ROLES = [
+  Role.SUPER_ADMIN,
+  Role.ADMIN,
+  Role.EDITOR,
+  Role.VIEWER,
+];
+
+/**
+ * 通知先ピッカー用に、管理ロールのスタッフ一覧を取得する（ページングなし）。
+ */
+export async function getNotificationStaffCandidates(): Promise<
+  NotificationStaffCandidate[]
+> {
+  const users = await prisma.user.findMany({
+    where: { role: { in: NOTIFICATION_STAFF_ROLES } },
+    select: { id: true, name: true, email: true, role: true },
+    orderBy: { name: "asc" },
+  });
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+  }));
+}
 
 function toUserData(user: {
   id: string;
