@@ -4,7 +4,11 @@ import { prisma } from "@/shared/db/prisma";
 import { CustomerType, ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-customer";
-import { ensureDateNotBlocked } from "@/shared/domain/reservations/availability";
+import {
+  ensureDateNotBlocked,
+  getReservationRuleSettings,
+} from "@/shared/domain/reservations/availability";
+import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
 import {
   CUSTOMER_SELECT,
   buildDateTime,
@@ -55,6 +59,16 @@ export async function createPublicReservationCommand(
 
   if (!space) {
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+  }
+
+  // 最小/最大予約時間（設定値）をサーバー側で強制する
+  const rules = await getReservationRuleSettings();
+  const durationError = checkReservationDuration(
+    (endDateTime.getTime() - startDateTime.getTime()) / 60000,
+    rules,
+  );
+  if (durationError) {
+    throw new DomainError(durationError, "VALIDATION");
   }
 
   await ensureDateNotBlocked(input.spaceId, space.locationId, input.date);

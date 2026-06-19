@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
 import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
+import { deriveSlotIntervalMinutes } from "@/shared/lib/reservation/time-slots-utils";
 import { CalendarPicker } from "./calendar-picker";
 import { ClosureNotice } from "./closure-notice";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -21,7 +22,8 @@ function calcMaxDuration(
     if (!slots[i]?.available) break;
     consecutive++;
   }
-  return consecutive * 30;
+  // スロット刻みは設定の予約枠時間単位。slots 配列から導出して server と揃える
+  return consecutive * deriveSlotIntervalMinutes(slots);
 }
 
 interface DateTimeSectionProps {
@@ -32,6 +34,10 @@ interface DateTimeSectionProps {
   readonly isFetchingSlots: boolean;
   readonly onRetrySlots: () => void;
   readonly spaceCapacity: number;
+  /** 最小予約時間（分・設定値） */
+  readonly minDuration: number;
+  /** 最大予約時間（分・設定値）。空き枠由来の上限と小さい方が実効上限になる */
+  readonly maxDuration: number;
   readonly selectedDate: Date | undefined;
   readonly selectedStartTime: string | null;
   readonly selectedDuration: number | null;
@@ -50,6 +56,8 @@ export function DateTimeSection({
   isFetchingSlots,
   onRetrySlots,
   spaceCapacity,
+  minDuration,
+  maxDuration,
   selectedDate,
   selectedStartTime,
   selectedDuration,
@@ -59,9 +67,11 @@ export function DateTimeSection({
   onDurationChange,
   onGuestsChange,
 }: DateTimeSectionProps): ReactElement {
-  const maxDuration = selectedStartTime
+  const availabilityMax = selectedStartTime
     ? calcMaxDuration(slots, selectedStartTime)
     : 0;
+  // 空き枠由来の上限と設定の最大予約時間の小さい方を実効上限にする
+  const effectiveMaxDuration = Math.min(availabilityMax, maxDuration);
 
   return (
     <div role="group" aria-label="日時選択" className="space-y-10">
@@ -104,7 +114,8 @@ export function DateTimeSection({
           </p>
           <DurationPills
             selectedMinutes={selectedDuration}
-            maxMinutes={maxDuration}
+            minMinutes={minDuration}
+            maxMinutes={effectiveMaxDuration}
             onSelect={onDurationChange}
           />
         </section>

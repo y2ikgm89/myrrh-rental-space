@@ -5,6 +5,8 @@ import {
   parseTime,
   generateFallbackSlots,
   generateSlotsFromBusinessHours,
+  deriveSlotIntervalMinutes,
+  checkReservationDuration,
 } from "@/shared/lib/reservation/time-slots-utils";
 
 // =============================================================================
@@ -391,5 +393,91 @@ describe("generateSlotsFromBusinessHours", () => {
       expect(slots[0]?.time).toBe("10:00");
       expect(slots[slots.length - 1]?.time).toBe("12:30");
     });
+  });
+
+  describe("予約枠の刻み（slotIntervalMinutes）設定の反映", () => {
+    test("60分刻みを渡すと 9:00-17:00 は 8 スロット（09:00〜16:00）になる", () => {
+      const slots = generateSlotsFromBusinessHours(
+        BUSINESS_HOURS_SINGLE_SLOT,
+        MONDAY_DATE,
+        60,
+      );
+      expect(slots).toHaveLength(8);
+      expect(slots[0]?.time).toBe("09:00");
+      expect(slots[slots.length - 1]?.time).toBe("16:00");
+    });
+
+    test("引数省略時は従来どおり 30 分刻み（16 スロット）", () => {
+      const slots = generateSlotsFromBusinessHours(
+        BUSINESS_HOURS_SINGLE_SLOT,
+        MONDAY_DATE,
+      );
+      expect(slots).toHaveLength(16);
+    });
+
+    test("generateFallbackSlots も刻みを受け取る（60分→12スロット）", () => {
+      expect(generateFallbackSlots(60)).toHaveLength(12);
+      expect(generateFallbackSlots()).toHaveLength(24);
+    });
+  });
+});
+
+// =============================================================================
+// deriveSlotIntervalMinutes
+// =============================================================================
+
+describe("deriveSlotIntervalMinutes", () => {
+  test("先頭2スロットが30分差なら30を返す", () => {
+    expect(
+      deriveSlotIntervalMinutes([
+        { time: "09:00", available: true },
+        { time: "09:30", available: true },
+      ]),
+    ).toBe(30);
+  });
+
+  test("先頭2スロットが60分差なら60を返す", () => {
+    expect(
+      deriveSlotIntervalMinutes([
+        { time: "09:00", available: true },
+        { time: "10:00", available: true },
+      ]),
+    ).toBe(60);
+  });
+
+  test("スロットが2件未満なら既定30を返す", () => {
+    expect(
+      deriveSlotIntervalMinutes([{ time: "09:00", available: true }]),
+    ).toBe(30);
+    expect(deriveSlotIntervalMinutes([])).toBe(30);
+  });
+});
+
+// =============================================================================
+// checkReservationDuration
+// =============================================================================
+
+describe("checkReservationDuration", () => {
+  const RULES = { minReservationDuration: 60, maxReservationDuration: 480 };
+
+  test("最小未満はエラーメッセージを返す", () => {
+    expect(checkReservationDuration(30, RULES)).toBe(
+      "予約時間は最短 60 分です",
+    );
+  });
+
+  test("最大超過はエラーメッセージを返す", () => {
+    expect(checkReservationDuration(600, RULES)).toBe(
+      "予約時間は最長 480 分です",
+    );
+  });
+
+  test("範囲内は null を返す", () => {
+    expect(checkReservationDuration(120, RULES)).toBeNull();
+  });
+
+  test("境界値（最小・最大ちょうど）は null を返す", () => {
+    expect(checkReservationDuration(60, RULES)).toBeNull();
+    expect(checkReservationDuration(480, RULES)).toBeNull();
   });
 });

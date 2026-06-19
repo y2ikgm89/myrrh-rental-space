@@ -147,6 +147,31 @@ export async function getBusinessHoursSettingsQuery(): Promise<BusinessHours | n
   return parseBusinessHours(settings.businessHours);
 }
 
+/**
+ * 予約ルール設定（予約枠の刻み・最小/最大予約時間）を取得する。
+ * 列は NOT NULL ＋ DB default のため通常は値が入るが、行欠損時は schema 既定にフォールバック。
+ */
+export async function getReservationRuleSettings(): Promise<{
+  defaultTimeSlot: number;
+  minReservationDuration: number;
+  maxReservationDuration: number;
+}> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      defaultTimeSlot: true,
+      minReservationDuration: true,
+      maxReservationDuration: true,
+    },
+  });
+
+  return {
+    defaultTimeSlot: settings?.defaultTimeSlot ?? 60,
+    minReservationDuration: settings?.minReservationDuration ?? 60,
+    maxReservationDuration: settings?.maxReservationDuration ?? 480,
+  };
+}
+
 export async function checkReservationOverlapQuery(
   params: OverlapCheckParams,
   tx?: PrismaTransactionClient,

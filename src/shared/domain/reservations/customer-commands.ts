@@ -7,6 +7,8 @@ import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";
 import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
+import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
+import { getReservationRuleSettings } from "@/shared/domain/reservations/availability";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
@@ -107,6 +109,16 @@ export async function updateCustomerReservation(
 ): Promise<CommandResult<UpdatePayload>> {
   const startDateTime = new Date(`${input.date}T${input.startTime}:00`);
   const endDateTime = new Date(`${input.date}T${input.endTime}:00`);
+
+  // 最小/最大予約時間（設定値）をサーバー側で強制する（新規予約と同一ルール）
+  const rules = await getReservationRuleSettings();
+  const durationError = checkReservationDuration(
+    (endDateTime.getTime() - startDateTime.getTime()) / 60000,
+    rules,
+  );
+  if (durationError) {
+    return { success: false, error: durationError };
+  }
 
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({

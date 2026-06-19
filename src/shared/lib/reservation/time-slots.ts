@@ -12,6 +12,7 @@ import "server-only";
 
 import {
   getBusinessHoursSettingsQuery,
+  getReservationRuleSettings,
   getReservationsForDateQuery,
   getSpaceLocationIdQuery,
   isDateBlocked,
@@ -53,11 +54,16 @@ export async function getAvailableTimeSlots(
   spaceId: string,
   date: string,
 ): Promise<TimeSlot[]> {
-  // 営業時間設定を取得
+  // 営業時間設定・予約ルール（予約枠の刻み）を取得
   const businessHours = await getBusinessHoursSettings();
+  const { defaultTimeSlot } = await getReservationRuleSettings();
 
-  // 営業時間に基づいて時間枠を生成
-  const slots = generateSlotsFromBusinessHours(businessHours, date);
+  // 営業時間に基づいて時間枠を生成（刻みは設定の予約枠時間単位）
+  const slots = generateSlotsFromBusinessHours(
+    businessHours,
+    date,
+    defaultTimeSlot,
+  );
 
   // 定休日（営業時間設定）の場合は空配列をそのまま返す
   if (slots.length === 0) {
