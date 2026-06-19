@@ -36,12 +36,9 @@ export async function updateEmailSettings(
       action: "update",
       execute: async () => {
         await updateEmailSettingsCommand({
-          senderEmail: emptyToNull(data.senderEmail),
-          senderName: emptyToNull(data.senderName),
           replyToEmail: emptyToNull(data.replyToEmail),
           sendReservationConfirmationEmail:
             data.sendReservationConfirmationEmail,
-          sendAdminNotificationEmail: data.sendAdminNotificationEmail,
           notificationEmailAddresses: emptyToNull(
             data.notificationEmailAddresses,
           ),

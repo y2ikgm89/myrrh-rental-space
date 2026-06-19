@@ -19,6 +19,7 @@ import {
   logError,
   normalizeError,
 } from "../errors/server";
+import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
 import { getFromAddress, getResendClient, isEmailEnabled } from "./client";
 import { CreateEmailOptionsSchema } from "./schemas";
 import type { EmailResult } from "./types";
@@ -74,12 +75,18 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     maxRetries = DEFAULT_MAX_RETRIES,
   } = params;
 
+  // 返信先(reply-to)は管理画面設定（settings.replyToEmail）を全送信に注入する。
+  // 個別の payload が replyTo を明示していればそちらを優先する。
+  const { replyToEmail } = await getEmailDeliverySettings();
+  const resolvedReplyTo = payload.replyTo ?? replyToEmail ?? undefined;
+
   // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
   // `Omit<U, "from">` + spread does not round-trip back to the original union under
   // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
   const fullPayload = CreateEmailOptionsSchema.parse({
     ...payload,
     from: getFromAddress(),
+    ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
   });
 
   const errorContext = {

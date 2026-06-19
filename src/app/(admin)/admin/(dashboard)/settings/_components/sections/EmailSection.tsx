@@ -79,14 +79,9 @@ export function EmailSection({ settings }: EmailSectionProps) {
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
-      senderEmail: settings.senderEmail ?? "",
-      senderName: settings.senderName ?? "",
       replyToEmail: settings.replyToEmail ?? "",
       sendReservationConfirmationEmail:
         settings.sendReservationConfirmationEmail ? "on" : "",
-      sendAdminNotificationEmail: settings.sendAdminNotificationEmail
-        ? "on"
-        : "",
       notificationEmailAddresses: settings.notificationEmailAddresses ?? "",
     },
   });
@@ -108,73 +103,38 @@ export function EmailSection({ settings }: EmailSectionProps) {
           <CardDescription>メール送信に関する設定を行います</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.senderEmail.id}
-              >
-                送信元メールアドレス
-              </label>
-              <Input
-                {...getInputProps(fields.senderEmail, { type: "email" })}
-                placeholder="noreply@example.com"
-                disabled={isPending}
-              />
-              {fields.senderEmail.errors &&
-                fields.senderEmail.errors.length > 0 && (
-                  <p
-                    id={fields.senderEmail.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.senderEmail.errors.join(", ")}
-                  </p>
-                )}
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.senderName.id}
-              >
-                送信者名
-              </label>
-              <Input
-                {...getInputProps(fields.senderName, { type: "text" })}
-                placeholder="Myrrh Rental Space"
-                disabled={isPending}
-              />
-              {fields.senderName.errors &&
-                fields.senderName.errors.length > 0 && (
-                  <p
-                    id={fields.senderName.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.senderName.errors.join(", ")}
-                  </p>
-                )}
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.replyToEmail.id}
-              >
-                返信先メールアドレス
-              </label>
-              <Input
-                {...getInputProps(fields.replyToEmail, { type: "email" })}
-                placeholder="info@example.com"
-                disabled={isPending}
-              />
-              {fields.replyToEmail.errors &&
-                fields.replyToEmail.errors.length > 0 && (
-                  <p
-                    id={fields.replyToEmail.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.replyToEmail.errors.join(", ")}
-                  </p>
-                )}
-            </div>
+          <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+            送信元アドレス（From）は環境変数{" "}
+            <code className="font-mono">EMAIL_FROM</code> /{" "}
+            <code className="font-mono">EMAIL_FROM_NAME</code>{" "}
+            で管理します。Resend
+            で検証済みのドメインを設定してください（未検証のドメインは全送信が停止します）。
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              className="block text-sm font-medium text-foreground"
+              htmlFor={fields.replyToEmail.id}
+            >
+              返信先メールアドレス
+            </label>
+            <Input
+              {...getInputProps(fields.replyToEmail, { type: "email" })}
+              placeholder="info@example.com"
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              受信者が「返信」したときの宛先。すべての送信メールに適用されます。
+            </p>
+            {fields.replyToEmail.errors &&
+              fields.replyToEmail.errors.length > 0 && (
+                <p
+                  id={fields.replyToEmail.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.replyToEmail.errors.join(", ")}
+                </p>
+              )}
           </div>
 
           <div className="space-y-1.5">
@@ -205,20 +165,22 @@ export function EmailSection({ settings }: EmailSectionProps) {
               )}
           </div>
 
-          <fieldset className="rounded-lg border p-4 space-y-4">
+          <fieldset className="rounded-lg border p-4 space-y-3">
             <legend className="px-1 text-sm font-medium">送信設定</legend>
-            <div className="flex flex-wrap gap-6">
-              <EmailSwitch
-                field={fields.sendReservationConfirmationEmail}
-                label="予約確認メールを送信"
-                disabled={isPending}
-              />
-              <EmailSwitch
-                field={fields.sendAdminNotificationEmail}
-                label="管理者通知メールを送信"
-                disabled={isPending}
-              />
-            </div>
+            <EmailSwitch
+              field={fields.sendReservationConfirmationEmail}
+              label="予約確認メールを予約者へ送信"
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              新規予約時の確認メールのみを制御します。キャンセル・ステータス変更の
+              メールは予約者への重要連絡として、この設定に関わらず常に送信されます。
+            </p>
+            <p className="text-xs text-muted-foreground">
+              管理者への通知メール（新規予約・変更・キャンセル・お問い合わせ・イベント申込）の
+              ON/OFF
+              は「通知」タブ、宛先は上の「通知先メールアドレス」で設定します。
+            </p>
           </fieldset>
 
           {formErrors && formErrors.length > 0 && (

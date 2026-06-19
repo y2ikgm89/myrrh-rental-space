@@ -1124,13 +1124,10 @@ model Settings {
   // Settings 側の旧 accessInfo / parkingInfo は 2026-05-01 に廃止。
 
   // Email Settings
-  senderEmail                       String?
-  senderName                        String?
+  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) が SSoT。Resend は検証済み
+  // ドメイン必須のため運用者が画面から自由設定できると誤入力で全送信が停止する。
+  // よって senderEmail / senderName は廃止し、返信先のみ運用者が設定可能にする。
   replyToEmail                      String?
-  reservationConfirmationTemplateId String?
-  reservationCancelledTemplateId    String?
-  reservationUpdatedTemplateId      String?
-  adminNotificationTemplateId       String?
 
   // SEO Settings
   defaultMetaDescription String?
@@ -1177,7 +1174,6 @@ model Settings {
   minReservationDuration           Int     @default(60)
   maxReservationDuration           Int     @default(480)
   sendReservationConfirmationEmail Boolean @default(true)
-  sendAdminNotificationEmail       Boolean @default(true)
 
   // Discount Settings (割引設定) - Enum化
   durationDiscountEnabled Boolean                @default(false)
@@ -1193,11 +1189,13 @@ model Settings {
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
   taxInputMode         TaxInputMode   @default(tax_excluded)
 
-  // Notification Settings
+  // Notification Settings（管理者通知のイベント別トグル。宛先は notificationEmailAddresses）
   notifyNewReservation       Boolean @default(true)
   notifyReservationChange    Boolean @default(true)
   notifyReservationCancel    Boolean @default(true)
   notifyNewInquiry           Boolean @default(true)
+  notifyEventRegistration    Boolean @default(true)
+  notifyEventCancellation    Boolean @default(true)
   notificationEmailAddresses String?
 
   // Other Settings

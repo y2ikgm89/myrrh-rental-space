@@ -17,6 +17,7 @@ import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-not
 import { prisma } from "@/shared/db/prisma";
 import {
   getCalendarEmailSettings,
+  getEmailDeliverySettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
@@ -252,6 +253,13 @@ export async function sendEventAdminNotification(
   data: EventAdminNotificationData,
   type: "registration" | "cancellation",
 ): Promise<EmailResult> {
+  const toggles = await getEmailDeliverySettings();
+  const enabledByType =
+    type === "registration"
+      ? toggles.notifyEventRegistration
+      : toggles.notifyEventCancellation;
+  if (!enabledByType) return { success: true };
+
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { success: true };
 

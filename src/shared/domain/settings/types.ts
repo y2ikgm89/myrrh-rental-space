@@ -53,8 +53,6 @@ export type SettingsData = {
   businessHours: BusinessHours | null;
   regularHolidays: string[] | null;
   holidayNotice: string | null;
-  senderEmail: string | null;
-  senderName: string | null;
   replyToEmail: string | null;
   defaultMetaDescription: string | null;
   defaultMetaKeywords: string | null;
@@ -73,11 +71,12 @@ export type SettingsData = {
   cancellationDeadlineHours: number;
   modificationDeadlineHours: number;
   sendReservationConfirmationEmail: boolean;
-  sendAdminNotificationEmail: boolean;
   notifyNewReservation: boolean;
   notifyReservationChange: boolean;
   notifyReservationCancel: boolean;
   notifyNewInquiry: boolean;
+  notifyEventRegistration: boolean;
+  notifyEventCancellation: boolean;
   notificationEmailAddresses: string | null;
   taxStandardRate: number;
   taxReducedRate: number;

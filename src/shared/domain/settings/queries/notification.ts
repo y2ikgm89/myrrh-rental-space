@@ -38,6 +38,71 @@ export async function getNotificationEmailAddresses(): Promise<string[]> {
     .filter((email) => email.length > 0);
 }
 
+export type EmailDeliverySettings = {
+  /** 予約確認メール（予約者宛）を送るか */
+  sendReservationConfirmationEmail: boolean;
+  /** 新規予約の管理者通知を送るか */
+  notifyNewReservation: boolean;
+  /** 予約変更の管理者通知を送るか */
+  notifyReservationChange: boolean;
+  /** 予約キャンセルの管理者通知を送るか */
+  notifyReservationCancel: boolean;
+  /** 新規お問い合わせの管理者通知を送るか */
+  notifyNewInquiry: boolean;
+  /** 新規イベント申込の管理者通知を送るか */
+  notifyEventRegistration: boolean;
+  /** イベント申込キャンセルの管理者通知を送るか */
+  notifyEventCancellation: boolean;
+  /** 全送信メールに付与する返信先（未設定なら null） */
+  replyToEmail: string | null;
+};
+
+/**
+ * メール配信のトグル設定をまとめて取得する。
+ *
+ * 各送信関数（`reservation-emails` / `contact-emails`）と `send.ts`（返信先注入）が
+ * 参照する。`STATIC_SETTINGS` ライフで `NOTIFICATION_SETTINGS` タグにより無効化される。
+ * カラム欠損時は schema の `@default(true)` と同じく送信側に倒す。
+ */
+export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
+
+  const settings = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          sendReservationConfirmationEmail: true,
+          notifyNewReservation: true,
+          notifyReservationChange: true,
+          notifyReservationCancel: true,
+          notifyNewInquiry: true,
+          notifyEventRegistration: true,
+          notifyEventCancellation: true,
+          replyToEmail: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getEmailDeliverySettings",
+  });
+
+  return {
+    sendReservationConfirmationEmail:
+      settings?.sendReservationConfirmationEmail ?? true,
+    notifyNewReservation: settings?.notifyNewReservation ?? true,
+    notifyReservationChange: settings?.notifyReservationChange ?? true,
+    notifyReservationCancel: settings?.notifyReservationCancel ?? true,
+    notifyNewInquiry: settings?.notifyNewInquiry ?? true,
+    notifyEventRegistration: settings?.notifyEventRegistration ?? true,
+    notifyEventCancellation: settings?.notifyEventCancellation ?? true,
+    replyToEmail: settings?.replyToEmail ?? null,
+  };
+}
+
 export async function getCalendarEmailSettings(): Promise<{
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;
