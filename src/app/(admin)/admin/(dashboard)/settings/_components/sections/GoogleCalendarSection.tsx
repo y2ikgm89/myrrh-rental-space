@@ -12,13 +12,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { cn } from "@/shared/lib/cn";
 import { toast } from "sonner";
-import {
-  getFormProps,
-  getInputProps,
-  getTextareaProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
@@ -291,8 +285,14 @@ export function GoogleCalendarSection({
                 </div>
               ) : (
                 <Input
-                  {...getInputProps(fields.googleCalendarId, { type: "text" })}
+                  id={fields.googleCalendarId.id}
+                  name={fields.googleCalendarId.name}
+                  value={calendarId}
+                  onChange={(e) => calendarIdControl.change(e.target.value)}
+                  onBlur={calendarIdControl.blur}
+                  type="text"
                   placeholder="example@group.calendar.google.com"
+                  className="font-mono"
                   disabled={isPending}
                 />
               )}
@@ -335,7 +335,11 @@ export function GoogleCalendarSection({
                 </div>
               ) : (
                 <Textarea
-                  {...getTextareaProps(fields.serviceAccountJson)}
+                  id={fields.serviceAccountJson.id}
+                  name={fields.serviceAccountJson.name}
+                  value={serviceAccountJson}
+                  onChange={(e) => serviceAccountControl.change(e.target.value)}
+                  onBlur={serviceAccountControl.blur}
                   placeholder='{"type": "service_account", ...}'
                   rows={6}
                   className="font-mono text-xs"
