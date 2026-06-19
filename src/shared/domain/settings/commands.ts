@@ -84,7 +84,6 @@ export type ContactInfoInput = {
 export type BusinessHoursSettingsInput = {
   businessHours: BusinessHours;
   regularHolidays: string[] | null;
-  specialHolidays: string[] | null;
   holidayNotice: string | null;
 };
 
@@ -263,7 +262,6 @@ export async function updateBusinessHoursSettings(
   const updateData = {
     businessHours: data.businessHours,
     regularHolidays: data.regularHolidays ?? Prisma.JsonNull,
-    specialHolidays: data.specialHolidays ?? Prisma.JsonNull,
     holidayNotice: data.holidayNotice,
   };
 

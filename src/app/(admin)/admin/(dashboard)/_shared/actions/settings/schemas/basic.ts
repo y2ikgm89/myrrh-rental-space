@@ -68,7 +68,7 @@ export const businessHoursSettingsSchema = z
   .object({
     businessHours: businessHoursWeekSchema,
     regularHolidays: uniqueDateArraySchema("定休日"),
-    specialHolidays: uniqueDateArraySchema("特別休業日"),
+    // 特別休業日は拠点（Location）ごとに管理（2026-04-27 に settings から移管済み）
     // HTMLタグを禁止してXSS対策
     holidayNotice: z
       .string()
