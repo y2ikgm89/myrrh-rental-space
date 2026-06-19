@@ -109,13 +109,14 @@ export function parseTime(time: string): { hour: number; minute: number } {
 export function generateSlotsFromBusinessHours(
   businessHours: BusinessHours | null,
   date: string,
+  slotIntervalMinutes: number = SLOT_INTERVAL_MINUTES,
 ): TimeSlot[] {
   const targetDate = new Date(`${date}T00:00:00`);
   const weekday = getWeekdayKey(targetDate);
 
   // 営業時間設定がない場合はフォールバック
   if (!businessHours) {
-    return generateFallbackSlots();
+    return generateFallbackSlots(slotIntervalMinutes);
   }
 
   // 毎月の繰り返し定休（第N曜日）に該当する場合は空配列
@@ -139,8 +140,8 @@ export function generateSlotsFromBusinessHours(
     const startMinutes = start.hour * 60 + start.minute;
     const endMinutes = end.hour * 60 + end.minute;
 
-    // 開始時刻から終了時刻まで30分刻みでスロットを生成
-    for (let m = startMinutes; m < endMinutes; m += SLOT_INTERVAL_MINUTES) {
+    // 開始時刻から終了時刻まで slotIntervalMinutes 刻みでスロットを生成
+    for (let m = startMinutes; m < endMinutes; m += slotIntervalMinutes) {
       const hour = Math.floor(m / 60);
       const minute = m % 60;
       slots.push({
@@ -161,12 +162,14 @@ export function generateSlotsFromBusinessHours(
 /**
  * フォールバック用スロット生成（営業時間設定がない場合）
  */
-export function generateFallbackSlots(): TimeSlot[] {
+export function generateFallbackSlots(
+  slotIntervalMinutes: number = SLOT_INTERVAL_MINUTES,
+): TimeSlot[] {
   const slots: TimeSlot[] = [];
   const startMinutes = DEFAULT_BUSINESS_HOURS.start * 60;
   const endMinutes = DEFAULT_BUSINESS_HOURS.end * 60;
 
-  for (let m = startMinutes; m < endMinutes; m += SLOT_INTERVAL_MINUTES) {
+  for (let m = startMinutes; m < endMinutes; m += slotIntervalMinutes) {
     const hour = Math.floor(m / 60);
     const minute = m % 60;
     slots.push({
@@ -184,4 +187,37 @@ export function addMinutesToTime(time: string, minutes: number): string {
   const newH = Math.floor(totalMinutes / 60);
   const newM = totalMinutes % 60;
   return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+}
+
+/**
+ * スロット配列から予約枠の刻み幅（分）を推定する。
+ * スロットは設定の defaultTimeSlot 間隔で生成されるため、先頭 2 件の差分が刻み幅。
+ * 2 件未満なら既定（30 分）を返す。client 側の連続枠計算で server と刻みを揃えるための SSoT。
+ */
+export function deriveSlotIntervalMinutes(slots: readonly TimeSlot[]): number {
+  const first = slots[0];
+  const second = slots[1];
+  if (!first || !second) return SLOT_INTERVAL_MINUTES;
+  const a = parseTime(first.time);
+  const b = parseTime(second.time);
+  const diff = b.hour * 60 + b.minute - (a.hour * 60 + a.minute);
+  return diff > 0 ? diff : SLOT_INTERVAL_MINUTES;
+}
+
+/**
+ * 予約時間（分）が最小/最大予約時間の範囲内かを検証する純粋関数。
+ * 範囲外ならエラーメッセージ、範囲内なら null を返す。
+ * throw する create 経路と Result を返す update 経路の双方から共用する SSoT。
+ */
+export function checkReservationDuration(
+  durationMinutes: number,
+  rules: { minReservationDuration: number; maxReservationDuration: number },
+): string | null {
+  if (durationMinutes < rules.minReservationDuration) {
+    return `予約時間は最短 ${rules.minReservationDuration} 分です`;
+  }
+  if (durationMinutes > rules.maxReservationDuration) {
+    return `予約時間は最長 ${rules.maxReservationDuration} 分です`;
+  }
+  return null;
 }

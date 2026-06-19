@@ -109,6 +109,8 @@ interface ReservationFormProps {
   readonly locations: readonly LocationWithSpaces[];
   readonly businessHours: BusinessHours | null;
   readonly turnstileSiteKey: string | null;
+  readonly minReservationDuration: number;
+  readonly maxReservationDuration: number;
   readonly prefillData?: PrefillData | undefined;
   readonly initialSpaceId?: string | undefined;
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
@@ -118,6 +120,8 @@ export function ReservationForm({
   locations,
   businessHours,
   turnstileSiteKey,
+  minReservationDuration,
+  maxReservationDuration,
   prefillData,
   initialSpaceId,
   requiredTerms = [],
@@ -529,6 +533,8 @@ export function ReservationForm({
           isFetchingSlots={isFetchingSlots}
           onRetrySlots={handleRetrySlots}
           spaceCapacity={currentSpace?.capacity ?? 1}
+          minDuration={minReservationDuration}
+          maxDuration={maxReservationDuration}
           selectedDate={state.date}
           selectedStartTime={state.startTime}
           selectedDuration={state.duration}

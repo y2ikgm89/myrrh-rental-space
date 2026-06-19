@@ -16,15 +16,20 @@ function formatDuration(minutes: number): string {
 interface DurationPillsProps {
   readonly selectedMinutes: number | null;
   readonly onSelect: (minutes: number) => void;
+  readonly minMinutes: number;
   readonly maxMinutes: number;
 }
 
 export function DurationPills({
   selectedMinutes,
   onSelect,
+  minMinutes,
   maxMinutes,
 }: DurationPillsProps): ReactElement {
-  const availableOptions = DURATION_OPTIONS.filter((d) => d <= maxMinutes);
+  // 設定の最小予約時間〜（空き枠と最大予約時間の小さい方）の範囲に収まる選択肢のみ提示
+  const availableOptions = DURATION_OPTIONS.filter(
+    (d) => d >= minMinutes && d <= maxMinutes,
+  );
 
   if (availableOptions.length === 0) {
     return (

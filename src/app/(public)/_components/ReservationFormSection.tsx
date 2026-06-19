@@ -25,7 +25,10 @@ import {
 } from "@/public/components/sections/section-style-helpers";
 
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";
-import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
+import {
+  getBusinessHoursSettingsQuery,
+  getReservationRuleSettings,
+} from "@/shared/domain/reservations/availability";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -54,14 +57,21 @@ export async function ReservationFormSection({
   style,
   searchParamSpaceId,
 }: ReservationFormSectionProps): Promise<ReactElement> {
-  const [locations, businessHours, turnstileSiteKey, user, requiredTerms] =
-    await Promise.all([
-      getPublishedLocationsWithSpaces(),
-      getBusinessHoursSettingsQuery(),
-      getTurnstileSiteKey(),
-      getCurrentCustomerUser(),
-      getRequiredTermsAtReservation(),
-    ]);
+  const [
+    locations,
+    businessHours,
+    turnstileSiteKey,
+    user,
+    requiredTerms,
+    reservationRules,
+  ] = await Promise.all([
+    getPublishedLocationsWithSpaces(),
+    getBusinessHoursSettingsQuery(),
+    getTurnstileSiteKey(),
+    getCurrentCustomerUser(),
+    getRequiredTermsAtReservation(),
+    getReservationRuleSettings(),
+  ]);
 
   if (config.requireLogin && !user) {
     redirect("/login?redirect=/reservation");
@@ -129,6 +139,8 @@ export async function ReservationFormSection({
           locations={locations}
           businessHours={businessHours}
           turnstileSiteKey={turnstileSiteKey}
+          minReservationDuration={reservationRules.minReservationDuration}
+          maxReservationDuration={reservationRules.maxReservationDuration}
           prefillData={prefillData}
           initialSpaceId={initialSpaceId}
           requiredTerms={requiredTerms}
