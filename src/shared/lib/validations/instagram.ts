@@ -7,25 +7,6 @@
  */
 
 import { z } from "zod";
-import { InstagramFeedLayout } from "@/shared/lib/validations/enums/prisma-types";
-
-// =============================================================================
-// Settings Schema
-// =============================================================================
-
-/**
- * Instagram フィード表示設定のバリデーションスキーマ
- */
-export const instagramSettingsSchema = z.object({
-  feedEnabled: z.boolean(),
-  feedLayout: z.enum(InstagramFeedLayout),
-  feedColumns: z.number().int().min(2).max(6),
-  feedMaxItems: z.number().int().min(1).max(24),
-  showCaption: z.boolean(),
-  showViewAll: z.boolean(),
-});
-
-export type InstagramSettingsInput = z.infer<typeof instagramSettingsSchema>;
 
 // =============================================================================
 // Post URL Schema

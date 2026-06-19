@@ -118,7 +118,6 @@ const ALL_ENUMS = {
     minimal: "minimal",
     striped: "striped",
   },
-  InstagramFeedLayout: { grid: "grid", masonry: "masonry", slider: "slider" },
   InstagramMediaType: {
     IMAGE: "IMAGE",
     VIDEO: "VIDEO",

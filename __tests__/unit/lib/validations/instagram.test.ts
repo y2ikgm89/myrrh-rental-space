@@ -6,7 +6,6 @@
 
 import { describe, test, expect } from "bun:test";
 import {
-  instagramSettingsSchema,
   instagramPostUrlSchema,
   instagramTokenSchema,
   instagramPostIdSchema,
@@ -14,129 +13,6 @@ import {
   isValidInstagramToken,
   extractInstagramShortcode,
 } from "@/shared/lib/validations/instagram";
-
-describe("instagramSettingsSchema", () => {
-  describe("正常系", () => {
-    test("有効な設定は検証を通過", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "grid",
-        feedColumns: 4,
-        feedMaxItems: 8,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("全てのレイアウトタイプは許可", () => {
-      const layouts = ["grid", "masonry", "slider"] as const;
-      for (const layout of layouts) {
-        const result = instagramSettingsSchema.safeParse({
-          feedEnabled: true,
-          feedLayout: layout,
-          feedColumns: 3,
-          feedMaxItems: 6,
-          showCaption: true,
-          showViewAll: false,
-        });
-        expect(result.success).toBe(true);
-      }
-    });
-  });
-
-  describe("feedColumns", () => {
-    test("2未満はエラー", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "grid",
-        feedColumns: 1,
-        feedMaxItems: 8,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("6超過はエラー", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "grid",
-        feedColumns: 7,
-        feedMaxItems: 8,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("2〜6は許可", () => {
-      for (const columns of [2, 3, 4, 5, 6]) {
-        const result = instagramSettingsSchema.safeParse({
-          feedEnabled: true,
-          feedLayout: "grid",
-          feedColumns: columns,
-          feedMaxItems: 8,
-          showCaption: false,
-          showViewAll: true,
-        });
-        expect(result.success).toBe(true);
-      }
-    });
-  });
-
-  describe("feedMaxItems", () => {
-    test("1未満はエラー", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "grid",
-        feedColumns: 4,
-        feedMaxItems: 0,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("24超過はエラー", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "grid",
-        feedColumns: 4,
-        feedMaxItems: 25,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("1〜24は許可", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "grid",
-        feedColumns: 4,
-        feedMaxItems: 24,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("feedLayout", () => {
-    test("無効なレイアウト値はエラー", () => {
-      const result = instagramSettingsSchema.safeParse({
-        feedEnabled: true,
-        feedLayout: "invalid",
-        feedColumns: 4,
-        feedMaxItems: 8,
-        showCaption: false,
-        showViewAll: true,
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-});
 
 describe("instagramPostUrlSchema", () => {
   describe("正常系", () => {

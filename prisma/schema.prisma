@@ -174,12 +174,6 @@ enum AnnouncementBarDesignStyle {
   striped
 }
 
-enum InstagramFeedLayout {
-  grid
-  masonry
-  slider
-}
-
 enum InstagramMediaType {
   IMAGE
   VIDEO
@@ -1343,12 +1337,6 @@ model Settings {
   instagramUserId          String?
   instagramUsername         String?
   instagramAccountType     String?
-  instagramFeedEnabled     Boolean            @default(false)
-  instagramFeedLayout      InstagramFeedLayout @default(grid)
-  instagramFeedColumns     Int                @default(4)
-  instagramFeedMaxItems    Int                @default(8)
-  instagramShowCaption     Boolean            @default(false)
-  instagramShowViewAll     Boolean            @default(true)
 
   // ==============================================
   // robots.txt設定

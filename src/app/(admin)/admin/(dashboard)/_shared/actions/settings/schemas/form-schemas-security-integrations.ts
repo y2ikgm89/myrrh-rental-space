@@ -8,7 +8,6 @@ import { z } from "zod";
 import {
   CalendarSyncMethod,
   DiscountCombinationMode,
-  InstagramFeedLayout,
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SUPPORTED_CURRENCY_VALUES,
@@ -181,18 +180,3 @@ export const twoWaySyncFormSchema = z.object({
 });
 
 export type TwoWaySyncFormInput = z.infer<typeof twoWaySyncFormSchema>;
-
-// =============================================================================
-// Integrations > Instagram フィード設定
-// =============================================================================
-
-export const instagramFeedFormSchema = z.object({
-  feedEnabled: switchBoolean(),
-  feedLayout: z.enum(InstagramFeedLayout),
-  feedColumns: z.number().int().min(2).max(6),
-  feedMaxItems: z.number().int().min(1).max(24),
-  showCaption: switchBoolean(),
-  showViewAll: switchBoolean(),
-});
-
-export type InstagramFeedFormInput = z.infer<typeof instagramFeedFormSchema>;

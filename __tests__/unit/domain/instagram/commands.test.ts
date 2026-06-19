@@ -63,11 +63,6 @@ mock.module("@generated/prisma/enums", () => ({
     VIDEO: "VIDEO",
     CAROUSEL_ALBUM: "CAROUSEL_ALBUM",
   },
-  InstagramFeedLayout: {
-    grid: "grid",
-    masonry: "masonry",
-    highlight: "highlight",
-  },
 }));
 
 // encrypt モック
@@ -108,7 +103,6 @@ mock.module("@/shared/lib/validations/instagram", () => ({
 }));
 
 import {
-  updateInstagramSettings,
   saveInstagramToken,
   connectInstagramOAuthAccount,
   refreshInstagramAccessToken,
@@ -116,53 +110,7 @@ import {
 } from "@/shared/domain/instagram/commands";
 
 // テスト用定数
-const VALID_SETTINGS_INPUT = {
-  feedEnabled: true,
-  feedLayout: "grid" as const,
-  feedColumns: 3,
-  feedMaxItems: 9,
-  showCaption: false,
-  showViewAll: true,
-};
-
 const VALID_TOKEN = "IGQV_valid_access_token_that_is_long_enough_for_testing";
-
-describe("updateInstagramSettings", () => {
-  beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue(undefined);
-  });
-
-  describe("正常系", () => {
-    test("有効な設定で upsert が呼ばれる", async () => {
-      await expect(
-        updateInstagramSettings(VALID_SETTINGS_INPUT),
-      ).resolves.toBeUndefined();
-
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-    });
-
-    test("void を返す", async () => {
-      const result = await updateInstagramSettings(VALID_SETTINGS_INPUT);
-      expect(result).toBeUndefined();
-    });
-
-    test("feedEnabled: false でも更新できる", async () => {
-      await updateInstagramSettings({
-        ...VALID_SETTINGS_INPUT,
-        feedEnabled: false,
-      });
-
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: "singleton" },
-          create: expect.objectContaining({ instagramFeedEnabled: false }),
-          update: expect.objectContaining({ instagramFeedEnabled: false }),
-        }),
-      );
-    });
-  });
-});
 
 describe("saveInstagramToken", () => {
   beforeEach(() => {

@@ -3,7 +3,6 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { InstagramMediaType } from "@generated/prisma/enums";
 import { encrypt } from "@/shared/lib/crypto";
-import type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
 import { DomainError } from "@/shared/domain/domain-error";
 import { testInstagramConnection } from "@/shared/lib/instagram";
 import type { InstagramMediaItem } from "@/shared/lib/instagram";
@@ -15,31 +14,6 @@ function getMetadataString(
 ): string | undefined {
   const value = metadata?.[key];
   return typeof value === "string" ? value : undefined;
-}
-
-export async function updateInstagramSettings(
-  input: InstagramSettingsInput,
-): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      instagramFeedEnabled: input.feedEnabled,
-      instagramFeedLayout: input.feedLayout,
-      instagramFeedColumns: input.feedColumns,
-      instagramFeedMaxItems: input.feedMaxItems,
-      instagramShowCaption: input.showCaption,
-      instagramShowViewAll: input.showViewAll,
-    },
-    update: {
-      instagramFeedEnabled: input.feedEnabled,
-      instagramFeedLayout: input.feedLayout,
-      instagramFeedColumns: input.feedColumns,
-      instagramFeedMaxItems: input.feedMaxItems,
-      instagramShowCaption: input.showCaption,
-      instagramShowViewAll: input.showViewAll,
-    },
-  });
 }
 
 export async function saveInstagramToken(
