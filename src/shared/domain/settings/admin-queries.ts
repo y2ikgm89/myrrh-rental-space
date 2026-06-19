@@ -80,6 +80,8 @@ function toSettingsData(
     ...settings,
     businessHours: parseBusinessHours(settings.businessHours),
     regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
+    notificationStaffIds:
+      parseStringArrayOrNull(settings.notificationStaffIds) ?? [],
     featureModules: parseFeatureModules(settings.featureModules),
     stripeSecretKeyMasked: options.stripeSecretKeyMasked,
     stripeWebhookSecretMasked: options.stripeWebhookSecretMasked,

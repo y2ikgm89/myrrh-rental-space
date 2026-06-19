@@ -93,6 +93,7 @@ export type EmailSettingsInput = {
   senderName: string | null;
   replyToEmail: string | null;
   sendReservationConfirmationEmail: boolean;
+  notificationStaffIds: string[];
   notificationEmailAddresses: string | null;
 };
 
@@ -281,6 +282,10 @@ export async function updateEmailSettings(
     senderEmail: normalizeNullableString(data.senderEmail),
     senderName: normalizeNullableString(data.senderName),
     replyToEmail: normalizeNullableString(data.replyToEmail),
+    notificationStaffIds: asPrismaInputJsonValue(
+      data.notificationStaffIds,
+      "通知先スタッフの形式が不正です",
+    ),
   };
 
   await prisma.settings.upsert({

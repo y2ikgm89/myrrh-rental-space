@@ -8,18 +8,25 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import { parseStringArrayOrNull } from "@/shared/lib/json-validators";
+import { mergeRecipients } from "@/shared/lib/email/recipients";
 
+/**
+ * 通知先（スタッフ＋カスタム）を解決した実メールアドレス一覧を返す。
+ *
+ * - スタッフは `User.id` で保存し、ここで毎回 findMany して**現在の**メールに解決する
+ *   （メール変更・退職に自動追従。意図的に非キャッシュ＝stale を作らない）。
+ * - カスタムは `notificationEmailAddresses`（カンマ区切り）。
+ * - 重複は大文字小文字無視で除去（スタッフ優先・順序保持）。
+ */
 export async function getNotificationEmailAddresses(): Promise<string[]> {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
-
   const settings = await safeFetch({
     fetch: () =>
       prisma.settings.findUnique({
         where: { id: "singleton" },
         select: {
           notificationEmailAddresses: true,
+          notificationStaffIds: true,
         },
       }),
     fallback: null,
@@ -28,14 +35,29 @@ export async function getNotificationEmailAddresses(): Promise<string[]> {
     operationName: "getNotificationEmailAddresses",
   });
 
-  if (!settings?.notificationEmailAddresses) {
-    return [];
-  }
-
-  return settings.notificationEmailAddresses
+  const customEmails = (settings?.notificationEmailAddresses ?? "")
     .split(",")
     .map((email) => email.trim())
     .filter((email) => email.length > 0);
+
+  const staffIds = parseStringArrayOrNull(settings?.notificationStaffIds) ?? [];
+  let staffEmails: string[] = [];
+  if (staffIds.length > 0) {
+    const users = await safeFetch({
+      fetch: () =>
+        prisma.user.findMany({
+          where: { id: { in: staffIds } },
+          select: { email: true },
+        }),
+      fallback: [] as { email: string }[],
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getNotificationEmailAddresses.staff",
+    });
+    staffEmails = users.map((u) => u.email);
+  }
+
+  return mergeRecipients(staffEmails, customEmails);
 }
 
 export type EmailDeliverySettings = {
