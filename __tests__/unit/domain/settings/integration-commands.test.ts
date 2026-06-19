@@ -119,7 +119,6 @@ describe("updateStripeSettings", () => {
     test("キーなしで基本設定を保存できる", async () => {
       await updateStripeSettings({
         stripeEnabled: true,
-        stripeTestMode: false,
         stripeCurrency: "jpy",
       });
 
@@ -134,7 +133,6 @@ describe("updateStripeSettings", () => {
     test("stripeSecretKey を指定すると暗号化して保存される", async () => {
       await updateStripeSettings({
         stripeEnabled: true,
-        stripeTestMode: true,
         stripeSecretKey: "sk_test_abc123",
         stripeCurrency: "jpy",
       });
@@ -160,7 +158,6 @@ describe("updateStripeSettings", () => {
     test("stripeWebhookSecret を指定すると暗号化して保存される", async () => {
       await updateStripeSettings({
         stripeEnabled: true,
-        stripeTestMode: false,
         stripeWebhookSecret: "whsec_test123",
         stripeCurrency: "jpy",
       });
@@ -185,7 +182,6 @@ describe("updateStripeSettings", () => {
     test("stripeEnabled が false でも正常に保存できる", async () => {
       await updateStripeSettings({
         stripeEnabled: false,
-        stripeTestMode: false,
         stripeCurrency: "usd",
       });
 
@@ -204,7 +200,6 @@ describe("updateStripeSettings", () => {
       // クリアは clearStripeKeys 経由で行う（[[lockable-integration-key-fields]]）。
       await updateStripeSettings({
         stripeEnabled: true,
-        stripeTestMode: false,
         stripePublishableKey: null,
         stripeCurrency: "jpy",
       });
@@ -221,7 +216,6 @@ describe("updateStripeSettings", () => {
     test("戻り値が void（undefined）", async () => {
       const result = await updateStripeSettings({
         stripeEnabled: true,
-        stripeTestMode: false,
         stripeCurrency: "jpy",
       });
       expect(result).toBeUndefined();
@@ -237,7 +231,6 @@ describe("updateStripeSettings", () => {
       await expect(
         updateStripeSettings({
           stripeEnabled: true,
-          stripeTestMode: false,
           stripeSecretKey: "sk_test_abc",
           stripeCurrency: "jpy",
         }),
@@ -255,7 +248,6 @@ describe("updateStripeSettings", () => {
       await expect(
         updateStripeSettings({
           stripeEnabled: true,
-          stripeTestMode: false,
           stripeWebhookSecret: "whsec_test",
           stripeCurrency: "jpy",
         }),

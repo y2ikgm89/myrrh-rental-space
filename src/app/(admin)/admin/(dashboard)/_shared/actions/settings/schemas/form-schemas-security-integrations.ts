@@ -83,7 +83,6 @@ export type DiscountFormInput = z.infer<typeof discountFormSchema>;
 export const stripeFormSchema = z
   .object({
     stripeEnabled: switchBoolean(),
-    stripeTestMode: switchBoolean(),
     stripePublishableKey: z
       .string()
       .max(200, { error: "公開可能キーは200文字以内で入力してください" })

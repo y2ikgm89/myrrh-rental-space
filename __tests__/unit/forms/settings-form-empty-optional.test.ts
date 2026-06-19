@@ -312,12 +312,11 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
-  test("Stripe: 有効/テスト Switch OFF + キー空欄でも success", () => {
+  test("Stripe: 有効 Switch OFF + キー空欄でも success", () => {
     expectSuccess(
       stripeFormSchema,
       form({
         stripeEnabled: "",
-        stripeTestMode: "",
         stripePublishableKey: "",
         stripeSecretKey: "",
         stripeWebhookSecret: "",

@@ -37,7 +37,6 @@ const MESSAGES: ValidationMessages = {
 export const stripeSettingsSchema = z
   .object({
     stripeEnabled: z.boolean(),
-    stripeTestMode: z.boolean(),
     stripePublishableKey: z
       .string()
       .max(200, { error: MESSAGES.maxLength("公開可能キー") })

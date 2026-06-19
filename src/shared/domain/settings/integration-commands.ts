@@ -15,7 +15,6 @@ import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/g
 
 export type StripeSettingsInput = {
   stripeEnabled: boolean;
-  stripeTestMode: boolean;
   stripePublishableKey?: string | null | undefined;
   stripeSecretKey?: string | null | undefined;
   stripeWebhookSecret?: string | null | undefined;
@@ -74,7 +73,6 @@ export async function updateStripeSettings(
 ): Promise<void> {
   const updateData: Record<string, unknown> = {
     stripeEnabled: data.stripeEnabled,
-    stripeTestMode: data.stripeTestMode,
     stripeCurrency: data.stripeCurrency,
   };
 
