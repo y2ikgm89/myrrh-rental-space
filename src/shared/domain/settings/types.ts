@@ -8,7 +8,6 @@ import type {
   HeaderScrollBehavior,
   LayoutWidth,
   TaxDisplayMode,
-  TaxInputMode,
 } from "@generated/prisma/enums";
 import type {
   BusinessHours,
@@ -85,7 +84,6 @@ export type SettingsData = {
   taxReducedRate: number;
   taxDisplayModeAdmin: TaxDisplayMode;
   taxDisplayModePublic: TaxDisplayMode;
-  taxInputMode: TaxInputMode;
   timezone: string | null;
   language: string | null;
   maintenanceMode: boolean;

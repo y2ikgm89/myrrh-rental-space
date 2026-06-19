@@ -1183,7 +1183,6 @@ model Settings {
   taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
   taxDisplayModeAdmin  TaxDisplayMode @default(both)
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
-  taxInputMode         TaxInputMode   @default(tax_excluded)
 
   // Notification Settings（管理者通知のイベント別トグル）
   notifyNewReservation       Boolean @default(true)

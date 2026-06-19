@@ -7,7 +7,6 @@ import type {
   DiscountType,
   DurationDiscountOverride,
   TaxDisplayMode,
-  TaxInputMode,
 } from "@/shared/lib/validations/enums/prisma-types";
 
 // Coupon型の簡易定義（Prismaのモデルに依存しない）
@@ -84,7 +83,6 @@ export type TaxSettings = {
   reducedRate: number; // 軽減税率（%）
   displayModeAdmin: TaxDisplayMode; // 管理画面の表示モード
   displayModePublic: TaxDisplayMode; // 公開ページの表示モード
-  inputMode: TaxInputMode; // 入力モード（税抜き/税込み）
 };
 
 /**

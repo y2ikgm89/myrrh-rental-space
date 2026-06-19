@@ -119,7 +119,6 @@ const TAX_SETTINGS_INPUT = {
   taxReducedRate: 8,
   taxDisplayModeAdmin: "tax_excluded" as const,
   taxDisplayModePublic: "tax_included" as const,
-  taxInputMode: "tax_excluded" as const,
 };
 
 const HEADER_SETTINGS_INPUT = {

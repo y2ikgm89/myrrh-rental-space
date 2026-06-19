@@ -1594,7 +1594,6 @@ describe("DEFAULT_TAX_SETTINGS", () => {
     expect(DEFAULT_TAX_SETTINGS.reducedRate).toBe(8);
     expect(DEFAULT_TAX_SETTINGS.displayModeAdmin).toBe("both");
     expect(DEFAULT_TAX_SETTINGS.displayModePublic).toBe("tax_included");
-    expect(DEFAULT_TAX_SETTINGS.inputMode).toBe("tax_excluded");
   });
 });
 

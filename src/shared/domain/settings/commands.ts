@@ -10,7 +10,6 @@ import type {
   HeaderScrollBehavior,
   LayoutWidth,
   TaxDisplayMode,
-  TaxInputMode,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
@@ -144,7 +143,6 @@ export type TaxSettingsInput = {
   taxReducedRate: number;
   taxDisplayModeAdmin: TaxDisplayMode;
   taxDisplayModePublic: TaxDisplayMode;
-  taxInputMode: TaxInputMode;
 };
 
 export type RobotsTxtSettingsInput = {

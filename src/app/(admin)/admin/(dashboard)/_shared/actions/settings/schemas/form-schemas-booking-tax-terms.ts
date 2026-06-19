@@ -2,10 +2,7 @@
  * 設定セクション用フォームスキーマ — 予約・税
  */
 import { z } from "zod";
-import {
-  TaxDisplayMode,
-  TaxInputMode,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Site > Payment > 消費税
@@ -16,7 +13,6 @@ export const taxFormSchema = z.object({
   taxReducedRate: z.number().min(0).max(100),
   taxDisplayModeAdmin: z.enum(TaxDisplayMode),
   taxDisplayModePublic: z.enum(TaxDisplayMode),
-  taxInputMode: z.enum(TaxInputMode),
 });
 
 export type TaxFormInput = z.infer<typeof taxFormSchema>;

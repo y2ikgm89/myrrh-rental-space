@@ -7,10 +7,7 @@ import {
   formatPrice,
 } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
-import {
-  TaxInputMode,
-  TaxRateType,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 公開ページ用の税設定対応料金フォーマットフック
@@ -25,7 +22,6 @@ export function useFormatPrice() {
     reducedRate: tax.reducedRate,
     displayModeAdmin: tax.displayMode,
     displayModePublic: tax.displayMode,
-    inputMode: TaxInputMode.tax_excluded,
   });
 
   /** 合計金額のフォーマット（税抜価格を渡す） */
