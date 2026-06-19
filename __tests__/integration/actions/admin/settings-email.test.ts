@@ -82,12 +82,34 @@ describe("emailFormSchema（実体）", () => {
     ).toBe("error");
   });
 
-  test("送信元(From)フィールドはスキーマに含まれない（env 専用に撤去済み）", () => {
-    expect(Object.keys(emailFormSchema.shape)).not.toContain("senderEmail");
-    expect(Object.keys(emailFormSchema.shape)).not.toContain("senderName");
-    expect(Object.keys(emailFormSchema.shape)).not.toContain(
-      "sendAdminNotificationEmail",
-    );
+  test("送信元メール: 有効は success / 不正は error / 100文字境界", () => {
+    expect(
+      parseWithZod(form({ senderEmail: "noreply@example.com" }), {
+        schema: emailFormSchema,
+      }).status,
+    ).toBe("success");
+    expect(
+      parseWithZod(form({ senderEmail: "not-an-email" }), {
+        schema: emailFormSchema,
+      }).status,
+    ).toBe("error");
+    const at100 = `${"a".repeat(88)}@example.com`; // 100
+    const at101 = `${"a".repeat(89)}@example.com`; // 101
+    expect(
+      parseWithZod(form({ senderEmail: at100 }), { schema: emailFormSchema })
+        .status,
+    ).toBe("success");
+    expect(
+      parseWithZod(form({ senderEmail: at101 }), { schema: emailFormSchema })
+        .status,
+    ).toBe("error");
+  });
+
+  test("送信元フィールドはスキーマに含まれる（sendAdminNotificationEmail は撤去済み）", () => {
+    const keys = Object.keys(emailFormSchema.shape);
+    expect(keys).toContain("senderEmail");
+    expect(keys).toContain("senderName");
+    expect(keys).not.toContain("sendAdminNotificationEmail");
   });
 });
 

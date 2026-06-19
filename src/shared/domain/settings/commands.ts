@@ -89,6 +89,8 @@ export type BusinessHoursSettingsInput = {
 };
 
 export type EmailSettingsInput = {
+  senderEmail: string | null;
+  senderName: string | null;
   replyToEmail: string | null;
   sendReservationConfirmationEmail: boolean;
   notificationEmailAddresses: string | null;
@@ -276,6 +278,8 @@ export async function updateEmailSettings(
 ): Promise<void> {
   const updateData = {
     ...data,
+    senderEmail: normalizeNullableString(data.senderEmail),
+    senderName: normalizeNullableString(data.senderName),
     replyToEmail: normalizeNullableString(data.replyToEmail),
   };
 

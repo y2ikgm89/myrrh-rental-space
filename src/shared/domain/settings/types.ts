@@ -53,6 +53,8 @@ export type SettingsData = {
   businessHours: BusinessHours | null;
   regularHolidays: string[] | null;
   holidayNotice: string | null;
+  senderEmail: string | null;
+  senderName: string | null;
   replyToEmail: string | null;
   defaultMetaDescription: string | null;
   defaultMetaKeywords: string | null;

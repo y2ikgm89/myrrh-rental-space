@@ -4,9 +4,6 @@ import { SITE_DEFAULTS } from "../constants";
 import { serverEnv } from "@/shared/lib/env/server";
 import { getDecryptedResendApiKey } from "@/shared/domain/settings/api-key-queries";
 
-export const EMAIL_FROM = serverEnv.EMAIL_FROM ?? "noreply@example.com";
-export const EMAIL_FROM_NAME = serverEnv.EMAIL_FROM_NAME ?? SITE_DEFAULTS.name;
-
 /**
  * 有効な Resend API キーを解決する（env 優先・無ければ管理画面で設定された DB キー）。
  *
@@ -47,8 +44,21 @@ export async function getResendClient(): Promise<Resend | null> {
 }
 
 /**
- * Get formatted from address
+ * 送信元アドレスを `表示名 <アドレス>` 形式で組み立てる。
+ *
+ * 解決順は env 優先・DB フォールバック（Stripe / Turnstile / Resend APIキーと同じ
+ * env-OR-DB パターン）:
+ *   アドレス: env EMAIL_FROM → DB senderEmail → "noreply@example.com"
+ *   表示名:   env EMAIL_FROM_NAME → DB senderName → SITE_DEFAULTS.name
+ *
+ * DB 値（管理画面のメール設定）は呼び出し側が `getEmailDeliverySettings()` から
+ * 取得して渡す（client 層から domain クエリへ往復させない）。
  */
-export function getFromAddress(): string {
-  return `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`;
+export function getFromAddress(
+  senderEmail: string | null,
+  senderName: string | null,
+): string {
+  const email = serverEnv.EMAIL_FROM ?? senderEmail ?? "noreply@example.com";
+  const name = serverEnv.EMAIL_FROM_NAME ?? senderName ?? SITE_DEFAULTS.name;
+  return `${name} <${email}>`;
 }
