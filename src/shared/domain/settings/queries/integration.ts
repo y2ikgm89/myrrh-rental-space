@@ -21,7 +21,6 @@ export async function getStripeSettings() {
         where: { id: "singleton" },
         select: {
           stripeEnabled: true,
-          stripeTestMode: true,
           stripePublishableKey: true,
           stripeSecretKey: true,
           stripeWebhookSecret: true,

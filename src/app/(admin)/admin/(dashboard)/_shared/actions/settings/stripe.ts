@@ -46,7 +46,6 @@ export async function updateStripeSettings(
       execute: async () => {
         await settingsCommands.updateStripeSettings({
           stripeEnabled: data.stripeEnabled,
-          stripeTestMode: data.stripeTestMode,
           stripePublishableKey: data.stripePublishableKey || null,
           stripeSecretKey: data.stripeSecretKey || null,
           stripeWebhookSecret: data.stripeWebhookSecret || null,

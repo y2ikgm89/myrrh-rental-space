@@ -1209,8 +1209,9 @@ model Settings {
   maintenanceMessage String? @db.Text
 
   // Stripe Payment Settings
+  // test/live モードは API キーの接頭辞（sk_test_ / sk_live_）が決定者。
+  // 別途トグルを持つと UI と実挙動が乖離するため列は持たない（2026-06-20 撤去）。
   stripeEnabled          Boolean   @default(false)
-  stripeTestMode         Boolean   @default(true)
   stripePublishableKey   String?
   stripeSecretKey        String?   @db.Text // 暗号化して保存
   stripeWebhookSecret    String?   @db.Text // 暗号化して保存

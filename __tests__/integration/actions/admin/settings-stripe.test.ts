@@ -75,7 +75,6 @@ const MESSAGES = {
 const stripeSettingsSchema = z
   .object({
     stripeEnabled: z.boolean(),
-    stripeTestMode: z.boolean(),
     stripePublishableKey: z
       .string()
       .max(200, { error: MESSAGES.maxLength("公開可能キー") })
@@ -133,7 +132,6 @@ const stripeConnectionTestSchema = z.object({
 
 const VALID_STRIPE_SETTINGS_INPUT = {
   stripeEnabled: true,
-  stripeTestMode: true,
   stripePublishableKey: "pk_test_51ABCDEFGHIJKLMNOP",
   stripeSecretKey: "sk_test_51ABCDEFGHIJKLMNOP",
   stripeWebhookSecret: "whsec_ABCDEFGHIJKLMNOP",
@@ -161,7 +159,6 @@ describe("Settings Stripe Admin Action Integration", () => {
       test("有効なライブモードデータはバリデーション通過", () => {
         const result = stripeSettingsSchema.safeParse({
           stripeEnabled: true,
-          stripeTestMode: false,
           stripePublishableKey: "pk_live_51ABCDEFGHIJKLMNOP",
           stripeSecretKey: "sk_live_51ABCDEFGHIJKLMNOP",
           stripeWebhookSecret: "whsec_ABCDEFGHIJKLMNOP",
@@ -173,7 +170,6 @@ describe("Settings Stripe Admin Action Integration", () => {
       test("キーなし（無効状態）でもOK", () => {
         const result = stripeSettingsSchema.safeParse({
           stripeEnabled: false,
-          stripeTestMode: true,
           stripePublishableKey: null,
           stripeSecretKey: null,
           stripeWebhookSecret: null,
@@ -185,7 +181,6 @@ describe("Settings Stripe Admin Action Integration", () => {
       test("キー省略でもOK（optional）", () => {
         const result = stripeSettingsSchema.safeParse({
           stripeEnabled: false,
-          stripeTestMode: true,
           stripeCurrency: "jpy",
         });
         expect(result.success).toBe(true);
@@ -194,7 +189,6 @@ describe("Settings Stripe Admin Action Integration", () => {
       test("stripeCurrencyデフォルトはjpy", () => {
         const result = stripeSettingsSchema.safeParse({
           stripeEnabled: false,
-          stripeTestMode: true,
         });
         expect(result.success).toBe(true);
         if (result.success) {
@@ -537,14 +531,6 @@ describe("Settings Stripe Admin Action Integration", () => {
       const result = stripeSettingsSchema.safeParse({
         ...VALID_STRIPE_SETTINGS_INPUT,
         stripeEnabled: "true",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("stripeTestMode に数値はエラー", () => {
-      const result = stripeSettingsSchema.safeParse({
-        ...VALID_STRIPE_SETTINGS_INPUT,
-        stripeTestMode: 1,
       });
       expect(result.success).toBe(false);
     });

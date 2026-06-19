@@ -75,7 +75,6 @@ describe("security-integration forms: ロック中保存の受理", () => {
       const r = parseWithZod(
         fd({
           stripeEnabled: "on",
-          stripeTestMode: "on",
           stripePublishableKey: "pk_test_abcdef",
           stripeSecretKey: "",
           stripeWebhookSecret: "",
@@ -86,11 +85,10 @@ describe("security-integration forms: ロック中保存の受理", () => {
       expect(r.status).toBe("success");
     });
 
-    test("本番モード（testMode OFF）でも保存できる", () => {
+    test("キーをすべて空（ロック）にしても保存できる", () => {
       const r = parseWithZod(
         fd({
           stripeEnabled: "on",
-          stripeTestMode: "",
           stripePublishableKey: "",
           stripeSecretKey: "",
           stripeWebhookSecret: "",
@@ -100,7 +98,6 @@ describe("security-integration forms: ロック中保存の受理", () => {
       );
       expect(r.status).toBe("success");
       if (r.status === "success") {
-        expect(r.value.stripeTestMode).toBe(false);
         expect(r.value.stripeEnabled).toBe(true);
       }
     });
@@ -109,7 +106,6 @@ describe("security-integration forms: ロック中保存の受理", () => {
       const r = parseWithZod(
         fd({
           stripeEnabled: "",
-          stripeTestMode: "on",
           stripePublishableKey: "invalid_key",
           stripeSecretKey: "",
           stripeWebhookSecret: "",

@@ -45,6 +45,7 @@ import type { Serialized } from "@/shared/lib/serialize";
 import {
   SUPPORTED_CURRENCIES,
   SUPPORTED_CURRENCY_VALUES,
+  isTestKey,
 } from "@/shared/lib/stripe-shared";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
@@ -86,7 +87,6 @@ export function StripeSection({ settings }: StripeSectionProps) {
     shouldRevalidate: "onInput",
     defaultValue: {
       stripeEnabled: settings.stripeEnabled ? "on" : "",
-      stripeTestMode: settings.stripeTestMode ? "on" : "",
       stripePublishableKey: settings.stripePublishableKey ?? "",
       stripeSecretKey: "",
       stripeWebhookSecret: "",
@@ -97,14 +97,19 @@ export function StripeSection({ settings }: StripeSectionProps) {
   });
 
   const enabledControl = useInputControl(fields.stripeEnabled);
-  const testModeControl = useInputControl(fields.stripeTestMode);
   const currencyControl = useInputControl(fields.stripeCurrency);
   const secretKeyControl = useInputControl(fields.stripeSecretKey);
 
   const enabled = enabledControl.value === "on";
-  const testMode = testModeControl.value === "on";
   const currency = currencyControl.value ?? "jpy";
   const secretKeyValue = secretKeyControl.value ?? "";
+
+  // test / live は保存済み公開キーの接頭辞から自動判定（DB トグルは持たない）
+  const savedMode: "test" | "live" | null = settings.stripePublishableKey
+    ? isTestKey(settings.stripePublishableKey)
+      ? "test"
+      : "live"
+    : null;
 
   // 保存成功時に input state をリセット（render-time sync で useEffect 不使用）
   const [previousLastResult, setPreviousLastResult] = useState(lastResult);
@@ -185,11 +190,6 @@ export function StripeSection({ settings }: StripeSectionProps) {
         name={fields.stripeEnabled.name}
         value={enabledControl.value ?? ""}
       />
-      <input
-        type="hidden"
-        name={fields.stripeTestMode.name}
-        value={testModeControl.value ?? ""}
-      />
       <input type="hidden" name={fields.stripeCurrency.name} value={currency} />
 
       <Card>
@@ -230,24 +230,34 @@ export function StripeSection({ settings }: StripeSectionProps) {
             />
           </div>
 
-          {/* テストモード */}
+          {/* 動作モード（APIキーから自動判定・読み取り専用） */}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor={fields.stripeTestMode.id}>テストモード</Label>
+              <Label>動作モード</Label>
               <p className="text-sm text-muted-foreground">
-                {testMode
-                  ? "テストキーを使用します（実際の決済は行われません）"
-                  : "本番キーを使用します（実際の決済が行われます）"}
+                test / live は API キー（pk_test_ /
+                pk_live_）の種類で決まります。 ここでは切り替えできません。
               </p>
             </div>
-            <Switch
-              id={fields.stripeTestMode.id}
-              checked={testMode}
-              onCheckedChange={(checked) =>
-                testModeControl.change(checked ? "on" : "")
-              }
-              disabled={isPending}
-            />
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  savedMode === "live"
+                    ? "bg-warning"
+                    : savedMode === "test"
+                      ? "bg-success"
+                      : "bg-muted-foreground",
+                )}
+              />
+              <span className="text-sm font-medium">
+                {savedMode === "test"
+                  ? "テストモード"
+                  : savedMode === "live"
+                    ? "本番モード（実際の決済が行われます）"
+                    : "キー未設定"}
+              </span>
+            </div>
           </div>
 
           {/* APIキー */}
@@ -282,7 +292,9 @@ export function StripeSection({ settings }: StripeSectionProps) {
                     type: "text",
                   })}
                   className="font-mono"
-                  placeholder={testMode ? "pk_test_..." : "pk_live_..."}
+                  placeholder={
+                    savedMode === "live" ? "pk_live_..." : "pk_test_..."
+                  }
                   disabled={isPending}
                 />
               )}
@@ -328,7 +340,9 @@ export function StripeSection({ settings }: StripeSectionProps) {
                   data-lpignore="true"
                   data-form-type="other"
                   className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
-                  placeholder={testMode ? "sk_test_..." : "sk_live_..."}
+                  placeholder={
+                    savedMode === "live" ? "sk_live_..." : "sk_test_..."
+                  }
                   disabled={isPending}
                 />
               )}

@@ -91,7 +91,6 @@ export type SettingsData = {
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
   stripeEnabled: boolean;
-  stripeTestMode: boolean;
   stripePublishableKey: string | null;
   stripeSecretKeyMasked: string | null;
   stripeWebhookSecretMasked: string | null;
