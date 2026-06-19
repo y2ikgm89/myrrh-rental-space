@@ -398,7 +398,9 @@ async function seedSettings(options: { resetFeatureModules?: boolean } = {}) {
     headerLogoUrl: "/images/seed/logo-header.svg",
     footerLogoUrl: "/images/seed/logo-footer.svg",
 
-    // メール送信設定（送信元 From は env EMAIL_FROM / EMAIL_FROM_NAME が SSoT）
+    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
+    senderEmail: "noreply@example.com",
+    senderName: "Myrrh Rental Space",
     replyToEmail: "support@example.com",
   };
 

@@ -79,6 +79,8 @@ export function EmailSection({ settings }: EmailSectionProps) {
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
+      senderEmail: settings.senderEmail ?? "",
+      senderName: settings.senderName ?? "",
       replyToEmail: settings.replyToEmail ?? "",
       sendReservationConfirmationEmail:
         settings.sendReservationConfirmationEmail ? "on" : "",
@@ -103,13 +105,61 @@ export function EmailSection({ settings }: EmailSectionProps) {
           <CardDescription>メール送信に関する設定を行います</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-            送信元アドレス（From）は環境変数{" "}
-            <code className="font-mono">EMAIL_FROM</code> /{" "}
-            <code className="font-mono">EMAIL_FROM_NAME</code>{" "}
-            で管理します。Resend
-            で検証済みのドメインを設定してください（未検証のドメインは全送信が停止します）。
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.senderEmail.id}
+              >
+                送信元メールアドレス
+              </label>
+              <Input
+                {...getInputProps(fields.senderEmail, { type: "email" })}
+                placeholder="noreply@example.com"
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                Resend
+                で検証済みのドメインのアドレスを指定してください（保存時に照合します）。
+              </p>
+              {fields.senderEmail.errors &&
+                fields.senderEmail.errors.length > 0 && (
+                  <p
+                    id={fields.senderEmail.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.senderEmail.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.senderName.id}
+              >
+                送信者名
+              </label>
+              <Input
+                {...getInputProps(fields.senderName, { type: "text" })}
+                placeholder="Myrrh Rental Space"
+                disabled={isPending}
+              />
+              {fields.senderName.errors &&
+                fields.senderName.errors.length > 0 && (
+                  <p
+                    id={fields.senderName.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.senderName.errors.join(", ")}
+                  </p>
+                )}
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            環境変数 <code className="font-mono">EMAIL_FROM</code> /{" "}
+            <code className="font-mono">EMAIL_FROM_NAME</code>{" "}
+            が設定されている場合はそちらが優先されます（通常は未設定で上の項目が使われます）。
+          </p>
 
           <div className="space-y-1.5">
             <label

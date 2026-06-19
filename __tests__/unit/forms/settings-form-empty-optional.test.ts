@@ -377,6 +377,8 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     expectSuccess(
       emailFormSchema,
       emptyKeys([
+        "senderEmail",
+        "senderName",
         "replyToEmail",
         "sendReservationConfirmationEmail",
         "notificationEmailAddresses",
@@ -387,11 +389,13 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
 
   test("メール設定: 不正メールはエラー（任意だが形式は検証）", () => {
     const fd = emptyKeys([
+      "senderEmail",
+      "senderName",
       "replyToEmail",
       "sendReservationConfirmationEmail",
       "notificationEmailAddresses",
     ]);
-    fd.set("replyToEmail", "invalid-email");
+    fd.set("senderEmail", "invalid-email");
     expect(parseWithZod(fd, { schema: emailFormSchema }).status).toBe("error");
   });
 

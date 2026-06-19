@@ -1124,9 +1124,11 @@ model Settings {
   // Settings 側の旧 accessInfo / parkingInfo は 2026-05-01 に廃止。
 
   // Email Settings
-  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) が SSoT。Resend は検証済み
-  // ドメイン必須のため運用者が画面から自由設定できると誤入力で全送信が停止する。
-  // よって senderEmail / senderName は廃止し、返信先のみ運用者が設定可能にする。
+  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの
+  // env-OR-DB（API キー / Stripe / Turnstile と同方式）。senderEmail/senderName は
+  // 管理画面のメール設定で運用者が設定でき、保存時に Resend 検証済みドメインと照合する。
+  senderEmail                       String?
+  senderName                        String?
   replyToEmail                      String?
 
   // SEO Settings

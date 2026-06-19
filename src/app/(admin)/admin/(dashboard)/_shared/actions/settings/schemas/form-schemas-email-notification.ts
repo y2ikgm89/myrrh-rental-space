@@ -9,8 +9,17 @@ import { optionalText, switchBoolean } from "./form-schema-helpers";
 // =============================================================================
 
 export const emailFormSchema = z.object({
-  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) が SSoT のため UI からは設定しない。
+  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバック。
+  // 空欄は env またはデフォルトにフォールバックする。ドメインの検証済み判定は
+  // Server Action 側（validateSenderDomain）で行う。
   // conform は空欄を undefined 化するため `.optional()` 必須（"" リテラルだけでは弾かれる）。
+  senderEmail: z
+    .union([
+      z.email({ error: "有効なメールアドレスを入力してください" }).max(100),
+      z.literal(""),
+    ])
+    .optional(),
+  senderName: optionalText(100),
   replyToEmail: z
     .union([
       z.email({ error: "有効なメールアドレスを入力してください" }).max(100),

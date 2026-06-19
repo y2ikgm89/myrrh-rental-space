@@ -75,17 +75,17 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     maxRetries = DEFAULT_MAX_RETRIES,
   } = params;
 
-  // 返信先(reply-to)は管理画面設定（settings.replyToEmail）を全送信に注入する。
-  // 個別の payload が replyTo を明示していればそちらを優先する。
-  const { replyToEmail } = await getEmailDeliverySettings();
-  const resolvedReplyTo = payload.replyTo ?? replyToEmail ?? undefined;
+  // 送信元(from)と返信先(reply-to)は管理画面設定（env 優先・DB フォールバック）を
+  // 注入する。個別の payload が replyTo を明示していればそちらを優先する。
+  const delivery = await getEmailDeliverySettings();
+  const resolvedReplyTo = payload.replyTo ?? delivery.replyToEmail ?? undefined;
 
   // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
   // `Omit<U, "from">` + spread does not round-trip back to the original union under
   // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
   const fullPayload = CreateEmailOptionsSchema.parse({
     ...payload,
-    from: getFromAddress(),
+    from: getFromAddress(delivery.senderEmail, delivery.senderName),
     ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
   });
 

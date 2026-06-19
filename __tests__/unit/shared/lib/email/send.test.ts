@@ -26,9 +26,9 @@ const mockIsEmailEnabled = mock<() => boolean>(() => true);
 const mockGetResendClient = mock<
   () => { emails: { send: typeof mockResendSend } } | null
 >(() => ({ emails: { send: mockResendSend } }));
-const mockGetFromAddress = mock<() => string>(
-  () => "テストサービス <noreply@example.com>",
-);
+const mockGetFromAddress = mock<
+  (senderEmail?: string | null, senderName?: string | null) => string
+>(() => "テストサービス <noreply@example.com>");
 const mockLogError = mock<
   (error: Error, context: Record<string, unknown>) => void
 >(() => {});
@@ -42,6 +42,8 @@ type DeliverySettings = {
   notifyReservationChange: boolean;
   notifyReservationCancel: boolean;
   notifyNewInquiry: boolean;
+  senderEmail: string | null;
+  senderName: string | null;
   replyToEmail: string | null;
 };
 
@@ -51,6 +53,8 @@ const DELIVERY_DEFAULTS: DeliverySettings = {
   notifyReservationChange: true,
   notifyReservationCancel: true,
   notifyNewInquiry: true,
+  senderEmail: null,
+  senderName: null,
   replyToEmail: null,
 };
 

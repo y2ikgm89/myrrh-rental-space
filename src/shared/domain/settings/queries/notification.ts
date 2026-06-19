@@ -53,6 +53,10 @@ export type EmailDeliverySettings = {
   notifyEventRegistration: boolean;
   /** イベント申込キャンセルの管理者通知を送るか */
   notifyEventCancellation: boolean;
+  /** 送信元メールアドレス（env EMAIL_FROM 未設定時のフォールバック。未設定なら null） */
+  senderEmail: string | null;
+  /** 送信者名（env EMAIL_FROM_NAME 未設定時のフォールバック。未設定なら null） */
+  senderName: string | null;
   /** 全送信メールに付与する返信先（未設定なら null） */
   replyToEmail: string | null;
 };
@@ -81,6 +85,8 @@ export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings>
           notifyNewInquiry: true,
           notifyEventRegistration: true,
           notifyEventCancellation: true,
+          senderEmail: true,
+          senderName: true,
           replyToEmail: true,
         },
       }),
@@ -99,6 +105,8 @@ export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings>
     notifyNewInquiry: settings?.notifyNewInquiry ?? true,
     notifyEventRegistration: settings?.notifyEventRegistration ?? true,
     notifyEventCancellation: settings?.notifyEventCancellation ?? true,
+    senderEmail: settings?.senderEmail ?? null,
+    senderName: settings?.senderName ?? null,
     replyToEmail: settings?.replyToEmail ?? null,
   };
 }
