@@ -6,15 +6,12 @@ import { cn } from "@/shared/lib/cn";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
+  maxConcurrentColumns,
   getWeekdayColorClass,
   DEFAULT_BUSINESS_HOURS,
-  PIXELS_PER_HOUR,
+  CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
-import type {
-  CalendarEvent,
-  CalendarDateRange,
-  PositionedEvent,
-} from "@/admin/lib/calendar";
+import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
 import { EventCell } from "../EventCell";
 import { TimeGrid, type TimeGridColumn } from "./TimeGrid";
 
@@ -24,30 +21,19 @@ interface WeekViewProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
-/** 1 サブカラム (重複時の各イベントレーン) の最小幅 — WCAG 2.5.5 / 文字 + アイコンが収まる最低限 */
-const SUBCOLUMN_MIN_PX = 80;
-/** 重複なし日の最小幅 — そもそも 1 日カラムが極端に狭くなることを防ぐ */
-const DAY_COLUMN_MIN_PX = 140;
-
-function maxConcurrentColumns(positioned: PositionedEvent[]): number {
-  if (positioned.length === 0) return 1;
-  const minWidthPct = positioned.reduce(
-    (min, e) => Math.min(min, e.position.width),
-    100,
-  );
-  return Math.max(1, Math.round(100 / Math.max(minWidthPct + 1, 1)));
-}
-
 export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
   const displayDays = dateRange.displayDates.slice(0, 7);
-  const gridHeight = timeSlots.length * PIXELS_PER_HOUR;
+  const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
 
   const columns: TimeGridColumn[] = displayDays.map((day, index) => {
     const dayEvents = events.filter((e) => isSameDay(e.startTime, day));
     const positioned = layoutOverlappingEvents(dayEvents);
     const maxCols = maxConcurrentColumns(positioned);
-    const minWidthPx = Math.max(DAY_COLUMN_MIN_PX, maxCols * SUBCOLUMN_MIN_PX);
+    const minWidthPx = Math.max(
+      CALENDAR_LAYOUT.weekColumnMinPx,
+      maxCols * CALENDAR_LAYOUT.weekSubcolumnMinPx,
+    );
     const today = isToday(day);
 
     return {
@@ -92,6 +78,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
         timeSlots={timeSlots}
         gridHeight={gridHeight}
         columns={columns}
+        ariaLabel="週間予約タイムグリッド"
       />
     </div>
   );

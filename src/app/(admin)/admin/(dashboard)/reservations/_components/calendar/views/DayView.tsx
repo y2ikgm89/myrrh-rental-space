@@ -6,11 +6,12 @@ import { cn } from "@/shared/lib/cn";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
+  maxConcurrentColumns,
   getWeekdayColorClass,
   DEFAULT_BUSINESS_HOURS,
-  PIXELS_PER_HOUR,
+  CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
-import type { CalendarEvent, PositionedEvent } from "@/admin/lib/calendar";
+import type { CalendarEvent } from "@/admin/lib/calendar";
 import { EventCell } from "../EventCell";
 import { TimeGrid, type TimeGridColumn } from "./TimeGrid";
 
@@ -20,32 +21,22 @@ interface DayViewProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
-/** 重複時の 1 サブカラム最小幅 */
-const SUBCOLUMN_MIN_PX = 120;
-/** 単一日カラムの最小幅 — 1fr で広がるが極端な狭幅を避ける */
-const DAY_COLUMN_MIN_PX = 320;
-
-function maxConcurrentColumns(positioned: PositionedEvent[]): number {
-  if (positioned.length === 0) return 1;
-  const minWidthPct = positioned.reduce(
-    (min, e) => Math.min(min, e.position.width),
-    100,
-  );
-  return Math.max(1, Math.round(100 / Math.max(minWidthPct + 1, 1)));
-}
-
 export function DayView({ date, events, onEventClick }: DayViewProps) {
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
   const positioned = layoutOverlappingEvents(events);
-  const gridHeight = timeSlots.length * PIXELS_PER_HOUR;
+  const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
 
   const maxCols = maxConcurrentColumns(positioned);
-  const minWidthPx = Math.max(DAY_COLUMN_MIN_PX, maxCols * SUBCOLUMN_MIN_PX);
+  const minWidthPx = Math.max(
+    CALENDAR_LAYOUT.dayColumnMinPx,
+    maxCols * CALENDAR_LAYOUT.daySubcolumnMinPx,
+  );
   const today = isToday(date);
   const dayOfWeek = date.getDay();
 
-  // WeekView と同形の単一カラム — 列ヘッダーは weekday + 日付ピル、bodyは bg-primary/5 で today を tint。
-  // 大きな内部 BIG 日付ヘッダーは CalendarToolbar の dateLabel と重複するため撤去。
+  // WeekView と同形の単一カラム — 列ヘッダーは weekday + 日付ピル、body は
+  // bg-primary/5 で today を tint。CalendarToolbar の dateLabel が SSoT のため
+  // 大きな内部 BIG 日付ヘッダーは持たない。
   const column: TimeGridColumn = {
     key: date.toISOString(),
     minWidthPx,
@@ -87,6 +78,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
         timeSlots={timeSlots}
         gridHeight={gridHeight}
         columns={[column]}
+        ariaLabel="日次予約タイムグリッド"
       />
     </div>
   );

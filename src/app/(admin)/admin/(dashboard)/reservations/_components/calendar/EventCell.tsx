@@ -1,11 +1,15 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { cn } from "@/shared/lib/cn";
 import { formatTimeShort } from "@/shared/lib/date-format";
 import { getStatusColorClass } from "@/admin/lib/calendar";
 import type { CalendarEvent, PositionedEvent } from "@/admin/lib/calendar";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
-import { RESERVATION_STATUS_ICONS } from "@/shared/lib/validations/enums/helpers";
+import {
+  RESERVATION_STATUS_ICONS,
+  RESERVATION_STATUS_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 interface EventCellProps {
   event: PositionedEvent;
@@ -13,11 +17,26 @@ interface EventCellProps {
 }
 
 /**
+ * 構造化された aria-label を生成する。
+ * 視覚的な title (hover tooltip) と SR 向け aria-label を分離。
+ */
+function buildAriaLabel(event: CalendarEvent): string {
+  const time = `${formatTimeShort(event.startTime)} から ${formatTimeShort(event.endTime)}`;
+  const status = RESERVATION_STATUS_LABELS[event.status];
+  return `${time}・${event.title}・スペース ${event.spaceName}・${status}`;
+}
+
+/**
  * 時間軸カレンダー (Week/Day/Resource) の絶対配置イベントセル。
  *
- * - 高さに応じて情報量を 3 段階で出し分け（time-only / +title / +space）
+ * - 高さに応じて情報量を 3 段階で出し分け (time-only / +title / +space)
  * - キャンセル予約は line-through + opacity で控えめに表示
- * - WCAG 2.5.5 (44px) — 最小高さ20pxは calculateEventPosition で担保、本体は 44px 以下でも click可能
+ * - z-index は CSS 変数 `--event-z` 経由で渡し、focus-visible:z-30 / hover:z-20 が
+ *   Tailwind 側で specificity 勝ちできるようにする (inline `style.zIndex` を使うと
+ *   class の `focus-visible:z-30` が specificity 負けして corner sticky の背後に
+ *   隠れる a11y 回帰を起こす)
+ * - WCAG 2.5.5 (44px) — 最小高さ 20px は calculateEventPosition が担保、本体は
+ *   click 可能。aria-label に「開始-終了・タイトル・スペース・ステータス」を構造化
  */
 export function EventCell({ event, onClick }: EventCellProps) {
   const { position } = event;
@@ -26,24 +45,29 @@ export function EventCell({ event, onClick }: EventCellProps) {
   const showTitle = position.height >= 36;
   const showMeta = position.height >= 60;
 
+  const style: CSSProperties = {
+    top: `${position.top}px`,
+    height: `${position.height}px`,
+    left: `${position.left}%`,
+    width: `${position.width}%`,
+    // Tailwind v4 CSS var arbitrary: `z-[var(--event-z)]` で参照
+    ["--event-z" as string]: position.zIndex,
+  };
+
   return (
     <button
       type="button"
       title={`${formatTimeShort(event.startTime)}-${formatTimeShort(event.endTime)}  ${event.title}  (${event.spaceName})`}
+      aria-label={buildAriaLabel(event)}
       className={cn(
-        "group absolute overflow-hidden rounded-md border-l-4 px-2 py-1 text-left text-xs transition-all",
-        "focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        "hover:z-20 hover:shadow-md",
+        "group absolute overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-left text-xs transition-all",
+        "z-[var(--event-z)] hover:z-20 focus-visible:z-30",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "hover:shadow-md",
         getStatusColorClass(event.status),
         isCancelled && "opacity-60",
       )}
-      style={{
-        top: `${position.top}px`,
-        height: `${position.height}px`,
-        left: `${position.left}%`,
-        width: `${position.width}%`,
-        zIndex: position.zIndex,
-      }}
+      style={style}
       onClick={() => onClick(event)}
     >
       <div className="flex items-center gap-1 font-semibold leading-tight tabular-nums">
@@ -75,10 +99,11 @@ interface EventBadgeProps {
 }
 
 /**
- * 月ビューのコンパクトな1行イベントバッジ。
+ * 月ビューのコンパクトな 1 行イベントバッジ。
  *
- * - 縦に並ぶため、時刻 + タイトル のみ表示
+ * - 縦に並ぶため時刻 + タイトルのみ表示
  * - 取消線は CANCELLED のみ
+ * - SR 向け aria-label は EventCell と統一フォーマット
  */
 export function EventBadge({ event, onClick }: EventBadgeProps) {
   const isCancelled = event.status === "CANCELLED";
@@ -88,6 +113,7 @@ export function EventBadge({ event, onClick }: EventBadgeProps) {
     <button
       type="button"
       title={`${formatTimeShort(event.startTime)}-${formatTimeShort(event.endTime)}  ${event.title}  (${event.spaceName})`}
+      aria-label={buildAriaLabel(event)}
       className={cn(
         "mb-0.5 flex w-full items-center gap-1 truncate rounded border-l-2 px-1.5 py-0.5 text-left text-xs transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",

@@ -24,7 +24,7 @@ import type {
   PositionedEvent,
   BusinessHours,
 } from "./calendar-types";
-import { DEFAULT_BUSINESS_HOURS, PIXELS_PER_HOUR } from "./calendar-types";
+import { DEFAULT_BUSINESS_HOURS, CALENDAR_LAYOUT } from "./calendar-types";
 
 /**
  * カレンダー日付範囲を計算
@@ -114,12 +114,29 @@ export function generateTimeSlots(
 }
 
 /**
+ * 列内の最大同時並走イベント数を計算する。
+ *
+ * `layoutOverlappingEvents` の戻り値 `position.width` (%) は
+ *   100 / columnCount - 1
+ * で生成されるため、最小幅から columnCount を逆算できる。
+ * WeekView/DayView の動的列幅算定で共通利用される。
+ */
+export function maxConcurrentColumns(positioned: PositionedEvent[]): number {
+  if (positioned.length === 0) return 1;
+  const minWidthPct = positioned.reduce(
+    (min, e) => Math.min(min, e.position.width),
+    100,
+  );
+  return Math.max(1, Math.round(100 / Math.max(minWidthPct + 1, 1)));
+}
+
+/**
  * イベントのグリッド位置を計算
  */
 export function calculateEventPosition(
   event: CalendarEvent,
   hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
-  pixelsPerHour: number = PIXELS_PER_HOUR,
+  pixelsPerHour: number = CALENDAR_LAYOUT.pixelsPerHour,
 ): EventPosition {
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
@@ -150,7 +167,7 @@ export function calculateEventPosition(
 export function layoutOverlappingEvents(
   events: CalendarEvent[],
   hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
-  pixelsPerHour: number = PIXELS_PER_HOUR,
+  pixelsPerHour: number = CALENDAR_LAYOUT.pixelsPerHour,
 ): PositionedEvent[] {
   if (events.length === 0) return [];
 
@@ -310,11 +327,25 @@ export function formatDateLabel(date: Date, view: CalendarView): string {
   }
 }
 
+/** 曜日ヘッダー生成用の基準サンデー (2024-01-07 = 日曜) — モジュール解決時に 1 度だけ評価される pure な定数 */
+const WEEKDAY_REFERENCE_SUNDAY = new Date(2024, 0, 7);
+
+/** 曜日ヘッダー (narrow) を date-fns localize 経由で生成・モジュール初期化時に確定 */
+const WEEKDAY_HEADERS: readonly string[] = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(WEEKDAY_REFERENCE_SUNDAY);
+  d.setDate(WEEKDAY_REFERENCE_SUNDAY.getDate() + i);
+  return format(d, "EEEEE", { locale: ja });
+});
+
 /**
- * 曜日ヘッダーを生成
+ * 曜日ヘッダーを生成 (日, 月, 火, 水, 木, 金, 土)
+ *
+ * date-fns + ja locale の narrow weekday で生成。hard-coded 配列との混在
+ * (#634 系の locale 漏れリスク) を避けるため `format(d, "EEEEE", { locale: ja })`
+ * で一元化。
  */
-export function getWeekdayHeaders(): string[] {
-  return ["日", "月", "火", "水", "木", "金", "土"];
+export function getWeekdayHeaders(): readonly string[] {
+  return WEEKDAY_HEADERS;
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format, isSameDay, isSameMonth, isToday } from "date-fns";
+import { ja } from "date-fns/locale";
 import { cn } from "@/shared/lib/cn";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { getWeekdayHeaders, getWeekdayColorClass } from "@/admin/lib/calendar";
@@ -105,7 +106,10 @@ export function MonthView({
                     <div className="flex items-center justify-between">
                       <button
                         type="button"
-                        aria-label={`${format(day, "yyyy年M月d日")} を日表示で開く`}
+                        aria-label={`${format(day, "yyyy年M月d日 (E)", { locale: ja })} を日表示で開く`}
+                        {...(todayCell
+                          ? { "aria-current": "date" as const }
+                          : {})}
                         className={cn(
                           "flex min-h-11 min-w-11 items-center justify-center rounded-full px-1.5 text-sm font-semibold tabular-nums transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
