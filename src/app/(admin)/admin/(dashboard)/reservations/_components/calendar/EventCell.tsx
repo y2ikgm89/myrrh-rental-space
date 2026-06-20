@@ -56,6 +56,11 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
     width: `${position.width}%`,
     // Tailwind v4 CSS var arbitrary: `z-[var(--event-z)]` で参照
     ["--event-z" as string]: position.zIndex,
+    // Google Calendar 同等: 過去 / キャンセルは saturate を 50% に落として
+    // border-l-4 の鮮やかな色帯も desaturate して「明確に過去」感を出す。
+    // Tailwind v4 の `saturate-50` を Turbopack の JIT が dev で拾いきれない
+    // ケースに備え inline style で確実適用する (build 時は通る)。
+    ...(isMuted ? { filter: "saturate(0.5)" } : {}),
   };
 
   return (
@@ -131,6 +136,7 @@ export function EventBadge({
         getStatusColorClass(event.status),
         isMuted && "opacity-60",
       )}
+      style={isMuted ? { filter: "saturate(0.5)" } : undefined}
       onClick={() => onClick(event)}
     >
       <CuratedIcon name={iconName} className="h-3 w-3 shrink-0" />
