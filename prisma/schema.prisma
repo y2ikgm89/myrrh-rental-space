@@ -1176,12 +1176,10 @@ model Settings {
   durationDiscountRules   Json                   @default("[]")
   discountCombinationMode DiscountCombinationMode @default(best)
   showOriginalPrice       Boolean                @default(true)
-  discountWarningEnabled  Boolean                @default(true)
 
   // Tax Settings (消費税設定) - Enum化
   taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
   taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
-  taxDisplayModeAdmin  TaxDisplayMode @default(both)
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
 
   // Notification Settings（管理者通知のイベント別トグル）

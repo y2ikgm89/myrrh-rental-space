@@ -39,7 +39,6 @@ const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountRules: [],
   discountCombinationMode: DiscountCombinationMode.best,
   showOriginalPrice: true,
-  discountWarningEnabled: true,
 };
 
 function maskSecretKey(key: string): string {
@@ -102,7 +101,6 @@ function toSettingsData(
     sidebarTocEnabled: settings.sidebarTocEnabled,
     taxStandardRate: settings.taxStandardRate,
     taxReducedRate: settings.taxReducedRate,
-    taxDisplayModeAdmin: settings.taxDisplayModeAdmin,
     taxDisplayModePublic: settings.taxDisplayModePublic,
   });
 }
@@ -323,7 +321,6 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
       durationDiscountRules: true,
       discountCombinationMode: true,
       showOriginalPrice: true,
-      discountWarningEnabled: true,
     },
   });
 
@@ -340,7 +337,6 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
       settings.discountCombinationMode,
     ),
     showOriginalPrice: settings.showOriginalPrice,
-    discountWarningEnabled: settings.discountWarningEnabled,
   };
 }
 
@@ -350,7 +346,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
     select: {
       taxStandardRate: true,
       taxReducedRate: true,
-      taxDisplayModeAdmin: true,
       taxDisplayModePublic: true,
     },
   });
@@ -362,7 +357,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
   return {
     standardRate: settings.taxStandardRate,
     reducedRate: settings.taxReducedRate,
-    displayModeAdmin: parseTaxDisplayMode(settings.taxDisplayModeAdmin),
     displayModePublic: parseTaxDisplayMode(settings.taxDisplayModePublic),
   };
 }

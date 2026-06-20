@@ -11,7 +11,6 @@ import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 export const taxFormSchema = z.object({
   taxStandardRate: z.number().min(0).max(100),
   taxReducedRate: z.number().min(0).max(100),
-  taxDisplayModeAdmin: z.enum(TaxDisplayMode),
   taxDisplayModePublic: z.enum(TaxDisplayMode),
 });
 

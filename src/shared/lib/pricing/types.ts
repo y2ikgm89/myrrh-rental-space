@@ -81,7 +81,6 @@ export type PriceCalculationParams = {
 export type TaxSettings = {
   standardRate: number; // 標準税率（%）
   reducedRate: number; // 軽減税率（%）
-  displayModeAdmin: TaxDisplayMode; // 管理画面の表示モード
   displayModePublic: TaxDisplayMode; // 公開ページの表示モード
 };
 

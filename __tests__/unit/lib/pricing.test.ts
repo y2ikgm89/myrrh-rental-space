@@ -1592,7 +1592,6 @@ describe("DEFAULT_TAX_SETTINGS", () => {
   test("デフォルト税設定が正しい", () => {
     expect(DEFAULT_TAX_SETTINGS.standardRate).toBe(10);
     expect(DEFAULT_TAX_SETTINGS.reducedRate).toBe(8);
-    expect(DEFAULT_TAX_SETTINGS.displayModeAdmin).toBe("both");
     expect(DEFAULT_TAX_SETTINGS.displayModePublic).toBe("tax_included");
   });
 });

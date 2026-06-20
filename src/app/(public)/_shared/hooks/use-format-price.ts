@@ -20,7 +20,6 @@ export function useFormatPrice() {
   const taxRate = getTaxRate(TaxRateType.standard, {
     standardRate: tax.standardRate,
     reducedRate: tax.reducedRate,
-    displayModeAdmin: tax.displayMode,
     displayModePublic: tax.displayMode,
   });
 

@@ -111,13 +111,11 @@ const DISCOUNT_SETTINGS_INPUT = {
   ],
   discountCombinationMode: "best" as const,
   showOriginalPrice: true,
-  discountWarningEnabled: false,
 };
 
 const TAX_SETTINGS_INPUT = {
   taxStandardRate: 10,
   taxReducedRate: 8,
-  taxDisplayModeAdmin: "tax_excluded" as const,
   taxDisplayModePublic: "tax_included" as const,
 };
 
