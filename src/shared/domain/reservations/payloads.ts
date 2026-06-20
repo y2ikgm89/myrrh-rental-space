@@ -181,6 +181,9 @@ export function calculatePricing(params: {
   basePrice: number;
   settings: Awaited<ReturnType<typeof getReservationSettings>>;
   coupon: ValidatedCoupon;
+  spaceDiscount?:
+    | import("@/shared/lib/pricing/types").SpaceDiscountSettings
+    | null;
 }) {
   const priceCalculation = calculateReservationPrice({
     hourlyPrice: params.hourlyPrice,
@@ -189,6 +192,7 @@ export function calculatePricing(params: {
       params.settings?.durationDiscountRules,
     ),
     durationDiscountEnabled: params.settings?.durationDiscountEnabled ?? false,
+    spaceDiscount: params.spaceDiscount ?? null,
     coupon: params.coupon,
     combinationMode: getValidDiscountCombinationMode(
       params.settings?.discountCombinationMode,
@@ -206,6 +210,10 @@ export function calculatePricing(params: {
     durationDiscountAmount:
       priceCalculation.durationDiscount > 0
         ? priceCalculation.durationDiscount
+        : null,
+    spaceDiscountAmount:
+      priceCalculation.spaceDiscount > 0
+        ? priceCalculation.spaceDiscount
         : null,
   };
 }

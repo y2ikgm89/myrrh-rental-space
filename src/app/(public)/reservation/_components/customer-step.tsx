@@ -52,6 +52,11 @@ interface CustomerStepProps {
     readonly endTime: string;
     readonly guests: number;
     readonly price: number | null;
+    readonly originalPrice: number | null;
+    readonly spaceDiscountAmount: number;
+    readonly durationDiscountAmount: number;
+    readonly appliedDurationRate: number | null;
+    readonly showOriginalPrice: boolean;
   };
   readonly onCustomerTypeChange: (type: CustomerType) => void;
   readonly onTurnstileVerify: (token: string) => void;
@@ -103,6 +108,11 @@ export function CustomerStep({
         endTime={summary.endTime}
         guests={summary.guests}
         price={summary.price}
+        originalPrice={summary.originalPrice}
+        spaceDiscountAmount={summary.spaceDiscountAmount}
+        durationDiscountAmount={summary.durationDiscountAmount}
+        appliedDurationRate={summary.appliedDurationRate}
+        showOriginalPrice={summary.showOriginalPrice}
         onEdit={onBack}
       />
 

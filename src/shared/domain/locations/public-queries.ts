@@ -13,6 +13,10 @@ import {
   parseFacilities,
   parseStringArray,
 } from "@/shared/lib/json-validators";
+import type {
+  DiscountType,
+  DurationDiscountOverride,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 export type SpaceOption = {
   id: string;
@@ -25,6 +29,11 @@ export type SpaceOption = {
   mainImageUrl: string;
   imageUrls: string[];
   facilities: { name: string; iconName: string }[];
+  // スペース固有割引。公開予約フォームの料金プレビュー / DB 永続化の SSoT は
+  // calculateReservationPrice 経由。none / discountValue == null は割引なし。
+  discountType: DiscountType;
+  discountValue: number | null;
+  durationDiscountOverride: DurationDiscountOverride;
 };
 
 export type LocationWithSpaces = {
@@ -268,6 +277,9 @@ export async function getPublishedLocationsWithSpaces(): Promise<
               mainImageUrl: true,
               imageUrls: true,
               facilities: true,
+              discountType: true,
+              discountValue: true,
+              durationDiscountOverride: true,
             },
           },
         },

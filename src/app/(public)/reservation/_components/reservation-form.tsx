@@ -27,6 +27,9 @@ import {
   formatDateString,
 } from "@/shared/lib/reservation/time-slots-utils";
 import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
+import type { PublicDiscountSettings } from "@/shared/domain/settings/queries/discount";
+import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
+import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 import { submitReservation } from "@/public/actions/reservation";
 import {
   fetchAvailableSlots,
@@ -111,6 +114,7 @@ interface ReservationFormProps {
   readonly turnstileSiteKey: string | null;
   readonly minReservationDuration: number;
   readonly maxReservationDuration: number;
+  readonly discountSettings: PublicDiscountSettings;
   readonly prefillData?: PrefillData | undefined;
   readonly initialSpaceId?: string | undefined;
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
@@ -122,6 +126,7 @@ export function ReservationForm({
   turnstileSiteKey,
   minReservationDuration,
   maxReservationDuration,
+  discountSettings,
   prefillData,
   initialSpaceId,
   requiredTerms = [],
@@ -224,10 +229,36 @@ export function ReservationForm({
     state.startTime && state.duration
       ? addMinutesToTime(state.startTime, state.duration)
       : null;
-  const price =
+
+  // 料金プレビューはサーバー側 createPublicReservationCommand と同じ
+  // calculateReservationPrice を SSoT として共有する。クーポンは公開フォームに
+  // 入力 UI が無いため null（mypage 経路で適用）。combinationMode はクーポン非対応
+  // のため計算結果に影響しないが API 整合のため best デフォルトを渡す。
+  const priceCalc =
     currentSpace && state.duration
-      ? (currentSpace.hourlyPrice * state.duration) / 60
+      ? calculateReservationPrice({
+          hourlyPrice: currentSpace.hourlyPrice,
+          hours: state.duration / 60,
+          durationRules: discountSettings.durationDiscountRules,
+          durationDiscountEnabled: discountSettings.durationDiscountEnabled,
+          spaceDiscount:
+            currentSpace.discountType !== "none" &&
+            currentSpace.discountValue != null &&
+            currentSpace.discountValue > 0
+              ? {
+                  discountType: currentSpace.discountType,
+                  discountValue: currentSpace.discountValue,
+                  durationDiscountOverride:
+                    currentSpace.durationDiscountOverride,
+                }
+              : null,
+          coupon: null,
+          combinationMode: DiscountCombinationMode.best,
+          showWarning: false,
+        })
       : null;
+  const basePrice = priceCalc?.basePrice ?? null;
+  const price = priceCalc?.totalPrice ?? null;
 
   const isStep1Complete = state.locationId != null && state.spaceId != null;
   const isStep2Complete =
@@ -509,6 +540,12 @@ export function ReservationForm({
             endTime: endTime ?? "",
             guests: state.guests,
             price,
+            originalPrice: basePrice,
+            spaceDiscountAmount: priceCalc?.spaceDiscount ?? 0,
+            durationDiscountAmount: priceCalc?.durationDiscount ?? 0,
+            appliedDurationRate:
+              priceCalc?.appliedDurationRule?.discountRate ?? null,
+            showOriginalPrice: discountSettings.showOriginalPrice,
           }}
           onCustomerTypeChange={handleCustomerTypeChange}
           onTurnstileVerify={handleTurnstileVerify}

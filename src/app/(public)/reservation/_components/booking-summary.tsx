@@ -20,6 +20,11 @@ interface BookingSummaryProps {
   readonly endTime: string;
   readonly guests: number;
   readonly price: number | null;
+  readonly originalPrice?: number | null;
+  readonly spaceDiscountAmount?: number;
+  readonly durationDiscountAmount?: number;
+  readonly appliedDurationRate?: number | null;
+  readonly showOriginalPrice?: boolean;
   readonly onEdit?: () => void;
 }
 
@@ -65,10 +70,20 @@ export function BookingSummary({
   endTime,
   guests,
   price,
+  originalPrice = null,
+  spaceDiscountAmount = 0,
+  durationDiscountAmount = 0,
+  appliedDurationRate = null,
+  showOriginalPrice = false,
   onEdit,
 }: BookingSummaryProps): ReactElement {
   const { formatTotal } = useFormatPrice();
   const durationLabel = formatDurationLabel(startTime, endTime);
+
+  const totalDiscount = spaceDiscountAmount + durationDiscountAmount;
+  const hasDiscount = totalDiscount > 0 && originalPrice != null;
+  const showStrikeThrough =
+    hasDiscount && showOriginalPrice && originalPrice !== price;
 
   return (
     <div className="border border-border px-6 py-6 sm:px-8 sm:py-7">
@@ -78,9 +93,34 @@ export function BookingSummary({
           予約内容
         </Heading>
         {price !== null ? (
-          <p className="text-xl font-light text-accent">{formatTotal(price)}</p>
+          <div className="flex flex-col items-end gap-0.5">
+            {showStrikeThrough && originalPrice !== null ? (
+              <p className="text-sm text-muted-foreground line-through">
+                {formatTotal(originalPrice)}
+              </p>
+            ) : null}
+            <p className="text-xl font-light text-accent">
+              {formatTotal(price)}
+            </p>
+          </div>
         ) : null}
       </div>
+
+      {hasDiscount ? (
+        <div className="mt-2 space-y-0.5 text-right text-sm text-accent">
+          {spaceDiscountAmount > 0 ? (
+            <p>スペース割引（-{formatTotal(spaceDiscountAmount)}）</p>
+          ) : null}
+          {durationDiscountAmount > 0 ? (
+            <p>
+              {appliedDurationRate != null
+                ? `長時間割引 ${appliedDurationRate}% OFF`
+                : "長時間割引適用"}
+              （-{formatTotal(durationDiscountAmount)}）
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Divider */}
       <div className="my-5 border-t border-border" />
