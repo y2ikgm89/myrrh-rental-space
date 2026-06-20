@@ -216,8 +216,7 @@ function SortableImageItem({
         alt={`画像${index + 1}`}
         width={40}
         height={40}
-        className="rounded object-cover"
-        style={{ width: 40, height: 40 }}
+        className="size-10 rounded object-cover"
       />
       <span className="flex-1 truncate text-sm">{url}</span>
       <Button
