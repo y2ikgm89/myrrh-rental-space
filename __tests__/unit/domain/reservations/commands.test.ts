@@ -35,6 +35,9 @@ const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
     name: "テストスペース",
     addressDetail: null,
     hourlyPrice: 1000,
+    discountType: "none",
+    discountValue: null,
+    durationDiscountOverride: "use_global",
     locationId: "loc-1",
     location: { address: "東京都渋谷区1-1-1" },
   }),
@@ -232,6 +235,9 @@ function resetAllMocks() {
       name: "テストスペース",
       addressDetail: null,
       hourlyPrice: 1000,
+      discountType: "none",
+      discountValue: null,
+      durationDiscountOverride: "use_global",
       location: { address: "東京都渋谷区1-1-1" },
     }),
   );
@@ -463,6 +469,34 @@ describe("createAdminReservationCommand", () => {
         }),
       );
     });
+
+    test("スペース固有割引(percentage)が適用され spaceDiscountAmount が永続化される", async () => {
+      mockSpaceFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "space-1",
+          name: "テストスペース",
+          addressDetail: null,
+          hourlyPrice: 1000,
+          discountType: "percentage",
+          discountValue: 20,
+          durationDiscountOverride: "use_global",
+          location: { address: "東京都渋谷区1-1-1" },
+        }),
+      );
+
+      await createAdminReservationCommand(validInput);
+
+      // hourlyPrice=1000 × 2h = basePrice=2000、20% 割引 = -400 → totalPrice=1600
+      expect(mockReservationCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            basePrice: 2000,
+            totalPrice: 1600,
+            spaceDiscountAmount: 400,
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -546,6 +580,34 @@ describe("updateAdminReservationCommand", () => {
       expect(result.payload).toBeDefined();
       expect(result.payload.reservationId).toBe("res-1");
       expect(result.googleCalendarEventId).toBeNull();
+    });
+
+    test("スペース固有割引(percentage)が適用され spaceDiscountAmount が永続化される", async () => {
+      mockSpaceFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "space-1",
+          name: "テストスペース",
+          addressDetail: null,
+          hourlyPrice: 1000,
+          discountType: "percentage",
+          discountValue: 20,
+          durationDiscountOverride: "use_global",
+          location: { address: "東京都渋谷区1-1-1" },
+        }),
+      );
+
+      await updateAdminReservationCommand("res-1", validInput);
+
+      // hourlyPrice=1000 × 2h = basePrice=2000、20% 割引 = -400 → totalPrice=1600
+      expect(mockReservationUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            basePrice: 2000,
+            totalPrice: 1600,
+            spaceDiscountAmount: 400,
+          }),
+        }),
+      );
     });
 
     test("クーポン変更時に旧クーポンのデクリメントと新クーポンのインクリメント", async () => {
@@ -1174,6 +1236,9 @@ describe("createPublicReservationCommand", () => {
         name: "テストスペース",
         addressDetail: null,
         hourlyPrice: 1000,
+        discountType: "none",
+        discountValue: null,
+        durationDiscountOverride: "use_global",
         locationId: "loc-1",
         location: { address: "東京都渋谷区1-1-1" },
       }),

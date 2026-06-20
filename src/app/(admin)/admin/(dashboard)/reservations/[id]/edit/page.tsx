@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import {
   getReservationById,
+  getReservationDiscountSettings,
   getSpacesForReservation,
 } from "@/admin/queries/reservation";
 import { ReservationEditForm } from "../../_components/ReservationEditForm";
@@ -31,9 +32,10 @@ export async function generateMetadata({
 export default async function ReservationEditPage({ params }: PageProps) {
   const { id } = await params;
 
-  const [reservation, spaces] = await Promise.all([
+  const [reservation, spaces, discountSettings] = await Promise.all([
     getReservationById(id),
     getSpacesForReservation(),
+    getReservationDiscountSettings(),
   ]);
 
   if (!reservation) {
@@ -52,6 +54,7 @@ export default async function ReservationEditPage({ params }: PageProps) {
         key={reservation.id}
         reservation={reservation}
         spaces={spaces}
+        discountSettings={discountSettings}
       />
     </AdminDetailLayout>
   );

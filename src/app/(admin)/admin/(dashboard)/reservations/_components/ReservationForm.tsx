@@ -26,8 +26,13 @@ import {
 } from "@/admin/components/ui";
 import { createReservationAction } from "@/admin/actions/reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
-import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  DiscountCombinationMode,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
+import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import { CustomerSelector } from "./CustomerSelector";
 import {
   RESERVATION_STATUS_OPTIONS,
@@ -40,6 +45,11 @@ import { createReservationFormSchema } from "./reservation-form-schema";
 
 type ReservationFormProps = {
   spaces: SpaceOption[];
+  discountSettings: {
+    durationDiscountEnabled: boolean;
+    durationDiscountRules: DurationDiscountRule[];
+    discountCombinationMode: DiscountCombinationMode;
+  };
 };
 
 const EMPTY_NEW_CUSTOMER: NewCustomerData = {
@@ -48,7 +58,10 @@ const EMPTY_NEW_CUSTOMER: NewCustomerData = {
   email: "",
 };
 
-export function ReservationForm({ spaces }: ReservationFormProps) {
+export function ReservationForm({
+  spaces,
+  discountSettings,
+}: ReservationFormProps) {
   const router = useRouter();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
@@ -102,7 +115,10 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
 
   const selectedSpace = spaces.find((s) => s.id === spaceId);
 
-  const calculatedPrice = (() => {
+  // 料金プレビューはサーバー側 createAdminReservationCommand と同じ
+  // calculateReservationPrice を SSoT として共有する。クーポンはサーバー側で
+  // 検証・適用されるため preview には含めない（手動 totalPrice 上書きで調整可能）。
+  const priceCalc = (() => {
     if (!selectedSpace || !startTime || !endTime) return null;
     const start = new Date(`2000-01-01T${startTime}`);
     const end = new Date(`2000-01-01T${endTime}`);
@@ -114,9 +130,31 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
       return null;
     }
     const hours = calculateDurationHours(start, end);
-    return selectedSpace.hourlyPrice * hours;
+    return calculateReservationPrice({
+      hourlyPrice: selectedSpace.hourlyPrice,
+      hours,
+      durationRules: discountSettings.durationDiscountRules,
+      durationDiscountEnabled: discountSettings.durationDiscountEnabled,
+      spaceDiscount:
+        selectedSpace.discountType !== "none" &&
+        selectedSpace.discountValue != null &&
+        selectedSpace.discountValue > 0
+          ? {
+              discountType: selectedSpace.discountType,
+              discountValue: selectedSpace.discountValue,
+              durationDiscountOverride: selectedSpace.durationDiscountOverride,
+            }
+          : null,
+      coupon: null,
+      combinationMode: discountSettings.discountCombinationMode,
+      showWarning: false,
+    });
   })();
 
+  const calculatedPrice = priceCalc?.totalPrice ?? null;
+  const basePrice = priceCalc?.basePrice ?? null;
+  const totalDiscount =
+    (priceCalc?.spaceDiscount ?? 0) + (priceCalc?.durationDiscount ?? 0);
   const displayPrice = manualPrice ?? calculatedPrice;
 
   return (
@@ -303,14 +341,20 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
 
             {displayPrice !== null ? (
               <div className="space-y-1">
+                {!manualPrice &&
+                  basePrice !== null &&
+                  totalDiscount > 0 &&
+                  basePrice !== displayPrice && (
+                    <div className="text-sm text-muted-foreground line-through">
+                      {formatCurrency(basePrice)}
+                    </div>
+                  )}
                 <div className="text-2xl font-bold">
                   {formatCurrency(displayPrice)}
                 </div>
-                {!manualPrice && calculatedPrice !== null && selectedSpace && (
+                {!manualPrice && totalDiscount > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    自動計算: {formatCurrency(selectedSpace.hourlyPrice)}/時間 ×{" "}
-                    {((calculatedPrice / selectedSpace.hourlyPrice) * 10) / 10}
-                    時間
+                    割引 -{formatCurrency(totalDiscount)} 適用
                   </p>
                 )}
               </div>
