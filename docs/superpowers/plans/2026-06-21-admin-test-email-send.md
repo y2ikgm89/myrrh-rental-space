@@ -1248,6 +1248,13 @@ import {
   Input,
   Label,
 } from "@/admin/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/admin/components/ui/select";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { sendTestEmailAction } from "@/admin/actions/settings";
 import { StatusBanner } from "../shared/StatusBanner";
@@ -1258,7 +1265,6 @@ type SimulatorOption = {
 };
 
 const SIMULATOR_OPTIONS: readonly SimulatorOption[] = [
-  { value: "", label: "（選択なし）" },
   { value: "delivered@resend.dev", label: "delivered@resend.dev — 配信成功" },
   { value: "bounced@resend.dev", label: "bounced@resend.dev — バウンス" },
   { value: "complained@resend.dev", label: "complained@resend.dev — 苦情" },
@@ -1343,19 +1349,24 @@ export function TestEmailCard({ defaultRecipient }: TestEmailCardProps) {
           <Label htmlFor={simulatorId}>
             または Resend テスト用アドレスを使う
           </Label>
-          <select
-            id={simulatorId}
-            className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          <Select
             value={simulatorValue}
-            onChange={(e) => handleSimulatorChange(e.target.value)}
+            onValueChange={handleSimulatorChange}
             disabled={pending}
           >
-            {SIMULATOR_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id={simulatorId} className="w-full">
+              <SelectValue placeholder="（選択なし）" />
+            </SelectTrigger>
+            <SelectContent>
+              {SIMULATOR_OPTIONS.filter((opt) => opt.value !== "").map(
+                (opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ),
+              )}
+            </SelectContent>
+          </Select>
           <p className="text-xs text-muted-foreground">
             Resend 公式の simulator アドレス。実際の受信箱は使われず、Resend
             ダッシュボードでバウンス・苦情等の挙動を確認できます。
