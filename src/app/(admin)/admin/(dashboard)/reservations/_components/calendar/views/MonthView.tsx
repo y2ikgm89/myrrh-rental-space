@@ -53,8 +53,10 @@ export function MonthView({
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
-      {/* 曜日ヘッダー (上部固定) */}
-      <div className="grid shrink-0 grid-cols-7 border-b bg-muted/40">
+      {/* 曜日ヘッダー (上部固定)
+          [scrollbar-gutter:stable] + overflow-hidden で日付グリッドと同じ
+          スクロールバー幅を予約し、縦スクロール時の 7 列ズレを防ぐ */}
+      <div className="grid shrink-0 grid-cols-7 overflow-hidden border-b bg-muted/40 [scrollbar-gutter:stable]">
         {weekdays.map((day, index) => (
           <div
             key={day}
@@ -68,8 +70,9 @@ export function MonthView({
         ))}
       </div>
 
-      {/* 日付グリッド (内部縦スクロール — 6週分が viewport 高を超えても card 外枠ははみ出さない) */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* 日付グリッド (内部縦スクロール — 6週分が viewport 高を超えても card 外枠ははみ出さない)
+          [scrollbar-gutter:stable] で曜日ヘッダーと列幅を揃える */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
         {weeks.map((week) => {
           const firstDay = week[0];
           if (!firstDay) return null;
