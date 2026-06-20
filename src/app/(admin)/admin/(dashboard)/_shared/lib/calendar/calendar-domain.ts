@@ -339,11 +339,22 @@ export function getEventsForDay(
 /**
  * ステータス別色クラスを取得（カレンダーイベント用）
  *
- * デザイン方針:
- * - 左 border は意味色（強）— 一目でステータス識別可能
- * - 背景は意味色の弱い tint — 読みやすさ優先
- * - テキストは foreground 系 — 小さいセル内でもコントラスト確保（WCAG 1.4.3 AA）
- * - CANCELLED は opacity 落として控えめに（取消線は EventCell 内で個別適用）
+ * デザイン方針 (PR #692 — Carbon Design / Linear / Jira / Notion / Apple HIG 公式準拠):
+ * - 5 status を **5 hue で完全分離** (PENDING=黄 / CONFIRMED=緑 / COMPLETED=青 /
+ *   NO_SHOW=赤 / CANCELLED=灰) — 色だけで一目識別可能
+ * - alpha scale を `/15` tint + border-l-4 + `hover:/25` の 5 段で統一
+ *   (旧 COMPLETED の bg-muted 100% solid の密度逸脱と COMPLETED+CANCELLED の灰系衝突を解消)
+ * - text は **text-foreground** 統一 (旧 text-muted-foreground は WCAG 4.5:1 ギリギリ
+ *   を回避し AAA 余裕 pass に)
+ * - 色覚多様性 (CUD): 色 hue 5 値分離 + Tabler icon (Clock/Check/CircleCheck/
+ *   AlertCircle/X) + 日本語ラベル + CANCELLED 取消線/opacity-60/saturate-50 (PR #688-690)
+ *   の **4 重符号化** で WCAG SC 1.4.1 (色に依存しない) を担保
+ *
+ * 業界整合:
+ * - COMPLETED = info (青) は Linear / Jira / Notion / Carbon Blue=Info の事実上の標準
+ * - CANCELLED は destructive (赤) を当てず muted (灰) — 取消は事実状態でありアクション
+ *   ではない (shadcn destructive variant 意味論 + Apple HIG systemGray)
+ * - NO_SHOW のみ destructive (赤) — ネガティブな確定 outcome で要フォロー
  */
 export function getStatusColorClass(status: string): string {
   switch (status) {
@@ -352,13 +363,13 @@ export function getStatusColorClass(status: string): string {
     case "CONFIRMED":
       return "bg-success/15 border-l-success text-foreground hover:bg-success/25";
     case "COMPLETED":
-      return "bg-muted border-l-muted-foreground text-foreground hover:bg-muted/80";
+      return "bg-info/15 border-l-info text-foreground hover:bg-info/25";
     case "NO_SHOW":
       return "bg-destructive/15 border-l-destructive text-foreground hover:bg-destructive/25";
     case "CANCELLED":
-      return "bg-muted/40 border-l-muted-foreground text-muted-foreground hover:bg-muted/60";
+      return "bg-muted/40 border-l-muted-foreground text-foreground hover:bg-muted/60";
     default:
-      return "bg-info/15 border-l-info text-foreground hover:bg-info/25";
+      return "bg-muted/40 border-l-muted-foreground text-foreground hover:bg-muted/60";
   }
 }
 

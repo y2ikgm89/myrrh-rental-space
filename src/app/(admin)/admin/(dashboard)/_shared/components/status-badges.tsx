@@ -59,21 +59,28 @@ const inquiryStatusConfig: StatusConfig<InquiryStatus> = {
   CLOSED: { label: INQUIRY_STATUS_LABELS.CLOSED, variant: "outline" },
 };
 
+// 予約ステータスの色割当 SSoT。calendar の getStatusColorClass と意味色を完全一致させる。
+// PR #692: Carbon Design System / Linear / Jira / Notion 標準パターンに整合。
+// - PENDING   = warning  (黄, 要対応の保留)
+// - CONFIRMED = success  (緑, 確定)
+// - COMPLETED = info     (青, 完了 — 業界標準: Linear/Jira/Notion で done=blue info)
+// - NO_SHOW   = destructive (赤, ネガティブな確定 outcome・要フォロー)
+// - CANCELLED = outline  (灰, 取消は事実状態でアクションではないため destructive 非適合)
 const reservationStatusConfig: StatusConfig<ReservationStatus> = {
-  PENDING: { label: RESERVATION_STATUS_LABELS.PENDING, variant: "pending" },
+  PENDING: { label: RESERVATION_STATUS_LABELS.PENDING, variant: "warning" },
   CONFIRMED: {
     label: RESERVATION_STATUS_LABELS.CONFIRMED,
     variant: "success",
   },
   COMPLETED: {
     label: RESERVATION_STATUS_LABELS.COMPLETED,
-    variant: "default",
+    variant: "info",
   },
   CANCELLED: {
     label: RESERVATION_STATUS_LABELS.CANCELLED,
-    variant: "destructive",
+    variant: "outline",
   },
-  NO_SHOW: { label: RESERVATION_STATUS_LABELS.NO_SHOW, variant: "warning" },
+  NO_SHOW: { label: RESERVATION_STATUS_LABELS.NO_SHOW, variant: "destructive" },
 };
 
 const paymentStatusConfig: StatusConfig<PaymentStatus> = {
