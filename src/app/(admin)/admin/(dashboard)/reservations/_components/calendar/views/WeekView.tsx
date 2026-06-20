@@ -1,12 +1,13 @@
 "use client";
 
-import { format, isSameDay, isToday } from "date-fns";
+import { format, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/shared/lib/cn";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
   maxConcurrentColumns,
+  isSameJstDay,
   getWeekdayColorClass,
   DEFAULT_BUSINESS_HOURS,
   CALENDAR_LAYOUT,
@@ -27,7 +28,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
 
   const columns: TimeGridColumn[] = displayDays.map((day, index) => {
-    const dayEvents = events.filter((e) => isSameDay(e.startTime, day));
+    const dayEvents = events.filter((e) => isSameJstDay(e.startTime, day));
     const positioned = layoutOverlappingEvents(dayEvents);
     const maxCols = maxConcurrentColumns(positioned);
     const minWidthPx = Math.max(

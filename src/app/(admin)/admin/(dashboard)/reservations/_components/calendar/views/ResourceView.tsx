@@ -1,9 +1,10 @@
 "use client";
 
-import { isSameDay, isToday } from "date-fns";
+import { isToday } from "date-fns";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
+  isSameJstDay,
   DEFAULT_BUSINESS_HOURS,
   CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
@@ -44,9 +45,7 @@ export function ResourceView({
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
   const today = isToday(date);
 
-  const dayEvents = events.filter((e) =>
-    isSameDay(new Date(e.startTime), date),
-  );
+  const dayEvents = events.filter((e) => isSameJstDay(e.startTime, date));
 
   // 該当スペースに属さない予約 (削除済みスペース等のフォールバック)
   const orphanEvents = dayEvents.filter(
