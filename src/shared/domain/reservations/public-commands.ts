@@ -13,7 +13,9 @@ import {
   CUSTOMER_SELECT,
   buildDateTime,
   calculateHoursAndBasePrice,
+  calculatePricing,
   ensureNoOverlap,
+  getReservationSettings,
   incrementCustomerReservationStats,
   buildPayload,
 } from "./payloads";
@@ -79,11 +81,22 @@ export async function createPublicReservationCommand(
     endTime: endDateTime,
   });
 
-  const { basePrice } = calculateHoursAndBasePrice(
+  const { hours, basePrice } = calculateHoursAndBasePrice(
     startDateTime,
     endDateTime,
     space.hourlyPrice,
   );
+
+  // 公開予約フォームの料金確定はサーバー側 SSoT。長時間割引は Settings から、
+  // クーポン・スペース割引は公開フォーム経路では扱わない（mypage / admin 経路で適用）。
+  const settings = await getReservationSettings();
+  const { totalPrice, durationDiscountAmount } = calculatePricing({
+    hourlyPrice: space.hourlyPrice,
+    hours,
+    basePrice,
+    settings,
+    coupon: null,
+  });
 
   const reservation = await prisma.$transaction(async (tx) => {
     await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
@@ -116,8 +129,9 @@ export async function createPublicReservationCommand(
         customerId,
         startTime: startDateTime,
         endTime: endDateTime,
-        totalPrice: basePrice,
         basePrice,
+        totalPrice,
+        durationDiscountAmount,
         status: ReservationStatus.CONFIRMED,
         notes: input.notes || null,
         userId: input.userId || null,
@@ -152,7 +166,7 @@ export async function createPublicReservationCommand(
       space,
       startTime: startDateTime,
       endTime: endDateTime,
-      totalPrice: basePrice,
+      totalPrice,
       notes: input.notes,
       guestName: guestNameDiff,
       icsSequence: reservation.icsSequence,
