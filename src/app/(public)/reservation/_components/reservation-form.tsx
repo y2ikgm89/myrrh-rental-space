@@ -27,6 +27,8 @@ import {
   formatDateString,
 } from "@/shared/lib/reservation/time-slots-utils";
 import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
+import type { PublicDiscountSettings } from "@/shared/domain/settings/queries/discount";
+import { calculateDurationDiscount } from "@/shared/lib/pricing/discount";
 import { submitReservation } from "@/public/actions/reservation";
 import {
   fetchAvailableSlots,
@@ -111,6 +113,7 @@ interface ReservationFormProps {
   readonly turnstileSiteKey: string | null;
   readonly minReservationDuration: number;
   readonly maxReservationDuration: number;
+  readonly discountSettings: PublicDiscountSettings;
   readonly prefillData?: PrefillData | undefined;
   readonly initialSpaceId?: string | undefined;
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
@@ -122,6 +125,7 @@ export function ReservationForm({
   turnstileSiteKey,
   minReservationDuration,
   maxReservationDuration,
+  discountSettings,
   prefillData,
   initialSpaceId,
   requiredTerms = [],
@@ -224,10 +228,22 @@ export function ReservationForm({
     state.startTime && state.duration
       ? addMinutesToTime(state.startTime, state.duration)
       : null;
-  const price =
+  const basePrice =
     currentSpace && state.duration
-      ? (currentSpace.hourlyPrice * state.duration) / 60
+      ? Math.floor((currentSpace.hourlyPrice * state.duration) / 60)
       : null;
+  const durationDiscount =
+    basePrice != null &&
+    state.duration &&
+    discountSettings.durationDiscountEnabled
+      ? calculateDurationDiscount(
+          basePrice,
+          state.duration / 60,
+          discountSettings.durationDiscountRules,
+        )
+      : { discount: 0, appliedRule: null };
+  const price =
+    basePrice != null ? basePrice - durationDiscount.discount : null;
 
   const isStep1Complete = state.locationId != null && state.spaceId != null;
   const isStep2Complete =
@@ -509,6 +525,11 @@ export function ReservationForm({
             endTime: endTime ?? "",
             guests: state.guests,
             price,
+            originalPrice: basePrice,
+            discountAmount: durationDiscount.discount,
+            appliedDiscountRate:
+              durationDiscount.appliedRule?.discountRate ?? null,
+            showOriginalPrice: discountSettings.showOriginalPrice,
           }}
           onCustomerTypeChange={handleCustomerTypeChange}
           onTurnstileVerify={handleTurnstileVerify}

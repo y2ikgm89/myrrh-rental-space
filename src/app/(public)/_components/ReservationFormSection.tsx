@@ -29,6 +29,7 @@ import {
   getBusinessHoursSettingsQuery,
   getReservationRuleSettings,
 } from "@/shared/domain/reservations/availability";
+import { getPublicDiscountSettings } from "@/shared/domain/settings/queries/discount";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -64,6 +65,7 @@ export async function ReservationFormSection({
     user,
     requiredTerms,
     reservationRules,
+    discountSettings,
   ] = await Promise.all([
     getPublishedLocationsWithSpaces(),
     getBusinessHoursSettingsQuery(),
@@ -71,6 +73,7 @@ export async function ReservationFormSection({
     getCurrentCustomerUser(),
     getRequiredTermsAtReservation(),
     getReservationRuleSettings(),
+    getPublicDiscountSettings(),
   ]);
 
   if (config.requireLogin && !user) {
@@ -141,6 +144,7 @@ export async function ReservationFormSection({
           turnstileSiteKey={turnstileSiteKey}
           minReservationDuration={reservationRules.minReservationDuration}
           maxReservationDuration={reservationRules.maxReservationDuration}
+          discountSettings={discountSettings}
           prefillData={prefillData}
           initialSpaceId={initialSpaceId}
           requiredTerms={requiredTerms}

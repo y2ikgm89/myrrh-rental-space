@@ -20,6 +20,10 @@ interface BookingSummaryProps {
   readonly endTime: string;
   readonly guests: number;
   readonly price: number | null;
+  readonly originalPrice?: number | null;
+  readonly discountAmount?: number;
+  readonly appliedDiscountRate?: number | null;
+  readonly showOriginalPrice?: boolean;
   readonly onEdit?: () => void;
 }
 
@@ -65,10 +69,17 @@ export function BookingSummary({
   endTime,
   guests,
   price,
+  originalPrice = null,
+  discountAmount = 0,
+  appliedDiscountRate = null,
+  showOriginalPrice = false,
   onEdit,
 }: BookingSummaryProps): ReactElement {
   const { formatTotal } = useFormatPrice();
   const durationLabel = formatDurationLabel(startTime, endTime);
+
+  const hasDiscount = discountAmount > 0 && originalPrice != null;
+  const showStrikeThrough = hasDiscount && showOriginalPrice;
 
   return (
     <div className="border border-border px-6 py-6 sm:px-8 sm:py-7">
@@ -78,9 +89,27 @@ export function BookingSummary({
           予約内容
         </Heading>
         {price !== null ? (
-          <p className="text-xl font-light text-accent">{formatTotal(price)}</p>
+          <div className="flex flex-col items-end gap-0.5">
+            {showStrikeThrough && originalPrice !== price ? (
+              <p className="text-sm text-muted-foreground line-through">
+                {formatTotal(originalPrice)}
+              </p>
+            ) : null}
+            <p className="text-xl font-light text-accent">
+              {formatTotal(price)}
+            </p>
+          </div>
         ) : null}
       </div>
+
+      {hasDiscount ? (
+        <p className="mt-2 text-right text-sm text-accent">
+          {appliedDiscountRate != null
+            ? `長時間割引 ${appliedDiscountRate}% OFF`
+            : "長時間割引適用"}
+          （-{formatTotal(discountAmount)}）
+        </p>
+      ) : null}
 
       {/* Divider */}
       <div className="my-5 border-t border-border" />
