@@ -10,6 +10,7 @@ import {
   maxConcurrentColumns,
   isSameJstDay,
   isPastJstDay,
+  isEventEnded,
   minutesSinceJstBusinessStart,
   getWeekdayColorClass,
   DEFAULT_BUSINESS_HOURS,
@@ -94,7 +95,12 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
       body: (
         <div className="absolute inset-0 px-1">
           {positioned.map((event) => (
-            <EventCell key={event.id} event={event} onClick={onEventClick} />
+            <EventCell
+              key={event.id}
+              event={event}
+              onClick={onEventClick}
+              isPast={now !== null && isEventEnded(event.endTime, now)}
+            />
           ))}
         </div>
       ),

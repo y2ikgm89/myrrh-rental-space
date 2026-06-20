@@ -135,6 +135,18 @@ export function isPastJstDay(date: string | Date, now: Date): boolean {
   return formatJstDateString(date) < formatJstDateString(now);
 }
 
+/**
+ * イベントが終了済み (endTime < now) か判定する。
+ * Google Calendar / Outlook 同等の「過去イベント opacity 落とし」SSoT。
+ *
+ * 日 (day) ベースの `isPastJstDay` と異なり、こちらは時刻 (時:分) 単位で判定する。
+ * 当日のイベントでも終了時刻を過ぎれば true になる。
+ */
+export function isEventEnded(endTime: string | Date, now: Date): boolean {
+  const end = typeof endTime === "string" ? new Date(endTime) : endTime;
+  return end.getTime() < now.getTime();
+}
+
 /** JST の hour / minute を Intl.DateTimeFormat で抽出 (ランタイム TZ 非依存) */
 function getJstHourMinute(date: Date): { hour: number; minute: number } {
   const parts = new Intl.DateTimeFormat("en-GB", {

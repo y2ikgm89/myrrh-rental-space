@@ -10,6 +10,7 @@ import {
   getWeekdayColorClass,
   isSameJstDay,
   isPastJstDay,
+  isEventEnded,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
 import { EventBadge } from "../EventCell";
@@ -157,6 +158,9 @@ export function MonthView({
                           key={event.id}
                           event={event}
                           onClick={onEventClick}
+                          isPast={
+                            now !== null && isEventEnded(event.endTime, now)
+                          }
                         />
                       ))}
 
