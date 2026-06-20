@@ -59,13 +59,15 @@ export type SendEmailParams = {
 /**
  * メールを送信する。
  *
- * env / 管理画面のいずれにも Resend API キーが無い場合は no-op（`{ success: true }` を返す）。
+ * Resend API キーが env / 管理画面のいずれにも無い場合は `{ ok: false, reason: "disabled" }` を返す。
+ * 既存テンプレ送信経路は `result.ok === false` を「失敗」として log するため動作不変。
+ * テスト送信機能は `reason: "disabled"` を「警告」、`reason: "error"` を「エラー」として UI 上区別する。
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
-  if (!(await isEmailEnabled())) return { success: true };
+  if (!(await isEmailEnabled())) return { ok: false, reason: "disabled" };
 
   const resend = await getResendClient();
-  if (!resend) return { success: true };
+  if (!resend) return { ok: false, reason: "disabled" };
 
   const {
     payload,
@@ -97,11 +99,14 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const { error } = idempotencyKey
+      const { data, error } = idempotencyKey
         ? await resend.emails.send(fullPayload, { idempotencyKey })
         : await resend.emails.send(fullPayload);
 
-      if (!error) return { success: true };
+      if (!error) {
+        const messageId = data?.id ?? "";
+        return { ok: true, messageId };
+      }
 
       if (attempt < maxRetries && RETRYABLE_ERROR_NAMES.has(error.name)) {
         await sleep(backoffMs(attempt));
@@ -117,18 +122,18 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
           attempt: attempt + 1,
         },
       });
-      return { success: false, error: "メール送信に失敗しました" };
+      return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     } catch (error) {
       logError(normalizeError(error), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: errorContext,
       });
-      return { success: false, error: "メール送信に失敗しました" };
+      return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     }
   }
 
-  return { success: false, error: "メール送信に失敗しました" };
+  return { ok: false, reason: "error", error: "メール送信に失敗しました" };
 }
 
 /**

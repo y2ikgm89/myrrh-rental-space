@@ -88,9 +88,9 @@ export async function GET(request: Request) {
           icsSequence: reservation.icsSequence,
         });
 
-        // sendEmail は送信失敗時に throw せず { success: false } を返す。
-        // 失敗時は claim を解放して次回 cron で再送できるようにする。
-        if (!result.success) {
+        // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。
+        // 失敗・disabled どちらでも claim を解放して次回 cron で再送できるようにする。
+        if (!result.ok) {
           await releaseReservationReminderClaim(reservation.id);
           skipped++;
           continue;

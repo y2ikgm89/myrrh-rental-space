@@ -52,7 +52,7 @@ export async function sendReservationConfirmationEmail(
 ): Promise<EmailResult> {
   const { sendReservationConfirmationEmail: enabled } =
     await getEmailDeliverySettings();
-  if (!enabled) return { success: true };
+  if (!enabled) return { ok: true, messageId: "" };
 
   const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
@@ -350,10 +350,10 @@ export async function sendReservationAdminNotification(
     update: toggles.notifyReservationChange,
     cancel: toggles.notifyReservationCancel,
   }[action];
-  if (!enabledByAction) return { success: true };
+  if (!enabledByAction) return { ok: true, messageId: "" };
 
   const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { success: true };
+  if (notificationEmails.length === 0) return { ok: true, messageId: "" };
 
   const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,

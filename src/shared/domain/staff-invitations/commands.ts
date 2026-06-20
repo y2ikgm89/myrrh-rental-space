@@ -151,9 +151,13 @@ async function sendInvitationEmailOrThrow(params: {
     expiresAt: params.expiresAt,
   });
 
-  if (!emailResult.success) {
+  if (!emailResult.ok) {
     logError(
-      new Error(emailResult.error || "Failed to send invitation email"),
+      new Error(
+        emailResult.reason === "error"
+          ? emailResult.error
+          : "Failed to send invitation email",
+      ),
       {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
