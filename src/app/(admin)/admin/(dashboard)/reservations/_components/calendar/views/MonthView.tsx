@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { format, isSameMonth, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/shared/lib/cn";
@@ -9,6 +9,7 @@ import {
   getWeekdayHeaders,
   getWeekdayColorClass,
   isSameJstDay,
+  isPastJstDay,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
 import { EventBadge } from "../EventCell";
@@ -33,6 +34,14 @@ export function MonthView({
   const weekdays = getWeekdayHeaders();
   const monthKey = format(dateRange.start, "yyyy-MM");
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  // hydration mismatch 回避: useSyncExternalStore で client-only gate
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  // eslint-disable-next-line @eslint-react/purity -- Client component
+  const now = isClient ? new Date() : null;
 
   const weeks: Date[][] = [];
   const { displayDates } = dateRange;
@@ -96,13 +105,17 @@ export function MonthView({
                 const hiddenCount = dayEvents.length - MAX_VISIBLE_EVENTS;
                 const isCurrentMonth = isSameMonth(day, currentDate);
                 const todayCell = isToday(day);
+                const isPast =
+                  !todayCell && now !== null && isPastJstDay(day, now);
 
                 return (
                   <div
                     key={dayId}
                     className={cn(
                       "relative flex min-h-[140px] flex-col gap-1 border-r p-1.5 last:border-r-0 transition-colors",
-                      !isCurrentMonth && "bg-muted/30",
+                      // 過去日 / 当月外 → muted (Google Calendar / Outlook 公式パターン)
+                      (isPast || !isCurrentMonth) && "bg-muted/30",
+                      // 今日 → primary tint (muted を上書き; 上の cn 順で tailwind-merge が解決)
                       todayCell && "bg-primary/5",
                     )}
                   >

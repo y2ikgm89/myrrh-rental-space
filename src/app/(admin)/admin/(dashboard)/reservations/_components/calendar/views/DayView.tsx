@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { format, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/shared/lib/cn";
@@ -7,6 +8,8 @@ import {
   generateTimeSlots,
   layoutOverlappingEvents,
   maxConcurrentColumns,
+  isPastJstDay,
+  minutesSinceJstBusinessStart,
   getWeekdayColorClass,
   DEFAULT_BUSINESS_HOURS,
   CALENDAR_LAYOUT,
@@ -34,8 +37,29 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
   const today = isToday(date);
   const dayOfWeek = date.getDay();
 
-  // WeekView と同形の単一カラム — 列ヘッダーは weekday + 日付ピル、body は
-  // bg-primary/5 で today を tint。CalendarToolbar の dateLabel が SSoT のため
+  // hydration mismatch 回避: useSyncExternalStore で client-only gate
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  // eslint-disable-next-line @eslint-react/purity -- Client component: now indicator
+  const now = isClient ? new Date() : null;
+  const past = now !== null && isPastJstDay(date, now);
+  const businessTotalMinutes =
+    (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;
+  const nowMinutes = now ? minutesSinceJstBusinessStart(now) : 0;
+  // 今日列のみ意味あり。営業時間外も 0 / gridHeight に clamp。
+  const nowOffsetPx =
+    now === null || !today
+      ? null
+      : nowMinutes <= 0
+        ? 0
+        : nowMinutes >= businessTotalMinutes
+          ? gridHeight
+          : (nowMinutes / 60) * CALENDAR_LAYOUT.pixelsPerHour;
+
+  // WeekView と同形の単一カラム。CalendarToolbar の dateLabel が SSoT のため
   // 大きな内部 BIG 日付ヘッダーは持たない。
   const column: TimeGridColumn = {
     key: date.toISOString(),
@@ -69,7 +93,8 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
         ))}
       </div>
     ),
-    ...(today ? { bodyClassName: "bg-primary/5" } : {}),
+    ...(past && !today ? { bodyClassName: "bg-muted/30" } : {}),
+    ...(today ? { isTodayColumn: true as const } : {}),
   };
 
   return (
@@ -79,6 +104,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
         gridHeight={gridHeight}
         columns={[column]}
         ariaLabel="日次予約タイムグリッド"
+        nowOffsetPx={nowOffsetPx}
       />
     </div>
   );
