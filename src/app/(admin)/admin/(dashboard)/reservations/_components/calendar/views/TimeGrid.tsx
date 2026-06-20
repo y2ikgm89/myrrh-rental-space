@@ -2,14 +2,15 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
+import { CALENDAR_LAYOUT } from "@/admin/lib/calendar";
 import { TimeColumn } from "./TimeColumn";
 
 /**
  * TimeGrid 1 列の入力。
  *
- * - `header` は sticky ヘッダーセル内に描画される。背景は親 cell 側で `bg-card`
- *   不透明に固定されるため、`header` 自身に alpha 背景を当てる場合は内側 div の
- *   別レイヤーに置く（cn のクラスマージで bg-card が上書きされ透けるのを防ぐ）。
+ * - `header` は sticky ヘッダーセル内に描画される (`bg-card` 不透明) — 内側 div として
+ *   レンダリングされるため、子要素に alpha 背景を当ててもセルの bg-card は親元素として
+ *   独立しており cn のクラスマージで透けることはない (PR #683 で sticky 透過根治済み)。
  * - `body` は時間スロット罫線の上に重ねるイベントレイヤー。
  *   `absolute inset-0` で位置決めしたものを渡す。
  */
@@ -20,7 +21,7 @@ export interface TimeGridColumn {
   minWidthPx: number;
   /** 列ヘッダー sticky セルに追加で適用する className */
   headerClassName?: string;
-  /** 列ボディ relative セルに追加で適用する className（例: 今日列の `bg-primary/5`） */
+  /** 列ボディ relative セルに追加で適用する className (例: 今日列の `bg-primary/5`) */
   bodyClassName?: string;
 }
 
@@ -28,6 +29,8 @@ interface TimeGridProps {
   timeSlots: string[];
   gridHeight: number;
   columns: TimeGridColumn[];
+  /** スクリーンリーダー向けラベル (region として announce される) */
+  ariaLabel: string;
 }
 
 /**
@@ -42,20 +45,31 @@ interface TimeGridProps {
  * sticky 要素は必ず**不透明背景** (`bg-card`) を持つ。半透明 (`bg-muted/40` 等) にすると
  * スクロールしてきた本体セルが透けて見える。
  *
- * **外側カード（rounded-lg border bg-card）は含まない** — 呼び出し側で wrap する。
- * これにより ResourceView の orphan footer のような付帯要素を同じカード内に配置できる。
+ * **外側カード (rounded-lg border bg-card) は含まない** — 呼び出し側で wrap する。
+ *
+ * **a11y**: role=region + aria-label で SR に discoverable な領域として announce する。
+ * EventCell/EventBadge 内部の button は個別に aria-label を持つので Tab ナビゲーションで
+ * 個々の予約に到達できる。キーボード矢印移動は将来拡張。
  */
-export function TimeGrid({ timeSlots, gridHeight, columns }: TimeGridProps) {
+export function TimeGrid({
+  timeSlots,
+  gridHeight,
+  columns,
+  ariaLabel,
+}: TimeGridProps) {
   const gridTemplate = [
-    "60px",
+    `${CALENDAR_LAYOUT.timeColumnWidthPx}px`,
     ...columns.map((c) => `minmax(${c.minWidthPx}px, 1fr)`),
   ].join(" ");
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div role="region" aria-label={ariaLabel} className="flex-1 overflow-auto">
       <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
         {/* Corner cell: 縦横スクロール時も常に左上に固定 (z-30) */}
-        <div className="sticky left-0 top-0 z-30 border-b border-r bg-card" />
+        <div
+          aria-hidden="true"
+          className="sticky left-0 top-0 z-30 border-b border-r bg-card"
+        />
 
         {/* 列ヘッダー: 縦スクロール時に上部固定 (z-20) */}
         {columns.map((col) => (
@@ -89,7 +103,11 @@ export function TimeGrid({ timeSlots, gridHeight, columns }: TimeGridProps) {
             style={{ height: `${gridHeight}px` }}
           >
             {timeSlots.map((time) => (
-              <div key={time} className="h-[60px] border-b last:border-b-0" />
+              <div
+                key={time}
+                style={{ height: `${CALENDAR_LAYOUT.pixelsPerHour}px` }}
+                className="border-b last:border-b-0"
+              />
             ))}
             {col.body}
           </div>

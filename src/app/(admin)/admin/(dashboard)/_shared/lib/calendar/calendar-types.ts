@@ -115,6 +115,25 @@ export const DEFAULT_BUSINESS_HOURS: BusinessHours = {
 };
 
 /**
- * 1時間あたりのピクセル数
+ * カレンダーレイアウト共通定数 (SSoT)
+ *
+ * 全 view (Month/Week/Day/Resource) で参照する pixel 系定数の単一参照点。
+ * 各 view にコピーされた `DAY_COLUMN_MIN_PX` / `SUBCOLUMN_MIN_PX` /
+ * `MIN_COLUMN_WIDTH` 相当をここに集約する。
  */
-export const PIXELS_PER_HOUR = 60;
+export const CALENDAR_LAYOUT = {
+  /** 1 時間あたりの pixel */
+  pixelsPerHour: 60,
+  /** 時刻カラム (TimeGrid 左端) の幅 */
+  timeColumnWidthPx: 60,
+  /** WeekView の各日カラム最小幅 (重複なし時) */
+  weekColumnMinPx: 140,
+  /** WeekView の重複イベント 1 サブカラム最小幅 — WCAG 2.5.5 / 文字 + アイコンが収まる最低限 */
+  weekSubcolumnMinPx: 80,
+  /** DayView の単一日カラム最小幅 (1fr で広がるが極端な狭幅を避ける) */
+  dayColumnMinPx: 320,
+  /** DayView の重複イベント 1 サブカラム最小幅 */
+  daySubcolumnMinPx: 120,
+  /** ResourceView の各スペースカラム最小幅 */
+  resourceColumnMinPx: 160,
+} as const;

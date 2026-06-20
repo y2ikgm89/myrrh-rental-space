@@ -1,11 +1,11 @@
 "use client";
 
-import { isSameDay } from "date-fns";
+import { isSameDay, isToday } from "date-fns";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
   DEFAULT_BUSINESS_HOURS,
-  PIXELS_PER_HOUR,
+  CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, SpaceOption } from "@/admin/lib/calendar";
 import { EventCell } from "../EventCell";
@@ -17,8 +17,6 @@ interface ResourceViewProps {
   spaces: SpaceOption[];
   onEventClick: (event: CalendarEvent) => void;
 }
-
-const MIN_COLUMN_WIDTH = 160;
 
 /**
  * スペース別ビュー (Resource Timeline)
@@ -32,8 +30,9 @@ const MIN_COLUMN_WIDTH = 160;
  * 発生する「極細バー化」問題が原理的に発生しない。
  *
  * 2D グリッド本体は WeekView / DayView と同じ `TimeGrid` shell を共有する。
- * 列ヘッダーはスペース名（日付ベースの「今日」ハイライトは適用しない — date は
- * Toolbar が SSoT）。
+ * 列ヘッダーはスペース名 (列が space ベースなので per-column の今日判定はしない)。
+ * date 側の「今日」は全列ボディに `bg-primary/5` tint を一律適用して affordance を与える
+ * (Week/Day と整合)。
  */
 export function ResourceView({
   date,
@@ -42,7 +41,8 @@ export function ResourceView({
   onEventClick,
 }: ResourceViewProps) {
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
-  const gridHeight = timeSlots.length * PIXELS_PER_HOUR;
+  const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
+  const today = isToday(date);
 
   const dayEvents = events.filter((e) =>
     isSameDay(new Date(e.startTime), date),
@@ -53,12 +53,16 @@ export function ResourceView({
     (e) => !spaces.some((s) => s.id === e.spaceId),
   );
 
+  // 空状態の外殻も他 3 ビューと同じ baseline shell。中身のセンタリングは
+  // inner div で完結させ、outer の shape を統一する。
   if (spaces.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center overflow-hidden rounded-lg border bg-card">
-        <p className="text-muted-foreground">
-          表示できるスペースがありません。スペースを登録してください。
-        </p>
+      <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+        <div className="flex flex-1 items-center justify-center px-4 py-8">
+          <p className="text-muted-foreground">
+            表示できるスペースがありません。スペースを登録してください。
+          </p>
+        </div>
       </div>
     );
   }
@@ -69,10 +73,10 @@ export function ResourceView({
     );
     return {
       key: space.id,
-      minWidthPx: MIN_COLUMN_WIDTH,
+      minWidthPx: CALENDAR_LAYOUT.resourceColumnMinPx,
       header: (
         <div
-          className="flex h-full items-center truncate px-3 py-2 text-sm font-semibold"
+          className="flex h-full items-center truncate px-2 py-2 text-sm font-semibold"
           title={space.name}
         >
           {space.name}
@@ -85,6 +89,8 @@ export function ResourceView({
           ))}
         </div>
       ),
+      // Today の affordance: 全スペース列のボディに薄い primary tint
+      ...(today ? { bodyClassName: "bg-primary/5" } : {}),
     };
   });
 
@@ -94,6 +100,7 @@ export function ResourceView({
         timeSlots={timeSlots}
         gridHeight={gridHeight}
         columns={columns}
+        ariaLabel="スペース別予約タイムグリッド"
       />
 
       {/* 孤立イベント (削除済みスペース等のフォールバック) — カード内の status footer */}
