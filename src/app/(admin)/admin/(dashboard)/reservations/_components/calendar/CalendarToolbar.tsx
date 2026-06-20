@@ -46,6 +46,7 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
   const {
     view,
     currentDate,
+    isAlreadyToday,
     spaces,
     spaceId,
     status,
@@ -67,7 +68,7 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
       <div
         role="group"
         aria-label="表示モード"
-        className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-muted p-1"
+        className="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted p-1 sm:gap-0.5"
       >
         {VIEW_OPTIONS.map(({ value, label, Icon }) => {
           const isActive = view === value;
@@ -75,7 +76,10 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
             <button
               key={value}
               type="button"
-              aria-pressed={isActive}
+              // ARIA 1.2: トグルボタンは active/inactive いずれの状態でも aria-pressed を
+              // 明示する。JSX で boolean false を渡すと属性自体が DOM から消えてしまい
+              // SR が「トグル状態にあること」を認識できないため、必ず string 化する。
+              aria-pressed={isActive ? "true" : "false"}
               onClick={() => setView(value)}
               className={cn(
                 "inline-flex min-h-11 items-center gap-1.5 rounded px-3 text-sm font-medium transition-colors",
@@ -102,7 +106,13 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
         >
           <IconChevronLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Button variant="outline" size="sm" onClick={goToday}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToday}
+          disabled={isAlreadyToday}
+          title={isAlreadyToday ? "既に今日を表示しています" : undefined}
+        >
           <IconCalendar className="mr-1.5 h-4 w-4" aria-hidden="true" />
           今日
         </Button>

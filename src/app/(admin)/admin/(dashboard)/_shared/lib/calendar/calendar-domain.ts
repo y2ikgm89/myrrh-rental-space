@@ -6,7 +6,6 @@ import {
   startOfDay,
   endOfDay,
   eachDayOfInterval,
-  isSameDay,
   addDays,
   addWeeks,
   addMonths,
@@ -16,6 +15,7 @@ import {
   format,
 } from "date-fns";
 import { ja } from "date-fns/locale";
+import { formatJstDateString } from "@/shared/lib/date-format";
 import type {
   CalendarView,
   CalendarDateRange,
@@ -114,6 +114,20 @@ export function generateTimeSlots(
 }
 
 /**
+ * 2 つの日時を JST (Asia/Tokyo) 基準で「同じ日か」判定する。
+ *
+ * date-fns の `isSameDay` はランタイム TZ で日付を比較するため、サーバー (UTC) と
+ * クライアント (JST) で評価結果が分かれる潜在バグがある。本関数は `formatJstDateString`
+ * (Intl.DateTimeFormat の timeZone="Asia/Tokyo") を経由して JST の YYYY-MM-DD に
+ * 正規化してから比較するため、ランタイム TZ に依存しない。
+ *
+ * カレンダー系のイベント日付比較は全てここに集約する (#634-637 系の locale 漏れ撲滅)。
+ */
+export function isSameJstDay(a: string | Date, b: string | Date): boolean {
+  return formatJstDateString(a) === formatJstDateString(b);
+}
+
+/**
  * 列内の最大同時並走イベント数を計算する。
  *
  * `layoutOverlappingEvents` の戻り値 `position.width` (%) は
@@ -151,10 +165,15 @@ export function calculateEventPosition(
 
   const duration = Math.max(0, clippedEnd - clippedStart);
   const offset = Math.max(0, clippedStart - dayStartMinutes);
+  const rawHeightPx = (duration / 60) * pixelsPerHour;
 
   return {
     top: (offset / 60) * pixelsPerHour,
-    height: Math.max((duration / 60) * pixelsPerHour, 20), // 最小高さ20px
+    // 営業時間外イベント (例: 22:00-23:00 で 9-21 時制限) や、日跨ぎで開始日の
+    // 営業時間と非交差な区間は duration=0 → height=0 を返す。呼び出し側は
+    // `layoutOverlappingEvents` の段階で除外する (ghost cell を描画しない)。
+    // それ以外は WCAG タッチ標的を満たす最低 20px を保証。
+    height: rawHeightPx <= 0 ? 0 : Math.max(rawHeightPx, 20),
     left: 0,
     width: 100,
     zIndex: 1,
@@ -213,8 +232,12 @@ export function layoutOverlappingEvents(
       let placed = false;
 
       for (const column of columns) {
-        const lastInColumn = column[column.length - 1];
-        if (lastInColumn && lastInColumn.endTime <= event.startTime) {
+        // 列内の **全イベント** と非重複であることを確認する。
+        // 旧実装は `lastInColumn.endTime <= event.startTime` だけ見ていたため、
+        // [A(00:00-02:00), B(01:00-03:00), C(00:30-01:30)] のように 3 件以上の
+        // 重複が staggered に並ぶケースで列分散が壊れた (audit #685 後の F2)。
+        const canPlace = column.every((e) => e.endTime <= event.startTime);
+        if (canPlace) {
           column.push(event);
           placed = true;
           break;
@@ -227,17 +250,22 @@ export function layoutOverlappingEvents(
     }
 
     const columnCount = columns.length;
+    // 1 カラム時のみ width: 100% (1% マージン非適用)、それ以外は 1% マージン
     const columnWidth = 100 / columnCount;
+    const widthMargin = columnCount > 1 ? 1 : 0;
 
     columns.forEach((column, colIndex) => {
       for (const event of column) {
         const position = calculateEventPosition(event, hours, pixelsPerHour);
+        // 営業時間外 / 日跨ぎで描画領域 0 のものは layout 段階で除外し
+        // ghost cell が DOM に残らないようにする。
+        if (position.height === 0) continue;
         result.push({
           ...event,
           position: {
             ...position,
             left: colIndex * columnWidth,
-            width: columnWidth - 1, // 1%のマージン
+            width: columnWidth - widthMargin,
             zIndex: colIndex + 1,
           },
         });
@@ -249,13 +277,13 @@ export function layoutOverlappingEvents(
 }
 
 /**
- * 指定日のイベントを取得
+ * 指定日のイベントを取得 (JST 基準で同日判定)
  */
 export function getEventsForDay(
   events: CalendarEvent[],
   day: Date,
 ): CalendarEvent[] {
-  return events.filter((event) => isSameDay(new Date(event.startTime), day));
+  return events.filter((event) => isSameJstDay(event.startTime, day));
 }
 
 /**

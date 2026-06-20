@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { format, isSameDay, isSameMonth, isToday } from "date-fns";
+import { format, isSameMonth, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/shared/lib/cn";
 import { formatJstDateString } from "@/shared/lib/date-format";
-import { getWeekdayHeaders, getWeekdayColorClass } from "@/admin/lib/calendar";
+import {
+  getWeekdayHeaders,
+  getWeekdayColorClass,
+  isSameJstDay,
+} from "@/admin/lib/calendar";
 import type { CalendarEvent, CalendarDateRange } from "@/admin/lib/calendar";
 import { EventBadge } from "../EventCell";
 
@@ -38,7 +42,7 @@ export function MonthView({
 
   const getEventsForDay = (day: Date) =>
     events
-      .filter((e) => isSameDay(new Date(e.startTime), day))
+      .filter((e) => isSameJstDay(e.startTime, day))
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   const handleDayClick = (day: Date) => {

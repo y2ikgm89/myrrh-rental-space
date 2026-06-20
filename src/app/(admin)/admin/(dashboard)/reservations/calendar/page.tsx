@@ -57,6 +57,14 @@ async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
 export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
+  // Pattern A: searchParam が server fetch を gate する → page 側で resolve し
+  // Suspense key として注入することで、soft navigation (nuqs push) でも
+  // boundary が再 trigger され skeleton → 新コンテンツの正規ストリームが回る。
+  // canonical 実装: admin/events/page.tsx (key={params.tab})
+  const params = await loadAdminCalendarSearchParams(searchParams);
+  const view = getValidCalendarView(params.view, "week");
+  const suspenseKey = `cal-${view}-${params.date ?? "today"}-${params.spaceId ?? "all"}-${params.status ?? "all"}`;
+
   return (
     <div className="flex h-[calc(100dvh-8rem)] flex-col space-y-6">
       <Breadcrumb
@@ -86,7 +94,7 @@ export default async function ReservationCalendarPage({
 
       {/* カレンダー */}
       <div className="min-h-0 flex-1">
-        <Suspense fallback={<CalendarSkeleton />}>
+        <Suspense key={suspenseKey} fallback={<CalendarSkeleton />}>
           <CalendarData searchParams={searchParams} />
         </Suspense>
       </div>

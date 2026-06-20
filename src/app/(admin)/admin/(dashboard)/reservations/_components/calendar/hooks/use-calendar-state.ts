@@ -13,6 +13,7 @@ import {
   navigatePrevious,
   getEventsForDay,
   getValidCalendarView,
+  isSameJstDay,
 } from "@/admin/lib/calendar";
 import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { toDateString } from "@/shared/lib/serialize";
@@ -41,10 +42,14 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
 
   // 日付計算
   // eslint-disable-next-line @eslint-react/purity -- Client-side hook: new Date() is safe here
-  const currentDate = params.date ? new Date(params.date) : new Date();
+  const now = new Date();
+  const currentDate = params.date ? new Date(params.date) : now;
 
   // 日付範囲計算
   const dateRange = getCalendarDateRange(currentDate, view);
+
+  // 「今日」ボタンの disabled 制御に使う JST 基準の判定
+  const isAlreadyToday = isSameJstDay(currentDate, now);
 
   // フィルタリング済みイベント
   const filteredEvents = events.filter((event) => {
@@ -94,6 +99,7 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
     view,
     currentDate,
     dateRange,
+    isAlreadyToday,
     spaceId,
     status,
     spaces,

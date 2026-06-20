@@ -56,6 +56,10 @@ export function EventDetailDialog({
     onStatusChange(event.id, status);
   };
 
+  // Escape キー: Radix UI Dialog のデフォルト動作で即 close する。
+  // ステータス変更は optimistic update + auto-submit パターンのため、Dialog 中に
+  // 「未保存状態」は存在しない (失敗時は toast error で通知)。
+  // → preventDefault の必要なし・確認ダイアログ不要。
   return (
     <Dialog open={!!event} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -134,7 +138,10 @@ export function EventDetailDialog({
 
             {/* ステータス変更 */}
             <div className="border-t pt-4">
-              <label className="mb-2 block text-sm font-medium">
+              <label
+                htmlFor="event-detail-status"
+                className="mb-2 block text-sm font-medium"
+              >
                 ステータス変更
               </label>
               <Select
@@ -148,7 +155,11 @@ export function EventDetailDialog({
                   TERMINAL_RESERVATION_STATUSES.includes(event.status)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  id="event-detail-status"
+                  className="w-full"
+                  aria-label="予約ステータスを変更"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
