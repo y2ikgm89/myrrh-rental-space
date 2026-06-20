@@ -26,6 +26,9 @@ const SPACE_SELECT = {
   addressDetail: true,
   hourlyPrice: true,
   locationId: true,
+  discountType: true,
+  discountValue: true,
+  durationDiscountOverride: true,
   location: { select: { address: true } },
 } as const;
 
@@ -87,16 +90,29 @@ export async function createPublicReservationCommand(
     space.hourlyPrice,
   );
 
-  // 公開予約フォームの料金確定はサーバー側 SSoT。長時間割引は Settings から、
-  // クーポン・スペース割引は公開フォーム経路では扱わない（mypage / admin 経路で適用）。
+  // 公開予約フォームの料金確定はサーバー側 SSoT。スペース固有割引（Space モデル）と
+  // 長時間割引（Settings）を calculateReservationPrice 経由で適用する。
+  // クーポンは公開フォームに code 入力 UI が無いため null（mypage 経路で適用）。
   const settings = await getReservationSettings();
-  const { totalPrice, durationDiscountAmount } = calculatePricing({
-    hourlyPrice: space.hourlyPrice,
-    hours,
-    basePrice,
-    settings,
-    coupon: null,
-  });
+  const spaceDiscount =
+    space.discountType !== "none" &&
+    space.discountValue != null &&
+    space.discountValue > 0
+      ? {
+          discountType: space.discountType,
+          discountValue: space.discountValue,
+          durationDiscountOverride: space.durationDiscountOverride,
+        }
+      : null;
+  const { totalPrice, durationDiscountAmount, spaceDiscountAmount } =
+    calculatePricing({
+      hourlyPrice: space.hourlyPrice,
+      hours,
+      basePrice,
+      settings,
+      coupon: null,
+      spaceDiscount,
+    });
 
   const reservation = await prisma.$transaction(async (tx) => {
     await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
@@ -131,6 +147,7 @@ export async function createPublicReservationCommand(
         endTime: endDateTime,
         basePrice,
         totalPrice,
+        spaceDiscountAmount,
         durationDiscountAmount,
         status: ReservationStatus.CONFIRMED,
         notes: input.notes || null,
