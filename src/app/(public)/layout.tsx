@@ -51,7 +51,10 @@ import { HeaderBackgroundMode } from "@/shared/lib/validations/enums/prisma-type
 import {
   getCookieConsentSettings,
   getMaintenanceSettings,
+  getSiteLayoutSettings,
 } from "@/shared/domain/settings/queries/site";
+import { getContainerMaxCss } from "@/shared/lib/styles/layout-mapper";
+import type { CSSProperties } from "react";
 import { MaintenancePage } from "@/public/components/maintenance-page";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
@@ -266,9 +269,10 @@ export default async function PublicRootLayout({
     );
   }
 
-  const [headerSettings, taxSettings] = await Promise.all([
+  const [headerSettings, taxSettings, layoutSettings] = await Promise.all([
     getHeaderSettings(),
     getPublicTaxSettings(),
+    getSiteLayoutSettings(),
   ]);
   const isTransparent =
     headerSettings.backgroundMode === HeaderBackgroundMode.transparent;
@@ -277,6 +281,14 @@ export default async function PublicRootLayout({
     reducedRate: taxSettings.reducedRate,
     displayMode: taxSettings.displayModePublic,
   };
+  // サイト全体のコンテンツ最大幅。Container(default variant)/各セクションが参照する
+  // CSS 変数 --container-max を設定値で上書きする。transparent header の負 marginTop も統合。
+  const mainStyle = {
+    "--container-max": getContainerMaxCss(layoutSettings),
+    ...(isTransparent && {
+      marginTop: "calc(var(--header-height, 0px) * -1)",
+    }),
+  } as CSSProperties;
 
   return (
     <html lang="ja">
@@ -321,12 +333,8 @@ export default async function PublicRootLayout({
             <main
               id="main-content"
               className="flex-1 pb-[var(--spacing-fluid-md)]"
-              {...(isTransparent && {
-                "data-header-transparent": "",
-                style: {
-                  marginTop: "calc(var(--header-height, 0px) * -1)",
-                },
-              })}
+              style={mainStyle}
+              {...(isTransparent && { "data-header-transparent": "" })}
             >
               <TaxSettingsProvider value={publicTaxDisplay}>
                 <LenisProvider>

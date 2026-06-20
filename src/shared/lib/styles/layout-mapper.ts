@@ -6,7 +6,7 @@
 
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import type { CSSProperties } from "react";
-import type { ContentWidth } from "@/shared/types/layout";
+import type { ContentWidth, LayoutConfig } from "@/shared/types/layout";
 
 // =============================================================================
 // Types
@@ -110,4 +110,23 @@ export function resolveWidthStyles(
   }
 
   return { className: "mx-auto", style: undefined, px: null };
+}
+
+/**
+ * LayoutConfig.containerWidth/containerWidthCustom → `--container-max` の CSS
+ * length 文字列を解決する。公開ルートの <main> に inline 注入し、Container
+ * (default variant) / SectionWrapper / 各リスト・詳細セクションが参照する
+ * var(--container-max) を上書きする。FULL / CUSTOM(px なし) は "100%"。
+ * contentWidth の resolveWidthStyles と同列の純粋関数（DB 非依存）。
+ */
+export function getContainerMaxCss(config: LayoutConfig): string {
+  const { containerWidth, containerWidthCustom } = config;
+  if (containerWidth === LayoutWidth.FULL) return "100%";
+  if (containerWidth === LayoutWidth.CUSTOM) {
+    return containerWidthCustom && containerWidthCustom > 0
+      ? `${containerWidthCustom}px`
+      : "100%";
+  }
+  const px = SITE_WIDTH_PRESETS[containerWidth].px;
+  return px ? `${px}px` : "100%";
 }
