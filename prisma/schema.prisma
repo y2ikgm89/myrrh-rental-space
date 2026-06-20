@@ -1306,7 +1306,6 @@ model Settings {
   // 同期方式設定 - Enum化
   googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
   googleCalendarSyncMethod         CalendarSyncMethod @default(polling)
-  googleCalendarPollingIntervalMin Int                @default(5)
 
   // 同期状態
   googleCalendarSyncToken    String?   @db.Text // 増分同期用トークン

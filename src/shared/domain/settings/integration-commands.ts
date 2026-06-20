@@ -35,7 +35,6 @@ export type GoogleCalendarSettingsInput = {
 export type TwoWaySyncSettingsInput = {
   enabled: boolean;
   syncMethod: CalendarSyncMethod;
-  pollingIntervalMin: number;
 };
 
 export type GoogleCalendarWebhookInput = {
@@ -259,12 +258,10 @@ export async function updateTwoWaySyncSettings(
       id: "singleton",
       googleCalendarTwoWaySyncEnabled: data.enabled,
       googleCalendarSyncMethod: data.syncMethod,
-      googleCalendarPollingIntervalMin: data.pollingIntervalMin,
     },
     update: {
       googleCalendarTwoWaySyncEnabled: data.enabled,
       googleCalendarSyncMethod: data.syncMethod,
-      googleCalendarPollingIntervalMin: data.pollingIntervalMin,
     },
   });
 }

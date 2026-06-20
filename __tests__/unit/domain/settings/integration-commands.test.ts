@@ -642,7 +642,6 @@ describe("updateTwoWaySyncSettings", () => {
       await updateTwoWaySyncSettings({
         enabled: true,
         syncMethod: "polling",
-        pollingIntervalMin: 15,
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
@@ -652,7 +651,6 @@ describe("updateTwoWaySyncSettings", () => {
           update: expect.objectContaining({
             googleCalendarTwoWaySyncEnabled: true,
             googleCalendarSyncMethod: "polling",
-            googleCalendarPollingIntervalMin: 15,
           }),
         }),
       );
@@ -662,7 +660,6 @@ describe("updateTwoWaySyncSettings", () => {
       await updateTwoWaySyncSettings({
         enabled: false,
         syncMethod: "webhook",
-        pollingIntervalMin: 30,
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
@@ -679,7 +676,6 @@ describe("updateTwoWaySyncSettings", () => {
       const result = await updateTwoWaySyncSettings({
         enabled: false,
         syncMethod: "polling",
-        pollingIntervalMin: 5,
       });
       expect(result).toBeUndefined();
     });

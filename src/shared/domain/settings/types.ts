@@ -125,7 +125,6 @@ export type SettingsData = {
   addToCalendarLinksEnabled: boolean;
   googleCalendarTwoWaySyncEnabled: boolean;
   googleCalendarSyncMethod: CalendarSyncMethod;
-  googleCalendarPollingIntervalMin: number;
   googleCalendarLastSyncedAt: Date | null;
   googleCalendarWebhookActive: boolean;
   googleCalendarWebhookExpiration: Date | null;
@@ -205,7 +204,6 @@ export type GoogleCalendarSettingsData = {
 export type TwoWaySyncSettingsData = {
   enabled: boolean;
   syncMethod: CalendarSyncMethod;
-  pollingIntervalMin: number;
   lastSyncedAt: Date | null;
   webhookExpiration: Date | null;
 };
