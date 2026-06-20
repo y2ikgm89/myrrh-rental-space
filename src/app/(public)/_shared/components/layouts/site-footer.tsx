@@ -349,7 +349,13 @@ export async function Footer(): Promise<ReactElement> {
             </nav>
           )}
           <p className="text-center text-[0.6875rem] tracking-eyebrow text-muted-foreground">
-            &copy; <CopyrightYear /> {info.name}. All rights reserved.
+            {footerSettings.copyright ? (
+              footerSettings.copyright
+            ) : (
+              <>
+                &copy; <CopyrightYear /> {info.name}. All rights reserved.
+              </>
+            )}
           </p>
         </div>
       </div>

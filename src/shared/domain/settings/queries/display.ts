@@ -35,6 +35,7 @@ export interface HeaderSettings {
 
 export interface FooterSettings {
   tagline: string | null;
+  copyright: string | null;
   navigationLabel: string;
   contactLabel: string;
   hoursLabel: string;
@@ -94,6 +95,7 @@ export async function getFooterSettings(): Promise<FooterSettings> {
         where: { id: "singleton" },
         select: {
           footerTagline: true,
+          footerCopyright: true,
           footerNavigationLabel: true,
           footerContactLabel: true,
           footerHoursLabel: true,
@@ -112,6 +114,7 @@ export async function getFooterSettings(): Promise<FooterSettings> {
 
   return {
     tagline: result?.footerTagline ?? null,
+    copyright: result?.footerCopyright ?? null,
     navigationLabel: result?.footerNavigationLabel ?? "Navigation",
     contactLabel: result?.footerContactLabel ?? "Contact",
     hoursLabel: result?.footerHoursLabel ?? "Hours",
@@ -123,4 +126,29 @@ export async function getFooterSettings(): Promise<FooterSettings> {
       useLogo: result?.useFooterLogo ?? true,
     },
   };
+}
+
+/**
+ * 管理画面でアップロードされた favicon の URL。
+ * 未設定時は null を返し、呼び出し側（layout の generateMetadata）は file-convention の
+ * favicon（src/app/favicon.ico）に委ねる。
+ */
+export async function getFaviconUrl(): Promise<string | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: { faviconUrl: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getFaviconUrl",
+  });
+
+  return result?.faviconUrl ?? null;
 }

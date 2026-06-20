@@ -44,6 +44,7 @@ import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getHeaderSettings,
   getFooterSettings,
+  getFaviconUrl,
   type HeaderSettings,
 } from "@/shared/domain/settings/queries/display";
 import { HeaderBackgroundMode } from "@/shared/lib/validations/enums/prisma-types";
@@ -59,35 +60,42 @@ import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
 import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import "./_styles/public.css";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getBaseUrl()),
-  title: {
-    default: SITE_DEFAULTS.name,
-    template: `%s | ${SITE_DEFAULTS.name}`,
-  },
-  description: SITE_DEFAULTS.description,
-  alternates: {
-    types: {
-      "application/rss+xml": "/feed.xml",
+export async function generateMetadata(): Promise<Metadata> {
+  // 管理画面でアップロードされた favicon があれば icons に注入する。
+  // 未設定なら icons を省略し、file-convention（src/app/favicon.ico）に委ねる。
+  const faviconUrl = await getFaviconUrl();
+
+  return {
+    metadataBase: new URL(getBaseUrl()),
+    title: {
+      default: SITE_DEFAULTS.name,
+      template: `%s | ${SITE_DEFAULTS.name}`,
     },
-  },
-  // OG / Twitter のサイト共通ベース。画像は file-based opengraph-image / twitter-image
-  // が自動注入する。各ページの generateMetadata が openGraph を export すると
-  // shallow 置換されるため、siteName / locale 等はページ側でも明示する必要がある。
-  openGraph: {
-    type: "website",
-    locale: "ja_JP",
-    siteName: SITE_DEFAULTS.name,
-    url: "/",
-    title: SITE_DEFAULTS.name,
     description: SITE_DEFAULTS.description,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE_DEFAULTS.name,
-    description: SITE_DEFAULTS.description,
-  },
-};
+    alternates: {
+      types: {
+        "application/rss+xml": "/feed.xml",
+      },
+    },
+    ...(faviconUrl ? { icons: { icon: faviconUrl } } : {}),
+    // OG / Twitter のサイト共通ベース。画像は file-based opengraph-image / twitter-image
+    // が自動注入する。各ページの generateMetadata が openGraph を export すると
+    // shallow 置換されるため、siteName / locale 等はページ側でも明示する必要がある。
+    openGraph: {
+      type: "website",
+      locale: "ja_JP",
+      siteName: SITE_DEFAULTS.name,
+      url: "/",
+      title: SITE_DEFAULTS.name,
+      description: SITE_DEFAULTS.description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: SITE_DEFAULTS.name,
+      description: SITE_DEFAULTS.description,
+    },
+  };
+}
 
 export async function generateViewport(): Promise<Viewport> {
   const footerSettings = await getFooterSettings();
