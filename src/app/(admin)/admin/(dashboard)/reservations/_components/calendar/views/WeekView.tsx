@@ -16,7 +16,7 @@ import type {
   PositionedEvent,
 } from "@/admin/lib/calendar";
 import { EventCell } from "../EventCell";
-import { TimeColumn } from "./TimeColumn";
+import { TimeGrid, type TimeGridColumn } from "./TimeGrid";
 
 interface WeekViewProps {
   dateRange: CalendarDateRange;
@@ -35,111 +35,67 @@ const DAY_COLUMN_MIN_PX = 140;
  */
 function maxConcurrentColumns(positioned: PositionedEvent[]): number {
   if (positioned.length === 0) return 1;
-  // position.width は (100 / columnCount - 1)% で生成されるので最小幅から columnCount を逆算
   const minWidthPct = positioned.reduce(
     (min, e) => Math.min(min, e.position.width),
     100,
   );
-  // 100 / (minWidth + 1) ≒ columnCount
   return Math.max(1, Math.round(100 / Math.max(minWidthPct + 1, 1)));
 }
 
 export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
   const displayDays = dateRange.displayDates.slice(0, 7);
-
-  // 日別イベント配置（React Compiler が自動メモ化）
-  const eventsByDay = displayDays.map((day) => {
-    const dayEvents = events.filter((e) => isSameDay(e.startTime, day));
-    return layoutOverlappingEvents(dayEvents);
-  });
-
-  // 日ごとの最大同時並走数を計算 → 必要なカラム最小幅を決定
-  const dayColumnMinWidths = eventsByDay.map((positioned) => {
-    const maxCols = maxConcurrentColumns(positioned);
-    return Math.max(DAY_COLUMN_MIN_PX, maxCols * SUBCOLUMN_MIN_PX);
-  });
-
   const gridHeight = timeSlots.length * PIXELS_PER_HOUR;
 
-  // CSS Grid columns: 60px (時刻列) + 各日 minmax(計算した最小幅, 1fr)
-  const gridTemplate = [
-    "60px",
-    ...dayColumnMinWidths.map((w) => `minmax(${w}px, 1fr)`),
-  ].join(" ");
+  const columns: TimeGridColumn[] = displayDays.map((day, index) => {
+    const dayEvents = events.filter((e) => isSameDay(e.startTime, day));
+    const positioned = layoutOverlappingEvents(dayEvents);
+    const maxCols = maxConcurrentColumns(positioned);
+    const minWidthPx = Math.max(DAY_COLUMN_MIN_PX, maxCols * SUBCOLUMN_MIN_PX);
+    const today = isToday(day);
 
-  return (
-    <div className="flex h-full flex-col rounded-lg border bg-card">
-      {/* グリッド全体を横スクロール対応 */}
-      <div className="flex-1 overflow-auto">
-        <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
-          {/* ヘッダー行（sticky top） */}
-          <div className="sticky top-0 z-20 border-b border-r bg-muted/40" />
-          {displayDays.map((day, index) => (
-            <div
-              key={day.toISOString()}
-              className={cn(
-                "sticky top-0 z-20 flex flex-col items-center gap-0.5 border-b border-r bg-muted/40 px-2 py-2 last:border-r-0",
-                isToday(day) && "bg-primary/10",
-              )}
-            >
-              <div
-                className={cn(
-                  "text-xs font-medium",
-                  getWeekdayColorClass(index),
-                )}
-              >
-                {format(day, "E", { locale: ja })}
-              </div>
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center text-lg font-semibold tabular-nums",
-                  isToday(day) &&
-                    "rounded-full bg-primary text-primary-foreground",
-                )}
-              >
-                {format(day, "d")}
-              </div>
-            </div>
-          ))}
-
-          {/* 時刻列 (sticky left) */}
+    return {
+      key: day.toISOString(),
+      minWidthPx,
+      // 今日ハイライトは header の**内側** div に乗せる。
+      // sticky セル (bg-card) を別レイヤーとして残し、cn のマージで bg-card が
+      // 上書きされて透けるのを防ぐ。
+      header: (
+        <div
+          className={cn(
+            "flex h-full flex-col items-center justify-center gap-0.5 px-2 py-2",
+            today && "bg-primary/10",
+          )}
+        >
           <div
-            className="sticky left-0 z-10 border-r bg-card"
-            style={{ height: `${gridHeight}px` }}
+            className={cn("text-xs font-medium", getWeekdayColorClass(index))}
           >
-            <TimeColumn timeSlots={timeSlots} />
+            {format(day, "E", { locale: ja })}
           </div>
-
-          {/* 日別列 */}
-          {displayDays.map((day, dayIndex) => (
-            <div
-              key={day.toISOString()}
-              className={cn(
-                "relative border-r last:border-r-0",
-                isToday(day) && "bg-primary/5",
-              )}
-              style={{ height: `${gridHeight}px` }}
-            >
-              {/* 時間帯の罫線 */}
-              {timeSlots.map((time) => (
-                <div key={time} className="h-[60px] border-b last:border-b-0" />
-              ))}
-
-              {/* イベント */}
-              <div className="absolute inset-0 px-0.5">
-                {(eventsByDay[dayIndex] ?? []).map((event) => (
-                  <EventCell
-                    key={event.id}
-                    event={event}
-                    onClick={onEventClick}
-                  />
-                ))}
-              </div>
-            </div>
+          <div
+            className={cn(
+              "flex h-8 w-8 items-center justify-center text-lg font-semibold tabular-nums",
+              today && "rounded-full bg-primary text-primary-foreground",
+            )}
+          >
+            {format(day, "d")}
+          </div>
+        </div>
+      ),
+      body: (
+        <div className="absolute inset-0 px-0.5">
+          {positioned.map((event) => (
+            <EventCell key={event.id} event={event} onClick={onEventClick} />
           ))}
         </div>
-      </div>
-    </div>
+      ),
+      // 列ボディの今日色は sticky でないため alpha 背景でも透過の問題はない。
+      // exactOptionalPropertyTypes 下では条件スプレッドで省略する。
+      ...(today ? { bodyClassName: "bg-primary/5" } : {}),
+    };
+  });
+
+  return (
+    <TimeGrid timeSlots={timeSlots} gridHeight={gridHeight} columns={columns} />
   );
 }
