@@ -14,6 +14,8 @@ import {
 interface EventCellProps {
   event: PositionedEvent;
   onClick: (event: CalendarEvent) => void;
+  /** イベント終了時刻が現在より過去か (Google Calendar 同等の muted 表示) */
+  isPast?: boolean;
 }
 
 /**
@@ -38,12 +40,14 @@ function buildAriaLabel(event: CalendarEvent): string {
  * - WCAG 2.5.5 (44px) — 最小高さ 20px は calculateEventPosition が担保、本体は
  *   click 可能。aria-label に「開始-終了・タイトル・スペース・ステータス」を構造化
  */
-export function EventCell({ event, onClick }: EventCellProps) {
+export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
   const { position } = event;
   const isCancelled = event.status === "CANCELLED";
   const iconName = RESERVATION_STATUS_ICONS[event.status];
   const showTitle = position.height >= 36;
   const showMeta = position.height >= 60;
+  // 過去イベント / キャンセルは統一的に muted (Google Calendar 同等)
+  const isMuted = isCancelled || isPast;
 
   const style: CSSProperties = {
     top: `${position.top}px`,
@@ -65,7 +69,7 @@ export function EventCell({ event, onClick }: EventCellProps) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         "hover:shadow-md",
         getStatusColorClass(event.status),
-        isCancelled && "opacity-60",
+        isMuted && "opacity-60",
       )}
       style={style}
       onClick={() => onClick(event)}
@@ -96,6 +100,8 @@ export function EventCell({ event, onClick }: EventCellProps) {
 interface EventBadgeProps {
   event: CalendarEvent;
   onClick: (event: CalendarEvent) => void;
+  /** イベント終了時刻が現在より過去か (Google Calendar 同等の muted 表示) */
+  isPast?: boolean;
 }
 
 /**
@@ -105,9 +111,14 @@ interface EventBadgeProps {
  * - 取消線は CANCELLED のみ
  * - SR 向け aria-label は EventCell と統一フォーマット
  */
-export function EventBadge({ event, onClick }: EventBadgeProps) {
+export function EventBadge({
+  event,
+  onClick,
+  isPast = false,
+}: EventBadgeProps) {
   const isCancelled = event.status === "CANCELLED";
   const iconName = RESERVATION_STATUS_ICONS[event.status];
+  const isMuted = isCancelled || isPast;
 
   return (
     <button
@@ -118,7 +129,7 @@ export function EventBadge({ event, onClick }: EventBadgeProps) {
         "mb-0.5 flex w-full items-center gap-1 truncate rounded border-l-2 px-1.5 py-0.5 text-left text-xs transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         getStatusColorClass(event.status),
-        isCancelled && "opacity-60",
+        isMuted && "opacity-60",
       )}
       onClick={() => onClick(event)}
     >

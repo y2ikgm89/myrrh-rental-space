@@ -7,6 +7,7 @@ import {
   layoutOverlappingEvents,
   isSameJstDay,
   isPastJstDay,
+  isEventEnded,
   minutesSinceJstBusinessStart,
   DEFAULT_BUSINESS_HOURS,
   CALENDAR_LAYOUT,
@@ -109,7 +110,12 @@ export function ResourceView({
       body: (
         <div className="absolute inset-0 px-1">
           {spaceEvents.map((event) => (
-            <EventCell key={event.id} event={event} onClick={onEventClick} />
+            <EventCell
+              key={event.id}
+              event={event}
+              onClick={onEventClick}
+              isPast={now !== null && isEventEnded(event.endTime, now)}
+            />
           ))}
         </div>
       ),
