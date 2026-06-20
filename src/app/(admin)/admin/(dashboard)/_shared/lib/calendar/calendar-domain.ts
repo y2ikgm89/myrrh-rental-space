@@ -128,6 +128,44 @@ export function isSameJstDay(a: string | Date, b: string | Date): boolean {
 }
 
 /**
+ * 日付が JST 基準で `now` より過去日 (= 今日より前) か判定する。
+ * 「過去日 muted」表示の SSoT。
+ */
+export function isPastJstDay(date: string | Date, now: Date): boolean {
+  return formatJstDateString(date) < formatJstDateString(now);
+}
+
+/** JST の hour / minute を Intl.DateTimeFormat で抽出 (ランタイム TZ 非依存) */
+function getJstHourMinute(date: Date): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Tokyo",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(date);
+  return {
+    hour: Number(parts.find((p) => p.type === "hour")?.value ?? "0"),
+    minute: Number(parts.find((p) => p.type === "minute")?.value ?? "0"),
+  };
+}
+
+/**
+ * 営業開始 (JST) から `now` までの経過分。
+ * - 負値 = 営業時間前 (例: 営業 09:00 で now=08:00 → -60)
+ * - 0 〜 営業時間内
+ * - 営業時間以上 = 営業終了後
+ *
+ * TimeGrid の「Now ライン」位置計算 SSoT。
+ */
+export function minutesSinceJstBusinessStart(
+  now: Date,
+  hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
+): number {
+  const { hour, minute } = getJstHourMinute(now);
+  return hour * 60 + minute - hours.startHour * 60;
+}
+
+/**
  * 列内の最大同時並走イベント数を計算する。
  *
  * `layoutOverlappingEvents` の戻り値 `position.width` (%) は

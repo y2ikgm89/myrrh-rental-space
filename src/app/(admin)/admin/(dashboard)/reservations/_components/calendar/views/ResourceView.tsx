@@ -1,10 +1,13 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { isToday } from "date-fns";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
   isSameJstDay,
+  isPastJstDay,
+  minutesSinceJstBusinessStart,
   DEFAULT_BUSINESS_HOURS,
   CALENDAR_LAYOUT,
 } from "@/admin/lib/calendar";
@@ -32,8 +35,8 @@ interface ResourceViewProps {
  *
  * 2D グリッド本体は WeekView / DayView と同じ `TimeGrid` shell を共有する。
  * 列ヘッダーはスペース名 (列が space ベースなので per-column の今日判定はしない)。
- * date 側の「今日」は全列ボディに `bg-primary/5` tint を一律適用して affordance を与える
- * (Week/Day と整合)。
+ * date 側の「今日」は全列が isTodayColumn=true となり過去帯 muted + Now ラインが
+ * 各列に揃って描画される。
  */
 export function ResourceView({
   date,
@@ -44,6 +47,28 @@ export function ResourceView({
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
   const today = isToday(date);
+
+  // hydration mismatch 回避: useSyncExternalStore で client-only gate
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  // eslint-disable-next-line @eslint-react/purity -- Client component: now indicator
+  const now = isClient ? new Date() : null;
+  const past = now !== null && isPastJstDay(date, now);
+  const businessTotalMinutes =
+    (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;
+  const nowMinutes = now ? minutesSinceJstBusinessStart(now) : 0;
+  // 今日 (selected date が今日) のみ意味あり。営業時間外も clamp。
+  const nowOffsetPx =
+    now === null || !today
+      ? null
+      : nowMinutes <= 0
+        ? 0
+        : nowMinutes >= businessTotalMinutes
+          ? gridHeight
+          : (nowMinutes / 60) * CALENDAR_LAYOUT.pixelsPerHour;
 
   const dayEvents = events.filter((e) => isSameJstDay(e.startTime, date));
 
@@ -88,8 +113,9 @@ export function ResourceView({
           ))}
         </div>
       ),
-      // Today の affordance: 全スペース列のボディに薄い primary tint
-      ...(today ? { bodyClassName: "bg-primary/5" } : {}),
+      // 過去日: 全スペース列 muted (今日列は TimeGrid が past/future overlay で処理)
+      ...(past ? { bodyClassName: "bg-muted/30" } : {}),
+      ...(today ? { isTodayColumn: true as const } : {}),
     };
   });
 
@@ -100,6 +126,7 @@ export function ResourceView({
         gridHeight={gridHeight}
         columns={columns}
         ariaLabel="スペース別予約タイムグリッド"
+        nowOffsetPx={nowOffsetPx}
       />
 
       {/* 孤立イベント (削除済みスペース等のフォールバック) — カード内の status footer */}
