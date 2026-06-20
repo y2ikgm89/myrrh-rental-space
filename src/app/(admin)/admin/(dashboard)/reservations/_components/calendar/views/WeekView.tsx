@@ -29,10 +29,6 @@ const SUBCOLUMN_MIN_PX = 80;
 /** 重複なし日の最小幅 — そもそも 1 日カラムが極端に狭くなることを防ぐ */
 const DAY_COLUMN_MIN_PX = 140;
 
-/**
- * 1 日カラム内の最大同時並走イベント数を計算する。
- * `layoutOverlappingEvents` の戻り値は `position.width` (%) を持つので、最小値から逆算できる。
- */
 function maxConcurrentColumns(positioned: PositionedEvent[]): number {
   if (positioned.length === 0) return 1;
   const minWidthPct = positioned.reduce(
@@ -57,9 +53,6 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
     return {
       key: day.toISOString(),
       minWidthPx,
-      // 今日ハイライトは header の**内側** div に乗せる。
-      // sticky セル (bg-card) を別レイヤーとして残し、cn のマージで bg-card が
-      // 上書きされて透けるのを防ぐ。
       header: (
         <div
           className={cn(
@@ -83,19 +76,23 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
         </div>
       ),
       body: (
-        <div className="absolute inset-0 px-0.5">
+        <div className="absolute inset-0 px-1">
           {positioned.map((event) => (
             <EventCell key={event.id} event={event} onClick={onEventClick} />
           ))}
         </div>
       ),
-      // 列ボディの今日色は sticky でないため alpha 背景でも透過の問題はない。
-      // exactOptionalPropertyTypes 下では条件スプレッドで省略する。
       ...(today ? { bodyClassName: "bg-primary/5" } : {}),
     };
   });
 
   return (
-    <TimeGrid timeSlots={timeSlots} gridHeight={gridHeight} columns={columns} />
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+      <TimeGrid
+        timeSlots={timeSlots}
+        gridHeight={gridHeight}
+        columns={columns}
+      />
+    </div>
   );
 }

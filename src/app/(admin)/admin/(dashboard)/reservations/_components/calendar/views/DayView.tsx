@@ -12,7 +12,7 @@ import {
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, PositionedEvent } from "@/admin/lib/calendar";
 import { EventCell } from "../EventCell";
-import { TimeColumn } from "./TimeColumn";
+import { TimeGrid, type TimeGridColumn } from "./TimeGrid";
 
 interface DayViewProps {
   date: Date;
@@ -22,7 +22,7 @@ interface DayViewProps {
 
 /** 重複時の 1 サブカラム最小幅 */
 const SUBCOLUMN_MIN_PX = 120;
-/** 重複なし時の最小幅 (1 日カラム) */
+/** 単一日カラムの最小幅 — 1fr で広がるが極端な狭幅を避ける */
 const DAY_COLUMN_MIN_PX = 320;
 
 function maxConcurrentColumns(positioned: PositionedEvent[]): number {
@@ -36,87 +36,58 @@ function maxConcurrentColumns(positioned: PositionedEvent[]): number {
 
 export function DayView({ date, events, onEventClick }: DayViewProps) {
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
-  const positionedEvents = layoutOverlappingEvents(events);
+  const positioned = layoutOverlappingEvents(events);
   const gridHeight = timeSlots.length * PIXELS_PER_HOUR;
+
+  const maxCols = maxConcurrentColumns(positioned);
+  const minWidthPx = Math.max(DAY_COLUMN_MIN_PX, maxCols * SUBCOLUMN_MIN_PX);
+  const today = isToday(date);
   const dayOfWeek = date.getDay();
 
-  const maxCols = maxConcurrentColumns(positionedEvents);
-  const dayColumnMinWidth = Math.max(
-    DAY_COLUMN_MIN_PX,
-    maxCols * SUBCOLUMN_MIN_PX,
-  );
+  // WeekView と同形の単一カラム — 列ヘッダーは weekday + 日付ピル、bodyは bg-primary/5 で today を tint。
+  // 大きな内部 BIG 日付ヘッダーは CalendarToolbar の dateLabel と重複するため撤去。
+  const column: TimeGridColumn = {
+    key: date.toISOString(),
+    minWidthPx,
+    header: (
+      <div
+        className={cn(
+          "flex h-full flex-col items-center justify-center gap-0.5 px-2 py-2",
+          today && "bg-primary/10",
+        )}
+      >
+        <div
+          className={cn("text-xs font-medium", getWeekdayColorClass(dayOfWeek))}
+        >
+          {format(date, "E", { locale: ja })}
+        </div>
+        <div
+          className={cn(
+            "flex h-8 w-8 items-center justify-center text-lg font-semibold tabular-nums",
+            today && "rounded-full bg-primary text-primary-foreground",
+          )}
+        >
+          {format(date, "d")}
+        </div>
+      </div>
+    ),
+    body: (
+      <div className="absolute inset-0 px-1">
+        {positioned.map((event) => (
+          <EventCell key={event.id} event={event} onClick={onEventClick} />
+        ))}
+      </div>
+    ),
+    ...(today ? { bodyClassName: "bg-primary/5" } : {}),
+  };
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-card">
-      {/* 日付ヘッダー */}
-      <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
-        <div className="flex items-baseline gap-3">
-          <div
-            className={cn(
-              "text-2xl font-bold tabular-nums",
-              isToday(date) && "text-primary",
-            )}
-          >
-            {format(date, "M月d日", { locale: ja })}
-          </div>
-          <div
-            className={cn(
-              "text-sm font-medium",
-              getWeekdayColorClass(dayOfWeek),
-            )}
-          >
-            ({format(date, "E", { locale: ja })})
-          </div>
-          {isToday(date) && (
-            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-              今日
-            </span>
-          )}
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {events.length} 件の予約
-        </div>
-      </div>
-
-      {/* グリッド */}
-      <div className="flex-1 overflow-auto">
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: `60px minmax(${dayColumnMinWidth}px, 1fr)`,
-            height: `${gridHeight}px`,
-          }}
-        >
-          <div className="sticky left-0 z-10 border-r bg-card">
-            <TimeColumn timeSlots={timeSlots} />
-          </div>
-
-          <div className={cn("relative", isToday(date) && "bg-primary/5")}>
-            {/* 時間帯の罫線 */}
-            {timeSlots.map((time) => (
-              <div key={time} className="h-[60px] border-b last:border-b-0" />
-            ))}
-
-            {/* イベント */}
-            <div className="absolute inset-0 px-2">
-              {positionedEvents.map((event) => (
-                <EventCell
-                  key={event.id}
-                  event={event}
-                  onClick={onEventClick}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 空状態 */}
-      {events.length === 0 && (
-        <div className="border-t bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-          この日の予約はありません
-        </div>
-      )}
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+      <TimeGrid
+        timeSlots={timeSlots}
+        gridHeight={gridHeight}
+        columns={[column]}
+      />
     </div>
   );
 }
