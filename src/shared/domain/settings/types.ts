@@ -35,8 +35,6 @@ export type SettingsData = {
   businessName: string | null;
   businessNameKana: string | null;
   representativeName: string | null;
-  businessType: string | null;
-  industryType: string | null;
   establishedDate: Date | null;
   registrationNumber: string | null;
   invoiceNumber: string | null;

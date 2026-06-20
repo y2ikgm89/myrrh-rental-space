@@ -9,6 +9,7 @@ import type { ReactElement } from "react";
 import {
   IconMapPin,
   IconPhone,
+  IconPrinter,
   IconMail,
   IconClock,
   IconCalendarOff,
@@ -210,6 +211,12 @@ export async function BusinessInfo(): Promise<ReactElement> {
             >
               {info.phone}
             </a>
+          </InfoSection>
+        )}
+
+        {info.fax && (
+          <InfoSection icon={IconPrinter} label="FAX">
+            <span itemProp="faxNumber">{info.fax}</span>
           </InfoSection>
         )}
 

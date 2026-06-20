@@ -55,9 +55,11 @@ export interface TermsTemplate {
 export interface BusinessInfo {
   readonly businessName: string | null;
   readonly representativeName: string | null;
+  readonly registrationNumber: string | null;
   readonly invoiceNumber: string | null;
   readonly email: string | null;
   readonly phoneNumber: string | null;
+  readonly faxNumber: string | null;
   readonly postalCode: string | null;
   readonly prefecture: string | null;
   readonly city: string | null;
@@ -72,10 +74,12 @@ export interface BusinessInfo {
 const PLACEHOLDER = {
   businessName: "【事業者名を入力してください】",
   representativeName: "【代表者名を入力してください】",
+  registrationNumber: "【法人番号を入力してください（13桁）】",
   invoiceNumber: "【インボイス登録番号を入力してください（T+13桁）】",
   address: "【住所を入力してください】",
   email: "【メールアドレスを入力してください】",
   phoneNumber: "【電話番号を入力してください】",
+  faxNumber: "【FAX番号を入力してください】",
   lastUpdated: "【最終更新日を入力してください（YYYY年MM月DD日）】",
 } as const;
 
@@ -996,8 +1000,10 @@ ${callout(
 <tbody>
 <tr><th>事業者名称</th><td>${PLACEHOLDER.businessName}</td></tr>
 <tr><th>代表者</th><td>${PLACEHOLDER.representativeName}</td></tr>
+<tr><th>法人番号</th><td>${PLACEHOLDER.registrationNumber}</td></tr>
 <tr><th>所在地</th><td>${PLACEHOLDER.address}</td></tr>
 <tr><th>電話番号</th><td>${PLACEHOLDER.phoneNumber}</td></tr>
+<tr><th>FAX番号</th><td>${PLACEHOLDER.faxNumber}</td></tr>
 <tr><th>電話受付時間</th><td>平日 10:00〜18:00（土日祝日・年末年始を除く）</td></tr>
 <tr><th>メールアドレス</th><td>${PLACEHOLDER.email}</td></tr>
 <tr><th>適格請求書発行事業者登録番号</th><td>${PLACEHOLDER.invoiceNumber}</td></tr>
@@ -1370,12 +1376,17 @@ export function applyBusinessInfo(content: string, info: BusinessInfo): string {
       info.representativeName ?? PLACEHOLDER.representativeName,
     ],
     [
+      PLACEHOLDER.registrationNumber,
+      info.registrationNumber ?? PLACEHOLDER.registrationNumber,
+    ],
+    [
       PLACEHOLDER.invoiceNumber,
       info.invoiceNumber ?? PLACEHOLDER.invoiceNumber,
     ],
     [PLACEHOLDER.address, buildAddress(info)],
     [PLACEHOLDER.email, info.email ?? PLACEHOLDER.email],
     [PLACEHOLDER.phoneNumber, info.phoneNumber ?? PLACEHOLDER.phoneNumber],
+    [PLACEHOLDER.faxNumber, info.faxNumber ?? PLACEHOLDER.faxNumber],
     [PLACEHOLDER.lastUpdated, formatLastUpdatedJa(new Date())],
   ];
 

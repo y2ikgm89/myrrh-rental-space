@@ -103,8 +103,6 @@ export const businessInfoFormSchema = z.object({
     .string()
     .max(50, { error: "50文字以内で入力してください" })
     .optional(),
-  businessType: z.string().max(50).optional(),
-  industryType: z.string().max(50).optional(),
   establishedDate: z.string().optional(),
   registrationNumber: z
     .string()

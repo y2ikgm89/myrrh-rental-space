@@ -15,9 +15,11 @@ export interface OrganizationSettings {
   siteName: string | null;
   siteDescription: string | null;
   businessName: string | null;
+  businessNameKana: string | null;
   businessDescription: string | null;
   headerLogoUrl: string | null;
   phoneNumber: string | null;
+  faxNumber: string | null;
   email: string | null;
   postalCode: string | null;
   prefecture: string | null;
@@ -43,13 +45,13 @@ export async function getPublicBusinessSettings() {
           businessName: true,
           businessNameKana: true,
           businessDescription: true,
-          businessType: true,
           representativeName: true,
           establishedDate: true,
           registrationNumber: true,
           invoiceNumber: true,
           email: true,
           phoneNumber: true,
+          faxNumber: true,
           postalCode: true,
           prefecture: true,
           city: true,
@@ -112,9 +114,11 @@ export async function getOrganizationSettings(): Promise<Serialized<Organization
           siteName: true,
           siteDescription: true,
           businessName: true,
+          businessNameKana: true,
           businessDescription: true,
           headerLogoUrl: true,
           phoneNumber: true,
+          faxNumber: true,
           email: true,
           postalCode: true,
           prefecture: true,

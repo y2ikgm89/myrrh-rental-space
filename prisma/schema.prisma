@@ -1088,12 +1088,10 @@ model Settings {
 
   // Business Info (事業者情報)
   businessName        String? // 会社名・屋号
-  businessNameKana    String? // 会社名・屋号（カナ）
+  businessNameKana    String? // 会社名・屋号（カナ） — JSON-LD alternateName で公開
   representativeName  String? // 代表者名
-  businessType        String? // 事業形態（個人事業主/法人）
-  industryType        String? // 業種
   establishedDate     DateTime? // 設立日
-  registrationNumber  String? // 法人番号/登録番号
+  registrationNumber  String? // 法人番号/登録番号 — 特商法表記で公開
   invoiceNumber       String? // インボイス登録番号
   businessDescription String?   @db.Text // 事業概要
 

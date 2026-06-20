@@ -52,8 +52,6 @@ export async function updateBusinessInfo(
             businessName: emptyToNull(data.businessName),
             businessNameKana: emptyToNull(data.businessNameKana),
             representativeName: emptyToNull(data.representativeName),
-            businessType: emptyToNull(data.businessType),
-            industryType: emptyToNull(data.industryType),
             establishedDate: data.establishedDate || null,
             registrationNumber: emptyToNull(data.registrationNumber),
             invoiceNumber: emptyToNull(data.invoiceNumber),
