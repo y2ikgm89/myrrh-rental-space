@@ -56,11 +56,6 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
     width: `${position.width}%`,
     // Tailwind v4 CSS var arbitrary: `z-[var(--event-z)]` で参照
     ["--event-z" as string]: position.zIndex,
-    // Google Calendar 同等: 過去 / キャンセルは saturate を 50% に落として
-    // border-l-4 の鮮やかな色帯も desaturate して「明確に過去」感を出す。
-    // Tailwind v4 の `saturate-50` を Turbopack の JIT が dev で拾いきれない
-    // ケースに備え inline style で確実適用する (build 時は通る)。
-    ...(isMuted ? { filter: "saturate(0.5)" } : {}),
   };
 
   return (
@@ -74,7 +69,10 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         "hover:shadow-md",
         getStatusColorClass(event.status),
-        isMuted && "opacity-60",
+        // Google Calendar 同等: 過去 / キャンセルは opacity に加え saturate も
+        // 落とし、border-l-4 の鮮やかな色帯を desaturate して「明確に過去」感を出す。
+        // Tailwind v4 公式 utility (saturate-{0,50,100,150,200} がデフォルトスケール)。
+        isMuted && "opacity-60 saturate-50",
       )}
       style={style}
       onClick={() => onClick(event)}
@@ -134,9 +132,8 @@ export function EventBadge({
         "mb-0.5 flex w-full items-center gap-1 truncate rounded border-l-2 px-1.5 py-0.5 text-left text-xs transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         getStatusColorClass(event.status),
-        isMuted && "opacity-60",
+        isMuted && "opacity-60 saturate-50",
       )}
-      style={isMuted ? { filter: "saturate(0.5)" } : undefined}
       onClick={() => onClick(event)}
     >
       <CuratedIcon name={iconName} className="h-3 w-3 shrink-0" />
