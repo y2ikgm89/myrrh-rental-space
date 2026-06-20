@@ -26,10 +26,12 @@ export interface WebSiteJsonLdData {
 export interface OrganizationJsonLdData {
   "@id"?: string;
   name: string;
+  alternateName?: string;
   description?: string;
   url: string;
   logo?: string;
   telephone?: string;
+  faxNumber?: string;
   email?: string;
   address?: {
     streetAddress?: string;
@@ -96,11 +98,13 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
   return omitUndefined({
     "@id": `${BASE_URL}/#organization`,
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
+    alternateName: settings?.businessNameKana || undefined,
     description:
       settings?.businessDescription || settings?.siteDescription || undefined,
     url: BASE_URL,
     logo: settings?.headerLogoUrl || undefined,
     telephone: settings?.phoneNumber || undefined,
+    faxNumber: settings?.faxNumber || undefined,
     email: settings?.email || undefined,
     address:
       settings?.postalCode || settings?.prefecture

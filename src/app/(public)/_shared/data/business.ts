@@ -19,6 +19,7 @@ export interface BusinessInfo {
   readonly streetAddress: string | null;
   readonly buildingName: string | null;
   readonly phone: string | null;
+  readonly fax: string | null;
   readonly email: string | null;
   readonly businessHours: unknown;
   readonly holidayNotice: string | null;
@@ -50,6 +51,7 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     streetAddress: settings?.streetAddress ?? null,
     buildingName: settings?.buildingName ?? null,
     phone: settings?.phoneNumber ?? null,
+    fax: settings?.faxNumber ?? null,
     email: settings?.email ?? null,
     businessHours: settings?.businessHours ?? null,
     holidayNotice: settings?.holidayNotice ?? null,

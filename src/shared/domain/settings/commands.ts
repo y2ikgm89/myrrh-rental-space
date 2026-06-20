@@ -60,8 +60,6 @@ export type BusinessInfoInput = {
   businessName: string | null;
   businessNameKana: string | null;
   representativeName: string | null;
-  businessType: string | null;
-  industryType: string | null;
   establishedDate: string | null;
   registrationNumber: string | null;
   invoiceNumber: string | null;

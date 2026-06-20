@@ -3,7 +3,7 @@
 /**
  * 事業者情報セクション
  *
- * 会社名 / 屋号 / 代表者 / 事業形態 (Select) / 業種 (Select) / 設立日 /
+ * 会社名 / 屋号 / 屋号カナ / 代表者 / 設立日 /
  * 法人番号 / インボイス登録番号 / 事業概要 (textarea) を 1 保存単位で扱う。
  */
 
@@ -14,7 +14,6 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
-  useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
@@ -26,11 +25,6 @@ import {
   CardTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
@@ -43,23 +37,6 @@ import { dateInputValueFromSerialized } from "@/shared/lib/serialize";
 interface BusinessInfoSectionProps {
   settings: Serialized<SettingsData>;
 }
-
-const BUSINESS_TYPES = [
-  { value: "individual", label: "個人事業主" },
-  { value: "corporation", label: "法人" },
-  { value: "llc", label: "合同会社" },
-  { value: "npo", label: "NPO法人" },
-  { value: "other", label: "その他" },
-];
-
-const INDUSTRY_TYPES = [
-  { value: "rental_space", label: "レンタルスペース" },
-  { value: "event_venue", label: "イベント会場" },
-  { value: "coworking", label: "コワーキングスペース" },
-  { value: "meeting_room", label: "貸会議室" },
-  { value: "studio", label: "スタジオ" },
-  { value: "other", label: "その他" },
-];
 
 export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
   const router = useRouter();
@@ -80,19 +57,12 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
       businessName: settings.businessName ?? "",
       businessNameKana: settings.businessNameKana ?? "",
       representativeName: settings.representativeName ?? "",
-      businessType: settings.businessType ?? "",
-      industryType: settings.industryType ?? "",
       establishedDate: dateInputValueFromSerialized(settings.establishedDate),
       registrationNumber: settings.registrationNumber ?? "",
       invoiceNumber: settings.invoiceNumber ?? "",
       businessDescription: settings.businessDescription ?? "",
     },
   });
-
-  const businessTypeControl = useInputControl(fields.businessType);
-  const industryTypeControl = useInputControl(fields.industryType);
-  const businessType = businessTypeControl.value ?? "";
-  const industryType = industryTypeControl.value ?? "";
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -105,18 +75,6 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action}>
-      {/* Select の hidden input */}
-      <input
-        type="hidden"
-        name={fields.businessType.name}
-        value={businessType}
-      />
-      <input
-        type="hidden"
-        name={fields.industryType.name}
-        value={industryType}
-      />
-
       <Card>
         <CardHeader>
           <CardTitle>事業者情報</CardTitle>
@@ -164,7 +122,7 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={fields.representativeName.id}>代表者名</Label>
               <Input
@@ -181,63 +139,6 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.businessType.id}>事業形態</Label>
-              <Select
-                value={businessType}
-                onValueChange={(value) => businessTypeControl.change(value)}
-                disabled={isPending}
-              >
-                <SelectTrigger id={fields.businessType.id}>
-                  <SelectValue placeholder="選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUSINESS_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fields.businessType.errors && (
-                <p
-                  id={fields.businessType.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.businessType.errors.join(", ")}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.industryType.id}>業種</Label>
-              <Select
-                value={industryType}
-                onValueChange={(value) => industryTypeControl.change(value)}
-                disabled={isPending}
-              >
-                <SelectTrigger id={fields.industryType.id}>
-                  <SelectValue placeholder="選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDUSTRY_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fields.industryType.errors && (
-                <p
-                  id={fields.industryType.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.industryType.errors.join(", ")}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor={fields.establishedDate.id}>設立日</Label>
               <Input

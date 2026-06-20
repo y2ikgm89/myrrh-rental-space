@@ -102,8 +102,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         "businessName",
         "businessNameKana",
         "representativeName",
-        "businessType",
-        "industryType",
         "establishedDate",
         "registrationNumber",
         "invoiceNumber",

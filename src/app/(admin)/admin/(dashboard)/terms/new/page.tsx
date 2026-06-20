@@ -43,9 +43,11 @@ export default async function NewTermsPage({
     const businessInfo: BusinessInfo = {
       businessName: settings?.businessName ?? null,
       representativeName: settings?.representativeName ?? null,
+      registrationNumber: settings?.registrationNumber ?? null,
       invoiceNumber: settings?.invoiceNumber ?? null,
       email: settings?.email ?? null,
       phoneNumber: settings?.phoneNumber ?? null,
+      faxNumber: settings?.faxNumber ?? null,
       postalCode: settings?.postalCode ?? null,
       prefecture: settings?.prefecture ?? null,
       city: settings?.city ?? null,
