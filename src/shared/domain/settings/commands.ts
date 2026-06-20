@@ -135,13 +135,11 @@ export type DiscountSettingsInput = {
   durationDiscountRules: DurationDiscountRule[];
   discountCombinationMode: DiscountCombinationMode;
   showOriginalPrice: boolean;
-  discountWarningEnabled: boolean;
 };
 
 export type TaxSettingsInput = {
   taxStandardRate: number;
   taxReducedRate: number;
-  taxDisplayModeAdmin: TaxDisplayMode;
   taxDisplayModePublic: TaxDisplayMode;
 };
 
@@ -397,7 +395,6 @@ export async function updateDiscountSettings(
     durationDiscountRules: JSON.stringify(data.durationDiscountRules),
     discountCombinationMode: data.discountCombinationMode,
     showOriginalPrice: data.showOriginalPrice,
-    discountWarningEnabled: data.discountWarningEnabled,
   };
 
   await prisma.settings.upsert({

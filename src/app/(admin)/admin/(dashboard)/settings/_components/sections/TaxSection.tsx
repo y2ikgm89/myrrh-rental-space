@@ -108,7 +108,6 @@ export function TaxSection({ settings }: TaxSectionProps) {
     defaultValue: {
       taxStandardRate: String(settings.standardRate),
       taxReducedRate: String(settings.reducedRate),
-      taxDisplayModeAdmin: settings.displayModeAdmin,
       taxDisplayModePublic: settings.displayModePublic,
     },
   });
@@ -201,15 +200,10 @@ export function TaxSection({ settings }: TaxSectionProps) {
         <CardHeader>
           <CardTitle>価格表示設定</CardTitle>
           <CardDescription>
-            管理画面と公開ページでの価格表示方法を設定します
+            公開ページでの価格表示方法を設定します
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <DisplayModeSelect
-            field={fields.taxDisplayModeAdmin}
-            label="管理画面での価格表示"
-            disabled={isPending}
-          />
           <DisplayModeSelect
             field={fields.taxDisplayModePublic}
             label="公開ページでの価格表示"

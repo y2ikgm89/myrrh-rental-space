@@ -70,7 +70,6 @@ export const discountFormSchema = z.object({
     ),
   discountCombinationMode: z.enum(DiscountCombinationMode),
   showOriginalPrice: switchBoolean(),
-  discountWarningEnabled: switchBoolean(),
 });
 
 export type DiscountFormInput = z.infer<typeof discountFormSchema>;

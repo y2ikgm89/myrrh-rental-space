@@ -30,7 +30,6 @@ const discountSettingsSchema = z.object({
   durationDiscountRules: z.array(durationDiscountRuleSchema),
   discountCombinationMode: z.enum(DiscountCombinationMode),
   showOriginalPrice: z.boolean(),
-  discountWarningEnabled: z.boolean(),
 });
 
 const taxDisplayModeSchema = z.enum(TaxDisplayMode);
@@ -38,7 +37,6 @@ const taxDisplayModeSchema = z.enum(TaxDisplayMode);
 const taxSettingsSchema = z.object({
   taxStandardRate: z.coerce.number().min(0).max(100),
   taxReducedRate: z.coerce.number().min(0).max(100),
-  taxDisplayModeAdmin: taxDisplayModeSchema,
   taxDisplayModePublic: taxDisplayModeSchema,
 });
 
@@ -55,13 +53,11 @@ const VALID_DISCOUNT_SETTINGS_INPUT = {
   ],
   discountCombinationMode: DiscountCombinationMode.best,
   showOriginalPrice: true,
-  discountWarningEnabled: true,
 };
 
 const VALID_TAX_SETTINGS_INPUT = {
   taxStandardRate: 10,
   taxReducedRate: 8,
-  taxDisplayModeAdmin: TaxDisplayMode.tax_excluded,
   taxDisplayModePublic: TaxDisplayMode.tax_included,
 };
 
@@ -209,7 +205,6 @@ describe("Settings Discount Admin Action Integration", () => {
           durationDiscountRules: [],
           discountCombinationMode: "best",
           showOriginalPrice: true,
-          discountWarningEnabled: true,
         });
         expect(result.success).toBe(true);
       });
@@ -286,7 +281,6 @@ describe("Settings Discount Admin Action Integration", () => {
           durationDiscountRules: [],
           discountCombinationMode: "best",
           showOriginalPrice: false,
-          discountWarningEnabled: false,
         });
         expect(result.success).toBe(true);
       });
@@ -403,13 +397,12 @@ describe("Settings Discount Admin Action Integration", () => {
       });
     });
 
-    describe("taxDisplayModeAdmin / taxDisplayModePublic", () => {
+    describe("taxDisplayModePublic", () => {
       test("有効な表示モード", () => {
         const validModes = Object.values(TaxDisplayMode);
         for (const mode of validModes) {
           const result = taxSettingsSchema.safeParse({
             ...VALID_TAX_SETTINGS_INPUT,
-            taxDisplayModeAdmin: mode,
             taxDisplayModePublic: mode,
           });
           expect(result.success).toBe(true);
@@ -419,7 +412,7 @@ describe("Settings Discount Admin Action Integration", () => {
       test("無効な表示モードはエラー", () => {
         const result = taxSettingsSchema.safeParse({
           ...VALID_TAX_SETTINGS_INPUT,
-          taxDisplayModeAdmin: "invalid",
+          taxDisplayModePublic: "invalid",
         });
         expect(result.success).toBe(false);
       });
@@ -457,8 +450,8 @@ describe("Settings Discount Admin Action Integration", () => {
       expect(result.success).toBe(false);
     });
 
-    test("taxSettingsSchema: taxDisplayModeAdmin欠落はエラー", () => {
-      const { taxDisplayModeAdmin: _, ...input } = VALID_TAX_SETTINGS_INPUT;
+    test("taxSettingsSchema: taxDisplayModePublic欠落はエラー", () => {
+      const { taxDisplayModePublic: _, ...input } = VALID_TAX_SETTINGS_INPUT;
       const result = taxSettingsSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
@@ -485,10 +478,10 @@ describe("Settings Discount Admin Action Integration", () => {
       expect(result.success).toBe(false);
     });
 
-    test("taxSettingsSchema: taxDisplayModeAdmin に数値はエラー", () => {
+    test("taxSettingsSchema: taxDisplayModePublic に数値はエラー", () => {
       const result = taxSettingsSchema.safeParse({
         ...VALID_TAX_SETTINGS_INPUT,
-        taxDisplayModeAdmin: 1,
+        taxDisplayModePublic: 1,
       });
       expect(result.success).toBe(false);
     });

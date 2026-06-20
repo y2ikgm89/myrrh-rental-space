@@ -39,7 +39,6 @@ export async function updateDiscountSettings(
           durationDiscountRules: data.durationDiscountRules,
           discountCombinationMode: data.discountCombinationMode,
           showOriginalPrice: data.showOriginalPrice,
-          discountWarningEnabled: data.discountWarningEnabled,
         });
         return null;
       },

@@ -75,7 +75,6 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
       })),
       discountCombinationMode: settings.discountCombinationMode,
       showOriginalPrice: settings.showOriginalPrice ? "on" : "",
-      discountWarningEnabled: settings.discountWarningEnabled ? "on" : "",
     },
   });
 
@@ -86,15 +85,11 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
     fields.discountCombinationMode,
   );
   const showOriginalPriceControl = useInputControl(fields.showOriginalPrice);
-  const discountWarningEnabledControl = useInputControl(
-    fields.discountWarningEnabled,
-  );
 
   const durationDiscountEnabled = durationDiscountEnabledControl.value === "on";
   const combinationMode =
     combinationModeControl.value ?? settings.discountCombinationMode;
   const showOriginalPrice = showOriginalPriceControl.value === "on";
-  const discountWarningEnabled = discountWarningEnabledControl.value === "on";
 
   const ruleFields = fields.durationDiscountRules.getFieldList();
 
@@ -135,11 +130,6 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
         type="hidden"
         name={fields.showOriginalPrice.name}
         value={showOriginalPriceControl.value ?? ""}
-      />
-      <input
-        type="hidden"
-        name={fields.discountWarningEnabled.name}
-        value={discountWarningEnabledControl.value ?? ""}
       />
 
       {/* 長時間割引設定 */}
@@ -354,25 +344,6 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
               checked={showOriginalPrice}
               onCheckedChange={(checked) =>
                 showOriginalPriceControl.change(checked ? "on" : "")
-              }
-              disabled={isPending}
-            />
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor={fields.discountWarningEnabled.id}>
-                割引適用時に警告を表示
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                割引が自動適用された際に警告メッセージを表示します
-              </p>
-            </div>
-            <Switch
-              id={fields.discountWarningEnabled.id}
-              checked={discountWarningEnabled}
-              onCheckedChange={(checked) =>
-                discountWarningEnabledControl.change(checked ? "on" : "")
               }
               disabled={isPending}
             />

@@ -14,7 +14,6 @@ import type { TaxSettings } from "./types";
 export const DEFAULT_TAX_SETTINGS: TaxSettings = {
   standardRate: 10,
   reducedRate: 8,
-  displayModeAdmin: TaxDisplayMode.both,
   displayModePublic: TaxDisplayMode.tax_included,
 };
 

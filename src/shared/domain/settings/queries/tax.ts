@@ -29,7 +29,6 @@ export async function getPublicTaxSettings(): Promise<TaxSettings> {
         select: {
           taxStandardRate: true,
           taxReducedRate: true,
-          taxDisplayModeAdmin: true,
           taxDisplayModePublic: true,
         },
       }),
@@ -46,7 +45,6 @@ export async function getPublicTaxSettings(): Promise<TaxSettings> {
   return {
     standardRate: plain.taxStandardRate,
     reducedRate: plain.taxReducedRate,
-    displayModeAdmin: parseTaxDisplayMode(plain.taxDisplayModeAdmin),
     displayModePublic: parseTaxDisplayMode(plain.taxDisplayModePublic),
   };
 }

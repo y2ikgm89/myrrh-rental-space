@@ -303,7 +303,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         durationDiscountEnabled: "",
         discountCombinationMode: DISCOUNT_MODE,
         showOriginalPrice: "",
-        discountWarningEnabled: "",
       }),
       "discount",
     );

@@ -82,7 +82,6 @@ export type SettingsData = {
   notificationEmailAddresses: string | null;
   taxStandardRate: number;
   taxReducedRate: number;
-  taxDisplayModeAdmin: TaxDisplayMode;
   taxDisplayModePublic: TaxDisplayMode;
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
@@ -163,7 +162,6 @@ export type DiscountSettingsData = {
   durationDiscountRules: DurationDiscountRule[];
   discountCombinationMode: DiscountCombinationMode;
   showOriginalPrice: boolean;
-  discountWarningEnabled: boolean;
 };
 
 export type RobotsTxtData = {
