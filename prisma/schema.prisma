@@ -1196,8 +1196,8 @@ model Settings {
   notificationEmailAddresses String?
 
   // Other Settings
-  timezone           String? @default("Asia/Tokyo")
-  language           String? @default("ja")
+  // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
+  // html lang は layout が "ja" を固定使用しており、設定値は保存経路も consumer も無かった。
   maintenanceMode    Boolean @default(false)
   maintenanceMessage String? @db.Text
 
