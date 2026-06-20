@@ -1,4 +1,8 @@
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  DiscountType,
+  DurationDiscountOverride,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   CREATABLE_RESERVATION_STATUSES,
   RESERVATION_STATUS_LABELS,
@@ -8,6 +12,9 @@ export type SpaceOption = {
   id: string;
   name: string;
   hourlyPrice: number;
+  discountType: DiscountType;
+  discountValue: number | null;
+  durationDiscountOverride: DurationDiscountOverride;
 };
 
 export type SelectedCustomer = {

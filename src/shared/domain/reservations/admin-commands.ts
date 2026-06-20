@@ -26,8 +26,30 @@ const SPACE_SELECT = {
   name: true,
   addressDetail: true,
   hourlyPrice: true,
+  discountType: true,
+  discountValue: true,
+  durationDiscountOverride: true,
   location: { select: { address: true } },
 } as const;
+
+function buildSpaceDiscount(space: {
+  discountType: import("@/shared/lib/pricing/types").SpaceDiscountSettings["discountType"];
+  discountValue: number | null;
+  durationDiscountOverride: import("@/shared/lib/pricing/types").SpaceDiscountSettings["durationDiscountOverride"];
+}): import("@/shared/lib/pricing/types").SpaceDiscountSettings | null {
+  if (
+    space.discountType === "none" ||
+    space.discountValue == null ||
+    space.discountValue <= 0
+  ) {
+    return null;
+  }
+  return {
+    discountType: space.discountType,
+    discountValue: space.discountValue,
+    durationDiscountOverride: space.durationDiscountOverride,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Admin: Create
@@ -86,6 +108,7 @@ export async function createAdminReservationCommand(input: {
     basePrice,
     settings,
     coupon: validatedCoupon,
+    spaceDiscount: buildSpaceDiscount(space),
   });
 
   const calculatedPrice = input.totalPrice ?? pricing.totalPrice;
@@ -124,6 +147,7 @@ export async function createAdminReservationCommand(input: {
         couponId: pricing.couponId,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
+        spaceDiscountAmount: pricing.spaceDiscountAmount,
         notes:
           input.manualDiscountAmount && input.manualDiscountReason
             ? `${input.notes || ""}\n【手動割引】¥${input.manualDiscountAmount.toLocaleString()} - ${input.manualDiscountReason}`.trim()
@@ -236,6 +260,7 @@ export async function updateAdminReservationCommand(
     basePrice,
     settings,
     coupon: validatedCoupon,
+    spaceDiscount: buildSpaceDiscount(space),
   });
 
   const calculatedPrice = input.totalPrice ?? pricing.totalPrice;
@@ -269,6 +294,7 @@ export async function updateAdminReservationCommand(
         couponId: newCouponId,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
+        spaceDiscountAmount: pricing.spaceDiscountAmount,
         notes: input.notes || null,
         icsSequence: { increment: 1 },
       },

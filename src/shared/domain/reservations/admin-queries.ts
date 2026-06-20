@@ -379,7 +379,14 @@ export async function getSpacesForReservationQuery() {
   return toPlainArray(
     await prisma.space.findMany({
       where: { isActive: true, isPublished: true },
-      select: { id: true, name: true, hourlyPrice: true },
+      select: {
+        id: true,
+        name: true,
+        hourlyPrice: true,
+        discountType: true,
+        discountValue: true,
+        durationDiscountOverride: true,
+      },
       orderBy: { name: "asc" },
     }),
   );

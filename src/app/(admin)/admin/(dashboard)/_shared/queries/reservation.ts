@@ -1,7 +1,11 @@
 import "server-only";
 
-import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  DiscountCombinationMode,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
 import {
   getReservationByIdQuery,
@@ -11,6 +15,9 @@ import {
   getSpacesForCalendarQuery,
   getSpacesForReservationQuery,
 } from "@/shared/domain/reservations/admin-queries";
+import { getReservationSettings } from "@/shared/domain/reservations/payloads";
+import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
+import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import { requireAdminPermission } from "./_helpers";
 
 export type ReservationWithRelations = {
@@ -128,8 +135,28 @@ export async function getReservationStats(): Promise<{
 }
 
 export async function getSpacesForReservation(): Promise<
-  { id: string; name: string; hourlyPrice: number }[]
+  Awaited<ReturnType<typeof getSpacesForReservationQuery>>
 > {
   await requireAdminPermission("reservation", "read");
   return getSpacesForReservationQuery();
+}
+
+export type AdminReservationDiscountSettings = {
+  durationDiscountEnabled: boolean;
+  durationDiscountRules: DurationDiscountRule[];
+  discountCombinationMode: DiscountCombinationMode;
+};
+
+export async function getReservationDiscountSettings(): Promise<AdminReservationDiscountSettings> {
+  await requireAdminPermission("reservation", "read");
+  const settings = await getReservationSettings();
+  return {
+    durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+    durationDiscountRules: parseDurationDiscountRules(
+      settings?.durationDiscountRules,
+    ),
+    discountCombinationMode: getValidDiscountCombinationMode(
+      settings?.discountCombinationMode,
+    ),
+  };
 }
