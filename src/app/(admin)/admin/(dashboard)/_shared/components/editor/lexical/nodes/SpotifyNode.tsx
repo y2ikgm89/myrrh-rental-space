@@ -120,8 +120,7 @@ function SpotifyComponent({
         allow="encrypted-media"
         loading="lazy"
         title={`Spotify ${CONTENT_TYPE_LABELS[contentType]}`}
-        className="w-full border-none rounded-xl"
-        style={{ height: "352px" }}
+        className="h-[352px] w-full border-none rounded-xl"
       />
     </div>
   );

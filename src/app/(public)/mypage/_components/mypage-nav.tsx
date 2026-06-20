@@ -57,9 +57,8 @@ export function MypageNav() {
                 <Link
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
-                  style={{ width: "max-content" }}
                   className={cn(
-                    "block whitespace-nowrap px-5 py-3 text-base tracking-[0.12em] transition-colors",
+                    "block w-max whitespace-nowrap px-5 py-3 text-base tracking-[0.12em] transition-colors",
                     "underline decoration-2 underline-offset-[6px]",
                     isActive
                       ? "text-accent decoration-accent"

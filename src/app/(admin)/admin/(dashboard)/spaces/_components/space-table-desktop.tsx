@@ -92,8 +92,7 @@ export function SpaceTableDesktop({
                         alt=""
                         width={40}
                         height={40}
-                        className="rounded object-cover"
-                        style={{ width: 40, height: 40 }}
+                        className="size-10 rounded object-cover"
                       />
                     )}
                     <div className="min-w-0">
