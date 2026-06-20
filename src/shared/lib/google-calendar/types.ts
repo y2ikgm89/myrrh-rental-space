@@ -80,7 +80,6 @@ export interface WebhookRenewalResult {
 export interface TwoWaySyncSettings {
   enabled: boolean;
   syncMethod: CalendarSyncMethod;
-  pollingIntervalMin: number;
   lastSyncedAt: Date | null;
   webhookExpiration: Date | null;
 }

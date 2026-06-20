@@ -345,7 +345,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       form({
         enabled: "",
         syncMethod: SYNC_METHOD,
-        pollingIntervalMin: "5",
       }),
       "twoWaySync",
     );

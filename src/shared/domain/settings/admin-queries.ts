@@ -88,7 +88,6 @@ function toSettingsData(
       options.googleCalendarServiceAccountEmailMasked,
     googleCalendarTwoWaySyncEnabled: settings.googleCalendarTwoWaySyncEnabled,
     googleCalendarSyncMethod: settings.googleCalendarSyncMethod,
-    googleCalendarPollingIntervalMin: settings.googleCalendarPollingIntervalMin,
     googleCalendarLastSyncedAt: settings.googleCalendarLastSyncedAt,
     googleCalendarWebhookActive: !!settings.googleCalendarWebhookChannelId,
     googleCalendarWebhookExpiration: settings.googleCalendarWebhookExpiration,
@@ -230,7 +229,6 @@ export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettingsData> {
     select: {
       googleCalendarTwoWaySyncEnabled: true,
       googleCalendarSyncMethod: true,
-      googleCalendarPollingIntervalMin: true,
       googleCalendarLastSyncedAt: true,
       googleCalendarWebhookExpiration: true,
     },
@@ -241,7 +239,6 @@ export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettingsData> {
     syncMethod: parseCalendarSyncMethod(
       settings?.googleCalendarSyncMethod ?? null,
     ),
-    pollingIntervalMin: settings?.googleCalendarPollingIntervalMin ?? 5,
     lastSyncedAt: settings?.googleCalendarLastSyncedAt ?? null,
     webhookExpiration: settings?.googleCalendarWebhookExpiration ?? null,
   };

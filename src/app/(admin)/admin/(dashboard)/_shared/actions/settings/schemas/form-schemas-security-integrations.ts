@@ -176,7 +176,6 @@ export type GoogleCalendarFormInput = z.infer<typeof googleCalendarFormSchema>;
 export const twoWaySyncFormSchema = z.object({
   enabled: switchBoolean(),
   syncMethod: z.enum(CalendarSyncMethod),
-  pollingIntervalMin: z.number().int().min(1).max(60),
 });
 
 export type TwoWaySyncFormInput = z.infer<typeof twoWaySyncFormSchema>;

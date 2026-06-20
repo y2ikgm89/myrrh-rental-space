@@ -54,8 +54,6 @@ interface TwoWaySyncSectionProps {
   settings: Serialized<SettingsData>;
 }
 
-const POLLING_INTERVAL_OPTIONS = [1, 5, 10, 15, 30, 60] as const;
-
 export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
   // Google Calendar が有効かつ接続済みのときだけフォーム本体をマウントする。
   // conform の useForm / useInputControl と <form> を必ず同時にマウントさせることで、
@@ -96,20 +94,15 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
     defaultValue: {
       enabled: settings.googleCalendarTwoWaySyncEnabled ? "on" : "",
       syncMethod: settings.googleCalendarSyncMethod,
-      pollingIntervalMin: String(settings.googleCalendarPollingIntervalMin),
     },
   });
 
   const enabledControl = useInputControl(fields.enabled);
   const syncMethodControl = useInputControl(fields.syncMethod);
-  const pollingIntervalControl = useInputControl(fields.pollingIntervalMin);
 
   const enabled = enabledControl.value === "on";
   const syncMethod =
     syncMethodControl.value ?? settings.googleCalendarSyncMethod;
-  const pollingInterval =
-    pollingIntervalControl.value ??
-    String(settings.googleCalendarPollingIntervalMin);
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -186,11 +179,6 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
         value={enabledControl.value ?? ""}
       />
       <input type="hidden" name={fields.syncMethod.name} value={syncMethod} />
-      <input
-        type="hidden"
-        name={fields.pollingIntervalMin.name}
-        value={pollingInterval}
-      />
 
       <Card>
         <CardHeader>
@@ -278,42 +266,6 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                     </p>
                   )}
                 </div>
-
-                {/* ポーリング間隔 */}
-                {(syncMethod === CalendarSyncMethod.polling ||
-                  syncMethod === CalendarSyncMethod.both) && (
-                  <div className="space-y-2">
-                    <Label htmlFor={fields.pollingIntervalMin.id}>
-                      ポーリング間隔
-                    </Label>
-                    <Select
-                      value={pollingInterval}
-                      onValueChange={(value) => {
-                        pollingIntervalControl.change(value);
-                      }}
-                      disabled={isPending}
-                    >
-                      <SelectTrigger id={fields.pollingIntervalMin.id}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {POLLING_INTERVAL_OPTIONS.map((min) => (
-                          <SelectItem key={min} value={String(min)}>
-                            {min}分{min === 5 ? "（推奨）" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {fields.pollingIntervalMin.errors && (
-                      <p
-                        id={fields.pollingIntervalMin.errorId}
-                        className="text-sm text-destructive"
-                      >
-                        {fields.pollingIntervalMin.errors.join(", ")}
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Webhook設定 */}
