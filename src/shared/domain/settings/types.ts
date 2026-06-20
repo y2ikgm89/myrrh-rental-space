@@ -84,8 +84,6 @@ export type SettingsData = {
   taxReducedRate: number;
   taxDisplayModeAdmin: TaxDisplayMode;
   taxDisplayModePublic: TaxDisplayMode;
-  timezone: string | null;
-  language: string | null;
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
   stripeEnabled: boolean;
