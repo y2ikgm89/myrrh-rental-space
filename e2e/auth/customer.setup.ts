@@ -31,7 +31,6 @@ const customerAuthFile = path.join(
 
 setup("authenticate as customer", async ({ page }) => {
   await page.goto(urls.customerLogin);
-  await page.waitForLoadState("networkidle");
 
   // dev login button をクリック
   const devLoginButton = page.getByRole("button", {

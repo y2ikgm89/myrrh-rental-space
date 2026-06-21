@@ -12,12 +12,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { urls, testUsers } from "./fixtures";
+import { urls, testUsers } from "../fixtures";
 import {
   gotoAdminLogin,
   primeAdminLoginGate,
   signInAsAdmin,
-} from "./helpers/admin-auth";
+} from "../helpers/admin-auth";
 
 /**
  * Setup authenticated session for admin user
@@ -74,11 +74,13 @@ test.describe("Authentication Flow", () => {
       ).toBeVisible();
 
       // Verify form elements exist
-      await expect(page.locator('input[type="email"]')).toBeVisible();
-      await expect(page.locator('input[type="password"]')).toBeVisible();
-      await expect(page.locator('button[type="submit"]')).toBeVisible();
+      await expect(page.getByLabel("メールアドレス")).toBeVisible();
+      await expect(page.getByLabel("パスワード")).toBeVisible();
       await expect(
-        page.locator('input[type="checkbox"]#remember-me'),
+        page.getByRole("button", { name: "ログイン", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("checkbox", { name: /メールアドレスを保存/ }),
       ).toBeVisible();
     });
 
@@ -98,9 +100,9 @@ test.describe("Authentication Flow", () => {
     test("should show error for invalid credentials", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.fill('input[type="email"]', "invalid@example.com");
-      await page.fill('input[type="password"]', "wrongpassword");
-      await page.click('button[type="submit"]');
+      await page.getByLabel("メールアドレス").fill("invalid@example.com");
+      await page.getByLabel("パスワード").fill("wrongpassword");
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // Wait for error message
       await expect(getLoginErrorMessage(page)).toBeVisible();
@@ -115,23 +117,26 @@ test.describe("Authentication Flow", () => {
     test("should validate email format", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.fill('input[type="email"]', "not-an-email");
-      await page.fill('input[type="password"]', "password123");
-      await page.click('button[type="submit"]');
+      await page.getByLabel("メールアドレス").fill("not-an-email");
+      await page.getByLabel("パスワード").fill("password123");
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // HTML5 validation should prevent form submission
-      const emailInput = page.locator('input[type="email"]');
+      const emailInput = page.getByLabel("メールアドレス");
       await expect(emailInput).toHaveAttribute("required", "");
     });
 
     test("should show loading state during login", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.fill('input[type="email"]', testUsers.admin.email);
-      await page.fill('input[type="password"]', "admin123");
+      await page.getByLabel("メールアドレス").fill(testUsers.admin.email);
+      await page.getByLabel("パスワード").fill("admin123");
 
       // Click submit and immediately check for loading state
-      const submitButton = page.locator('button[type="submit"]');
+      const submitButton = page.getByRole("button", {
+        name: "ログイン",
+        exact: true,
+      });
       await submitButton.click();
 
       // Button should be disabled during loading
@@ -145,22 +150,24 @@ test.describe("Authentication Flow", () => {
       await gotoAdminLogin(page);
 
       const email = testUsers.admin.email;
-      await page.fill('input[type="email"]', email);
-      await page.fill('input[type="password"]', "admin123");
-      await page.check('input[type="checkbox"]#remember-me');
-      await page.click('button[type="submit"]');
+      await page.getByLabel("メールアドレス").fill(email);
+      await page.getByLabel("パスワード").fill("admin123");
+      await page
+        .getByRole("checkbox", { name: /メールアドレスを保存/ })
+        .check();
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // Wait for redirect
-      await page.waitForURL(urls.adminDashboard);
+      await expect(page).toHaveURL(urls.adminDashboard);
 
       // Clear session and go back to login
       await clearAuthSession(page, { preserveLocalStorage: true });
       await gotoAdminLogin(page);
 
       // Email should be pre-filled
-      await expect(page.locator('input[type="email"]')).toHaveValue(email);
+      await expect(page.getByLabel("メールアドレス")).toHaveValue(email);
       await expect(
-        page.locator('input[type="checkbox"]#remember-me'),
+        page.getByRole("checkbox", { name: /メールアドレスを保存/ }),
       ).toBeChecked();
     });
   });
@@ -336,7 +343,7 @@ test.describe("Authentication Flow", () => {
       await logoutButton.click();
 
       // Wait for redirect
-      await page.waitForURL(urls.login);
+      await expect(page).toHaveURL(urls.login);
 
       // Try to access admin dashboard
       await page.goto(urls.adminDashboard);
@@ -360,7 +367,7 @@ test.describe("Authentication Flow", () => {
         'button:has-text("ログアウト"), a:has-text("ログアウト")',
       );
       await logoutButton.click();
-      await page.waitForURL(urls.login);
+      await expect(page).toHaveURL(urls.login);
 
       // Get cookies after logout
       const cookiesAfter = await page.context().cookies();
@@ -432,10 +439,10 @@ test.describe("Authentication Flow", () => {
     test("should handle empty form submission", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.click('button[type="submit"]');
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // HTML5 validation should prevent submission
-      const emailInput = page.locator('input[type="email"]');
+      const emailInput = page.getByLabel("メールアドレス");
       await expect(emailInput).toHaveAttribute("required", "");
     });
 
@@ -445,9 +452,9 @@ test.describe("Authentication Flow", () => {
       // Simulate offline mode
       await page.context().setOffline(true);
 
-      await page.fill('input[type="email"]', testUsers.admin.email);
-      await page.fill('input[type="password"]', "admin123");
-      await page.click('button[type="submit"]');
+      await page.getByLabel("メールアドレス").fill(testUsers.admin.email);
+      await page.getByLabel("パスワード").fill("admin123");
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // Should show error message
       await expect(getLoginErrorMessage(page)).toBeVisible({
@@ -478,9 +485,9 @@ test.describe("Authentication Flow", () => {
       const longEmail = "a".repeat(300) + "@example.com";
       const longPassword = "p".repeat(300);
 
-      await page.fill('input[type="email"]', longEmail);
-      await page.fill('input[type="password"]', longPassword);
-      await page.click('button[type="submit"]');
+      await page.getByLabel("メールアドレス").fill(longEmail);
+      await page.getByLabel("パスワード").fill(longPassword);
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // Should handle gracefully without crashing
       await expect(getLoginErrorMessage(page)).toBeVisible();
@@ -490,9 +497,9 @@ test.describe("Authentication Flow", () => {
       await gotoAdminLogin(page);
 
       const specialPassword = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-      await page.fill('input[type="email"]', testUsers.admin.email);
-      await page.fill('input[type="password"]', specialPassword);
-      await page.click('button[type="submit"]');
+      await page.getByLabel("メールアドレス").fill(testUsers.admin.email);
+      await page.getByLabel("パスワード").fill(specialPassword);
+      await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // Should process without errors (will fail auth but not crash)
       await expect(getLoginErrorMessage(page)).toBeVisible();
@@ -505,9 +512,11 @@ test.describe("Authentication Flow", () => {
 
       const attempts = 5;
       for (let i = 0; i < attempts; i++) {
-        await page.fill('input[type="email"]', "test@example.com");
-        await page.fill('input[type="password"]', `wrongpassword${i}`);
-        await page.click('button[type="submit"]');
+        await page.getByLabel("メールアドレス").fill("test@example.com");
+        await page.getByLabel("パスワード").fill(`wrongpassword${i}`);
+        await page
+          .getByRole("button", { name: "ログイン", exact: true })
+          .click();
 
         await expect(getLoginErrorMessage(page)).toBeVisible({
           timeout: 5000,

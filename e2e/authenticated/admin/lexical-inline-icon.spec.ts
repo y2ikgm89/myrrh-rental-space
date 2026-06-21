@@ -31,7 +31,6 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
     page,
   }) => {
     await page.goto(NEW_POST_PATH);
-    await page.waitForLoadState("networkidle");
 
     const editor = page.locator('[contenteditable="true"]').first();
     await expect(editor).toBeVisible({ timeout: 15000 });
@@ -47,7 +46,6 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
 
   test("「アイコン」を選択すると IconPickerDialog が開く", async ({ page }) => {
     await page.goto(NEW_POST_PATH);
-    await page.waitForLoadState("networkidle");
 
     const editor = page.locator('[contenteditable="true"]').first();
     await expect(editor).toBeVisible({ timeout: 15000 });
@@ -69,7 +67,6 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
     page,
   }) => {
     await page.goto(NEW_POST_PATH);
-    await page.waitForLoadState("networkidle");
 
     const editor = page.locator('[contenteditable="true"]').first();
     await expect(editor).toBeVisible({ timeout: 15000 });

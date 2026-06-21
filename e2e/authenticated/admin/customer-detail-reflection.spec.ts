@@ -39,7 +39,6 @@ const CUSTOMER_DETAIL_URL_PATTERN = /\/admin\/customers\/[0-9a-f-]+(?:\?|$)/;
 /** 顧客行が無ければ test.skip するヘルパー（Empty state / 未 seed 環境対応）。 */
 async function gotoListAndRequireCustomer(page: Page) {
   await page.goto(ADMIN_CUSTOMERS_PATH);
-  await page.waitForLoadState("networkidle");
   // テーブル全体が描画されるまで待機（Suspense / RSC 遅延対策）
   await expect(
     page.getByRole("heading", { name: /顧客|Customer/ }).first(),
@@ -77,7 +76,6 @@ async function clickRowAndWaitForDetail(
 test.describe("admin 顧客詳細 - reflection smoke", () => {
   test("/admin/customers がリスト or 空状態を表示する", async ({ page }) => {
     await page.goto(ADMIN_CUSTOMERS_PATH);
-    await page.waitForLoadState("networkidle");
 
     // 認証済み（/admin/login にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);

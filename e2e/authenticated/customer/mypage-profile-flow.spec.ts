@@ -31,7 +31,6 @@ import { urls } from "../../fixtures";
 test.describe("マイページプロフィール - 編集 UI smoke", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(urls.mypageProfile);
-    await page.waitForLoadState("networkidle");
   });
 
   test("認証済みでアカウント設定ページが表示される", async ({ page }) => {

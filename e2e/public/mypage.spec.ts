@@ -49,7 +49,6 @@ test.describe("マイページ - 認証ガード", () => {
   }) => {
     // /login ページ自体のチェック（マイページが redirect される先）
     await page.goto(urls.customerLogin);
-    await page.waitForLoadState("networkidle");
 
     const robotsMeta = page.locator('meta[name="robots"]');
     const robotsContent = await robotsMeta.getAttribute("content");

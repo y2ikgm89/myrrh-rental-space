@@ -10,7 +10,6 @@ import { test, expect } from "@playwright/test";
 test.describe("/access/[locationSlug] 拠点詳細ページ", () => {
   test("LocalBusiness JSON-LD が出力される", async ({ page }) => {
     await page.goto("/access/honkan");
-    await page.waitForLoadState("networkidle");
 
     // ページが正常表示されていることを確認（404 でないこと）
     await expect(page).not.toHaveTitle(/404|not found/i);
@@ -57,7 +56,6 @@ test.describe("/access/[locationSlug] 拠点詳細ページ", () => {
 
   test("拠点ページに拠点名が表示される", async ({ page }) => {
     await page.goto("/access/honkan");
-    await page.waitForLoadState("networkidle");
 
     // ページが正常に表示され、タイトルや見出しが存在すること
     const title = await page.title();

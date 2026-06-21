@@ -48,7 +48,6 @@ function formatViolations(violations: readonly Result[]): string {
 test.describe("a11y scan - 管理画面主要ページ", () => {
   test("ダッシュボードに critical 違反がない", async ({ page }) => {
     await page.goto("/admin");
-    await page.waitForLoadState("networkidle");
 
     const results = await buildAdminAxeScanner(page).analyze();
     const criticals = results.violations.filter((v) => v.impact === "critical");
@@ -61,7 +60,6 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
 
   test("予約管理ページに critical 違反がない", async ({ page }) => {
     await page.goto("/admin/reservations");
-    await page.waitForLoadState("networkidle");
 
     const results = await buildAdminAxeScanner(page).analyze();
     const criticals = results.violations.filter((v) => v.impact === "critical");
@@ -74,7 +72,6 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
 
   test("スペース管理ページに critical 違反がない", async ({ page }) => {
     await page.goto("/admin/spaces");
-    await page.waitForLoadState("networkidle");
 
     const results = await buildAdminAxeScanner(page).analyze();
     const criticals = results.violations.filter((v) => v.impact === "critical");
@@ -87,7 +84,6 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
 
   test("FAQ 管理ページに critical 違反がない", async ({ page }) => {
     await page.goto("/admin/faq");
-    await page.waitForLoadState("networkidle");
 
     const results = await buildAdminAxeScanner(page).analyze();
     const criticals = results.violations.filter((v) => v.impact === "critical");
@@ -102,7 +98,6 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
     page,
   }) => {
     await page.goto("/admin/blog/new");
-    await page.waitForLoadState("networkidle");
 
     const results = await buildAdminAxeScanner(page).analyze();
     const criticals = results.violations.filter((v) => v.impact === "critical");
@@ -115,7 +110,6 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
 
   test("設定ページに critical 違反がない", async ({ page }) => {
     await page.goto("/admin/settings");
-    await page.waitForLoadState("networkidle");
 
     const results = await buildAdminAxeScanner(page).analyze();
     const criticals = results.violations.filter((v) => v.impact === "critical");

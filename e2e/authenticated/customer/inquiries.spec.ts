@@ -18,7 +18,6 @@ import { urls } from "../../fixtures";
 test.describe("お問い合わせ履歴 - 一覧ページ", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(urls.mypageInquiries);
-    await page.waitForLoadState("networkidle");
   });
 
   test("お問い合わせ一覧ページが認証済みで表示される", async ({ page }) => {
@@ -39,12 +38,10 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
     page,
   }) => {
     await page.goto(urls.mypageInquiries);
-    await page.waitForLoadState("networkidle");
 
     const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
-    await page.waitForLoadState("networkidle");
 
     expect(page.url()).toMatch(/\/mypage\/inquiries\/[^/]+$/);
     await expect(page.locator("main").first()).toBeVisible();
@@ -62,12 +59,10 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
     page,
   }) => {
     await page.goto(urls.mypageInquiries);
-    await page.waitForLoadState("networkidle");
 
     const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
-    await page.waitForLoadState("networkidle");
 
     // 返信セクション or 「未返信」メッセージ（一覧 sort 順で最初が NEW か RESOLVED かは仕様依存）
     const hasReplySection = await page

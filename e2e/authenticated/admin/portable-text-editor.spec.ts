@@ -29,7 +29,6 @@ const HOME_PAGE_EDIT_PATH = "/admin/pages/home/edit";
 test.describe("Portable Text editor - inline / block 入力 smoke", () => {
   test("ページ編集画面が表示される", async ({ page }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
-    await page.waitForLoadState("networkidle");
 
     // 認証済み（/admin/login にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);
@@ -43,7 +42,6 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
 
   test("PortableTextInlineEditor に文字入力できる", async ({ page }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
-    await page.waitForLoadState("networkidle");
 
     const inlineEditor = page
       .locator('[role="textbox"][aria-multiline="false"]')
@@ -63,7 +61,6 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
     page,
   }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
-    await page.waitForLoadState("networkidle");
 
     // home page-hero schema は全 variant が `description: field.portableTextBlock(...)` を持つ
     // (definitions/page-hero/schema.ts) ため block editor は必ず存在する
@@ -85,7 +82,6 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
     page,
   }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
-    await page.waitForLoadState("networkidle");
 
     const inlineEditor = page
       .locator('[role="textbox"][aria-multiline="false"]')

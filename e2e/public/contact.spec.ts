@@ -1,5 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { urls, testContacts, inquiryFactory } from "../fixtures";
+import { urls, inquiryFactory } from "../fixtures";
+
+/**
+ * Parallel-safe な per-test contact データ。
+ * 静的フィクスチャは email 衝突を起こすため factory で都度生成する。
+ */
+let contact: ReturnType<typeof inquiryFactory.build>;
+test.beforeEach(() => {
+  contact = inquiryFactory.build();
+});
 
 /**
  * 公開サイト - お問い合わせページ E2E テスト
@@ -21,10 +30,9 @@ import { urls, testContacts, inquiryFactory } from "../fixtures";
 test.describe("お問い合わせページ - 基本表示", () => {
   test("お問い合わせページが正しく読み込まれる", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
-    // ページが正常に読み込まれることを確認
-    expect(page.url()).toContain("/contact");
+    // ページが正常に読み込まれることを web-first assertion で確認
+    await expect(page).toHaveURL(/\/contact/);
   });
 
   test("ページタイトルが設定されている", async ({ page }) => {
@@ -37,7 +45,6 @@ test.describe("お問い合わせページ - 基本表示", () => {
 
   test("見出しが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // お問い合わせページの見出しを確認
     const heading = page.locator("h1");
@@ -47,7 +54,6 @@ test.describe("お問い合わせページ - 基本表示", () => {
 
   test("説明文が表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // ページの説明文が存在することを確認
     const description = page.locator("p").first();
@@ -62,7 +68,6 @@ test.describe("お問い合わせページ - 基本表示", () => {
 test.describe("お問い合わせページ - フォーム表示", () => {
   test("お問い合わせフォームが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // フォームが存在することを確認
     const form = page.locator("form");
@@ -71,7 +76,6 @@ test.describe("お問い合わせページ - フォーム表示", () => {
 
   test("名前フィールドが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     const nameInput = page.locator('input[name="name"]');
     await expect(nameInput).toBeVisible();
@@ -85,7 +89,6 @@ test.describe("お問い合わせページ - フォーム表示", () => {
 
   test("メールアドレスフィールドが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     const emailInput = page.locator('input[name="email"]');
     await expect(emailInput).toBeVisible();
@@ -98,20 +101,8 @@ test.describe("お問い合わせページ - フォーム表示", () => {
     await expect(emailLabel.first()).toBeVisible();
   });
 
-  test("電話番号フィールドが表示される（オプション）", async ({ page }) => {
-    await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-
-    const phoneInput = page.locator('input[name="phone"]');
-
-    if ((await phoneInput.count()) > 0) {
-      await expect(phoneInput).toBeVisible();
-    }
-  });
-
   test("メッセージフィールドが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     const messageInput = page.locator('textarea[name="message"]');
     await expect(messageInput).toBeVisible();
@@ -125,9 +116,8 @@ test.describe("お問い合わせページ - フォーム表示", () => {
 
   test("送信ボタンが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
-    const submitButton = page.locator('button[type="submit"]');
+    const submitButton = page.getByRole("button", { name: /送信|Submit/i });
     await expect(submitButton).toBeVisible();
     await expect(submitButton).toContainText(/送信|Submit/i);
   });
@@ -140,14 +130,13 @@ test.describe("お問い合わせページ - フォーム表示", () => {
 test.describe("お問い合わせページ - バリデーション", () => {
   test("名前が空の場合にエラーが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // メールとメッセージだけ入力
-    await page.fill('input[name="email"]', testContacts.valid.email);
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
+    await page.fill('input[name="email"]', contact.email);
+    await page.fill('textarea[name="message"]', contact.message);
 
     // 送信ボタンをクリック
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
     // エラーメッセージを確認
     const errorMessage = page.locator(
@@ -159,14 +148,13 @@ test.describe("お問い合わせページ - バリデーション", () => {
 
   test("メールアドレスが空の場合にエラーが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 名前とメッセージだけ入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
+    await page.fill('input[name="name"]', contact.name);
+    await page.fill('textarea[name="message"]', contact.message);
 
     // 送信ボタンをクリック
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
     // エラーメッセージを確認
     const errorMessage = page.locator(
@@ -178,15 +166,14 @@ test.describe("お問い合わせページ - バリデーション", () => {
 
   test("不正なメールアドレス形式でエラーが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 不正なメールアドレスを入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
+    await page.fill('input[name="name"]', contact.name);
     await page.fill('input[name="email"]', "invalid-email");
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
+    await page.fill('textarea[name="message"]', contact.message);
 
     // 送信ボタンをクリック
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
     // エラーメッセージを確認
     const errorMessage = page.locator(
@@ -198,14 +185,13 @@ test.describe("お問い合わせページ - バリデーション", () => {
 
   test("メッセージが空の場合にエラーが表示される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 名前とメールだけ入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
+    await page.fill('input[name="name"]', contact.name);
+    await page.fill('input[name="email"]', contact.email);
 
     // 送信ボタンをクリック
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
     // エラーメッセージを確認
     const errorMessage = page.locator(
@@ -215,41 +201,19 @@ test.describe("お問い合わせページ - バリデーション", () => {
     await expect(errorMessage.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test("メッセージが短すぎる場合にエラーが表示される", async ({ page }) => {
-    await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-
-    // 短いメッセージを入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
-    await page.fill('textarea[name="message"]', "あ"); // 1文字だけ
-
-    // 送信ボタンをクリック
-    await page.click('button[type="submit"]');
-
-    // エラーメッセージを確認（文字数制限がある場合）
-    const errorMessage = page.locator("text=文字以上");
-
-    if ((await errorMessage.count()) > 0) {
-      await expect(errorMessage.first()).toBeVisible({ timeout: 5000 });
-    }
-  });
-
   test("すべてのフィールドが空の場合に複数のエラーが表示される", async ({
     page,
   }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 何も入力せずに送信
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
     // 複数のエラーメッセージが表示されることを確認
-    await page.waitForTimeout(500);
-
     const errors = page.locator(
       "[data-error], .text-destructive, .text-red-500",
     );
+    await expect(errors.first()).toBeVisible();
     const errorCount = await errors.count();
 
     // 少なくとも2つ以上のエラーが表示されることを確認
@@ -266,7 +230,6 @@ test.describe("お問い合わせページ - フォーム入力", () => {
     page,
   }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // `inquiryFactory.build()` で並列実行セーフな unique data を生成
     // （test-data.ts の static fixture では並列実行時に email 衝突の可能性がある）
@@ -276,14 +239,10 @@ test.describe("お問い合わせページ - フォーム入力", () => {
     });
 
     // 各フィールドに入力
+    // (phone フィールドは public-inquiry-form-card に存在しない =
+    //  従来の `if (await phoneInput.count() > 0)` ガードは silent-pass のため削除)
     await page.fill('input[name="name"]', inquiry.name);
     await page.fill('input[name="email"]', inquiry.email);
-
-    const phoneInput = page.locator('input[name="phone"]');
-    if ((await phoneInput.count()) > 0 && inquiry.phone !== null) {
-      await page.fill('input[name="phone"]', inquiry.phone);
-    }
-
     await page.fill('textarea[name="message"]', inquiry.message);
 
     // 入力値を確認
@@ -298,11 +257,10 @@ test.describe("お問い合わせページ - フォーム入力", () => {
 
   test("フォームをクリアできる", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
+    await page.fill('input[name="name"]', contact.name);
+    await page.fill('input[name="email"]', contact.email);
 
     // クリア
     await page.locator('input[name="name"]').clear();
@@ -317,7 +275,6 @@ test.describe("お問い合わせページ - フォーム入力", () => {
     page,
   }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // テキストエリアでEnterを押す
     const textarea = page.locator('textarea[name="message"]');
@@ -330,48 +287,24 @@ test.describe("お問い合わせページ - フォーム入力", () => {
 });
 
 // =============================================================================
-// 5. Turnstile検証
-// =============================================================================
-
-test.describe("お問い合わせページ - Turnstile", () => {
-  test("Turnstileウィジェットが表示される（有効な場合）", async ({ page }) => {
-    await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-
-    // Turnstileウィジェットまたはiframeを確認
-    const turnstileWidget = page.locator(
-      '[data-turnstile], iframe[src*="turnstile"], .cf-turnstile',
-    );
-
-    // Turnstileが有効な場合のみテスト
-    if ((await turnstileWidget.count()) > 0) {
-      await expect(turnstileWidget.first()).toBeVisible();
-    }
-  });
-});
-
-// =============================================================================
 // 6. 送信処理
 // =============================================================================
 
 test.describe("お問い合わせページ - 送信処理", () => {
   test("送信ボタンクリックで送信処理が開始される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 有効なデータを入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
+    await page.fill('input[name="name"]', contact.name);
+    await page.fill('input[name="email"]', contact.email);
+    await page.fill('textarea[name="message"]', contact.message);
 
     // 送信ボタンをクリック
-    const submitButton = page.locator('button[type="submit"]');
+    const submitButton = page.getByRole("button", { name: /送信|Submit/i });
     await submitButton.click();
 
     // ローディング状態または無効化状態になることを確認
     // Turnstileがない環境では、バリデーションエラーまたはローディング状態
-    await page.waitForTimeout(500);
-
     // ボタンが一時的に無効になるか、ローディング表示が出ることを確認
     const isDisabled = await submitButton.isDisabled();
     const hasLoadingText = await submitButton.textContent();
@@ -393,7 +326,6 @@ test.describe("お問い合わせページ - レスポンシブ", () => {
   test("モバイルビューでフォームが表示される", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     const form = page.locator("form");
     await expect(form).toBeVisible();
@@ -402,13 +334,14 @@ test.describe("お問い合わせページ - レスポンシブ", () => {
     await expect(page.locator('input[name="name"]')).toBeVisible();
     await expect(page.locator('input[name="email"]')).toBeVisible();
     await expect(page.locator('textarea[name="message"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /送信|Submit/i }),
+    ).toBeVisible();
   });
 
   test("タブレットビューでフォームが表示される", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     const form = page.locator("form");
     await expect(form).toBeVisible();
@@ -417,13 +350,10 @@ test.describe("お問い合わせページ - レスポンシブ", () => {
   test("モバイルビューでフォーム入力ができる", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // モバイルでの入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await expect(page.locator('input[name="name"]')).toHaveValue(
-      testContacts.valid.name,
-    );
+    await page.fill('input[name="name"]', contact.name);
+    await expect(page.locator('input[name="name"]')).toHaveValue(contact.name);
   });
 });
 
@@ -434,7 +364,6 @@ test.describe("お問い合わせページ - レスポンシブ", () => {
 test.describe("お問い合わせページ - アクセシビリティ", () => {
   test("フォームフィールドにラベルが関連付けられている", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // 名前フィールド
     const nameInput = page.locator('input[name="name"]');
@@ -457,7 +386,6 @@ test.describe("お問い合わせページ - アクセシビリティ", () => {
 
   test("キーボードでフォームを操作できる", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // Tabキーで最初のフィールドにフォーカス
     await page.keyboard.press("Tab");
@@ -469,26 +397,8 @@ test.describe("お問い合わせページ - アクセシビリティ", () => {
     await expect(focusedElement).toBeVisible();
   });
 
-  test("エラーメッセージがaria-liveで通知される", async ({ page }) => {
-    await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-
-    // 空のまま送信
-    await page.click('button[type="submit"]');
-
-    // エラーメッセージがアクセシブルであることを確認
-    const errorContainer = page.locator(
-      '[aria-live="polite"], [aria-live="assertive"], [role="alert"]',
-    );
-
-    if ((await errorContainer.count()) > 0) {
-      await expect(errorContainer.first()).toBeVisible();
-    }
-  });
-
   test("必須フィールドにaria-requiredがある", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     const nameInput = page.locator('input[name="name"]');
     const isRequired =
@@ -508,28 +418,24 @@ test.describe("お問い合わせページ - エラーハンドリング", () =>
     page,
   }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // フォームに入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
+    await page.fill('input[name="name"]', contact.name);
+    await page.fill('input[name="email"]', contact.email);
+    await page.fill('textarea[name="message"]', contact.message);
 
     // オフラインモードをシミュレート
     await page.context().setOffline(true);
 
     // 送信
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
-    // エラー処理を待機
-    await page.waitForTimeout(2000);
+    // ページがクラッシュしていないことを確認（フォームが visible のままであることを auto-retry で待機）
+    const form = page.locator("form");
+    await expect(form).toBeVisible();
 
     // オンラインに戻す
     await page.context().setOffline(false);
-
-    // ページがクラッシュしていないことを確認
-    const form = page.locator("form");
-    await expect(form).toBeVisible();
   });
 
   test("JavaScriptエラーが発生しない", async ({ page }) => {
@@ -540,13 +446,13 @@ test.describe("お問い合わせページ - エラーハンドリング", () =>
     });
 
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // フォーム操作
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.click('button[type="submit"]');
+    await page.fill('input[name="name"]', contact.name);
+    await page.getByRole("button", { name: /送信|Submit/i }).click();
 
-    await page.waitForTimeout(1000);
+    // 送信後のバリデーション/エラー描画が確定するまで form の visible で auto-retry
+    await expect(page.locator("form")).toBeVisible();
 
     expect(errors.length).toBe(0);
   });
@@ -559,7 +465,6 @@ test.describe("お問い合わせページ - エラーハンドリング", () =>
 test.describe("お問い合わせページ - セキュリティ", () => {
   test("XSSスクリプトが実行されない", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // XSSペイロードを入力
     const xssPayload = '<script>alert("XSS")</script>';
@@ -573,7 +478,6 @@ test.describe("お問い合わせページ - セキュリティ", () => {
 
   test("SQLインジェクションペイロードが安全に処理される", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
 
     // SQLインジェクションペイロードを入力
     const sqlPayload = "'; DROP TABLE users; --";

@@ -32,13 +32,11 @@ async function openFirstReservationDetail(
   page: import("@playwright/test").Page,
 ): Promise<void> {
   await page.goto(urls.mypageReservations);
-  await page.waitForLoadState("networkidle");
 
   // seed-driven: dev customer に 4 件の reservation が必ずある。空なら seed regression。
   const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
   await expect(detailLink).toBeVisible({ timeout: 5000 });
   await detailLink.click();
-  await page.waitForLoadState("networkidle");
 }
 
 test.describe("予約キャンセル Dialog - 顧客側 smoke", () => {

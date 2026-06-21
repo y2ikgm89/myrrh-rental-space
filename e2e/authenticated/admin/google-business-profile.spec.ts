@@ -31,7 +31,6 @@ const API_SETTINGS_PATH = "/admin/settings/integrations?tab=calendar";
 test.describe("Google Business Profile 連携 - smoke", () => {
   test("GBP セクションが「カレンダー」タブに表示される", async ({ page }) => {
     await page.goto(API_SETTINGS_PATH);
-    await page.waitForLoadState("networkidle");
 
     // 認証済み（/admin/login にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);
@@ -46,7 +45,6 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     page,
   }) => {
     await page.goto(API_SETTINGS_PATH);
-    await page.waitForLoadState("networkidle");
 
     // 未連携 Badge
     const unconnectedBadge = page.getByText("未連携", { exact: true }).first();
@@ -72,7 +70,6 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     page,
   }) => {
     await page.goto(`${API_SETTINGS_PATH}&gbp_success=1`);
-    await page.waitForLoadState("networkidle");
 
     // useEffect → router.replace は async commit phase で発火するため
     // 固定 timeout ではなく toHaveURL の auto-retry で polling 検証する
@@ -86,7 +83,6 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     page,
   }) => {
     await page.goto(`${API_SETTINGS_PATH}&gbp_error=invalid_state`);
-    await page.waitForLoadState("networkidle");
 
     await expect(page).toHaveURL(/^(?!.*gbp_error).*\/admin\/settings\/api/, {
       timeout: 5000,
