@@ -100,7 +100,7 @@ describe("sendEventAdminNotification() の type->toggle マッピング", () => 
 
     const result = await sendEventAdminNotification(DATA, "registration");
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
@@ -112,7 +112,7 @@ describe("sendEventAdminNotification() の type->toggle マッピング", () => 
 
     const result = await sendEventAdminNotification(DATA, "cancellation");
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
@@ -127,7 +127,7 @@ describe("sendEventAdminNotification() の type->toggle マッピング", () => 
 
     const result = await sendEventAdminNotification(DATA, "registration");
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });

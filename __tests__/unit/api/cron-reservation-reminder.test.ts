@@ -7,8 +7,13 @@ const mockFindReservationsForReminderWindow = mock<
 >(() => Promise.resolve([]));
 
 const mockSendReservationReminderEmail = mock<
-  () => Promise<{ success: boolean; error?: string }>
->(() => Promise.resolve({ success: true }));
+  () => Promise<{
+    ok: boolean;
+    messageId?: string;
+    reason?: string;
+    error?: string;
+  }>
+>(() => Promise.resolve({ ok: true, messageId: "re_test_id" }));
 
 const mockClaimReservationReminder = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
@@ -185,7 +190,10 @@ describe("GET /api/cron/reservation-reminder", () => {
     mockFindReservationsForReminderWindow.mockResolvedValue([]);
     mockClaimReservationReminder.mockResolvedValue(true);
     mockReleaseReservationReminderClaim.mockResolvedValue(undefined);
-    mockSendReservationReminderEmail.mockResolvedValue({ success: true });
+    mockSendReservationReminderEmail.mockResolvedValue({
+      ok: true,
+      messageId: "re_test_id",
+    });
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
@@ -310,12 +318,13 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
   });
 
-  test("メール送信が success:false → claim を release + skipped=1", async () => {
+  test("メール送信が ok:false → claim を release + skipped=1", async () => {
     const reservation = makeReservation();
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
-    // sendEmail は失敗時に throw せず { success: false } を返す
+    // sendEmail は失敗時に throw せず { ok: false } を返す
     mockSendReservationReminderEmail.mockResolvedValue({
-      success: false,
+      ok: false,
+      reason: "error",
       error: "メール送信に失敗しました",
     });
 

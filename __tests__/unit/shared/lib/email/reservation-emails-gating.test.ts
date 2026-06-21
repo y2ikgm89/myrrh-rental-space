@@ -118,7 +118,7 @@ describe("sendReservationConfirmationEmail() のゲート", () => {
 
     const result = await sendReservationConfirmationEmail(DATA);
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
@@ -132,7 +132,7 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
 
     const result = await sendReservationAdminNotification(DATA, "new");
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
@@ -144,7 +144,7 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
 
     const result = await sendReservationAdminNotification(DATA, "cancel");
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
@@ -159,7 +159,7 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
 
     const result = await sendReservationAdminNotification(DATA, "new");
 
-    expect(result).toEqual({ ok: true, messageId: "msg_test" });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
