@@ -45,14 +45,14 @@ export async function gotoAdminLogin(page: Page): Promise<void> {
   await ensureAdminUser();
   await primeAdminLoginGate(page.context());
   await page.goto(urls.login);
-  await expect(page.locator("input#email")).toBeVisible();
-  await expect(page.locator("input#password")).toBeVisible();
+  await expect(page.getByLabel("メールアドレス")).toBeVisible();
+  await expect(page.getByLabel("パスワード")).toBeVisible();
 }
 
 export async function signInAsAdmin(page: Page): Promise<void> {
   await gotoAdminLogin(page);
-  await page.locator("input#email").fill(adminCredentials.email);
-  await page.locator("input#password").fill(adminCredentials.password);
+  await page.getByLabel("メールアドレス").fill(adminCredentials.email);
+  await page.getByLabel("パスワード").fill(adminCredentials.password);
   // `exact: true` 必須 — `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` 環境 (CI / dev) では
   // `<DevLoginButton>`「SUPER_ADMIN でログイン」も同 page に render され、
   // partial match だと strict mode violation で fail する。

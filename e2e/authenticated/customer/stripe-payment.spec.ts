@@ -44,13 +44,11 @@ test.describe("Stripe 決済 UI - 決済ボタン表示", () => {
     page,
   }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     // seed-driven: dev customer に 4 件の reservation が必ずある。空なら seed regression。
     const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
-    await page.waitForLoadState("networkidle");
 
     const paymentButton = page
       .getByRole("button", { name: /決済|支払|お支払い|Pay/i })
@@ -74,7 +72,6 @@ test.describe("Stripe 決済 UI - 決済ボタン表示", () => {
 test.describe("Stripe 決済 UI - success / cancel URL 表示", () => {
   test("/reservation/success ページが正しく表示される", async ({ page }) => {
     await page.goto("/reservation/success?session_id=mock_test_session");
-    await page.waitForLoadState("networkidle");
 
     // 404 でないことを確認
     expect(page.url()).not.toMatch(/\/404|\/not-found/);
@@ -85,7 +82,6 @@ test.describe("Stripe 決済 UI - success / cancel URL 表示", () => {
 
   test("/reservation/cancel ページが正しく表示される", async ({ page }) => {
     await page.goto("/reservation/cancel?session_id=mock_test_session");
-    await page.waitForLoadState("networkidle");
 
     expect(page.url()).not.toMatch(/\/404|\/not-found/);
     await expect(page.locator("main").first()).toBeVisible();
@@ -100,13 +96,11 @@ test.describe("Stripe 決済 UI - checkout route intercept", () => {
     await mockStripeCheckoutRedirect(context, "success");
 
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     // seed-driven: 一覧から最初の reservation detail に navigate
     const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
-    await page.waitForLoadState("networkidle");
 
     // 決済ボタンの有無は reservation status に依存（COMPLETED+PAID なら無し、CONFIRMED+UNPAID なら有り）。
     // 一覧の最初が決済必要状態でない場合は detail 描画ゲートのみで完走を契約とする
@@ -132,8 +126,8 @@ test.describe("Stripe 決済 UI - checkout route intercept", () => {
       await paymentLink.click();
     }
 
-    await page
-      .waitForURL(/\/reservation\/(success|cancel)/, { timeout: 10000 })
+    await expect(page)
+      .toHaveURL(/\/reservation\/(success|cancel)/, { timeout: 10000 })
       .catch(() => null);
 
     expect(page.url()).toMatch(

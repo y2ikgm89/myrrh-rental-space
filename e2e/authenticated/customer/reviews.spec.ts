@@ -24,12 +24,10 @@ test.describe("レビュー - スペース詳細セクション", () => {
     page,
   }) => {
     await page.goto(urls.spaces);
-    await page.waitForLoadState("networkidle");
 
     const spaceLink = page.locator('a[href*="/spaces/"]').first();
     await expect(spaceLink).toBeVisible({ timeout: 5000 });
     await spaceLink.click();
-    await page.waitForLoadState("networkidle");
 
     // レビューセクション or 関連 heading の存在
     const hasReviewSection = await page
@@ -59,13 +57,11 @@ test.describe("レビュー - マイページからの投稿経路", () => {
     page,
   }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     // seed-driven: 4 件確実に存在
     const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
-    await page.waitForLoadState("networkidle");
 
     // 一覧 sort 順依存（最初の reservation の status が COMPLETED/未完了/キャンセル のいずれか）。
     // どれかの state が描画されていれば pass の契約とする。

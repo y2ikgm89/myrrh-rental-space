@@ -20,14 +20,12 @@ test.describe("AddToCalendar UI 表示", () => {
     page,
   }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     const firstReservation = page
       .locator('a[href^="/mypage/reservations/"]')
       .first();
     await expect(firstReservation).toBeVisible({ timeout: 5000 });
     await firstReservation.click();
-    await page.waitForLoadState("networkidle");
 
     const reservationCancelled = await page
       .getByText(/キャンセル済|CANCELLED/i)
@@ -60,7 +58,6 @@ test.describe("AddToCalendar UI 表示", () => {
     page,
   }) => {
     await page.goto("/mypage/events");
-    await page.waitForLoadState("networkidle");
 
     // EventRegistration は seed にないため、ページ自体の描画ゲートのみ。
     // CONFIRMED 申込が seed に追加された時点で本 test を assertion 化する。
@@ -87,14 +84,12 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     request,
   }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     const firstReservation = page
       .locator('a[href^="/mypage/reservations/"]')
       .first();
     await expect(firstReservation).toBeVisible({ timeout: 5000 });
     await firstReservation.click();
-    await page.waitForLoadState("networkidle");
 
     const icsLink = page
       .locator('section[aria-labelledby="add-to-calendar-label"]')

@@ -18,7 +18,6 @@ import { urls } from "../fixtures";
 test.describe("顧客ログインページ - UI と a11y", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(urls.customerLogin);
-    await page.waitForLoadState("networkidle");
   });
 
   test("ログインページが正しく表示される", async ({ page }) => {
@@ -61,7 +60,6 @@ test.describe("顧客ログインページ - UI と a11y", () => {
   test("ログイン後の redirect 先パラメータを保持できる", async ({ page }) => {
     // /login?redirectTo=/mypage/reservations のような遷移経由
     await page.goto(`${urls.customerLogin}?redirectTo=/mypage`);
-    await page.waitForLoadState("networkidle");
 
     // URL が保持されている
     expect(page.url()).toContain("redirectTo");

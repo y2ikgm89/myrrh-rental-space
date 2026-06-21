@@ -20,7 +20,6 @@ import { urls } from "../fixtures";
 test.describe("公開スペース - レビュー表示", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(urls.spaces);
-    await page.waitForLoadState("networkidle");
   });
 
   test("スペース詳細ページにレビューセクション or 空状態が描画される", async ({
@@ -29,7 +28,6 @@ test.describe("公開スペース - レビュー表示", () => {
     const spaceLink = page.locator('a[href*="/spaces/"]').first();
     await expect(spaceLink).toBeVisible({ timeout: 5000 });
     await spaceLink.click();
-    await page.waitForLoadState("networkidle");
 
     expect(page.url()).toMatch(/\/spaces\/[^/]+/);
 
@@ -57,7 +55,6 @@ test.describe("公開スペース - レビュー表示", () => {
     const spaceLink = page.locator('a[href*="/spaces/"]').first();
     await expect(spaceLink).toBeVisible({ timeout: 5000 });
     await spaceLink.click();
-    await page.waitForLoadState("networkidle");
 
     // 評価表示パターン: "4.5" "★4.5" "4.5 / 5" 等
     const hasRatingNumber = await page
@@ -79,7 +76,6 @@ test.describe("公開スペース - レビュー表示", () => {
     const spaceLink = page.locator('a[href*="/spaces/"]').first();
     await expect(spaceLink).toBeVisible({ timeout: 5000 });
     await spaceLink.click();
-    await page.waitForLoadState("networkidle");
 
     const loginPrompt = await page
       .getByText(/ログイン|サインイン|予約完了後にレビュー/i)

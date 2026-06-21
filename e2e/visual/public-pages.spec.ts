@@ -52,14 +52,36 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
     page.locator('[class*="instagram" i]'),
   ];
 
+  // 全 <img> の load 完了を待つ（toHaveScreenshot 直前の決定論的待機）
+  const waitForImagesLoaded = (page: Page) =>
+    page.evaluate(() =>
+      Promise.all(
+        Array.from(document.images)
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise((res) => {
+                img.onload = res;
+                img.onerror = res;
+              }),
+          ),
+      ),
+    );
+
+  // GSAP / CSS animations が prefers-reduced-motion を見て止まる前提で reduce を強制
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+  });
+
   test("ホームページ - above-the-fold + full page snapshot", async ({
     page,
   }) => {
     await page.goto(urls.home);
-    await page.waitForLoadState("networkidle");
 
     // GSAP / Lenis アニメーション完了を待つ
-    await page.waitForTimeout(1000);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await waitForImagesLoaded(page);
 
     await expect(page).toHaveScreenshot("homepage.png", {
       fullPage: true,
@@ -71,8 +93,9 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("スペース一覧ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.spaces);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await waitForImagesLoaded(page);
 
     await expect(page).toHaveScreenshot("spaces-list.png", {
       fullPage: true,
@@ -84,8 +107,9 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("ブログ一覧ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.blog);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await waitForImagesLoaded(page);
 
     await expect(page).toHaveScreenshot("posts-list.png", {
       fullPage: true,
@@ -97,8 +121,9 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("お知らせ一覧ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.news);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await waitForImagesLoaded(page);
 
     await expect(page).toHaveScreenshot("news-list.png", {
       fullPage: true,
@@ -110,8 +135,9 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("FAQ ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.faq);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await waitForImagesLoaded(page);
 
     await expect(page).toHaveScreenshot("faq.png", {
       fullPage: true,
@@ -123,8 +149,9 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("お問い合わせページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(500);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await waitForImagesLoaded(page);
 
     await expect(page).toHaveScreenshot("contact.png", {
       fullPage: true,
@@ -143,10 +170,27 @@ test.describe("Visual Regression - モバイル viewport", () => {
 
   test.use({ viewport: { width: 375, height: 667 } });
 
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+  });
+
   test("ホームページ - モバイル full page", async ({ page }) => {
     await page.goto(urls.home);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(1000);
+    await expect(page.locator("main").first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() =>
+      Promise.all(
+        Array.from(document.images)
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise((res) => {
+                img.onload = res;
+                img.onerror = res;
+              }),
+          ),
+      ),
+    );
 
     await expect(page).toHaveScreenshot("homepage-mobile.png", {
       fullPage: true,

@@ -39,19 +39,16 @@ test.describe("予約 full flow - スペース → 予約ページ遷移", () =>
     await bypassTurnstile(context);
 
     await page.goto(urls.spaces);
-    await page.waitForLoadState("networkidle");
 
     // seed-driven: 公開済 space が確実にある
     const spaceLink = page.locator('a[href*="/spaces/"]').first();
     await expect(spaceLink).toBeVisible({ timeout: 5000 });
     await spaceLink.click();
-    await page.waitForLoadState("networkidle");
 
     // 「予約する」ボタン
     const reserveButton = page.getByRole("link", { name: /予約する/i }).first();
     await expect(reserveButton).toBeVisible({ timeout: 5000 });
     await reserveButton.click();
-    await page.waitForLoadState("networkidle");
 
     expect(page.url()).toMatch(/\/reservation/);
 
@@ -65,7 +62,6 @@ test.describe("予約 full flow - スペース → 予約ページ遷移", () =>
 test.describe("予約 full flow - 履歴とキャンセル権限", () => {
   test("マイページ予約履歴で予約リストが表示される", async ({ page }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     expect(page.url()).not.toMatch(/\/login/);
     expect(page.url()).toContain("/mypage/reservations");
@@ -79,7 +75,6 @@ test.describe("予約 full flow - 履歴とキャンセル権限", () => {
     page,
   }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
@@ -89,7 +84,6 @@ test.describe("予約 full flow - 履歴とキャンセル権限", () => {
 
     if (href) {
       await page.goto(href);
-      await page.waitForLoadState("networkidle");
       expect(page.url()).not.toMatch(/\/login/);
       await expect(page.locator("main").first()).toBeVisible();
     }
@@ -99,12 +93,10 @@ test.describe("予約 full flow - 履歴とキャンセル権限", () => {
     page,
   }) => {
     await page.goto(urls.mypageReservations);
-    await page.waitForLoadState("networkidle");
 
     const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
-    await page.waitForLoadState("networkidle");
 
     // 一覧の最初がどの status / paymentStatus を持つかは sort 順に依存するため
     // どちらかが visible なら pass の契約とする。

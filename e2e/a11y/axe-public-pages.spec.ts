@@ -57,8 +57,8 @@ function formatAxeViolations(violations: readonly Result[]): string {
 test.describe("a11y scan - 公開ページ主要ルート", () => {
   test("ホームページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.home);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(800); // GSAP 入場アニメ完了待ち
+    await expect(page.locator("main").first()).toBeVisible();
+    // GSAP 入場アニメ完了は web-first assertion の auto-wait で吸収
 
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
@@ -71,8 +71,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("スペース一覧ページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.spaces);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -84,8 +82,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("予約ページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.reservation);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -97,8 +93,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("ブログ一覧ページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.blog);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -110,8 +104,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("お知らせ一覧ページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.news);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -123,8 +115,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("お問い合わせページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.contact);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -136,8 +126,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("FAQ ページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.faq);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -149,8 +137,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("イベント一覧ページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.events);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 
@@ -162,8 +148,6 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   test("ログインページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.customerLogin);
-    await page.waitForLoadState("networkidle");
-
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);
 

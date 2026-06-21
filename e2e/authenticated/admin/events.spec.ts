@@ -27,7 +27,6 @@ import { urls } from "../../fixtures";
 test.describe("イベント管理 - 一覧ページ", () => {
   test("イベント管理ページが正しく表示される", async ({ page }) => {
     await page.goto(urls.adminEvents);
-    await page.waitForLoadState("networkidle");
 
     // ページ見出しに「イベント」が含まれる
     await expect(page.locator("h1").first()).toContainText(/イベント|Event/i);
@@ -35,7 +34,6 @@ test.describe("イベント管理 - 一覧ページ", () => {
 
   test("新規作成ボタンが表示されている", async ({ page }) => {
     await page.goto(urls.adminEvents);
-    await page.waitForLoadState("networkidle");
 
     const createButton = page
       .locator('a[href*="/admin/events/new"]')
@@ -48,7 +46,6 @@ test.describe("イベント管理 - 一覧ページ", () => {
     page,
   }) => {
     await page.goto(urls.adminEvents);
-    await page.waitForLoadState("networkidle");
 
     // テーブル行 / カード / 空状態のいずれか
     const hasRows = await page
@@ -72,14 +69,12 @@ test.describe("イベント管理 - 一覧ページ", () => {
 test.describe("イベント管理 - 新規作成", () => {
   test("新規作成ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminEvents);
-    await page.waitForLoadState("networkidle");
 
     const createButton = page
       .locator('a[href*="/admin/events/new"]')
       .or(page.getByRole("link", { name: /新規作成|新しいイベント|追加/i }))
       .first();
     await createButton.click();
-    await page.waitForLoadState("networkidle");
 
     expect(page.url()).toContain("/admin/events/new");
 
@@ -91,7 +86,6 @@ test.describe("イベント管理 - 新規作成", () => {
     page,
   }) => {
     await page.goto("/admin/events/new");
-    await page.waitForLoadState("networkidle");
 
     // タイトル入力欄
     const titleInput = page
@@ -101,9 +95,10 @@ test.describe("イベント管理 - 新規作成", () => {
     await expect(titleInput).toBeVisible();
 
     // 開始日時 / 終了日時の入力欄
-    const startTimeInput = page
-      .locator('input[name="startTime"], input[type="datetime-local"]')
-      .first();
+    const startTimeInput = page.getByLabel("開始日時");
     await expect(startTimeInput).toBeVisible();
+
+    const endTimeInput = page.getByLabel("終了日時");
+    await expect(endTimeInput).toBeVisible();
   });
 });
