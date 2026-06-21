@@ -77,10 +77,17 @@ for (let i = 0; i < files.length; i++) {
   const file = files[i];
   if (file === undefined) continue;
   const t0 = performance.now();
-  const proc = Bun.spawnSync(["bun", "test", file], {
-    stdout: "inherit",
-    stderr: "inherit",
-  });
+  // `--conditions production`: package.json `exports` の `production` 条件を強制。
+  // Lexical の `.dev.mjs` は `defineImportRule` / `ElementNode` の TDZ regression を
+  // 抱えており（dev ビルドのみの上流バグ）、テストでは `.prod.mjs` を選択させる。
+  // 本番ランタイムは Next.js の build 経由で同 `production` 条件が解決されるため整合。
+  const proc = Bun.spawnSync(
+    ["bun", "test", "--conditions", "production", file],
+    {
+      stdout: "inherit",
+      stderr: "inherit",
+    },
+  );
   const ms = Math.round(performance.now() - t0);
   const ord = `(${i + 1}/${files.length})`;
   if (proc.success) {
