@@ -12,6 +12,7 @@ import { checkAdminAuth, logAction } from "@/admin/lib/action-auth";
 import { logPermissionDenied } from "@/admin/lib/audit";
 import { isDomainError } from "@/shared/domain/domain-error";
 import { fireAndForget } from "@/shared/lib/async-utils";
+import { withPurgeBatch } from "@/shared/lib/cache/batcher";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
@@ -128,38 +129,44 @@ export async function executeAdminMutationResult<TData>(
   }
 
   // 5-7. 実行 + afterSuccess + 監査ログ
-  try {
-    const data = await options.execute(user);
-    await options.afterSuccess?.(data);
+  // withPurgeBatch wraps to coalesce all queueTagPurge calls (issued from inside
+  // afterSuccess via invalidateSiteWideCache) into a single Cloudflare API call.
+  // Early-return paths above (auth/permission failure) deliberately skip this scope
+  // since they don't invoke afterSuccess.
+  return withPurgeBatch(async () => {
+    try {
+      const data = await options.execute(user);
+      await options.afterSuccess?.(data);
 
-    fireAndForget(
-      logAction(
-        user.id,
-        options.action,
-        options.resource,
-        options.resolveAuditResourceId?.(data) ?? resourceId,
-      ),
-      {
-        operation: "executeAdminMutationResult.logAction",
-        category: ErrorCategory.DATABASE,
-        severity: ErrorSeverity.MEDIUM,
-        context: {
-          resource: options.resource,
-          action: options.action,
-          userId: user.id,
+      fireAndForget(
+        logAction(
+          user.id,
+          options.action,
+          options.resource,
+          options.resolveAuditResourceId?.(data) ?? resourceId,
+        ),
+        {
+          operation: "executeAdminMutationResult.logAction",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            resource: options.resource,
+            action: options.action,
+            userId: user.id,
+          },
         },
-      },
-    );
+      );
 
-    return data;
-  } catch (error) {
-    if (isDomainError(error)) {
-      return {
-        error: error.message,
-        code: error.code,
-      };
+      return data;
+    } catch (error) {
+      if (isDomainError(error)) {
+        return {
+          error: error.message,
+          code: error.code,
+        };
+      }
+
+      throw error;
     }
-
-    throw error;
-  }
+  });
 }

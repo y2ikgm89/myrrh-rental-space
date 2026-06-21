@@ -76,23 +76,18 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 // cloudflare module: 全 export をスタブ化してバッチ実行時の他テスト汚染を防ぐ
-const mockPurgeNewsCache = mock<() => Promise<{ success: boolean }>>(() =>
-  Promise.resolve({ success: true }),
+const mockPurgeDetailUrls = mock<
+  (paths: readonly string[]) => Promise<{ success: boolean }>
+>(async () => ({ success: true }));
+const mockPurgeByTags = mock<(tags: string[]) => Promise<{ success: boolean }>>(
+  async () => ({ success: true }),
 );
-const noopPurge = (): Promise<{ success: boolean }> =>
-  Promise.resolve({ success: true });
 mock.module("@/shared/lib/cloudflare", () => ({
-  purgeCloudflareCache: mock(noopPurge),
-  purgeCloudflareCacheByPrefix: mock(noopPurge),
-  purgeAllCloudflareCache: mock(noopPurge),
-  purgeCloudflareByPaths: mock(noopPurge),
-  purgeSpaceCache: mock(noopPurge),
-  purgePostCache: mock(noopPurge),
-  purgeNewsCache: mockPurgeNewsCache,
-  purgePageCache: mock(noopPurge),
-  purgeHomeCache: mock(noopPurge),
-  purgeFaqCache: mock(noopPurge),
-  purgeTermsCache: mock(noopPurge),
+  purgeCloudflareCache: mock(async () => ({ success: true })),
+  purgeAllCloudflareCache: mock(async () => ({ success: true })),
+  purgeCloudflareByPaths: mock(async () => ({ success: true })),
+  purgeCloudflareDetailUrls: mockPurgeDetailUrls,
+  purgeCloudflareCacheByTags: mockPurgeByTags,
 }));
 
 // =============================================================================
@@ -121,7 +116,8 @@ describe("bulkTogglePublishedNews", () => {
     mockExecuteAdminMutationResult.mockClear();
     mockBulkTogglePublishedNewsCommand.mockClear();
     mockFireAndForget.mockClear();
-    mockPurgeNewsCache.mockClear();
+    mockPurgeDetailUrls.mockClear();
+    mockPurgeByTags.mockClear();
   });
 
   describe("バリデーション", () => {
@@ -228,7 +224,7 @@ describe("bulkTogglePublishedNews", () => {
       );
     });
 
-    test("afterSuccess で fireAndForget(purgeNewsCache) が呼ばれる", async () => {
+    test("afterSuccess で fireAndForget(purgeCloudflareDetailUrls) が news slug 群を渡す", async () => {
       mockBulkTogglePublishedNewsCommand.mockResolvedValueOnce({
         count: 2,
         isPublished: true,
@@ -237,8 +233,11 @@ describe("bulkTogglePublishedNews", () => {
 
       await bulkTogglePublishedNews([VALID_UUID_A, VALID_UUID_B], true);
 
-      // 2 slugs → 2 fireAndForget(purgeNewsCache) calls
-      expect(mockFireAndForget).toHaveBeenCalledTimes(2);
+      expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
+      const paths = mockPurgeDetailUrls.mock.calls[0]![0] as readonly string[];
+      expect(paths).toEqual(
+        expect.arrayContaining(["/news/news-a", "/news/news-b"]),
+      );
     });
   });
 });
@@ -252,7 +251,8 @@ describe("bulkDeleteNews", () => {
     mockExecuteAdminMutationResult.mockClear();
     mockBulkDeleteNewsCommand.mockClear();
     mockFireAndForget.mockClear();
-    mockPurgeNewsCache.mockClear();
+    mockPurgeDetailUrls.mockClear();
+    mockPurgeByTags.mockClear();
   });
 
   describe("バリデーション", () => {
@@ -302,7 +302,7 @@ describe("bulkDeleteNews", () => {
       expect(result.count).toBe(2);
     });
 
-    test("afterSuccess で削除成功 slugs 分だけ fireAndForget が呼ばれる", async () => {
+    test("afterSuccess で削除成功 slug が CF detail URL purge に渡る", async () => {
       mockBulkDeleteNewsCommand.mockResolvedValueOnce({
         count: 1,
         affectedSlugs: ["news-a"],
@@ -310,8 +310,9 @@ describe("bulkDeleteNews", () => {
 
       await bulkDeleteNews([VALID_UUID_A, VALID_UUID_B]);
 
-      // 1 affectedSlug → 1 fireAndForget(purgeNewsCache)
-      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
+      const paths = mockPurgeDetailUrls.mock.calls[0]![0] as readonly string[];
+      expect(paths).toEqual(expect.arrayContaining(["/news/news-a"]));
     });
   });
 });

@@ -4,6 +4,8 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { invalidateSiteWideCache, firePurgeAsync } from "@/shared/lib/cache";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   createTermsCommand,
@@ -26,12 +28,28 @@ const orderedIdsSchema = z
     error: "同じIDを複数指定することはできません",
   });
 
-function invalidateTermsCaches(slug?: string, previousSlug?: string) {
-  updateTag(CACHE_TAGS.TERMS);
+function invalidateTermsCaches(slug?: string, previousSlug?: string): void {
+  // Belt-and-suspenders: parent CACHE_TAGS.TERMS AND explicit sub-tags.
+  // OR-tag-matching makes the sub-tag updateTag calls redundant TODAY because
+  // every reader co-tags TERMS, but removing them would create a foot-gun where
+  // a future reader tagged with ONLY a sub-tag silently misses invalidation.
+  invalidateSiteWideCache(CACHE_TAGS.TERMS);
   updateTag(getCacheTag.terms.footer());
   if (slug) updateTag(getCacheTag.terms.detail(slug));
   if (previousSlug && previousSlug !== slug) {
     updateTag(getCacheTag.terms.detail(previousSlug));
+  }
+
+  // CDN per-detail URL purge (slug-keyed).
+  const paths: string[] = [];
+  if (slug) paths.push(`/terms/${slug}`);
+  if (previousSlug && previousSlug !== slug)
+    paths.push(`/terms/${previousSlug}`);
+  if (paths.length > 0) {
+    void firePurgeAsync(() => purgeCloudflareDetailUrls(paths), {
+      operation: "invalidateTermsCaches.detailUrlPurge",
+      urls: paths,
+    });
   }
 }
 

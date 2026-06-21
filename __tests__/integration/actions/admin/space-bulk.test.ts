@@ -4,6 +4,8 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // Mocks (must be defined before importing target module)
 // =============================================================================
 
+type AffectedSpace = { id: string; slug: string };
+
 const mockBulkTogglePublishedSpacesCommand = mock<
   (
     ids: string[],
@@ -11,15 +13,13 @@ const mockBulkTogglePublishedSpacesCommand = mock<
   ) => Promise<{
     count: number;
     isPublished: boolean;
-    affectedIds: string[];
-    affectedSlugs: string[];
+    affected: ReadonlyArray<AffectedSpace>;
   }>
 >(() =>
   Promise.resolve({
     count: 0,
     isPublished: true,
-    affectedIds: [],
-    affectedSlugs: [],
+    affected: [],
   }),
 );
 
@@ -27,15 +27,13 @@ const mockBulkDeleteSpacesCommand = mock<
   (ids: string[]) => Promise<{
     count: number;
     skipped: number;
-    affectedIds: string[];
-    affectedSlugs: string[];
+    affected: ReadonlyArray<AffectedSpace>;
   }>
 >(() =>
   Promise.resolve({
     count: 0,
     skipped: 0,
-    affectedIds: [],
-    affectedSlugs: [],
+    affected: [],
   }),
 );
 
@@ -82,23 +80,18 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 // cloudflare module: 全 export をスタブ化してバッチ実行時の他テスト汚染を防ぐ
-const mockPurgeSpaceCache = mock<() => Promise<{ success: boolean }>>(() =>
-  Promise.resolve({ success: true }),
+const mockPurgeDetailUrls = mock<
+  (paths: readonly string[]) => Promise<{ success: boolean }>
+>(async () => ({ success: true }));
+const mockPurgeByTags = mock<(tags: string[]) => Promise<{ success: boolean }>>(
+  async () => ({ success: true }),
 );
-const noopPurge = (): Promise<{ success: boolean }> =>
-  Promise.resolve({ success: true });
 mock.module("@/shared/lib/cloudflare", () => ({
-  purgeCloudflareCache: mock(noopPurge),
-  purgeCloudflareCacheByPrefix: mock(noopPurge),
-  purgeAllCloudflareCache: mock(noopPurge),
-  purgeCloudflareByPaths: mock(noopPurge),
-  purgeSpaceCache: mockPurgeSpaceCache,
-  purgePostCache: mock(noopPurge),
-  purgeNewsCache: mock(noopPurge),
-  purgePageCache: mock(noopPurge),
-  purgeHomeCache: mock(noopPurge),
-  purgeFaqCache: mock(noopPurge),
-  purgeTermsCache: mock(noopPurge),
+  purgeCloudflareCache: mock(async () => ({ success: true })),
+  purgeAllCloudflareCache: mock(async () => ({ success: true })),
+  purgeCloudflareByPaths: mock(async () => ({ success: true })),
+  purgeCloudflareDetailUrls: mockPurgeDetailUrls,
+  purgeCloudflareCacheByTags: mockPurgeByTags,
 }));
 
 // =============================================================================
@@ -125,7 +118,8 @@ describe("bulkTogglePublishedSpaces", () => {
     mockExecuteAdminMutationResult.mockClear();
     mockBulkTogglePublishedSpacesCommand.mockClear();
     mockFireAndForget.mockClear();
-    mockPurgeSpaceCache.mockClear();
+    mockPurgeDetailUrls.mockClear();
+    mockPurgeByTags.mockClear();
   });
 
   describe("バリデーション", () => {
@@ -176,8 +170,7 @@ describe("bulkTogglePublishedSpaces", () => {
       mockBulkTogglePublishedSpacesCommand.mockResolvedValueOnce({
         count: 100,
         isPublished: true,
-        affectedIds: ids,
-        affectedSlugs: ids.map((_, i) => `slug-${i}`),
+        affected: ids.map((id, i) => ({ id, slug: `slug-${i}` })),
       });
 
       const result = await bulkTogglePublishedSpaces(ids, true);
@@ -192,8 +185,10 @@ describe("bulkTogglePublishedSpaces", () => {
       mockBulkTogglePublishedSpacesCommand.mockResolvedValueOnce({
         count: 2,
         isPublished: true,
-        affectedIds: [VALID_UUID_A, VALID_UUID_B],
-        affectedSlugs: ["space-a", "space-b"],
+        affected: [
+          { id: VALID_UUID_A, slug: "space-a" },
+          { id: VALID_UUID_B, slug: "space-b" },
+        ],
       });
 
       const result = await bulkTogglePublishedSpaces(
@@ -219,8 +214,7 @@ describe("bulkTogglePublishedSpaces", () => {
       mockBulkTogglePublishedSpacesCommand.mockResolvedValueOnce({
         count: 1,
         isPublished: false,
-        affectedIds: [VALID_UUID_A],
-        affectedSlugs: ["space-a"],
+        affected: [{ id: VALID_UUID_A, slug: "space-a" }],
       });
 
       await bulkTogglePublishedSpaces([VALID_UUID_A], false);
@@ -235,14 +229,43 @@ describe("bulkTogglePublishedSpaces", () => {
       mockBulkTogglePublishedSpacesCommand.mockResolvedValueOnce({
         count: 2,
         isPublished: true,
-        affectedIds: [VALID_UUID_A, VALID_UUID_B],
-        affectedSlugs: ["space-a", "space-b"],
+        affected: [
+          { id: VALID_UUID_A, slug: "space-a" },
+          { id: VALID_UUID_B, slug: "space-b" },
+        ],
       });
 
       await bulkTogglePublishedSpaces([VALID_UUID_A, VALID_UUID_B], true);
 
-      // 2 ids → 2 fireAndForget(purgeSpaceCache) calls
-      expect(mockFireAndForget).toHaveBeenCalledTimes(2);
+      // fireAndForget is invoked at least once for the purge fan-out
+      expect(mockFireAndForget).toHaveBeenCalled();
+    });
+
+    test("afterSuccess passes SLUGS (not ids) to CF detail URL purge", async () => {
+      mockBulkTogglePublishedSpacesCommand.mockResolvedValueOnce({
+        count: 2,
+        isPublished: true,
+        affected: [
+          { id: VALID_UUID_A, slug: "space-a" },
+          { id: VALID_UUID_B, slug: "space-b" },
+        ],
+      });
+
+      await bulkTogglePublishedSpaces([VALID_UUID_A, VALID_UUID_B], true);
+
+      expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
+      const calledWith = mockPurgeDetailUrls.mock
+        .calls[0]![0] as readonly string[];
+      expect(calledWith).toEqual(
+        expect.arrayContaining(["/spaces/space-a", "/spaces/space-b"]),
+      );
+      // CRITICAL regression assertion: ids must NOT appear as URL paths
+      expect(calledWith).not.toEqual(
+        expect.arrayContaining([
+          `/spaces/${VALID_UUID_A}`,
+          `/spaces/${VALID_UUID_B}`,
+        ]),
+      );
     });
   });
 });
@@ -256,7 +279,8 @@ describe("bulkDeleteSpaces", () => {
     mockExecuteAdminMutationResult.mockClear();
     mockBulkDeleteSpacesCommand.mockClear();
     mockFireAndForget.mockClear();
-    mockPurgeSpaceCache.mockClear();
+    mockPurgeDetailUrls.mockClear();
+    mockPurgeByTags.mockClear();
   });
 
   describe("バリデーション", () => {
@@ -285,8 +309,10 @@ describe("bulkDeleteSpaces", () => {
       mockBulkDeleteSpacesCommand.mockResolvedValueOnce({
         count: 2,
         skipped: 0,
-        affectedIds: [VALID_UUID_A, VALID_UUID_B],
-        affectedSlugs: ["space-a", "space-b"],
+        affected: [
+          { id: VALID_UUID_A, slug: "space-a" },
+          { id: VALID_UUID_B, slug: "space-b" },
+        ],
       });
 
       const result = await bulkDeleteSpaces([VALID_UUID_A, VALID_UUID_B]);
@@ -309,8 +335,7 @@ describe("bulkDeleteSpaces", () => {
       mockBulkDeleteSpacesCommand.mockResolvedValueOnce({
         count: 1,
         skipped: 1,
-        affectedIds: [VALID_UUID_A],
-        affectedSlugs: ["space-a"],
+        affected: [{ id: VALID_UUID_A, slug: "space-a" }],
       });
 
       const result = await bulkDeleteSpaces([VALID_UUID_A, VALID_UUID_B]);
@@ -318,18 +343,19 @@ describe("bulkDeleteSpaces", () => {
       expect(result).toMatchObject({ count: 1, skipped: 1 });
     });
 
-    test("afterSuccess で削除成功 ids 分だけ fireAndForget が呼ばれる", async () => {
+    test("afterSuccess で削除成功 slug 分が CF detail URL purge に渡る", async () => {
       mockBulkDeleteSpacesCommand.mockResolvedValueOnce({
         count: 1,
         skipped: 1,
-        affectedIds: [VALID_UUID_A], // skipped の VALID_UUID_B は含まれない
-        affectedSlugs: ["space-a"],
+        affected: [{ id: VALID_UUID_A, slug: "space-a" }], // skipped の VALID_UUID_B は含まれない
       });
 
       await bulkDeleteSpaces([VALID_UUID_A, VALID_UUID_B]);
 
-      // 1 affectedId → 1 fireAndForget(purgeSpaceCache)
-      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
+      const calledWith = mockPurgeDetailUrls.mock
+        .calls[0]![0] as readonly string[];
+      expect(calledWith).toEqual(expect.arrayContaining(["/spaces/space-a"]));
     });
   });
 });

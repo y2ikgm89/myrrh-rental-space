@@ -4,10 +4,9 @@ import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgePageCache } from "@/shared/lib/cloudflare";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import { firePurgeAsync } from "@/shared/lib/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -27,13 +26,12 @@ import {
 } from "@/shared/lib/validations/page";
 
 function purgePageCaches(...slugs: string[]): void {
-  for (const slug of [...new Set(slugs)]) {
-    fireAndForget(purgePageCache(slug), {
-      operation: "purgePageCache",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.LOW,
-    });
-  }
+  const unique = [...new Set(slugs)].map((s) => (s === "home" ? "/" : `/${s}`));
+  if (unique.length === 0) return;
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(unique), {
+    operation: "purgePageDetailUrls",
+    urls: unique,
+  });
 }
 
 function invalidatePageTags(...slugs: string[]): void {

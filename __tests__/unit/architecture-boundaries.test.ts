@@ -1893,3 +1893,90 @@ describe("SectionConfig union widening cast 構造解消済（方針: .claude/ru
     expect(offenders).toEqual([]);
   }, 30000);
 });
+
+import nextConfig from "../../next.config";
+import {
+  SITE_WIDE_CDN_TAGS,
+  PRIVATE_NO_TAG_PREFIXES,
+} from "@/shared/lib/constants/cdn-cache-tags";
+
+type HeaderEntry = { key: string; value: string };
+type SourceEntry = { source: string; headers: HeaderEntry[] };
+
+async function getHeaders(): Promise<SourceEntry[]> {
+  // next.config.ts exports default the config object; headers() is an async fn.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cfg = nextConfig as any;
+  const headers = await (cfg.headers?.() ?? Promise.resolve([]));
+  return headers as SourceEntry[];
+}
+
+describe("next.config Cache-Tag emission contract", () => {
+  test("headers() returns at least one source entry", async () => {
+    const headers = await getHeaders();
+    expect(headers.length).toBeGreaterThan(0);
+  });
+
+  test("every per-public-collection Cache-Tag value contains the full site-wide set", async () => {
+    const headers = await getHeaders();
+    const publicCollections = [
+      "/blog/:path*",
+      "/category/:path*",
+      "/tag/:path*",
+      "/spaces/:path*",
+      "/news/:path*",
+      "/events/:path*",
+      "/faq/:path*",
+      "/terms/:path*",
+    ];
+    for (const source of publicCollections) {
+      const entry = headers.find((h) => h.source === source);
+      expect(entry, source).toBeDefined();
+      const tagHeader = entry!.headers.find((h) => h.key === "Cache-Tag");
+      expect(tagHeader, `${source} must have Cache-Tag`).toBeDefined();
+      const tags = tagHeader!.value.split(",");
+      for (const siteWide of SITE_WIDE_CDN_TAGS) {
+        expect(tags, `${source} missing site-wide tag ${siteWide}`).toContain(
+          siteWide,
+        );
+      }
+    }
+  });
+
+  test("home (/) and /about emit home-marketing-v1 in their Cache-Tag value", async () => {
+    const headers = await getHeaders();
+    for (const source of ["/", "/about"]) {
+      const entry = headers.find((h) => h.source === source);
+      expect(entry, source).toBeDefined();
+      const tagHeader = entry!.headers.find((h) => h.key === "Cache-Tag");
+      expect(tagHeader).toBeDefined();
+      expect(tagHeader!.value.split(",")).toContain("home-marketing-v1");
+    }
+  });
+
+  test("private blocklist sources NEVER emit Cache-Tag", async () => {
+    const headers = await getHeaders();
+    for (const prefix of PRIVATE_NO_TAG_PREFIXES) {
+      const source = `${prefix}/:path*`;
+      const entry = headers.find((h) => h.source === source);
+      expect(entry, source).toBeDefined();
+      const tagHeader = entry!.headers.find((h) => h.key === "Cache-Tag");
+      expect(
+        tagHeader,
+        `${source} must NOT have Cache-Tag (PII path)`,
+      ).toBeUndefined();
+      const ccHeader = entry!.headers.find((h) => h.key === "Cache-Control");
+      expect(ccHeader?.value).toBe("private, no-store");
+    }
+  });
+
+  test("blanket /:path* emits Cache-Control only (no Cache-Tag) so private match-wins inherits no tag", async () => {
+    const headers = await getHeaders();
+    const blanket = headers.find((h) => h.source === "/:path*");
+    expect(blanket).toBeDefined();
+    const tag = blanket!.headers.find((h) => h.key === "Cache-Tag");
+    expect(tag).toBeUndefined();
+    const cc = blanket!.headers.find((h) => h.key === "Cache-Control");
+    expect(cc?.value).toMatch(/^public, s-maxage=/);
+  });
+});

@@ -92,20 +92,12 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 // cloudflare module: 全 export をスタブ化してバッチ実行時の他テスト汚染を防ぐ
-const noopPurge = (): Promise<{ success: boolean }> =>
-  Promise.resolve({ success: true });
 mock.module("@/shared/lib/cloudflare", () => ({
-  purgeCloudflareCache: mock(noopPurge),
-  purgeCloudflareCacheByPrefix: mock(noopPurge),
-  purgeAllCloudflareCache: mock(noopPurge),
-  purgeCloudflareByPaths: mock(noopPurge),
-  purgeSpaceCache: mock(noopPurge),
-  purgePostCache: mock(noopPurge),
-  purgeNewsCache: mock(noopPurge),
-  purgePageCache: mock(noopPurge),
-  purgeHomeCache: mock(noopPurge),
-  purgeFaqCache: mock(noopPurge),
-  purgeTermsCache: mock(noopPurge),
+  purgeCloudflareCache: mock(async () => ({ success: true })),
+  purgeAllCloudflareCache: mock(async () => ({ success: true })),
+  purgeCloudflareByPaths: mock(async () => ({ success: true })),
+  purgeCloudflareDetailUrls: mock(async () => ({ success: true })),
+  purgeCloudflareCacheByTags: mock(async () => ({ success: true })),
 }));
 
 // =============================================================================

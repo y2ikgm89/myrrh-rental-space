@@ -1,5 +1,10 @@
 "use server";
 
+/**
+ * Notifications are admin-only — no public cached surface.
+ * Cache invalidation is intentionally omitted.
+ */
+
 import { z } from "zod";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";

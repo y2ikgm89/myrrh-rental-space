@@ -1,48 +1,52 @@
 import "server-only";
 
-import { updateTag } from "next/cache";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgePostCache } from "@/shared/lib/cloudflare";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import {
+  invalidateSiteWideCache,
+  purgeMarketingHomeTag,
+  firePurgeAsync,
+} from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 
 export async function purgePostCaches(
   ...slugs: Array<string | undefined>
 ): Promise<void> {
-  const uniqueSlugs = [
-    ...new Set(slugs.filter((slug): slug is string => Boolean(slug))),
-  ];
-
-  for (const slug of uniqueSlugs) {
-    fireAndForget(purgePostCache(slug), {
-      operation: "purgePostCache",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.LOW,
-    });
-  }
+  const unique = [...new Set(slugs.filter((s): s is string => Boolean(s)))].map(
+    (s) => `/blog/${s}`,
+  );
+  if (unique.length === 0) return;
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(unique), {
+    operation: "purgePostDetailUrls",
+    urls: unique,
+  });
 }
 
 export async function purgePostArchive(): Promise<void> {
-  fireAndForget(purgePostCache(), {
-    operation: "purgePostCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(["/blog"]), {
+    operation: "purgePostArchive",
+    urls: ["/blog"],
   });
 }
 
 export async function invalidatePostCollectionCaches(): Promise<void> {
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(CACHE_TAGS.SIDEBAR_DATA);
+  invalidateSiteWideCache([CACHE_TAGS.POSTS, CACHE_TAGS.SIDEBAR_DATA]);
+  purgeMarketingHomeTag();
 }
 
 export async function invalidatePostCategoryCaches(): Promise<void> {
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(CACHE_TAGS.POST_CATEGORIES);
-  updateTag(CACHE_TAGS.SIDEBAR_DATA);
+  invalidateSiteWideCache([
+    CACHE_TAGS.POSTS,
+    CACHE_TAGS.POST_CATEGORIES,
+    CACHE_TAGS.SIDEBAR_DATA,
+  ]);
+  purgeMarketingHomeTag();
 }
 
 export async function invalidatePostTagCaches(): Promise<void> {
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(CACHE_TAGS.POST_TAGS);
-  updateTag(CACHE_TAGS.SIDEBAR_DATA);
+  invalidateSiteWideCache([
+    CACHE_TAGS.POSTS,
+    CACHE_TAGS.POST_TAGS,
+    CACHE_TAGS.SIDEBAR_DATA,
+  ]);
+  purgeMarketingHomeTag();
 }

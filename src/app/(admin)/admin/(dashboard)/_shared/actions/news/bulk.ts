@@ -4,10 +4,13 @@ import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgeNewsCache } from "@/shared/lib/cloudflare";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import {
+  invalidateSiteWideCache,
+  purgeMarketingHomeTag,
+  firePurgeAsync,
+} from "@/shared/lib/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   bulkTogglePublishedNewsCommand,
@@ -24,16 +27,19 @@ const bulkInputSchema = z.object({
 });
 
 function invalidateNewsCachesForSlugs(slugs: string[]): void {
-  updateTag(CACHE_TAGS.NEWS);
-  updateTag(CACHE_TAGS.SIDEBAR_DATA);
-  for (const slug of [...new Set(slugs)]) {
+  const uniqueSlugs = [...new Set(slugs)];
+  for (const slug of uniqueSlugs) {
     updateTag(getCacheTag.news.detail(slug));
-    fireAndForget(purgeNewsCache(slug), {
-      operation: "purgeNewsCache",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.LOW,
+  }
+  const paths = uniqueSlugs.map((s) => `/news/${s}`);
+  if (paths.length > 0) {
+    void firePurgeAsync(() => purgeCloudflareDetailUrls(paths), {
+      operation: "purgeNewsDetailUrls.bulk",
+      urls: paths,
     });
   }
+  invalidateSiteWideCache([CACHE_TAGS.NEWS, CACHE_TAGS.SIDEBAR_DATA]);
+  purgeMarketingHomeTag();
 }
 
 export async function bulkTogglePublishedNews(

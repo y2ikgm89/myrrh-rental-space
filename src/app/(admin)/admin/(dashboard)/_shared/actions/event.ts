@@ -25,6 +25,24 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import {
+  invalidateSiteWideCache,
+  purgeMarketingHomeTag,
+  firePurgeAsync,
+} from "@/shared/lib/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+
+function invalidateEventSiteWideCaches(slug?: string | null): void {
+  invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.SIDEBAR_DATA]);
+  purgeMarketingHomeTag();
+  if (slug) {
+    void firePurgeAsync(() => purgeCloudflareDetailUrls([`/events/${slug}`]), {
+      operation: "purgeEventDetailUrls",
+      urls: [`/events/${slug}`],
+    });
+  }
+}
 import {
   syncEventToCalendar,
   updateEventCalendarSync,
@@ -119,6 +137,7 @@ export async function createEventAction(
         },
         afterSuccess: (payload) => {
           invalidateEventCaches();
+          invalidateEventSiteWideCaches(payload.slug);
           fireAndForget(syncEventOutbound(payload.id), {
             operation: "syncEventOutbound.create",
             category: ErrorCategory.EXTERNAL_API,
@@ -180,6 +199,7 @@ export async function updateEventAction(
         },
         afterSuccess: () => {
           invalidateEventCaches();
+          invalidateEventSiteWideCaches(data.slug);
           fireAndForget(syncEventOutbound(validId), {
             operation: "syncEventOutbound.update",
             category: ErrorCategory.EXTERNAL_API,
@@ -226,6 +246,7 @@ export async function deleteEvent(
     },
     afterSuccess: (data) => {
       invalidateEventCaches();
+      invalidateEventSiteWideCaches();
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
@@ -251,6 +272,7 @@ export async function publishEvent(id: string): Promise<MutationResult> {
     },
     afterSuccess: () => {
       invalidateEventCaches();
+      invalidateEventSiteWideCaches();
       fireAndForget(syncEventOutbound(validated.data), {
         operation: "syncEventOutbound.publish",
         category: ErrorCategory.EXTERNAL_API,
@@ -271,6 +293,7 @@ export async function duplicateEvent(
     execute: async () => duplicateEventCommand(validated.data),
     afterSuccess: (data) => {
       invalidateEventCaches();
+      invalidateEventSiteWideCaches(data.slug);
       fireAndForget(syncEventOutbound(data.id), {
         operation: "syncEventOutbound.duplicate",
         category: ErrorCategory.EXTERNAL_API,
@@ -299,6 +322,7 @@ export async function cancelEvent(
     },
     afterSuccess: (data) => {
       invalidateEventCaches();
+      invalidateEventSiteWideCaches();
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
@@ -329,6 +353,7 @@ export async function archiveEvent(
     },
     afterSuccess: (data) => {
       invalidateEventCaches();
+      invalidateEventSiteWideCaches();
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {

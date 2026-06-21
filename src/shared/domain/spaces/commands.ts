@@ -141,14 +141,14 @@ async function ensureSpaceExists(id: string) {
 
 export async function createSpaceCommand(
   input: SpaceCommandInput,
-): Promise<{ id: string }> {
+): Promise<{ id: string; slug: string }> {
   await ensureSlugAvailable(input.slug);
   await ensureAssignableLocation(input.locationId);
   await ensureAssignableCategory(input.categoryId);
 
   const space = await prisma.space.create({
     data: buildSpaceData(input, input.isPublished ? new Date() : null),
-    select: { id: true },
+    select: { id: true, slug: true },
   });
 
   return space;
@@ -157,7 +157,8 @@ export async function createSpaceCommand(
 export async function updateSpaceCommand(
   id: string,
   input: SpaceCommandInput,
-): Promise<void> {
+): Promise<{ id: string; slug: string; oldSlug: string }> {
+  // Validation queries can run outside the transaction (each is a single read).
   const existingSpace = await ensureSpaceExists(id);
   await ensureAssignableLocation(input.locationId);
   await ensureAssignableCategory(input.categoryId);
@@ -170,33 +171,52 @@ export async function updateSpaceCommand(
     publishedAt = null;
   }
 
-  await prisma.space.update({
-    where: { id },
-    data: buildSpaceData(input, publishedAt),
+  // Capture oldSlug + apply update atomically so a concurrent admin rename
+  // can't slip in between the findUnique and the update.
+  // Per CLAUDE.md: array form $transaction is banned; use interactive form.
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.space.findUnique({
+      where: { id },
+      select: { slug: true },
+    });
+    if (!before) {
+      throw new DomainError("スペースが見つかりません", "NOT_FOUND");
+    }
+    const row = await tx.space.update({
+      where: { id },
+      data: buildSpaceData(input, publishedAt),
+      select: { id: true, slug: true },
+    });
+    return { id: row.id, slug: row.slug, oldSlug: before.slug };
   });
 }
 
 export async function updateSpacePublishedCommand(
   id: string,
   isPublished: boolean,
-): Promise<{ isPublished: boolean }> {
+): Promise<{ id: string; slug: string; isPublished: boolean }> {
   await ensureSpaceExists(id);
 
-  await prisma.space.update({
+  const row = await prisma.space.update({
     where: { id },
     data: {
       isPublished,
       publishedAt: isPublished ? new Date() : null,
     },
+    select: { id: true, slug: true },
   });
 
-  return { isPublished };
+  return { id: row.id, slug: row.slug, isPublished };
 }
 
-export async function deleteSpaceCommand(id: string): Promise<void> {
+export async function deleteSpaceCommand(
+  id: string,
+): Promise<{ id: string; slug: string }> {
   const space = await prisma.space.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      slug: true,
       _count: {
         select: {
           reservations: {
@@ -224,6 +244,8 @@ export async function deleteSpaceCommand(id: string): Promise<void> {
       isPublished: false,
     },
   });
+
+  return { id: space.id, slug: space.slug };
 }
 
 /**

@@ -59,14 +59,13 @@ describe("bulkTogglePublishedSpacesCommand", () => {
       expect(result).toEqual({
         count: 0,
         isPublished: true,
-        affectedIds: [],
-        affectedSlugs: [],
+        affected: [],
       });
       expect(mockFindMany).not.toHaveBeenCalled();
       expect(mockUpdateMany).not.toHaveBeenCalled();
     });
 
-    test("複数件 publish 成功で count と affectedSlugs を返す", async () => {
+    test("複数件 publish 成功で count と affected を返す", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
       mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
@@ -78,8 +77,7 @@ describe("bulkTogglePublishedSpacesCommand", () => {
       expect(result).toEqual({
         count: 2,
         isPublished: true,
-        affectedIds: [SPACE_A.id, SPACE_B.id],
-        affectedSlugs: ["space-a", "space-b"],
+        affected: [SPACE_A, SPACE_B],
       });
       expect(mockFindMany).toHaveBeenCalledTimes(1);
       expect(mockUpdateMany).toHaveBeenCalledTimes(1);
@@ -96,7 +94,7 @@ describe("bulkTogglePublishedSpacesCommand", () => {
 
       expect(result.isPublished).toBe(false);
       expect(result.count).toBe(1);
-      expect(result.affectedSlugs).toEqual(["space-a"]);
+      expect(result.affected).toEqual([SPACE_A]);
     });
 
     test("対象が見つからない場合は count: 0 を返し updateMany を呼ばない", async () => {
@@ -107,8 +105,7 @@ describe("bulkTogglePublishedSpacesCommand", () => {
       expect(result).toEqual({
         count: 0,
         isPublished: true,
-        affectedIds: [],
-        affectedSlugs: [],
+        affected: [],
       });
       expect(mockUpdateMany).not.toHaveBeenCalled();
     });
@@ -128,14 +125,13 @@ describe("bulkDeleteSpacesCommand", () => {
       expect(result).toEqual({
         count: 0,
         skipped: 0,
-        affectedIds: [],
-        affectedSlugs: [],
+        affected: [],
       });
       expect(mockFindMany).not.toHaveBeenCalled();
       expect(mockDelete).not.toHaveBeenCalled();
     });
 
-    test("複数件削除成功で count と affectedSlugs を返す", async () => {
+    test("複数件削除成功で count と affected を返す", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
       mockDelete.mockResolvedValue({});
 
@@ -144,8 +140,7 @@ describe("bulkDeleteSpacesCommand", () => {
       expect(result).toEqual({
         count: 2,
         skipped: 0,
-        affectedIds: [SPACE_A.id, SPACE_B.id],
-        affectedSlugs: ["space-a", "space-b"],
+        affected: [SPACE_A, SPACE_B],
       });
       expect(mockDelete).toHaveBeenCalledTimes(2);
     });
@@ -158,8 +153,7 @@ describe("bulkDeleteSpacesCommand", () => {
       expect(result).toEqual({
         count: 0,
         skipped: 0,
-        affectedIds: [],
-        affectedSlugs: [],
+        affected: [],
       });
       expect(mockDelete).not.toHaveBeenCalled();
     });
@@ -187,8 +181,7 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result.count).toBe(2);
       expect(result.skipped).toBe(1);
-      expect(result.affectedIds).toEqual([SPACE_A.id, SPACE_C.id]);
-      expect(result.affectedSlugs).toEqual(["space-a", "space-c"]);
+      expect(result.affected).toEqual([SPACE_A, SPACE_C]);
       expect(mockDelete).toHaveBeenCalledTimes(3);
     });
 
@@ -204,8 +197,7 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result.count).toBe(0);
       expect(result.skipped).toBe(2);
-      expect(result.affectedIds).toEqual([]);
-      expect(result.affectedSlugs).toEqual([]);
+      expect(result.affected).toEqual([]);
     });
 
     test("P2003 以外のエラーは throw する", async () => {
