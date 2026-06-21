@@ -1,15 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import { purgeHomeCache } from "@/shared/lib/cloudflare";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { invalidateSiteWideCache } from "@/shared/lib/cache";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -34,12 +31,7 @@ import {
 const idSchema = z.uuid({ error: "IDが不正です" });
 
 function invalidateNavigationCache(): void {
-  updateTag(CACHE_TAGS.NAVIGATION);
-  fireAndForget(purgeHomeCache(), {
-    operation: "purgeHomeCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
-  });
+  invalidateSiteWideCache(CACHE_TAGS.NAVIGATION);
 }
 
 export async function deleteNavigationItem(

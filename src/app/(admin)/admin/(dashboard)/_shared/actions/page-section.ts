@@ -1,13 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgePageCache } from "@/shared/lib/cloudflare";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import { invalidateSiteWideCache, firePurgeAsync } from "@/shared/lib/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createPageSectionCommand,
@@ -40,15 +38,12 @@ const reorderPageSectionsSchema = z.object({
     }),
 });
 
-function revalidatePages(pageSlug: string) {
-  updateTag(CACHE_TAGS.SECTIONS);
-  updateTag(CACHE_TAGS.PAGE_SECTIONS);
-  updateTag(CACHE_TAGS.PAGES);
-  updateTag(getCacheTag.pages.detail(pageSlug));
-  fireAndForget(purgePageCache(pageSlug), {
-    operation: "purgePageCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
+function revalidatePages(pageSlug: string): void {
+  invalidateSiteWideCache([CACHE_TAGS.PAGES, CACHE_TAGS.PAGE_SECTIONS]);
+  const path = pageSlug === "home" ? "/" : `/${pageSlug}`;
+  void firePurgeAsync(() => purgeCloudflareDetailUrls([path]), {
+    operation: "revalidatePages.detailUrlPurge",
+    urls: [path],
   });
 }
 

@@ -13,6 +13,7 @@
 
 import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
+import { invalidateSiteWideCache } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -133,8 +134,12 @@ export async function updateReservationSettings(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
-          updateTag(CACHE_TAGS.TERMS);
+          // NOTE (#XXX migration): was data-cache only via updateTag; now also purges CDN
+          // (BUSINESS_SETTINGS + TERMS are in NEXTJS_TAG_TO_CDN_TAG → site-wide CDN tag purge).
+          invalidateSiteWideCache([
+            CACHE_TAGS.BUSINESS_SETTINGS,
+            CACHE_TAGS.TERMS,
+          ]);
         },
       });
       if (isMutationError(result)) {
@@ -161,9 +166,14 @@ export async function updateSidebarSettings(
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SIDEBAR_SETTINGS);
-      updateTag(CACHE_TAGS.SIDEBAR_DATA);
-      updateTag(CACHE_TAGS.POSTS);
+      // SIDEBAR_* are read by BlogLayout consumers: /blog archive, taxonomy archives,
+      // ArticleLayout-wrapped /blog/[slug], /news/[id], /events/[slug], /terms.
+      // POSTS is defensive — sidebar widgets (recent/popular) derive from Post rows.
+      invalidateSiteWideCache([
+        CACHE_TAGS.SIDEBAR_SETTINGS,
+        CACHE_TAGS.SIDEBAR_DATA,
+        CACHE_TAGS.POSTS,
+      ]);
     },
   });
 }

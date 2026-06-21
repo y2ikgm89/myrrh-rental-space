@@ -28,6 +28,8 @@ import {
 import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 /** トークン更新を開始する残り日数（10日） */
 const REFRESH_THRESHOLD_DAYS = 10;
@@ -97,6 +99,10 @@ export async function GET(request: Request) {
     await refreshInstagramAccessToken({
       accessToken: refreshResult.accessToken,
       expiresAt: newExpiresAt,
+    });
+
+    invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.INTEGRATION_SETTINGS, {
+      skipCdnPurge: true,
     });
 
     const newDaysRemaining = getTokenExpiryDays(newExpiresAt);

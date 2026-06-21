@@ -4,14 +4,18 @@ import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgeSpaceCache } from "@/shared/lib/cloudflare";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import {
+  invalidateSiteWideCache,
+  purgeMarketingHomeTag,
+  firePurgeAsync,
+} from "@/shared/lib/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   bulkTogglePublishedSpacesCommand,
   bulkDeleteSpacesCommand,
+  type AffectedSpace,
   type BulkPublishResult,
   type BulkDeleteResult,
 } from "@/shared/domain/spaces/bulk-commands";
@@ -23,20 +27,33 @@ const bulkInputSchema = z.object({
     .max(100, { error: "一度に処理できるのは100件までです" }),
 });
 
-function invalidateSpaceCachesForIds(ids: string[]): void {
-  updateTag(CACHE_TAGS.SPACES);
-  updateTag(CACHE_TAGS.REVIEWS);
-  // 公開スペース詳細は slug でタグ付けされるため id 基準の spaces.detail は噛まない。
-  // 詳細ページの無効化は SPACES コレクションタグが担う。
-  for (const id of [...new Set(ids)]) {
-    updateTag(getCacheTag.reviews.space(id));
-    updateTag(getCacheTag.reviews.stats(id));
-    fireAndForget(purgeSpaceCache(id), {
-      operation: "purgeSpaceCache",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.LOW,
+function invalidateSpaceCachesForTargets(
+  targets: ReadonlyArray<AffectedSpace>,
+): void {
+  invalidateSiteWideCache([
+    CACHE_TAGS.SPACES,
+    CACHE_TAGS.SPACE_CATEGORIES,
+    CACHE_TAGS.LOCATIONS,
+    CACHE_TAGS.REVIEWS,
+  ]);
+
+  const seenIds = new Set<string>();
+  for (const t of targets) {
+    if (seenIds.has(t.id)) continue;
+    seenIds.add(t.id);
+    updateTag(getCacheTag.reviews.space(t.id));
+    updateTag(getCacheTag.reviews.stats(t.id));
+  }
+
+  const paths = [...new Set(targets.map((t) => `/spaces/${t.slug}`))];
+  if (paths.length > 0) {
+    void firePurgeAsync(() => purgeCloudflareDetailUrls(paths), {
+      operation: "invalidateSpaceCachesForTargets.detailUrlPurge",
+      urls: paths,
     });
   }
+
+  purgeMarketingHomeTag();
 }
 
 export async function bulkTogglePublishedSpaces(
@@ -52,7 +69,7 @@ export async function bulkTogglePublishedSpaces(
     execute: async () =>
       bulkTogglePublishedSpacesCommand(parsed.data.ids, publish),
     afterSuccess: (data) => {
-      invalidateSpaceCachesForIds(data.affectedIds);
+      invalidateSpaceCachesForTargets(data.affected);
     },
   });
 }
@@ -68,7 +85,7 @@ export async function bulkDeleteSpaces(
     action: "delete",
     execute: async () => bulkDeleteSpacesCommand(parsed.data.ids),
     afterSuccess: (data) => {
-      invalidateSpaceCachesForIds(data.affectedIds);
+      invalidateSpaceCachesForTargets(data.affected);
     },
   });
 }

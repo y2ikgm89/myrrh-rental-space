@@ -297,6 +297,28 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // next.config.ts: ban raw string literals as Cache-Tag values.
+  // CDN cache tags MUST come from src/shared/lib/constants/cdn-cache-tags.ts.
+  {
+    name: "next-config-cache-tag-ssot",
+    files: ["next.config.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          // Target: an ObjectExpression that contains BOTH
+          //   { key: 'key', value: Literal 'Cache-Tag' }
+          //   AND { key: 'value', value: Literal (raw string) }
+          // The selector matches the inner Literal so the error points there.
+          selector:
+            "ObjectExpression:has(Property[key.name='key'][value.value='Cache-Tag']) > Property[key.name='value'] > Literal",
+          message:
+            "Cache-Tag values MUST come from CDN_CACHE_TAGS via joinCacheTags(). See src/shared/lib/constants/cdn-cache-tags.ts.",
+        },
+      ],
+    },
+  },
+
   // Prettier（末尾: 競合ルール無効化）
   prettier,
 

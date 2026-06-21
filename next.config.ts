@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import {
+  SITE_WIDE_CDN_TAGS,
+  SIDEBAR_CDN_TAGS,
+  CDN_CACHE_TAGS,
+  joinCacheTags,
+  type CdnTagValue,
+} from "./src/shared/lib/constants/cdn-cache-tags";
 
 type RemotePattern = NonNullable<
   NonNullable<NextConfig["images"]>["remotePatterns"]
@@ -23,6 +30,62 @@ function getR2PublicUrlPattern(): RemotePattern | null {
 }
 
 const r2PublicUrlPattern = getR2PublicUrlPattern();
+
+// ============================================================
+// Cache-Tag values (precomputed once at startup)
+//
+// Per-collection sources MUST inline the full site-wide tag set because Next.js
+// header overriding REPLACES same-key values (verified against next.js source
+// `packages/next/src/server/lib/router-utils/resolve-routes.ts`). Append is not
+// possible — the per-collection entry's Cache-Tag value supersedes the blanket.
+//
+// Raw string literals for Cache-Tag values are banned in this file by ESLint
+// (see eslint.config.mjs no-restricted-syntax override for next.config.ts).
+// ============================================================
+
+function joinWithSiteWide(extra: readonly CdnTagValue[]): string {
+  return joinCacheTags([...SITE_WIDE_CDN_TAGS, ...extra]);
+}
+
+// Marketing-aggregation pages emit HOME_MARKETING in addition to site-wide.
+const HOME_PAGE_CACHE_TAG = joinCacheTags([
+  ...SITE_WIDE_CDN_TAGS,
+  CDN_CACHE_TAGS.HOME_MARKETING,
+]);
+
+const BLOG_DETAIL_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.POST,
+  ...SIDEBAR_CDN_TAGS,
+]);
+const CATEGORY_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.POST,
+  CDN_CACHE_TAGS.POST_CATEGORY,
+  ...SIDEBAR_CDN_TAGS,
+]);
+const TAG_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.POST,
+  CDN_CACHE_TAGS.POST_TAG,
+  ...SIDEBAR_CDN_TAGS,
+]);
+const SPACES_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.SPACE,
+  CDN_CACHE_TAGS.SPACE_CATEGORY,
+  CDN_CACHE_TAGS.LOCATION,
+]);
+const NEWS_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.NEWS,
+  ...SIDEBAR_CDN_TAGS,
+]);
+const EVENTS_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.EVENT,
+  ...SIDEBAR_CDN_TAGS,
+]);
+const FAQ_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.FAQ]);
+const TERMS_CACHE_TAG = joinWithSiteWide([
+  CDN_CACHE_TAGS.TERMS_DETAIL,
+  ...SIDEBAR_CDN_TAGS,
+]);
+const ROBOTS_CACHE_TAG = joinCacheTags([CDN_CACHE_TAGS.ROBOTS_TXT]);
 
 const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
@@ -177,7 +240,11 @@ const nextConfig: NextConfig = {
   //   defense-in-depth に留める）。公式 "Execution order"（headers → proxy → filesystem routes）と整合。
   async headers() {
     return [
-      // 公開ページ（積極的キャッシュ - Cloudflare CDN連携）。必ず先頭に置く。
+      // ============================================================
+      // 公開ページ blanket: Cache-Control public のみ。Cache-Tag は EMIT しない。
+      // 私的 blocklist が同一 source match 配下に入っても Cache-Tag が継承されないよう、
+      // タグは per-public-source で個別に付与する。
+      // ============================================================
       {
         source: "/:path*",
         headers: [
@@ -187,40 +254,86 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // --- private blocklist（認証 / PII。blanket より後ろ = last-match-wins で上書き）---
-      // 管理画面
+      // ============================================================
+      // Marketing-aggregation: home (/) + /about
+      // HOME_MARKETING タグを SITE_WIDE と合わせて emit。
+      // ============================================================
+      {
+        source: "/",
+        headers: [{ key: "Cache-Tag", value: HOME_PAGE_CACHE_TAG }],
+      },
+      {
+        source: "/about",
+        headers: [{ key: "Cache-Tag", value: HOME_PAGE_CACHE_TAG }],
+      },
+      // ============================================================
+      // 公開 collection sources。Site-wide ∪ collection ∪ sidebar をインライン。
+      // ============================================================
+      {
+        source: "/blog/:path*",
+        headers: [{ key: "Cache-Tag", value: BLOG_DETAIL_CACHE_TAG }],
+      },
+      {
+        source: "/category/:path*",
+        headers: [{ key: "Cache-Tag", value: CATEGORY_CACHE_TAG }],
+      },
+      {
+        source: "/tag/:path*",
+        headers: [{ key: "Cache-Tag", value: TAG_CACHE_TAG }],
+      },
+      {
+        source: "/spaces/:path*",
+        headers: [{ key: "Cache-Tag", value: SPACES_CACHE_TAG }],
+      },
+      {
+        source: "/news/:path*",
+        headers: [{ key: "Cache-Tag", value: NEWS_CACHE_TAG }],
+      },
+      {
+        source: "/events/:path*",
+        headers: [{ key: "Cache-Tag", value: EVENTS_CACHE_TAG }],
+      },
+      {
+        source: "/faq/:path*",
+        headers: [{ key: "Cache-Tag", value: FAQ_CACHE_TAG }],
+      },
+      {
+        source: "/terms/:path*",
+        headers: [{ key: "Cache-Tag", value: TERMS_CACHE_TAG }],
+      },
+      {
+        source: "/robots.txt",
+        headers: [{ key: "Cache-Tag", value: ROBOTS_CACHE_TAG }],
+      },
+      // ============================================================
+      // private blocklist（認証 / PII。blanket より後ろ = last-match-wins で上書き）
+      // Cache-Tag は EMIT しない（no-store なので CDN に乗らない＋将来 public 化したときに
+      // PII URL が purgeable になるリスク防止）。
+      // ============================================================
       {
         source: "/admin/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // 予約フロー（complete / cancel は予約 PII を含む）
       {
         source: "/reservation/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // 会員マイページ（予約・プロフィール・問い合わせ等の PII）
       {
         source: "/mypage/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // 顧客ログイン（セッション状態でリダイレクト分岐する）
       {
         source: "/login/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // 管理者プレビュー（未公開ドラフトの閲覧）
       {
         source: "/preview/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // お問い合わせ（ログイン顧客の PII をフォームに prefill するため公開キャッシュ不可）
       {
         source: "/contact/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
-      // API Routes（認証 / PII を含むレスポンスがある。origin で no-store）。
-      // Next.js の precedence 上ここが API の Cache-Control の唯一の実効レイヤー＝SSoT
-      // （Route Handler 側の Cache-Control は config が上書きする＝上記コメント参照）。
       {
         source: "/api/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],

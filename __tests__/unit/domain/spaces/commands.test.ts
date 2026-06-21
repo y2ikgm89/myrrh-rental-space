@@ -2,13 +2,13 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 const mockSpaceCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "space-1" }),
+  Promise.resolve({ id: "space-1", slug: "test-space" }),
 );
 const mockSpaceFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
 const mockSpaceUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "space-1" }),
+  Promise.resolve({ id: "space-1", slug: "test-space" }),
 );
 const mockLocationFindFirst = mock<
   () => Promise<Record<string, unknown> | null>
@@ -19,20 +19,37 @@ const mockSpaceCategoryFindFirst = mock<
 
 mock.module("server-only", () => ({}));
 
-mock.module("@/shared/db/prisma", () => ({
-  prisma: {
-    space: {
-      create: mockSpaceCreate,
-      findUnique: mockSpaceFindUnique,
-      update: mockSpaceUpdate,
-    },
-    location: {
-      findFirst: mockLocationFindFirst,
-    },
-    spaceCategory: {
-      findFirst: mockSpaceCategoryFindFirst,
-    },
+// updateSpaceCommand は interactive `$transaction(async (tx) => ...)` を使うため、
+// tx として同じ space mocks を露出する callback ベースの実装を提供する。
+interface PrismaMock {
+  space: {
+    create: typeof mockSpaceCreate;
+    findUnique: typeof mockSpaceFindUnique;
+    update: typeof mockSpaceUpdate;
+  };
+  location: { findFirst: typeof mockLocationFindFirst };
+  spaceCategory: { findFirst: typeof mockSpaceCategoryFindFirst };
+  $transaction: <T>(fn: (tx: PrismaMock) => Promise<T>) => Promise<T>;
+}
+
+const prismaMock: PrismaMock = {
+  space: {
+    create: mockSpaceCreate,
+    findUnique: mockSpaceFindUnique,
+    update: mockSpaceUpdate,
   },
+  location: {
+    findFirst: mockLocationFindFirst,
+  },
+  spaceCategory: {
+    findFirst: mockSpaceCategoryFindFirst,
+  },
+  $transaction: <T>(fn: (tx: PrismaMock) => Promise<T>): Promise<T> =>
+    fn(prismaMock),
+};
+
+mock.module("@/shared/db/prisma", () => ({
+  prisma: prismaMock,
 }));
 
 // enum モック
@@ -114,6 +131,7 @@ const VALID_INPUT = {
 
 const ACTIVE_SPACE = {
   id: SPACE_ID,
+  slug: "test-space",
   isPublished: false,
   publishedAt: null,
 };
@@ -133,7 +151,7 @@ describe("createSpaceCommand", () => {
     mockCheckSlugAvailability.mockReset();
     mockGetSlugErrorMessage.mockReset();
 
-    mockSpaceCreate.mockResolvedValue({ id: SPACE_ID });
+    mockSpaceCreate.mockResolvedValue({ id: SPACE_ID, slug: "test-space" });
     mockLocationFindFirst.mockResolvedValue(ACTIVE_LOCATION);
     mockSpaceCategoryFindFirst.mockResolvedValue(ACTIVE_CATEGORY);
     mockCheckSlugAvailability.mockResolvedValue({ available: true });
@@ -144,7 +162,7 @@ describe("createSpaceCommand", () => {
     test("有効な入力でスペースを作成できる", async () => {
       const result = await createSpaceCommand(VALID_INPUT);
 
-      expect(result).toEqual({ id: SPACE_ID });
+      expect(result).toEqual({ id: SPACE_ID, slug: "test-space" });
       expect(mockSpaceCreate).toHaveBeenCalledTimes(1);
     });
 
@@ -212,7 +230,7 @@ describe("createSpaceCommand", () => {
         categoryId: CATEGORY_ID,
       });
 
-      expect(result).toEqual({ id: SPACE_ID });
+      expect(result).toEqual({ id: SPACE_ID, slug: "test-space" });
       expect(mockSpaceCategoryFindFirst).toHaveBeenCalledTimes(1);
     });
   });
@@ -288,7 +306,7 @@ describe("updateSpaceCommand", () => {
     mockGetSlugErrorMessage.mockReset();
 
     mockSpaceFindUnique.mockResolvedValue(ACTIVE_SPACE);
-    mockSpaceUpdate.mockResolvedValue({ id: SPACE_ID });
+    mockSpaceUpdate.mockResolvedValue({ id: SPACE_ID, slug: "test-space" });
     mockLocationFindFirst.mockResolvedValue(ACTIVE_LOCATION);
     mockSpaceCategoryFindFirst.mockResolvedValue(ACTIVE_CATEGORY);
     mockCheckSlugAvailability.mockResolvedValue({ available: true });
@@ -410,14 +428,18 @@ describe("updateSpacePublishedCommand", () => {
     mockSpaceUpdate.mockReset();
 
     mockSpaceFindUnique.mockResolvedValue(ACTIVE_SPACE);
-    mockSpaceUpdate.mockResolvedValue({ id: SPACE_ID });
+    mockSpaceUpdate.mockResolvedValue({ id: SPACE_ID, slug: "test-space" });
   });
 
   describe("正常系", () => {
     test("スペースを公開状態に変更し戻り値を返す", async () => {
       const result = await updateSpacePublishedCommand(SPACE_ID, true);
 
-      expect(result).toEqual({ isPublished: true });
+      expect(result).toEqual({
+        id: SPACE_ID,
+        slug: "test-space",
+        isPublished: true,
+      });
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -430,7 +452,11 @@ describe("updateSpacePublishedCommand", () => {
     test("スペースを非公開状態に変更し戻り値を返す", async () => {
       const result = await updateSpacePublishedCommand(SPACE_ID, false);
 
-      expect(result).toEqual({ isPublished: false });
+      expect(result).toEqual({
+        id: SPACE_ID,
+        slug: "test-space",
+        isPublished: false,
+      });
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

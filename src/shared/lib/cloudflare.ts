@@ -267,61 +267,74 @@ export async function purgeCloudflareCache(
   return { success: true, purgedFiles: totalPurged };
 }
 
-/**
- * プレフィックスに一致するURLのキャッシュをパージ（Enterprise機能）
- * 無料プランでは使用不可。その場合はpurgeAllCloudflareCacheを使用
- */
-export async function purgeCloudflareCacheByPrefix(
-  prefixes: string[],
-): Promise<PurgeResult> {
-  const credentials = await getCloudflareCredentials();
+// ============================================================
+// Plan-tier gate. Health probe (cache/health.ts) flips this to false when the
+// canary purge_by_tags returns a plan-tier feature-unavailable error.
+// purgeCloudflareCacheByTags consults the flag and falls back to
+// purgeAllCloudflareCache for site-wide invalidation.
+// ============================================================
+let cloudflareTagPurgeEnabled = true;
 
-  if (!credentials) {
-    logger.debug("Cloudflare credentials not configured, skipping cache purge");
-    return { success: true };
-  }
-
-  if (prefixes.length === 0) {
-    return { success: true };
-  }
-
-  const result = await callPurgeApi(credentials.zoneId, credentials.apiToken, {
-    prefixes,
-  });
-
-  if (!result.success) {
-    logger.warn("Cloudflare prefix cache purge failed", {
-      error: result.error,
-      prefixes,
-    });
-  }
-
-  return result;
+export function setCloudflareTagPurgeEnabled(enabled: boolean): void {
+  cloudflareTagPurgeEnabled = enabled;
 }
 
-/** 全キャッシュをパージ */
+export function isCloudflareTagPurgeEnabled(): boolean {
+  return cloudflareTagPurgeEnabled;
+}
+
+// ============================================================
+// Public-facing exports for health probe
+// ============================================================
+
+/**
+ * Validated credentials accessor (same Zone ID regex check as runtime).
+ * Public so the startup health probe can use the canonical validation path.
+ */
+export async function getCloudflareCredentialsValidated(): Promise<{
+  zoneId: string;
+  apiToken: string;
+} | null> {
+  return getCloudflareCredentials();
+}
+
+/**
+ * Public wrapper of callPurgeApi for the health probe's canary call.
+ * (callPurgeApi is module-internal; this is the only export point.)
+ */
+export async function callPurgeApiPublic(
+  zoneId: string,
+  apiToken: string,
+  body: Record<string, unknown>,
+): Promise<PurgeResult> {
+  return callPurgeApi(zoneId, apiToken, body);
+}
+
+// ============================================================
+// Whole-zone purge (kept as tag-purge fallback)
+// ============================================================
+
 export async function purgeAllCloudflareCache(): Promise<PurgeResult> {
   const credentials = await getCloudflareCredentials();
-
   if (!credentials) {
     logger.debug("Cloudflare credentials not configured, skipping cache purge");
     return { success: true };
   }
-
   const result = await callPurgeApi(credentials.zoneId, credentials.apiToken, {
     purge_everything: true,
   });
-
   if (result.success) {
     logger.info("Cloudflare cache purged (all)");
   } else {
     logger.warn("Cloudflare cache purge (all) failed", { error: result.error });
   }
-
   return result;
 }
 
-/** パス配列をフルURLに変換してキャッシュをパージ */
+// ============================================================
+// URL purge (Cloudflare's primary recommendation for per-detail surfaces)
+// ============================================================
+
 export async function purgeCloudflareByPaths(
   siteUrl: string,
   paths: string[],
@@ -330,57 +343,99 @@ export async function purgeCloudflareByPaths(
   return purgeCloudflareCache(urls);
 }
 
-function getSiteUrl(): string {
-  return getBaseUrl();
-}
-
-function purgeContentCache(
-  basePath: string,
-  id?: string,
+/**
+ * Typed thin wrapper for per-detail URL purge. Caller passes relative paths
+ * like ['/blog/foo', '/spaces/bar']; we prepend getBaseUrl().
+ */
+export async function purgeCloudflareDetailUrls(
+  paths: readonly string[],
 ): Promise<PurgeResult> {
-  const siteUrl = getSiteUrl();
-  const paths = [basePath, "/"];
-  if (id) {
-    paths.push(`${basePath}/${id}`);
+  if (paths.length === 0) return { success: true };
+  return purgeCloudflareByPaths(getBaseUrl(), paths.slice());
+}
+
+// ============================================================
+// Tag purge (Cloudflare purge_by_tags). Chunked at 30 client-side
+// (matches MAX_URLS_PER_REQUEST; a conservative implementation choice, NOT a
+// Cloudflare-imposed per-request count limit — Cloudflare publishes per-tag
+// 1024-char and aggregate 16 KB header limits, not a per-request tag count cap).
+// ============================================================
+
+const MAX_TAGS_PER_REQUEST = 30;
+
+/**
+ * Purge by Cache-Tag values. Falls back to purgeAllCloudflareCache when the
+ * runtime flag indicates the plan doesn't support tag purge (set by the
+ * startup health probe).
+ */
+export async function purgeCloudflareCacheByTags(
+  tags: string[],
+): Promise<PurgeResult> {
+  const credentials = await getCloudflareCredentials();
+  if (!credentials) {
+    logger.debug(
+      "Cloudflare credentials not configured, skipping cache tag purge",
+    );
+    return { success: true };
   }
-  return purgeCloudflareByPaths(siteUrl, paths);
-}
+  if (tags.length === 0) {
+    return { success: true };
+  }
 
-/** スペース関連のキャッシュをパージ */
-export function purgeSpaceCache(spaceId?: string): Promise<PurgeResult> {
-  return purgeContentCache("/spaces", spaceId);
-}
+  // Plan-tier fallback: degrade to purge_everything so site-wide invalidation
+  // still happens, just less surgically.
+  if (!cloudflareTagPurgeEnabled) {
+    logger.info(
+      "Cloudflare tag purge disabled (plan tier); falling back to purge_all",
+      { tags },
+    );
+    return purgeAllCloudflareCache();
+  }
 
-/** 投稿関連のキャッシュをパージ */
-export function purgePostCache(slug?: string): Promise<PurgeResult> {
-  return purgeContentCache("/blog", slug);
-}
+  // Validate + dedupe per Cloudflare constraints
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const t of tags) {
+    if (typeof t !== "string" || t.length === 0 || t.length > 1024) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    unique.push(t);
+  }
+  if (unique.length === 0) {
+    return { success: false, error: "パージ対象タグが無効です" };
+  }
 
-/** ニュース関連のキャッシュをパージ */
-export function purgeNewsCache(newsId?: string): Promise<PurgeResult> {
-  return purgeContentCache("/news", newsId);
-}
+  const batches: string[][] = [];
+  for (let i = 0; i < unique.length; i += MAX_TAGS_PER_REQUEST) {
+    batches.push(unique.slice(i, i + MAX_TAGS_PER_REQUEST));
+  }
 
-/** ページのキャッシュをパージ */
-export function purgePageCache(slug: string): Promise<PurgeResult> {
-  const siteUrl = getSiteUrl();
-  return purgeCloudflareByPaths(siteUrl, [`/${slug}`]);
-}
+  const results = await Promise.all(
+    batches.map((batch) =>
+      callPurgeApi(credentials.zoneId, credentials.apiToken, { tags: batch }),
+    ),
+  );
 
-/** ホームページのキャッシュをパージ */
-export function purgeHomeCache(): Promise<PurgeResult> {
-  const siteUrl = getSiteUrl();
-  return purgeCloudflareByPaths(siteUrl, ["/"]);
-}
+  let totalPurged = 0;
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    const batch = batches[i];
+    if (!result || !batch) continue;
+    if (!result.success) {
+      logger.warn("Cloudflare tag purge failed", {
+        error: result.error,
+        tags: batch,
+        purgedBeforeFailure: totalPurged,
+      });
+      return {
+        success: false,
+        error: result.error,
+        purgedFiles: totalPurged,
+      };
+    }
+    totalPurged += batch.length;
+  }
 
-/** FAQ関連のキャッシュをパージ */
-export function purgeFaqCache(): Promise<PurgeResult> {
-  const siteUrl = getSiteUrl();
-  return purgeCloudflareByPaths(siteUrl, ["/faq"]);
-}
-
-/** 利用規約関連のキャッシュをパージ */
-export function purgeTermsCache(): Promise<PurgeResult> {
-  const siteUrl = getSiteUrl();
-  return purgeCloudflareByPaths(siteUrl, ["/terms"]);
+  logger.info("Cloudflare cache purged (by tags)", { count: totalPurged });
+  return { success: true, purgedFiles: totalPurged };
 }

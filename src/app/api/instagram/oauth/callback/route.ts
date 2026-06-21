@@ -27,6 +27,8 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
 const instagramOAuthCallbackQuerySchema = z.object({
@@ -147,6 +149,13 @@ export async function GET(request: NextRequest) {
       userId,
       username: userInfo.username,
       accountType: userInfo.accountType,
+    });
+
+    // INTEGRATION_SETTINGS is admin-only (private,no-store); CDN purge is a no-op,
+    // but revalidateTag flushes the SSR cache so /admin/settings/integrations
+    // reflects the just-saved tokens immediately.
+    invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.INTEGRATION_SETTINGS, {
+      skipCdnPurge: true,
     });
 
     return redirectToSettings({

@@ -34,6 +34,8 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 function redirectToIntegrationsError(
   request: NextRequest,
@@ -106,6 +108,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       expiresAt: tokens.expiresAt,
       accountId: firstAccount.accountId,
       accountName: firstAccount.accountName,
+    });
+
+    invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.INTEGRATION_SETTINGS, {
+      skipCdnPurge: true,
     });
 
     return NextResponse.redirect(

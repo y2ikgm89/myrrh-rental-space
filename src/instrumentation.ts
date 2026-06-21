@@ -19,6 +19,13 @@ export async function register(): Promise<void> {
 
     const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
     await bootstrapSystemPages();
+
+    // Cloudflare credentials + plan-tier startup probe (production only).
+    // Surfaces missing/malformed credentials as HIGH-severity logError, and
+    // detects non-Enterprise plans via a canary tag-purge to enable URL-purge fallback.
+    const { assertCloudflareCredentials } =
+      await import("@/shared/lib/cache/health");
+    await assertCloudflareCredentials();
   }
 }
 

@@ -28,10 +28,9 @@ import {
 } from "@/shared/domain/faq/item-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgeFaqCache } from "@/shared/lib/cloudflare";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import { invalidateSiteWideCache, firePurgeAsync } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -53,10 +52,10 @@ function invalidateFaqCaches(): void {
 }
 
 function purgeFaqCaches(): void {
-  fireAndForget(purgeFaqCache(), {
-    operation: "purgeFaqCache",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.LOW,
+  invalidateSiteWideCache(CACHE_TAGS.FAQ);
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(["/faq"]), {
+    operation: "purgeFaqList",
+    urls: ["/faq"],
   });
 }
 

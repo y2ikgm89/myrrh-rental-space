@@ -12,10 +12,13 @@ import {
   updateNewsSettings as updateNewsSettingsCommand,
 } from "@/shared/domain/news/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { purgeNewsCache } from "@/shared/lib/cloudflare";
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import {
+  invalidateSiteWideCache,
+  purgeMarketingHomeTag,
+  firePurgeAsync,
+} from "@/shared/lib/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -30,22 +33,19 @@ import {
 const idSchema = z.uuid({ error: "お知らせIDが不正です" });
 
 function purgeNewsCaches(...slugs: Array<string | undefined>): void {
-  const uniqueSlugs = [
-    ...new Set(slugs.filter((slug): slug is string => Boolean(slug))),
-  ];
-
-  for (const slug of uniqueSlugs) {
-    fireAndForget(purgeNewsCache(slug), {
-      operation: "purgeNewsCache",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.LOW,
-    });
-  }
+  const unique = [...new Set(slugs.filter((s): s is string => Boolean(s)))].map(
+    (s) => `/news/${s}`,
+  );
+  if (unique.length === 0) return;
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(unique), {
+    operation: "purgeNewsDetailUrls",
+    urls: unique,
+  });
 }
 
 function invalidateNewsCollectionCaches(): void {
-  updateTag(CACHE_TAGS.NEWS);
-  updateTag(CACHE_TAGS.SIDEBAR_DATA);
+  invalidateSiteWideCache([CACHE_TAGS.NEWS, CACHE_TAGS.SIDEBAR_DATA]);
+  purgeMarketingHomeTag();
 }
 
 export async function createNews(

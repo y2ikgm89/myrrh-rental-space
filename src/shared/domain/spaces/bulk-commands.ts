@@ -3,18 +3,21 @@ import "server-only";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 
+export interface AffectedSpace {
+  id: string;
+  slug: string;
+}
+
 export type BulkPublishResult = {
   count: number;
   isPublished: boolean;
-  affectedIds: string[];
-  affectedSlugs: string[];
+  affected: ReadonlyArray<AffectedSpace>;
 };
 
 export type BulkDeleteResult = {
   count: number;
   skipped: number;
-  affectedIds: string[];
-  affectedSlugs: string[];
+  affected: ReadonlyArray<AffectedSpace>;
 };
 
 /**
@@ -22,31 +25,21 @@ export type BulkDeleteResult = {
  *
  * - `publish: true` で `isPublished` を true + `publishedAt` を現在時刻に設定
  * - `publish: false` で `isPublished` を false + `publishedAt` を null にリセット
- * - 戻り値の `affectedIds` / `affectedSlugs` は cache invalidation 用
+ * - 戻り値の `affected` は cache invalidation 用（id+slug を1つのレコードで返却）
  */
 export async function bulkTogglePublishedSpacesCommand(
   ids: string[],
   publish: boolean,
 ): Promise<BulkPublishResult> {
   if (ids.length === 0) {
-    return {
-      count: 0,
-      isPublished: publish,
-      affectedIds: [],
-      affectedSlugs: [],
-    };
+    return { count: 0, isPublished: publish, affected: [] };
   }
   const targets = await prisma.space.findMany({
     where: { id: { in: ids } },
     select: { id: true, slug: true },
   });
   if (targets.length === 0) {
-    return {
-      count: 0,
-      isPublished: publish,
-      affectedIds: [],
-      affectedSlugs: [],
-    };
+    return { count: 0, isPublished: publish, affected: [] };
   }
   const result = await prisma.space.updateMany({
     where: { id: { in: targets.map((t) => t.id) } },
@@ -58,8 +51,7 @@ export async function bulkTogglePublishedSpacesCommand(
   return {
     count: result.count,
     isPublished: publish,
-    affectedIds: targets.map((t) => t.id),
-    affectedSlugs: targets.map((t) => t.slug),
+    affected: targets.map((t) => ({ id: t.id, slug: t.slug })),
   };
 }
 
@@ -68,33 +60,31 @@ export async function bulkTogglePublishedSpacesCommand(
  *
  * - `Reservation.spaceId` の FK 制約 (P2003) は個別 catch して `skipped` に計上
  * - 一括 `deleteMany` ではなく逐次 delete することで FK 違反のスペースのみスキップできる
- * - 戻り値の `affectedIds` / `affectedSlugs` は cache invalidation 用（削除成功分のみ）
+ * - 戻り値の `affected` は cache invalidation 用（削除成功分のみ）
  */
 export async function bulkDeleteSpacesCommand(
   ids: string[],
 ): Promise<BulkDeleteResult> {
   if (ids.length === 0) {
-    return { count: 0, skipped: 0, affectedIds: [], affectedSlugs: [] };
+    return { count: 0, skipped: 0, affected: [] };
   }
   const targets = await prisma.space.findMany({
     where: { id: { in: ids } },
     select: { id: true, slug: true },
   });
   if (targets.length === 0) {
-    return { count: 0, skipped: 0, affectedIds: [], affectedSlugs: [] };
+    return { count: 0, skipped: 0, affected: [] };
   }
 
   let count = 0;
   let skipped = 0;
-  const affectedIds: string[] = [];
-  const affectedSlugs: string[] = [];
+  const affected: AffectedSpace[] = [];
 
   for (const target of targets) {
     try {
       await prisma.space.delete({ where: { id: target.id } });
       count += 1;
-      affectedIds.push(target.id);
-      affectedSlugs.push(target.slug);
+      affected.push({ id: target.id, slug: target.slug });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -107,5 +97,5 @@ export async function bulkDeleteSpacesCommand(
     }
   }
 
-  return { count, skipped, affectedIds, affectedSlugs };
+  return { count, skipped, affected };
 }
