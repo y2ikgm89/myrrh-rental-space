@@ -139,30 +139,34 @@ afterEach(() => {
 
 describe("sendEmail()", () => {
   describe("no-op path", () => {
-    test("isEmailEnabled() が false の場合、SDK を呼ばずに { success: true } を返す", async () => {
+    test("isEmailEnabled() が false の場合、SDK を呼ばずに { ok: false, reason: 'disabled' } を返す", async () => {
       mockIsEmailEnabled.mockReturnValue(false);
 
       const result = await sendEmail(BASE_PARAMS);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: false, reason: "disabled" });
       expect(mockResendSend).not.toHaveBeenCalled();
     });
 
-    test("getResendClient() が null の場合、SDK を呼ばずに { success: true } を返す", async () => {
+    test("getResendClient() が null の場合、SDK を呼ばずに { ok: false, reason: 'disabled' } を返す", async () => {
       mockGetResendClient.mockReturnValue(null);
 
       const result = await sendEmail(BASE_PARAMS);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: false, reason: "disabled" });
       expect(mockResendSend).not.toHaveBeenCalled();
     });
   });
 
   describe("正常系", () => {
     test("idempotencyKey なしの場合、1 引数形式で resend.emails.send を呼ぶ", async () => {
+      mockResendSend.mockResolvedValue({
+        data: { id: "msg_test123" },
+        error: null,
+      });
       const result = await sendEmail(BASE_PARAMS);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "msg_test123" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
       // 1 引数形式: 第 2 引数が undefined（オプション未渡し）
       expect(mockResendSend).toHaveBeenCalledWith(
@@ -179,12 +183,16 @@ describe("sendEmail()", () => {
     });
 
     test("idempotencyKey あり の場合、2 引数形式で resend.emails.send を呼ぶ（公式推奨）", async () => {
+      mockResendSend.mockResolvedValue({
+        data: { id: "msg_test456" },
+        error: null,
+      });
       const result = await sendEmail({
         ...BASE_PARAMS,
         idempotencyKey: "reservation-confirm/reservation-1",
       });
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "msg_test456" });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
       expect(mockResendSend).toHaveBeenCalledWith(
         expect.objectContaining({ to: VALID_PAYLOAD.to }),
@@ -202,7 +210,7 @@ describe("sendEmail()", () => {
       );
     });
 
-    test("成功時に { success: true } を返す", async () => {
+    test("成功時に { ok: true, messageId } を返す", async () => {
       mockResendSend.mockResolvedValue({
         data: { id: "test-email-id" },
         error: null,
@@ -210,7 +218,7 @@ describe("sendEmail()", () => {
 
       const result = await sendEmail(BASE_PARAMS);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "test-email-id" });
     });
   });
 
@@ -271,7 +279,7 @@ describe("sendEmail()", () => {
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
 
       // 4 回目で成功（attempt 0→1→2→3 の計 4 回）
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(4);
     });
 
@@ -287,7 +295,7 @@ describe("sendEmail()", () => {
 
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
     });
 
@@ -303,7 +311,7 @@ describe("sendEmail()", () => {
 
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
     });
 
@@ -317,7 +325,8 @@ describe("sendEmail()", () => {
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
 
       expect(result).toEqual({
-        success: false,
+        ok: false,
+        reason: "error",
         error: "メール送信に失敗しました",
       });
       // retry せず 1 回だけ呼ばれる
@@ -334,7 +343,8 @@ describe("sendEmail()", () => {
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
 
       expect(result).toEqual({
-        success: false,
+        ok: false,
+        reason: "error",
         error: "メール送信に失敗しました",
       });
       expect(mockResendSend).toHaveBeenCalledTimes(1);
@@ -350,7 +360,8 @@ describe("sendEmail()", () => {
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
 
       expect(result).toEqual({
-        success: false,
+        ok: false,
+        reason: "error",
         error: "メール送信に失敗しました",
       });
       // maxRetries: 0 なので attempt=0 のみ（1 回で終了）
@@ -370,13 +381,13 @@ describe("sendEmail()", () => {
 
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ ok: true, messageId: "email-retry-ok" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("エラーハンドリング", () => {
-    test("最終失敗時は固定メッセージ { success: false, error: 'メール送信に失敗しました' } を返す", async () => {
+    test("最終失敗時は固定メッセージ { ok: false, reason: 'error', error: 'メール送信に失敗しました' } を返す", async () => {
       const rateLimitError = {
         name: "rate_limit_exceeded",
         message: "Rate limit exceeded: 内部詳細情報（露出してはいけない）",
@@ -386,10 +397,14 @@ describe("sendEmail()", () => {
 
       const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("メール送信に失敗しました");
-      // エラーの内部メッセージを露出しない
-      expect(result.error).not.toContain("内部詳細情報");
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.reason === "error") {
+        expect(result.error).toBe("メール送信に失敗しました");
+        // エラーの内部メッセージを露出しない
+        expect(result.error).not.toContain("内部詳細情報");
+      } else {
+        throw new Error("Expected error result");
+      }
     });
 
     test("logError が ErrorCategory.EXTERNAL_API / ErrorSeverity.MEDIUM で呼ばれる", async () => {
@@ -522,7 +537,8 @@ describe("sendEmail()", () => {
       const result = await sendEmail(BASE_PARAMS);
 
       expect(result).toEqual({
-        success: false,
+        ok: false,
+        reason: "error",
         error: "メール送信に失敗しました",
       });
       expect(mockLogError).toHaveBeenCalledTimes(1);

@@ -15,6 +15,7 @@ import {
   getSettings,
   getNotificationStaffCandidates,
 } from "@/admin/queries/settings";
+import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import { EmailSection, NotificationSection } from "../_components/sections";
@@ -22,12 +23,13 @@ import type { ReactElement } from "react";
 
 async function NotificationsSettingsContent(): Promise<ReactElement> {
   await connection();
-  const [settings, staff] = await Promise.all([
+  const [settings, staff, auth] = await Promise.all([
     getSettings(),
     getNotificationStaffCandidates(),
+    checkAdminAuth(),
   ]);
 
-  if (!settings) {
+  if (!settings || !auth.success) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         設定を読み込めませんでした
@@ -39,7 +41,13 @@ async function NotificationsSettingsContent(): Promise<ReactElement> {
     {
       value: "email",
       label: "メール",
-      content: <EmailSection settings={settings} staff={staff} />,
+      content: (
+        <EmailSection
+          settings={settings}
+          staff={staff}
+          currentUserEmail={auth.user.email}
+        />
+      ),
     },
     {
       value: "notification",

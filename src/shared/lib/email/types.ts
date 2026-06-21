@@ -96,4 +96,14 @@ export type StatusChangeEmailData = {
   icsSequence: number;
 };
 
-export type EmailResult = { success: boolean; error?: string };
+/**
+ * メール送信結果。
+ *
+ * - `{ ok: true; messageId }` — Resend が受理（API レベル成功、配信は別途 webhook で観測）
+ * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定で no-op
+ * - `{ ok: false; reason: "error"; error }` — Resend API エラー（retry 尽きた後）
+ */
+export type EmailResult =
+  | { ok: true; messageId: string }
+  | { ok: false; reason: "disabled" }
+  | { ok: false; reason: "error"; error: string };

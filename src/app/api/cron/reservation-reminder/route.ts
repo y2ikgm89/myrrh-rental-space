@@ -88,10 +88,14 @@ export async function GET(request: Request) {
           icsSequence: reservation.icsSequence,
         });
 
-        // sendEmail は送信失敗時に throw せず { success: false } を返す。
-        // 失敗時は claim を解放して次回 cron で再送できるようにする。
-        if (!result.success) {
-          await releaseReservationReminderClaim(reservation.id);
+        // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。
+        // disabled（RESEND_API_KEY 未設定）: claim を保持して永続 skipped 扱い
+        //   → 次回 cron でも claim できないため無限 retry を防ぐ
+        // error: claim を解放して次回 cron で再送できるようにする
+        if (!result.ok) {
+          if (result.reason !== "disabled") {
+            await releaseReservationReminderClaim(reservation.id);
+          }
           skipped++;
           continue;
         }

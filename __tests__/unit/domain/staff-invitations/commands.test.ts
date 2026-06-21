@@ -106,8 +106,13 @@ mock.module("better-auth/crypto", () => ({
 // メール送信モック
 // -----------------------------------------------------------------------
 const mockSendStaffInvitationEmail = mock<
-  () => Promise<{ success: boolean; error?: string }>
->(() => Promise.resolve({ success: true }));
+  () => Promise<{
+    ok: boolean;
+    messageId?: string;
+    reason?: string;
+    error?: string;
+  }>
+>(() => Promise.resolve({ ok: true, messageId: "re_test_id" }));
 
 mock.module("@/shared/lib/email/system-emails", () => ({
   sendStaffInvitationEmail: mockSendStaffInvitationEmail,
@@ -211,7 +216,7 @@ describe("sendInvitation", () => {
       Promise.resolve(VALID_INVITATION_RECORD),
     );
     mockSendStaffInvitationEmail.mockImplementation(() =>
-      Promise.resolve({ success: true }),
+      Promise.resolve({ ok: true, messageId: "re_test_id" }),
     );
     mockInvitationDelete.mockImplementation(() =>
       Promise.resolve({ id: INVITATION_ID }),
@@ -290,7 +295,7 @@ describe("sendInvitation", () => {
 
     test("メール送信失敗時は招待レコードを削除して UNEXPECTED エラーをスロー", async () => {
       mockSendStaffInvitationEmail.mockImplementation(() =>
-        Promise.resolve({ success: false, error: "SMTP error" }),
+        Promise.resolve({ ok: false, reason: "error", error: "SMTP error" }),
       );
       await expect(
         sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR),
@@ -298,10 +303,24 @@ describe("sendInvitation", () => {
       expect(mockInvitationDelete).toHaveBeenCalledTimes(1);
     });
 
+    test("RESEND_API_KEY 未設定（disabled）の場合は招待レコードを保持して silent success", async () => {
+      mockSendStaffInvitationEmail.mockImplementation(() =>
+        Promise.resolve({ ok: false, reason: "disabled" }),
+      );
+      // disabled は throw しないため resolve する
+      const result = await sendInvitation(
+        VALID_CREATE_INPUT,
+        SUPER_ADMIN_CREATOR,
+      );
+      expect(result).toMatchObject({ id: INVITATION_ID });
+      // 招待レコードは削除しない
+      expect(mockInvitationDelete).not.toHaveBeenCalled();
+    });
+
     test("メール送信失敗時に logError が呼ばれる", async () => {
       mockLogError.mockReset();
       mockSendStaffInvitationEmail.mockImplementation(() =>
-        Promise.resolve({ success: false, error: "SMTP error" }),
+        Promise.resolve({ ok: false, reason: "error", error: "SMTP error" }),
       );
       await expect(
         sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR),
@@ -328,7 +347,7 @@ describe("sendInvitation", () => {
           Promise.resolve({ ...VALID_INVITATION_RECORD, role }),
         );
         mockSendStaffInvitationEmail.mockImplementation(() =>
-          Promise.resolve({ success: true }),
+          Promise.resolve({ ok: true, messageId: "re_test_id" }),
         );
 
         await expect(
@@ -551,7 +570,7 @@ describe("resendInvitation", () => {
       Promise.resolve({ id: INVITATION_ID }),
     );
     mockSendStaffInvitationEmail.mockImplementation(() =>
-      Promise.resolve({ success: true }),
+      Promise.resolve({ ok: true, messageId: "re_test_id" }),
     );
   });
 
@@ -664,7 +683,7 @@ describe("resendInvitation", () => {
 
     test("メール再送失敗時は UNEXPECTED エラーをスロー", async () => {
       mockSendStaffInvitationEmail.mockImplementation(() =>
-        Promise.resolve({ success: false, error: "SMTP error" }),
+        Promise.resolve({ ok: false, reason: "error", error: "SMTP error" }),
       );
       await expect(
         resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
@@ -673,10 +692,20 @@ describe("resendInvitation", () => {
       });
     });
 
+    test("RESEND_API_KEY 未設定（disabled）の場合は再送も silent success", async () => {
+      mockSendStaffInvitationEmail.mockImplementation(() =>
+        Promise.resolve({ ok: false, reason: "disabled" }),
+      );
+      // disabled は throw しないため resolve する
+      await expect(
+        resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
+      ).resolves.toBeUndefined();
+    });
+
     test("メール再送失敗時に logError が呼ばれる", async () => {
       mockLogError.mockReset();
       mockSendStaffInvitationEmail.mockImplementation(() =>
-        Promise.resolve({ success: false, error: "SMTP error" }),
+        Promise.resolve({ ok: false, reason: "error", error: "SMTP error" }),
       );
       await expect(
         resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
@@ -700,7 +729,7 @@ describe("toInvitationData 変換（sendInvitation 経由）", () => {
     mockUserFindUnique.mockImplementation(() => Promise.resolve(null));
     mockInvitationFindFirst.mockImplementation(() => Promise.resolve(null));
     mockSendStaffInvitationEmail.mockImplementation(() =>
-      Promise.resolve({ success: true }),
+      Promise.resolve({ ok: true, messageId: "re_test_id" }),
     );
     mockInvitationDelete.mockImplementation(() =>
       Promise.resolve({ id: INVITATION_ID }),

@@ -35,8 +35,8 @@ const DELIVERY_DEFAULTS: DeliverySettings = {
 };
 
 const mockSendEmail = mock<
-  (...args: unknown[]) => Promise<{ success: boolean }>
->(() => Promise.resolve({ success: true }));
+  (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
+>(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
 const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
   Promise.resolve(DELIVERY_DEFAULTS),
 );
@@ -102,7 +102,7 @@ const DATA: ReservationEmailData = {
 
 beforeEach(() => {
   mockSendEmail.mockReset();
-  mockSendEmail.mockResolvedValue({ success: true });
+  mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
   mockGetEmailDeliverySettings.mockReset();
   mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
   mockGetNotificationEmailAddresses.mockReset();
@@ -118,7 +118,7 @@ describe("sendReservationConfirmationEmail() のゲート", () => {
 
     const result = await sendReservationConfirmationEmail(DATA);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
@@ -132,7 +132,7 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
 
     const result = await sendReservationAdminNotification(DATA, "new");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
@@ -144,7 +144,7 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
 
     const result = await sendReservationAdminNotification(DATA, "cancel");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
@@ -159,7 +159,7 @@ describe("sendReservationAdminNotification() の action->toggle マッピング"
 
     const result = await sendReservationAdminNotification(DATA, "new");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });

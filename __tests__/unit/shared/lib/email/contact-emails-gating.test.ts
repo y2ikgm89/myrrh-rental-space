@@ -26,8 +26,8 @@ const DELIVERY_DEFAULTS: DeliverySettings = {
 };
 
 const mockSendEmail = mock<
-  (...args: unknown[]) => Promise<{ success: boolean }>
->(() => Promise.resolve({ success: true }));
+  (...args: unknown[]) => Promise<{ ok: true; messageId: string }>
+>(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
 const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
   Promise.resolve(DELIVERY_DEFAULTS),
 );
@@ -58,7 +58,7 @@ const DATA: ContactEmailData = {
 
 beforeEach(() => {
   mockSendEmail.mockReset();
-  mockSendEmail.mockResolvedValue({ success: true });
+  mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
   mockGetEmailDeliverySettings.mockReset();
   mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
   mockGetNotificationEmailAddresses.mockReset();
@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe("sendContactAdminNotification() の配信ゲート", () => {
-  test("notifyNewInquiry が false なら sendEmail を呼ばず success を返す", async () => {
+  test("notifyNewInquiry が false なら sendEmail を呼ばず disabled を返す", async () => {
     mockGetEmailDeliverySettings.mockResolvedValue({
       ...DELIVERY_DEFAULTS,
       notifyNewInquiry: false,
@@ -74,16 +74,16 @@ describe("sendContactAdminNotification() の配信ゲート", () => {
 
     const result = await sendContactAdminNotification(DATA);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
-  test("通知先アドレスが空なら sendEmail を呼ばず success を返す", async () => {
+  test("通知先アドレスが空なら sendEmail を呼ばず disabled を返す", async () => {
     mockGetNotificationEmailAddresses.mockResolvedValue([]);
 
     const result = await sendContactAdminNotification(DATA);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: false, reason: "disabled" });
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
