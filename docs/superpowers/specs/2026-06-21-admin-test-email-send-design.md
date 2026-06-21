@@ -23,21 +23,21 @@ Admin が `/admin/settings` のメールタブで送信元・通知先・確認�
 
 Resend 公式ドキュメント（context7 検証済）に基づき、以下を全採用：
 
-| 機能                               | 採否 | 仕様                                                                                                                                                          |
-| ---------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| React Email JSX template           | ✅   | `payload.react = TestEmail({...})`。`@react-email/render` 依存追加なし（Resend SDK が内部 SSR）                                                               |
-| `tags`                             | ✅   | `[{name:"category",value:"test"},{name:"source",value:"admin_settings"}]` — Resend dashboard で本番トラフィックから分離可能                                   |
-| `headers`                          | ✅   | `{"X-Test-Email":"true"}` — 受信側 grep 用                                                                                                                    |
-| `Idempotency-Key`                  | ✅   | per-click unique: `test-email/${staffId}/${Date.now()}-${randomUUID().slice(0,6)}`（同一クリックの Server Action retry を吸収、連続クリックは別 ID で別送信） |
-| Simulator addresses                | ✅   | UI dropdown で `delivered@/bounced@/complained@/suppressed@resend.dev` を選択肢提示。Resend 公式：「Do not set up testing flows with fake email addresses」   |
-| `validateSenderDomain` pre-check   | ✅   | 既存関数を hard gate 再利用（settings 保存と同 SSoT）                                                                                                         |
-| Friendly From + Reply-To           | ✅   | `sendEmail()` が既存処理（`getFromAddress("Name <email>")` + `delivery.replyToEmail` 注入）                                                                   |
-| Resend messageId 返却              | ✅   | `sendEmail()` 返却型を refactor して messageId を surface、UI 上 monospace で表示                                                                             |
-| Rate limit                         | ✅   | 既存 `authMutationRateLimiter`（20/15min/IP） — Resend team 5 req/sec quota 防御                                                                              |
-| Audit log                          | ✅   | `executeAdminMutationResult` 自動 + `metadata.{recipient, messageId, simulatorAddress}`                                                                       |
-| Labeled variants（`delivered+x@`） | ❌   | admin 単独利用で価値なし                                                                                                                                      |
-| `scheduled_at`                     | ❌   | テスト主旨と矛盾                                                                                                                                              |
-| Webhook event consumer             | ❌   | 別 feature scope（v2 候補）                                                                                                                                   |
+| 機能                               | 採否 | 仕様                                                                                                                                                                                        |
+| ---------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| React Email JSX template           | ✅   | `payload.react = TestEmail({...})`。`@react-email/render` 依存追加なし（Resend SDK が内部 SSR）                                                                                             |
+| `tags`                             | ✅   | `[{name:"category",value:"test"},{name:"source",value:"admin_settings"}]` — Resend dashboard で本番トラフィックから分離可能                                                                 |
+| `headers`                          | ✅   | `{"X-Test-Email":"true"}` — 受信側 grep 用                                                                                                                                                  |
+| `Idempotency-Key`                  | ✅   | per-click unique: `test-email/${staffId}/${Date.now()}-${randomUUID().slice(0,6)}`（同一クリックの Server Action retry を吸収、連続クリックは別 ID で別送信）                               |
+| Simulator addresses                | ✅   | UI dropdown で `delivered@/bounced@/complained@/suppressed@resend.dev` を選択肢提示。Resend 公式：「Do not set up testing flows with fake email addresses」                                 |
+| `validateSenderDomain` pre-check   | ✅   | 既存関数を hard gate 再利用（settings 保存と同 SSoT）                                                                                                                                       |
+| Friendly From + Reply-To           | ✅   | `sendEmail()` が既存処理（`getFromAddress("Name <email>")` + `delivery.replyToEmail` 注入）                                                                                                 |
+| Resend messageId 返却              | ✅   | `sendEmail()` 返却型を refactor して messageId を surface、UI 上 monospace で表示                                                                                                           |
+| Rate limit                         | ✅   | 既存 `authMutationRateLimiter`（20/15min/IP） — Resend team 5 req/sec quota 防御                                                                                                            |
+| Audit log                          | ✅   | `executeAdminMutationResult` 自動管理（標準: user/resource/action/timestamp）。recipient と simulatorAddress は sendTestEmail の context として application log に残る（AuditLog ではない） |
+| Labeled variants（`delivered+x@`） | ❌   | admin 単独利用で価値なし                                                                                                                                                                    |
+| `scheduled_at`                     | ❌   | テスト主旨と矛盾                                                                                                                                                                            |
+| Webhook event consumer             | ❌   | 別 feature scope（v2 候補）                                                                                                                                                                 |
 
 ## 5. Architecture
 
@@ -54,7 +54,8 @@ EmailSection.tsx (admin settings tab)
                 ↓ Server Action
 sendTestEmailAction (_shared/actions/settings/test-email.ts) ←─ new
   ├─ Zod validate recipient (z.email().max(100))
-  ├─ executeAdminMutationResult({resource:"settings",action:"update", execute, auditMetadata})
+  ├─ executeAdminMutationResult({resource:"settings",action:"update", execute})
+  │     // audit logged automatically (user/settings/update/timestamp)
   │     └─ execute:
   │           ├─ assertActionRateLimit(authMutationRateLimiter)
   │           ├─ getEmailDeliverySettings() → senderEmail
@@ -111,11 +112,13 @@ export type EmailResult =
 
 ### 6.3 Migration
 
-`sendEmail()` 戻り値を消費する全 caller を新型に追随させる（9 ファイル）:
+`sendEmail()` 戻り値を消費する全 caller を新型に追随させる（4 ファイル）:
 
 ```
-src/shared/lib/email/{reservation,event,contact,welcome,inquiry,system,reminder,password-reset,review}-emails.ts
+src/shared/lib/email/{reservation,event,contact,system}-emails.ts
 ```
+
+残り 5 ファイル（welcome/inquiry/reminder/password-reset/review）は EmailResult 戻り値を inspect しないため pass-through で更新不要。
 
 既存パターン `if (!result.success) { ... }` を `if (!result.ok) { ... }` に置換。`disabled` を意識しない既存 caller は `.ok === false` 全体を「失敗」として扱えば従前通りの挙動（fire-and-forget log だけ）になる。disabled を特別扱いする必要がある caller は今のところ無い（テスト送信のみが新規要件）。
 
@@ -144,12 +147,7 @@ src/shared/lib/email/{reservation,event,contact,welcome,inquiry,system,reminder,
 | `src/shared/lib/email/reservation-emails.ts`                                       | `.success` → `.ok`                                                                             |
 | `src/shared/lib/email/event-emails.ts`                                             | 同上                                                                                           |
 | `src/shared/lib/email/contact-emails.ts`                                           | 同上                                                                                           |
-| `src/shared/lib/email/welcome-emails.ts`                                           | 同上                                                                                           |
-| `src/shared/lib/email/inquiry-emails.ts`                                           | 同上                                                                                           |
 | `src/shared/lib/email/system-emails.ts`                                            | 同上                                                                                           |
-| `src/shared/lib/email/reminder-emails.ts`                                          | 同上                                                                                           |
-| `src/shared/lib/email/password-reset-emails.ts`                                    | 同上                                                                                           |
-| `src/shared/lib/email/review-emails.ts`                                            | 同上                                                                                           |
 | `src/app/(admin)/admin/(dashboard)/settings/_components/sections/EmailSection.tsx` | `<TestEmailCard staffEmail={...} />` を CardContent 末尾に追加                                 |
 | `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/index.ts`              | `export { sendTestEmailAction }` 追加                                                          |
 
@@ -260,7 +258,7 @@ assertion 共通項:
 6. 設定タブで送信元を未検証ドメインに変更し保存（保存自体は availability-first で通る）→ テスト送信 → 赤バナー「検証済みドメイン: …」
 7. [テスト送信] を 25 回連続クリック → 21 回目以降赤バナー rate limit
 8. ローカルで `RESEND_API_KEY` 未設定 → 黄色バナー（false-green でない）
-9. AuditLog テーブル参照 → `resource=settings, action=UPDATE, metadata.recipient, metadata.messageId, metadata.simulatorAddress` 記録
+9. AuditLog テーブル参照 → `resource=settings, action=UPDATE, userId` 記録（recipient は application log で確認）
 10. [テスト送信] 連打 → 各クリックで異なる messageId（per-click idempotency 確認）
 
 ## 10. Risks and Mitigations
@@ -269,7 +267,7 @@ assertion 共通項:
 
 | Risk                                                 | Mitigation                                                                                                    |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `sendEmail()` 返却型 refactor が既存 9 caller を壊す | 機械的置換（`.success` → `.ok`）+ 既存統合テスト全実行 + `bun run validate && bun run build` で type 整合確認 |
+| `sendEmail()` 返却型 refactor が既存 4 caller を壊す | 機械的置換（`.success` → `.ok`）+ 既存統合テスト全実行 + `bun run validate && bun run build` で type 整合確認 |
 | Idempotency key 衝突（同 ms 連打）                   | `Date.now() + randomUUID().slice(0,6)` で衝突確率を 16^6 分の 1 まで低減                                      |
 | Rate-limit が IP 単位（NAT 配下複数 admin で共有）   | acceptable、PR description に明記                                                                             |
 
