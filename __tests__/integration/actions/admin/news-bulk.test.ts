@@ -88,6 +88,11 @@ mock.module("@/shared/lib/cloudflare", () => ({
   purgeCloudflareByPaths: mock(async () => ({ success: true })),
   purgeCloudflareDetailUrls: mockPurgeDetailUrls,
   purgeCloudflareCacheByTags: mockPurgeByTags,
+  // cache/health.ts が transitive import するため stub 化必須（bun の named-import 静的解析）
+  callPurgeApiPublic: mock(async () => ({ success: true })),
+  getCloudflareCredentialsValidated: mock(async () => null),
+  setCloudflareTagPurgeEnabled: mock(() => {}),
+  isCloudflareTagPurgeEnabled: mock(() => true),
 }));
 
 // =============================================================================
