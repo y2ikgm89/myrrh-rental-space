@@ -134,9 +134,13 @@ describe("sendTestEmailAction", () => {
     });
   });
 
-  test("invalid email → MutationError, sendTestEmail not called", async () => {
+  test("invalid email → MutationError with specific field message, sendTestEmail not called", async () => {
     const r = await sendTestEmailAction("not-an-email");
     expect(isMutationError(r)).toBe(true);
+    if (isMutationError(r)) {
+      // generic "入力内容に誤りがあります" ではなく Zod field message が返る
+      expect(r.error).toContain("メールアドレス");
+    }
     expect(mockSendTestEmail).not.toHaveBeenCalled();
   });
 

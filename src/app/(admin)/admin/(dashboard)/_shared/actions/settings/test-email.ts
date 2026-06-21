@@ -36,7 +36,10 @@ export async function sendTestEmailAction(
 ): Promise<MutationResult<{ messageId: string }>> {
   const parsed = recipientSchema.safeParse(recipient);
   if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
+    return createValidationMutationError(
+      parsed.error,
+      parsed.error.issues[0]?.message ?? "入力に誤りがあります",
+    );
   }
   const to = parsed.data;
   const isSimulator =
