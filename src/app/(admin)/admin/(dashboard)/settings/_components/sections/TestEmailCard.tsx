@@ -62,10 +62,8 @@ export function TestEmailCard({ defaultRecipient }: TestEmailCardProps) {
 
   const handleSimulatorChange = (value: string) => {
     setSimulatorValue(value);
-    if (value !== "") {
-      setRecipient(value);
-      setResult(null);
-    }
+    setRecipient(value);
+    setResult(null);
   };
 
   const handleRecipientChange = (value: string) => {
