@@ -148,7 +148,7 @@ export function TestEmailCard({ defaultRecipient }: TestEmailCardProps) {
                 <p className="text-xs text-muted-foreground">
                   送信 ID:{" "}
                   <code className="font-mono text-foreground">
-                    {result.messageId || "(disabled mode)"}
+                    {result.messageId}
                   </code>
                 </p>
                 <p className="text-xs text-muted-foreground">
