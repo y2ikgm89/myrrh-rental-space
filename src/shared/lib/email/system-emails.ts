@@ -34,7 +34,7 @@ export async function sendCalendarSyncRejectionEmail(data: {
   };
 }): Promise<EmailResult> {
   const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: true, messageId: "" };
+  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
   const currentDate = format(data.currentStartTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
@@ -132,7 +132,7 @@ export async function sendWebhookRenewalNotification(data: {
   error?: string;
 }): Promise<EmailResult> {
   const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: true, messageId: "" };
+  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
   const subject = data.success
     ? "【Google Calendar】Webhook自動更新完了"

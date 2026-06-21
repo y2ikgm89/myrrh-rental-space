@@ -258,10 +258,10 @@ export async function sendEventAdminNotification(
     type === "registration"
       ? toggles.notifyEventRegistration
       : toggles.notifyEventCancellation;
-  if (!enabledByType) return { ok: true, messageId: "" };
+  if (!enabledByType) return { ok: false, reason: "disabled" };
 
   const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: true, messageId: "" };
+  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
   const eventDate = format(data.eventStartTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,

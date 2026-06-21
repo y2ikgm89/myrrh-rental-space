@@ -49,10 +49,10 @@ export async function sendContactAdminNotification(
   data: ContactEmailData,
 ): Promise<EmailResult> {
   const { notifyNewInquiry } = await getEmailDeliverySettings();
-  if (!notifyNewInquiry) return { ok: true, messageId: "" };
+  if (!notifyNewInquiry) return { ok: false, reason: "disabled" };
 
   const notificationEmails = await getNotificationEmailAddresses();
-  if (notificationEmails.length === 0) return { ok: true, messageId: "" };
+  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
   return sendEmail({
     payload: {
