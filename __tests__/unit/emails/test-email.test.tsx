@@ -32,4 +32,10 @@ describe("TestEmail component", () => {
     expect(json).toContain("admin@example.com");
     expect(json).toContain("テスト送信");
   });
+
+  test("includes #0066cc accent color for links", () => {
+    const el = TestEmail(getProps());
+    const json = JSON.stringify(el);
+    expect(json).toContain("#0066cc");
+  });
 });

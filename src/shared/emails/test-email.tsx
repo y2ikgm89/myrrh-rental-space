@@ -5,12 +5,13 @@ import {
   Heading,
   Hr,
   Html,
+  Link,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
 
-type Props = {
+type TestEmailProps = {
   recipientLabel: string;
   siteName: string;
   timestamp: string;
@@ -24,7 +25,7 @@ export function TestEmail({
   timestamp,
   triggeredByName,
   triggeredByEmail,
-}: Props) {
+}: TestEmailProps) {
   return (
     <Html lang="ja">
       <Head />
@@ -51,7 +52,10 @@ export function TestEmail({
               <strong>送信日時:</strong> {timestamp}
             </Text>
             <Text style={detailItem}>
-              <strong>送信操作者:</strong> {triggeredByName}（{triggeredByEmail}
+              <strong>送信操作者:</strong> {triggeredByName}（
+              <Link href={`mailto:${triggeredByEmail}`} style={accentLink}>
+                {triggeredByEmail}
+              </Link>
               ）
             </Text>
           </Section>
@@ -130,4 +134,9 @@ const footer = {
   fontSize: "12px",
   color: "#8898aa",
   marginTop: "32px",
+};
+
+const accentLink = {
+  color: "#0066cc",
+  textDecoration: "underline",
 };
