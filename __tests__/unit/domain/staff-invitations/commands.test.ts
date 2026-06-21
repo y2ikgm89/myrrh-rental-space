@@ -303,6 +303,20 @@ describe("sendInvitation", () => {
       expect(mockInvitationDelete).toHaveBeenCalledTimes(1);
     });
 
+    test("RESEND_API_KEY 未設定（disabled）の場合は招待レコードを保持して silent success", async () => {
+      mockSendStaffInvitationEmail.mockImplementation(() =>
+        Promise.resolve({ ok: false, reason: "disabled" }),
+      );
+      // disabled は throw しないため resolve する
+      const result = await sendInvitation(
+        VALID_CREATE_INPUT,
+        SUPER_ADMIN_CREATOR,
+      );
+      expect(result).toMatchObject({ id: INVITATION_ID });
+      // 招待レコードは削除しない
+      expect(mockInvitationDelete).not.toHaveBeenCalled();
+    });
+
     test("メール送信失敗時に logError が呼ばれる", async () => {
       mockLogError.mockReset();
       mockSendStaffInvitationEmail.mockImplementation(() =>
@@ -676,6 +690,16 @@ describe("resendInvitation", () => {
       ).rejects.toMatchObject({
         code: "UNEXPECTED",
       });
+    });
+
+    test("RESEND_API_KEY 未設定（disabled）の場合は再送も silent success", async () => {
+      mockSendStaffInvitationEmail.mockImplementation(() =>
+        Promise.resolve({ ok: false, reason: "disabled" }),
+      );
+      // disabled は throw しないため resolve する
+      await expect(
+        resendInvitation(INVITATION_ID, SUPER_ADMIN_CREATOR),
+      ).resolves.toBeUndefined();
     });
 
     test("メール再送失敗時に logError が呼ばれる", async () => {

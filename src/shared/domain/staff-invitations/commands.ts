@@ -152,22 +152,21 @@ async function sendInvitationEmailOrThrow(params: {
   });
 
   if (!emailResult.ok) {
-    logError(
-      new Error(
-        emailResult.reason === "error"
-          ? emailResult.error
-          : "Failed to send invitation email",
-      ),
-      {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: {
-          operation: params.operation,
-          invitationId: params.invitationId,
-          email: params.email,
-        },
+    if (emailResult.reason === "disabled") {
+      // RESEND_API_KEY 未設定環境（dev/staging）では従前通り silent success
+      // — 招待レコードは保持し、メールはスキップ
+      return;
+    }
+    // reason === "error" のみ throw して invitation を delete させる
+    logError(new Error(emailResult.error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: params.operation,
+        invitationId: params.invitationId,
+        email: params.email,
       },
-    );
+    });
     throw new DomainError("招待メールの送信に失敗しました", "UNEXPECTED");
   }
 }

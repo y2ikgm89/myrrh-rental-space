@@ -318,7 +318,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
   });
 
-  test("メール送信が ok:false → claim を release + skipped=1", async () => {
+  test("メール送信が ok:false (error) → claim を release + skipped=1", async () => {
     const reservation = makeReservation();
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
     // sendEmail は失敗時に throw せず { ok: false } を返す
@@ -336,6 +336,25 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockSendReservationReminderEmail).toHaveBeenCalledTimes(1);
     // 送信失敗時は次回再送できるよう claim を解放する
     expect(mockReleaseReservationReminderClaim).toHaveBeenCalledWith("res-1");
+  });
+
+  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）", async () => {
+    const reservation = makeReservation();
+    mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
+    // RESEND_API_KEY 未設定環境
+    mockSendReservationReminderEmail.mockResolvedValue({
+      ok: false,
+      reason: "disabled",
+    });
+
+    const response = await GET(makeRequest("Bearer test-secret"));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
+    expect(mockSendReservationReminderEmail).toHaveBeenCalledTimes(1);
+    // disabled 時は claim を解放しない（次回 cron でも claim できないため無限 retry を防ぐ）
+    expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
   });
 
   test("複数予約: 成功2 + スキップ1 (メールなし)", async () => {
