@@ -59,7 +59,7 @@ export function CompactHero({
           <PortableText blocks={description} />
         </div>
         {buttons.length > 0 && (
-          <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
+          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-4">
             {buttons.map((btn) => (
               <Button
                 key={btn.url}
