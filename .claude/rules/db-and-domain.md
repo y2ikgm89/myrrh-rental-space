@@ -32,3 +32,20 @@ paths:
 ## cache 無効化
 
 - タグ文字列の直書き禁止。`CACHE_TAGS` / `getCacheTag` / `CACHE_LIFE`（`src/shared/lib/constants/cache.ts`）を使う。
+
+## `'use cache'` + `safeFetch` を呼ぶときの境界（build-time prerender 汚染回避）
+
+- `'use cache'` 関数が内部で `safeFetch({fallback: ...})` を使う場合、その関数を **layout 本体 / `generateMetadata` / `generateViewport` の直配置から呼ばない**。`next build` 時に `'use cache'` は eager 評価され、Dockerfile builder の placeholder `DATABASE_URL` で Prisma 接続失敗 → fallback の `null`/`[]` が静的シェル RSC payload に**永続 baking** され Cloudflare HIT で恒久汚染される（観測: PR #76c2316b 真因）。
+- canonical pattern: **`<Suspense>` 境界内で `await connection()` を呼ぶ async server component** から呼び出す。これで build prerender は skip され runtime resume で実 DB から resolve。
+  ```tsx
+  async function Chrome(): Promise<ReactElement> {
+    await connection();
+    const data = await getSomeSettings(); // 'use cache' + safeFetch を使う query
+    return <Renderer {...data} />;
+  }
+  <Suspense fallback={<Skeleton />}>
+    <Chrome />
+  </Suspense>;
+  ```
+- 例外的に layout-level の chrome 設定（`backgroundMode` / `containerMax` / `taxSettings` など）は fallback が安全側のデフォルトに収束する場合に限り直配置を許容する（latent issue として受容・visible 影響が確認されたら上記 pattern にリファクタ）。
+- 詳細根拠と再 litigate 禁止項目は memory [[project_cacheable-fetch-build-prerender-canonical-2026-06-22]] が SSoT。

@@ -39,6 +39,7 @@
 - **cache タグ直書き禁止** — `CACHE_TAGS` / `getCacheTag`（`src/shared/lib/constants/cache.ts`）を使う。
 - **`prisma.$transaction([...])` 配列形式禁止** — `Promise.all` か interactive `$transaction(async (tx) => {})`。
 - **管理画面の mutation は `executeAdminMutationResult`（`@/admin/lib/admin-action`）を経由** — auth → 権限 → execute → cache 無効化 → 監査の順を手書きしない。
+- **`'use cache'` + `safeFetch` を含む DB query は Suspense + `await connection()` で隔離** — layout 本体 / `generateMetadata` から直配置で呼ぶと build prerender に null fallback が焼き込まれ Cloudflare HIT で恒久汚染する（詳細・例 → `.claude/rules/db-and-domain.md`）。
 
 ## TypeScript
 
