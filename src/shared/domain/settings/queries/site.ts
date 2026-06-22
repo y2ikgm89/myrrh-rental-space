@@ -33,7 +33,7 @@ export type AnalyticsConfig = {
   microsoftClarityId: string | null;
 };
 
-const FALLBACK_LAYOUT_CONFIG: LayoutConfig = {
+export const FALLBACK_LAYOUT_CONFIG: LayoutConfig = {
   containerWidth: LayoutWidth.LG,
   containerWidthCustom: null,
   contentWidth: LayoutWidth.MD,

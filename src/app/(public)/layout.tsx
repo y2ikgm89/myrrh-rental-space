@@ -52,6 +52,7 @@ import {
   getCookieConsentSettings,
   getMaintenanceSettings,
   getSiteLayoutSettings,
+  FALLBACK_LAYOUT_CONFIG,
 } from "@/shared/domain/settings/queries/site";
 import { getContainerMaxCss } from "@/shared/lib/styles/layout-mapper";
 import type { CSSProperties } from "react";
@@ -59,7 +60,11 @@ import { MaintenancePage } from "@/public/components/maintenance-page";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
-import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
+import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
+import {
+  TaxSettingsProvider,
+  type PublicTaxDisplay,
+} from "@/public/contexts/tax-settings";
 import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import "./_styles/public.css";
 
@@ -253,6 +258,102 @@ async function MobileNavWithAuth(): Promise<ReactElement> {
   return <MobileNav authKind={authKind} />;
 }
 
+/**
+ * `<main>` chrome 全体の presentational frame（Server Component）。
+ * Suspense fallback と resolved の両方から **同じコンポーネント** で呼ばれることが重要:
+ * これにより React が同一インスタンスとして reconcile し、children 内の
+ * LenisProvider / NuqsAdapter が Suspense 解決時に再 mount されない。
+ *
+ * 取得した settings は props 経由で渡す。データ取得は `MainShellResolved`（async）が担う。
+ */
+function MainShellFrame({
+  style,
+  isTransparent,
+  taxValue,
+  children,
+}: {
+  readonly style: CSSProperties;
+  readonly isTransparent: boolean;
+  readonly taxValue: PublicTaxDisplay;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <main
+      id="main-content"
+      className="flex-1 pb-[var(--spacing-fluid-md)]"
+      style={style}
+      {...(isTransparent && { "data-header-transparent": "" })}
+    >
+      <TaxSettingsProvider value={taxValue}>
+        <LenisProvider>
+          <NuqsAdapter>{children}</NuqsAdapter>
+        </LenisProvider>
+      </TaxSettingsProvider>
+    </main>
+  );
+}
+
+/**
+ * Suspense fallback 用デフォルト（DB 非依存）。queries 側の null-fallback と同じ値を
+ * 直接 import し、build prerender に **DB query を含めず** に静的シェルを焼く。
+ */
+const DEFAULT_TAX_VALUE: PublicTaxDisplay = {
+  standardRate: DEFAULT_TAX_SETTINGS.standardRate,
+  reducedRate: DEFAULT_TAX_SETTINGS.reducedRate,
+  displayMode: DEFAULT_TAX_SETTINGS.displayModePublic,
+};
+const DEFAULT_MAIN_STYLE = {
+  "--container-max": getContainerMaxCss(FALLBACK_LAYOUT_CONFIG),
+} as CSSProperties;
+
+/**
+ * `<main>` の動的 chrome を解決する async Server Component（Suspense 内で resume）。
+ *
+ * 設計（PR #76c2316b で確立した build-time prerender 汚染回避 pattern の layout 本体への展開）:
+ * - `await connection()` で build prerender を skip して runtime に評価
+ * - 'use cache' + safeFetch fallback の null が静的シェル RSC payload に焼き込まれる構造的問題を回避
+ * - 同じ `MainShellFrame` を fallback と resolved で使うため React reconcile が成立し、
+ *   LenisProvider / NuqsAdapter（Client Provider）が Suspense 解決時に再 mount しない
+ *
+ * 詳細根拠と再 litigate 禁止項目は memory
+ * `project_cacheable-fetch-build-prerender-canonical-2026-06-22` が SSoT。
+ */
+async function MainShellResolved({
+  children,
+}: {
+  readonly children: ReactNode;
+}): Promise<ReactElement> {
+  await connection();
+  const [headerSettings, taxSettings, layoutSettings] = await Promise.all([
+    getHeaderSettings(),
+    getPublicTaxSettings(),
+    getSiteLayoutSettings(),
+  ]);
+  const isTransparent =
+    headerSettings.backgroundMode === HeaderBackgroundMode.transparent;
+  const taxValue: PublicTaxDisplay = {
+    standardRate: taxSettings.standardRate,
+    reducedRate: taxSettings.reducedRate,
+    displayMode: taxSettings.displayModePublic,
+  };
+  const style = {
+    "--container-max": getContainerMaxCss(layoutSettings),
+    ...(isTransparent && {
+      marginTop: "calc(var(--header-height, 0px) * -1)",
+    }),
+  } as CSSProperties;
+
+  return (
+    <MainShellFrame
+      style={style}
+      isTransparent={isTransparent}
+      taxValue={taxValue}
+    >
+      {children}
+    </MainShellFrame>
+  );
+}
+
 export default async function PublicRootLayout({
   children,
 }: Readonly<{
@@ -270,30 +371,10 @@ export default async function PublicRootLayout({
     );
   }
 
-  // 注: getHeaderSettings は HeaderWithData (Suspense 内) でも fetch する。layout 本体は
-  // 静的シェルに焼かれるため build prerender で null fallback になりやすい。layout-level の
-  // backgroundMode 用途では fallback "solid" でも問題ない（透過ヘッダーの負 marginTop は
-  // 適用されないだけ）ため、この箇所は build-time fallback を受容する設計。
-  const [headerSettings, taxSettings, layoutSettings] = await Promise.all([
-    getHeaderSettings(),
-    getPublicTaxSettings(),
-    getSiteLayoutSettings(),
-  ]);
-  const isTransparent =
-    headerSettings.backgroundMode === HeaderBackgroundMode.transparent;
-  const publicTaxDisplay = {
-    standardRate: taxSettings.standardRate,
-    reducedRate: taxSettings.reducedRate,
-    displayMode: taxSettings.displayModePublic,
-  };
-  // サイト全体のコンテンツ最大幅。Container(default variant)/各セクションが参照する
-  // CSS 変数 --container-max を設定値で上書きする。transparent header の負 marginTop も統合。
-  const mainStyle = {
-    "--container-max": getContainerMaxCss(layoutSettings),
-    ...(isTransparent && {
-      marginTop: "calc(var(--header-height, 0px) * -1)",
-    }),
-  } as CSSProperties;
+  // layout 本体では DB query を直配置で呼ばない（build prerender で safeFetch fallback の
+  // null/[] が静的シェルに永続 baking される構造的問題を回避）。`<main>` chrome に必要な
+  // headerSettings / taxSettings / layoutSettings は MainShellResolved (Suspense + connection)
+  // 内で取得する。SSoT: memory `project_cacheable-fetch-build-prerender-canonical-2026-06-22`。
 
   return (
     <html lang="ja">
@@ -339,18 +420,24 @@ export default async function PublicRootLayout({
               <HeaderWithData />
             </Suspense>
 
-            <main
-              id="main-content"
-              className="flex-1 pb-[var(--spacing-fluid-md)]"
-              style={mainStyle}
-              {...(isTransparent && { "data-header-transparent": "" })}
+            {/* `<main>` chrome を Suspense + await connection() で隔離。Footer/Header/
+                AnnouncementBar と同 pattern (PR #76c2316b) を layout 本体にも展開し、
+                build prerender で null fallback が静的シェルに焼き込まれる構造を排除。
+                fallback と resolved で MainShellFrame を共有することで children 内の
+                LenisProvider / NuqsAdapter が Suspense 解決時に再 mount しない。 */}
+            <Suspense
+              fallback={
+                <MainShellFrame
+                  style={DEFAULT_MAIN_STYLE}
+                  isTransparent={false}
+                  taxValue={DEFAULT_TAX_VALUE}
+                >
+                  {children}
+                </MainShellFrame>
+              }
             >
-              <TaxSettingsProvider value={publicTaxDisplay}>
-                <LenisProvider>
-                  <NuqsAdapter>{children}</NuqsAdapter>
-                </LenisProvider>
-              </TaxSettingsProvider>
-            </main>
+              <MainShellResolved>{children}</MainShellResolved>
+            </Suspense>
 
             {/* Footer は Suspense でラップして build-time prerender への焼き込みを回避。
                 内部の `await connection()` で runtime 動的化を保証。実データは resume で流入。 */}

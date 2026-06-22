@@ -47,5 +47,5 @@ paths:
     <Chrome />
   </Suspense>;
   ```
-- 例外的に layout-level の chrome 設定（`backgroundMode` / `containerMax` / `taxSettings` など）は fallback が安全側のデフォルトに収束する場合に限り直配置を許容する（latent issue として受容・visible 影響が確認されたら上記 pattern にリファクタ）。
+- 例外的に許容されるのは `generateMetadata` の `favicon` / `generateViewport` の `themeColor` 程度（fallback が file-convention `favicon.ico` / `#fafafa` に収束し visible 影響皆無）。**layout body の `<main>` chrome に効くもの (header/tax/container 等) は必ず Suspense + connection() に隔離する**。
 - 詳細根拠と再 litigate 禁止項目は memory [[project_cacheable-fetch-build-prerender-canonical-2026-06-22]] が SSoT。
