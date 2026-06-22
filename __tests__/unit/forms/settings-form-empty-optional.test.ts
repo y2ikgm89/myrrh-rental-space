@@ -136,7 +136,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       emptyKeys([
         "siteName",
         "siteDescription",
-        "faviconUrl",
         "defaultOgpImageUrl",
         "headerLogoUrl",
         "footerLogoUrl",

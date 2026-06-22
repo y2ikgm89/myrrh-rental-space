@@ -20,7 +20,6 @@ import { checkRobotsTxtWarnings } from "@/shared/domain/settings/robots-txt";
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
-  faviconUrl: string | null;
   defaultOgpImageUrl: string | null;
   headerLogoUrl: string | null;
   footerLogoUrl: string | null;
