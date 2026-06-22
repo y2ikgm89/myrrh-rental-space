@@ -19,7 +19,6 @@ import { z } from "zod";
 const basicInfoSchema = z.object({
   siteName: z.string().max(100).nullable(),
   siteDescription: z.string().max(500).nullable(),
-  faviconUrl: z.string().max(500).nullable(),
   defaultOgpImageUrl: z.string().max(500).nullable(),
   headerLogoUrl: z.string().max(500).nullable(),
   footerLogoUrl: z.string().max(500).nullable(),
@@ -67,7 +66,6 @@ const seoSettingsSchema = z.object({
 const VALID_BASIC_INFO_INPUT = {
   siteName: "Myrrh Rental Space",
   siteDescription: "レンタルスペース予約管理システム",
-  faviconUrl: "https://example.com/favicon.ico",
   defaultOgpImageUrl: "https://example.com/ogp.png",
   headerLogoUrl: "https://example.com/header-logo.png",
   footerLogoUrl: "https://example.com/footer-logo.png",
@@ -117,7 +115,6 @@ describe("Settings Basic Admin Action Integration", () => {
         const result = basicInfoSchema.safeParse({
           siteName: null,
           siteDescription: null,
-          faviconUrl: null,
           defaultOgpImageUrl: null,
           headerLogoUrl: null,
           footerLogoUrl: null,
@@ -173,12 +170,12 @@ describe("Settings Basic Admin Action Integration", () => {
       });
     });
 
-    describe("faviconUrl / defaultOgpImageUrl / headerLogoUrl / footerLogoUrl", () => {
+    describe("defaultOgpImageUrl / headerLogoUrl / footerLogoUrl (URL 長さ境界)", () => {
       test("500文字のURLはOK", () => {
         const longUrl = "https://example.com/" + "a".repeat(479);
         const result = basicInfoSchema.safeParse({
           ...VALID_BASIC_INFO_INPUT,
-          faviconUrl: longUrl,
+          headerLogoUrl: longUrl,
         });
         expect(result.success).toBe(true);
       });
@@ -187,7 +184,7 @@ describe("Settings Basic Admin Action Integration", () => {
         const longUrl = "a".repeat(501);
         const result = basicInfoSchema.safeParse({
           ...VALID_BASIC_INFO_INPUT,
-          faviconUrl: longUrl,
+          headerLogoUrl: longUrl,
         });
         expect(result.success).toBe(false);
       });

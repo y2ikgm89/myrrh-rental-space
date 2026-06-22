@@ -25,7 +25,6 @@ export type SettingsData = {
   id: string;
   siteName: string | null;
   siteDescription: string | null;
-  faviconUrl: string | null;
   defaultOgpImageUrl: string | null;
   headerLogoUrl: string | null;
   footerLogoUrl: string | null;

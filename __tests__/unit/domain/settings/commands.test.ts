@@ -74,7 +74,6 @@ import { DomainError } from "@/shared/domain/domain-error";
 const BASIC_INFO_INPUT = {
   siteName: "Myrrh Rental Space",
   siteDescription: "レンタルスペース予約サービス",
-  faviconUrl: "https://example.com/favicon.ico",
   defaultOgpImageUrl: "https://example.com/ogp.jpg",
   headerLogoUrl: "https://example.com/header-logo.png",
   footerLogoUrl: "https://example.com/footer-logo.png",
@@ -154,7 +153,7 @@ describe("updateBasicInfo", () => {
         ...BASIC_INFO_INPUT,
         siteName: null,
         siteDescription: null,
-        faviconUrl: null,
+        defaultOgpImageUrl: null,
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);

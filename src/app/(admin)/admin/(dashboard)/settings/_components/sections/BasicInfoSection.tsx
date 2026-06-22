@@ -4,17 +4,20 @@
  * 基本情報セクション
  *
  * サイト名、フッターコピーライト、サイト説明（テキスト情報）と、
- * ロゴ・ファビコン・OGP画像（ブランド画像）を 1 つの保存単位で管理する。
+ * ロゴ・OGP画像（ブランド画像）を 1 つの保存単位で管理する。
  *
- * で value / onChange を bridge、Switch も `useInputControl` + hidden input
+ * `useInputControl` で value / onChange を bridge、Switch も `useInputControl` + hidden input
  * 経由で "on" / "" sync。
  *
  * UI 構造:
  * - テキスト情報 grid（siteName / footerCopyright + siteDescription）
  * - 横線で区切り「ブランド画像」サブセクション
- *   - 4 画像すべて `<fieldset>` + `<legend>` で視覚・semantic 的にグルーピング
+ *   - 各画像は `<fieldset>` + `<legend>` で視覚・semantic 的にグルーピング
  *   - ヘッダー / フッターロゴ: 画像 + 使用 Switch + 補足の複合グループ
- *   - ファビコン / OGP画像: 画像のみの単一グループ（FormLabel は sr-only で legend と冗長性回避）
+ *   - OGP画像: 画像のみの単一グループ
+ *
+ * ファビコンは Next.js file-convention `src/app/favicon.ico` を SSoT として
+ * リポジトリ管理に移行済 (PR-B clean-break)。admin UI からは管理しない。
  */
 
 import { useActionState, useEffect } from "react";
@@ -68,7 +71,6 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
     defaultValue: {
       siteName: settings.siteName ?? "",
       siteDescription: settings.siteDescription ?? "",
-      faviconUrl: settings.faviconUrl ?? "",
       defaultOgpImageUrl: settings.defaultOgpImageUrl ?? "",
       headerLogoUrl: settings.headerLogoUrl ?? "",
       footerLogoUrl: settings.footerLogoUrl ?? "",
@@ -78,14 +80,14 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
     },
   });
 
-  const faviconUrlControl = useInputControl(fields.faviconUrl);
+  // faviconUrl は撤去 (PR-B clean-break)。favicon は Next.js file-convention
+  // `src/app/favicon.ico` を SSoT とし、admin UI からは管理しない。
   const defaultOgpImageUrlControl = useInputControl(fields.defaultOgpImageUrl);
   const headerLogoUrlControl = useInputControl(fields.headerLogoUrl);
   const footerLogoUrlControl = useInputControl(fields.footerLogoUrl);
   const useHeaderLogoControl = useInputControl(fields.useHeaderLogo);
   const useFooterLogoControl = useInputControl(fields.useFooterLogo);
 
-  const faviconUrl = faviconUrlControl.value ?? "";
   const defaultOgpImageUrl = defaultOgpImageUrlControl.value ?? "";
   const headerLogoUrl = headerLogoUrlControl.value ?? "";
   const footerLogoUrl = footerLogoUrlControl.value ?? "";
@@ -104,7 +106,6 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
   return (
     <form {...getFormProps(form)} action={action}>
       {/* MediaPicker / Switch の hidden input 群 */}
-      <input type="hidden" name={fields.faviconUrl.name} value={faviconUrl} />
       <input
         type="hidden"
         name={fields.defaultOgpImageUrl.name}
@@ -198,7 +199,7 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
                 ブランド画像
               </h3>
               <p className="text-xs text-muted-foreground">
-                サイトのロゴ・ファビコン・OGP画像を設定します
+                サイトのロゴ・OGP画像を設定します（ファビコンはリポジトリ管理）
               </p>
             </div>
 
@@ -272,35 +273,21 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
               </fieldset>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <fieldset className="space-y-2 rounded-lg border p-4">
-                <legend className="px-1 text-sm font-medium">ファビコン</legend>
-                <MediaPickerField
-                  value={faviconUrl}
-                  onChange={(url) => faviconUrlControl.change(url)}
-                  disabled={isPending}
-                  aspectRatio="square"
-                  defaultUsage="SITE"
-                  alt="ファビコン"
-                  recommendedSize="正方形 192×192 以上（.ico .png .svg）"
-                />
-              </fieldset>
-
-              <fieldset className="space-y-2 rounded-lg border p-4">
-                <legend className="px-1 text-sm font-medium">
-                  OGP画像（デフォルト）
-                </legend>
-                <MediaPickerField
-                  value={defaultOgpImageUrl}
-                  onChange={(url) => defaultOgpImageUrlControl.change(url)}
-                  disabled={isPending}
-                  aspectRatio="wide"
-                  defaultUsage="SITE"
-                  alt="OGP画像"
-                  recommendedSize="1200×630px（横長 1.91:1）"
-                />
-              </fieldset>
-            </div>
+            {/* favicon は Next.js file-convention `src/app/favicon.ico` に移行済 (PR-B clean-break) */}
+            <fieldset className="space-y-2 rounded-lg border p-4">
+              <legend className="px-1 text-sm font-medium">
+                OGP画像（デフォルト）
+              </legend>
+              <MediaPickerField
+                value={defaultOgpImageUrl}
+                onChange={(url) => defaultOgpImageUrlControl.change(url)}
+                disabled={isPending}
+                aspectRatio="wide"
+                defaultUsage="SITE"
+                alt="OGP画像"
+                recommendedSize="1200×630px（横長 1.91:1）"
+              />
+            </fieldset>
           </div>
 
           {formErrors && formErrors.length > 0 && (

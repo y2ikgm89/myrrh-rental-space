@@ -45,7 +45,6 @@ import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getHeaderSettings,
   getFooterSettings,
-  getFaviconUrl,
 } from "@/shared/domain/settings/queries/display";
 import { HeaderBackgroundMode } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -68,10 +67,9 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import "./_styles/public.css";
 
 export async function generateMetadata(): Promise<Metadata> {
-  // 管理画面でアップロードされた favicon があれば icons に注入する。
-  // 未設定なら icons を省略し、file-convention（src/app/favicon.ico）に委ねる。
-  const faviconUrl = await getFaviconUrl();
-
+  // favicon は Next.js file-convention `src/app/favicon.ico` を SSoT とする
+  // (Next.js 公式 metadata file-conventions canonical)。DB driven favicon は撤去
+  // (PR-B clean-break)。/icon-192, /icon-512, /apple-icon は別 file-convention で配信。
   return {
     metadataBase: new URL(getBaseUrl()),
     title: {
@@ -84,7 +82,6 @@ export async function generateMetadata(): Promise<Metadata> {
         "application/rss+xml": "/feed.xml",
       },
     },
-    ...(faviconUrl ? { icons: { icon: faviconUrl } } : {}),
     // OG / Twitter のサイト共通ベース。画像は file-based opengraph-image / twitter-image
     // が自動注入する。各ページの generateMetadata が openGraph を export すると
     // shallow 置換されるため、siteName / locale 等はページ側でも明示する必要がある。
