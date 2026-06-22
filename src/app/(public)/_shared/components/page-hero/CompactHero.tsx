@@ -59,13 +59,13 @@ export function CompactHero({
           <PortableText blocks={description} />
         </div>
         {buttons.length > 0 && (
-          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <div className="mt-6 grid w-full max-w-sm grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
             {buttons.map((btn) => (
               <Button
                 key={btn.url}
                 variant="editorial"
                 href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-eyebrow"
+                className="min-h-[var(--touch-target-min)] w-full justify-center text-xs uppercase tracking-eyebrow"
                 {...(btn.openInNewTab && { target: "_blank" as const })}
                 label={btn.label}
               />

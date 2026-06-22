@@ -564,10 +564,10 @@ export function EditorialSplitHero({
 
       <div
         className={cn(
-          "col-start-1 row-start-2 flex flex-col bg-background pt-8",
+          "col-start-1 row-start-2 flex flex-col bg-background",
+          "py-[calc(var(--spacing-fluid-md)+env(safe-area-inset-bottom,0px))]",
           padXMobile,
-          "pb-[calc(var(--spacing-fluid-md)+env(safe-area-inset-bottom,0px))]",
-          "md:col-start-2 md:row-start-2 md:pt-6 md:pb-16",
+          "md:col-start-2 md:row-start-2 md:py-16",
           padXDesktop,
         )}
       >
@@ -579,13 +579,13 @@ export function EditorialSplitHero({
 
         {buttons.length > 0 && (
           <ScrollReveal delay={0.4} className="mt-10 md:mt-12">
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <div className="mx-auto grid w-full max-w-sm grid-cols-1 gap-3 sm:mx-0 sm:grid-cols-2 sm:gap-4">
               {buttons.map((btn) => (
                 <Button
                   key={btn.url}
                   variant="editorial"
                   href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                  className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-eyebrow"
+                  className="min-h-[var(--touch-target-min)] w-full justify-center text-xs uppercase tracking-eyebrow"
                   {...(btn.openInNewTab && { target: "_blank" as const })}
                   label={btn.label}
                 />
