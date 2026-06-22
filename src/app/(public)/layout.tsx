@@ -50,13 +50,12 @@ import {
 import { HeaderBackgroundMode } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getCookieConsentSettings,
-  getMaintenanceSettings,
   getSiteLayoutSettings,
   FALLBACK_LAYOUT_CONFIG,
 } from "@/shared/domain/settings/queries/site";
 import { getContainerMaxCss } from "@/shared/lib/styles/layout-mapper";
 import type { CSSProperties } from "react";
-import { MaintenancePage } from "@/public/components/maintenance-page";
+import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
@@ -105,7 +104,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// nonce CSP(strict-dynamic) + PPR(cacheComponents) では route を完全動的(ƒ)に
+// しないと document 直下の framework/chunk スクリプトに per-request nonce が付かず
+// CSP で全ブロックされる（◐ 静的シェルでは nonce 不在＝公開サイトの JS が一切起動しない）。
+// Next.js 16 公式 next-prerender-dynamic-viewport opt-in pattern:
+// generateViewport で dynamic API (connection/cookies/headers) を await し、
+// `<html>` を `<Suspense>` で包む → route 全体が ƒ 化 / framework script に nonce 注入。
+// 公式: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+// admin PR #604 / project_admin-auth-csp-nonce-connection-2026-06-16 と同型。
 export async function generateViewport(): Promise<Viewport> {
+  await connection();
   const footerSettings = await getFooterSettings();
   return {
     width: "device-width",
@@ -126,6 +134,9 @@ export async function generateViewport(): Promise<Viewport> {
  * リクエスト時に評価される
  */
 async function DynamicContent(): Promise<ReactElement> {
+  // `getCookieConsentSettings` / `getAnalyticsConfig` は `'use cache' + safeFetch` 構造のため、
+  // rule .claude/rules/db-and-domain.md §6 に従い `await connection()` で build prerender skip。
+  await connection();
   const [cookieSettings, analyticsConfig, headersList] = await Promise.all([
     getCookieConsentSettings(),
     getAnalyticsConfig(),
@@ -380,125 +391,128 @@ export default async function PublicRootLayout({
 }: Readonly<{
   children: ReactNode;
 }>): Promise<ReactElement> {
-  // メンテナンスモードチェック: 有効時は通常レイアウトをスキップして専用画面を返す
-  const maintenanceSettings = await getMaintenanceSettings();
-  if (maintenanceSettings.maintenanceMode) {
-    return (
-      <html lang="ja">
-        <body className="font-sans antialiased">
-          <MaintenancePage message={maintenanceSettings.maintenanceMessage} />
-        </body>
-      </html>
-    );
-  }
-
   // layout 本体では DB query を直配置で呼ばない（build prerender で safeFetch fallback の
-  // null/[] が静的シェルに永続 baking される構造的問題を回避）。`<main>` chrome に必要な
-  // headerSettings / taxSettings / layoutSettings は MainShellResolved (Suspense + connection)
-  // 内で取得する。SSoT: memory `project_cacheable-fetch-build-prerender-canonical-2026-06-22`。
+  // null/[] が静的シェルに永続 baking される構造的問題を回避）。
+  // - `<main>` chrome に必要な settings → MainShellResolved (Suspense + connection)
+  // - maintenance mode 判定 → MaintenanceGate (Suspense + connection)
+  // SSoT: memory `project_cacheable-fetch-build-prerender-canonical-2026-06-22`。
+  //
+  // `<html>` を `<Suspense>` で包むのは Next.js 16 公式 next-prerender-dynamic-viewport
+  // opt-in pattern: generateViewport の `await connection()` と合わせて route を ƒ 化し、
+  // PPR 静的シェルを emit させない → strict-dynamic CSP nonce が framework script 全てに付与。
+  // 公式: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+  // 同 pattern: admin layout (PR #604 / project_admin-auth-csp-nonce-connection-2026-06-16)。
 
   return (
-    <html lang="ja">
-      <head>
-        <Suspense fallback={null}>
-          <HeadContent />
-        </Suspense>
-      </head>
-      <body className="font-sans antialiased">
-        {/* 全公開ページ共通の構造化データ */}
-        <Suspense fallback={null}>
-          <StructuredDataContent />
-        </Suspense>
-        <AriaLiveProvider>
-          <div className="flex min-h-dvh flex-col pb-16 md:pb-0">
-            {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
-            <SkipLink />
-
-            {/* AnnouncementBarWrapper も Suspense + connection() で build-time prerender に
-                焼かれないようにする。bar が active で無ければ component が null を返すため、
-                fallback は null (skeleton 不要)。 */}
+    <Suspense>
+      <html lang="ja">
+        <head>
+          <Suspense fallback={null}>
+            <HeadContent />
+          </Suspense>
+        </head>
+        <body className="font-sans antialiased">
+          {/* MaintenanceGate: 内部で `await connection()` + `getMaintenanceSettings()`。
+              maintenance ON → MaintenancePage を直接 return（chrome 全部スキップ）。
+              maintenance OFF → children（通常 chrome）を pass-through。
+              `'use cache' + safeFetch` を持つ getMaintenanceSettings を rule §6 通り隔離。 */}
+          <MaintenanceGate>
+            {/* 全公開ページ共通の構造化データ */}
             <Suspense fallback={null}>
-              <AnnouncementBarWrapper />
+              <StructuredDataContent />
             </Suspense>
-            <Suspense
-              fallback={
-                <header
-                  role="banner"
-                  className="flex h-[var(--header-height,4rem)] items-center border-b border-border/50 px-[var(--container-padding)]"
-                >
-                  <div className="h-5 w-24 animate-pulse bg-surface" />
-                  <nav className="ml-auto hidden gap-6 md:flex">
-                    {skeletonKeys(4, "nav-item").map((key) => (
-                      <div
-                        key={key}
-                        className="h-3 w-14 animate-pulse bg-surface"
-                      />
-                    ))}
-                  </nav>
-                </header>
-              }
-            >
-              <HeaderWithData />
-            </Suspense>
+            <AriaLiveProvider>
+              <div className="flex min-h-dvh flex-col pb-16 md:pb-0">
+                {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
+                <SkipLink />
 
-            {/* `<main>` chrome を Suspense + await connection() で隔離。Footer/Header/
-                AnnouncementBar と同 pattern (PR #76c2316b) を layout 本体にも展開し、
-                build prerender で null fallback が静的シェルに焼き込まれる構造を排除。
-                fallback と resolved で同じ MainShellFrame を使うのは **DOM 形状一致による
-                CLS 抑制が目的**（state 保持ではない・Suspense 解決時に providers は
-                1 回 remount される・React 公式仕様）。 */}
-            <Suspense
-              fallback={
-                <MainShellFrame
-                  style={DEFAULT_MAIN_STYLE}
-                  isTransparent={false}
-                  taxValue={DEFAULT_TAX_VALUE}
+                {/* AnnouncementBarWrapper も Suspense + connection() で build-time prerender に
+                    焼かれないようにする。bar が active で無ければ component が null を返すため、
+                    fallback は null (skeleton 不要)。 */}
+                <Suspense fallback={null}>
+                  <AnnouncementBarWrapper />
+                </Suspense>
+                <Suspense
+                  fallback={
+                    <header
+                      role="banner"
+                      className="flex h-[var(--header-height,4rem)] items-center border-b border-border/50 px-[var(--container-padding)]"
+                    >
+                      <div className="h-5 w-24 animate-pulse bg-surface" />
+                      <nav className="ml-auto hidden gap-6 md:flex">
+                        {skeletonKeys(4, "nav-item").map((key) => (
+                          <div
+                            key={key}
+                            className="h-3 w-14 animate-pulse bg-surface"
+                          />
+                        ))}
+                      </nav>
+                    </header>
+                  }
                 >
-                  {children}
-                </MainShellFrame>
-              }
-            >
-              <MainShellResolved>{children}</MainShellResolved>
-            </Suspense>
+                  <HeaderWithData />
+                </Suspense>
 
-            {/* Footer は Suspense でラップして build-time prerender への焼き込みを回避。
-                内部の `await connection()` で runtime 動的化を保証。実データは resume で流入。 */}
-            <Suspense
-              fallback={
-                <footer
-                  role="contentinfo"
-                  className="border-t border-border bg-surface"
+                {/* `<main>` chrome を Suspense + await connection() で隔離。Footer/Header/
+                    AnnouncementBar と同 pattern (PR #76c2316b) を layout 本体にも展開し、
+                    build prerender で null fallback が静的シェルに焼き込まれる構造を排除。
+                    fallback と resolved で同じ MainShellFrame を使うのは **DOM 形状一致による
+                    CLS 抑制が目的**（state 保持ではない・Suspense 解決時に providers は
+                    1 回 remount される・React 公式仕様）。 */}
+                <Suspense
+                  fallback={
+                    <MainShellFrame
+                      style={DEFAULT_MAIN_STYLE}
+                      isTransparent={false}
+                      taxValue={DEFAULT_TAX_VALUE}
+                    >
+                      {children}
+                    </MainShellFrame>
+                  }
                 >
-                  <div className="mx-auto max-w-6xl px-5 py-[var(--spacing-fluid-sm)] md:px-8 md:py-[var(--spacing-fluid-md)]">
-                    <div className="grid gap-10 md:gap-16 md:grid-cols-3">
-                      {skeletonKeys(3, "footer-col").map((key) => (
-                        <div key={key} className="space-y-3">
-                          <div className="h-3 w-20 animate-pulse bg-surface" />
-                          <div className="h-3 w-32 animate-pulse bg-surface" />
-                          <div className="h-3 w-24 animate-pulse bg-surface" />
+                  <MainShellResolved>{children}</MainShellResolved>
+                </Suspense>
+
+                {/* Footer は Suspense でラップして build-time prerender への焼き込みを回避。
+                    内部の `await connection()` で runtime 動的化を保証。実データは resume で流入。 */}
+                <Suspense
+                  fallback={
+                    <footer
+                      role="contentinfo"
+                      className="border-t border-border bg-surface"
+                    >
+                      <div className="mx-auto max-w-6xl px-5 py-[var(--spacing-fluid-sm)] md:px-8 md:py-[var(--spacing-fluid-md)]">
+                        <div className="grid gap-10 md:gap-16 md:grid-cols-3">
+                          {skeletonKeys(3, "footer-col").map((key) => (
+                            <div key={key} className="space-y-3">
+                              <div className="h-3 w-20 animate-pulse bg-surface" />
+                              <div className="h-3 w-32 animate-pulse bg-surface" />
+                              <div className="h-3 w-24 animate-pulse bg-surface" />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </footer>
-              }
-            >
-              <Footer />
-            </Suspense>
-            <Suspense fallback={null}>
-              <MobileNavWithAuth />
-            </Suspense>
+                      </div>
+                    </footer>
+                  }
+                >
+                  <Footer />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <MobileNavWithAuth />
+                </Suspense>
 
-            {/* 動的コンテンツ - リクエスト時にストリーミング */}
-            <Suspense fallback={null}>
-              <DynamicContent />
-            </Suspense>
+                {/* 動的コンテンツ - リクエスト時にストリーミング */}
+                <Suspense fallback={null}>
+                  <DynamicContent />
+                </Suspense>
 
-            {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
-            <AriaLiveRegion />
-          </div>
-        </AriaLiveProvider>
-      </body>
-    </html>
+                {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
+                <AriaLiveRegion />
+              </div>
+            </AriaLiveProvider>
+          </MaintenanceGate>
+        </body>
+      </html>
+    </Suspense>
   );
 }
