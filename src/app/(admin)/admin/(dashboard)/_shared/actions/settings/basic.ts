@@ -49,7 +49,6 @@ export async function updateBasicInfo(
         await updateBasicInfoCommand({
           siteName: emptyToNull(data.siteName),
           siteDescription: emptyToNull(data.siteDescription),
-          faviconUrl: emptyToNull(data.faviconUrl),
           defaultOgpImageUrl: emptyToNull(data.defaultOgpImageUrl),
           headerLogoUrl: emptyToNull(data.headerLogoUrl),
           footerLogoUrl: emptyToNull(data.footerLogoUrl),

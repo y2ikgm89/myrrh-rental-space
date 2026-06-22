@@ -128,27 +128,5 @@ export async function getFooterSettings(): Promise<FooterSettings> {
   };
 }
 
-/**
- * 管理画面でアップロードされた favicon の URL。
- * 未設定時は null を返し、呼び出し側（layout の generateMetadata）は file-convention の
- * favicon（src/app/favicon.ico）に委ねる。
- */
-export async function getFaviconUrl(): Promise<string | null> {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: { faviconUrl: true },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getFaviconUrl",
-  });
-
-  return result?.faviconUrl ?? null;
-}
+// getFaviconUrl was removed (PR-B clean-break). favicon は Next.js
+// file-convention `src/app/favicon.ico` を SSoT とする運用に移行済。
