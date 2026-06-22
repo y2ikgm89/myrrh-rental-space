@@ -152,8 +152,15 @@ async function DynamicContent(): Promise<ReactElement> {
 
 /**
  * Head内の動的コンテンツ: Analytics設定による検索エンジン検証タグ
+ *
+ * `await connection()` 必須（defense-in-depth）: `getAnalyticsConfig()` は内部で
+ * `'use cache' + safeFetch fallback (defaults)` 構造のため、Suspense ラップだけだと
+ * build prerender 経路で eager 評価される。現状は GA OFF 同士で結果一致で実害ゼロだが、
+ * admin が GA / Bing / Search Console を有効化した瞬間に静的シェルが OFF を恒久 baking
+ * する構造的同型違反になる。`connection()` で runtime resume を強制し予防。
  */
 async function HeadContent(): Promise<ReactElement> {
+  await connection();
   const config = await getAnalyticsConfig();
 
   return (
@@ -180,8 +187,16 @@ async function HeadContent(): Promise<ReactElement> {
 /**
  * 構造化データ: @graph パターン（Organization + WebSite）
  * エンティティ間の @id 相互参照でナレッジグラフ理解を向上
+ *
+ * `await connection()` 必須: 内部の `getOrganizationSettings()` は
+ * `'use cache' + safeFetch({fallback: null})` のため、Suspense ラップだけでは
+ * build prerender 経路で eager 評価され、placeholder DATABASE_URL で null fallback が
+ * 静的シェルに永続 baking される（businessName/phoneNumber/address 等が SITE_DEFAULTS
+ * + localhost:3000 に collapse して全公開 route の JSON-LD に焼き込まれる）。SEO への
+ * 直接影響あり。`connection()` で runtime resume を強制し、Cloud Run 実 DB から resolve。
  */
 async function StructuredDataContent(): Promise<ReactElement> {
+  await connection();
   const graphData = await getGraphJsonLdData();
   return (
     <GraphJsonLd
@@ -260,9 +275,14 @@ async function MobileNavWithAuth(): Promise<ReactElement> {
 
 /**
  * `<main>` chrome 全体の presentational frame（Server Component）。
- * Suspense fallback と resolved の両方から **同じコンポーネント** で呼ばれることが重要:
- * これにより React が同一インスタンスとして reconcile し、children 内の
- * LenisProvider / NuqsAdapter が Suspense 解決時に再 mount されない。
+ *
+ * fallback と resolved の両方から同じコンポーネントで呼ばれるが、React Suspense semantics 上
+ * fallback → resolved の遷移では fallback subtree が unmount され resolved subtree が
+ * fresh に mount される（React 19 公式: state 保持には `<Activity mode="hidden">` が必要）。
+ * したがって LenisProvider / NuqsAdapter は初回 Suspense 解決時に 1 回 remount する。
+ * これは初回ロード時の一度きりで user-perceptible 影響は無く、同一 frame コンポーネントを
+ * 使うのは **fallback DOM 形状を resolved と一致させて CLS / レイアウトシフトを防ぐ**目的
+ * （state 保持目的ではない）。
  *
  * 取得した settings は props 経由で渡す。データ取得は `MainShellResolved`（async）が担う。
  */
@@ -312,8 +332,9 @@ const DEFAULT_MAIN_STYLE = {
  * 設計（PR #76c2316b で確立した build-time prerender 汚染回避 pattern の layout 本体への展開）:
  * - `await connection()` で build prerender を skip して runtime に評価
  * - 'use cache' + safeFetch fallback の null が静的シェル RSC payload に焼き込まれる構造的問題を回避
- * - 同じ `MainShellFrame` を fallback と resolved で使うため React reconcile が成立し、
- *   LenisProvider / NuqsAdapter（Client Provider）が Suspense 解決時に再 mount しない
+ * - fallback と resolved で同じ `MainShellFrame` を使うのは **DOM レイアウト一致による CLS 抑制**
+ *   が目的。React Suspense 解決時には LenisProvider / NuqsAdapter は 1 回 unmount + remount
+ *   される（公式 semantics・初回ロード時のみで実害皆無）。state 保持目的では使えない。
  *
  * 詳細根拠と再 litigate 禁止項目は memory
  * `project_cacheable-fetch-build-prerender-canonical-2026-06-22` が SSoT。
@@ -423,8 +444,9 @@ export default async function PublicRootLayout({
             {/* `<main>` chrome を Suspense + await connection() で隔離。Footer/Header/
                 AnnouncementBar と同 pattern (PR #76c2316b) を layout 本体にも展開し、
                 build prerender で null fallback が静的シェルに焼き込まれる構造を排除。
-                fallback と resolved で MainShellFrame を共有することで children 内の
-                LenisProvider / NuqsAdapter が Suspense 解決時に再 mount しない。 */}
+                fallback と resolved で同じ MainShellFrame を使うのは **DOM 形状一致による
+                CLS 抑制が目的**（state 保持ではない・Suspense 解決時に providers は
+                1 回 remount される・React 公式仕様）。 */}
             <Suspense
               fallback={
                 <MainShellFrame
