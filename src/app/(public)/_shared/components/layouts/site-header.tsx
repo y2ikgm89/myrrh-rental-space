@@ -352,7 +352,7 @@ export function Header({
         scrolled && "border-b border-border/50",
       )}
     >
-      <div className="mx-auto grid max-w-[var(--container-header-max)] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 md:grid-cols-3 md:gap-10 md:px-8 md:py-5 lg:gap-16">
+      <div className="mx-auto grid max-w-[var(--container-header-max)] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-5 xl:gap-16">
         {/* Brand — 左列（container の justify-items-start が default 適用） */}
         <SiteBrand brand={brand} variant="header" />
 
@@ -360,9 +360,9 @@ export function Header({
         {items.length > 0 && (
           <NavigationMenu.Root
             aria-label="メインナビゲーション"
-            className="relative hidden md:col-start-2 md:flex md:justify-self-center"
+            className="relative hidden lg:col-start-2 lg:flex lg:justify-self-center"
           >
-            <NavigationMenu.List className="flex items-center gap-4 lg:gap-8">
+            <NavigationMenu.List className="flex items-center gap-6 xl:gap-8">
               {items.map((item) => (
                 <NavigationMenu.Item key={item.id}>
                   {item.children.length > 0 ? (
@@ -401,8 +401,8 @@ export function Header({
           </NavigationMenu.Root>
         )}
 
-        {/* Desktop Auth + CTA — 右列（md:justify-self-end で cell 内右端 / 認証内部 gap-5 / CTA 間 gap-8 で暗黙分離） */}
-        <div className="hidden items-center gap-8 md:col-start-3 md:flex md:justify-self-end">
+        {/* Desktop Auth + CTA — 右列（lg:justify-self-end で cell 内右端 / 認証内部 gap-5 / CTA 間 gap-8 で暗黙分離） */}
+        <div className="hidden items-center gap-8 lg:col-start-3 lg:flex lg:justify-self-end">
           {authSlot?.variant === "authenticated" && (
             <div className="flex items-center gap-5">
               <Link
@@ -435,7 +435,7 @@ export function Header({
         {/* Mobile — Radix Dialog (focus trap + body scroll lock + Esc) */}
         <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
-            className="inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground lg:hidden"
             aria-label="メニューを開く"
           >
             <IconMenu2
@@ -445,8 +445,8 @@ export function Header({
             />
           </Dialog.Trigger>
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl md:hidden" />
-            <Dialog.Content className="fixed inset-0 z-50 flex flex-col md:hidden">
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl lg:hidden" />
+            <Dialog.Content className="fixed inset-0 z-50 flex flex-col lg:hidden">
               <Dialog.Title className="sr-only">
                 ナビゲーションメニュー
               </Dialog.Title>
