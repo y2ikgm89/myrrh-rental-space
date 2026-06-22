@@ -19,6 +19,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import {
   Header,
   type HeaderAuthSlot,
@@ -45,7 +46,6 @@ import {
   getHeaderSettings,
   getFooterSettings,
   getFaviconUrl,
-  type HeaderSettings,
 } from "@/shared/domain/settings/queries/display";
 import { HeaderBackgroundMode } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -202,20 +202,21 @@ async function resolvePublicAuthKind(): Promise<PublicAuthKind> {
 }
 
 /**
- * Header ラッパー: DB からナビゲーション + 認証状態を取得
+ * Header ラッパー: DB からヘッダー設定 + ナビゲーション + 認証状態を取得
  *
- * ブランド（サイト名・ロゴ・ロゴ使用フラグ）は `headerSettings.brand` に
- * Settings から既にロード済みのため、ここでは追加フェッチ不要。
- *
- * PPR: `getCurrentCustomerUser()` は uncached なため、この async SC は必ず
- * 親レイアウトの `<Suspense>` 内で呼び出すこと。
+ * 設計上の重要事項（build-time prerender 汚染の構造的回避）:
+ * - `getHeaderSettings()` を **この Suspense 内 SC で fetch する**（layout 本体から
+ *   props で渡さない）。layout 本体は静的シェルに焼き込まれるため、build 時に placeholder
+ *   DATABASE_URL で接続失敗→safeFetch fallback の null が brand に焼かれる問題を回避する。
+ * - `await connection()` で runtime 動的レンダリングを保証（`'use cache'` 関数だけだと
+ *   Next.js が build prerender に焼き込んでしまうため）。
+ * - canonical: HeaderWithData / Footer / AnnouncementBarWrapper を Suspense + connection()
+ *   で対称化することで、PPR の static shell は skeleton のみ、実データは runtime resume。
  */
-async function HeaderWithData({
-  headerSettings,
-}: {
-  headerSettings: HeaderSettings;
-}): Promise<ReactElement> {
-  const [navItems, authKind] = await Promise.all([
+async function HeaderWithData(): Promise<ReactElement> {
+  await connection();
+  const [headerSettings, navItems, authKind] = await Promise.all([
+    getHeaderSettings(),
     getHeaderNavigation(),
     resolvePublicAuthKind(),
   ]);
@@ -269,6 +270,10 @@ export default async function PublicRootLayout({
     );
   }
 
+  // 注: getHeaderSettings は HeaderWithData (Suspense 内) でも fetch する。layout 本体は
+  // 静的シェルに焼かれるため build prerender で null fallback になりやすい。layout-level の
+  // backgroundMode 用途では fallback "solid" でも問題ない（透過ヘッダーの負 marginTop は
+  // 適用されないだけ）ため、この箇所は build-time fallback を受容する設計。
   const [headerSettings, taxSettings, layoutSettings] = await Promise.all([
     getHeaderSettings(),
     getPublicTaxSettings(),
@@ -307,8 +312,12 @@ export default async function PublicRootLayout({
             {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
             <SkipLink />
 
-            {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
-            <AnnouncementBarWrapper />
+            {/* AnnouncementBarWrapper も Suspense + connection() で build-time prerender に
+                焼かれないようにする。bar が active で無ければ component が null を返すため、
+                fallback は null (skeleton 不要)。 */}
+            <Suspense fallback={null}>
+              <AnnouncementBarWrapper />
+            </Suspense>
             <Suspense
               fallback={
                 <header
@@ -327,7 +336,7 @@ export default async function PublicRootLayout({
                 </header>
               }
             >
-              <HeaderWithData headerSettings={headerSettings} />
+              <HeaderWithData />
             </Suspense>
 
             <main
@@ -343,7 +352,30 @@ export default async function PublicRootLayout({
               </TaxSettingsProvider>
             </main>
 
-            <Footer />
+            {/* Footer は Suspense でラップして build-time prerender への焼き込みを回避。
+                内部の `await connection()` で runtime 動的化を保証。実データは resume で流入。 */}
+            <Suspense
+              fallback={
+                <footer
+                  role="contentinfo"
+                  className="border-t border-border bg-surface"
+                >
+                  <div className="mx-auto max-w-6xl px-5 py-[var(--spacing-fluid-sm)] md:px-8 md:py-[var(--spacing-fluid-md)]">
+                    <div className="grid gap-10 md:gap-16 md:grid-cols-3">
+                      {skeletonKeys(3, "footer-col").map((key) => (
+                        <div key={key} className="space-y-3">
+                          <div className="h-3 w-20 animate-pulse bg-surface" />
+                          <div className="h-3 w-32 animate-pulse bg-surface" />
+                          <div className="h-3 w-24 animate-pulse bg-surface" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </footer>
+              }
+            >
+              <Footer />
+            </Suspense>
             <Suspense fallback={null}>
               <MobileNavWithAuth />
             </Suspense>

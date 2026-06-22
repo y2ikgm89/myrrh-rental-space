@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
@@ -142,6 +143,12 @@ const CONTACT_LINK_CLASS =
 const HEADING_CLASS = "text-eyebrow uppercase text-muted-foreground";
 
 export async function Footer(): Promise<ReactElement> {
+  // build-time prerender 汚染を構造的に回避する。Footer は全て 'use cache' 関数依存だが
+  // (info / footerNav / footerSettings / socialLinks / footerTerms)、build 時に placeholder
+  // DATABASE_URL で接続失敗→safeFetch fallback の null/[] が静的シェルに焼き込まれる問題が
+  // ある (PR の真因)。`await connection()` で runtime 動的レンダリングを強制し、必ず Cloud Run
+  // の実 DB から real data を取り直す。親 layout は本 Footer を Suspense でラップしている。
+  await connection();
   const [info, footerNav, footerSettings, socialLinks, footerTerms] =
     await Promise.all([
       getBusinessInfo(),
