@@ -40,7 +40,6 @@ import {
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
-import { DEFAULT_PAGE_HERO } from "../src/shared/lib/sections/definitions/page-hero";
 import {
   buildInitialFeatureModules,
   parseDisabledFeatureModulesEnv,
@@ -2338,30 +2337,6 @@ async function seedPages() {
     await import("@/shared/domain/pages/system-pages-commands");
   await bootstrapSystemPagesCommand(prisma);
   console.log("✅ System pages ensured");
-
-  // ホームページに page-hero セクション（order=-1）を idempotent に挿入
-  const homePage = await prisma.page.findUnique({
-    where: { slug: "home" },
-    select: { id: true },
-  });
-  if (homePage) {
-    const existingHero = await prisma.section.findFirst({
-      where: { pageId: homePage.id, type: "page-hero" },
-      select: { id: true },
-    });
-    if (!existingHero) {
-      await prisma.section.create({
-        data: {
-          pageId: homePage.id,
-          type: "page-hero",
-          config: DEFAULT_PAGE_HERO,
-          order: -1,
-          isActive: true,
-        },
-      });
-      console.log("✅ Inserted page-hero section for home page");
-    }
-  }
 }
 
 // =============================================================================

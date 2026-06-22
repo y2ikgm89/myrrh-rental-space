@@ -20,12 +20,19 @@ describe("DEFAULT_PAGE_SECTIONS", () => {
     expect(homepagePrefixed).toHaveLength(0);
   });
 
-  test("home defaults の order は重複なしの非負整数", () => {
+  test("home defaults の order は重複なしの整数（page-hero sentinel order=-1 を許容）", () => {
     const home = DEFAULT_PAGE_SECTIONS["home"] ?? [];
     const orders = home.map((s) => s.order);
     expect(new Set(orders).size).toBe(orders.length);
-    for (const o of orders) {
-      expect(o).toBeGreaterThanOrEqual(0);
+    // page-hero は構造的に先頭固定 (order=-1 sentinel; reorderPageSectionsCommand と整合)。
+    // 他 type は非負整数。
+    for (const section of home) {
+      expect(Number.isInteger(section.order)).toBe(true);
+      if (section.type === "page-hero") {
+        expect(section.order).toBe(-1);
+      } else {
+        expect(section.order).toBeGreaterThanOrEqual(0);
+      }
     }
   });
 

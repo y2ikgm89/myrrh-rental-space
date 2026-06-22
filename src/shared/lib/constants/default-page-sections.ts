@@ -5,8 +5,10 @@
  * 各ページに適したセクションタイプとconfigを定義。
  */
 
+import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { createBlock, createSpan } from "@/shared/lib/portable-text";
+import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero/defaults";
 
 /**
  * textarea -> block 移行 helper
@@ -77,6 +79,15 @@ export function createDefaultCustomPageSections(
  */
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [
+    {
+      type: "page-hero",
+      config: asPrismaInputJsonValue(
+        DEFAULT_PAGE_HERO,
+        "DEFAULT_PAGE_HERO is not a valid Prisma.InputJsonValue",
+      ),
+      order: -1,
+      isActive: true,
+    },
     {
       type: "features",
       config: {

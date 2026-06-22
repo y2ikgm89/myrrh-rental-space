@@ -3,7 +3,7 @@
  * prisma/seed.ts（Bun）や system-pages-commands から利用可能
  */
 
-import { Prisma } from "@generated/prisma/client";
+import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 
 export function isPrismaInputJsonValue(
