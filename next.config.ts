@@ -244,13 +244,25 @@ const nextConfig: NextConfig = {
       // 公開ページ blanket: Cache-Control public のみ。Cache-Tag は EMIT しない。
       // 私的 blocklist が同一 source match 配下に入っても Cache-Tag が継承されないよう、
       // タグは per-public-source で個別に付与する。
+      //
+      // 4 ディレクティブの意味（公式準拠・Cloudflare canonical pattern）:
+      // - public:                       共有キャッシュ (CF) と private キャッシュ (browser) 両方に保存可
+      // - max-age=0, must-revalidate:   browser は毎回 CF edge へ軽量 revalidate（304 主体）
+      // - s-maxage=3600:                CF edge は 1 時間キャッシュ
+      // - stale-while-revalidate=3600:  CF 失効後 1 時間は stale を返しつつ背後で更新
+      //
+      // 旧設計（max-age 不在）はブラウザの heuristic caching（Last-Modified ベースの推測）に
+      // フォールバックして予測不能だった。max-age=0+must-revalidate で「admin 編集 → CF 自動 purge →
+      // 次の browser access で即時新コンテンツ」が確実に成立する（再訪問者の stale window 解消）。
+      // 公式: https://developers.cloudflare.com/cache/concepts/cache-control/
       // ============================================================
       {
         source: "/:path*",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, s-maxage=3600, stale-while-revalidate=3600",
+            value:
+              "public, max-age=0, must-revalidate, s-maxage=3600, stale-while-revalidate=3600",
           },
         ],
       },

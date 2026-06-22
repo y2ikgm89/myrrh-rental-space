@@ -679,9 +679,11 @@ describe("architecture boundaries", () => {
 
     const catchAllIndex = source.indexOf('source: "/:path*"');
     expect(catchAllIndex).toBeGreaterThanOrEqual(0);
-    // catch-all は公開キャッシュ（エッジキャッシュ維持のため no-store にしない）
+    // catch-all は公開キャッシュ（エッジキャッシュ維持のため no-store にしない）。
+    // max-age=0+must-revalidate でブラウザを毎回 CF edge へ revalidate させ、
+    // s-maxage=3600 で CF が 1 時間キャッシュ。canonical Cloudflare pattern。
     expect(valueAfter(catchAllIndex)).toBe(
-      "public, s-maxage=3600, stale-while-revalidate=3600",
+      "public, max-age=0, must-revalidate, s-maxage=3600, stale-while-revalidate=3600",
     );
 
     // 認証・個人情報を含むルートは origin で no-store（RFC 9111 / MDN）。
@@ -1977,6 +1979,7 @@ describe("next.config Cache-Tag emission contract", () => {
     const tag = blanket!.headers.find((h) => h.key === "Cache-Tag");
     expect(tag).toBeUndefined();
     const cc = blanket!.headers.find((h) => h.key === "Cache-Control");
-    expect(cc?.value).toMatch(/^public, s-maxage=/);
+    // canonical: public, max-age=0, must-revalidate, s-maxage=..., stale-while-revalidate=...
+    expect(cc?.value).toMatch(/^public, max-age=0, must-revalidate, s-maxage=/);
   });
 });
