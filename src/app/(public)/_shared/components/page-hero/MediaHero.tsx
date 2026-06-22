@@ -168,13 +168,13 @@ export function MediaHero({
 
         {hasButtons && (
           <ScrollReveal delay={0.5}>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4 md:mt-10">
+            <div className="mx-auto mt-8 grid w-full max-w-sm grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:mt-10">
               {buttons.map((btn) => (
                 <Button
                   key={btn.url}
                   variant="editorial"
                   href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                  className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-eyebrow"
+                  className="min-h-[var(--touch-target-min)] w-full justify-center text-xs uppercase tracking-eyebrow"
                   {...(btn.openInNewTab && { target: "_blank" as const })}
                   label={btn.label}
                 />
