@@ -1074,9 +1074,11 @@ model Settings {
   updatedAt DateTime @updatedAt
 
   // Site Basic Info
+  // NOTE: faviconUrl 列は PR #699 (expand) で全 read/write 参照撤去済。本 PR (contract)
+  // で DROP COLUMN を実行する。favicon は Next.js file-convention `src/app/favicon.ico` を
+  // SSoT として運用 (https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons)。
   siteName           String?
   siteDescription    String? @db.Text
-  faviconUrl         String?
   defaultOgpImageUrl String?
   headerLogoUrl      String?
   footerLogoUrl      String?
