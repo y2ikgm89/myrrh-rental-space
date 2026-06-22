@@ -76,6 +76,23 @@ describe("PAGE_TEMPLATES", () => {
     }
   });
 
+  it("requiredSectionTypes are present in DEFAULT_PAGE_SECTIONS (drift gate)", () => {
+    // SSoT 分裂回帰防止: 各テンプレートの requiredSectionTypes は、そのテンプレートの
+    // defaultSections（= DEFAULT_PAGE_SECTIONS から解決される唯一のシード源）に
+    // 必ず含まれていなければならない。両者がズレるとシード生成直後の公開ページが
+    // 「core セクション欠落」状態でレンダリングされる silent bug を引き起こす。
+    for (const [slug, tpl] of Object.entries(PAGE_TEMPLATES)) {
+      const required = tpl.requiredSectionTypes ?? [];
+      const defaultTypes = tpl.defaultSections.map((s) => s.type);
+      for (const type of required) {
+        expect(
+          defaultTypes.includes(type),
+          `template "${slug}" requires section type "${type}" but it is missing from DEFAULT_PAGE_SECTIONS (defaultSections: [${defaultTypes.join(", ")}])`,
+        ).toBe(true);
+      }
+    }
+  });
+
   it("page-specific sections are gated to their templates", () => {
     // reservation は space-list / space-showcase を含まない (二重表示防止)
     expect(PAGE_TEMPLATES["reservation"]?.allowedSectionTypes).not.toContain(

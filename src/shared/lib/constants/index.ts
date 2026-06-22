@@ -18,10 +18,6 @@ export {
 export { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "./cache";
 export type { CacheLife, CacheTag } from "./cache";
 export {
-  DEFAULT_PAGE_SECTIONS,
-  type DefaultSectionDef,
-} from "./default-page-sections";
-export {
   ADMIN_SPACE_MANAGEMENT_TABS,
   type AdminSpaceManagementTab,
 } from "./admin-space-management";
