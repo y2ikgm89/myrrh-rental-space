@@ -2,7 +2,6 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import {
-  maskCloudflareToken,
   maskGoogleMapsKey,
   maskResendKey,
   maskTurnstileKey,
@@ -10,7 +9,6 @@ import {
 import { safeDecrypt } from "@/shared/lib/crypto";
 import { serverEnv } from "@/shared/lib/env/server";
 import type {
-  CloudflareConfig,
   CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
@@ -139,56 +137,6 @@ export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
   }
 
   return safeDecrypt(settings.googleMapsApiKey);
-}
-
-export async function getCloudflareConfig(): Promise<CloudflareConfig> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      cloudflareZoneId: true,
-      cloudflareApiToken: true,
-      cloudflareLastTestedAt: true,
-      cloudflareConnectionStatus: true,
-    },
-  });
-
-  return {
-    zoneId: settings?.cloudflareZoneId || null,
-    apiTokenMasked: settings?.cloudflareApiToken
-      ? maskCloudflareToken(safeDecrypt(settings.cloudflareApiToken) || "****")
-      : null,
-    lastTestedAt: settings?.cloudflareLastTestedAt || null,
-    connectionStatus: parseConnectionStatus(
-      settings?.cloudflareConnectionStatus,
-    ),
-  };
-}
-
-export async function getDecryptedCloudflareCredentials(): Promise<{
-  zoneId: string;
-  apiToken: string;
-} | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      cloudflareZoneId: true,
-      cloudflareApiToken: true,
-    },
-  });
-
-  if (!settings?.cloudflareZoneId || !settings.cloudflareApiToken) {
-    return null;
-  }
-
-  const apiToken = safeDecrypt(settings.cloudflareApiToken);
-  if (!apiToken) {
-    return null;
-  }
-
-  return {
-    zoneId: settings.cloudflareZoneId,
-    apiToken,
-  };
 }
 
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {

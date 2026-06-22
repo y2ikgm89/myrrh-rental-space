@@ -5,7 +5,6 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
-  testCloudflareConnection,
   testGoogleMapsConnection,
   testResendConnection,
   testTurnstileConnection,
@@ -17,7 +16,6 @@ import {
 import {
   resendFormSchema,
   googleMapsFormSchema,
-  cloudflareFormSchema,
   turnstileFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -26,16 +24,13 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   addCustomApiKey as addCustomApiKeyCommand,
-  clearCloudflareSettings as clearCloudflareSettingsCommand,
   clearGoogleMapsSettings as clearGoogleMapsSettingsCommand,
   clearResendSettings as clearResendSettingsCommand,
   clearTurnstileSettings as clearTurnstileSettingsCommand,
   deleteCustomApiKey as deleteCustomApiKeyCommand,
-  recordCloudflareConnectionStatus,
   recordGoogleMapsConnectionStatus,
   recordResendConnectionStatus,
   recordTurnstileConnectionStatus,
-  updateCloudflareSettings as updateCloudflareSettingsCommand,
   updateGoogleMapsSettings as updateGoogleMapsSettingsCommand,
   updateResendSettings as updateResendSettingsCommand,
   updateTurnstileSettings as updateTurnstileSettingsCommand,
@@ -258,90 +253,6 @@ export async function clearGoogleMapsKeys(): Promise<MutationResult> {
     action: "update",
     execute: async () => {
       await clearGoogleMapsSettingsCommand();
-      return null;
-    },
-    afterSuccess: refreshSettingsCache,
-  });
-}
-
-/**
- * Cloudflare 設定更新 — conform `useActionState` 統合経路。
- *
- * `useActionState` + `useForm` (conform) に clean break 移行。
- */
-export async function updateCloudflareSettings(
-  _prev: SubmissionResult | undefined,
-  formData: FormData,
-): Promise<SubmissionResult> {
-  return executeConformMutation(
-    formData,
-    cloudflareFormSchema,
-    async (data) => {
-      const result = await executeAdminMutationResult({
-        resource: "settings",
-        action: "update",
-        execute: async () => {
-          await updateCloudflareSettingsCommand({
-            cloudflareZoneId: data.cloudflareZoneId
-              ? data.cloudflareZoneId
-              : null,
-            cloudflareApiToken: data.cloudflareApiToken
-              ? data.cloudflareApiToken
-              : null,
-          });
-          return null;
-        },
-        afterSuccess: refreshSettingsCache,
-      });
-      if (isMutationError(result)) {
-        return { ok: false, error: result.error };
-      }
-      return { ok: true };
-    },
-  );
-}
-
-export async function testCloudflareConnectionAction(
-  zoneId: string,
-  apiToken: string,
-): Promise<MutationResult<{ zoneName?: string; plan?: string }>> {
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      const result = await testCloudflareConnection(zoneId, apiToken);
-      await recordCloudflareConnectionStatus(
-        result.success ? "connected" : "error",
-      );
-      refreshSettingsCache();
-
-      if (!result.success) {
-        throw new DomainError(
-          result.error || "接続テストに失敗しました",
-          "VALIDATION",
-        );
-      }
-
-      return omitUndefined({
-        zoneName:
-          typeof result.metadata?.["zoneName"] === "string"
-            ? result.metadata["zoneName"]
-            : undefined,
-        plan:
-          typeof result.metadata?.["plan"] === "string"
-            ? result.metadata["plan"]
-            : undefined,
-      });
-    },
-  });
-}
-
-export async function clearCloudflareKeys(): Promise<MutationResult> {
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await clearCloudflareSettingsCommand();
       return null;
     },
     afterSuccess: refreshSettingsCache,

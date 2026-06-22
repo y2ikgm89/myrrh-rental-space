@@ -137,17 +137,6 @@ export const resendFormSchema = z.object({
 export type ResendFormInput = z.infer<typeof resendFormSchema>;
 
 // =============================================================================
-// Integrations > Cloudflare
-// =============================================================================
-
-export const cloudflareFormSchema = z.object({
-  cloudflareZoneId: z.string().optional(),
-  cloudflareApiToken: z.string().optional(),
-});
-
-export type CloudflareFormInput = z.infer<typeof cloudflareFormSchema>;
-
-// =============================================================================
 // Integrations > Google Calendar
 // =============================================================================
 

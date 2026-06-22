@@ -1,7 +1,6 @@
 import "server-only";
 
 import {
-  getCloudflareConfig as getCloudflareConfigQuery,
   getCustomApiKeys as getCustomApiKeysQuery,
   getCustomApiKeyValue as getCustomApiKeyValueQuery,
   getGoogleMapsConfig as getGoogleMapsConfigQuery,
@@ -9,7 +8,6 @@ import {
   getTurnstileConfig as getTurnstileConfigQuery,
 } from "@/shared/domain/settings/api-key-queries";
 import type {
-  CloudflareConfig,
   CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
@@ -18,7 +16,6 @@ import type {
 import { requireAdminPermission } from "./_helpers";
 
 export type {
-  CloudflareConfig,
   CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
@@ -38,11 +35,6 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
   await requireAdminPermission("settings", "read");
   return getGoogleMapsConfigQuery();
-}
-
-export async function getCloudflareConfig(): Promise<CloudflareConfig> {
-  await requireAdminPermission("settings", "read");
-  return getCloudflareConfigQuery();
 }
 
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {

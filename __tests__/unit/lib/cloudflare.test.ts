@@ -39,12 +39,24 @@ mock.module("@/shared/lib/constants", () => ({
   getBaseUrl: () => "http://localhost:3000",
 }));
 
-const mockGetCredentials = mock<
-  () => Promise<{ zoneId: string; apiToken: string } | null>
->(() => Promise.resolve({ zoneId: "a".repeat(32), apiToken: "test-token" }));
+// env-only credentials: `cloudflare.ts` は `serverEnv` から CLOUDFLARE_ZONE_ID /
+// CLOUDFLARE_API_TOKEN を読む。test では `serverEnv` モジュール自体を mock して
+// credentials の有無を切り替える（process.env 直接書き換えは @t3-oss/env-nextjs の
+// validate キャッシュを bypass できないため不可）。
+//
+// 注: import 側は `serverEnv` 識別子を 1 度しか解決しないため、テスト中の差し替えは
+// **同じオブジェクト参照を保ったままプロパティを mutate** する（reassign 不可）。
+const mockServerEnv: {
+  CLOUDFLARE_ZONE_ID: string | undefined;
+  CLOUDFLARE_API_TOKEN: string | undefined;
+} = {
+  CLOUDFLARE_ZONE_ID: "a".repeat(32),
+  CLOUDFLARE_API_TOKEN: "test-token",
+};
 
-mock.module("@/shared/domain/settings/api-key-queries", () => ({
-  getDecryptedCloudflareCredentials: mockGetCredentials,
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: mockServerEnv,
+  isProduction: () => false,
 }));
 
 const { purgeCloudflareCache } = await import("@/shared/lib/cloudflare");
@@ -84,11 +96,9 @@ describe("purgeCloudflareCache - retry", () => {
   let setTimeoutSpy: ReturnType<typeof spyOn<typeof globalThis, "setTimeout">>;
 
   beforeEach(() => {
-    mockGetCredentials.mockReset();
-    mockGetCredentials.mockResolvedValue({
-      zoneId: "a".repeat(32),
-      apiToken: "test-token",
-    });
+    // 同一参照を維持したままプロパティを mutate（reassign は import side に反映されない）
+    mockServerEnv.CLOUDFLARE_ZONE_ID = "a".repeat(32);
+    mockServerEnv.CLOUDFLARE_API_TOKEN = "test-token";
 
     // backoff の sleep を即時実行（test 高速化）
     setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
@@ -229,7 +239,8 @@ describe("purgeCloudflareCache - retry", () => {
   });
 
   test("credentials 未設定時は success: true で no-op", async () => {
-    mockGetCredentials.mockResolvedValue(null);
+    mockServerEnv.CLOUDFLARE_ZONE_ID = undefined;
+    mockServerEnv.CLOUDFLARE_API_TOKEN = undefined;
     const result = await purgeCloudflareCache(["https://example.com/page"]);
     expect(result.success).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();

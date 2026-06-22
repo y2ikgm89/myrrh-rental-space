@@ -19,7 +19,6 @@ export { StripeSection } from "./StripeSection";
 export { ResendSection } from "./ResendSection";
 export { TurnstileSection } from "./TurnstileSection";
 export { GoogleMapsSection } from "./GoogleMapsSection";
-export { CloudflareSection } from "./CloudflareSection";
 export { GoogleCalendarSection } from "./GoogleCalendarSection";
 export { GoogleBusinessProfileSection } from "./GoogleBusinessProfileSection";
 export { ICalFeedSection } from "./ICalFeedSection";

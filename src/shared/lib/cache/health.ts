@@ -31,7 +31,7 @@ export async function assertCloudflareCredentials(): Promise<void> {
   if (process.env["NODE_ENV"] !== "production") return;
 
   try {
-    const creds = await getCloudflareCredentialsValidated();
+    const creds = getCloudflareCredentialsValidated();
     if (!creds) {
       logError(
         new Error(

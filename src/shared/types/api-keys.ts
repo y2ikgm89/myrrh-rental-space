@@ -47,16 +47,6 @@ export type GoogleMapsConfig = {
 };
 
 /**
- * Cloudflare CDN設定
- */
-export type CloudflareConfig = {
-  zoneId: string | null;
-  apiTokenMasked: string | null;
-  lastTestedAt: Date | null;
-  connectionStatus: ConnectionStatus;
-};
-
-/**
  * カスタムAPIキー（汎用）
  */
 export type CustomApiKeyData = {

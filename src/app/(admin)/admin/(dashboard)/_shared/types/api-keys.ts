@@ -1,6 +1,5 @@
 export type {
   ApiKeyTestResult,
-  CloudflareConfig,
   ConnectionStatus,
   CustomApiKeyData,
   CustomApiKeyInput,

@@ -93,7 +93,6 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     items: [
       "Resend",
       "Turnstile",
-      "Cloudflare",
       "Google Maps",
       "Google カレンダー",
       "Instagram",

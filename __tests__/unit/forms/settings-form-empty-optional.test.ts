@@ -47,7 +47,6 @@ import {
   discountFormSchema,
   stripeFormSchema,
   resendFormSchema,
-  cloudflareFormSchema,
   googleCalendarFormSchema,
   twoWaySyncFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
@@ -267,7 +266,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   // ---------------------------------------------------------------------------
   // 連携系（API キー / Stripe / Calendar / Instagram）
   // ---------------------------------------------------------------------------
-  test("Turnstile / Google Maps / Resend / Cloudflare: 空欄でも success", () => {
+  test("Turnstile / Google Maps / Resend: 空欄でも success", () => {
     expectSuccess(
       turnstileFormSchema,
       emptyKeys(["turnstileSiteKey", "turnstileSecretKey"]),
@@ -279,11 +278,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       "googleMaps",
     );
     expectSuccess(resendFormSchema, emptyKeys(["resendApiKey"]), "resend");
-    expectSuccess(
-      cloudflareFormSchema,
-      emptyKeys(["cloudflareZoneId", "cloudflareApiToken"]),
-      "cloudflare",
-    );
   });
 
   test("iCal フィード: 両 Switch OFF でも success", () => {

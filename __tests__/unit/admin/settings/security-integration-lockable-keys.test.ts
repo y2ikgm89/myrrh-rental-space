@@ -16,7 +16,6 @@ import {
   turnstileFormSchema,
   googleMapsFormSchema,
   resendFormSchema,
-  cloudflareFormSchema,
   stripeFormSchema,
   googleCalendarFormSchema,
 } from "@/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas-security-integrations";
@@ -41,16 +40,6 @@ describe("security-integration forms: ロック中保存の受理", () => {
       const r = parseWithZod(
         fd({ turnstileSiteKey: "", turnstileSecretKey: "" }),
         { schema: turnstileFormSchema },
-      );
-      expect(r.status).toBe("success");
-    });
-  });
-
-  describe("cloudflare", () => {
-    test("Zone ID あり・API Token ロック（空）で保存できる", () => {
-      const r = parseWithZod(
-        fd({ cloudflareZoneId: "zone123", cloudflareApiToken: "" }),
-        { schema: cloudflareFormSchema },
       );
       expect(r.status).toBe("success");
     });

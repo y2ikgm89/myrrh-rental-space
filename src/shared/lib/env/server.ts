@@ -107,6 +107,18 @@ export const serverEnv = createEnv({
     R2_BUCKET_NAME: z.string().optional(),
     R2_PUBLIC_URL: z.url().optional(),
 
+    // Cloudflare CDN（CDN cache purge / 任意）
+    // 設定時のみ admin mutation 時に purge_by_tags が発火する。
+    // Zone ID は 32 文字の hex（Cloudflare 公式形式）。
+    // API Token は最小権限 `Zone:Read` + `Zone:Cache Purge:Purge` を単一 Zone に限定して発行する。
+    CLOUDFLARE_ZONE_ID: z
+      .string()
+      .regex(/^[a-f0-9]{32}$/i, {
+        error: "CLOUDFLARE_ZONE_ID must be exactly 32 hex characters",
+      })
+      .optional(),
+    CLOUDFLARE_API_TOKEN: z.string().min(40).optional(),
+
     // Node environment
     NODE_ENV: z
       .enum(["development", "production", "test"])
@@ -140,6 +152,8 @@ export const serverEnv = createEnv({
     R2_SECRET_ACCESS_KEY: process.env["R2_SECRET_ACCESS_KEY"],
     R2_BUCKET_NAME: process.env["R2_BUCKET_NAME"],
     R2_PUBLIC_URL: process.env["R2_PUBLIC_URL"],
+    CLOUDFLARE_ZONE_ID: process.env["CLOUDFLARE_ZONE_ID"],
+    CLOUDFLARE_API_TOKEN: process.env["CLOUDFLARE_API_TOKEN"],
     NODE_ENV: process.env["NODE_ENV"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）

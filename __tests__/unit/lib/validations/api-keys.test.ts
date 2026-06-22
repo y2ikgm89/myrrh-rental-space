@@ -3,13 +3,10 @@ import {
   resendSettingsSchema,
   turnstileSettingsSchema,
   googleMapsSettingsSchema,
-  cloudflareSettingsSchema,
   customApiKeySchema,
   isValidResendApiKey,
   isValidTurnstileKey,
   isValidGoogleMapsApiKey,
-  isValidCloudflareZoneId,
-  isValidCloudflareApiToken,
 } from "@/admin/lib/validations/api-keys";
 
 describe("resendSettingsSchema", () => {
@@ -170,64 +167,6 @@ describe("isValidGoogleMapsApiKey", () => {
 
   test("AIza で始まらない場合 false を返す", () => {
     expect(isValidGoogleMapsApiKey("invalid_key")).toBe(false);
-  });
-});
-
-describe("cloudflareSettingsSchema", () => {
-  test("正常なCloudflare設定が検証を通過する", () => {
-    const validData = {
-      cloudflareZoneId: "a".repeat(32),
-      cloudflareApiToken: "b".repeat(40),
-    };
-
-    const result = cloudflareSettingsSchema.safeParse(validData);
-    expect(result.success).toBe(true);
-  });
-
-  test("cloudflareZoneId が null の場合検証を通過する", () => {
-    const data = {
-      cloudflareZoneId: null,
-      cloudflareApiToken: null,
-    };
-
-    const result = cloudflareSettingsSchema.safeParse(data);
-    expect(result.success).toBe(true);
-  });
-
-  test("cloudflareZoneId が50文字を超える場合エラーになる", () => {
-    const data = {
-      cloudflareZoneId: "a".repeat(51),
-    };
-
-    const result = cloudflareSettingsSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("isValidCloudflareZoneId", () => {
-  test("32文字の16進数の場合 true を返す", () => {
-    expect(isValidCloudflareZoneId("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4")).toBe(
-      true,
-    );
-  });
-
-  test("32文字でない場合 false を返す", () => {
-    expect(isValidCloudflareZoneId("a1b2c3d4")).toBe(false);
-  });
-
-  test("16進数でない文字が含まれる場合 false を返す", () => {
-    expect(isValidCloudflareZoneId("g".repeat(32))).toBe(false);
-  });
-});
-
-describe("isValidCloudflareApiToken", () => {
-  test("40文字以上の場合 true を返す", () => {
-    expect(isValidCloudflareApiToken("a".repeat(40))).toBe(true);
-    expect(isValidCloudflareApiToken("a".repeat(50))).toBe(true);
-  });
-
-  test("40文字未満の場合 false を返す", () => {
-    expect(isValidCloudflareApiToken("a".repeat(39))).toBe(false);
   });
 });
 

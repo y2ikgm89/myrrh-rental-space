@@ -3,8 +3,8 @@
 /**
  * Cloudflare Turnstile設定セクション
  *
- * PR #75-#77 ResendSection / GoogleMapsSection / CloudflareSection canonical
- * pattern を踏襲、Site Key + Secret Key の 2 入力。
+ * ResendSection / GoogleMapsSection canonical pattern を踏襲、
+ * Site Key + Secret Key の 2 入力。
  */
 
 import {

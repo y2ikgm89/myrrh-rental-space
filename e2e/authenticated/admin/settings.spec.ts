@@ -306,7 +306,7 @@ test.describe("外部連携設定ページ", () => {
       page.locator('[role="tab"]:has-text("Turnstile")'),
     ).toBeVisible();
     await expect(
-      page.locator('[role="tab"]:has-text("Cloudflare")'),
+      page.locator('[role="tab"]:has-text("Google Maps")'),
     ).toBeVisible();
   });
 });

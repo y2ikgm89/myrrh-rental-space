@@ -4,7 +4,6 @@ import {
   maskResendKey,
   maskTurnstileKey,
   maskGoogleMapsKey,
-  maskCloudflareToken,
 } from "@/shared/lib/api-keys";
 
 // =============================================================================
@@ -182,35 +181,5 @@ describe("maskGoogleMapsKey", () => {
 
   test("空文字列で '****' を返す", () => {
     expect(maskGoogleMapsKey("")).toBe("****");
-  });
-});
-
-// =============================================================================
-// maskCloudflareToken
-// =============================================================================
-
-describe("maskCloudflareToken", () => {
-  test("有効なトークンを prefix...suffix 形式でマスクする", () => {
-    // prefixLength=8, suffixLength=4, minLength=16
-    const token = "abcdefgh12345678abcd";
-    expect(maskCloudflareToken(token)).toBe("abcdefgh...abcd");
-  });
-
-  test("minLength=16 ちょうどのトークンを正常にマスクする", () => {
-    const token = "abcdefgh12345678"; // 16文字
-    expect(maskCloudflareToken(token)).toBe("abcdefgh...5678");
-  });
-
-  test("最小長未満（15文字）のトークンで '****' を返す", () => {
-    const token = "abcdefgh1234567"; // 15文字
-    expect(maskCloudflareToken(token)).toBe("****");
-  });
-
-  test("不正文字を含むトークンで '****' を返す", () => {
-    expect(maskCloudflareToken("abcdefgh1234<script>")).toBe("****");
-  });
-
-  test("空文字列で '****' を返す", () => {
-    expect(maskCloudflareToken("")).toBe("****");
   });
 });

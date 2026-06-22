@@ -1,8 +1,16 @@
 /**
  * Cloudflare CDN Cache Purge
  *
- * Cloudflare APIを使用したキャッシュパージ機能
- * 管理画面での設定（Zone ID, API Token）をDBから取得して使用
+ * env-only credentials（`CLOUDFLARE_ZONE_ID` / `CLOUDFLARE_API_TOKEN`）。
+ * 12-factor / Secret Manager で infra layer 管理。
+ *
+ * Zone ID は env schema (`src/shared/lib/env/server.ts`) で
+ * 32-char hex を regex 検証済み。本モジュールは追加検証なしで信頼する。
+ * 未設定（env 欠落）時は `getCloudflareCredentials()` が null を返し、
+ * 各 purge エントリポイントは早期 return で no-op（既存挙動と整合）。
+ *
+ * 起動時の credential 健全性チェック + plan-tier 検出は
+ * `src/shared/lib/cache/health.ts` の `assertCloudflareCredentials()` が担当。
  */
 
 import "server-only";
@@ -12,7 +20,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { getDecryptedCloudflareCredentials } from "@/shared/domain/settings/api-key-queries";
+import { serverEnv } from "@/shared/lib/env/server";
 import { logger } from "./logger";
 import { getBaseUrl } from "@/shared/lib/constants";
 
@@ -20,13 +28,6 @@ interface PurgeResult {
   success: boolean;
   error?: string | undefined;
   purgedFiles?: number;
-}
-
-// Cloudflare Zone ID: 32文字の16進数
-const ZONE_ID_PATTERN = /^[a-f0-9]{32}$/i;
-
-function isValidZoneId(zoneId: string): boolean {
-  return ZONE_ID_PATTERN.test(zoneId);
 }
 
 // Cloudflare API レスポンスのZodスキーマ
@@ -42,25 +43,14 @@ const cloudflareApiResponseSchema = z.object({
     .optional(),
 });
 
-async function getCloudflareCredentials(): Promise<{
+function getCloudflareCredentials(): {
   zoneId: string;
   apiToken: string;
-} | null> {
-  const credentials = await getDecryptedCloudflareCredentials();
-  if (!credentials) {
-    return null;
-  }
-
-  // Zone IDの形式検証
-  if (!isValidZoneId(credentials.zoneId)) {
-    logger.warn("Invalid Cloudflare Zone ID format");
-    return null;
-  }
-
-  return {
-    zoneId: credentials.zoneId,
-    apiToken: credentials.apiToken,
-  };
+} | null {
+  const zoneId = serverEnv.CLOUDFLARE_ZONE_ID;
+  const apiToken = serverEnv.CLOUDFLARE_API_TOKEN;
+  if (!zoneId || !apiToken) return null;
+  return { zoneId, apiToken };
 }
 
 /** 公式推奨: 3-5 回の exponential backoff retry */
@@ -96,12 +86,8 @@ async function callPurgeApi(
   apiToken: string,
   body: Record<string, unknown>,
 ): Promise<PurgeResult> {
-  // Zone IDの二重検証（防御的プログラミング）
-  if (!isValidZoneId(zoneId)) {
-    return { success: false, error: "Invalid Zone ID format" };
-  }
-
-  // URL APIを使用してSSRF対策（パスのエスケープ）
+  // Zone ID は env schema で 32-char hex を regex 検証済み。
+  // ここでの追加検証は冗長なので削除。SSRF 対策のため URL API で path をエスケープ。
   const apiUrl = new URL(
     `/client/v4/zones/${encodeURIComponent(zoneId)}/purge_cache`,
     "https://api.cloudflare.com",
@@ -215,7 +201,7 @@ async function callPurgeApi(
 export async function purgeCloudflareCache(
   urls: string[],
 ): Promise<PurgeResult> {
-  const credentials = await getCloudflareCredentials();
+  const credentials = getCloudflareCredentials();
 
   if (!credentials) {
     // Cloudflare設定がない場合は何もしない（エラーにはしない）
@@ -288,13 +274,16 @@ export function isCloudflareTagPurgeEnabled(): boolean {
 // ============================================================
 
 /**
- * Validated credentials accessor (same Zone ID regex check as runtime).
- * Public so the startup health probe can use the canonical validation path.
+ * Validated credentials accessor.
+ *
+ * env-only design: regex 検証は env schema (`src/shared/lib/env/server.ts`) が
+ * 起動時に済ませているため、未設定なら null を返すだけの薄いラッパー。
+ * 起動時 health probe (`cache/health.ts`) からのみ呼ばれる。
  */
-export async function getCloudflareCredentialsValidated(): Promise<{
+export function getCloudflareCredentialsValidated(): {
   zoneId: string;
   apiToken: string;
-} | null> {
+} | null {
   return getCloudflareCredentials();
 }
 
@@ -315,7 +304,7 @@ export async function callPurgeApiPublic(
 // ============================================================
 
 export async function purgeAllCloudflareCache(): Promise<PurgeResult> {
-  const credentials = await getCloudflareCredentials();
+  const credentials = getCloudflareCredentials();
   if (!credentials) {
     logger.debug("Cloudflare credentials not configured, skipping cache purge");
     return { success: true };
@@ -371,7 +360,7 @@ const MAX_TAGS_PER_REQUEST = 30;
 export async function purgeCloudflareCacheByTags(
   tags: string[],
 ): Promise<PurgeResult> {
-  const credentials = await getCloudflareCredentials();
+  const credentials = getCloudflareCredentials();
   if (!credentials) {
     logger.debug(
       "Cloudflare credentials not configured, skipping cache tag purge",

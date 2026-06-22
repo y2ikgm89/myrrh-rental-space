@@ -42,12 +42,6 @@ const googleMapsSettingsSchema = z.object({
     }),
 });
 
-// Cloudflare設定スキーマ
-const cloudflareSettingsSchema = z.object({
-  cloudflareZoneId: z.string().max(50).nullable().optional(),
-  cloudflareApiToken: z.string().max(200).nullable().optional(),
-});
-
 // カスタムAPIキースキーマ
 const customApiKeySchema = z.object({
   name: z.string().min(1, { error: "サービス名を入力してください" }).max(100),
@@ -68,11 +62,6 @@ const VALID_TURNSTILE_INPUT = {
 
 const VALID_GOOGLE_MAPS_INPUT = {
   googleMapsApiKey: "AIzaSyAbcdefghijklmnopqrstuvwxyz12345",
-};
-
-const VALID_CLOUDFLARE_INPUT = {
-  cloudflareZoneId: "abcdef1234567890abcdef1234567890",
-  cloudflareApiToken: "cf_token_abcdefghijklmnopqrstuvwxyz1234567890",
 };
 
 const VALID_CUSTOM_API_KEY_INPUT = {
@@ -232,57 +221,6 @@ describe("ApiKeys Admin Action Integration", () => {
       test("200文字を超えるキーはエラー", () => {
         const result = googleMapsSettingsSchema.safeParse({
           googleMapsApiKey: "AIza" + "a".repeat(197),
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  describe("cloudflareSettingsSchema バリデーション", () => {
-    describe("正常系", () => {
-      test("有効なCloudflare設定はバリデーション通過", () => {
-        const result = cloudflareSettingsSchema.safeParse(
-          VALID_CLOUDFLARE_INPUT,
-        );
-        expect(result.success).toBe(true);
-      });
-
-      test("両方nullは許可", () => {
-        const result = cloudflareSettingsSchema.safeParse({
-          cloudflareZoneId: null,
-          cloudflareApiToken: null,
-        });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("cloudflareZoneId", () => {
-      test("50文字のZone IDはOK", () => {
-        const result = cloudflareSettingsSchema.safeParse({
-          cloudflareZoneId: "a".repeat(50),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("51文字のZone IDはエラー", () => {
-        const result = cloudflareSettingsSchema.safeParse({
-          cloudflareZoneId: "a".repeat(51),
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe("cloudflareApiToken", () => {
-      test("200文字のAPI TokenはOK", () => {
-        const result = cloudflareSettingsSchema.safeParse({
-          cloudflareApiToken: "a".repeat(200),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("201文字のAPI Tokenはエラー", () => {
-        const result = cloudflareSettingsSchema.safeParse({
-          cloudflareApiToken: "a".repeat(201),
         });
         expect(result.success).toBe(false);
       });

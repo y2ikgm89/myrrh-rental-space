@@ -130,47 +130,6 @@ export async function clearGoogleMapsSettings(): Promise<void> {
   });
 }
 
-export async function updateCloudflareSettings(data: {
-  cloudflareZoneId?: string | null;
-  cloudflareApiToken?: string | null;
-}): Promise<void> {
-  const updateData: Record<string, unknown> = {};
-
-  // Zone ID は管理 UI で「変更」ボタンによりロックされる公開識別子。ロック中の保存は
-  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（API Token と同じ意味論）。
-  // クリアは clearCloudflareSettings（「クリア」ボタン）経由で行う。
-  if (data.cloudflareZoneId) {
-    updateData["cloudflareZoneId"] = data.cloudflareZoneId;
-  }
-
-  if (data.cloudflareApiToken) {
-    updateData["cloudflareApiToken"] = encryptSecret(
-      data.cloudflareApiToken,
-      "API Tokenの暗号化に失敗しました",
-    );
-  }
-
-  await upsertSettings(updateData);
-}
-
-export async function recordCloudflareConnectionStatus(
-  status: "connected" | "error",
-): Promise<void> {
-  await upsertSettings({
-    cloudflareLastTestedAt: new Date(),
-    cloudflareConnectionStatus: status,
-  });
-}
-
-export async function clearCloudflareSettings(): Promise<void> {
-  await upsertSettings({
-    cloudflareZoneId: null,
-    cloudflareApiToken: null,
-    cloudflareLastTestedAt: null,
-    cloudflareConnectionStatus: null,
-  });
-}
-
 export async function addCustomApiKey(
   data: CustomApiKeyInput,
 ): Promise<{ id: string }> {

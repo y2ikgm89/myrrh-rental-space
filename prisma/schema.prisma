@@ -1256,11 +1256,8 @@ model Settings {
   googleMapsLastTestedAt     DateTime?
   googleMapsConnectionStatus String?
 
-  // Cloudflare CDN (Cache Purge API)
-  cloudflareZoneId           String? // Zone ID (not encrypted)
-  cloudflareApiToken         String?   @db.Text // Encrypted API Token
-  cloudflareLastTestedAt     DateTime?
-  cloudflareConnectionStatus String? // 'connected' | 'error'
+  // Cloudflare CDN (Cache Purge API) — env-only に移行済み（CLOUDFLARE_ZONE_ID /
+  // CLOUDFLARE_API_TOKEN）。DB 列は contract migration で DROP 済み。
 
   // Custom API Keys (Generic key-value storage)
   // Format: { "id": { "name": "...", "key": "encrypted", "value": "encrypted", ... } }

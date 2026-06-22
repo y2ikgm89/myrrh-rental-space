@@ -11,7 +11,6 @@ import {
   getResendConfig,
   getTurnstileConfig,
   getGoogleMapsConfig,
-  getCloudflareConfig,
   getCustomApiKeys,
 } from "@/admin/queries/api-keys";
 import { getInstagramConfig } from "@/admin/queries/instagram";
@@ -23,7 +22,6 @@ import {
   ResendSection,
   TurnstileSection,
   GoogleMapsSection,
-  CloudflareSection,
   CustomApiKeysSection,
   GoogleCalendarSection,
   GoogleBusinessProfileSection,
@@ -39,7 +37,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     resendConfig,
     turnstileConfig,
     googleMapsConfig,
-    cloudflareConfig,
     customApiKeys,
     settings,
     instagramConfig,
@@ -48,7 +45,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     getResendConfig(),
     getTurnstileConfig(),
     getGoogleMapsConfig(),
-    getCloudflareConfig(),
     getCustomApiKeys(),
     getSettings(),
     getInstagramConfig(),
@@ -69,11 +65,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
       value: "turnstile",
       label: "Turnstile",
       content: <TurnstileSection config={turnstileConfig} />,
-    },
-    {
-      value: "cloudflare",
-      label: "Cloudflare",
-      content: <CloudflareSection config={cloudflareConfig} />,
     },
     {
       value: "google-maps",

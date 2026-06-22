@@ -74,33 +74,6 @@ export function isValidGoogleMapsApiKey(key: string): boolean {
 }
 
 // =============================================================================
-// Cloudflare CDN
-// =============================================================================
-
-export const cloudflareSettingsSchema = z.object({
-  cloudflareZoneId: z.string().max(50).nullable().optional(),
-  cloudflareApiToken: z.string().max(200).nullable().optional(),
-});
-
-export type CloudflareSettingsInput = z.infer<typeof cloudflareSettingsSchema>;
-
-/**
- * Cloudflare Zone IDの形式検証
- * Zone IDは32文字の16進数
- */
-export function isValidCloudflareZoneId(zoneId: string): boolean {
-  return /^[a-f0-9]{32}$/.test(zoneId);
-}
-
-/**
- * Cloudflare API Tokenの形式検証
- * API Tokenは一般的に40文字以上
- */
-export function isValidCloudflareApiToken(token: string): boolean {
-  return token.length >= 40;
-}
-
-// =============================================================================
 // Custom API Keys
 // =============================================================================
 
