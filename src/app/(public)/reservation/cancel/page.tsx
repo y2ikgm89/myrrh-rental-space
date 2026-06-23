@@ -1,11 +1,14 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
-import type { SearchParams } from "nuqs/server";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { verifyCancelToken } from "@/shared/lib/reservation-cancel-token";
+import {
+  verifyCancelToken,
+  tokenFingerprint,
+} from "@/shared/lib/reservation-cancel-token";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
@@ -15,6 +18,15 @@ import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/help
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import {
+  publicQueryRateLimiter,
+  getClientIpFromHeaders,
+} from "@/shared/lib/rate-limit";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 import { GuestCancelForm } from "./_components/guest-cancel-form";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（mypage / login と同方針）。
@@ -28,20 +40,25 @@ export const metadata: Metadata = {
 // ---------------------------------------------------------------------------
 
 const CANCELLABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
+const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-interface PageProps {
-  readonly searchParams: Promise<SearchParams>;
-}
+export default async function GuestCancelPage(): Promise<ReactElement> {
+  // proxy（middleware）が `?token=...` を HttpOnly cookie に転写済み。
+  // ここでは cookie のみ読み、URL クエリにトークンを残さない（ログ・履歴漏洩遮断）。
+  const cookieStore = await cookies();
+  const token = cookieStore.get(CANCEL_TOKEN_COOKIE_NAME)?.value ?? null;
 
-export default async function GuestCancelPage({
-  searchParams,
-}: PageProps): Promise<ReactElement> {
-  const sp = await searchParams;
-  const token = typeof sp["token"] === "string" ? sp["token"] : null;
+  // GET ページにも rate-limit を貼る。有効トークン 1 本で uncached DB findFirst を
+  // 無制限ヒットできる経路を遮断（publicQueryRateLimiter: 30/min/IP）。
+  const clientIp = await getClientIpFromHeaders();
+  const limit = await publicQueryRateLimiter.check(clientIp);
+  if (!limit.success) {
+    return <TooManyRequestsView />;
+  }
 
   if (!token) {
     return <InvalidLinkView />;
@@ -51,6 +68,20 @@ export default async function GuestCancelPage({
   const verified = verifyCancelToken(token, now);
 
   if (!verified.valid) {
+    // WARNING ログ: 失敗 token の流通量・指紋を観測し brute-force / 漁る攻撃を検知
+    logError(
+      new Error(`Guest cancel token verify failed: ${verified.reason}`),
+      {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "guestCancelPageVerify",
+          reason: verified.reason,
+          ip: clientIp,
+          tokenFingerprint: tokenFingerprint(token),
+        },
+      },
+    );
     return <InvalidLinkView reason={verified.reason} />;
   }
 
@@ -76,6 +107,7 @@ export default async function GuestCancelPage({
             <Link
               href={toAppRoute("/contact")}
               className="underline underline-offset-4 hover:text-foreground"
+              rel="noreferrer"
             >
               お問い合わせ
             </Link>
@@ -106,6 +138,7 @@ export default async function GuestCancelPage({
             <Link
               href={toAppRoute("/contact")}
               className="underline underline-offset-4 hover:text-foreground"
+              rel="noreferrer"
             >
               お問い合わせ
             </Link>
@@ -167,7 +200,7 @@ export default async function GuestCancelPage({
         </div>
       </div>
 
-      <GuestCancelForm token={token} turnstileSiteKey={turnstileSiteKey} />
+      <GuestCancelForm turnstileSiteKey={turnstileSiteKey} />
     </Layout>
   );
 }
@@ -203,8 +236,13 @@ function DetailRow({ label, children }: DetailRowProps) {
   );
 }
 
+/**
+ * **意図的に invalid と expired を同一文言に統合**: 期限切れ表示で「これは正規
+ * トークン形式」という弱オラクル情報を漏らさない（/login や /mypage と同 pattern）。
+ * SR には reason 情報は提供せず、文言は単一に保つ。
+ */
 function InvalidLinkView({
-  reason,
+  reason: _reason,
 }: {
   reason?: "invalid" | "expired";
 } = {}) {
@@ -212,23 +250,35 @@ function InvalidLinkView({
     <Layout>
       <div className="border border-destructive/30 bg-destructive/5 p-6 text-center">
         <p className="text-base font-medium text-foreground">
-          {reason === "expired"
-            ? "キャンセルリンクの有効期限が切れています"
-            : "キャンセルリンクが無効です"}
+          キャンセルリンクが無効または期限切れです
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          {reason === "expired"
-            ? "有効期限が切れたリンクです。"
-            : "リンクが正しくない可能性があります。"}
+          リンクが正しくないか、有効期限が切れている可能性があります。
           <br />
           ご不明な点は
           <Link
             href={toAppRoute("/contact")}
             className="underline underline-offset-4 hover:text-foreground"
+            rel="noreferrer"
           >
             お問い合わせ
           </Link>
           ください。
+        </p>
+      </div>
+    </Layout>
+  );
+}
+
+function TooManyRequestsView() {
+  return (
+    <Layout>
+      <div className="border border-destructive/30 bg-destructive/5 p-6 text-center">
+        <p className="text-base font-medium text-foreground">
+          リクエストが多すぎます
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          しばらく時間をおいてから再度お試しください。
         </p>
       </div>
     </Layout>

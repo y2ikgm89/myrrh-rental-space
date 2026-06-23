@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -8,6 +9,7 @@ import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cach
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -18,6 +20,7 @@ import {
   updateReservationNotesCommand,
   updateReservationStatusCommand,
 } from "@/shared/domain/reservations/lifecycle-commands";
+import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
 import { getReservationGuestData } from "@/shared/domain/reservations/admin-queries";
@@ -31,15 +34,9 @@ import {
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
-  sendReservationCancelledEmail,
   sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
-import {
-  NOTIFICATION_TYPE,
-  NOTIFICATION_TYPE_LABELS,
-} from "@/shared/lib/validations/enums/helpers";
-import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 
 const updateStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
@@ -131,40 +128,26 @@ export const updateReservationStatus = async (
         status === ReservationStatus.CANCELLED &&
         result.previousStatus !== ReservationStatus.CANCELLED
       ) {
-        if (result.googleCalendarEventId) {
-          fireAndForget(deleteCalendarSync(id, result.googleCalendarEventId), {
-            operation: "deleteCalendarSync",
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.LOW,
-            context: { reservationId: id },
-          });
-        }
-
+        // refund / GCal 削除 / 顧客向け+管理者メール / in-app 通知 / 監査ログを
+        // 一括で副作用ヘルパーへ委譲（会員・ゲスト経路と SSoT 共有）。
         fireAndForget(
-          Promise.all([
-            sendReservationCancelledEmail(payloadData),
-            sendReservationAdminNotification(payloadData, "cancel"),
-          ]),
+          (async () => {
+            const requestHeaders = await headers();
+            const ip = await getClientIpFromHeaders();
+            const userAgent = requestHeaders.get("user-agent");
+            await applyCancellationSideEffects({
+              reservationId: id,
+              cancellationReason: null,
+              channel: "admin",
+              actorUserId: null,
+              request: { ip, userAgent, tokenFingerprint: null },
+            });
+          })(),
           {
-            operation: "sendCancellationEmails",
+            operation: "applyCancellationSideEffects",
             category: ErrorCategory.EXTERNAL_API,
             severity: ErrorSeverity.MEDIUM,
             context: { reservationId: id },
-          },
-        );
-
-        fireAndForget(
-          createNotificationCommand({
-            type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
-            title:
-              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_CANCEL],
-            message: `予約がキャンセルされました`,
-            resourceType: "reservation",
-            resourceId: id,
-          }),
-          {
-            operation: "createCancelNotification",
-            category: ErrorCategory.DATABASE,
           },
         );
       }

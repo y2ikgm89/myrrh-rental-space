@@ -6,6 +6,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";
 import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
+import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
 import { getReservationRuleSettings } from "@/shared/domain/reservations/availability";
@@ -48,6 +49,7 @@ export async function cancelCustomerReservation(
       deadlineHours,
       now: reservationDeadlineNow(),
       cancellationReason,
+      cancelledByType: CANCELLED_BY.CUSTOMER_MYPAGE,
     });
     if (!result.success) {
       return { success: false, error: result.error };
@@ -83,6 +85,7 @@ export async function cancelReservationByToken(
       deadlineHours,
       now: reservationDeadlineNow(),
       cancellationReason,
+      cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
     });
     if (!result.success) {
       return { success: false, error: result.error };

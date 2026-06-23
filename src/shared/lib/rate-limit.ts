@@ -200,6 +200,15 @@ export const publicQueryRateLimiter = createRateLimiter({
   maxRequests: 30,
 });
 
+// ゲストキャンセル「予約 ID 単位」の追加バケット（3 attempts / hour / reservation）。
+// IP-only の formSubmitRateLimiter だけだと Cloud Run multi-instance × XFF spoof で
+// 単一予約に対する分散攻撃が抜けるため、reservationId をキーにした第二防壁を貼る。
+// AES-GCM トークン検証コスト × DB 書き込みコストの上限を構造的に制約する。
+export const cancelByReservationRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
 /**
  * パス名に基づいて適切なレートリミッターを選択しチェックする
  */

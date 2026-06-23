@@ -64,10 +64,12 @@ export async function getReservationForGuestCancel(reservationId: string) {
     where: { id: reservationId, deletedAt: null },
     select: {
       id: true,
+      customerId: true,
       startTime: true,
       endTime: true,
       status: true,
       totalPrice: true,
+      paymentStatus: true,
       guestLastName: true,
       guestFirstName: true,
       space: { select: { id: true, name: true, slug: true } },
