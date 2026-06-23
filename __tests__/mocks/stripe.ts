@@ -1,41 +1,55 @@
 /**
  * Stripe API モック
  *
- * Stripe 連携をテストするためのモック実装
+ * Stripe 連携をテストするためのモック実装。
+ *
+ * ## 型整合の方針
+ * 公式 Stripe SDK (`stripe`) の型（`Stripe.Customer` / `Stripe.PaymentIntent` /
+ * `Stripe.Subscription` / `Stripe.Checkout.Session` など）を **直接 import** し、
+ * モック関数のパラメータ・戻り値型として再利用する。
+ *
+ * SDK の major bump（例: customer の email が nullable 化、PaymentIntent.status の
+ * 列挙拡張、Subscription.items シェイプ変更など）が起きたとき、ハンドラの実装より
+ * **テストの mock factory が先に型エラーで落ちる**ことで silent contract drift を
+ * 検知する。手書きの `MockCustomer` / `MockPaymentIntent` 型では SDK の進化を
+ * 取りこぼし、本番 webhook が 500 になってから気付くため必ず SDK 型を経由する。
+ *
+ * @see https://github.com/stripe/stripe-node — `Stripe.*` 名前空間が公式 type SSoT
  */
 
 import { mock } from "bun:test";
+import type Stripe from "stripe";
 
 // =============================================================================
-// Types
+// Types — Stripe SDK 公式型のサブセット
 // =============================================================================
 
-export interface MockCustomer {
-  id: string;
-  email: string;
-  name?: string | undefined;
-  metadata?: Record<string, string> | undefined;
-}
+/**
+ * テストで保持する Customer の最小サブセット。
+ * `Stripe.Customer` の上位互換シェイプから必要 field のみ pick する。
+ */
+export type MockCustomer = Pick<
+  Stripe.Customer,
+  "id" | "email" | "name" | "metadata"
+>;
 
-export interface MockPaymentIntent {
-  id: string;
-  amount: number;
-  currency: string;
-  status:
-    | "requires_payment_method"
-    | "requires_confirmation"
-    | "succeeded"
-    | "canceled";
-  customer?: string | undefined;
-  metadata?: Record<string, string> | undefined;
-}
+/**
+ * テストで保持する PaymentIntent の最小サブセット。
+ * `status` は SDK の literal union（`Stripe.PaymentIntent.Status`）を維持。
+ */
+export type MockPaymentIntent = Pick<
+  Stripe.PaymentIntent,
+  "id" | "amount" | "currency" | "status" | "customer" | "metadata"
+>;
 
-export interface MockSubscription {
-  id: string;
-  customer: string;
-  status: "active" | "canceled" | "past_due" | "unpaid";
-  items: { data: { price: { id: string } }[] };
-}
+/**
+ * テストで保持する Subscription の最小サブセット。
+ * `status` は SDK の literal union（`Stripe.Subscription.Status`）を維持。
+ */
+export type MockSubscription = Pick<
+  Stripe.Subscription,
+  "id" | "customer" | "status" | "items"
+>;
 
 // =============================================================================
 // Mock Data Storage
@@ -46,24 +60,27 @@ export const mockPaymentIntents: MockPaymentIntent[] = [];
 export const mockSubscriptions: MockSubscription[] = [];
 
 // =============================================================================
-// Mock Functions
+// Mock Functions — SDK の `Stripe.*Resource.*Params` を採用
 // =============================================================================
 
 /**
  * customers.create のモック
  */
 export const mockCustomersCreate = mock<
-  (params: {
-    email: string;
-    name?: string;
-    metadata?: Record<string, string>;
-  }) => Promise<MockCustomer>
+  (params: Stripe.CustomerCreateParams) => Promise<MockCustomer>
 >((params) => {
   const customer: MockCustomer = {
     id: `cus_mock_${Date.now()}`,
-    email: params.email,
-    name: params.name,
-    metadata: params.metadata,
+    email: params.email ?? null,
+    name: params.name ?? null,
+    // CustomerCreateParams.metadata は MetadataParam（number/null 許容）。
+    // 応答型の Customer.metadata は string-only な map なので明示変換する。
+    metadata: Object.fromEntries(
+      Object.entries(params.metadata ?? {}).map(([k, v]) => [
+        k,
+        v === null || v === undefined ? "" : String(v),
+      ]),
+    ) as Stripe.Customer["metadata"],
   };
   mockCustomers.push(customer);
   return Promise.resolve(customer);
@@ -83,20 +100,22 @@ export const mockCustomersRetrieve = mock<
  * paymentIntents.create のモック
  */
 export const mockPaymentIntentsCreate = mock<
-  (params: {
-    amount: number;
-    currency: string;
-    customer?: string;
-    metadata?: Record<string, string>;
-  }) => Promise<MockPaymentIntent>
+  (params: Stripe.PaymentIntentCreateParams) => Promise<MockPaymentIntent>
 >((params) => {
   const paymentIntent: MockPaymentIntent = {
     id: `pi_mock_${Date.now()}`,
     amount: params.amount,
     currency: params.currency,
     status: "requires_payment_method",
-    customer: params.customer,
-    metadata: params.metadata,
+    customer: params.customer ?? null,
+    // PaymentIntentCreateParams.metadata は MetadataParam（number/null 許容）。
+    // 応答型の PaymentIntent.metadata は string-only な map に正規化する。
+    metadata: Object.fromEntries(
+      Object.entries(params.metadata ?? {}).map(([k, v]) => [
+        k,
+        v === null || v === undefined ? "" : String(v),
+      ]),
+    ) as Stripe.PaymentIntent["metadata"],
   };
   mockPaymentIntents.push(paymentIntent);
   return Promise.resolve(paymentIntent);
@@ -122,18 +141,25 @@ export const mockPaymentIntentsConfirm = mock<
  * subscriptions.create のモック
  */
 export const mockSubscriptionsCreate = mock<
-  (params: {
-    customer: string;
-    items: { price: string }[];
-  }) => Promise<MockSubscription>
+  (params: Stripe.SubscriptionCreateParams) => Promise<MockSubscription>
 >((params) => {
+  const items = (params.items ?? []).map(
+    (item, index) =>
+      ({
+        id: `si_mock_${Date.now()}_${index}`,
+        price: { id: item.price ?? "price_mock" },
+      }) as unknown as Stripe.SubscriptionItem,
+  );
   const subscription: MockSubscription = {
     id: `sub_mock_${Date.now()}`,
     customer: params.customer,
     status: "active",
     items: {
-      data: params.items.map((item) => ({ price: { id: item.price } })),
-    },
+      object: "list",
+      data: items,
+      has_more: false,
+      url: `/v1/subscription_items?subscription=sub_mock_${Date.now()}`,
+    } as Stripe.ApiList<Stripe.SubscriptionItem>,
   };
   mockSubscriptions.push(subscription);
   return Promise.resolve(subscription);

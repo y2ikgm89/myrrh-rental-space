@@ -1,24 +1,39 @@
 /**
  * Google Calendar API モック
  *
- * Google Calendar 連携をテストするためのモック実装
+ * ## 型整合の方針
+ * 公式 `googleapis` パッケージの `calendar_v3` namespace から
+ * `Schema$Event` / `Params$Resource$Events$*` 型を **直接 import** し、
+ * モック関数のパラメータ・戻り値型として再利用する。
+ *
+ * `googleapis` の major bump（Schema$Event の field 増減、reminders / conferenceData
+ * のシェイプ変更など）が起きたとき、`google-calendar/events.ts` の実装より
+ * **テストの mock factory が先に型エラーで落ちる**ことで silent contract drift を
+ * 検知する。
+ *
+ * @see https://googleapis.dev/nodejs/googleapis/latest/calendar/index.html
  */
 
 import { mock } from "bun:test";
+import type { calendar_v3 } from "googleapis";
 
 // =============================================================================
-// Types
+// Types — googleapis calendar_v3 公式型のサブセット
 // =============================================================================
 
-export interface MockCalendarEvent {
-  id: string;
-  summary: string;
-  description?: string | undefined;
-  start: { dateTime: string; timeZone?: string | undefined };
-  end: { dateTime: string; timeZone?: string | undefined };
-  location?: string | undefined;
-}
+/**
+ * テストで保持する Calendar Event の最小サブセット。
+ * 上位型は `calendar_v3.Schema$Event`。null が入る列（API レスポンス由来）も
+ * 公式型どおり許容する。
+ */
+export type MockCalendarEvent = Pick<
+  calendar_v3.Schema$Event,
+  "id" | "summary" | "description" | "start" | "end" | "location"
+>;
 
+/**
+ * `events.insert` / `events.update` の戻り値: `{ data: Schema$Event }` 相当。
+ */
 export interface MockCalendarInsertResult {
   data: MockCalendarEvent;
 }
@@ -37,7 +52,7 @@ export const createdEvents: MockCalendarEvent[] = [];
  */
 export const updatedEvents: {
   eventId: string;
-  event: Partial<MockCalendarEvent>;
+  event: calendar_v3.Schema$Event;
 }[] = [];
 
 /**
@@ -47,20 +62,23 @@ export const deletedEventIds: string[] = [];
 
 /**
  * events.insert のモック
+ *
+ * 公式 SDK `calendar.events.insert(Params$Resource$Events$Insert)` 互換シグネチャ。
+ * `params.requestBody` は `Schema$Event` 型。
  */
 export const mockEventsInsert = mock<
-  (params: {
-    calendarId: string;
-    requestBody: Partial<MockCalendarEvent>;
-  }) => Promise<MockCalendarInsertResult>
+  (
+    params: calendar_v3.Params$Resource$Events$Insert,
+  ) => Promise<MockCalendarInsertResult>
 >((params) => {
+  const body: calendar_v3.Schema$Event = params.requestBody ?? {};
   const event: MockCalendarEvent = {
     id: `mock-event-${Date.now()}`,
-    summary: params.requestBody.summary ?? "Mock Event",
-    description: params.requestBody.description,
-    start: params.requestBody.start ?? { dateTime: new Date().toISOString() },
-    end: params.requestBody.end ?? { dateTime: new Date().toISOString() },
-    location: params.requestBody.location,
+    summary: body.summary ?? "Mock Event",
+    description: body.description ?? null,
+    start: body.start ?? { dateTime: new Date().toISOString() },
+    end: body.end ?? { dateTime: new Date().toISOString() },
+    location: body.location ?? null,
   };
   createdEvents.push(event);
   return Promise.resolve({ data: event });
@@ -70,20 +88,19 @@ export const mockEventsInsert = mock<
  * events.update のモック
  */
 export const mockEventsUpdate = mock<
-  (params: {
-    calendarId: string;
-    eventId: string;
-    requestBody: Partial<MockCalendarEvent>;
-  }) => Promise<MockCalendarInsertResult>
+  (
+    params: calendar_v3.Params$Resource$Events$Update,
+  ) => Promise<MockCalendarInsertResult>
 >((params) => {
-  updatedEvents.push({ eventId: params.eventId, event: params.requestBody });
+  const body: calendar_v3.Schema$Event = params.requestBody ?? {};
+  updatedEvents.push({ eventId: params.eventId ?? "", event: body });
   const event: MockCalendarEvent = {
-    id: params.eventId,
-    summary: params.requestBody.summary ?? "Updated Event",
-    description: params.requestBody.description,
-    start: params.requestBody.start ?? { dateTime: new Date().toISOString() },
-    end: params.requestBody.end ?? { dateTime: new Date().toISOString() },
-    location: params.requestBody.location,
+    id: params.eventId ?? null,
+    summary: body.summary ?? "Updated Event",
+    description: body.description ?? null,
+    start: body.start ?? { dateTime: new Date().toISOString() },
+    end: body.end ?? { dateTime: new Date().toISOString() },
+    location: body.location ?? null,
   };
   return Promise.resolve({ data: event });
 });
@@ -92,9 +109,9 @@ export const mockEventsUpdate = mock<
  * events.delete のモック
  */
 export const mockEventsDelete = mock<
-  (params: { calendarId: string; eventId: string }) => Promise<void>
+  (params: calendar_v3.Params$Resource$Events$Delete) => Promise<void>
 >((params) => {
-  deletedEventIds.push(params.eventId);
+  deletedEventIds.push(params.eventId ?? "");
   return Promise.resolve();
 });
 
@@ -102,13 +119,13 @@ export const mockEventsDelete = mock<
  * events.list のモック
  */
 export const mockEventsList = mock<
-  (params: {
-    calendarId: string;
-    timeMin?: string;
-    timeMax?: string;
-  }) => Promise<{ data: { items: MockCalendarEvent[] } }>
+  (
+    params: calendar_v3.Params$Resource$Events$List,
+  ) => Promise<{ data: calendar_v3.Schema$Events }>
 >(() => {
-  return Promise.resolve({ data: { items: [...createdEvents] } });
+  return Promise.resolve({
+    data: { items: [...createdEvents] } as calendar_v3.Schema$Events,
+  });
 });
 
 /**
@@ -152,7 +169,7 @@ export function getCreatedEvents(): MockCalendarEvent[] {
  */
 export function getUpdatedEvents(): {
   eventId: string;
-  event: Partial<MockCalendarEvent>;
+  event: calendar_v3.Schema$Event;
 }[] {
   return [...updatedEvents];
 }
