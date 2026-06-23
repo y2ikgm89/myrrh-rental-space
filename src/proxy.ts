@@ -330,6 +330,32 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     if (!sessionCookie) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
+
+    // 管理画面内部 API（/admin/api/*）: 認証済みでも IP 単位で rate-limit を貼る
+    // (defense-in-depth)。低権限スタッフによる内部 DoS や OGP 外向き fetch
+    // amplifier を構造的に抑制する。重い endpoint（OGP / customer-search）は
+    // expensiveAdminRateLimiter (60/分)、その他は apiRateLimiter (100/分)。
+    // 振分は checkRateLimit() が SSoT。
+    if (pathname.startsWith("/admin/api/")) {
+      const clientIp = getClientIp(req);
+      const rateLimitResult = await checkRateLimit(pathname, clientIp);
+
+      if (!rateLimitResult.success) {
+        return NextResponse.json(
+          { error: "Too many requests" },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(rateLimitResult.reset),
+              "Retry-After": String(
+                Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+              ),
+            },
+          },
+        );
+      }
+    }
   }
 
   return createResponse(req, pathname);

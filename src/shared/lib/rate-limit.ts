@@ -209,6 +209,34 @@ export const cancelByReservationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// 管理画面の「重い」内部 API 用（60 リクエスト/分/IP）— defense-in-depth。
+// 認証済みスタッフでも、外向き fetch (OGP プレビュー) や全件 LIKE スキャン
+// (customer 検索) のような副作用 / コスト大の endpoint は単独でレート制限する。
+// 想定 abuse:
+//   - 低権限スタッフによる内部 DoS（管理画面ループで意図せず大量発火する UI ミスも含む）
+//   - OGP 外向き fetch を踏み台にした amplifier（origin 帯域消費・第三者サイトへの負荷）
+// `apiRateLimiter`(100/分) より厳しく、`formSubmitRateLimiter`(5/分) より緩いバランス。
+export const expensiveAdminRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 60,
+});
+
+/**
+ * 管理画面の「重い」内部 API パス（expensiveAdminRateLimiter 適用対象）。
+ * - `/admin/api/ogp` … 任意 URL の外向き fetch（amplifier 化リスク）
+ * - `/admin/api/customers/search` … 全件 LIKE スキャン（DB CPU 大）
+ */
+const EXPENSIVE_ADMIN_API_PATHS: ReadonlyArray<string> = [
+  "/admin/api/ogp",
+  "/admin/api/customers/search",
+];
+
+function isExpensiveAdminApiPath(pathname: string): boolean {
+  return EXPENSIVE_ADMIN_API_PATHS.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 /**
  * Better Auth の「読み取り専用」エンドポイント。
  * get-session / list-sessions / list-accounts は credential を介さない参照系のため、
@@ -263,6 +291,14 @@ export async function checkRateLimit(
   }
   if (pathname.startsWith("/api/admin/login-tokens")) {
     return tokenRateLimiter.check(clientIp);
+  }
+  // 管理画面内部 API: 認証済みでも defense-in-depth で IP bucket をかける。
+  // 重い endpoint は厳しめ (60/分)、その他は緩めの apiRateLimiter (100/分)。
+  if (pathname.startsWith("/admin/api/")) {
+    if (isExpensiveAdminApiPath(pathname)) {
+      return expensiveAdminRateLimiter.check(clientIp);
+    }
+    return apiRateLimiter.check(clientIp);
   }
   return apiRateLimiter.check(clientIp);
 }
