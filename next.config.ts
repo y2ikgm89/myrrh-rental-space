@@ -201,6 +201,10 @@ const nextConfig: NextConfig = {
       "@dnd-kit/core",
       "@dnd-kit/sortable",
       "@dnd-kit/utilities",
+      // Form validation (主に server / admin が利用。public form は server-only
+      // validation で client から除外済み。webpack fallback の barrel 最適化保険)
+      "zod",
+      "@conform-to/zod",
     ],
   },
 

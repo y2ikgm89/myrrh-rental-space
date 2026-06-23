@@ -8,8 +8,6 @@ import {
   useForm,
   useInputControl,
 } from "@conform-to/react";
-import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
-import { spaceReviewSchema } from "@/shared/lib/validations/review";
 import { submitReview } from "@/public/actions/review";
 import { Heading } from "@/public/components/design-system/heading";
 import { Input } from "@/public/components/design-system/input";
@@ -107,17 +105,16 @@ function ReviewFormInner({
     undefined,
   );
 
+  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
+  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
+  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   const [form, fields] = useForm({
     id: "review-form",
-    constraint: getZodConstraint(spaceReviewSchema),
     lastResult,
     defaultValue: {
       reservationId,
       title: "",
       comment: "",
-    },
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: spaceReviewSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",

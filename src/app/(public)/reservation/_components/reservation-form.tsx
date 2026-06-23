@@ -13,13 +13,11 @@ import {
 import { useQueryState, parseAsInteger } from "nuqs";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { asConformFieldset } from "@/shared/lib/conform/typed-input-control";
-import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
-import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import {
@@ -190,9 +188,11 @@ export function ReservationForm({
     undefined,
   );
 
+  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
+  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
+  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   const [form, fields] = useForm({
     id: "reservation-form",
-    constraint: getZodConstraint(publicReservationSchema),
     lastResult,
     defaultValue: {
       locationId: auto.locationId ?? "",
@@ -205,9 +205,6 @@ export function ReservationForm({
       email: prefillData?.email ?? "",
       phoneNumber: prefillData?.phoneNumber ?? "",
       notes: "",
-    },
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: publicReservationSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
