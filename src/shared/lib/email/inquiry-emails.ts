@@ -53,7 +53,13 @@ export async function sendInquiryStatusNotificationToAll(
 
   const inquiries = await prisma.inquiry.findMany({
     where: { id: { in: inquiryIds } },
-    select: { id: true, name: true, email: true, subject: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      subject: true,
+      updatedAt: true,
+    },
   });
 
   if (inquiries.length === 0) return;
@@ -74,7 +80,10 @@ export async function sendInquiryStatusNotificationToAll(
             footer,
           }),
         },
-        idempotencyKey: `inquiry-status/${inquiry.id}/${newStatus}`,
+        // 同一 inquiry を 24h 内に RESOLVED → 再オープン → 再 RESOLVED するケースで
+        // payload (name/subject) が変わっても Resend が `invalid_idempotent_request` で
+        // silent drop することを防ぐため updatedAt を末尾に混ぜる。
+        idempotencyKey: `inquiry-status/${inquiry.id}/${newStatus}/${inquiry.updatedAt.getTime()}`,
         operation: "sendInquiryStatusNotificationToAll",
         context: { inquiryId: inquiry.id, email: inquiry.email },
       }),

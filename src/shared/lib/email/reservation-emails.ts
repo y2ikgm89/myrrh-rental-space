@@ -372,7 +372,10 @@ export async function sendReservationStatusChangedEmail(
       ),
       attachments,
     }),
-    idempotencyKey: `reservation-status/${data.reservationId}/${data.newStatus}`,
+    // icsSequence は status 変更ごとに増分されるため、24h 内に同一予約で複数回 status 変更
+    // が起きても idempotency key が衝突せず Resend が `invalid_idempotent_request` で
+    // silent drop することを防ぐ。
+    idempotencyKey: `reservation-status/${data.reservationId}/${data.newStatus}/${data.icsSequence}`,
     operation: "sendReservationStatusChangedEmail",
     context: {
       reservationId: data.reservationId,
