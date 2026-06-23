@@ -1,16 +1,17 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ReservationStatus } from "@generated/prisma/enums";
 import { applyCancellation } from "@/shared/domain/reservations/cancel-core";
+import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 
-const mockReservationUpdate = mock<
-  (args: Record<string, unknown>) => Promise<{ id: string }>
->(() => Promise.resolve({ id: "r1" }));
+const mockReservationUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockCouponUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 1 }));
 
 const mockTx = {
-  reservation: { update: mockReservationUpdate },
+  reservation: { updateMany: mockReservationUpdateMany },
   coupon: { updateMany: mockCouponUpdateMany },
 };
 
@@ -19,13 +20,13 @@ const FUTURE_START = new Date("2026-04-10T00:00:00Z"); // 期限内（9日後）
 
 describe("applyCancellation", () => {
   beforeEach(() => {
-    mockReservationUpdate.mockReset();
+    mockReservationUpdateMany.mockReset();
     mockCouponUpdateMany.mockReset();
-    mockReservationUpdate.mockResolvedValue({ id: "r1" });
+    mockReservationUpdateMany.mockResolvedValue({ count: 1 });
     mockCouponUpdateMany.mockResolvedValue({ count: 1 });
   });
 
-  test("PENDING かつ期限内なら CANCELLED に更新して success", async () => {
+  test("PENDING かつ期限内なら CANCELLED に atomic claim して success", async () => {
     const result = await applyCancellation(
       mockTx as never,
       {
@@ -38,14 +39,44 @@ describe("applyCancellation", () => {
     );
 
     expect(result).toEqual({ success: true });
-    expect(mockReservationUpdate).toHaveBeenCalledWith(
+    expect(mockReservationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "r1", deletedAt: null },
+        where: expect.objectContaining({
+          id: "r1",
+          deletedAt: null,
+          status: { in: expect.arrayContaining([ReservationStatus.PENDING]) },
+        }),
         data: expect.objectContaining({
           status: ReservationStatus.CANCELLED,
           cancelledAt: NOW,
-          cancelledByType: "CUSTOMER",
+          cancelledByType: CANCELLED_BY.CUSTOMER_MYPAGE,
           icsSequence: { increment: 1 },
+        }),
+      }),
+    );
+  });
+
+  test("CUSTOMER_TOKEN を渡すと cancelledByType にそのまま流れる", async () => {
+    await applyCancellation(
+      mockTx as never,
+      {
+        id: "r1",
+        status: ReservationStatus.PENDING,
+        startTime: FUTURE_START,
+        couponId: null,
+      },
+      {
+        deadlineHours: 24,
+        now: NOW,
+        cancellationReason: null,
+        cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
+      },
+    );
+
+    expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
         }),
       }),
     );
@@ -67,7 +98,7 @@ describe("applyCancellation", () => {
       success: false,
       error: "この予約はキャンセルできません",
     });
-    expect(mockReservationUpdate).not.toHaveBeenCalled();
+    expect(mockReservationUpdateMany).not.toHaveBeenCalled();
   });
 
   test("キャンセル期限を過ぎていればエラーで更新しない", async () => {
@@ -84,7 +115,27 @@ describe("applyCancellation", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(mockReservationUpdate).not.toHaveBeenCalled();
+    expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("atomic claim が count=0 なら race を error として返す", async () => {
+    mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+    const result = await applyCancellation(
+      mockTx as never,
+      {
+        id: "r1",
+        status: ReservationStatus.PENDING,
+        startTime: FUTURE_START,
+        couponId: null,
+      },
+      { deadlineHours: 24, now: NOW, cancellationReason: null },
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("別の操作");
+    }
+    expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });
 
   test("クーポン付き予約はクーポン使用回数を戻す", async () => {
@@ -134,7 +185,7 @@ describe("applyCancellation", () => {
       { deadlineHours: 24, now: NOW, cancellationReason: "予定変更のため" },
     );
 
-    expect(mockReservationUpdate).toHaveBeenCalledWith(
+    expect(mockReservationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ cancellationReason: "予定変更のため" }),
       }),

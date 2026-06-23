@@ -13,14 +13,14 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { cancelGuestReservationAction } from "../_actions/cancel";
 
 interface GuestCancelFormProps {
-  readonly token: string;
   readonly turnstileSiteKey: string | null;
 }
 
-export function GuestCancelForm({
-  token,
-  turnstileSiteKey,
-}: GuestCancelFormProps) {
+/**
+ * トークンはサーバ側で HttpOnly cookie (`cancel-token`) から読まれる。
+ * client から token を引き渡す必要はない（漏洩面遮断のため意図的に prop 廃止）。
+ */
+export function GuestCancelForm({ turnstileSiteKey }: GuestCancelFormProps) {
   const [reason, setReason] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,6 @@ export function GuestCancelForm({
     setError(null);
     startTransition(async () => {
       const result = await cancelGuestReservationAction(
-        token,
         reason.trim() || null,
         turnstileToken || undefined,
       );

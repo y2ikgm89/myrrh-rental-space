@@ -192,8 +192,53 @@ function handleAdminLoginGate(
 // Main proxy
 // ---------------------------------------------------------------------------
 
+/**
+ * ゲストキャンセル URL `?token=…` を HttpOnly cookie に転写して `?token` を URL から除去する。
+ *
+ * URL クエリに含まれるトークンは Cloud Run / Cloudflare のアクセスログ、ブラウザ履歴、
+ * autocomplete、同一オリジン Link クリック時の Referer 等あらゆる地点に残留する。
+ * cookie に転写することで残留経路を遮断し、cookie 自体は HttpOnly + SameSite=Strict +
+ * (本番) Secure で送信制御する。
+ *
+ * トークン形式は middleware (edge) で軽量検証のみ行う:
+ *   - base64url 文字種
+ *   - 長さ 32〜1024 字（典型 100〜300）
+ * 暗号学的な verify は Node ランタイムの page/action で実施する。
+ */
+const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
+const CANCEL_TOKEN_COOKIE_MAX_AGE = 30 * 60; // 30 分
+const CANCEL_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
+
+function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
+  const { pathname, searchParams } = req.nextUrl;
+  if (pathname !== "/reservation/cancel") return null;
+  const token = searchParams.get("token");
+  if (!token) return null;
+
+  // 不正形式の token は cookie に書かず ?token も外して redirect（ページが invalid と判定）
+  const cleanUrl = new URL(req.url);
+  cleanUrl.searchParams.delete("token");
+  const response = NextResponse.redirect(cleanUrl);
+
+  if (CANCEL_TOKEN_PATTERN.test(token)) {
+    response.cookies.set({
+      name: CANCEL_TOKEN_COOKIE_NAME,
+      value: token,
+      httpOnly: true,
+      sameSite: "strict",
+      secure: !isLocalhostRequest(req),
+      path: "/",
+      maxAge: CANCEL_TOKEN_COOKIE_MAX_AGE,
+    });
+  }
+  return response;
+}
+
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
+
+  const cancelTransfer = handleGuestCancelTokenTransfer(req);
+  if (cancelTransfer) return cancelTransfer;
 
   if (pathname.startsWith("/api")) {
     // Cloud Run の health / liveness probe は x-forwarded-for を設定しないため、

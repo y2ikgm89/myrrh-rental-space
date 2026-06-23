@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import type { SubmissionResult } from "@conform-to/react";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -7,6 +8,7 @@ import {
   cancelCustomerReservation,
   updateCustomerReservation,
 } from "@/shared/domain/reservations/customer-commands";
+import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
@@ -18,7 +20,10 @@ import {
   checkActionRateLimit,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
-import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import {
+  formSubmitRateLimiter,
+  getClientIpFromHeaders,
+} from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -75,20 +80,18 @@ export async function cancelReservationAction(
       coupons: true,
     });
 
-    // Create admin notification (fire-and-forget)
-    fireAndForget(
-      createNotificationCommand({
-        type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
-        title: "顧客による予約キャンセル",
-        message: `${customer.lastName}${customer.firstName}様が予約をキャンセルしました`,
-        resourceType: "reservation",
-        resourceId: parsedId.data,
-      }),
-      {
-        operation: "createCustomerCancelNotification",
-        category: ErrorCategory.DATABASE,
-      },
-    );
+    // 副作用統一実行: refund / GCal / メール / 通知 / 監査ログ
+    const requestHeaders = await headers();
+    const ip = await getClientIpFromHeaders();
+    const userAgent = requestHeaders.get("user-agent");
+
+    await applyCancellationSideEffects({
+      reservationId: parsedId.data,
+      cancellationReason: trimmedReason,
+      channel: "customer-mypage",
+      actorUserId: session.user.id,
+      request: { ip, userAgent, tokenFingerprint: null },
+    });
 
     return null;
   } catch (error) {

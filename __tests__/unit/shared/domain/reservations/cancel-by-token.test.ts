@@ -5,15 +5,15 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 const mockFindFirst = mock<(args: Record<string, unknown>) => Promise<unknown>>(
   () => Promise.resolve(null),
 );
-const mockUpdate = mock<(args: Record<string, unknown>) => Promise<unknown>>(
-  () => Promise.resolve({ id: "r1" }),
-);
+const mockUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<unknown>
+>(() => Promise.resolve({ count: 1 }));
 const mockCouponUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve({ count: 0 }));
 
 const mockTx = {
-  reservation: { findFirst: mockFindFirst, update: mockUpdate },
+  reservation: { findFirst: mockFindFirst, updateMany: mockUpdateMany },
   coupon: { updateMany: mockCouponUpdateMany },
 };
 
@@ -31,9 +31,9 @@ const FAR_FUTURE = new Date("2099-01-01T00:00:00Z");
 describe("cancelReservationByToken", () => {
   beforeEach(() => {
     mockFindFirst.mockReset();
-    mockUpdate.mockReset();
+    mockUpdateMany.mockReset();
     mockCouponUpdateMany.mockReset();
-    mockUpdate.mockResolvedValue({ id: "r1" });
+    mockUpdateMany.mockResolvedValue({ count: 1 });
     mockCouponUpdateMany.mockResolvedValue({ count: 0 });
   });
 
@@ -43,10 +43,10 @@ describe("cancelReservationByToken", () => {
     const result = await cancelReservationByToken("r1", 24);
 
     expect(result).toEqual({ success: false, error: "予約が見つかりません" });
-    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockUpdateMany).not.toHaveBeenCalled();
   });
 
-  test("有効な予約をキャンセルし payload を返す（customerId フィルタなし）", async () => {
+  test("有効な予約をキャンセルし payload を返す（customerId フィルタなし・CUSTOMER_TOKEN を記録）", async () => {
     mockFindFirst.mockResolvedValue({
       id: "r1",
       status: "PENDING",
@@ -57,7 +57,13 @@ describe("cancelReservationByToken", () => {
     const result = await cancelReservationByToken("r1", 24, "都合により");
 
     expect(result).toEqual({ success: true, payload: { reservationId: "r1" } });
-    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cancelledByType: "CUSTOMER_TOKEN",
+        }),
+      }),
+    );
     expect(mockFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "r1", deletedAt: null } }),
     );

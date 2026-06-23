@@ -73,10 +73,37 @@ export const serverEnv = createEnv({
     TURNSTILE_SECRET_KEY: z.string().optional(),
 
     // Encryption（本番必須 - ランタイム検証）
-    // API キーの暗号化に使用
+    // API キー / OAuth トークン等の暗号化に使用。
+    // 鍵ローテーション: `ENCRYPTION_KEY` は常に「新規 encrypt に使う primary key」、
+    // `ENCRYPTION_KEY_ID` はそれの kid（識別子、デフォルト "v1"）、
+    // `ENCRYPTION_KEYS_LEGACY` は decrypt fallback 用の旧鍵リスト
+    // (`<kid>:<hex64>,<kid>:<hex64>,...` 形式)。
     ENCRYPTION_KEY: z
       .string()
       .length(64, { error: "ENCRYPTION_KEY must be exactly 64 characters" })
+      .optional(),
+    /** Primary key の識別子（kid）。1〜32 文字、`a-zA-Z0-9-_` のみ。未指定なら "v1"。 */
+    ENCRYPTION_KEY_ID: z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]{1,32}$/u, {
+        error:
+          "ENCRYPTION_KEY_ID must be 1-32 chars of [a-zA-Z0-9_-] (e.g. 'v1', 'v2', 'k20260623')",
+      })
+      .optional(),
+    /**
+     * decrypt fallback 用の旧鍵リスト（ローテーション猶予期間用）。
+     * 形式: `<kid1>:<hex64>,<kid2>:<hex64>,...`
+     * 旧 ciphertext は kid に従って該当鍵で復号、鍵不在なら decrypt 失敗。
+     */
+    ENCRYPTION_KEYS_LEGACY: z
+      .string()
+      .regex(
+        /^([a-zA-Z0-9_-]{1,32}:[0-9a-fA-F]{64})(,[a-zA-Z0-9_-]{1,32}:[0-9a-fA-F]{64})*$/u,
+        {
+          error:
+            "ENCRYPTION_KEYS_LEGACY must be '<kid>:<hex64>' entries joined by ','",
+        },
+      )
       .optional(),
 
     // Cron（本番必須 - ランタイム検証）
@@ -142,6 +169,8 @@ export const serverEnv = createEnv({
     INSTAGRAM_REDIRECT_URI: process.env["INSTAGRAM_REDIRECT_URI"],
     TURNSTILE_SECRET_KEY: process.env["TURNSTILE_SECRET_KEY"],
     ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
+    ENCRYPTION_KEY_ID: process.env["ENCRYPTION_KEY_ID"],
+    ENCRYPTION_KEYS_LEGACY: process.env["ENCRYPTION_KEYS_LEGACY"],
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],

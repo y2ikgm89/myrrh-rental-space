@@ -55,11 +55,20 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
   ),
 }));
 
-// `getEncryptionKey()` は setup.ts でグローバル mock 済 (固定 64 文字 hex)。
+// encryption helpers は setup.ts でグローバル mock 済 (固定 kid + hex)。
 // 異常系 test (未設定シナリオ) では `mockImplementationOnce` で個別 override する。
-const mockGetEncryptionKeyOverride = mock<() => string>(() => "a".repeat(64));
+const TEST_PRIMARY = { kid: "v1", hex: "a".repeat(64) };
+const mockGetEncryptionKeyOverride = mock<() => string>(() => TEST_PRIMARY.hex);
+const mockGetPrimaryOverride = mock<() => typeof TEST_PRIMARY>(
+  () => TEST_PRIMARY,
+);
 mock.module("@/shared/lib/env/encryption", () => ({
+  DEFAULT_KID: "v1",
   getEncryptionKey: mockGetEncryptionKeyOverride,
+  getPrimaryEncryptionKey: mockGetPrimaryOverride,
+  getLegacyEncryptionKeys: () => [],
+  findEncryptionKeyByKid: (kid: string) =>
+    kid === TEST_PRIMARY.kid ? TEST_PRIMARY : null,
 }));
 
 // CalendarSyncMethod enum モック
@@ -224,7 +233,7 @@ describe("updateStripeSettings", () => {
 
   describe("異常系", () => {
     test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする（stripeSecretKey）", async () => {
-      mockGetEncryptionKeyOverride.mockImplementationOnce(() => {
+      mockGetPrimaryOverride.mockImplementationOnce(() => {
         throw new Error("ENCRYPTION_KEY is not set");
       });
 
@@ -241,7 +250,7 @@ describe("updateStripeSettings", () => {
     });
 
     test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする（stripeWebhookSecret）", async () => {
-      mockGetEncryptionKeyOverride.mockImplementationOnce(() => {
+      mockGetPrimaryOverride.mockImplementationOnce(() => {
         throw new Error("ENCRYPTION_KEY is not set");
       });
 
