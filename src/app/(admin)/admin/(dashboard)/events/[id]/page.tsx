@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { IconDownload, IconPencil } from "@tabler/icons-react";
+import {
+  IconDownload,
+  IconPencil,
+  IconClipboardCheck,
+} from "@tabler/icons-react";
 import { getEventById } from "@/shared/domain/events/admin-queries";
 import { getEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { deleteEvent } from "@/admin/actions/event";
@@ -58,6 +62,7 @@ export default async function EventDetailPage({
   const serializedRegistrations = registrationPage.registrations.map((r) => ({
     ...r,
     cancelledAt: r.cancelledAt?.toISOString() ?? null,
+    attendedAt: r.attendedAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
   }));
 
@@ -93,6 +98,12 @@ export default async function EventDetailPage({
               <IconDownload className="mr-2 h-4 w-4" />
               CSV
             </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/admin/events/${event.id}/check-in`}>
+              <IconClipboardCheck className="mr-2 h-4 w-4" />
+              当日受付
+            </Link>
           </Button>
           <Button asChild size="sm">
             <Link href={`/admin/events/${event.id}/edit`}>

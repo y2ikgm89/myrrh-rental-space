@@ -8,6 +8,7 @@ export async function createEventRegistrationCommand(data: {
   eventId: string;
   ticketId: string;
   name: string;
+  // 公開申込ではフォーム側 Zod で必須化済。walk-in 用には createWalkInRegistrationCommand を使う
   email: string;
   phone?: string | null;
   note?: string | null;
@@ -177,4 +178,185 @@ export async function cancelEventRegistrationCommand(
   });
 
   return { ...registration, icsSequence: updated.icsSequence };
+}
+
+/**
+ * 当日受付 (check-in) の出席フラグを toggle する。
+ *
+ * - `attended: true`  → attendedAt を現在時刻にセット (既に出席済なら no-op で既存値を返す)
+ * - `attended: false` → attendedAt を null に戻す (誤打刻取消)
+ *
+ * 二重押し / 多端末からの並列実行は last-write-wins。check-in には capacity 制約が
+ * 無いため advisory lock は不要。CANCELLED 済の申込には適用できない。
+ */
+export async function setEventRegistrationCheckInCommand(params: {
+  registrationId: string;
+  attended: boolean;
+}) {
+  const existing = await prisma.eventRegistration.findFirst({
+    where: {
+      id: params.registrationId,
+      event: { deletedAt: null },
+    },
+    select: {
+      id: true,
+      eventId: true,
+      attendedAt: true,
+      status: true,
+    },
+  });
+  if (!existing) throw new DomainError("申込が見つかりません", "NOT_FOUND");
+  if (existing.status === RegistrationStatus.CANCELLED) {
+    throw new DomainError(
+      "キャンセル済の申込は出席登録できません",
+      "VALIDATION",
+    );
+  }
+
+  const nextAttendedAt = params.attended ? new Date() : null;
+
+  // 状態変化なしは no-op (DB 書き込み回避、監査ログ汚染防止)
+  if (
+    (existing.attendedAt === null && nextAttendedAt === null) ||
+    (existing.attendedAt !== null && nextAttendedAt !== null)
+  ) {
+    return {
+      registrationId: existing.id,
+      eventId: existing.eventId,
+      before: existing.attendedAt,
+      after: existing.attendedAt,
+      changed: false,
+    };
+  }
+
+  const updated = await prisma.eventRegistration.update({
+    where: { id: existing.id },
+    data: { attendedAt: nextAttendedAt },
+    select: { attendedAt: true },
+  });
+
+  return {
+    registrationId: existing.id,
+    eventId: existing.eventId,
+    before: existing.attendedAt,
+    after: updated.attendedAt,
+    changed: true,
+  };
+}
+
+/**
+ * 当日参加 (walk-in) の新規申込を作成し、同一トランザクション内で attendedAt も
+ * セットして即出席扱いにする。
+ *
+ * - 定員 TOCTOU は createEventRegistrationCommand と同じ pg_advisory_xact_lock で防止
+ * - customerId は null 固定 (会員紐付け UI は Phase 1 では持たない)
+ * - email は任意 (受付係が代行入力する省略可) — null も許容
+ * - 確認メールは送信しない (呼出側 Server Action で常時 suppress)
+ */
+export async function createWalkInRegistrationCommand(data: {
+  eventId: string;
+  ticketId: string;
+  name: string;
+  email: string | null;
+  phone?: string | null;
+  note?: string | null;
+  quantity: number;
+}) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728350::int4, hashtext(${data.eventId}))`;
+
+    const event = await tx.event.findFirst({
+      where: {
+        id: data.eventId,
+        deletedAt: null,
+        status: EventStatus.PUBLISHED,
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        capacity: true,
+        startTime: true,
+      },
+    });
+    if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+
+    const ticket = await tx.eventTicket.findFirst({
+      where: { id: data.ticketId, eventId: data.eventId, isAvailable: true },
+      select: { id: true, name: true, capacity: true },
+    });
+    if (!ticket) {
+      throw new DomainError(
+        "指定されたチケット種別が見つかりません",
+        "NOT_FOUND",
+      );
+    }
+
+    const eventConfirmed =
+      event.capacity != null
+        ? await tx.eventRegistration.aggregate({
+            where: { eventId: event.id, status: RegistrationStatus.CONFIRMED },
+            _sum: { quantity: true },
+          })
+        : null;
+
+    const ticketConfirmed =
+      ticket.capacity != null
+        ? await tx.eventRegistration.aggregate({
+            where: {
+              eventId: event.id,
+              ticketId: ticket.id,
+              status: RegistrationStatus.CONFIRMED,
+            },
+            _sum: { quantity: true },
+          })
+        : null;
+
+    if (event.capacity != null && eventConfirmed) {
+      const remaining = event.capacity - (eventConfirmed._sum.quantity ?? 0);
+      if (data.quantity > remaining) {
+        throw new DomainError(
+          remaining <= 0
+            ? "このイベントは満員です"
+            : `残り${String(remaining)}枠です。参加人数を${String(remaining)}名以下にしてください`,
+          "VALIDATION",
+        );
+      }
+    }
+
+    if (ticket.capacity != null && ticketConfirmed) {
+      const remaining = ticket.capacity - (ticketConfirmed._sum.quantity ?? 0);
+      if (data.quantity > remaining) {
+        throw new DomainError(
+          remaining <= 0
+            ? `「${ticket.name}」は満員です`
+            : `「${ticket.name}」は残り${String(remaining)}枠です。参加人数を${String(remaining)}名以下にしてください`,
+          "VALIDATION",
+        );
+      }
+    }
+
+    const registration = await tx.eventRegistration.create({
+      data: {
+        eventId: data.eventId,
+        ticketId: data.ticketId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone ?? null,
+        note: data.note ?? null,
+        quantity: data.quantity,
+        customerId: null,
+        attendedAt: new Date(),
+      },
+      select: {
+        id: true,
+        eventId: true,
+        name: true,
+        quantity: true,
+        attendedAt: true,
+      },
+    });
+
+    return { registration, event: { title: event.title, slug: event.slug } };
+  });
 }

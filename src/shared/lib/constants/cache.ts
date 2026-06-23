@@ -235,6 +235,10 @@ export const getCacheTag = {
   auditLogs: {
     recent: (userId: string) => `audit-logs:recent:${userId}`,
   },
+  events: {
+    list: () => CACHE_TAGS.EVENTS,
+    checkin: (eventId: string) => `${CACHE_TAGS.EVENTS}-checkin-${eventId}`,
+  },
 } as const;
 
 /** キャッシュ有効期間の型 */

@@ -47,7 +47,8 @@ import type { EmailResult } from "./types";
 type EventRegistrationConfirmationData = {
   registrationId: string;
   customerName: string;
-  customerEmail: string;
+  // walk-in 由来 (当日参加) では null。null の場合は送信せず disabled を返す
+  customerEmail: string | null;
   eventTitle: string;
   eventStartTime: Date;
   eventEndTime: Date;
@@ -58,10 +59,15 @@ type EventRegistrationConfirmationData = {
 
 /**
  * イベント申込確認メールを送信
+ *
+ * customerEmail が null (walk-in 由来) の場合は送信せず disabled を返す。
  */
 export async function sendEventRegistrationConfirmation(
   data: EventRegistrationConfirmationData,
 ): Promise<EmailResult> {
+  if (!data.customerEmail) return { ok: false, reason: "disabled" };
+  const customerEmail = data.customerEmail;
+
   const eventDate = format(data.eventStartTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
@@ -130,7 +136,7 @@ export async function sendEventRegistrationConfirmation(
 
   return sendEmail({
     payload: omitUndefined({
-      to: data.customerEmail,
+      to: customerEmail,
       subject: `【イベント申込確認】${data.eventTitle} - ${eventDate}`,
       react: EventRegistrationConfirmationEmail(
         omitUndefined({
@@ -152,7 +158,7 @@ export async function sendEventRegistrationConfirmation(
     operation: "sendEventRegistrationConfirmation",
     context: {
       registrationId: data.registrationId,
-      customerEmail: data.customerEmail,
+      customerEmail,
     },
   });
 }
@@ -160,7 +166,7 @@ export async function sendEventRegistrationConfirmation(
 type EventRegistrationCancelledData = {
   registrationId: string;
   customerName: string;
-  customerEmail: string;
+  customerEmail: string | null;
   eventTitle: string;
   eventStartTime: Date;
   eventEndTime: Date;
@@ -171,10 +177,15 @@ type EventRegistrationCancelledData = {
 
 /**
  * イベント申込キャンセル確認メールを送信（CANCEL ICS 添付）
+ *
+ * customerEmail が null (walk-in 由来) の場合は送信せず disabled を返す。
  */
 export async function sendEventRegistrationCancelled(
   data: EventRegistrationCancelledData,
 ): Promise<EmailResult> {
+  if (!data.customerEmail) return { ok: false, reason: "disabled" };
+  const customerEmail = data.customerEmail;
+
   const eventDate = format(data.eventStartTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
@@ -225,7 +236,7 @@ export async function sendEventRegistrationCancelled(
 
   return sendEmail({
     payload: omitUndefined({
-      to: data.customerEmail,
+      to: customerEmail,
       subject: `【イベント申込キャンセル】${data.eventTitle}`,
       react: EventRegistrationCancelledEmail({
         customerName: data.customerName,
@@ -239,7 +250,7 @@ export async function sendEventRegistrationCancelled(
     operation: "sendEventRegistrationCancelled",
     context: {
       registrationId: data.registrationId,
-      customerEmail: data.customerEmail,
+      customerEmail,
     },
   });
 }
@@ -248,7 +259,8 @@ type EventAdminNotificationData = {
   registrationId: string;
   eventId: string;
   participantName: string;
-  participantEmail: string;
+  // walk-in 由来は null。本文では「未登録 / 当日参加」と表示
+  participantEmail: string | null;
   eventTitle: string;
   eventStartTime: Date;
   quantity: number;
@@ -356,8 +368,13 @@ export async function sendEventCancelledToAllParticipants(
   ]);
   const host = getAppHost();
 
+  // walk-in 由来 (email=null) は宛先が無いため除外
+  const recipients = event.registrations.filter(
+    (r): r is typeof r & { email: string } => r.email !== null,
+  );
+
   const results = await Promise.allSettled(
-    event.registrations.map((registration) => {
+    recipients.map((registration) => {
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -414,7 +431,7 @@ export async function sendEventCancelledToAllParticipants(
 
   for (const [i, result] of results.entries()) {
     if (result.status === "rejected") {
-      const registration = event.registrations[i];
+      const registration = recipients[i];
       if (registration) {
         logError(normalizeError(result.reason), {
           category: ErrorCategory.EXTERNAL_API,
@@ -483,8 +500,13 @@ export async function sendEventUpdatedToAllParticipants(
   ]);
   const host = getAppHost();
 
+  // walk-in 由来 (email=null) は宛先が無いため除外
+  const recipients = event.registrations.filter(
+    (r): r is typeof r & { email: string } => r.email !== null,
+  );
+
   const results = await Promise.allSettled(
-    event.registrations.map((registration) => {
+    recipients.map((registration) => {
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -540,7 +562,7 @@ export async function sendEventUpdatedToAllParticipants(
 
   for (const [i, result] of results.entries()) {
     if (result.status === "rejected") {
-      const registration = event.registrations[i];
+      const registration = recipients[i];
       if (registration) {
         logError(normalizeError(result.reason), {
           category: ErrorCategory.EXTERNAL_API,

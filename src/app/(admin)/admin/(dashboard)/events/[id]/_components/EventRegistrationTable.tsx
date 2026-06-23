@@ -22,12 +22,14 @@ import type { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-t
 type Registration = {
   id: string;
   name: string;
-  email: string;
+  // walk-in (当日参加) では null
+  email: string | null;
   phone: string | null;
   note: string | null;
   quantity: number;
   status: RegistrationStatus;
   cancelledAt: string | null;
+  attendedAt: string | null;
   createdAt: string;
 };
 
@@ -92,7 +94,11 @@ export function EventRegistrationTable({
                 <TableRow key={reg.id}>
                   <TableCell className="font-medium">{reg.name}</TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {reg.email}
+                    {reg.email ?? (
+                      <span className="text-muted-foreground italic">
+                        当日参加
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>{reg.quantity}名</TableCell>
                   <TableCell className="whitespace-nowrap">

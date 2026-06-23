@@ -39,7 +39,7 @@ export async function GET(request: Request): Promise<Response> {
 
     const csv = generateCsv(registrations, [
       { header: "氏名", accessor: (r) => r.name },
-      { header: "メール", accessor: (r) => r.email },
+      { header: "メール", accessor: (r) => r.email ?? "" },
       { header: "電話番号", accessor: (r) => r.phone },
       { header: "参加人数", accessor: (r) => r.quantity },
       {
@@ -59,6 +59,13 @@ export async function GET(request: Request): Promise<Response> {
       {
         header: "開催場所",
         accessor: (r) => r.event.location,
+      },
+      {
+        header: "出席日時",
+        accessor: (r) =>
+          r.attendedAt
+            ? format(r.attendedAt, "yyyy/MM/dd HH:mm", { locale: ja })
+            : "",
       },
       {
         header: "キャンセル日",

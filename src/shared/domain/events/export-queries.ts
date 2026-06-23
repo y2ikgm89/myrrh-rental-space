@@ -15,6 +15,7 @@ export async function getEventRegistrationsForExport(eventId: string) {
       quantity: true,
       status: true,
       cancelledAt: true,
+      attendedAt: true,
       createdAt: true,
       event: {
         select: {
