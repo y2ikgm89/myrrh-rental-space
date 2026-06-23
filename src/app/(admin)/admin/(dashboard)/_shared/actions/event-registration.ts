@@ -16,7 +16,7 @@ import { getEventDetailsForEmail } from "@/shared/domain/events/registration-que
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -68,7 +68,6 @@ export async function adminCancelRegistration(
     },
     afterSuccess: (data) => {
       updateTag(CACHE_TAGS.EVENTS);
-      updateTag(getCacheTag.events.checkin(data.eventId));
 
       fireAndForget(
         createNotificationCommand({
@@ -166,10 +165,7 @@ export async function toggleEventRegistrationCheckIn(
         changed: result.changed,
       };
     },
-    afterSuccess: () => {
-      // check-in toggle は公開側 (EVENTS) には影響しないため checkin タグのみ無効化
-      updateTag(getCacheTag.events.checkin(parsed.data.eventId));
-    },
+    // check-in toggle は公開側 (EVENTS) には影響しないため cache 無効化不要
   });
 }
 
@@ -236,9 +232,8 @@ export async function createWalkInRegistration(
       };
     },
     afterSuccess: (data) => {
-      // walk-in は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS も並列無効化
+      // walk-in は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS を無効化
       invalidateEventCaches();
-      updateTag(getCacheTag.events.checkin(data.eventId));
 
       fireAndForget(
         createNotificationCommand({
