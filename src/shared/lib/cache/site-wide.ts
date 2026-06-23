@@ -12,6 +12,13 @@
  *
  * Why { expire: 0 } not 'max': 'max' is stale-while-revalidate. OAuth callbacks
  * redirect to admin pages that must read just-saved values — SWR breaks that.
+ *
+ * Sitemap auto-purge: every site-wide invalidation also enqueues a SITEMAP
+ * CDN tag purge. The /sitemap.xml route is the only response that carries
+ * the `sitemap-v1` tag (see next.config.ts), so the purge invalidates only
+ * the sitemap document itself. This collapses Google's sitemap discovery
+ * lag (~2 h s-maxage on the edge) to "next request after publish".
+ * @see https://developers.cloudflare.com/cache/how-to/purge-cache/purge-by-tags/
  */
 
 import "server-only";
@@ -53,6 +60,8 @@ function translateToCdnTags(
  * Server-Action variant.
  * - updateTag (immediate expire, read-your-own-writes)
  * - CDN tag purge coalesced via withPurgeBatch
+ * - SITEMAP tag always appended so /sitemap.xml is purged on every site-wide
+ *   invalidation (Google discovery latency collapse).
  */
 export function invalidateSiteWideCache(
   tags: NextJsTagInput,
@@ -64,9 +73,9 @@ export function invalidateSiteWideCache(
   if (options?.skipCdnPurge) return;
 
   const cdnTags = translateToCdnTags(nextJsTags);
-  if (cdnTags.length > 0) {
-    queueTagPurge(...cdnTags);
-  }
+  // Always co-purge sitemap. Cheap (single tag) and admin publish → Google
+  // sitemap discovery lag drops from s-maxage window to next-request.
+  queueTagPurge(...cdnTags, CDN_CACHE_TAGS.SITEMAP);
 
   if (options?.cdnUrlPurge) {
     void firePurgeAsync(options.cdnUrlPurge, {
@@ -86,6 +95,7 @@ export function invalidateSiteWideCaches(
  * Route Handler / cron variant.
  * - revalidateTag(tag, { expire: 0 }) (blocking immediate-expire)
  * - CDN tag purge fires immediately (not via batcher — Route Handlers don't wrap)
+ * - SITEMAP tag always appended (same rationale as the Server-Action variant).
  */
 export function invalidateSiteWideCacheFromRouteHandler(
   tags: NextJsTagInput,
@@ -96,13 +106,11 @@ export function invalidateSiteWideCacheFromRouteHandler(
 
   if (options?.skipCdnPurge) return;
 
-  const cdnTags = translateToCdnTags(nextJsTags);
-  if (cdnTags.length > 0) {
-    void firePurgeAsync(() => purgeCloudflareCacheByTags(cdnTags.slice()), {
-      operation: "invalidateSiteWideCacheFromRouteHandler.tagPurge",
-      tags: cdnTags,
-    });
-  }
+  const cdnTags = [...translateToCdnTags(nextJsTags), CDN_CACHE_TAGS.SITEMAP];
+  void firePurgeAsync(() => purgeCloudflareCacheByTags(cdnTags.slice()), {
+    operation: "invalidateSiteWideCacheFromRouteHandler.tagPurge",
+    tags: cdnTags,
+  });
 
   if (options?.cdnUrlPurge) {
     void firePurgeAsync(options.cdnUrlPurge, {

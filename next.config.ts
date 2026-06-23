@@ -85,6 +85,8 @@ const TERMS_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.TERMS_DETAIL,
   ...SIDEBAR_CDN_TAGS,
 ]);
+const SITEMAP_CACHE_TAG = joinCacheTags([CDN_CACHE_TAGS.SITEMAP]);
+
 const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
   reactCompiler: true,
@@ -314,6 +316,16 @@ const nextConfig: NextConfig = {
       {
         source: "/terms/:path*",
         headers: [{ key: "Cache-Tag", value: TERMS_CACHE_TAG }],
+      },
+      // ============================================================
+      // /sitemap.xml — site-wide auto-purge target (see site-wide.ts).
+      // Cache-Control inherited from blanket public (s-maxage=3600). Every
+      // admin mutation that calls invalidateSiteWideCache co-purges this tag,
+      // so the s-maxage window is effectively bypassed on content updates.
+      // ============================================================
+      {
+        source: "/sitemap.xml",
+        headers: [{ key: "Cache-Tag", value: SITEMAP_CACHE_TAG }],
       },
       // ============================================================
       // private blocklist（認証 / PII。blanket より後ろ = last-match-wins で上書き）
