@@ -49,15 +49,6 @@ export function getPrimaryEncryptionKey(): EncryptionKey {
 }
 
 /**
- * 既存 (旧形式) API 互換: hex のみ返す。新コードは `getPrimaryEncryptionKey()` を使うこと。
- *
- * @deprecated kid を伴う `getPrimaryEncryptionKey()` に置き換える
- */
-export function getEncryptionKey(): string {
-  return getPrimaryEncryptionKey().hex;
-}
-
-/**
  * Legacy 鍵リストを取得。`ENCRYPTION_KEYS_LEGACY="kidA:hexA,kidB:hexB"` を parse。
  * decrypt fallback 用。同一 kid が primary とも legacy にも存在する場合は primary が勝つ。
  */

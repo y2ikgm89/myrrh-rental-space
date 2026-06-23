@@ -58,13 +58,11 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
 // encryption helpers は setup.ts でグローバル mock 済 (固定 kid + hex)。
 // 異常系 test (未設定シナリオ) では `mockImplementationOnce` で個別 override する。
 const TEST_PRIMARY = { kid: "v1", hex: "a".repeat(64) };
-const mockGetEncryptionKeyOverride = mock<() => string>(() => TEST_PRIMARY.hex);
 const mockGetPrimaryOverride = mock<() => typeof TEST_PRIMARY>(
   () => TEST_PRIMARY,
 );
 mock.module("@/shared/lib/env/encryption", () => ({
   DEFAULT_KID: "v1",
-  getEncryptionKey: mockGetEncryptionKeyOverride,
   getPrimaryEncryptionKey: mockGetPrimaryOverride,
   getLegacyEncryptionKeys: () => [],
   findEncryptionKeyByKid: (kid: string) =>
