@@ -23,6 +23,7 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { formatEventVenue } from "@/shared/domain/events/venue";
+import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -95,6 +96,9 @@ export async function sendEventRegistrationConfirmation(
     organizerEmail: organizer.email,
   });
 
+  // ゲストでもログイン不要で .ics をダウンロードできるよう、署名付きトークンを URL に付与する。
+  // 寿命は CALENDAR_TOKEN_LIFETIME_MS (30 日)。
+  const icsDownloadUrl = `${appUrl}/api/calendar/event/${data.registrationId}?token=${createCalendarToken("event", data.registrationId)}`;
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? buildAddToCalendarUrls({
         summary: data.eventTitle,
@@ -106,7 +110,7 @@ export async function sendEventRegistrationConfirmation(
         startTime: data.eventStartTime,
         endTime: data.eventEndTime,
         ...(data.location !== undefined ? { location: data.location } : {}),
-        icsDownloadUrl: `${appUrl}/api/calendar/event/${data.registrationId}`,
+        icsDownloadUrl,
       })
     : undefined;
 

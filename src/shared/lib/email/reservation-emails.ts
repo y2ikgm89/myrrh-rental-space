@@ -25,6 +25,7 @@ import {
   computeCancelTokenExpiresAt,
   createCancelToken,
 } from "@/shared/lib/reservation-cancel-token";
+import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -99,6 +100,9 @@ export async function sendReservationConfirmationEmail(
     organizerEmail: organizer.email,
   });
 
+  // ゲストでもログイン不要で .ics をダウンロードできるよう、署名付きトークンを URL に付与する。
+  // 寿命は CALENDAR_TOKEN_LIFETIME_MS (30 日)。会員も同じ URL を踏むため挙動は分岐しない。
+  const icsDownloadUrl = `${appUrl}/api/calendar/reservation/${data.reservationId}?token=${createCalendarToken("reservation", data.reservationId)}`;
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? buildAddToCalendarUrls({
         summary: `【予約】${data.spaceName}`,
@@ -110,7 +114,7 @@ export async function sendReservationConfirmationEmail(
         startTime: data.startTime,
         endTime: data.endTime,
         ...(data.location !== undefined ? { location: data.location } : {}),
-        icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}`,
+        icsDownloadUrl,
       })
     : undefined;
 
@@ -316,7 +320,7 @@ export async function sendReservationStatusChangedEmail(
           startTime: data.startTime,
           endTime: data.endTime,
           ...(data.location !== undefined ? { location: data.location } : {}),
-          icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}`,
+          icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}?token=${createCalendarToken("reservation", data.reservationId)}`,
         })
       : undefined;
 

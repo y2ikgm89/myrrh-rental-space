@@ -1,7 +1,11 @@
 /**
  * イベント申込 .ics ダウンロード API
  *
- * Customer session 認証必須。リクエストユーザー所有の申込のみ .ics を返す。
+ * アクセス権限の判定:
+ *   1. クエリ `?token=<署名付きトークン>` がある場合: HMAC 検証成功で許可
+ *      (ゲスト = 確認メールの「iCal (.ics)」リンク経路)
+ *   2. それ以外: customer session 必須 + 所有者一致
+ *
  * ステータスが CANCELLED の場合は METHOD:CANCEL、それ以外は METHOD:REQUEST。
  *
  * @module app/api/calendar/event/[registrationId]
@@ -19,6 +23,10 @@ import {
   type EventCalendarParams,
 } from "@/shared/lib/ical";
 import { getAppHost } from "@/shared/lib/constants";
+import {
+  calendarTokenFingerprint,
+  verifyCalendarToken,
+} from "@/shared/lib/calendar/calendar-token";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import {
   ErrorCategory,
@@ -35,39 +43,82 @@ const paramSchema = z.object({
 });
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ registrationId: string }> },
 ) {
   try {
-    // 1. 認証
-    const session = await getCustomerSession();
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    // 2. バリデーション
+    // 1. パスパラメータ検証
     const raw = await params;
     const parsed = paramSchema.safeParse(raw);
     if (!parsed.success) {
       return new NextResponse("Invalid id", { status: 400 });
     }
+    const registrationId = parsed.data.registrationId;
 
-    // 3. 顧客紐付け
-    const customer = await getCustomerByUserId(session.user.id);
-    if (!customer) {
-      return new NextResponse("Customer not found", { status: 404 });
+    // 2. アクセス権判定: token 経路 → session 経路の順で解決
+    const url = new URL(request.url);
+    const token = url.searchParams.get("token");
+    let lookupCustomerId: string | undefined;
+
+    if (token !== null) {
+      const result = verifyCalendarToken(token, "event");
+      if (!result.valid) {
+        logError(
+          normalizeError(new Error(`Calendar token ${result.reason}: event`)),
+          {
+            category: ErrorCategory.AUTHORIZATION,
+            severity: ErrorSeverity.LOW,
+            context: {
+              operation: "calendarEventDownload",
+              reason: result.reason,
+              tokenFingerprint: calendarTokenFingerprint(token),
+              registrationId,
+            },
+          },
+        );
+        return new NextResponse(
+          result.reason === "expired" ? "Token expired" : "Invalid token",
+          { status: result.reason === "expired" ? 410 : 401 },
+        );
+      }
+      if (result.targetId !== registrationId) {
+        logError(normalizeError(new Error("Calendar token target mismatch")), {
+          category: ErrorCategory.AUTHORIZATION,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "calendarEventDownload",
+            tokenFingerprint: calendarTokenFingerprint(token),
+            urlRegistrationId: registrationId,
+            payloadRegistrationId: result.targetId,
+          },
+        });
+        return new NextResponse("Invalid token", { status: 401 });
+      }
+      lookupCustomerId = undefined;
+    } else {
+      const session = await getCustomerSession();
+      if (!session) {
+        return new NextResponse("Unauthorized", { status: 401 });
+      }
+      const customer = await getCustomerByUserId(session.user.id);
+      if (!customer) {
+        return new NextResponse("Customer not found", { status: 404 });
+      }
+      lookupCustomerId = customer.id;
     }
 
-    // 4. 申込取得（所有者チェック）
+    // 3. 申込取得
     const registration = await getEventRegistrationForCalendar({
-      registrationId: parsed.data.registrationId,
-      customerId: customer.id,
+      registrationId,
+      ...(lookupCustomerId !== undefined
+        ? { customerId: lookupCustomerId }
+        : {}),
     });
     if (!registration) {
       return new NextResponse("Not found", { status: 404 });
     }
 
-    // 5. ICS 生成
+    // 4. ICS 生成
     const host = getAppHost();
     const organizer = await getIcalOrganizer();
     const calendarParams: EventCalendarParams = {

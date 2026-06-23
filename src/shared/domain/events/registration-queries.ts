@@ -185,9 +185,16 @@ export async function getCustomerEventRegistrations(customerId: string) {
   }));
 }
 
+/**
+ * イベント申込の .ics 生成に必要なフィールドを取得する。
+ *
+ * - `customerId` を渡した場合: 所有者一致を where 条件で強制 (会員セッション経路)
+ * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
+ *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
+ */
 export async function getEventRegistrationForCalendar(params: {
   registrationId: string;
-  customerId: string;
+  customerId?: string | undefined;
 }): Promise<{
   id: string;
   eventTitle: string;
@@ -202,7 +209,9 @@ export async function getEventRegistrationForCalendar(params: {
   const reg = await prisma.eventRegistration.findFirst({
     where: {
       id: params.registrationId,
-      customerId: params.customerId,
+      ...(params.customerId !== undefined
+        ? { customerId: params.customerId }
+        : {}),
       event: { deletedAt: null },
     },
     select: {
