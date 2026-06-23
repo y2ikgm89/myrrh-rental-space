@@ -107,6 +107,17 @@ describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
     expect(result.coupons.map((c) => c.code)).toEqual([
       `${SCOPE}-active`.toUpperCase(),
     ]);
+
+    // $queryRaw は Prisma の result 拡張をバイパスする（公式仕様）。
+    // queries.ts の row mapping で Decimal→number に正規化されていることを
+    // 直接検証する（findMany 経路と型契約を揃えるため）。Intl 整形を呼ぶ
+    // 下流（formatCoupon の toLocaleString 等）が壊れる経路の回帰防止。
+    const active = result.coupons[0];
+    expect(active).toBeDefined();
+    expect(typeof active!.discountValue).toBe("number");
+    expect(active!.discountValue).toBe(10);
+    expect(active!.minReservationAmount).toBeNull();
+    expect(active!.maxDiscountAmount).toBeNull();
   });
 
   test("status=limitReached は raw SQL を例外なく実行し、上限到達クーポンのみ返す", async () => {
@@ -116,5 +127,11 @@ describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
     expect(result.coupons.map((c) => c.code)).toEqual([
       `${SCOPE}-limit`.toUpperCase(),
     ]);
+
+    // Decimal→number 正規化の回帰防止（FIXED_AMOUNT 値も number で揃える）。
+    const limit = result.coupons[0];
+    expect(limit).toBeDefined();
+    expect(typeof limit!.discountValue).toBe("number");
+    expect(limit!.discountValue).toBe(500);
   });
 });
