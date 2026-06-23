@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
+import {
+  generateArticleMetadata,
+  getSeoSettings,
+} from "@/public/lib/seo/metadata-factory";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublicTermsBySlug } from "@/shared/domain/terms/queries";
 import { TermsDetailPageContent } from "@/app/(public)/terms/_components/terms-detail-page-content";
@@ -16,7 +19,10 @@ export async function generateMetadata({
   await connection();
 
   const { slug } = await params;
-  const terms = await getPublicTermsBySlug(slug);
+  const [terms, settings] = await Promise.all([
+    getPublicTermsBySlug(slug),
+    getSeoSettings(),
+  ]);
 
   if (!terms) {
     return { title: "規約が見つかりません" };
@@ -27,6 +33,7 @@ export async function generateMetadata({
       title: terms.title,
       description: `${terms.title}をご確認ください。`,
     },
+    settings,
     {
       canonicalUrl: `${getBaseUrl()}/terms/${slug}`,
     },

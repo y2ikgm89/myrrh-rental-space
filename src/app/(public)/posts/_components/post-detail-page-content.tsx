@@ -41,11 +41,6 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
     return { title: "記事が見つかりません" };
   }
 
-  const options: { canonicalUrl: string; siteName?: string } = {
-    canonicalUrl: `${getBaseUrl()}${post.url}`,
-  };
-  if (settings?.siteName) options.siteName = settings.siteName;
-
   return generateArticleMetadata(
     {
       title: post.title,
@@ -55,7 +50,10 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
       ogpDescription: post.ogpDescription,
       metaKeywords: post.metaKeywords,
     },
-    options,
+    settings,
+    {
+      canonicalUrl: `${getBaseUrl()}${post.url}`,
+    },
   );
 }
 

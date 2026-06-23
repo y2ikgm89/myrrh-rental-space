@@ -35,11 +35,6 @@ export async function generateMetadata({
   ]);
   if (!tag) return { title: "タグが見つかりません" };
 
-  const options: { canonicalUrl: string; siteName?: string } = {
-    canonicalUrl: `${getBaseUrl()}${buildTagPath(tag.slug)}`,
-  };
-  if (settings?.siteName) options.siteName = settings.siteName;
-
   return generateArticleMetadata(
     {
       title: tag.metaTitle ?? `${tag.name}の記事`,
@@ -48,7 +43,10 @@ export async function generateMetadata({
       ogpTitle: tag.metaTitle,
       ogpDescription: tag.metaDescription,
     },
-    options,
+    settings,
+    {
+      canonicalUrl: `${getBaseUrl()}${buildTagPath(tag.slug)}`,
+    },
   );
 }
 
