@@ -124,8 +124,6 @@ export const CACHE_TAGS = {
   BUSINESS_SETTINGS: "business-settings",
   /** Cookie同意設定 */
   COOKIE_CONSENT: "cookie-consent",
-  /** robots.txt設定 */
-  ROBOTS_TXT: "robots-txt",
   /** レイアウト詳細設定（コンテンツ幅等） */
   LAYOUT_SETTINGS: "layout-settings",
   /** アナリティクス設定 */

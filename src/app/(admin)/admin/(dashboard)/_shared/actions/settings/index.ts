@@ -143,14 +143,3 @@ export { updateTaxSettings } from "./tax";
 
 export type { TaxSettings } from "@/shared/domain/settings/types";
 export type { TaxSettingsInput } from "./schemas";
-
-// =============================================================================
-// robots.txt Actions
-// =============================================================================
-
-export { updateRobotsTxtSettings, resetRobotsTxtToDefault } from "./robots-txt";
-
-export { DEFAULT_ROBOTS_TXT } from "@/shared/domain/settings/robots-txt";
-
-export type { RobotsTxtData } from "@/shared/domain/settings/types";
-export type { RobotsTxtSettingsInput } from "./schemas";

@@ -85,8 +85,6 @@ const TERMS_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.TERMS_DETAIL,
   ...SIDEBAR_CDN_TAGS,
 ]);
-const ROBOTS_CACHE_TAG = joinCacheTags([CDN_CACHE_TAGS.ROBOTS_TXT]);
-
 const nextConfig: NextConfig = {
   // React Compiler for automatic memoization
   reactCompiler: true,
@@ -312,10 +310,6 @@ const nextConfig: NextConfig = {
       {
         source: "/terms/:path*",
         headers: [{ key: "Cache-Tag", value: TERMS_CACHE_TAG }],
-      },
-      {
-        source: "/robots.txt",
-        headers: [{ key: "Cache-Tag", value: ROBOTS_CACHE_TAG }],
       },
       // ============================================================
       // private blocklist（認証 / PII。blanket より後ろ = last-match-wins で上書き）

@@ -15,8 +15,6 @@ import { DomainError } from "@/shared/domain/domain-error";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
-import { checkRobotsTxtWarnings } from "@/shared/domain/settings/robots-txt";
-
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
@@ -138,11 +136,6 @@ export type TaxSettingsInput = {
   taxStandardRate: number;
   taxReducedRate: number;
   taxDisplayModePublic: TaxDisplayMode;
-};
-
-export type RobotsTxtSettingsInput = {
-  robotsTxtEnabled: boolean;
-  robotsTxtCustom: string | null;
 };
 
 function normalizeNullableString(value: string | null): string | null {
@@ -406,30 +399,6 @@ export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
-  });
-}
-
-export async function updateRobotsTxtSettings(
-  data: RobotsTxtSettingsInput,
-): Promise<{ warnings: string[] }> {
-  const warnings = data.robotsTxtCustom
-    ? checkRobotsTxtWarnings(data.robotsTxtCustom)
-    : [];
-
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
-  });
-
-  return { warnings };
-}
-
-export async function resetRobotsTxtToDefault(): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", robotsTxtEnabled: false, robotsTxtCustom: null },
-    update: { robotsTxtEnabled: false, robotsTxtCustom: null },
   });
 }
 

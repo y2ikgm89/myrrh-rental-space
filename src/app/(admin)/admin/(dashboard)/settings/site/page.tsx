@@ -19,7 +19,6 @@ import {
   BasicInfoSection,
   ContactInfoSection,
   SeoSection,
-  RobotsTxtSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
@@ -52,7 +51,6 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       content: (
         <div className="space-y-6">
           <SeoSection settings={settings} />
-          <RobotsTxtSection />
         </div>
       ),
     },

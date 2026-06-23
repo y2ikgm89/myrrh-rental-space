@@ -16,9 +16,6 @@ export {
   featureModulesSettingsSchema,
   type FeatureModulesSettingsInput,
   sidebarSettingsSchema,
-  robotsTxtSettingsSchema,
-  type RobotsTxtSettingsInput,
-  checkRobotsTxtWarnings,
 } from "./basic";
 
 export {

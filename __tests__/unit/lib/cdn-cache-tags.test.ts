@@ -74,9 +74,6 @@ describe("resolveCdnTag", () => {
     );
     expect(resolveCdnTag(CACHE_TAGS.POSTS)).toBe(CDN_CACHE_TAGS.POST);
     expect(resolveCdnTag(CACHE_TAGS.SPACES)).toBe(CDN_CACHE_TAGS.SPACE);
-    expect(resolveCdnTag(CACHE_TAGS.ROBOTS_TXT)).toBe(
-      CDN_CACHE_TAGS.ROBOTS_TXT,
-    );
     expect(resolveCdnTag(CACHE_TAGS.INTEGRATION_SETTINGS)).toBe(
       CDN_CACHE_TAGS.INTEGRATION_SETTINGS,
     );

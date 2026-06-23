@@ -51,10 +51,6 @@ mock.module("@generated/prisma/enums", () => ({
   },
 }));
 
-mock.module("@/shared/domain/settings/robots-txt", () => ({
-  checkRobotsTxtWarnings: mock<(content: string) => string[]>(() => []),
-}));
-
 import {
   updateBasicInfo,
   updateBusinessInfo,
