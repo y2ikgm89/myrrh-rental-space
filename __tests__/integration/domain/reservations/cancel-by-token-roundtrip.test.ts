@@ -184,7 +184,11 @@ describeMaybe(
       }
     }, 30_000);
 
-    test("二重 cancel: atomic claim で 2 回目は success:false（cancellationReason は最初の値を維持）", async () => {
+    test("逐次二重 cancel: 2 回目は CANCELLABLE_STATUSES ガードで弾かれる（cancellationReason は最初の値を維持）", async () => {
+      // 注: sequential な 2 回目の cancel は findFirst が CANCELLED 行をそのまま読むため
+      // applyCancellation の早期 if (!CANCELLABLE_STATUSES.includes(...)) で弾かれる
+      // （「この予約はキャンセルできません」）。WHERE 句で count=0 になる atomic claim
+      // race path は「並行二重 cancel」テスト側でカバーする。
       const startTime = new Date(Date.now() + 48 * 60 * 60 * 1000);
       const { reservationId, cleanup } = await createReservationFixture({
         startTime,
@@ -211,7 +215,8 @@ describeMaybe(
         );
         expect(second.success).toBe(false);
         if (!second.success) {
-          expect(second.error).toMatch(/ステータスが変更/);
+          // 逐次=ガードヒット、並行=updateMany count=0 のどちらでも 2 回目失敗を許容
+          expect(second.error).toMatch(/キャンセルできません|ステータスが変更/);
         }
 
         // 永続化された理由は最初の "first" のまま
