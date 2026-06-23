@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -13,14 +13,24 @@ function read(path: string): string {
 }
 
 describe("admin clean-break dead code boundaries", () => {
-  test("settings-other integration tests import the production sidebar schema", () => {
-    const testSource = read(
-      "__tests__/integration/actions/admin/settings-other.test.ts",
-    );
+  test("admin integration tests must not re-declare schemas inline with z.object", () => {
+    // shallow zombie test (production schema を import せず inline 再宣言して
+    // safeParse のみ走らせるテスト) は永続化層 0 カバレッジで本物のドリフトを
+    // 検知できないため禁止。Server Action を本物呼び出しする integration test、
+    // または production schema を import する unit test に置き換えること。
+    const dir = filePath("__tests__/integration/actions/admin");
+    if (!existsSync(dir)) return;
 
-    expect(testSource).toContain('from "@/shared/lib/validations/sidebar"');
-    expect(testSource).not.toContain("const sidebarWidgetsSchema = z.object");
-    expect(testSource).not.toContain("const sidebarSettingsSchema = z.object");
+    const offenders: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      if (!entry.endsWith(".test.ts")) continue;
+      const source = readFileSync(join(dir, entry), "utf8");
+      if (/\bz\.object\s*\(/.test(source)) {
+        offenders.push(entry);
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 
   test("content managed page editor does not keep builder inserter, legacy section editor, or page-hero editor", () => {
