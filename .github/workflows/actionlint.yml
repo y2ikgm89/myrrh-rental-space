@@ -12,6 +12,11 @@ on:
       - ".github/workflows/**"
       - ".github/actionlint.yml"
 
+# 最小権限の原則（公式 Security hardening）。読み取りのみで十分。
+# https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     name: Validate GitHub Actions workflows
@@ -21,11 +26,26 @@ jobs:
         # SHA 直 pin（公式 security best practice。tag force-push 攻撃 + codeload 404 outage 対策）
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      # rhysd/actionlint: GitHub Actions workflow の lint（syntax + expression + shellcheck）
-      # 公式: https://github.com/rhysd/actionlint
-      - name: Download actionlint
-        id: actionlint
-        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      # rhysd/actionlint v1.7.12 を SHA256 検証付きで取得して直接実行する。
+      # 旧方式 `bash <(curl ...main/scripts/download-actionlint.bash)` は
+      # - main ブランチからの取得 = supply-chain 攻撃 surface
+      # - SHA256 検証なし = MITM / tag force-push リスク
+      # を伴うため、公式 release asset を SHA256 で固定する方式に置換。
+      # 公式 release: https://github.com/rhysd/actionlint/releases/tag/v1.7.12
+      # バージョン更新時は SHA256 も併せて更新する
+      # (gh api repos/rhysd/actionlint/releases/tags/<tag> --jq '.assets[].digest')。
+      - name: Download & verify actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        run: |
+          set -euo pipefail
+          curl -fsSL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
+          chmod +x actionlint
+          ./actionlint -version
 
       - name: Run actionlint
-        run: ${{ steps.actionlint.outputs.executable }} -color
+        run: ./actionlint -color
