@@ -172,8 +172,6 @@
   --spacing-fluid-2xl: clamp(6rem, 3.308rem + 11.491vw, 19rem);
 
   --spacing-region: clamp(2.5rem, 5vw, 4rem);
-  --spacing-element: 1.5rem;
-  --spacing-inline: 1rem;
 
   --container-max: 80rem;
   --container-padding: clamp(1rem, 3vw, 3rem);

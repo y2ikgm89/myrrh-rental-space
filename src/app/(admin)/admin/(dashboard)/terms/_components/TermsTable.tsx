@@ -20,6 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableShell,
   DndContext,
   closestCenter,
   useSensor,
@@ -192,41 +193,39 @@ export function TermsTable({ items: initialItems }: TermsTableProps) {
       <p className="text-xs text-muted-foreground">
         ドラッグ&ドロップで表示順を変更できます
       </p>
-      <div className="rounded-lg border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <DndContext
-            id="terms-sortable"
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+      <TableShell>
+        <DndContext
+          id="terms-sortable"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items.map((i) => i.id)}
+            strategy={verticalListSortingStrategy}
           >
-            <SortableContext
-              items={items.map((i) => i.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12" />
-                    <TableHead>タイトル</TableHead>
-                    <TableHead>タイプ</TableHead>
-                    <TableHead>スラッグ</TableHead>
-                    <TableHead>同意必須</TableHead>
-                    <TableHead className="text-right">同意数</TableHead>
-                    <TableHead>状態</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item) => (
-                    <SortableRow key={item.id} item={item} />
-                  ))}
-                </TableBody>
-              </Table>
-            </SortableContext>
-          </DndContext>
-        </div>
-      </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12" />
+                  <TableHead>タイトル</TableHead>
+                  <TableHead>タイプ</TableHead>
+                  <TableHead>スラッグ</TableHead>
+                  <TableHead>同意必須</TableHead>
+                  <TableHead className="text-right">同意数</TableHead>
+                  <TableHead>状態</TableHead>
+                  <TableHead>操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <SortableRow key={item.id} item={item} />
+                ))}
+              </TableBody>
+            </Table>
+          </SortableContext>
+        </DndContext>
+      </TableShell>
     </div>
   );
 }

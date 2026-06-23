@@ -6,6 +6,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableShell,
 } from "@/admin/components/ui";
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
@@ -26,45 +27,43 @@ export function TermsTrashTable({ items }: TermsTrashTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>タイトル</TableHead>
-              <TableHead>タイプ</TableHead>
-              <TableHead className="hidden md:table-cell">スラッグ</TableHead>
-              <TableHead className="hidden lg:table-cell">削除日時</TableHead>
-              <TableHead className="text-right">同意数</TableHead>
-              <TableHead>操作</TableHead>
+    <TableShell>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>タイトル</TableHead>
+            <TableHead>タイプ</TableHead>
+            <TableHead className="hidden md:table-cell">スラッグ</TableHead>
+            <TableHead className="hidden lg:table-cell">削除日時</TableHead>
+            <TableHead className="text-right">同意数</TableHead>
+            <TableHead>操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell className="font-medium">{item.title}</TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {TERMS_TYPE_LABELS[item.type] ?? item.type}
+                </Badge>
+              </TableCell>
+              <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
+                {item.slug}
+              </TableCell>
+              <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
+                {item.deletedAt ? formatDateTimeShort(item.deletedAt) : "—"}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {item.agreementsCount}
+              </TableCell>
+              <TableCell>
+                <TermsTrashActionCell id={item.id} title={item.title} />
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.title}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {TERMS_TYPE_LABELS[item.type] ?? item.type}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
-                  {item.slug}
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                  {item.deletedAt ? formatDateTimeShort(item.deletedAt) : "—"}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {item.agreementsCount}
-                </TableCell>
-                <TableCell>
-                  <TermsTrashActionCell id={item.id} title={item.title} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+          ))}
+        </TableBody>
+      </Table>
+    </TableShell>
   );
 }

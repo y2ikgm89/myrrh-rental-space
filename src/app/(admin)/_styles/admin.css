@@ -231,7 +231,6 @@
     env(safe-area-inset-right, 0px)
   );
   --spacing-region: clamp(1.5rem, 3vw, 2.5rem);
-  --spacing-card: clamp(1rem, 2vw, 1.5rem);
 
   /* --------------------------------------------------------------------------
    * Responsive Breakpoints — Tailwind v4 default + 3xl (ultra wide)

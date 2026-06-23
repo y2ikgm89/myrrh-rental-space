@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
 import { Button } from "@/public/components/design-system/button";
+import { PublicEmptyState } from "@/public/components/ui/empty-state";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
@@ -32,21 +33,20 @@ interface PostGridProps {
 export function PostGrid({ posts, hasFilters }: PostGridProps): ReactElement {
   if (posts.length === 0) {
     return (
-      <div
-        className="space-y-6 py-[var(--spacing-fluid-lg)] text-center"
-        role="status"
-      >
-        <p className="text-muted-foreground">
-          {hasFilters
+      <PublicEmptyState
+        message={
+          hasFilters
             ? "条件に一致する記事が見つかりませんでした"
-            : "記事がまだありません。"}
-        </p>
-        {hasFilters && (
-          <Button variant="editorial" size="sm" href="/blog">
-            フィルタを解除
-          </Button>
-        )}
-      </div>
+            : "記事がまだありません。"
+        }
+        action={
+          hasFilters ? (
+            <Button variant="editorial" size="sm" href="/blog">
+              フィルタを解除
+            </Button>
+          ) : null
+        }
+      />
     );
   }
 
