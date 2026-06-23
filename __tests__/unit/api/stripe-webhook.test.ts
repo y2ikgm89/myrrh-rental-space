@@ -677,6 +677,35 @@ describe("POST /api/webhooks/stripe", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // 内部例外時は 500 を返す（Stripe 公式: 5xx で再送、冪等性は atomic claim で担保）
+  // ---------------------------------------------------------------------------
+
+  test("内部例外（DB 障害等）→ 500 を返し、Stripe に再送させる", async () => {
+    // unstable_rethrow は Next.js 内部エラー以外は no-op（再スローしない）
+    mockUnstableRethrow.mockImplementation(() => {
+      // Next.js 内部エラーではないので何もしない
+    });
+
+    // handler 内で DB 例外が発生する状況を再現
+    mockClaimReservationAsPaid.mockRejectedValueOnce(
+      new Error("DB connection lost"),
+    );
+
+    const event = makeSessionCompletedEvent("paid", "pi-123");
+    mockConstructEvent.mockReturnValue(event);
+
+    const response = await POST(makeRequest("body"));
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(500);
+    // エラー詳細は body に出さない（情報漏洩防止）
+    expect(body.error).toBe("Webhook processing failed");
+    expect(body.error).not.toContain("DB connection lost");
+    // ログには記録される
+    expect(mockLogError).toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
   // reservationId がセッションメタデータにない場合
   // ---------------------------------------------------------------------------
 

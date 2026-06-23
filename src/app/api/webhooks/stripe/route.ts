@@ -141,8 +141,13 @@ export async function POST(request: Request) {
       severity: ErrorSeverity.HIGH,
       context: { operation: "stripeWebhook" },
     });
-    // エラーでも 200 を返す（Stripe が再送しないように）
-    return jsonSuccess({ error: "Webhook processing failed" });
+    // 内部例外は 500 を返して Stripe に再送させる。
+    // - 冪等性は各 handler の `claimReservationAs*` atomic claim で担保済
+    //   （重複 PAID/REFUNDED/FAILED は updateMany.count === 0 で副作用 skip）
+    // - 200 で握り潰すと一過性の DB 障害等で予約が PAID に遷移できず silent stuck
+    // - エラー詳細は body に出さず log のみ（情報漏洩防止）
+    // @see https://docs.stripe.com/webhooks (5xx → exponential backoff retry up to 3 days)
+    return jsonError("Webhook processing failed", 500);
   }
 }
 
