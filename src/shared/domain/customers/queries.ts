@@ -1,6 +1,6 @@
 import "server-only";
 
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus, EmailDeliveryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type {
   CustomerData,
@@ -311,6 +311,61 @@ export async function findCustomerByEmailExcept(
     },
     select: { id: true },
   });
+}
+
+/**
+ * メールアドレスから配信状態を取得する（Resend Webhook 由来）。
+ *
+ * sendEmail() が宛先 suppress 判定に使う軽量 lookup（unique index 経由）。
+ * 顧客が DB に存在しない宛先（system / staff / inquiry guest）は null を返し、
+ * 呼び出し側は「観測なし＝送信続行」として扱う。
+ */
+export async function getCustomerEmailDeliveryStatusByEmail(
+  email: string,
+): Promise<EmailDeliveryStatus | null> {
+  const customer = await prisma.customer.findUnique({
+    where: { email },
+    select: { emailDeliveryStatus: true },
+  });
+  return customer?.emailDeliveryStatus ?? null;
+}
+
+/**
+ * Resend Webhook (email.bounced / email.complained) から配信状態を更新する。
+ *
+ * - email が DB の Customer に紐づかない場合は no-op（unknown 宛先）。
+ * - 既に COMPLAINED の Customer に SOFT_BOUNCED を上書きしない（強い終端状態を保護）。
+ * - 同 email に紐づく Customer が複数（履歴・テスト由来）なら `updateMany` で全件更新。
+ *
+ * @returns 更新行数（0 = 該当顧客なし / 1+ = 更新済み）
+ */
+export async function updateCustomerEmailDeliveryStatusByEmail(
+  email: string,
+  status: EmailDeliveryStatus,
+  reason: string | null,
+): Promise<number> {
+  // 強い終端状態（HARD_BOUNCED / COMPLAINED）は SOFT_BOUNCED で上書きしない。
+  // OK へのリセットは管理 UI 経由を想定（本 PR 範囲外）。
+  const protectedStates: EmailDeliveryStatus[] =
+    status === EmailDeliveryStatus.SOFT_BOUNCED
+      ? [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED]
+      : [];
+
+  const result = await prisma.customer.updateMany({
+    where: {
+      email,
+      ...(protectedStates.length > 0
+        ? { emailDeliveryStatus: { notIn: protectedStates } }
+        : {}),
+    },
+    data: {
+      emailDeliveryStatus: status,
+      emailDeliveryUpdatedAt: new Date(),
+      emailDeliveryReason: reason?.slice(0, 500) ?? null,
+    },
+  });
+
+  return result.count;
 }
 
 export async function getCustomerByUserId(userId: string) {
