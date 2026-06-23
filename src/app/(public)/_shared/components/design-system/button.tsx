@@ -91,6 +91,7 @@ export function Button(props: ButtonProps) {
   } = props;
   const classes = cn(
     "inline-flex items-center justify-center gap-2 transition-colors duration-200",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
     variantClasses[variant],
     variant !== "link" && sizeClasses[size],
     className,

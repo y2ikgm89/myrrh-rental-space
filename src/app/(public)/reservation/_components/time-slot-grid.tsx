@@ -63,7 +63,7 @@ export function TimeSlotGrid({
   return (
     <div className="@container">
       <div
-        role="listbox"
+        role="group"
         aria-label="開始時間を選択"
         className="grid grid-cols-3 gap-2.5 @sm:grid-cols-4 @md:grid-cols-5 @2xl:grid-cols-6"
       >
@@ -75,8 +75,7 @@ export function TimeSlotGrid({
             <button
               key={slot.time}
               type="button"
-              role="option"
-              aria-selected={isSelected}
+              aria-pressed={isSelected}
               aria-disabled={isUnavailable}
               disabled={isUnavailable}
               onClick={() => onSelect(slot.time)}

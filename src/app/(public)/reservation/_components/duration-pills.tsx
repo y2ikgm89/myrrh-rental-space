@@ -41,7 +41,7 @@ export function DurationPills({
 
   return (
     <div
-      role="listbox"
+      role="group"
       aria-label="利用時間を選択"
       className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0"
     >
@@ -51,8 +51,7 @@ export function DurationPills({
           <button
             key={minutes}
             type="button"
-            role="option"
-            aria-selected={isSelected}
+            aria-pressed={isSelected}
             onClick={() => onSelect(minutes)}
             className={cn(
               // min-h-11 で 44px タッチ標的を確保し、同フロー内の TimeSlot/Stepper と統一。

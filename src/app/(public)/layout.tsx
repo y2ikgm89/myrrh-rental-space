@@ -308,7 +308,8 @@ function MainShellFrame({
   return (
     <main
       id="main-content"
-      className="flex-1 pb-[var(--spacing-fluid-md)]"
+      tabIndex={-1}
+      className="flex-1 pb-[var(--spacing-fluid-md)] focus-visible:outline-none"
       style={style}
       {...(isTransparent && { "data-header-transparent": "" })}
     >

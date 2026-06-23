@@ -80,7 +80,9 @@ export function Input({
           aria-describedby={errorId}
           {...props}
           className={cn(
-            "w-full min-h-11 border-0 border-b bg-transparent py-3 text-foreground transition-colors placeholder:text-muted-foreground/60 focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
+            // text-base md:text-sm: iOS Safari は font-size < 16px の input で auto-zoom する
+            // ため、モバイルは 16px (text-base) を強制し、md+ はデザイン通り 14px (text-sm)。
+            "w-full min-h-11 border-0 border-b bg-transparent py-3 text-base md:text-sm text-foreground transition-colors placeholder:text-muted-foreground/60 focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
             // Border-bottom theme は左右 padding 0 が canonical だが、icon 配置時のみ pl-7 / pr-7
             hasLeading ? "pl-7" : "px-0",
             hasTrailing && "pr-7",
