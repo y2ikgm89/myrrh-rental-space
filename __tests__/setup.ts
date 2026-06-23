@@ -24,15 +24,14 @@ process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
 process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
 
 // `crypto.ts` は `@/shared/lib/env/encryption` の
-// `getPrimaryEncryptionKey()` / `findEncryptionKeyByKid()` / `getEncryptionKey()`
-// 経由で `serverEnv.ENCRYPTION_KEY` (+ kid / legacy) を読む。
+// `getPrimaryEncryptionKey()` / `findEncryptionKeyByKid()` 経由で
+// `serverEnv.ENCRYPTION_KEY` (+ kid / legacy) を読む。
 // `serverEnv` はモジュールロード時 snapshot を取る公式仕様のため、test 環境では
 // helper を `mock.module` で固定値に置換 (個別 test の異常系で動的 override 可能)。
 const TEST_PRIMARY_KEY = { kid: "v1", hex: "a".repeat(64) };
 const TEST_LEGACY_KEYS: { kid: string; hex: string }[] = [];
 mock.module("@/shared/lib/env/encryption", () => ({
   DEFAULT_KID: "v1",
-  getEncryptionKey: () => TEST_PRIMARY_KEY.hex,
   getPrimaryEncryptionKey: () => TEST_PRIMARY_KEY,
   getLegacyEncryptionKeys: () => TEST_LEGACY_KEYS,
   findEncryptionKeyByKid: (kid: string) => {

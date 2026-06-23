@@ -25,7 +25,6 @@ const mockFindByKid = mock<(kid: string) => EncryptionKey | null>((kid) => {
 
 mock.module("@/shared/lib/env/encryption", () => ({
   DEFAULT_KID: "v1",
-  getEncryptionKey: () => PRIMARY.hex,
   getPrimaryEncryptionKey: mockGetPrimary,
   getLegacyEncryptionKeys: () => [LEGACY_V0],
   findEncryptionKeyByKid: mockFindByKid,
