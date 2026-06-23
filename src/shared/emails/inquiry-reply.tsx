@@ -1,14 +1,18 @@
+import { Hr, Section, Text } from "@react-email/components";
+import { inquiryReplyFixture } from "./inquiry-reply.fixture";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+  COLOR,
+  SECTION_VARIANT_STYLES,
+  detailItem,
+  detailsHeading,
+  detailsSection,
+  heading,
+  hr,
+  messageText,
+  text,
+} from "./_shared/styles";
 
 type Props = {
   customerName: string;
@@ -16,7 +20,22 @@ type Props = {
   originalMessage: string;
   replyMessage: string;
   repliedByName: string;
-  siteName: string;
+  footer: EmailFooterData;
+};
+
+const repliedByStyle = {
+  fontSize: "12px",
+  color: COLOR.textSubtle,
+  marginTop: "12px",
+  textAlign: "right" as const,
+};
+
+const messageBox = {
+  ...messageText,
+  backgroundColor: COLOR.surface,
+  padding: "12px",
+  borderRadius: "4px",
+  border: `1px solid ${COLOR.border}`,
 };
 
 export function InquiryReplyEmail({
@@ -25,136 +44,58 @@ export function InquiryReplyEmail({
   originalMessage,
   replyMessage,
   repliedByName,
-  siteName,
+  footer,
 }: Props) {
+  const info = SECTION_VARIANT_STYLES.info;
+
   return (
-    <Html>
-      <Head />
-      <Preview>お問い合わせへの回答: {originalSubject}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>お問い合わせへの回答</Heading>
+    <EmailLayout
+      preview={`お問い合わせへの回答: ${originalSubject}`}
+      footer={footer}
+    >
+      <Text style={heading}>お問い合わせへの回答</Text>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{customerName} 様</Text>
 
-          <Text style={text}>
-            お問い合わせいただきありがとうございます。
-            以下の通り回答いたします。
-          </Text>
+      <Text style={text}>
+        お問い合わせいただきありがとうございます。 以下の通り回答いたします。
+      </Text>
 
-          <Section style={replySection}>
-            <Text style={detailsHeading}>回答内容</Text>
-            <Hr style={hr} />
-            <Text style={messageText}>{replyMessage}</Text>
-            <Text style={repliedBy}>回答者: {repliedByName}</Text>
-          </Section>
+      <Section
+        style={{
+          backgroundColor: info.background,
+          borderRadius: "8px",
+          padding: "20px",
+          margin: "24px 0",
+        }}
+      >
+        <Text style={{ ...detailsHeading, color: info.heading }}>回答内容</Text>
+        <Hr style={hr} />
+        <Text style={messageBox}>{replyMessage}</Text>
+        <Text style={repliedByStyle}>回答者: {repliedByName}</Text>
+      </Section>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>お問い合わせ内容</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>件名:</strong> {originalSubject}
-            </Text>
-            <Text style={detailItem}>
-              <strong>内容:</strong>
-            </Text>
-            <Text style={messageText}>{originalMessage}</Text>
-          </Section>
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>お問い合わせ内容</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>件名:</strong> {originalSubject}
+        </Text>
+        <Text style={detailItem}>
+          <strong>内容:</strong>
+        </Text>
+        <Text style={messageBox}>{originalMessage}</Text>
+      </Section>
 
-          <Hr style={hr} />
+      <Hr style={hr} />
 
-          <Text style={text}>
-            ご不明な点がございましたら、お気軽にお問い合わせください。
-          </Text>
-
-          <Text style={footer}>{siteName}</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={text}>
+        ご不明な点が残りましたら、再度お問い合わせください。
+      </Text>
+    </EmailLayout>
   );
 }
 
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
-
-const heading = {
-  fontSize: "24px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "24px",
-};
-
-const text = {
-  fontSize: "16px",
-  lineHeight: "26px",
-  color: "#484848",
-};
-
-const replySection = {
-  backgroundColor: "#eef6ff",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsSection = {
-  backgroundColor: "#f9fafb",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsHeading = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "12px",
-};
-
-const detailItem = {
-  fontSize: "14px",
-  lineHeight: "24px",
-  color: "#484848",
-  margin: "8px 0",
-};
-
-const messageText: React.CSSProperties = {
-  fontSize: "14px",
-  lineHeight: "22px",
-  color: "#484848",
-  whiteSpace: "pre-wrap",
-  backgroundColor: "#ffffff",
-  padding: "12px",
-  borderRadius: "4px",
-  border: "1px solid #e6e6e6",
-};
-
-const repliedBy = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "12px",
-  textAlign: "right" as const,
-};
-
-const hr = {
-  borderColor: "#e6e6e6",
-  margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
-};
+InquiryReplyEmail.PreviewProps = inquiryReplyFixture;
 
 export default InquiryReplyEmail;

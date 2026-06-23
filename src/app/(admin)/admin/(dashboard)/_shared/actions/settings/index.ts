@@ -68,10 +68,11 @@ export {
 export { updateEmailSettings, updateNotificationSettings } from "./email";
 
 // =============================================================================
-// Email Test Action
+// Email Template Preview & Test Send
 // =============================================================================
 
-export { sendTestEmailAction } from "./test-email";
+export { previewTemplateAction } from "./template-preview";
+export { sendTemplateTestAction } from "./template-test-send";
 
 // =============================================================================
 // Google Calendar Actions

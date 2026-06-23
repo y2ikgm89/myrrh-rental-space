@@ -106,6 +106,7 @@ export async function registerForEvent(
               sendEventAdminNotification(
                 {
                   registrationId: result.registration.id,
+                  eventId: result.registration.eventId,
                   participantName: result.registration.name,
                   participantEmail: result.registration.email,
                   eventTitle: result.event.title,
@@ -221,6 +222,7 @@ export async function cancelEventRegistration(
           sendEventAdminNotification(
             {
               registrationId: registration.id,
+              eventId: registration.eventId,
               participantName: registration.name,
               participantEmail: registration.email,
               eventTitle: registration.event.title,

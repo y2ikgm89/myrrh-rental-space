@@ -12,6 +12,7 @@ const PAYMENT_EMAIL_SELECT = {
   paymentStatus: true,
   status: true,
   icsSequence: true,
+  userId: true,
   customer: {
     select: {
       email: true,

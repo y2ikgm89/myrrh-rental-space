@@ -2,10 +2,12 @@ import "server-only";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
-import { getSeoSettings } from "@/shared/domain/settings/queries/site";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
-import { SITE_DEFAULTS, getAppHost } from "../constants";
+import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { createCancelToken } from "@/shared/lib/reservation-cancel-token";
+import { getAppHost, getAppUrl } from "../constants";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -17,22 +19,37 @@ import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
 import type { EmailResult, ReminderEmailData } from "./types";
 
-async function getSiteName(): Promise<string> {
-  const seo = await getSeoSettings();
-  return seo?.siteName || SITE_DEFAULTS.name;
-}
-
 export async function sendReservationReminderEmail(
   data: ReminderEmailData,
 ): Promise<EmailResult> {
-  const siteName = await getSiteName();
   const reservationDate = format(data.startTime, "yyyy年M月d日", {
     locale: ja,
   });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, deadlineSettings, organizer, footer] =
+    await Promise.all([
+      getCalendarEmailSettings(),
+      getReservationDeadlineSettings(),
+      getIcalOrganizer(),
+      getEmailFooterData(),
+    ]);
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
+  const appUrl = getAppUrl();
+
+  // リマインダ送信時点でキャンセル期限内なら、キャンセル URL を生成する。
+  // 「リマインダにキャンセル URL が無い」と顧客が連絡無くキャンセルし得る運用上の穴を塞ぐ。
+  const cancelDeadline = new Date(
+    data.startTime.getTime() -
+      deadlineSettings.cancellationDeadlineHours * 60 * 60 * 1000,
+  );
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/reservation/cancel?token=${createCancelToken(data.reservationId, cancelDeadline)}`
+      : undefined;
+
+  const memberReservationUrl = data.userId
+    ? `${appUrl}/mypage/reservations/${data.reservationId}`
+    : undefined;
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -75,15 +92,20 @@ export async function sendReservationReminderEmail(
     payload: omitUndefined({
       to: data.customerEmail,
       subject: `【ご予約リマインダー】${data.spaceName} - ${reservationDate}`,
-      react: ReservationReminderEmail({
-        customerName: data.customerName,
-        spaceName: data.spaceName,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        location: data.location,
-        notes: data.notes,
-        siteName,
-      }),
+      react: ReservationReminderEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          location: data.location,
+          notes: data.notes,
+          cancelUrl,
+          memberReservationUrl,
+          cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+          footer,
+        }),
+      ),
       attachments,
     }),
     idempotencyKey: `reservation-reminder/${data.reservationId}`,

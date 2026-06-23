@@ -1,9 +1,8 @@
 import "server-only";
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
-import { getSeoSettings } from "@/shared/domain/settings/queries/site";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { prisma } from "@/shared/db/prisma";
-import { SITE_DEFAULTS } from "../constants";
 import { hashForKey, sendEmail } from "./send";
 import {
   logError,
@@ -13,15 +12,10 @@ import {
 } from "../errors/server";
 import type { EmailResult, InquiryReplyEmailData } from "./types";
 
-async function getSiteName(): Promise<string> {
-  const seo = await getSeoSettings();
-  return seo?.siteName || SITE_DEFAULTS.name;
-}
-
 export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
 ): Promise<EmailResult> {
-  const siteName = await getSiteName();
+  const footer = await getEmailFooterData();
 
   return sendEmail({
     payload: {
@@ -33,7 +27,7 @@ export async function sendInquiryReplyEmail(
         originalMessage: data.originalMessage,
         replyMessage: data.replyMessage,
         repliedByName: data.repliedByName,
-        siteName,
+        footer,
       }),
     },
     idempotencyKey: `inquiry-reply/${data.inquiryId}/${hashForKey(data.replyMessage)}`,
@@ -64,7 +58,7 @@ export async function sendInquiryStatusNotificationToAll(
 
   if (inquiries.length === 0) return;
 
-  const siteName = await getSiteName();
+  const footer = await getEmailFooterData();
   const statusLabel = newStatus === "RESOLVED" ? "対応完了" : "終了";
 
   const results = await Promise.allSettled(
@@ -77,7 +71,7 @@ export async function sendInquiryStatusNotificationToAll(
             customerName: inquiry.name,
             inquirySubject: inquiry.subject,
             newStatus,
-            siteName,
+            footer,
           }),
         },
         idempotencyKey: `inquiry-status/${inquiry.id}/${newStatus}`,

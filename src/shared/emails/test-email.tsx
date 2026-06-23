@@ -1,23 +1,32 @@
+import { Hr, Link, Section, Text } from "@react-email/components";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { testEmailFixture } from "./test-email.fixture";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+  COLOR,
+  detailItem,
+  detailsHeading,
+  detailsSection,
+  heading,
+  hr,
+  text,
+} from "./_shared/styles";
 
 type TestEmailProps = {
   recipientLabel: string;
   siteName: string;
-  timestamp: string;
+  /** 送信日時。テンプレ内部で JST 整形する。 */
+  timestamp: Date;
   triggeredByName: string;
   triggeredByEmail: string;
+  footer: EmailFooterData;
 };
+
+function formatJst(date: Date): string {
+  return `${format(date, "yyyy年M月d日 (EEEE) HH:mm:ss", { locale: ja })} JST`;
+}
 
 export function TestEmail({
   recipientLabel,
@@ -25,118 +34,55 @@ export function TestEmail({
   timestamp,
   triggeredByName,
   triggeredByEmail,
+  footer,
 }: TestEmailProps) {
+  const formatted = formatJst(timestamp);
   return (
-    <Html lang="ja">
-      <Head />
-      <Preview>
-        テスト送信 - {siteName}（{timestamp}）
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>テストメール</Heading>
+    <EmailLayout
+      preview={`テスト送信 - ${siteName}（${formatted}）`}
+      footer={footer}
+    >
+      <Text style={heading}>テストメール</Text>
 
-          <Text style={text}>
-            このメールは {siteName} のメール送信設定が正しく機能しているかを
-            確認するためのテストメールです。実際の予約・通知・お知らせとは
-            関係ありません。
-          </Text>
+      <Text style={text}>
+        このメールは {siteName} のメール送信設定が正しく機能しているかを
+        確認するためのテストメールです。実際の予約・通知・お知らせとは
+        関係ありません。
+      </Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>送信情報</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>宛先:</strong> {recipientLabel}
-            </Text>
-            <Text style={detailItem}>
-              <strong>送信日時:</strong> {timestamp}
-            </Text>
-            <Text style={detailItem}>
-              <strong>送信操作者:</strong> {triggeredByName}（
-              <Link href={`mailto:${triggeredByEmail}`} style={accentLink}>
-                {triggeredByEmail}
-              </Link>
-              ）
-            </Text>
-          </Section>
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>送信情報</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>宛先:</strong> {recipientLabel}
+        </Text>
+        <Text style={detailItem}>
+          <strong>送信日時:</strong> {formatted}
+        </Text>
+        <Text style={detailItem}>
+          <strong>送信操作者:</strong> {triggeredByName}（
+          <Link
+            href={`mailto:${triggeredByEmail}`}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            {triggeredByEmail}
+          </Link>
+          ）
+        </Text>
+      </Section>
 
-          <Text style={text}>
-            このメールが正しい宛先に届いていれば、送信元ドメイン・Reply-To・
-            DNS（SPF / DKIM / DMARC）・Resend API の全段が正常に機能して
-            います。届かない／迷惑メールフォルダに入る等の問題があれば、
-            管理画面のメール設定および Resend ダッシュボードを確認してください。
-          </Text>
+      <Text style={text}>
+        このメールが正しい宛先に届いていれば、送信元ドメイン・Reply-To・
+        DNS（SPF / DKIM / DMARC）・Resend API の全段が正常に機能して
+        います。届かない／迷惑メールフォルダに入る等の問題があれば、
+        管理画面のメール設定および Resend ダッシュボードを確認してください。
+      </Text>
 
-          <Hr style={hr} />
-
-          <Text style={footer}>{siteName}</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Hr style={hr} />
+    </EmailLayout>
   );
 }
 
+TestEmail.PreviewProps = testEmailFixture;
+
 export default TestEmail;
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
-
-const heading = {
-  fontSize: "24px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "24px",
-};
-
-const text = {
-  fontSize: "16px",
-  lineHeight: "26px",
-  color: "#484848",
-};
-
-const detailsSection = {
-  backgroundColor: "#f9fafb",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsHeading = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "12px",
-};
-
-const detailItem = {
-  fontSize: "14px",
-  lineHeight: "24px",
-  color: "#484848",
-  margin: "8px 0",
-};
-
-const hr = {
-  borderColor: "#e6e6e6",
-  margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
-};
-
-const accentLink = {
-  color: "#0066cc",
-  textDecoration: "underline",
-};

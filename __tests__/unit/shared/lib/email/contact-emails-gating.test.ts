@@ -44,6 +44,19 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
   getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
 }));
 
+mock.module("@/shared/emails/_shared/footer-data", () => ({
+  getEmailFooterData: () =>
+    Promise.resolve({
+      businessName: "Org",
+      address: "",
+      phoneNumber: null,
+      contactEmail: null,
+      siteName: "Org",
+      siteUrl: "https://example.com",
+      legalLinks: [],
+    }),
+}));
+
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendContactAdminNotification } from "@/shared/lib/email/contact-emails";
 import type { ContactEmailData } from "@/shared/lib/email/types";

@@ -1,19 +1,13 @@
 import "server-only";
 import { ReviewReplyEmail } from "@/shared/emails/review-reply";
-import { getSeoSettings } from "@/shared/domain/settings/queries/site";
-import { SITE_DEFAULTS } from "../constants";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult, ReviewReplyEmailData } from "./types";
-
-async function getSiteName(): Promise<string> {
-  const seo = await getSeoSettings();
-  return seo?.siteName || SITE_DEFAULTS.name;
-}
 
 export async function sendReviewReplyEmail(
   data: ReviewReplyEmailData,
 ): Promise<EmailResult> {
-  const siteName = await getSiteName();
+  const footer = await getEmailFooterData();
 
   return sendEmail({
     payload: {
@@ -26,7 +20,7 @@ export async function sendReviewReplyEmail(
         originalTitle: data.originalTitle,
         originalComment: data.originalComment,
         replyBody: data.replyBody,
-        siteName,
+        footer,
       }),
     },
     idempotencyKey: `review-reply/${data.reviewId}/${hashForKey(data.replyBody)}`,

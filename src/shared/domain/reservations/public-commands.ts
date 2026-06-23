@@ -187,6 +187,7 @@ export async function createPublicReservationCommand(
       notes: input.notes,
       guestName: guestNameDiff,
       icsSequence: reservation.icsSequence,
+      userId: input.userId ?? null,
     }),
   };
 }

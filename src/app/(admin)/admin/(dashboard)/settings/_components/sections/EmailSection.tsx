@@ -33,7 +33,6 @@ import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { EmailChips } from "./EmailChips";
 import { NotificationStaffPicker } from "./NotificationStaffPicker";
-import { TestEmailCard } from "./TestEmailCard";
 
 type StaffOption = {
   id: string;
@@ -44,7 +43,6 @@ type StaffOption = {
 interface EmailSectionProps {
   settings: Serialized<SettingsData>;
   staff: StaffOption[];
-  currentUserEmail: string;
 }
 
 type EmailSwitchProps = {
@@ -75,11 +73,7 @@ function EmailSwitch({ field, label, disabled }: EmailSwitchProps) {
   );
 }
 
-export function EmailSection({
-  settings,
-  staff,
-  currentUserEmail,
-}: EmailSectionProps) {
+export function EmailSection({ settings, staff }: EmailSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateEmailSettings,
@@ -307,9 +301,6 @@ export function EmailSection({
           </CardContent>
         </Card>
       </form>
-      <div className="mt-6">
-        <TestEmailCard defaultRecipient={currentUserEmail} />
-      </div>
     </>
   );
 }

@@ -1,16 +1,20 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
+import { reservationConfirmationFixture } from "./reservation-confirmation.fixture";
+import { CalendarLinks } from "./_shared/CalendarLinks";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
+import {
+  COLOR,
+  SECTION_VARIANT_STYLES,
+  detailItem,
+  detailsHeading,
+  detailsSection,
+  heading,
+  hr,
+  linkDangerStyle,
+  text,
+} from "./_shared/styles";
 
 type Props = {
   customerName: string;
@@ -22,7 +26,13 @@ type Props = {
   reservationId: string;
   notes?: string;
   addToCalendarLinks?: AddToCalendarUrls;
+  /** ゲスト向け: 期限内のみ生成される暗号化トークン付き URL */
   cancelUrl?: string;
+  /** 会員向け: ログイン後の予約詳細ページ URL（マイページから取消・変更可能） */
+  memberReservationUrl?: string;
+  /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
+  cancellationDeadlineHours?: number;
+  footer: EmailFooterData;
 };
 
 export function ReservationConfirmationEmail({
@@ -36,204 +46,132 @@ export function ReservationConfirmationEmail({
   notes,
   addToCalendarLinks,
   cancelUrl,
+  memberReservationUrl,
+  cancellationDeadlineHours,
+  footer,
 }: Props) {
+  const danger = SECTION_VARIANT_STYLES.danger;
+
   return (
-    <Html>
-      <Head />
-      <Preview>ご予約ありがとうございます - {spaceName}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>ご予約確認</Heading>
+    <EmailLayout
+      preview={`ご予約ありがとうございます - ${spaceName}`}
+      footer={footer}
+    >
+      <Text style={heading}>ご予約確認</Text>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{customerName} 様</Text>
 
-          <Text style={text}>
-            この度はご予約いただき、誠にありがとうございます。
-            以下の内容でご予約を承りました。
+      <Text style={text}>
+        この度はご予約いただき、誠にありがとうございます。
+        以下の内容でご予約を承りました。
+      </Text>
+
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>予約詳細</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>予約番号:</strong> {reservationId}
+        </Text>
+        <Text style={detailItem}>
+          <strong>スペース:</strong> {spaceName}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日付:</strong> {reservationDate}
+        </Text>
+        <Text style={detailItem}>
+          <strong>時間:</strong> {startTime} - {endTime}
+        </Text>
+        <Text style={detailItem}>
+          <strong>料金:</strong> {totalPrice}
+        </Text>
+        {notes && (
+          <Text style={detailItem}>
+            <strong>備考:</strong> {notes}
           </Text>
+        )}
+      </Section>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>予約詳細</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>予約番号:</strong> {reservationId}
-            </Text>
-            <Text style={detailItem}>
-              <strong>スペース:</strong> {spaceName}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日付:</strong> {reservationDate}
-            </Text>
-            <Text style={detailItem}>
-              <strong>時間:</strong> {startTime} - {endTime}
-            </Text>
-            <Text style={detailItem}>
-              <strong>料金:</strong> {totalPrice}
-            </Text>
-            {notes && (
-              <Text style={detailItem}>
-                <strong>備考:</strong> {notes}
-              </Text>
+      {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
+
+      {memberReservationUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            会員のお客様は、マイページから予約内容の変更・キャンセル・領収書の確認が
+            行えます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={memberReservationUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページで予約を確認する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {cancelUrl && (
+        <Section
+          style={{
+            backgroundColor: danger.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            ご予約のキャンセルは下記のリンクから行えます
+            {cancellationDeadlineHours !== undefined && (
+              <>（予約開始の {cancellationDeadlineHours} 時間前まで有効）</>
             )}
-          </Section>
-
-          {addToCalendarLinks && (
-            <Section style={calendarSection}>
-              <Text style={calendarHeading}>カレンダーに追加</Text>
-              <Text style={calendarDescription}>
-                この予約をカレンダーに追加できます:
-              </Text>
-              <Text style={calendarLinks}>
-                <Link href={addToCalendarLinks.google} style={calendarLink}>
-                  Google Calendar
-                </Link>
-                {" | "}
-                <Link href={addToCalendarLinks.outlookWeb} style={calendarLink}>
-                  Outlook
-                </Link>
-                {" | "}
-                <Link href={addToCalendarLinks.ics} style={calendarLink}>
-                  iCal (.ics)
-                </Link>
-              </Text>
-            </Section>
-          )}
-
-          {cancelUrl && (
-            <Section style={cancelSection}>
-              <Text style={cancelDescription}>
-                ご予約のキャンセルはこちらのリンクから行えます（期限内のみ有効）:
-              </Text>
-              <Text style={cancelLinkText}>
-                <Link href={cancelUrl} style={cancelLink}>
-                  予約をキャンセルする
-                </Link>
-              </Text>
-            </Section>
-          )}
-
-          <Hr style={hr} />
-
-          <Text style={text}>
-            ご不明な点がございましたら、お気軽にお問い合わせください。
+            。
           </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link href={cancelUrl} style={linkDangerStyle}>
+              予約をキャンセルする
+            </Link>
+          </Text>
+        </Section>
+      )}
 
-          <Text style={footer}>Myrrh Rental Space</Text>
-        </Container>
-      </Body>
-    </Html>
+      {cancellationDeadlineHours !== undefined && (
+        <Text style={text}>
+          ご予約のキャンセル・変更は、予約開始時刻の{" "}
+          <strong>{cancellationDeadlineHours} 時間前まで</strong>
+          にお手続きください。期限を過ぎたお取消しはキャンセル料の対象となる場合が
+          ございます。詳しくはキャンセルポリシーをご確認ください。
+        </Text>
+      )}
+
+      <Hr style={hr} />
+
+      <Text style={text}>
+        ご不明な点がございましたら、お気軽にお問い合わせください。
+        ご利用を心よりお待ちしております。
+      </Text>
+    </EmailLayout>
   );
 }
 
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
-
-const heading = {
-  fontSize: "24px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "24px",
-};
-
-const text = {
-  fontSize: "16px",
-  lineHeight: "26px",
-  color: "#484848",
-};
-
-const detailsSection = {
-  backgroundColor: "#f9fafb",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsHeading = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "12px",
-};
-
-const detailItem = {
-  fontSize: "14px",
-  lineHeight: "24px",
-  color: "#484848",
-  margin: "8px 0",
-};
-
-const hr = {
-  borderColor: "#e6e6e6",
-  margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
-};
-
-const calendarSection = {
-  backgroundColor: "#e8f4fd",
-  borderRadius: "8px",
-  padding: "16px 20px",
-  margin: "24px 0",
-};
-
-const calendarHeading = {
-  fontSize: "16px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "8px",
-};
-
-const calendarDescription = {
-  fontSize: "14px",
-  color: "#484848",
-  marginBottom: "12px",
-};
-
-const calendarLinks = {
-  fontSize: "14px",
-  lineHeight: "24px",
-};
-
-const calendarLink = {
-  color: "#0066cc",
-  textDecoration: "underline",
-};
-
-const cancelSection = {
-  backgroundColor: "#fff8f8",
-  borderRadius: "8px",
-  padding: "16px 20px",
-  margin: "24px 0",
-};
-
-const cancelDescription = {
-  fontSize: "14px",
-  color: "#484848",
-  marginBottom: "8px",
-};
-
-const cancelLinkText = {
-  fontSize: "14px",
-  lineHeight: "24px",
-};
-
-const cancelLink = {
-  color: "#cc3333",
-  textDecoration: "underline",
-};
+ReservationConfirmationEmail.PreviewProps = reservationConfirmationFixture;
 
 export default ReservationConfirmationEmail;

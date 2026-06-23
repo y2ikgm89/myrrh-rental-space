@@ -1,116 +1,75 @@
+import { Hr, Section, Text } from "@react-email/components";
+import { eventRegistrationCancelledFixture } from "./event-registration-cancelled.fixture";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+  SECTION_VARIANT_STYLES,
+  detailItem,
+  detailsHeading,
+  heading,
+  hr,
+  text,
+} from "./_shared/styles";
 
 type Props = {
   customerName: string;
   eventTitle: string;
   eventDate: string;
+  footer: EmailFooterData;
 };
 
 export function EventRegistrationCancelledEmail({
   customerName,
   eventTitle,
   eventDate,
+  footer,
 }: Props) {
+  const danger = SECTION_VARIANT_STYLES.danger;
+
   return (
-    <Html>
-      <Head />
-      <Preview>イベント申込キャンセルのお知らせ - {eventTitle}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>イベント申込キャンセルのお知らせ</Heading>
+    <EmailLayout
+      preview={`イベント申込キャンセルのお知らせ - ${eventTitle}`}
+      footer={footer}
+    >
+      <Text style={heading}>イベント申込キャンセルのお知らせ</Text>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{customerName} 様</Text>
 
-          <Text style={text}>以下のイベント申込がキャンセルされました。</Text>
+      <Text style={text}>以下のイベント申込がキャンセルされました。</Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>キャンセルされた申込</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>イベント:</strong> {eventTitle}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日付:</strong> {eventDate}
-            </Text>
-          </Section>
+      <Section
+        style={{
+          backgroundColor: danger.background,
+          borderRadius: "8px",
+          padding: "20px",
+          margin: "24px 0",
+        }}
+      >
+        <Text style={{ ...detailsHeading, color: danger.heading }}>
+          キャンセルされた申込
+        </Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>イベント:</strong> {eventTitle}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日付:</strong> {eventDate}
+        </Text>
+      </Section>
 
-          <Hr style={hr} />
+      <Hr style={hr} />
 
-          <Text style={text}>またのご参加をお待ちしております。</Text>
+      <Text style={text}>
+        参加費の払い戻し条件についてはキャンセルポリシーをご確認ください。
+        ご不明な点がございましたら、お気軽にお問い合わせください。
+      </Text>
 
-          <Text style={footer}>Myrrh Rental Space</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={text}>またのご参加を心よりお待ちしております。</Text>
+    </EmailLayout>
   );
 }
 
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
-
-const heading = {
-  fontSize: "24px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "24px",
-};
-
-const text = {
-  fontSize: "16px",
-  lineHeight: "26px",
-  color: "#484848",
-};
-
-const detailsSection = {
-  backgroundColor: "#fef2f2",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsHeading = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#991b1b",
-  marginBottom: "12px",
-};
-
-const detailItem = {
-  fontSize: "14px",
-  lineHeight: "24px",
-  color: "#484848",
-  margin: "8px 0",
-};
-
-const hr = {
-  borderColor: "#e6e6e6",
-  margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
-};
+EventRegistrationCancelledEmail.PreviewProps =
+  eventRegistrationCancelledFixture;
 
 export default EventRegistrationCancelledEmail;

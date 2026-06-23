@@ -105,6 +105,9 @@ tmpclaude-*-cwd
 # ─── Vendor deploy artifacts ─────────────────────────────────────────────────
 .vercel/
 
+# ─── react-email CLI build artifacts ─────────────────────────────────────────
+.react-email/
+
 # ─── Generated API docs (TypeDoc) ────────────────────────────────────────────
 docs/api/
 

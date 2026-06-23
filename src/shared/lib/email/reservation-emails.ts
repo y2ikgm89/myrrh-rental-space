@@ -13,6 +13,7 @@ import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import {
   getCalendarEmailSettings,
   getEmailDeliverySettings,
@@ -45,6 +46,18 @@ import type {
 } from "./types";
 
 /**
+ * 予約 ID から、会員向けマイページの予約詳細 URL を組み立てる。
+ * userId が無い（ゲスト予約）場合は undefined を返す。
+ */
+function buildMemberReservationUrl(
+  userId: string | null | undefined,
+  reservationId: string,
+): string | undefined {
+  if (!userId) return undefined;
+  return `${getAppUrl()}/mypage/reservations/${reservationId}`;
+}
+
+/**
  * 予約確認メールを送信
  */
 export async function sendReservationConfirmationEmail(
@@ -60,11 +73,13 @@ export async function sendReservationConfirmationEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const [calendarSettings, deadlineSettings, organizer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getReservationDeadlineSettings(),
-    getIcalOrganizer(),
-  ]);
+  const [calendarSettings, deadlineSettings, organizer, footer] =
+    await Promise.all([
+      getCalendarEmailSettings(),
+      getReservationDeadlineSettings(),
+      getIcalOrganizer(),
+      getEmailFooterData(),
+    ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -96,7 +111,8 @@ export async function sendReservationConfirmationEmail(
       })
     : undefined;
 
-  // キャンセルリンク（キャンセル期限前のみ有効なトークンを発行）
+  // 期限内のみ有効なキャンセルトークン URL を発行。
+  // 会員でも非会員でも cancelUrl は発行する（マイページが落ちている時の保険として）。
   const cancelDeadline = new Date(
     data.startTime.getTime() -
       deadlineSettings.cancellationDeadlineHours * 60 * 60 * 1000,
@@ -105,6 +121,11 @@ export async function sendReservationConfirmationEmail(
     cancelDeadline > new Date()
       ? `${appUrl}/reservation/cancel?token=${createCancelToken(data.reservationId, cancelDeadline)}`
       : undefined;
+
+  const memberReservationUrl = buildMemberReservationUrl(
+    data.userId,
+    data.reservationId,
+  );
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -146,6 +167,9 @@ export async function sendReservationConfirmationEmail(
           notes: data.notes,
           addToCalendarLinks,
           cancelUrl,
+          memberReservationUrl,
+          cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+          footer,
         }),
       ),
       attachments,
@@ -171,9 +195,12 @@ export async function sendReservationCancelledEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -223,6 +250,7 @@ export async function sendReservationCancelledEmail(
         startTime,
         endTime,
         reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+        footer,
       }),
       attachments,
     }),
@@ -248,10 +276,13 @@ export async function sendReservationStatusChangedEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const isCancelled = data.newStatus === ReservationStatus.CANCELLED;
 
@@ -282,6 +313,11 @@ export async function sendReservationStatusChangedEmail(
           icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}`,
         })
       : undefined;
+
+  const memberReservationUrl = buildMemberReservationUrl(
+    data.userId,
+    data.reservationId,
+  );
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -324,6 +360,8 @@ export async function sendReservationStatusChangedEmail(
           newStatus: data.newStatus,
           location: data.location,
           addToCalendarLinks,
+          memberReservationUrl,
+          footer,
         }),
       ),
       attachments,
@@ -355,6 +393,8 @@ export async function sendReservationAdminNotification(
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
+  const footer = await getEmailFooterData();
+
   const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
@@ -381,6 +421,7 @@ export async function sendReservationAdminNotification(
           totalPrice: formatPrice(data.totalPrice, "未設定"),
           reservationId: data.reservationId.slice(0, 8).toUpperCase(),
           adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
+          footer,
         }),
       ),
     },
