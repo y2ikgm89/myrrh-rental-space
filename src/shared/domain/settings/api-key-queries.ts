@@ -1,11 +1,13 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import {
   maskGoogleMapsKey,
   maskResendKey,
   maskTurnstileKey,
 } from "@/shared/lib/api-keys";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { safeDecrypt } from "@/shared/lib/crypto";
 import { serverEnv } from "@/shared/lib/env/server";
 import type {
@@ -66,6 +68,10 @@ export async function getDecryptedResendApiKey(): Promise<string | null> {
 }
 
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
     select: {
@@ -125,6 +131,10 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
 }
 
 export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
     select: {
