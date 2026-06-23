@@ -12,6 +12,7 @@ import {
   isSignedAdminGateToken,
 } from "@/shared/lib/admin-login-gate";
 import { serverEnv } from "@/shared/lib/env/server";
+import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
 
 /**
@@ -130,6 +131,29 @@ function applySecurityHeaders(
   headers.set("Content-Security-Policy", csp);
 }
 
+/**
+ * Cloud Run / Load Balancer が発行する `X-Cloud-Trace-Context` を解析し、
+ * 後段（Server Component / Route Handler / Server Action / instrumentation）から
+ * `headers()` で取得しやすい flat header (`x-trace-id` / `x-span-id` / `x-trace-sampled`)
+ * として転写する。
+ *
+ * これにより Cloud Logging 構造化ログの `logging.googleapis.com/trace`・`spanId` 特殊
+ * フィールドを起点とした 1 request 横断検索が成立する。
+ *
+ * @see https://cloud.google.com/trace/docs/setup#force-trace
+ * @see https://cloud.google.com/logging/docs/structured-logging#special-payload-fields
+ */
+function applyTraceHeaders(req: NextRequest, headers: Headers): void {
+  const traceHeader = req.headers.get("x-cloud-trace-context");
+  const parsed = parseCloudTraceContext(traceHeader);
+  if (!parsed) return;
+  headers.set("x-trace-id", parsed.traceId);
+  if (parsed.spanId) headers.set("x-span-id", parsed.spanId);
+  if (typeof parsed.traceSampled === "boolean") {
+    headers.set("x-trace-sampled", parsed.traceSampled ? "1" : "0");
+  }
+}
+
 function createResponse(req: NextRequest, pathname: string): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isLocalhost = isLocalhostRequest(req);
@@ -138,6 +162,7 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-pathname", pathname);
   requestHeaders.set("Content-Security-Policy", cspValue);
+  applyTraceHeaders(req, requestHeaders);
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },

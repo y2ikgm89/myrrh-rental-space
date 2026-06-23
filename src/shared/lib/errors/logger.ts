@@ -7,4 +7,14 @@
 
 import "server-only";
 
-export { createErrorLogger, logError } from "./logger-core";
+export {
+  createErrorLogger,
+  logError,
+  logger,
+  parseCloudTraceContext,
+} from "./logger-core";
+export type {
+  HttpRequestPayload,
+  LogEnrichment,
+  ParsedCloudTraceContext,
+} from "./logger-core";

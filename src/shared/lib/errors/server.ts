@@ -19,4 +19,10 @@ export {
 } from "./types";
 export type { ErrorLogContext } from "./types";
 export { logError, createErrorLogger } from "./logger";
+export { parseCloudTraceContext } from "./logger-core";
+export type {
+  HttpRequestPayload,
+  LogEnrichment,
+  ParsedCloudTraceContext,
+} from "./logger-core";
 export { safeFetch, criticalFetch } from "./safe-fetch";
