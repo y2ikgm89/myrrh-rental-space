@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
+import { useRadioGroupKeyboard } from "@/public/lib/a11y/use-radio-group-keyboard";
 
 /**
  * 公開予約ページ Step 1 場所選択。
@@ -11,6 +12,8 @@ import { cn } from "@/shared/lib/cn";
  * SpaceSelector と同型の Responsive ハイブリッドカード:
  * mobile = 縦長 aspect 16:9 / @md+ = 横長 aspect 4:3 + 画像 260/320px。
  * Step 1-2 でカード言語を完全統一する。
+ *
+ * a11y: WAI-ARIA APG radio group pattern (roving tabindex + 矢印キー + Home/End)。
  */
 export function LocationSelector({
   locations,
@@ -21,20 +24,36 @@ export function LocationSelector({
   readonly selectedId: string | null;
   readonly onSelect: (id: string) => void;
 }): ReactElement {
+  const { getItemProps } = useRadioGroupKeyboard<
+    LocationWithSpaces,
+    string,
+    HTMLButtonElement
+  >({
+    items: locations,
+    selected: selectedId,
+    onSelect,
+    getKey: (location) => location.id,
+    orientation: "vertical",
+  });
+
   return (
     <div
       role="radiogroup"
       aria-label="場所を選択"
       className="@container flex flex-col gap-3"
     >
-      {locations.map((location) => {
+      {locations.map((location, index) => {
         const isSelected = location.id === selectedId;
+        const itemProps = getItemProps(location, index);
         return (
           <button
             key={location.id}
             type="button"
             role="radio"
             aria-checked={isSelected}
+            tabIndex={itemProps.tabIndex}
+            ref={itemProps.ref}
+            onKeyDown={itemProps.onKeyDown}
             onClick={() => onSelect(location.id)}
             className={cn(
               "group flex flex-col overflow-hidden border text-left transition-colors duration-200",

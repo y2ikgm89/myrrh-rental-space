@@ -9,6 +9,7 @@ import { cn } from "@/shared/lib/cn";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { SpaceDetailDialog } from "./space-detail-dialog";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { useRadioGroupKeyboard } from "@/public/lib/a11y/use-radio-group-keyboard";
 
 /** Desktop card に表示する設備 icon 最大件数。超過分は "+N" badge で示す。 */
 const MAX_FACILITY_ICONS = 6;
@@ -36,6 +37,21 @@ export function SpaceSelector({
   const isSingle = spaces.length === 1;
   const [detailSpace, setDetailSpace] = useState<SpaceOption | null>(null);
 
+  // WAI-ARIA APG radio group: roving tabindex + 矢印キー + Home/End + selection follows focus
+  // isSingle のときは disabled (タブストップ単一・矢印操作不要・APG: 単一 radio は意味なし)
+  const { getItemProps } = useRadioGroupKeyboard<
+    SpaceOption,
+    string,
+    HTMLDivElement
+  >({
+    items: spaces,
+    selected: selectedId,
+    onSelect,
+    getKey: (space) => space.id,
+    orientation: "vertical",
+    disabled: isSingle,
+  });
+
   return (
     <>
       <div
@@ -43,20 +59,25 @@ export function SpaceSelector({
         aria-label="スペースを選択"
         className="@container flex flex-col gap-3"
       >
-        {spaces.map((space) => {
+        {spaces.map((space, index) => {
           const isSelected = space.id === selectedId;
+          const itemProps = getItemProps(space, index);
           return (
             <div
               key={space.id}
               role="radio"
-              tabIndex={isSingle ? -1 : 0}
+              tabIndex={isSingle ? -1 : itemProps.tabIndex}
+              ref={itemProps.ref}
               aria-checked={isSelected}
               onClick={() => onSelect(space.id)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
+                // Enter は radio として標準でないが既存挙動を保持
+                if (e.key === "Enter") {
                   e.preventDefault();
                   onSelect(space.id);
+                  return;
                 }
+                itemProps.onKeyDown(e);
               }}
               className={cn(
                 "group flex flex-col overflow-hidden border text-left transition-colors duration-200",
