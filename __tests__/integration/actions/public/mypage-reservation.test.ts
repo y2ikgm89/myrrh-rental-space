@@ -66,6 +66,15 @@ mock.module("@/shared/lib/action-helpers", () => ({
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
   publicQueryRateLimiter: {},
+  cancelByReservationRateLimiter: {
+    check: mock(() => Promise.resolve({ success: true })),
+  },
+  getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
+}));
+
+// 新規: applyCancellationSideEffects を no-op モック
+mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
+  applyCancellationSideEffects: mock(() => Promise.resolve()),
 }));
 
 // auth モック
