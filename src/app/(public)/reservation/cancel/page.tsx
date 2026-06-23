@@ -240,6 +240,10 @@ function DetailRow({ label, children }: DetailRowProps) {
  * **意図的に invalid と expired を同一文言に統合**: 期限切れ表示で「これは正規
  * トークン形式」という弱オラクル情報を漏らさない（/login や /mypage と同 pattern）。
  * SR には reason 情報は提供せず、文言は単一に保つ。
+ *
+ * 漏洩窓制限のためトークン寿命に 7 日 cap を掛けているため、policy 上は
+ * まだキャンセル可能でもリンクだけ先に expired となるケースがある。代替経路として
+ * 会員にはマイページ・ゲストにはお問い合わせを併記する。
  */
 function InvalidLinkView({
   reason: _reason,
@@ -254,17 +258,31 @@ function InvalidLinkView({
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           リンクが正しくないか、有効期限が切れている可能性があります。
-          <br />
-          ご不明な点は
-          <Link
-            href={toAppRoute("/contact")}
-            className="underline underline-offset-4 hover:text-foreground"
-            rel="noreferrer"
-          >
-            お問い合わせ
-          </Link>
-          ください。
         </p>
+        <Stack gap="sm" className="mt-4 text-sm text-muted-foreground">
+          <p>
+            会員の方は
+            <Link
+              href={toAppRoute("/mypage")}
+              className="underline underline-offset-4 hover:text-foreground"
+              rel="noreferrer"
+            >
+              マイページ
+            </Link>
+            から直接キャンセルできます。
+          </p>
+          <p>
+            会員でない方は
+            <Link
+              href={toAppRoute("/contact")}
+              className="underline underline-offset-4 hover:text-foreground"
+              rel="noreferrer"
+            >
+              お問い合わせ
+            </Link>
+            よりご連絡ください。
+          </p>
+        </Stack>
       </div>
     </Layout>
   );

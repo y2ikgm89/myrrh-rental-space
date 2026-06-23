@@ -6,7 +6,10 @@ import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
-import { createCancelToken } from "@/shared/lib/reservation-cancel-token";
+import {
+  computeCancelTokenExpiresAt,
+  createCancelToken,
+} from "@/shared/lib/reservation-cancel-token";
 import { getAppHost, getAppUrl } from "../constants";
 import {
   ErrorCategory,
@@ -38,9 +41,11 @@ export async function sendReservationReminderEmail(
 
   // リマインダ送信時点でキャンセル期限内なら、キャンセル URL を生成する。
   // 「リマインダにキャンセル URL が無い」と顧客が連絡無くキャンセルし得る運用上の穴を塞ぐ。
-  const cancelDeadline = new Date(
-    data.startTime.getTime() -
-      deadlineSettings.cancellationDeadlineHours * 60 * 60 * 1000,
+  // 漏洩窓上限（MAX_CANCEL_TOKEN_LIFETIME_MS）を掛けるが、リマインダは予約直前に送るため
+  // 通常は policy 期限の方が早く採用される（cap は実質効かない）。
+  const cancelDeadline = computeCancelTokenExpiresAt(
+    data.startTime,
+    deadlineSettings.cancellationDeadlineHours,
   );
   const cancelUrl =
     cancelDeadline > new Date()

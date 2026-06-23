@@ -24,6 +24,45 @@ import { createHash } from "node:crypto";
 
 const PURPOSE = "reservation-cancel";
 
+/**
+ * キャンセルトークンの最大有効期間（漏洩窓の上限）。
+ *
+ * 自然な exp は「予約開始時刻 − cancellationDeadlineHours」だが、半年先の予約
+ * では半年間生きるトークンになるため、受信者のメールボックスや SMTP 中継・
+ * Resend ログが漏れた際の悪用窓が長くなる。トークンの寿命を **発行時点から
+ * 7 日** に上限することで、policy が許す期間より早くトークンが死ぬ可能性は
+ * あるが、漏洩リスクを構造的に制限する。
+ *
+ * **キャップが当たった場合のユーザー導線**:
+ *   - 会員: マイページ `/mypage/reservations` から直接キャンセル可
+ *   - ゲスト: お問い合わせから連絡（リマインダ送信で新しいトークンが再発行される）
+ *
+ * リマインダーは送信時点で新トークンを焼き直すため、通常は cap が当たらず
+ * policy 上限まで生きる（実害ケースは「ずっと先の予約 × 確認メール」だけ）。
+ */
+export const MAX_CANCEL_TOKEN_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * トークンに焼く `exp`（有効期限）を計算する。
+ *
+ * `policy 期限`（予約開始時刻 − cancellationDeadlineHours）と
+ * `発行時刻 + MAX_CANCEL_TOKEN_LIFETIME_MS` の **早い方** を返す。
+ *
+ * @param startTime 予約開始時刻
+ * @param cancellationDeadlineHours キャンセル受付期限（時間）
+ * @param now 発行時刻（省略時は `new Date()`）
+ */
+export function computeCancelTokenExpiresAt(
+  startTime: Date,
+  cancellationDeadlineHours: number,
+  now: Date = new Date(),
+): Date {
+  const policyExp =
+    startTime.getTime() - cancellationDeadlineHours * 60 * 60 * 1000;
+  const cappedExp = now.getTime() + MAX_CANCEL_TOKEN_LIFETIME_MS;
+  return new Date(Math.min(policyExp, cappedExp));
+}
+
 interface CancelTokenPayload {
   /** 予約ID（UUID） */
   rid: string;
