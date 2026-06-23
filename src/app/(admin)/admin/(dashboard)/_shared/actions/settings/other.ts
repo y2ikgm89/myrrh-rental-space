@@ -134,8 +134,6 @@ export async function updateReservationSettings(
           return null;
         },
         afterSuccess: () => {
-          // NOTE (#XXX migration): was data-cache only via updateTag; now also purges CDN
-          // (BUSINESS_SETTINGS + TERMS are in NEXTJS_TAG_TO_CDN_TAG → site-wide CDN tag purge).
           invalidateSiteWideCache([
             CACHE_TAGS.BUSINESS_SETTINGS,
             CACHE_TAGS.TERMS,
