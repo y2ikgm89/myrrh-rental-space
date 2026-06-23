@@ -1,0 +1,81 @@
+import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
+import { z } from "zod";
+import { checkPermission } from "@/admin/lib/action-auth";
+import { getEventCheckInAttendees } from "@/shared/domain/events/registration-queries";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+
+// EventRegistration.id / Event.id は cuid (varchar 30)。uuid 不可
+const eventIdSchema = z
+  .string()
+  .min(1, { error: "eventId が不正です" })
+  .max(30, { error: "eventId が不正です" });
+
+type RouteParams = { params: Promise<{ id: string }> };
+
+/**
+ * 当日受付 (check-in) 画面の attendees 取得 endpoint。
+ *
+ * - 全件 JSON で返却 (検索/フィルタはクライアント側で実行)
+ * - private, no-store: PII (氏名/電話) を含むため CDN/ブラウザどちらにもキャッシュさせない
+ * - RBAC: event:read 権限が必要
+ */
+export async function GET(
+  request: Request,
+  { params }: RouteParams,
+): Promise<Response> {
+  try {
+    const auth = await checkPermission("event", "read", request.headers);
+    if (!auth.success) {
+      return NextResponse.json({ error: auth.error.error }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const parsed = eventIdSchema.safeParse(id);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "eventId が不正です" },
+        { status: 400 },
+      );
+    }
+
+    const result = await getEventCheckInAttendees(parsed.data);
+
+    return NextResponse.json(
+      {
+        registrations: result.registrations.map((r) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          quantity: r.quantity,
+          attendedAt: r.attendedAt?.toISOString() ?? null,
+          createdAt: r.createdAt.toISOString(),
+          ticket: r.ticket,
+        })),
+        total: result.total,
+        attendedCount: result.attendedCount,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+        },
+      },
+    );
+  } catch (error) {
+    unstable_rethrow(error);
+    logError(error, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: "getEventCheckInAttendees" },
+    });
+    return NextResponse.json(
+      { error: "出席者一覧の取得に失敗しました" },
+      { status: 500 },
+    );
+  }
+}

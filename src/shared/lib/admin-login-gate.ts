@@ -19,7 +19,9 @@ const TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const textEncoder = new TextEncoder();
 
 export const ADMIN_GATE_COOKIE_NAME = "admin-gate";
-export const ADMIN_GATE_COOKIE_MAX_AGE = 60 * 60; // 1 hour
+// 8 hour: 当日受付運用 (5-6h 想定) 中の gate 切れによる /admin/login 404 復旧を防ぐ。
+// path=/admin・HttpOnly・SameSite=strict・Secure は据置のため漏出面は変わらない。
+export const ADMIN_GATE_COOKIE_MAX_AGE = 60 * 60 * 8;
 
 export function getAdminGateCookieOptions(): {
   httpOnly: boolean;

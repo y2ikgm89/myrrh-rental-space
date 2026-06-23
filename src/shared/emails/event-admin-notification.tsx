@@ -15,7 +15,8 @@ import {
 type Props = {
   type: "registration" | "cancellation";
   participantName: string;
-  participantEmail: string;
+  // walk-in (当日参加) では null。「未登録 / 当日参加」と表示する
+  participantEmail: string | null;
   eventTitle: string;
   eventDate: string;
   quantity: number;
@@ -79,7 +80,8 @@ export function EventAdminNotificationEmail({
           <strong>日付:</strong> {eventDate}
         </Text>
         <Text style={detailItem}>
-          <strong>参加者:</strong> {participantName} ({participantEmail})
+          <strong>参加者:</strong> {participantName} (
+          {participantEmail ?? "メール未登録 / 当日参加"})
         </Text>
         <Text style={detailItem}>
           <strong>参加人数:</strong> {String(quantity)}名

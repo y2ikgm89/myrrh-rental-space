@@ -1769,13 +1769,16 @@ model EventRegistration {
   eventId     String             @db.VarChar(30)
   ticketId    String             @db.VarChar(30)
   name        String             @db.VarChar(100)
-  email       String             @db.VarChar(255)
+  // 公開申込では必須・walk-in (当日参加) では任意のため nullable
+  email       String?            @db.VarChar(255)
   phone       String?            @db.VarChar(20)
   note        String?            @db.Text
   quantity    Int                @default(1)
   status      RegistrationStatus @default(CONFIRMED)
   customerId  String?            @db.Uuid
   cancelledAt DateTime?
+  // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
+  attendedAt  DateTime?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -1791,6 +1794,7 @@ model EventRegistration {
   @@index([customerId])
   @@index([status])
   @@index([eventId, status, createdAt])
+  @@index([eventId, attendedAt])
   @@map("event_registrations")
 }
 

@@ -36,6 +36,7 @@ export async function getEventRegistrations(
         quantity: true,
         status: true,
         cancelledAt: true,
+        attendedAt: true,
         createdAt: true,
       },
     }),
@@ -46,6 +47,48 @@ export async function getEventRegistrations(
   ]);
 
   return { registrations, total, confirmedCount, page, perPage };
+}
+
+/**
+ * 当日受付 (check-in) 画面向けに、確定済 (CONFIRMED) 申込を**全件**取得する。
+ *
+ * - 検索/フィルタはクライアント側で実行するため全件返却 (1 イベント数十〜数百名想定)
+ * - CANCELLED は除外 (受付対象外)
+ * - select は受付に必要な最小カラム (note は除外、CSV は別 query で扱う)
+ * - 進捗カウンタ用に attendedCount (出席済件数) も併せて返す
+ */
+export async function getEventCheckInAttendees(eventId: string) {
+  const where = {
+    eventId,
+    event: { deletedAt: null },
+    status: RegistrationStatus.CONFIRMED,
+  };
+
+  const [registrations, attendedCount] = await Promise.all([
+    prisma.eventRegistration.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        quantity: true,
+        attendedAt: true,
+        createdAt: true,
+        ticket: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.eventRegistration.count({
+      where: { ...where, attendedAt: { not: null } },
+    }),
+  ]);
+
+  return {
+    registrations,
+    total: registrations.length,
+    attendedCount,
+  };
 }
 
 export async function getRegistrationCount(eventId: string) {
