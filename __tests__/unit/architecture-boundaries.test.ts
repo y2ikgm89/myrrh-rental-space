@@ -471,79 +471,29 @@ const THIN_ADMIN_ACTION_FILES = [
     "admin.ts",
   ),
 ];
-const SERVER_ONLY_QUERY_FILES = [
-  join(SRC_ROOT, "shared", "db", "prisma.ts"),
-  join(SRC_ROOT, "shared", "db", "better-auth-adapter.ts"),
-  join(SRC_ROOT, "shared", "domain", "settings", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "settings", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "settings", "api-key-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "settings", "api-key-commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "settings", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "settings", "announcement-bar.ts"),
-  join(SRC_ROOT, "shared", "domain", "audit-log", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "audit-log", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "admin-login-tokens", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "admin-login-tokens", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "auth", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "auth", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "dashboard", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "block-template", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "block-template", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "coupons", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "coupons", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "faq", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "faq", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "customers", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "customers", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "inquiries", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "inquiries", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "instagram", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "instagram", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "locations", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "locations", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "navigation", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "pages", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "pages", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "pages", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "pages", "system-pages.ts"),
-  join(SRC_ROOT, "shared", "domain", "permissions", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "permissions", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "sections", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "sections", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "sections", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "post-comments", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "post-comments", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "posts", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "posts", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "posts", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "news", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "news", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "news", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "staff-invitations", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "staff-invitations", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "space-categories", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "space-categories", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "spaces", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "spaces", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "media", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "media", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "editor-comments", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "editor-comments", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "reservations", "admin-queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "reservations", "availability.ts"),
-  join(SRC_ROOT, "shared", "domain", "reservations", "calendar-sync.ts"),
-  join(SRC_ROOT, "shared", "domain", "reservations", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "ical", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "ical", "commands.ts"),
-  join(SRC_ROOT, "shared", "domain", "sitemap", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "slugs", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "system", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "user-page-assignments", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "users", "queries.ts"),
-  join(SRC_ROOT, "shared", "domain", "users", "commands.ts"),
-  join(SRC_ROOT, "shared", "lib", "google-calendar", "settings.ts"),
-  join(SRC_ROOT, "shared", "lib", "google-calendar", "webhook.ts"),
-];
+/**
+ * `@/shared/db/prisma` を import する src 配下の全ファイルを動的に列挙する。
+ *
+ * 旧実装は手書き allowlist だったが、追加ファイルが allowlist に登録されない限り
+ * gate が dead になる drift があり 58+ ファイルが未保護だった。
+ * import 検出ベースに切り替えて drift gate を回復する。
+ *
+ * prisma.ts / better-auth-adapter.ts は自身を import しないため明示的に含める
+ * （これらは Prisma client を直接ホストするため当然 server-only 必須）。
+ */
+function collectPrismaImportingFiles(): string[] {
+  const importRe = /from\s+["']@\/shared\/db\/prisma["']/u;
+  const hits = collectSourceFiles(SRC_ROOT).filter((file) => {
+    const source = readFileSync(file, "utf8");
+    return importRe.test(source);
+  });
+  const seed = [
+    join(SRC_ROOT, "shared", "db", "prisma.ts"),
+    join(SRC_ROOT, "shared", "db", "better-auth-adapter.ts"),
+  ];
+  const set = new Set<string>([...seed, ...hits]);
+  return [...set].sort();
+}
 
 function collectSourceFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -956,8 +906,15 @@ describe("architecture boundaries", () => {
     ).toBe(false);
   });
 
-  test("server-side query modules は server-only を明示する", () => {
-    const offenders = SERVER_ONLY_QUERY_FILES.filter(existsSync)
+  test("`@/shared/db/prisma` を import する全ファイルが server-only を明示する", () => {
+    // 動的列挙: 手書き allowlist は追加ファイルが登録されない限り gate が dead になり、
+    // 実際に 58+ ファイルが未保護で drift していた。`from "@/shared/db/prisma"` を持つ
+    // ファイルを毎回走査して server-only 強制する canonical 方式に切り替えた。
+    const files = collectPrismaImportingFiles();
+    // sanity: 少なくとも prisma.ts + better-auth-adapter.ts + 主要 domain は検出される
+    expect(files.length).toBeGreaterThan(10);
+
+    const offenders = files
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return !/import\s+["']server-only["'];?/.test(source);

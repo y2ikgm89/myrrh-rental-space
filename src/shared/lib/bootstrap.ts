@@ -9,6 +9,8 @@
  * - 絶対に throw しない（サーバー起動をブロックしない）
  */
 
+import "server-only";
+
 import { prisma } from "@/shared/db/prisma";
 import { bootstrapSystemPagesCommand } from "@/shared/domain/pages/system-pages-commands";
 
