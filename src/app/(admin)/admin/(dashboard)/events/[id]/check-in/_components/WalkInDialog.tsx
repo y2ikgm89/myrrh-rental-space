@@ -11,6 +11,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { toast } from "sonner";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -247,9 +248,11 @@ export function WalkInDialog({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "受付中…" : "受付確定 (即出席)"}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label="受付確定 (即出席)"
+              pendingLabel="受付中…"
+            />
           </DialogFooter>
         </form>
       </DialogContent>
