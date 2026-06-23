@@ -12,22 +12,11 @@
  *   bun scripts/backfill-page-hero-buttons.ts --dry-run  # 対象集計のみ (書込なし)
  */
 
-// Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
 import { isRecord } from "@/shared/lib/serialize";
 import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero/defaults";
-
-const databaseUrl = process.env["DATABASE_URL"];
-if (!databaseUrl) {
-  console.error("❌ DATABASE_URL が設定されていません");
-  process.exit(1);
-}
+import { withScript } from "./_shared/script-prisma";
 
 const isDryRun = process.argv.slice(2).includes("--dry-run");
-
-const adapter = new PrismaPg({ connectionString: databaseUrl });
-const prisma = new PrismaClient({ adapter });
 
 // buttons フィールドを持つ variant（minimal は持たない）
 const VARIANTS_WITH_BUTTONS = new Set(["editorial-split", "compact", "media"]);
@@ -38,7 +27,7 @@ const DEFAULT_BUTTONS =
     ? DEFAULT_PAGE_HERO.buttons
     : [];
 
-async function main() {
+await withScript("backfill-page-hero-buttons", async (prisma) => {
   const sections = await prisma.section.findMany({
     where: { type: "page-hero" },
     select: { id: true, config: true },
@@ -91,15 +80,4 @@ async function main() {
       isDryRun ? " (dry-run)" : ""
     }`,
   );
-}
-
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (error) => {
-    console.error(
-      "❌ page-hero buttons backfill failed:",
-      error instanceof Error ? error.message : String(error),
-    );
-    await prisma.$disconnect();
-    process.exitCode = 1;
-  });
+});

@@ -1,25 +1,9 @@
 import { hashPassword } from "better-auth/crypto";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../../generated/prisma/client";
 import { Role } from "../../generated/prisma/enums";
 import { adminCredentials, testUsers } from "../../e2e/fixtures";
+import { withScript } from "../_shared/script-prisma";
 
-const databaseUrl = process.env["DATABASE_URL"];
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({
-    connectionString: databaseUrl,
-    connectionTimeoutMillis: 5_000,
-    idleTimeoutMillis: 300_000,
-    max: 2,
-  }),
-});
-
-async function ensureAdminUser(): Promise<void> {
+await withScript("ensure-admin-user", async (prisma) => {
   const passwordHash = await hashPassword(adminCredentials.password);
 
   await prisma.$transaction(async (tx) => {
@@ -102,10 +86,4 @@ async function ensureAdminUser(): Promise<void> {
       },
     });
   });
-}
-
-try {
-  await ensureAdminUser();
-} finally {
-  await prisma.$disconnect();
-}
+});

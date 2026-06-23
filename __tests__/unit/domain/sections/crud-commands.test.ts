@@ -47,6 +47,11 @@ const mockPageFindUnique = mock<
   () => Promise<{ slug: string; template: string } | null>
 >(() => Promise.resolve({ slug: "test-page", template: "content" }));
 
+// $executeRaw tagged template の呼び出しを記録する（reorder 単一 SQL 化の検証用）
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
+
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
@@ -79,9 +84,44 @@ mock.module("@/shared/db/prisma", () => ({
       };
       return fn(tx);
     },
+    $executeRaw: mockExecuteRaw,
   },
   Prisma: { JsonNull: "JsonNull" },
 }));
+
+// Prisma.sql / Prisma.join / Prisma.raw を結合済み文字列に展開するスタブ
+mock.module("@generated/prisma/client", () => {
+  type SqlFragment = { __sql: string; __values: unknown[] };
+  const sql = (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): SqlFragment => {
+    let combined = "";
+    for (let i = 0; i < strings.length; i++) {
+      combined += strings[i];
+      if (i < values.length) {
+        const v = values[i] as SqlFragment | unknown;
+        if (v && typeof v === "object" && "__sql" in (v as object)) {
+          combined += (v as SqlFragment).__sql;
+        } else {
+          combined += `$${i + 1}`;
+        }
+      }
+    }
+    return { __sql: combined, __values: values };
+  };
+  return {
+    Prisma: {
+      sql,
+      join: (parts: SqlFragment[], separator = ","): SqlFragment => ({
+        __sql: parts.map((p) => p.__sql).join(separator),
+        __values: parts.flatMap((p) => p.__values),
+      }),
+      raw: (s: string): SqlFragment => ({ __sql: s, __values: [] }),
+      JsonNull: "JsonNull",
+    },
+  };
+});
 
 mock.module("@/shared/db/json", () => ({
   parsePrismaInputJson: (json: string, _msg: string) => JSON.parse(json),
@@ -502,7 +542,7 @@ describe("reorderPageSectionsCommand", () => {
     ).rejects.toThrow("セクション数が一致しません");
   });
 
-  test("page-hero は order=-1 維持（並び替え対象外）", async () => {
+  test("page-hero は order=-1 維持（CASE WHEN 単一 SQL）", async () => {
     mockSectionFindMany.mockImplementationOnce(() =>
       Promise.resolve([
         { id: "id-hero", type: "page-hero", order: -1 },
@@ -510,9 +550,8 @@ describe("reorderPageSectionsCommand", () => {
         { id: "id-b", type: "gallery", order: 1 },
       ]),
     );
-    mockSectionUpdate.mockImplementation(() =>
-      Promise.resolve({ id: "x", isActive: true }),
-    );
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
 
     const result = await reorderPageSectionsCommand({
       pageId: PAGE_ID,
@@ -522,22 +561,46 @@ describe("reorderPageSectionsCommand", () => {
     expect(result.count).toBe(3);
     expect(result.pageSlug).toBe("test-page");
 
-    // page-hero（id-hero）は order=-1 維持
-    expect(mockSectionUpdate).toHaveBeenCalledWith({
-      where: { id: "id-hero" },
-      data: { order: -1 },
-    });
+    // 個別 update ループは廃止 — 1 回の $executeRaw に集約
+    expect(mockSectionUpdate).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
 
-    // id-b は orderedIds[0] なので order=0（インデックス順）
-    expect(mockSectionUpdate).toHaveBeenCalledWith({
-      where: { id: "id-b" },
-      data: { order: 0 },
-    });
+    const call = mockExecuteRaw.mock.calls[0];
+    // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
+    const sql =
+      (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+    expect(sql).toContain("sections");
+    expect(sql).toContain("order");
+    expect(sql).toContain("CASE");
 
-    // id-a は orderedIds[2] なので order=2
-    expect(mockSectionUpdate).toHaveBeenCalledWith({
-      where: { id: "id-a" },
-      data: { order: 2 },
-    });
+    // values は WHEN/THEN/IN 句に展開される SqlFragment 集合。
+    // 各 SqlFragment の __sql に WHEN/THEN テンプレ、__values にバインド値が入る。
+    const values = (call?.slice(1) ?? []) as Array<
+      { __sql: string; __values: unknown[] } | undefined
+    >;
+    const aggregatedSql = values
+      .map((v) => (v && typeof v === "object" && "__sql" in v ? v.__sql : ""))
+      .join(" ");
+    expect(aggregatedSql).toContain("WHEN");
+    expect(aggregatedSql).toContain("THEN");
+
+    // bind 値の中に page-hero の -1 が含まれることを確認
+    const collectPrimitives = (items: unknown[]): unknown[] => {
+      const out: unknown[] = [];
+      for (const item of items) {
+        if (item && typeof item === "object" && "__values" in item) {
+          out.push(
+            ...collectPrimitives((item as { __values: unknown[] }).__values),
+          );
+        } else {
+          out.push(item);
+        }
+      }
+      return out;
+    };
+    const bindValues = collectPrimitives(values);
+    expect(bindValues).toContain(-1);
+    expect(bindValues).toContain(0);
+    expect(bindValues).toContain(2);
   });
 });

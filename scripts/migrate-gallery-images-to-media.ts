@@ -13,23 +13,12 @@
  * 冪等 — `images` キーがあり `media` キーが無い gallery section のみ rename する。
  */
 
-// Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
 import { isRecord } from "@/shared/lib/serialize";
-
-const databaseUrl = process.env["DATABASE_URL"];
-if (!databaseUrl) {
-  console.error("❌ DATABASE_URL が設定されていません");
-  process.exit(1);
-}
+import { withScript } from "./_shared/script-prisma";
 
 const isDryRun = process.argv.slice(2).includes("--dry-run");
 
-const adapter = new PrismaPg({ connectionString: databaseUrl });
-const prisma = new PrismaClient({ adapter });
-
-async function main() {
+await withScript("migrate-gallery-images-to-media", async (prisma) => {
   const sections = await prisma.section.findMany({
     where: { type: "gallery" },
     select: { id: true, config: true },
@@ -70,15 +59,4 @@ async function main() {
       isDryRun ? " (dry-run)" : ""
     }`,
   );
-}
-
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (error) => {
-    console.error(
-      "❌ gallery migrate failed:",
-      error instanceof Error ? error.message : String(error),
-    );
-    await prisma.$disconnect();
-    process.exitCode = 1;
-  });
+});

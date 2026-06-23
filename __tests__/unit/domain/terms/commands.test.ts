@@ -45,6 +45,11 @@ const mockTransaction = mock<
   (cb: (tx: TxClient) => Promise<unknown>) => Promise<unknown>
 >((cb) => cb({ termsDocument: { update: mockUpdate } }));
 
+// $executeRaw tagged template の最後の呼び出しを記録する（reorder 単一 SQL 化の検証用）
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
+
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
@@ -62,8 +67,44 @@ mock.module("@/shared/db/prisma", () => ({
       createMany: mockAgreementCreateMany,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
+
+// Prisma.sql / Prisma.join は実行時にトークン化された SQL 片を返す。テストでは
+// 結合済み文字列で検証できるよう raw を保持するスタブを返す。
+mock.module("@generated/prisma/client", () => {
+  type SqlFragment = { __sql: string; __values: unknown[] };
+  const sql = (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): SqlFragment => {
+    let combined = "";
+    for (let i = 0; i < strings.length; i++) {
+      combined += strings[i];
+      if (i < values.length) {
+        const v = values[i] as SqlFragment | unknown;
+        if (v && typeof v === "object" && "__sql" in (v as object)) {
+          combined += (v as SqlFragment).__sql;
+        } else {
+          combined += `$${i + 1}`;
+        }
+      }
+    }
+    return { __sql: combined, __values: values };
+  };
+  return {
+    Prisma: {
+      sql,
+      join: (parts: SqlFragment[], separator = ","): SqlFragment => ({
+        __sql: parts.map((p) => p.__sql).join(separator),
+        __values: parts.flatMap((p) => p.__values),
+      }),
+      raw: (s: string): SqlFragment => ({ __sql: s, __values: [] }),
+      JsonNull: "JsonNull",
+    },
+  };
+});
 
 const {
   createTermsCommand,
@@ -218,33 +259,33 @@ describe("reorderTermsCommand", () => {
   beforeEach(() => {
     mockUpdate.mockReset();
     mockUpdate.mockResolvedValue({ id: "id-1", slug: "privacy-policy" });
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
-  test("orderedIds の順に footerOrder を 0 始まりで再採番する", async () => {
+  test("orderedIds の順に footerOrder を 0 始まりで CASE WHEN 単一 SQL で再採番する", async () => {
     await reorderTermsCommand(["id-a", "id-b", "id-c"]);
 
-    expect(mockUpdate).toHaveBeenCalledTimes(3);
-    expect(mockUpdate).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        where: { id: "id-a", deletedAt: null },
-        data: { footerOrder: 0 },
-      }),
-    );
-    expect(mockUpdate).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        where: { id: "id-c", deletedAt: null },
-        data: { footerOrder: 2 },
-      }),
-    );
+    // N 回ループ UPDATE は廃止 — 1 回の $executeRaw に集約される
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+
+    const call = mockExecuteRaw.mock.calls[0];
+    // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
+    const sql =
+      (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+    expect(sql).toContain("terms_documents");
+    expect(sql).toContain("footerOrder");
+    expect(sql).toContain("CASE");
+    expect(sql).toContain("deletedAt");
   });
 
-  test("空配列の場合 update を呼ばない", async () => {
+  test("空配列の場合 SQL を実行しない", async () => {
     const result = await reorderTermsCommand([]);
 
     expect(result).toEqual({ updated: 0 });
     expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
   });
 });
 
