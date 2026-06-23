@@ -13,6 +13,7 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -51,7 +52,9 @@ const backgroundMap: Record<
   surface: "bg-surface",
   muted: "bg-muted",
   gradient: "bg-accent/5",
-  image: "bg-cover bg-center bg-no-repeat",
+  // image 背景は next/image fill で別途レンダリング（CSS background-image を使うと
+  // AVIF/WebP 変換・srcset・device-size responsive を完全バイパスしてしまう）
+  image: "",
 };
 
 const maxWidthMap: Record<
@@ -111,13 +114,12 @@ export function SectionWrapper({
       ? textAlignMap[style.typography.textAlign]
       : "";
 
-  const hasBgImage =
-    style.background.type === "image" && style.background.imageUrl;
-  const bgImageStyle = hasBgImage
-    ? { backgroundImage: `url(${style.background.imageUrl})` }
-    : undefined;
-  const mergedStyle =
-    bgImageStyle || styleProp ? { ...bgImageStyle, ...styleProp } : undefined;
+  const bgImageUrl =
+    style.background.type === "image" && style.background.imageUrl
+      ? style.background.imageUrl
+      : undefined;
+  const hasBgImage = Boolean(bgImageUrl);
+  const mergedStyle = styleProp;
 
   const showOverlay = hasBgImage && style.background.overlayOpacity > 0;
 
@@ -155,6 +157,9 @@ export function SectionWrapper({
     <section
       className={cn(
         "relative",
+        // 背景画像を持つときは `isolate` で stacking context を section 内に閉じ込め、
+        // 内側 `-z-10` が祖先まで突き抜けないようにする（next/image fill canonical pattern）。
+        hasBgImage && "isolate",
         bgClass,
         alignClass,
         visibilityClass,
@@ -163,6 +168,20 @@ export function SectionWrapper({
       )}
       style={mergedStyle}
     >
+      {bgImageUrl && (
+        // next/image fill: AVIF/WebP + srcset + responsive を有効化する canonical pattern。
+        // 親 <section> が `relative isolate` なので fill の position:absolute と -z-10 が
+        // 正しく section 内に閉じる。
+        // 公式: https://nextjs.org/docs/app/api-reference/components/image#fill
+        <Image
+          src={bgImageUrl}
+          alt=""
+          fill
+          sizes="100vw"
+          className="-z-10 object-cover"
+          aria-hidden="true"
+        />
+      )}
       {showOverlay && (
         <div
           className="pointer-events-none absolute inset-0 bg-foreground"
