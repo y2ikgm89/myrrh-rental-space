@@ -71,6 +71,10 @@
   /* Warning: 注意イエロー */
   --color-warning: oklch(0.75 0.18 85);
   --color-warning-foreground: oklch(0.2 0.02 85);
+  /* 淡色 tint バッジ(bg-warning/10)上の前景用。--color-warning(oklch 0.75)は
+   * その上で AA(4.5:1)未達のため、テキスト用に暗いゴールドを用意する。
+   * 値は公開サイト(public.css)の --color-warning-strong と SSoT 同値。 */
+  --color-warning-strong: oklch(0.45 0.13 85);
 
   /* Info: 情報ブルー */
   --color-info: oklch(0.55 0.2 260);
