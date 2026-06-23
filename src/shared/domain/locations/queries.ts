@@ -4,7 +4,6 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import type {
   GetLocationsResult,
-  LocationData,
   LocationWithStats,
   PublishedLocationOption,
 } from "@/shared/domain/locations/types";
@@ -13,13 +12,6 @@ import {
   parseStringArray,
   parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
-import {
-  ErrorCategory,
-  ErrorSeverity,
-  safeFetch,
-} from "@/shared/lib/errors/server";
-import { toPlainObject } from "@/shared/lib/serialize";
-import { slugParamSchema } from "@/shared/lib/validations/params";
 
 function parseAmenities(
   value: Prisma.JsonValue | null,
@@ -207,75 +199,6 @@ export async function getLocationById(
   }
 
   return formatLocation(location);
-}
-
-export async function getLocationBySlug(
-  slug: string,
-): Promise<LocationData | null> {
-  const validated = slugParamSchema.safeParse(slug);
-  if (!validated.success) return null;
-
-  const location = await safeFetch({
-    fetch: () =>
-      prisma.location.findUnique({
-        where: { slug: validated.data },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          address: true,
-          postalCode: true,
-          prefecture: true,
-          city: true,
-          streetAddress: true,
-          buildingName: true,
-          accessLines: true,
-          parkingInfo: true,
-          amenities: true,
-          imageUrl: true,
-          imageUrls: true,
-          businessHours: true,
-          specialHolidays: true,
-          latitude: true,
-          longitude: true,
-          googleBusinessPlaceId: true,
-          googleReviewUrl: true,
-          priceRange: true,
-          paymentAccepted: true,
-          phoneNumber: true,
-          email: true,
-          gbpSyncEnabled: true,
-          gbpSyncedAt: true,
-          gbpSyncError: true,
-          sortOrder: true,
-          isPublished: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getLocationBySlug",
-  });
-
-  if (!location) return null;
-
-  return toPlainObject({
-    ...location,
-    accessLines: parseStringArray(location.accessLines),
-    amenities: parseAmenities(location.amenities),
-    imageUrls: parseStringArray(location.imageUrls),
-    businessHours: parseBusinessHours(location.businessHours),
-    specialHolidays: parseStringArrayOrNull(location.specialHolidays),
-    gbpSyncedAt: location.gbpSyncedAt
-      ? location.gbpSyncedAt.toISOString()
-      : null,
-    createdAt: location.createdAt.toISOString(),
-    updatedAt: location.updatedAt.toISOString(),
-  });
 }
 
 export async function getPublishedLocations(): Promise<

@@ -61,8 +61,6 @@ import {
   updateCoupon,
   deleteCoupon,
   updateCouponActive,
-  incrementCouponUsage,
-  decrementCouponUsage,
 } from "@/shared/domain/coupons/commands";
 
 // テストデータ
@@ -434,79 +432,6 @@ describe("coupons/commands", () => {
         );
 
         expect(mockCouponUpdate).not.toHaveBeenCalled();
-      });
-    });
-  });
-
-  // =============================================================================
-  // incrementCouponUsage
-  // =============================================================================
-
-  describe("incrementCouponUsage", () => {
-    describe("正常系", () => {
-      test("使用数を 1 インクリメントする", async () => {
-        await expect(incrementCouponUsage(COUPON_ID)).resolves.toBeUndefined();
-
-        expect(mockCouponUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: { id: COUPON_ID },
-            data: { usageCount: { increment: 1 } },
-          }),
-        );
-      });
-
-      test("update が 1 回だけ呼ばれる", async () => {
-        await incrementCouponUsage(COUPON_ID);
-
-        expect(mockCouponUpdate).toHaveBeenCalledTimes(1);
-        expect(mockCouponUpdateMany).not.toHaveBeenCalled();
-      });
-    });
-  });
-
-  // =============================================================================
-  // decrementCouponUsage
-  // =============================================================================
-
-  describe("decrementCouponUsage", () => {
-    describe("正常系", () => {
-      test("使用数を 1 デクリメントする（usageCount > 0 の場合のみ）", async () => {
-        mockCouponUpdateMany.mockResolvedValueOnce({ count: 1 });
-
-        await expect(decrementCouponUsage(COUPON_ID)).resolves.toBeUndefined();
-
-        expect(mockCouponUpdateMany).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: {
-              id: COUPON_ID,
-              usageCount: { gt: 0 },
-            },
-            data: { usageCount: { decrement: 1 } },
-          }),
-        );
-      });
-
-      test("updateMany が 1 回だけ呼ばれる", async () => {
-        await decrementCouponUsage(COUPON_ID);
-
-        expect(mockCouponUpdateMany).toHaveBeenCalledTimes(1);
-        expect(mockCouponUpdate).not.toHaveBeenCalled();
-      });
-
-      test("usageCount が 0 の場合はデクリメントしない（updateMany の where 条件で除外）", async () => {
-        // count: 0 は where 条件に該当せず updateMany が実行されなかったことを示す
-        mockCouponUpdateMany.mockResolvedValueOnce({ count: 0 });
-
-        await expect(decrementCouponUsage(COUPON_ID)).resolves.toBeUndefined();
-
-        // updateMany は呼ばれるが where 条件で 0 件にマッチ → エラーにならない
-        expect(mockCouponUpdateMany).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: expect.objectContaining({
-              usageCount: { gt: 0 },
-            }),
-          }),
-        );
       });
     });
   });

@@ -355,10 +355,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
   };
 }
 
-export async function getPublicTaxSettings(): Promise<TaxSettings> {
-  return getTaxSettings();
-}
-
 export async function getEventImportSettings(): Promise<{
   eventImportEnabled: boolean;
 }> {

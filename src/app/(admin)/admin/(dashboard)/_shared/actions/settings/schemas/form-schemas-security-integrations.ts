@@ -40,17 +40,6 @@ export const googleMapsFormSchema = z.object({
 export type GoogleMapsFormInput = z.infer<typeof googleMapsFormSchema>;
 
 // =============================================================================
-// Site > Integrations > iCal フィード
-// =============================================================================
-
-export const icalFeedFormSchema = z.object({
-  icalFeedEnabled: switchBoolean(),
-  icalFeedIncludeCustomerInfo: switchBoolean(),
-});
-
-export type ICalFeedFormInput = z.infer<typeof icalFeedFormSchema>;
-
-// =============================================================================
 // Booking > 割引設定
 // =============================================================================
 

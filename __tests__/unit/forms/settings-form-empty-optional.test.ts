@@ -43,7 +43,6 @@ import {
 import {
   turnstileFormSchema,
   googleMapsFormSchema,
-  icalFeedFormSchema,
   discountFormSchema,
   stripeFormSchema,
   resendFormSchema,
@@ -277,14 +276,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       "googleMaps",
     );
     expectSuccess(resendFormSchema, emptyKeys(["resendApiKey"]), "resend");
-  });
-
-  test("iCal フィード: 両 Switch OFF でも success", () => {
-    expectSuccess(
-      icalFeedFormSchema,
-      emptyKeys(["icalFeedEnabled", "icalFeedIncludeCustomerInfo"]),
-      "icalFeed",
-    );
   });
 
   test("割引: 全 Switch OFF + 空ルールでも success", () => {

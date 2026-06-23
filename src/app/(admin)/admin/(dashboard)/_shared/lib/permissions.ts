@@ -6,21 +6,16 @@
  * `@/shared/lib/admin-permissions` / `@/shared/lib/admin-resources` に集約。
  *
  * 本ファイルは server-only セッション / Prisma 連携が必要なヘルパー
- * （`userHasPermission` / `userHasResourceAccess` / `canAccessAdmin`
- * / `checkReadPermissionFor`）と、UI 表示用ラベル（`ACTION_LABELS`）を提供する。
+ * （`userHasPermission` / `userHasResourceAccess` / `canAccessAdmin`）
+ * と、UI 表示用ラベル（`ACTION_LABELS`）を提供する。
  */
 
 import "server-only";
 
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
-import {
-  getAdminSession,
-  getAdminSessionUser,
-  type AdminUser,
-} from "@/shared/lib/admin-auth";
+import { type AdminUser } from "@/shared/lib/admin-auth";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
-import { logPermissionDenied } from "@/admin/lib/audit";
 import {
   ROLE_PERMISSIONS,
   hasPermission,
@@ -108,26 +103,6 @@ export async function userHasResourceAccess(
  */
 export function canAccessAdmin(role: Role): boolean {
   return isDashboardRole(role);
-}
-
-/**
- * リソース別の読み取り権限チェック関数を生成
- */
-export function checkReadPermissionFor(
-  resource: Resource,
-): () => Promise<boolean> {
-  return async (): Promise<boolean> => {
-    const session = await getAdminSession();
-    if (!session?.user) return false;
-    const user = getAdminSessionUser(session);
-    if (!user) return false;
-    if (!canAccessAdmin(user.role)) return false;
-    if (!hasPermission(user.role, resource, "read")) {
-      void logPermissionDenied(user.id, resource, "read");
-      return false;
-    }
-    return true;
-  };
 }
 
 export { isEditorRole, isAdminRole, isSuperAdminRole } from "./role-guards";

@@ -106,28 +106,6 @@ function buildSpaceCommandInput(data: SpaceFormData) {
   });
 }
 
-export async function createSpace(
-  input: SpaceFormData,
-): Promise<MutationResult<Awaited<ReturnType<typeof createSpaceCommand>>>> {
-  const parsed = spaceFormSchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "space",
-    action: "create",
-    execute: async () => {
-      const commandInput = buildSpaceCommandInput(parsed.data);
-      return createSpaceCommand(commandInput);
-    },
-    afterSuccess: (result) => {
-      revalidateSpaces([{ id: result.id, slug: result.slug }]);
-    },
-    resolveAuditResourceId: (result) => result.id,
-  });
-}
-
 /**
  * 管理画面 新規 Space 作成 — conform `useActionState` canonical
  *
