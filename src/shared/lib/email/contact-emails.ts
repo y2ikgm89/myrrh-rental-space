@@ -9,6 +9,7 @@
 import "server-only";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { ContactConfirmationEmail } from "@/shared/emails/contact-confirmation";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import {
   getEmailDeliverySettings,
   getNotificationEmailAddresses,
@@ -23,6 +24,8 @@ import type { ContactEmailData, EmailResult } from "./types";
 export async function sendContactConfirmationEmail(
   data: ContactEmailData,
 ): Promise<EmailResult> {
+  const footer = await getEmailFooterData();
+
   return sendEmail({
     payload: {
       to: data.email,
@@ -31,6 +34,7 @@ export async function sendContactConfirmationEmail(
         name: data.name,
         subject: data.subject,
         message: data.message,
+        footer,
       }),
     },
     idempotencyKey: `contact-confirm/${data.inquiryId}`,
@@ -54,6 +58,8 @@ export async function sendContactAdminNotification(
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
+  const footer = await getEmailFooterData();
+
   return sendEmail({
     payload: {
       to: notificationEmails,
@@ -66,6 +72,7 @@ export async function sendContactAdminNotification(
         message: data.message,
         inquiryId: data.inquiryId.slice(0, 8).toUpperCase(),
         adminUrl: getAdminUrl(`/inquiries/${data.inquiryId}`),
+        footer,
       }),
     },
     idempotencyKey: `contact-admin/${data.inquiryId}`,

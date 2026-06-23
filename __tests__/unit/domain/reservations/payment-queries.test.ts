@@ -77,6 +77,7 @@ const FULFILL_DATA = {
   paymentStatus: PaymentStatus.PAID,
   status: ReservationStatus.CONFIRMED,
   icsSequence: 0,
+  userId: null,
   customer: {
     email: "customer@example.com",
     lastName: "田中",

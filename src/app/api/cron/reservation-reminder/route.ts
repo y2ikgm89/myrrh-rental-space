@@ -86,6 +86,7 @@ export async function GET(request: Request) {
           location: reservation.space.location?.name,
           notes: reservation.notes ?? undefined,
           icsSequence: reservation.icsSequence,
+          userId: reservation.userId,
         });
 
         // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。

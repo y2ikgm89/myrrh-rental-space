@@ -1,16 +1,18 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { adminNotificationReservationFixture } from "./admin-notification.fixture";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
+import {
+  COLOR,
+  buttonSection,
+  detailItem,
+  detailsHeading,
+  detailsSection,
+  heading,
+  hr,
+  messageText,
+} from "./_shared/styles";
 
 type ReservationNotificationProps = {
   type: "reservation";
@@ -25,6 +27,7 @@ type ReservationNotificationProps = {
   totalPrice: string;
   reservationId: string;
   adminUrl: string;
+  footer: EmailFooterData;
 };
 
 type InquiryNotificationProps = {
@@ -35,9 +38,35 @@ type InquiryNotificationProps = {
   message: string;
   inquiryId: string;
   adminUrl: string;
+  footer: EmailFooterData;
 };
 
 type Props = ReservationNotificationProps | InquiryNotificationProps;
+
+const ACTION_COLORS: Record<"new" | "update" | "cancel", string> = {
+  new: "#15803d",
+  update: "#a16207",
+  cancel: "#b91c1c",
+};
+
+const ADMIN_BUTTON_STYLE = {
+  backgroundColor: COLOR.text,
+  borderRadius: "6px",
+  color: COLOR.primaryText,
+  fontSize: "14px",
+  fontWeight: "600",
+  padding: "12px 24px",
+  textDecoration: "none",
+  display: "inline-block",
+};
+
+const guestNameDiffStyle = {
+  fontSize: "13px",
+  lineHeight: "20px",
+  color: "#9a3412",
+  margin: "2px 0 8px 0",
+  paddingLeft: "4px",
+};
 
 export function AdminNotificationEmail(props: Props) {
   if (props.type === "inquiry") {
@@ -58,65 +87,52 @@ function ReservationNotification({
   totalPrice,
   reservationId,
   adminUrl,
+  footer,
 }: ReservationNotificationProps) {
   const actionText = RESERVATION_ACTION_LABELS[action];
-
-  const actionColor = {
-    new: "#16a34a",
-    update: "#ca8a04",
-    cancel: "#dc2626",
-  }[action];
+  const actionColor = ACTION_COLORS[action];
 
   return (
-    <Html>
-      <Head />
-      <Preview>
-        [{actionText}] {spaceName} - {customerName}様
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={{ ...heading, color: actionColor }}>
-            {actionText}のお知らせ
-          </Heading>
+    <EmailLayout
+      preview={`[${actionText}] ${spaceName} - ${customerName}様`}
+      footer={footer}
+    >
+      <Text style={{ ...heading, color: actionColor }}>
+        【{actionText}】のお知らせ
+      </Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>予約情報</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>予約番号:</strong> {reservationId}
-            </Text>
-            <Text style={detailItem}>
-              <strong>お客様:</strong> {customerName} ({customerEmail})
-            </Text>
-            {guestName && (
-              <Text style={guestNameDiffStyle}>
-                ※ 予約時入力名: {guestName}
-              </Text>
-            )}
-            <Text style={detailItem}>
-              <strong>スペース:</strong> {spaceName}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日付:</strong> {reservationDate}
-            </Text>
-            <Text style={detailItem}>
-              <strong>時間:</strong> {startTime} - {endTime}
-            </Text>
-            <Text style={detailItem}>
-              <strong>料金:</strong> {totalPrice}
-            </Text>
-          </Section>
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>予約情報</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>予約番号:</strong> {reservationId}
+        </Text>
+        <Text style={detailItem}>
+          <strong>お客様:</strong> {customerName} ({customerEmail})
+        </Text>
+        {guestName && (
+          <Text style={guestNameDiffStyle}>※ 予約時入力名: {guestName}</Text>
+        )}
+        <Text style={detailItem}>
+          <strong>スペース:</strong> {spaceName}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日付:</strong> {reservationDate}
+        </Text>
+        <Text style={detailItem}>
+          <strong>時間:</strong> {startTime} - {endTime}
+        </Text>
+        <Text style={detailItem}>
+          <strong>料金:</strong> {totalPrice}
+        </Text>
+      </Section>
 
-          <Section style={buttonSection}>
-            <Link href={adminUrl} style={button}>
-              管理画面で確認
-            </Link>
-          </Section>
-
-          <Text style={footer}>Myrrh Rental Space 管理システム</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Section style={buttonSection}>
+        <Link href={adminUrl} style={ADMIN_BUTTON_STYLE}>
+          管理画面で確認
+        </Link>
+      </Section>
+    </EmailLayout>
   );
 }
 
@@ -127,137 +143,55 @@ function InquiryNotification({
   message,
   inquiryId,
   adminUrl,
+  footer,
 }: InquiryNotificationProps) {
   return (
-    <Html>
-      <Head />
-      <Preview>
-        [新規お問い合わせ] {subject} - {name}様
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={{ ...heading, color: "#2563eb" }}>
-            新規お問い合わせ
-          </Heading>
+    <EmailLayout
+      preview={`[新規お問い合わせ] ${subject} - ${name}様`}
+      footer={footer}
+    >
+      <Text style={{ ...heading, color: "#1d4ed8" }}>【新規お問い合わせ】</Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>お問い合わせ情報</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>ID:</strong> {inquiryId}
-            </Text>
-            <Text style={detailItem}>
-              <strong>お名前:</strong> {name}
-            </Text>
-            <Text style={detailItem}>
-              <strong>メール:</strong> {email}
-            </Text>
-            <Text style={detailItem}>
-              <strong>件名:</strong> {subject}
-            </Text>
-            <Text style={detailItem}>
-              <strong>内容:</strong>
-            </Text>
-            <Text style={messageText}>{message}</Text>
-          </Section>
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>お問い合わせ情報</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>ID:</strong> {inquiryId}
+        </Text>
+        <Text style={detailItem}>
+          <strong>お名前:</strong> {name}
+        </Text>
+        <Text style={detailItem}>
+          <strong>メール:</strong> {email}
+        </Text>
+        <Text style={detailItem}>
+          <strong>件名:</strong> {subject}
+        </Text>
+        <Text style={detailItem}>
+          <strong>内容:</strong>
+        </Text>
+        <Text
+          style={{
+            ...messageText,
+            backgroundColor: COLOR.surface,
+            padding: "12px",
+            borderRadius: "4px",
+            border: `1px solid ${COLOR.border}`,
+          }}
+        >
+          {message}
+        </Text>
+      </Section>
 
-          <Section style={buttonSection}>
-            <Link href={adminUrl} style={button}>
-              管理画面で確認
-            </Link>
-          </Section>
-
-          <Text style={footer}>Myrrh Rental Space 管理システム</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Section style={buttonSection}>
+        <Link href={adminUrl} style={ADMIN_BUTTON_STYLE}>
+          管理画面で確認
+        </Link>
+      </Section>
+    </EmailLayout>
   );
 }
 
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
-
-const heading = {
-  fontSize: "24px",
-  fontWeight: "600",
-  marginBottom: "24px",
-};
-
-const detailsSection = {
-  backgroundColor: "#f9fafb",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsHeading = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "12px",
-};
-
-const detailItem = {
-  fontSize: "14px",
-  lineHeight: "24px",
-  color: "#484848",
-  margin: "8px 0",
-};
-
-const guestNameDiffStyle = {
-  fontSize: "13px",
-  lineHeight: "20px",
-  color: "#b45309",
-  margin: "2px 0 8px 0",
-  paddingLeft: "4px",
-};
-
-const messageText: React.CSSProperties = {
-  fontSize: "14px",
-  lineHeight: "22px",
-  color: "#484848",
-  whiteSpace: "pre-wrap",
-  backgroundColor: "#ffffff",
-  padding: "12px",
-  borderRadius: "4px",
-  border: "1px solid #e6e6e6",
-};
-
-const hr = {
-  borderColor: "#e6e6e6",
-  margin: "16px 0",
-};
-
-const buttonSection: React.CSSProperties = {
-  textAlign: "center",
-  margin: "24px 0",
-};
-
-const button = {
-  backgroundColor: "#1a1a1a",
-  borderRadius: "6px",
-  color: "#ffffff",
-  fontSize: "14px",
-  fontWeight: "600",
-  padding: "12px 24px",
-  textDecoration: "none",
-  display: "inline-block",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
-};
+AdminNotificationEmail.PreviewProps = adminNotificationReservationFixture;
 
 export default AdminNotificationEmail;

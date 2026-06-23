@@ -19,6 +19,12 @@ export type ReservationEmailData = {
   notes?: string;
   location?: string;
   icsSequence: number;
+  /**
+   * 予約に紐づく会員 ID。会員予約なら User.id、ゲスト予約なら null/undefined。
+   * メール本文の動線を「会員=マイページ詳細リンク」「ゲスト=暗号化トークン URL」に
+   * 出し分けるために使う。
+   */
+  userId?: string | null;
 };
 
 export type ContactEmailData = {
@@ -74,6 +80,8 @@ export type ReminderEmailData = {
   location: string | undefined;
   notes: string | undefined;
   icsSequence: number;
+  /** 会員予約の場合の User.id。ゲストなら null/undefined。 */
+  userId?: string | null;
 };
 
 export type PasswordResetEmailData = {
@@ -94,6 +102,8 @@ export type StatusChangeEmailData = {
   newStatus: ReservationStatus;
   location?: string;
   icsSequence: number;
+  /** 会員予約の場合の User.id。ゲストなら null/undefined。 */
+  userId?: string | null;
 };
 
 /**

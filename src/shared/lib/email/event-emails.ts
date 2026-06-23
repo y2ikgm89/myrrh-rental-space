@@ -14,6 +14,7 @@ import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { prisma } from "@/shared/db/prisma";
 import {
   getCalendarEmailSettings,
@@ -35,7 +36,7 @@ import {
   buildEventCancelCalendar,
 } from "../ical";
 import { omitUndefined } from "../serialize";
-import { getAppHost, getAppUrl } from "../constants";
+import { getAdminUrl, getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult } from "./types";
 
@@ -67,10 +68,13 @@ export async function sendEventRegistrationConfirmation(
   const startTime = format(data.eventStartTime, "HH:mm", { locale: ja });
   const endTime = format(data.eventEndTime, "HH:mm", { locale: ja });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     registrationId: data.registrationId,
@@ -139,6 +143,7 @@ export async function sendEventRegistrationConfirmation(
           quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
+          footer,
         }),
       ),
       attachments,
@@ -174,9 +179,12 @@ export async function sendEventRegistrationCancelled(
     locale: ja,
   });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     registrationId: data.registrationId,
@@ -223,6 +231,7 @@ export async function sendEventRegistrationCancelled(
         customerName: data.customerName,
         eventTitle: data.eventTitle,
         eventDate,
+        footer,
       }),
       attachments,
     }),
@@ -237,6 +246,7 @@ export async function sendEventRegistrationCancelled(
 
 type EventAdminNotificationData = {
   registrationId: string;
+  eventId: string;
   participantName: string;
   participantEmail: string;
   eventTitle: string;
@@ -263,6 +273,8 @@ export async function sendEventAdminNotification(
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
+  const footer = await getEmailFooterData();
+
   const eventDate = format(data.eventStartTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
@@ -283,6 +295,8 @@ export async function sendEventAdminNotification(
         quantity: data.quantity,
         currentRegistrations: data.currentRegistrations,
         capacity: data.capacity,
+        adminUrl: getAdminUrl(`/events/${data.eventId}`),
+        footer,
       }),
     },
     idempotencyKey: `event-admin/${data.registrationId}/${type}`,
@@ -299,6 +313,7 @@ export async function sendEventAdminNotification(
  */
 export async function sendEventCancelledToAllParticipants(
   eventId: string,
+  reason?: string,
 ): Promise<void> {
   const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
@@ -334,9 +349,12 @@ export async function sendEventCancelledToAllParticipants(
     locale: ja,
   });
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const results = await Promise.allSettled(
     event.registrations.map((registration) => {
@@ -373,11 +391,15 @@ export async function sendEventCancelledToAllParticipants(
         payload: omitUndefined({
           to: registration.email,
           subject: `【イベント中止のお知らせ】${event.title}`,
-          react: EventCancelledNotificationEmail({
-            customerName: registration.name,
-            eventTitle: event.title,
-            eventDate,
-          }),
+          react: EventCancelledNotificationEmail(
+            omitUndefined({
+              customerName: registration.name,
+              eventTitle: event.title,
+              eventDate,
+              reason,
+              footer,
+            }),
+          ),
           attachments,
         }),
         idempotencyKey: `event-cancelled/${eventId}/${hashForKey(registration.email)}`,
@@ -454,9 +476,12 @@ export async function sendEventUpdatedToAllParticipants(
   const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
   const oldStartTimestamp = oldStartTime.getTime();
 
-  const calendarSettings = await getCalendarEmailSettings();
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
   const host = getAppHost();
-  const organizer = await getIcalOrganizer();
 
   const results = await Promise.allSettled(
     event.registrations.map((registration) => {
@@ -499,6 +524,7 @@ export async function sendEventUpdatedToAllParticipants(
             eventDate: oldEventDate,
             newEventDate: `${newEventDate}〜${newEndTime}`,
             location: venueDisplay ?? undefined,
+            footer,
           }),
           attachments,
         }),

@@ -2,24 +2,39 @@ import { describe, test, expect } from "bun:test";
 import { TestEmail } from "@/shared/emails/test-email";
 import type { ReactElement } from "react";
 
+function getFooter() {
+  return {
+    businessName: "Myrrh Rental Space",
+    address: "",
+    phoneNumber: null,
+    contactEmail: null,
+    siteName: "Myrrh Rental Space",
+    siteUrl: "https://example.com",
+    legalLinks: [],
+  };
+}
+
 function getProps() {
   return {
     recipientLabel: "delivered@resend.dev",
     siteName: "Myrrh Rental Space",
-    timestamp: "2026-06-21 12:00 JST",
+    timestamp: new Date("2026-06-21T12:00:00+09:00"),
     triggeredByName: "Admin User",
     triggeredByEmail: "admin@example.com",
+    footer: getFooter(),
   };
 }
 
 describe("TestEmail component", () => {
-  test("returns a React element rooted in Html with lang=ja", () => {
+  test("returns a React element wrapped in EmailLayout", () => {
     const el = TestEmail(getProps()) as ReactElement<{
-      lang?: string;
+      preview?: string;
+      footer?: unknown;
       children: unknown;
     }>;
     expect(el).toBeTruthy();
-    expect(el.props.lang).toBe("ja");
+    expect(el.props.preview).toContain("テスト送信");
+    expect(el.props.footer).toBeTruthy();
   });
 
   test("includes all props as renderable values in the tree", () => {
@@ -27,15 +42,15 @@ describe("TestEmail component", () => {
     const json = JSON.stringify(el);
     expect(json).toContain("delivered@resend.dev");
     expect(json).toContain("Myrrh Rental Space");
-    expect(json).toContain("2026-06-21 12:00 JST");
+    expect(json).toContain("2026年6月21日");
     expect(json).toContain("Admin User");
     expect(json).toContain("admin@example.com");
     expect(json).toContain("テスト送信");
   });
 
-  test("includes #0066cc accent color for links", () => {
+  test("includes the canonical link color for links", () => {
     const el = TestEmail(getProps());
     const json = JSON.stringify(el);
-    expect(json).toContain("#0066cc");
+    expect(json).toContain("#0b5cd1");
   });
 });

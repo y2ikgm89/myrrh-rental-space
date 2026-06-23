@@ -1,28 +1,23 @@
 import "server-only";
 import { WelcomeEmail } from "@/shared/emails/welcome";
-import { getSeoSettings } from "@/shared/domain/settings/queries/site";
-import { SITE_DEFAULTS } from "../constants";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult, WelcomeEmailData } from "./types";
-
-async function getSiteName(): Promise<string> {
-  const seo = await getSeoSettings();
-  return seo?.siteName || SITE_DEFAULTS.name;
-}
 
 export async function sendWelcomeEmail(
   data: WelcomeEmailData,
 ): Promise<EmailResult> {
-  const siteName = await getSiteName();
+  const footer = await getEmailFooterData();
 
   return sendEmail({
     payload: {
       to: data.customerEmail,
-      subject: `【${siteName}】ご登録ありがとうございます`,
+      subject: `【${footer.siteName}】ご登録ありがとうございます`,
       react: WelcomeEmail({
         customerName: data.customerName,
         loginUrl: data.loginUrl,
-        siteName,
+        siteName: footer.siteName,
+        footer,
       }),
     },
     idempotencyKey: `welcome/${hashForKey(data.customerEmail)}`,

@@ -89,6 +89,7 @@ export async function adminCancelRegistration(
             sendEventAdminNotification(
               {
                 registrationId: data.registrationId,
+                eventId: data.eventId,
                 participantName: data.name,
                 participantEmail: data.email,
                 eventTitle: data.eventTitle,

@@ -39,6 +39,8 @@ export type ReservationPayload = {
   notes?: string | undefined;
   location?: string | undefined;
   icsSequence: number;
+  /** 会員予約なら User.id、ゲスト予約なら null/undefined。メール送信時のマイページ動線出し分けに使う。 */
+  userId?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -237,6 +239,7 @@ export function buildPayload(params: {
   notes?: string | null | undefined;
   guestName?: string | null;
   icsSequence: number;
+  userId?: string | null;
 }): ReservationPayload {
   return {
     reservationId: params.reservationId,
@@ -254,5 +257,6 @@ export function buildPayload(params: {
       params.space.addressDetail,
     ),
     icsSequence: params.icsSequence,
+    userId: params.userId ?? null,
   };
 }

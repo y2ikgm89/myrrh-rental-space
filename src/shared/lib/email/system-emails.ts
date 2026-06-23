@@ -10,8 +10,9 @@ import "server-only";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
-import { getAdminUrl, SITE_DEFAULTS } from "../constants";
+import { getAdminUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult, StaffInvitationEmailData } from "./types";
 
@@ -101,14 +102,17 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 export async function sendStaffInvitationEmail(
   data: StaffInvitationEmailData,
 ): Promise<EmailResult> {
+  const footer = await getEmailFooterData();
+
   return sendEmail({
     payload: {
       to: data.to,
-      subject: `【スタッフ招待】${SITE_DEFAULTS.name}`,
+      subject: `【スタッフ招待】${footer.businessName}`,
       react: StaffInvitationEmail({
         staffName: data.staffName,
         setupUrl: data.setupUrl,
         expiresAt: data.expiresAt,
+        footer,
       }),
     },
     // setupUrl は一意なトークンを含むため、再招待時は新しいキーになる

@@ -1,14 +1,15 @@
+import { Hr, Section, Text } from "@react-email/components";
+import { reservationCancelledFixture } from "./reservation-cancelled.fixture";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+  SECTION_VARIANT_STYLES,
+  detailItem,
+  detailsHeading,
+  heading,
+  hr,
+  text,
+} from "./_shared/styles";
 
 type Props = {
   customerName: string;
@@ -17,6 +18,7 @@ type Props = {
   startTime: string;
   endTime: string;
   reservationId: string;
+  footer: EmailFooterData;
 };
 
 export function ReservationCancelledEmail({
@@ -26,103 +28,59 @@ export function ReservationCancelledEmail({
   startTime,
   endTime,
   reservationId,
+  footer,
 }: Props) {
+  const danger = SECTION_VARIANT_STYLES.danger;
+
   return (
-    <Html>
-      <Head />
-      <Preview>予約キャンセルのお知らせ - {spaceName}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>予約キャンセルのお知らせ</Heading>
+    <EmailLayout
+      preview={`予約キャンセルのお知らせ - ${spaceName}`}
+      footer={footer}
+    >
+      <Text style={heading}>予約キャンセルのお知らせ</Text>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{customerName} 様</Text>
 
-          <Text style={text}>以下のご予約がキャンセルされました。</Text>
+      <Text style={text}>以下のご予約がキャンセルされました。</Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>キャンセルされた予約</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>予約番号:</strong> {reservationId}
-            </Text>
-            <Text style={detailItem}>
-              <strong>スペース:</strong> {spaceName}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日付:</strong> {reservationDate}
-            </Text>
-            <Text style={detailItem}>
-              <strong>時間:</strong> {startTime} - {endTime}
-            </Text>
-          </Section>
+      <Section
+        style={{
+          backgroundColor: danger.background,
+          borderRadius: "8px",
+          padding: "20px",
+          margin: "24px 0",
+        }}
+      >
+        <Text style={{ ...detailsHeading, color: danger.heading }}>
+          キャンセルされた予約
+        </Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>予約番号:</strong> {reservationId}
+        </Text>
+        <Text style={detailItem}>
+          <strong>スペース:</strong> {spaceName}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日付:</strong> {reservationDate}
+        </Text>
+        <Text style={detailItem}>
+          <strong>時間:</strong> {startTime} - {endTime}
+        </Text>
+      </Section>
 
-          <Hr style={hr} />
+      <Hr style={hr} />
 
-          <Text style={text}>またのご利用をお待ちしております。</Text>
+      <Text style={text}>
+        キャンセル料金や払い戻し条件については、当サービスのキャンセルポリシーを
+        ご確認ください。ご不明な点がございましたら、お気軽にお問い合わせください。
+      </Text>
 
-          <Text style={footer}>Myrrh Rental Space</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={text}>またのご利用を心よりお待ちしております。</Text>
+    </EmailLayout>
   );
 }
 
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
-
-const heading = {
-  fontSize: "24px",
-  fontWeight: "600",
-  color: "#1a1a1a",
-  marginBottom: "24px",
-};
-
-const text = {
-  fontSize: "16px",
-  lineHeight: "26px",
-  color: "#484848",
-};
-
-const detailsSection = {
-  backgroundColor: "#fef2f2",
-  borderRadius: "8px",
-  padding: "20px",
-  margin: "24px 0",
-};
-
-const detailsHeading = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#991b1b",
-  marginBottom: "12px",
-};
-
-const detailItem = {
-  fontSize: "14px",
-  lineHeight: "24px",
-  color: "#484848",
-  margin: "8px 0",
-};
-
-const hr = {
-  borderColor: "#e6e6e6",
-  margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
-};
+ReservationCancelledEmail.PreviewProps = reservationCancelledFixture;
 
 export default ReservationCancelledEmail;

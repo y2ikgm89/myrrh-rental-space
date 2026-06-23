@@ -218,6 +218,7 @@ async function fulfillPaymentAtomically(
         location: reservation.space.location?.name,
         notes: reservation.notes ?? undefined,
         icsSequence: reservation.icsSequence,
+        userId: reservation.userId,
       }),
     ),
     {

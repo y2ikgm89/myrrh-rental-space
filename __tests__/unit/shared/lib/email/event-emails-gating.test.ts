@@ -67,12 +67,25 @@ mock.module("@/shared/domain/settings/queries/organization", () => ({
     Promise.resolve({ name: "Org", email: "org@example.com" }),
 }));
 mock.module("@/shared/db/prisma", () => ({ prisma: {}, basePrisma: {} }));
+mock.module("@/shared/emails/_shared/footer-data", () => ({
+  getEmailFooterData: () =>
+    Promise.resolve({
+      businessName: "Org",
+      address: "",
+      phoneNumber: null,
+      contactEmail: null,
+      siteName: "Org",
+      siteUrl: "https://example.com",
+      legalLinks: [],
+    }),
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import { sendEventAdminNotification } from "@/shared/lib/email/event-emails";
 
 const DATA = {
   registrationId: "registration-abcd12",
+  eventId: "event-abcd12",
   participantName: "山田太郎",
   participantEmail: "participant@example.com",
   eventTitle: "ワークショップ",

@@ -1,6 +1,6 @@
 import "server-only";
 import { PasswordResetEmail } from "@/shared/emails/password-reset";
-import { SITE_DEFAULTS } from "../constants";
+import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult, PasswordResetEmailData } from "./types";
 
@@ -10,14 +10,17 @@ import type { EmailResult, PasswordResetEmailData } from "./types";
 export async function sendPasswordResetEmail(
   data: PasswordResetEmailData,
 ): Promise<EmailResult> {
+  const footer = await getEmailFooterData();
+
   return sendEmail({
     payload: {
       to: data.email,
-      subject: `【パスワードリセット】${SITE_DEFAULTS.name}`,
+      subject: `【パスワードリセット】${footer.siteName}`,
       react: PasswordResetEmail({
         name: data.name,
         resetUrl: data.resetUrl,
-        siteName: SITE_DEFAULTS.name,
+        siteName: footer.siteName,
+        footer,
       }),
     },
     // resetUrl は一意なトークンを含むため、同一リクエスト再試行のみ dedupe される
