@@ -92,22 +92,41 @@ export function ImageCarousel({
       aria-roledescription="carousel"
       aria-label={`${alt} - ${count}枚の画像`}
     >
-      {/* Images — crossfade transition */}
-      {images.map((src, i) => (
-        <Image
-          key={src}
-          src={src}
-          alt={i === activeIndex ? `${alt} ${i + 1}/${count}` : ""}
-          fill
-          sizes={sizes}
-          priority={priority && i === 0}
-          className={cn(
-            "object-cover transition-opacity duration-400",
-            i === activeIndex ? "opacity-100" : "opacity-0",
-          )}
-          aria-hidden={i !== activeIndex}
-        />
-      ))}
+      {/* Images — crossfade transition.
+       *
+       * next/image の native lazy loading は IntersectionObserver ベースだが、
+       * 同一 viewport に絶対配置で重ねた sibling は全部「画面内」と判定され
+       * 並列で fetch される。N 枚カードで N 並列 DL になり LCP/帯域を圧迫する。
+       * 対策として active ± 1 のみ実マウントして並列 DL を 3 枚に抑える。
+       * (DOM 構造は維持しつつ Image を placeholder div に差し替える)
+       */}
+      {images.map((src, i) => {
+        const isWindow =
+          i === activeIndex ||
+          i === (activeIndex - 1 + count) % count ||
+          i === (activeIndex + 1) % count;
+        return (
+          <div
+            key={src}
+            className={cn(
+              "absolute inset-0 transition-opacity duration-400",
+              i === activeIndex ? "opacity-100" : "opacity-0",
+            )}
+            aria-hidden={i !== activeIndex}
+          >
+            {isWindow ? (
+              <Image
+                src={src}
+                alt={i === activeIndex ? `${alt} ${i + 1}/${count}` : ""}
+                fill
+                sizes={sizes}
+                priority={priority && i === 0}
+                className="object-cover"
+              />
+            ) : null}
+          </div>
+        );
+      })}
 
       {/* Navigation buttons — visible on hover (desktop only) */}
       {count > 1 && (
