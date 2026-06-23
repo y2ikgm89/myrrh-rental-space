@@ -21,7 +21,10 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
-import { createCancelToken } from "@/shared/lib/reservation-cancel-token";
+import {
+  computeCancelTokenExpiresAt,
+  createCancelToken,
+} from "@/shared/lib/reservation-cancel-token";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -113,9 +116,12 @@ export async function sendReservationConfirmationEmail(
 
   // 期限内のみ有効なキャンセルトークン URL を発行。
   // 会員でも非会員でも cancelUrl は発行する（マイページが落ちている時の保険として）。
-  const cancelDeadline = new Date(
-    data.startTime.getTime() -
-      deadlineSettings.cancellationDeadlineHours * 60 * 60 * 1000,
+  // 漏洩窓を最小化するため、トークン寿命は MAX_CANCEL_TOKEN_LIFETIME_MS（7 日）で上限。
+  // 7 日を超える先の予約では確認メールのリンクは 7 日で expired となり、リマインダ
+  // 送信時に新トークンが再発行される。
+  const cancelDeadline = computeCancelTokenExpiresAt(
+    data.startTime,
+    deadlineSettings.cancellationDeadlineHours,
   );
   const cancelUrl =
     cancelDeadline > new Date()
