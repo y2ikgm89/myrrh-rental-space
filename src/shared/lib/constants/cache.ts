@@ -235,7 +235,6 @@ export const getCacheTag = {
   },
   events: {
     list: () => CACHE_TAGS.EVENTS,
-    checkin: (eventId: string) => `${CACHE_TAGS.EVENTS}-checkin-${eventId}`,
   },
 } as const;
 
