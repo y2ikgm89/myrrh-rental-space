@@ -68,7 +68,12 @@ mock.module("@/shared/lib/email/contact-emails", () => ({
 
 const mockUpdateTag = mock(() => undefined);
 
+// 公式 Bun re-export pattern: actual を spread して必要 fn のみ override。
+// partial mock は cacheTag/cacheLife/revalidateTag 等を undefined 化し、
+// 'use cache' 経路を引く domain query (getSuppressedEmailSet 等) を SyntaxError 化する。
+const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
+  ...actualNextCache,
   updateTag: mockUpdateTag,
 }));
 

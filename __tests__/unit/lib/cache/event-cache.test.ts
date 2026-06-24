@@ -2,7 +2,11 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 
 const updateTagMock = mock<(tag: string) => void>(() => {});
-mock.module("next/cache", () => ({ updateTag: updateTagMock }));
+const actualNextCache = await import("next/cache");
+mock.module("next/cache", () => ({
+  ...actualNextCache,
+  updateTag: updateTagMock,
+}));
 
 const { invalidateEventCaches } =
   await import("@/shared/lib/cache/event-cache");

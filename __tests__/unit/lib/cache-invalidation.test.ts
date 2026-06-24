@@ -17,7 +17,9 @@ const mockFireAndForget = mock<(p: Promise<unknown>, opts: unknown) => void>(
   },
 );
 
+const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
+  ...actualNextCache,
   updateTag: mockUpdateTag,
   revalidateTag: mockRevalidateTag,
 }));
