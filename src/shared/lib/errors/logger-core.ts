@@ -228,7 +228,9 @@ export function logError(
   const gcpSeverity = SEVERITY_TO_GCP[logContext.severity];
   const message = extractMessage(error);
   const stack =
-    error instanceof Error ? error.stack : `Error: ${message}\n    at unknown`;
+    error instanceof Error
+      ? (error.stack ?? `${error.name}: ${error.message}\n    at unknown`)
+      : `Error: ${message}\n    at unknown`;
 
   if (process.env["NODE_ENV"] === "production") {
     const entry: GcpStructuredErrorLog = {
