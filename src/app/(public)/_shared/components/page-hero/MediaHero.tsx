@@ -101,6 +101,7 @@ export function MediaHero({
           autoPlayInterval={autoPlayInterval}
           sizes="100vw"
           priority
+          {...(hasPoster && { posterUrl: posterImage.url })}
         />
       ) : hasPoster ? (
         <div className="absolute inset-0">

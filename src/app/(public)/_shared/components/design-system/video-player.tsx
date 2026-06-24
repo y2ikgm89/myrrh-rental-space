@@ -125,6 +125,10 @@ export function VideoPlayer({
         muted
         loop={loop}
         playsInline
+        // preload="metadata" でメタデータ + 先頭フレームのみ先行取得。
+        // LCP 影響を抑えつつ、poster と組み合わせて load 中の黒画面を排除する
+        // （MDN: preload="metadata" は length 等のメタと最初の数フレームのみ取得）。
+        preload="metadata"
         {...(onEnded !== undefined && { onEnded })}
         {...(poster !== undefined && { poster })}
         className={cn("h-full w-full object-cover", className)}

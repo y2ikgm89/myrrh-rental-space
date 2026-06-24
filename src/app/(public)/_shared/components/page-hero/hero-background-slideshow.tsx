@@ -50,6 +50,11 @@ interface HeroBackgroundSlideshowProps {
   readonly autoPlayInterval: number;
   readonly sizes?: string;
   readonly priority?: boolean;
+  /**
+   * 動画スライドの load 中 / autoplay 失敗時に表示するポスター画像 URL。
+   * 全動画スライド共通（schema 上も単一）。空文字なら未指定として扱う。
+   */
+  readonly posterUrl?: string;
 }
 
 type SlideKind = "image" | "video-file" | "video-embed";
@@ -82,6 +87,7 @@ export function HeroBackgroundSlideshow({
   autoPlayInterval,
   sizes = "100vw",
   priority = false,
+  posterUrl,
 }: HeroBackgroundSlideshowProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerElsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -307,6 +313,9 @@ export function HeroBackgroundSlideshow({
                 url={item.url}
                 variant="background"
                 loop={kind === "video-embed" ? true : !hasMultiple}
+                {...(kind === "video-file" &&
+                  posterUrl !== undefined &&
+                  posterUrl.length > 0 && { poster: posterUrl })}
                 {...(kind === "video-file" && {
                   videoRef: (el: HTMLVideoElement | null) => {
                     videoElsRef.current[i] = el;
