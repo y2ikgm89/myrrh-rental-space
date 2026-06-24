@@ -20,6 +20,32 @@ import {
 import { isValidSecretKey, isTestKey } from "./stripe-shared";
 
 /**
+ * Stripe webhook helpers の async-only 型封印
+ *
+ * Bun runtime（Web Crypto / SubtleCryptoProvider 経路）では sync 版の
+ * `constructEvent` / `generateTestHeaderString` が `Error: Stripe is unable to
+ * perform synchronous crypto operations in this environment.` を投げる。
+ * stripe-node 公式が edge runtime 向けに `constructEventAsync` /
+ * `generateTestHeaderStringAsync` を提供しているため、Bun 上では async 版のみ
+ * 使う。型レベルで sync 版を削除し、誤って呼ばれた瞬間に TS エラーとして
+ * 検出する。互換 ESLint rule (`no-restricted-syntax`) で直接呼出も禁止し、
+ * 型 + lint の 2 段防御とする。
+ *
+ * @see https://github.com/stripe/stripe-node/blob/master/src/Webhooks.ts
+ * @see https://github.com/stripe/stripe-node/blob/master/testProjects/cloudflare-pages/functions/index.js
+ */
+type SyncOnlyWebhookMembers = "constructEvent" | "generateTestHeaderString";
+type AsyncOnlyWebhooks = Omit<Stripe["webhooks"], SyncOnlyWebhookMembers>;
+
+/**
+ * `client.webhooks` を async-only に封印した Stripe クライアント。
+ * 既存実装は本体を一切変更せず、型のみ narrow する。
+ */
+export type AsyncOnlyStripe = Omit<Stripe, "webhooks"> & {
+  readonly webhooks: AsyncOnlyWebhooks;
+};
+
+/**
  * Stripe設定の取得元
  */
 export type StripeConfigSource = "env" | "db" | null;
@@ -44,14 +70,19 @@ function getEnvSecretKey(): string | null {
 
 /**
  * Stripeクライアントを作成
+ *
+ * 戻り値は `AsyncOnlyStripe` で sync webhook helpers を型レベルで封印する。
+ * 実体は `new Stripe()` のまま（runtime 動作は不変・cast のみ）。
+ *
  * @param secretKey - シークレットキー（復号化済み）
  */
-export function createStripeClient(secretKey: string): Stripe {
-  return new Stripe(secretKey, {
+export function createStripeClient(secretKey: string): AsyncOnlyStripe {
+  const client = new Stripe(secretKey, {
     // stripe@22 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
     apiVersion: "2026-05-27.dahlia",
     typescript: true,
   });
+  return client as AsyncOnlyStripe;
 }
 
 /**
@@ -59,9 +90,10 @@ export function createStripeClient(secretKey: string): Stripe {
  * @param dbSecretKey - DBから取得した暗号化されたシークレットキー
  * @returns Stripeクライアントと設定元
  */
-export async function getStripeClient(
-  dbSecretKey?: string | null,
-): Promise<{ client: Stripe | null; source: StripeConfigSource }> {
+export async function getStripeClient(dbSecretKey?: string | null): Promise<{
+  client: AsyncOnlyStripe | null;
+  source: StripeConfigSource;
+}> {
   const envKey = getEnvSecretKey();
   if (envKey) {
     return { client: createStripeClient(envKey), source: "env" };
