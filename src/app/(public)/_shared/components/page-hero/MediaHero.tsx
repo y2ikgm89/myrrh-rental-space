@@ -22,17 +22,16 @@ import { useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { Button } from "@/public/components/design-system/button";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
-import { isAppRoute } from "@/shared/lib/typed-routes";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { HeroBackgroundSlideshow } from "./hero-background-slideshow";
 import { HeroScrim, getHeroTextClasses } from "./hero-scrim";
+import { HeroCtaButtons } from "./HeroCtaButtons";
 
 export type MediaHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "media" }>,
@@ -169,18 +168,10 @@ export function MediaHero({
 
         {hasButtons && (
           <ScrollReveal delay={0.5}>
-            <div className="mx-auto mt-8 grid w-full max-w-sm grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:mt-10">
-              {buttons.map((btn) => (
-                <Button
-                  key={btn.url}
-                  variant="editorial"
-                  href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                  className="min-h-[var(--touch-target-min)] w-full justify-center text-xs uppercase tracking-eyebrow"
-                  {...(btn.openInNewTab && { target: "_blank" as const })}
-                  label={btn.label}
-                />
-              ))}
-            </div>
+            <HeroCtaButtons
+              buttons={buttons}
+              className="mx-auto mt-8 md:mt-10"
+            />
           </ScrollReveal>
         )}
       </div>

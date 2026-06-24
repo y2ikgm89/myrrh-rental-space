@@ -1,11 +1,10 @@
 import type { ReactElement } from "react";
 import Image from "next/image";
-import { Button } from "@/public/components/design-system/button";
 import { cn } from "@/shared/lib/cn";
-import { isAppRoute } from "@/shared/lib/typed-routes";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
+import { HeroCtaButtons } from "./HeroCtaButtons";
 
 export type CompactHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "compact" }>,
@@ -58,20 +57,7 @@ export function CompactHero({
         <div className="mt-4 max-w-[28rem] text-sm leading-relaxed text-muted-foreground md:text-base [&_p]:mt-0 [&_p+p]:mt-3">
           <PortableText blocks={description} />
         </div>
-        {buttons.length > 0 && (
-          <div className="mt-6 grid w-full max-w-sm grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-            {buttons.map((btn) => (
-              <Button
-                key={btn.url}
-                variant="editorial"
-                href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                className="min-h-[var(--touch-target-min)] w-full justify-center text-xs uppercase tracking-eyebrow"
-                {...(btn.openInNewTab && { target: "_blank" as const })}
-                label={btn.label}
-              />
-            ))}
-          </div>
-        )}
+        <HeroCtaButtons buttons={buttons} className="mt-6" />
       </div>
     </section>
   );

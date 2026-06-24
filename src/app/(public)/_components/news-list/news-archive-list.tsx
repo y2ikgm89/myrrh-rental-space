@@ -17,6 +17,7 @@ import type { ReactElement } from "react";
 import Link from "next/link";
 import { Button } from "@/public/components/design-system/button";
 import { Heading } from "@/public/components/design-system/heading";
+import { PublicEmptyState } from "@/public/components/ui/empty-state";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 
@@ -38,21 +39,20 @@ export function NewsList({ items, query = "" }: NewsListProps): ReactElement {
   if (items.length === 0) {
     const hasQuery = query.length > 0;
     return (
-      <div
-        className="space-y-6 py-[var(--spacing-fluid-lg)] text-center"
-        role="status"
-      >
-        <p className="text-muted-foreground">
-          {hasQuery
+      <PublicEmptyState
+        message={
+          hasQuery
             ? "条件に一致するお知らせが見つかりませんでした"
-            : "お知らせはまだありません。"}
-        </p>
-        {hasQuery && (
-          <Button variant="editorial" size="sm" href="/news">
-            検索を解除
-          </Button>
-        )}
-      </div>
+            : "お知らせはまだありません。"
+        }
+        action={
+          hasQuery ? (
+            <Button variant="editorial" size="sm" href="/news">
+              検索を解除
+            </Button>
+          ) : null
+        }
+      />
     );
   }
 

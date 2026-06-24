@@ -19,14 +19,12 @@ import {
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
 } from "@tabler/icons-react";
-import { Button } from "@/public/components/design-system/button";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
-import { isAppRoute } from "@/shared/lib/typed-routes";
 import type {
   HeroTransition,
   PageHeroConfig,
@@ -34,6 +32,7 @@ import type {
 import { DEFAULT_PAGE_HERO } from "@/shared/lib/sections/definitions/page-hero/defaults";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { HeroCtaButtons } from "./HeroCtaButtons";
 
 export type EditorialSplitHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "editorial-split" }>,
@@ -579,18 +578,7 @@ export function EditorialSplitHero({
 
         {buttons.length > 0 && (
           <ScrollReveal delay={0.4} className="mt-10 md:mt-12">
-            <div className="mx-auto grid w-full max-w-sm grid-cols-1 gap-3 sm:mx-0 sm:grid-cols-2 sm:gap-4">
-              {buttons.map((btn) => (
-                <Button
-                  key={btn.url}
-                  variant="editorial"
-                  href={isAppRoute(btn.url) ? btn.url : "/reservation"}
-                  className="min-h-[var(--touch-target-min)] w-full justify-center text-xs uppercase tracking-eyebrow"
-                  {...(btn.openInNewTab && { target: "_blank" as const })}
-                  label={btn.label}
-                />
-              ))}
-            </div>
+            <HeroCtaButtons buttons={buttons} className="mx-auto sm:mx-0" />
           </ScrollReveal>
         )}
       </div>

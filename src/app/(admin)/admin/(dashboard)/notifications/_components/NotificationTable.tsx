@@ -21,6 +21,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableShell,
 } from "@/admin/components/ui";
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
@@ -55,95 +56,93 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8" />
-              <TableHead>タイプ</TableHead>
-              <TableHead>内容</TableHead>
-              <TableHead className="hidden md:table-cell">日時</TableHead>
-              <TableHead>操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {notifications.map((notification) => {
-              const validType = isValidNotificationType(notification.type)
-                ? notification.type
-                : null;
-              const typeLabel = validType
-                ? NOTIFICATION_TYPE_LABELS[validType]
-                : notification.type;
-              const badgeVariant = validType
-                ? NOTIFICATION_TYPE_BADGE_VARIANTS[validType]
-                : "secondary";
-              const typeIconName = validType
-                ? NOTIFICATION_TYPE_ICONS[validType]
-                : null;
-              const href = getNotificationResourceHref(
-                notification.type,
-                notification.resourceType,
-                notification.resourceId,
-              );
+    <TableShell>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-8" />
+            <TableHead>タイプ</TableHead>
+            <TableHead>内容</TableHead>
+            <TableHead className="hidden md:table-cell">日時</TableHead>
+            <TableHead>操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {notifications.map((notification) => {
+            const validType = isValidNotificationType(notification.type)
+              ? notification.type
+              : null;
+            const typeLabel = validType
+              ? NOTIFICATION_TYPE_LABELS[validType]
+              : notification.type;
+            const badgeVariant = validType
+              ? NOTIFICATION_TYPE_BADGE_VARIANTS[validType]
+              : "secondary";
+            const typeIconName = validType
+              ? NOTIFICATION_TYPE_ICONS[validType]
+              : null;
+            const href = getNotificationResourceHref(
+              notification.type,
+              notification.resourceType,
+              notification.resourceId,
+            );
 
-              return (
-                <TableRow key={notification.id}>
-                  <TableCell className="w-8 pr-0">
-                    {!notification.isRead && (
-                      <span
-                        className="inline-block h-2 w-2 rounded-full bg-primary"
-                        aria-label="未読"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Badge
-                      variant={badgeVariant}
-                      className="inline-flex items-center gap-1.5"
-                    >
-                      {typeIconName ? (
-                        <CuratedIcon name={typeIconName} className="h-3 w-3" />
-                      ) : null}
-                      <span>{typeLabel}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {notification.title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-                        {notification.message}
-                      </p>
-                      {href && (
-                        <Link
-                          href={href}
-                          className="mt-1 inline-block whitespace-nowrap text-xs text-primary hover:underline"
-                          {...(!notification.isRead && {
-                            onClick: () => handleMarkAsRead(notification.id),
-                          })}
-                        >
-                          詳細を見る
-                        </Link>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell whitespace-nowrap text-sm text-muted-foreground">
-                    {formatDateTimeShort(notification.createdAt)}
-                  </TableCell>
-                  <TableCell>
-                    <NotificationActionCell
-                      id={notification.id}
-                      isRead={notification.isRead}
+            return (
+              <TableRow key={notification.id}>
+                <TableCell className="w-8 pr-0">
+                  {!notification.isRead && (
+                    <span
+                      className="inline-block h-2 w-2 rounded-full bg-primary"
+                      aria-label="未読"
                     />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <Badge
+                    variant={badgeVariant}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    {typeIconName ? (
+                      <CuratedIcon name={typeIconName} className="h-3 w-3" />
+                    ) : null}
+                    <span>{typeLabel}</span>
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {notification.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                      {notification.message}
+                    </p>
+                    {href && (
+                      <Link
+                        href={href}
+                        className="mt-1 inline-block whitespace-nowrap text-xs text-primary hover:underline"
+                        {...(!notification.isRead && {
+                          onClick: () => handleMarkAsRead(notification.id),
+                        })}
+                      >
+                        詳細を見る
+                      </Link>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell whitespace-nowrap text-sm text-muted-foreground">
+                  {formatDateTimeShort(notification.createdAt)}
+                </TableCell>
+                <TableCell>
+                  <NotificationActionCell
+                    id={notification.id}
+                    isRead={notification.isRead}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableShell>
   );
 }
