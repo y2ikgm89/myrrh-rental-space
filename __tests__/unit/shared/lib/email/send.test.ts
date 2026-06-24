@@ -80,11 +80,19 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: mockNormalizeError,
 }));
 
-// Resend webhook suppression check (DB lookup) を素通しさせる:
-// 単体テストでは Customer.emailDeliveryStatus を null 固定で「未登録 = 送信許可」扱い。
-// suppression 挙動自体の検証は __tests__/integration/email/suppression.test.ts に分離 (本 PR の scope 外)。
+// Resend webhook suppression check (DB lookup) のモック:
+// Bun 公式 re-export pattern (...actual, override) で他の export を保ち
+// `getSuppressedEmailSet` のみ module-level mock に差し替える。
+// デフォルトは空 Set（= 全宛先送信許可）。suppression 検証は
+// describe("suppression branch") で per-test に mockResolvedValue で切替える。
+const actualCustomersQueries =
+  await import("@/shared/domain/customers/queries");
+const mockGetSuppressedEmailSet = mock<
+  (emails: readonly string[]) => Promise<Set<string>>
+>(() => Promise.resolve(new Set()));
 mock.module("@/shared/domain/customers/queries", () => ({
-  getCustomerEmailDeliveryStatusByEmail: () => Promise.resolve(null),
+  ...actualCustomersQueries,
+  getSuppressedEmailSet: mockGetSuppressedEmailSet,
 }));
 
 // 3. テスト対象 import
@@ -119,6 +127,9 @@ beforeEach(() => {
   mockLogError.mockReset();
   mockNormalizeError.mockReset();
   mockSetTimeout.mockClear();
+  // suppression: デフォルトで「全宛先送信許可」（空 Set）にリセット
+  mockGetSuppressedEmailSet.mockReset();
+  mockGetSuppressedEmailSet.mockResolvedValue(new Set());
 
   // デフォルト挙動: メール有効 + クライアント存在
   // NOTE: mockResendSend のデフォルト戻り値は各テストで個別に設定する
@@ -588,6 +599,124 @@ describe("sendEmail()", () => {
           }),
         }),
       );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // suppression branch
+  // -----------------------------------------------------------------------
+  // PR #742 で追加した「Resend webhook 由来の HARD_BOUNCED / COMPLAINED 観測済み
+  // 宛先に送信を抑止」のロジックを 6 case で網羅する。production は
+  // `getSuppressedEmailSet(emails)` の bulk fetch + 'use cache' に乗っており、
+  // suppression set に該当する宛先が 1 件でも含まれていれば送信せず
+  // { ok: false, reason: "disabled" } + logError を返す（公式 Gmail Feb 2024
+  // / Yahoo bulk sender complaint rate < 0.3% 要件のアプリ層先取り）。
+  describe("suppression branch", () => {
+    test("1 recipient HARD_BOUNCED なら送信せず disabled + logError 1 回", async () => {
+      mockGetSuppressedEmailSet.mockResolvedValue(
+        new Set(["customer@example.com"]),
+      );
+
+      const result = await sendEmail(BASE_PARAMS);
+
+      expect(result).toEqual({ ok: false, reason: "disabled" });
+      expect(mockResendSend).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalledTimes(1);
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          category: "EXTERNAL_API",
+          severity: "LOW",
+          context: expect.objectContaining({
+            operation: "testOperation",
+            recipient: "customer@example.com",
+          }),
+        }),
+      );
+    });
+
+    test("1 recipient COMPLAINED なら送信せず disabled + logError 1 回", async () => {
+      // domain query 側で HARD_BOUNCED / COMPLAINED の両方が Set に入って返る
+      // 仕様なので、test は「Set に入っているか」のみ確認すれば良い。
+      mockGetSuppressedEmailSet.mockResolvedValue(
+        new Set(["customer@example.com"]),
+      );
+
+      const result = await sendEmail(BASE_PARAMS);
+
+      expect(result).toEqual({ ok: false, reason: "disabled" });
+      expect(mockResendSend).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalledTimes(1);
+    });
+
+    test("SOFT_BOUNCED 相当（suppression set に含まれない）は送信続行", async () => {
+      // SOFT_BOUNCED は domain query 側で suppression set に含めない仕様。
+      // test では「Set が空 = 送信許可」のケースとして等価に扱う。
+      mockGetSuppressedEmailSet.mockResolvedValue(new Set());
+
+      const result = await sendEmail(BASE_PARAMS);
+
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
+      expect(mockResendSend).toHaveBeenCalledTimes(1);
+      expect(mockLogError).not.toHaveBeenCalled();
+    });
+
+    test("DB 未登録（unknown 宛先）は送信続行", async () => {
+      // staff / system / inquiry guest 等 Customer レコードなしの宛先は
+      // findMany で行が返らず Set に含まれない。
+      mockGetSuppressedEmailSet.mockResolvedValue(new Set());
+
+      const result = await sendEmail(BASE_PARAMS);
+
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
+      expect(mockResendSend).toHaveBeenCalledTimes(1);
+    });
+
+    test("複数宛先のうち 1 件のみ HARD_BOUNCED でも全送信を抑止 + logError", async () => {
+      mockGetSuppressedEmailSet.mockResolvedValue(new Set(["b@example.com"]));
+
+      const result = await sendEmail({
+        ...BASE_PARAMS,
+        payload: {
+          ...VALID_PAYLOAD,
+          to: ["a@example.com", "b@example.com", "c@example.com"],
+        },
+      });
+
+      expect(result).toEqual({ ok: false, reason: "disabled" });
+      expect(mockResendSend).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          context: expect.objectContaining({
+            recipient: "b@example.com",
+          }),
+        }),
+      );
+      // bulk fetch なので getSuppressedEmailSet は 1 回だけ呼ばれる
+      // （per-recipient N×round-trip でないことの回帰防止）
+      expect(mockGetSuppressedEmailSet).toHaveBeenCalledTimes(1);
+      expect(mockGetSuppressedEmailSet).toHaveBeenCalledWith([
+        "a@example.com",
+        "b@example.com",
+        "c@example.com",
+      ]);
+    });
+
+    test("複数宛先が全て OK なら送信続行", async () => {
+      mockGetSuppressedEmailSet.mockResolvedValue(new Set());
+
+      const result = await sendEmail({
+        ...BASE_PARAMS,
+        payload: {
+          ...VALID_PAYLOAD,
+          to: ["a@example.com", "b@example.com", "c@example.com"],
+        },
+      });
+
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
+      expect(mockResendSend).toHaveBeenCalledTimes(1);
+      expect(mockLogError).not.toHaveBeenCalled();
     });
   });
 });

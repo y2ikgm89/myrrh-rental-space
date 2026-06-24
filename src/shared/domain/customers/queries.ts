@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { CustomerStatus, EmailDeliveryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type {
@@ -12,6 +13,7 @@ import type {
   CustomerWithReservationsAndAccount,
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 
 type CustomerWhereInput = Prisma.CustomerWhereInput;
@@ -314,20 +316,43 @@ export async function findCustomerByEmailExcept(
 }
 
 /**
- * メールアドレスから配信状態を取得する（Resend Webhook 由来）。
+ * sendEmail() の suppression 判定用に bulk fetch する。
  *
- * sendEmail() が宛先 suppress 判定に使う軽量 lookup（unique index 経由）。
- * 顧客が DB に存在しない宛先（system / staff / inquiry guest）は null を返し、
- * 呼び出し側は「観測なし＝送信続行」として扱う。
+ * 引数 `emails` の中で `emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED`
+ * の宛先のみを `Set<email>` で返す。N×sequential `findUnique` を 1 回の
+ * `findMany` + WHERE IN に置換することで hot path（送信前 check）の DB
+ * round-trip を排除する。
+ *
+ * Next.js 16 公式 `'use cache'` + `cacheTag(SUPPRESSED_EMAILS)` で短期 cache
+ * に乗せ、Resend webhook（bounce / complaint 受信）の `revalidateTag` で
+ * 即時 invalidate される。`cacheLife("minutes")` は webhook lag を許容する
+ * 短期 staleness（最新の bounce 反映までの最大遅延）。
+ *
+ * 顧客が DB に存在しない宛先（system / staff / inquiry guest）は Set に含まれない
+ * → 呼び出し側は「観測なし＝送信続行」として扱う。
+ *
+ * @see https://nextjs.org/docs/app/api-reference/directives/use-cache
+ * @see https://nextjs.org/docs/app/api-reference/functions/revalidateTag
  */
-export async function getCustomerEmailDeliveryStatusByEmail(
-  email: string,
-): Promise<EmailDeliveryStatus | null> {
-  const customer = await prisma.customer.findUnique({
-    where: { email },
-    select: { emailDeliveryStatus: true },
+export async function getSuppressedEmailSet(
+  emails: readonly string[],
+): Promise<Set<string>> {
+  "use cache";
+  cacheLife(CACHE_LIFE.DYNAMIC_DATA);
+  cacheTag(CACHE_TAGS.SUPPRESSED_EMAILS);
+
+  if (emails.length === 0) return new Set();
+
+  const rows = await prisma.customer.findMany({
+    where: {
+      email: { in: [...emails] },
+      emailDeliveryStatus: {
+        in: [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED],
+      },
+    },
+    select: { email: true },
   });
-  return customer?.emailDeliveryStatus ?? null;
+  return new Set(rows.map((r) => r.email));
 }
 
 /**

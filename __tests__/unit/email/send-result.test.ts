@@ -33,10 +33,17 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
   getEmailDeliverySettings: mockGetEmailDeliverySettings,
 }));
 
-// Resend webhook suppression check (DB lookup) を素通しさせる:
-// 単体テストでは Customer.emailDeliveryStatus を null 固定で「未登録 = 送信許可」扱い。
+// Resend webhook suppression check (bulk fetch) を素通しさせる:
+// Bun 公式 re-export pattern で他の export を保ち `getSuppressedEmailSet` のみ
+// module-level mock に差し替える。デフォルトは空 Set (= 送信許可)。
+const actualCustomersQueries =
+  await import("@/shared/domain/customers/queries");
+const mockGetSuppressedEmailSet = mock<
+  (emails: readonly string[]) => Promise<Set<string>>
+>(() => Promise.resolve(new Set()));
 mock.module("@/shared/domain/customers/queries", () => ({
-  getCustomerEmailDeliveryStatusByEmail: () => Promise.resolve(null),
+  ...actualCustomersQueries,
+  getSuppressedEmailSet: mockGetSuppressedEmailSet,
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
@@ -49,6 +56,8 @@ describe("sendEmail return shape (new EmailResult)", () => {
     mockGetResendClient.mockClear();
     mockGetFromAddress.mockClear();
     mockGetEmailDeliverySettings.mockClear();
+    mockGetSuppressedEmailSet.mockReset();
+    mockGetSuppressedEmailSet.mockResolvedValue(new Set());
   });
 
   test("happy path returns ok:true with messageId from Resend response", async () => {

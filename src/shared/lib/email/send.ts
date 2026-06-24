@@ -13,14 +13,13 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { CreateEmailOptions } from "resend";
-import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
   ErrorSeverity,
   logError,
   normalizeError,
 } from "../errors/server";
-import { getCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/queries";
+import { getSuppressedEmailSet } from "@/shared/domain/customers/queries";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
 import { getFromAddress, getResendClient, isEmailEnabled } from "./client";
 import { CreateEmailOptionsSchema } from "./schemas";
@@ -57,12 +56,6 @@ export type SendEmailParams = {
   /** 最大リトライ回数（デフォルト: {@link DEFAULT_MAX_RETRIES}） */
   maxRetries?: number;
 };
-
-/** sendEmail() 内で suppress 判定対象とする終端 delivery status */
-const SUPPRESSED_DELIVERY_STATUSES: ReadonlySet<EmailDeliveryStatus> = new Set([
-  EmailDeliveryStatus.HARD_BOUNCED,
-  EmailDeliveryStatus.COMPLAINED,
-]);
 
 /** payload.to を string[] に正規化（送信前 suppress 判定用） */
 function normalizeRecipients(to: CreateEmailOptions["to"]): string[] {
@@ -101,13 +94,14 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   // 宛先のいずれかが HARD_BOUNCED / COMPLAINED なら no-op + audit log。
   // 配信状態は Customer.email (unique) でのみ追跡しているため、
   // staff / system 宛先（DB に Customer レコードなし）は素通りする。
+  // bulk fetch + 'use cache' + tag SUPPRESSED_EMAILS に乗せ、Resend webhook の
+  // revalidateTag で invalidate される（per-recipient N×round-trip を撲滅）。
   const recipients = normalizeRecipients(payload.to);
-  for (const recipient of recipients) {
-    const status = await getCustomerEmailDeliveryStatusByEmail(recipient);
-    if (status && SUPPRESSED_DELIVERY_STATUSES.has(status)) {
-      logError(
-        new Error(`Email suppressed: recipient delivery status is ${status}`),
-        {
+  if (recipients.length > 0) {
+    const suppressedSet = await getSuppressedEmailSet(recipients);
+    for (const recipient of recipients) {
+      if (suppressedSet.has(recipient)) {
+        logError(new Error(`Email suppressed: ${recipient}`), {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
           context: {
@@ -115,11 +109,10 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
             operation,
             ...(idempotencyKey !== undefined && { idempotencyKey }),
             recipient,
-            deliveryStatus: status,
           },
-        },
-      );
-      return { ok: false, reason: "disabled" };
+        });
+        return { ok: false, reason: "disabled" };
+      }
     }
   }
 
