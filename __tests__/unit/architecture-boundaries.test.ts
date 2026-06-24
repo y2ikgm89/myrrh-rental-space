@@ -1922,4 +1922,13 @@ describe("next.config Cache-Tag emission contract", () => {
       ).not.toContain(SITEMAP_TAG);
     }
   });
+
+  test("/sitemap.xml source appears exactly once (Next.js headers() は last-match-wins、複数 source は Cache-Tag を上書きする)", async () => {
+    const headers = await getHeaders();
+    const sitemapSources = headers.filter((h) => h.source === "/sitemap.xml");
+    expect(
+      sitemapSources,
+      "/sitemap.xml は exactly 1 つの source entry のみ持つこと（複製で SITEMAP tag 上書き bug 防止）",
+    ).toHaveLength(1);
+  });
 });
