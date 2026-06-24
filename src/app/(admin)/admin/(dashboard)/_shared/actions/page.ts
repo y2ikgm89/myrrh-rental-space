@@ -1,11 +1,11 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
 import { firePurgeAsync } from "@/shared/lib/cache";
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -35,15 +35,21 @@ function purgePageCaches(...slugs: string[]): void {
 }
 
 function invalidatePageTags(...slugs: string[]): void {
-  updateTag(CACHE_TAGS.PAGES);
-  for (const slug of [...new Set(slugs)]) {
-    updateTag(getCacheTag.pages.detail(slug));
-  }
+  const uniqueSlugs = [...new Set(slugs)];
+  const tags: string[] = [
+    CACHE_TAGS.PAGES,
+    ...uniqueSlugs.map((slug) => getCacheTag.pages.detail(slug)),
+  ];
+  // 他 7 entity（spaces/news/posts/postCategories/postTags/events/terms）と同じ
+  // invalidateSiteWideCache 経路に揃え SITEMAP CDN tag を自動 co-purge する。
+  invalidateSiteWideCache(tags);
 }
 
 function invalidatePageSeoTags(slug: string): void {
-  updateTag(CACHE_TAGS.PAGE_SEO);
-  updateTag(getCacheTag.pageSeo.detail(slug));
+  invalidateSiteWideCache([
+    CACHE_TAGS.PAGE_SEO,
+    getCacheTag.pageSeo.detail(slug),
+  ]);
 }
 
 /**
