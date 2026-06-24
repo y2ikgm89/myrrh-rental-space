@@ -30,12 +30,15 @@ interface SiteBrandProps {
 }
 
 /**
- * Editorial Magazine ベースの表示サイズ。
+ * ロゴ高さ = タップ標的の床に揃え画像とクリック領域を 1:1 にする。
  *
- * ロゴ画像: mobile 24px / desktop 32px — 控えめで余白を活かす雑誌的トーン。
- * テキスト: `font-heading` italic + tracking。
+ * - mobile 44px = WCAG 2.2 SC 2.5.5 (AAA) ＋ Apple HIG nav bar の規定値
+ * - desktop 48px = Material 3 top app bar (64dp) の leading slot
+ *
+ * 画像が標的より小さい従来実装は視認性を犠牲にしていた（雑誌的余白志向）。
+ * `<Link>` 側の `min-h-11` と一致するため、ヘッダー総高は据え置き〜+4px に収まる。
  */
-const LOGO_HEIGHT_CLASS = "h-6 md:h-8";
+const LOGO_HEIGHT_CLASS = "h-11 md:h-12";
 
 /**
  * Next.js Image の `width` は aspect ratio 推論にのみ使われ、
@@ -98,7 +101,7 @@ export function SiteBrand({
           unoptimized={isSvg(brand.logoUrl)}
           onError={() => setHasError(true)}
           className={cn("w-auto object-contain", LOGO_HEIGHT_CLASS)}
-          sizes="(max-width: 768px) 120px, 160px"
+          sizes="(max-width: 768px) 200px, 240px"
         />
       ) : (
         <span className={BRAND_TEXT_CLASS}>{brand.siteName}</span>
