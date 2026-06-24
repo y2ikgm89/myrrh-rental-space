@@ -13,12 +13,14 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { CreateEmailOptions } from "resend";
+import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
   ErrorSeverity,
   logError,
   normalizeError,
 } from "../errors/server";
+import { getCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/queries";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
 import { getFromAddress, getResendClient, isEmailEnabled } from "./client";
 import { CreateEmailOptionsSchema } from "./schemas";
@@ -56,12 +58,30 @@ export type SendEmailParams = {
   maxRetries?: number;
 };
 
+/** sendEmail() 内で suppress 判定対象とする終端 delivery status */
+const SUPPRESSED_DELIVERY_STATUSES: ReadonlySet<EmailDeliveryStatus> = new Set([
+  EmailDeliveryStatus.HARD_BOUNCED,
+  EmailDeliveryStatus.COMPLAINED,
+]);
+
+/** payload.to を string[] に正規化（送信前 suppress 判定用） */
+function normalizeRecipients(to: CreateEmailOptions["to"]): string[] {
+  if (typeof to === "string") return [to];
+  if (Array.isArray(to)) return to;
+  return [];
+}
+
 /**
  * メールを送信する。
  *
  * Resend API キーが env / 管理画面のいずれにも無い場合は `{ ok: false, reason: "disabled" }` を返す。
  * 既存テンプレ送信経路は `result.ok === false` を「失敗」として log するため動作不変。
  * テスト送信機能は `reason: "disabled"` を「警告」、`reason: "error"` を「エラー」として UI 上区別する。
+ *
+ * ## Resend Webhook suppression (Gmail Feb 2024 / Yahoo bulk sender 要件 — complaint rate < 0.3%)
+ * 宛先の `Customer.emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED` のときは送信せず
+ * `{ ok: false, reason: "disabled" }` を返し、監査ログに残す（Resend 側の suppression list を
+ * アプリ層で先取りし、API quota / sender reputation を保護）。
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   if (!(await isEmailEnabled())) return { ok: false, reason: "disabled" };
@@ -76,6 +96,32 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     context,
     maxRetries = DEFAULT_MAX_RETRIES,
   } = params;
+
+  // === Resend Webhook 由来の suppression check（送信前） ===
+  // 宛先のいずれかが HARD_BOUNCED / COMPLAINED なら no-op + audit log。
+  // 配信状態は Customer.email (unique) でのみ追跡しているため、
+  // staff / system 宛先（DB に Customer レコードなし）は素通りする。
+  const recipients = normalizeRecipients(payload.to);
+  for (const recipient of recipients) {
+    const status = await getCustomerEmailDeliveryStatusByEmail(recipient);
+    if (status && SUPPRESSED_DELIVERY_STATUSES.has(status)) {
+      logError(
+        new Error(`Email suppressed: recipient delivery status is ${status}`),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: {
+            ...context,
+            operation,
+            ...(idempotencyKey !== undefined && { idempotencyKey }),
+            recipient,
+            deliveryStatus: status,
+          },
+        },
+      );
+      return { ok: false, reason: "disabled" };
+    }
+  }
 
   // 送信元(from)と返信先(reply-to)は管理画面設定（env 優先・DB フォールバック）を
   // 注入する。個別の payload が replyTo を明示していればそちらを優先する。

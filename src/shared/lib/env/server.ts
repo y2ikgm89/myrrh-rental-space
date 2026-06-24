@@ -49,6 +49,13 @@ export const serverEnv = createEnv({
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
     EMAIL_FROM_NAME: z.string().optional(),
+    /**
+     * Resend Webhook 署名検証用シークレット（svix 形式 `whsec_...`）。
+     * Resend Dashboard → Webhooks → Signing Secret から取得。
+     * 設定されていない場合 `/api/webhooks/resend` は 503 を返す。
+     * @see https://resend.com/docs/webhooks/verify-webhooks-requests
+     */
+    RESEND_WEBHOOK_SECRET: z.string().optional(),
 
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
@@ -158,6 +165,7 @@ export const serverEnv = createEnv({
     RESEND_API_KEY: process.env["RESEND_API_KEY"],
     EMAIL_FROM: process.env["EMAIL_FROM"],
     EMAIL_FROM_NAME: process.env["EMAIL_FROM_NAME"],
+    RESEND_WEBHOOK_SECRET: process.env["RESEND_WEBHOOK_SECRET"],
     STRIPE_SECRET_KEY: process.env["STRIPE_SECRET_KEY"],
     GBP_STUB_MODE: process.env["GBP_STUB_MODE"],
     GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"],

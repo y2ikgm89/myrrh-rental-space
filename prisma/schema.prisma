@@ -192,6 +192,20 @@ enum RegistrationStatus {
   CANCELLED
 }
 
+/// Resend Webhook (email.bounced / email.complained) で観測された配信状態。
+/// Gmail Feb 2024 / Yahoo bulk sender 要件 (complaint rate < 0.3%) 対応で、
+/// HARD_BOUNCED / COMPLAINED 宛先には送信前に suppress する。
+/// - OK: 既定値（観測なし or 正常配信）
+/// - SOFT_BOUNCED: bounce.type=Temporary（再送猶予あり）
+/// - HARD_BOUNCED: bounce.type=Permanent（送信永久停止）
+/// - COMPLAINED: email.complained（受信者がスパム報告 → 送信永久停止）
+enum EmailDeliveryStatus {
+  OK
+  SOFT_BOUNCED
+  HARD_BOUNCED
+  COMPLAINED
+}
+
 // ==============================================
 // Better Auth Models
 // ==============================================
@@ -636,6 +650,12 @@ model Customer {
   isActive           Boolean        @default(true)
   marketingOptIn     Boolean        @default(false)  // メルマガ・キャンペーン受信可否
   phoneContactOptIn  Boolean        @default(true)   // 電話連絡可否
+  /// Resend Webhook で観測された配信状態。HARD_BOUNCED / COMPLAINED は送信前にスキップ。
+  /// 詳細は EmailDeliveryStatus enum 参照。
+  emailDeliveryStatus       EmailDeliveryStatus @default(OK)
+  emailDeliveryUpdatedAt    DateTime?
+  /// Resend Webhook payload の bounce.message / suppression reason を保持（人間可読のラベル）。
+  emailDeliveryReason       String?       @db.VarChar(500)
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -659,6 +679,7 @@ model Customer {
   @@index([lastReservationAt])
   @@index([lastName, firstName])
   @@index([userId])
+  @@index([emailDeliveryStatus])
   @@map("customers")
 }
 
