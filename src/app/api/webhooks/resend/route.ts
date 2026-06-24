@@ -223,4 +223,7 @@ async function handleComplained(event: ResendWebhookEvent): Promise<void> {
 
 function invalidateCustomerCache(): void {
   revalidateTag(CACHE_TAGS.CUSTOMERS, CACHE_LIFE.DYNAMIC_DATA);
+  // sendEmail() 内の getSuppressedEmailSet() ('use cache') を invalidate して
+  // bounce / complaint を観測した宛先への次回送信を即時 suppress。
+  revalidateTag(CACHE_TAGS.SUPPRESSED_EMAILS, CACHE_LIFE.DYNAMIC_DATA);
 }
