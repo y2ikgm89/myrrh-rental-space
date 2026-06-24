@@ -117,6 +117,7 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "lefthook": "^2.1.9",
+    "p-limit": "^7.1.1",
     "prettier": "^3.8.4",
     "react-email": "^6.6.3",
     "tailwindcss": "^4.3.0",
