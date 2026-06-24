@@ -6,7 +6,9 @@
  * Header/Footer 両方で共有。Settings の `useLogo` + `logoUrl` に応じて
  * Next.js Image（LCP 最適化）またはセリフイタリックのテキストを描画する。
  *
- * - `useLogo && logoUrl` → <Image> with priority for header, lazy for footer
+ * - `useLogo && logoUrl` → <Image> with loading="eager" for header (above-fold), lazy for footer
+ *   ヘッダーロゴは小さい SVG が多く LCP ではないため `preload` / `fetchPriority="high"`
+ *   は付けない（hero LCP の preload と帯域競合させない・Next.js 16 公式推奨）
  * - SVG は unoptimized（ベクターのため最適化不要・公式推奨）
  * - ロゴ読み込み失敗時は `onError` でテキストにフォールバック
  * - alt はサイト名（WebAIM: リンク化されたロゴは会社名を alt に）
@@ -74,7 +76,7 @@ export function SiteBrand({
           alt={brand.siteName}
           width={LOGO_INTRINSIC_WIDTH}
           height={LOGO_INTRINSIC_HEIGHT}
-          priority={variant === "header"}
+          loading={variant === "header" ? "eager" : "lazy"}
           unoptimized={isSvg(brand.logoUrl)}
           onError={() => setHasError(true)}
           className={cn("w-auto object-contain", LOGO_HEIGHT_CLASS)}

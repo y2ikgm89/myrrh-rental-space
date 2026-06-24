@@ -237,7 +237,9 @@ export default async function EventDetailPage({
                   fill
                   sizes="(min-width: 1024px) 60vw, 100vw"
                   rounded
-                  priority
+                  preload
+                  loading="eager"
+                  fetchPriority="high"
                 />
               ),
             })}

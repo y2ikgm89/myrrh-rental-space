@@ -44,7 +44,7 @@ export function TopBarBranding({
       alt={displayName}
       width={LOGO_INTRINSIC_WIDTH}
       height={LOGO_INTRINSIC_HEIGHT}
-      priority
+      loading="eager"
       unoptimized={isSvg(headerLogoUrl)}
       onError={() => setLogoError(true)}
       className="h-8 w-auto object-contain"
