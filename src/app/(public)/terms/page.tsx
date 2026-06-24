@@ -5,18 +5,23 @@ import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
-import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
+import {
+  generateArticleMetadata,
+  getSeoSettings,
+} from "@/public/lib/seo/metadata-factory";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedTermsList } from "@/shared/domain/terms/queries";
 import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
+  const settings = await getSeoSettings();
   return generateArticleMetadata(
     {
       title: "規約一覧",
       description: "利用規約・プライバシーポリシー・キャンセルポリシー等の一覧",
     },
+    settings,
     { canonicalUrl: `${getBaseUrl()}/terms` },
   );
 }

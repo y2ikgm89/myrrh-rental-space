@@ -35,11 +35,6 @@ export async function generateMetadata({
   ]);
   if (!category) return { title: "カテゴリが見つかりません" };
 
-  const options: { canonicalUrl: string; siteName?: string } = {
-    canonicalUrl: `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
-  };
-  if (settings?.siteName) options.siteName = settings.siteName;
-
   return generateArticleMetadata(
     {
       title: category.metaTitle ?? `${category.name}の記事`,
@@ -48,7 +43,10 @@ export async function generateMetadata({
       ogpTitle: category.metaTitle,
       ogpDescription: category.metaDescription,
     },
-    options,
+    settings,
+    {
+      canonicalUrl: `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
+    },
   );
 }
 

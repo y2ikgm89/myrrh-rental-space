@@ -14,8 +14,12 @@ import {
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getBaseUrl } from "@/shared/lib/constants";
 import { parseStringArray } from "@/shared/lib/json-validators";
+import {
+  generateArticleMetadata,
+  getSeoSettings,
+} from "@/public/lib/seo/metadata-factory";
 import {
   BreadcrumbJsonLd,
   ProductJsonLd,
@@ -37,41 +41,27 @@ export async function generateMetadata({
 }: SpaceDetailPageProps): Promise<Metadata> {
   await connection();
   const { slug } = await params;
-  const space = await getSpaceBySlug(slug);
+  const [space, settings] = await Promise.all([
+    getSpaceBySlug(slug),
+    getSeoSettings(),
+  ]);
   if (!space) return {};
 
-  const canonicalUrl = `${getBaseUrl()}/spaces/${slug}`;
-  const ogTitle = space.ogpTitle ?? space.name;
-  const ogDescription =
-    space.ogpDescription ?? space.descriptionPlainText ?? undefined;
-  const ogImage = space.ogpImageUrl ?? space.mainImageUrl ?? undefined;
-
-  return {
-    title: ogTitle,
-    description:
-      space.ogpDescription ??
-      space.metaDescription ??
-      space.descriptionPlainText ??
-      undefined,
-    alternates: {
-      canonical: canonicalUrl,
+  return generateArticleMetadata(
+    {
+      title: space.name,
+      description:
+        space.metaDescription ?? space.descriptionPlainText ?? undefined,
+      image: space.ogpImageUrl ?? space.mainImageUrl,
+      ogpTitle: space.ogpTitle,
+      ogpDescription: space.ogpDescription ?? space.descriptionPlainText,
     },
-    openGraph: {
-      type: "website",
-      title: ogTitle,
-      description: ogDescription,
-      url: canonicalUrl,
-      locale: "ja_JP",
-      siteName: SITE_DEFAULTS.name,
-      ...(ogImage ? { images: [ogImage] } : {}),
+    settings,
+    {
+      canonicalUrl: `${getBaseUrl()}/spaces/${slug}`,
+      ogType: "website",
     },
-    twitter: {
-      card: "summary_large_image",
-      title: ogTitle,
-      description: ogDescription,
-      ...(ogImage ? { images: [ogImage] } : {}),
-    },
-  };
+  );
 }
 
 export default async function SpaceDetailPage({

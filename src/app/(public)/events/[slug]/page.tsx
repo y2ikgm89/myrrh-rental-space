@@ -23,9 +23,13 @@ import {
 } from "@/shared/domain/events/venue";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getBaseUrl } from "@/shared/lib/constants";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import {
+  generateArticleMetadata,
+  getSeoSettings,
+} from "@/public/lib/seo/metadata-factory";
 import {
   EventInfoPanel,
   type EventInfoPanelVenue,
@@ -47,7 +51,10 @@ export async function generateMetadata({
   await connection();
 
   const { slug } = await params;
-  const event = await getPublishedEventBySlug(slug);
+  const [event, settings] = await Promise.all([
+    getPublishedEventBySlug(slug),
+    getSeoSettings(),
+  ]);
 
   if (!event) {
     return { title: "イベントが見つかりません" };
@@ -57,33 +64,22 @@ export async function generateMetadata({
     event.descriptionPlainText.trim() !== ""
       ? event.descriptionPlainText
       : `${event.title} - イベント詳細`;
-  const description = event.metaDescription ?? fallbackDescription;
-  const ogpTitle = event.ogpTitle ?? event.title;
-  const ogpDescription = event.ogpDescription ?? fallbackDescription;
-  const ogpImage = event.ogpImageUrl ?? event.thumbnailUrl;
-  const canonicalUrl = `${getBaseUrl()}/events/${slug}`;
 
-  return {
-    title: event.title,
-    description,
-    ...(event.metaKeywords ? { keywords: event.metaKeywords } : {}),
-    alternates: { canonical: canonicalUrl },
-    openGraph: {
-      type: "website",
-      title: ogpTitle,
-      description: ogpDescription,
-      url: canonicalUrl,
-      locale: "ja_JP",
-      siteName: SITE_DEFAULTS.name,
-      ...(ogpImage ? { images: [ogpImage] } : {}),
+  return generateArticleMetadata(
+    {
+      title: event.title,
+      description: event.metaDescription ?? fallbackDescription,
+      image: event.ogpImageUrl ?? event.thumbnailUrl,
+      ogpTitle: event.ogpTitle,
+      ogpDescription: event.ogpDescription ?? fallbackDescription,
+      metaKeywords: event.metaKeywords,
     },
-    twitter: {
-      card: "summary_large_image",
-      title: ogpTitle,
-      description: ogpDescription,
-      ...(ogpImage ? { images: [ogpImage] } : {}),
+    settings,
+    {
+      canonicalUrl: `${getBaseUrl()}/events/${slug}`,
+      ogType: "website",
     },
-  };
+  );
 }
 
 export default async function EventDetailPage({

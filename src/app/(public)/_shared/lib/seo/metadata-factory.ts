@@ -27,42 +27,59 @@ export interface ArticleMetadata {
 export { getSeoSettings, type SeoSettings };
 
 /**
- * 記事ページメタデータ生成（ブログ・ニュース共通）
+ * 記事ページメタデータ生成（ブログ・ニュース・スペース・イベント・タクソノミー共通）
+ *
+ * settings には `getSeoSettings()` の戻り値を渡す。article の各フィールドが null/空のときに
+ * 管理画面で設定した SEO defaults（defaultOgpImageUrl / defaultMetaDescription /
+ * defaultOgpTitle / defaultOgpDescription / defaultMetaKeywords / siteName）を fallback として
+ * マージする。これを渡さないと管理画面の OGP defaults が silently 効かない。
  */
 export function generateArticleMetadata(
   article: ArticleMetadata,
+  settings?: SeoSettings | null,
   options?: {
     canonicalUrl?: string;
     siteName?: string;
+    /** OGP の type。スペース・イベント等の永続コンテンツは "website"、ブログ・お知らせは "article"。既定 "article"。 */
+    ogType?: "article" | "website";
   },
 ): Metadata {
-  const title = article.ogpTitle || article.title;
   const description =
-    article.ogpDescription || article.description || undefined;
+    article.description ?? settings?.defaultMetaDescription ?? undefined;
+  const keywords =
+    article.metaKeywords ?? settings?.defaultMetaKeywords ?? undefined;
+  const image = article.image ?? settings?.defaultOgpImageUrl ?? undefined;
+  const ogTitle =
+    article.ogpTitle ?? settings?.defaultOgpTitle ?? article.title;
+  const ogDescription =
+    article.ogpDescription ?? settings?.defaultOgpDescription ?? description;
+  const siteName =
+    options?.siteName ?? settings?.siteName ?? SITE_DEFAULTS.name;
+  const ogType = options?.ogType ?? "article";
 
   return {
     title: article.title,
-    description,
-    keywords: article.metaKeywords || undefined,
+    ...(description !== undefined && { description }),
+    ...(keywords !== undefined && { keywords }),
     ...(options?.canonicalUrl && {
       alternates: {
         canonical: options.canonicalUrl,
       },
     }),
     openGraph: {
-      title,
-      description,
-      images: article.image ? [article.image] : undefined,
-      type: "article",
+      title: ogTitle,
+      ...(ogDescription !== undefined && { description: ogDescription }),
+      ...(image !== undefined && { images: [image] }),
+      type: ogType,
       locale: "ja_JP",
-      siteName: options?.siteName || SITE_DEFAULTS.name,
+      siteName,
       ...(options?.canonicalUrl && { url: options.canonicalUrl }),
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
-      images: article.image ? [article.image] : undefined,
+      title: ogTitle,
+      ...(ogDescription !== undefined && { description: ogDescription }),
+      ...(image !== undefined && { images: [image] }),
     },
   };
 }
