@@ -563,12 +563,17 @@ export function EditorialSplitHero({
         />
       </div>
 
+      {/* SSoT: inter-section の下方向余白は SectionStack の gap-[--spacing-fluid-md] が
+          唯一の源泉（.claude/rules / SectionWrapper §冒頭コメント）。content block は
+          PR #703 が確立した divider 上下対称（title.pb-fluid-md ↔ content.pt-fluid-md）の
+          ための top padding のみ保持し、pb は持たない。bg-background は body 背景と同色で
+          内側塗りは不可視のため bottom 側に padding を持たせる意味も無い。 */}
       <div
         className={cn(
           "col-start-1 row-start-2 flex flex-col bg-background",
-          "py-[calc(var(--spacing-fluid-md)+env(safe-area-inset-bottom,0px))]",
+          "pt-[var(--spacing-fluid-md)]",
           padXMobile,
-          "md:col-start-2 md:row-start-2 md:py-16",
+          "md:col-start-2 md:row-start-2 md:pt-16",
           padXDesktop,
         )}
       >

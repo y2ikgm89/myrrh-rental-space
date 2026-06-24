@@ -23,7 +23,9 @@ export function MinimalHero({
       className={cn(
         "bg-background",
         "ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
-        "py-[var(--spacing-fluid-lg)]",
+        // SSoT: inter-section 下方向余白は SectionStack gap が唯一の源泉。
+        // hero 内側塗り (bg-background = body 背景同色) は不可視なので pb 不要。
+        "pt-[var(--spacing-fluid-lg)]",
       )}
     >
       {eyebrow ? (
