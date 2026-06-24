@@ -4,7 +4,11 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 // next/cache の updateTag を spy 化して、helper が呼ぶタグ群を検証する。
 // CACHE_TAGS / getCacheTag は副作用なし純粋モジュールのためモックしない（実 SSoT で期待値を組む）。
 const updateTagMock = mock<(tag: string) => void>(() => {});
-mock.module("next/cache", () => ({ updateTag: updateTagMock }));
+const actualNextCache = await import("next/cache");
+mock.module("next/cache", () => ({
+  ...actualNextCache,
+  updateTag: updateTagMock,
+}));
 
 const { invalidateReservationCaches } =
   await import("@/shared/lib/cache/reservation-cache");

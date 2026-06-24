@@ -131,7 +131,10 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     mockClaimReservationAsRefunded(id),
 }));
 
+// 公式 Bun re-export pattern: actual を spread して必要 fn のみ override。
+const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
+  ...actualNextCache,
   revalidateTag: (tag: string, profile: string) =>
     mockRevalidateTag(tag, profile),
 }));
@@ -710,7 +713,9 @@ describe("POST /api/webhooks/stripe", () => {
     );
 
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockReturnValue(event);
+    // mockConstructEvent は Promise<Stripe.Event> 戻り型 (PR #744 で async 化)。
+    // 他 14 箇所と同じ mockResolvedValue + asStripeEvent helper pattern に統一。
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { error: string };
