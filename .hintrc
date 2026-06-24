@@ -1,0 +1,9 @@
+{
+  "extends": ["development"],
+  "ignoredUrls": [
+    {
+      "domain": ".*\\/cdn-cgi\\/.*",
+      "hints": ["http-cache"]
+    }
+  ]
+}
