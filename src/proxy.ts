@@ -22,6 +22,17 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
   ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"],
   ["X-DNS-Prefetch-Control", "on"],
+  // Lighthouse Best Practices `coop` audit 通過。cross-origin の opener / popup から
+  // window.opener 経由でアクセスされないよう top-level browsing context を分離する
+  // (Spectre / cross-origin 情報漏洩の defense-in-depth)。
+  // 値選定: better-auth の social login は redirect flow (`/api/auth/sign-in/social/*`)
+  // を使い popup + postMessage は使わない。Stripe / Cloudflare Turnstile / Google reCAPTCHA
+  // / YouTube / Instagram embed は全て iframe 経由で COOP の影響を受けない。
+  // `_blank` で開く external tab (`openExternalTab`) は noreferrer で opener が
+  // 既に severed なため COOP 無関係。よって `same-origin-allow-popups` に緩める
+  // 必要はなく、最も厳格な `same-origin` を採用。
+  // 参考: https://developer.mozilla.org/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy
+  ["Cross-Origin-Opener-Policy", "same-origin"],
 ];
 
 function resolveFrameAncestors(pathname: string): string {
