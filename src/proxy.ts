@@ -13,25 +13,7 @@ import {
 } from "@/shared/lib/admin-login-gate";
 import { serverEnv } from "@/shared/lib/env/server";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
-
-/**
- * Timing-safe string comparison to prevent timing attacks on secret tokens.
- * Uses Web Crypto API (available in Edge/Node.js middleware).
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  const encoder = new TextEncoder();
-  const bufA = encoder.encode(a);
-  const bufB = encoder.encode(b);
-  if (bufA.byteLength !== bufB.byteLength) return false;
-  // crypto.subtle.timingSafeEqual is not available in all runtimes;
-  // fall back to constant-time XOR comparison
-  let result = 0;
-  for (let i = 0; i < bufA.byteLength; i++) {
-    result |= (bufA[i] ?? 0) ^ (bufB[i] ?? 0);
-  }
-  return result === 0;
-}
+import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
@@ -172,7 +154,7 @@ function handleAdminLoginGate(
   const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
 
   // gate cookie がある → 通過（timing-safe comparison for defensive consistency）
-  if (gateCookie?.value && timingSafeEqual(gateCookie.value, "1")) {
+  if (gateCookie?.value && timingSafeEqualStrings(gateCookie.value, "1")) {
     return createResponse(req, pathname);
   }
 
@@ -284,7 +266,7 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
       }
       const authHeader = req.headers.get("authorization");
       const expected = `Bearer ${cronSecret}`;
-      if (!authHeader || !timingSafeEqual(authHeader, expected)) {
+      if (!authHeader || !timingSafeEqualStrings(authHeader, expected)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }

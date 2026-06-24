@@ -1,6 +1,7 @@
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 import { jsonError } from "@/shared/lib/route-responses";
+import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 type AuthorizeCronRequestOptions = {
   authorizationHeader: string | null;
@@ -38,7 +39,11 @@ export function authorizeCronRequest({
     return null;
   }
 
-  if (secret && authorizationHeader !== `Bearer ${secret}`) {
+  if (
+    secret &&
+    (authorizationHeader === null ||
+      !timingSafeEqualStrings(authorizationHeader, `Bearer ${secret}`))
+  ) {
     return jsonError("Unauthorized", 401);
   }
 
