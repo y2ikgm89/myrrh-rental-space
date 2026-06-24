@@ -24,11 +24,7 @@ import ical, {
 } from "ical-generator";
 import { getVtimezoneComponent } from "@touch4it/ical-timezones";
 import { buildEventRegistrationUid, buildReservationUid } from "./uid";
-import type {
-  EventCalendarParams,
-  ICalFeedEntry,
-  ReservationCalendarParams,
-} from "./types";
+import type { EventCalendarParams, ReservationCalendarParams } from "./types";
 
 const PRODID = "-//Myrrh Rental Space//Reservation System//JP";
 const DEFAULT_TIMEZONE = "Asia/Tokyo";
@@ -207,33 +203,6 @@ export function buildEventCancelCalendar(
 }
 
 // =============================================================================
-// iCal Feed (管理者購読)
-// =============================================================================
-
-export type ICalFeedParams = {
-  readonly calendarName: string;
-  readonly entries: readonly ICalFeedEntry[];
-};
-
-export function buildICalFeed(params: ICalFeedParams, _host: string): string {
-  const cal = createCalendar(ICalCalendarMethod.PUBLISH, params.calendarName);
-  for (const entry of params.entries) {
-    const event = cal.createEvent({
-      id: entry.uid,
-      start: entry.startTime,
-      end: entry.endTime,
-      summary: entry.summary,
-      description: entry.description,
-      status: ICalEventStatus.CONFIRMED,
-      busystatus: ICalEventBusyStatus.BUSY,
-      sequence: entry.sequence,
-    });
-    if (entry.location !== undefined) event.location(entry.location);
-  }
-  return cal.toString();
-}
-
-// =============================================================================
 // Re-exports
 // =============================================================================
 
@@ -249,7 +218,6 @@ export type {
   AddToCalendarUrls,
   CalendarEventInput,
   EventCalendarParams,
-  ICalFeedEntry,
   ReservationCalendarParams,
 } from "./types";
 

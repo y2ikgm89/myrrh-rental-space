@@ -136,7 +136,6 @@ async function clearAllData() {
     await tx.event.deleteMany();
 
     // スペース関連
-    await tx.iCalToken.deleteMany();
     await tx.space.deleteMany();
     await tx.spaceCategory.deleteMany();
     await tx.location.deleteMany();
