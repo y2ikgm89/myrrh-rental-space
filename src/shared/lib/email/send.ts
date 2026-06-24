@@ -13,7 +13,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { CreateEmailOptions } from "resend";
-import { EmailDeliveryStatus } from "@generated/prisma/enums";
+import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
   ErrorSeverity,

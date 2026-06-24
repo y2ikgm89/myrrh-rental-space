@@ -56,6 +56,7 @@ export {
   EditorCommentStatus,
   MediaType,
   MediaUsage,
+  EmailDeliveryStatus,
 } from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------
