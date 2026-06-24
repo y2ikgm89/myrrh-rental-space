@@ -9,7 +9,10 @@ interface ImageCarouselProps {
   readonly images: readonly string[];
   readonly alt: string;
   readonly sizes: string;
-  readonly priority?: boolean;
+  /** カルーセル最初の画像（mount 時に表示）のみに適用する LCP 最適化（Next.js 公式 3-prop）。 */
+  readonly preload?: boolean;
+  readonly loading?: "lazy" | "eager";
+  readonly fetchPriority?: "high" | "low" | "auto";
 }
 
 /**
@@ -23,7 +26,9 @@ export function ImageCarousel({
   images,
   alt,
   sizes,
-  priority = false,
+  preload = false,
+  loading,
+  fetchPriority,
 }: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartXRef = useRef(0);
@@ -120,7 +125,13 @@ export function ImageCarousel({
                 alt={i === activeIndex ? `${alt} ${i + 1}/${count}` : ""}
                 fill
                 sizes={sizes}
-                priority={priority && i === 0}
+                preload={preload && i === 0}
+                {...(loading !== undefined && {
+                  loading: i === 0 ? loading : "lazy",
+                })}
+                {...(fetchPriority !== undefined && {
+                  fetchPriority: i === 0 ? fetchPriority : "auto",
+                })}
                 className="object-cover"
               />
             ) : null}

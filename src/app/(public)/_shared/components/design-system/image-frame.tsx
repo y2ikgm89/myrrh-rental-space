@@ -37,7 +37,12 @@ interface ImageFrameBaseProps {
   readonly src: string;
   readonly alt: string;
   readonly sizes: string;
-  readonly priority?: boolean;
+  /** `<link rel="preload" as="image">` を head に挿入する。LCP 候補のみ true（Next.js 公式）。 */
+  readonly preload?: boolean;
+  /** `lazy`（default）または `eager`。LCP / above-the-fold は `eager`。 */
+  readonly loading?: "lazy" | "eager";
+  /** ブラウザに通知するリソース優先度。LCP は `high`、それ以外は省略（`auto`）。 */
+  readonly fetchPriority?: "high" | "low" | "auto";
   readonly className?: string;
   readonly rounded?: boolean;
 }
@@ -63,7 +68,9 @@ export function ImageFrame(props: ImageFrameProps) {
     src,
     alt,
     sizes,
-    priority = false,
+    preload = false,
+    loading,
+    fetchPriority,
     className,
     rounded = false,
   } = props;
@@ -83,7 +90,9 @@ export function ImageFrame(props: ImageFrameProps) {
           alt={alt}
           fill
           sizes={sizes}
-          priority={priority}
+          preload={preload}
+          {...(loading !== undefined && { loading })}
+          {...(fetchPriority !== undefined && { fetchPriority })}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
       ) : (
@@ -93,7 +102,9 @@ export function ImageFrame(props: ImageFrameProps) {
           width={props.width}
           height={props.height}
           sizes={sizes}
-          priority={priority}
+          preload={preload}
+          {...(loading !== undefined && { loading })}
+          {...(fetchPriority !== undefined && { fetchPriority })}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
       )}

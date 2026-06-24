@@ -119,7 +119,9 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
                 "洗練されたレンタルスペースのインテリア"
               }
               fill
-              priority
+              preload
+              loading="eager"
+              fetchPriority="high"
               sizes="(min-width: 768px) 50vw, 100vw"
               className="object-cover"
             />

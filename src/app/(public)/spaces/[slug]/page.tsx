@@ -148,7 +148,9 @@ export default async function SpaceDetailPage({
                     fill
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     className="object-cover"
-                    priority
+                    preload
+                    loading="eager"
+                    fetchPriority="high"
                   />
                 </div>
                 {subImages.slice(0, 2).map((img) => (
@@ -174,7 +176,9 @@ export default async function SpaceDetailPage({
                   fill
                   sizes="(min-width: 1024px) 672px, 100vw"
                   className="object-cover"
-                  priority
+                  preload
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </div>
             )}
