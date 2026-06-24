@@ -75,6 +75,7 @@ export const mockSendEmail = mock<
   return Promise.resolve({
     data: { id: `mock-email-${Date.now()}` },
     error: null,
+    headers: null,
   });
 });
 
@@ -121,7 +122,7 @@ export function findEmailTo(email: string): MockEmailRecord | undefined {
 export function findEmailBySubject(
   subject: string,
 ): MockEmailRecord | undefined {
-  return sentEmails.find((e) => e.subject.includes(subject));
+  return sentEmails.find((e) => e.subject?.includes(subject) ?? false);
 }
 
 /**

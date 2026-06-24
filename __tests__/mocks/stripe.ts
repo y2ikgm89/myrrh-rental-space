@@ -152,7 +152,7 @@ export const mockSubscriptionsCreate = mock<
   );
   const subscription: MockSubscription = {
     id: `sub_mock_${Date.now()}`,
-    customer: params.customer,
+    customer: params.customer ?? `cus_mock_${Date.now()}`,
     status: "active",
     items: {
       object: "list",
