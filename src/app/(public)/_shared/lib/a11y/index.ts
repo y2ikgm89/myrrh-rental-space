@@ -26,3 +26,11 @@ export {
   type AriaLiveRole,
   type AriaLiveAnnouncement,
 } from "./aria-live";
+
+// radiogroup 用キーボード制御 (WAI-ARIA APG)
+export {
+  useRadioGroupKeyboard,
+  type RadioItemProps,
+  type UseRadioGroupKeyboardOptions,
+  type UseRadioGroupKeyboardReturn,
+} from "./use-radio-group-keyboard";
