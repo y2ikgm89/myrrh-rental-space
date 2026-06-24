@@ -144,9 +144,13 @@ describe("app/sitemap.ts", () => {
       };
       const result = await sitemap();
       for (const entry of result) {
-        expect(entry.url.startsWith(BASE_URL)).toBe(true);
-        const pathPart = entry.url.slice(BASE_URL.length);
-        expect(pathPart.includes("//")).toBe(false);
+        // URL.origin で厳密 origin 比較 — `startsWith(BASE_URL)` は
+        // `https://example.com.evil.com` を misfire させうる（CodeQL
+        // js/incomplete-url-substring-sanitization）。new URL は path-only な
+        // dangling `/` を保ったまま絶対 URL 検証できる。
+        const parsed = new URL(entry.url);
+        expect(parsed.origin).toBe(BASE_URL);
+        expect(parsed.pathname.includes("//")).toBe(false);
       }
     });
 
