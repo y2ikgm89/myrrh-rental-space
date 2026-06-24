@@ -172,6 +172,10 @@ export const NEXTJS_TAGS_WITHOUT_CDN_MAPPING = [
   CACHE_TAGS.NOTIFICATION_SETTINGS,
   CACHE_TAGS.BLOCK_TEMPLATES,
   CACHE_TAGS.REVIEWS,
+  // sendEmail() の suppression bulk lookup ('use cache' + tag) 専用。
+  // server-only な email 送信経路でのみ消費され、Cloudflare CDN edge には
+  // 一切露出しない (/api/webhooks/resend は private,no-store)。
+  CACHE_TAGS.SUPPRESSED_EMAILS,
 ] as const;
 
 export const PRIVATE_NO_TAG_PREFIXES = [
