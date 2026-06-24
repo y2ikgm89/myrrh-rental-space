@@ -333,6 +333,7 @@ export async function sendEventCancelledToAllParticipants(
       title: true,
       startTime: true,
       endTime: true,
+      updatedAt: true,
       addressDetail: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
@@ -360,6 +361,9 @@ export async function sendEventCancelledToAllParticipants(
   const eventDate = format(event.startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
+  // event の updatedAt を idempotency key に混ぜることで、24h 内に同一イベントを
+  // 再キャンセル相当の更新があっても payload 差異で Resend が silent drop しない。
+  const eventUpdatedAt = event.updatedAt.getTime();
 
   const [calendarSettings, organizer, footer] = await Promise.all([
     getCalendarEmailSettings(),
@@ -419,7 +423,7 @@ export async function sendEventCancelledToAllParticipants(
           ),
           attachments,
         }),
-        idempotencyKey: `event-cancelled/${eventId}/${hashForKey(registration.email)}`,
+        idempotencyKey: `event-cancelled/${eventId}/${hashForKey(registration.email)}/${eventUpdatedAt}`,
         operation: "sendEventCancelledToAllParticipants",
         context: {
           eventId,
@@ -460,6 +464,7 @@ export async function sendEventUpdatedToAllParticipants(
       title: true,
       startTime: true,
       endTime: true,
+      updatedAt: true,
       addressDetail: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
@@ -492,6 +497,9 @@ export async function sendEventUpdatedToAllParticipants(
   });
   const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
   const oldStartTimestamp = oldStartTime.getTime();
+  // 同一 oldStartTime のまま他のフィールド (タイトル/場所/etc.) のみ更新されても
+  // idempotency key を分離するため event.updatedAt も混ぜる。event-cancelled と対称。
+  const eventUpdatedAt = event.updatedAt.getTime();
 
   const [calendarSettings, organizer, footer] = await Promise.all([
     getCalendarEmailSettings(),
@@ -550,7 +558,7 @@ export async function sendEventUpdatedToAllParticipants(
           }),
           attachments,
         }),
-        idempotencyKey: `event-updated/${eventId}/${oldStartTimestamp}/${hashForKey(registration.email)}`,
+        idempotencyKey: `event-updated/${eventId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
         operation: "sendEventUpdatedToAllParticipants",
         context: {
           eventId,
