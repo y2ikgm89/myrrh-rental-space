@@ -285,7 +285,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         </div>
         {hasGuestDiff && (
           <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 p-4">
-            <p className="mb-2 text-sm font-medium text-warning">
+            <p className="mb-2 text-sm font-medium text-warning-strong">
               予約時の入力情報が顧客情報と異なります
             </p>
             <dl className="space-y-1 text-sm">
