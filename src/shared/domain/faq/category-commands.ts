@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type {
@@ -195,13 +196,19 @@ export async function reorderFaqCategories(
     return;
   }
 
-  // Interactive transaction で pg deprecation 回避
-  await prisma.$transaction(async (tx) => {
-    for (const [index, id] of orderedIds.entries()) {
-      await tx.faqCategory.update({
-        where: { id, deletedAt: null },
-        data: { order: index },
-      });
-    }
-  });
+  // 単一 SQL の CASE WHEN で order を一括更新（N 回 UPDATE 廃止）。
+  // 対象 id × deletedAt IS NULL は WHERE 句で絞り、ソフトデリート済カテゴリは除外する。
+  const cases: Prisma.Sql[] = [];
+  const ids: Prisma.Sql[] = [];
+  for (const [index, id] of orderedIds.entries()) {
+    cases.push(Prisma.sql`WHEN ${id}::uuid THEN ${index}`);
+    ids.push(Prisma.sql`${id}::uuid`);
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "faq_categories"
+    SET "order" = CASE "id" ${Prisma.join(cases, " ")} END
+    WHERE "id" IN (${Prisma.join(ids)})
+      AND "deletedAt" IS NULL
+  `;
 }

@@ -13,21 +13,10 @@
  *   - 新スタッフへのログインURL発行
  */
 
-// Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
+import { withScript } from "./_shared/script-prisma";
 
-const databaseUrl = process.env["DATABASE_URL"];
-if (!databaseUrl) {
-  console.error("❌ DATABASE_URL が設定されていません");
-  process.exit(1);
-}
-
-const adapter = new PrismaPg({ connectionString: databaseUrl });
-const prisma = new PrismaClient({ adapter });
-
-async function main() {
+await withScript("generate-login-url", async (prisma) => {
   const { token, expiresAt } = await createAdminGateToken();
 
   await prisma.loginToken.create({
@@ -43,11 +32,4 @@ async function main() {
   console.log("");
   console.log(`   有効期限: ${expiresAt.toISOString()}`);
   console.log("");
-
-  await prisma.$disconnect();
-}
-
-main().catch((error: unknown) => {
-  console.error("❌ エラー:", error);
-  process.exit(1);
 });

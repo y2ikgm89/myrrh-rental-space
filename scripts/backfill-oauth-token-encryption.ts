@@ -17,21 +17,10 @@
  *        purpose=`oauth-google` と整合)。冪等 — 既に暗号化済みの値は skip する。
  */
 
-// Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
 import { encryptOAuthToken, isEncrypted } from "@/shared/lib/crypto";
-
-const databaseUrl = process.env["DATABASE_URL"];
-if (!databaseUrl) {
-  console.error("❌ DATABASE_URL が設定されていません");
-  process.exit(1);
-}
+import { withScript } from "./_shared/script-prisma";
 
 const isDryRun = process.argv.slice(2).includes("--dry-run");
-
-const adapter = new PrismaPg({ connectionString: databaseUrl });
-const prisma = new PrismaClient({ adapter });
 
 type PlaintextField = "accessToken" | "refreshToken";
 
@@ -50,7 +39,7 @@ function plaintextFields(account: {
   return fields;
 }
 
-async function main() {
+await withScript("backfill-oauth-token-encryption", async (prisma) => {
   const accounts = await prisma.account.findMany({
     where: { providerId: "google" },
     select: { id: true, accessToken: true, refreshToken: true },
@@ -89,11 +78,4 @@ async function main() {
     console.log(`   再暗号化した account:      ${migratedAccounts}`);
   }
   console.log("");
-
-  await prisma.$disconnect();
-}
-
-main().catch((error: unknown) => {
-  console.error("❌ エラー:", error);
-  process.exit(1);
 });

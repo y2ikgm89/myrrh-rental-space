@@ -2,7 +2,7 @@ import "server-only";
 
 import { clonePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
-import type { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -295,18 +295,26 @@ export async function reorderPageSectionsCommand(input: {
   // page-hero は順序不変（-1 固定で先頭維持）
   const heroSection = existing.find((s) => s.type === "page-hero");
 
-  await prisma.$transaction(async (tx) => {
-    for (let i = 0; i < input.orderedIds.length; i++) {
-      const id = input.orderedIds[i];
-      if (id === undefined) continue;
-      // page-hero は -1 維持
-      if (heroSection && id === heroSection.id) {
-        await tx.section.update({ where: { id }, data: { order: -1 } });
-        continue;
-      }
-      await tx.section.update({ where: { id }, data: { order: i } });
-    }
-  });
+  // 単一 SQL の CASE WHEN で一括更新（N 回の UPDATE ループを廃止）。
+  // PostgreSQL は CASE 式の引数を順序評価するため、id ごとの分岐が成立する。
+  // page-hero は -1 固定、それ以外は配列インデックス。
+  const cases: Prisma.Sql[] = [];
+  const ids: Prisma.Sql[] = [];
+  for (let i = 0; i < input.orderedIds.length; i++) {
+    const id = input.orderedIds[i];
+    if (id === undefined) continue;
+    const nextOrder = heroSection && id === heroSection.id ? -1 : i;
+    cases.push(Prisma.sql`WHEN ${id}::uuid THEN ${nextOrder}`);
+    ids.push(Prisma.sql`${id}::uuid`);
+  }
+
+  if (cases.length > 0) {
+    await prisma.$executeRaw`
+      UPDATE "sections"
+      SET "order" = CASE "id" ${Prisma.join(cases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
+  }
 
   return {
     count: input.orderedIds.length,

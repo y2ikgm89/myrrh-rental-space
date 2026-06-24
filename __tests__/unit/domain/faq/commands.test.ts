@@ -116,6 +116,11 @@ const mockTransaction = mock<(argOrCallback: unknown) => Promise<unknown>>(
   },
 );
 
+// $executeRaw tagged template の呼び出しを記録する（reorder 単一 SQL 化の検証用）
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
+
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
@@ -141,8 +146,43 @@ mock.module("@/shared/db/prisma", () => ({
       findMany: mockFaqItemFindMany,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
+
+// Prisma.sql / Prisma.join / Prisma.raw を結合済み文字列に展開するスタブ
+mock.module("@generated/prisma/client", () => {
+  type SqlFragment = { __sql: string; __values: unknown[] };
+  const sql = (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): SqlFragment => {
+    let combined = "";
+    for (let i = 0; i < strings.length; i++) {
+      combined += strings[i];
+      if (i < values.length) {
+        const v = values[i] as SqlFragment | unknown;
+        if (v && typeof v === "object" && "__sql" in (v as object)) {
+          combined += (v as SqlFragment).__sql;
+        } else {
+          combined += `$${i + 1}`;
+        }
+      }
+    }
+    return { __sql: combined, __values: values };
+  };
+  return {
+    Prisma: {
+      sql,
+      join: (parts: SqlFragment[], separator = ","): SqlFragment => ({
+        __sql: parts.map((p) => p.__sql).join(separator),
+        __values: parts.flatMap((p) => p.__values),
+      }),
+      raw: (s: string): SqlFragment => ({ __sql: s, __values: [] }),
+      JsonNull: "JsonNull",
+    },
+  };
+});
 
 mock.module("@/shared/lib/serialize", () => ({
   omitUndefined: mock(<T extends Record<string, unknown>>(obj: T): T => {
@@ -501,48 +541,44 @@ describe("reorderFaqCategories", () => {
   beforeEach(() => {
     mockFaqCategoryUpdate.mockReset();
     mockFaqCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
-    // mockTransaction は interactive callback をそのまま実行するデフォルト実装
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
-    test("複数 ID を渡すと update が 3 回呼ばれる（interactive transaction）", async () => {
+    test("複数 ID を渡すと CASE WHEN 単一 SQL で更新される", async () => {
       await reorderFaqCategories(["cat-1", "cat-2", "cat-3"]);
 
-      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(3);
+      expect(mockFaqCategoryUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
     });
 
-    test("各カテゴリが配列インデックス順で update される", async () => {
+    test("生成 SQL は faq_categories / CASE / deletedAt を含む", async () => {
       await reorderFaqCategories(["cat-a", "cat-b"]);
 
-      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(2);
-      expect(mockFaqCategoryUpdate).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({
-          where: { id: "cat-a", deletedAt: null },
-          data: { order: 0 },
-        }),
-      );
-      expect(mockFaqCategoryUpdate).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          where: { id: "cat-b", deletedAt: null },
-          data: { order: 1 },
-        }),
-      );
+      const call = mockExecuteRaw.mock.calls[0];
+      // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
+      const sql =
+        (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+      expect(sql).toContain("faq_categories");
+      expect(sql).toContain("order");
+      expect(sql).toContain("CASE");
+      expect(sql).toContain("deletedAt");
     });
   });
 
   describe("エッジケース", () => {
-    test("空配列を渡した場合 update が呼ばれない", async () => {
+    test("空配列を渡した場合 SQL が実行されない", async () => {
       await reorderFaqCategories([]);
 
       expect(mockFaqCategoryUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
 
     test("1 件の配列を渡しても正常に動作する", async () => {
       await reorderFaqCategories(["cat-1"]);
 
-      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -792,33 +828,29 @@ describe("reorderFaqItems", () => {
     mockFaqItemUpdate.mockReset();
     mockFaqCategoryFindFirst.mockResolvedValue({ id: CATEGORY_ID });
     mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
-    test("複数 ID を渡すと update が ID 数分呼ばれる", async () => {
+    test("複数 ID を渡すと CASE WHEN 単一 SQL で更新される", async () => {
       await reorderFaqItems(CATEGORY_ID, ["item-1", "item-2", "item-3"]);
 
-      expect(mockFaqItemUpdate).toHaveBeenCalledTimes(3);
+      expect(mockFaqItemUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
     });
 
-    test("各質問が配列インデックス順で update される", async () => {
+    test("生成 SQL は faq_items / categoryId / CASE / deletedAt を含む", async () => {
       await reorderFaqItems(CATEGORY_ID, ["item-a", "item-b"]);
 
-      expect(mockFaqItemUpdate).toHaveBeenCalledTimes(2);
-      expect(mockFaqItemUpdate).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({
-          where: { id: "item-a", deletedAt: null },
-          data: { order: 0, categoryId: CATEGORY_ID },
-        }),
-      );
-      expect(mockFaqItemUpdate).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          where: { id: "item-b", deletedAt: null },
-          data: { order: 1, categoryId: CATEGORY_ID },
-        }),
-      );
+      const call = mockExecuteRaw.mock.calls[0];
+      // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
+      const sql =
+        (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+      expect(sql).toContain("faq_items");
+      expect(sql).toContain("categoryId");
+      expect(sql).toContain("CASE");
+      expect(sql).toContain("deletedAt");
     });
   });
 
@@ -834,21 +866,23 @@ describe("reorderFaqItems", () => {
       });
     });
 
-    test("カテゴリが見つからない場合 update が呼ばれない", async () => {
+    test("カテゴリが見つからない場合 SQL が実行されない", async () => {
       mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(reorderFaqItems("non-existent", ["item-1"])).rejects.toThrow(
         DomainError,
       );
       expect(mockFaqItemUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 
   describe("エッジケース", () => {
-    test("空配列を渡した場合 update が呼ばれない", async () => {
+    test("空配列を渡した場合 SQL が実行されない", async () => {
       await reorderFaqItems(CATEGORY_ID, []);
 
       expect(mockFaqItemUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
 
     test("カテゴリは存在するが空配列の場合は正常終了する", async () => {
