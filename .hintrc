@@ -4,6 +4,14 @@
     {
       "domain": ".*\\/cdn-cgi\\/.*",
       "hints": ["http-cache"]
+    },
+    {
+      "domain": "chrome-extension://.*",
+      "hints": ["*"]
+    },
+    {
+      "domain": "static.cloudflareinsights.com",
+      "hints": ["*"]
     }
   ]
 }
