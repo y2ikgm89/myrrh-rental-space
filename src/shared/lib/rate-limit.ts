@@ -210,18 +210,55 @@ export const cancelByReservationRateLimiter = createRateLimiter({
 });
 
 /**
- * パス名に基づいて適切なレートリミッターを選択しチェックする
+ * Better Auth の「読み取り専用」エンドポイント。
+ * get-session / list-sessions / list-accounts は credential を介さない参照系のため、
+ * authMutationRateLimiter（20/15分）ではなく apiRateLimiter（100/分）で十分。
+ *
+ * Better Auth のエンドポイント命名は admin (`/api/auth/*`) / customer (`/api/customer-auth/*`)
+ * いずれも共通（basePath だけが異なる）ため、basePath を剥がした最終セグメントで判定する。
+ *
+ * @see https://www.better-auth.com/docs/concepts/api
+ */
+const BETTER_AUTH_READONLY_ENDPOINTS: ReadonlySet<string> = new Set([
+  "get-session",
+  "list-sessions",
+  "list-accounts",
+]);
+
+function isBetterAuthReadOnlyPath(pathname: string, basePath: string): boolean {
+  const tail = pathname.slice(basePath.length).replace(/^\/+/, "");
+  // 末尾の query/fragment は middleware の pathname には含まれないため、
+  // 単純に先頭セグメントを比較すれば十分。
+  const [segment] = tail.split("/");
+  return segment ? BETTER_AUTH_READONLY_ENDPOINTS.has(segment) : false;
+}
+
+/**
+ * パス名に基づいて適切なレートリミッターを選択しチェックする。
+ *
+ * Better Auth の mutation 系（sign-in / sign-up / sign-out / reset-password /
+ * forget-password / change-password / change-email / verify-email /
+ * update-user 等）は credential stuffing / enumeration 緩和のため
+ * authMutationRateLimiter (20/15分) を使う。
+ *
+ * 顧客向け `/api/customer-auth/*`（公開サイトのソーシャル/パスワードログイン）と
+ * 管理向け `/api/auth/*`（管理画面ログイン）は basePath のみ異なる同一の Better Auth
+ * エンドポイント群なので、判定ロジックは対称に組む。
  */
 export async function checkRateLimit(
   pathname: string,
   clientIp: string,
 ): Promise<RateLimitResult> {
   if (pathname.startsWith("/api/auth")) {
-    // get-session は読み取り専用 — apiRateLimiter（100/分）で十分
-    if (pathname === "/api/auth/get-session") {
+    if (isBetterAuthReadOnlyPath(pathname, "/api/auth")) {
       return apiRateLimiter.check(clientIp);
     }
-    // sign-in/sign-up/sign-out 等の mutation — ブルートフォース対策
+    return authMutationRateLimiter.check(clientIp);
+  }
+  if (pathname.startsWith("/api/customer-auth")) {
+    if (isBetterAuthReadOnlyPath(pathname, "/api/customer-auth")) {
+      return apiRateLimiter.check(clientIp);
+    }
     return authMutationRateLimiter.check(clientIp);
   }
   if (pathname.startsWith("/api/admin/login-tokens")) {
