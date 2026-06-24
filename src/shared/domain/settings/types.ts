@@ -161,13 +161,6 @@ export type DiscountSettingsData = {
   showOriginalPrice: boolean;
 };
 
-export type RobotsTxtData = {
-  robotsTxtEnabled: boolean;
-  robotsTxtCustom: string | null;
-  defaultRobotsTxt: string;
-  warnings: string[];
-};
-
 export type ICalTokenWithRelations = {
   id: string;
   token: string;

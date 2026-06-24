@@ -138,37 +138,3 @@ export type FeatureModulesSettingsInput = z.infer<
 
 // Re-export from validations for sidebar
 export { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
-
-// robots.txt
-
-export const robotsTxtSettingsSchema = z.object({
-  robotsTxtEnabled: z.boolean(),
-  robotsTxtCustom: z
-    .string()
-    .max(10000, { error: "robots.txtは10000文字以内で入力してください" })
-    .nullable(),
-});
-
-export type RobotsTxtSettingsInput = z.infer<typeof robotsTxtSettingsSchema>;
-
-export function checkRobotsTxtWarnings(content: string): string[] {
-  const warnings: string[] = [];
-  const lines = content.split("\n").map((line) => line.trim().toLowerCase());
-
-  let hasWildcardUserAgent = false;
-  for (const line of lines) {
-    if (line.startsWith("user-agent:") && line.includes("*")) {
-      hasWildcardUserAgent = true;
-    }
-    if (hasWildcardUserAgent && line === "disallow: /") {
-      warnings.push("この設定はサイト全体が検索結果から除外されます");
-      break;
-    }
-  }
-
-  if (!lines.some((line) => line.startsWith("sitemap:"))) {
-    warnings.push("Sitemapが指定されていません（推奨）");
-  }
-
-  return warnings;
-}

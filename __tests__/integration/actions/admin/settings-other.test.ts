@@ -9,7 +9,6 @@
  * - reservationSettingsSchema（予約設定）
  * - announcementBarCarouselSettingsSchema（お知らせバーカルーセル設定）
  * - sidebarSettingsSchema（サイドバー設定）
- * - robotsTxtSettingsSchema（robots.txt設定）
  */
 
 import { describe, test, expect } from "bun:test";
@@ -74,14 +73,6 @@ const announcementBarCarouselSettingsSchema = z.object({
   announcementBarSticky: z.boolean(),
 });
 
-const robotsTxtSettingsSchema = z.object({
-  robotsTxtEnabled: z.boolean(),
-  robotsTxtCustom: z
-    .string()
-    .max(10000, { error: "robots.txtは10000文字以内で入力してください" })
-    .nullable(),
-});
-
 // =============================================================================
 // テストデータ
 // =============================================================================
@@ -130,12 +121,6 @@ const VALID_SIDEBAR_INPUT = {
   sidebarRecentCount: 5,
   sidebarPopularCount: 5,
   sidebarTocEnabled: true,
-};
-
-const VALID_ROBOTS_TXT_INPUT = {
-  robotsTxtEnabled: true,
-  robotsTxtCustom:
-    "User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml",
 };
 
 // =============================================================================
@@ -680,47 +665,6 @@ describe("Settings Other Admin Action Integration", () => {
             { type: "search", enabled: "true" },
             ...DEFAULT_SIDEBAR_WIDGETS.slice(1),
           ],
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  // ===========================================================================
-  // robotsTxtSettingsSchema
-  // ===========================================================================
-
-  describe("robotsTxtSettingsSchema バリデーション", () => {
-    describe("正常系", () => {
-      test("有効なデータはバリデーション通過", () => {
-        const result = robotsTxtSettingsSchema.safeParse(
-          VALID_ROBOTS_TXT_INPUT,
-        );
-        expect(result.success).toBe(true);
-      });
-
-      test("robotsTxtCustom nullはOK", () => {
-        const result = robotsTxtSettingsSchema.safeParse({
-          robotsTxtEnabled: false,
-          robotsTxtCustom: null,
-        });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("robotsTxtCustom", () => {
-      test("10000文字はOK", () => {
-        const result = robotsTxtSettingsSchema.safeParse({
-          ...VALID_ROBOTS_TXT_INPUT,
-          robotsTxtCustom: "a".repeat(10000),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("10001文字はエラー", () => {
-        const result = robotsTxtSettingsSchema.safeParse({
-          ...VALID_ROBOTS_TXT_INPUT,
-          robotsTxtCustom: "a".repeat(10001),
         });
         expect(result.success).toBe(false);
       });

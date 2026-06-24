@@ -64,7 +64,6 @@ export const CDN_CACHE_TAGS = {
   EVENT: asCdnTag("event-v1"),
   FAQ: asCdnTag("faq-v1"),
   TERMS_DETAIL: asCdnTag("terms-detail-v1"),
-  ROBOTS_TXT: asCdnTag("robots-txt-v1"),
 
   // --- BlogLayout sidebar ---
   SIDEBAR_DATA: asCdnTag("sidebar-data-v1"),
@@ -149,7 +148,6 @@ export const NEXTJS_TAG_TO_CDN_TAG = {
   [CACHE_TAGS.EVENTS]: CDN_CACHE_TAGS.EVENT,
   [CACHE_TAGS.FAQ]: CDN_CACHE_TAGS.FAQ,
   [CACHE_TAGS.TERMS]: CDN_CACHE_TAGS.TERMS_DETAIL,
-  [CACHE_TAGS.ROBOTS_TXT]: CDN_CACHE_TAGS.ROBOTS_TXT,
 
   // Admin-only (skipCdnPurge:true callers; mapping exists for type-cleanliness)
   [CACHE_TAGS.INTEGRATION_SETTINGS]: CDN_CACHE_TAGS.INTEGRATION_SETTINGS,

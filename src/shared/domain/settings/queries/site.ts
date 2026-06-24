@@ -171,29 +171,6 @@ export async function getMaintenanceSettings() {
   return toPlainObject(result);
 }
 
-export async function getPublicRobotsTxtSettings() {
-  "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.ROBOTS_TXT);
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          robotsTxtEnabled: true,
-          robotsTxtCustom: true,
-        },
-      }),
-    fallback: { robotsTxtEnabled: false, robotsTxtCustom: null },
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getPublicRobotsTxtSettings",
-  });
-
-  return toPlainObject(result);
-}
-
 export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);

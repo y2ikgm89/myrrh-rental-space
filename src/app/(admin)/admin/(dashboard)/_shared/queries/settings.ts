@@ -10,7 +10,6 @@ import type {
   BusinessTimeSlot,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
-  RobotsTxtData,
   SettingsData,
   TaxSettings,
 } from "@/shared/domain/settings/types";
@@ -25,7 +24,6 @@ export type {
   SettingsData,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
-  RobotsTxtData,
   TaxSettings,
 };
 
@@ -68,9 +66,4 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
 export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData | null> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getGoogleCalendarSettings();
-}
-
-export async function getRobotsTxtSettings(): Promise<RobotsTxtData> {
-  await requireAdminPermission("settings", "read");
-  return adminQueries.getRobotsTxtSettings();
 }

@@ -1352,12 +1352,6 @@ model Settings {
   instagramUsername         String?
   instagramAccountType     String?
 
-  // ==============================================
-  // robots.txt設定
-  // ==============================================
-  robotsTxtEnabled Boolean @default(false) // カスタムrobots.txtを使用
-  robotsTxtCustom  String? @db.Text // カスタムrobots.txt内容
-
   // Mypage Deadline Settings（マイページ操作期限）
   cancellationDeadlineHours  Int @default(24) // キャンセル可能期限（時間前）
   modificationDeadlineHours  Int @default(24) // 変更可能期限（時間前）

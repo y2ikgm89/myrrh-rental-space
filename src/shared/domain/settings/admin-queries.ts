@@ -12,7 +12,6 @@ import type {
   GoogleCalendarWebhookState,
   ICalFeedSettingsData,
   ICalTokenWithRelations,
-  RobotsTxtData,
   SettingsData,
   TaxSettings,
   TwoWaySyncSettingsData,
@@ -29,11 +28,6 @@ import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
-import {
-  DEFAULT_ROBOTS_TXT,
-  checkRobotsTxtWarnings,
-} from "@/shared/domain/settings/robots-txt";
-
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
@@ -363,24 +357,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
 
 export async function getPublicTaxSettings(): Promise<TaxSettings> {
   return getTaxSettings();
-}
-
-export async function getRobotsTxtSettings(): Promise<RobotsTxtData> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      robotsTxtEnabled: true,
-      robotsTxtCustom: true,
-    },
-  });
-
-  const robotsTxtCustom = settings?.robotsTxtCustom ?? null;
-  return {
-    robotsTxtEnabled: settings?.robotsTxtEnabled ?? false,
-    robotsTxtCustom,
-    defaultRobotsTxt: DEFAULT_ROBOTS_TXT,
-    warnings: robotsTxtCustom ? checkRobotsTxtWarnings(robotsTxtCustom) : [],
-  };
 }
 
 export async function getEventImportSettings(): Promise<{
