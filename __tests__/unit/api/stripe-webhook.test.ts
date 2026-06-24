@@ -21,13 +21,15 @@ const mockGetStripeSettings = mock<
 >();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
-// Stripe Client — `Stripe.Event` を返却型に固定して silent contract drift を検知
+// Stripe Client — `Stripe.Event` を返却型に固定して silent contract drift を検知。
+// Bun runtime は SubtleCryptoProvider (async-only) を選択するため
+// route handler は `await constructEventAsync` を使用する。mock 型も Promise 化。
 const mockConstructEvent =
-  mock<(body: string, sig: string, secret: string) => Stripe.Event>();
+  mock<(body: string, sig: string, secret: string) => Promise<Stripe.Event>>();
 const mockGetStripeClient = mock<
   () => Promise<{
     client: {
-      webhooks: { constructEvent: typeof mockConstructEvent };
+      webhooks: { constructEventAsync: typeof mockConstructEvent };
     } | null;
   }>
 >();
@@ -322,7 +324,7 @@ describe("POST /api/webhooks/stripe", () => {
     mockGetStripeClient.mockResolvedValue({
       client: {
         webhooks: {
-          constructEvent: mockConstructEvent,
+          constructEventAsync: mockConstructEvent,
         },
       },
     });
@@ -352,10 +354,8 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockConstructEvent).not.toHaveBeenCalled();
   });
 
-  test("署名検証失敗（constructEvent 例外）→ 400", async () => {
-    mockConstructEvent.mockImplementation(() => {
-      throw new Error("Invalid signature");
-    });
+  test("署名検証失敗（constructEventAsync rejection）→ 400", async () => {
+    mockConstructEvent.mockRejectedValue(new Error("Invalid signature"));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { error: string };
@@ -423,7 +423,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("checkout.session.completed (paid) → fulfill + キャッシュ無効化", async () => {
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -449,7 +449,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("checkout.session.completed (unpaid) → PI ID のみ保存", async () => {
     const event = makeSessionCompletedEvent("unpaid", "pi-456");
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -479,7 +479,7 @@ describe("POST /api/webhooks/stripe", () => {
     mockClaimReservationAsPaid.mockResolvedValueOnce(null);
 
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -509,7 +509,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
     mockClaimReservationAsPaid.mockResolvedValueOnce({
       ...DEFAULT_RESERVATION,
       id: "res-456",
@@ -543,7 +543,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -570,7 +570,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -595,7 +595,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
 
@@ -611,7 +611,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("charge.refunded → REFUNDED", async () => {
     const event = makeChargeRefundedEvent("pi-refund-123");
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
     mockFindReservationByPaymentIntent.mockResolvedValue({
       id: "res-ref-1",
       paymentStatus: "PAID",
@@ -631,7 +631,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("べき等性: charge.refunded で既に REFUNDED → claim が false で cache invalidate スキップ", async () => {
     const event = makeChargeRefundedEvent("pi-refund-123");
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
     mockFindReservationByPaymentIntent.mockResolvedValue({
       id: "res-ref-1",
       paymentStatus: "REFUNDED",
@@ -648,7 +648,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("charge.refunded で payment_intent が null → ログのみ、200 を返す", async () => {
     const event = makeChargeRefundedEvent(null);
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -661,7 +661,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("charge.refunded で予約が見つからない → ログのみ、200 を返す", async () => {
     const event = makeChargeRefundedEvent("pi-not-found");
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
     mockFindReservationByPaymentIntent.mockResolvedValue(null);
 
     const response = await POST(makeRequest("body"));
@@ -682,7 +682,7 @@ describe("POST /api/webhooks/stripe", () => {
       type: "payment_intent.created",
       data: { object: {} },
     };
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -710,7 +710,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockReturnValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { received: boolean };
@@ -776,15 +776,15 @@ describe("POST /api/webhooks/stripe", () => {
         return `decrypted-${value}`;
       });
 
-      // 実 constructEvent を `mockConstructEvent` 経由で配線
-      // (signature 検証は実 SDK が実行する)
+      // 実 constructEventAsync を `mockConstructEvent` 経由で配線
+      // (signature 検証は実 SDK が実行する。Bun SubtleCrypto 対応で async 必須)
       mockConstructEvent.mockImplementation((body, sig, secret) =>
-        realStripe.webhooks.constructEvent(body, sig, secret),
+        realStripe.webhooks.constructEventAsync(body, sig, secret),
       );
 
       mockGetStripeClient.mockResolvedValue({
         client: {
-          webhooks: { constructEvent: mockConstructEvent },
+          webhooks: { constructEventAsync: mockConstructEvent },
         },
       });
     }

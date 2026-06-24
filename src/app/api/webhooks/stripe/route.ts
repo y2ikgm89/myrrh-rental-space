@@ -96,7 +96,15 @@ export async function POST(request: Request) {
 
     let event: Stripe.Event;
     try {
-      event = client.webhooks.constructEvent(body, signature, webhookSecret);
+      // Bun runtime は WebCrypto のみで SubtleCryptoProvider (async-only) を選択するため、
+      // sync 版 constructEvent は "SubtleCryptoProvider cannot be used in a synchronous context"
+      // で throw する。Stripe SDK 公式の async 版を使用する。
+      // 公式: https://github.com/stripe/stripe-node — "Use `await constructEventAsync(...)`"
+      event = await client.webhooks.constructEventAsync(
+        body,
+        signature,
+        webhookSecret,
+      );
     } catch (verifyError) {
       logError(normalizeError(verifyError), {
         category: ErrorCategory.VALIDATION,
