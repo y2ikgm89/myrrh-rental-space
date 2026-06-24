@@ -1917,4 +1917,29 @@ describe("next.config Cache-Tag emission contract", () => {
     // canonical: public, max-age=0, must-revalidate, s-maxage=..., stale-while-revalidate=...
     expect(cc?.value).toMatch(/^public, max-age=0, must-revalidate, s-maxage=/);
   });
+
+  test("/sitemap.xml emits SITEMAP Cache-Tag only (purge target for site-wide co-purge)", async () => {
+    const headers = await getHeaders();
+    const entry = headers.find((h) => h.source === "/sitemap.xml");
+    expect(entry, "/sitemap.xml entry must exist").toBeDefined();
+    const tag = entry!.headers.find((h) => h.key === "Cache-Tag");
+    expect(tag?.value).toBe("sitemap-v1");
+    // Cache-Control inherited from blanket public (no per-source override).
+    const cc = entry!.headers.find((h) => h.key === "Cache-Control");
+    expect(cc).toBeUndefined();
+  });
+
+  test("/sitemap.xml SITEMAP tag is NOT in any other public source (site-wide invalidation must only purge sitemap)", async () => {
+    const headers = await getHeaders();
+    const SITEMAP_TAG = "sitemap-v1";
+    for (const entry of headers) {
+      if (entry.source === "/sitemap.xml") continue;
+      const tag = entry.headers.find((h) => h.key === "Cache-Tag");
+      if (!tag) continue;
+      expect(
+        tag.value.split(","),
+        `${entry.source} must NOT contain SITEMAP tag`,
+      ).not.toContain(SITEMAP_TAG);
+    }
+  });
 });

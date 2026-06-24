@@ -59,7 +59,7 @@ describe("invalidateSiteWideCache (Server Action)", () => {
     expect(mockUpdateTag).toHaveBeenCalledWith("layout-settings");
   });
 
-  test("multi-tag input queues all CDN-mapped tags into the batcher", () => {
+  test("multi-tag input queues all CDN-mapped tags into the batcher (with SITEMAP co-purge)", () => {
     invalidateSiteWideCache([
       CACHE_TAGS.LAYOUT_SETTINGS,
       CACHE_TAGS.NAVIGATION,
@@ -67,11 +67,20 @@ describe("invalidateSiteWideCache (Server Action)", () => {
     expect(mockUpdateTag).toHaveBeenCalledTimes(2);
     expect(mockUpdateTag).toHaveBeenNthCalledWith(1, "layout-settings");
     expect(mockUpdateTag).toHaveBeenNthCalledWith(2, "navigation");
+    // Every site-wide invalidation auto-appends SITEMAP so /sitemap.xml is
+    // purged immediately (Google discovery latency collapse).
     expect(mockQueueTagPurge).toHaveBeenCalledTimes(1);
     expect(mockQueueTagPurge).toHaveBeenCalledWith(
       "layout-v1",
       "navigation-v1",
+      "sitemap-v1",
     );
+  });
+
+  test("zero-mapped input still purges SITEMAP (sitemap is the universal co-purge target)", () => {
+    invalidateSiteWideCache("posts-some-slug"); // per-detail tag, no CDN mapping
+    expect(mockQueueTagPurge).toHaveBeenCalledTimes(1);
+    expect(mockQueueTagPurge).toHaveBeenCalledWith("sitemap-v1");
   });
 
   test("skipCdnPurge:true skips queueTagPurge", () => {
