@@ -62,13 +62,14 @@ describe("getSitemapContentData", () => {
     mockTermsFindMany.mockReset();
   });
 
-  test("8 model 全て空でも { spaces, news, posts, postCategories, postTags, customPages, events, terms } を返す", async () => {
+  test("8 collection + systemPageLastModified が空でも空 shape を返す", async () => {
     mockSpaceFindMany.mockResolvedValueOnce([]);
     mockNewsFindMany.mockResolvedValueOnce([]);
     mockPostFindMany.mockResolvedValueOnce([]);
     mockPostCategoryFindMany.mockResolvedValueOnce([]);
     mockPostTagFindMany.mockResolvedValueOnce([]);
-    mockPageFindMany.mockResolvedValueOnce([]);
+    // customPages + systemPageLastModified の 2 回呼ばれる
+    mockPageFindMany.mockResolvedValue([]);
     mockEventFindMany.mockResolvedValueOnce([]);
     mockTermsFindMany.mockResolvedValueOnce([]);
 
@@ -83,6 +84,7 @@ describe("getSitemapContentData", () => {
       customPages: [],
       events: [],
       terms: [],
+      systemPageLastModified: new Map(),
     });
   });
 
@@ -177,5 +179,42 @@ describe("getSitemapContentData", () => {
 
     expect(result.spaces).toEqual([{ slug: "studio-a", updatedAt: updated }]);
     expect(result.posts[0]?.category?.slug).toBe("news");
+  });
+
+  test("systemPageLastModified は Page.updatedAt と Section.updatedAt の max", async () => {
+    const pageUpdated = new Date("2026-01-01T00:00:00Z");
+    const sectionUpdated = new Date("2026-06-15T00:00:00Z");
+    // 1 回目 = customPages (isSystemPage: false) → []
+    // 2 回目 = system page (isSystemPage: true) → 2 row
+    mockPageFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        slug: "home",
+        updatedAt: pageUpdated,
+        sections: [{ updatedAt: sectionUpdated }],
+      },
+      {
+        slug: "about",
+        updatedAt: pageUpdated,
+        sections: [],
+      },
+    ]);
+
+    const result = await getSitemapContentData();
+    expect(result.systemPageLastModified.get("home")).toEqual(sectionUpdated);
+    expect(result.systemPageLastModified.get("about")).toEqual(pageUpdated);
+  });
+
+  test("1 collection の Promise reject でも他 collection は通常通り返す（fail-soft）", async () => {
+    mockSpaceFindMany.mockRejectedValueOnce(new Error("db connection lost"));
+    mockNewsFindMany.mockResolvedValueOnce([
+      { slug: "n1", updatedAt: new Date("2026-06-01T00:00:00Z") },
+    ]);
+    mockPageFindMany.mockResolvedValue([]);
+
+    const result = await getSitemapContentData();
+    expect(result.spaces).toEqual([]);
+    expect(result.news).toEqual([
+      { slug: "n1", updatedAt: new Date("2026-06-01T00:00:00Z") },
+    ]);
   });
 });

@@ -1,10 +1,16 @@
 /**
  * XMLサイトマップ生成
  *
- * Google公式ガイドラインに準拠:
- * - priority/changefreq は Google が無視するため不使用
- * - lastmod は実際のコンテンツ更新日を使用
- * - 正規化された絶対URLのみ含める
+ * 設計方針:
+ * - priority/changefreq は Google が無視するため emit しない
+ * - lastmod は実コンテンツ駆動（new Date() は使わない）— Google の「if your page
+ *   changed 7 years ago, but you're telling us in the lastmod element that it
+ *   changed yesterday, eventually we're not going to believe you anymore」
+ *   反パターンを回避
+ * - 空 collection に対する listing entry は emit しない（fake lastmod で advertise しない）
+ * - 全 slug は `encodeURIComponent` で escape — Next.js sitemap は <loc> を auto-encode しない
+ * - 部分失敗（DB 一部 query 失敗）でも残りの collection は通常通り emit（fail-soft）
+ * - catastrophic 失敗時は STATIC_PAGES のみ返す（Googlebot に 500 を返さない）
  *
  * @see https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
@@ -22,12 +28,21 @@ import {
   getFeatureFilterContext,
   isUrlDisabled,
 } from "@/shared/lib/features/check";
+import { isReservedPath } from "@/shared/lib/slug-validation";
+import { logger } from "@/shared/lib/logger";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
+
+interface StaticPageDefinition {
+  /** sitemap に出す URL path（先頭スラッシュあり） */
+  readonly path: string;
+  /** Page table の slug（home → "/", それ以外は path.slice(1) と一致） */
+  readonly slug: string;
+}
 
 // =============================================================================
 // Constants
@@ -36,31 +51,75 @@ type SitemapEntry = MetadataRoute.Sitemap[number];
 const BASE_URL = getBaseUrl();
 
 /**
- * 静的ページの定義
+ * 静的システムページ定義。
  *
- * lastModified は設定で管理されないため、
- * ビルド時の日付を使用（実質的に変更頻度が低いページ）
+ * - lastModified は Page.updatedAt と各 Section.updatedAt の max を集約（queries.ts）
+ * - DB row 不在 / isPublished=false の場合は sitemap から省略（fake lastmod を避けるため）
+ * - リスト維持は __tests__/unit/app/sitemap-static-pages.test.ts の drift gate で強制
+ *
+ * `feature module` 単位の OFF（access/contact/faq/reservation）は `isUrlDisabled` で
+ * filter。`/`（home）/`/about`/`/terms` は法的・基幹ルートのため常時 emit。
  */
-const STATIC_PAGES = [
-  "/",
-  "/about",
-  "/access",
-  "/contact",
-  "/faq",
-  "/reservation",
-  "/terms",
-] as const;
+export const STATIC_PAGES = [
+  { path: "/", slug: "home" },
+  { path: "/about", slug: "about" },
+  { path: "/access", slug: "access" },
+  { path: "/contact", slug: "contact" },
+  { path: "/faq", slug: "faq" },
+  { path: "/reservation", slug: "reservation" },
+  { path: "/terms", slug: "terms" },
+] as const satisfies readonly StaticPageDefinition[];
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** 配列が空なら null、それ以外は最大 updatedAt を返す（implicit sort 依存を回避）。 */
+function maxUpdatedAt<T extends { readonly updatedAt: Date }>(
+  rows: readonly T[],
+): Date | null {
+  let max: Date | null = null;
+  for (const row of rows) {
+    if (max === null || row.updatedAt > max) max = row.updatedAt;
+  }
+  return max;
+}
+
+/** path 中の slug 部分のみを encode（先頭の "/" は維持）。 */
+function encodePath(path: string): string {
+  return path
+    .split("/")
+    .map((segment) => (segment === "" ? "" : encodeURIComponent(segment)))
+    .join("/");
+}
+
+/** STATIC_PAGES 専用フォールバック — catastrophic 失敗時に最低限の sitemap を返す。 */
+function fallbackStaticSitemap(): MetadataRoute.Sitemap {
+  return STATIC_PAGES.map(({ path }) => ({ url: `${BASE_URL}${path}` }));
+}
 
 // =============================================================================
 // Sitemap Generation
 // =============================================================================
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // 全データ / Feature filter を並列取得
-  const [content, featureCtx] = await Promise.all([
-    getSitemapContentData(),
-    getFeatureFilterContext(),
-  ]);
+  let content: Awaited<ReturnType<typeof getSitemapContentData>>;
+  let featureCtx: Awaited<ReturnType<typeof getFeatureFilterContext>>;
+  try {
+    [content, featureCtx] = await Promise.all([
+      getSitemapContentData(),
+      getFeatureFilterContext(),
+    ]);
+  } catch (error) {
+    logger.error(
+      "sitemap() catastrophic failure — returning STATIC_PAGES only",
+      {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
+    return fallbackStaticSitemap();
+  }
+
   const {
     spaces,
     news,
@@ -70,44 +129,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     customPages,
     events,
     terms,
+    systemPageLastModified,
   } = content;
-  const { enabled, disabledRoutes } = featureCtx;
-
-  // 各コンテンツタイプの最新更新日を取得
-  const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date();
-  const latestNewsUpdate = news[0]?.updatedAt ?? new Date();
-  const latestPostUpdate = posts[0]?.updatedAt ?? new Date();
-  const latestEventUpdate = events[0]?.updatedAt ?? new Date();
+  const { enabled, disabledRoutes, disabledPageSlugs } = featureCtx;
 
   const entries: SitemapEntry[] = [];
 
   // ==========================================================================
-  // 1. 静的ページ — disabled feature の publicRoutes を除外
+  // 1. 静的システムページ — feature gate（isUrlDisabled）と Page.updatedAt 駆動
   // ==========================================================================
-  for (const path of STATIC_PAGES) {
+  for (const { path, slug } of STATIC_PAGES) {
     if (isUrlDisabled(path, disabledRoutes)) continue;
-    entries.push({
-      url: `${BASE_URL}${path}`,
-      lastModified: new Date(),
-    });
+    const lastModified = systemPageLastModified.get(slug);
+    if (!lastModified) continue; // DB row 不在 / 非公開なら省略
+    entries.push({ url: `${BASE_URL}${path}`, lastModified });
   }
 
   // ==========================================================================
-  // 2. 一覧ページ（feature ON のもののみ追加）
+  // 2. listing ルート — feature ON ＋ 空 collection の場合は emit しない
   // ==========================================================================
-  if (enabled.has("spaces")) {
+  const latestSpaceUpdate = maxUpdatedAt(spaces);
+  const latestNewsUpdate = maxUpdatedAt(news);
+  const latestPostUpdate = maxUpdatedAt(posts);
+  const latestEventUpdate = maxUpdatedAt(events);
+
+  if (enabled.has("spaces") && latestSpaceUpdate) {
     entries.push({
       url: `${BASE_URL}/spaces`,
       lastModified: latestSpaceUpdate,
     });
   }
-  if (enabled.has("news")) {
+  if (enabled.has("news") && latestNewsUpdate) {
     entries.push({ url: `${BASE_URL}/news`, lastModified: latestNewsUpdate });
   }
-  if (enabled.has("posts")) {
+  if (enabled.has("posts") && latestPostUpdate) {
     entries.push({ url: `${BASE_URL}/blog`, lastModified: latestPostUpdate });
   }
-  if (enabled.has("events")) {
+  if (enabled.has("events") && latestEventUpdate) {
     entries.push({
       url: `${BASE_URL}/events`,
       lastModified: latestEventUpdate,
@@ -120,7 +178,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("spaces")) {
     for (const space of spaces) {
       entries.push({
-        url: `${BASE_URL}/spaces/${space.slug}`,
+        url: `${BASE_URL}/spaces/${encodeURIComponent(space.slug)}`,
         lastModified: space.updatedAt,
       });
     }
@@ -128,7 +186,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("news")) {
     for (const item of news) {
       entries.push({
-        url: `${BASE_URL}/news/${item.slug}`,
+        url: `${BASE_URL}/news/${encodeURIComponent(item.slug)}`,
         lastModified: item.updatedAt,
       });
     }
@@ -136,19 +194,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("posts")) {
     for (const post of posts) {
       entries.push({
-        url: `${BASE_URL}${buildPostCanonicalPath(post)}`,
+        url: `${BASE_URL}${encodePath(buildPostCanonicalPath(post))}`,
         lastModified: post.updatedAt,
       });
     }
     for (const category of postCategories) {
       entries.push({
-        url: `${BASE_URL}${buildCategoryPath(category.slug)}`,
+        url: `${BASE_URL}${encodePath(buildCategoryPath(category.slug))}`,
         lastModified: category.updatedAt,
       });
     }
     for (const tag of postTags) {
       entries.push({
-        url: `${BASE_URL}${buildTagPath(tag.slug)}`,
+        url: `${BASE_URL}${encodePath(buildTagPath(tag.slug))}`,
         lastModified: tag.updatedAt,
       });
     }
@@ -159,25 +217,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // @see https://developers.google.com/search/docs/appearance/structured-data/event
     for (const event of events) {
       entries.push({
-        url: `${BASE_URL}/events/${event.slug}`,
+        url: `${BASE_URL}/events/${encodeURIComponent(event.slug)}`,
         lastModified: event.updatedAt,
       });
     }
   }
 
   // ==========================================================================
-  // カスタムページ / 規約 — feature gate 対象外（CMS-managed / 法的要件）
+  // カスタムページ — feature gate は disabledPageSlugs SSoT に従う
   // ==========================================================================
   for (const page of customPages) {
+    if (disabledPageSlugs.has(page.slug)) continue;
+    if (isReservedPath(page.slug)) continue; // 過去 data 防御（slug-validation 緩和時の保険）
     entries.push({
-      url: `${BASE_URL}/${page.slug}`,
+      url: `${BASE_URL}/${encodeURIComponent(page.slug)}`,
       lastModified: page.updatedAt,
     });
   }
+
+  // ==========================================================================
+  // 規約 — feature gate 対象外（CMS-managed / 法的要件）
+  // ==========================================================================
   for (const term of terms) {
     entries.push({
-      url: `${BASE_URL}/terms/${term.slug}`,
+      url: `${BASE_URL}/terms/${encodeURIComponent(term.slug)}`,
       lastModified: term.updatedAt,
+    });
+  }
+
+  // ==========================================================================
+  // 観測フック — Google 上限（50,000）の 90% 到達で警告
+  // ==========================================================================
+  if (entries.length > 45_000) {
+    logger.warn("sitemap entry count approaching Google 50,000 limit", {
+      entryCount: entries.length,
     });
   }
 

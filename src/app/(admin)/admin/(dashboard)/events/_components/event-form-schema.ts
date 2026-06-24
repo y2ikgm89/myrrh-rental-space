@@ -2,6 +2,7 @@ import { z } from "zod";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
+import { SLUG_REGEX } from "@/shared/lib/validations/params";
 
 /**
  * EventForm (conform) form schema
@@ -108,7 +109,11 @@ const eventFormBaseSchema = z.object({
   slug: z
     .string()
     .min(1, { error: "スラッグは必須です" })
-    .max(100, { error: "スラッグは100文字以内です" }),
+    .max(100, { error: "スラッグは100文字以内です" })
+    .regex(SLUG_REGEX, {
+      error:
+        "スラッグは小文字英数字とハイフンのみ使用できます（先頭/末尾/連続ハイフン禁止）",
+    }),
   /** Lexical EditorState JSON 文字列（hidden input transit） */
   descriptionJson: lexicalJsonSchema,
   /**

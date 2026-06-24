@@ -8,11 +8,21 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+/**
+ * Base URL は path concat (`${BASE_URL}${path}`) で 30+ 箇所に流入する SSoT 値。
+ * 末尾スラッシュは `//spaces` のようなダブルスラッシュ URL を sitemap / robots /
+ * OGP canonical / breadcrumb JSON-LD に焼き込み Google の canonical signal を分断する。
+ * Zod refine で build 時 fail-fast。
+ */
+const noTrailingSlash = z.url().refine((v) => !v.endsWith("/"), {
+  message: "must not end with trailing slash (paths are concatenated)",
+});
+
 export const clientEnv = createEnv({
   client: {
     // Base URLs
-    NEXT_PUBLIC_BASE_URL: z.url(),
-    NEXT_PUBLIC_APP_URL: z.url(),
+    NEXT_PUBLIC_BASE_URL: noTrailingSlash,
+    NEXT_PUBLIC_APP_URL: noTrailingSlash,
 
     // Turnstile (optional)
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
