@@ -33,6 +33,12 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
   getEmailDeliverySettings: mockGetEmailDeliverySettings,
 }));
 
+// Resend webhook suppression check (DB lookup) を素通しさせる:
+// 単体テストでは Customer.emailDeliveryStatus を null 固定で「未登録 = 送信許可」扱い。
+mock.module("@/shared/domain/customers/queries", () => ({
+  getCustomerEmailDeliveryStatusByEmail: () => Promise.resolve(null),
+}));
+
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 const { sendEmail } = await import("@/shared/lib/email/send");
 

@@ -75,9 +75,16 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
 
 mock.module("@/shared/lib/errors/server", () => ({
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
-  ErrorSeverity: { MEDIUM: "MEDIUM" },
+  ErrorSeverity: { MEDIUM: "MEDIUM", LOW: "LOW" },
   logError: mockLogError,
   normalizeError: mockNormalizeError,
+}));
+
+// Resend webhook suppression check (DB lookup) を素通しさせる:
+// 単体テストでは Customer.emailDeliveryStatus を null 固定で「未登録 = 送信許可」扱い。
+// suppression 挙動自体の検証は __tests__/integration/email/suppression.test.ts に分離 (本 PR の scope 外)。
+mock.module("@/shared/domain/customers/queries", () => ({
+  getCustomerEmailDeliveryStatusByEmail: () => Promise.resolve(null),
 }));
 
 // 3. テスト対象 import
