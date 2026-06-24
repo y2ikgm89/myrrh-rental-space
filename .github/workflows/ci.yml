@@ -38,6 +38,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+# Workflow-level の最小権限 default。
+# 個別 job (bundle-size-diff = pull-requests:write, visual-regression =
+# contents:write + pull-requests:write) は job-level permissions で override される。
+# 公式: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
+permissions:
+  contents: read
+
 env:
   # GitHub-hosted runner の Node デフォルト heap (~2GB) は大規模 monorepo の
   # `tsc --noEmit` や `next build` (TypeScript フェーズ) で不足する。
@@ -659,8 +666,9 @@ jobs:
       # preactjs/compressed-size-action:
       # base と head で build を実行し、指定 pattern のファイルサイズを gzip で比較
       # 参照: https://github.com/preactjs/compressed-size-action
+      # SHA 直 pin（公式 security best practice。tag force-push 攻撃対策）
       - name: Compressed size diff
-        uses: preactjs/compressed-size-action@v2
+        uses: preactjs/compressed-size-action@f322c295dde06a1cb7ccaef105732dd8a726d1d9 # v2.10.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           build-script: "build:skip-env"
