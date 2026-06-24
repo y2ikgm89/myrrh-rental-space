@@ -173,6 +173,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           onClick={goPrev}
           className={cn(
             "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="前のお知らせ"
@@ -242,6 +243,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           onClick={goNext}
           className={cn(
             "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="次のお知らせ"
@@ -259,6 +261,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           onClick={() => setIsPlaying((prev) => !prev)}
           className={cn(
             "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label={
@@ -281,6 +284,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         onClick={() => dismissBar(currentBar.id)}
         className={cn(
           "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
           !hasCustomText && "hover:bg-foreground/10",
         )}
         aria-label="閉じる"
