@@ -18,8 +18,23 @@
  */
 
 import type { Ref } from "react";
+import { preconnect } from "react-dom";
 import { detectVideoProvider } from "@/shared/lib/video/url-detect";
 import { cn } from "@/shared/lib/cn";
+
+/**
+ * `<video src={url}>` で R2 等の外部オリジン mp4 を直接配信する経路向けの preconnect。
+ * iframe provider (YouTube / Vimeo) は別ブラウジングコンテキストで socket pool が
+ * 共有されないため対象外（preconnect しても親 document の接続を子 iframe が再利用しない）。
+ * `<video>` は crossorigin 属性なし = no-cors fetch のため crossOrigin は付けない。
+ */
+function preconnectVideoOrigin(url: string): void {
+  try {
+    preconnect(new URL(url).origin);
+  } catch {
+    // URL parse 失敗時は no-op（admin 入力ミス / 相対 URL など）。
+  }
+}
 
 export type VideoPlayerVariant = "background" | "controls";
 
@@ -115,7 +130,11 @@ export function VideoPlayer({
     );
   }
 
-  // R2 self-host または任意 mp4 URL
+  // R2 self-host または任意 mp4 URL — ブラウザが直接フェッチするので preconnect で
+  // TCP + TLS handshake を先行。React 19 公式 API (`react-dom` preconnect) が render
+  // 時に `<link rel="preconnect">` を `<head>` へ自動 hoist。
+  preconnectVideoOrigin(url);
+
   if (variant === "background") {
     return (
       <video
