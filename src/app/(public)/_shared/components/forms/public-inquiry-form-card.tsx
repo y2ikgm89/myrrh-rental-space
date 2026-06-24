@@ -8,14 +8,14 @@ import {
   useForm,
   useInputControl,
 } from "@conform-to/react";
-import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
-import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 import { submitInquiry } from "@/public/actions/inquiry";
+import type { z } from "zod";
+import type { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
@@ -107,9 +107,11 @@ export function PublicInquiryFormCard({
   const initialCustomerType: CustomerType =
     defaults?.customerType ?? CustomerType.PERSONAL;
 
-  const [form, fields] = useForm({
+  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
+  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
+  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
+  const [form, fields] = useForm<z.input<typeof publicInquirySchema>>({
     id: "public-inquiry-form",
-    constraint: getZodConstraint(publicInquirySchema),
     lastResult,
     defaultValue: {
       customerType: initialCustomerType,
@@ -122,9 +124,6 @@ export function PublicInquiryFormCard({
       }),
       ...(defaults?.email !== undefined && { email: defaults.email }),
       ...(defaults?.subject !== undefined && { subject: defaults.subject }),
-    },
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: publicInquirySchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",

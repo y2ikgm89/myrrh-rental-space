@@ -8,12 +8,12 @@ import {
   useForm,
   useInputControl,
 } from "@conform-to/react";
-import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
-import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { updateProfileAction } from "../../_shared/actions/profile";
+import type { z } from "zod";
+import type { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -56,9 +56,11 @@ export function ProfileForm({
     undefined,
   );
 
-  const [form, fields] = useForm({
+  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
+  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
+  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
+  const [form, fields] = useForm<z.input<typeof customerProfileSchema>>({
     id: "profile-form",
-    constraint: getZodConstraint(customerProfileSchema),
     lastResult,
     defaultValue: {
       customerType: defaultValues.customerType,
@@ -66,9 +68,6 @@ export function ProfileForm({
       firstName: defaultValues.firstName,
       companyName: defaultValues.companyName,
       phoneNumber: defaultValues.phoneNumber,
-    },
-    onValidate({ formData }) {
-      return parseWithZod(formData, { schema: customerProfileSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
