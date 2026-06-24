@@ -1,33 +1,49 @@
 /**
  * Resend メールサービス モック
  *
- * Resend SDK v6+ の `{ data, error }` 返却シェイプと
- * `emails.send(payload, { idempotencyKey })` の 2 引数シグネチャに準拠。
+ * ## 型整合の方針
+ * 公式 Resend SDK (`resend`) の `CreateEmailOptions` / `CreateEmailResponse` を
+ * **直接 import** し、モック関数のパラメータ・戻り値型として再利用する。
+ *
+ * SDK の major bump（v6 で `{ data, error }` シェイプ確立 / `react?: ReactNode`、
+ * `idempotencyKey` を 2nd 引数 `CreateEmailRequestOptions` に切出 etc.）が起きたとき、
+ * 送信ヘルパの実装より **テストの mock factory が先に型エラーで落ちる**ことで
+ * silent contract drift を検知する。
+ *
+ * @see https://resend.com/docs/api-reference/emails/send-email
  */
 
 import { mock } from "bun:test";
+import type {
+  CreateEmailOptions,
+  CreateEmailRequestOptions,
+  CreateEmailResponse,
+} from "resend";
 
 // =============================================================================
-// Types
+// Types — Resend SDK 公式型のサブセット
 // =============================================================================
 
-export type MockEmailResponse = {
-  data: { id: string } | null;
-  error: { name: string; message: string } | null;
-};
+/**
+ * Resend SDK の `emails.send()` 返却型をそのまま採用。
+ * `{ data: { id } | null, error: ErrorResponse | null }`。
+ */
+export type MockEmailResponse = CreateEmailResponse;
 
-export interface MockEmail {
-  from: string;
-  to: string | string[];
-  subject: string;
-  html?: string;
-  react?: React.ReactElement;
-}
+/**
+ * Resend SDK の `emails.send()` ペイロード型をそのまま採用。
+ * `text` / `html` / `react` の排他 union（discriminated by content kind）が維持される。
+ */
+export type MockEmail = CreateEmailOptions;
 
-export type MockSendOptions = {
-  idempotencyKey?: string;
-};
+/**
+ * Resend SDK の `emails.send()` の 2nd 引数 `{ idempotencyKey? }`。
+ */
+export type MockSendOptions = CreateEmailRequestOptions;
 
+/**
+ * 送信ログ用: ペイロード + 任意の idempotencyKey を flatten した記録。
+ */
 export type MockEmailRecord = MockEmail & {
   idempotencyKey?: string;
 };
@@ -59,6 +75,7 @@ export const mockSendEmail = mock<
   return Promise.resolve({
     data: { id: `mock-email-${Date.now()}` },
     error: null,
+    headers: null,
   });
 });
 
@@ -105,7 +122,7 @@ export function findEmailTo(email: string): MockEmailRecord | undefined {
 export function findEmailBySubject(
   subject: string,
 ): MockEmailRecord | undefined {
-  return sentEmails.find((e) => e.subject.includes(subject));
+  return sentEmails.find((e) => e.subject?.includes(subject) ?? false);
 }
 
 /**
