@@ -57,7 +57,6 @@ import type { CSSProperties } from "react";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
-import { serverEnv } from "@/shared/lib/env/server";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import {
@@ -160,23 +159,6 @@ async function DynamicContent(): Promise<ReactElement> {
 }
 
 /**
- * R2 public bucket の origin（scheme + host[:port]）を抽出。
- * `R2_PUBLIC_URL` が path 付き（例 `https://cdn.example.com/bucket`）で設定されても
- * `<link rel=preconnect>` には origin のみ必要なため `new URL().origin` で正規化する。
- * env 未設定 / 不正 URL なら null を返し preconnect link を emit しない（CSP は
- * `img-src` に `mediaSource`（同じ origin）を許可済み・proxy.ts 参照）。
- */
-function getR2PublicOrigin(): string | null {
-  const publicUrl = serverEnv.R2_PUBLIC_URL;
-  if (!publicUrl) return null;
-  try {
-    return new URL(publicUrl).origin;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Head内の動的コンテンツ: Analytics設定による検索エンジン検証タグ
  *
  * `await connection()` 必須（defense-in-depth）: `getAnalyticsConfig()` は内部で
@@ -184,31 +166,27 @@ function getR2PublicOrigin(): string | null {
  * build prerender 経路で eager 評価される。現状は GA OFF 同士で結果一致で実害ゼロだが、
  * admin が GA / Bing / Search Console を有効化した瞬間に静的シェルが OFF を恒久 baking
  * する構造的同型違反になる。`connection()` で runtime resume を強制し予防。
+ *
+ * Resource hint (`<link rel="preconnect">` / dns-prefetch) は emit しない:
+ * - W3C / web.dev 公式: preconnect は実際にその origin へリクエストするとわかっている
+ *   page でだけ emit すべき。blanket emit は Lighthouse の "unused preconnect" 警告原因。
+ * - 本サイトの外部 origin 直接フェッチ箇所:
+ *   - R2 mp4 video (`<video src={r2-url}>`) → `video-player.tsx` で render 時に preconnect
+ *   - R2 SVG ロゴ (`<Image unoptimized>`) → `site-brand.tsx` で render 時に preconnect
+ *   - Cloudflare Turnstile (iframe) → `turnstile-widget.tsx` で render 時に preconnect
+ *   全て React 19 公式 `react-dom` preconnect API で consumer 側 emit、`<link>` は
+ *   React 19 の metadata hoisting で自動 `<head>` 移動。
+ * - 通常 R2 画像は `/_next/image` 経由（Next.js Image Optimizer がサーバー側で R2 取得・
+ *   `next-server.ts` の `fetchExternalImage`）でブラウザは R2 へ直接接続しないため preconnect 無効。
+ * - Stripe は公開フローで未使用、YouTube/Vimeo/Maps iframe は lazy load で below-fold、
+ *   Analytics は cookie consent 後の遅延ロードのため全て preconnect 対象外。
  */
 async function HeadContent(): Promise<ReactElement> {
   await connection();
   const config = await getAnalyticsConfig();
-  const r2Origin = getR2PublicOrigin();
 
   return (
     <>
-      {/* Preconnect hints for external resources */}
-      <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
-      <link rel="dns-prefetch" href="https://js.stripe.com" />
-
-      {/* R2 public origin: 画像配信の `unoptimized` 経路（admin upload された画像が
-          next/image 経由でもオリジンに直接ヒットする）に対する LCP 改善。preconnect で
-          TCP + TLS handshake を先行させ、dns-prefetch は preconnect 非対応ブラウザの fallback。
-          crossOrigin="anonymous" は画像が anonymous CORS で取得されるため必須（指定しないと
-          preconnect が credentialed 接続として確立され、実 fetch とは別 socket になり無効化）。
-          Next.js 公式 resource hints (`<link rel=preconnect>`)。 */}
-      {r2Origin && (
-        <>
-          <link rel="preconnect" href={r2Origin} crossOrigin="anonymous" />
-          <link rel="dns-prefetch" href={r2Origin} />
-        </>
-      )}
-
       {/* Google Search Console verification */}
       {config.googleSearchConsoleId && (
         <meta

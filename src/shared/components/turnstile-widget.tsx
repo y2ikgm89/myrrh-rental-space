@@ -17,6 +17,7 @@
  */
 
 import { type ReactElement, type Ref } from "react";
+import { preconnect } from "react-dom";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import {
   DEFAULT_TURNSTILE_APPEARANCE,
@@ -44,6 +45,12 @@ export function TurnstileWidget({
   ref,
 }: TurnstileWidgetProps): ReactElement | null {
   if (!siteKey) return null;
+
+  // Cloudflare Turnstile スクリプト・iframe を読み込むオリジン。React 19 公式の
+  // resource hint API（react-dom）でレンダー時に <link rel="preconnect"> を <head>
+  // へ自動 hoist。Turnstile は no-cors fetch のため crossOrigin は付けない（付けると
+  // CORS-anonymous ソケットになり実 fetch と socket pool が分離して無効化）。
+  preconnect("https://challenges.cloudflare.com");
 
   return (
     <Turnstile

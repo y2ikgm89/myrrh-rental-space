@@ -15,6 +15,7 @@
  */
 
 import { useState, type ReactElement } from "react";
+import { preconnect } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
@@ -60,6 +61,23 @@ export function SiteBrand({
   const [hasError, setHasError] = useState(false);
 
   const shouldShowLogo = brand.useLogo && brand.logoUrl !== null && !hasError;
+
+  // SVG ロゴは next/image の最適化を経由せずブラウザが直接 R2 オリジンから取得する
+  // (`unoptimized={isSvg(...)}`)。header variant は `loading="eager"` で初期表示に
+  // 出るため preconnect で TCP+TLS を先行確立し LCP を改善する。footer variant は
+  // lazy load なので不要。crossOrigin は付けない (`<img>` の no-cors fetch とマッチ)。
+  if (
+    shouldShowLogo &&
+    brand.logoUrl &&
+    variant === "header" &&
+    isSvg(brand.logoUrl)
+  ) {
+    try {
+      preconnect(new URL(brand.logoUrl).origin);
+    } catch {
+      // URL parse 失敗時は no-op
+    }
+  }
 
   const navigateProps = onNavigate ? { onClick: onNavigate } : {};
 
