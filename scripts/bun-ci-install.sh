@@ -1,5 +1,10 @@
 #!/bin/sh
-# Resilient `bun install --frozen-lockfile` for CI / Docker (cold-cache) builds.
+# Resilient `bun ci` for CI / Docker (cold-cache) builds.
+#
+# `bun ci` is the Bun-official CI/CD command and is exactly equivalent to
+# `bun install --frozen-lockfile` (installs the exact versions from `bun.lock`
+# and fails if `package.json` disagrees with the lockfile).
+#   https://github.com/oven-sh/bun/blob/main/docs/pm/cli/install.mdx
 #
 # Root cause this guards against:
 #   Bun 1.3.13 introduced *streaming* tarball extraction — package tarballs are
@@ -27,11 +32,11 @@ attempts="${BUN_INSTALL_ATTEMPTS:-3}"
 i=1
 while [ "$i" -le "$attempts" ]; do
   if [ "$i" -eq 1 ]; then
-    bun install --frozen-lockfile
+    bun ci
   else
     echo ">>> bun-ci-install: retry ${i}/${attempts} — clearing cache + --network-concurrency 4" >&2
     bun pm cache rm || true
-    bun install --frozen-lockfile --network-concurrency 4
+    bun ci --network-concurrency 4
   fi
   status=$?
   if [ "$status" -eq 0 ]; then
@@ -40,5 +45,5 @@ while [ "$i" -le "$attempts" ]; do
   echo ">>> bun-ci-install: attempt ${i}/${attempts} failed (exit ${status})" >&2
   i=$((i + 1))
 done
-echo ">>> bun-ci-install: bun install --frozen-lockfile failed after ${attempts} attempts" >&2
+echo ">>> bun-ci-install: bun ci failed after ${attempts} attempts" >&2
 exit 1

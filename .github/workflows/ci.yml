@@ -648,7 +648,8 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
       # preactjs/compressed-size-action は内部で `bun install --frozen-lockfile`
-      # を呼ぶため、setup-bun を先に実行して PATH に bun を通す必要がある
+      # （= `bun ci` の同義 alias、Bun 公式 docs）を呼ぶため、setup-bun を先に実行
+      # して PATH に bun を通す必要がある
       # （未設定だと "Unable to locate executable file: bun" で fail）
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
