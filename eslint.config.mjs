@@ -217,6 +217,34 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Stripe webhook helpers: ban sync constructEvent / generateTestHeaderString.
+  // Bun runtime（Web Crypto / SubtleCryptoProvider 経路）では sync 版が
+  // `Error: Stripe is unable to perform synchronous crypto operations in this environment.`
+  // を投げる。stripe-node 公式が edge runtime 向けに `*Async` 版を提供しているため
+  // Bun 上では async 版のみ使う。型レベル封印は src/shared/lib/stripe.ts
+  // (AsyncOnlyStripe / Omit) で行い、ここは「直接呼出」を機械的に弾く 2 段防御。
+  //
+  // SDK 内部実装 (createWebhooks など) は除外する必要があるが、
+  // node_modules は globalIgnores で外れているため対象外。
+  //
+  // @see https://github.com/stripe/stripe-node/blob/master/src/Webhooks.ts
+  // @see https://github.com/stripe/stripe-node/blob/master/testProjects/cloudflare-pages/functions/index.js
+  {
+    name: "stripe-webhook-async-only",
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "MemberExpression[property.name=/^(constructEvent|generateTestHeaderString)$/]",
+          message:
+            "Stripe webhook の sync helpers (constructEvent / generateTestHeaderString) は Bun runtime (Web Crypto) で throw する。constructEventAsync / generateTestHeaderStringAsync を使ってください。型封印は src/shared/lib/stripe.ts の AsyncOnlyStripe を参照。",
+        },
+      ],
+    },
+  },
+
   // ファイル固有設定
   {
     name: "console-allowed",
