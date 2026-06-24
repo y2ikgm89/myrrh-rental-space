@@ -732,19 +732,21 @@ describe("POST /api/webhooks/stripe", () => {
   //
   // このブロックは:
   //   1. ディスク上の `__tests__/fixtures/stripe/*.json` を実 payload として読む
-  //   2. `Stripe.webhooks.generateTestHeaderString` で公式に署名ヘッダーを生成
+  //   2. `Stripe.webhooks.generateTestHeaderStringAsync` で公式に署名ヘッダーを生成
+  //      (Bun runtime は SubtleCryptoProvider を選択するため async 版が必須。
+  //       Stripe SDK v18+ で sync 版は同期コンテキストで throw する。)
   //   3. **実 Stripe インスタンス** を `getStripeClient` 経由で注入
   //   4. ルートハンドラに POST して構造を end-to-end で検証
   // 公式: https://github.com/stripe/stripe-node#testing-webhook-signing
   // ---------------------------------------------------------------------------
 
-  describe("実 Stripe SDK 経由（fixture + generateTestHeaderString）", () => {
+  describe("実 Stripe SDK 経由（fixture + generateTestHeaderStringAsync）", () => {
     const WEBHOOK_SECRET = "whsec_test_fixture_secret";
 
     // 実 Stripe インスタンス: secretKey はテスト用ダミー（呼び出すのは
-    // webhooks.constructEvent / generateTestHeaderString のみで、HTTP API は
+    // webhooks.constructEvent / generateTestHeaderStringAsync のみで、HTTP API は
     // 叩かないので任意値で良い）
-    // 公式: https://github.com/stripe/stripe-node — generateTestHeaderString /
+    // 公式: https://github.com/stripe/stripe-node — generateTestHeaderStringAsync /
     // constructEvent は **インスタンスメソッド** `stripeClient.webhooks.*`
     const realStripe = new Stripe("sk_test_dummy_fixture", {
       // ルート (`src/shared/lib/stripe.ts`) と同じ apiVersion ピン留め
@@ -791,10 +793,12 @@ describe("POST /api/webhooks/stripe", () => {
       setupRealStripeClient();
 
       const payload = loadFixture("payment_intent_succeeded");
-      const signature = realStripe.webhooks.generateTestHeaderString({
-        payload,
-        secret: WEBHOOK_SECRET,
-      });
+      const signature = await realStripe.webhooks.generateTestHeaderStringAsync(
+        {
+          payload,
+          secret: WEBHOOK_SECRET,
+        },
+      );
 
       const response = await POST(makeRequest(payload, signature));
       const body = (await response.json()) as { received: boolean };
@@ -817,10 +821,12 @@ describe("POST /api/webhooks/stripe", () => {
       setupRealStripeClient();
 
       const payload = loadFixture("payment_intent_succeeded");
-      const signature = realStripe.webhooks.generateTestHeaderString({
-        payload,
-        secret: WEBHOOK_SECRET,
-      });
+      const signature = await realStripe.webhooks.generateTestHeaderStringAsync(
+        {
+          payload,
+          secret: WEBHOOK_SECRET,
+        },
+      );
 
       // body を 1 byte 改ざんすると signature が一致しない
       const tampered = payload.replace('"amount": 5000', '"amount": 9999999');
