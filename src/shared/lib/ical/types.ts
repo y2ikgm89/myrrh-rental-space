@@ -55,14 +55,3 @@ export type EventCalendarParams = {
   readonly organizerName?: string;
   readonly organizerEmail?: string;
 };
-
-/** iCal フィード（管理者購読用）の 1 エントリ */
-export type ICalFeedEntry = {
-  readonly uid: string;
-  readonly summary: string;
-  readonly description: string;
-  readonly startTime: Date;
-  readonly endTime: Date;
-  readonly location?: string;
-  readonly sequence: number;
-};

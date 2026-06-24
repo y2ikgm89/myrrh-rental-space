@@ -226,7 +226,6 @@ model User {
   reservations    Reservation[]
   posts           Post[]
   postComments    PostComment[]
-  icalTokens      ICalToken[]
   auditLogs       AuditLog[]
   mediaFiles      Media[]
   customer        Customer?          @relation("CustomerUser")
@@ -484,7 +483,6 @@ model Space {
 
   // Relations
   reservations Reservation[]
-  icalTokens   ICalToken[]
   reviews      SpaceReview[]
   events       Event[]
   blockedDates BlockedDate[]
@@ -1311,10 +1309,6 @@ model Settings {
   icalAttachmentEnabled     Boolean @default(true) // メールにiCal添付
   addToCalendarLinksEnabled Boolean @default(true) // Add to Calendarリンク表示
 
-  // iCalフィード設定（外部カレンダー購読用）
-  icalFeedEnabled             Boolean @default(false) // iCalフィード公開
-  icalFeedIncludeCustomerInfo Boolean @default(false) // 顧客情報を含む
-
   // ==============================================
   // Google Calendar 双方向同期（Phase 4）
   // ==============================================
@@ -1379,30 +1373,6 @@ model InstagramPost {
 
   @@index([sortOrder])
   @@map("instagram_posts")
-}
-
-// =============================================================================
-// iCal Feed Token
-// =============================================================================
-
-/// iCalフィード公開用トークン
-model ICalToken {
-  id         String    @id @default(uuid()) @db.Uuid
-  token      String    @unique // 公開URL用トークン（32バイトBase64URL）
-  name       String // トークン名（識別用）
-  spaceId String? @db.Uuid // null = 全予約、指定時 = 特定スペースのみ
-  createdBy String @db.Uuid // 作成した管理者ID
-  expiresAt  DateTime? // null = 無期限
-  createdAt  DateTime  @default(now())
-  lastUsedAt DateTime? // 最終アクセス日時
-
-  space Space? @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  user  User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-
-  // @unique が自動的にインデックスを作成するため @@index([token]) は不要
-  @@index([spaceId])
-  @@index([createdBy])
-  @@map("ical_tokens")
 }
 
 // =============================================================================

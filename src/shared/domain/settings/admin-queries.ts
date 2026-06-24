@@ -10,8 +10,6 @@ import type {
   DiscountSettingsData,
   GoogleCalendarSettingsData,
   GoogleCalendarWebhookState,
-  ICalFeedSettingsData,
-  ICalTokenWithRelations,
   SettingsData,
   TaxSettings,
   TwoWaySyncSettingsData,
@@ -25,7 +23,7 @@ import {
 } from "@/shared/lib/json-validators";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
-import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
@@ -254,56 +252,6 @@ export async function getGoogleCalendarWebhookState(): Promise<GoogleCalendarWeb
     resourceId: settings?.googleCalendarWebhookResourceId ?? null,
     token: settings?.googleCalendarWebhookToken ?? null,
     expiration: settings?.googleCalendarWebhookExpiration ?? null,
-  };
-}
-
-export async function getICalTokens(): Promise<
-  Serialized<ICalTokenWithRelations>[]
-> {
-  const tokens = await prisma.iCalToken.findMany({
-    select: {
-      id: true,
-      token: true,
-      name: true,
-      spaceId: true,
-      createdBy: true,
-      expiresAt: true,
-      createdAt: true,
-      lastUsedAt: true,
-      space: { select: { name: true } },
-      user: { select: { name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return toPlainArray(
-    tokens.map((token) => ({
-      id: token.id,
-      token: token.token,
-      name: token.name,
-      spaceId: token.spaceId,
-      spaceName: token.space?.name ?? null,
-      createdBy: token.createdBy,
-      createdByName: token.user.name,
-      expiresAt: token.expiresAt,
-      createdAt: token.createdAt,
-      lastUsedAt: token.lastUsedAt,
-    })),
-  );
-}
-
-export async function getICalFeedSettings(): Promise<ICalFeedSettingsData> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      icalFeedEnabled: true,
-      icalFeedIncludeCustomerInfo: true,
-    },
-  });
-
-  return {
-    icalFeedEnabled: settings?.icalFeedEnabled ?? false,
-    icalFeedIncludeCustomerInfo: settings?.icalFeedIncludeCustomerInfo ?? false,
   };
 }
 

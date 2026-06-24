@@ -161,24 +161,6 @@ export type DiscountSettingsData = {
   showOriginalPrice: boolean;
 };
 
-export type ICalTokenWithRelations = {
-  id: string;
-  token: string;
-  name: string;
-  spaceId: string | null;
-  spaceName: string | null;
-  createdBy: string;
-  createdByName: string | null;
-  expiresAt: Date | null;
-  createdAt: Date;
-  lastUsedAt: Date | null;
-};
-
-export type ICalFeedSettingsData = {
-  icalFeedEnabled: boolean;
-  icalFeedIncludeCustomerInfo: boolean;
-};
-
 export type GoogleCalendarSettingsData = {
   enabled: boolean;
   calendarId: string | null;

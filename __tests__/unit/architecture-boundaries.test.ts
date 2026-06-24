@@ -276,16 +276,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "ical-tokens.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "settings",
     "basic.ts",
   ),
@@ -1258,16 +1248,6 @@ describe("architecture boundaries", () => {
         "actions",
         "settings",
         "tax.ts",
-      ),
-      join(
-        SRC_ROOT,
-        "app",
-        "(admin)",
-        "admin",
-        "(dashboard)",
-        "_shared",
-        "actions",
-        "ical-tokens.ts",
       ),
     ];
 

@@ -25,7 +25,6 @@ import {
   CustomApiKeysSection,
   GoogleCalendarSection,
   GoogleBusinessProfileSection,
-  ICalFeedSection,
   TwoWaySyncSection,
   InstagramSection,
 } from "../_components/sections";
@@ -83,7 +82,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
                   enabled={settings.googleBusinessProfileEnabled}
                   authInfo={gbpAuthInfo}
                 />
-                <ICalFeedSection />
                 <TwoWaySyncSection settings={settings} />
               </div>
             ),

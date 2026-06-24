@@ -45,13 +45,3 @@ test.describe("Calendar API - 認証ガード（未認証）", () => {
     expect(response.status()).toBe(401);
   });
 });
-
-test.describe("Admin iCal Feed - token 認証", () => {
-  test("GET /api/ical/[token] は不正トークンで 404 を返す", async ({
-    request,
-  }) => {
-    const response = await request.get("/api/ical/invalid-token-value");
-    // token 未検証 or feed 無効で 403/404 のいずれか
-    expect([403, 404]).toContain(response.status());
-  });
-});

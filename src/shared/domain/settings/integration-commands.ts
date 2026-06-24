@@ -1,6 +1,5 @@
 import "server-only";
 
-import { randomBytes } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import type { CalendarSyncMethod } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -41,18 +40,6 @@ export type GoogleCalendarWebhookInput = {
   channelId: string;
   resourceId: string;
   expiration: Date | undefined;
-};
-
-export type ICalTokenCreateInput = {
-  name: string;
-  spaceId: string | null;
-  expiresInDays: number | null;
-  createdBy: string;
-};
-
-export type ICalFeedSettingsInput = {
-  icalFeedEnabled: boolean;
-  icalFeedIncludeCustomerInfo: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -311,69 +298,5 @@ export async function clearGoogleCalendarWebhook(): Promise<void> {
       googleCalendarWebhookToken: null,
       googleCalendarWebhookExpiration: null,
     },
-  });
-}
-
-// ---------------------------------------------------------------------------
-// iCal commands
-// ---------------------------------------------------------------------------
-
-export async function createICalToken(
-  data: ICalTokenCreateInput,
-): Promise<{ id: string; token: string }> {
-  if (data.spaceId) {
-    const space = await prisma.space.findUnique({
-      where: { id: data.spaceId },
-      select: { id: true },
-    });
-
-    if (!space) {
-      throw new DomainError("スペースが見つかりません", "VALIDATION");
-    }
-  }
-
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt =
-    data.expiresInDays && data.expiresInDays > 0
-      ? new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000)
-      : null;
-
-  const created = await prisma.iCalToken.create({
-    data: {
-      token,
-      name: data.name,
-      spaceId: data.spaceId,
-      createdBy: data.createdBy,
-      expiresAt,
-    },
-    select: {
-      id: true,
-      token: true,
-    },
-  });
-
-  return created;
-}
-
-export async function deleteICalToken(id: string): Promise<void> {
-  const token = await prisma.iCalToken.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-
-  if (!token) {
-    throw new DomainError("トークンが見つかりません", "NOT_FOUND");
-  }
-
-  await prisma.iCalToken.delete({ where: { id } });
-}
-
-export async function updateICalFeedSettings(
-  data: ICalFeedSettingsInput,
-): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
   });
 }

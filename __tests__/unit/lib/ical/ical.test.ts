@@ -4,7 +4,6 @@ import {
   buildReservationCancelCalendar,
   buildEventCalendar,
   buildEventCancelCalendar,
-  buildICalFeed,
   buildGoogleCalendarUrl,
   buildOutlookWebUrl,
   buildAddToCalendarUrls,
@@ -135,39 +134,6 @@ describe("buildEventCancelCalendar", () => {
     );
     expect(ics).toContain("METHOD:CANCEL");
     expect(ics).toContain("STATUS:CANCELLED");
-  });
-});
-
-describe("buildICalFeed", () => {
-  test("produces METHOD:PUBLISH calendar with multiple events", () => {
-    const ics = buildICalFeed(
-      {
-        calendarName: "Studio A - 予約",
-        entries: [
-          {
-            uid: "reservation-1@example.com",
-            summary: "【予約】Studio A",
-            description: "Test 1",
-            startTime: new Date("2026-05-01T10:00:00+09:00"),
-            endTime: new Date("2026-05-01T12:00:00+09:00"),
-            sequence: 0,
-          },
-          {
-            uid: "reservation-2@example.com",
-            summary: "【予約】Studio A",
-            description: "Test 2",
-            startTime: new Date("2026-05-02T14:00:00+09:00"),
-            endTime: new Date("2026-05-02T16:00:00+09:00"),
-            sequence: 1,
-          },
-        ],
-      },
-      "example.com",
-    );
-    expect(ics).toContain("METHOD:PUBLISH");
-    expect(ics).toContain("X-WR-CALNAME:Studio A - 予約");
-    expect(ics).toContain("UID:reservation-1@example.com");
-    expect(ics).toContain("UID:reservation-2@example.com");
   });
 });
 

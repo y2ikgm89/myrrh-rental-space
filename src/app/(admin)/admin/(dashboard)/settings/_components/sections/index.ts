@@ -21,7 +21,6 @@ export { TurnstileSection } from "./TurnstileSection";
 export { GoogleMapsSection } from "./GoogleMapsSection";
 export { GoogleCalendarSection } from "./GoogleCalendarSection";
 export { GoogleBusinessProfileSection } from "./GoogleBusinessProfileSection";
-export { ICalFeedSection } from "./ICalFeedSection";
 export { TwoWaySyncSection } from "./TwoWaySyncSection";
 export { CustomApiKeysSection } from "./CustomApiKeysSection";
 export { InstagramSection } from "./InstagramSection";
