@@ -112,9 +112,6 @@ export { CodeBlockPlugin } from "./CodeBlockPlugin";
 export { ImageDropPlugin } from "./ImageDropPlugin";
 export { FindReplacePlugin } from "./FindReplacePlugin";
 
-// Markdown export
-export { MarkdownExportPlugin } from "./MarkdownExportPlugin";
-
 // Custom block plugins
 export { ButtonPlugin } from "./ButtonPlugin";
 export { PullQuotePlugin } from "./PullQuotePlugin";

@@ -7,7 +7,6 @@ import {
   HeaderScrollBehavior,
   LayoutWidth,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { sidebarWidgetsSchema } from "@/shared/lib/validations/sidebar";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
@@ -63,20 +62,6 @@ export const footerFormSchema = z.object({
 });
 
 export type FooterFormInput = z.infer<typeof footerFormSchema>;
-
-// =============================================================================
-// Site > Appearance > サイドバー設定
-// =============================================================================
-
-export const sidebarFormSchema = z.object({
-  sidebarEnabled: z.boolean(),
-  sidebarWidgets: sidebarWidgetsSchema,
-  sidebarRecentCount: z.number().int().min(1).max(20),
-  sidebarPopularCount: z.number().int().min(1).max(20),
-  sidebarTocEnabled: z.boolean(),
-});
-
-export type SidebarFormInput = z.infer<typeof sidebarFormSchema>;
 
 // =============================================================================
 // Site > Appearance > レイアウト設定

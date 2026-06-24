@@ -5,8 +5,8 @@
  * shared/domain 配下の admin 系 query helper（admin-search / audit-recents 等）から
  * 直接参照できるよう shared/lib に配置。
  *
- * server-only 周辺（`userHasPermission` / `userHasResourceAccess` / `checkReadPermissionFor`
- * 等の Better Auth セッション/Prisma 連携部分）は admin layer に残す。
+ * server-only 周辺（`userHasPermission` / `userHasResourceAccess` 等の
+ * Better Auth セッション/Prisma 連携部分）は admin layer に残す。
  */
 
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";

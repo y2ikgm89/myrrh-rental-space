@@ -11,7 +11,6 @@ import type {
   CouponStatusValue,
   GetCouponsResult,
 } from "@/shared/domain/coupons/types";
-import type { CouponType } from "@generated/prisma/enums";
 import { toPlainObject } from "@/shared/lib/serialize";
 
 /**
@@ -307,73 +306,4 @@ export async function getCouponById(
   }
 
   return formatCouponDetail(coupon);
-}
-
-export type ValidatedCouponData = {
-  id: string;
-  code: string;
-  name: string;
-  type: CouponType;
-  discountValue: number;
-  maxDiscountAmount: number | null;
-  canCombineWithDurationDiscount: boolean;
-};
-
-export type CouponValidationResult =
-  | { valid: true; coupon: ValidatedCouponData }
-  | { valid: false; errorMessage: string };
-
-export async function validateCouponCodeQuery(
-  code: string,
-  reservationAmount?: number,
-): Promise<CouponValidationResult> {
-  const normalizedCode = code.toUpperCase().trim();
-  const coupon = await prisma.coupon.findUnique({
-    where: { code: normalizedCode },
-  });
-  const now = new Date();
-
-  // セキュリティ方針: 期限切れ / 上限到達 / 未開始 / 無効 / 不存在は
-  // **意図的に同一文言「無効なクーポンコードです」** を返す。
-  // 理由: 個別文言を出すとクーポンコード列挙攻撃（enumeration）の足がかりになる
-  // （存在するコード × 期間外/上限到達 から有効コードの形式を推測される）。
-  // 例外: `minReservationAmount` 未満は有効コードを既に保有している前提のため
-  // UX を優先して具体的な金額を返す（attacker は既にコードを知っているため
-  // 列挙の追加情報にならない）。
-  if (!coupon || !coupon.isActive) {
-    return { valid: false, errorMessage: "無効なクーポンコードです" };
-  }
-
-  if (coupon.validFrom > now) {
-    return { valid: false, errorMessage: "無効なクーポンコードです" };
-  }
-  if (coupon.validUntil && coupon.validUntil < now) {
-    return { valid: false, errorMessage: "無効なクーポンコードです" };
-  }
-  if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
-    return { valid: false, errorMessage: "無効なクーポンコードです" };
-  }
-  if (
-    reservationAmount !== undefined &&
-    coupon.minReservationAmount !== null &&
-    reservationAmount < coupon.minReservationAmount
-  ) {
-    return {
-      valid: false,
-      errorMessage: `このクーポンは¥${coupon.minReservationAmount.toLocaleString()}以上のご利用で適用できます`,
-    };
-  }
-
-  return {
-    valid: true,
-    coupon: {
-      id: coupon.id,
-      code: coupon.code,
-      name: coupon.name,
-      type: coupon.type,
-      discountValue: coupon.discountValue,
-      maxDiscountAmount: coupon.maxDiscountAmount,
-      canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
-    },
-  };
 }

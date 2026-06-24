@@ -84,14 +84,3 @@ export async function getGlobalBlockedDates(): Promise<BlockedDateData[]> {
   });
   return rows.map(formatBlockedDate);
 }
-
-/** 編集 / 削除用の単一 blocked date 取得 */
-export async function getBlockedDateById(
-  id: string,
-): Promise<BlockedDateData | null> {
-  const row = await prisma.blockedDate.findUnique({
-    where: { id },
-    select: BLOCKED_DATE_SELECT,
-  });
-  return row ? formatBlockedDate(row) : null;
-}

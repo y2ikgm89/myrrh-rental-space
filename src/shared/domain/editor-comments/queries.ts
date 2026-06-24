@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { EditorCommentStatus } from "@generated/prisma/enums";
-import type { EditorCommentThread, MarkInfo, ThreadListItem } from "./types";
+import type { EditorCommentThread, ThreadListItem } from "./types";
 
 export async function getCommentThreadsQuery(input: {
   contentType: string;
@@ -153,36 +153,4 @@ export async function getThreadDetailQuery(
     createdByUser: thread.createdBy ? userMap.get(thread.createdBy) : undefined,
     resolvedByUser: thread.resolvedBy ? userMap.get(thread.resolvedBy) : null,
   };
-}
-
-export async function getMarkInfoListQuery(
-  contentType: string,
-  contentId: string,
-): Promise<MarkInfo[]> {
-  const threads = await prisma.editorCommentThread.findMany({
-    where: {
-      contentType,
-      contentId,
-      status: { not: "DELETED" },
-    },
-    select: {
-      id: true,
-      markId: true,
-      status: true,
-      _count: {
-        select: {
-          comments: {
-            where: { isDeleted: false },
-          },
-        },
-      },
-    },
-  });
-
-  return threads.map((thread) => ({
-    markId: thread.markId,
-    threadId: thread.id,
-    status: thread.status,
-    commentCount: thread._count.comments,
-  }));
 }

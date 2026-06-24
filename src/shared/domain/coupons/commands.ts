@@ -138,17 +138,3 @@ export async function updateCouponActive(
 
   return { isActive: updated.isActive };
 }
-
-export async function incrementCouponUsage(id: string): Promise<void> {
-  await prisma.coupon.update({
-    where: { id },
-    data: { usageCount: { increment: 1 } },
-  });
-}
-
-export async function decrementCouponUsage(id: string): Promise<void> {
-  await prisma.coupon.updateMany({
-    where: { id, usageCount: { gt: 0 } },
-    data: { usageCount: { decrement: 1 } },
-  });
-}

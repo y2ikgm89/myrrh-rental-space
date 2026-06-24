@@ -54,10 +54,6 @@ export async function getTaxSettings(): Promise<TaxSettings> {
   return adminQueries.getTaxSettings();
 }
 
-export async function getPublicTaxSettings(): Promise<TaxSettings> {
-  return adminQueries.getPublicTaxSettings();
-}
-
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {
   await requireAdminPermission("settings", "read");
   return announcementBar.getAnnouncementBarCarouselSettings();
