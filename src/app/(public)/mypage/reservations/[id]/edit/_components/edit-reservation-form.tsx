@@ -15,6 +15,8 @@ import { Select } from "@/public/components/design-system/select";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { updateReservationAction } from "../../../../_shared/actions/reservation";
+import type { z } from "zod";
+import type { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -97,20 +99,22 @@ export function EditReservationForm({
   // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
   // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   // HTML5 の required は JSX 上のリテラル attribute で担保。
-  const [form, fields] = useForm({
-    id: "edit-reservation-form",
-    lastResult,
-    defaultValue: {
-      reservationId,
-      spaceId: initialValues.spaceId,
-      date: initialValues.date,
-      startTime: initialValues.startTime,
-      endTime: initialValues.endTime,
-      numberOfGuests,
+  const [form, fields] = useForm<z.input<typeof customerReservationEditSchema>>(
+    {
+      id: "edit-reservation-form",
+      lastResult,
+      defaultValue: {
+        reservationId,
+        spaceId: initialValues.spaceId,
+        date: initialValues.date,
+        startTime: initialValues.startTime,
+        endTime: initialValues.endTime,
+        numberOfGuests,
+      },
+      shouldValidate: "onBlur",
+      shouldRevalidate: "onInput",
     },
-    shouldValidate: "onBlur",
-    shouldRevalidate: "onInput",
-  });
+  );
 
   const turnstileTokenControl = useInputControl(fields.turnstileToken);
 

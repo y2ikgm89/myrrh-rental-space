@@ -19,6 +19,8 @@ import {
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { registerForEvent } from "@/public/actions/event-registration";
+import type { z } from "zod";
+import type { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { formatEventPrice } from "@/public/lib/format-event-date";
 import type { EventTicketOption } from "@/shared/domain/events/ticket-types";
 import { cn } from "@/shared/lib/cn";
@@ -53,17 +55,19 @@ export function EventRegistrationForm({
   // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   // これにより client bundle から zod / @conform-to/zod (約 302KB) が DCE される。
   // HTML5 の required / min / max は JSX 上のリテラル attribute で担保。
-  const [form, fields] = useForm({
-    id: "event-registration-form",
-    lastResult,
-    defaultValue: {
-      eventId,
-      ticketId: tickets[0]?.id ?? "",
-      quantity: 1,
+  const [form, fields] = useForm<z.input<typeof publicEventRegistrationSchema>>(
+    {
+      id: "event-registration-form",
+      lastResult,
+      defaultValue: {
+        eventId,
+        ticketId: tickets[0]?.id ?? "",
+        quantity: 1,
+      },
+      shouldValidate: "onBlur",
+      shouldRevalidate: "onInput",
     },
-    shouldValidate: "onBlur",
-    shouldRevalidate: "onInput",
-  });
+  );
 
   const turnstileTokenControl = useInputControl(fields.turnstileToken);
 

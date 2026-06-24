@@ -12,6 +12,8 @@ import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { updateProfileAction } from "../../_shared/actions/profile";
+import type { z } from "zod";
+import type { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -57,7 +59,7 @@ export function ProfileForm({
   // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
   // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
   // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
-  const [form, fields] = useForm({
+  const [form, fields] = useForm<z.input<typeof customerProfileSchema>>({
     id: "profile-form",
     lastResult,
     defaultValue: {

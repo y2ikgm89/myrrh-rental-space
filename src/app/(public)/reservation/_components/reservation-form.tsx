@@ -29,6 +29,8 @@ import type { PublicDiscountSettings } from "@/shared/domain/settings/queries/di
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 import { submitReservation } from "@/public/actions/reservation";
+import type { z } from "zod";
+import type { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import {
   fetchAvailableSlots,
   fetchSpaceBlockedDates,
@@ -191,7 +193,7 @@ export function ReservationForm({
   // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
   // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
   // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
-  const [form, fields] = useForm({
+  const [form, fields] = useForm<z.input<typeof publicReservationSchema>>({
     id: "reservation-form",
     lastResult,
     defaultValue: {
