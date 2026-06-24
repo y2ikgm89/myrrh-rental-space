@@ -710,7 +710,7 @@ describe("POST /api/webhooks/stripe", () => {
     );
 
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockReturnValue(event);
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
 
     const response = await POST(makeRequest("body"));
     const body = (await response.json()) as { error: string };
