@@ -249,7 +249,12 @@ const eslintConfig = defineConfig([
   {
     name: "console-allowed",
     // logger / seed / scripts は CLI・出力用途で console を許可する。
-    files: ["src/shared/lib/logger.ts", "prisma/seed.ts", "scripts/**/*.ts"],
+    files: [
+      "src/shared/lib/logger.ts",
+      "src/shared/lib/errors/logger-core.ts",
+      "prisma/seed.ts",
+      "scripts/**/*.ts",
+    ],
     rules: {
       "no-console": "off",
     },
