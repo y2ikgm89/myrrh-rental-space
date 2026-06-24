@@ -82,6 +82,13 @@ function buildCsp(
   // - script-src: nonce + strict-dynamic を厳格維持。Next.js が自前 script と
   //   @next/third-parties / Clarity のローダーに nonce を付与し、strict-dynamic が
   //   そこから派生する script を許可する（host allowlist 不要）。
+  //   'wasm-unsafe-eval' は Turbopack 本番 runtime が `WebAssembly.instantiate` /
+  //   `WebAssembly.compile` を使うため必須（Next.js 公式 CSP guide「Common CSP
+  //   Violations」節で WebAssembly に対する canonical な directive として明記）。
+  //   W3C CSP3 で 'wasm-unsafe-eval' は WASM のコンパイル/インスタンス化だけを
+  //   許可する非対称な権限で、文字列 eval / new Function / setTimeout(string) は
+  //   引き続き遮断される（'unsafe-eval' とは別物。'unsafe-eval' を本番に置かない
+  //   設計 SSoT を侵害しない）。Chrome 97+ / Firefox 102+ / Safari 16+ で実装済。
   // - style-src: 'unsafe-inline' を許可。nonce は <style> 要素のみ認可し、インライン
   //   style 属性（next/image fill・React の style prop・アニメーション初期値など）は
   //   CSP3 仕様上 nonce で認可できず、本番では全て遮断される（実ブラウザでホームページに
@@ -94,7 +101,7 @@ function buildCsp(
   //   Microsoft Clarity は *.clarity.ms / c.bing.com へデータをアップロードする。
   return `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""};
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
