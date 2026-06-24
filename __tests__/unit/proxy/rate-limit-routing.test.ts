@@ -3,15 +3,17 @@
  *
  * `proxy.ts` は `/api/*` を `checkRateLimit(pathname, clientIp)` に委譲する。
  * ここでは「どの bucket に落ちるか」（authMutationRateLimiter / apiRateLimiter /
- * tokenRateLimiter）を pathname → remaining 初期値で間接的に検証する。
+ * tokenRateLimiter / expensiveAdminRateLimiter）を pathname → remaining 初期値で
+ * 間接的に検証する。
  *
  * 各 bucket は in-memory LRU で independent token を持つため、token (IP) を
  * 個別生成すれば cross-test の汚染なく `remaining` を assert できる。
  *
  * Buckets:
- * - authMutationRateLimiter: maxRequests 20 → 初回 remaining 19
- * - apiRateLimiter:          maxRequests 100 → 初回 remaining 99
- * - tokenRateLimiter:        maxRequests 30 → 初回 remaining 29
+ * - authMutationRateLimiter:     maxRequests 20 → 初回 remaining 19
+ * - apiRateLimiter:              maxRequests 100 → 初回 remaining 99
+ * - tokenRateLimiter:            maxRequests 30 → 初回 remaining 29
+ * - expensiveAdminRateLimiter:   maxRequests 60 → 初回 remaining 59
  */
 
 import { describe, test, expect } from "bun:test";
@@ -20,6 +22,7 @@ import { checkRateLimit } from "@/shared/lib/rate-limit";
 const AUTH_MUTATION_REMAINING = 19;
 const API_REMAINING = 99;
 const TOKEN_REMAINING = 29;
+const EXPENSIVE_ADMIN_REMAINING = 59;
 
 function uniqueIp(label: string): string {
   // テスト間で bucket を汚染しないために、unique なラベルを IP として使う。
@@ -203,6 +206,44 @@ describe("checkRateLimit — other API paths", () => {
 
   test("既定 /api/* は apiRateLimiter に落ちる", async () => {
     const result = await checkRateLimit("/api/spaces", uniqueIp("o1"));
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(API_REMAINING);
+  });
+});
+
+describe("checkRateLimit — /admin/api/* (defense-in-depth)", () => {
+  test("/admin/api/ogp は expensiveAdminRateLimiter (60/分) を使う", async () => {
+    const result = await checkRateLimit(
+      "/admin/api/ogp",
+      uniqueIp("admin-ogp"),
+    );
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(EXPENSIVE_ADMIN_REMAINING);
+  });
+
+  test("/admin/api/customers/search は expensiveAdminRateLimiter (60/分) を使う", async () => {
+    const result = await checkRateLimit(
+      "/admin/api/customers/search",
+      uniqueIp("admin-customers-search"),
+    );
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(EXPENSIVE_ADMIN_REMAINING);
+  });
+
+  test("/admin/api/pages/* は apiRateLimiter (100/分) を使う", async () => {
+    const result = await checkRateLimit(
+      "/admin/api/pages/deleted",
+      uniqueIp("admin-pages"),
+    );
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(API_REMAINING);
+  });
+
+  test("/admin/api/announcement-bars は apiRateLimiter (100/分) を使う", async () => {
+    const result = await checkRateLimit(
+      "/admin/api/announcement-bars",
+      uniqueIp("admin-announcement-bars"),
+    );
     expect(result.success).toBe(true);
     expect(result.remaining).toBe(API_REMAINING);
   });
