@@ -1,28 +1,67 @@
 #!/usr/bin/env bun
 /**
- * Per-file isolation test runner (Bun native).
+ * Per-file isolation test runner (Bun native, async parallel).
  *
  * bun:test の `mock.module()` は process-global live binding を残す公式仕様。
  * 各 *.test.ts を独立した `bun test` サブプロセスで起動することで cross-file
- * 干渉を物理的に排除する。
+ * 干渉を物理的に排除する。隔離境界は **process** なので、process を並列に
+ * 起動する分には汚染しない（公式仕様 SSoT）。
+ *
+ * ## 並列実行戦略
+ *
+ * - 既定並列度 `N = min(navigator.hardwareConcurrency, 4)` の `p-limit` プール。
+ *   上限を 4 にクランプするのは CI ランナ (Cloud Build / GitHub Actions) の
+ *   2-4 vCPU と OOM 余裕を見越した経験則。`TEST_PARALLEL` 環境変数で上書き可能。
+ * - **実 DB 接続テストは serial bucket に隔離**。`TEST_DATABASE_URL` を読み
+ *   共有 Postgres を操作する 5 ファイル (cancel-by-token-roundtrip /
+ *   reminder-idempotency / coupon-status-filter / registration-overbooking /
+ *   scope-check-constraint) は順次実行で並列書込み競合を避ける。
+ * - serial bucket と parallel bucket は **並列** に動かす (互いに DB 共有なし)。
+ *
+ * ## 出力順序保持
+ *
+ * 並列実行で stdout/stderr が interleave しないよう、各サブプロセスは
+ * `stdout: "pipe"` / `stderr: "pipe"` で buffer し、完了時に file 単位で
+ * 一括 flush する (Promise.all で並列収集 → 順次 write)。
  *
  * 公式準拠（bun.com/docs）:
- * - `Bun.spawnSync([...], options)` の primary form（配列引数）採用
- * - `new Bun.Glob(pattern).scanSync({ cwd })` で sync 走査（per-file runner は sync で十分）
- * - `Bun.Glob.scanSync` は OS-native path separator を返すため明示的に POSIX 正規化
- * - `process.env` / `process.argv` は Bun でも標準（`Bun.env` / `Bun.argv` は alias）
+ * - `Bun.spawn([...], { stdout: "pipe", stderr: "pipe" })` async API
+ *   <https://bun.com/docs/runtime/child-process>
+ * - `proc.stdout.text()` / `proc.stderr.text()` / `proc.exited` を
+ *   `Promise.all` で同時 await する公式パターン
+ * - `new Bun.Glob(pattern).scanSync({ cwd })` で sync 走査
+ * - `Bun.Glob.scanSync` は OS-native path separator を返すため POSIX 正規化
  *
  * Usage:
  *   bun scripts/run-tests.ts __tests__/unit
  *   bun scripts/run-tests.ts __tests__/integration __tests__/integration/api
  *   bun scripts/run-tests.ts __tests__/unit/lib/crypto.test.ts
+ *
+ * Env:
+ *   TEST_PARALLEL  並列度の手動上書き (default: min(cpu, 4))
  */
 
-interface Failure {
+import pLimit from "p-limit";
+
+interface FileResult {
   file: string;
   exitCode: number;
   ms: number;
+  stdout: string;
+  stderr: string;
 }
+
+/**
+ * 実 Postgres を共有する統合テスト。並列起動すると同一テーブルへの insert/delete
+ * が衝突するため serial bucket に隔離する。新規追加時はこのリストに足すこと。
+ */
+const SERIAL_DB_TESTS = new Set<string>([
+  "__tests__/integration/domain/reservations/cancel-by-token-roundtrip.test.ts",
+  "__tests__/integration/domain/reservations/reminder-idempotency.test.ts",
+  "__tests__/integration/domain/coupons/coupon-status-filter.test.ts",
+  "__tests__/integration/domain/events/registration-overbooking.test.ts",
+  "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
+]);
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
@@ -66,16 +105,25 @@ for (const arg of args) {
 }
 files.sort();
 
+const parallelFiles = files.filter((f) => !SERIAL_DB_TESTS.has(f));
+const serialFiles = files.filter((f) => SERIAL_DB_TESTS.has(f));
+
+const cpuCount = Math.max(1, navigator.hardwareConcurrency || 1);
+const envParallel = process.env["TEST_PARALLEL"];
+const parsedEnv =
+  envParallel === undefined ? Number.NaN : Number.parseInt(envParallel, 10);
+const concurrency =
+  Number.isFinite(parsedEnv) && parsedEnv > 0
+    ? parsedEnv
+    : Math.min(cpuCount, 4);
+
 console.info(
-  `[run-tests] ${files.length} test files (isolation: per-file bun subprocess)`,
+  `[run-tests] ${files.length} test files ` +
+    `(parallel=${parallelFiles.length} @ concurrency=${concurrency}, ` +
+    `serial=${serialFiles.length}, isolation: per-file bun subprocess)`,
 );
 
-const failures: Failure[] = [];
-const t0All = performance.now();
-
-for (let i = 0; i < files.length; i++) {
-  const file = files[i];
-  if (file === undefined) continue;
+async function runOne(file: string): Promise<FileResult> {
   const t0 = performance.now();
   // `--conditions production`: package.json `exports` の `production` 条件を強制し
   // `@lexical/*` を bundled `.prod.mjs` で解決する。Bun 公式 [Conditional Exports]
@@ -108,26 +156,64 @@ for (let i = 0; i < files.length; i++) {
   //   テストのみで、内部実装の dev assertion / 詳細 stack に依存しない。
   // - 本番ランタイムは Next.js build 経由で同 `production` 条件が解決されるため、
   //   テストと本番のバイナリは整合 (`.prod.mjs` を共通参照)。
-  const proc = Bun.spawnSync(
-    ["bun", "test", "--conditions", "production", file],
-    {
-      stdout: "inherit",
-      stderr: "inherit",
-    },
-  );
+  const proc = Bun.spawn(["bun", "test", "--conditions", "production", file], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  // 公式パターン: stdout / stderr / exited を Promise.all で同時 await。
+  // pipe バッファが full にならないよう必ず並列で吸い出す。
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
   const ms = Math.round(performance.now() - t0);
-  const ord = `(${i + 1}/${files.length})`;
-  if (proc.success) {
-    console.info(`[run-tests] ${ord} PASS ${file} (${ms}ms)`);
+  return { file, exitCode, ms, stdout, stderr };
+}
+
+let doneCount = 0;
+function flushResult(result: FileResult): void {
+  doneCount += 1;
+  const ord = `(${doneCount}/${files.length})`;
+  // file 単位で buffer 済みなので write 中に interleave しない。
+  if (result.stdout.length > 0) process.stdout.write(result.stdout);
+  if (result.stderr.length > 0) process.stderr.write(result.stderr);
+  if (result.exitCode === 0) {
+    console.info(`[run-tests] ${ord} PASS ${result.file} (${result.ms}ms)`);
   } else {
-    failures.push({ file, exitCode: proc.exitCode, ms });
     console.error(
-      `[run-tests] ${ord} FAIL ${file} (${ms}ms, exit=${proc.exitCode})`,
+      `[run-tests] ${ord} FAIL ${result.file} (${result.ms}ms, exit=${result.exitCode})`,
     );
   }
 }
 
+const t0All = performance.now();
+const results: FileResult[] = [];
+
+// 並列バケット: p-limit で同時実行数を絞る。各タスクは完了次第 flush。
+const limit = pLimit(concurrency);
+const parallelPromises = parallelFiles.map((file) =>
+  limit(async () => {
+    const r = await runOne(file);
+    results.push(r);
+    flushResult(r);
+    return r;
+  }),
+);
+
+// Serial バケット: 共有 Postgres を順次操作 (並列バケットとは並行に進む)。
+const serialPromise = (async () => {
+  for (const file of serialFiles) {
+    const r = await runOne(file);
+    results.push(r);
+    flushResult(r);
+  }
+})();
+
+await Promise.all([...parallelPromises, serialPromise]);
+
 const totalMs = Math.round(performance.now() - t0All);
+const failures = results.filter((r) => r.exitCode !== 0);
 const passed = files.length - failures.length;
 console.info(
   `\n[run-tests] done: ${passed} passed, ${failures.length} failed in ${(totalMs / 1000).toFixed(1)}s`,
