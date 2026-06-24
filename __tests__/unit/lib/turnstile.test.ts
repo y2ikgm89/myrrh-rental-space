@@ -30,6 +30,31 @@ mock.module("@/shared/lib/crypto", () => ({
   encryptStripeData: (value: string) => `v1:stripe:iv:${value}:tag`,
 }));
 
+// getTurnstileConfig が 'use cache' (Next.js 16 公式 cache layer) 化されたため、
+// prisma の mockResolvedValueOnce は cache hit で素通しされ test 間切替が効かない。
+// 公式 Bun re-export pattern で domain query 自体を mock し、cache 層ごと bypass。
+const actualApiKeyQueries =
+  await import("@/shared/domain/settings/api-key-queries");
+const mockGetTurnstileConfig = mock<
+  () => Promise<{
+    siteKey: string | null;
+    secretKeyMasked: string | null;
+    lastTestedAt: Date | null;
+    connectionStatus: string | null;
+  }>
+>(() =>
+  Promise.resolve({
+    siteKey: null,
+    secretKeyMasked: null,
+    lastTestedAt: null,
+    connectionStatus: null,
+  }),
+);
+mock.module("@/shared/domain/settings/api-key-queries", () => ({
+  ...actualApiKeyQueries,
+  getTurnstileConfig: mockGetTurnstileConfig,
+}));
+
 const mockFetch = mock(() => Promise.resolve(new Response()));
 
 const originalFetch = globalThis.fetch;
@@ -266,10 +291,15 @@ describe("turnstile", () => {
   });
 
   describe("isTurnstileEnabled", () => {
+    // getTurnstileConfig が 'use cache' 化されたため、isTurnstileEnabled は cache layer 経由で
+    // config を取得する。prisma mock では cache hit を制御できないため domain query 自体を
+    // mockGetTurnstileConfig 経由で切替える (前章の `mock.module` 参照)。
     test("両方のキーが設定されている場合はtrueを返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
-        turnstileSiteKey: "site-key",
-        turnstileSecretKey: "secret-key",
+      mockGetTurnstileConfig.mockResolvedValueOnce({
+        siteKey: "site-key",
+        secretKeyMasked: "***",
+        lastTestedAt: null,
+        connectionStatus: null,
       });
 
       const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
@@ -279,7 +309,12 @@ describe("turnstile", () => {
     });
 
     test("設定が存在しない場合はfalseを返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce(null);
+      mockGetTurnstileConfig.mockResolvedValueOnce({
+        siteKey: null,
+        secretKeyMasked: null,
+        lastTestedAt: null,
+        connectionStatus: null,
+      });
 
       const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
       const result = await isTurnstileEnabled();
@@ -288,9 +323,11 @@ describe("turnstile", () => {
     });
 
     test("サイトキーが未設定の場合はfalseを返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
-        turnstileSiteKey: null,
-        turnstileSecretKey: "secret-key",
+      mockGetTurnstileConfig.mockResolvedValueOnce({
+        siteKey: null,
+        secretKeyMasked: "***",
+        lastTestedAt: null,
+        connectionStatus: null,
       });
 
       const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
@@ -300,9 +337,11 @@ describe("turnstile", () => {
     });
 
     test("シークレットキーが未設定の場合はfalseを返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
-        turnstileSiteKey: "site-key",
-        turnstileSecretKey: null,
+      mockGetTurnstileConfig.mockResolvedValueOnce({
+        siteKey: "site-key",
+        secretKeyMasked: null,
+        lastTestedAt: null,
+        connectionStatus: null,
       });
 
       const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
