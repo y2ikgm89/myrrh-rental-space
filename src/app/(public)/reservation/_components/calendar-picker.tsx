@@ -58,11 +58,6 @@ export function CalendarPicker({
         onSelect={onSelect}
         disabled={isDisabledDay}
         showOutsideDays={false}
-        classNames={{
-          today: "rdp-today font-bold",
-          selected: "rdp-selected",
-          disabled: "rdp-disabled",
-        }}
       />
     </div>
   );

@@ -640,20 +640,24 @@
   outline-offset: 2px;
 }
 
-/* Modifiers */
-.rdp-theme .rdp-today:not(.rdp-outside) {
+/* Modifiers — v10 公式パターンを accent (bronze) 多用環境向けに強化:
+ * selected = foreground 塗り (公式 border のみだと accent 多用で埋もれる)、
+ * disabled = muted 色 + opacity 0.5 (opacity 単独だと selected と紛れる)。 */
+.rdp-theme .rdp-today:not(.rdp-outside):not(.rdp-selected) {
   color: var(--color-accent);
-  font-weight: 400;
+  font-weight: 700;
 }
 
 .rdp-theme .rdp-selected .rdp-day_button {
-  background-color: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+  border-color: var(--color-foreground);
+  font-weight: 700;
 }
 
 .rdp-theme .rdp-disabled:not(.rdp-selected) {
-  opacity: 0.35;
+  color: var(--color-muted-foreground);
+  opacity: 0.5;
 }
 
 .rdp-theme .rdp-outside {
