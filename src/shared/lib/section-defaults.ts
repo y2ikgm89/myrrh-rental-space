@@ -12,6 +12,8 @@
  * 競合時のシリアライゼーション失敗は安全に無視する（もう片方が作成済み）。
  */
 
+import "server-only";
+
 import { prisma } from "@/shared/db/prisma";
 import { ensurePageSectionsCommand } from "@/shared/domain/pages/system-pages-commands";
 
