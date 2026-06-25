@@ -14,17 +14,24 @@ import type { ReactElement, ReactNode } from "react";
 import { getAppUrl } from "@/shared/lib/constants";
 import "./_styles/admin.css";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getAppUrl()),
-  title: {
-    default: "管理画面",
-    template: "%s | 管理画面",
-  },
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+// metadata は generateMetadata で runtime 評価する。`export const metadata` で
+// module load 時に getAppUrl() を評価すると、Cloud Run rev 単位の env rotation
+// （NEXT_PUBLIC_APP_URL など）が build 時の値で焼き込まれて即時反映されない。
+// 公開側（generateMetadata 経由）と対称化し、generateViewport + connection() で
+// 既に admin route を完全動的(ƒ)化しているため、metadata も runtime 評価で整合させる。
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    metadataBase: new URL(getAppUrl()),
+    title: {
+      default: "管理画面",
+      template: "%s | 管理画面",
+    },
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 // nonce CSP(strict-dynamic) + PPR(cacheComponents) では route を完全動的(ƒ)に
 // しないと document 直下の framework/chunk スクリプトに per-request nonce が付かず
