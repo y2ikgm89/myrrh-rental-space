@@ -66,7 +66,6 @@ export async function getPosts(
         ogpDescription: true,
         publishedAt: true,
         status: true,
-        viewCount: true,
         createdAt: true,
         updatedAt: true,
         contentWidth: true,

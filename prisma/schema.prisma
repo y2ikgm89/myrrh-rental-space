@@ -821,7 +821,6 @@ model Post {
   publishedAt        DateTime?
   status             PostStatus  @default(DRAFT)
   authorId String? @db.Uuid // ユーザー削除時にnull化
-  viewCount          Int         @default(0)
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
   createdAt          DateTime    @default(now())
@@ -837,7 +836,6 @@ model Post {
   @@index([authorId])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
-  @@index([viewCount])
   @@map("posts")
 }
 

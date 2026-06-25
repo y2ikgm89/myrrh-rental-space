@@ -19,7 +19,6 @@ import {
   stopRowClick,
 } from "@/admin/components/table";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
-import { formatCount } from "@/shared/lib/format/count";
 import type { PostListData } from "@/shared/domain/posts/types";
 
 // =============================================================================
@@ -99,9 +98,6 @@ export function PostTable({ posts }: PostTableProps) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Badge variant="outline">{post.category.name}</Badge>
-                  </TableCell>
-                  <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
-                    {formatCount(post.viewCount)}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {post.publishedAt

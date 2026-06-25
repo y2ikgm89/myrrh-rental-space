@@ -36,7 +36,6 @@ type PostRecord = {
   ogpDescription: string | null;
   publishedAt: Date | null;
   status: PostStatus;
-  viewCount: number;
   createdAt: Date;
   updatedAt: Date;
   contentWidth: LayoutWidth | null;
@@ -98,7 +97,7 @@ export type PostFilters = {
 export type PostPagination = {
   page?: number;
   limit?: number;
-  sortBy?: "createdAt" | "publishedAt" | "title" | "viewCount";
+  sortBy?: "createdAt" | "publishedAt" | "title";
   sortOrder?: "asc" | "desc";
 };
 
