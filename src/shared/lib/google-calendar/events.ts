@@ -180,7 +180,7 @@ export async function updateCalendarEvent(
  */
 export async function deleteCalendarEvent(
   eventId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   const client = await getServiceAccountClient();
   if (!client) {
     return { success: false, error: "Google Calendar is not configured" };

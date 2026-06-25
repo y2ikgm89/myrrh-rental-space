@@ -208,7 +208,7 @@ export async function updateCalendarSync(
 export async function deleteCalendarSync(
   reservationId: string,
   eventId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   try {
     const isEnabled = await isGoogleCalendarEnabled();
     if (!isEnabled) {
@@ -223,7 +223,7 @@ export async function deleteCalendarSync(
       return { success: true };
     }
 
-    return omitUndefined({ success: false, error: result.error });
+    return { success: false, error: result.error };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,

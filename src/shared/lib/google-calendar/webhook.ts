@@ -100,7 +100,7 @@ export async function setupWebhookWatch(
 export async function stopWebhookWatch(
   channelId: string,
   resourceId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true } | { success: false; error: string }> {
   const client = await getServiceAccountClient();
   if (!client) {
     return { success: false, error: "Google Calendar is not configured" };
