@@ -92,49 +92,7 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "api-keys",
-    "queries.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "api-keys",
-    "mutations.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "announcement-bar.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "audit-log.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "dashboard.ts",
   ),
   join(
     SRC_ROOT,
@@ -225,17 +183,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "_shared",
     "actions",
     "news.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "post",
-    "queries.ts",
   ),
   join(
     SRC_ROOT,
@@ -415,17 +362,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "_shared",
     "actions",
     "space.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
-    "reservation",
-    "queries.ts",
   ),
   join(
     SRC_ROOT,
@@ -904,16 +840,23 @@ describe("architecture boundaries", () => {
   });
 
   test("移行済み admin action は Prisma を直接 import しない", () => {
-    const offenders = THIN_ADMIN_ACTION_FILES.filter(existsSync)
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return (
-          source.includes("@/shared/db/prisma") ||
-          source.includes('from "@/shared/db"') ||
-          source.includes("@generated/prisma")
-        );
-      })
-      .map((file) => relative(ROOT, file));
+    // drift gate: 旧実装は `.filter(existsSync)` で不在 path を silent drop し、
+    // リファクタで path が変わった THIN_ADMIN_ACTION_FILES エントリが vacuous test
+    // 化していた（6 件が drop されても test は緑のままだった）。不在 path は
+    // hard-fail させ、配列の更新漏れを機械検知する。
+    const missing = THIN_ADMIN_ACTION_FILES.filter(
+      (file) => !existsSync(file),
+    ).map((file) => relative(ROOT, file));
+    expect(missing).toEqual([]);
+
+    const offenders = THIN_ADMIN_ACTION_FILES.filter((file) => {
+      const source = readFileSync(file, "utf8");
+      return (
+        source.includes("@/shared/db/prisma") ||
+        source.includes('from "@/shared/db"') ||
+        source.includes("@generated/prisma")
+      );
+    }).map((file) => relative(ROOT, file));
 
     expect(offenders).toEqual([]);
   });
