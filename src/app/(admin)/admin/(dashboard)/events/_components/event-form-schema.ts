@@ -3,6 +3,7 @@ import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
+import { gallerySchema } from "@/shared/lib/validations/gallery";
 
 /**
  * EventForm (conform) form schema
@@ -162,6 +163,7 @@ const eventFormBaseSchema = z.object({
   ogpDescription: optionalNullableString(200, "OGP説明文は200文字以内です"),
   metaDescription: optionalNullableString(160, "メタ説明文は160文字以内です"),
   metaKeywords: optionalNullableString(500, "メタキーワードは500文字以内です"),
+  gallery: gallerySchema,
 });
 
 function refineEvent(

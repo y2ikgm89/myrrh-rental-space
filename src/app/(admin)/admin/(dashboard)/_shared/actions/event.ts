@@ -83,9 +83,6 @@ function buildEventCommandInput(data: EventFormData) {
     descriptionHtml,
     descriptionPlainText,
     tickets,
-    // gallery は EventFormSchema 未追加（Task 11 で統合予定）。
-    // それまでは空配列を default として渡し既存動作を維持する。
-    gallery: [] as const,
   });
 }
 
