@@ -5,9 +5,9 @@
  */
 
 // 専用フック
-export { usePostEditor } from "./usePostEditor";
-export { useNewsEditor } from "./useNewsEditor";
-export { useTermsEditor } from "./useTermsEditor";
+export { usePostEditor } from "./use-post-editor";
+export { useNewsEditor } from "./use-news-editor";
+export { useTermsEditor } from "./use-terms-editor";
 
 // コンテンツ幅 pure function
 export { resolveContentWidthPx } from "./content-width";

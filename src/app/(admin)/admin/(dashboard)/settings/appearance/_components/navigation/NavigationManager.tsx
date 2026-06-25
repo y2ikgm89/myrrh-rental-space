@@ -16,7 +16,7 @@ import type { Serialized } from "@/shared/lib/serialize";
 import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import type { NavigationItemData, SocialLinkData } from "./types";
 import { flattenNavItems } from "./types";
-import { useNavigationHandlers } from "./hooks/useNavigationHandlers";
+import { useNavigationHandlers } from "./hooks/use-navigation-handlers";
 import { NavigationList, SocialLinkList } from "./NavigationList";
 import { NavigationFormDialog, SocialLinkFormDialog } from "./NavigationDialog";
 
