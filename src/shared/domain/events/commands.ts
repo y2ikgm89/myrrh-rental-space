@@ -18,6 +18,7 @@ import {
 } from "@/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import type {
   EventTicketInput,
   EventTicketWritableFields,
@@ -37,6 +38,7 @@ export interface EventCommandInput {
   descriptionHtml: string;
   descriptionPlainText: string;
   thumbnailUrl?: string | null;
+  readonly gallery: readonly GalleryItem[];
   ogpImageUrl?: string | null;
   ogpTitle?: string | null;
   ogpDescription?: string | null;
@@ -99,6 +101,7 @@ export async function createEventCommand(data: EventCommandInput) {
         descriptionHtml: data.descriptionHtml,
         descriptionPlainText: data.descriptionPlainText,
         thumbnailUrl: data.thumbnailUrl ?? null,
+        gallery: data.gallery as unknown as Prisma.JsonArray,
         ogpImageUrl: data.ogpImageUrl ?? null,
         ogpTitle: data.ogpTitle ?? null,
         ogpDescription: data.ogpDescription ?? null,
@@ -176,6 +179,7 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         descriptionHtml: data.descriptionHtml,
         descriptionPlainText: data.descriptionPlainText,
         thumbnailUrl: data.thumbnailUrl ?? null,
+        gallery: data.gallery as unknown as Prisma.JsonArray,
         ogpImageUrl: data.ogpImageUrl ?? null,
         ogpTitle: data.ogpTitle ?? null,
         ogpDescription: data.ogpDescription ?? null,
@@ -339,6 +343,7 @@ export async function duplicateEventCommand(id: string) {
       descriptionHtml: true,
       descriptionPlainText: true,
       thumbnailUrl: true,
+      gallery: true,
       ogpImageUrl: true,
       ogpTitle: true,
       ogpDescription: true,
@@ -382,6 +387,7 @@ export async function duplicateEventCommand(id: string) {
         descriptionHtml: source.descriptionHtml,
         descriptionPlainText: source.descriptionPlainText,
         thumbnailUrl: source.thumbnailUrl,
+        gallery: asPrismaInputJsonValue(source.gallery, "gallery が不正です"),
         ogpImageUrl: source.ogpImageUrl,
         ogpTitle: source.ogpTitle,
         ogpDescription: source.ogpDescription,

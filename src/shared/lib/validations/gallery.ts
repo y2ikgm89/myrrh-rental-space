@@ -10,7 +10,7 @@ export type GalleryItem = z.infer<typeof galleryItemSchema>;
 
 export const gallerySchema = z
   .array(galleryItemSchema)
-  .max(20, { message: "ギャラリーは最大20件まで" })
+  .max(20, { error: "ギャラリーは最大20件まで" })
   .default([])
   .superRefine((items, ctx) => {
     const urls = items.map((i) => i.url);

@@ -43,6 +43,7 @@ const eventDetailSelect = {
   descriptionHtml: true,
   descriptionPlainText: true,
   thumbnailUrl: true,
+  gallery: true,
   ogpImageUrl: true,
   ogpTitle: true,
   ogpDescription: true,

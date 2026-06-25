@@ -119,7 +119,7 @@ const VALID_INPUT = {
   capacity: 10,
   hourlyPrice: 1000,
   mainImageUrl: "https://example.com/image.jpg",
-  imageUrls: ["https://example.com/image1.jpg"],
+  gallery: [] as const,
   facilities: [
     { name: "Wi-Fi", iconName: "IconWifi" },
     { name: "プロジェクター", iconName: "IconPresentation" },
