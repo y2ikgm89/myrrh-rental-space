@@ -26,8 +26,6 @@ CREATE TYPE "AuditAction" AS ENUM (
 );
 
 -- squawk-ignore changing-column-type
-ALTER TABLE "audit_logs"
-  ALTER COLUMN "action" TYPE "AuditAction"
-  USING ("action"::text::"AuditAction");
+ALTER TABLE "audit_logs" ALTER COLUMN "action" TYPE "AuditAction" USING ("action"::text::"AuditAction");
 
 DROP TYPE "AuditAction_old";
