@@ -531,6 +531,7 @@ export async function SectionRenderer({
         registrationOpen: e.registrationOpen,
         spaceName: e.space?.name ?? null,
         thumbnailUrl: e.thumbnailUrl ?? null,
+        gallery: e.gallery,
       }));
       return (
         <EventCalendarSection
