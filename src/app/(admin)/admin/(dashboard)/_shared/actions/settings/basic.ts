@@ -6,8 +6,8 @@
  * @module admin/actions/settings/basic
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
+import { invalidateSiteWideCache } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -59,7 +59,7 @@ export async function updateBasicInfo(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+        invalidateSiteWideCache(CACHE_TAGS.LAYOUT_SETTINGS);
       },
     });
     if (isMutationError(result)) {
@@ -100,7 +100,7 @@ export async function updateLayoutSettings(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+        invalidateSiteWideCache(CACHE_TAGS.LAYOUT_SETTINGS);
       },
     });
     if (isMutationError(result)) {
@@ -131,7 +131,7 @@ export async function updateMetaSettings(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.SEO_SETTINGS);
+        invalidateSiteWideCache(CACHE_TAGS.SEO_SETTINGS);
       },
     });
     if (isMutationError(result)) {
@@ -172,7 +172,7 @@ export async function updateAnalyticsSettings(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.ANALYTICS_CONFIG);
+        invalidateSiteWideCache(CACHE_TAGS.ANALYTICS_CONFIG);
       },
     });
     if (isMutationError(result)) {
@@ -204,7 +204,7 @@ export async function updateSearchVerification(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.SEO_SETTINGS);
+          invalidateSiteWideCache(CACHE_TAGS.SEO_SETTINGS);
         },
       });
       if (isMutationError(result)) {

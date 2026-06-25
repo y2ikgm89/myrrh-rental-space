@@ -6,8 +6,8 @@
  * @module admin/actions/settings/business
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
+import { invalidateSiteWideCache } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -60,7 +60,7 @@ export async function updateBusinessInfo(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
+          invalidateSiteWideCache(CACHE_TAGS.ORGANIZATION_SETTINGS);
         },
       });
       if (isMutationError(result)) {
@@ -104,8 +104,10 @@ export async function updateContactInfo(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
-          updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+          invalidateSiteWideCache([
+            CACHE_TAGS.ORGANIZATION_SETTINGS,
+            CACHE_TAGS.BUSINESS_SETTINGS,
+          ]);
         },
       });
       if (isMutationError(result)) {
@@ -132,8 +134,10 @@ export async function updateBusinessHoursSettings(
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
-      updateTag(CACHE_TAGS.RESERVATIONS);
+      invalidateSiteWideCache([
+        CACHE_TAGS.BUSINESS_SETTINGS,
+        CACHE_TAGS.RESERVATIONS,
+      ]);
     },
   });
 }

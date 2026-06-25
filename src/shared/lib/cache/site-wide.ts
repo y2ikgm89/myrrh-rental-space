@@ -84,13 +84,6 @@ export function invalidateSiteWideCache(
   }
 }
 
-export function invalidateSiteWideCaches(
-  tags: readonly string[],
-  options?: InvalidateOptions,
-): void {
-  invalidateSiteWideCache(tags, options);
-}
-
 /**
  * Route Handler / cron variant.
  * - revalidateTag(tag, { expire: 0 }) (blocking immediate-expire)

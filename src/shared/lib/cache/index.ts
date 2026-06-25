@@ -1,6 +1,5 @@
 export {
   invalidateSiteWideCache,
-  invalidateSiteWideCaches,
   invalidateSiteWideCacheFromRouteHandler,
   purgeMarketingHomeTag,
   type InvalidateOptions,

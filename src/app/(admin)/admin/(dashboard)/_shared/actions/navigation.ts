@@ -31,7 +31,7 @@ import {
 const idSchema = z.uuid({ error: "IDが不正です" });
 
 function invalidateNavigationCache(): void {
-  invalidateSiteWideCache(CACHE_TAGS.NAVIGATION);
+  invalidateSiteWideCache([CACHE_TAGS.NAVIGATION, CACHE_TAGS.SOCIAL_LINKS]);
 }
 
 export async function deleteNavigationItem(
