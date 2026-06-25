@@ -14,6 +14,7 @@ import {
   checkSlugAvailability,
   getSlugErrorMessage,
 } from "@/shared/lib/slug-validation";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 type SpaceCommandInput = {
   slug: string;
@@ -27,7 +28,7 @@ type SpaceCommandInput = {
   hourlyPrice: number;
   dailyPrice?: number | null | undefined;
   mainImageUrl: string;
-  imageUrls: string[];
+  gallery: readonly GalleryItem[];
   facilities: { name: string; iconName: string }[];
   isPublished: boolean;
   reviewsEnabled: boolean;
@@ -67,7 +68,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     hourlyPrice: input.hourlyPrice,
     dailyPrice: input.dailyPrice ?? null,
     mainImageUrl: input.mainImageUrl,
-    imageUrls: input.imageUrls,
+    gallery: input.gallery as unknown as Prisma.JsonArray,
     facilities: input.facilities,
     isPublished: input.isPublished,
     reviewsEnabled: input.reviewsEnabled,
@@ -257,7 +258,7 @@ export async function deleteSpaceCommand(
  * - 関連する予約・レビュー・イベント・iCal トークンは複製しない
  * - slug は `${original.slug}-copy` をベースに `ensureUniqueSlug` で衝突回避
  * - name は `${original.name}（コピー）` の慣例に従う（Event 複製と全角括弧で統一）
- * - 画像 URL（mainImageUrl / imageUrls）は元レコードの URL を参照共有
+ * - 画像 URL（mainImageUrl / gallery）は元レコードの URL を参照共有
  *   （R2 オブジェクト複製は行わない。差し替えは管理者の編集操作）
  *
  * 同一実装が `events/commands.ts` の `duplicateEventCommand` にもある（YAGNI のため
@@ -280,7 +281,7 @@ export async function duplicateSpaceCommand(
       hourlyPrice: true,
       dailyPrice: true,
       mainImageUrl: true,
-      imageUrls: true,
+      gallery: true,
       facilities: true,
       businessHours: true,
       reviewsEnabled: true,
@@ -319,10 +320,7 @@ export async function duplicateSpaceCommand(
       hourlyPrice: source.hourlyPrice,
       dailyPrice: source.dailyPrice,
       mainImageUrl: source.mainImageUrl,
-      imageUrls: asPrismaInputJsonValue(
-        source.imageUrls,
-        "imageUrls が不正です",
-      ),
+      gallery: asPrismaInputJsonValue(source.gallery, "gallery が不正です"),
       facilities: asPrismaInputJsonValue(
         source.facilities,
         "facilities が不正です",

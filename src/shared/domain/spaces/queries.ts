@@ -7,6 +7,10 @@ import {
   parseFacilities,
   parseStringArray,
 } from "@/shared/lib/json-validators";
+import {
+  parseGallery,
+  type GalleryItem,
+} from "@/shared/lib/validations/gallery";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import {
   getValidDiscountType,
@@ -28,7 +32,7 @@ function formatSpaceToPlain(s: {
   hourlyPrice: number;
   dailyPrice: number | null;
   mainImageUrl: string;
-  imageUrls: unknown;
+  gallery: unknown;
   facilities: unknown;
   businessHours: Prisma.JsonValue | null;
   isPublished: boolean;
@@ -66,7 +70,7 @@ function formatSpaceToPlain(s: {
     hourlyPrice: s.hourlyPrice,
     dailyPrice: s.dailyPrice,
     mainImageUrl: s.mainImageUrl,
-    imageUrls: parseStringArray(s.imageUrls),
+    gallery: parseGallery(s.gallery),
     facilities: parseFacilities(s.facilities),
     businessHours: parseBusinessHours(s.businessHours),
     isPublished: s.isPublished,

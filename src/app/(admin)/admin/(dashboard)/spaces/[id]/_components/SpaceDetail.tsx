@@ -36,9 +36,10 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // imageUrls / facilities はスキーマで重複禁止が保証されているため、そのまま使用
-  const allImages = [space.mainImageUrl, ...space.imageUrls];
-  const additionalImages = space.imageUrls;
+  // gallery は GalleryItem[]。URL だけ取り出して allImages / additionalImages を組み立てる
+  const galleryUrls = space.gallery.map((g) => g.url);
+  const allImages = [space.mainImageUrl, ...galleryUrls];
+  const additionalImages = galleryUrls;
   const facilities = space.facilities;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);

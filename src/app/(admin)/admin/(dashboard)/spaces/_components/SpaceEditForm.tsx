@@ -302,7 +302,7 @@ export function SpaceEditForm({
     space?.mainImageUrl ?? "",
   );
   const [imageUrls, setImageUrls] = useState<ImageItem[]>(() =>
-    (space?.imageUrls ?? []).map((url) => ({ key: genKey(), url })),
+    (space?.gallery ?? []).map((item) => ({ key: genKey(), url: item.url })),
   );
 
   // 詳細設定

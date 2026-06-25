@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { EventStatus, PostStatus } from "@generated/prisma/enums";
 import { toPlainArray } from "@/shared/lib/serialize";
-import { parseStringArray } from "@/shared/lib/json-validators";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
 
 /**
@@ -90,7 +90,7 @@ export async function searchLinkCardCandidates(params: {
           isActive: true,
           ...(titleContains && { name: titleContains }),
         },
-        select: { id: true, name: true, mainImageUrl: true, imageUrls: true },
+        select: { id: true, name: true, mainImageUrl: true, gallery: true },
         orderBy: { name: "asc" },
         take: limit,
       });
@@ -100,7 +100,7 @@ export async function searchLinkCardCandidates(params: {
           contentId: r.id,
           title: r.name,
           thumbnailUrl:
-            r.mainImageUrl ?? parseStringArray(r.imageUrls)[0] ?? null,
+            r.mainImageUrl ?? parseGallery(r.gallery)[0]?.url ?? null,
         })),
       );
     }

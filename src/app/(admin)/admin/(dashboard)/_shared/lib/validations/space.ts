@@ -16,6 +16,7 @@ import {
   type BusinessHours,
 } from "@/shared/lib/json-validators";
 import { isRecord } from "@/shared/lib/serialize";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -357,7 +358,7 @@ export type SpaceWithStats = {
   hourlyPrice: number;
   dailyPrice: number | null;
   mainImageUrl: string;
-  imageUrls: string[];
+  gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];
   businessHours: BusinessHours | null;
   isPublished: boolean;

@@ -15,7 +15,6 @@ import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { parseStringArray } from "@/shared/lib/json-validators";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -78,7 +77,7 @@ export default async function SpaceDetailPage({
     : { averageRating: 0, totalCount: 0 };
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
-  const subImages = parseStringArray(space.imageUrls);
+  const subImages = space.gallery.map((g) => g.url);
 
   return (
     <>
