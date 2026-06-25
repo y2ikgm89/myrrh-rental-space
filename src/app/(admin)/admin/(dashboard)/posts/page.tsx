@@ -1,7 +1,7 @@
 /**
  * 投稿管理ページ
  *
- * 4タブ構造で記事一覧・カテゴリー・タグ・コメントを管理
+ * 3タブ構造で記事一覧・カテゴリー・タグを管理
  */
 
 import { Suspense } from "react";
@@ -9,32 +9,20 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { getPosts, getPostCategories, getPostTags } from "@/admin/queries/post";
-import {
-  getAdminComments,
-  getCommentStats,
-} from "@/admin/queries/post-comment";
 import { PostFilters } from "./_components/PostFilters";
 import { PostTable } from "./_components/PostTable";
 import { PostsManagementTabs } from "./_components/PostsManagementTabs";
 import { CategoryManager } from "./taxonomy/_components/CategoryManager";
 import { TagManager } from "./taxonomy/_components/TagManager";
-import { CommentFilters } from "./comments/_components/CommentFilters";
-import { CommentTable } from "./comments/_components/CommentTable";
-import { CommentStats } from "./comments/_components/CommentStats";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums/helpers";
-import { createTypeGuard, omitUndefined } from "@/shared/lib/serialize";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
-import type * as PostCommentTypes from "@/shared/domain/post-comments/types";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "投稿管理 | Myrrh Rental Space",
 };
-
-// コメントステータスフィルター
-const COMMENT_STATUS_VALUES = ["ALL", "ACTIVE", "DELETED"] as const;
-const isValidCommentStatus = createTypeGuard(COMMENT_STATUS_VALUES);
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -105,52 +93,11 @@ async function TagContent() {
 }
 
 // ==============================================================================
-// コメントタブのコンポーネント
-// ==============================================================================
-
-async function CommentStatsWrapper() {
-  await connection();
-  const stats = await getCommentStats();
-  return <CommentStats stats={stats} />;
-}
-
-async function CommentList({ searchParams }: { searchParams: SearchParams }) {
-  await connection();
-  const params = await loadAdminPostSearchParams(searchParams);
-  const status = isValidCommentStatus(params.status)
-    ? params.status
-    : undefined;
-
-  const filters: PostCommentTypes.CommentFilters = {
-    status: status ?? "ALL",
-    postId: params.postId || undefined,
-    search: params.search || undefined,
-  };
-
-  const result = await getAdminComments(filters, {
-    page: params.page,
-    limit: params.perPage,
-  });
-
-  return (
-    <>
-      <CommentTable comments={result.comments} />
-      <Pagination
-        currentPage={result.page}
-        totalPages={result.totalPages}
-        total={result.total}
-        perPage={params.perPage}
-      />
-    </>
-  );
-}
-
-// ==============================================================================
 // タブパネル（アクティブタブのみ描画）
 // ==============================================================================
 
 function tabPanel(
-  tab: "posts" | "categories" | "tags" | "comments",
+  tab: "posts" | "categories" | "tags",
   searchParams: SearchParams,
 ) {
   switch (tab) {
@@ -177,18 +124,6 @@ function tabPanel(
           <TagContent />
         </Suspense>
       );
-    case "comments":
-      return (
-        <div className="space-y-6">
-          <Suspense fallback={<LoadingState />}>
-            <CommentStatsWrapper />
-          </Suspense>
-          <CommentFilters />
-          <Suspense fallback={<LoadingState />}>
-            <CommentList searchParams={searchParams} />
-          </Suspense>
-        </div>
-      );
   }
 }
 
@@ -208,7 +143,7 @@ export default async function PostsPage({ searchParams }: PageProps) {
             投稿管理
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
-            投稿・カテゴリー・タグ・コメントを管理します
+            投稿・カテゴリー・タグを管理します
           </p>
         </div>
         <Button asChild>

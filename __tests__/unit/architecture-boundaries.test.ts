@@ -172,16 +172,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "post-comment.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "news.ts",
   ),
   join(
@@ -1747,7 +1737,6 @@ describe("conform FieldMetadata generic invariance gate（方針: .claude/rules/
       "CUSTOMERS",
       "INQUIRIES",
       "MEDIA",
-      "POST_COMMENTS",
       "RESERVATIONS",
       "STAFF",
     ].sort();

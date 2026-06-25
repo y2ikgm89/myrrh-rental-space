@@ -225,7 +225,6 @@ model User {
   sessions        Session[]
   reservations    Reservation[]
   posts           Post[]
-  postComments    PostComment[]
   auditLogs       AuditLog[]
   mediaFiles      Media[]
   customer        Customer?          @relation("CustomerUser")
@@ -239,7 +238,6 @@ model User {
   resolvedCommentThreads  EditorCommentThread[]  @relation("CommentThreadResolver")
   createdEditorComments   EditorComment[]        @relation("EditorCommentCreator")
   deletedEditorComments   EditorComment[]        @relation("EditorCommentDeleter")
-  deletedPostComments     PostComment[]          @relation("PostCommentDeleter")
   inquiryReplies          Inquiry[]              @relation("InquiryReplies")
   reservationDeletions    Reservation[]          @relation("ReservationDeletions")
   eventDeletions          Event[]                @relation("EventDeletions")
@@ -832,7 +830,6 @@ model Post {
   // Relations
   category PostCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   author   User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  comments PostComment[]
   postTags PostTagOnPost[]
 
   // OR検索用インデックス
@@ -890,51 +887,6 @@ model PostTag {
   posts PostTagOnPost[]
 
   @@map("post_tags")
-}
-
-model PostComment {
-  id              String  @id @default(uuid()) @db.Uuid
-  postId String @db.Uuid
-  parentCommentId String? @db.Uuid // Self-reference for nested comments
-
-  // Content
-  content String @db.Text
-
-  // Author info (either userId OR guest info)
-  userId String? @db.Uuid // For logged-in users
-  guestName  String? // For guest comments
-  guestEmail String? // For guest comments
-
-  // Spam prevention metadata
-  ipAddress   String? // For rate limiting (hashed)
-  contentHash String? // For duplicate detection
-
-  // Status
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
-  deletedBy String? @db.Uuid // userId of admin who deleted
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  post          Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  deleter       User?        @relation("PostCommentDeleter", fields: [deletedBy], references: [id], onDelete: SetNull)
-  parentComment PostComment? @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
-  replies       PostComment[] @relation("CommentReplies")
-
-  // Indexes
-  @@index([postId, createdAt])
-  @@index([parentCommentId])
-  @@index([userId])
-  @@index([ipAddress, createdAt])
-  @@index([guestEmail, createdAt])
-  @@index([contentHash])
-  @@index([isDeleted])
-  @@index([isDeleted, createdAt(sort: Desc)]) // Admin search optimization
-  @@map("post_comments")
 }
 
 // ==============================================
