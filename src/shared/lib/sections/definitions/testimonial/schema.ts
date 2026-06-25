@@ -3,19 +3,13 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { createCompactImageGroupSchema } from "../_shared/image";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const layouts = ["grid", "carousel", "list"] as const;
 const variants = ["default", "card", "minimal"] as const;
 
 export const testimonialConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Testimonials",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Testimonials" }),
   items: field.array("レビュー", {
     subGroup: "text",
     fields: {

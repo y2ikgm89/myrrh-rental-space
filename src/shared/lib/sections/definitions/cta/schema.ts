@@ -3,16 +3,12 @@ import { z } from "zod";
 import { field } from "../../field-registry";
 import { createButtonsArraySchema } from "../_shared/buttons";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const variants = ["default", "centered", "split"] as const;
 
 export const ctaConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Ready to Begin?",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", { subGroup: "text" }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Ready to Begin?" }),
   description: field.portableTextBlock("説明文", { subGroup: "text" }),
   buttons: createButtonsArraySchema("ボタン"),
   backgroundColor: field.color("背景色", { group: "design" }),

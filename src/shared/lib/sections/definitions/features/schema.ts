@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const itemLayouts = ["hero-first", "equal-grid", "icon-left"] as const;
 const displayLayouts = [
@@ -11,14 +12,7 @@ const displayLayouts = [
 ] as const;
 
 export const featuresConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Features",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Features" }),
   items: field.array("特徴", {
     subGroup: "text",
     fields: {

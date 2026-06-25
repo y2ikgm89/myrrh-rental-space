@@ -16,7 +16,6 @@ import {
   type ReactElement,
   type SyntheticEvent,
 } from "react";
-import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
@@ -40,10 +39,10 @@ import {
 import type { FaqListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import type { PublicFaqCategoryWithItems } from "@/shared/domain/sections/queries";
-import { toAppRoute } from "@/shared/lib/typed-routes";
 import { FaqHelpfulVote } from "../faq/_components/faq-helpful-vote";
 import { FaqViewTracker } from "../faq/_components/faq-view-tracker";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { ListSectionViewAllLink } from "./_shared/list-section-view-all-link";
 
 export interface FaqData {
   readonly id: string;
@@ -330,20 +329,7 @@ export function FaqListSection({
             </div>
           )}
 
-          {config.showViewAllLink && config.viewAllText.length > 0 && (
-            <ScrollReveal delay={0.2}>
-              <div className="mt-8 text-center">
-                <Link
-                  href={toAppRoute(config.viewAllUrl)}
-                  className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <PortableTextSpans spans={config.viewAllText} />
-                  <span aria-hidden="true">{" →"}</span>
-                  <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
-                </Link>
-              </div>
-            </ScrollReveal>
-          )}
+          <ListSectionViewAllLink config={config} marginTopClassName="mt-8" />
         </div>
       </SectionWrapper>
 

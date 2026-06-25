@@ -34,6 +34,7 @@ import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import { ListSectionViewAllLink } from "../_shared/list-section-view-all-link";
 
 export interface SpaceListData {
   readonly id: string;
@@ -189,20 +190,7 @@ export function SpaceListSimpleView({
         ))}
       </div>
 
-      {config.showViewAllLink && config.viewAllText.length > 0 && (
-        <ScrollReveal delay={0.2}>
-          <div className="mt-10 text-center">
-            <Link
-              href={toAppRoute(config.viewAllUrl)}
-              className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <PortableTextSpans spans={config.viewAllText} />
-              <span aria-hidden="true">{" →"}</span>
-              <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
-            </Link>
-          </div>
-        </ScrollReveal>
-      )}
+      <ListSectionViewAllLink config={config} marginTopClassName="mt-10" />
     </SectionWrapper>
   );
 }

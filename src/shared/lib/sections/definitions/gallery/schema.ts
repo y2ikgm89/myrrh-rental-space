@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const layouts = ["grid", "masonry", "carousel"] as const;
 const gaps = ["none", "sm", "md", "lg"] as const;
@@ -10,12 +11,7 @@ const hoverEffects = ["zoom", "overlay", "none"] as const;
 
 export const galleryConfigSchema = z
   .object({
-    sectionLabel: field.text("セクションラベル", {
-      default: "Gallery",
-      maxLength: 50,
-      subGroup: "text",
-    }),
-    title: field.portableTextInline("見出し", { subGroup: "text" }),
+    ...sectionHeaderFields({ sectionLabelDefault: "Gallery" }),
     media: field.array("メディア", {
       subGroup: "media",
       fields: {

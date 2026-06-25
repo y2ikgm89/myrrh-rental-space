@@ -2,41 +2,22 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { listSectionHeaderFields } from "../_shared/list-header";
 
 const variants = ["default", "bordered", "minimal"] as const;
 const initialOpenOptions = ["first", "none", "all"] as const;
 
 export const faqListConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "FAQ",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
+  ...listSectionHeaderFields({
+    sectionLabelDefault: "FAQ",
+    defaultViewAllUrl: "/faq",
+    maxItemsCap: 50,
+    maxItemsDefault: 10,
   }),
   categoryId: field.dynamicSelect("カテゴリで絞り込み", {
     source: "faqCategories",
     subGroup: "other",
     helpText: "未指定の場合、全カテゴリのFAQを表示",
-  }),
-  maxItems: field.number("最大表示件数", {
-    min: 1,
-    max: 50,
-    default: 10,
-    suffix: "件",
-    group: "advanced",
-  }),
-  showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
-    default: true,
-  }),
-  viewAllText: field.portableTextInline("「すべて見る」リンクの文字", {
-    subGroup: "button",
-  }),
-  viewAllUrl: field.text("「すべて見る」リンク先 URL", {
-    default: "/faq",
-    maxLength: 200,
-    subGroup: "button",
   }),
   items: field
     .array("カスタム項目", {

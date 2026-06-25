@@ -2,17 +2,13 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const aspectRatios = ["16:9", "4:3", "1:1", "auto"] as const;
 const borderRadii = ["none", "sm", "lg"] as const;
 
 export const embedConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Media",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", { subGroup: "text" }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Media" }),
   embedUrl: field.url("埋め込み URL"),
   embedCode: field.textarea("埋め込みコード", { maxLength: 10000 }),
   aspectRatio: field.select("アスペクト比", {
