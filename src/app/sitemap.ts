@@ -103,6 +103,7 @@ function fallbackStaticSitemap(): MetadataRoute.Sitemap {
 // =============================================================================
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const startedAt = Date.now();
   let content: Awaited<ReturnType<typeof getSitemapContentData>>;
   let featureCtx: Awaited<ReturnType<typeof getFeatureFilterContext>>;
   try {
@@ -115,6 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       "sitemap() catastrophic failure — returning STATIC_PAGES only",
       {
         error: error instanceof Error ? error.message : String(error),
+        durationMs: Date.now() - startedAt,
       },
     );
     return fallbackStaticSitemap();
@@ -246,8 +248,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ==========================================================================
-  // 観測フック — Google 上限（50,000）の 90% 到達で警告
+  // 観測ログ — origin DB は s-maxage=3600 の CF キャッシュ越しで ~1/h/PoP のため
+  // 1 レンダ = 1 info log で異常検知に十分（GCP Cloud Logging で dashboard 化）
   // ==========================================================================
+  logger.info("sitemap rendered", {
+    totalEntries: entries.length,
+    collections: {
+      spaces: spaces.length,
+      news: news.length,
+      posts: posts.length,
+      postCategories: postCategories.length,
+      postTags: postTags.length,
+      customPages: customPages.length,
+      events: events.length,
+      terms: terms.length,
+      systemPages: systemPageLastModified.size,
+    },
+    enabledFeatures: [...enabled].sort(),
+    durationMs: Date.now() - startedAt,
+  });
+
+  // Google 上限（50,000）の 90% 到達で警告
   if (entries.length > 45_000) {
     logger.warn("sitemap entry count approaching Google 50,000 limit", {
       entryCount: entries.length,
