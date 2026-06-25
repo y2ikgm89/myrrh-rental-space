@@ -30,7 +30,7 @@ export interface WidthStyles {
 // =============================================================================
 
 export const SITE_WIDTH_PRESETS: Record<LayoutWidth, WidthPreset> = {
-  [LayoutWidth.XS]: { label: "極小", description: "未使用", px: 900 },
+  [LayoutWidth.XS]: { label: "極小", description: "コンテンツ専用", px: 900 },
   [LayoutWidth.SM]: { label: "小", description: "コンパクト", px: 1000 },
   [LayoutWidth.MD]: { label: "中", description: "スタンダード", px: 1100 },
   [LayoutWidth.LG]: { label: "大", description: "ワイド", px: 1200 },
