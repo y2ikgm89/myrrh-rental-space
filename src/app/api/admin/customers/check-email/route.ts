@@ -6,9 +6,11 @@
  *
  * 認証: 認証済み admin ロール（`checkAdminAuth`）
  * レスポンス: `{ available: boolean }` のみ（重複時の ID は漏洩防止のため返さない）
+ *
+ * @see docs/api-conventions.md — status code 規約 / レスポンスヘルパー
  */
 
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
@@ -19,6 +21,12 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonSuccess,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 
 const querySchema = z.object({
   email: z.email(),
@@ -29,7 +37,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const auth = await checkAdminAuth(request.headers);
     if (!auth.success) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const url = new URL(request.url);
@@ -38,17 +46,14 @@ export async function GET(request: Request): Promise<NextResponse> {
       excludeId: url.searchParams.get("excludeId") ?? undefined,
     });
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid query parameters" },
-        { status: 400 },
-      );
+      return jsonValidationError(parsed.error, "Invalid query parameters");
     }
 
     const { email, excludeId } = parsed.data;
 
     const existing = await findCustomerByEmailExcept(email, excludeId);
 
-    return NextResponse.json({ available: existing === null });
+    return jsonSuccess({ available: existing === null });
   } catch (error: unknown) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
@@ -56,9 +61,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       severity: ErrorSeverity.MEDIUM,
       context: { operation: "checkCustomerEmail" },
     });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return jsonError("Internal server error", 500);
   }
 }

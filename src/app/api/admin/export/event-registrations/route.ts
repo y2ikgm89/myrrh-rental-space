@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
@@ -11,14 +10,25 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 
 const eventIdSchema = z.uuid({ error: "eventId が不正です" });
 
+/**
+ * イベント申込者 CSV エクスポート
+ *
+ * @see docs/api-conventions.md — CSV/redirect は許可リスト（成功時のみ `new Response`）。
+ *   エラー JSON は `jsonError` 経由。
+ */
 export async function GET(request: Request): Promise<Response> {
   try {
     const auth = await checkPermission("event", "read", request.headers);
     if (!auth.success) {
-      return NextResponse.json({ error: auth.error.error }, { status: 403 });
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const { searchParams } = new URL(request.url);
@@ -26,10 +36,7 @@ export async function GET(request: Request): Promise<Response> {
     const parsed = eventIdSchema.safeParse(eventIdParam);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "eventId が不正です" },
-        { status: 400 },
-      );
+      return jsonValidationError(parsed.error, "eventId が不正です");
     }
 
     const eventId = parsed.data;
@@ -90,9 +97,6 @@ export async function GET(request: Request): Promise<Response> {
       severity: ErrorSeverity.HIGH,
       context: { operation: "exportEventRegistrations" },
     });
-    return NextResponse.json(
-      { error: "エクスポートに失敗しました" },
-      { status: 500 },
-    );
+    return jsonError("エクスポートに失敗しました", 500);
   }
 }

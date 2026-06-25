@@ -8,9 +8,16 @@ import {
 } from "@/shared/lib/route-responses";
 
 describe("route-responses", () => {
-  test("権限系メッセージは 403 に変換する", () => {
+  test("未ログインメッセージは 401 に変換する (docs/api-conventions.md)", () => {
+    expect(getRouteErrorStatus("ログインが必要です")).toBe(401);
+  });
+
+  test("権限不足メッセージは 403 に変換する (docs/api-conventions.md)", () => {
     expect(getRouteErrorStatus("管理者権限が必要です")).toBe(403);
-    expect(getRouteErrorStatus("ログインが必要です")).toBe(403);
+    expect(getRouteErrorStatus("spaceのcreate権限がありません")).toBe(403);
+    expect(getRouteErrorStatus("このリソースへのアクセス権がありません")).toBe(
+      403,
+    );
   });
 
   test("一般エラーは 400 に変換する", () => {
