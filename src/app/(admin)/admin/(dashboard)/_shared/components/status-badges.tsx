@@ -206,7 +206,6 @@ const auditActionConfig = {
   UPDATE: { label: AUDIT_ACTION_LABELS.UPDATE, variant: "secondary" },
   DELETE: { label: AUDIT_ACTION_LABELS.DELETE, variant: "destructive" },
   PUBLISH: { label: AUDIT_ACTION_LABELS.PUBLISH, variant: "default" },
-  UNPUBLISH: { label: AUDIT_ACTION_LABELS.UNPUBLISH, variant: "outline" },
   LOGIN_SUCCESS: {
     label: AUDIT_ACTION_LABELS.LOGIN_SUCCESS,
     variant: "default",
