@@ -90,6 +90,13 @@ let contentFixture: ContentData = emptyContent();
 let contextFixture: FeatureFilterContext = allOnContext();
 let contentShouldThrow = false;
 
+// `next/server` の `connection()` は request scope 内でのみ動作するため
+// Bun unit test 環境では throw する。sitemap.ts が build prerender 隔離のために
+// 呼び出すが、ユニットテストの不変条件検証には無関係なので no-op で mock する。
+mock.module("next/server", () => ({
+  connection: () => Promise.resolve(),
+}));
+
 mock.module("@/shared/domain/sitemap/queries", () => ({
   getSitemapContentData: () =>
     contentShouldThrow
