@@ -11,8 +11,6 @@ import {
 } from "@/shared/domain/settings/queries/organization";
 import { isRecord, omitUndefined } from "@/shared/lib/serialize";
 
-const BASE_URL = getBaseUrl();
-
 // =============================================================================
 // Types
 // =============================================================================
@@ -66,12 +64,13 @@ export interface GraphJsonLdData {
  * WebSite JSON-LD用データを取得
  */
 export async function getWebSiteJsonLdData(): Promise<WebSiteJsonLdData> {
+  const baseUrl = getBaseUrl();
   const settings = await getOrganizationSettings();
 
   return {
     name: settings?.siteName || SITE_DEFAULTS.name,
     description: settings?.siteDescription || SITE_DEFAULTS.description,
-    url: BASE_URL,
+    url: baseUrl,
   };
 }
 
@@ -79,6 +78,7 @@ export async function getWebSiteJsonLdData(): Promise<WebSiteJsonLdData> {
  * Organization JSON-LD用データを取得
  */
 export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdData> {
+  const baseUrl = getBaseUrl();
   const [settings, sameAs] = await Promise.all([
     getOrganizationSettings(),
     getSocialLinkUrls(),
@@ -96,12 +96,12 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
     : undefined;
 
   return omitUndefined({
-    "@id": `${BASE_URL}/#organization`,
+    "@id": `${baseUrl}/#organization`,
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
     alternateName: settings?.businessNameKana || undefined,
     description:
       settings?.businessDescription || settings?.siteDescription || undefined,
-    url: BASE_URL,
+    url: baseUrl,
     logo: settings?.headerLogoUrl || undefined,
     telephone: settings?.phoneNumber || undefined,
     faxNumber: settings?.faxNumber || undefined,

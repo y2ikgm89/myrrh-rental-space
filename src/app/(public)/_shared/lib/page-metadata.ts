@@ -19,8 +19,6 @@ import {
 } from "@/shared/lib/validations/page";
 import { getPageSeo } from "@/shared/domain/pages/queries";
 
-const BASE_URL = getBaseUrl();
-
 /**
  * SEOデータ型
  */
@@ -66,6 +64,7 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
  * - keywords
  */
 export async function generatePageMetadata(slug: string): Promise<Metadata> {
+  const baseUrl = getBaseUrl();
   // Page SEO と Settings を並列取得
   const [seo, settings] = await Promise.all([
     getPageSeo(slug),
@@ -94,7 +93,7 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
   const ogImage = seo?.ogpImageUrl || settings?.defaultOgpImageUrl || undefined;
 
   // canonical URL: 'home' はルート URL、それ以外は /{slug}
-  const canonicalUrl = slug === "home" ? `${BASE_URL}/` : `${BASE_URL}/${slug}`;
+  const canonicalUrl = slug === "home" ? `${baseUrl}/` : `${baseUrl}/${slug}`;
 
   const metadata: Metadata = {
     title,

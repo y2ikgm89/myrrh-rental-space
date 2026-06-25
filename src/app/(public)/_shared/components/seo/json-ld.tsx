@@ -15,8 +15,6 @@ import { escapeJsonForScriptTag } from "@/shared/lib/json-ld-escape";
 import type { OrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import type { LocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-json-ld";
 
-const BASE_URL = getBaseUrl();
-
 // =============================================================================
 // Types
 // =============================================================================
@@ -188,8 +186,9 @@ export function GraphJsonLd({
   organization: OrganizationJsonLdData;
   webSite: { name: string; description?: string; url?: string };
 }): ReactElement {
+  const baseUrl = getBaseUrl();
   const orgId = `${organization.url}/#organization`;
-  const websiteId = `${webSite.url || BASE_URL}/#website`;
+  const websiteId = `${webSite.url || baseUrl}/#website`;
 
   const data = {
     "@context": "https://schema.org",
@@ -200,7 +199,7 @@ export function GraphJsonLd({
         "@id": websiteId,
         name: webSite.name,
         ...(webSite.description && { description: webSite.description }),
-        url: webSite.url || BASE_URL,
+        url: webSite.url || baseUrl,
         publisher: { "@id": orgId },
       },
     ],
@@ -295,6 +294,7 @@ export function ArticleJsonLd({
   dateModified,
   author,
 }: ArticleData): ReactElement {
+  const baseUrl = getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -314,7 +314,7 @@ export function ArticleJsonLd({
     publisher: {
       "@type": "Organization",
       name: SITE_DEFAULTS.name,
-      url: BASE_URL,
+      url: baseUrl,
     },
   };
 
@@ -345,6 +345,7 @@ export function EventJsonLd({
   offers,
   maximumAttendeeCapacity,
 }: EventData): ReactElement {
+  const baseUrl = getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -384,7 +385,7 @@ export function EventJsonLd({
     organizer: {
       "@type": "Organization",
       name: SITE_DEFAULTS.name,
-      url: BASE_URL,
+      url: baseUrl,
     },
   };
 
@@ -402,6 +403,7 @@ export function NewsArticleJsonLd({
   datePublished,
   dateModified,
 }: Omit<ArticleData, "author">): ReactElement {
+  const baseUrl = getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -414,7 +416,7 @@ export function NewsArticleJsonLd({
     publisher: {
       "@type": "Organization",
       name: SITE_DEFAULTS.name,
-      url: BASE_URL,
+      url: baseUrl,
     },
   };
 
@@ -429,6 +431,7 @@ export function BreadcrumbJsonLd({
 }: {
   items: BreadcrumbItem[];
 }): ReactElement {
+  const baseUrl = getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -436,7 +439,7 @@ export function BreadcrumbJsonLd({
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: item.url.startsWith("http") ? item.url : `${BASE_URL}${item.url}`,
+      item: item.url.startsWith("http") ? item.url : `${baseUrl}${item.url}`,
     })),
   };
 
@@ -469,18 +472,19 @@ export function FAQPageJsonLd({ items }: { items: FAQItem[] }): ReactElement {
 export function WebSiteJsonLd({
   name,
   description,
-  url = BASE_URL,
+  url,
 }: {
   name: string;
   description?: string;
   url?: string;
 }): ReactElement {
+  const resolvedUrl = url ?? getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name,
     ...(description && { description }),
-    url,
+    url: resolvedUrl,
   };
 
   return <JsonLd data={data} />;
