@@ -821,6 +821,50 @@ describe("architecture boundaries", () => {
     ).toBe(false);
   });
 
+  test("shared/ 内の Prisma 直 import / model 呼出は domain・db 配下に限定する（placement gate）", () => {
+    // CLAUDE.md コア規約「DB query / command は src/shared/domain/<entity>/{queries,commands}.ts に置く」を
+    // 機械強制する。shared/ 配下で prisma facade を import し、かつ `prisma.<model>.<method>` の形で
+    // 実際に DB 呼出をしているファイルは原則 domain/db 配下に限る。
+    // ALLOWLIST: domain/db に切り出すと過剰な抽象になる正当な lib 境界の例外のみ列挙する。
+    const SHARED_ROOT = join(SRC_ROOT, "shared");
+    const ALLOWLIST = new Set(
+      [
+        join(SRC_ROOT, "shared", "lib", "calendar-sync", "event-inbound.ts"),
+        join(SRC_ROOT, "shared", "lib", "email", "event-emails.ts"),
+        join(SRC_ROOT, "shared", "lib", "email", "inquiry-emails.ts"),
+        join(
+          SRC_ROOT,
+          "shared",
+          "lib",
+          "google-business-profile",
+          "location-sync.ts",
+        ),
+      ].map((file) => relative(ROOT, file)),
+    );
+    const importsPrisma = (source: string) =>
+      /from\s+["']@\/shared\/db\/prisma["']/u.test(source);
+    // `prisma.<model>.<method>` のみを「DB 呼出」とみなす。
+    // prisma を delegate として下層 command に渡すだけのファイル（bootstrap / section-defaults）は
+    // 二段目のドット参照を持たないため自然に除外される。
+    const containsPrismaModelCall = (source: string) =>
+      /\bprisma\.\w+\.\w+/u.test(source);
+
+    const offenders = collectSourceFiles(SHARED_ROOT)
+      .filter(
+        (file) =>
+          !file.startsWith(SHARED_DOMAIN_ROOT) &&
+          !file.startsWith(SHARED_DB_ROOT),
+      )
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return importsPrisma(source) && containsPrismaModelCall(source);
+      })
+      .map((file) => relative(ROOT, file))
+      .filter((rel) => !ALLOWLIST.has(rel));
+
+    expect(offenders).toEqual([]);
+  });
+
   test("`@/shared/db/prisma` を import する全ファイルが server-only を明示する", () => {
     // 動的列挙: 手書き allowlist は追加ファイルが登録されない限り gate が dead になり、
     // 実際に 58+ ファイルが未保護で drift していた。`from "@/shared/db/prisma"` を持つ
