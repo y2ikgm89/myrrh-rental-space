@@ -10,9 +10,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { serverEnv } from "@/shared/lib/env/server";
-import { clientEnv } from "@/shared/lib/env/client";
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
+import { getAppUrl } from "@/shared/lib/constants";
 
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
 const STATE_COOKIE_NAME = "instagram_oauth_state";
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const redirectUri = serverEnv.INSTAGRAM_REDIRECT_URI;
 
   if (!clientId || !redirectUri) {
-    const settingsUrl = new URL("/admin/settings/integrations", getBaseUrl());
+    const settingsUrl = new URL("/admin/settings/integrations", getAppUrl());
     settingsUrl.searchParams.set("tab", "instagram");
     settingsUrl.searchParams.set(
       "error",
@@ -71,15 +71,4 @@ export async function GET(request: Request) {
   authUrl.searchParams.set("state", state);
 
   return NextResponse.redirect(authUrl);
-}
-
-/**
- * ベースURLを取得
- */
-function getBaseUrl(): string {
-  if (serverEnv.BETTER_AUTH_URL) {
-    return serverEnv.BETTER_AUTH_URL;
-  }
-  // フォールバック（Cloud Run では NEXT_PUBLIC_APP_URL を明示設定すること）
-  return clientEnv.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }

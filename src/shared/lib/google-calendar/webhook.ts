@@ -14,8 +14,7 @@ import {
   saveGoogleCalendarWebhook,
   saveGoogleCalendarWebhookToken,
 } from "@/shared/domain/settings/commands";
-import { serverEnv } from "@/shared/lib/env/server";
-import { clientEnv } from "@/shared/lib/env/client";
+import { getAppUrl } from "@/shared/lib/constants";
 import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
@@ -183,16 +182,8 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
       });
     }
 
-    // 新しいWebhookを設定
-    const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
-    if (!baseUrl) {
-      return {
-        success: false,
-        renewed: false,
-        error: "APP_URL not configured",
-      };
-    }
-
+    // 新しいWebhookを設定（getAppUrl は production で env 未設定なら throw）
+    const baseUrl = getAppUrl();
     const webhookUrl = `${baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`}/api/webhooks/google-calendar`;
     const result = await setupWebhookWatch(webhookUrl);
 
