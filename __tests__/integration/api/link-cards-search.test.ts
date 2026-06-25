@@ -103,13 +103,13 @@ describe("searchLinkCardCandidates", () => {
         id: "s1",
         name: "スペースA",
         mainImageUrl: "https://x/main.jpg",
-        imageUrls: ["https://x/1.jpg"],
+        gallery: [{ url: "https://x/1.jpg", alt: "", caption: "" }],
       },
       {
         id: "s2",
         name: "スペースB",
         mainImageUrl: null,
-        imageUrls: ["https://x/2.jpg"],
+        gallery: [{ url: "https://x/2.jpg", alt: "", caption: "" }],
       },
     ]);
 

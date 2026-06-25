@@ -630,7 +630,7 @@ async function seedSpaces(overridePublished?: boolean) {
       hourlyPrice: new Prisma.Decimal(3000),
       dailyPrice: new Prisma.Decimal(20000),
       mainImageUrl: "/images/seed/meeting-room.svg",
-      imageUrls: [],
+      gallery: [],
       facilities: [
         { name: "Wi-Fi", iconName: "IconWifi" },
         { name: "プロジェクター", iconName: "IconPresentation" },
@@ -655,7 +655,7 @@ async function seedSpaces(overridePublished?: boolean) {
       hourlyPrice: new Prisma.Decimal(8000),
       dailyPrice: new Prisma.Decimal(50000),
       mainImageUrl: "/images/seed/seminar-room.svg",
-      imageUrls: [],
+      gallery: [],
       facilities: [
         { name: "Wi-Fi", iconName: "IconWifi" },
         { name: "プロジェクター", iconName: "IconPresentation" },
@@ -681,7 +681,7 @@ async function seedSpaces(overridePublished?: boolean) {
       hourlyPrice: new Prisma.Decimal(500),
       dailyPrice: new Prisma.Decimal(3000),
       mainImageUrl: "/images/seed/coworking.svg",
-      imageUrls: [],
+      gallery: [],
       facilities: [
         { name: "Wi-Fi", iconName: "IconWifi" },
         { name: "電源", iconName: "IconChargingPile" },

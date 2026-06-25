@@ -94,7 +94,7 @@ describe("resolveLinkCardsByType", () => {
         name: "スタジオ",
         descriptionPlainText: "広い",
         mainImageUrl: "https://x/m.jpg",
-        imageUrls: ["https://x/1.jpg"],
+        gallery: [{ url: "https://x/1.jpg", alt: "", caption: "" }],
       },
     ]);
     const map = await resolveLinkCardsByType("space", ["s1"]);
