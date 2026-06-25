@@ -6,6 +6,8 @@ import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
 import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import { isImageUrl } from "@/shared/lib/media/detect-media-type";
 
 interface SpaceCardProps {
   readonly slug: string;
@@ -15,7 +17,7 @@ interface SpaceCardProps {
   readonly area: number | null;
   readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
-  readonly imageUrls?: readonly string[] | undefined;
+  readonly gallery?: readonly GalleryItem[] | undefined;
   readonly categoryName?: string | null | undefined;
   readonly locationName?: string | undefined;
   readonly averageRating?: number | undefined;
@@ -42,15 +44,19 @@ export async function SpaceCard({
   area,
   hourlyPrice,
   mainImageUrl,
-  imageUrls,
+  gallery,
   categoryName,
   locationName,
   averageRating,
   reviewCount,
   layout = "grid",
 }: SpaceCardProps) {
-  // imageUrls はスキーマで重複禁止が保証されている（mainImageUrl との重複も禁止）
-  const allImages = imageUrls ? [mainImageUrl, ...imageUrls] : [mainImageUrl];
+  const allImages = gallery
+    ? [
+        mainImageUrl,
+        ...gallery.filter((g) => isImageUrl(g.url)).map((g) => g.url),
+      ]
+    : [mainImageUrl];
 
   const tax = await getPublicTaxSettings();
   const taxRate = getTaxRate(TaxRateType.standard, tax);

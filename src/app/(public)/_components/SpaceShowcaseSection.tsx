@@ -8,6 +8,7 @@ import { SpacesCarousel } from "./space-showcase/_spaces-carousel";
 import { SpacesGrid } from "./space-showcase/_spaces-grid";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 export interface ShowcaseSpaceData {
   readonly id: string;
@@ -18,7 +19,7 @@ export interface ShowcaseSpaceData {
   readonly hourlyPrice: number | null;
   readonly area: number | null;
   readonly mainImageUrl: string;
-  readonly imageUrls: readonly string[];
+  readonly gallery: readonly GalleryItem[];
   readonly categoryName: string | null;
   readonly locationName: string | null;
 }

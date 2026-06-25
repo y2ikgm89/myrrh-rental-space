@@ -15,6 +15,7 @@ import {
   parseStringArray,
 } from "@/shared/lib/json-validators";
 import { parseGallery } from "@/shared/lib/validations/gallery";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import type {
   DiscountType,
   DurationDiscountOverride,
@@ -47,7 +48,7 @@ export type SpaceOption = {
   hourlyPrice: number;
   dailyPrice: number | null;
   mainImageUrl: string;
-  imageUrls: string[]; // gallery[].url を展開した string[] (UI 互換維持)
+  gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];
   // スペース固有割引。公開予約フォームの料金プレビュー / DB 永続化の SSoT は
   // calculateReservationPrice 経由。none / discountValue == null は割引なし。
@@ -316,7 +317,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         ...l,
         spaces: l.spaces.map((s) => ({
           ...s,
-          imageUrls: parseGallery(s.gallery).map((g) => g.url),
+          gallery: parseGallery(s.gallery),
           facilities: parseFacilities(s.facilities),
         })),
       })),

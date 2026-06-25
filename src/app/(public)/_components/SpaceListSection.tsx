@@ -32,6 +32,7 @@ import {
 } from "./space-list/space-list-simple-view";
 import { SpaceGrid } from "./space-list/space-grid";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 export type { SpaceListData };
 
@@ -54,7 +55,7 @@ interface CatalogSpace {
   readonly area: number | null;
   readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
-  readonly imageUrls: readonly string[];
+  readonly gallery: readonly GalleryItem[];
   readonly category: { readonly name: string } | null;
   readonly location: { readonly name: string };
 }

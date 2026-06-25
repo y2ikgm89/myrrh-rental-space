@@ -72,7 +72,7 @@ export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
               area={featured.area}
               hourlyPrice={featured.hourlyPrice}
               mainImageUrl={featured.mainImageUrl}
-              imageUrls={featured.imageUrls}
+              gallery={featured.gallery}
               categoryName={featured.categoryName}
               locationName={featured.locationName ?? undefined}
             />
@@ -99,7 +99,7 @@ export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
                 area={space.area}
                 hourlyPrice={space.hourlyPrice}
                 mainImageUrl={space.mainImageUrl}
-                imageUrls={space.imageUrls}
+                gallery={space.gallery}
                 categoryName={space.categoryName}
                 locationName={space.locationName ?? undefined}
               />

@@ -222,10 +222,7 @@ export async function SectionRenderer({
             style={resolved}
             mode={{
               kind: "catalog",
-              spaces: items.map((s) => ({
-                ...s,
-                imageUrls: s.gallery.map((g) => g.url),
-              })),
+              spaces: items,
               categories,
               locations,
               reviewStats,
@@ -277,7 +274,7 @@ export async function SectionRenderer({
         hourlyPrice: s.hourlyPrice,
         area: s.area,
         mainImageUrl: s.mainImageUrl,
-        imageUrls: s.gallery.map((g) => g.url),
+        gallery: s.gallery,
         categoryName: s.category?.name ?? null,
         locationName: s.location?.name ?? null,
       }));

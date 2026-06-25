@@ -2,6 +2,7 @@ import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal"
 import { Button } from "@/public/components/design-system/button";
 import { PublicEmptyState } from "@/public/components/ui/empty-state";
 import { SpaceCard } from "./space-card";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 interface Space {
   readonly id: string;
@@ -12,7 +13,7 @@ interface Space {
   readonly area: number | null;
   readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
-  readonly imageUrls: readonly string[];
+  readonly gallery: readonly GalleryItem[];
   readonly category: { readonly name: string } | null;
   readonly location: { readonly name: string };
 }
@@ -63,7 +64,7 @@ export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
             hourlyPrice={space.hourlyPrice}
             locationName={space.location.name}
             mainImageUrl={space.mainImageUrl}
-            imageUrls={space.imageUrls}
+            gallery={space.gallery}
             categoryName={space.category?.name}
             layout="horizontal"
             {...(stats && stats.totalCount > 0
