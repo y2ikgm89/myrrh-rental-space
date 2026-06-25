@@ -171,11 +171,11 @@ export const verifyCustomerSession = cache(
 
 /** 現在の顧客ユーザー取得（リダイレクトなし） */
 export const getCurrentCustomerUser = cache(
-  async (requestHeaders?: Headers): Promise<CustomerUser | undefined> => {
+  async (requestHeaders?: Headers): Promise<CustomerUser | null> => {
     const session = await customerAuth.api.getSession({
       headers: await resolveRequestHeaders(requestHeaders),
     });
-    return getCustomerSessionUser(session) ?? undefined;
+    return getCustomerSessionUser(session);
   },
 );
 
