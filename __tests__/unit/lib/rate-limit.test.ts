@@ -135,16 +135,6 @@ describe("checkRateLimit", () => {
     expect(result.remaining).toBe(19);
   });
 
-  test("/api/admin/login-tokens パスはトークン用リミッターを使用する", async () => {
-    const result = await checkRateLimit(
-      "/api/admin/login-tokens/verify",
-      "check-token-ip",
-    );
-    expect(result.success).toBe(true);
-    // トークンリミッターは maxRequests: 30
-    expect(result.remaining).toBe(29);
-  });
-
   test("その他のAPIパスはデフォルトリミッターを使用する", async () => {
     const result = await checkRateLimit("/api/spaces", "check-default-ip");
     expect(result.success).toBe(true);

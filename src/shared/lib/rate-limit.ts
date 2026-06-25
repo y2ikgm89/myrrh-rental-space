@@ -139,7 +139,7 @@ export function createRateLimiter(
  * ヘッダ。本番の ingress が **Cloudflare 限定**（Cloud Run へ直接到達不可）であることを前提に、
  * その場合のみ Cloudflare が `cf-connecting-ip` を実クライアント IP で上書きするため詐称不可になる。
  * origin が Cloudflare をバイパスして直接到達可能だと、攻撃者がこれらのヘッダを回転させて
- * rate limiter のバケット（authMutation 20/15分・public-form 5/分・login-token 等）や
+ * rate limiter のバケット（authMutation 20/15分・public-form 5/分等）や
  * Turnstile remoteip を回避できる。
  *
  * → infra 側で「ingress = Cloudflare 限定」を保証すること（Cloud Run の ingress 制限 +
@@ -186,12 +186,6 @@ export const apiRateLimiter = createRateLimiter({
 export const authMutationRateLimiter = createRateLimiter({
   interval: 15 * 60 * 1000, // 15分
   maxRequests: 20,
-});
-
-// ログイントークン用（30リクエスト/分/IP）
-export const tokenRateLimiter = createRateLimiter({
-  interval: 60 * 1000, // 1分
-  maxRequests: 30,
 });
 
 // 公開フォーム送信用（5リクエスト/分/IP）— スパム対策
@@ -294,9 +288,6 @@ export async function checkRateLimit(
       return apiRateLimiter.check(clientIp);
     }
     return authMutationRateLimiter.check(clientIp);
-  }
-  if (pathname.startsWith("/api/admin/login-tokens")) {
-    return tokenRateLimiter.check(clientIp);
   }
   // 管理画面内部 API: 認証済みでも defense-in-depth で IP bucket をかける。
   // 重い endpoint は厳しめ (60/分)、その他は緩めの apiRateLimiter (100/分)。

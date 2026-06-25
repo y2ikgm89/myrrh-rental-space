@@ -3,7 +3,7 @@
  *
  * `proxy.ts` は `/api/*` を `checkRateLimit(pathname, clientIp)` に委譲する。
  * ここでは「どの bucket に落ちるか」（authMutationRateLimiter / apiRateLimiter /
- * tokenRateLimiter / expensiveAdminRateLimiter）を pathname → remaining 初期値で
+ * expensiveAdminRateLimiter）を pathname → remaining 初期値で
  * 間接的に検証する。
  *
  * 各 bucket は in-memory LRU で independent token を持つため、token (IP) を
@@ -12,7 +12,6 @@
  * Buckets:
  * - authMutationRateLimiter:     maxRequests 20 → 初回 remaining 19
  * - apiRateLimiter:              maxRequests 100 → 初回 remaining 99
- * - tokenRateLimiter:            maxRequests 30 → 初回 remaining 29
  * - expensiveAdminRateLimiter:   maxRequests 60 → 初回 remaining 59
  */
 
@@ -21,7 +20,6 @@ import { checkRateLimit } from "@/shared/lib/rate-limit";
 
 const AUTH_MUTATION_REMAINING = 19;
 const API_REMAINING = 99;
-const TOKEN_REMAINING = 29;
 const EXPENSIVE_ADMIN_REMAINING = 59;
 
 function uniqueIp(label: string): string {
@@ -195,15 +193,6 @@ describe("checkRateLimit — /api/customer-auth (customer Better Auth)", () => {
 });
 
 describe("checkRateLimit — other API paths", () => {
-  test("/api/admin/login-tokens/* は tokenRateLimiter に落ちる", async () => {
-    const result = await checkRateLimit(
-      "/api/admin/login-tokens/verify",
-      uniqueIp("t1"),
-    );
-    expect(result.success).toBe(true);
-    expect(result.remaining).toBe(TOKEN_REMAINING);
-  });
-
   test("既定 /api/* は apiRateLimiter に落ちる", async () => {
     const result = await checkRateLimit("/api/spaces", uniqueIp("o1"));
     expect(result.success).toBe(true);
