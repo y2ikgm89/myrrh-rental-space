@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 
 const NOTIFICATION_SELECT = {
   id: true,
@@ -42,9 +43,9 @@ type GetNotificationsParams = {
 export async function getNotificationsQuery(params: GetNotificationsParams) {
   const { page, perPage, type, isRead } = params;
 
-  const where: Record<string, unknown> = {};
-  if (type) where["type"] = type;
-  if (isRead !== undefined) where["isRead"] = isRead;
+  const where: Prisma.AdminNotificationWhereInput = {};
+  if (type) where.type = type;
+  if (isRead !== undefined) where.isRead = isRead;
 
   const [total, notifications] = await Promise.all([
     prisma.adminNotification.count({ where }),
