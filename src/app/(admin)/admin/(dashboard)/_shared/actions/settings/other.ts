@@ -11,7 +11,6 @@
  * @module admin/actions/settings/other
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { invalidateSiteWideCache } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
@@ -66,7 +65,7 @@ export async function updateMaintenanceSettings(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+          invalidateSiteWideCache(CACHE_TAGS.LAYOUT_SETTINGS);
         },
       });
       if (isMutationError(result)) {
@@ -104,7 +103,7 @@ export async function updateCookieConsentSettings(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.COOKIE_CONSENT);
+          invalidateSiteWideCache(CACHE_TAGS.COOKIE_CONSENT);
         },
       });
       if (isMutationError(result)) {
@@ -194,7 +193,7 @@ export async function updateAnnouncementBarCarouselSettings(
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
+      invalidateSiteWideCache(CACHE_TAGS.ANNOUNCEMENT_BAR);
     },
   });
 }
@@ -218,7 +217,7 @@ export async function updateHeaderSettings(
           return null;
         },
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+          invalidateSiteWideCache(CACHE_TAGS.LAYOUT_SETTINGS);
         },
       });
       if (isMutationError(result)) {
@@ -252,8 +251,10 @@ export async function updateFooterSettings(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-        updateTag(CACHE_TAGS.SOCIAL_LINKS);
+        invalidateSiteWideCache([
+          CACHE_TAGS.LAYOUT_SETTINGS,
+          CACHE_TAGS.SOCIAL_LINKS,
+        ]);
       },
     });
     if (isMutationError(result)) {
@@ -288,17 +289,19 @@ export async function updateFeatureModulesSettings(
           return null;
         },
         afterSuccess: () => {
-          // FEATURE_MODULES SSoT 自体
-          updateTag(CACHE_TAGS.FEATURE_MODULES);
-          // feature filter を埋め込んだ全 consumer を invalidate
-          updateTag(CACHE_TAGS.NAVIGATION);
-          updateTag(CACHE_TAGS.PAGE_SECTIONS);
-          updateTag(CACHE_TAGS.SECTIONS);
-          // sitemap 生成は dynamic で feature filter を毎回読むため明示
-          // invalidate 不要だが、Cloud CDN にキャッシュされている可能性が
-          // あるため明示する
-          updateTag(CACHE_TAGS.PAGES);
-          updateTag(CACHE_TAGS.REVIEWS);
+          invalidateSiteWideCache([
+            // FEATURE_MODULES SSoT 自体
+            CACHE_TAGS.FEATURE_MODULES,
+            // feature filter を埋め込んだ全 consumer を invalidate
+            CACHE_TAGS.NAVIGATION,
+            CACHE_TAGS.PAGE_SECTIONS,
+            CACHE_TAGS.SECTIONS,
+            // sitemap 生成は dynamic で feature filter を毎回読むため明示
+            // invalidate 不要だが、Cloud CDN にキャッシュされている可能性が
+            // あるため明示する
+            CACHE_TAGS.PAGES,
+            CACHE_TAGS.REVIEWS,
+          ]);
         },
       });
       if (isMutationError(result)) {

@@ -10,8 +10,8 @@
  * - 表示設定
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
+import { invalidateSiteWideCache } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -43,7 +43,7 @@ export async function updateDiscountSettings(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+        invalidateSiteWideCache(CACHE_TAGS.BUSINESS_SETTINGS);
       },
     });
     if (isMutationError(result)) {
