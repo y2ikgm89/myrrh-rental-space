@@ -1,8 +1,14 @@
 /**
- * User Server Action 実呼出し統合テスト
+ * User Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/user.ts の
- * deleteUser / updateUserRole を実 import で呼び出す。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
+ *
+ * 対象: deleteUser / updateUserRole
  *
  * conform 系 (createUser / updateUser) は後続タスクで分離。
  */
@@ -64,7 +70,7 @@ const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 
-describe("deleteUser (real)", () => {
+describe("deleteUser (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDeleteUser.mockClear();
@@ -92,7 +98,7 @@ describe("deleteUser (real)", () => {
   });
 });
 
-describe("updateUserRole (real)", () => {
+describe("updateUserRole (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdateUserRole.mockClear();

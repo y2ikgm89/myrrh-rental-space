@@ -1,10 +1,14 @@
 /**
- * Post Server Action 実呼出し統合テスト
+ * Post Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/post/mutations.ts を
- * 実 import して呼び出し、executeAdminMutationResult を mock.module で
- * 差替えた本物のカバレッジを確保する（coupon-bulk pattern）。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
  *
+ * 対象: src/app/(admin)/admin/(dashboard)/_shared/actions/post/mutations.ts
  * schema 単体 test は post.test.ts に残置。
  */
 
@@ -128,7 +132,7 @@ const VALID_CREATE_INPUT = {
 // Tests
 // ============================================================================
 
-describe("createPost (real)", () => {
+describe("createPost (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockCreatePost.mockClear();
@@ -159,7 +163,7 @@ describe("createPost (real)", () => {
   });
 });
 
-describe("updatePostSettings (real)", () => {
+describe("updatePostSettings (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockUpdatePostSettings.mockClear();
@@ -206,7 +210,7 @@ describe("updatePostSettings (real)", () => {
   });
 });
 
-describe("deletePost / publishPost / unpublishPost / archivePost (real)", () => {
+describe("deletePost / publishPost / unpublishPost / archivePost (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockDeletePost.mockClear();

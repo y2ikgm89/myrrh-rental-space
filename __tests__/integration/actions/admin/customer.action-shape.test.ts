@@ -1,9 +1,15 @@
 /**
- * Customer Server Action 実呼出し統合テスト
+ * Customer Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts の
- * updateCustomerStatus / updateCustomerNotes / toggleCustomerActive /
- * deleteCustomer / mergeCustomers を実 import で呼び出す。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
+ *
+ * 対象: updateCustomerStatus / updateCustomerNotes / toggleCustomerActive /
+ * deleteCustomer / mergeCustomers
  *
  * conform 系 (createCustomer / updateCustomer) は customerFormSchema が
  * 巨大なため後続タスクで分離。
@@ -82,7 +88,7 @@ const { isMutationError } = await import("@/shared/lib/mutation-result");
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 const VALID_UUID_B = "22222222-2222-4222-8222-222222222222";
 
-describe("updateCustomerStatus (real)", () => {
+describe("updateCustomerStatus (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdateStatus.mockClear();
@@ -106,7 +112,7 @@ describe("updateCustomerStatus (real)", () => {
   });
 });
 
-describe("updateCustomerNotes (real)", () => {
+describe("updateCustomerNotes (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdateNotes.mockClear();
@@ -123,7 +129,7 @@ describe("updateCustomerNotes (real)", () => {
   });
 });
 
-describe("toggleCustomerActive (real)", () => {
+describe("toggleCustomerActive (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockToggleActive.mockClear();
@@ -141,7 +147,7 @@ describe("toggleCustomerActive (real)", () => {
   });
 });
 
-describe("deleteCustomer (real)", () => {
+describe("deleteCustomer (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDeleteCustomer.mockClear();
@@ -165,7 +171,7 @@ describe("deleteCustomer (real)", () => {
   });
 });
 
-describe("mergeCustomers (real)", () => {
+describe("mergeCustomers (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockMerge.mockClear();

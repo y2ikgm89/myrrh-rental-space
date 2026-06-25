@@ -1,9 +1,15 @@
 /**
- * Page Server Action 実呼出し統合テスト
+ * Page Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts の
- * deletePage / deletePagePermanently / restorePage / updatePagePublished /
- * bulkUpdatePagePublished / bulkDeletePages を実 import で呼び出す。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
+ *
+ * 対象: deletePage / deletePagePermanently / restorePage / updatePagePublished /
+ * bulkUpdatePagePublished / bulkDeletePages
  *
  * conform 系 (createPage / updatePageSeo) は後続タスクで分離。
  */
@@ -102,7 +108,7 @@ const {
 const SLUG = "about";
 const SLUG_B = "contact";
 
-describe("deletePage (real)", () => {
+describe("deletePage (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDeletePage.mockClear();
@@ -121,7 +127,7 @@ describe("deletePage (real)", () => {
   });
 });
 
-describe("deletePagePermanently (real)", () => {
+describe("deletePagePermanently (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDeletePagePermanently.mockClear();
@@ -140,7 +146,7 @@ describe("deletePagePermanently (real)", () => {
   });
 });
 
-describe("restorePage (real)", () => {
+describe("restorePage (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockRestorePage.mockClear();
@@ -161,7 +167,7 @@ describe("restorePage (real)", () => {
   });
 });
 
-describe("updatePagePublished (real)", () => {
+describe("updatePagePublished (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdatePublished.mockClear();
@@ -181,7 +187,7 @@ describe("updatePagePublished (real)", () => {
   });
 });
 
-describe("bulkUpdatePagePublished (real)", () => {
+describe("bulkUpdatePagePublished (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockBulkUpdatePublished.mockClear();
@@ -200,7 +206,7 @@ describe("bulkUpdatePagePublished (real)", () => {
   });
 });
 
-describe("bulkDeletePages (real)", () => {
+describe("bulkDeletePages (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockBulkDelete.mockClear();
