@@ -385,8 +385,12 @@ async function seedSettings(options: { resetFeatureModules?: boolean } = {}) {
     cancellationDeadlineHours: 24,
     modificationDeadlineHours: 24,
 
-    // ロゴ・OGP（公開ページ表示用）
-    // favicon は Next.js file-convention `src/app/favicon.ico` を SSoT とする (PR-B clean-break)。
+    // ファビコン・ロゴ・OGP（公開ページ表示用）
+    // ファビコンは空文字で開始し、admin から R2 アップロードで設定。未設定（空文字）
+    // 時は dynamic icon Route Handler (`src/app/icon/route.tsx`) が ImageResponse の
+    // default fallback を返すため UX 上は常に何らかのアイコンが配信される。
+    // 列は NOT NULL + DEFAULT '' で型強化済（null は許さない）。
+    faviconUrl: "",
     defaultOgpImageUrl: "/images/seed/ogp-default.svg",
     headerLogoUrl: "/images/seed/logo-header.svg",
     footerLogoUrl: "/images/seed/logo-footer.svg",

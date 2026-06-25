@@ -11,11 +11,13 @@ import { optionalText, switchBoolean } from "./form-schema-helpers";
 // Site > General > 基本情報
 // =============================================================================
 
-// faviconUrl は撤去 (PR-B clean-break)。favicon は Next.js file-convention
-// `src/app/favicon.ico` を SSoT とする。
+// faviconUrl は dynamic icon Route Handler (`src/app/icon/route.tsx`) 経由で配信される
+// R2 オブジェクト URL を保持する。空欄保存は emptyToNull で null 化され、Route Handler
+// 側で default fallback の ImageResponse が返る。
 export const basicInfoFormSchema = z.object({
   siteName: optionalText(100),
   siteDescription: optionalText(500),
+  faviconUrl: optionalText(500),
   defaultOgpImageUrl: optionalText(500),
   headerLogoUrl: optionalText(500),
   footerLogoUrl: optionalText(500),

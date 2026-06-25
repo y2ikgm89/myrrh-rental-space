@@ -49,6 +49,9 @@ export async function updateBasicInfo(
         await updateBasicInfoCommand({
           siteName: emptyToNull(data.siteName),
           siteDescription: emptyToNull(data.siteDescription),
+          // faviconUrl は NOT NULL + DEFAULT '' で型強化済（null は許さない）。
+          // conform の parseWithZod は空入力を undefined にするため `?? ""` で空文字化。
+          faviconUrl: data.faviconUrl ?? "",
           defaultOgpImageUrl: emptyToNull(data.defaultOgpImageUrl),
           headerLogoUrl: emptyToNull(data.headerLogoUrl),
           footerLogoUrl: emptyToNull(data.footerLogoUrl),

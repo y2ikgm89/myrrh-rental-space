@@ -67,9 +67,11 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import "./_styles/public.css";
 
 export async function generateMetadata(): Promise<Metadata> {
-  // favicon は Next.js file-convention `src/app/favicon.ico` を SSoT とする
-  // (Next.js 公式 metadata file-conventions canonical)。DB driven favicon は撤去
-  // (PR-B clean-break)。/icon-192, /icon-512, /apple-icon は別 file-convention で配信。
+  // favicon は静的 URL `/icon` で `<link rel="icon">` を注入し、実体は dynamic icon
+  // Route Handler (`src/app/icon/route.tsx`) が DB driven で配信する。generateMetadata
+  // 自体は静的 literal のみ返し DB query しないため、PR #699 が懸念した build-time
+  // prerender 汚染は構造的に発生しない。/icon-192, /icon-512, /apple-icon は別
+  // file-convention で配信（PWA manifest 経由）。
   return {
     metadataBase: new URL(getBaseUrl()),
     title: {
@@ -77,6 +79,10 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${SITE_DEFAULTS.name}`,
     },
     description: SITE_DEFAULTS.description,
+    icons: {
+      icon: "/icon",
+      apple: "/apple-icon",
+    },
     alternates: {
       types: {
         "application/rss+xml": "/feed.xml",

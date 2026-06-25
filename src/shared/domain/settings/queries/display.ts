@@ -128,5 +128,37 @@ export async function getFooterSettings(): Promise<FooterSettings> {
   };
 }
 
-// getFaviconUrl was removed (PR-B clean-break). favicon は Next.js
-// file-convention `src/app/favicon.ico` を SSoT とする運用に移行済。
+/**
+ * Settings.faviconUrl を取得する。dynamic icon Route Handler (`src/app/icon/route.tsx`)
+ * からのみ呼ばれる前提。
+ *
+ * 戻り値は常に `string`（schema は NOT NULL + DEFAULT '' で型強化済）。未設定は空文字
+ * で表現され、Route Handler 側で `if (!faviconUrl)` で default fallback に分岐する
+ * （null と空文字の二重表現を排除）。
+ *
+ * `'use cache' + safeFetch` + LAYOUT_SETTINGS タグで他の display 系 query と同じ
+ * invalidation pulley に乗せる（updateBasicInfo の afterSuccess で自動 revalidate）。
+ *
+ * 呼び出し元は必ず Route Handler の `await connection()` の後に呼ぶ
+ * (rule .claude/rules/db-and-domain.md §6)。generateMetadata / layout 本体・
+ * manifest.ts からは呼ばない（build-time prerender 汚染の構造的回避）。
+ */
+export async function getFaviconUrl(): Promise<string> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: { faviconUrl: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getFaviconUrl",
+  });
+
+  return result?.faviconUrl ?? "";
+}

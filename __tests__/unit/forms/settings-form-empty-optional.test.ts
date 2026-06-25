@@ -129,12 +129,13 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   // ---------------------------------------------------------------------------
   // 基本情報 / メンテナンス（任意テキスト + Switch）
   // ---------------------------------------------------------------------------
-  test("基本情報: 全テキスト空欄 + ロゴ Switch OFF でも success", () => {
+  test("基本情報: 全テキスト空欄 + ロゴ Switch OFF + ファビコン空欄でも success", () => {
     expectSuccess(
       basicInfoFormSchema,
       emptyKeys([
         "siteName",
         "siteDescription",
+        "faviconUrl",
         "defaultOgpImageUrl",
         "headerLogoUrl",
         "footerLogoUrl",

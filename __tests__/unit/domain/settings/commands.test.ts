@@ -70,6 +70,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 const BASIC_INFO_INPUT = {
   siteName: "Myrrh Rental Space",
   siteDescription: "レンタルスペース予約サービス",
+  faviconUrl: "https://example.com/favicon.png",
   defaultOgpImageUrl: "https://example.com/ogp.jpg",
   headerLogoUrl: "https://example.com/header-logo.png",
   footerLogoUrl: "https://example.com/footer-logo.png",
@@ -144,15 +145,33 @@ describe("updateBasicInfo", () => {
       );
     });
 
-    test("null フィールドを含む入力でも正常に動作する", async () => {
+    test("null フィールドを含む入力でも正常に動作する（faviconUrl は空文字）", async () => {
       await updateBasicInfo({
         ...BASIC_INFO_INPUT,
         siteName: null,
         siteDescription: null,
+        // faviconUrl は NOT NULL + DEFAULT '' で型 string なので null 不可。
+        // 未設定状態のテストは空文字で行う。
+        faviconUrl: "",
         defaultOgpImageUrl: null,
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    test("faviconUrl が upsert の create/update に渡される (dynamic icon route の SSoT)", async () => {
+      await updateBasicInfo(BASIC_INFO_INPUT);
+
+      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            faviconUrl: "https://example.com/favicon.png",
+          }),
+          update: expect.objectContaining({
+            faviconUrl: "https://example.com/favicon.png",
+          }),
+        }),
+      );
     });
 
     test("戻り値が void（undefined）", async () => {
