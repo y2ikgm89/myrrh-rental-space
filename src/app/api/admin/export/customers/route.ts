@@ -3,7 +3,11 @@ import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getCustomersForExport } from "@/shared/domain/customers/export-queries";
 import { generateCsv } from "@/shared/lib/csv";
-import { format } from "date-fns";
+import {
+  formatJstDateString,
+  formatJstYmd,
+  formatJstYmdHm,
+} from "@/shared/lib/date-format";
 import {
   logError,
   ErrorCategory,
@@ -58,23 +62,21 @@ export async function GET(request: Request): Promise<Response> {
       {
         header: "最終予約日",
         accessor: (c) =>
-          c.lastReservationAt ? format(c.lastReservationAt, "yyyy/MM/dd") : "",
+          c.lastReservationAt ? formatJstYmd(c.lastReservationAt) : "",
       },
       {
         header: "初回予約日",
         accessor: (c) =>
-          c.firstReservationAt
-            ? format(c.firstReservationAt, "yyyy/MM/dd")
-            : "",
+          c.firstReservationAt ? formatJstYmd(c.firstReservationAt) : "",
       },
       { header: "有効", accessor: (c) => (c.isActive ? "はい" : "いいえ") },
       {
         header: "登録日",
-        accessor: (c) => format(c.createdAt, "yyyy/MM/dd HH:mm"),
+        accessor: (c) => formatJstYmdHm(c.createdAt),
       },
     ]);
 
-    const filename = `customers-${format(new Date(), "yyyyMMdd")}.csv`;
+    const filename = `customers-${formatJstDateString(new Date()).replaceAll("-", "")}.csv`;
 
     return new Response(csv, {
       headers: {
