@@ -5,7 +5,7 @@ import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
 import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
-import { ImageCarousel } from "./image-carousel";
+import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
 
 interface SpaceCardProps {
   readonly slug: string;
