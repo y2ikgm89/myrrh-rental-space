@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getInquiries as getInquiriesQuery,
   getInquiryById as getInquiryByIdQuery,
@@ -14,9 +13,10 @@ import type {
   InquiryWithCustomer,
 } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "お問い合わせIDが不正です" });
+const idSchema = uuidIdSchema("お問い合わせ");
 
 export async function getInquiries(
   filters: InquiryFilters = {},

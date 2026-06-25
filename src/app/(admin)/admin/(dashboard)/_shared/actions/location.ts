@@ -22,8 +22,9 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "場所IDが不正です" });
+const idSchema = uuidIdSchema("店舗");
 const publishSchema = z.object({
   id: z.uuid({ error: "場所IDが不正です" }),
   isPublished: z.boolean(),

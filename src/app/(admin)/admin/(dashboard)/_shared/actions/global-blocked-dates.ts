@@ -2,7 +2,6 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
-import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -15,8 +14,9 @@ import {
   deleteBlockedDateCommand,
 } from "@/shared/domain/blocked-dates/commands";
 import { scopedBlockedDateFormSchema } from "@/admin/lib/validations/blocked-date";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("ブロック日");
 
 function invalidateGlobalBlockedCaches(): void {
   updateTag(CACHE_TAGS.SPACES);

@@ -7,7 +7,6 @@
  */
 
 import { unstable_rethrow } from "next/navigation";
-import { z } from "zod";
 import { incrementFaqItemViewCount } from "@/shared/domain/faq/analytics-commands";
 import {
   ErrorCategory,
@@ -15,8 +14,9 @@ import {
   logError,
 } from "@/shared/lib/errors/server";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid();
+const idSchema = uuidIdSchema("FAQ");
 
 type RouteContext = {
   params: Promise<{ id: string }>;

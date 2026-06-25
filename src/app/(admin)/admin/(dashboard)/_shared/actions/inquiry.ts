@@ -16,13 +16,14 @@ import { sendInquiryReplyEmail } from "@/shared/lib/email/inquiry-emails";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
+
+const idSchema = uuidIdSchema("お問い合わせ");
 
 const updateStatusSchema = z.object({
-  id: z.uuid({ error: "お問い合わせIDが不正です" }),
+  id: idSchema,
   status: z.enum(InquiryStatus),
 });
-
-const idSchema = z.uuid({ error: "お問い合わせIDが不正です" });
 
 export async function updateInquiryStatus(
   id: string,

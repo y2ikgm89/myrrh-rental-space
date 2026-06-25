@@ -25,8 +25,9 @@ import {
   invalidatePostTagCaches,
   purgePostArchive,
 } from "./cache-helpers";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "カテゴリ/タグIDが不正です" });
+const idSchema = uuidIdSchema("タクソノミー");
 const postCategoryOrderSchema = z
   .array(
     z.object({

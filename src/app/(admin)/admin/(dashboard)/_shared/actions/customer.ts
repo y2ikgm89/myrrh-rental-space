@@ -35,9 +35,10 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
-const idSchema = z.uuid({ error: "顧客IDが不正です" });
+const idSchema = uuidIdSchema("顧客");
 
 /**
  * 顧客新規作成 — conform `useActionState` 統合経路。

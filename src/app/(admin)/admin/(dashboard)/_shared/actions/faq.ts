@@ -39,8 +39,9 @@ import {
   faqCategoryFormSchema,
   faqItemFormSchema,
 } from "@/admin/lib/validations/faq";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("FAQ");
 const orderedIdsSchema = z
   .array(z.uuid({ error: "IDが不正です" }))
   .refine((ids) => new Set(ids).size === ids.length, {

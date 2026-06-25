@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getCustomerById as getCustomerByIdQuery,
   getCustomerStats as getCustomerStatsQuery,
@@ -15,9 +14,10 @@ import type {
   CustomerWithReservationsAndAccount,
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "顧客IDが不正です" });
+const idSchema = uuidIdSchema("顧客");
 
 export async function getCustomers(
   filters: CustomerFilters = {},

@@ -8,7 +8,6 @@ import {
   purgeMarketingHomeTag,
   firePurgeAsync,
 } from "@/shared/lib/cache";
-import { z } from "zod";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -31,8 +30,9 @@ import {
   spaceFormSchema,
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("スペース");
 
 interface SpaceTarget {
   id: string;

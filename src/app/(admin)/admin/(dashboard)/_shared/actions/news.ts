@@ -1,7 +1,6 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   createNews as createNewsCommand,
@@ -29,8 +28,9 @@ import {
   type UpdateNewsBodyInput,
   type UpdateNewsSettingsInput,
 } from "@/admin/lib/validations/news";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "お知らせIDが不正です" });
+const idSchema = uuidIdSchema("お知らせ");
 
 function purgeNewsCaches(...slugs: Array<string | undefined>): void {
   const unique = [...new Set(slugs.filter((s): s is string => Boolean(s)))].map(

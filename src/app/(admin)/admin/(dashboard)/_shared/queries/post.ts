@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getPostById as getPostByIdQuery,
   getPostCategories as getPostCategoriesQuery,
@@ -17,9 +16,10 @@ import type {
   PostPagination,
   PostTagData,
 } from "@/shared/domain/posts/types";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("記事");
 
 export async function getPosts(
   filters: PostFilters = {},

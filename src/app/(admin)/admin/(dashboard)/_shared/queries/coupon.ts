@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getCouponById as getCouponByIdQuery,
   getCoupons as getCouponsQuery,
@@ -11,9 +10,10 @@ import type {
   CouponPagination,
   GetCouponsResult,
 } from "@/shared/domain/coupons/types";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "クーポンIDが不正です" });
+const idSchema = uuidIdSchema("クーポン");
 
 export async function getCoupons(
   filters: CouponFilters = {},
