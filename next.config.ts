@@ -173,39 +173,13 @@ const nextConfig: NextConfig = {
     // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
     // 公式: https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
     globalNotFound: true,
-    // Optimize package imports - barrel export の tree shaking。
-    // NOTE: Turbopack（このプロジェクトの dev/build バンドラ）は import を自動解析するため
-    // この設定は本来不要（公式: "not required when using Turbopack"）。webpack フォールバック
-    // 時のみ効く。date-fns / recharts / @tabler/icons-react は Next.js が既定で最適化するため
-    // 記載しない。Radix は個別 @radix-ui/react-* ではなく統合バレル radix-ui を import している。
-    optimizePackageImports: [
-      // UI primitives（実際に import している統合バレル）
-      "radix-ui",
-      // Rich text editor (Lexical)
-      "lexical",
-      "@lexical/code",
-      "@lexical/html",
-      "@lexical/link",
-      "@lexical/list",
-      "@lexical/react",
-      "@lexical/rich-text",
-      "@lexical/selection",
-      "@lexical/table",
-      "@lexical/utils",
-      // Animation
-      "gsap",
-      "gsap/ScrollTrigger",
-      "@gsap/react",
-      "lenis",
-      // DnD
-      "@dnd-kit/core",
-      "@dnd-kit/sortable",
-      "@dnd-kit/utilities",
-      // Form validation (主に server / admin が利用。public form は server-only
-      // validation で client から除外済み。webpack fallback の barrel 最適化保険)
-      "zod",
-      "@conform-to/zod",
-    ],
+    // NOTE: experimental.optimizePackageImports は Next.js 16 で削除済み。
+    // Next.js 16 から Turbopack が dev/build 両方で安定版デフォルト化し、
+    // Turbopack は import を自動解析・最適化するため本設定は完全に inert。
+    // 公式: "if you are using Turbopack, it automatically analyzes and optimizes
+    //        imports, so this configuration is not required"
+    // 公式: "Starting with Next.js 16, Turbopack is stable and used by default
+    //        for both `next dev` and `next build`"
   },
 
   // Legacy URL redirects（恒久 308）
