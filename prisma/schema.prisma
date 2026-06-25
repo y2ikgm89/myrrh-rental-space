@@ -1042,11 +1042,16 @@ model Settings {
   updatedAt DateTime @updatedAt
 
   // Site Basic Info
-  // NOTE: faviconUrl 列は PR #699 (expand) で全 read/write 参照撤去済。本 PR (contract)
-  // で DROP COLUMN を実行する。favicon は Next.js file-convention `src/app/favicon.ico` を
-  // SSoT として運用 (https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons)。
+  // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
+  // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
+  // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
+  // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
+  // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
+  // generateMetadata からは静的 URL `/icon` を icons.icon に注入し DB query しないため、
+  // PR #699 の build-time prerender 汚染懸念には抵触しない。
   siteName           String?
   siteDescription    String? @db.Text
+  faviconUrl         String  @default("")
   defaultOgpImageUrl String?
   headerLogoUrl      String?
   footerLogoUrl      String?

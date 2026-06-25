@@ -18,6 +18,7 @@ import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
+  faviconUrl: string;
   defaultOgpImageUrl: string | null;
   headerLogoUrl: string | null;
   footerLogoUrl: string | null;
