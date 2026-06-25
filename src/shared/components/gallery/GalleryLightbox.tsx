@@ -11,6 +11,9 @@
  * - キーボードナビ（←/→ / Escape はネイティブ <dialog> が処理）
  * - タッチスワイプ（dx > 50px で前後送り）
  * - 複数画像時のみ前後ナビゲーションボタンを表示
+ *
+ * @remarks initialIndex は初回マウント時のみ参照される。
+ * 別の index で開き直す場合は <GalleryLightbox key={initialIndex} ... /> でリマウントすること。
  */
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
@@ -151,7 +154,6 @@ export function GalleryLightbox({
             height={800}
             sizes="90vw"
             className="max-h-[80svh] w-auto object-contain"
-            priority
           />
         </div>
 
