@@ -599,7 +599,7 @@ model Reservation {
   // Cancellation tracking
   cancellationReason String?  @db.Text
   cancelledAt        DateTime?
-  cancelledByType    String?  @db.VarChar(20) // "CUSTOMER" | "ADMIN"
+  cancelledByType    String?  @db.VarChar(20) // "CUSTOMER" | "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
@@ -1297,7 +1297,7 @@ model Settings {
 
   // Google Business Profile sync
   googleBusinessProfileEnabled Boolean @default(false)
-  googleBusinessProfileAuth    Json?   // { accessToken, refreshToken, expiresAt, accountId } encrypted
+  googleBusinessProfileAuth    Json?   // { encrypted: string } envelope (中身は { accessToken, refreshToken, expiresAt, accountId } を encrypt() した ciphertext)
 
   // Google Meet ビデオ会議自動生成
   googleCalendarMeetEnabled Boolean @default(false)
