@@ -36,6 +36,7 @@ import type {
   ReservationChartSummary,
 } from "@/shared/domain/dashboard/queries";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { formatCount } from "@/shared/lib/format/count";
 
 /** dashboard chart の業界標準比率（IBM Carbon / Stripe / Vercel Analytics） */
 const CHART_ASPECT_RATIO = 3;
@@ -194,7 +195,7 @@ function formatRevenueAxis(value: number): string {
     const man = value / 10_000;
     return Number.isInteger(man) ? `${man}万` : `${man.toFixed(1)}万`;
   }
-  return value.toLocaleString("ja-JP");
+  return formatCount(value);
 }
 
 /**
@@ -273,7 +274,7 @@ function ReservationTooltip({ active, payload, label }: ChartTooltipProps) {
             予約数
           </dt>
           <dd className="font-medium tabular-nums text-foreground">
-            {reservations.toLocaleString("ja-JP")} 件
+            {formatCount(reservations)} 件
           </dd>
         </div>
         <div className="flex items-center justify-between gap-6">
@@ -320,7 +321,7 @@ export function ReservationChart({
   windowDays,
 }: ReservationChartProps) {
   const chartTitle = `予約・売上推移（直近${windowDays}日）`;
-  const chartDescription = `直近${windowDays}日間の予約数（左軸・件）と売上（右軸・円）の日次推移。合計予約数 ${summary.totalReservations.toLocaleString("ja-JP")} 件、合計売上 ${formatPrice(summary.totalRevenue)}。`;
+  const chartDescription = `直近${windowDays}日間の予約数（左軸・件）と売上（右軸・円）の日次推移。合計予約数 ${formatCount(summary.totalReservations)} 件、合計売上 ${formatPrice(summary.totalRevenue)}。`;
   const xAxisTicks = buildXAxisTicks(data);
   const { ref: chartContainerRef, width, height } = useChartContainerSize();
 
@@ -331,7 +332,7 @@ export function ReservationChart({
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 @md/main:grid-cols-4">
           <SummaryStat
             label="合計予約数"
-            value={`${summary.totalReservations.toLocaleString("ja-JP")} 件`}
+            value={`${formatCount(summary.totalReservations)} 件`}
             hint={`平均 ${summary.averageReservationsPerDay.toFixed(1)} 件/日`}
           />
           <SummaryStat
@@ -341,7 +342,7 @@ export function ReservationChart({
           />
           <SummaryStat
             label="ピーク予約数"
-            value={`${summary.peakReservations.toLocaleString("ja-JP")} 件`}
+            value={`${formatCount(summary.peakReservations)} 件`}
             hint="1日あたり最大"
           />
           <SummaryStat

@@ -6,6 +6,7 @@
 
 import { IconMessageCircle, IconClock, IconTrash } from "@tabler/icons-react";
 import type * as PostCommentTypes from "@/shared/domain/post-comments/types";
+import { formatCount } from "@/shared/lib/format/count";
 
 type Props = {
   stats: PostCommentTypes.CommentStats;
@@ -20,9 +21,7 @@ export function CommentStats({ stats }: Props) {
           <IconMessageCircle className="w-4 h-4" />
           <span className="text-sm font-medium">総コメント数</span>
         </div>
-        <p className="text-2xl font-bold">
-          {stats.total.toLocaleString("ja-JP")}
-        </p>
+        <p className="text-2xl font-bold">{formatCount(stats.total)}</p>
       </div>
 
       {/* 今日のコメント */}
@@ -32,7 +31,7 @@ export function CommentStats({ stats }: Props) {
           <span className="text-sm font-medium">今日のコメント</span>
         </div>
         <p className="text-2xl font-bold text-primary">
-          {stats.today.toLocaleString("ja-JP")}
+          {formatCount(stats.today)}
         </p>
       </div>
 
@@ -43,7 +42,7 @@ export function CommentStats({ stats }: Props) {
           <span className="text-sm font-medium">削除済み</span>
         </div>
         <p className="text-2xl font-bold text-destructive">
-          {stats.deleted.toLocaleString("ja-JP")}
+          {formatCount(stats.deleted)}
         </p>
       </div>
     </div>

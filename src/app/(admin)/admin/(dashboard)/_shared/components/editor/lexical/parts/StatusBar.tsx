@@ -8,6 +8,7 @@
 
 import type { WordCountData } from "../plugins/WordCountPlugin";
 import type { SaveStatus } from "../plugins/AutoSavePlugin";
+import { formatCount } from "@/shared/lib/format/count";
 
 // =============================================================================
 // Constants
@@ -44,7 +45,7 @@ export function StatusBar({ wordCount, saveStatus }: StatusBarProps) {
     >
       {charCount > 0 && (
         <>
-          <span>文字数: {charCount.toLocaleString("ja-JP")}</span>
+          <span>文字数: {formatCount(charCount)}</span>
           <span className="text-border">|</span>
           <span>読了目安: 約{readingTimeMinutes}分</span>
         </>

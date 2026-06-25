@@ -45,6 +45,7 @@ import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import { formatDateShort } from "@/shared/lib/date-format";
+import { formatCount } from "@/shared/lib/format/count";
 import { useQueryStates } from "nuqs";
 import {
   adminFaqCategoryDetailSearchParamsParsers,
@@ -136,7 +137,7 @@ function SortableRow({
         className="hidden text-right text-muted-foreground lg:table-cell tabular-nums"
         onClick={() => onEdit(item)}
       >
-        {item.viewCount.toLocaleString("ja-JP")}
+        {formatCount(item.viewCount)}
       </TableCell>
       <TableCell
         className="hidden text-right lg:table-cell"
