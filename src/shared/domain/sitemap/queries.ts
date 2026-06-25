@@ -109,6 +109,7 @@ const COLLECTION_KEYS = [
 
 export async function getSitemapContentData(): Promise<SitemapContentData> {
   const settled = await Promise.allSettled([
+    // Space は deletedAt 列を持たず isActive=false が soft-delete 代替 (schema.prisma:429-500 確認済み)
     prisma.space.findMany({
       where: { isPublished: true, isActive: true },
       select: { slug: true, updatedAt: true },
