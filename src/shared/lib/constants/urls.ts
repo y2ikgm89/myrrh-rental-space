@@ -74,15 +74,6 @@ export function getAdminUrl(path: string): string {
 }
 
 /**
- * 公開ページ URL を構築
- *
- * @param path - ルートからのパス（例: '/blog/my-post'）
- */
-export function getPublicUrl(path: string): string {
-  return `${getBaseUrl()}${path}`;
-}
-
-/**
  * アプリ URL のホスト名を取得（iCal UID の localpart@domain 用）
  *
  * 例: "https://example.com/foo" → "example.com"

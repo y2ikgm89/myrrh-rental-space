@@ -22,7 +22,7 @@ mock.module("@/shared/lib/env/client", () => ({
   }),
 }));
 
-const { getBaseUrl, getAppUrl, getAdminUrl, getPublicUrl, getAppHost } =
+const { getBaseUrl, getAppUrl, getAdminUrl, getAppHost } =
   await import("@/shared/lib/constants/urls");
 
 describe("urls.ts", () => {
@@ -79,19 +79,12 @@ describe("urls.ts", () => {
     });
   });
 
-  describe("getAdminUrl / getPublicUrl / getAppHost", () => {
+  describe("getAdminUrl / getAppHost", () => {
     test("getAdminUrl は /admin プレフィックスで連結する", () => {
       mockBaseUrl = "https://example.com";
       mockAppUrl = "https://app.example.com";
       expect(getAdminUrl("/dashboard")).toBe(
         "https://app.example.com/admin/dashboard",
-      );
-    });
-
-    test("getPublicUrl は BASE_URL に連結する", () => {
-      mockBaseUrl = "https://example.com";
-      expect(getPublicUrl("/blog/post-1")).toBe(
-        "https://example.com/blog/post-1",
       );
     });
 
