@@ -3918,8 +3918,8 @@ async function seedAuditLog() {
 
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 
-  // AuditAction 全 12 値（schema.prisma L1504-1517 と一致）:
-  // CREATE / UPDATE / DELETE / PUBLISH / UNPUBLISH / LOGIN_SUCCESS / LOGIN_FAILED /
+  // AuditAction 全 11 値（schema.prisma の AuditAction enum と一致）:
+  // CREATE / UPDATE / DELETE / PUBLISH / LOGIN_SUCCESS / LOGIN_FAILED /
   // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST / ROLE_CHANGE
   const entries: Array<{
     action:
@@ -3927,7 +3927,6 @@ async function seedAuditLog() {
       | "UPDATE"
       | "DELETE"
       | "PUBLISH"
-      | "UNPUBLISH"
       | "LOGIN_SUCCESS"
       | "LOGIN_FAILED"
       | "LOGOUT"
@@ -3967,13 +3966,6 @@ async function seedAuditLog() {
       ...(firstPost?.id ? { resourceId: firstPost.id } : {}),
       userId: admin.id,
       createdAt: hoursAgo(40),
-    },
-    {
-      action: "UNPUBLISH",
-      resource: "post",
-      ...(firstPost?.id ? { resourceId: firstPost.id } : {}),
-      userId: admin.id,
-      createdAt: hoursAgo(36),
     },
     {
       action: "LOGIN_SUCCESS",
@@ -4051,7 +4043,7 @@ async function seedAuditLog() {
   }
 
   console.log(
-    `✅ Created ${entries.length.toString()} audit log entries (all 12 AuditAction values)`,
+    `✅ Created ${entries.length.toString()} audit log entries (all 11 AuditAction values)`,
   );
 }
 
