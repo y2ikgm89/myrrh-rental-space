@@ -15,7 +15,10 @@ import {
   format,
 } from "date-fns";
 import { ja } from "date-fns/locale";
-import { formatJstDateString } from "@/shared/lib/date-format";
+import {
+  formatJstDateString,
+  formatJstMonthDay,
+} from "@/shared/lib/date-format";
 import type {
   CalendarView,
   CalendarDateRange,
@@ -408,7 +411,7 @@ export function formatDateLabel(date: Date, view: CalendarView): string {
     case "week": {
       const weekStart = startOfWeek(date, { weekStartsOn: 0 });
       const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
-      return `${format(weekStart, "M月d日", { locale: ja })} - ${format(weekEnd, "M月d日", { locale: ja })}`;
+      return `${formatJstMonthDay(weekStart)} - ${formatJstMonthDay(weekEnd)}`;
     }
     case "day":
     case "resource":

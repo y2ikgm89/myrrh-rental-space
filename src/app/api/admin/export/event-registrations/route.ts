@@ -4,8 +4,7 @@ import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getEventRegistrationsForExport } from "@/shared/domain/events/export-queries";
 import { generateCsv } from "@/shared/lib/csv";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatJstDateString, formatJstYmdHm } from "@/shared/lib/date-format";
 import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
@@ -53,8 +52,7 @@ export async function GET(request: Request): Promise<Response> {
       },
       {
         header: "開催日時",
-        accessor: (r) =>
-          format(r.event.startTime, "yyyy/MM/dd HH:mm", { locale: ja }),
+        accessor: (r) => formatJstYmdHm(r.event.startTime),
       },
       {
         header: "開催場所",
@@ -62,26 +60,19 @@ export async function GET(request: Request): Promise<Response> {
       },
       {
         header: "出席日時",
-        accessor: (r) =>
-          r.attendedAt
-            ? format(r.attendedAt, "yyyy/MM/dd HH:mm", { locale: ja })
-            : "",
+        accessor: (r) => (r.attendedAt ? formatJstYmdHm(r.attendedAt) : ""),
       },
       {
         header: "キャンセル日",
-        accessor: (r) =>
-          r.cancelledAt
-            ? format(r.cancelledAt, "yyyy/MM/dd HH:mm", { locale: ja })
-            : "",
+        accessor: (r) => (r.cancelledAt ? formatJstYmdHm(r.cancelledAt) : ""),
       },
       {
         header: "申込日",
-        accessor: (r) =>
-          format(r.createdAt, "yyyy/MM/dd HH:mm", { locale: ja }),
+        accessor: (r) => formatJstYmdHm(r.createdAt),
       },
     ]);
 
-    const filename = `event-registrations-${format(new Date(), "yyyyMMdd")}.csv`;
+    const filename = `event-registrations-${formatJstDateString(new Date()).replaceAll("-", "")}.csv`;
 
     return new Response(csv, {
       headers: {

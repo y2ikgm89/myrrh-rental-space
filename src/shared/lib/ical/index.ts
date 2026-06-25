@@ -15,7 +15,6 @@
 
 import "server-only";
 
-import { format } from "date-fns";
 import ical, {
   ICalCalendarMethod,
   ICalEventBusyStatus,
@@ -23,6 +22,7 @@ import ical, {
   type ICalCalendar,
 } from "ical-generator";
 import { getVtimezoneComponent } from "@touch4it/ical-timezones";
+import { formatJstYmd, formatTimeShort } from "@/shared/lib/date-format";
 import { buildEventRegistrationUid, buildReservationUid } from "./uid";
 import type { EventCalendarParams, ReservationCalendarParams } from "./types";
 
@@ -56,9 +56,9 @@ function createCalendar(
 function buildReservationDescription(
   params: ReservationCalendarParams,
 ): string {
-  const formattedDate = format(params.startTime, "yyyy/MM/dd");
-  const formattedStart = format(params.startTime, "HH:mm");
-  const formattedEnd = format(params.endTime, "HH:mm");
+  const formattedDate = formatJstYmd(params.startTime);
+  const formattedStart = formatTimeShort(params.startTime);
+  const formattedEnd = formatTimeShort(params.endTime);
 
   const lines = [
     `予約ID: ${params.reservationId.slice(0, 8).toUpperCase()}`,
@@ -133,9 +133,9 @@ export function buildReservationCancelCalendar(
 // =============================================================================
 
 function buildEventDescription(params: EventCalendarParams): string {
-  const formattedDate = format(params.startTime, "yyyy/MM/dd");
-  const formattedStart = format(params.startTime, "HH:mm");
-  const formattedEnd = format(params.endTime, "HH:mm");
+  const formattedDate = formatJstYmd(params.startTime);
+  const formattedStart = formatTimeShort(params.startTime);
+  const formattedEnd = formatTimeShort(params.endTime);
 
   return [
     `申込ID: ${params.registrationId.slice(0, 8).toUpperCase()}`,

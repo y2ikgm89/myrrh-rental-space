@@ -15,6 +15,9 @@ import {
   formatMonthDayTime,
   formatYearMonth,
   formatDayWithWeekday,
+  formatJstYmd,
+  formatJstYmdHm,
+  formatJstMonthDay,
 } from "@/shared/lib/date-format";
 
 // テスト用の固定日時（タイムゾーン影響を受けにくい日中の時刻）
@@ -659,5 +662,70 @@ describe("表示フォーマットの TZ 非依存性（#418 ハイドレーシ�
     const result = formatDateTimeFull(CROSS_DAY_UTC);
     expect(result).toContain("2026/06/02");
     expect(result).toContain("火");
+  });
+});
+
+// =============================================================================
+// formatJstYmd / formatJstYmdHm / formatJstMonthDay
+// =============================================================================
+//
+// CSV export / iCal description / カレンダー見出しの SSoT。
+// `date-fns format()` は timeZone 指定がなく、Cloud Run (UTC) では JST と
+// 9 時間ずれる silent bug の温床。これらは Intl.DateTimeFormat + Asia/Tokyo 固定で
+// サーバ TZ / ブラウザ TZ に依存しない。
+//
+// 日跨ぎする UTC 入力 (20:00Z = 翌日 05:00 JST) で JST 固定出力を pin する。
+// =============================================================================
+
+describe("formatJstYmd", () => {
+  // UTC 2026-06-01 20:00 → JST 2026-06-02 05:00
+  const CROSS_DAY_UTC = new Date("2026-06-01T20:00:00.000Z");
+
+  test("UTC 入力を JST カレンダー日付 YYYY/MM/DD で整形する", () => {
+    expect(formatJstYmd(CROSS_DAY_UTC)).toBe("2026/06/02");
+  });
+
+  test("ISO 文字列を受け取れる", () => {
+    expect(formatJstYmd("2026-06-01T20:00:00.000Z")).toBe("2026/06/02");
+  });
+
+  test("日中の datetime も JST で正しく整形する", () => {
+    // UTC 2024-01-15 03:30 → JST 2024-01-15 12:30
+    expect(formatJstYmd(new Date("2024-01-15T03:30:00.000Z"))).toBe(
+      "2024/01/15",
+    );
+  });
+});
+
+describe("formatJstYmdHm", () => {
+  // UTC 2026-06-01 20:00 → JST 2026-06-02 05:00
+  const CROSS_DAY_UTC = new Date("2026-06-01T20:00:00.000Z");
+
+  test("UTC 入力を JST 日時 YYYY/MM/DD HH:mm で整形する", () => {
+    expect(formatJstYmdHm(CROSS_DAY_UTC)).toBe("2026/06/02 05:00");
+  });
+
+  test("ISO 文字列を受け取れる", () => {
+    expect(formatJstYmdHm("2026-06-01T20:00:00.000Z")).toBe("2026/06/02 05:00");
+  });
+
+  test("24 時間表記で深夜 0 時を含む", () => {
+    // UTC 2026-06-01 15:00 → JST 2026-06-02 00:00
+    expect(formatJstYmdHm(new Date("2026-06-01T15:00:00.000Z"))).toBe(
+      "2026/06/02 00:00",
+    );
+  });
+});
+
+describe("formatJstMonthDay", () => {
+  test("UTC 入力を JST `M月d日` 形式で整形する", () => {
+    // UTC 2026-06-01 20:00 → JST 2026-06-02
+    expect(formatJstMonthDay(new Date("2026-06-01T20:00:00.000Z"))).toBe(
+      "6月2日",
+    );
+  });
+
+  test("ISO 文字列を受け取れる", () => {
+    expect(formatJstMonthDay("2026-12-01T15:00:00.000Z")).toBe("12月2日");
   });
 });

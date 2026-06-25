@@ -302,3 +302,80 @@ export function formatMonthDayWithWeekday(date: Date | string): string {
   const value = typeof date === "string" ? new Date(date) : date;
   return JST_MONTH_DAY_WEEKDAY_FORMATTER.format(value);
 }
+
+// =============================================================================
+// CSV / iCal / カレンダー見出し用 JST フォーマット helper（SSoT）
+// =============================================================================
+//
+// CSV export / iCal description / dashboard・カレンダー見出し で
+// `date-fns format(date, "yyyy/MM/dd"...)` を直接呼ぶと、サーバ (Cloud Run = UTC)
+// 環境で **タイムゾーン指定が無いため 9 時間ずれる silent bug** の温床になる。
+// 表示用フォーマットも timeZone: "Asia/Tokyo" 固定の SSoT helper に集約する。
+
+const JST_YMD_SLASH_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * 任意の datetime を JST の `"YYYY/MM/DD"` 形式に整形する。
+ *
+ * `formatToParts` で JST 部品を取得し、ロケール非依存に `YYYY/MM/DD` で組み立てる。
+ * CSV export / iCal description 等で `date-fns format(d, "yyyy/MM/dd")` の
+ * silent UTC bug を防ぐ SSoT。
+ */
+export function formatJstYmd(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  const parts = JST_YMD_SLASH_FORMATTER.formatToParts(value);
+  const lookup = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${lookup("year")}/${lookup("month")}/${lookup("day")}`;
+}
+
+const JST_YMD_HM_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * 任意の datetime を JST の `"YYYY/MM/DD HH:mm"` 形式に整形する。
+ *
+ * CSV export / iCal description 等で `date-fns format(d, "yyyy/MM/dd HH:mm")` の
+ * silent UTC bug を防ぐ SSoT。
+ */
+export function formatJstYmdHm(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  const parts = JST_YMD_HM_FORMATTER.formatToParts(value);
+  const lookup = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${lookup("year")}/${lookup("month")}/${lookup("day")} ${lookup("hour")}:${lookup("minute")}`;
+}
+
+const JST_MONTH_DAY_NUMERIC_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * 任意の datetime を JST の `"M月d日"` 形式に整形する（年なし日本語月日・ゼロパディング無し）。
+ *
+ * カレンダー週ビューの見出し等で `date-fns format(d, "M月d日", { locale: ja })` の
+ * silent UTC bug を防ぐ SSoT。`formatToParts` で JST 部品を取得し、ロケール非依存に
+ * `M月d日` で組み立てる（ja-JP の `numeric` 出力 `"6/2"` / `en-CA` の zero-padded
+ * `"06"` を避けるため `parseInt` で先頭ゼロ除去）。
+ */
+export function formatJstMonthDay(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  const parts = JST_MONTH_DAY_NUMERIC_FORMATTER.formatToParts(value);
+  const lookup = (type: Intl.DateTimeFormatPartTypes): number =>
+    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
+  return `${lookup("month")}月${lookup("day")}日`;
+}

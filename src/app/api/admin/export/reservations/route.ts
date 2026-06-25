@@ -3,8 +3,12 @@ import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getReservationsForExport } from "@/shared/domain/reservations/export-queries";
 import { generateCsv } from "@/shared/lib/csv";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import {
+  formatJstDateString,
+  formatJstYmd,
+  formatJstYmdHm,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import {
   RESERVATION_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
@@ -44,10 +48,10 @@ export async function GET(request: Request): Promise<Response> {
       { header: "予約時電話", accessor: (r) => r.guestPhone },
       {
         header: "利用日",
-        accessor: (r) => format(r.startTime, "yyyy/MM/dd", { locale: ja }),
+        accessor: (r) => formatJstYmd(r.startTime),
       },
-      { header: "開始", accessor: (r) => format(r.startTime, "HH:mm") },
-      { header: "終了", accessor: (r) => format(r.endTime, "HH:mm") },
+      { header: "開始", accessor: (r) => formatTimeShort(r.startTime) },
+      { header: "終了", accessor: (r) => formatTimeShort(r.endTime) },
       { header: "基本料金", accessor: (r) => r.basePrice },
       { header: "割引額", accessor: (r) => r.couponDiscountAmount },
       { header: "合計", accessor: (r) => r.totalPrice },
@@ -64,11 +68,11 @@ export async function GET(request: Request): Promise<Response> {
       { header: "備考", accessor: (r) => r.notes },
       {
         header: "作成日",
-        accessor: (r) => format(r.createdAt, "yyyy/MM/dd HH:mm"),
+        accessor: (r) => formatJstYmdHm(r.createdAt),
       },
     ]);
 
-    const filename = `reservations-${format(new Date(), "yyyyMMdd")}.csv`;
+    const filename = `reservations-${formatJstDateString(new Date()).replaceAll("-", "")}.csv`;
 
     return new Response(csv, {
       headers: {
