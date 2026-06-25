@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getDeletedFaqCategories as getDeletedFaqCategoriesQuery,
   getDeletedFaqItems as getDeletedFaqItemsQuery,
@@ -20,9 +19,10 @@ import type {
   FaqItemSort,
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("FAQ");
 
 export async function getFaqCategories(): Promise<FaqCategoryListResult> {
   await requireAdminPermission("faq", "read");

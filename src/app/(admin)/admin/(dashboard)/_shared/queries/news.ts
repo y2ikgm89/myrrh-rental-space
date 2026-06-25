@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getNewsById as getNewsByIdQuery,
   getNewsList as getNewsListQuery,
@@ -11,9 +10,10 @@ import type {
   NewsFilters,
   NewsPagination,
 } from "@/shared/domain/news/types";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "お知らせIDが不正です" });
+const idSchema = uuidIdSchema("お知らせ");
 
 export async function getNewsList(
   filters: NewsFilters = {},

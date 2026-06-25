@@ -16,9 +16,10 @@ import {
   updateAnnouncementBarActive as updateAnnouncementBarActiveCommand,
   updateAnnouncementBar as updateAnnouncementBarCommand,
 } from "@/shared/domain/settings/announcement-bar";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { barFormSchema } from "../../settings/appearance/_components/announcement-bar/bar-form-schema";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("お知らせ");
 
 function invalidateAnnouncementBarCache(): void {
   invalidateSiteWideCache(CACHE_TAGS.ANNOUNCEMENT_BAR);

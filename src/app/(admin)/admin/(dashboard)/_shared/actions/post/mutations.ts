@@ -1,7 +1,6 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   createPostSchema,
@@ -19,8 +18,9 @@ import {
   invalidatePostCollectionCaches,
   purgePostCaches,
 } from "./cache-helpers";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "投稿IDが不正です" });
+const idSchema = uuidIdSchema("記事");
 
 /**
  * 投稿記事 新規作成（既存 RHF callback 用、互換維持）。

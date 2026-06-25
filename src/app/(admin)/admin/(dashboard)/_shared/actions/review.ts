@@ -1,7 +1,6 @@
 "use server";
 
 import type { SubmissionResult } from "@conform-to/react";
-import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -18,8 +17,9 @@ import { reviewReplySchema } from "@/shared/lib/validations/review";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendReviewReplyEmail } from "@/shared/lib/email/review-emails";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "レビューIDが不正です" });
+const idSchema = uuidIdSchema("レビュー");
 
 type ReviewTarget = { spaceId: string; spaceSlug: string };
 

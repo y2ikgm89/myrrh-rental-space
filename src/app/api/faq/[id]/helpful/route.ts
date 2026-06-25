@@ -15,8 +15,9 @@ import {
   logError,
 } from "@/shared/lib/errors/server";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid();
+const idSchema = uuidIdSchema("FAQ");
 
 const bodySchema = z.object({
   vote: z.enum(["helpful", "not-helpful"]),

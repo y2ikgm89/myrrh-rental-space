@@ -24,8 +24,9 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("イベント参加申込");
 // EventRegistration.id / Event.id / EventTicket.id は cuid (varchar 30) なので uuid 不可
 const cuidSchema = z
   .string()

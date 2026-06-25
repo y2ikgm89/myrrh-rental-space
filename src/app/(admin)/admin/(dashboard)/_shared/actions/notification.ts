@@ -5,7 +5,6 @@
  * Cache invalidation is intentionally omitted.
  */
 
-import { z } from "zod";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -14,8 +13,9 @@ import {
   deleteNotificationCommand,
 } from "@/shared/domain/notifications/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("通知");
 
 export async function markNotificationAsRead(
   id: string,

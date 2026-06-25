@@ -9,6 +9,7 @@ import type {
 import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import {
   addCommentCommand,
   createCommentThreadCommand,
@@ -18,7 +19,7 @@ import {
   resolveThreadCommand,
 } from "@/shared/domain/editor-comments/commands";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("コメント");
 
 const createThreadSchema = z.object({
   markId: z.string().min(1, { error: "markId は必須です" }),

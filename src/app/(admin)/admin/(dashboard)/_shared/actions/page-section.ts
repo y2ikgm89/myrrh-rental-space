@@ -20,8 +20,9 @@ import {
   updateSectionContentSchema,
   type UpdateSectionContentInput,
 } from "@/shared/lib/validations/section";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("ページセクション");
 
 const createPageSectionSchema = z.object({
   pageId: z.uuid({ error: "ページIDが不正です" }),

@@ -11,6 +11,7 @@ import {
   deleteBlockTemplate as deleteBlockTemplateCommand,
 } from "@/shared/domain/block-template/commands";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const createBlockTemplateSchema = z.object({
   name: z
@@ -24,7 +25,7 @@ const createBlockTemplateSchema = z.object({
   nodeJson: z.record(z.string(), z.unknown()).or(z.array(z.unknown())),
 });
 
-const idSchema = z.uuid({ error: "テンプレートIDが不正です" });
+const idSchema = uuidIdSchema("ブロックテンプレート");
 type CreateBlockTemplateInput = z.infer<typeof createBlockTemplateSchema>;
 
 export async function createBlockTemplate(

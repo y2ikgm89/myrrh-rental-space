@@ -24,3 +24,16 @@ export const slugParamSchema = z.string().min(1).max(100).regex(SLUG_REGEX);
  * エンティティIDパラメータ（CUID等、1-100文字）
  */
 export const idParamSchema = z.string().min(1).max(100);
+
+/**
+ * UUID 形式のエンティティ ID スキーマファクトリ。
+ *
+ * 管理 action / query / route handler で個別に宣言されていた
+ * `z.uuid({ error: "XXX IDが不正です" })` を集約し、エラー文言の
+ * 揺れ（"IDが不正です" / "ユーザーIDが不正です" 等）を構造的に解消する。
+ *
+ * @param entityLabel エラーメッセージの先頭に付与するエンティティ名（例: "クーポン"）
+ */
+export function uuidIdSchema(entityLabel: string) {
+  return z.uuid({ error: `${entityLabel}IDが不正です` });
+}

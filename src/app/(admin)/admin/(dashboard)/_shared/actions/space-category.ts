@@ -24,8 +24,9 @@ import {
   updateSpaceCategoryOrder as updateSpaceCategoryOrderCommand,
 } from "@/shared/domain/space-categories/commands";
 import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "カテゴリーIDが不正です" });
+const idSchema = uuidIdSchema("スペースカテゴリ");
 const categoryOrderSchema = z
   .array(
     z.object({

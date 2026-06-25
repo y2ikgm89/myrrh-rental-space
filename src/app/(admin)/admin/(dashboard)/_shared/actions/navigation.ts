@@ -27,8 +27,9 @@ import {
   navFormSchema,
   socialFormSchema,
 } from "../../settings/appearance/_components/navigation/nav-form-schema";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "IDが不正です" });
+const idSchema = uuidIdSchema("ナビゲーション");
 
 function invalidateNavigationCache(): void {
   invalidateSiteWideCache(CACHE_TAGS.NAVIGATION);

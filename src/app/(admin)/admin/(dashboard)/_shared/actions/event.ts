@@ -2,7 +2,6 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -53,8 +52,9 @@ import {
   type EventFormData,
 } from "../../events/_components/event-form-schema";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "イベントIDが不正です" });
+const idSchema = uuidIdSchema("イベント");
 
 /**
  * EventFormData (conform parsed output: Lexical JSON string + 事前 render 済み HTML)

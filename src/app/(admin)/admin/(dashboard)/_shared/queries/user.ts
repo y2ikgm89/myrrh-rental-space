@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   getUser as getUserQuery,
   getUsers as getUsersQuery,
@@ -12,9 +11,10 @@ import type {
   UserListResult,
   UserStats,
 } from "@/shared/domain/users/types";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.uuid({ error: "ユーザーIDが不正です" });
+const idSchema = uuidIdSchema("ユーザー");
 
 export async function getUsers(
   params: UserListParams = {},

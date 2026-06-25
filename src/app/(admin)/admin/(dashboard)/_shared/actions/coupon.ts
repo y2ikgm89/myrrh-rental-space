@@ -9,7 +9,6 @@
 
 import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
-import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -23,8 +22,9 @@ import {
   updateCouponActive as updateCouponActiveCommand,
 } from "@/shared/domain/coupons/commands";
 import { couponFormSchema } from "@/shared/lib/validations/coupon";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = z.uuid({ error: "クーポンIDが不正です" });
+const idSchema = uuidIdSchema("クーポン");
 
 export async function createCoupon(
   _prev: SubmissionResult | undefined,
