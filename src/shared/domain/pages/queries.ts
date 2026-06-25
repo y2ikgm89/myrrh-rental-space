@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
@@ -10,6 +11,15 @@ import {
 } from "@/shared/lib/errors/server";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 import { toPlainObject } from "@/shared/lib/serialize";
+
+/**
+ * 公開ページクエリの共通 where 句。Page model に deletedAt 列はないため
+ * isPublished + isActive gate のみ。新規 query 追加時の gate 漏れを構造的に防ぐ。
+ */
+const PUBLIC_WHERE = {
+  isPublished: true,
+  isActive: true,
+} as const satisfies Prisma.PageWhereInput;
 
 export interface PageSeoData {
   title: string;
@@ -38,9 +48,8 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
     fetch: () =>
       prisma.page.findUnique({
         where: {
+          ...PUBLIC_WHERE,
           slug,
-          isPublished: true,
-          isActive: true,
         },
         select: {
           id: true,
@@ -72,9 +81,8 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
     fetch: () =>
       prisma.page.findUnique({
         where: {
+          ...PUBLIC_WHERE,
           slug,
-          isPublished: true,
-          isActive: true,
         },
         select: {
           title: true,

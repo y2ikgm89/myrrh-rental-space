@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
@@ -17,6 +18,24 @@ import type {
   DiscountType,
   DurationDiscountOverride,
 } from "@/shared/lib/validations/enums/prisma-types";
+
+/**
+ * 公開拠点クエリの共通 where 句。Location model に deletedAt 列はないため
+ * isPublished + isActive gate のみ。新規 query 追加時の gate 漏れを構造的に防ぐ。
+ */
+const PUBLIC_LOCATION_WHERE = {
+  isPublished: true,
+  isActive: true,
+} as const satisfies Prisma.LocationWhereInput;
+
+/**
+ * Location → spaces inner select で使う、公開スペース用の共通 where 句。
+ * Space model も同じ shape（deletedAt なし、isPublished + isActive）。
+ */
+const PUBLIC_SPACE_WHERE = {
+  isPublished: true,
+  isActive: true,
+} as const satisfies Prisma.SpaceWhereInput;
 
 export type SpaceOption = {
   id: string;
@@ -64,7 +83,7 @@ export async function getActiveLocations(): Promise<LocationOption[]> {
   const locations = await safeFetch({
     fetch: () =>
       prisma.location.findMany({
-        where: { isPublished: true, isActive: true },
+        where: { ...PUBLIC_LOCATION_WHERE },
         orderBy: { sortOrder: "asc" },
         select: { id: true, name: true },
       }),
@@ -121,8 +140,7 @@ export async function getPublishedLocationsForAccess(
     fetch: () =>
       prisma.location.findMany({
         where: {
-          isPublished: true,
-          isActive: true,
+          ...PUBLIC_LOCATION_WHERE,
           ...(slugs && slugs.length > 0 && { slug: { in: [...slugs] } }),
         },
         orderBy: { sortOrder: "asc" },
@@ -206,7 +224,7 @@ export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
   const locations = await safeFetch({
     fetch: () =>
       prisma.location.findMany({
-        where: { isPublished: true, isActive: true },
+        where: { ...PUBLIC_LOCATION_WHERE },
         orderBy: { sortOrder: "asc" },
         select: {
           id: true,
@@ -255,7 +273,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
   const locations = await safeFetch({
     fetch: () =>
       prisma.location.findMany({
-        where: { isPublished: true, isActive: true },
+        where: { ...PUBLIC_LOCATION_WHERE },
         orderBy: { sortOrder: "asc" },
         select: {
           id: true,
@@ -264,7 +282,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
           address: true,
           imageUrl: true,
           spaces: {
-            where: { isPublished: true, isActive: true },
+            where: { ...PUBLIC_SPACE_WHERE },
             orderBy: { name: "asc" },
             select: {
               id: true,
