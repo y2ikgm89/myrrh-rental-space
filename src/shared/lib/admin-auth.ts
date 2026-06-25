@@ -331,13 +331,13 @@ export const verifyAdminSession = cache(
 
 /** 現在の管理者ユーザー取得（リダイレクトなし） */
 export const getCurrentAdminUser = cache(
-  async (requestHeaders?: Headers): Promise<AdminUser | undefined> => {
+  async (requestHeaders?: Headers): Promise<AdminUser | null> => {
     // 権限判定（isAdmin 等）に使うため、verifySession と同様にライブ DB を強制参照する。
     const session = await adminAuth.api.getSession({
       headers: await resolveRequestHeaders(requestHeaders),
       query: { disableCookieCache: true },
     });
-    return getAdminSessionUser(session) ?? undefined;
+    return getAdminSessionUser(session);
   },
 );
 
@@ -345,7 +345,7 @@ export const getCurrentAdminUser = cache(
 export const isAdmin = cache(
   async (requestHeaders?: Headers): Promise<boolean> => {
     const user = await getCurrentAdminUser(requestHeaders);
-    return user !== undefined && isAdminOrHigherRole(user.role);
+    return user !== null && isAdminOrHigherRole(user.role);
   },
 );
 
