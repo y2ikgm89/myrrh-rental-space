@@ -278,7 +278,6 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
         hourlyPrice: "0",
         dailyPrice: "",
         mainImageUrl: "https://example.com/a.jpg",
-        imageUrls: "",
         facilities: "",
         locationId: UUID,
         categoryId: "",

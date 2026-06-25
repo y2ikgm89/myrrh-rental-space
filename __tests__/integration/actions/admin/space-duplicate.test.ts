@@ -13,7 +13,7 @@ const mockFindUnique = mock<
     hourlyPrice: number;
     dailyPrice: number | null;
     mainImageUrl: string;
-    imageUrls: string[];
+    gallery: unknown;
     facilities: string[];
     businessHours: unknown;
     reviewsEnabled: boolean;
@@ -76,7 +76,10 @@ const SOURCE_SPACE = {
   hourlyPrice: 1000,
   dailyPrice: 8000,
   mainImageUrl: "https://example.com/main.jpg",
-  imageUrls: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+  gallery: [
+    { url: "https://example.com/1.jpg", alt: "", caption: "" },
+    { url: "https://example.com/2.jpg", alt: "", caption: "" },
+  ],
   facilities: ["wifi", "projector"],
   businessHours: null,
   reviewsEnabled: true,

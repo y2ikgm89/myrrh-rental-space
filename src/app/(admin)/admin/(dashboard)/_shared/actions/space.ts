@@ -31,7 +31,6 @@ import {
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 const idSchema = uuidIdSchema("スペース");
 
@@ -95,24 +94,15 @@ function buildSpaceCommandInput(data: SpaceFormData) {
   const {
     descriptionJson: _dropJson,
     descriptionHtml: _dropHtml,
-    imageUrls,
     ...rest
   } = data;
   void _dropJson;
   void _dropHtml;
-  // フォームの imageUrls (string[]) を GalleryItem[] に変換する
-  // alt / caption は空文字でデフォルト化（管理画面ギャラリーエディタは Task 後続で対応）
-  const gallery: GalleryItem[] = imageUrls.map((url) => ({
-    url,
-    alt: "",
-    caption: "",
-  }));
   return omitUndefined({
     ...rest,
     descriptionJson,
     descriptionHtml,
     descriptionPlainText,
-    gallery,
   });
 }
 

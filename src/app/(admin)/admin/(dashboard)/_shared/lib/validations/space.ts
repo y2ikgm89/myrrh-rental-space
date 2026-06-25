@@ -16,7 +16,10 @@ import {
   type BusinessHours,
 } from "@/shared/lib/json-validators";
 import { isRecord } from "@/shared/lib/serialize";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import {
+  gallerySchema,
+  type GalleryItem,
+} from "@/shared/lib/validations/gallery";
 
 /**
  * スペースフォーム用バリデーションスキーマ
@@ -49,29 +52,7 @@ const coerceRequiredNumber = (value: unknown) => {
 const coerceBoolean = (value: unknown): boolean =>
   value === "on" || value === true;
 
-/**
- * 画像URL配列のバリデーション
- *
- * 各 URL は React key の stable ID として機能するため、重複を禁止する。
- * FormData 送信時は同名 hidden input の `getAll()` で `string[]` になる。
- */
-const imageUrlsSchema = z.preprocess(
-  (value) => {
-    if (value === undefined || value === null || value === "") return [];
-    if (Array.isArray(value)) {
-      return value
-        .map((item) => (typeof item === "string" ? item.trim() : item))
-        .filter((item) => typeof item !== "string" || item.length > 0);
-    }
-    return value;
-  },
-  z
-    .array(z.url({ error: "有効なURLを入力してください" }))
-    .max(10, { error: "画像は最大10枚までです" })
-    .refine((arr) => new Set(arr).size === arr.length, {
-      error: "同じ画像を複数登録することはできません",
-    }),
-);
+// gallerySchema は @/shared/lib/validations/gallery からインポートして使用する
 
 /**
  * 設備配列フォーム用スキーマ
@@ -228,7 +209,7 @@ export const spaceFormBaseSchema = z
       .string()
       .min(1, { error: "メイン画像URLを入力してください" })
       .url({ error: "有効なURLを入力してください" }),
-    imageUrls: imageUrlsSchema,
+    gallery: gallerySchema,
     facilities: facilitiesFormSchema,
     isPublished: z.preprocess(coerceBoolean, z.boolean()),
     reviewsEnabled: z.preprocess((value) => {
@@ -275,10 +256,10 @@ export const spaceFormBaseSchema = z
  * Server Action の safeParse で使用。
  */
 export const spaceFormSchema = spaceFormBaseSchema.refine(
-  (data) => !data.imageUrls.includes(data.mainImageUrl),
+  (data) => !data.gallery.some((g) => g.url === data.mainImageUrl),
   {
-    error: "メイン画像と同じURLを追加画像に登録することはできません",
-    path: ["imageUrls"],
+    error: "メイン画像とギャラリーで同じ画像は使えません",
+    path: ["gallery"],
   },
 );
 
@@ -306,7 +287,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   hourlyPrice: 0,
   dailyPrice: null,
   mainImageUrl: "",
-  imageUrls: [],
+  gallery: [],
   facilities: [],
   isPublished: false,
   reviewsEnabled: true,

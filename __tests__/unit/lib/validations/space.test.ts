@@ -25,9 +25,9 @@ const VALID_SPACE_INPUT = {
   hourlyPrice: 1000,
   dailyPrice: 8000,
   mainImageUrl: "https://example.com/images/main.jpg",
-  imageUrls: [
-    "https://example.com/images/1.jpg",
-    "https://example.com/images/2.jpg",
+  gallery: [
+    { url: "https://example.com/images/1.jpg", alt: "", caption: "" },
+    { url: "https://example.com/images/2.jpg", alt: "", caption: "" },
   ],
   facilities: [
     { name: "WiFi", iconName: "" },
@@ -75,7 +75,7 @@ describe("spaceFormSchema", () => {
       const result = spaceFormSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.imageUrls).toEqual([]);
+        expect(result.data.gallery).toEqual([]);
         expect(result.data.facilities).toEqual([]);
         expect(result.data.isPublished).toBe(false);
       }
@@ -355,30 +355,34 @@ describe("spaceFormSchema", () => {
     });
   });
 
-  describe("imageUrls", () => {
+  describe("gallery", () => {
     test("空配列は許可", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        imageUrls: [],
+        gallery: [],
       });
       expect(result.success).toBe(true);
     });
 
-    test("11枚以上はエラー", () => {
+    test("21枚以上はエラー", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        imageUrls: Array(11).fill("https://example.com/image.jpg"),
+        gallery: Array(21).fill({
+          url: "https://example.com/image.jpg",
+          alt: "",
+          caption: "",
+        }),
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("最大10枚");
+        expect(result.error.issues[0].message).toContain("最大20件");
       }
     });
 
     test("無効なURLが含まれるとエラー", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        imageUrls: ["https://example.com/image.jpg", "invalid-url"],
+        gallery: [{ url: "invalid-url", alt: "", caption: "" }],
       });
       expect(result.success).toBe(false);
     });
@@ -470,7 +474,7 @@ describe("defaultSpaceFormValues", () => {
       hourlyPrice: 0,
       dailyPrice: null,
       mainImageUrl: "",
-      imageUrls: [],
+      gallery: [],
       facilities: [],
       isPublished: false,
       reviewsEnabled: true,
