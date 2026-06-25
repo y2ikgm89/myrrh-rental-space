@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
 import type { Prisma } from "@generated/prisma/client";
@@ -67,7 +68,8 @@ export async function getReservationsQuery(
   } = {},
 ) {
   const { tab = "all", search, startDate, endDate, spaceId } = filters;
-  const { page = 1, limit = 10, sortBy, sortOrder } = pagination;
+  const { sortBy, sortOrder } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
 
   const tabWhere = buildTabWhere(tab);
   const defaults = getDefaultSort(tab);
@@ -159,8 +161,8 @@ export async function getReservationsQuery(
       orderBy: {
         [effectiveSortBy]: effectiveSortOrder,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -178,7 +180,7 @@ export async function getReservationsQuery(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   });
 }
 

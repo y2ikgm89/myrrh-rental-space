@@ -12,6 +12,7 @@ import {
   parseStringArray,
   parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
+import { paginate } from "@/shared/lib/pagination";
 
 function parseAmenities(
   value: Prisma.JsonValue | null,
@@ -148,9 +149,10 @@ export async function getLocations(options: {
   limit: number;
 }): Promise<GetLocationsResult> {
   const { includeInactive = false, search } = options;
-  const page = Math.max(1, options.page);
-  const limit = Math.max(1, options.limit);
-  const skip = (page - 1) * limit;
+  const { skip, take, page, limit } = paginate({
+    page: options.page,
+    limit: options.limit,
+  });
 
   const where: Prisma.LocationWhereInput = {
     ...(includeInactive ? {} : { isActive: true }),
@@ -169,7 +171,7 @@ export async function getLocations(options: {
       where,
       orderBy: { sortOrder: "asc" },
       skip,
-      take: limit,
+      take,
       select: LOCATION_FULL_SELECT,
     }),
     prisma.location.count({ where }),

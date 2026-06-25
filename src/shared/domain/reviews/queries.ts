@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@generated/prisma/client";
 
 const reviewListSelect = {
@@ -62,12 +63,8 @@ export async function getReviewsQuery(
   } = {},
 ) {
   const { search, spaceId, rating, isPublished } = filters;
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
 
   const conditions: Prisma.SpaceReviewWhereInput[] = [];
 
@@ -111,8 +108,8 @@ export async function getReviewsQuery(
       where,
       select: reviewListSelect,
       orderBy: { [sortBy]: sortOrder },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -121,7 +118,7 @@ export async function getReviewsQuery(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

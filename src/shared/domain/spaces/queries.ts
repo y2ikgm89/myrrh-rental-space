@@ -7,6 +7,7 @@ import {
   parseFacilities,
   parseStringArray,
 } from "@/shared/lib/json-validators";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import {
   getValidDiscountType,
   getValidDurationDiscountOverride,
@@ -109,12 +110,8 @@ export async function getSpacesQuery(
 ) {
   const { isPublished, search, locationId, categoryId, uncategorizedOnly } =
     filters;
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
 
   const where: {
     isActive: boolean;
@@ -170,8 +167,8 @@ export async function getSpacesQuery(
       orderBy: {
         [sortBy]: sortOrder,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -180,7 +177,7 @@ export async function getSpacesQuery(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

@@ -14,6 +14,7 @@ import type {
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 
 type CustomerWhereInput = Prisma.CustomerWhereInput;
@@ -63,12 +64,8 @@ export async function getCustomers(
   filters: CustomerFilters = {},
   pagination: CustomerPagination = {},
 ): Promise<GetCustomersResult> {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
   const where = buildCustomerWhere(filters);
 
   const [total, customers] = await Promise.all([
@@ -76,8 +73,8 @@ export async function getCustomers(
     prisma.customer.findMany({
       where,
       orderBy: buildCustomerOrderBy(sortBy, sortOrder),
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
       select: {
         id: true,
         lastName: true,
@@ -158,7 +155,7 @@ export async function getCustomers(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

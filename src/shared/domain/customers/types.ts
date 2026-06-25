@@ -3,6 +3,7 @@ import type {
   CustomerType,
   ReservationStatus,
 } from "@generated/prisma/enums";
+import type { PaginationInput } from "@/shared/lib/pagination";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type CustomerRecord = {
@@ -90,12 +91,7 @@ export type CustomerSortBy =
   | "lastReservationAt"
   | "totalSpent";
 
-export type CustomerPagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: CustomerSortBy;
-  sortOrder?: "asc" | "desc";
-};
+export type CustomerPagination = PaginationInput<CustomerSortBy>;
 
 export type CustomerStats = {
   total: number;

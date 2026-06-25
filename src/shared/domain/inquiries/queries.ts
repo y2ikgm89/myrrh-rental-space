@@ -2,6 +2,7 @@ import "server-only";
 
 import { InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import type { Prisma } from "@generated/prisma/client";
@@ -20,12 +21,8 @@ export async function getInquiries(
   pagination: InquiryPagination = {},
 ): Promise<Serialized<GetInquiriesResult>> {
   const { status, search } = filters;
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
 
   const where: InquiryWhereInput = {};
 
@@ -72,8 +69,8 @@ export async function getInquiries(
       orderBy: {
         [sortBy]: sortOrder,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -82,7 +79,7 @@ export async function getInquiries(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

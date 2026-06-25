@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { AuditAction } from "@generated/prisma/enums";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { isRecord, toPlainObject } from "@/shared/lib/serialize";
 
 export type AuditLogItem = {
@@ -112,8 +113,12 @@ export async function getAuditLogs(
   filters: Required<AuditLogFilters>,
 ): Promise<AuditLogResult> {
   const where = buildAuditLogWhere(filters);
-  const page = filters.page ?? 1;
-  const perPage = filters.perPage ?? 20;
+  const {
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({ page: filters.page, limit: filters.perPage ?? 20 });
 
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
@@ -137,8 +142,8 @@ export async function getAuditLogs(
         },
       },
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
     }),
     prisma.auditLog.count({ where }),
   ]);
@@ -151,7 +156,7 @@ export async function getAuditLogs(
     })),
     total,
     page,
-    totalPages: Math.ceil(total / perPage),
+    totalPages: calcTotalPages(total, perPage),
   });
 }
 

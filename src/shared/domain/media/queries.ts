@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { parseStringArray } from "@/shared/lib/json-validators";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { MediaType, MediaUsage } from "@generated/prisma/enums";
 
 function transformMedia(media: {
@@ -54,8 +55,7 @@ export async function getMediaListQuery(
   } = {},
   pagination: { page: number; limit: number },
 ) {
-  const { page, limit } = pagination;
-  const skip = (page - 1) * limit;
+  const { skip, take, page, limit } = paginate(pagination);
 
   const where: Prisma.MediaWhereInput = {
     isActive: true,
@@ -94,7 +94,7 @@ export async function getMediaListQuery(
     prisma.media.findMany({
       where,
       skip,
-      take: limit,
+      take,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -123,7 +123,7 @@ export async function getMediaListQuery(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

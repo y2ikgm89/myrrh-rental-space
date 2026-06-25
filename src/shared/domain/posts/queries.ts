@@ -14,6 +14,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
@@ -95,7 +96,7 @@ export async function getPublishedPostsList(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.POST_TAGS);
 
-  const skip = (page - 1) * perPage;
+  const { skip, take } = paginate({ page, limit: perPage });
 
   const where = {
     status: PostStatus.PUBLISHED,
@@ -119,7 +120,7 @@ export async function getPublishedPostsList(
           select: postListSelect,
           orderBy: { publishedAt: "desc" },
           skip,
-          take: perPage,
+          take,
         }),
       fallback: [],
       category: ErrorCategory.DATABASE,
@@ -146,7 +147,7 @@ export async function getPublishedPostsList(
       }),
     ),
     totalCount,
-    totalPages: Math.ceil(totalCount / perPage),
+    totalPages: calcTotalPages(totalCount, perPage),
     currentPage: page,
   };
 }

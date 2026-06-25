@@ -14,6 +14,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import {
   parseFacilities,
@@ -114,7 +115,7 @@ export async function getPublishedSpacesPaginated(
     ...(locationId ? { locationId } : {}),
   };
 
-  const skip = (page - 1) * perPage;
+  const { skip, take } = paginate({ page, limit: perPage });
 
   const result = await safeFetch({
     fetch: async () => {
@@ -124,7 +125,7 @@ export async function getPublishedSpacesPaginated(
           select: spaceListSelect,
           orderBy: { name: "asc" },
           skip,
-          take: perPage,
+          take,
         }),
         prisma.space.count({ where }),
       ]);
@@ -132,7 +133,7 @@ export async function getPublishedSpacesPaginated(
       return {
         items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
         totalCount,
-        totalPages: Math.ceil(totalCount / perPage),
+        totalPages: calcTotalPages(totalCount, perPage),
         currentPage: page,
       };
     },
