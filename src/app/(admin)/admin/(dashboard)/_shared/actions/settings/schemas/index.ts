@@ -36,7 +36,6 @@ export {
 
 export * from "./form-schema-helpers";
 export * from "./form-schemas-brand-contact";
-export * from "./form-schemas-booking-tax-terms";
 export * from "./form-schemas-seo-analytics";
 export * from "./form-schemas-email-notification";
 export * from "./form-schemas-privacy-appearance";

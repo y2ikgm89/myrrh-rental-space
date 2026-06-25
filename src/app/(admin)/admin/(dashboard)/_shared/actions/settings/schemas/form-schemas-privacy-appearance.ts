@@ -1,12 +1,11 @@
 /**
- * 設定セクション用フォームスキーマ — Cookie・外観（ヘッダー/フッター/サイドバー/レイアウト）
+ * 設定セクション用フォームスキーマ — Cookie・外観（フッター/サイドバー/レイアウト）
+ *
+ * ヘッダー設定は canonical な `headerSettingsSchema`（`./basic`）に統合済み。
+ * 二重メンテ回避のため client から basic.ts の `xxxSettingsSchema` を直接 import する。
  */
 import { z } from "zod";
-import {
-  HeaderBackgroundMode,
-  HeaderScrollBehavior,
-  LayoutWidth,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
@@ -22,17 +21,6 @@ export const cookieConsentFormSchema = z.object({
 });
 
 export type CookieConsentFormInput = z.infer<typeof cookieConsentFormSchema>;
-
-// =============================================================================
-// Site > Appearance > ヘッダー設定
-// =============================================================================
-
-export const headerFormSchema = z.object({
-  headerScrollBehavior: z.enum(HeaderScrollBehavior),
-  headerBackgroundMode: z.enum(HeaderBackgroundMode),
-});
-
-export type HeaderFormInput = z.infer<typeof headerFormSchema>;
 
 // =============================================================================
 // Site > Appearance > フッター設定

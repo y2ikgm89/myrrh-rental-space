@@ -32,7 +32,7 @@ import {
   SubmitButton,
 } from "@/admin/components/ui";
 import { updateReservationSettings } from "@/admin/actions/settings";
-import { reservationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
+import { reservationSettingsSchema } from "@/admin/actions/settings/schemas/basic";
 import type { SettingsData } from "@/shared/domain/settings/types";
 
 interface ReservationSectionProps {
@@ -59,7 +59,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
     id: "reservation-settings",
     lastResult,
     onValidate({ formData }) {
-      return parseWithZod(formData, { schema: reservationFormSchema });
+      return parseWithZod(formData, { schema: reservationSettingsSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",

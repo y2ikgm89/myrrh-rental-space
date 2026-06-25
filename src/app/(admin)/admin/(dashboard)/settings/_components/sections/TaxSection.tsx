@@ -32,7 +32,7 @@ import {
   SubmitButton,
 } from "@/admin/components/ui";
 import { updateTaxSettings, type TaxSettings } from "@/admin/actions/settings";
-import { taxFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
+import { taxSettingsSchema } from "@/admin/actions/settings/schemas/discount";
 import { TaxDisplayMode } from "@/shared/lib/validations/enums/prisma-types";
 
 interface TaxSectionProps {
@@ -101,7 +101,7 @@ export function TaxSection({ settings }: TaxSectionProps) {
     id: "tax-settings",
     lastResult,
     onValidate({ formData }) {
-      return parseWithZod(formData, { schema: taxFormSchema });
+      return parseWithZod(formData, { schema: taxSettingsSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
