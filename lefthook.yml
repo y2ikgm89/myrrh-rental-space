@@ -39,7 +39,8 @@ pre-commit:
     # 保護ファイルへのコミット防止
     # 実装: scripts/check-protected-files.sh
     # - .env*                    常にブロック（秘密情報）
-    # - prisma/migrations/*.sql  常にブロック（生成物）
+    # - prisma/migrations/*.sql  既存ファイル改変（diff-filter=M）のみブロック。
+    #                            新規追加（A、prisma migrate dev 出力）は許可。
     # - bun.lock                 package.json 同時 stage 時のみ許可
     - name: protected-files
       run: bash scripts/check-protected-files.sh
