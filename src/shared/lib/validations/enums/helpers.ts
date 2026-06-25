@@ -650,7 +650,6 @@ export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
 export const NOTIFICATION_TYPE = {
   RESERVATION_NEW: "reservation_new",
   RESERVATION_CANCEL: "reservation_cancel",
-  RESERVATION_CHANGE: "reservation_change",
   RESERVATION_UPDATE: "reservation_update",
   INQUIRY_NEW: "inquiry_new",
   REVIEW_NEW: "review_new",
@@ -674,7 +673,6 @@ export function isValidNotificationType(
 export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.RESERVATION_NEW]: "新規予約",
   [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "予約キャンセル",
-  [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "予約変更",
   [NOTIFICATION_TYPE.RESERVATION_UPDATE]: "予約更新",
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "新規お問い合わせ",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
@@ -695,7 +693,6 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
 export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.RESERVATION_NEW]: "IconCalendarPlus",
   [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "IconX",
-  [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "IconCalendarTime",
   [NOTIFICATION_TYPE.RESERVATION_UPDATE]: "IconCalendarTime",
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "IconMail",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "IconStar",
@@ -707,7 +704,7 @@ export type ReservationAction = "new" | "update" | "cancel";
 
 export const RESERVATION_ACTION_LABELS: Record<ReservationAction, string> = {
   new: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_NEW],
-  update: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_CHANGE],
+  update: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_UPDATE],
   cancel: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_CANCEL],
 };
 
@@ -726,7 +723,6 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
 > = {
   [NOTIFICATION_TYPE.RESERVATION_NEW]: "default",
   [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "destructive",
-  [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "secondary",
   [NOTIFICATION_TYPE.RESERVATION_UPDATE]: "secondary",
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "default",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "default",
