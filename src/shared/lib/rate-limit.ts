@@ -1,26 +1,32 @@
 /**
  * API レート制限（Strategy/Adapter Pattern）
  *
- * `RateLimitStore` interface で backend を抽象化し、in-memory（LRUCache）と
- * Redis 等の distributed backend を switch 可能にした SSoT。
+ * `RateLimitStore` interface で backend を抽象化し、in-memory（LRUCache）実装を
+ * 提供する SSoT。
  *
- * **設計判断（distributed environments）:**
- * `InMemoryRateLimitStore` は **per-instance protection only**。Cloud Run の
- * multi-instance autoscale 環境では、各 instance が独立した bucket を持つため
- * 「同一 IP が N instance × maxRequests/min を発行可能」になる。完全な
- * distributed rate limiting には `RedisRateLimitStore`（Upstash Redis / Cloud
- * Memorystore 等）に env-driven で切り替える。
+ * **設計判断（Cloud Run max=1 構成依存）:**
+ * 本実装は **Cloud Run max instance = 1 の単一インスタンス前提**で per-instance
+ * protection のみ提供する。max=1 構成では「全リクエストが同一プロセスを通る」
+ * ため、`InMemoryRateLimitStore`（LRU bucket）でグローバル rate limit として
+ * 十分に機能する。
+ *
+ * **autoscale 解禁時の制約（未実装）:**
+ * 将来 multi-instance autoscale（max>1）に移行する場合、各 instance が独立した
+ * bucket を持ち「同一 IP が N instance × maxRequests/min を発行可能」になる
+ * ため、distributed backend（Upstash Redis / Cloud Memorystore 等）の実装が
+ * **必須**になる。本ファイルには Redis backend 実装は存在しない — autoscale
+ * 解禁時は新規追加が必要。
  *
  * **多層防御:**
- * - Layer 1: `InMemoryRateLimitStore`（このファイル、per-instance）
+ * - Layer 1: `InMemoryRateLimitStore`（このファイル、Cloud Run max=1 でグローバル）
  * - Layer 2: Cloudflare Turnstile（公開フォームの bot 緩和、`turnstile-actions.ts`）
  * - Layer 3: Cloud Run autoscale max instance 数（実質的なグローバル上限）
  * - Layer 4: Cloudflare WAF Custom Rules（CDN 層 IP rate limit、運用配線）
  *
  * **interface contract:**
- * `check(token, options)` は `Promise<RateLimitResult>` を返す（Redis backend
- * 切替を前提とした async）。in-memory 実装は LRU から同期取得するが、
- * `Promise.resolve()` で wrap して interface を統一する。
+ * `check(token, options)` は `Promise<RateLimitResult>` を返す（将来の
+ * distributed backend 追加を見越した async）。in-memory 実装は LRU から
+ * 同期取得するが、`Promise.resolve()` で wrap して interface を統一する。
  */
 
 import { LRUCache } from "lru-cache";
