@@ -8,6 +8,11 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
 
 // EventRegistration.id / Event.id は cuid (varchar 30)。uuid 不可
 const eventIdSchema = z
@@ -23,6 +28,10 @@ type RouteParams = { params: Promise<{ id: string }> };
  * - 全件 JSON で返却 (検索/フィルタはクライアント側で実行)
  * - private, no-store: PII (氏名/電話) を含むため CDN/ブラウザどちらにもキャッシュさせない
  * - RBAC: event:read 権限が必要
+ *
+ * @see docs/api-conventions.md — status code 規約 / レスポンスヘルパー
+ *   PII を含む成功レスポンスは `Cache-Control: private, no-store` を明示するため
+ *   `jsonSuccess` ではなく `NextResponse.json` 直返しを許可している。
  */
 export async function GET(
   request: Request,
@@ -31,16 +40,13 @@ export async function GET(
   try {
     const auth = await checkPermission("event", "read", request.headers);
     if (!auth.success) {
-      return NextResponse.json({ error: auth.error.error }, { status: 403 });
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const { id } = await params;
     const parsed = eventIdSchema.safeParse(id);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "eventId が不正です" },
-        { status: 400 },
-      );
+      return jsonValidationError(parsed.error, "eventId が不正です");
     }
 
     const result = await getEventCheckInAttendees(parsed.data);
@@ -73,9 +79,6 @@ export async function GET(
       severity: ErrorSeverity.HIGH,
       context: { operation: "getEventCheckInAttendees" },
     });
-    return NextResponse.json(
-      { error: "出席者一覧の取得に失敗しました" },
-      { status: 500 },
-    );
+    return jsonError("出席者一覧の取得に失敗しました", 500);
   }
 }

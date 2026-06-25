@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getCustomersForExport } from "@/shared/domain/customers/export-queries";
@@ -17,12 +16,19 @@ import {
   CUSTOMER_STATUS_LABELS,
   CUSTOMER_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
 
+/**
+ * 顧客 CSV エクスポート
+ *
+ * @see docs/api-conventions.md — CSV/redirect は許可リスト（成功時のみ `new Response`）。
+ *   エラー JSON は `jsonError` 経由。
+ */
 export async function GET(request: Request): Promise<Response> {
   try {
     const auth = await checkPermission("customer", "read", request.headers);
     if (!auth.success) {
-      return NextResponse.json({ error: auth.error.error }, { status: 403 });
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const customers = await getCustomersForExport();
@@ -94,9 +100,6 @@ export async function GET(request: Request): Promise<Response> {
       severity: ErrorSeverity.HIGH,
       context: { operation: "exportCustomers" },
     });
-    return NextResponse.json(
-      { error: "エクスポートに失敗しました" },
-      { status: 500 },
-    );
+    return jsonError("エクスポートに失敗しました", 500);
   }
 }

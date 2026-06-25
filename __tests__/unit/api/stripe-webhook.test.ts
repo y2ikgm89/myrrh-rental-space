@@ -170,8 +170,11 @@ mock.module("@/shared/lib/errors/server", () => ({
 // @/shared/lib/constants はモック不要（純粋な定数ファイル、副作用なし）
 
 mock.module("@/shared/lib/route-responses", () => ({
-  getRouteErrorStatus: (message: string) =>
-    message.includes("ログイン") || message.includes("権限") ? 403 : 400,
+  getRouteErrorStatus: (message: string) => {
+    if (message.includes("ログイン")) return 401;
+    if (message.includes("権限") || message.includes("アクセス権")) return 403;
+    return 400;
+  },
   jsonError: (msg: string, status = 400) => mockJsonError(msg, status),
   jsonSuccess: (data: unknown, status = 200) => mockJsonSuccess(data, status),
   jsonValidationError: (

@@ -30,6 +30,7 @@ import {
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
+import { jsonError } from "@/shared/lib/route-responses";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
 const instagramOAuthCallbackQuerySchema = z.object({
@@ -55,10 +56,14 @@ const instagramOAuthCallbackQuerySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   // 認証チェック
+  // @see docs/api-conventions.md — 未認証=401 / 認証済+権限不足=403
   const session = await getAdminSession(request.headers);
   const user = getAdminSessionUser(session);
-  if (!user || (!isAdminRole(user.role) && !isSuperAdminRole(user.role))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return jsonError("Unauthorized", 401);
+  }
+  if (!isAdminRole(user.role) && !isSuperAdminRole(user.role)) {
+    return jsonError("Forbidden", 403);
   }
 
   const parsedQuery = instagramOAuthCallbackQuerySchema.safeParse({

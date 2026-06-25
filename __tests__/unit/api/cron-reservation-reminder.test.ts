@@ -120,8 +120,11 @@ mock.module("@/shared/lib/cron-auth", () => ({
 }));
 
 mock.module("@/shared/lib/route-responses", () => ({
-  getRouteErrorStatus: (message: string) =>
-    message.includes("ログイン") || message.includes("権限") ? 403 : 400,
+  getRouteErrorStatus: (message: string) => {
+    if (message.includes("ログイン")) return 401;
+    if (message.includes("権限") || message.includes("アクセス権")) return 403;
+    return 400;
+  },
   jsonError: (error: string, status = 400) =>
     NextResponse.json({ error }, { status }),
   jsonSuccess: <T>(data: T, status = 200) =>
