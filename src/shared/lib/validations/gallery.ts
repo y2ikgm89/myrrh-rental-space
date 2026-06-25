@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const galleryItemSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   alt: z.string().max(200).default(""),
   caption: z.string().max(500).default(""),
 });
@@ -18,6 +18,7 @@ export const gallerySchema = z
     if (dupIndex !== -1) {
       ctx.addIssue({
         code: "custom",
+        input: items,
         message: "URL が重複しています",
         path: [dupIndex, "url"],
       });

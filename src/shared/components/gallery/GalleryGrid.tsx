@@ -23,7 +23,7 @@
  * VideoPlayer の代わりに native <video> タグを使用する。
  */
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 import { detectMediaSourceType } from "@/shared/lib/media/detect-media-type";
@@ -47,6 +47,34 @@ export function GalleryGrid({
 
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const isOpen = lightboxIndex >= 0;
+
+  // iOS Safari body-lock: scrollY を GalleryGrid 側で保持することで、
+  // key={lightboxIndex} による GalleryLightbox リマウント時の ref 再初期化を回避する。
+  // GalleryGrid 自体はリマウントされないため scrollYRef は安定して保持される。
+  const scrollYRef = useRef<number>(0);
+  useEffect(() => {
+    if (!isOpen) return;
+    scrollYRef.current = window.scrollY;
+    const scrollY = scrollYRef.current;
+    const body = document.body;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    return () => {
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.width = prev.width;
+      body.style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isOpen]);
 
   if (merged.length === 0) return null;
 
@@ -106,6 +134,7 @@ export function GalleryGrid({
             src={item.url}
             controls
             playsInline
+            preload="none"
             className="h-full w-full object-cover"
           />
         ) : (

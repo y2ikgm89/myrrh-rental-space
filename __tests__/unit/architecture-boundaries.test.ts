@@ -1588,14 +1588,14 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("Phase 1 Prisma JSON cast は asPrismaInputJsonValue helper 経由（as Prisma.InputJsonValue 0 件）", () => {
-    // Prisma JSON 型 — `as Prisma.InputJsonValue` は禁止（方針: .claude/rules/type-safety.md）
+  test("Phase 1 Prisma JSON cast は asPrismaInputJsonValue helper 経由（as Prisma.(Input)?Json* 直書き 0 件）", () => {
+    // Prisma JSON 型 — `as Prisma.InputJsonValue` / `as Prisma.JsonArray` / `as Prisma.JsonObject` / `as Prisma.JsonValue`
+    // の直書きは禁止（方針: .claude/rules/type-safety.md）。
     // helper: asPrismaInputJsonValue / parsePrismaInputJson / clonePrismaInputJson (@/shared/db/prisma-input-json)
-    // `as Prisma.InputJsonObject` (data field) と `satisfies + as Prisma.InputJsonArray` (navigation token) のみ許容
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = collectNonCommentOffenders(
       sourceFiles,
-      /\bas\s+Prisma\.InputJsonValue\b/u,
+      /\bas\s+Prisma\.(Input)?Json(Value|Array|Object)\b/u,
     );
 
     expect(offenders).toEqual([]);

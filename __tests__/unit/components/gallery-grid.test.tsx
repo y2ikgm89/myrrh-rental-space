@@ -121,6 +121,103 @@ describe("GalleryGrid", () => {
     expect(container?.childElementCount).toBe(0);
   });
 
+  // ── Case 1b: 1 件 → 1 カラム全幅 ────────────────────────────────────────
+
+  test("1 件のとき grid-cols-1 クラスが付く", async () => {
+    const items = [
+      { url: "https://cdn.example.com/img1.jpg", alt: "img1", caption: "" },
+    ];
+
+    await act(async () => {
+      root?.render(<GalleryGrid items={items} />);
+    });
+
+    const grid = container?.querySelector(".grid");
+    expect(grid?.className).toContain("grid-cols-1");
+    const images = container?.querySelectorAll("[data-testid='gallery-image']");
+    expect(images?.length).toBe(1);
+  });
+
+  // ── Case 1c: 2 件 → 2 カラム ─────────────────────────────────────────────
+
+  test("2 件のとき grid-cols-2 クラスが付く", async () => {
+    const items = Array.from({ length: 2 }, (_, i) => ({
+      url: `https://cdn.example.com/img${i + 1}.jpg`,
+      alt: `image ${i + 1}`,
+      caption: "",
+    }));
+
+    await act(async () => {
+      root?.render(<GalleryGrid items={items} />);
+    });
+
+    const grid = container?.querySelector(".grid");
+    expect(grid?.className).toContain("grid-cols-2");
+    const images = container?.querySelectorAll("[data-testid='gallery-image']");
+    expect(images?.length).toBe(2);
+  });
+
+  // ── Case 1d: 3 件 → 3 カラム ─────────────────────────────────────────────
+
+  test("3 件のとき grid-cols-3 クラスが付く", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => ({
+      url: `https://cdn.example.com/img${i + 1}.jpg`,
+      alt: `image ${i + 1}`,
+      caption: "",
+    }));
+
+    await act(async () => {
+      root?.render(<GalleryGrid items={items} />);
+    });
+
+    const grid = container?.querySelector(".grid");
+    expect(grid?.className).toContain("grid-cols-3");
+    const images = container?.querySelectorAll("[data-testid='gallery-image']");
+    expect(images?.length).toBe(3);
+  });
+
+  // ── Case 1e: 4 件 → 2×2 グリッド ──────────────────────────────────────────
+
+  test("4 件のとき grid-cols-2 grid-rows-2 クラスが付く", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => ({
+      url: `https://cdn.example.com/img${i + 1}.jpg`,
+      alt: `image ${i + 1}`,
+      caption: "",
+    }));
+
+    await act(async () => {
+      root?.render(<GalleryGrid items={items} />);
+    });
+
+    const grid = container?.querySelector(".grid");
+    expect(grid?.className).toContain("grid-cols-2");
+    expect(grid?.className).toContain("grid-rows-2");
+    const images = container?.querySelectorAll("[data-testid='gallery-image']");
+    expect(images?.length).toBe(4);
+    // オーバーレイは出ない
+    expect(container?.querySelector("button[aria-label^='他']")).toBeNull();
+  });
+
+  // ── Case hero prop ──────────────────────────────────────────────────────────
+
+  test("hero prop が指定されると先頭に仮想挿入されて描画される", async () => {
+    const heroUrl = "https://cdn.example.com/hero.jpg";
+    const items = [
+      { url: "https://cdn.example.com/img1.jpg", alt: "img1", caption: "" },
+    ];
+
+    await act(async () => {
+      root?.render(<GalleryGrid items={items} hero={heroUrl} />);
+    });
+
+    // hero + items = 2 件 → 2 カラム、2 枚描画
+    const images = container?.querySelectorAll("[data-testid='gallery-image']");
+    expect(images?.length).toBe(2);
+    // 先頭が hero
+    const first = images?.[0] as HTMLImageElement | undefined;
+    expect(first?.src).toContain("hero.jpg");
+  });
+
   // ── Case 2: 5 件 (全画像) → 4-up グリッド + "+1" overlay ──────────────
 
   test("5 件 (全画像) → 4 タイル描画 + '+1' overlay + overlay クリックで lightbox が開く", async () => {

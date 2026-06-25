@@ -17,6 +17,8 @@
  */
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
+// NOTE: body-lock (iOS Safari scrollY 保持) は GalleryGrid 側に hoist 済み。
+// GalleryLightbox は dialog 開閉 / keyboard nav / swipe のみ担当する。
 import Image from "next/image";
 import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
@@ -46,44 +48,6 @@ export function GalleryLightbox({
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  // iOS Safari は <dialog> 表示中も背後 body がスクロールできてしまう（WebKit）。
-  // position:fixed 方式で body をロックし、閉じたら元のスクロール位置に復帰する。
-  // GallerySection L59-82 と同一パターン。
-  //
-  // scrollY を ref で保持する理由:
-  //   GalleryGrid は key={lightboxIndex} でこのコンポーネントをリマウントするため、
-  //   open=true の effect が再実行される際に body がすでに position:fixed 状態だと
-  //   window.scrollY が 0 になりうる（position:fixed 直後の再マウント競合）。
-  //   ref に初回 open 時の値をキャプチャし、unmount cleanup で安全に復帰させる。
-  const scrollYRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    // body がまだ fixed されていない初回 open 時にだけ scrollY をキャプチャする
-    if (scrollYRef.current === null) {
-      scrollYRef.current = window.scrollY;
-    }
-    const scrollY = scrollYRef.current;
-    const body = document.body;
-    const prev = {
-      position: body.style.position,
-      top: body.style.top,
-      width: body.style.width,
-      overflow: body.style.overflow,
-    };
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
-    return () => {
-      body.style.position = prev.position;
-      body.style.top = prev.top;
-      body.style.width = prev.width;
-      body.style.overflow = prev.overflow;
-      window.scrollTo(0, scrollY);
-      scrollYRef.current = null;
-    };
   }, [open]);
 
   const navigate = (direction: 1 | -1) => {

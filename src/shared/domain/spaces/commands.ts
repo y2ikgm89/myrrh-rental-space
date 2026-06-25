@@ -68,7 +68,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     hourlyPrice: input.hourlyPrice,
     dailyPrice: input.dailyPrice ?? null,
     mainImageUrl: input.mainImageUrl,
-    gallery: input.gallery as unknown as Prisma.JsonArray,
+    gallery: asPrismaInputJsonValue(input.gallery, "gallery が不正です"),
     facilities: input.facilities,
     isPublished: input.isPublished,
     reviewsEnabled: input.reviewsEnabled,
