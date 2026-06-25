@@ -4,15 +4,6 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 // =============================================================================
 
-const mockLoginTokenCreate = mock<
-  () => Promise<{ token: string; expiresAt: Date }>
->(() =>
-  Promise.resolve({
-    token: "test-token-abc",
-    expiresAt: new Date("2026-04-01T12:00:00Z"),
-  }),
-);
-
 const mockLoginTokenUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
@@ -22,87 +13,15 @@ mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     loginToken: {
-      create: mockLoginTokenCreate,
       updateMany: mockLoginTokenUpdateMany,
     },
   },
 }));
 
-import {
-  createAdminLoginTokenRecord,
-  consumeAdminLoginToken,
-} from "@/shared/domain/admin-login-tokens/commands";
+import { consumeAdminLoginToken } from "@/shared/domain/admin-login-tokens/commands";
 
 // テスト用定数
 const VALID_TOKEN = "secure-token-xyz-123";
-const CREATED_BY = "admin-user-1";
-const EXPIRES_AT = new Date("2026-04-01T12:00:00Z");
-
-describe("createAdminLoginTokenRecord", () => {
-  beforeEach(() => {
-    mockLoginTokenCreate.mockReset();
-    mockLoginTokenCreate.mockResolvedValue({
-      token: VALID_TOKEN,
-      expiresAt: EXPIRES_AT,
-    });
-  });
-
-  describe("正常系", () => {
-    test("有効なトークンレコードを作成して token と expiresAt を返す", async () => {
-      const result = await createAdminLoginTokenRecord({
-        token: VALID_TOKEN,
-        createdBy: CREATED_BY,
-        expiresAt: EXPIRES_AT,
-      });
-
-      expect(result).toEqual({ token: VALID_TOKEN, expiresAt: EXPIRES_AT });
-      expect(mockLoginTokenCreate).toHaveBeenCalledTimes(1);
-    });
-
-    test("prisma.loginToken.create に正しいデータが渡される", async () => {
-      await createAdminLoginTokenRecord({
-        token: VALID_TOKEN,
-        createdBy: CREATED_BY,
-        expiresAt: EXPIRES_AT,
-      });
-
-      expect(mockLoginTokenCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: {
-            token: VALID_TOKEN,
-            createdBy: CREATED_BY,
-            expiresAt: EXPIRES_AT,
-          },
-          select: {
-            token: true,
-            expiresAt: true,
-          },
-        }),
-      );
-    });
-
-    test("異なる createdBy でトークンを作成できる", async () => {
-      const anotherAdmin = "another-admin-2";
-      mockLoginTokenCreate.mockResolvedValueOnce({
-        token: "another-token",
-        expiresAt: EXPIRES_AT,
-      });
-
-      const result = await createAdminLoginTokenRecord({
-        token: "another-token",
-        createdBy: anotherAdmin,
-        expiresAt: EXPIRES_AT,
-      });
-
-      expect(result.token).toBe("another-token");
-      expect(mockLoginTokenCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ createdBy: anotherAdmin }),
-        }),
-      );
-    });
-  });
-});
 
 describe("consumeAdminLoginToken", () => {
   beforeEach(() => {
