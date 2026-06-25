@@ -27,7 +27,7 @@ import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
-import { updateCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/queries";
+import { updateCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/commands";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { getResendClient } from "@/shared/lib/email/client";
 import { serverEnv } from "@/shared/lib/env/server";
