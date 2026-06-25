@@ -102,14 +102,14 @@ function fallbackStaticSitemap(): MetadataRoute.Sitemap {
 // Sitemap Generation
 // =============================================================================
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // build prerender skip — `getFeatureFilterContext` 内部の
-  // `getFeatureModulesSettings` は `'use cache' + safeFetch({fallback: null})` 構造で、
-  // Dockerfile builder の placeholder DATABASE_URL では fallback null が空 Map として
-  // 静的シェルに baking され Cloudflare HIT で恒久汚染する。
-  // 公式 canonical pattern (.claude/rules/db-and-domain.md §6) に従い動的化する。
-  await connection();
-
+/**
+ * sitemap.xml が要求する Next.js MetadataRoute エントリを構築する pure function。
+ *
+ * `connection()` などの Next.js request scope への依存を持たないため unit test から
+ * 直接呼べる（mock 不要）。Next.js sitemap convention の wrapper は default export
+ * `sitemap()`（下記）。
+ */
+export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
   const startedAt = Date.now();
   const baseUrl = getBaseUrl();
   let content: Awaited<ReturnType<typeof getSitemapContentData>>;
@@ -284,4 +284,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   return entries;
+}
+
+/**
+ * Next.js sitemap convention の default export。
+ *
+ * `await connection()` で build prerender skip を取り（`getFeatureFilterContext` 内部の
+ * `'use cache' + safeFetch({fallback: null})` 構造が Dockerfile builder の placeholder
+ * DATABASE_URL で空 Map を静的シェルに baking し Cloudflare HIT で恒久汚染する問題を
+ * 回避）、データ構築は pure な `buildSitemap()` に委譲する。
+ *
+ * `connection()` は Next.js request scope を要求するため unit test で直接呼べない。
+ * テスト時は `buildSitemap()` を直接呼んで sitemap エントリ生成ロジックだけ検証する。
+ *
+ * 公式 canonical pattern: .claude/rules/db-and-domain.md §6
+ */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
+  return buildSitemap();
 }
