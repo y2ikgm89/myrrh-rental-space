@@ -42,10 +42,8 @@ function collectTsxFiles(dir: string): string[] {
 
 describe("admin design tokens", () => {
   test("管理画面に禁止パレット相当のユーティリティクラスが含まれない", () => {
-    if (!existsSync(ADMIN_APP_ROOT)) {
-      expect(true).toBe(true);
-      return;
-    }
+    // admin route group の rename/消滅を silent green で見逃さない hard-fail
+    expect(existsSync(ADMIN_APP_ROOT)).toBe(true);
 
     const files = collectTsxFiles(ADMIN_APP_ROOT);
     const violations: string[] = [];
