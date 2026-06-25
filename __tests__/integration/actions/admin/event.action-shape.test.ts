@@ -1,10 +1,15 @@
 /**
- * Event Server Action 実呼出し統合テスト
+ * Event Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/event.ts のうち
- * id-only mutation (deleteEvent / publishEvent / duplicateEvent / cancelEvent
- * / archiveEvent) を実 import して呼び出し、executeAdminMutationResult を
- * mock.module で差替えた本物のカバレッジを確保する。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
+ *
+ * 対象: deleteEvent / publishEvent / duplicateEvent / cancelEvent / archiveEvent
+ * (id-only mutation 群)
  *
  * conform 系 (createEventAction / updateEventAction) は別レイヤ (event-bulk)
  * と同等で event-bulk.test.ts が既存実装済。
@@ -122,7 +127,7 @@ const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 
-describe("deleteEvent (real)", () => {
+describe("deleteEvent (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockDeleteEventCommand.mockClear();
@@ -147,7 +152,7 @@ describe("deleteEvent (real)", () => {
   });
 });
 
-describe("publishEvent (real)", () => {
+describe("publishEvent (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockPublishEventCommand.mockClear();
@@ -162,7 +167,7 @@ describe("publishEvent (real)", () => {
   });
 });
 
-describe("duplicateEvent (real)", () => {
+describe("duplicateEvent (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockDuplicateEventCommand.mockClear();
@@ -180,7 +185,7 @@ describe("duplicateEvent (real)", () => {
   });
 });
 
-describe("cancelEvent (real)", () => {
+describe("cancelEvent (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockCancelEventCommand.mockClear();
@@ -195,7 +200,7 @@ describe("cancelEvent (real)", () => {
   });
 });
 
-describe("archiveEvent (real)", () => {
+describe("archiveEvent (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockArchiveEventCommand.mockClear();

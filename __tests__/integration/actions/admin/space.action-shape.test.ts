@@ -1,8 +1,14 @@
 /**
- * Space Server Action 実呼出し統合テスト
+ * Space Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts の
- * updateSpacePublished / deleteSpace / duplicateSpace を実 import で呼び出す。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
+ *
+ * 対象: updateSpacePublished / deleteSpace / duplicateSpace
  *
  * conform 系 (createSpaceAction / updateSpaceAction) は spaceFormSchema が
  * Lexical + 多数 enum で複雑なため、後続タスクで分離 test 化。
@@ -89,7 +95,7 @@ const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 
-describe("updateSpacePublished (real)", () => {
+describe("updateSpacePublished (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdatePublished.mockClear();
@@ -114,7 +120,7 @@ describe("updateSpacePublished (real)", () => {
   });
 });
 
-describe("deleteSpace (real)", () => {
+describe("deleteSpace (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDeleteSpace.mockClear();
@@ -138,7 +144,7 @@ describe("deleteSpace (real)", () => {
   });
 });
 
-describe("duplicateSpace (real)", () => {
+describe("duplicateSpace (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDuplicateSpace.mockClear();

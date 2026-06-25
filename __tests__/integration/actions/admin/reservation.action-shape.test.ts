@@ -1,9 +1,15 @@
 /**
- * Reservation Server Action 実呼出し統合テスト
+ * Reservation Server Action — action shape & schema 統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/reservation/mutations.ts の
- * id-only mutation (updateReservationNotes / deleteReservation /
- * restoreReservation / restoreReservationStatus) を実 import で呼び出す。
+ * **scope**: action 関数の input validation / executeAdminMutationResult への
+ * options shape (resource / action / resourceId) / domain command への引数伝搬
+ * のみを実 import で検証する。`executeAdminMutationResult` は mock しており
+ * **auth / RBAC / cache invalidation / 監査ログは検証しない**。
+ * end-to-end な auth + RBAC + cache + audit の検証は
+ * `_executeAdminMutationResult-rbac.test.ts` を参照。
+ *
+ * 対象: updateReservationNotes / deleteReservation / restoreReservation /
+ * restoreReservationStatus (id-only mutation 群)
  *
  * conform 系 (createReservationAction / updateReservationAction) は副作用が
  * 多い (メール・GCal・通知) ため後続タスクで分離 test 化。
@@ -151,7 +157,7 @@ const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 
-describe("updateReservationNotes (real)", () => {
+describe("updateReservationNotes (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdateNotes.mockClear();
@@ -176,7 +182,7 @@ describe("updateReservationNotes (real)", () => {
   });
 });
 
-describe("deleteReservation (real)", () => {
+describe("deleteReservation (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockDeleteReservation.mockClear();
@@ -199,7 +205,7 @@ describe("deleteReservation (real)", () => {
   });
 });
 
-describe("restoreReservation (real)", () => {
+describe("restoreReservation (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockRestoreReservation.mockClear();
@@ -216,7 +222,7 @@ describe("restoreReservation (real)", () => {
   });
 });
 
-describe("restoreReservationStatus (real)", () => {
+describe("restoreReservationStatus (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockRestoreStatus.mockClear();
@@ -241,7 +247,7 @@ describe("restoreReservationStatus (real)", () => {
   });
 });
 
-describe("updateReservationStatus (real)", () => {
+describe("updateReservationStatus (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdateStatus.mockClear();
