@@ -17,6 +17,7 @@
  */
 
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
 import { getSitemapContentData } from "@/shared/domain/sitemap/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
@@ -103,6 +104,13 @@ function fallbackStaticSitemap(): MetadataRoute.Sitemap {
 // =============================================================================
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // build prerender skip — `getFeatureFilterContext` 内部の
+  // `getFeatureModulesSettings` は `'use cache' + safeFetch({fallback: null})` 構造で、
+  // Dockerfile builder の placeholder DATABASE_URL では fallback null が空 Map として
+  // 静的シェルに baking され Cloudflare HIT で恒久汚染する。
+  // 公式 canonical pattern (.claude/rules/db-and-domain.md §6) に従い動的化する。
+  await connection();
+
   const startedAt = Date.now();
   let content: Awaited<ReturnType<typeof getSitemapContentData>>;
   let featureCtx: Awaited<ReturnType<typeof getFeatureFilterContext>>;
