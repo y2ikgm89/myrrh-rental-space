@@ -4,19 +4,24 @@
  * 管理画面・公開ページ両方で使用される型
  */
 
-import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  Prisma,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Prismaトランザクションクライアント型
  *
  * Prisma拡張クライアントとの互換性を確保するため、
- * reservationモデルのfindFirstメソッドのみを要求する型定義
+ * reservationモデルのfindFirstメソッドのみを要求する型定義。
+ * where / orderBy は Prisma 公式の Input 型を使用して field 名 typo / type drift
+ * を build 時検出する。
  */
 export interface PrismaTransactionClient {
   reservation: {
     findFirst: (args: {
-      where: Record<string, unknown>;
-      select?: Record<string, boolean>;
+      where: Prisma.ReservationWhereInput;
+      select?: Prisma.ReservationSelect;
     }) => Promise<{
       id: string;
       startTime: Date;
@@ -26,9 +31,9 @@ export interface PrismaTransactionClient {
   };
   blockedDate: {
     findFirst: (args: {
-      where: Record<string, unknown>;
-      orderBy?: Record<string, unknown>;
-      select?: Record<string, boolean>;
+      where: Prisma.BlockedDateWhereInput;
+      orderBy?: Prisma.BlockedDateOrderByWithRelationInput;
+      select?: Prisma.BlockedDateSelect;
     }) => Promise<{ reason: string | null } | null>;
   };
 }

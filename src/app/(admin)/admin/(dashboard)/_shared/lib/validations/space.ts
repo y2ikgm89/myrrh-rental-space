@@ -10,7 +10,10 @@ import {
   DurationDiscountOverride,
   TaxRateType,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { facilitiesSchema } from "@/shared/lib/json-validators";
+import {
+  facilitiesSchema,
+  type BusinessHours,
+} from "@/shared/lib/json-validators";
 import { isRecord } from "@/shared/lib/serialize";
 
 /**
@@ -355,7 +358,7 @@ export type SpaceWithStats = {
   mainImageUrl: string;
   imageUrls: string[];
   facilities: { name: string; iconName: string }[];
-  businessHours: Record<string, unknown> | null;
+  businessHours: BusinessHours | null;
   isPublished: boolean;
   /** toISOString() 済み ISO 8601 文字列（React 19 RSC 境界シリアライゼーション対応） */
   publishedAt: string | null;

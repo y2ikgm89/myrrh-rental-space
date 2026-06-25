@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 import type { CalendarSyncMethod } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -57,7 +58,7 @@ function normalizeNullableString(value: string | null): string | null {
 export async function updateStripeSettings(
   data: StripeSettingsInput,
 ): Promise<void> {
-  const updateData: Record<string, unknown> = {
+  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {
     stripeEnabled: data.stripeEnabled,
     stripeCurrency: data.stripeCurrency,
   };
@@ -66,12 +67,12 @@ export async function updateStripeSettings(
   // 空送信になるため、空（falsy）は「既存値を維持」として扱う（シークレットキーと同じ意味論）。
   // クリアは clearStripeKeys（「キーをクリア」ボタン）経由で行う。
   if (data.stripePublishableKey) {
-    updateData["stripePublishableKey"] = data.stripePublishableKey;
+    updateData.stripePublishableKey = data.stripePublishableKey;
   }
 
   if (data.stripeSecretKey) {
     try {
-      updateData["stripeSecretKey"] = encrypt(data.stripeSecretKey);
+      updateData.stripeSecretKey = encrypt(data.stripeSecretKey);
     } catch {
       throw new DomainError(
         "シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。",
@@ -82,7 +83,7 @@ export async function updateStripeSettings(
 
   if (data.stripeWebhookSecret) {
     try {
-      updateData["stripeWebhookSecret"] = encrypt(data.stripeWebhookSecret);
+      updateData.stripeWebhookSecret = encrypt(data.stripeWebhookSecret);
     } catch {
       throw new DomainError(
         "Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。",
@@ -147,7 +148,7 @@ export async function clearStripeKeys(): Promise<void> {
 export async function updateGoogleCalendarSettings(
   data: GoogleCalendarSettingsInput,
 ): Promise<void> {
-  const updateData: Record<string, unknown> = {
+  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {
     googleCalendarEnabled: data.googleCalendarEnabled,
     icalAttachmentEnabled: data.icalAttachmentEnabled,
     addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
@@ -158,7 +159,7 @@ export async function updateGoogleCalendarSettings(
   // カレンダーID は管理 UI で「変更」ボタンによりロックされる公開識別子。ロック中の保存は
   // 空送信になるため、空（falsy）は「既存値を維持」として扱う（サービスアカウントと同じ意味論）。
   if (data.googleCalendarId) {
-    updateData["googleCalendarId"] = normalizeNullableString(
+    updateData.googleCalendarId = normalizeNullableString(
       data.googleCalendarId,
     );
   }
@@ -171,11 +172,11 @@ export async function updateGoogleCalendarSettings(
       );
     }
 
-    updateData["googleCalendarServiceAccountJson"] = encryptServiceAccountJson(
+    updateData.googleCalendarServiceAccountJson = encryptServiceAccountJson(
       data.serviceAccountJson,
     );
-    updateData["googleCalendarConnectionStatus"] = null;
-    updateData["googleCalendarLastTestedAt"] = null;
+    updateData.googleCalendarConnectionStatus = null;
+    updateData.googleCalendarLastTestedAt = null;
   }
 
   await prisma.settings.upsert({
