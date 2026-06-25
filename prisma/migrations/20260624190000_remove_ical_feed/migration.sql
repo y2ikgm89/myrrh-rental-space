@@ -12,11 +12,14 @@ ALTER TABLE "ical_tokens" DROP CONSTRAINT "ical_tokens_createdBy_fkey";
 -- DropForeignKey
 ALTER TABLE "ical_tokens" DROP CONSTRAINT "ical_tokens_spaceId_fkey";
 
--- squawk-ignore ban-drop-column
 -- AlterTable
-ALTER TABLE "settings" DROP COLUMN "icalFeedEnabled",
-DROP COLUMN "icalFeedIncludeCustomerInfo";
+-- squawk-ignore ban-drop-column
+ALTER TABLE "settings" DROP COLUMN "icalFeedEnabled";
 
--- squawk-ignore ban-drop-table
+-- AlterTable
+-- squawk-ignore ban-drop-column
+ALTER TABLE "settings" DROP COLUMN "icalFeedIncludeCustomerInfo";
+
 -- DropTable
+-- squawk-ignore ban-drop-table
 DROP TABLE "ical_tokens";
