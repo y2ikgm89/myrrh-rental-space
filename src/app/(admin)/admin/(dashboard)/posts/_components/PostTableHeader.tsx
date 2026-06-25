@@ -49,7 +49,6 @@ export function PostTableHeader({
           タイトル
         </SortableColumnHeader>
         <TableHead className="hidden md:table-cell">カテゴリ</TableHead>
-        <TableHead className="hidden text-right lg:table-cell">PV</TableHead>
         <SortableColumnHeader
           column="publishedAt"
           currentSortBy={params.sortBy}

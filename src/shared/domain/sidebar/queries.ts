@@ -102,7 +102,7 @@ export async function getSidebarData(
             prisma.post.findMany({
               where: publishedWhere,
               select: postSelect,
-              orderBy: { viewCount: "desc" },
+              orderBy: { publishedAt: "desc" },
               take: popularCount,
             }),
           fallback: [],
