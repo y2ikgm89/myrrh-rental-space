@@ -5,12 +5,8 @@ import type { Prisma } from "@generated/prisma/client";
 import {
   parseBusinessHours,
   parseFacilities,
-  parseStringArray,
 } from "@/shared/lib/json-validators";
-import {
-  parseGallery,
-  type GalleryItem,
-} from "@/shared/lib/validations/gallery";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import {
   getValidDiscountType,
