@@ -173,55 +173,43 @@ export const CACHE_TAGS = {
  */
 export const getCacheTag = {
   posts: {
-    list: () => CACHE_TAGS.POSTS,
     detail: (slug: string) => `${CACHE_TAGS.POSTS}-${slug}`,
     tags: () => CACHE_TAGS.POST_TAGS,
     tagPage: (slug: string) => `${CACHE_TAGS.POST_TAGS}-${slug}`,
   },
   news: {
-    list: () => CACHE_TAGS.NEWS,
     detail: (id: string) => `${CACHE_TAGS.NEWS}-${id}`,
   },
   spaces: {
-    list: () => CACHE_TAGS.SPACES,
     detail: (id: string) => `${CACHE_TAGS.SPACES}-${id}`,
   },
   pages: {
-    list: () => CACHE_TAGS.PAGES,
     detail: (slug: string) => `${CACHE_TAGS.PAGES}-${slug}`,
   },
   faq: {
-    list: () => CACHE_TAGS.FAQ,
     detail: (id: string) => `${CACHE_TAGS.FAQ}-${id}`,
   },
   terms: {
-    list: () => CACHE_TAGS.TERMS,
     detail: (slug: string) => `${CACHE_TAGS.TERMS}-${slug}`,
     footer: () => `${CACHE_TAGS.TERMS}-footer`,
   },
   reservations: {
-    list: () => CACHE_TAGS.RESERVATIONS,
     detail: (id: string) => `${CACHE_TAGS.RESERVATIONS}-${id}`,
     calendar: () => `${CACHE_TAGS.RESERVATIONS}-calendar`,
   },
   customers: {
-    list: () => CACHE_TAGS.CUSTOMERS,
     detail: (id: string) => `${CACHE_TAGS.CUSTOMERS}-${id}`,
   },
   inquiries: {
-    list: () => CACHE_TAGS.INQUIRIES,
     detail: (id: string) => `${CACHE_TAGS.INQUIRIES}-${id}`,
   },
   coupons: {
-    list: () => CACHE_TAGS.COUPONS,
     detail: (id: string) => `${CACHE_TAGS.COUPONS}-${id}`,
   },
   media: {
-    list: () => CACHE_TAGS.MEDIA,
     detail: (id: string) => `${CACHE_TAGS.MEDIA}-${id}`,
   },
   staff: {
-    list: () => CACHE_TAGS.STAFF,
     detail: (id: string) => `${CACHE_TAGS.STAFF}-${id}`,
   },
   layoutSettings: {
@@ -236,9 +224,6 @@ export const getCacheTag = {
   },
   auditLogs: {
     recent: (userId: string) => `audit-logs:recent:${userId}`,
-  },
-  events: {
-    list: () => CACHE_TAGS.EVENTS,
   },
 } as const;
 
