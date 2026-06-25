@@ -53,11 +53,17 @@ substitutions:
   _CLOUDFLARE_ZONE_ID_SECRET_VERSION: "1"
   _CLOUDFLARE_API_TOKEN_SECRET_VERSION: "1"
   # NEXT_PUBLIC_* (ビルド時インライン + ランタイム両方で使用)
-  _NEXT_PUBLIC_BASE_URL: ""
-  _NEXT_PUBLIC_APP_URL: ""
+  #
+  # _NEXT_PUBLIC_BASE_URL / _NEXT_PUBLIC_APP_URL は **trigger で必須設定**。
+  # 空デフォルトを残すと trigger 未設定時に `""` が build に流入し、
+  # next build が空文字を client/server bundle にインライン化して
+  # `http://localhost:3000` を sitemap / OGP / canonical / breadcrumb に
+  # 焼き込む silent SEO 汚染を起こす。デフォルトを削除して
+  # `gcloud builds submit` の substitution 未設定エラーで build 投入時点に
+  # 早期 fail させる（Dockerfile builder-base の assert と多重防御）。
   _NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
   _NEXT_PUBLIC_GA_MEASUREMENT_ID: ""
-  # Server-only env vars
+  # Server-only env vars（optional・空はコード fallback で吸収するためデフォルト維持）
   _BETTER_AUTH_URL: ""
 
 options:

@@ -45,6 +45,18 @@ ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 
+# BASE_URL / APP_URL は build 時にクライアント bundle へインライン化されるため、
+# 空のまま build を通すと `http://localhost:3000` 系のローカル URL を sitemap /
+# OGP / canonical / breadcrumb に焼き込む silent SEO 汚染を引き起こす。
+# 空でかつ末尾スラッシュ無しの絶対 URL であることを Docker layer で early assert する。
+# Turnstile / GA は legitimately optional のため未検査。
+RUN if [ -z "$NEXT_PUBLIC_BASE_URL" ] || [ -z "$NEXT_PUBLIC_APP_URL" ]; then \
+      echo "ERROR: NEXT_PUBLIC_BASE_URL / NEXT_PUBLIC_APP_URL は build 時に必須（cloudbuild trigger で substitution 設定）" >&2; \
+      exit 1; \
+    fi; \
+    case "$NEXT_PUBLIC_BASE_URL" in */) echo "ERROR: NEXT_PUBLIC_BASE_URL に末尾スラッシュ" >&2; exit 1 ;; esac; \
+    case "$NEXT_PUBLIC_APP_URL" in */) echo "ERROR: NEXT_PUBLIC_APP_URL に末尾スラッシュ" >&2; exit 1 ;; esac
+
 ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
     NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
