@@ -5,7 +5,7 @@
 -- (PostgreSQL では ENUM 値の DROP が直接サポートされていないため公式回避策を採用)
 -- https://www.postgresql.org/docs/current/sql-altertype.html
 --
--- 注: 既存 audit_log 行に UNPUBLISH 値があれば失敗するが、本 dead 値は writer 0 件のため
+-- 注: 既存 audit_logs 行に UNPUBLISH 値があれば失敗するが、本 dead 値は writer 0 件のため
 -- 本番にも該当行は存在しない。dev seed の UNPUBLISH エントリは本 PR で同時に撤去済み。
 
 ALTER TYPE "AuditAction" RENAME TO "AuditAction_old";
@@ -25,7 +25,8 @@ CREATE TYPE "AuditAction" AS ENUM (
   'ROLE_CHANGE'
 );
 
-ALTER TABLE "audit_log"
+-- squawk-ignore changing-column-type
+ALTER TABLE "audit_logs"
   ALTER COLUMN "action" TYPE "AuditAction"
   USING ("action"::text::"AuditAction");
 
