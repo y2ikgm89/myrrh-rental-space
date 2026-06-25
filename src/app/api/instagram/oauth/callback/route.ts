@@ -29,6 +29,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
 const instagramOAuthCallbackQuerySchema = z.object({
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const savedState = cookieStore.get(STATE_COOKIE_NAME)?.value;
 
-  if (!savedState || savedState !== state) {
+  if (!savedState || !timingSafeEqualStrings(savedState, state)) {
     logError(new Error("CSRF state mismatch in Instagram OAuth"), {
       category: ErrorCategory.VALIDATION,
       severity: ErrorSeverity.MEDIUM,
