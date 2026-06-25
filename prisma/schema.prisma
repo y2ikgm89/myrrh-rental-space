@@ -676,7 +676,6 @@ model Customer {
   @@index([isActive])
   @@index([lastReservationAt])
   @@index([lastName, firstName])
-  @@index([userId])
   @@index([emailDeliveryStatus])
   @@map("customers")
 }
