@@ -103,7 +103,7 @@ export function GalleryField({
           variant="outline"
           size="sm"
           onClick={() => picker.openPicker()}
-          disabled={disabled ?? items.length >= max}
+          disabled={(disabled ?? false) || items.length >= max}
         >
           <IconPhotoPlus className="mr-2 h-4 w-4" aria-hidden="true" />
           画像を追加
