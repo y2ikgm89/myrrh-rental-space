@@ -11,22 +11,6 @@ export {
   type SkipLinkTarget,
 } from "./skip-link";
 
-// モーション設定
-export {
-  REDUCED_MOTION_CSS,
-  prefersReducedMotion,
-  getAnimationDuration,
-} from "./motion-utils";
-
-// ARIAライブリージョン
-export {
-  ARIA_LIVE_PRESETS,
-  ARIA_LIVE_REGION_CLASSES,
-  type AriaLivePoliteness,
-  type AriaLiveRole,
-  type AriaLiveAnnouncement,
-} from "./aria-live";
-
 // radiogroup 用キーボード制御 (WAI-ARIA APG)
 export {
   useRadioGroupKeyboard,
