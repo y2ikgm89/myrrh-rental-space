@@ -33,7 +33,7 @@
 - **決済** — Stripe による予約決済
 - **メール** — Resend ＋ React Email によるトランザクションメール送信
 - **画像ストレージ** — Cloudflare R2（S3 互換）
-- **外部連携** — Google Analytics / Google Calendar、Instagram、iCal フィード
+- **外部連携** — Google Analytics / Google Calendar、Instagram、Add to Calendar（.ics 生成）
 - **品質** — Playwright E2E、axe-core によるアクセシビリティ検証、Lighthouse CI
 
 ## 技術スタック
