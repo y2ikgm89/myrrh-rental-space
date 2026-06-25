@@ -66,10 +66,8 @@ function compactForScan(source: string): string {
 
 describe("admin submit button pattern", () => {
   test("管理画面の .tsx に Button/button の type=submit 直書きがない", () => {
-    if (!existsSync(ADMIN_APP_ROOT)) {
-      expect(true).toBe(true);
-      return;
-    }
+    // admin route group の rename/消滅を silent green で見逃さない hard-fail
+    expect(existsSync(ADMIN_APP_ROOT)).toBe(true);
 
     const files = collectTsxFiles(ADMIN_APP_ROOT);
     const violations: string[] = [];
