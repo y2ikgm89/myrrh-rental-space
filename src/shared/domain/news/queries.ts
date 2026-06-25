@@ -14,6 +14,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 
@@ -65,7 +66,7 @@ export async function getPublishedNewsList(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.NEWS);
 
-  const skip = (page - 1) * perPage;
+  const { skip, take } = paginate({ page, limit: perPage });
 
   const where = {
     ...PUBLIC_WHERE,
@@ -82,7 +83,7 @@ export async function getPublishedNewsList(
           select: newsListSelect,
           orderBy: { publishedAt: "desc" },
           skip,
-          take: perPage,
+          take,
         }),
       fallback: [],
       category: ErrorCategory.DATABASE,
@@ -109,7 +110,7 @@ export async function getPublishedNewsList(
       }),
     ),
     totalCount,
-    totalPages: Math.ceil(totalCount / perPage),
+    totalPages: calcTotalPages(totalCount, perPage),
     currentPage: page,
   };
 }

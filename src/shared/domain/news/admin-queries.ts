@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { LayoutWidth } from "@generated/prisma/enums";
 import type { Prisma } from "@generated/prisma/client";
 
@@ -74,12 +75,8 @@ export async function getNewsList(
   filters: NewsFilters = {},
   pagination: NewsPagination = {},
 ): Promise<GetNewsListResult> {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
   const where = buildNewsWhere(filters);
 
   const [total, news] = await Promise.all([
@@ -107,8 +104,8 @@ export async function getNewsList(
       orderBy: {
         [sortBy]: sortOrder,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -117,7 +114,7 @@ export async function getNewsList(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

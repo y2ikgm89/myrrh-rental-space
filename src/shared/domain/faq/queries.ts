@@ -6,6 +6,7 @@ import {
   FAQ_RECENT_DAYS,
   FAQ_STALE_DAYS,
 } from "@/shared/domain/faq/constants";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type {
   FaqCategoryListResult,
   FaqCategoryWithItems,
@@ -218,7 +219,10 @@ export async function getFaqItems(
   pagination: FaqItemPagination = {},
   sort?: FaqItemSort,
 ): Promise<FaqItemListResult> {
-  const { page = 1, limit = 20 } = pagination;
+  const { skip, take, page, limit } = paginate({
+    page: pagination.page,
+    limit: pagination.limit ?? 20,
+  });
   const where = buildFaqItemWhere(filters);
 
   const [total, items] = await Promise.all([
@@ -227,8 +231,8 @@ export async function getFaqItems(
       where,
       select: ITEM_WITH_CATEGORY_SELECT,
       orderBy: buildFaqItemOrderBy(sort),
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -237,7 +241,7 @@ export async function getFaqItems(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

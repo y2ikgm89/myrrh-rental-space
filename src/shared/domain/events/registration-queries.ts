@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@generated/prisma/enums";
 import { formatEventVenue } from "@/shared/domain/events/venue";
+import { paginate } from "@/shared/lib/pagination";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
 export const EVENT_REGISTRATIONS_PER_PAGE = 20;
@@ -17,16 +18,23 @@ export async function getEventRegistrations(
   eventId: string,
   options: { page?: number; perPage?: number } = {},
 ) {
-  const perPage = Math.max(1, options.perPage ?? EVENT_REGISTRATIONS_PER_PAGE);
-  const page = Math.max(1, options.page ?? 1);
+  const {
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({
+    page: options.page,
+    limit: options.perPage ?? EVENT_REGISTRATIONS_PER_PAGE,
+  });
   const where = { eventId, event: { deletedAt: null } };
 
   const [registrations, total, confirmedCount] = await Promise.all([
     prisma.eventRegistration.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
       select: {
         id: true,
         name: true,

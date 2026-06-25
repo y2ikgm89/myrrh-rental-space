@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { EventStatus } from "@generated/prisma/client";
 import type { EventTabFilter } from "@/shared/lib/nuqs";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 
 const eventListSelect = {
   id: true,
@@ -119,11 +120,15 @@ export async function getEvents(options: GetEventsOptions = {}) {
     tab = "all",
     dateFrom = "",
     dateTo = "",
-    page = 1,
-    perPage = 10,
     sortBy,
     sortOrder,
   } = options;
+  const {
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({ page: options.page, limit: options.perPage ?? 10 });
 
   const now = new Date();
   const tabWhere = buildTabWhere(tab, now);
@@ -159,8 +164,8 @@ export async function getEvents(options: GetEventsOptions = {}) {
       where,
       select: eventListSelect,
       orderBy,
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
     }),
     prisma.event.count({ where }),
   ]);
@@ -169,7 +174,7 @@ export async function getEvents(options: GetEventsOptions = {}) {
     events,
     total: totalCount,
     page,
-    totalPages: Math.ceil(totalCount / perPage),
+    totalPages: calcTotalPages(totalCount, perPage),
   };
 }
 

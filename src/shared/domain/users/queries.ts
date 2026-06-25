@@ -2,6 +2,7 @@ import "server-only";
 
 import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@generated/prisma/client";
 import type {
   NotificationStaffCandidate,
@@ -68,14 +69,13 @@ function toUserData(user: {
 export async function getUsers(
   params: UserListParams = {},
 ): Promise<UserListResult> {
+  const { search, role, sortBy = "createdAt", sortOrder = "desc" } = params;
   const {
-    page = 1,
-    perPage = 20,
-    search,
-    role,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({ page: params.page, limit: params.perPage ?? 20 });
 
   const where = {
     AND: [
@@ -103,8 +103,8 @@ export async function getUsers(
         },
       },
       orderBy: { [sortBy]: sortOrder },
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
     }),
     prisma.user.count({ where }),
   ]);
@@ -114,7 +114,7 @@ export async function getUsers(
     total,
     page,
     perPage,
-    totalPages: Math.ceil(total / perPage),
+    totalPages: calcTotalPages(total, perPage),
   };
 }
 

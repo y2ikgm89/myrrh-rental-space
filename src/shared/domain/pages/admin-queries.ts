@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
+import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { PageData, PageListResult } from "./types";
 
@@ -25,11 +26,15 @@ export async function getPagesListQuery(
     query,
     status = "all",
     type = "all",
-    page = 1,
-    perPage = 20,
     sortBy = "updatedAt",
     sortOrder = "desc",
   } = params;
+  const {
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({ page: params.page, limit: params.perPage ?? 20 });
 
   if (allowedPageIds && allowedPageIds.length === 0) {
     return { pages: [], total: 0, page, perPage };
@@ -73,8 +78,8 @@ export async function getPagesListQuery(
     prisma.page.findMany({
       where,
       orderBy,
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
       include: {
         _count: { select: { sections: true } },
       },

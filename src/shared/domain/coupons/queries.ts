@@ -11,6 +11,7 @@ import type {
   CouponStatusValue,
   GetCouponsResult,
 } from "@/shared/domain/coupons/types";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainObject } from "@/shared/lib/serialize";
 
 /**
@@ -220,12 +221,8 @@ export async function getCoupons(
   filters: CouponFilters = {},
   pagination: CouponPagination = {},
 ): Promise<GetCouponsResult> {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
 
   let total: number;
   let coupons: Coupon[];
@@ -250,8 +247,8 @@ export async function getCoupons(
       FROM ${COUPONS_TABLE}
       ${whereSql}
       ORDER BY ${sortColumn} ${sortDirection}
-      LIMIT ${limit}
-      OFFSET ${(page - 1) * limit}
+      LIMIT ${take}
+      OFFSET ${skip}
     `;
     coupons = rawRows.map(normalizeCouponRow);
   } else {
@@ -279,8 +276,8 @@ export async function getCoupons(
           updatedAt: true,
         },
         orderBy: { [sortBy]: sortOrder },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip,
+        take,
       }),
     ]);
   }
@@ -290,7 +287,7 @@ export async function getCoupons(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

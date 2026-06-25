@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { isValidPostStatus } from "@/shared/lib/validations/enums/guards";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@generated/prisma/client";
 
 type PostWhereInput = Prisma.PostWhereInput;
@@ -40,12 +41,8 @@ export async function getPosts(
   filters: PostFilters = {},
   pagination: PostPagination = {},
 ): Promise<GetPostsResult> {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
   const where = buildPostWhere(filters);
 
   const [total, posts] = await Promise.all([
@@ -85,8 +82,8 @@ export async function getPosts(
       orderBy: {
         [sortBy]: sortOrder,
       },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
     }),
   ]);
 
@@ -101,7 +98,7 @@ export async function getPosts(
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: calcTotalPages(total, limit),
   };
 }
 

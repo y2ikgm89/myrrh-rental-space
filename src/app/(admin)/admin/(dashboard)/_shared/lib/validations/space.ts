@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PaginationInput } from "@/shared/lib/pagination";
 import {
   seoOgpFieldsSchema,
   defaultSeoOgpValues,
@@ -414,9 +415,6 @@ export type SpaceFilters = {
 /**
  * スペースページネーション
  */
-export type SpacePagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: "name" | "createdAt" | "updatedAt" | "hourlyPrice";
-  sortOrder?: "asc" | "desc";
-};
+export type SpacePagination = PaginationInput<
+  "name" | "createdAt" | "updatedAt" | "hourlyPrice"
+>;

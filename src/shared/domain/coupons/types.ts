@@ -1,4 +1,5 @@
 import type { CouponType } from "@generated/prisma/enums";
+import type { PaginationInput } from "@/shared/lib/pagination";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type CouponRecord = {
@@ -55,9 +56,6 @@ export type CouponFilters = {
   search?: string | undefined;
 };
 
-export type CouponPagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: "code" | "name" | "createdAt" | "validFrom" | "usageCount";
-  sortOrder?: "asc" | "desc";
-};
+export type CouponPagination = PaginationInput<
+  "code" | "name" | "createdAt" | "validFrom" | "usageCount"
+>;

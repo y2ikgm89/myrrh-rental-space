@@ -1,4 +1,5 @@
 import type { LayoutWidth, PostStatus } from "@generated/prisma/enums";
+import type { PaginationInput } from "@/shared/lib/pagination";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type PostTagSummaryRecord = {
@@ -94,12 +95,9 @@ export type PostFilters = {
   search?: string | undefined;
 };
 
-export type PostPagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: "createdAt" | "publishedAt" | "title";
-  sortOrder?: "asc" | "desc";
-};
+export type PostPagination = PaginationInput<
+  "createdAt" | "publishedAt" | "title"
+>;
 
 export type CreatePostCommandInput = {
   title: string;

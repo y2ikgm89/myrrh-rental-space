@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@generated/prisma/client";
 
 const NOTIFICATION_SELECT = {
@@ -41,7 +42,13 @@ type GetNotificationsParams = {
 };
 
 export async function getNotificationsQuery(params: GetNotificationsParams) {
-  const { page, perPage, type, isRead } = params;
+  const { type, isRead } = params;
+  const {
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({ page: params.page, limit: params.perPage });
 
   const where: Prisma.AdminNotificationWhereInput = {};
   if (type) where.type = type;
@@ -53,8 +60,8 @@ export async function getNotificationsQuery(params: GetNotificationsParams) {
       where,
       select: NOTIFICATION_SELECT,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
     }),
   ]);
 
@@ -63,7 +70,7 @@ export async function getNotificationsQuery(params: GetNotificationsParams) {
     total,
     page,
     perPage,
-    totalPages: Math.ceil(total / perPage),
+    totalPages: calcTotalPages(total, perPage),
   };
 }
 

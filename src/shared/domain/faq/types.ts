@@ -1,3 +1,4 @@
+import type { PaginationInput } from "@/shared/lib/pagination";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type FaqItemRecord = {
@@ -92,10 +93,7 @@ export type FaqItemSort = {
   sortOrder: FaqItemSortOrder;
 };
 
-export type FaqItemPagination = {
-  page?: number;
-  limit?: number;
-};
+export type FaqItemPagination = PaginationInput;
 
 export type FaqCategoryCommandInput = {
   name: string;

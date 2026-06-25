@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { paginate } from "@/shared/lib/pagination";
 import type {
   GetSpaceCategoriesResult,
   SpaceCategoryWithStats,
@@ -20,9 +21,10 @@ export async function getSpaceCategories(options: {
   limit: number;
 }): Promise<GetSpaceCategoriesResult> {
   const { includeInactive = false, search } = options;
-  const page = Math.max(1, options.page);
-  const limit = Math.max(1, options.limit);
-  const skip = (page - 1) * limit;
+  const { skip, take, page, limit } = paginate({
+    page: options.page,
+    limit: options.limit,
+  });
 
   const where = {
     ...(includeInactive ? {} : { isActive: true }),
@@ -43,7 +45,7 @@ export async function getSpaceCategories(options: {
       where,
       orderBy: { sortOrder: "asc" },
       skip,
-      take: limit,
+      take,
       include: {
         _count: {
           select: { spaces: true },

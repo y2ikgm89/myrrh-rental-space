@@ -1,4 +1,5 @@
 import type { LayoutWidth } from "@generated/prisma/enums";
+import type { PaginationInput } from "@/shared/lib/pagination";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type NewsRecord = {
@@ -39,12 +40,7 @@ export type NewsFilters = {
   search?: string | undefined;
 };
 
-export type NewsPagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: "createdAt" | "publishedAt";
-  sortOrder?: "asc" | "desc";
-};
+export type NewsPagination = PaginationInput<"createdAt" | "publishedAt">;
 
 export type CreateNewsCommandInput = {
   slug: string;

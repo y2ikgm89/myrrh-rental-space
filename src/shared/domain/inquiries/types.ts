@@ -1,4 +1,5 @@
 import type { InquiryStatus } from "@generated/prisma/enums";
+import type { PaginationInput } from "@/shared/lib/pagination";
 
 export type InquiryData = {
   id: string;
@@ -38,12 +39,7 @@ export type InquiryFilters = {
   search?: string | undefined;
 };
 
-export type InquiryPagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: "createdAt" | "updatedAt";
-  sortOrder?: "asc" | "desc";
-};
+export type InquiryPagination = PaginationInput<"createdAt" | "updatedAt">;
 
 export type InquiryStats = {
   total: number;

@@ -7,6 +7,7 @@ import type {
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
+import type { PaginationInput } from "@/shared/lib/pagination";
 import {
   getReservationByIdQuery,
   getReservationsForCalendarQuery,
@@ -81,12 +82,7 @@ export type ReservationFilters = {
   spaceId?: string | undefined;
 };
 
-export type ReservationPagination = {
-  page?: number;
-  limit?: number;
-  sortBy?: "startTime" | "createdAt";
-  sortOrder?: "asc" | "desc";
-};
+export type ReservationPagination = PaginationInput<"startTime" | "createdAt">;
 
 export async function getReservations(
   filters: ReservationFilters = {},

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 
@@ -194,8 +195,10 @@ export async function getAdminAgreements(
   items: AdminAgreementListItem[];
   total: number;
 }> {
-  const page = filter.page ?? 1;
-  const perPage = filter.perPage ?? 50;
+  const { skip, take } = paginate({
+    page: filter.page,
+    limit: filter.perPage ?? 50,
+  });
 
   const where = {
     ...(filter.termsId !== undefined && { termsId: filter.termsId }),
@@ -207,8 +210,8 @@ export async function getAdminAgreements(
     prisma.termsAgreement.findMany({
       where,
       orderBy: { agreedAt: "desc" },
-      skip: (page - 1) * perPage,
-      take: perPage,
+      skip,
+      take,
       select: AGREEMENT_LIST_SELECT,
     }),
     prisma.termsAgreement.count({ where }),
