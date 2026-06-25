@@ -150,13 +150,61 @@ function createAdminAuth() {
         }
       }),
       after: createAuthMiddleware(async (ctx) => {
-        // ログイン成功
-        if (ctx.path.startsWith("/sign-in") && ctx.context.newSession) {
-          const { user } = ctx.context.newSession;
-          void logAuthEvent(AuditAction.LOGIN_SUCCESS, user.id, {
-            email: user.email,
-            provider: "email",
-          });
+        // ログイン (成功 / 失敗)
+        //
+        // Better Auth の after hook は **エラー throw 時にも発火する**
+        // (to-auth-endpoints.mjs: APIError を catch して ctx.context.returned に格納)。
+        // 成功 (newSession 確立) と失敗 (returned が APIError / status !== "OK") を
+        // 対称配線し、LOGIN_SUCCESS / LOGIN_FAILED の双方を記録する
+        // (証跡完全性 + brute-force / credential stuffing 試行追跡)。
+        if (ctx.path.startsWith("/sign-in")) {
+          try {
+            if (ctx.context.newSession) {
+              const { user } = ctx.context.newSession;
+              void logAuthEvent(AuditAction.LOGIN_SUCCESS, user.id, {
+                email: user.email,
+                provider: "email",
+              });
+            } else {
+              // ログイン失敗 — newSession 不在のときに記録する。
+              // email は body から、ip / userAgent はリクエストヘッダから抽出し、
+              // 失敗理由は returned (APIError) の message から取得する。
+              const body = isRecord(ctx.body) ? ctx.body : {};
+              const email =
+                typeof body["email"] === "string" ? body["email"] : "unknown";
+              const userAgent =
+                ctx.headers?.get("user-agent")?.slice(0, 200) ?? "unknown";
+              const ip =
+                ctx.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+                ctx.headers?.get("x-real-ip") ??
+                "unknown";
+              const returned: unknown = ctx.context.returned;
+              const returnedRecord = isRecord(returned) ? returned : null;
+              const status = returnedRecord
+                ? typeof returnedRecord["status"] === "string"
+                  ? returnedRecord["status"]
+                  : null
+                : null;
+              const reasonRaw = returnedRecord
+                ? typeof returnedRecord["message"] === "string"
+                  ? returnedRecord["message"]
+                  : ""
+                : "";
+              // status が "OK" の成功レスポンスは LOGIN_SUCCESS 側で扱うため除外
+              // (newSession を伴わない 200 OK は通常存在しないが防御的)。
+              if (status !== "OK") {
+                void logAuthEvent(AuditAction.LOGIN_FAILED, undefined, {
+                  email,
+                  ip,
+                  userAgent,
+                  reason: reasonRaw.slice(0, 200),
+                  provider: "email",
+                });
+              }
+            }
+          } catch {
+            // 監査ログ失敗でも認証フローを阻害しない
+          }
         }
 
         // ログアウト
