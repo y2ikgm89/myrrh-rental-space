@@ -36,6 +36,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 function redirectToIntegrationsError(
   request: NextRequest,
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const savedState = cookieStore.get(GBP_OAUTH_STATE_COOKIE)?.value;
 
     // CSRF state 検証（公式 OAuth 2.0 RFC 6749 §10.12 準拠）
-    if (!state || !savedState || savedState !== state) {
+    if (!state || !savedState || !timingSafeEqualStrings(savedState, state)) {
       logError(new Error("CSRF state mismatch in GBP OAuth"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.MEDIUM,
