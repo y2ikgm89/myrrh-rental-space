@@ -267,15 +267,34 @@ describe("updateDiscountSettings", () => {
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
     });
 
-    test("durationDiscountRules が JSON 文字列に変換される", async () => {
+    test("durationDiscountRules が Prisma Json 配列としてそのまま渡される", async () => {
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
       expect(mockSettingsUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
-            durationDiscountRules: expect.any(String),
+            durationDiscountRules:
+              DISCOUNT_SETTINGS_INPUT.durationDiscountRules,
           }),
         }),
+      );
+    });
+
+    test("round-trip: 保存値を parseDurationDiscountRules で読み戻すと入力と deep-equal", async () => {
+      const { parseDurationDiscountRules } =
+        await import("@/shared/lib/pricing/discount");
+
+      await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
+
+      const calls = mockSettingsUpsert.mock.calls as unknown as Array<
+        [{ update?: { durationDiscountRules?: unknown } }]
+      >;
+      const stored = calls[0]?.[0]?.update?.durationDiscountRules;
+      expect(Array.isArray(stored)).toBe(true);
+      // Prisma Json 列に object を渡したときの read 側挙動を模した round-trip
+      const roundTripped = parseDurationDiscountRules(stored);
+      expect(roundTripped).toEqual(
+        DISCOUNT_SETTINGS_INPUT.durationDiscountRules,
       );
     });
 

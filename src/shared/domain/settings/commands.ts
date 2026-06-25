@@ -382,7 +382,10 @@ export async function updateDiscountSettings(
 
   const updateData = {
     durationDiscountEnabled: data.durationDiscountEnabled,
-    durationDiscountRules: JSON.stringify(data.durationDiscountRules),
+    durationDiscountRules: asPrismaInputJsonValue(
+      data.durationDiscountRules,
+      "割引ルールの形式が不正です",
+    ),
     discountCombinationMode: data.discountCombinationMode,
     showOriginalPrice: data.showOriginalPrice,
   };
