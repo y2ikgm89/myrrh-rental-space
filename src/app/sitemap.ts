@@ -48,8 +48,6 @@ interface StaticPageDefinition {
 // Constants
 // =============================================================================
 
-const BASE_URL = getBaseUrl();
-
 /**
  * 静的システムページ定義。
  *
@@ -95,7 +93,8 @@ function encodePath(path: string): string {
 
 /** STATIC_PAGES 専用フォールバック — catastrophic 失敗時に最低限の sitemap を返す。 */
 function fallbackStaticSitemap(): MetadataRoute.Sitemap {
-  return STATIC_PAGES.map(({ path }) => ({ url: `${BASE_URL}${path}` }));
+  const baseUrl = getBaseUrl();
+  return STATIC_PAGES.map(({ path }) => ({ url: `${baseUrl}${path}` }));
 }
 
 // =============================================================================
@@ -104,6 +103,7 @@ function fallbackStaticSitemap(): MetadataRoute.Sitemap {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const startedAt = Date.now();
+  const baseUrl = getBaseUrl();
   let content: Awaited<ReturnType<typeof getSitemapContentData>>;
   let featureCtx: Awaited<ReturnType<typeof getFeatureFilterContext>>;
   try {
@@ -144,7 +144,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (isUrlDisabled(path, disabledRoutes)) continue;
     const lastModified = systemPageLastModified.get(slug);
     if (!lastModified) continue; // DB row 不在 / 非公開なら省略
-    entries.push({ url: `${BASE_URL}${path}`, lastModified });
+    entries.push({ url: `${baseUrl}${path}`, lastModified });
   }
 
   // ==========================================================================
@@ -157,19 +157,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   if (enabled.has("spaces") && latestSpaceUpdate) {
     entries.push({
-      url: `${BASE_URL}/spaces`,
+      url: `${baseUrl}/spaces`,
       lastModified: latestSpaceUpdate,
     });
   }
   if (enabled.has("news") && latestNewsUpdate) {
-    entries.push({ url: `${BASE_URL}/news`, lastModified: latestNewsUpdate });
+    entries.push({ url: `${baseUrl}/news`, lastModified: latestNewsUpdate });
   }
   if (enabled.has("posts") && latestPostUpdate) {
-    entries.push({ url: `${BASE_URL}/blog`, lastModified: latestPostUpdate });
+    entries.push({ url: `${baseUrl}/blog`, lastModified: latestPostUpdate });
   }
   if (enabled.has("events") && latestEventUpdate) {
     entries.push({
-      url: `${BASE_URL}/events`,
+      url: `${baseUrl}/events`,
       lastModified: latestEventUpdate,
     });
   }
@@ -180,7 +180,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("spaces")) {
     for (const space of spaces) {
       entries.push({
-        url: `${BASE_URL}/spaces/${encodeURIComponent(space.slug)}`,
+        url: `${baseUrl}/spaces/${encodeURIComponent(space.slug)}`,
         lastModified: space.updatedAt,
       });
     }
@@ -188,7 +188,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("news")) {
     for (const item of news) {
       entries.push({
-        url: `${BASE_URL}/news/${encodeURIComponent(item.slug)}`,
+        url: `${baseUrl}/news/${encodeURIComponent(item.slug)}`,
         lastModified: item.updatedAt,
       });
     }
@@ -196,19 +196,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (enabled.has("posts")) {
     for (const post of posts) {
       entries.push({
-        url: `${BASE_URL}${encodePath(buildPostCanonicalPath(post))}`,
+        url: `${baseUrl}${encodePath(buildPostCanonicalPath(post))}`,
         lastModified: post.updatedAt,
       });
     }
     for (const category of postCategories) {
       entries.push({
-        url: `${BASE_URL}${encodePath(buildCategoryPath(category.slug))}`,
+        url: `${baseUrl}${encodePath(buildCategoryPath(category.slug))}`,
         lastModified: category.updatedAt,
       });
     }
     for (const tag of postTags) {
       entries.push({
-        url: `${BASE_URL}${encodePath(buildTagPath(tag.slug))}`,
+        url: `${baseUrl}${encodePath(buildTagPath(tag.slug))}`,
         lastModified: tag.updatedAt,
       });
     }
@@ -219,7 +219,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // @see https://developers.google.com/search/docs/appearance/structured-data/event
     for (const event of events) {
       entries.push({
-        url: `${BASE_URL}/events/${encodeURIComponent(event.slug)}`,
+        url: `${baseUrl}/events/${encodeURIComponent(event.slug)}`,
         lastModified: event.updatedAt,
       });
     }
@@ -232,7 +232,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (disabledPageSlugs.has(page.slug)) continue;
     if (isReservedPath(page.slug)) continue; // 過去 data 防御（slug-validation 緩和時の保険）
     entries.push({
-      url: `${BASE_URL}/${encodeURIComponent(page.slug)}`,
+      url: `${baseUrl}/${encodeURIComponent(page.slug)}`,
       lastModified: page.updatedAt,
     });
   }
@@ -242,7 +242,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ==========================================================================
   for (const term of terms) {
     entries.push({
-      url: `${BASE_URL}/terms/${encodeURIComponent(term.slug)}`,
+      url: `${baseUrl}/terms/${encodeURIComponent(term.slug)}`,
       lastModified: term.updatedAt,
     });
   }

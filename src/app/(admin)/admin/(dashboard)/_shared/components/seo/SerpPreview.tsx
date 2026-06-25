@@ -7,8 +7,6 @@
 
 import { SITE_DEFAULTS, getBaseUrl } from "@/shared/lib/constants";
 
-const BASE_URL = getBaseUrl();
-
 interface SerpPreviewProps {
   title: string;
   description: string;
@@ -32,14 +30,14 @@ export function SerpPreview({
   slug,
   siteName,
 }: SerpPreviewProps) {
+  const baseUrl = getBaseUrl();
   const displaySiteName = siteName || SITE_DEFAULTS.name;
   const fullTitle = title
     ? `${truncate(title, TITLE_DISPLAY_LIMIT)} | ${displaySiteName}`
     : displaySiteName;
 
   // URL表示: 'home' はルート、それ以外は breadcrumb 形式
-  const displayUrl =
-    slug === "home" ? BASE_URL : `${displaySiteName} › ${slug}`;
+  const displayUrl = slug === "home" ? baseUrl : `${displaySiteName} › ${slug}`;
 
   const displayDescription = description
     ? truncate(description, DESCRIPTION_DISPLAY_LIMIT)

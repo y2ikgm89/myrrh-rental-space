@@ -25,8 +25,6 @@ import {
   ATTR_LABELS,
 } from "@/public/lib/seo/json-ld-config";
 
-const BASE_URL = getBaseUrl();
-
 export interface LocationLocalBusinessJsonLdData {
   "@id"?: string;
   name: string;
@@ -78,6 +76,7 @@ export function buildLocationLocalBusinessJsonLdData(
   location: LocationForSeo,
   options: { includeBranchOf: boolean },
 ): LocationLocalBusinessJsonLdData {
+  const baseUrl = getBaseUrl();
   const streetAddress = [location.streetAddress, location.buildingName]
     .filter(Boolean)
     .join(" ");
@@ -116,9 +115,9 @@ export function buildLocationLocalBusinessJsonLdData(
     : undefined;
 
   return omitUndefined({
-    "@id": `${BASE_URL}/access#${location.slug}-localbusiness`,
+    "@id": `${baseUrl}/access#${location.slug}-localbusiness`,
     name: location.name,
-    url: `${BASE_URL}/access#${location.slug}`,
+    url: `${baseUrl}/access#${location.slug}`,
     description: location.description ?? undefined,
     image: location.imageUrl ? [location.imageUrl] : undefined,
     telephone: location.phoneNumber ?? undefined,
@@ -143,7 +142,7 @@ export function buildLocationLocalBusinessJsonLdData(
     amenityFeature:
       amenityFeature && amenityFeature.length > 0 ? amenityFeature : undefined,
     branchOf: options.includeBranchOf
-      ? { "@id": `${BASE_URL}/#organization` }
+      ? { "@id": `${baseUrl}/#organization` }
       : undefined,
   });
 }
