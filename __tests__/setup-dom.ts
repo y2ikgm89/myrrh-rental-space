@@ -83,6 +83,27 @@ export function installJSDOMForTests(): void {
     window.getComputedStyle.bind(window),
   );
   defineGlobal(globalThis, "DOMParser", window.DOMParser);
+
+  // jsdom は HTMLDialogElement.showModal() / close() を未実装。
+  // dialog 要素を使うコンポーネントのテストが TypeError で落ちるため polyfill する。
+  // open 属性の付け外しで open プロパティを模倣（JSDOM の HTMLDialogElement.open は
+  // 属性 reflect なので setAttribute で連動する）。
+  if (typeof window.HTMLDialogElement !== "undefined") {
+    if (!window.HTMLDialogElement.prototype.showModal) {
+      window.HTMLDialogElement.prototype.showModal = function (
+        this: HTMLDialogElement,
+      ) {
+        this.setAttribute("open", "");
+      };
+    }
+    if (!window.HTMLDialogElement.prototype.close) {
+      window.HTMLDialogElement.prototype.close = function (
+        this: HTMLDialogElement,
+      ) {
+        this.removeAttribute("open");
+      };
+    }
+  }
 }
 
 installJSDOMForTests();
