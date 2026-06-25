@@ -2,18 +2,12 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const variants = ["default", "minimal", "split"] as const;
 
 export const contactFormConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Contact",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Contact" }),
   description: field.portableTextBlock("説明文", { subGroup: "text" }),
   showNameField: field.boolean("名前フィールドを表示する", { default: true }),
   showPhoneField: field.boolean("電話番号フィールドを表示する", {

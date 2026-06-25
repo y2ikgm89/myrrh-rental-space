@@ -2,18 +2,12 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const layouts = ["list", "calendar", "calendar-list-toggle"] as const;
 
 export const eventCalendarConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Events",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Events" }),
   description: field.portableTextBlock("説明文", { subGroup: "text" }),
   maxEvents: field.number("最大表示件数", {
     min: 1,

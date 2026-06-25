@@ -2,41 +2,22 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { listSectionHeaderFields } from "../_shared/list-header";
 
 const layouts = ["grid", "list", "carousel", "catalog"] as const;
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9"] as const;
 
 export const spaceListConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Spaces",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
-  maxItems: field.number("最大表示件数", {
-    min: 1,
-    max: 24,
-    default: 6,
-    suffix: "件",
-    group: "advanced",
+  ...listSectionHeaderFields({
+    sectionLabelDefault: "Spaces",
+    defaultViewAllUrl: "/spaces",
+    maxItemsCap: 24,
+    maxItemsDefault: 6,
   }),
   showOnlyPublished: field.boolean("公開済みスペースのみ表示する", {
     default: true,
     group: "advanced",
-  }),
-  showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
-    default: true,
-  }),
-  viewAllText: field.portableTextInline("「すべて見る」リンクの文字", {
-    subGroup: "button",
-  }),
-  viewAllUrl: field.text("「すべて見る」リンク先 URL", {
-    default: "/spaces",
-    maxLength: 200,
-    subGroup: "button",
   }),
   displayLayout: field.select("表示レイアウト", {
     options: layouts,

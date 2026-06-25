@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 /**
  * 予約フォームセクション設定
@@ -15,14 +16,7 @@ import { sectionLayoutSchema } from "../_shared/layout";
  * - `requireLogin`: 未ログイン時 `/login` へリダイレクトする
  */
 export const reservationFormConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Reserve",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Reserve" }),
   description: field.portableTextBlock("説明文", {
     subGroup: "text",
   }),

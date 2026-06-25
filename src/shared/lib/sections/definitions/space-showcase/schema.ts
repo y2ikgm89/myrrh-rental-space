@@ -2,20 +2,14 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { sectionHeaderFields } from "../_shared/section-header";
 
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9", "1:1"] as const;
 const displayLayouts = ["grid", "carousel"] as const;
 
 export const spaceShowcaseConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "Spaces",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
+  ...sectionHeaderFields({ sectionLabelDefault: "Spaces" }),
   maxItems: field.number("最大表示件数", {
     min: 1,
     max: 12,

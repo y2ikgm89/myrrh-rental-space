@@ -2,35 +2,16 @@ import { z } from "zod";
 
 import { field } from "../../field-registry";
 import { sectionLayoutSchema } from "../_shared/layout";
+import { listSectionHeaderFields } from "../_shared/list-header";
 
 const layouts = ["list", "card", "archive"] as const;
 
 export const newsListConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル", {
-    default: "News",
-    maxLength: 50,
-    subGroup: "text",
-  }),
-  title: field.portableTextInline("見出し", {
-    subGroup: "text",
-  }),
-  maxItems: field.number("最大表示件数", {
-    min: 1,
-    max: 20,
-    default: 5,
-    suffix: "件",
-    group: "advanced",
-  }),
-  showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
-    default: true,
-  }),
-  viewAllText: field.portableTextInline("「すべて見る」リンクの文字", {
-    subGroup: "button",
-  }),
-  viewAllUrl: field.text("「すべて見る」リンク先 URL", {
-    default: "/news",
-    maxLength: 200,
-    subGroup: "button",
+  ...listSectionHeaderFields({
+    sectionLabelDefault: "News",
+    defaultViewAllUrl: "/news",
+    maxItemsCap: 20,
+    maxItemsDefault: 5,
   }),
   displayLayout: field.select("表示レイアウト", {
     options: layouts,
