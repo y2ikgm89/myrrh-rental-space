@@ -13,7 +13,6 @@ import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { serverEnv } from "@/shared/lib/env/server";
-import { clientEnv } from "@/shared/lib/env/client";
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
 import { connectInstagramOAuthAccount } from "@/shared/domain/instagram/commands";
@@ -28,7 +27,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
@@ -180,8 +179,7 @@ export async function GET(request: NextRequest) {
  * 設定ページにリダイレクト
  */
 function redirectToSettings(params: { error?: string; success?: string }) {
-  const baseUrl = getBaseUrl();
-  const settingsUrl = new URL("/admin/settings/integrations", baseUrl);
+  const settingsUrl = new URL("/admin/settings/integrations", getAppUrl());
   settingsUrl.searchParams.set("tab", "instagram");
 
   if (params.error) {
@@ -192,15 +190,4 @@ function redirectToSettings(params: { error?: string; success?: string }) {
   }
 
   return NextResponse.redirect(settingsUrl);
-}
-
-/**
- * ベースURLを取得
- */
-function getBaseUrl(): string {
-  if (serverEnv.BETTER_AUTH_URL) {
-    return serverEnv.BETTER_AUTH_URL;
-  }
-  // フォールバック（Cloud Run では NEXT_PUBLIC_APP_URL を明示設定すること）
-  return clientEnv.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
