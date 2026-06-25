@@ -22,7 +22,7 @@ import {
 } from "@/admin/components/ui";
 import type { SelectionBoxOption } from "@/admin/components/ui";
 import { updateHeaderSettings } from "@/admin/actions/settings";
-import { headerFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
+import { headerSettingsSchema } from "@/admin/actions/settings/schemas/basic";
 import {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
@@ -84,7 +84,7 @@ export function HeaderSection({ settings }: HeaderSectionProps) {
     id: "header-settings",
     lastResult,
     onValidate({ formData }) {
-      return parseWithZod(formData, { schema: headerFormSchema });
+      return parseWithZod(formData, { schema: headerSettingsSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
