@@ -8,8 +8,13 @@
  */
 
 import { useAriaLiveOptional } from "@/shared/contexts";
-import { ARIA_LIVE_REGION_CLASSES } from "@/public/lib/a11y";
 import type { ReactElement } from "react";
+
+/**
+ * ライブリージョン用 CSS クラス
+ * 視覚的には非表示だがスクリーンリーダーには読み上げられる
+ */
+const ARIA_LIVE_REGION_CLASSES = "sr-only";
 
 /**
  * ARIAライブリージョン
