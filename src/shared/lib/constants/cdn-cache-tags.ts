@@ -110,7 +110,7 @@ export const SIDEBAR_CDN_TAGS = [
  *
  * Tags intentionally absent from this mapping (use URL purge or are admin-only):
  * - REVIEWS (id-keyed sub-tags, purged via space detail URL)
- * - RESERVATIONS, CUSTOMERS, INQUIRIES, POST_COMMENTS, MEDIA, STAFF, COUPONS,
+ * - RESERVATIONS, CUSTOMERS, INQUIRIES, MEDIA, STAFF, COUPONS,
  *   NOTIFICATION_SETTINGS, BLOCK_TEMPLATES (admin-only, private,no-store)
  */
 export const NEXTJS_TAG_TO_CDN_TAG = {
@@ -165,7 +165,6 @@ export const NEXTJS_TAGS_WITHOUT_CDN_MAPPING = [
   CACHE_TAGS.RESERVATIONS,
   CACHE_TAGS.CUSTOMERS,
   CACHE_TAGS.INQUIRIES,
-  CACHE_TAGS.POST_COMMENTS,
   CACHE_TAGS.MEDIA,
   CACHE_TAGS.STAFF,
   CACHE_TAGS.COUPONS,

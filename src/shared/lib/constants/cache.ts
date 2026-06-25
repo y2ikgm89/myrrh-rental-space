@@ -80,8 +80,6 @@ export const CACHE_TAGS = {
   POST_CATEGORIES: "post-categories",
   /** 投稿タグ */
   POST_TAGS: "post-tags",
-  /** 投稿コメント */
-  POST_COMMENTS: "post-comments",
   /** お知らせ */
   NEWS: "news",
   /** スペース */

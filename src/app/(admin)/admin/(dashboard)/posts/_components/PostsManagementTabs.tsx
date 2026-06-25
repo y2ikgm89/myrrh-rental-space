@@ -8,13 +8,12 @@ import { cn } from "@/shared/lib/cn";
 // 型・定数
 // =============================================================================
 
-type PostManagementTab = "posts" | "categories" | "tags" | "comments";
+type PostManagementTab = "posts" | "categories" | "tags";
 
 const TAB_BASE: readonly { value: PostManagementTab; label: string }[] = [
   { value: "posts", label: "記事一覧" },
   { value: "categories", label: "カテゴリー" },
   { value: "tags", label: "タグ" },
-  { value: "comments", label: "コメント" },
 ];
 
 // =============================================================================

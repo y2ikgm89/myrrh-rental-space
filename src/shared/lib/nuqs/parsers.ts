@@ -275,29 +275,6 @@ export async function loadAdminMediaSearchParams(
 }
 
 // ============================================================
-// 管理画面: コメント（専用キャッシュ — 現状ローダー未使用だがパーサー単一化のため保持）
-// ============================================================
-
-const adminCommentSearchParamsParsers = {
-  search: parseAsQuery,
-  status: parseAsString.withDefault(""),
-  page: parseAsPage,
-  perPage: parseAsPerPage,
-};
-
-const adminCommentSearchParamsCache = createSearchParamsCache(
-  adminCommentSearchParamsParsers,
-);
-
-/** 管理画面コメント検索パラメータローダー */
-export async function loadAdminCommentSearchParams(
-  searchParams: Promise<SearchParams>,
-) {
-  await adminCommentSearchParamsCache.parse(searchParams);
-  return adminCommentSearchParamsCache.all();
-}
-
-// ============================================================
 // 管理画面: 固定ページ一覧
 // ============================================================
 
@@ -599,7 +576,7 @@ export async function loadAdminTermsSearchParams(
   return adminTermsSearchParamsCache.all();
 }
 
-const adminPostTabs = ["posts", "categories", "tags", "comments"] as const;
+const adminPostTabs = ["posts", "categories", "tags"] as const;
 
 const postSortByValues = ["createdAt", "publishedAt", "title"] as const;
 

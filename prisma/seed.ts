@@ -108,9 +108,6 @@ async function clearAllData() {
     // BlockTemplate（Lexical 再利用ブロック）
     await tx.blockTemplate.deleteMany();
 
-    // コメント
-    await tx.postComment.deleteMany();
-
     // 予約関連
     await tx.termsAgreement.deleteMany();
     await tx.termsDocument.deleteMany();
@@ -2854,66 +2851,6 @@ async function seedBlog() {
 }
 
 // =============================================================================
-// Blog Comments
-// =============================================================================
-
-async function seedBlogComments() {
-  const posts = await prisma.post.findMany({
-    where: { status: "PUBLISHED" },
-    take: 3,
-  });
-  if (posts.length === 0) {
-    console.log("⚠️ No published blog posts found. Skipping comments seed.");
-    return;
-  }
-
-  const comments = [
-    {
-      guestName: "山田太郎",
-      guestEmail: "yamada@example.com",
-      content: "とても参考になりました！",
-    },
-    {
-      guestName: "鈴木花子",
-      guestEmail: "suzuki@example.com",
-      content: "会議室選びで悩んでいたので助かりました。",
-    },
-    {
-      guestName: "田中一郎",
-      guestEmail: "tanaka@example.com",
-      content: "実際に利用してみて、記事の通りでした！",
-    },
-    {
-      guestName: "佐藤美咲",
-      guestEmail: "sato@example.com",
-      content: "もう少し詳しく知りたいです。",
-    },
-    {
-      guestName: "高橋健太",
-      guestEmail: "takahashi@example.com",
-      content: "素晴らしい記事ですね。",
-    },
-  ];
-
-  for (let i = 0; i < comments.length; i++) {
-    const post = posts[i % posts.length];
-    const comment = comments[i];
-    if (!post || !comment) continue;
-
-    const existing = await prisma.postComment.findFirst({
-      where: { postId: post.id, guestEmail: comment.guestEmail },
-    });
-
-    if (!existing) {
-      await prisma.postComment.create({
-        data: { postId: post.id, ...comment },
-      });
-      console.log(`✅ Created blog comment by ${comment.guestName}`);
-    }
-  }
-}
-
-// =============================================================================
 // Navigation
 // =============================================================================
 
@@ -4420,7 +4357,6 @@ async function seedDev() {
   await seedTerms();
   await seedBlogTags();
   await seedBlog();
-  await seedBlogComments();
 
   // Phase 7: サイト設定
   await seedNavigation();
