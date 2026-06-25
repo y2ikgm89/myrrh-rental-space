@@ -51,9 +51,20 @@ export function GalleryLightbox({
   // iOS Safari は <dialog> 表示中も背後 body がスクロールできてしまう（WebKit）。
   // position:fixed 方式で body をロックし、閉じたら元のスクロール位置に復帰する。
   // GallerySection L59-82 と同一パターン。
+  //
+  // scrollY を ref で保持する理由:
+  //   GalleryGrid は key={lightboxIndex} でこのコンポーネントをリマウントするため、
+  //   open=true の effect が再実行される際に body がすでに position:fixed 状態だと
+  //   window.scrollY が 0 になりうる（position:fixed 直後の再マウント競合）。
+  //   ref に初回 open 時の値をキャプチャし、unmount cleanup で安全に復帰させる。
+  const scrollYRef = useRef<number | null>(null);
   useEffect(() => {
     if (!open) return;
-    const scrollY = window.scrollY;
+    // body がまだ fixed されていない初回 open 時にだけ scrollY をキャプチャする
+    if (scrollYRef.current === null) {
+      scrollYRef.current = window.scrollY;
+    }
+    const scrollY = scrollYRef.current;
     const body = document.body;
     const prev = {
       position: body.style.position,
@@ -71,6 +82,7 @@ export function GalleryLightbox({
       body.style.width = prev.width;
       body.style.overflow = prev.overflow;
       window.scrollTo(0, scrollY);
+      scrollYRef.current = null;
     };
   }, [open]);
 

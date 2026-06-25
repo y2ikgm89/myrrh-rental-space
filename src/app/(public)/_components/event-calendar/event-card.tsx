@@ -153,7 +153,7 @@ export function EventCard({ variant, event, isPast = false }: EventCardProps) {
                 event.thumbnailUrl,
                 ...event.gallery.map((g) => g.url).filter(isImageUrl),
               ]}
-              alt={event.title}
+              alt=""
               sizes="10rem"
               loading="lazy"
             />

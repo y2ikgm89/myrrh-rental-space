@@ -76,11 +76,19 @@ export function GalleryGrid({
     gridClasses = "grid grid-cols-2 md:grid-cols-4";
   }
 
-  const overflow = merged.length - displayLimit;
+  // "+N" オーバーレイのカウントは lightbox が扱う「画像」基準で算出する。
+  // merged.length - displayLimit だと動画混入時に lightbox の実画像数とズレるため、
+  // displayLimit タイル目以降にある画像の枚数を数える。
+  const hiddenImageCount =
+    merged.length > displayLimit
+      ? merged
+          .slice(displayLimit)
+          .filter((m) => detectMediaSourceType(m.url) !== "video").length
+      : 0;
 
   const renderTile = (item: GalleryItem, i: number): ReactElement => {
     const isLastDisplayed = i === displayLimit - 1;
-    const showOverlay = isLastDisplayed && overflow > 0;
+    const showOverlay = isLastDisplayed && hiddenImageCount > 0;
     const isVideo = detectMediaSourceType(item.url) === "video";
 
     // 画像の場合は lightbox 内の index を imageItems サブセットで解決
@@ -88,24 +96,10 @@ export function GalleryGrid({
       ? -1
       : imageItems.findIndex((m) => m.url === item.url);
 
-    const handleClick = () => {
-      if (isVideo) return; // 動画タイルはクリックアクションなし（controls で制御）
-      setLightboxIndex(imageIndex);
-    };
-
     return (
-      <button
+      <div
         key={`${item.url}-${i}`}
-        type="button"
-        onClick={handleClick}
-        disabled={isVideo}
-        className={cn(
-          "relative aspect-[4/3] overflow-hidden bg-muted transition",
-          !isVideo &&
-            "cursor-pointer hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-          isVideo && "cursor-default",
-        )}
-        aria-label={isVideo ? undefined : `ギャラリー画像 ${imageIndex + 1}`}
+        className="relative aspect-[4/3] overflow-hidden bg-muted"
       >
         {isVideo ? (
           <video
@@ -115,20 +109,44 @@ export function GalleryGrid({
             className="h-full w-full object-cover"
           />
         ) : (
-          <Image
-            src={item.url}
-            alt={item.alt}
-            fill
-            sizes="(min-width:1024px) 33vw, 50vw"
-            className="object-cover"
-          />
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(imageIndex)}
+            className="absolute inset-0 cursor-pointer transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={`ギャラリー画像 ${imageIndex + 1}`}
+          >
+            <Image
+              src={item.url}
+              alt={item.alt}
+              fill
+              sizes="(min-width:1024px) 33vw, 50vw"
+              className="object-cover"
+            />
+          </button>
         )}
+        {/* "+N" overlay は動画・画像問わず別 button で重ねる。
+            こうすることで最終タイルが動画でも overlay クリックが inert にならない。 */}
         {showOverlay && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-white">
-            +{overflow}
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              // 最後に表示された画像（または非動画タイル）の imageIndex を起点に lightbox を開く
+              const firstHiddenImageIndex = imageItems.findIndex((m) =>
+                merged.slice(displayLimit).some((h) => h.url === m.url),
+              );
+              setLightboxIndex(
+                firstHiddenImageIndex >= 0
+                  ? firstHiddenImageIndex
+                  : Math.max(0, imageItems.length - 1),
+              );
+            }}
+            className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/50 text-2xl font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={`他 ${hiddenImageCount} 枚の画像を表示`}
+          >
+            +{hiddenImageCount}
+          </button>
         )}
-      </button>
+      </div>
     );
   };
 

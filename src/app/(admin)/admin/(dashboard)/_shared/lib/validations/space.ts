@@ -136,7 +136,7 @@ const optionalSeoStringShape = {
 /**
  * スペース作成・編集フォームの基底 ZodObject（.refine() 前）
  *
- * cross-field 検証（mainImageUrl ↔ imageUrls 重複チェック）は含まない。
+ * cross-field 検証（mainImageUrl ↔ gallery 重複チェック）は含まない。
  * `.omit()` / `.extend()` が必要な派生スキーマはこちらを使う。
  */
 export const spaceFormBaseSchema = z
