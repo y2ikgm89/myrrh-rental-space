@@ -1,5 +1,10 @@
 /**
- * sitemap() 統合テスト。
+ * `buildSitemap()` 統合テスト。
+ *
+ * sitemap.ts の default export `sitemap()` は `await connection()` + `buildSitemap()`
+ * の薄い wrapper で、エントリ生成ロジックは pure な `buildSitemap()` に切り出されている。
+ * unit test は後者を直接呼ぶことで Next.js request scope への依存を持たず、
+ * `next/server` を mock する必要もない。
  *
  * mock.module で `getSitemapContentData` と `getFeatureFilterContext` を差し替え、
  * fixture を変えながら sitemap entry の不変条件を検証する。
@@ -90,13 +95,6 @@ let contentFixture: ContentData = emptyContent();
 let contextFixture: FeatureFilterContext = allOnContext();
 let contentShouldThrow = false;
 
-// `next/server` の `connection()` は request scope 内でのみ動作するため
-// Bun unit test 環境では throw する。sitemap.ts が build prerender 隔離のために
-// 呼び出すが、ユニットテストの不変条件検証には無関係なので no-op で mock する。
-mock.module("next/server", () => ({
-  connection: () => Promise.resolve(),
-}));
-
 mock.module("@/shared/domain/sitemap/queries", () => ({
   getSitemapContentData: () =>
     contentShouldThrow
@@ -112,7 +110,9 @@ mock.module("@/shared/lib/features/check", () => ({
     ),
 }));
 
-const { default: sitemap, STATIC_PAGES } = await import("@/app/sitemap");
+// pure な `buildSitemap()` を直接テスト対象とする — `next/server.connection()`
+// を mock せずに済む（default export `sitemap()` は connection() の薄い wrapper のみ）。
+const { buildSitemap: sitemap, STATIC_PAGES } = await import("@/app/sitemap");
 
 describe("app/sitemap.ts", () => {
   beforeEach(() => {
