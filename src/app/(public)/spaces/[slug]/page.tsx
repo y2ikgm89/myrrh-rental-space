@@ -1,7 +1,6 @@
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import Image from "next/image";
 import type { Metadata } from "next";
 import {
   IconStar,
@@ -15,7 +14,6 @@ import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { parseStringArray } from "@/shared/lib/json-validators";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -27,6 +25,7 @@ import {
 import { Container } from "../../_shared/components/design-system/container";
 import { SiteCTA } from "../../_shared/components/layouts/site-cta";
 import { Breadcrumb } from "../../_shared/components/layouts/breadcrumb";
+import { GalleryGrid } from "@/shared/components/gallery/GalleryGrid";
 import { SpaceInfo } from "./_components/space-info";
 import { ReservationWidget } from "./_components/reservation-widget";
 import { RelatedSpaces } from "./_components/related-spaces";
@@ -78,7 +77,6 @@ export default async function SpaceDetailPage({
     : { averageRating: 0, totalCount: 0 };
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
-  const subImages = parseStringArray(space.imageUrls);
 
   return (
     <>
@@ -138,50 +136,8 @@ export default async function SpaceDetailPage({
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_320px]">
           {/* Left column */}
           <div className="min-w-0 space-y-16">
-            {/* Gallery: 1 枚なら中央寄せ単独表示、2 枚以上で mosaic 4-grid */}
-            {subImages.length >= 1 ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:grid-rows-2">
-                <div className="relative aspect-[4/3] overflow-hidden md:col-span-2 md:row-span-2 md:aspect-auto md:h-[440px]">
-                  <Image
-                    src={space.mainImageUrl}
-                    alt={space.name}
-                    fill
-                    sizes="(min-width: 1024px) 50vw, 100vw"
-                    className="object-cover"
-                    preload
-                    loading="eager"
-                    fetchPriority="high"
-                  />
-                </div>
-                {subImages.slice(0, 2).map((img) => (
-                  <div
-                    key={img}
-                    className="relative hidden aspect-[4/3] overflow-hidden md:block md:h-[215px]"
-                  >
-                    <Image
-                      src={img}
-                      alt={`${space.name} の写真`}
-                      fill
-                      sizes="(min-width: 1024px) 17vw, 33vw"
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="relative mx-auto aspect-[4/3] w-full max-w-2xl overflow-hidden">
-                <Image
-                  src={space.mainImageUrl}
-                  alt={space.name}
-                  fill
-                  sizes="(min-width: 1024px) 672px, 100vw"
-                  className="object-cover"
-                  preload
-                  loading="eager"
-                  fetchPriority="high"
-                />
-              </div>
-            )}
+            {/* Gallery: GalleryGrid が 0/1/2+ 件を内包処理。hero は先頭に仮想挿入 */}
+            <GalleryGrid items={space.gallery} hero={space.mainImageUrl} />
 
             {/* Quick stats row (Airbnb / Vrbo pattern): gallery 直下 icon + label + value 4-col grid */}
             <section

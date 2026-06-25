@@ -98,7 +98,6 @@ export type WeekdayKey = (typeof WEEKDAY_VALUES)[number];
  * バリデーション失敗時は空配列を返す
  *
  * @example
- * const imageUrls = parseStringArray(space.imageUrls)
  * const tags = parseStringArray(post.tags)
  */
 export function parseStringArray(value: unknown): string[] {

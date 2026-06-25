@@ -133,6 +133,21 @@ mock.module("@/admin/components/ui", () => ({
   DialogFooter: Passthrough,
   DialogTitle: Passthrough,
   DialogDescription: Passthrough,
+  // Tabs 系（AutoSectionForm が content / design タブで使用）
+  Tabs: Passthrough,
+  TabsList: Passthrough,
+  TabsTrigger: ({
+    children,
+    ...props
+  }: {
+    children?: ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
+  TabsContent: Passthrough,
 }));
 
 mock.module("next/image", () => ({

@@ -10,10 +10,8 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
-import {
-  parseFacilities,
-  parseStringArray,
-} from "@/shared/lib/json-validators";
+import { parseFacilities } from "@/shared/lib/json-validators";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import { toPlainArray } from "@/shared/lib/serialize";
 import {
   idParamSchema,
@@ -67,7 +65,7 @@ export async function getShowcaseSpaces(
           dailyPrice: true,
           area: true,
           mainImageUrl: true,
-          imageUrls: true,
+          gallery: true,
           facilities: true,
           addressDetail: true,
           category: { select: { id: true, name: true } },
@@ -88,7 +86,7 @@ export async function getShowcaseSpaces(
       hourlyPrice: Number(s.hourlyPrice),
       dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
       area: s.area ? Number(s.area) : null,
-      imageUrls: parseStringArray(s.imageUrls),
+      gallery: parseGallery(s.gallery),
       facilities: parseFacilities(s.facilities),
       lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
     })),

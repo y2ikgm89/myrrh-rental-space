@@ -20,6 +20,7 @@ import {
   parseFacilities,
   parseStringArray,
 } from "@/shared/lib/json-validators";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 /**
@@ -41,7 +42,7 @@ const spaceListSelect = {
   hourlyPrice: true,
   dailyPrice: true,
   mainImageUrl: true,
-  imageUrls: true,
+  gallery: true,
   facilities: true,
   addressDetail: true,
   reviewsEnabled: true,
@@ -59,7 +60,7 @@ function mapSpaceListItem(s: SpaceListRow) {
     hourlyPrice: Number(s.hourlyPrice),
     dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
     area: s.area ? Number(s.area) : null,
-    imageUrls: parseStringArray(s.imageUrls),
+    gallery: parseGallery(s.gallery),
     facilities: parseFacilities(s.facilities),
     lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
   };
@@ -170,7 +171,7 @@ export async function getSpaceBySlug(slug: string) {
           hourlyPrice: true,
           dailyPrice: true,
           mainImageUrl: true,
-          imageUrls: true,
+          gallery: true,
           facilities: true,
           addressDetail: true,
           reviewsEnabled: true,
@@ -200,7 +201,7 @@ export async function getSpaceBySlug(slug: string) {
 
   return toPlainObject({
     ...space,
-    imageUrls: parseStringArray(space.imageUrls),
+    gallery: parseGallery(space.gallery),
     facilities: parseFacilities(space.facilities),
     location: {
       ...space.location,
@@ -242,7 +243,7 @@ export async function getRelatedSpaces(
           capacity: true,
           hourlyPrice: true,
           mainImageUrl: true,
-          imageUrls: true,
+          gallery: true,
         },
         take: limit,
         orderBy: { name: "asc" },
@@ -257,7 +258,7 @@ export async function getRelatedSpaces(
     spaces.map((s) => ({
       ...s,
       hourlyPrice: Number(s.hourlyPrice),
-      imageUrls: parseStringArray(s.imageUrls),
+      gallery: parseGallery(s.gallery),
     })),
   );
 }

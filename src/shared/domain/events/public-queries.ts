@@ -11,6 +11,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 
 const publicEventSelect = {
   id: true,
@@ -18,6 +19,7 @@ const publicEventSelect = {
   slug: true,
   descriptionPlainText: true,
   thumbnailUrl: true,
+  gallery: true,
   startTime: true,
   endTime: true,
   registrationDeadline: true,
@@ -54,6 +56,17 @@ const publicEventDetailSelect = {
   metaKeywords: true,
 };
 
+type PublicEventRow = Awaited<
+  ReturnType<typeof prisma.event.findMany<{ select: typeof publicEventSelect }>>
+>[number];
+
+function mapPublicEvent<T extends PublicEventRow>(event: T) {
+  return {
+    ...event,
+    gallery: parseGallery(event.gallery),
+  };
+}
+
 export async function getPublishedEvents() {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
@@ -75,7 +88,7 @@ export async function getPublishedEvents() {
     operationName: "getPublishedEvents",
   });
 
-  return toPlainArray(events);
+  return toPlainArray(events.map(mapPublicEvent));
 }
 
 /**
@@ -121,7 +134,7 @@ export async function getUpcomingEventsExcluding(params: {
       : [];
 
   if (sameSpace.length >= limit) {
-    return toPlainArray(sameSpace);
+    return toPlainArray(sameSpace.map(mapPublicEvent));
   }
 
   // 2. 残り枠を「現在のイベント + 取得済み同スペース」を除いた今後のイベントで埋める
@@ -131,7 +144,7 @@ export async function getUpcomingEventsExcluding(params: {
     limit - sameSpace.length,
   );
 
-  return toPlainArray([...sameSpace, ...others]);
+  return toPlainArray([...sameSpace, ...others].map(mapPublicEvent));
 }
 
 /**
@@ -173,5 +186,5 @@ export async function getPublishedEventBySlug(slug: string) {
   });
 
   if (!event) return null;
-  return toPlainObject(event);
+  return toPlainObject(mapPublicEvent(event));
 }

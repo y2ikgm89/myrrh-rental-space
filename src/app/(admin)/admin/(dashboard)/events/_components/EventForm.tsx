@@ -8,6 +8,7 @@ import { parseWithZod } from "@conform-to/zod/v4";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
 import {
   Button,
+  Label,
   SubmitButton,
   Tabs,
   TabsContent,
@@ -19,7 +20,16 @@ import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lex
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
-import { asTypedField } from "@/shared/lib/conform/typed-input-control";
+import {
+  asTypedField,
+  asConformFieldset,
+} from "@/shared/lib/conform/typed-input-control";
+import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
+import {
+  type GalleryItem,
+  parseGallery,
+} from "@/shared/lib/validations/gallery";
+import type { FormMetadata } from "@conform-to/react";
 import type {
   getEventById,
   getLocationsForEvent,
@@ -174,6 +184,7 @@ export function EventForm({
           ogpDescription: event.ogpDescription ?? "",
           metaDescription: event.metaDescription ?? "",
           metaKeywords: event.metaKeywords ?? "",
+          gallery: parseGallery(event.gallery),
         }
       : {
           title: "",
@@ -187,6 +198,7 @@ export function EventForm({
           ogpDescription: "",
           metaDescription: "",
           metaKeywords: "",
+          gallery: [],
         },
   });
 
@@ -202,6 +214,7 @@ export function EventForm({
     publish: [
       fields.descriptionJson,
       fields.thumbnailUrl,
+      fields.gallery,
       fields.registrationDeadline,
       fields.status,
       fields.registrationOpen,
@@ -320,6 +333,21 @@ export function EventForm({
             thumbnailUrl={thumbnailUrl}
             onThumbnailUrlChange={setThumbnailUrl}
           />
+          <div className="space-y-2 border-t pt-4 mt-6">
+            <Label>イベントギャラリー (最大 20 件)</Label>
+            <p className="text-xs text-muted-foreground">
+              本文内のギャラリーブロックとは別の、イベント最上位の画像一覧です。最初の数枚は一覧カードのカルーセルに表示されます。
+            </p>
+            <GalleryField
+              field={asTypedField<GalleryItem[]>(fields.gallery)}
+              form={asConformFieldset<FormMetadata<Record<string, unknown>>>(
+                form,
+              )}
+              defaultUsage="EVENT"
+              max={20}
+              disabled={isPending}
+            />
+          </div>
         </TabsContent>
 
         {/* ============ 参加費・定員 ============ */}

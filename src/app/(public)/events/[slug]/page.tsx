@@ -38,6 +38,7 @@ import { EventCalendarDisclosure } from "./_components/event-calendar-disclosure
 import { EventStatusNotice } from "./_components/event-status-notice";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 import { RelatedEvents } from "./_components/related-events";
+import { GalleryGrid } from "@/shared/components/gallery/GalleryGrid";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -254,6 +255,12 @@ export default async function EventDetailPage({
             <SanitizedHtml html={resolvedDescriptionHtml} />
           </Prose>
         ) : null}
+
+        {event.gallery.length > 0 && (
+          <section aria-label="イベントギャラリー" className="mt-12">
+            <GalleryGrid items={event.gallery} />
+          </section>
+        )}
 
         <section
           id={REGISTER_ANCHOR_ID}

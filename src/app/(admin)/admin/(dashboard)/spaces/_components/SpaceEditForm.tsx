@@ -2,14 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useActionState, useEffect, useEffectEvent, useState } from "react";
 import {
-  useActionState,
-  useEffect,
-  useEffectEvent,
-  useId,
-  useState,
-} from "react";
-import { getFormProps, useForm, type FieldMetadata } from "@conform-to/react";
+  getFormProps,
+  useForm,
+  type FieldMetadata,
+  type FormMetadata,
+} from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { IconHelpCircle, IconPhotoPlus, IconX } from "@tabler/icons-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
@@ -19,18 +18,13 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  closestCenter,
-  DndContext,
   Input,
-  KeyboardSensor,
   Label,
-  PointerSensor,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SortableContext,
   SubmitButton,
   Switch,
   Tabs,
@@ -38,26 +32,18 @@ import {
   TabsList,
   TabsTrigger,
   Textarea,
-  toTranslate3d,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  useSensor,
-  useSensors,
-  useSortable,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  type DragEndEvent,
 } from "@/admin/components/ui";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
-import {
-  useMultipleMediaPicker,
-  useSingleMediaPicker,
-} from "@/admin/hooks/use-media-picker";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import { createSpaceAction, updateSpaceAction } from "@/admin/actions/space";
 import { spaceFormSchema } from "@/admin/lib/validations/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
@@ -80,7 +66,10 @@ import { formatCurrency, getTaxRateLabel } from "@/shared/lib/pricing/format";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
-import { cn } from "@/shared/lib/cn";
+import {
+  asTypedField,
+  asConformFieldset,
+} from "@/shared/lib/conform/typed-input-control";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
 import {
@@ -141,7 +130,6 @@ export type SpaceEditFormProps = {
   initialBlockedDates?: readonly BlockedDateData[];
 };
 
-type ImageItem = { key: string; url: string };
 type FacilityItem = { key: string; name: string; iconName: string };
 
 function genKey(): string {
@@ -155,82 +143,6 @@ function getInitialDescriptionJson(space: SpaceWithStats | undefined): string {
     : JSON.stringify(
         space.descriptionJson ?? JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON),
       );
-}
-
-type SortableImageItemProps = {
-  id: string;
-  url: string;
-  index: number;
-  onRemove: () => void;
-  disabled: boolean;
-};
-
-function SortableImageItem({
-  id,
-  url,
-  index,
-  onRemove,
-  disabled,
-}: SortableImageItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id, disabled });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: toTranslate3d(transform), transition }}
-      className={cn(
-        "flex items-center gap-2 rounded border p-2",
-        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
-      )}
-    >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing"
-        aria-label="ドラッグして並び替え"
-      >
-        <svg
-          className="h-4 w-4 text-muted-foreground"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            d="M4 8h16M4 16h16"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-      <Image
-        src={url}
-        alt={`画像${index + 1}`}
-        width={40}
-        height={40}
-        className="size-10 rounded object-cover"
-      />
-      <span className="flex-1 truncate text-sm">{url}</span>
-      <Button
-        type="button"
-        variant="destructive"
-        size="sm"
-        onClick={onRemove}
-        disabled={disabled}
-        aria-label={`画像${index + 1}を削除`}
-      >
-        削除
-      </Button>
-    </div>
-  );
 }
 
 type ConformFieldErrors = FieldMetadata<unknown>["errors"];
@@ -249,7 +161,6 @@ export function SpaceEditForm({
   initialBlockedDates = [],
 }: SpaceEditFormProps) {
   const isEdit = mode === "edit";
-  const dndContextId = useId();
 
   /** スペース管理ハブの `tab` と衝突しないよう `section` を使用 */
   const [activeSection, setActiveSection] = useQueryState(
@@ -300,9 +211,6 @@ export function SpaceEditForm({
   // メディア
   const [mainImageUrl, setMainImageUrl] = useState<string>(
     space?.mainImageUrl ?? "",
-  );
-  const [imageUrls, setImageUrls] = useState<ImageItem[]>(() =>
-    (space?.imageUrls ?? []).map((url) => ({ key: genKey(), url })),
   );
 
   // 詳細設定
@@ -379,50 +287,11 @@ export function SpaceEditForm({
     setFacilities((prev) => prev.filter((f) => f.key !== key));
   };
 
-  // 画像配列
-  const removeImage = (key: string) => {
-    setImageUrls((prev) => prev.filter((item) => item.key !== key));
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  const handleImageDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setImageUrls((prev) => {
-      const oldIndex = prev.findIndex((item) => item.key === String(active.id));
-      const newIndex = prev.findIndex((item) => item.key === String(over.id));
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(oldIndex, 1);
-      if (!moved) return prev;
-      next.splice(newIndex, 0, moved);
-      return next;
-    });
-  };
-
   const mainImagePicker = useSingleMediaPicker({
     defaultUsage: "SPACE",
     onSelect: (media) => {
       const selected = media[0];
       if (selected) setMainImageUrl(selected.url);
-    },
-  });
-  const additionalImagesPicker = useMultipleMediaPicker({
-    defaultUsage: "SPACE",
-    maxSelections: 10 - imageUrls.length,
-    onSelect: (media) => {
-      if (media.length === 0) return;
-      const remaining = 10 - imageUrls.length;
-      const next = media
-        .slice(0, remaining)
-        .map((m) => ({ key: genKey(), url: m.url }));
-      setImageUrls((prev) => [...prev, ...next]);
     },
   });
   const ogpImagePicker = useSingleMediaPicker({
@@ -470,7 +339,7 @@ export function SpaceEditForm({
       fields.durationDiscountOverride,
       fields.taxRateType,
     ].filter((f) => fieldHasErrors(f.errors)).length,
-    media: [fields.mainImageUrl, fields.imageUrls].filter((f) =>
+    media: [fields.mainImageUrl, fields.gallery].filter((f) =>
       fieldHasErrors(f.errors),
     ).length,
     details: [fields.categoryId, fields.facilities].filter((f) =>
@@ -585,14 +454,6 @@ export function SpaceEditForm({
         name={fields.mainImageUrl.name}
         value={mainImageUrl}
       />
-      {imageUrls.map((item) => (
-        <input
-          key={item.key}
-          type="hidden"
-          name={fields.imageUrls.name}
-          value={item.url}
-        />
-      ))}
       <input type="hidden" name={fields.categoryId.name} value={categoryId} />
       {facilities.map((item) => (
         <input
@@ -1154,58 +1015,20 @@ export function SpaceEditForm({
                 )}
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>追加画像（最大10枚）</Label>
-                  <span className="text-sm text-muted-foreground">
-                    {imageUrls.length} / 10 枚
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => additionalImagesPicker.openPicker()}
-                  disabled={isPending || imageUrls.length >= 10}
-                >
-                  <IconPhotoPlus aria-hidden="true" className="mr-2 h-4 w-4" />
-                  画像を追加
-                </Button>
-                {imageUrls.length > 0 && (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      ドラッグ&ドロップで順序を変更できます
-                    </p>
-                    <DndContext
-                      id={dndContextId}
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleImageDragEnd}
-                    >
-                      <SortableContext
-                        items={imageUrls.map((item) => item.key)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-2">
-                          {imageUrls.map((item, index) => (
-                            <SortableImageItem
-                              key={item.key}
-                              id={item.key}
-                              url={item.url}
-                              index={index}
-                              onRemove={() => removeImage(item.key)}
-                              disabled={isPending}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  </>
-                )}
-                {fieldHasErrors(fields.imageUrls.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.imageUrls.errors?.join(", ")}
-                  </p>
-                )}
+              <div className="space-y-2">
+                <Label>追加画像（最大20枚）</Label>
+                <p className="text-xs text-muted-foreground">
+                  並び順をドラッグで変更できます。最初の数枚は一覧カードのカルーセルに表示されます。
+                </p>
+                <GalleryField
+                  field={asTypedField<GalleryItem[]>(fields.gallery)}
+                  form={asConformFieldset<
+                    FormMetadata<Record<string, unknown>>
+                  >(form)}
+                  defaultUsage="SPACE"
+                  max={20}
+                  disabled={isPending}
+                />
               </div>
             </CardContent>
           </Card>
@@ -1592,7 +1415,6 @@ export function SpaceEditForm({
       </div>
 
       {mainImagePicker.mediaPickerDialog}
-      {additionalImagesPicker.mediaPickerDialog}
       {ogpImagePicker.mediaPickerDialog}
     </form>
   );

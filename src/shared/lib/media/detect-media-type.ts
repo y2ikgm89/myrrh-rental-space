@@ -47,6 +47,16 @@ export function detectMediaSourceType(
   return "image";
 }
 
+/**
+ * URL が画像かどうかを判定する（一覧カルーセルの動画 filter 用）。
+ *
+ * `detectMediaSourceType(url) === "image"` の sugar wrapper。
+ * YouTube / Vimeo URL や動画拡張子は false を返し、それ以外は true。
+ */
+export function isImageUrl(url: string): boolean {
+  return detectMediaSourceType(url) === "image";
+}
+
 function stripQueryAndFragment(url: string): string {
   const queryIndex = url.indexOf("?");
   const fragmentIndex = url.indexOf("#");

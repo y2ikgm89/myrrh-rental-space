@@ -442,7 +442,7 @@ model Space {
   hourlyPrice   Decimal   @db.Decimal(10, 2)
   dailyPrice    Decimal?  @db.Decimal(10, 2)
   mainImageUrl  String
-  imageUrls     Json      @default("[]")
+  gallery       Json      @default("[]")
   /// 構造化された設備リスト（Airbnb / Booking.com 標準パターン）。
   /// JSON 配列 `{ name: string; iconName: string }[]`。
   /// `iconName` は `@/shared/lib/icon-curation` の curation 識別子。
@@ -1655,6 +1655,8 @@ model Event {
   publishedAt           DateTime?
   deletedAt             DateTime?
   deletedById           String?     @db.Uuid
+  /// 写真ギャラリー (本文外の最上位画像一覧)。GalleryItem[] = { url, alt, caption }[]。最大20件。
+  gallery               Json        @default("[]")
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 

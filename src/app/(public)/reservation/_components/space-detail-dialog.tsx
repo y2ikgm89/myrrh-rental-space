@@ -27,10 +27,9 @@ export function SpaceDetailDialog({
   readonly isSelected: boolean;
 }): ReactElement {
   const { formatUnit } = useFormatPrice();
-  // imageUrls / facilities はスキーマで重複禁止が保証されているため、そのまま使用
   const allImages =
     space !== null
-      ? [space.mainImageUrl, ...space.imageUrls].filter(Boolean)
+      ? [space.mainImageUrl, ...space.gallery.map((g) => g.url)].filter(Boolean)
       : [];
   const facilities = space !== null ? space.facilities : [];
 

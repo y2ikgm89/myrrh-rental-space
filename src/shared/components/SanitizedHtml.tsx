@@ -19,7 +19,7 @@ import { sanitize } from "isomorphic-dompurify";
 import { useEffect, useRef } from "react";
 import { injectHeadingAnchors } from "@/shared/lib/html/extract-headings";
 
-const DOMPURIFY_CONFIG = {
+export const SANITIZE_OPTIONS = {
   ADD_TAGS: ["iframe"],
   ADD_ATTR: [
     "allow",
@@ -29,6 +29,15 @@ const DOMPURIFY_CONFIG = {
     "target",
     "rel",
     "loading",
+    "data-gallery",
+    "data-gallery-columns",
+    "data-gallery-style",
+    "data-gallery-item",
+    "data-src",
+    "data-alt",
+    "data-caption",
+    "data-gallery-img",
+    "data-gallery-placeholder",
   ],
   ALLOWED_URI_REGEXP:
     /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
@@ -102,7 +111,7 @@ function hydrateLexicalTabs(root: HTMLElement): () => void {
 
 export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
   // DOMPurify でサニタイズ → heading に id 自動付与（決定論的、SSR/Client で同一結果）
-  const cleanHtml = sanitize(html, DOMPURIFY_CONFIG);
+  const cleanHtml = sanitize(html, SANITIZE_OPTIONS);
   const withAnchors = injectHeadingAnchors(cleanHtml);
   const ref = useRef<HTMLDivElement>(null);
 

@@ -10,6 +10,9 @@ import {
   formatTime,
   formatEventPrice,
 } from "@/public/lib/format-event-date";
+import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
+import { isImageUrl } from "@/shared/lib/media/detect-media-type";
+import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
 export interface EventCardData {
   readonly id: string;
@@ -24,6 +27,8 @@ export interface EventCardData {
   readonly registrationOpen: boolean;
   readonly spaceName: string | null;
   readonly thumbnailUrl: string | null;
+  /** ギャラリー画像（複数ある場合はカルーセルで表示） */
+  readonly gallery: readonly GalleryItem[];
 }
 
 interface EventCardListProps {
@@ -142,13 +147,25 @@ export function EventCard({ variant, event, isPast = false }: EventCardProps) {
       {/* Thumbnail — desktop only */}
       {event.thumbnailUrl ? (
         <div className="relative hidden aspect-[3/2] overflow-hidden md:block">
-          <Image
-            src={event.thumbnailUrl}
-            alt=""
-            fill
-            sizes="10rem"
-            className="object-cover transition-opacity group-hover:opacity-85"
-          />
+          {event.gallery.length > 0 ? (
+            <ImageCarousel
+              images={[
+                event.thumbnailUrl,
+                ...event.gallery.map((g) => g.url).filter(isImageUrl),
+              ]}
+              alt=""
+              sizes="10rem"
+              loading="lazy"
+            />
+          ) : (
+            <Image
+              src={event.thumbnailUrl}
+              alt=""
+              fill
+              sizes="10rem"
+              className="object-cover transition-opacity group-hover:opacity-85"
+            />
+          )}
         </div>
       ) : null}
 

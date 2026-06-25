@@ -29,9 +29,9 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   hourlyPrice: 5000,
   dailyPrice: 30000,
   mainImageUrl: "https://example.com/main.jpg",
-  imageUrls: [
-    "https://example.com/image1.jpg",
-    "https://example.com/image2.jpg",
+  gallery: [
+    { url: "https://example.com/image1.jpg", alt: "", caption: "" },
+    { url: "https://example.com/image2.jpg", alt: "", caption: "" },
   ],
   facilities: [
     { name: "Wi-Fi", iconName: "IconWifi" },
@@ -85,7 +85,7 @@ describe("Space Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("imageUrlsデフォルトは空配列", () => {
+      test("galleryデフォルトは空配列", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
@@ -99,7 +99,7 @@ describe("Space Admin Action Integration", () => {
         const result = spaceFormSchema.safeParse(input);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.imageUrls).toEqual([]);
+          expect(result.data.gallery).toEqual([]);
         }
       });
 
@@ -502,14 +502,15 @@ describe("Space Admin Action Integration", () => {
       });
     });
 
-    describe("imageUrls", () => {
-      test("10枚のユニーク画像はOK", () => {
+    describe("gallery", () => {
+      test("20枚のユニーク画像はOK", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          imageUrls: Array.from(
-            { length: 10 },
-            (_, i) => `https://example.com/image-${i + 1}.jpg`,
-          ),
+          gallery: Array.from({ length: 20 }, (_, i) => ({
+            url: `https://example.com/image-${i + 1}.jpg`,
+            alt: "",
+            caption: "",
+          })),
         });
         expect(result.success).toBe(true);
       });
@@ -517,34 +518,37 @@ describe("Space Admin Action Integration", () => {
       test("重複した URL は refine エラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          imageUrls: Array(3).fill("https://example.com/image.jpg"),
+          gallery: Array(3).fill({
+            url: "https://example.com/image.jpg",
+            alt: "",
+            caption: "",
+          }),
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain(
-            "同じ画像を複数登録",
-          );
+          expect(result.error.issues[0].message).toContain("URL が重複");
         }
       });
 
-      test("11枚のユニーク画像はエラー", () => {
+      test("21枚のユニーク画像はエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          imageUrls: Array.from(
-            { length: 11 },
-            (_, i) => `https://example.com/image-${i + 1}.jpg`,
-          ),
+          gallery: Array.from({ length: 21 }, (_, i) => ({
+            url: `https://example.com/image-${i + 1}.jpg`,
+            alt: "",
+            caption: "",
+          })),
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("最大10枚");
+          expect(result.error.issues[0].message).toContain("最大20件");
         }
       });
 
       test("無効なURLを含む配列はエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          imageUrls: ["https://example.com/valid.jpg", "not-a-url"],
+          gallery: [{ url: "not-a-url", alt: "", caption: "" }],
         });
         expect(result.success).toBe(false);
       });

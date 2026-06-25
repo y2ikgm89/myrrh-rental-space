@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { EventStatus, PostStatus } from "@generated/prisma/enums";
-import { parseStringArray } from "@/shared/lib/json-validators";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
 
@@ -112,7 +112,7 @@ async function resolveSpaceCards(
       name: true,
       descriptionPlainText: true,
       mainImageUrl: true,
-      imageUrls: true,
+      gallery: true,
     },
   });
 
@@ -124,7 +124,7 @@ async function resolveSpaceCards(
       title: r.name,
       excerpt:
         r.descriptionPlainText.length > 0 ? r.descriptionPlainText : null,
-      thumbnailUrl: r.mainImageUrl ?? parseStringArray(r.imageUrls)[0] ?? null,
+      thumbnailUrl: r.mainImageUrl ?? parseGallery(r.gallery)[0]?.url ?? null,
       href: `/spaces/${r.slug}`,
     });
   }

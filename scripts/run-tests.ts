@@ -77,7 +77,7 @@ function normalize(target: string): string {
 
 async function collectTestFiles(target: string): Promise<string[]> {
   const normalized = normalize(target);
-  if (normalized.endsWith(".test.ts")) {
+  if (normalized.endsWith(".test.ts") || normalized.endsWith(".test.tsx")) {
     if (!(await Bun.file(normalized).exists())) {
       console.error(`[run-tests] not found: ${normalized}`);
       process.exit(2);
@@ -87,13 +87,13 @@ async function collectTestFiles(target: string): Promise<string[]> {
 
   // Bun.Glob.scanSync は OS-native path separator を返す（Windows = "\"）
   // → POSIX "/" に正規化して `bun test <path>` 引数化
-  const glob = new Bun.Glob("**/*.test.ts");
+  const glob = new Bun.Glob("**/*.test.{ts,tsx}");
   const results: string[] = [];
   for (const rel of glob.scanSync({ cwd: normalized })) {
     results.push(`${normalized}/${rel.replaceAll("\\", "/")}`);
   }
   if (results.length === 0) {
-    console.error(`[run-tests] no *.test.ts found under: ${normalized}`);
+    console.error(`[run-tests] no *.test.{ts,tsx} found under: ${normalized}`);
     process.exit(2);
   }
   return results;

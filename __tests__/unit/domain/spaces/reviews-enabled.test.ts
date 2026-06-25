@@ -17,7 +17,7 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       hourlyPrice: 1000,
       dailyPrice: null,
       mainImageUrl: "https://example.com/image.jpg",
-      imageUrls: [],
+      gallery: [],
       facilities: [],
       businessHours: null,
       isPublished: true,

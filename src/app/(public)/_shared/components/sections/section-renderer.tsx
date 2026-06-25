@@ -274,7 +274,7 @@ export async function SectionRenderer({
         hourlyPrice: s.hourlyPrice,
         area: s.area,
         mainImageUrl: s.mainImageUrl,
-        imageUrls: s.imageUrls,
+        gallery: s.gallery,
         categoryName: s.category?.name ?? null,
         locationName: s.location?.name ?? null,
       }));
@@ -528,6 +528,7 @@ export async function SectionRenderer({
         registrationOpen: e.registrationOpen,
         spaceName: e.space?.name ?? null,
         thumbnailUrl: e.thumbnailUrl ?? null,
+        gallery: e.gallery,
       }));
       return (
         <EventCalendarSection

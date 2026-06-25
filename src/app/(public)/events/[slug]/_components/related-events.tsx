@@ -56,6 +56,7 @@ export async function RelatedEvents({
     registrationOpen: e.registrationOpen,
     spaceName: e.space?.name ?? null,
     thumbnailUrl: e.thumbnailUrl ?? null,
+    gallery: e.gallery,
   }));
 
   return (
