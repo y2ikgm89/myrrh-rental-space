@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
@@ -14,7 +15,14 @@ import type { Serialized } from "@/shared/lib/serialize";
 /**
  * 公開ページ向け規約クエリ
  * 軸: deletedAt: null + isPublished: true
+ *
+ * 公開クエリの共通 where 句。新規 query 追加時の soft-delete / publish gate 漏れ
+ * を構造的に防ぐため必ずこの const をスプレッドする。
  */
+const PUBLIC_WHERE = {
+  deletedAt: null,
+  isPublished: true,
+} as const satisfies Prisma.TermsDocumentWhereInput;
 
 const PUBLIC_LIST_SELECT = {
   id: true,
@@ -69,7 +77,7 @@ export async function getPublishedTermsList(): Promise<PublicTermsListItem[]> {
   const result = await safeFetch({
     fetch: () =>
       prisma.termsDocument.findMany({
-        where: { deletedAt: null, isPublished: true },
+        where: { ...PUBLIC_WHERE },
         orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_LIST_SELECT,
       }),
@@ -94,8 +102,7 @@ export async function getFooterTerms(): Promise<PublicTermsListItem[]> {
     fetch: () =>
       prisma.termsDocument.findMany({
         where: {
-          deletedAt: null,
-          isPublished: true,
+          ...PUBLIC_WHERE,
           showInFooter: true,
         },
         orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
@@ -123,7 +130,7 @@ export async function getPublicTermsBySlug(
   const result = await safeFetch({
     fetch: () =>
       prisma.termsDocument.findFirst({
-        where: { slug, deletedAt: null, isPublished: true },
+        where: { ...PUBLIC_WHERE, slug },
         select: PUBLIC_DETAIL_SELECT,
       }),
     fallback: null,
@@ -150,8 +157,7 @@ export async function getRequiredTermsAtReservation(): Promise<
     fetch: () =>
       prisma.termsDocument.findMany({
         where: {
-          deletedAt: null,
-          isPublished: true,
+          ...PUBLIC_WHERE,
           requiredAtReservation: true,
         },
         orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
@@ -180,8 +186,7 @@ export async function getRequiredTermsAtInquiry(): Promise<
     fetch: () =>
       prisma.termsDocument.findMany({
         where: {
-          deletedAt: null,
-          isPublished: true,
+          ...PUBLIC_WHERE,
           requiredAtInquiry: true,
         },
         orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
@@ -210,8 +215,7 @@ export async function getRequiredTermsAtSignup(): Promise<
     fetch: () =>
       prisma.termsDocument.findMany({
         where: {
-          deletedAt: null,
-          isPublished: true,
+          ...PUBLIC_WHERE,
           requiredAtSignup: true,
         },
         orderBy: [{ footerOrder: "asc" }, { title: "asc" }],

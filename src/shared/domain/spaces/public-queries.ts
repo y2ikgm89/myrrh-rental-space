@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import {
   CACHE_LIFE,
@@ -19,6 +20,15 @@ import {
   parseStringArray,
 } from "@/shared/lib/json-validators";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+
+/**
+ * 公開スペースクエリの共通 where 句。Space model に deletedAt 列はないため
+ * isPublished + isActive gate のみ。新規 query 追加時の gate 漏れを構造的に防ぐ。
+ */
+const PUBLIC_WHERE = {
+  isPublished: true,
+  isActive: true,
+} as const satisfies Prisma.SpaceWhereInput;
 
 const spaceListSelect = {
   id: true,
@@ -69,8 +79,7 @@ export async function getPublishedSpaces(
     fetch: () =>
       prisma.space.findMany({
         where: {
-          isPublished: true,
-          isActive: true,
+          ...PUBLIC_WHERE,
           ...(categoryId ? { categoryId } : {}),
           ...(locationId ? { locationId } : {}),
         },
@@ -100,8 +109,7 @@ export async function getPublishedSpacesPaginated(
   cacheTag(CACHE_TAGS.SPACES);
 
   const where = {
-    isPublished: true,
-    isActive: true,
+    ...PUBLIC_WHERE,
     ...(categoryId ? { categoryId } : {}),
     ...(locationId ? { locationId } : {}),
   };
@@ -148,7 +156,7 @@ export async function getSpaceBySlug(slug: string) {
   const space = await safeFetch({
     fetch: () =>
       prisma.space.findFirst({
-        where: { slug, isPublished: true, isActive: true },
+        where: { ...PUBLIC_WHERE, slug },
         select: {
           id: true,
           slug: true,
@@ -222,8 +230,7 @@ export async function getRelatedSpaces(
     fetch: () =>
       prisma.space.findMany({
         where: {
-          isPublished: true,
-          isActive: true,
+          ...PUBLIC_WHERE,
           id: { not: currentId },
           ...(categoryId ? { categoryId } : {}),
         },
@@ -298,7 +305,7 @@ export async function getActiveCategories() {
  */
 export async function getActiveSpacesByLocationId(locationId: string) {
   const spaces = await prisma.space.findMany({
-    where: { locationId, isPublished: true, isActive: true },
+    where: { ...PUBLIC_WHERE, locationId },
     select: {
       id: true,
       name: true,

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import {
   CACHE_LIFE,
@@ -15,6 +16,14 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
+
+/**
+ * 公開ニュースクエリの共通 where 句。News model に deletedAt 列はないため
+ * isPublished gate のみ。新規 query 追加時の publish gate 漏れを構造的に防ぐ。
+ */
+const PUBLIC_WHERE = {
+  isPublished: true,
+} as const satisfies Prisma.NewsWhereInput;
 
 const newsListSelect = {
   id: true,
@@ -59,7 +68,7 @@ export async function getPublishedNewsList(
   const skip = (page - 1) * perPage;
 
   const where = {
-    isPublished: true,
+    ...PUBLIC_WHERE,
     ...(search
       ? { title: { contains: search, mode: "insensitive" as const } }
       : {}),
@@ -116,8 +125,8 @@ export async function getPublishedNewsItem(slug: string) {
     fetch: () =>
       prisma.news.findFirst({
         where: {
+          ...PUBLIC_WHERE,
           slug,
-          isPublished: true,
         },
         select: newsDetailSelect,
       }),
@@ -143,9 +152,7 @@ export async function getPublishedNews(maxItems: number) {
   const news = await safeFetch({
     fetch: () =>
       prisma.news.findMany({
-        where: {
-          isPublished: true,
-        },
+        where: { ...PUBLIC_WHERE },
         select: newsListSelect,
         orderBy: { publishedAt: "desc" },
         take: maxItems,
