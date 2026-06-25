@@ -8,7 +8,7 @@
  * Optional FAQ JSON-LD for schema.org FAQPage.
  */
 
-/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped (< / > / &), safe for structured data */
+/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + escapeJsonForScriptTag (5 escape: < / > / & / U+2028 / U+2029) — SSoT helper */
 
 import {
   useRef,
@@ -32,6 +32,7 @@ import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
 import { Heading } from "@/public/components/design-system/heading";
 import { cn } from "@/shared/lib/cn";
+import { escapeJsonForScriptTag } from "@/shared/lib/json-ld-escape";
 import {
   parseContainerWidth,
   parseFaqInitialOpen,
@@ -200,18 +201,17 @@ export function FaqListSection({
   const jsonLdHtml =
     flatJsonLdItems.length === 0
       ? null
-      : JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: flatJsonLdItems.map((item) => ({
-            "@type": "Question",
-            name: item.question,
-            acceptedAnswer: { "@type": "Answer", text: item.answer },
-          })),
-        })
-          .replace(/</g, "\\u003c")
-          .replace(/>/g, "\\u003e")
-          .replace(/&/g, "\\u0026");
+      : escapeJsonForScriptTag(
+          JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: flatJsonLdItems.map((item) => ({
+              "@type": "Question",
+              name: item.question,
+              acceptedAnswer: { "@type": "Answer", text: item.answer },
+            })),
+          }),
+        );
 
   return (
     <>

@@ -11,6 +11,7 @@
 /* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
 import type { ReactElement } from "react";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { escapeJsonForScriptTag } from "@/shared/lib/json-ld-escape";
 import type { OrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import type { LocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-json-ld";
 
@@ -122,12 +123,7 @@ interface JsonLdProps {
 function JsonLd({ data }: JsonLdProps): ReactElement {
   // セキュリティ: HTML/Script特殊文字とJavaScript改行文字をUnicodeエスケープ
   // これによりscriptタグ内でのXSS攻撃を防止
-  const safeJsonString = JSON.stringify(data)
-    .replace(/</g, "\\u003c")
-    .replace(/>/g, "\\u003e")
-    .replace(/&/g, "\\u0026")
-    .replace(/\u2028/g, "\\u2028")
-    .replace(/\u2029/g, "\\u2029");
+  const safeJsonString = escapeJsonForScriptTag(JSON.stringify(data));
 
   return (
     <script
