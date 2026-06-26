@@ -53,6 +53,15 @@ const eventDetailSelect = {
   spaceId: true,
   googleCalendarEventId: true,
   updatedAt: true,
+  slots: {
+    select: {
+      id: true,
+      startAt: true,
+      endAt: true,
+      capacity: true,
+    },
+    orderBy: { startAt: "asc" as const },
+  },
 } satisfies Prisma.EventSelect;
 
 interface GetEventsOptions {

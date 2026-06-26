@@ -21,7 +21,17 @@ type TicketRow = {
   capacity: number | null;
 };
 
+type SlotRow = {
+  id: string;
+  eventId: string;
+  capacity: number;
+  startAt: Date;
+};
+
 const mockEventFindFirst = mock<() => Promise<EventRow | null>>(() =>
+  Promise.resolve(null),
+);
+const mockSlotFindUnique = mock<() => Promise<SlotRow | null>>(() =>
   Promise.resolve(null),
 );
 const mockTicketFindFirst = mock<() => Promise<TicketRow | null>>(() =>
@@ -56,6 +66,7 @@ mock.module("@/shared/db/prisma", () => {
   const tx = {
     $executeRaw: mockExecuteRaw,
     event: { findFirst: mockEventFindFirst },
+    eventTimeSlot: { findUnique: mockSlotFindUnique },
     eventTicket: { findFirst: mockTicketFindFirst },
     eventRegistration: {
       aggregate: mockRegistrationAggregate,
@@ -99,8 +110,16 @@ const BASE_TICKET: TicketRow = {
   capacity: null,
 };
 
+const BASE_SLOT: SlotRow = {
+  id: "slot-1",
+  eventId: "event-1",
+  capacity: 1000, // slot が制約にならないよう大きな数
+  startAt: FUTURE,
+};
+
 const VALID_INPUT = {
   eventId: "event-1",
+  slotId: "slot-1",
   ticketId: "ticket-1",
   name: "山田太郎",
   email: "yamada@example.com",
@@ -110,11 +129,13 @@ const VALID_INPUT = {
 describe("createEventRegistrationCommand", () => {
   beforeEach(() => {
     mockEventFindFirst.mockReset();
+    mockSlotFindUnique.mockReset();
     mockTicketFindFirst.mockReset();
     mockRegistrationAggregate.mockReset();
     mockRegistrationCreate.mockReset();
 
     mockEventFindFirst.mockImplementation(() => Promise.resolve(BASE_EVENT));
+    mockSlotFindUnique.mockImplementation(() => Promise.resolve(BASE_SLOT));
     mockTicketFindFirst.mockImplementation(() => Promise.resolve(BASE_TICKET));
     mockRegistrationAggregate.mockImplementation(() =>
       Promise.resolve({ _sum: { quantity: 0 } }),
@@ -143,9 +164,9 @@ describe("createEventRegistrationCommand", () => {
       expect(result.event.slug).toBe("test-event");
     });
 
-    test("event capacity 内なら申込が作成される", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({ ...BASE_EVENT, capacity: 10 }),
+    test("slot capacity 内なら申込が作成される", async () => {
+      mockSlotFindUnique.mockImplementation(() =>
+        Promise.resolve({ ...BASE_SLOT, capacity: 10 }),
       );
       mockRegistrationAggregate.mockImplementation(() =>
         Promise.resolve({ _sum: { quantity: 7 } }),
@@ -234,9 +255,9 @@ describe("createEventRegistrationCommand", () => {
       );
     });
 
-    test("event capacity 超過は VALIDATION エラー", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({ ...BASE_EVENT, capacity: 10 }),
+    test("slot capacity 超過は VALIDATION エラー", async () => {
+      mockSlotFindUnique.mockImplementation(() =>
+        Promise.resolve({ ...BASE_SLOT, capacity: 10 }),
       );
       mockRegistrationAggregate.mockImplementation(() =>
         Promise.resolve({ _sum: { quantity: 9 } }),

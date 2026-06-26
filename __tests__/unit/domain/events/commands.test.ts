@@ -61,6 +61,19 @@ const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
   Promise.resolve(0),
 );
 
+const mockEventTimeSlotFindMany = mock<
+  () => Promise<{ id: string; registrations: { id: string }[] }[]>
+>(() => Promise.resolve([]));
+const mockEventTimeSlotCreate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "slot-1" }),
+);
+const mockEventTimeSlotUpdate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "slot-1" }),
+);
+const mockEventTimeSlotDelete = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "slot-1" }),
+);
+
 // $transaction interactive callback で tx を渡す mock
 type TxClient = {
   event: {
@@ -77,6 +90,12 @@ type TxClient = {
   eventRegistration: {
     count: typeof mockEventRegistrationCount;
   };
+  eventTimeSlot: {
+    findMany: typeof mockEventTimeSlotFindMany;
+    create: typeof mockEventTimeSlotCreate;
+    update: typeof mockEventTimeSlotUpdate;
+    delete: typeof mockEventTimeSlotDelete;
+  };
 };
 const txStub: TxClient = {
   event: { create: mockEventCreate, update: mockEventUpdate },
@@ -88,6 +107,12 @@ const txStub: TxClient = {
     deleteMany: mockEventTicketDeleteMany,
   },
   eventRegistration: { count: mockEventRegistrationCount },
+  eventTimeSlot: {
+    findMany: mockEventTimeSlotFindMany,
+    create: mockEventTimeSlotCreate,
+    update: mockEventTimeSlotUpdate,
+    delete: mockEventTimeSlotDelete,
+  },
 };
 const mockTransaction = mock(
   async (callback: (tx: TxClient) => Promise<unknown>) => callback(txStub),
@@ -180,10 +205,14 @@ const VALID_EVENT_INPUT = {
   descriptionPlainText: "テストの説明",
   thumbnailUrl: null,
   gallery: [] as const,
-  startTime: "2024-06-15T10:00:00Z",
-  endTime: "2024-06-15T12:00:00Z",
+  slots: [
+    {
+      startAt: new Date("2024-06-15T10:00:00Z"),
+      endAt: new Date("2024-06-15T12:00:00Z"),
+      capacity: 30,
+    },
+  ],
   registrationDeadline: null,
-  capacity: 30,
   tickets: [
     {
       name: "一般",
@@ -477,8 +506,14 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        startTime: "2024-06-16T10:00:00Z", // 日時変更
-        endTime: "2024-06-16T12:00:00Z",
+        // 新規スロット（id なし）= 変更ありとみなされ通知トリガー
+        slots: [
+          {
+            startAt: new Date("2024-06-16T10:00:00Z"),
+            endAt: new Date("2024-06-16T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
@@ -502,9 +537,15 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        // 同じ日時・会場
-        startTime: "2024-06-15T10:00:00Z",
-        endTime: "2024-06-15T12:00:00Z",
+        // 既存スロット（id あり = 変更なしとみなされ通知スキップ）+ 同じ会場
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
         addressDetail: "東京都渋谷区",
       });
 
@@ -841,10 +882,16 @@ describe("duplicateEventCommand", () => {
     descriptionPlainText: "本文",
     thumbnailUrl: "https://example.com/thumb.jpg",
     gallery: [],
+    ogpImageUrl: null,
+    ogpTitle: null,
+    ogpDescription: null,
+    metaDescription: null,
+    metaKeywords: null,
     startTime: new Date("2024-06-15T10:00:00Z"),
     endTime: new Date("2024-06-15T12:00:00Z"),
     registrationDeadline: new Date("2024-06-14T23:59:00Z"),
     capacity: 30,
+    slots: [],
     tickets: [
       {
         name: "一般",
@@ -915,7 +962,7 @@ describe("duplicateEventCommand", () => {
             startTime: SOURCE_EVENT.startTime,
             endTime: SOURCE_EVENT.endTime,
             registrationDeadline: SOURCE_EVENT.registrationDeadline,
-            capacity: SOURCE_EVENT.capacity,
+            capacity: null, // duplicateEventCommand は capacity をスロット管理に移行し null 固定
             addressDetail: SOURCE_EVENT.addressDetail,
           }),
         }),

@@ -12,11 +12,11 @@ import { gallerySchema } from "@/shared/lib/validations/gallery";
  * - `descriptionJson` (Lexical EditorState JSON) は hidden input で transit
  * - `descriptionHtml` は client-side で `renderEditorStateJsonToHtmlClient()` で生成 → hidden input
  * - boolean (`registrationOpen`) は Switch + hidden input "on" / "" を `z.preprocess` で coerce
- * - 数値 (`capacity`) は `<input type="number">` 経由で空文字 → null
  * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
+ * - `slots`  は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
+ *   （startAt/endAt は datetime-local 文字列 → parseDateTimeLocalAsJst で Date 変換）
  * - sentinel `EVENT_FORM_NONE_VALUE` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
- * - datetime-local (`startTime` / `endTime` / `registrationDeadline`) は JST 固定 `formatDateTimeLocalInJst` / `parseDateTimeLocalAsJst` SSoT 経由 (command 層)
- * - cross-field refine: 終了 > 開始 / registrationDeadline ≤ startTime
+ * - cross-field refine: registrationDeadline ≤ 最初スロット開始時刻
  */
 
 /** Radix Select の `value=""` 予約を回避する「未選択」sentinel（会場 / スペース共通）。 */
@@ -29,11 +29,6 @@ const booleanFromCheckbox = z.preprocess(
 
 const emptyOrNullToNull = (value: unknown): unknown =>
   value === "" || value === null || value === undefined ? null : value;
-
-const optionalNullableInt = z.preprocess(
-  emptyOrNullToNull,
-  z.union([z.coerce.number().int(), z.null()]).nullable().optional(),
-);
 
 const nullableUuidWithSentinel = (sentinel: string) =>
   z.preprocess(
@@ -96,6 +91,34 @@ const ticketsSchema = z.preprocess(
     }),
 );
 
+/** 各スロットの入力スキーマ（JSON transit 内の各要素）。startAt/endAt は datetime-local 文字列→Date 変換。 */
+const slotFormItemSchema = z.object({
+  id: z.string().optional(),
+  startAt: z.iso
+    .datetime({ local: true, error: "有効な開始日時を入力してください" })
+    .transform(parseDateTimeLocalAsJst),
+  endAt: z.iso
+    .datetime({ local: true, error: "有効な終了日時を入力してください" })
+    .transform(parseDateTimeLocalAsJst),
+  capacity: z.number().int().min(0, { error: "定員は0以上です" }),
+});
+
+/** スロット一覧（JSON 文字列 hidden input で transit）。 */
+const slotsSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    if (value === "") return [];
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  },
+  z
+    .array(slotFormItemSchema)
+    .min(1, { error: "スロットを少なくとも1件登録してください" }),
+);
+
 const optionalNullableString = (maxLength: number, error: string) =>
   z.preprocess(
     emptyOrNullToNull,
@@ -128,20 +151,13 @@ const eventFormBaseSchema = z.object({
     (value) => (value === "" ? null : value),
     z.string().nullable().optional(),
   ),
-  startTime: z.iso.datetime({
-    local: true,
-    error: "有効な日時を入力してください",
-  }),
-  endTime: z.iso.datetime({
-    local: true,
-    error: "有効な日時を入力してください",
-  }),
+  /** タイムスロット一覧（JSON 文字列で transit、startAt/endAt は Date 変換済み）。必須 ≥ 1 件。 */
+  slots: slotsSchema,
   registrationDeadline: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))
     .nullable()
     .optional(),
-  capacity: optionalNullableInt,
   tickets: ticketsSchema,
   addressDetail: z.preprocess(
     (value) => (value === "" ? null : value),
@@ -168,48 +184,26 @@ const eventFormBaseSchema = z.object({
 
 function refineEvent(
   data: {
-    startTime: string;
-    endTime: string;
+    slots: Array<{ startAt: Date }>;
     registrationDeadline?: string | null | undefined;
-    capacity?: number | null | undefined;
   },
   ctx: z.RefinementCtx,
 ): void {
-  const start = parseDateTimeLocalAsJst(data.startTime);
-  const end = parseDateTimeLocalAsJst(data.endTime);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
-  if (end <= start) {
-    ctx.addIssue({
-      code: "custom",
-      message: "終了時刻は開始時刻より後である必要があります",
-      path: ["endTime"],
-    });
-  }
+  const firstSlot = data.slots[0];
+  if (!firstSlot) return;
 
   if (
     typeof data.registrationDeadline === "string" &&
     data.registrationDeadline !== ""
   ) {
     const deadline = parseDateTimeLocalAsJst(data.registrationDeadline);
-    if (!Number.isNaN(deadline.getTime()) && deadline > start) {
+    if (!Number.isNaN(deadline.getTime()) && deadline > firstSlot.startAt) {
       ctx.addIssue({
         code: "custom",
-        message: "申込締切は開始時刻以前である必要があります",
+        message: "申込締切は最初のスロット開始時刻以前である必要があります",
         path: ["registrationDeadline"],
       });
     }
-  }
-
-  if (
-    typeof data.capacity === "number" &&
-    Number.isFinite(data.capacity) &&
-    data.capacity < 1
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "定員は1以上です",
-      path: ["capacity"],
-    });
   }
 }
 

@@ -11,7 +11,6 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { generateSlug } from "@/shared/lib/slug";
-import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -23,6 +22,8 @@ import type {
   EventTicketInput,
   EventTicketWritableFields,
 } from "./ticket-types";
+import type { SlotInput } from "./slot-commands";
+import { syncEventTimeSlotsCommand } from "./slot-commands";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -30,6 +31,7 @@ import type {
  * から 3 値（descriptionJson / descriptionHtml / descriptionPlainText）を生成して渡す。
  *
  * Space の `SpaceCommandInput` と同じ分離パターン。
+ * startTime / endTime / capacity はスロット（EventTimeSlot）で管理するため廃止。
  */
 export interface EventCommandInput {
   title: string;
@@ -44,18 +46,18 @@ export interface EventCommandInput {
   ogpDescription?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
-  startTime: string;
-  endTime: string;
-  /** 申込締切日時（null = 開始時刻まで受付）。startTime 以前である必要あり。 */
+  /** 申込締切日時（null = 最初のスロット開始時刻まで受付）。スロット startAt 以前必須。 */
   registrationDeadline?: string | null;
-  capacity?: number | null;
   addressDetail?: string | null;
   locationId?: string | null;
   spaceId?: string | null;
   status: (typeof EventStatus)[keyof typeof EventStatus];
   registrationOpen?: boolean;
   tickets?: readonly EventTicketInput[];
+  slots: readonly SlotInput[];
 }
+
+export type { SlotInput };
 
 /**
  * status と registrationOpen の不変条件を server-side で強制。
@@ -89,6 +91,16 @@ function buildTicketWriteData(
   };
 }
 
+/**
+ * registrationDeadline 文字列を Date に変換する。
+ * 空文字 / undefined / null → null。
+ */
+function parseOptionalDeadline(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export async function createEventCommand(data: EventCommandInput) {
   const slug = await ensureUniqueSlug(data.slug);
 
@@ -107,12 +119,13 @@ export async function createEventCommand(data: EventCommandInput) {
         ogpDescription: data.ogpDescription ?? null,
         metaDescription: data.metaDescription ?? null,
         metaKeywords: data.metaKeywords ?? null,
-        startTime: parseDateTimeLocalAsJst(data.startTime),
-        endTime: parseDateTimeLocalAsJst(data.endTime),
-        registrationDeadline: data.registrationDeadline
-          ? parseDateTimeLocalAsJst(data.registrationDeadline)
-          : null,
-        capacity: data.capacity ?? null,
+        // startTime / endTime / capacity は最初のスロットから派生。
+        // DB 列は contract migration まで残るが、ここでは最初のスロット値を格納する
+        // (backfill 後は参照されないが NOT NULL 制約のために必要)。
+        startTime: data.slots[0]?.startAt ?? new Date(),
+        endTime: data.slots[0]?.endAt ?? new Date(),
+        capacity: null,
+        registrationDeadline: parseOptionalDeadline(data.registrationDeadline),
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
@@ -125,6 +138,9 @@ export async function createEventCommand(data: EventCommandInput) {
       },
       select: { id: true, slug: true },
     });
+
+    // スロット同期
+    await syncEventTimeSlotsCommand(tx, created.id, data.slots);
 
     if (data.tickets && data.tickets.length > 0) {
       await tx.eventTicket.createMany({
@@ -149,7 +165,6 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       slug: true,
       status: true,
       startTime: true,
-      endTime: true,
       locationId: true,
       spaceId: true,
       addressDetail: true,
@@ -166,8 +181,8 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
 
-  const newStartTime = parseDateTimeLocalAsJst(data.startTime);
-  const newEndTime = parseDateTimeLocalAsJst(data.endTime);
+  const firstSlotStart = data.slots[0]?.startAt ?? existing.startTime;
+  const firstSlotEnd = data.slots[0]?.endAt ?? existing.startTime;
 
   await prisma.$transaction(async (tx) => {
     await tx.event.update({
@@ -185,12 +200,11 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         ogpDescription: data.ogpDescription ?? null,
         metaDescription: data.metaDescription ?? null,
         metaKeywords: data.metaKeywords ?? null,
-        startTime: newStartTime,
-        endTime: newEndTime,
-        registrationDeadline: data.registrationDeadline
-          ? parseDateTimeLocalAsJst(data.registrationDeadline)
-          : null,
-        capacity: data.capacity ?? null,
+        // 旧列は contract まで残すが最初のスロット値で同期
+        startTime: firstSlotStart,
+        endTime: firstSlotEnd,
+        capacity: null,
+        registrationDeadline: parseOptionalDeadline(data.registrationDeadline),
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
@@ -203,18 +217,21 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       },
     });
 
+    // スロット差分同期
+    await syncEventTimeSlotsCommand(tx, id, data.slots);
+
     if (data.tickets !== undefined) {
       const incoming = data.tickets;
       const incomingIds = new Set(
         incoming.flatMap((t) => (t.id != null ? [t.id] : [])),
       );
 
-      const existing = await tx.eventTicket.findMany({
+      const existingTickets = await tx.eventTicket.findMany({
         where: { eventId: id },
         select: { id: true },
       });
 
-      const toDelete = existing
+      const toDelete = existingTickets
         .map((e) => e.id)
         .filter((existingId) => !incomingIds.has(existingId));
       if (toDelete.length > 0) {
@@ -241,16 +258,14 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     }
   });
 
-  const dateTimeChanged =
-    existing.startTime.getTime() !== newStartTime.getTime() ||
-    existing.endTime.getTime() !== newEndTime.getTime();
   const venueChanged =
     (existing.locationId ?? null) !== (data.locationId ?? null) ||
     (existing.spaceId ?? null) !== (data.spaceId ?? null) ||
     (existing.addressDetail ?? "") !== (data.addressDetail ?? "");
 
+  // スロット変更は sendEventUpdatedToAllParticipants で通知
   if (
-    (dateTimeChanged || venueChanged) &&
+    (data.slots.some((s) => !s.id) || venueChanged) &&
     data.status === EventStatus.PUBLISHED
   ) {
     fireAndForget(sendEventUpdatedToAllParticipants(id, existing.startTime), {
@@ -352,11 +367,14 @@ export async function duplicateEventCommand(id: string) {
       startTime: true,
       endTime: true,
       registrationDeadline: true,
-      capacity: true,
       addressDetail: true,
       locationId: true,
       spaceId: true,
       registrationOpen: true,
+      slots: {
+        select: { startAt: true, endAt: true, capacity: true },
+        orderBy: { startAt: "asc" },
+      },
       tickets: {
         select: {
           name: true,
@@ -395,19 +413,23 @@ export async function duplicateEventCommand(id: string) {
         metaKeywords: source.metaKeywords,
         startTime: source.startTime,
         endTime: source.endTime,
+        capacity: null,
         registrationDeadline: source.registrationDeadline,
-        capacity: source.capacity,
         addressDetail: source.addressDetail,
         locationId: source.locationId,
         spaceId: source.spaceId,
         status: EventStatus.DRAFT,
-        // DRAFT 化に伴い受付状態は強制 false（normalizeRegistrationOpen と同等）
         registrationOpen: false,
         publishedAt: null,
         googleCalendarEventId: null,
       },
       select: { id: true, slug: true },
     });
+
+    // スロットをコピー（id なし = 新規作成）
+    if (source.slots.length > 0) {
+      await syncEventTimeSlotsCommand(tx, newEvent.id, source.slots);
+    }
 
     if (source.tickets.length > 0) {
       await tx.eventTicket.createMany({

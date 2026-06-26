@@ -8,8 +8,9 @@ describe("eventFormSchema (conform)", () => {
     slug: "test-event",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     descriptionHtml: "",
-    startTime: "2026-05-01T10:00",
-    endTime: "2026-05-01T12:00",
+    slots: JSON.stringify([
+      { startAt: "2026-05-01T10:00", endAt: "2026-05-01T12:00", capacity: 10 },
+    ]),
     status: "DRAFT",
     registrationOpen: false,
     tickets: JSON.stringify([
@@ -35,39 +36,36 @@ describe("eventFormSchema (conform)", () => {
     expect(result.success).toBe(false);
   });
 
-  it("終了時刻が開始時刻より前の場合エラー", () => {
+  it("スロットが空配列の場合エラー", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      startTime: "2026-05-01T12:00",
-      endTime: "2026-05-01T10:00",
+      slots: JSON.stringify([]),
     });
     expect(result.success).toBe(false);
   });
 
-  it("定員が0以下の場合エラー", () => {
-    const result = eventFormSchema.safeParse({ ...validInput, capacity: 0 });
+  it("スロットの定員が負数の場合エラー", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      slots: JSON.stringify([
+        {
+          startAt: "2026-05-01T10:00",
+          endAt: "2026-05-01T12:00",
+          capacity: -1,
+        },
+      ]),
+    });
     expect(result.success).toBe(false);
   });
 
-  it("定員が null の場合は無制限として受け入れる", () => {
-    const result = eventFormSchema.safeParse({ ...validInput, capacity: null });
+  it("スロットの定員が 0 は有効（定員制限なし相当）", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      slots: JSON.stringify([
+        { startAt: "2026-05-01T10:00", endAt: "2026-05-01T12:00", capacity: 0 },
+      ]),
+    });
     expect(result.success).toBe(true);
-  });
-
-  it("定員が空文字の場合 null として受け入れる (FormData transit)", () => {
-    const result = eventFormSchema.safeParse({ ...validInput, capacity: "" });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.capacity).toBeNull();
-    }
-  });
-
-  it("定員が string '5' で number 5 にコース", () => {
-    const result = eventFormSchema.safeParse({ ...validInput, capacity: "5" });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.capacity).toBe(5);
-    }
   });
 
   it("チケットの料金が負の値はエラー", () => {
@@ -146,18 +144,19 @@ describe("eventFormSchema (conform)", () => {
     }
   });
 
-  it("申込締切が開始時刻以降の場合エラー", () => {
+  it("申込締切がスロット開始時刻より後の場合エラー", () => {
+    // validInput の slots[0].startAt = "2026-05-01T10:00"
     const result = eventFormSchema.safeParse({
       ...validInput,
-      registrationDeadline: "2026-05-01T15:00",
+      registrationDeadline: "2026-05-01T15:00", // スロット開始後 → エラー
     });
     expect(result.success).toBe(false);
   });
 
-  it("申込締切が開始時刻と同じ場合 OK (start 以前 = ≤)", () => {
+  it("申込締切がスロット開始時刻と同じ場合 OK (≤)", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      registrationDeadline: "2026-05-01T10:00",
+      registrationDeadline: "2026-05-01T10:00", // スロット開始と同時刻 → OK
     });
     expect(result.success).toBe(true);
   });
@@ -173,8 +172,6 @@ describe("eventFormSchema (conform)", () => {
   it("オプションフィールドを受け入れる", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      capacity: 30,
-      price: 1000,
       addressDetail: "2F 会議室A",
       locationId: "11111111-1111-4111-8111-111111111111",
       spaceId: "22222222-2222-4222-8222-222222222222",

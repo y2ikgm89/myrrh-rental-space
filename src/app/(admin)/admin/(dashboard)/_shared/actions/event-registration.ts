@@ -176,6 +176,7 @@ export async function toggleEventRegistrationCheckIn(
 
 const walkInSchema = z.object({
   eventId: cuidSchema,
+  slotId: cuidSchema,
   ticketId: cuidSchema,
   name: z.string().trim().min(1, "氏名を入力してください").max(100),
   // 受付係が代行入力するため任意。空文字は null 扱い
@@ -219,6 +220,7 @@ export async function createWalkInRegistration(
       // DomainError は executeAdminMutationResult が外側で MutationError に変換する
       const result = await createWalkInRegistrationCommand({
         eventId: parsed.data.eventId,
+        slotId: parsed.data.slotId,
         ticketId: parsed.data.ticketId,
         name: parsed.data.name,
         email: parsed.data.email,

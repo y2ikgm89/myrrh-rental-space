@@ -36,7 +36,7 @@ import type {
   getSpacesForEvent,
 } from "@/shared/domain/events/admin-queries";
 import { EventBasicFields } from "./EventBasicFields";
-import { EventScheduleFields } from "./EventScheduleFields";
+import { EventScheduleFields, type SlotFormItem } from "./EventScheduleFields";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
@@ -152,6 +152,18 @@ export function EventForm({
     }
     return [createDefaultTicket(0)];
   });
+
+  const [slots, setSlots] = useState<SlotFormItem[]>(() => {
+    if (event && event.slots.length > 0) {
+      return event.slots.map((s) => ({
+        id: s.id,
+        startAt: formatDateTimeLocalInJst(s.startAt),
+        endAt: formatDateTimeLocalInJst(s.endAt),
+        capacity: s.capacity,
+      }));
+    }
+    return [{ startAt: "", endAt: "", capacity: 0 }];
+  });
   const boundAction =
     isEdit && event?.id
       ? updateEventAction.bind(null, event.id)
@@ -173,12 +185,9 @@ export function EventForm({
       ? {
           title: event.title,
           slug: event.slug,
-          startTime: formatDateTimeLocalInJst(event.startTime),
-          endTime: formatDateTimeLocalInJst(event.endTime),
           registrationDeadline: event.registrationDeadline
             ? formatDateTimeLocalInJst(event.registrationDeadline)
             : "",
-          capacity: event.capacity != null ? String(event.capacity) : "",
           addressDetail: event.addressDetail ?? "",
           ogpTitle: event.ogpTitle ?? "",
           ogpDescription: event.ogpDescription ?? "",
@@ -189,10 +198,7 @@ export function EventForm({
       : {
           title: "",
           slug: "",
-          startTime: "",
-          endTime: "",
           registrationDeadline: "",
-          capacity: "",
           addressDetail: "",
           ogpTitle: "",
           ogpDescription: "",
@@ -204,13 +210,9 @@ export function EventForm({
 
   // タブごとのエラー数（バッジ表示用）
   const tabErrorCount: Record<EventEditTabValue, number> = {
-    basic: [
-      fields.title,
-      fields.slug,
-      fields.startTime,
-      fields.endTime,
-      fields.capacity,
-    ].filter((f) => fieldHasErrors(f.errors)).length,
+    basic: [fields.title, fields.slug, fields.slots].filter((f) =>
+      fieldHasErrors(f.errors),
+    ).length,
     publish: [
       fields.descriptionJson,
       fields.thumbnailUrl,
@@ -270,6 +272,11 @@ export function EventForm({
       <input type="hidden" name={fields.spaceId.name} value={spaceId ?? ""} />
       <input
         type="hidden"
+        name={fields.slots.name}
+        value={JSON.stringify(slots)}
+      />
+      <input
+        type="hidden"
         name={fields.tickets.name}
         value={JSON.stringify(tickets)}
       />
@@ -312,7 +319,12 @@ export function EventForm({
           className="space-y-6 data-[state=inactive]:hidden"
         >
           <EventBasicFields fields={fields} isPending={isPending} />
-          <EventScheduleFields fields={fields} isPending={isPending} />
+          <EventScheduleFields
+            slots={slots}
+            onChange={setSlots}
+            errors={fields.slots.errors ?? undefined}
+            isPending={isPending}
+          />
         </TabsContent>
 
         {/* ============ 本文・公開 ============ */}

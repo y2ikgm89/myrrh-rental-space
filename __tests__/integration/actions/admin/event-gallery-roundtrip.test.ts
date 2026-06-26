@@ -87,6 +87,14 @@ mock.module("@/shared/db/prisma", () => ({
         eventTicket: {
           createMany: mock(() => Promise.resolve({ count: 0 })),
           deleteMany: mock(() => Promise.resolve({ count: 0 })),
+          findMany: mock(() => Promise.resolve([])),
+          update: mock(() => Promise.resolve({ id: "ticket-1" })),
+        },
+        eventTimeSlot: {
+          findMany: mock(() => Promise.resolve([])),
+          create: mock(() => Promise.resolve({ id: "slot-1" })),
+          update: mock(() => Promise.resolve({ id: "slot-1" })),
+          delete: mock(() => Promise.resolve({ id: "slot-1" })),
         },
       };
       return fn(tx);
@@ -129,8 +137,13 @@ const BASE_INPUT = {
   descriptionHtml: "<p>test</p>",
   descriptionPlainText: "test",
   gallery: GALLERY,
-  startTime: "2026-07-01T10:00",
-  endTime: "2026-07-01T12:00",
+  slots: [
+    {
+      startAt: new Date("2026-07-01T01:00:00.000Z"),
+      endAt: new Date("2026-07-01T03:00:00.000Z"),
+      capacity: 10,
+    },
+  ] as const,
   status: EventStatus.DRAFT,
 } as const;
 
@@ -157,6 +170,7 @@ const SOURCE_EVENT = {
   registrationDeadline: null,
   capacity: null,
   registrationOpen: false,
+  slots: [],
   tickets: [],
 };
 

@@ -1629,6 +1629,34 @@ model SpaceReview {
 
 
 // ==============================================
+// Event Time Slot Model (イベントタイムスロット)
+// ==============================================
+
+/// イベントの時間枠（例: 9:00-10:00 定員5名）。
+/// 1 イベント = 複数スロット。スロット単位で申込・定員・GCal を管理する。
+/// startAt / endAt は Timestamptz(6) で UTC 保存、JST 表示は date-format.ts SSoT。
+/// capacity は NOT NULL — スロット単位の定員が SSoT（Event.capacity は contract で DROP）。
+/// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの cuid とは別）。
+model EventTimeSlot {
+  id                    String    @id @default(cuid(2)) @db.VarChar(30)
+  eventId               String    @db.VarChar(30)
+  startAt               DateTime  @db.Timestamptz(6)
+  endAt                 DateTime  @db.Timestamptz(6)
+  capacity              Int
+  googleCalendarEventId String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
+
+  /// 同一イベントで同時刻スロット二重登録を防ぐ
+  @@unique([eventId, startAt])
+  @@index([eventId, startAt])
+  @@map("event_time_slots")
+}
+
+// ==============================================
 // Event Model (イベント)
 // ==============================================
 
@@ -1677,6 +1705,7 @@ model Event {
   deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
   tickets       EventTicket[]
+  slots         EventTimeSlot[]
 
   @@index([startTime, endTime])
   @@index([status])
@@ -1719,6 +1748,9 @@ model EventTicket {
 model EventRegistration {
   id          String             @id @default(cuid()) @db.VarChar(30)
   eventId     String             @db.VarChar(30)
+  /// 申込対象タイムスロット（バックフィル後 NOT NULL 化予定）。
+  /// null = バックフィル前の既存レコードのみ。新規申込は必須。
+  slotId      String?            @db.VarChar(30)
   ticketId    String             @db.VarChar(30)
   name        String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
@@ -1737,11 +1769,14 @@ model EventRegistration {
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
 
-  event    Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  ticket   EventTicket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
-  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  slot     EventTimeSlot? @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  ticket   EventTicket    @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  customer Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
+  @@index([slotId])
+  @@index([slotId, status])
   @@index([ticketId])
   @@index([customerId])
   @@index([status])
