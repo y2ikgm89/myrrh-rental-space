@@ -227,7 +227,8 @@ describe("Event gallery round-trip", () => {
 
     await updateEventCommand("evt-id", BASE_INPUT);
 
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    // syncEventTimeSlotsCommand も tx.event.update を呼ぶため合計2回
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
     const callArg = mockUpdate.mock.calls[0]?.[0] as
       | { data: Record<string, unknown> }
       | undefined;
