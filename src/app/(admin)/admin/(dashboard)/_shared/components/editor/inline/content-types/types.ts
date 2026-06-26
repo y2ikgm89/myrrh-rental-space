@@ -10,7 +10,10 @@
 
 import type { FieldMetadata, FormMetadata } from "@conform-to/react";
 import type { ReactNode } from "react";
-import type { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  PostStatus,
+  TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // サイドパネル設定（コンテンツ種別ごとに TForm / TExtra を束ねる）
@@ -72,18 +75,20 @@ export type NewsSidePanelExtra = {
 
 /**
  * 利用規約エディタの設定ダイアログにのみ渡す追加データ
+ *
+ * 旧 3 boolean (requiredAtReservation/Inquiry/Signup) を `scopes: TermsScope[]`
+ * 配列に統合した新 shape。scope の追加は ALTER TYPE ADD VALUE で済むため
+ * TermsScope enum 1 列で済む。changelog は改訂時の周知文 (任意)。
  */
 export type TermsSidePanelExtra = {
   typeValue: string;
   onTypeChange: (value: string) => void;
   isPublishedValue: boolean;
   onIsPublishedChange: (value: boolean) => void;
-  requiredAtReservationValue: boolean;
-  onRequiredAtReservationChange: (value: boolean) => void;
-  requiredAtInquiryValue: boolean;
-  onRequiredAtInquiryChange: (value: boolean) => void;
-  requiredAtSignupValue: boolean;
-  onRequiredAtSignupChange: (value: boolean) => void;
+  scopesValue: readonly TermsScope[];
+  onScopesChange: (scopes: readonly TermsScope[]) => void;
+  changelogValue: string;
+  onChangelogChange: (value: string) => void;
   showInFooterValue: boolean;
   onShowInFooterChange: (value: boolean) => void;
 };

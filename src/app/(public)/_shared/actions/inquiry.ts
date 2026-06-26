@@ -31,7 +31,8 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
-import { TERMS_AGREEMENT_CONTEXT } from "@/shared/lib/validations/terms";
+import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function submitInquiry(
   _prev: SubmissionResult | undefined,
@@ -49,6 +50,20 @@ export async function submitInquiry(
     });
     if (!turnstile.success) {
       return { ok: false, error: turnstile.error };
+    }
+
+    // Server-side consent gate
+    try {
+      await assertAllRequiredTermsAgreed({
+        scope: TermsScope.INQUIRY,
+        agreedTermsIds: data.agreedTermsIds,
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        error:
+          error instanceof Error ? error.message : "規約への同意が必要です",
+      };
     }
 
     let customerId: string | null = null;
@@ -76,21 +91,16 @@ export async function submitInquiry(
       });
 
       if (data.agreedTermsIds.length > 0) {
-        fireAndForget(
-          recordTermsAgreementsCommand({
-            termsIds: data.agreedTermsIds,
-            context: TERMS_AGREEMENT_CONTEXT.INQUIRY,
-            resourceId: result.id,
-            customerId,
-            guestEmail: customerId ? null : data.email,
-            ipAddress: clientIp,
-            userAgent: userAgent ?? null,
-          }),
-          {
-            operation: "recordTermsAgreements",
-            category: ErrorCategory.DATABASE,
-          },
-        );
+        // 法務 evidence は await で確実に記録する。
+        await recordTermsAgreementsCommand({
+          termsIds: data.agreedTermsIds,
+          scope: TermsScope.INQUIRY,
+          resourceId: result.id,
+          customerId,
+          guestEmail: customerId ? null : data.email,
+          ipAddress: clientIp,
+          userAgent: userAgent ?? null,
+        });
       }
 
       updateTag(CACHE_TAGS.INQUIRIES);

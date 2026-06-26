@@ -11,6 +11,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
+import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 公開ページ向け規約クエリ
@@ -45,6 +46,13 @@ const PUBLIC_DETAIL_SELECT = {
   updatedAt: true,
 } as const;
 
+const PUBLIC_REQUIRED_SELECT = {
+  id: true,
+  slug: true,
+  title: true,
+  contentHtml: true,
+} as const;
+
 export type PublicTermsListItem = Serialized<{
   id: string;
   type: string;
@@ -65,6 +73,13 @@ export type PublicTermsDetail = Serialized<{
   publishedAt: Date | null;
   updatedAt: Date;
 }>;
+
+export interface RequiredTerm {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly contentHtml: string;
+}
 
 /**
  * 公開: 全公開規約を一覧取得（フッター含む）
@@ -144,11 +159,17 @@ export async function getPublicTermsBySlug(
 }
 
 /**
- * 公開: 予約フォームでの同意必須規約一覧
+ * 公開: 指定 scope で同意必須に設定された規約一覧
+ *
+ * 旧 `getRequiredTermsAtReservation/Inquiry/Signup` 3 関数を統合した SSoT。
+ * `scopes: { has: scope }` で Postgres ARRAY contains を使う。
+ *
+ * 公開 4 経路 (/login signup, /reservation, /contact, /events 申込) はすべて
+ * 本関数を呼び出して required terms を取得する。
  */
-export async function getRequiredTermsAtReservation(): Promise<
-  Array<{ id: string; slug: string; title: string; contentHtml: string }>
-> {
+export async function getRequiredTermsByScope(
+  scope: TermsScope,
+): Promise<RequiredTerm[]> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.TERMS);
@@ -158,73 +179,16 @@ export async function getRequiredTermsAtReservation(): Promise<
       prisma.termsDocument.findMany({
         where: {
           ...PUBLIC_WHERE,
-          requiredAtReservation: true,
+          scopes: { has: scope },
         },
         orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
-        select: { id: true, slug: true, title: true, contentHtml: true },
+        select: PUBLIC_REQUIRED_SELECT,
       }),
     fallback: [],
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: "getRequiredTermsAtReservation",
-  });
-
-  return toPlainArray(result);
-}
-
-/**
- * 公開: お問い合わせフォームでの同意必須規約一覧
- */
-export async function getRequiredTermsAtInquiry(): Promise<
-  Array<{ id: string; slug: string; title: string; contentHtml: string }>
-> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.TERMS);
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.termsDocument.findMany({
-        where: {
-          ...PUBLIC_WHERE,
-          requiredAtInquiry: true,
-        },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
-        select: { id: true, slug: true, title: true, contentHtml: true },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getRequiredTermsAtInquiry",
-  });
-
-  return toPlainArray(result);
-}
-
-/**
- * 公開: 新規登録（サインアップ）での同意必須規約一覧
- */
-export async function getRequiredTermsAtSignup(): Promise<
-  Array<{ id: string; slug: string; title: string; contentHtml: string }>
-> {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.TERMS);
-
-  const result = await safeFetch({
-    fetch: () =>
-      prisma.termsDocument.findMany({
-        where: {
-          ...PUBLIC_WHERE,
-          requiredAtSignup: true,
-        },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
-        select: { id: true, slug: true, title: true, contentHtml: true },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getRequiredTermsAtSignup",
+    operationName: "getRequiredTermsByScope",
+    context: { scope },
   });
 
   return toPlainArray(result);

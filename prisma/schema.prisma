@@ -1460,24 +1460,35 @@ model LoginAttempt {
 // 規約管理（clean-break rebuild）
 // =============================================================================
 
+/// 規約の適用先スコープ。1 規約は複数 scope を持てる (多対多風)。
+/// 公開 4 経路の同意必須を SSoT 制御する。新 scope 追加は ALTER TYPE ADD VALUE のみ。
+/// 旧 requiredAtReservation/Inquiry/Signup 3 boolean は本 enum に統合 (PR: terms-domain overhaul)。
+enum TermsScope {
+  LOGIN_SIGNUP        // /login 社会ログインの新規登録時
+  RESERVATION         // スペース予約フォーム (/reservation step3)
+  INQUIRY             // お問い合わせフォーム (/contact + 各 ContactFormSection)
+  EVENT_REGISTRATION  // イベント申込フォーム (/events/[slug] 申込)
+}
+
 /// 規約マスター（最新版を直接保存。バージョン履歴は同意記録の contentSnapshot で代替）
 model TermsDocument {
-  id                    String    @id @default(uuid()) @db.Uuid
-  type                  String    @db.VarChar(64)         // VARCHAR で柔軟化（旧 TermsType enum 廃止）
-  slug                  String    @unique @db.VarChar(50)
-  title                 String    @db.VarChar(100)
-  contentJson           Json                              // Lexical EditorState
-  contentHtml           String    @db.Text                // SSR / 同意記録 snapshot 用
-  isPublished           Boolean   @default(false)
-  publishedAt           DateTime?
-  requiredAtReservation Boolean   @default(false)
-  requiredAtInquiry     Boolean   @default(false)
-  requiredAtSignup      Boolean   @default(false)
-  showInFooter          Boolean   @default(true)
-  footerOrder           Int       @default(0)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  deletedAt             DateTime?
+  id           String    @id @default(uuid()) @db.Uuid
+  type         String    @db.VarChar(64)         // VARCHAR で柔軟化（旧 TermsType enum 廃止）
+  slug         String    @unique @db.VarChar(50)
+  title        String    @db.VarChar(100)
+  contentJson  Json                              // Lexical EditorState
+  contentHtml  String    @db.Text                // SSR / 同意記録 snapshot 用（保存時 sanitize-html で再生成）
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+  /// 適用 scope 配列。空配列 = フッター掲載専用 (どの consent フォームにも出ない)。
+  scopes       TermsScope[]
+  /// 改訂時の周知文 (民法 548 条の 4 周知義務対応・任意)。
+  changelog    String?   @db.Text
+  showInFooter Boolean   @default(true)
+  footerOrder  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   agreements TermsAgreement[]
 
@@ -1489,17 +1500,18 @@ model TermsDocument {
 
 /// 規約同意記録（証跡）— 同意時の HTML スナップショットを保持しバージョン履歴を兼ねる
 model TermsAgreement {
-  id              String   @id @default(uuid()) @db.Uuid
-  termsId         String   @db.Uuid
-  customerId      String?  @db.Uuid
-  guestEmail      String?  @db.VarChar(255)
-  contentSnapshot String   @db.Text                // 同意時 HTML 完全保存
-  contentHash     String   @db.VarChar(64)         // sha256(contentSnapshot)
-  agreedAt        DateTime @default(now())
-  context         String   @db.VarChar(64)         // "reservation"/"inquiry"/"signup"
-  resourceId      String?  @db.Uuid                // 予約 ID 等
-  ipAddress       String?  @db.VarChar(45)
-  userAgent       String?  @db.Text
+  id              String     @id @default(uuid()) @db.Uuid
+  termsId         String     @db.Uuid
+  customerId      String?    @db.Uuid
+  guestEmail      String?    @db.VarChar(255)
+  contentSnapshot String     @db.Text                // 同意時 HTML 完全保存
+  contentHash     String     @db.VarChar(64)         // sha256(contentSnapshot)
+  agreedAt        DateTime   @default(now())
+  /// 同意が発生した scope (旧 context VARCHAR を enum 化)。
+  scope           TermsScope
+  resourceId      String?    @db.Uuid                // 予約 ID / 問い合わせ ID / イベント申込 ID 等
+  ipAddress       String?    @db.VarChar(45)
+  userAgent       String?    @db.Text
 
   terms    TermsDocument @relation(fields: [termsId], references: [id], onDelete: Restrict)
   customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -1508,7 +1520,7 @@ model TermsAgreement {
   @@index([customerId])
   @@index([resourceId])
   @@index([agreedAt])
-  @@index([context, agreedAt])
+  @@index([scope, agreedAt])
   @@map("terms_agreements")
 }
 

@@ -56,6 +56,7 @@ import {
   type BusinessInfo,
 } from "../src/shared/lib/terms-templates";
 import { type TermsTypeValue } from "../src/shared/lib/validations/terms";
+import { TermsScope } from "../src/shared/lib/validations/enums/prisma-types";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -2363,88 +2364,86 @@ async function seedTerms(overridePublished?: boolean) {
     buildingName: settings?.buildingName ?? null,
   };
 
+  // 新 TermsScope enum 配列に統合 (旧 requiredAt* 3 boolean を廃止)。
+  // 各規約に対応する scopes 配列で適用先 (LOGIN_SIGNUP / RESERVATION /
+  // INQUIRY / EVENT_REGISTRATION) を表現する。空配列はフッター掲載のみ。
   const terms: ReadonlyArray<{
     type: TermsTypeValue;
     slug: string;
     title: string;
-    requiredAtReservation: boolean;
-    requiredAtInquiry: boolean;
-    requiredAtSignup: boolean;
+    scopes: TermsScope[];
     footerOrder: number;
   }> = [
     {
       type: "terms-of-use",
       slug: "terms-of-use",
       title: "利用規約",
-      requiredAtReservation: true,
-      requiredAtInquiry: false,
-      requiredAtSignup: true,
+      // 全フォームで同意必須 (法務の全体規約)
+      scopes: [
+        TermsScope.LOGIN_SIGNUP,
+        TermsScope.RESERVATION,
+        TermsScope.INQUIRY,
+        TermsScope.EVENT_REGISTRATION,
+      ],
       footerOrder: 0,
     },
     {
       type: "privacy-policy",
       slug: "privacy-policy",
       title: "プライバシーポリシー",
-      requiredAtReservation: false,
-      requiredAtInquiry: true,
-      requiredAtSignup: true,
+      // 個人情報を取得する全フォームで同意必須
+      scopes: [
+        TermsScope.LOGIN_SIGNUP,
+        TermsScope.INQUIRY,
+        TermsScope.RESERVATION,
+        TermsScope.EVENT_REGISTRATION,
+      ],
       footerOrder: 1,
     },
     {
       type: "cancellation",
       slug: "cancellation-policy",
       title: "キャンセルポリシー",
-      requiredAtReservation: true,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      // 予約とイベント申込のみ
+      scopes: [TermsScope.RESERVATION, TermsScope.EVENT_REGISTRATION],
       footerOrder: 2,
     },
     {
       type: "commercial-transaction",
       slug: "commercial-transaction",
       title: "特定商取引法に基づく表記",
-      requiredAtReservation: false,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      scopes: [],
       footerOrder: 3,
     },
     // 利用規約 §1 が「本規約の一部を構成する」と明記する個別規約（支払い規約・施設利用規約）、
     // および Cookie ポリシー（外部送信規律）・レビュー投稿ガイドラインを掲載ページ化する。
-    // 同意取得を伴わない情報提供ページのため requiredAt* は false（管理画面で個別に有効化可能）。
+    // 同意取得を伴わない情報提供ページのため scopes 空配列（管理画面で個別に有効化可能）。
     {
       type: "payment",
       slug: "payment-terms",
       title: "支払い規約",
-      requiredAtReservation: false,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      scopes: [],
       footerOrder: 4,
     },
     {
       type: "rental-terms",
       slug: "rental-terms",
       title: "施設利用規約",
-      requiredAtReservation: false,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      scopes: [],
       footerOrder: 5,
     },
     {
       type: "review-guidelines",
       slug: "review-guidelines",
       title: "レビュー投稿ガイドライン",
-      requiredAtReservation: false,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      scopes: [],
       footerOrder: 6,
     },
     {
       type: "cookie-policy",
       slug: "cookie-policy",
       title: "Cookie ポリシー",
-      requiredAtReservation: false,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      scopes: [],
       footerOrder: 7,
     },
   ];
@@ -2470,9 +2469,7 @@ async function seedTerms(overridePublished?: boolean) {
         title: t.title,
         contentJson,
         contentHtml,
-        requiredAtReservation: t.requiredAtReservation,
-        requiredAtInquiry: t.requiredAtInquiry,
-        requiredAtSignup: t.requiredAtSignup,
+        scopes: { set: t.scopes },
         footerOrder: t.footerOrder,
       },
       create: {
@@ -2485,9 +2482,7 @@ async function seedTerms(overridePublished?: boolean) {
         ...(overridePublished === false
           ? { publishedAt: null }
           : { publishedAt: new Date() }),
-        requiredAtReservation: t.requiredAtReservation,
-        requiredAtInquiry: t.requiredAtInquiry,
-        requiredAtSignup: t.requiredAtSignup,
+        scopes: t.scopes,
         showInFooter: true,
         footerOrder: t.footerOrder,
       },

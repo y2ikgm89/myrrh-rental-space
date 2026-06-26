@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
+import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 管理画面向け規約クエリ
@@ -17,9 +18,8 @@ const ADMIN_LIST_SELECT = {
   title: true,
   isPublished: true,
   publishedAt: true,
-  requiredAtReservation: true,
-  requiredAtInquiry: true,
-  requiredAtSignup: true,
+  scopes: true,
+  changelog: true,
   showInFooter: true,
   footerOrder: true,
   createdAt: true,
@@ -37,9 +37,8 @@ const ADMIN_DETAIL_SELECT = {
   contentHtml: true,
   isPublished: true,
   publishedAt: true,
-  requiredAtReservation: true,
-  requiredAtInquiry: true,
-  requiredAtSignup: true,
+  scopes: true,
+  changelog: true,
   showInFooter: true,
   footerOrder: true,
   createdAt: true,
@@ -54,9 +53,8 @@ export type AdminTermsListItem = Serialized<{
   title: string;
   isPublished: boolean;
   publishedAt: Date | null;
-  requiredAtReservation: boolean;
-  requiredAtInquiry: boolean;
-  requiredAtSignup: boolean;
+  scopes: TermsScope[];
+  changelog: string | null;
   showInFooter: boolean;
   footerOrder: number;
   createdAt: Date;
@@ -74,9 +72,8 @@ export type AdminTermsDetail = Serialized<{
   contentHtml: string;
   isPublished: boolean;
   publishedAt: Date | null;
-  requiredAtReservation: boolean;
-  requiredAtInquiry: boolean;
-  requiredAtSignup: boolean;
+  scopes: TermsScope[];
+  changelog: string | null;
   showInFooter: boolean;
   footerOrder: number;
   createdAt: Date;
@@ -153,9 +150,10 @@ const AGREEMENT_LIST_SELECT = {
   guestEmail: true,
   contentHash: true,
   agreedAt: true,
-  context: true,
+  scope: true,
   resourceId: true,
   ipAddress: true,
+  userAgent: true,
   terms: { select: { title: true, slug: true, type: true } },
   customer: {
     select: { id: true, lastName: true, firstName: true, email: true },
@@ -169,9 +167,10 @@ export type AdminAgreementListItem = Serialized<{
   guestEmail: string | null;
   contentHash: string;
   agreedAt: Date;
-  context: string;
+  scope: TermsScope;
   resourceId: string | null;
   ipAddress: string | null;
+  userAgent: string | null;
   terms: { title: string; slug: string; type: string };
   customer: {
     id: string;
@@ -183,8 +182,11 @@ export type AdminAgreementListItem = Serialized<{
 
 export interface AdminAgreementsFilter {
   termsId?: string | undefined;
-  context?: string | undefined;
+  scope?: TermsScope | undefined;
   customerId?: string | undefined;
+  guestEmailKeyword?: string | undefined;
+  agreedAtFrom?: Date | undefined;
+  agreedAtTo?: Date | undefined;
   page?: number | undefined;
   perPage?: number | undefined;
 }
@@ -202,8 +204,22 @@ export async function getAdminAgreements(
 
   const where = {
     ...(filter.termsId !== undefined && { termsId: filter.termsId }),
-    ...(filter.context !== undefined && { context: filter.context }),
+    ...(filter.scope !== undefined && { scope: filter.scope }),
     ...(filter.customerId !== undefined && { customerId: filter.customerId }),
+    ...(filter.guestEmailKeyword !== undefined &&
+      filter.guestEmailKeyword.length > 0 && {
+        guestEmail: {
+          contains: filter.guestEmailKeyword,
+          mode: "insensitive" as const,
+        },
+      }),
+    ...((filter.agreedAtFrom !== undefined ||
+      filter.agreedAtTo !== undefined) && {
+      agreedAt: {
+        ...(filter.agreedAtFrom !== undefined && { gte: filter.agreedAtFrom }),
+        ...(filter.agreedAtTo !== undefined && { lte: filter.agreedAtTo }),
+      },
+    }),
   };
 
   const [items, total] = await Promise.all([

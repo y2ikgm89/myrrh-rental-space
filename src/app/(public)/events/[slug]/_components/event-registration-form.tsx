@@ -24,12 +24,17 @@ import type { publicEventRegistrationSchema } from "@/shared/lib/validations/eve
 import { formatEventPrice } from "@/public/lib/format-event-date";
 import type { EventTicketOption } from "@/shared/domain/events/ticket-types";
 import { cn } from "@/shared/lib/cn";
+import {
+  TermsConsentChecklist,
+  type ConsentTerm,
+} from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
 
 interface EventRegistrationFormProps {
   readonly eventId: string;
   readonly turnstileSiteKey: string | null;
   readonly remainingCapacity: number | null;
   readonly tickets: readonly EventTicketOption[];
+  readonly requiredTerms?: readonly ConsentTerm[];
 }
 
 export function EventRegistrationForm({
@@ -37,13 +42,25 @@ export function EventRegistrationForm({
   turnstileSiteKey,
   remainingCapacity,
   tickets,
+  requiredTerms = [],
 }: EventRegistrationFormProps): ReactElement {
   const [selectedTicketId, setSelectedTicketId] = useState<string>(
     tickets[0]?.id ?? "",
   );
   const [submitted, setSubmitted] = useState(false);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
+  const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
   const turnstileRef = useRef<TurnstileInstance>(null);
+
+  const allTermsAgreed =
+    requiredTerms.length === 0 ||
+    requiredTerms.every((term) => agreedTermsIds.includes(term.id));
+
+  const toggleTermAgreement = (id: string) => {
+    setAgreedTermsIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
 
   const [lastResult, formAction, isPending] = useActionState(
     registerForEvent,
@@ -145,6 +162,14 @@ export function EventRegistrationForm({
           name={fields.turnstileToken.name}
           value={turnstileTokenControl.value ?? ""}
         />
+        {agreedTermsIds.map((id) => (
+          <input
+            key={id}
+            type="hidden"
+            name={fields.agreedTermsIds.name}
+            value={id}
+          />
+        ))}
 
         {tickets.length > 1 && (
           <fieldset className="space-y-3">
@@ -268,6 +293,19 @@ export function EventRegistrationForm({
           onExpire={handleTurnstileExpire}
         />
 
+        {requiredTerms.length > 0 && (
+          <div className="border-t border-border pt-6">
+            <TermsConsentChecklist
+              terms={requiredTerms}
+              agreedIds={agreedTermsIds}
+              onToggle={toggleTermAgreement}
+              disabled={isPending}
+              heading="ご利用規約への同意"
+              variant="flat"
+            />
+          </div>
+        )}
+
         {formErrorMessage !== null && (
           <div
             className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
@@ -277,7 +315,11 @@ export function EventRegistrationForm({
           </div>
         )}
 
-        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+        <Button
+          type="submit"
+          disabled={isPending || !allTermsAgreed}
+          className="w-full sm:w-auto"
+        >
           {isPending ? "送信中..." : "申し込む"}
         </Button>
       </form>

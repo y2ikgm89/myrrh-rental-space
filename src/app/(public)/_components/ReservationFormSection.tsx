@@ -34,7 +34,8 @@ import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
-import { getRequiredTermsAtReservation } from "@/shared/domain/terms/queries";
+import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
@@ -71,7 +72,7 @@ export async function ReservationFormSection({
     getBusinessHoursSettingsQuery(),
     getTurnstileSiteKey(),
     getCurrentCustomerUser(),
-    getRequiredTermsAtReservation(),
+    getRequiredTermsByScope(TermsScope.RESERVATION),
     getReservationRuleSettings(),
     getPublicDiscountSettings(),
   ]);

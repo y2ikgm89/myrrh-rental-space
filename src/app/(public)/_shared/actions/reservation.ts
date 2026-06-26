@@ -31,7 +31,8 @@ import {
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
-import { TERMS_AGREEMENT_CONTEXT } from "@/shared/lib/validations/terms";
+import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -78,6 +79,21 @@ export async function submitReservation(
         };
       }
 
+      // Server-side consent gate — client gate のみは curl bypass 可能なので
+      // ここで必須規約への同意を強制確認する。不足時は DomainError(VALIDATION)。
+      try {
+        await assertAllRequiredTermsAgreed({
+          scope: TermsScope.RESERVATION,
+          agreedTermsIds: data.agreedTermsIds,
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "規約への同意が必要です",
+        };
+      }
+
       const user = await getCurrentCustomerUser();
 
       const clientIp = await getClientIpFromHeaders();
@@ -91,21 +107,17 @@ export async function submitReservation(
         });
 
         if (data.agreedTermsIds.length > 0) {
-          fireAndForget(
-            recordTermsAgreementsCommand({
-              termsIds: data.agreedTermsIds,
-              context: TERMS_AGREEMENT_CONTEXT.RESERVATION,
-              resourceId: result.id,
-              customerId: result.customerId ?? null,
-              guestEmail: user ? null : data.email,
-              ipAddress: clientIp,
-              userAgent: userAgent ?? null,
-            }),
-            {
-              operation: "recordTermsAgreements",
-              category: ErrorCategory.DATABASE,
-            },
-          );
+          // 法務 evidence は await で確実に記録する。fireAndForget だと
+          // recordTermsAgreementsCommand 失敗時に evidence が永久消失する。
+          await recordTermsAgreementsCommand({
+            termsIds: data.agreedTermsIds,
+            scope: TermsScope.RESERVATION,
+            resourceId: result.id,
+            customerId: result.customerId ?? null,
+            guestEmail: user ? null : data.email,
+            ipAddress: clientIp,
+            userAgent: userAgent ?? null,
+          });
         }
 
         invalidateReservationCaches(result.id, result.customerId ?? null, {

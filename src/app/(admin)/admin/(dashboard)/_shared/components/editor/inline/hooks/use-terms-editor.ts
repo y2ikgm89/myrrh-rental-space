@@ -25,6 +25,7 @@ import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexica
 import { getTermsPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -48,9 +49,8 @@ function toSettingsFormData(
       slug: "",
       title: initialTitle ?? "",
       isPublished: false,
-      requiredAtReservation: false,
-      requiredAtInquiry: false,
-      requiredAtSignup: false,
+      scopes: [],
+      changelog: null,
       showInFooter: true,
     };
   }
@@ -60,9 +60,8 @@ function toSettingsFormData(
     slug: terms.slug,
     title: terms.title,
     isPublished: terms.isPublished,
-    requiredAtReservation: terms.requiredAtReservation,
-    requiredAtInquiry: terms.requiredAtInquiry,
-    requiredAtSignup: terms.requiredAtSignup,
+    scopes: terms.scopes,
+    changelog: terms.changelog,
     showInFooter: terms.showInFooter,
   };
 }
@@ -103,17 +102,33 @@ export function useTermsEditor({
   const [typeValue, setTypeValue] = useState<string>(
     terms?.type ?? "terms-of-use",
   );
-  const [requiredAtReservationValue, setRequiredAtReservationValue] =
-    useState<boolean>(terms?.requiredAtReservation ?? false);
-  const [requiredAtInquiryValue, setRequiredAtInquiryValue] = useState<boolean>(
-    terms?.requiredAtInquiry ?? false,
+  const [scopesValue, setScopesValue] = useState<readonly TermsScope[]>(
+    terms?.scopes ?? [],
   );
-  const [requiredAtSignupValue, setRequiredAtSignupValue] = useState<boolean>(
-    terms?.requiredAtSignup ?? false,
+  const [changelogValue, setChangelogValue] = useState<string>(
+    terms?.changelog ?? "",
   );
   const [showInFooterValue, setShowInFooterValue] = useState<boolean>(
     terms?.showInFooter ?? true,
   );
+
+  // settingsForm の外部 state (Select / Checkbox group / Textarea) は dirty を
+  // form.update() 経由で伝搬しているが、初期値と一致する update を一度噛ませた
+  // ケース等で dirty 検知が漏れることがあるため、外部 state ベースの差分も
+  // 集約して isDirty 判定に合流させる。
+  const initialType = terms?.type ?? "terms-of-use";
+  const initialScopes = terms?.scopes ?? [];
+  const initialChangelog = terms?.changelog ?? "";
+  const initialIsPublished = terms?.isPublished ?? false;
+  const initialShowInFooter = terms?.showInFooter ?? true;
+
+  const isExternalDirty =
+    typeValue !== initialType ||
+    JSON.stringify([...scopesValue].sort()) !==
+      JSON.stringify([...initialScopes].sort()) ||
+    changelogValue !== initialChangelog ||
+    isPublishedValue !== initialIsPublished ||
+    showInFooterValue !== initialShowInFooter;
 
   const isBodyDirty = contentJson !== savedContentJson;
 
@@ -130,8 +145,8 @@ export function useTermsEditor({
     shouldRevalidate: "onInput",
   });
 
-  const isSettingsDirty = settingsForm.dirty ?? false;
-  const isDirty = isBodyDirty || isSettingsDirty;
+  const isSettingsDirty = settingsForm.dirty ?? isExternalDirty;
+  const isDirty = isBodyDirty || isSettingsDirty || isExternalDirty;
 
   const core = useEditorCore({ listPath: "/admin/terms" });
 
@@ -153,13 +168,28 @@ export function useTermsEditor({
     for (const [key, field] of Object.entries(settingsFields)) {
       const fieldValue = field.value;
       if (Array.isArray(fieldValue)) {
-        formData.append(key, JSON.stringify(fieldValue));
+        for (const v of fieldValue) {
+          formData.append(key, String(v));
+        }
       } else if (typeof fieldValue === "boolean") {
-        if (fieldValue) formData.append(key, "on");
+        // OFF も明示的に空文字を送ることで preprocess 側の dirty 検知漏れを防ぐ。
+        // booleanFromCheckbox は "on" / true → true, それ以外 → false に正規化する。
+        formData.append(key, fieldValue ? "on" : "");
       } else if (fieldValue != null) {
         formData.append(key, String(fieldValue));
       }
     }
+    // 外部 state (Switch / multi-checkbox / Textarea) を上書き反映。form.update
+    // が dirty 連動しないケースで信頼できる SSoT として外部値を最終的に勝たせる。
+    formData.set("type", typeValue);
+    formData.delete("scopes");
+    for (const s of scopesValue) {
+      formData.append("scopes", String(s));
+    }
+    formData.set("changelog", changelogValue);
+    formData.set("isPublished", isPublishedValue ? "on" : "");
+    formData.set("showInFooter", showInFooterValue ? "on" : "");
+
     const submission = parseWithZod(formData, {
       schema: termsSettingsFormSchema,
     });
@@ -183,9 +213,9 @@ export function useTermsEditor({
     contentJson,
     contentHtml,
     isPublished: Boolean(settingsData.isPublished),
-    requiredAtReservation: Boolean(settingsData.requiredAtReservation),
-    requiredAtInquiry: Boolean(settingsData.requiredAtInquiry),
-    requiredAtSignup: Boolean(settingsData.requiredAtSignup),
+    scopes: [...scopesValue],
+    changelog:
+      changelogValue.trim().length === 0 ? null : changelogValue.trim(),
     showInFooter: Boolean(settingsData.showInFooter),
   });
 
@@ -201,6 +231,10 @@ export function useTermsEditor({
       );
       if (isMutationError(result)) {
         toast.error(result.error);
+        // slug 衝突時は設定ダイアログを開いて編集者が修正できる導線を作る。
+        if (/スラッグ|slug/i.test(result.error)) {
+          setIsSettingsDialogOpen(true);
+        }
         return null;
       }
       return result.id;
@@ -243,6 +277,9 @@ export function useTermsEditor({
         );
         if (isMutationError(result)) {
           toast.error(result.error);
+          if (/スラッグ|slug/i.test(result.error)) {
+            setIsSettingsDialogOpen(true);
+          }
           return;
         }
         setSavedContentJson(contentJson);
@@ -342,11 +379,6 @@ export function useTermsEditor({
 
   // プレビューは Next.js Draft Mode 相当の server-side fetch パターン
   // (preview route が published filter なし + cache なしで未公開データを表示)。
-  // WordPress auto-draft 整合:
-  // - create mode: 入力済み内容を下書き (非公開) として自動保存 → preview → edit へ遷移
-  //   (以降の保存は更新)。title / slug 未入力なら設定ダイアログを開く。
-  // - edit mode: 現在の本文 + 設定を保存 → preview。
-  // 別タブ起動は `openPreviewTab` (anchor.click) で popup blocker + noreferrer を両立。
   const handlePreview = () => {
     if (mode === "create" || !terms) {
       const settingsData = validateSettings();
@@ -415,27 +447,20 @@ export function useTermsEditor({
     });
   };
 
-  const handleRequiredAtReservationChange = (value: boolean) => {
-    setRequiredAtReservationValue(value);
-    settingsForm.update({
-      name: settingsFields.requiredAtReservation.name,
-      value: value ? "on" : "",
-    });
+  const handleScopesChange = (next: readonly TermsScope[]) => {
+    setScopesValue(next);
+    // scopes は外部 state (scopesValue) で SSoT 管理し、validateSettings の
+    // FormData 再構築段階で SetMultiple として送信する。conform `form.update`
+    // は array fields に対する型互換性が string-literal union 配列で破綻する
+    // (DefaultValue<TermsScope[]> != string[]) ため、Checkbox group は外部
+    // state を直接参照し、dirty 検知は isExternalDirty に委ねる。
   };
 
-  const handleRequiredAtInquiryChange = (value: boolean) => {
-    setRequiredAtInquiryValue(value);
+  const handleChangelogChange = (value: string) => {
+    setChangelogValue(value);
     settingsForm.update({
-      name: settingsFields.requiredAtInquiry.name,
-      value: value ? "on" : "",
-    });
-  };
-
-  const handleRequiredAtSignupChange = (value: boolean) => {
-    setRequiredAtSignupValue(value);
-    settingsForm.update({
-      name: settingsFields.requiredAtSignup.name,
-      value: value ? "on" : "",
+      name: settingsFields.changelog.name,
+      value,
     });
   };
 
@@ -460,9 +485,8 @@ export function useTermsEditor({
     contentJson,
     isPublished: isPublishedValue,
     type: typeValue,
-    requiredAtReservation: requiredAtReservationValue,
-    requiredAtInquiry: requiredAtInquiryValue,
-    requiredAtSignup: requiredAtSignupValue,
+    scopes: scopesValue,
+    changelog: changelogValue,
     showInFooter: showInFooterValue,
 
     isSettingsDialogOpen,
@@ -479,9 +503,8 @@ export function useTermsEditor({
     handleContentChange,
     handleIsPublishedChange,
     handleTypeChange,
-    handleRequiredAtReservationChange,
-    handleRequiredAtInquiryChange,
-    handleRequiredAtSignupChange,
+    handleScopesChange,
+    handleChangelogChange,
     handleShowInFooterChange,
 
     isDeleteDialogOpen: core.isDeleteDialogOpen,

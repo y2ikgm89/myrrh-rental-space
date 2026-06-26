@@ -21,6 +21,21 @@ export const publicEventRegistrationSchema = eventRegistrationBaseSchema.extend(
       .max(10, { error: "参加人数は10名以下です" })
       .default(1),
     turnstileToken: z.string().min(1, { error: "セキュリティ検証が必要です" }),
+    /**
+     * 同意済み規約 ID (uuid) 配列。FormData の multiple hidden input から
+     * z.preprocess で normalize する。空配列は許容するが、server-side で
+     * `assertAllRequiredTermsAgreed({scope: EVENT_REGISTRATION})` により
+     * 必須規約への subset 一致を強制する。
+     */
+    agreedTermsIds: z.preprocess(
+      (v) => {
+        if (v === undefined || v === null) return [];
+        if (Array.isArray(v)) return v;
+        if (typeof v === "string") return v.length > 0 ? [v] : [];
+        return v;
+      },
+      z.array(z.uuid({ error: "規約IDが不正です" })).default([]),
+    ),
   },
 );
 

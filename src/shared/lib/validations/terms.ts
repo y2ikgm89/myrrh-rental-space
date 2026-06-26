@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
-import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  LayoutWidth,
+  TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 規約本文のコンテンツ幅（固定）。
@@ -44,13 +47,37 @@ export const TERMS_TYPE_LABELS: Record<string, string> = {
   custom: "カスタム規約",
 };
 
-export const TERMS_AGREEMENT_CONTEXT = {
-  RESERVATION: "reservation",
-  INQUIRY: "inquiry",
-  SIGNUP: "signup",
-} as const;
-export type TermsAgreementContext =
-  (typeof TERMS_AGREEMENT_CONTEXT)[keyof typeof TERMS_AGREEMENT_CONTEXT];
+/**
+ * 規約 scope のラベル/説明文 SSoT。
+ *
+ * 旧 `requiredAtReservation/Inquiry/Signup` 3 boolean を `scopes: TermsScope[]`
+ * 配列に統合した際の UI 用ラベル定義。管理画面の scope multi-select と
+ * 一覧バッジが本定義を参照する。
+ *
+ * description は配線先 URL を明記し編集者が誤配線しないようにする。
+ */
+export const TERMS_SCOPE_VALUES = [
+  TermsScope.LOGIN_SIGNUP,
+  TermsScope.RESERVATION,
+  TermsScope.INQUIRY,
+  TermsScope.EVENT_REGISTRATION,
+] as const;
+
+export const TERMS_SCOPE_LABELS: Record<TermsScope, string> = {
+  [TermsScope.LOGIN_SIGNUP]: "ログイン (社会ログイン新規登録)",
+  [TermsScope.RESERVATION]: "スペース予約フォーム",
+  [TermsScope.INQUIRY]: "お問い合わせフォーム",
+  [TermsScope.EVENT_REGISTRATION]: "イベント申込フォーム",
+};
+
+export const TERMS_SCOPE_DESCRIPTIONS: Record<TermsScope, string> = {
+  [TermsScope.LOGIN_SIGNUP]:
+    "/login で Google / LINE 新規ログイン時にチェック必須",
+  [TermsScope.RESERVATION]: "/reservation の Step3 (お客様情報) でチェック必須",
+  [TermsScope.INQUIRY]: "/contact など contact-form セクションでチェック必須",
+  [TermsScope.EVENT_REGISTRATION]:
+    "/events/[slug] の申込フォームでチェック必須",
+};
 
 const slugSchema = z
   .string()
@@ -73,10 +100,21 @@ const titleSchema = z
   .min(1, { error: "タイトルを入力してください" })
   .max(100, { error: "タイトルは100文字以内です" });
 
+const termsScopeSchema = z.enum(
+  [
+    TermsScope.LOGIN_SIGNUP,
+    TermsScope.RESERVATION,
+    TermsScope.INQUIRY,
+    TermsScope.EVENT_REGISTRATION,
+  ] as const,
+  { error: "不正な scope です" },
+);
+
 /**
  * 規約作成・編集フォームスキーマ
  *
  * `footerOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
+ * `scopes` は重複を許さず TermsScope enum 値のみ受理する。
  */
 export const termsFormSchema = z.object({
   type: typeSchema,
@@ -86,10 +124,12 @@ export const termsFormSchema = z.object({
   /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
   contentHtml: z.string(),
   isPublished: z.boolean(),
-  requiredAtReservation: z.boolean(),
-  requiredAtInquiry: z.boolean(),
-  requiredAtSignup: z.boolean(),
+  /** 同意必須にする scope 配列 (空配列なら consent UI に出さない・フッター掲載のみ可) */
+  scopes: z.array(termsScopeSchema).default([]),
+  /** 改訂時の周知文 (任意・将来 mypage 通知で利用) */
+  changelog: z.string().max(2000).nullable().default(null),
   showInFooter: z.boolean(),
 });
 
 export type TermsFormInput = z.infer<typeof termsFormSchema>;
+export type TermsScopeValue = TermsScope;
