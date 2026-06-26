@@ -50,13 +50,10 @@ import {
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
-import {
-  applyBusinessInfo,
-  getTemplatesForType,
-  type BusinessInfo,
-} from "../src/shared/lib/terms-templates";
-import { type TermsTypeValue } from "../src/shared/lib/validations/terms";
-import { TermsScope } from "../src/shared/lib/validations/enums/prisma-types";
+
+// NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
+// `prisma/migrations/<ts>_terms_initial_data/migration.sql` に SSoT 移管したため撤去済。
+// 規約マスターは `prisma migrate deploy` で投入され、seed.ts は規約を一切扱わない (PR #819)。
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -110,8 +107,12 @@ async function clearAllData() {
     await tx.blockTemplate.deleteMany();
 
     // 予約関連
-    await tx.termsAgreement.deleteMany();
-    await tx.termsDocument.deleteMany();
+    // NOTE: termsDocument / termsAgreement は意図的に deleteMany しない。
+    //   規約マスターは Prisma 公式 Data Migration パターン
+    //   (prisma/migrations/<ts>_terms_initial_data/migration.sql) で SSoT 管理しており、
+    //   seed.ts は規約に一切触れない設計に統一済 (PR #819)。
+    //   完全再初期化が必要な場合は `prisma migrate reset` を使用すること
+    //   (schema drop + 全 migration 再適用で terms_documents も再生成される)。
     await tx.reservation.deleteMany();
 
     // コンテンツ
@@ -2341,155 +2342,14 @@ async function seedPages() {
 }
 
 // =============================================================================
-// Terms (clean-break rebuild — VARCHAR type, single document per type)
+// Terms — Prisma 公式 Data Migration パターンに完全移管済 (PR #819)
+//
+// `prisma/migrations/<ts>_terms_initial_data/migration.sql` が 8 規約の SSoT。
+// `prisma migrate deploy` (CI / 本番デプロイ) で必ず投入されるため seed.ts は
+// 規約に一切触れない設計に統一。`prisma db seed` は dev/test 用と公式で明示
+// されており、initial data の二重管理を物理的に排除した
+// (公式 doc: https://www.prisma.io/docs/orm/prisma-migrate/workflows/data-migration)。
 // =============================================================================
-
-async function seedTerms(overridePublished?: boolean) {
-  const settings = await prisma.settings.findFirst();
-
-  // 法令準拠テンプレート（terms-templates.ts）のプレースホルダー差し込み用事業者情報。
-  // Settings 未設定のフィールドはテンプレート側のプレースホルダーがそのまま残る。
-  const businessInfo: BusinessInfo = {
-    businessName: settings?.businessName ?? "Myrrh Rental Space",
-    representativeName: settings?.representativeName ?? null,
-    registrationNumber: settings?.registrationNumber ?? null,
-    invoiceNumber: settings?.invoiceNumber ?? null,
-    email: settings?.email ?? null,
-    phoneNumber: settings?.phoneNumber ?? null,
-    faxNumber: settings?.faxNumber ?? null,
-    postalCode: settings?.postalCode ?? null,
-    prefecture: settings?.prefecture ?? null,
-    city: settings?.city ?? null,
-    streetAddress: settings?.streetAddress ?? null,
-    buildingName: settings?.buildingName ?? null,
-  };
-
-  // 新 TermsScope enum 配列に統合 (旧 requiredAt* 3 boolean を廃止)。
-  // 各規約に対応する scopes 配列で適用先 (LOGIN_SIGNUP / RESERVATION /
-  // INQUIRY / EVENT_REGISTRATION) を表現する。空配列はフッター掲載のみ。
-  const terms: ReadonlyArray<{
-    type: TermsTypeValue;
-    slug: string;
-    title: string;
-    scopes: TermsScope[];
-    footerOrder: number;
-  }> = [
-    {
-      type: "terms-of-use",
-      slug: "terms-of-use",
-      title: "利用規約",
-      // 全フォームで同意必須 (法務の全体規約)
-      scopes: [
-        TermsScope.LOGIN_SIGNUP,
-        TermsScope.RESERVATION,
-        TermsScope.INQUIRY,
-        TermsScope.EVENT_REGISTRATION,
-      ],
-      footerOrder: 0,
-    },
-    {
-      type: "privacy-policy",
-      slug: "privacy-policy",
-      title: "プライバシーポリシー",
-      // 個人情報を取得する全フォームで同意必須
-      scopes: [
-        TermsScope.LOGIN_SIGNUP,
-        TermsScope.INQUIRY,
-        TermsScope.RESERVATION,
-        TermsScope.EVENT_REGISTRATION,
-      ],
-      footerOrder: 1,
-    },
-    {
-      type: "cancellation",
-      slug: "cancellation-policy",
-      title: "キャンセルポリシー",
-      // 予約とイベント申込のみ
-      scopes: [TermsScope.RESERVATION, TermsScope.EVENT_REGISTRATION],
-      footerOrder: 2,
-    },
-    {
-      type: "commercial-transaction",
-      slug: "commercial-transaction",
-      title: "特定商取引法に基づく表記",
-      scopes: [],
-      footerOrder: 3,
-    },
-    // 利用規約 §1 が「本規約の一部を構成する」と明記する個別規約（支払い規約・施設利用規約）、
-    // および Cookie ポリシー（外部送信規律）・レビュー投稿ガイドラインを掲載ページ化する。
-    // 同意取得を伴わない情報提供ページのため scopes 空配列（管理画面で個別に有効化可能）。
-    {
-      type: "payment",
-      slug: "payment-terms",
-      title: "支払い規約",
-      scopes: [],
-      footerOrder: 4,
-    },
-    {
-      type: "rental-terms",
-      slug: "rental-terms",
-      title: "施設利用規約",
-      scopes: [],
-      footerOrder: 5,
-    },
-    {
-      type: "review-guidelines",
-      slug: "review-guidelines",
-      title: "レビュー投稿ガイドライン",
-      scopes: [],
-      footerOrder: 6,
-    },
-    {
-      type: "cookie-policy",
-      slug: "cookie-policy",
-      title: "Cookie ポリシー",
-      scopes: [],
-      footerOrder: 7,
-    },
-  ];
-
-  for (const t of terms) {
-    const template = getTemplatesForType(t.type)[0];
-    if (!template) {
-      console.warn(`⚠️ Skipped terms (no template): ${t.type}`);
-      continue;
-    }
-    // contentHtml: 法令準拠テンプレートに事業者情報を差し込んだリッチ HTML（公開ページ描画の SSoT）。
-    const contentHtml = applyBusinessInfo(template.content, businessInfo);
-    // contentJson: Lexical エディタ用の段落近似（HTML→Lexical 変換は DOM 依存で client 完結のため、
-    // seed では plain text 段落化で近似する。公開ページは contentHtml を描画するため表示に影響しない）。
-    const contentJson = parsePrismaInputJson(
-      buildParagraphEditorStateJson(stripHtmlToText(contentHtml, 20000)),
-      "seed terms contentJson が不正です",
-    );
-    await prisma.termsDocument.upsert({
-      where: { slug: t.slug },
-      update: {
-        type: t.type,
-        title: t.title,
-        contentJson,
-        contentHtml,
-        scopes: { set: t.scopes },
-        footerOrder: t.footerOrder,
-      },
-      create: {
-        type: t.type,
-        slug: t.slug,
-        title: t.title,
-        contentJson,
-        contentHtml,
-        isPublished: overridePublished ?? true,
-        ...(overridePublished === false
-          ? { publishedAt: null }
-          : { publishedAt: new Date() }),
-        scopes: t.scopes,
-        showInFooter: true,
-        footerOrder: t.footerOrder,
-      },
-    });
-    console.log(`✅ Upserted terms (template-based): ${t.title}`);
-  }
-}
 
 // =============================================================================
 // FAQ
@@ -4353,7 +4213,7 @@ async function seedDev() {
   await seedNews();
   await seedPages();
   await seedFaq();
-  await seedTerms();
+  // 規約は Data Migration (terms_initial_data) で投入済のため seed では何もしない
   await seedBlogTags();
   await seedBlog();
 
@@ -4407,7 +4267,7 @@ async function seedProduction(email: string, password: string, name: string) {
   await seedNews(false);
   await seedPages();
   await seedFaq(false);
-  await seedTerms(false);
+  // 規約は Data Migration (terms_initial_data) で投入済のため seed では何もしない
 
   // Phase 5: サイト設定
   await seedNavigation();
