@@ -61,6 +61,35 @@ const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
   Promise.resolve(0),
 );
 
+// upsertEventFromCalendar が tx 外で呼ぶ prisma.eventTimeSlot.findFirst 用
+const mockEventTimeSlotFindFirst = mock<
+  () => Promise<{ id: string; eventId: string } | null>
+>(() => Promise.resolve(null));
+const mockEventTimeSlotFindMany = mock<
+  () => Promise<{ id: string; registrations: { id: string }[] }[]>
+>(() => Promise.resolve([]));
+const mockEventTimeSlotCreate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "slot-1" }),
+);
+const mockEventTimeSlotUpdate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "slot-1" }),
+);
+const mockEventTimeSlotDelete = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "slot-1" }),
+);
+// firstSlotStartAt / lastSlotEndAt 同期で commands 層が aggregate を呼ぶ
+const mockEventTimeSlotAggregate = mock<
+  () => Promise<{
+    _min: { startAt: Date | null };
+    _max: { endAt: Date | null };
+  }>
+>(() =>
+  Promise.resolve({
+    _min: { startAt: new Date("2026-12-01T10:00:00Z") },
+    _max: { endAt: new Date("2026-12-01T12:00:00Z") },
+  }),
+);
+
 // $transaction interactive callback で tx を渡す mock
 type TxClient = {
   event: {
@@ -77,6 +106,13 @@ type TxClient = {
   eventRegistration: {
     count: typeof mockEventRegistrationCount;
   };
+  eventTimeSlot: {
+    findMany: typeof mockEventTimeSlotFindMany;
+    create: typeof mockEventTimeSlotCreate;
+    update: typeof mockEventTimeSlotUpdate;
+    delete: typeof mockEventTimeSlotDelete;
+    aggregate: typeof mockEventTimeSlotAggregate;
+  };
 };
 const txStub: TxClient = {
   event: { create: mockEventCreate, update: mockEventUpdate },
@@ -88,6 +124,13 @@ const txStub: TxClient = {
     deleteMany: mockEventTicketDeleteMany,
   },
   eventRegistration: { count: mockEventRegistrationCount },
+  eventTimeSlot: {
+    findMany: mockEventTimeSlotFindMany,
+    create: mockEventTimeSlotCreate,
+    update: mockEventTimeSlotUpdate,
+    delete: mockEventTimeSlotDelete,
+    aggregate: mockEventTimeSlotAggregate,
+  },
 };
 const mockTransaction = mock(
   async (callback: (tx: TxClient) => Promise<unknown>) => callback(txStub),
@@ -100,6 +143,9 @@ mock.module("@/shared/db/prisma", () => ({
       findMany: mockEventFindMany,
       create: mockEventCreate,
       update: mockEventUpdate,
+    },
+    eventTimeSlot: {
+      findFirst: mockEventTimeSlotFindFirst,
     },
     $transaction: mockTransaction,
   },
@@ -180,10 +226,14 @@ const VALID_EVENT_INPUT = {
   descriptionPlainText: "テストの説明",
   thumbnailUrl: null,
   gallery: [] as const,
-  startTime: "2024-06-15T10:00:00Z",
-  endTime: "2024-06-15T12:00:00Z",
+  slots: [
+    {
+      startAt: new Date("2024-06-15T10:00:00Z"),
+      endAt: new Date("2024-06-15T12:00:00Z"),
+      capacity: 30,
+    },
+  ],
   registrationDeadline: null,
-  capacity: 30,
   tickets: [
     {
       name: "一般",
@@ -360,8 +410,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.DRAFT,
-        startTime: new Date("2024-06-15T10:00:00Z"),
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -375,7 +424,8 @@ describe("updateEventCommand", () => {
 
       await updateEventCommand("event-1", VALID_EVENT_INPUT);
 
-      expect(mockEventUpdate).toHaveBeenCalledTimes(1);
+      // 1 回目 = event 本体更新、2 回目 = firstSlotStartAt/lastSlotEndAt 同期
+      expect(mockEventUpdate).toHaveBeenCalledTimes(2);
     });
 
     test("スラッグが変更された場合、ensureUniqueSlug が呼ばれる", async () => {
@@ -383,8 +433,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "old-slug",
         status: EventStatus.DRAFT,
-        startTime: new Date("2024-06-15T10:00:00Z"),
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -411,8 +460,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.DRAFT,
-        startTime: new Date("2024-06-15T10:00:00Z"),
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -435,8 +483,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.DRAFT,
-        startTime: new Date("2024-06-15T10:00:00Z"),
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -464,8 +511,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.PUBLISHED,
-        startTime: new Date("2024-06-15T10:00:00Z"), // 変更前
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -477,8 +523,14 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        startTime: "2024-06-16T10:00:00Z", // 日時変更
-        endTime: "2024-06-16T12:00:00Z",
+        // 新規スロット（id なし）= 変更ありとみなされ通知トリガー
+        slots: [
+          {
+            startAt: new Date("2024-06-16T10:00:00Z"),
+            endAt: new Date("2024-06-16T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
@@ -489,8 +541,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.PUBLISHED,
-        startTime: new Date("2024-06-15T10:00:00Z"),
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -502,9 +553,15 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        // 同じ日時・会場
-        startTime: "2024-06-15T10:00:00Z",
-        endTime: "2024-06-15T12:00:00Z",
+        // 既存スロット（id あり = 変更なしとみなされ通知スキップ）+ 同じ会場
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
         addressDetail: "東京都渋谷区",
       });
 
@@ -516,8 +573,7 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.PUBLISHED,
-        startTime: new Date("2024-06-15T10:00:00Z"),
-        endTime: new Date("2024-06-15T12:00:00Z"),
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -841,10 +897,19 @@ describe("duplicateEventCommand", () => {
     descriptionPlainText: "本文",
     thumbnailUrl: "https://example.com/thumb.jpg",
     gallery: [],
-    startTime: new Date("2024-06-15T10:00:00Z"),
-    endTime: new Date("2024-06-15T12:00:00Z"),
+    ogpImageUrl: null,
+    ogpTitle: null,
+    ogpDescription: null,
+    metaDescription: null,
+    metaKeywords: null,
     registrationDeadline: new Date("2024-06-14T23:59:00Z"),
-    capacity: 30,
+    slots: [
+      {
+        startAt: new Date("2024-06-15T10:00:00Z"),
+        endAt: new Date("2024-06-15T12:00:00Z"),
+        capacity: 30,
+      },
+    ],
     tickets: [
       {
         name: "一般",
@@ -890,7 +955,6 @@ describe("duplicateEventCommand", () => {
           data: expect.objectContaining({
             status: EventStatus.DRAFT,
             publishedAt: null,
-            googleCalendarEventId: null,
             slug: "original-event-copy",
             title: "オリジナルイベント（コピー）",
           }),
@@ -898,7 +962,7 @@ describe("duplicateEventCommand", () => {
       );
     });
 
-    test("本文・サムネイル・日時・会場・定員・料金・申込締切が全て複製される", async () => {
+    test("本文・サムネイル・会場・申込締切が複製される（日時・定員はスロット側で複製）", async () => {
       mockEventFindFirst
         .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
         .mockImplementationOnce(() => Promise.resolve(null));
@@ -912,10 +976,7 @@ describe("duplicateEventCommand", () => {
             descriptionHtml: SOURCE_EVENT.descriptionHtml,
             descriptionPlainText: SOURCE_EVENT.descriptionPlainText,
             thumbnailUrl: SOURCE_EVENT.thumbnailUrl,
-            startTime: SOURCE_EVENT.startTime,
-            endTime: SOURCE_EVENT.endTime,
             registrationDeadline: SOURCE_EVENT.registrationDeadline,
-            capacity: SOURCE_EVENT.capacity,
             addressDetail: SOURCE_EVENT.addressDetail,
           }),
         }),
@@ -949,20 +1010,6 @@ describe("duplicateEventCommand", () => {
       expect(mockEventCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: EventStatus.DRAFT }),
-        }),
-      );
-    });
-
-    test("googleCalendarEventId は必ず null になる（unique 制約衝突防止）", async () => {
-      mockEventFindFirst
-        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
-        .mockImplementationOnce(() => Promise.resolve(null));
-
-      await duplicateEventCommand("source-event-id");
-
-      expect(mockEventCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ googleCalendarEventId: null }),
         }),
       );
     });
@@ -1039,7 +1086,9 @@ describe("upsertEventFromCalendar", () => {
     mockEventFindMany.mockClear();
     mockEventCreate.mockClear();
     mockEventUpdate.mockClear();
+    mockEventTimeSlotFindFirst.mockClear();
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
+    mockEventTimeSlotFindFirst.mockImplementation(() => Promise.resolve(null));
   });
 
   const CALENDAR_INPUT = {
@@ -1052,9 +1101,9 @@ describe("upsertEventFromCalendar", () => {
   };
 
   describe("正常系", () => {
-    test("既存イベント（googleCalendarEventId 一致）を更新し action: updated を返す", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({ id: "event-1" }),
+    test("既存スロット（googleCalendarEventId 一致）を更新し action: updated を返す", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
       );
       mockEventUpdate.mockImplementation(() =>
         Promise.resolve({ id: "event-1" }),
@@ -1063,12 +1112,15 @@ describe("upsertEventFromCalendar", () => {
       const result = await upsertEventFromCalendar(CALENDAR_INPUT);
 
       expect(result).toMatchObject({ id: "event-1", action: "updated" });
-      expect(mockEventUpdate).toHaveBeenCalledTimes(1);
+      // 1 回目 = event 本体更新、2 回目 = firstSlotStartAt/lastSlotEndAt 同期
+      expect(mockEventUpdate).toHaveBeenCalledTimes(2);
       expect(mockEventCreate).not.toHaveBeenCalled();
     });
 
-    test("既存イベントがない場合、新規作成し action: created を返す", async () => {
-      // 1回目: findFirst（既存チェック）→ null、2回目: findFirst（ensureUniqueSlug）→ null
+    test("既存スロットがない場合、新規作成し action: created を返す", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve(null),
+      );
       mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
       mockEventCreate.mockImplementation(() =>
         Promise.resolve({ id: "event-new" }),
@@ -1081,6 +1133,9 @@ describe("upsertEventFromCalendar", () => {
     });
 
     test("新規作成時にステータスが DRAFT になる", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve(null),
+      );
       mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
       mockEventCreate.mockImplementation(() =>
         Promise.resolve({ id: "event-new" }),
@@ -1092,22 +1147,26 @@ describe("upsertEventFromCalendar", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             status: EventStatus.DRAFT,
-            googleCalendarEventId: "gcal-event-1",
+            firstSlotStartAt: CALENDAR_INPUT.startTime,
+            lastSlotEndAt: CALENDAR_INPUT.endTime,
           }),
         }),
       );
     });
 
-    test("既存イベントの更新に正しいフィールドが渡される", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({ id: "event-1" }),
+    test("既存スロット紐づきの event 更新に正しいフィールドが渡される", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
       );
 
       await upsertEventFromCalendar(CALENDAR_INPUT);
 
       expect(mockEventUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ id: "event-1", deletedAt: null }),
+          where: expect.objectContaining({
+            id: "event-1",
+            deletedAt: null,
+          }),
           data: expect.objectContaining({
             title: "Google Calendar Event",
             // Google Calendar の location 文字列は addressDetail に格納される
@@ -1118,6 +1177,9 @@ describe("upsertEventFromCalendar", () => {
     });
 
     test("description が null の場合も作成できる", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve(null),
+      );
       mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
       mockEventCreate.mockImplementation(() =>
         Promise.resolve({ id: "event-new" }),

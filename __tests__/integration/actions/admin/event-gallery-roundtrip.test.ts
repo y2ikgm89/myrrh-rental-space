@@ -87,6 +87,17 @@ mock.module("@/shared/db/prisma", () => ({
         eventTicket: {
           createMany: mock(() => Promise.resolve({ count: 0 })),
           deleteMany: mock(() => Promise.resolve({ count: 0 })),
+          findMany: mock(() => Promise.resolve([])),
+          update: mock(() => Promise.resolve({ id: "ticket-1" })),
+        },
+        eventTimeSlot: {
+          findMany: mock(() => Promise.resolve([])),
+          create: mock(() => Promise.resolve({ id: "slot-1" })),
+          update: mock(() => Promise.resolve({ id: "slot-1" })),
+          delete: mock(() => Promise.resolve({ id: "slot-1" })),
+          aggregate: mock(() =>
+            Promise.resolve({ _min: { startAt: null }, _max: { endAt: null } }),
+          ),
         },
       };
       return fn(tx);
@@ -129,8 +140,13 @@ const BASE_INPUT = {
   descriptionHtml: "<p>test</p>",
   descriptionPlainText: "test",
   gallery: GALLERY,
-  startTime: "2026-07-01T10:00",
-  endTime: "2026-07-01T12:00",
+  slots: [
+    {
+      startAt: new Date("2026-07-01T01:00:00.000Z"),
+      endAt: new Date("2026-07-01T03:00:00.000Z"),
+      capacity: 10,
+    },
+  ] as const,
   status: EventStatus.DRAFT,
 } as const;
 
@@ -157,6 +173,7 @@ const SOURCE_EVENT = {
   registrationDeadline: null,
   capacity: null,
   registrationOpen: false,
+  slots: [],
   tickets: [],
 };
 
@@ -210,7 +227,8 @@ describe("Event gallery round-trip", () => {
 
     await updateEventCommand("evt-id", BASE_INPUT);
 
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    // syncEventTimeSlotsCommand も tx.event.update を呼ぶため合計2回
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
     const callArg = mockUpdate.mock.calls[0]?.[0] as
       | { data: Record<string, unknown> }
       | undefined;

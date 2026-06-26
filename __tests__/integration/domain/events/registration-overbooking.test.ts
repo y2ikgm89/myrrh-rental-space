@@ -47,11 +47,11 @@ let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createEventRegistrationCommand: CommandsModule["createEventRegistrationCommand"];
 
-/** capacity を指定して PUBLISHED イベント + 受付中チケットを 1 件作る。 */
+/** capacity を指定して PUBLISHED イベント + タイムスロット + 受付中チケットを 1 件作る。 */
 async function createTestEvent(opts: {
   eventCapacity: number | null;
   ticketCapacity: number | null;
-}): Promise<{ eventId: string; ticketId: string }> {
+}): Promise<{ eventId: string; ticketId: string; slotId: string }> {
   const suffix = crypto.randomUUID();
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const end = new Date(Date.now() + 26 * 60 * 60 * 1000);
@@ -63,11 +63,23 @@ async function createTestEvent(opts: {
       descriptionJson: { type: "doc" },
       descriptionHtml: "<p>test</p>",
       descriptionPlainText: "test",
-      startTime: start,
-      endTime: end,
-      capacity: opts.eventCapacity,
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
+      // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
+      firstSlotStartAt: start,
+      lastSlotEndAt: end,
+    },
+    select: { id: true },
+  });
+
+  // スロット定員: eventCapacity を使う場合はその値、ticketCapacity 専用なら大きな数
+  const slotCapacity = opts.eventCapacity ?? 1000;
+  const slot = await prisma.eventTimeSlot.create({
+    data: {
+      eventId: event.id,
+      startAt: start,
+      endAt: end,
+      capacity: slotCapacity,
     },
     select: { id: true },
   });
@@ -83,7 +95,7 @@ async function createTestEvent(opts: {
     select: { id: true },
   });
 
-  return { eventId: event.id, ticketId: ticket.id };
+  return { eventId: event.id, ticketId: ticket.id, slotId: slot.id };
 }
 
 /** テストイベントとその子レコードを削除する（restrict 回避のため順序固定）。 */
@@ -93,16 +105,18 @@ async function cleanupEvent(eventId: string): Promise<void> {
   await prisma.event.deleteMany({ where: { id: eventId } });
 }
 
-/** 同一イベント・同一チケットに quantity=1 の申込を N 並行で投げる。 */
+/** 同一イベント・同一スロット・同一チケットに quantity=1 の申込を N 並行で投げる。 */
 async function registerConcurrently(
   eventId: string,
   ticketId: string,
+  slotId: string,
   count: number,
 ): Promise<PromiseSettledResult<unknown>[]> {
   return Promise.allSettled(
     Array.from({ length: count }, (_unused, i) =>
       createEventRegistrationCommand({
         eventId,
+        slotId,
         ticketId,
         name: `テスト太郎${String(i)}`,
         email: `overbooking-${String(i)}@example.com`,
@@ -138,7 +152,12 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
       eventCapacity: null,
       ticketCapacity: null,
     });
-    await registerConcurrently(warmup.eventId, warmup.ticketId, CONCURRENCY);
+    await registerConcurrently(
+      warmup.eventId,
+      warmup.ticketId,
+      warmup.slotId,
+      CONCURRENCY,
+    );
     await cleanupEvent(warmup.eventId);
   });
 
@@ -148,7 +167,7 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
   });
 
   test("event.capacity=1 に 5 並行申込しても CONFIRMED 合計は capacity を超えない", async () => {
-    const { eventId, ticketId } = await createTestEvent({
+    const { eventId, ticketId, slotId } = await createTestEvent({
       eventCapacity: 1,
       ticketCapacity: null,
     });
@@ -157,6 +176,7 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
       const results = await registerConcurrently(
         eventId,
         ticketId,
+        slotId,
         CONCURRENCY,
       );
 
@@ -174,7 +194,7 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
   }, 30_000);
 
   test("ticket.capacity=1 に 5 並行申込しても CONFIRMED 合計は capacity を超えない", async () => {
-    const { eventId, ticketId } = await createTestEvent({
+    const { eventId, ticketId, slotId } = await createTestEvent({
       eventCapacity: null,
       ticketCapacity: 1,
     });
@@ -183,6 +203,7 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
       const results = await registerConcurrently(
         eventId,
         ticketId,
+        slotId,
         CONCURRENCY,
       );
 

@@ -30,11 +30,18 @@ type Ticket = {
   price: number;
 };
 
+type SlotInfo = {
+  id: string;
+  startAt: string;
+  endAt: string;
+};
+
 type Props = {
   readonly eventId: string;
   readonly initialAttendees: Attendee[];
   readonly initialAttendedCount: number;
   readonly tickets: Ticket[];
+  readonly slots: SlotInfo[];
 };
 
 export function CheckInClient({
@@ -42,6 +49,7 @@ export function CheckInClient({
   initialAttendees,
   initialAttendedCount,
   tickets,
+  slots,
 }: Props) {
   const router = useRouter();
   const [attendees, setAttendees] = useState<Attendee[]>(initialAttendees);
@@ -209,6 +217,7 @@ export function CheckInClient({
         onOpenChange={setWalkInOpen}
         eventId={eventId}
         tickets={tickets}
+        slots={slots}
         onSuccess={handleWalkInSuccess}
         action={createWalkInRegistration}
       />

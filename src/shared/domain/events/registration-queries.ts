@@ -117,12 +117,14 @@ export async function getEventDetailsForEmail(eventId: string): Promise<{
   const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
     select: {
-      startTime: true,
-      endTime: true,
       addressDetail: true,
-      capacity: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
+      slots: {
+        select: { startAt: true, endAt: true, capacity: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
       _count: {
         select: {
           registrations: {
@@ -133,15 +135,16 @@ export async function getEventDetailsForEmail(eventId: string): Promise<{
     },
   });
   if (!event) return null;
+  const firstSlot = event.slots[0];
   return {
-    startTime: event.startTime,
-    endTime: event.endTime,
+    startTime: firstSlot?.startAt ?? new Date(0),
+    endTime: firstSlot?.endAt ?? new Date(0),
     location: formatEventVenue({
       location: event.location,
       space: event.space,
       addressDetail: event.addressDetail,
     }),
-    capacity: event.capacity,
+    capacity: firstSlot?.capacity ?? null,
     confirmedCount: event._count.registrations,
   };
 }
@@ -152,13 +155,17 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
   status: true,
   cancelledAt: true,
   createdAt: true,
+  slot: {
+    select: {
+      startAt: true,
+      endAt: true,
+    },
+  },
   event: {
     select: {
       id: true,
       title: true,
       slug: true,
-      startTime: true,
-      endTime: true,
       addressDetail: true,
       status: true,
       location: { select: { name: true } },
@@ -173,12 +180,14 @@ type CustomerEventRegistrationRow = {
   readonly status: RegistrationStatus;
   readonly cancelledAt: Date | null;
   readonly createdAt: Date;
+  readonly slot: {
+    readonly startAt: Date;
+    readonly endAt: Date;
+  } | null;
   readonly event: {
     readonly id: string;
     readonly title: string;
     readonly slug: string;
-    readonly startTime: Date;
-    readonly endTime: Date;
     readonly addressDetail: string | null;
     readonly status: string;
     readonly location: { readonly name: string } | null;
@@ -197,8 +206,8 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
       id: row.event.id,
       title: row.event.title,
       slug: row.event.slug,
-      startTime: row.event.startTime,
-      endTime: row.event.endTime,
+      startTime: row.slot?.startAt ?? new Date(0),
+      endTime: row.slot?.endAt ?? new Date(0),
       status: row.event.status,
       location: formatEventVenue({
         location: row.event.location,
@@ -212,8 +221,8 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
 /**
  * 顧客のイベント申込を「これから / 過去」に分けて取得する。
  *
- * - active: CONFIRMED かつ event.endTime > now（開始日時の近い順）
- * - past: CANCELLED または event.endTime <= now（直近に終わった順）
+ * - active: CONFIRMED かつスロット終了時刻 > now（開始日時の近い順）
+ * - past: CANCELLED またはスロット終了時刻 <= now（直近に終わった順）
  *
  * 時刻判定をドメイン層で完結させることで、呼び出し側 (RSC) は `Date.now()` を
  * render 中に呼ばずに済む（React Compiler purity rule 準拠）。
@@ -232,9 +241,10 @@ export async function getCustomerEventRegistrations(
       where: {
         customerId,
         status: RegistrationStatus.CONFIRMED,
-        event: { ...baseEventWhere, endTime: { gt: now } },
+        event: baseEventWhere,
+        slot: { endAt: { gt: now } },
       },
-      orderBy: { event: { startTime: "asc" } },
+      orderBy: { slot: { startAt: "asc" } },
       select: CUSTOMER_EVENT_REGISTRATION_SELECT,
     }),
     prisma.eventRegistration.findMany({
@@ -243,10 +253,10 @@ export async function getCustomerEventRegistrations(
         event: baseEventWhere,
         OR: [
           { status: RegistrationStatus.CANCELLED },
-          { event: { ...baseEventWhere, endTime: { lte: now } } },
+          { slot: { endAt: { lte: now } } },
         ],
       },
-      orderBy: { event: { startTime: "desc" } },
+      orderBy: { slot: { startAt: "desc" } },
       select: CUSTOMER_EVENT_REGISTRATION_SELECT,
     }),
   ]);
@@ -292,11 +302,12 @@ export async function getEventRegistrationForCalendar(params: {
       quantity: true,
       icsSequence: true,
       status: true,
+      slot: {
+        select: { startAt: true, endAt: true },
+      },
       event: {
         select: {
           title: true,
-          startTime: true,
-          endTime: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -309,8 +320,8 @@ export async function getEventRegistrationForCalendar(params: {
     id: reg.id,
     eventTitle: reg.event.title,
     customerName: reg.name,
-    startTime: reg.event.startTime,
-    endTime: reg.event.endTime,
+    startTime: reg.slot?.startAt ?? new Date(0),
+    endTime: reg.slot?.endAt ?? new Date(0),
     location: formatEventVenue({
       location: reg.event.location,
       space: reg.event.space,

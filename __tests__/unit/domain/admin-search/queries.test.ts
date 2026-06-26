@@ -163,13 +163,13 @@ describe("searchByResource", () => {
     );
   });
 
-  test("event: deletedAt: null で soft delete を除外 + startTime を YYYY-MM-DD で description 化", async () => {
+  test("event: deletedAt: null で soft delete を除外 + 最初のスロット startAt を YYYY-MM-DD で description 化", async () => {
     mockEventFindMany.mockResolvedValueOnce([
       {
         id: "e1",
         title: "Test Event",
         slug: "test",
-        startTime: new Date("2025-06-15T10:00:00Z"),
+        slots: [{ startAt: new Date("2025-06-15T10:00:00Z") }],
       },
     ]);
 

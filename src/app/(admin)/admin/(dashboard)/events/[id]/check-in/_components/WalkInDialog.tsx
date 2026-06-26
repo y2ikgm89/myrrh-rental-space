@@ -24,11 +24,19 @@ type Ticket = {
   price: number;
 };
 
+type SlotInfo = {
+  id: string;
+  /** ISO 8601 文字列（Date を page 側でシリアライズ） */
+  startAt: string;
+  endAt: string;
+};
+
 type Props = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly eventId: string;
   readonly tickets: Ticket[];
+  readonly slots: SlotInfo[];
   readonly onSuccess: () => void;
   readonly action: (
     input: WalkInRegistrationInput,
@@ -37,16 +45,37 @@ type Props = {
   >;
 };
 
+function formatSlotLabel(startAt: string, endAt: string): string {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  const dateLabel = start.toLocaleDateString("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+  });
+  const startTime = start.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const endTime = end.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${dateLabel} ${startTime}〜${endTime}`;
+}
+
 export function WalkInDialog({
   open,
   onOpenChange,
   eventId,
   tickets,
+  slots,
   onSuccess,
   action,
 }: Props) {
   const firstTicketId = tickets[0]?.id ?? "";
+  const firstSlotId = slots[0]?.id ?? "";
   const [ticketId, setTicketId] = useState<string>(firstTicketId);
+  const [slotId, setSlotId] = useState<string>(firstSlotId);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -56,6 +85,7 @@ export function WalkInDialog({
 
   function reset() {
     setTicketId(firstTicketId);
+    setSlotId(firstSlotId);
     setName("");
     setEmail("");
     setPhone("");
@@ -70,6 +100,10 @@ export function WalkInDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!slotId) {
+      toast.error("タイムスロットを選択してください");
+      return;
+    }
     if (!ticketId) {
       toast.error("チケット種別を選択してください");
       return;
@@ -81,6 +115,7 @@ export function WalkInDialog({
     startTransition(async () => {
       const result = await action({
         eventId,
+        slotId,
         ticketId,
         name: name.trim(),
         email: email.trim() || undefined,
@@ -97,16 +132,17 @@ export function WalkInDialog({
     });
   }
 
-  if (tickets.length === 0) {
+  if (tickets.length === 0 || slots.length === 0) {
+    const reason =
+      tickets.length === 0
+        ? "先にイベント編集画面でチケットを設定してください。"
+        : "先にイベント編集画面でタイムスロットを設定してください。";
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>当日参加を受け付けられません</DialogTitle>
-            <DialogDescription>
-              このイベントには有効なチケット種別がありません。
-              先にイベント編集画面でチケットを設定してください。
-            </DialogDescription>
+            <DialogDescription>{reason}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => handleOpenChange(false)}>
@@ -128,6 +164,38 @@ export function WalkInDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* スロット選択 */}
+          {slots.length > 1 && (
+            <div className="space-y-2">
+              <Label>タイムスロット</Label>
+              <div
+                role="radiogroup"
+                aria-label="タイムスロット"
+                className="flex flex-wrap gap-2"
+              >
+                {slots.map((s) => {
+                  const selected = slotId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setSlotId(s.id)}
+                      className={
+                        selected
+                          ? "rounded-md border-2 border-primary bg-primary/10 px-3 py-2 text-sm font-medium"
+                          : "rounded-md border-2 border-muted-foreground/30 bg-background px-3 py-2 text-sm hover:border-muted-foreground/60"
+                      }
+                    >
+                      {formatSlotLabel(s.startAt, s.endAt)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* チケット選択 */}
           {tickets.length > 1 && (
             <div className="space-y-2">

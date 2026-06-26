@@ -112,7 +112,7 @@ export async function searchLinkCardCandidates(params: {
           ...(titleContains && { title: titleContains }),
         },
         select: { id: true, title: true, thumbnailUrl: true },
-        orderBy: { startTime: "desc" },
+        orderBy: { createdAt: "desc" },
         take: limit,
       });
       return toPlainArray(

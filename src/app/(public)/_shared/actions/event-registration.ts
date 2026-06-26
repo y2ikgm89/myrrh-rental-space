@@ -96,6 +96,7 @@ export async function registerForEvent(
       try {
         const result = await createEventRegistrationCommand({
           eventId: data.eventId,
+          slotId: data.slotId,
           ticketId: data.ticketId,
           name: data.name,
           email: data.email,

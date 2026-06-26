@@ -50,6 +50,12 @@ export default async function CheckInPage({ params }: PageProps) {
       price: t.price,
     }));
 
+  const slots = event.slots.map((s) => ({
+    id: s.id,
+    startAt: s.startAt.toISOString(),
+    endAt: s.endAt.toISOString(),
+  }));
+
   return (
     <AdminDetailLayout
       backHref={`/admin/events/${event.id}`}
@@ -69,6 +75,7 @@ export default async function CheckInPage({ params }: PageProps) {
         initialAttendees={initialAttendees}
         initialAttendedCount={attendees.attendedCount}
         tickets={tickets}
+        slots={slots}
       />
     </AdminDetailLayout>
   );

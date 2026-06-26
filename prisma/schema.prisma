@@ -1629,6 +1629,34 @@ model SpaceReview {
 
 
 // ==============================================
+// Event Time Slot Model (イベントタイムスロット)
+// ==============================================
+
+/// イベントの時間枠（例: 9:00-10:00 定員5名）。
+/// 1 イベント = 複数スロット。スロット単位で申込・定員・GCal を管理する。
+/// startAt / endAt は Timestamptz(6) で UTC 保存、JST 表示は date-format.ts SSoT。
+/// capacity は NOT NULL — スロット単位の定員が SSoT。
+/// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの cuid とは別）。
+model EventTimeSlot {
+  id                    String    @id @default(cuid(2)) @db.VarChar(30)
+  eventId               String    @db.VarChar(30)
+  startAt               DateTime  @db.Timestamptz(6)
+  endAt                 DateTime  @db.Timestamptz(6)
+  capacity              Int
+  googleCalendarEventId String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations EventRegistration[]
+
+  /// 同一イベントで同時刻スロット二重登録を防ぐ
+  @@unique([eventId, startAt])
+  @@index([eventId, startAt])
+  @@map("event_time_slots")
+}
+
+// ==============================================
 // Event Model (イベント)
 // ==============================================
 
@@ -1648,9 +1676,6 @@ model Event {
   ogpDescription        String?
   metaDescription       String?     @db.Text
   metaKeywords          String?
-  startTime             DateTime
-  endTime               DateTime
-  capacity              Int?
   /// 号室・フロア・補足情報または外部会場名。
   /// locationId/spaceId と併用時は補足情報（フロア・入口案内等）、
   /// 両方 null のときは外部会場名として使う。
@@ -1661,9 +1686,8 @@ model Event {
   spaceId               String?     @db.Uuid
   status                EventStatus @default(DRAFT)
   registrationOpen      Boolean     @default(true)
-  /// 申込締切日時（null = 開始時刻まで受付）。startTime <= 必須。
+  /// 申込締切日時（null = 最初のスロット開始時刻まで受付）。スロット startAt 以前必須。
   registrationDeadline  DateTime?
-  googleCalendarEventId String?     @unique
   publishedAt           DateTime?
   deletedAt             DateTime?
   deletedById           String?     @db.Uuid
@@ -1671,18 +1695,26 @@ model Event {
   gallery               Json        @default("[]")
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
+  /// MIN(slots.startAt) の非正規化キャッシュ。スロット変更時に commands 層で同期。
+  /// null = スロット未登録。ORDER BY / フィルタ用途に特化。slots.startAt と型を合わせ TIMESTAMPTZ(6)。
+  firstSlotStartAt      DateTime?   @db.Timestamptz(6)
+  /// MAX(slots.endAt) の非正規化キャッシュ。firstSlotStartAt と対称。
+  /// 「終了が遅い順」ソート (past タブ既定) を semantic に支える。
+  lastSlotEndAt         DateTime?   @db.Timestamptz(6)
 
   location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
   deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
   tickets       EventTicket[]
+  slots         EventTimeSlot[]
 
-  @@index([startTime, endTime])
   @@index([status])
   @@index([locationId])
   @@index([spaceId])
   @@index([deletedAt])
+  @@index([firstSlotStartAt])
+  @@index([lastSlotEndAt])
   @@map("events")
 }
 
@@ -1719,6 +1751,9 @@ model EventTicket {
 model EventRegistration {
   id          String             @id @default(cuid()) @db.VarChar(30)
   eventId     String             @db.VarChar(30)
+  /// 申込対象タイムスロット（バックフィル後 NOT NULL 化予定）。
+  /// null = バックフィル前の既存レコードのみ。新規申込は必須。
+  slotId      String?            @db.VarChar(30)
   ticketId    String             @db.VarChar(30)
   name        String             @db.VarChar(100)
   // 公開申込では必須・walk-in (当日参加) では任意のため nullable
@@ -1737,11 +1772,14 @@ model EventRegistration {
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
 
-  event    Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  ticket   EventTicket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
-  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  slot     EventTimeSlot? @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  ticket   EventTicket    @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  customer Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
+  @@index([slotId])
+  @@index([slotId, status])
   @@index([ticketId])
   @@index([customerId])
   @@index([status])

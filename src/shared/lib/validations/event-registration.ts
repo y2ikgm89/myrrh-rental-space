@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const eventRegistrationBaseSchema = z.object({
   eventId: z.uuid({ error: "イベントIDは必須です" }),
+  slotId: z.string().min(1, { error: "タイムスロットは必須です" }),
   ticketId: z.string().min(1, { error: "チケット種別は必須です" }),
   name: z
     .string()

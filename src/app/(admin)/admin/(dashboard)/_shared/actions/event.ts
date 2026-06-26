@@ -72,17 +72,20 @@ function buildEventCommandInput(data: EventFormData) {
     descriptionJson: _dropJson,
     descriptionHtml: _dropHtml,
     tickets: rawTickets,
+    slots: rawSlots,
     ...rest
   } = data;
   void _dropJson;
   void _dropHtml;
   const tickets = rawTickets.map((t) => omitUndefined(t));
+  const slots = rawSlots.map((s) => omitUndefined(s));
   return omitUndefined({
     ...rest,
     descriptionJson,
     descriptionHtml,
     descriptionPlainText,
     tickets,
+    slots,
   });
 }
 
@@ -241,7 +244,9 @@ export async function deleteEvent(
       const event = await getEventById(validated.data);
       await deleteEventCommand(validated.data);
       return {
-        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+        googleCalendarEventId:
+          event?.slots.find((s) => s.googleCalendarEventId !== null)
+            ?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
@@ -317,7 +322,9 @@ export async function cancelEvent(
       const event = await getEventById(validated.data);
       await cancelEventCommand(validated.data);
       return {
-        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+        googleCalendarEventId:
+          event?.slots.find((s) => s.googleCalendarEventId !== null)
+            ?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
@@ -348,7 +355,9 @@ export async function archiveEvent(
       const event = await getEventById(validated.data);
       await archiveEventCommand(validated.data);
       return {
-        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+        googleCalendarEventId:
+          event?.slots.find((s) => s.googleCalendarEventId !== null)
+            ?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {

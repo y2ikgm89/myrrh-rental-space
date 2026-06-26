@@ -10,10 +10,7 @@ const eventListSelect = {
   id: true,
   title: true,
   slug: true,
-  startTime: true,
-  endTime: true,
   registrationDeadline: true,
-  capacity: true,
   addressDetail: true,
   status: true,
   registrationOpen: true,
@@ -22,6 +19,11 @@ const eventListSelect = {
   createdAt: true,
   location: { select: { id: true, name: true } },
   space: { select: { id: true, name: true } },
+  slots: {
+    select: { startAt: true, endAt: true, capacity: true },
+    orderBy: { startAt: "asc" as const },
+    take: 1,
+  },
   tickets: {
     select: {
       id: true,
@@ -51,8 +53,17 @@ const eventDetailSelect = {
   metaKeywords: true,
   locationId: true,
   spaceId: true,
-  googleCalendarEventId: true,
   updatedAt: true,
+  slots: {
+    select: {
+      id: true,
+      startAt: true,
+      endAt: true,
+      capacity: true,
+      googleCalendarEventId: true,
+    },
+    orderBy: { startAt: "asc" as const },
+  },
 } satisfies Prisma.EventSelect;
 
 interface GetEventsOptions {
@@ -69,8 +80,8 @@ interface GetEventsOptions {
 
 /**
  * タブ別の where 句を生成する。
- * - open: PUBLISHED かつ endTime >= now（開催前・開催中）
- * - past: PUBLISHED かつ endTime < now、または ARCHIVED
+ * - open: PUBLISHED かつ endAt >= now のスロットが存在（開催前・開催中）
+ * - past: PUBLISHED かつ全スロットが終了、または ARCHIVED
  * - draft: DRAFT
  * - cancelled: CANCELLED
  * - all: 制約なし（呼び出し側の status フィルタに委譲）
@@ -78,11 +89,17 @@ interface GetEventsOptions {
 function buildTabWhere(tab: EventTabFilter, now: Date): Prisma.EventWhereInput {
   switch (tab) {
     case "open":
-      return { status: EventStatus.PUBLISHED, endTime: { gte: now } };
+      return {
+        status: EventStatus.PUBLISHED,
+        slots: { some: { endAt: { gte: now } } },
+      };
     case "past":
       return {
         OR: [
-          { status: EventStatus.PUBLISHED, endTime: { lt: now } },
+          {
+            status: EventStatus.PUBLISHED,
+            NOT: { slots: { some: { endAt: { gte: now } } } },
+          },
           { status: EventStatus.ARCHIVED },
         ],
       };
@@ -93,6 +110,22 @@ function buildTabWhere(tab: EventTabFilter, now: Date): Prisma.EventWhereInput {
     case "all":
       return {};
   }
+}
+
+/**
+ * ソートキーを Prisma の orderBy に変換する。
+ * "startTime" / "endTime" は非正規化列 firstSlotStartAt / lastSlotEndAt で semantic sort。
+ * nulls: "last" を明示し、スロット未登録 Event が DESC 時に先頭に来る Postgres 既定挙動を抑止する。
+ */
+function buildEventOrderBy(
+  sortBy: string,
+  sortOrder: "asc" | "desc",
+): Prisma.EventOrderByWithRelationInput {
+  if (sortBy === "startTime")
+    return { firstSlotStartAt: { sort: sortOrder, nulls: "last" } };
+  if (sortBy === "endTime")
+    return { lastSlotEndAt: { sort: sortOrder, nulls: "last" } };
+  return { [sortBy]: sortOrder };
 }
 
 /** タブ別のデフォルトソート（URL に sortBy/sortOrder が指定されていない場合の初期値） */
@@ -152,13 +185,15 @@ export async function getEvents(options: GetEventsOptions = {}) {
       : {}),
     // status Select は tab="all" でのみ有効（他タブは tab が status を上書きするため UI で非表示）
     ...(tab === "all" && status ? { status } : {}),
-    ...(dateFrom ? { startTime: { gte: new Date(dateFrom) } } : {}),
-    ...(dateTo ? { endTime: { lte: new Date(dateTo) } } : {}),
+    ...(dateFrom
+      ? { slots: { some: { startAt: { gte: new Date(dateFrom) } } } }
+      : {}),
+    ...(dateTo
+      ? { slots: { some: { endAt: { lte: new Date(dateTo) } } } }
+      : {}),
   };
 
-  const orderBy: Prisma.EventOrderByWithRelationInput = {
-    [effectiveSortBy]: effectiveSortOrder,
-  };
+  const orderBy = buildEventOrderBy(effectiveSortBy, effectiveSortOrder);
 
   const [events, totalCount] = await Promise.all([
     prisma.event.findMany({

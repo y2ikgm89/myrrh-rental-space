@@ -18,8 +18,14 @@ export async function saveEventGoogleCalendarEventId(params: {
   eventId: string;
   googleCalendarEventId: string;
 }): Promise<void> {
-  await prisma.event.update({
-    where: { id: params.eventId, deletedAt: null },
+  const firstSlot = await prisma.eventTimeSlot.findFirst({
+    where: { eventId: params.eventId },
+    orderBy: { startAt: "asc" },
+    select: { id: true },
+  });
+  if (!firstSlot) return;
+  await prisma.eventTimeSlot.update({
+    where: { id: firstSlot.id },
     data: { googleCalendarEventId: params.googleCalendarEventId },
   });
 }
@@ -27,8 +33,14 @@ export async function saveEventGoogleCalendarEventId(params: {
 export async function clearEventGoogleCalendarEventId(
   eventId: string,
 ): Promise<void> {
-  await prisma.event.update({
-    where: { id: eventId, deletedAt: null },
+  const firstSlot = await prisma.eventTimeSlot.findFirst({
+    where: { eventId },
+    orderBy: { startAt: "asc" },
+    select: { id: true },
+  });
+  if (!firstSlot) return;
+  await prisma.eventTimeSlot.update({
+    where: { id: firstSlot.id },
     data: { googleCalendarEventId: null },
   });
 }
@@ -54,30 +66,33 @@ export async function getEventForCalendarSync(
       id: true,
       title: true,
       slug: true,
-      startTime: true,
-      endTime: true,
       descriptionPlainText: true,
       addressDetail: true,
-      googleCalendarEventId: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
+      slots: {
+        select: { startAt: true, endAt: true, googleCalendarEventId: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
     },
   });
 
   if (!event) return null;
 
+  const firstSlot = event.slots[0];
   return {
     eventId: event.id,
     title: event.title,
     descriptionPlainText: event.descriptionPlainText,
-    startTime: event.startTime,
-    endTime: event.endTime,
+    startTime: firstSlot?.startAt ?? new Date(0),
+    endTime: firstSlot?.endAt ?? new Date(0),
     location: formatEventVenue({
       location: event.location,
       space: event.space,
       addressDetail: event.addressDetail,
     }),
     publicUrl: `${getAppUrl()}/events/${event.slug}`,
-    googleCalendarEventId: event.googleCalendarEventId,
+    googleCalendarEventId: firstSlot?.googleCalendarEventId ?? null,
   };
 }

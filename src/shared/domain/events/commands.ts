@@ -11,7 +11,6 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { generateSlug } from "@/shared/lib/slug";
-import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -23,6 +22,8 @@ import type {
   EventTicketInput,
   EventTicketWritableFields,
 } from "./ticket-types";
+import type { SlotInput } from "./slot-commands";
+import { syncEventTimeSlotsCommand } from "./slot-commands";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -30,6 +31,7 @@ import type {
  * から 3 値（descriptionJson / descriptionHtml / descriptionPlainText）を生成して渡す。
  *
  * Space の `SpaceCommandInput` と同じ分離パターン。
+ * startTime / endTime / capacity はスロット（EventTimeSlot）で管理するため廃止。
  */
 export interface EventCommandInput {
   title: string;
@@ -44,18 +46,18 @@ export interface EventCommandInput {
   ogpDescription?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
-  startTime: string;
-  endTime: string;
-  /** 申込締切日時（null = 開始時刻まで受付）。startTime 以前である必要あり。 */
+  /** 申込締切日時（null = 最初のスロット開始時刻まで受付）。スロット startAt 以前必須。 */
   registrationDeadline?: string | null;
-  capacity?: number | null;
   addressDetail?: string | null;
   locationId?: string | null;
   spaceId?: string | null;
   status: (typeof EventStatus)[keyof typeof EventStatus];
   registrationOpen?: boolean;
   tickets?: readonly EventTicketInput[];
+  slots: readonly SlotInput[];
 }
+
+export type { SlotInput };
 
 /**
  * status と registrationOpen の不変条件を server-side で強制。
@@ -89,6 +91,16 @@ function buildTicketWriteData(
   };
 }
 
+/**
+ * registrationDeadline 文字列を Date に変換する。
+ * 空文字 / undefined / null → null。
+ */
+function parseOptionalDeadline(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export async function createEventCommand(data: EventCommandInput) {
   const slug = await ensureUniqueSlug(data.slug);
 
@@ -107,12 +119,7 @@ export async function createEventCommand(data: EventCommandInput) {
         ogpDescription: data.ogpDescription ?? null,
         metaDescription: data.metaDescription ?? null,
         metaKeywords: data.metaKeywords ?? null,
-        startTime: parseDateTimeLocalAsJst(data.startTime),
-        endTime: parseDateTimeLocalAsJst(data.endTime),
-        registrationDeadline: data.registrationDeadline
-          ? parseDateTimeLocalAsJst(data.registrationDeadline)
-          : null,
-        capacity: data.capacity ?? null,
+        registrationDeadline: parseOptionalDeadline(data.registrationDeadline),
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
@@ -125,6 +132,9 @@ export async function createEventCommand(data: EventCommandInput) {
       },
       select: { id: true, slug: true },
     });
+
+    // スロット同期
+    await syncEventTimeSlotsCommand(tx, created.id, data.slots);
 
     if (data.tickets && data.tickets.length > 0) {
       await tx.eventTicket.createMany({
@@ -148,8 +158,11 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       id: true,
       slug: true,
       status: true,
-      startTime: true,
-      endTime: true,
+      slots: {
+        select: { startAt: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
       locationId: true,
       spaceId: true,
       addressDetail: true,
@@ -165,9 +178,6 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
   const wasPublished =
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
-
-  const newStartTime = parseDateTimeLocalAsJst(data.startTime);
-  const newEndTime = parseDateTimeLocalAsJst(data.endTime);
 
   await prisma.$transaction(async (tx) => {
     await tx.event.update({
@@ -185,12 +195,7 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         ogpDescription: data.ogpDescription ?? null,
         metaDescription: data.metaDescription ?? null,
         metaKeywords: data.metaKeywords ?? null,
-        startTime: newStartTime,
-        endTime: newEndTime,
-        registrationDeadline: data.registrationDeadline
-          ? parseDateTimeLocalAsJst(data.registrationDeadline)
-          : null,
-        capacity: data.capacity ?? null,
+        registrationDeadline: parseOptionalDeadline(data.registrationDeadline),
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
@@ -203,18 +208,21 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       },
     });
 
+    // スロット差分同期
+    await syncEventTimeSlotsCommand(tx, id, data.slots);
+
     if (data.tickets !== undefined) {
       const incoming = data.tickets;
       const incomingIds = new Set(
         incoming.flatMap((t) => (t.id != null ? [t.id] : [])),
       );
 
-      const existing = await tx.eventTicket.findMany({
+      const existingTickets = await tx.eventTicket.findMany({
         where: { eventId: id },
         select: { id: true },
       });
 
-      const toDelete = existing
+      const toDelete = existingTickets
         .map((e) => e.id)
         .filter((existingId) => !incomingIds.has(existingId));
       if (toDelete.length > 0) {
@@ -241,22 +249,26 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     }
   });
 
-  const dateTimeChanged =
-    existing.startTime.getTime() !== newStartTime.getTime() ||
-    existing.endTime.getTime() !== newEndTime.getTime();
   const venueChanged =
     (existing.locationId ?? null) !== (data.locationId ?? null) ||
     (existing.spaceId ?? null) !== (data.spaceId ?? null) ||
     (existing.addressDetail ?? "") !== (data.addressDetail ?? "");
 
+  // スロット変更は sendEventUpdatedToAllParticipants で通知
   if (
-    (dateTimeChanged || venueChanged) &&
+    (data.slots.some((s) => !s.id) || venueChanged) &&
     data.status === EventStatus.PUBLISHED
   ) {
-    fireAndForget(sendEventUpdatedToAllParticipants(id, existing.startTime), {
-      operation: "sendEventUpdatedToAllParticipants",
-      category: ErrorCategory.EXTERNAL_API,
-    });
+    fireAndForget(
+      sendEventUpdatedToAllParticipants(
+        id,
+        existing.slots[0]?.startAt ?? new Date(),
+      ),
+      {
+        operation: "sendEventUpdatedToAllParticipants",
+        category: ErrorCategory.EXTERNAL_API,
+      },
+    );
   }
 }
 
@@ -349,14 +361,15 @@ export async function duplicateEventCommand(id: string) {
       ogpDescription: true,
       metaDescription: true,
       metaKeywords: true,
-      startTime: true,
-      endTime: true,
       registrationDeadline: true,
-      capacity: true,
       addressDetail: true,
       locationId: true,
       spaceId: true,
       registrationOpen: true,
+      slots: {
+        select: { startAt: true, endAt: true, capacity: true },
+        orderBy: { startAt: "asc" },
+      },
       tickets: {
         select: {
           name: true,
@@ -393,21 +406,21 @@ export async function duplicateEventCommand(id: string) {
         ogpDescription: source.ogpDescription,
         metaDescription: source.metaDescription,
         metaKeywords: source.metaKeywords,
-        startTime: source.startTime,
-        endTime: source.endTime,
         registrationDeadline: source.registrationDeadline,
-        capacity: source.capacity,
         addressDetail: source.addressDetail,
         locationId: source.locationId,
         spaceId: source.spaceId,
         status: EventStatus.DRAFT,
-        // DRAFT 化に伴い受付状態は強制 false（normalizeRegistrationOpen と同等）
         registrationOpen: false,
         publishedAt: null,
-        googleCalendarEventId: null,
       },
       select: { id: true, slug: true },
     });
+
+    // スロットをコピー（id なし = 新規作成）
+    if (source.slots.length > 0) {
+      await syncEventTimeSlotsCommand(tx, newEvent.id, source.slots);
+    }
 
     if (source.tickets.length > 0) {
       await tx.eventTicket.createMany({
@@ -447,45 +460,73 @@ export async function upsertEventFromCalendar(data: {
   const descriptionHtml = buildParagraphHtml(plain);
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
 
-  const existing = await prisma.event.findFirst({
-    where: {
-      googleCalendarEventId: data.googleCalendarEventId,
-      deletedAt: null,
-    },
-    select: { id: true },
+  const existingSlot = await prisma.eventTimeSlot.findFirst({
+    where: { googleCalendarEventId: data.googleCalendarEventId },
+    select: { id: true, eventId: true },
   });
 
-  if (existing) {
-    await prisma.event.update({
-      where: { id: existing.id, deletedAt: null },
-      data: {
-        title: data.title,
-        descriptionJson,
-        descriptionHtml,
-        descriptionPlainText,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        addressDetail: data.location ?? null,
-      },
+  if (existingSlot) {
+    await prisma.$transaction(async (tx) => {
+      await tx.event.update({
+        where: { id: existingSlot.eventId, deletedAt: null },
+        data: {
+          title: data.title,
+          descriptionJson,
+          descriptionHtml,
+          descriptionPlainText,
+          addressDetail: data.location ?? null,
+        },
+      });
+      await tx.eventTimeSlot.update({
+        where: { id: existingSlot.id },
+        data: {
+          startAt: data.startTime,
+          endAt: data.endTime,
+        },
+      });
+      // firstSlotStartAt / lastSlotEndAt 非正規化列を MIN/MAX 集約で再計算
+      const aggregate = await tx.eventTimeSlot.aggregate({
+        where: { eventId: existingSlot.eventId },
+        _min: { startAt: true },
+        _max: { endAt: true },
+      });
+      await tx.event.update({
+        where: { id: existingSlot.eventId },
+        data: {
+          firstSlotStartAt: aggregate._min.startAt ?? null,
+          lastSlotEndAt: aggregate._max.endAt ?? null,
+        },
+      });
     });
-    return { id: existing.id, action: "updated" as const };
+    return { id: existingSlot.eventId, action: "updated" as const };
   }
 
   const slug = await ensureUniqueSlug(generateSlug(data.title, "event"));
-  const event = await prisma.event.create({
-    data: {
-      title: data.title,
-      slug,
-      descriptionJson,
-      descriptionHtml,
-      descriptionPlainText,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      addressDetail: data.location ?? null,
-      status: EventStatus.DRAFT,
-      googleCalendarEventId: data.googleCalendarEventId,
-    },
-    select: { id: true },
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.event.create({
+      data: {
+        title: data.title,
+        slug,
+        descriptionJson,
+        descriptionHtml,
+        descriptionPlainText,
+        addressDetail: data.location ?? null,
+        status: EventStatus.DRAFT,
+        firstSlotStartAt: data.startTime,
+        lastSlotEndAt: data.endTime,
+      },
+      select: { id: true },
+    });
+    await tx.eventTimeSlot.create({
+      data: {
+        eventId: created.id,
+        startAt: data.startTime,
+        endAt: data.endTime,
+        capacity: 0,
+        googleCalendarEventId: data.googleCalendarEventId,
+      },
+    });
+    return created;
   });
   return { id: event.id, action: "created" as const };
 }
