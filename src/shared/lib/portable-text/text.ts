@@ -3,7 +3,7 @@
  * a11y `aria-label` 派生・SR フォールバック・検索 cache 等で使用。
  */
 
-import type { PortableTextSpan, PortableTextBlock } from "./schema";
+import type { PortableTextSpan, PortableTextBlock } from "./types";
 
 export function spansToPlainText(spans: PortableTextSpan[]): string {
   return spans.map((s) => (s._type === "span" ? s.text : "")).join("");

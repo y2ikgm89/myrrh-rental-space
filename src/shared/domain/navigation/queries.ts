@@ -15,10 +15,8 @@ import {
 } from "@/shared/lib/features/check";
 import { toPlainArray } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import {
-  createSpanArraySchema,
-  type PortableTextSpan,
-} from "@/shared/lib/portable-text";
+import { createSpanArraySchema } from "@/shared/lib/portable-text/schema";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 function parseLabelSpans(value: unknown): PortableTextSpan[] {
   const result = createSpanArraySchema().safeParse(value);

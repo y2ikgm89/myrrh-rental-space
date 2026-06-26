@@ -8,10 +8,8 @@
 import type { Route } from "next";
 import { z } from "zod";
 import { isAppRoute, toAppRoute } from "@/shared/lib/typed-routes";
-import {
-  createSpanArraySchema,
-  type PortableTextSpan,
-} from "@/shared/lib/portable-text";
+import { createSpanArraySchema } from "@/shared/lib/portable-text/schema";
+import type { PortableTextSpan } from "@/shared/lib/portable-text";
 
 // =============================================================================
 // URL / CTAボタン共通スキーマ

@@ -64,8 +64,10 @@ const PortableTextBlockEditor = dynamic(
 import {
   createBlockArraySchema,
   createSpanArraySchema,
-  type PortableTextBlock,
-  type PortableTextSpan,
+} from "@/shared/lib/portable-text/schema";
+import type {
+  PortableTextBlock,
+  PortableTextSpan,
 } from "@/shared/lib/portable-text";
 import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { FieldGroupSection } from "./FieldGroupSection";

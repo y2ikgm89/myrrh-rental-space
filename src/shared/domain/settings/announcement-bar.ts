@@ -20,6 +20,8 @@ import {
 import {
   createSpanArraySchema,
   portableTextSpanSchema,
+} from "@/shared/lib/portable-text/schema";
+import {
   spansToPlainText,
   type PortableTextSpan,
 } from "@/shared/lib/portable-text";

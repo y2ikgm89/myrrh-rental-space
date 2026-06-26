@@ -37,11 +37,8 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
-import {
-  portableTextSpanSchema,
-  createSpan,
-  type PortableTextSpan,
-} from "@/shared/lib/portable-text";
+import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
+import { createSpan, type PortableTextSpan } from "@/shared/lib/portable-text";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
 import {
   createEnumGuard,
