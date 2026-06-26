@@ -2979,8 +2979,8 @@ async function seedEvents() {
     title: string;
     slug: string;
     description: string;
-    startTime: Date;
-    endTime: Date;
+    startAt: Date;
+    endAt: Date;
     capacity: number;
     price: number;
     addressDetail?: string;
@@ -2994,8 +2994,8 @@ async function seedEvents() {
       slug: "yoga-mindfulness-workshop",
       description:
         "初心者歓迎のヨガ体験会です。心身のリラクゼーションを体験しましょう。",
-      startTime: new Date("2026-05-15T10:00:00+09:00"),
-      endTime: new Date("2026-05-15T12:00:00+09:00"),
+      startAt: new Date("2026-05-15T10:00:00+09:00"),
+      endAt: new Date("2026-05-15T12:00:00+09:00"),
       capacity: 15,
       price: 2000,
       locationId: honkanId,
@@ -3009,8 +3009,8 @@ async function seedEvents() {
       slug: "photography-workshop",
       description:
         "プロカメラマンによる撮影テクニック講座。カメラをお持ちください。",
-      startTime: new Date("2026-05-20T14:00:00+09:00"),
-      endTime: new Date("2026-05-20T17:00:00+09:00"),
+      startAt: new Date("2026-05-20T14:00:00+09:00"),
+      endAt: new Date("2026-05-20T17:00:00+09:00"),
       capacity: 10,
       price: 5000,
       locationId: bekkanId,
@@ -3023,8 +3023,8 @@ async function seedEvents() {
       title: "ビジネスネットワーキングイベント",
       slug: "business-networking",
       description: "地域のビジネスオーナーが集まる交流会。軽食付き。",
-      startTime: new Date("2026-06-01T18:00:00+09:00"),
-      endTime: new Date("2026-06-01T20:00:00+09:00"),
+      startAt: new Date("2026-06-01T18:00:00+09:00"),
+      endAt: new Date("2026-06-01T20:00:00+09:00"),
       capacity: 30,
       price: 0,
       locationId: honkanId,
@@ -3036,8 +3036,8 @@ async function seedEvents() {
       title: "キッズアートスクール",
       slug: "kids-art-school",
       description: "お子様向けのアート教室。絵の具や材料は全てご用意します。",
-      startTime: new Date("2026-04-10T10:00:00+09:00"),
-      endTime: new Date("2026-04-10T12:00:00+09:00"),
+      startAt: new Date("2026-04-10T10:00:00+09:00"),
+      endAt: new Date("2026-04-10T12:00:00+09:00"),
       capacity: 8,
       price: 1500,
       // 外部会場（location なし、addressDetail も空）の例
@@ -3049,8 +3049,8 @@ async function seedEvents() {
       slug: "spring-calligraphy-archived",
       description:
         "過去に開催した書道教室のアーカイブです。次回開催をお待ちください。",
-      startTime: new Date("2026-03-05T10:00:00+09:00"),
-      endTime: new Date("2026-03-05T12:00:00+09:00"),
+      startAt: new Date("2026-03-05T10:00:00+09:00"),
+      endAt: new Date("2026-03-05T12:00:00+09:00"),
       capacity: 10,
       price: 3000,
       addressDetail: "渋谷区文化総合センター大和田 和室",
@@ -3060,20 +3060,37 @@ async function seedEvents() {
     },
   ];
 
-  const events = eventSeedSource.map(({ description, price, ...rest }) => ({
-    rest,
-    description,
-    seedPrice: price,
-  }));
+  const events = eventSeedSource.map(
+    ({ description, price, startAt, endAt, capacity, ...eventRest }) => ({
+      eventRest,
+      description,
+      seedPrice: price,
+      startAt,
+      endAt,
+      capacity,
+    }),
+  );
 
   let createdCount = 0;
-  for (const { rest, description, seedPrice } of events) {
+  for (const {
+    eventRest,
+    description,
+    seedPrice,
+    startAt,
+    endAt,
+    capacity,
+  } of events) {
     await prisma.event.upsert({
-      where: { slug: rest.slug },
+      where: { slug: eventRest.slug },
       update: {},
       create: {
-        ...rest,
+        ...eventRest,
         ...buildSeedDescription(description),
+        firstSlotStartAt: startAt,
+        lastSlotEndAt: endAt,
+        slots: {
+          create: [{ startAt, endAt, capacity }],
+        },
         tickets: {
           create: [
             {
@@ -3099,6 +3116,11 @@ async function seedEvents() {
       tickets: {
         select: { id: true },
         orderBy: { sortOrder: "asc" as const },
+        take: 1,
+      },
+      slots: {
+        select: { id: true },
+        orderBy: { startAt: "asc" as const },
         take: 1,
       },
     },
@@ -3138,11 +3160,13 @@ async function seedEvents() {
     });
     if (existingCount > 0) continue;
 
+    const firstSlotId = event.slots[0]?.id ?? null;
     for (const reg of sampleRegistrations) {
       await prisma.eventRegistration.create({
         data: {
           eventId: event.id,
           ticketId: firstTicket.id,
+          slotId: firstSlotId,
           name: reg.name,
           email: reg.email,
           phone: reg.phone,
