@@ -8,6 +8,7 @@ describe("publicEventRegistrationSchema", () => {
   const validInput = {
     eventId: "550e8400-e29b-41d4-a716-446655440000",
     ticketId: "ticket-001",
+    slotId: "slot-001",
     name: "山田太郎",
     email: "yamada@example.com",
     quantity: 2,
@@ -99,6 +100,7 @@ describe("adminEventRegistrationSchema", () => {
   const validInput = {
     eventId: "550e8400-e29b-41d4-a716-446655440000",
     ticketId: "ticket-001",
+    slotId: "slot-001",
     name: "山田太郎",
     email: "yamada@example.com",
     quantity: 1,

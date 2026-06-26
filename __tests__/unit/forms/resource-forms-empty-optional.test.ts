@@ -301,10 +301,14 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
         descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
         descriptionHtml: "",
         thumbnailUrl: "",
-        startTime: "2026-07-01T10:00",
-        endTime: "2026-07-01T12:00",
+        slots: JSON.stringify([
+          {
+            startAt: "2026-07-01T10:00",
+            endAt: "2026-07-01T12:00",
+            capacity: 10,
+          },
+        ]),
         registrationDeadline: "",
-        capacity: "",
         tickets: EMPTY_DESC_TICKET,
         addressDetail: "",
         locationId: EVENT_FORM_NONE_VALUE,
