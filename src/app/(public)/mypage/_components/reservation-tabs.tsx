@@ -47,7 +47,7 @@ export function ReservationTabs({
       }}
     >
       <Tabs.List
-        aria-label="予約一覧の表示切替"
+        aria-label="予約の表示切替"
         // mb-4 md:mb-6 で mobile の累積余白を圧縮。
         // overflow-x-auto + scrollbar 非表示 + -mx/-px で container padding を貫通し
         // mobile での 3 桁件数や追加 tab の overflow を横スクロールで吸収する。

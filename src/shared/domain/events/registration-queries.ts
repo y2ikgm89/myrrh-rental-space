@@ -146,32 +146,48 @@ export async function getEventDetailsForEmail(eventId: string): Promise<{
   };
 }
 
-export async function getCustomerEventRegistrations(customerId: string) {
-  const rows = await prisma.eventRegistration.findMany({
-    where: { customerId, event: { deletedAt: null } },
-    orderBy: { createdAt: "desc" },
+const CUSTOMER_EVENT_REGISTRATION_SELECT = {
+  id: true,
+  quantity: true,
+  status: true,
+  cancelledAt: true,
+  createdAt: true,
+  event: {
     select: {
       id: true,
-      quantity: true,
+      title: true,
+      slug: true,
+      startTime: true,
+      endTime: true,
+      addressDetail: true,
       status: true,
-      cancelledAt: true,
-      createdAt: true,
-      event: {
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          startTime: true,
-          endTime: true,
-          addressDetail: true,
-          status: true,
-          location: { select: { name: true } },
-          space: { select: { name: true } },
-        },
-      },
+      location: { select: { name: true } },
+      space: { select: { name: true } },
     },
-  });
-  return rows.map((row) => ({
+  },
+} as const;
+
+type CustomerEventRegistrationRow = {
+  readonly id: string;
+  readonly quantity: number;
+  readonly status: RegistrationStatus;
+  readonly cancelledAt: Date | null;
+  readonly createdAt: Date;
+  readonly event: {
+    readonly id: string;
+    readonly title: string;
+    readonly slug: string;
+    readonly startTime: Date;
+    readonly endTime: Date;
+    readonly addressDetail: string | null;
+    readonly status: string;
+    readonly location: { readonly name: string } | null;
+    readonly space: { readonly name: string } | null;
+  };
+};
+
+function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
+  return {
     id: row.id,
     quantity: row.quantity,
     status: row.status,
@@ -190,7 +206,55 @@ export async function getCustomerEventRegistrations(customerId: string) {
         addressDetail: row.event.addressDetail,
       }),
     },
-  }));
+  };
+}
+
+/**
+ * 顧客のイベント申込を「これから / 過去」に分けて取得する。
+ *
+ * - active: CONFIRMED かつ event.endTime > now（開始日時の近い順）
+ * - past: CANCELLED または event.endTime <= now（直近に終わった順）
+ *
+ * 時刻判定をドメイン層で完結させることで、呼び出し側 (RSC) は `Date.now()` を
+ * render 中に呼ばずに済む（React Compiler purity rule 準拠）。
+ */
+export async function getCustomerEventRegistrations(
+  customerId: string,
+): Promise<{
+  readonly active: ReturnType<typeof mapCustomerEventRegistration>[];
+  readonly past: ReturnType<typeof mapCustomerEventRegistration>[];
+}> {
+  const now = new Date();
+  const baseEventWhere = { deletedAt: null } as const;
+
+  const [activeRows, pastRows] = await Promise.all([
+    prisma.eventRegistration.findMany({
+      where: {
+        customerId,
+        status: RegistrationStatus.CONFIRMED,
+        event: { ...baseEventWhere, endTime: { gt: now } },
+      },
+      orderBy: { event: { startTime: "asc" } },
+      select: CUSTOMER_EVENT_REGISTRATION_SELECT,
+    }),
+    prisma.eventRegistration.findMany({
+      where: {
+        customerId,
+        event: baseEventWhere,
+        OR: [
+          { status: RegistrationStatus.CANCELLED },
+          { event: { ...baseEventWhere, endTime: { lte: now } } },
+        ],
+      },
+      orderBy: { event: { startTime: "desc" } },
+      select: CUSTOMER_EVENT_REGISTRATION_SELECT,
+    }),
+  ]);
+
+  return {
+    active: activeRows.map(mapCustomerEventRegistration),
+    past: pastRows.map(mapCustomerEventRegistration),
+  };
 }
 
 /**

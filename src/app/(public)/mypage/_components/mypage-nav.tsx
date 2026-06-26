@@ -23,7 +23,7 @@ import type { Route } from "next";
  */
 
 const NAV_ITEMS = [
-  { href: "/mypage", label: "予約一覧" },
+  { href: "/mypage", label: "予約" },
   { href: "/mypage/events", label: "イベント" },
   { href: "/mypage/inquiries", label: "お問い合わせ" },
   { href: "/mypage/settings", label: "設定" },

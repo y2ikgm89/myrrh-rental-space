@@ -28,7 +28,7 @@ import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calen
 // Types
 // ---------------------------------------------------------------------------
 
-interface EventRegistration {
+export interface EventRegistrationListItem {
   readonly id: string;
   readonly quantity: number;
   readonly status: string;
@@ -46,7 +46,9 @@ interface EventRegistration {
 }
 
 interface EventRegistrationListProps {
-  readonly registrations: readonly EventRegistration[];
+  readonly registrations: readonly EventRegistrationListItem[];
+  readonly emptyMessage: string;
+  readonly showBrowseCta?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,19 +68,23 @@ const REGISTRATION_STATUS_VARIANTS: Record<RegistrationStatus, BadgeVariant> = {
 
 export function EventRegistrationList({
   registrations,
+  emptyMessage,
+  showBrowseCta = false,
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
       <div className="space-y-4 py-12 text-center md:py-16">
-        <p className="text-muted-foreground">イベント申込がありません</p>
-        <Button
-          variant="editorial"
-          size="sm"
-          href="/events"
-          className="w-full sm:w-auto"
-        >
-          イベントを探す
-        </Button>
+        <p className="text-muted-foreground">{emptyMessage}</p>
+        {showBrowseCta && (
+          <Button
+            variant="editorial"
+            size="sm"
+            href="/events"
+            className="w-full sm:w-auto"
+          >
+            イベントを探す
+          </Button>
+        )}
       </div>
     );
   }
@@ -102,7 +108,7 @@ export function EventRegistrationList({
 function EventRegistrationCard({
   registration,
 }: {
-  readonly registration: EventRegistration;
+  readonly registration: EventRegistrationListItem;
 }) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);

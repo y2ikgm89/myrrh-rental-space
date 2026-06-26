@@ -64,7 +64,7 @@ export default async function MypagePage({
 
   return (
     <Stack gap="lg">
-      <Heading level={1}>予約一覧</Heading>
+      <Heading level={1}>予約</Heading>
       {justCancelled && (
         <div
           role="status"
