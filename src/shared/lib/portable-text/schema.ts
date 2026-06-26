@@ -1,18 +1,35 @@
 /**
- * Portable Text 公式準拠の Span / Block schema
+ * Portable Text 公式準拠の Span / Block Zod schema
  *
  * 業界 reference:
  * - https://portabletext.org/
  * - https://www.sanity.io/docs/block-content
  *
- * - Span: inline token (`_type: "span" | "iconInline"`)
- * - Block: 段落単位 (`_type: "block"`, `children: PortableTextSpan[]`)
+ * 重要:
+ * - 型 (`PortableTextSpan` / `PortableTextBlock` 等) は `./types` (zero runtime) に分離。
+ *   この schema 側は `satisfies z.ZodType<...>` で型と zod schema を lockstep にする。
+ * - barrel (`./index`) は schema 値を **意図的に re-export していない** (CSP nonce gap 構造予防)。
+ *   client bundle に Zod schema chunk が混入し strict-dynamic CSP 下で nonce-less な
+ *   Flight top-level <script> として CSP ブロックされるのを構造的に予防する。
+ *   schema 値が必要な server コード / admin client (Conform parseWithZod / Lexical Decorator)
+ *   はこのモジュールを直接 deep-import する: `@/shared/lib/portable-text/schema`。
+ * - 強制: `__tests__/unit/architecture-boundaries.test.ts` の grep gate で client-graph
+ *   (=`src/app/(public)/**`) からの schema value-import を禁止する。
  *
- * `_key` は配列要素の stable identity（React reconciliation + 並べ替え/挿入/削除）。
- * 配列全体は `safeParse(undefined)` で `[]` にフォールバック（field defaults 契約）。
+ * 関連:
+ * - facebook/react#29978 / vercel/next.js#55590 (React Flight client-reference は
+ *   nonce 注入 API を持たない上流バグ → 我々はトリガーパターンを構造的に断つ)
  */
 
 import { z } from "zod";
+import type { PortableTextSpan, PortableTextBlock } from "./types";
+
+export type {
+  PortableTextSpan,
+  PortableTextBlock,
+  SpanTextToken,
+  SpanIconToken,
+} from "./types";
 
 const ICON_NAME_PATTERN = /^Icon[A-Z][A-Za-z0-9]*$/;
 const tokenKeySchema = z.string().min(1, { error: "_key は必須です" });
@@ -38,7 +55,7 @@ const iconInlineTokenSchema = z.object({
 export const portableTextSpanSchema = z.discriminatedUnion("_type", [
   spanTokenSchema,
   iconInlineTokenSchema,
-]);
+]) satisfies z.ZodType<PortableTextSpan>;
 
 export const portableTextBlockSchema = z.object({
   _key: tokenKeySchema,
@@ -47,12 +64,7 @@ export const portableTextBlockSchema = z.object({
   children: z
     .array(portableTextSpanSchema)
     .max(200, { error: "Span は200件以内です" }),
-});
-
-export type PortableTextSpan = z.infer<typeof portableTextSpanSchema>;
-export type PortableTextBlock = z.infer<typeof portableTextBlockSchema>;
-export type SpanTextToken = Extract<PortableTextSpan, { _type: "span" }>;
-export type SpanIconToken = Extract<PortableTextSpan, { _type: "iconInline" }>;
+}) satisfies z.ZodType<PortableTextBlock>;
 
 interface SpanArrayOpts {
   readonly maxSpans?: number;

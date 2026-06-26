@@ -3,8 +3,8 @@ import {
   NavigationType,
   SocialPlatform,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
 import {
-  portableTextSpanSchema,
   spansToPlainText,
   type PortableTextSpan,
 } from "@/shared/lib/portable-text";

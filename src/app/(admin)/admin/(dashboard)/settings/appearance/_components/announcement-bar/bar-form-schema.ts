@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
 import {
-  portableTextSpanSchema,
   spansToPlainText,
   type PortableTextSpan,
 } from "@/shared/lib/portable-text";

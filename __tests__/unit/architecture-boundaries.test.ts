@@ -1473,6 +1473,65 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  test("portable-text barrel は schema 値を re-export しない (CSP nonce gap 構造予防)", () => {
+    const barrelPath = join(
+      SRC_ROOT,
+      "shared",
+      "lib",
+      "portable-text",
+      "index.ts",
+    );
+    const source = readFileSync(barrelPath, "utf8");
+    const lines = source.split(/\r?\n/u);
+    const violations: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+      if (/^export\s+type[\s{]/u.test(trimmed)) continue;
+      if (/from\s+["']\.\/schema["']/u.test(trimmed)) {
+        violations.push(
+          `portable-text/index.ts: schema value re-export found: ${trimmed}`,
+        );
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  test("src/app/(public)/** は portable-text/schema を value-import しない (CSP nonce gap 構造予防)", () => {
+    function walkPublic(dir: string): string[] {
+      const out: string[] = [];
+      const stack: string[] = [dir];
+      while (stack.length > 0) {
+        const cur = stack.pop();
+        if (!cur || !existsSync(cur)) continue;
+        for (const entry of readdirSync(cur, { withFileTypes: true })) {
+          const p = join(cur, entry.name);
+          if (entry.isDirectory()) stack.push(p);
+          else if (/\.(ts|tsx)$/u.test(entry.name)) out.push(p);
+        }
+      }
+      return out;
+    }
+    const violations: string[] = [];
+    for (const path of walkPublic(PUBLIC_APP_ROOT)) {
+      const source = readFileSync(path, "utf8");
+      const lines = source.split(/\r?\n/u);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] ?? "";
+        const trimmed = line.trim();
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+        if (
+          !/from\s+["']@\/shared\/lib\/portable-text\/schema["']/u.test(trimmed)
+        )
+          continue;
+        if (/^import\s+type[\s{]/u.test(trimmed)) continue;
+        if (/^export\s+type[\s{]/u.test(trimmed)) continue;
+        violations.push(`${relative(ROOT, path)}:${i + 1}: ${trimmed}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
   test("Phase 1 で PortableTextSpan[] 化済の見出しフィールドは schema で string を受け付けない", async () => {
     const { validateSectionConfig } =
       await import("@/shared/lib/validations/section");

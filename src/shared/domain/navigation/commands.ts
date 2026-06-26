@@ -5,10 +5,8 @@ import { prisma } from "@/shared/db/prisma";
 import { isPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
 import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  createSpanArraySchema,
-  spansToPlainText,
-} from "@/shared/lib/portable-text";
+import { createSpanArraySchema } from "@/shared/lib/portable-text/schema";
+import { spansToPlainText } from "@/shared/lib/portable-text";
 
 export const navigationItemInputSchema = z.object({
   type: z.enum(NavigationType),

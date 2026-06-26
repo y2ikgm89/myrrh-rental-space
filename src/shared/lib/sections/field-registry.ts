@@ -10,7 +10,7 @@ import { z } from "zod";
 import {
   createBlockArraySchema,
   createSpanArraySchema,
-} from "@/shared/lib/portable-text";
+} from "@/shared/lib/portable-text/schema";
 import type { FieldType, MediaAcceptType } from "./types";
 
 // ─────────────────────────────────────────────────────────────

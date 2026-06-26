@@ -8,7 +8,7 @@ import type {
   PortableTextBlock,
   SpanTextToken,
   SpanIconToken,
-} from "./schema";
+} from "./types";
 
 export function createSpan(text: string): SpanTextToken {
   return { _key: crypto.randomUUID(), _type: "span", text };
