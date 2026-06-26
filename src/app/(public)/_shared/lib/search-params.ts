@@ -95,3 +95,16 @@ export function isMypageReservationTab(
 export const mypageReservationsSearchParamsParsers = {
   tab: parseAsStringLiteral(MYPAGE_RESERVATION_TABS),
 };
+
+export const MYPAGE_EVENT_TABS = ["active", "past"] as const;
+export type MypageEventTab = (typeof MYPAGE_EVENT_TABS)[number];
+
+const mypageEventTabSet = new Set<string>(MYPAGE_EVENT_TABS);
+export function isMypageEventTab(value: string): value is MypageEventTab {
+  return mypageEventTabSet.has(value);
+}
+
+// mypageReservations と完全対称: URL 未指定時は申込状況で初期タブを動的決定するため withDefault なし。
+export const mypageEventsSearchParamsParsers = {
+  tab: parseAsStringLiteral(MYPAGE_EVENT_TABS),
+};

@@ -296,7 +296,7 @@ export function ReservationDetail({
           href="/mypage"
           className="inline-flex min-h-11 w-full items-center justify-center text-sm text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
         >
-          予約一覧に戻る
+          予約に戻る
         </Link>
         <Link
           href={`/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`}
