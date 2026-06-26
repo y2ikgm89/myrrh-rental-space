@@ -78,6 +78,18 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
 }));
 
+// terms 系: server-side consent gate + 記録コマンドを no-op に。
+const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
+const mockRecordTermsAgreementsCommand = mock(() =>
+  Promise.resolve({ count: 0 }),
+);
+mock.module("@/shared/domain/terms/queries", () => ({
+  getRequiredTermsByScope: mockGetRequiredTermsByScope,
+}));
+mock.module("@/shared/domain/terms/commands", () => ({
+  recordTermsAgreementsCommand: mockRecordTermsAgreementsCommand,
+}));
+
 const mockSyncReservationToCalendar = mock(() =>
   Promise.resolve({ success: true }),
 );
@@ -263,6 +275,9 @@ describe("submitReservation", () => {
     mockUpdateTag.mockClear();
     mockGetCurrentUser.mockClear();
     mockRedirect.mockClear();
+    mockGetRequiredTermsByScope.mockClear();
+    mockRecordTermsAgreementsCommand.mockClear();
+    mockGetRequiredTermsByScope.mockImplementation(() => Promise.resolve([]));
 
     mockValidateTurnstile.mockImplementation(() =>
       Promise.resolve({ success: true as const }),

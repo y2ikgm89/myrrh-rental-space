@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TERMS_TYPE_VALUES } from "@/shared/lib/validations/terms";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 const slugSchema = z
   .string()
@@ -20,12 +21,40 @@ const booleanFromCheckbox = z.preprocess(
 );
 
 /**
+ * checkbox group の preprocess: FormData は同名フィールドを複数 append すると
+ * getAll で string[] になり、conform は単一の場合 string を返す。両者を
+ * normalize し TermsScope enum 値のみに narrow する。
+ */
+const termsScopesField = z.preprocess(
+  (v) => {
+    if (v === undefined || v === null) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string") return v.length > 0 ? [v] : [];
+    return v;
+  },
+  z
+    .array(
+      z.enum(
+        [
+          TermsScope.LOGIN_SIGNUP,
+          TermsScope.RESERVATION,
+          TermsScope.INQUIRY,
+          TermsScope.EVENT_REGISTRATION,
+        ] as const,
+        { error: "不正な scope です" },
+      ),
+    )
+    .default([]),
+);
+
+/**
  * 利用規約 設定フォームスキーマ（SettingsDialog 専用）
  *
  * 本文（contentJson / contentHtml）は含まない。
  * conform `parseWithZod`（FormData 経路）と object literal（テスト経路）両対応の
- * in-place preprocess pattern。isPublished / 各 boolean flag は checkbox value
- * "on" / boolean true を boolean に変換する。
+ * in-place preprocess pattern。isPublished / showInFooter は checkbox value
+ * "on" / boolean true を boolean に変換する。`scopes` は multi-checkbox の
+ * 重複入力を許容しつつ enum 値のみに narrow する。
  */
 export const termsSettingsFormSchema = z.object({
   type: z
@@ -43,9 +72,11 @@ export const termsSettingsFormSchema = z.object({
   slug: slugSchema,
   title: titleSchema,
   isPublished: booleanFromCheckbox,
-  requiredAtReservation: booleanFromCheckbox,
-  requiredAtInquiry: booleanFromCheckbox,
-  requiredAtSignup: booleanFromCheckbox,
+  scopes: termsScopesField,
+  changelog: z.preprocess(
+    (v) => (typeof v === "string" && v.length === 0 ? null : v),
+    z.string().max(2000).nullable().default(null),
+  ),
   showInFooter: z.preprocess(
     (v) => v === "on" || v === true,
     z.boolean().default(true),

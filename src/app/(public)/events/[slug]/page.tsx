@@ -22,6 +22,8 @@ import {
   formatEventVenue,
 } from "@/shared/domain/events/venue";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -96,10 +98,12 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  const [registrationCount, turnstileSiteKey] = await Promise.all([
-    getRegistrationCount(event.id),
-    getTurnstileSiteKey(),
-  ]);
+  const [registrationCount, turnstileSiteKey, requiredTerms] =
+    await Promise.all([
+      getRegistrationCount(event.id),
+      getTurnstileSiteKey(),
+      getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
+    ]);
 
   const remainingCapacity =
     event.capacity != null ? event.capacity - registrationCount : null;
@@ -282,6 +286,11 @@ export default async function EventDetailPage({
                   name: t.name,
                   price: t.price,
                   unitSize: t.unitSize,
+                }))}
+                requiredTerms={requiredTerms.map((t) => ({
+                  id: t.id,
+                  slug: t.slug,
+                  title: t.title,
                 }))}
               />
             ) : isFull ? (

@@ -4,7 +4,8 @@ import type { SearchParams } from "nuqs/server";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
-import { getRequiredTermsAtSignup } from "@/shared/domain/terms/queries";
+import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
@@ -24,7 +25,7 @@ export default async function LoginPage({
   if (user) redirect("/mypage");
 
   const [requiredTerms, turnstileSiteKey] = await Promise.all([
-    getRequiredTermsAtSignup(),
+    getRequiredTermsByScope(TermsScope.LOGIN_SIGNUP),
     getTurnstileSiteKey(),
   ]);
 

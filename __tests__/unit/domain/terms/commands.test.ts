@@ -122,9 +122,8 @@ const VALID_INPUT = {
   contentJson: '{"root":{"type":"root","children":[]}}',
   contentHtml: "<p>テスト規約</p>",
   isPublished: true,
-  requiredAtReservation: false,
-  requiredAtInquiry: false,
-  requiredAtSignup: true,
+  scopes: ["LOGIN_SIGNUP" as const],
+  changelog: null,
   showInFooter: true,
 };
 
@@ -350,7 +349,7 @@ describe("recordTermsAgreementsCommand", () => {
   test("空配列入力は早期 return ({ count: 0 }) で DB アクセスなし", async () => {
     const result = await recordTermsAgreementsCommand({
       termsIds: [],
-      context: "reservation",
+      scope: "RESERVATION" as const,
     });
 
     expect(result).toEqual({ count: 0 });
@@ -363,7 +362,7 @@ describe("recordTermsAgreementsCommand", () => {
 
     const result = await recordTermsAgreementsCommand({
       termsIds: ["t1", "t2"],
-      context: "reservation",
+      scope: "RESERVATION" as const,
     });
 
     expect(result).toEqual({ count: 0 });
@@ -378,7 +377,7 @@ describe("recordTermsAgreementsCommand", () => {
 
     const result = await recordTermsAgreementsCommand({
       termsIds: ["t1"],
-      context: "reservation",
+      scope: "RESERVATION" as const,
       resourceId: "res-1",
       ipAddress: "127.0.0.1",
     });
@@ -391,7 +390,7 @@ describe("recordTermsAgreementsCommand", () => {
             termsId: "t1",
             contentSnapshot: "<p>第1条</p>",
             contentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
-            context: "reservation",
+            scope: "RESERVATION" as const,
             resourceId: "res-1",
             ipAddress: "127.0.0.1",
           }),
@@ -406,7 +405,7 @@ describe("recordTermsAgreementsCommand", () => {
 
     await recordTermsAgreementsCommand({
       termsIds: ["t1"],
-      context: "reservation",
+      scope: "RESERVATION" as const,
       customerId: null,
       guestEmail: null,
     });

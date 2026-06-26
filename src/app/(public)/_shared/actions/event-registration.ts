@@ -37,6 +37,11 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getEventDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
+import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import { headers } from "next/headers";
+import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 
 export async function registerForEvent(
   _prev: SubmissionResult | undefined,
@@ -59,6 +64,20 @@ export async function registerForEvent(
         return { ok: false, error: turnstile.error };
       }
 
+      // Server-side consent gate (EVENT_REGISTRATION scope の必須規約強制)
+      try {
+        await assertAllRequiredTermsAgreed({
+          scope: TermsScope.EVENT_REGISTRATION,
+          agreedTermsIds: data.agreedTermsIds,
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "規約への同意が必要です",
+        };
+      }
+
       // Get current user (non-blocking — null if not logged in)
       const session = await getCustomerSession();
       const user = session?.user;
@@ -69,6 +88,10 @@ export async function registerForEvent(
           customerId = customer.id;
         }
       }
+
+      const clientIp = await getClientIpFromHeaders();
+      const headersList = await headers();
+      const userAgent = headersList.get("user-agent");
 
       try {
         const result = await createEventRegistrationCommand({
@@ -81,6 +104,19 @@ export async function registerForEvent(
           quantity: data.quantity,
           customerId,
         });
+
+        if (data.agreedTermsIds.length > 0) {
+          // 法務 evidence は await で確実に記録する。
+          await recordTermsAgreementsCommand({
+            termsIds: data.agreedTermsIds,
+            scope: TermsScope.EVENT_REGISTRATION,
+            resourceId: result.registration.id,
+            customerId,
+            guestEmail: customerId ? null : data.email,
+            ipAddress: clientIp,
+            userAgent: userAgent ?? null,
+          });
+        }
 
         invalidateEventCaches();
 

@@ -763,6 +763,41 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("deprecated terms requiredAt* 3 boolean は src 以下に残さない (TermsScope[] へ移行済み)", () => {
+    // 旧 `requiredAtReservation` / `requiredAtInquiry` / `requiredAtSignup` 3 boolean は
+    // `TermsScope[]` array column に統合された (PR: terms-domain overhaul)。
+    // コメント・docstring の歴史的言及は collectNonCommentOffenders で除外する。
+    const files = collectStyleSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      files,
+      /\b(requiredAtReservation|requiredAtInquiry|requiredAtSignup)\b/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  test("TermsAgreement は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
+    // TermsAgreement は法務証跡なので append-only。事後改竄を ESLint/test 双方で
+    // 物理的に塞ぐ。Prisma の update / updateMany / delete / deleteMany / upsert /
+    // deleteMany を src/ 配下から grep gate する。restore など意図的な再有効化は
+    // 別 model (TermsDocument) の操作で行うので本 gate は terms_agreement のみ。
+    const files = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      files,
+      /prisma\.termsAgreement\.(update|updateMany|delete|deleteMany|upsert)\b/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  test("TERMS_AGREEMENT_CONTEXT VARCHAR ラベルは src 以下に残さない (TermsScope enum へ移行済み)", () => {
+    // `TERMS_AGREEMENT_CONTEXT` const は TermsScope enum に統合済 (PR: terms-domain overhaul)。
+    const files = collectStyleSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      files,
+      /\bTERMS_AGREEMENT_CONTEXT\b/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
   test("mypage-nav.tsx は <select> mobile picker を再導入しない", () => {
     // PR #605 の妥協 native <select> 撤去後、4 NAV_ITEMS を grid grid-cols-4 md:flex で
     // 単一 DOM 統一。<select> の再導入を deny-list で防ぐ (情報設計破綻 + 3-tap 動線回避)。

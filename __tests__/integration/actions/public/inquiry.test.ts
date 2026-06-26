@@ -66,6 +66,20 @@ mock.module("@/shared/lib/email/contact-emails", () => ({
   sendContactAdminNotification: mockSendContactAdminNotification,
 }));
 
+// terms 系: server-side consent gate + 記録コマンドを no-op に。
+// `assertAllRequiredTermsAgreed` は内部で `getRequiredTermsByScope` を呼び、
+// 未モックだと Prisma `'use cache'` 経路で SyntaxError 化するため明示的に空配列を返す。
+const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
+const mockRecordTermsAgreementsCommand = mock(() =>
+  Promise.resolve({ count: 0 }),
+);
+mock.module("@/shared/domain/terms/queries", () => ({
+  getRequiredTermsByScope: mockGetRequiredTermsByScope,
+}));
+mock.module("@/shared/domain/terms/commands", () => ({
+  recordTermsAgreementsCommand: mockRecordTermsAgreementsCommand,
+}));
+
 const mockUpdateTag = mock(() => undefined);
 
 // 公式 Bun re-export pattern: actual を spread して必要 fn のみ override。
@@ -192,6 +206,9 @@ describe("submitInquiry", () => {
     mockSendContactConfirmationEmail.mockClear();
     mockSendContactAdminNotification.mockClear();
     mockUpdateTag.mockClear();
+    mockGetRequiredTermsByScope.mockClear();
+    mockRecordTermsAgreementsCommand.mockClear();
+    mockGetRequiredTermsByScope.mockImplementation(() => Promise.resolve([]));
     // 成功レスポンスにリセット
     mockValidateTurnstile.mockImplementation(() =>
       Promise.resolve({ success: true as const }),

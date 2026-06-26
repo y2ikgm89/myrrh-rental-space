@@ -37,7 +37,10 @@ import {
 } from "@/admin/components/ui";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { stopRowClick } from "@/admin/components/table";
-import { TERMS_TYPE_LABELS } from "@/shared/lib/validations/terms";
+import {
+  TERMS_TYPE_LABELS,
+  TERMS_SCOPE_LABELS,
+} from "@/shared/lib/validations/terms";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
 import { reorderTerms, updateTermsPublished } from "@/admin/actions/terms";
@@ -83,34 +86,28 @@ function SortableRow({ item }: SortableRowProps) {
         </div>
       </TableCell>
       <TableCell className="font-medium">{item.title}</TableCell>
-      <TableCell>
+      <TableCell className="hidden md:table-cell">
         <Badge variant="secondary">
           {TERMS_TYPE_LABELS[item.type] ?? item.type}
         </Badge>
       </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground">
+      <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
         {item.slug}
       </TableCell>
-      <TableCell>
-        <div className="flex flex-wrap gap-1">
-          {item.requiredAtReservation && (
-            <Badge variant="outline" className="text-xs">
-              予約
-            </Badge>
-          )}
-          {item.requiredAtInquiry && (
-            <Badge variant="outline" className="text-xs">
-              問合せ
-            </Badge>
-          )}
-          {item.requiredAtSignup && (
-            <Badge variant="outline" className="text-xs">
-              登録
-            </Badge>
-          )}
-        </div>
+      <TableCell className="hidden md:table-cell">
+        {item.scopes.length === 0 ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {item.scopes.map((scope) => (
+              <Badge key={scope} variant="outline" className="text-xs">
+                {TERMS_SCOPE_LABELS[scope]}
+              </Badge>
+            ))}
+          </div>
+        )}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="hidden text-right tabular-nums lg:table-cell">
         {item.agreementsCount}
       </TableCell>
       <TableCell onClick={stopRowClick}>
@@ -209,10 +206,16 @@ export function TermsTable({ items: initialItems }: TermsTableProps) {
                 <TableRow>
                   <TableHead className="w-12" />
                   <TableHead>タイトル</TableHead>
-                  <TableHead>タイプ</TableHead>
-                  <TableHead>スラッグ</TableHead>
-                  <TableHead>同意必須</TableHead>
-                  <TableHead className="text-right">同意数</TableHead>
+                  <TableHead className="hidden md:table-cell">タイプ</TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    スラッグ
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    同意必須
+                  </TableHead>
+                  <TableHead className="hidden text-right lg:table-cell">
+                    同意数
+                  </TableHead>
                   <TableHead>状態</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>

@@ -14,6 +14,7 @@ import {
   type TurnstileInstance,
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { TermsConsentChecklist } from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
 import { setSignupTermsAgreementCookie } from "./signup-terms-action";
 
 /* ------------------------------------------------------------------ */
@@ -130,41 +131,14 @@ export function SocialLoginButtons({
         </div>
       )}
 
-      {requiredTerms.length > 0 && (
-        <div className="space-y-3 border border-border p-4">
-          <p className="text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
-            ご利用規約への同意
-          </p>
-          {requiredTerms.map((term) => {
-            const isChecked = agreedIds.includes(term.id);
-            return (
-              <label
-                key={term.id}
-                className="flex min-h-11 items-start gap-3 py-1"
-              >
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 border-border accent-accent"
-                  checked={isChecked}
-                  disabled={pending !== null}
-                  onChange={() => handleToggleTerm(term.id)}
-                  aria-label={`${term.title}に同意する`}
-                />
-                <span className="text-sm text-muted-foreground">
-                  <a
-                    href={`/terms/${term.slug}`}
-                    target="_blank"
-                    className="text-accent underline transition-colors hover:text-foreground"
-                  >
-                    {term.title}
-                  </a>
-                  に同意します
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      )}
+      <TermsConsentChecklist
+        terms={requiredTerms}
+        agreedIds={agreedIds}
+        onToggle={handleToggleTerm}
+        disabled={pending !== null}
+        heading="ご利用規約への同意"
+        variant="boxed"
+      />
 
       <TurnstileWidget
         ref={turnstileRef}

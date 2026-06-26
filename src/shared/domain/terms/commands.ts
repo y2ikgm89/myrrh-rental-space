@@ -4,7 +4,9 @@ import { createHash } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
+import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
+import { sanitizeContentHtml } from "@/shared/lib/html/sanitize";
 import type { TermsFormInput } from "@/shared/lib/validations/terms";
 
 interface SlugOnly {
@@ -25,13 +27,17 @@ async function ensureSlugAvailable(
   }
 }
 
+/**
+ * Lexical client が生成した HTML を server-side で sanitize-html により再生成する。
+ * TermsAgreement.contentSnapshot に焼かれる前のセキュリティ境界。
+ */
 function buildContent(input: TermsFormInput) {
   return {
     contentJson: parsePrismaInputJson(
       input.contentJson,
       "contentJson が不正です",
     ),
-    contentHtml: input.contentHtml,
+    contentHtml: sanitizeContentHtml(input.contentHtml),
   };
 }
 
@@ -59,9 +65,8 @@ export async function createTermsCommand(
       contentHtml,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
-      requiredAtReservation: input.requiredAtReservation,
-      requiredAtInquiry: input.requiredAtInquiry,
-      requiredAtSignup: input.requiredAtSignup,
+      scopes: [...input.scopes],
+      changelog: input.changelog,
       showInFooter: input.showInFooter,
       // footerOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
       footerOrder: (maxOrder._max.footerOrder ?? 0) + 1,
@@ -112,9 +117,8 @@ export async function updateTermsCommand(
       contentHtml,
       isPublished: input.isPublished,
       publishedAt,
-      requiredAtReservation: input.requiredAtReservation,
-      requiredAtInquiry: input.requiredAtInquiry,
-      requiredAtSignup: input.requiredAtSignup,
+      scopes: { set: [...input.scopes] },
+      changelog: input.changelog,
       showInFooter: input.showInFooter,
       // footerOrder は変更しない（位置は reorderTermsCommand のみが変更）
     },
@@ -210,20 +214,34 @@ export async function softDeleteTermsCommand(id: string): Promise<SlugOnly> {
 }
 
 /**
- * 規約物理削除（ソフトデリート済みのみ）
+ * 規約物理削除（ソフトデリート済みのみ・同意記録があれば不可）
+ *
+ * 同意記録に紐づく規約を物理削除すると `onDelete: Restrict` により Prisma が
+ * 生エラーを bubble するため、コマンド層で件数 pre-check し DomainError に
+ * 変換する (admin UI 側で適切なメッセージ表示)。
  */
 export async function hardDeleteTermsCommand(
   id: string,
 ): Promise<{ id: string }> {
   const existing = await prisma.termsDocument.findUnique({
     where: { id },
-    select: { id: true, deletedAt: true },
+    select: {
+      id: true,
+      deletedAt: true,
+      _count: { select: { agreements: true } },
+    },
   });
   if (!existing) {
     throw new DomainError("規約が見つかりません", "NOT_FOUND");
   }
   if (!existing.deletedAt) {
     throw new DomainError("削除済みの規約のみ物理削除できます", "VALIDATION");
+  }
+  if (existing._count.agreements > 0) {
+    throw new DomainError(
+      "この規約には同意記録が残っているため物理削除できません",
+      "CONFLICT",
+    );
   }
 
   await prisma.termsDocument.delete({ where: { id } });
@@ -271,13 +289,21 @@ export async function restoreTermsCommand(id: string): Promise<SlugOnly> {
 /**
  * 同意記録の作成（公開フォーム送信時に呼ぶ）
  *
+ * 旧 `context: string` を `scope: TermsScope` enum に置換 (schema 変更)。
+ *
+ * 呼出側は事前に `assertAllRequiredTermsAgreed({scope, agreedTermsIds})` で
+ * server-side gate を通すこと (curl bypass 防止)。
+ *
+ * 該当 docs が公開されていない / 削除済みなら 0 件 record を返す (本コマンド
+ * は append-only の証跡なので silent skip 設計)。
+ *
  * @param termsIds 同意した規約 ID 配列
- * @param context  "reservation"/"inquiry"/"signup" 等
+ * @param scope   "RESERVATION"/"INQUIRY"/"LOGIN_SIGNUP"/"EVENT_REGISTRATION"
  * @param resourceId 紐づくリソース ID（予約 / 問い合わせ ID 等）
  */
 export async function recordTermsAgreementsCommand(input: {
   termsIds: readonly string[];
-  context: string;
+  scope: TermsScope;
   resourceId?: string | null;
   customerId?: string | null;
   guestEmail?: string | null;
@@ -301,7 +327,7 @@ export async function recordTermsAgreementsCommand(input: {
     termsId: doc.id,
     contentSnapshot: doc.contentHtml,
     contentHash: createHash("sha256").update(doc.contentHtml).digest("hex"),
-    context: input.context,
+    scope: input.scope,
     ...(input.resourceId !== undefined &&
       input.resourceId !== null && { resourceId: input.resourceId }),
     ...(input.customerId !== undefined &&

@@ -14,6 +14,7 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
+import { TermsConsentChecklist } from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
 import { BookingSummary } from "./booking-summary";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 
@@ -207,35 +208,15 @@ export function CustomerStep({
         </div>
 
         {requiredTerms.length > 0 ? (
-          <div className="mt-8 space-y-3 border-t border-border pt-6">
-            {requiredTerms.map((term) => {
-              const isChecked = agreedTermsIds.includes(term.id);
-              return (
-                <label
-                  key={term.id}
-                  className="flex min-h-11 items-start gap-3 py-1"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 border-border accent-accent"
-                    checked={isChecked}
-                    onChange={() => onToggleTerm(term.id)}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    <a
-                      href={`/terms/${term.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-accent underline transition-colors hover:text-foreground"
-                    >
-                      {term.title}
-                      <span className="sr-only">（新しいタブで開く）</span>
-                    </a>
-                    に同意します
-                  </span>
-                </label>
-              );
-            })}
+          <div className="mt-8 border-t border-border pt-6">
+            <TermsConsentChecklist
+              terms={requiredTerms}
+              agreedIds={agreedTermsIds}
+              onToggle={onToggleTerm}
+              disabled={isPending}
+              heading="ご利用規約への同意"
+              variant="flat"
+            />
           </div>
         ) : null}
 

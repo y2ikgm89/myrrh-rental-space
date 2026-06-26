@@ -57,6 +57,7 @@ export {
   MediaType,
   MediaUsage,
   EmailDeliveryStatus,
+  TermsScope,
 } from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------

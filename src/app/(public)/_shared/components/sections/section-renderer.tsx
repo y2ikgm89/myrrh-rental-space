@@ -69,7 +69,8 @@ import {
   reservationSearchParams,
   spaceSearchParams,
 } from "@/public/lib/search-params";
-import { getRequiredTermsAtInquiry } from "@/shared/domain/terms/queries";
+import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { getBusinessInfo } from "@/public/data/business";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getDefaultSectionStyle } from "@/shared/domain/section-styles/types";
@@ -463,7 +464,7 @@ export async function SectionRenderer({
       const config = getContactFormConfig(section.config);
       const [turnstileSiteKey, requiredTerms] = await Promise.all([
         getTurnstileSiteKey(),
-        getRequiredTermsAtInquiry(),
+        getRequiredTermsByScope(TermsScope.INQUIRY),
       ]);
       return (
         <ContactFormSection
