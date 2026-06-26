@@ -405,6 +405,10 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
 
+      - name: Remove stale Microsoft apt repo (prevents apt-get 403 on noble runners)
+        if: needs.changes.outputs.code == 'true'
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list || true
+
       - name: Install Playwright browsers
         if: needs.changes.outputs.code == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install chromium --with-deps
@@ -516,6 +520,9 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             playwright-${{ runner.os }}-
+
+      - name: Remove stale Microsoft apt repo (prevents apt-get 403 on noble runners)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list || true
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
