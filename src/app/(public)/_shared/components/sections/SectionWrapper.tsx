@@ -35,7 +35,7 @@ import type {
 const LAYOUT_CONTAINER_WIDTH_CLASSES: Record<LayoutContainerWidth, string> = {
   sm: "max-w-[var(--prose-narrow)]",
   md: "max-w-[var(--prose-medium)]",
-  lg: "max-w-[var(--container-max)]",
+  lg: "max-w-[var(--container-site)]",
   xl: "max-w-[var(--container-editorial)]",
   full: "max-w-none",
 };

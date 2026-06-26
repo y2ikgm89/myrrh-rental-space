@@ -117,7 +117,7 @@ export default async function SpaceDetailPage({
         </Container>
       </div>
 
-      <article className="mx-auto max-w-[var(--container-max)] px-6 pt-12 md:px-12 md:pt-16">
+      <article className="mx-auto max-w-[var(--container-site)] px-6 pt-12 md:px-12 md:pt-16">
         {/* Hero header: Kinfolk magazine cover pattern (中央寄せ eyebrow + serif h1 + meta) */}
         <header className="text-center">
           <p className="text-xs uppercase tracking-eyebrow-wide text-accent">

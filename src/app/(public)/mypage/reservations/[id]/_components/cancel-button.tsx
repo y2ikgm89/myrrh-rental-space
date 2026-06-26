@@ -106,12 +106,15 @@ export function CancelButton({
             </div>
           )}
 
-          <DialogFooter className="mt-2 gap-2">
+          {/* JSX 順 = visual 順 (Dialog primitive が flex-col / sm:flex-row 両軸対応)。
+           *  mobile 縦並びでは「閉じる」が上、「キャンセル確定」(destructive) が thumb-zone 底に来る。 */}
+          <DialogFooter>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setOpen(false)}
               disabled={isPending}
+              className="w-full sm:w-auto"
             >
               閉じる
             </Button>
@@ -120,7 +123,7 @@ export function CancelButton({
               size="sm"
               onClick={handleConfirm}
               disabled={isPending}
-              className="bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
+              className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
             >
               {isPending ? "キャンセル中..." : "キャンセルを確定する"}
             </Button>

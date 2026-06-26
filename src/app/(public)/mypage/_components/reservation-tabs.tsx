@@ -15,8 +15,10 @@ interface ReservationTabsProps {
   readonly pastItems: readonly ReservationListItem[];
 }
 
+// shrink-0: 件数 3 桁になっても tab 自身が縮まず Tabs.List の overflow-x-auto に逃がす。
+// tabular-nums: 件数 (1)→(10)→(100) で width jiggle を防止。
 const TAB_TRIGGER_CLASS = cn(
-  "min-h-11 whitespace-nowrap px-5 py-3 text-base tracking-[0.12em] transition-colors",
+  "min-h-11 shrink-0 whitespace-nowrap px-4 py-3 text-base tracking-[0.12em] transition-colors tabular-nums sm:px-5",
   "underline decoration-2 underline-offset-[6px]",
   "text-muted-foreground decoration-transparent hover:text-foreground",
   "data-[state=active]:text-accent data-[state=active]:decoration-accent",
@@ -46,7 +48,10 @@ export function ReservationTabs({
     >
       <Tabs.List
         aria-label="予約一覧の表示切替"
-        className="mb-6 flex justify-center border-b border-border"
+        // mb-4 md:mb-6 で mobile の累積余白を圧縮。
+        // overflow-x-auto + scrollbar 非表示 + -mx/-px で container padding を貫通し
+        // mobile での 3 桁件数や追加 tab の overflow を横スクロールで吸収する。
+        className="mb-4 flex shrink-0 justify-start overflow-x-auto border-b border-border [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:mb-6 md:justify-center"
       >
         <Tabs.Trigger value="active" className={TAB_TRIGGER_CLASS}>
           これから（{activeItems.length}）

@@ -53,7 +53,7 @@ export function TaxonomyArchiveView({
         ]}
       />
       <section className="pt-10 pb-[var(--spacing-fluid-md)] md:pt-14">
-        <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
+        <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)]">
           <header className="mb-10 text-center md:mb-14">
             <SectionLabel>{eyebrow}</SectionLabel>
             <div className="mt-4">

@@ -52,7 +52,7 @@ import {
   getSiteLayoutSettings,
   FALLBACK_LAYOUT_CONFIG,
 } from "@/shared/domain/settings/queries/site";
-import { getContainerMaxCss } from "@/shared/lib/styles/layout-mapper";
+import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
 import type { CSSProperties } from "react";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
@@ -348,7 +348,7 @@ const DEFAULT_TAX_VALUE: PublicTaxDisplay = {
   displayMode: DEFAULT_TAX_SETTINGS.displayModePublic,
 };
 const DEFAULT_MAIN_STYLE = {
-  "--container-max": getContainerMaxCss(FALLBACK_LAYOUT_CONFIG),
+  "--container-site": getContainerSiteCss(FALLBACK_LAYOUT_CONFIG),
 } as CSSProperties;
 
 /**
@@ -383,7 +383,7 @@ async function MainShellResolved({
     displayMode: taxSettings.displayModePublic,
   };
   const style = {
-    "--container-max": getContainerMaxCss(layoutSettings),
+    "--container-site": getContainerSiteCss(layoutSettings),
     ...(isTransparent && {
       marginTop: "calc(var(--header-height, 0px) * -1)",
     }),

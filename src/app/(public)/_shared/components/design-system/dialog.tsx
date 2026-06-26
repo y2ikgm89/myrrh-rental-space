@@ -38,7 +38,11 @@ function DialogContent({
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
+          // Mobile canonical: 左右 16px のセーフ余白 (w-[calc(100%-2rem)])、
+          // iOS dynamic viewport ツールバー対応の 100dvh、長 dialog の内部スクロール
+          // 許容 (overflow-y-auto)、すべての viewport で rounded-lg (旧 sm: gate は
+          // mobile で sharp 角と border の交差で hit area 端が触りにくくなるため撤去)。
+          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border border-border bg-background p-4 shadow-lg duration-200 sm:p-6",
           className,
         )}
         {...props}
@@ -59,8 +63,10 @@ function DialogHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      // pe-12: absolute right-2 top-2 h-11 w-11 の close button (44px + 8px gutter)
+      // と Title/Description の右端衝突を構造的に回避。
       className={cn(
-        "flex flex-col space-y-1.5 text-center sm:text-left",
+        "flex flex-col space-y-1.5 pe-12 text-center sm:text-left",
         className,
       )}
       {...props}
@@ -74,8 +80,13 @@ function DialogFooter({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      // BREAKING: 旧版の flex-col-reverse は destructive action が縦並び時に最下段
+      // (thumb-zone) に来るため誤タップを誘発する anti-pattern。consumer 側で JSX
+      // 順を意味通りに並べ、ここは JSX 順 = visual 順を保証する flex-col に統一。
+      // sm: 横並びは space-x-2 → gap-2 で両軸統一 (gap は flex-direction 切替で
+      // 同値・space-x は flex-col のとき無効になる)。
       className={cn(
-        "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+        "flex flex-col gap-2 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}

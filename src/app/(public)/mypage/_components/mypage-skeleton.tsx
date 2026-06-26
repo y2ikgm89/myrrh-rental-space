@@ -33,10 +33,13 @@ export function MypageSkeleton({ variant = "list" }: MypageSkeletonProps) {
   }
 
   if (variant === "form") {
+    // 実フォーム (edit-reservation-form / profile-form) は border / outer padding を
+    // 持たない素の field stack 構造なので、skeleton も border / p-6 を撤去して
+    // loading → loaded 遷移の CLS / フラッシュを抑える。
     return (
       <div className="space-y-6" aria-busy="true" aria-live="polite">
         <Skeleton className="h-8 w-1/2" variant="text" />
-        <div className="space-y-6 border border-border p-6 sm:p-8">
+        <div className="space-y-6">
           <div className="space-y-2">
             <Skeleton className="h-3 w-20" variant="text" />
             <Skeleton className="h-11 w-full" />
@@ -49,7 +52,7 @@ export function MypageSkeleton({ variant = "list" }: MypageSkeletonProps) {
             <Skeleton className="h-3 w-20" variant="text" />
             <Skeleton className="h-11 w-full" />
           </div>
-          <Skeleton className="h-12 w-32" />
+          <Skeleton className="h-12 w-full sm:w-32" />
         </div>
       </div>
     );

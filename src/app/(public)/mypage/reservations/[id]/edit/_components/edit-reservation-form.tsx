@@ -147,7 +147,13 @@ export function EditReservationForm({
     form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
 
   return (
-    <form {...getFormProps(form)} action={formAction} className="space-y-6">
+    <form
+      {...getFormProps(form)}
+      action={formAction}
+      // aria-busy: submit 中の status を assistive tech に伝達 (WCAG 4.1.3)。
+      aria-busy={isPending}
+      className="space-y-6"
+    >
       {/* Hidden inputs for transit */}
       <input
         type="hidden"
@@ -226,16 +232,21 @@ export function EditReservationForm({
         onExpire={handleTurnstileExpire}
       />
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "変更中..." : "予約を変更する"}
-        </Button>
-
+      {/* Action row (mobile-first canonical):
+       *  - mobile は縦並びで「変更する=下=thumb-zone」「キャンセル=上」
+       *    (旧 flex-col-reverse 系 anti-pattern は使わず JSX 順 = visual 順)。
+       *  - sm+ で横並びに戻し justify-end で右寄せ。
+       *  - 各 Button に w-full sm:w-auto で full-width tap target を担保。 */}
+      <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-3">
         <Button
           variant="secondary"
           href={toAppRoute(`/mypage/reservations/${reservationId}`)}
+          className="w-full sm:w-auto"
         >
           キャンセル
+        </Button>
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+          {isPending ? "変更中..." : "予約を変更する"}
         </Button>
       </div>
     </form>

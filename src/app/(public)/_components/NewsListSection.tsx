@@ -59,7 +59,7 @@ export function NewsListSection({
 
     return (
       <section className="pt-10 pb-[var(--spacing-fluid-md)] md:pt-14">
-        <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
+        <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)]">
           <Suspense fallback={null}>
             <div className="mb-8 max-w-md">
               <SearchBar placeholder="お知らせを検索..." />

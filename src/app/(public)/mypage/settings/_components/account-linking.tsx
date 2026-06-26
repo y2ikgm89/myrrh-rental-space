@@ -137,7 +137,7 @@ export function AccountLinking({
           return (
             <div
               key={provider.id}
-              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-border p-4"
+              className="flex flex-col gap-3 border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex items-center gap-3">
                 <span className={provider.logoClass}>
@@ -158,6 +158,13 @@ export function AccountLinking({
                   size="sm"
                   onClick={() => handleUnlink(provider.id)}
                   disabled={linkedCount <= 1 || isUnlinking}
+                  // disabled の理由を SR に伝える。下に書かれた p#unlink-notice
+                  // と aria-describedby で関連付け。
+                  {...(linkedCount <= 1 && {
+                    "aria-describedby": "unlink-notice",
+                  })}
+                  // min-w で「解除」↔「解除中...」の layout shift を防ぐ。
+                  className="w-full min-w-[6.5rem] sm:w-auto"
                 >
                   {isUnlinking ? (
                     "解除中..."
@@ -176,6 +183,7 @@ export function AccountLinking({
                   variant="secondary"
                   size="sm"
                   onClick={() => handleLink(provider.id)}
+                  className="w-full sm:w-auto"
                 >
                   連携する
                 </Button>
@@ -186,7 +194,7 @@ export function AccountLinking({
       </div>
 
       {linkedCount <= 1 && (
-        <p className="text-xs text-muted-foreground">
+        <p id="unlink-notice" className="text-xs text-muted-foreground">
           最低1つのアカウント連携が必要です。解除するには別のアカウントを先に連携してください。
         </p>
       )}
@@ -212,7 +220,7 @@ export function AccountLinking({
               アカウントを削除する
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>アカウント削除の確認</DialogTitle>
               <DialogDescription>
@@ -226,11 +234,13 @@ export function AccountLinking({
               onVerify={setDeleteTurnstileToken}
               onExpire={() => setDeleteTurnstileToken("")}
             />
+            {/* JSX 順 = visual 順: mobile 縦並びで「キャンセル」が上、「削除」が下 (thumb-zone)。 */}
             <DialogFooter>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setDeleteDialogOpen(false)}
+                className="w-full sm:w-auto"
               >
                 キャンセル
               </Button>
@@ -239,7 +249,7 @@ export function AccountLinking({
                 size="sm"
                 onClick={handleDeleteAccount}
                 disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
+                className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
               >
                 {isDeleting ? "削除中..." : "削除する"}
               </Button>

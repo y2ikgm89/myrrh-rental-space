@@ -21,16 +21,19 @@ export function IncompleteProfileNotice({
 }: IncompleteProfileNoticeProps): ReactElement | null {
   if (isCustomerProfileComplete(customer)) return null;
 
+  // 旧版は <div> + 内部 inline <Link> でアクセシブルなタップ標的が
+  // 「アカウント設定」テキストのみ (14px line-height) と狭く、WCAG 2.5.5 未達。
+  // notice 全体を Link 化することで notice カード全面を 44px+ tap target にする。
   return (
-    <div className="mb-6 border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
+    <Link
+      href="/mypage/settings"
+      className="mb-6 block min-h-[var(--touch-target-min)] border border-accent/30 bg-accent/5 p-4 text-sm text-foreground transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+    >
       お名前が未登録です。
-      <Link
-        href="/mypage/settings"
-        className="ml-1 text-accent underline underline-offset-4 hover:text-foreground"
-      >
+      <span className="ml-1 text-accent underline underline-offset-4">
         アカウント設定
-      </Link>
+      </span>
       から姓名を入力してください。
-    </div>
+    </Link>
   );
 }

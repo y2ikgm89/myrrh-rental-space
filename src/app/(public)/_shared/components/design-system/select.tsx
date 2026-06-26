@@ -46,7 +46,10 @@ export function Select({
         aria-describedby={errorId}
         {...props}
         className={cn(
-          "w-full min-h-11 border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
+          // text-base (mobile) で iOS Safari の <select> focus 時 viewport auto-zoom
+          // を抑止 (Apple 公式 viewport spec: font-size < 16px で発火)。md+ では
+          // 視覚密度を保つため text-sm に縮小。Input/Textarea と完全対称。
+          "w-full min-h-11 border-0 border-b bg-transparent px-0 py-3 text-base text-foreground transition-colors focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed md:text-sm",
           error ? "border-destructive" : "border-border",
         )}
       >

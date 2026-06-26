@@ -743,6 +743,44 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("deprecated --container-max トークン (Tailwind v4 built-in w-max 衝突) は src 以下に残さない", () => {
+    // Tailwind v4 の @theme `--container-*` は max-w-{name} / w-{name} を自動生成し、
+    // `--container-max` は built-in `w-max` / `max-w-max` (= max-content) と silently 衝突する。
+    // 命名を `--container-site` に統一済 (PR: refactor(public,mypage)!: --container-site rename)。
+    // 過去のコメント / docstring 参照は collectNonCommentOffenders で除外する。
+    const files = collectStyleSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(files, /--container-max\b/u);
+    expect(offenders).toEqual([]);
+  });
+
+  test("deprecated getContainerMaxCss export は src 以下に残さない", () => {
+    // `getContainerMaxCss` → `getContainerSiteCss` rename と同型のドリフト防止。
+    const files = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      files,
+      /\bgetContainerMaxCss\b/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  test("mypage-nav.tsx は <select> mobile picker を再導入しない", () => {
+    // PR #605 の妥協 native <select> 撤去後、4 NAV_ITEMS を grid grid-cols-4 md:flex で
+    // 単一 DOM 統一。<select> の再導入を deny-list で防ぐ (情報設計破綻 + 3-tap 動線回避)。
+    // collectNonCommentOffenders で JSDoc 内の言及 (例: 「PR #605 の妥協 native <select> 撤去」) は除外する。
+    const mypageNavFile = join(
+      PUBLIC_APP_ROOT,
+      "mypage",
+      "_components",
+      "mypage-nav.tsx",
+    );
+    expect(existsSync(mypageNavFile)).toBe(true);
+    const offenders = collectNonCommentOffenders(
+      [mypageNavFile],
+      /<select[\s>]/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
   test("public セクション系 surface は px-4 / px-6 の横パディングを直書きしない（Container / SectionWrapper トークン経由）", () => {
     const sectionRoots = [
       join(PUBLIC_APP_ROOT, "_shared", "components", "sections"),

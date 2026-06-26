@@ -113,13 +113,18 @@ export function resolveWidthStyles(
 }
 
 /**
- * LayoutConfig.containerWidth/containerWidthCustom → `--container-max` の CSS
+ * LayoutConfig.containerWidth/containerWidthCustom → `--container-site` の CSS
  * length 文字列を解決する。公開ルートの <main> に inline 注入し、Container
  * (default variant) / SectionWrapper / 各リスト・詳細セクションが参照する
- * var(--container-max) を上書きする。FULL / CUSTOM(px なし) は "100%"。
+ * var(--container-site) を上書きする。FULL / CUSTOM(px なし) は "100%"。
  * contentWidth の resolveWidthStyles と同列の純粋関数（DB 非依存）。
+ *
+ * 命名: `--container-max` ではなく `--container-site` に固定。Tailwind v4 の
+ * `@theme --container-*` は max-w-{name} / w-{name} を自動生成し、`max` は
+ * built-in `w-max` / `max-w-max` (= max-content) と silently 衝突する仕様
+ * （memory: project_tailwind-v4-theme-token-collision-2026-06-18）。
  */
-export function getContainerMaxCss(config: LayoutConfig): string {
+export function getContainerSiteCss(config: LayoutConfig): string {
   const { containerWidth, containerWidthCustom } = config;
   if (containerWidth === LayoutWidth.FULL) return "100%";
   if (containerWidth === LayoutWidth.CUSTOM) {

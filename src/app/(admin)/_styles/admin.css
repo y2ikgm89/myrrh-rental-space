@@ -204,7 +204,9 @@
   /* --------------------------------------------------------------------------
    * Layout — Admin dashboard
    * -------------------------------------------------------------------------- */
-  --container-max: 100rem; /* admin は広め (1600px) */
+  /* admin は広め (1600px)。`--container-site` 命名理由は public.css の同名定義
+   * コメント参照 (Tailwind v4 `--container-max` built-in collision 回避)。 */
+  --container-site: 100rem;
   --container-padding: clamp(1rem, 2vw, 2rem);
   --sidebar-width: 18rem; /* 288px */
   --sidebar-width-collapsed: 4rem; /* 64px */

@@ -18,16 +18,16 @@ export default function BlogPostLoading(): ReactElement {
   return (
     <div>
       <div className="bg-surface py-3">
-        <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
+        <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)]">
           <Skeleton className="h-4 w-48" />
         </div>
       </div>
-      <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)] py-12">
+      <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)] py-12">
         <Skeleton className="mb-3 h-4 w-12" />
         <Skeleton className="mb-4 h-9 w-3/4" />
         <Skeleton className="h-4 w-32" />
       </div>
-      <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)] pb-16">
+      <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)] pb-16">
         <div className="grid gap-12 lg:grid-cols-[1fr_280px]">
           <div className="space-y-4">
             {BODY_LINE_KEYS.map((key) => (

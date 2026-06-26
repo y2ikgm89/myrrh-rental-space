@@ -84,11 +84,16 @@ interface DetailRowProps {
 
 function DetailRow({ label, children }: DetailRowProps) {
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4 py-3 border-b border-border last:border-none">
-      <dt className="text-sm text-muted-foreground sm:w-36 shrink-0">
+    <div className="flex flex-col gap-1 border-b border-border py-3 last:border-none sm:flex-row sm:items-baseline sm:gap-4">
+      <dt className="shrink-0 text-sm text-muted-foreground sm:w-36">
         {label}
       </dt>
-      <dd className="text-sm text-foreground">{children}</dd>
+      {/* min-w-0 break-words [overflow-wrap:anywhere]:
+       *  notes / cancellationReason / 長 space 名等の UGC が container を破らないようにする。
+       *  break-words だけでは長英数列が伸びるため anywhere を併用。 */}
+      <dd className="min-w-0 break-words text-sm text-foreground [overflow-wrap:anywhere]">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -134,12 +139,12 @@ export function ReservationDetail({
 
   return (
     <div className="border border-border">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 border-b border-border">
-        <Heading level={2} className="!text-xl">
+      {/* Header: 長 space 名 break-words + Badge cluster shrink-0 で wrap 安定。 */}
+      <div className="flex flex-col gap-2 border-b border-border p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-6">
+        <Heading level={2} className="!text-xl min-w-0 break-words">
           {space.name}
         </Heading>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Badge variant={RESERVATION_BADGE_VARIANTS[status] ?? "default"}>
             {isValidReservationStatus(reservation.status) ? (
               <CuratedIcon
@@ -285,17 +290,17 @@ export function ReservationDetail({
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-t border-border">
+      {/* Footer: mobile は full-width tap area / sm+ は両端寄せ */}
+      <div className="flex flex-col gap-2 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6">
         <Link
           href="/mypage"
-          className="inline-flex min-h-11 items-center text-sm text-foreground underline underline-offset-4 hover:text-accent transition-colors"
+          className="inline-flex min-h-11 w-full items-center justify-center text-sm text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
         >
           予約一覧に戻る
         </Link>
         <Link
           href={`/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`}
-          className="inline-flex min-h-11 items-center text-sm text-foreground underline underline-offset-4 hover:text-accent transition-colors"
+          className="inline-flex min-h-11 w-full items-center justify-center text-sm text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
         >
           この予約について問い合わせる
         </Link>
