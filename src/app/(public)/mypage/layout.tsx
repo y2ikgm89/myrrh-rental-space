@@ -3,18 +3,19 @@
  *
  * - verifyCustomerSession() で認証チェック
  * - ensureCustomerLinked() で Customer 紐づけ
- * - 新規顧客の場合、signup terms cookie を消費して同意記録
+ * - 新規顧客の場合、signup terms cookie を消費して同意記録（SignupTermsConsumer に隔離）
  * - メール未登録時は /mypage/settings にリダイレクト（LINE ログインで email なしの場合）
  *
  * 設計（rule .claude/rules/db-and-domain.md §6 canonical）:
- * - 認証 + Prisma 直呼び出し (verifyCustomerSession / ensureCustomerLinked) + cookies/headers
+ * - 認証 + Prisma 直呼び出し (verifyCustomerSession / ensureCustomerLinked) + headers
  *   等の dynamic API 処理は **MypageAuthGate async SC に隔離**し、冒頭で `await connection()`
  *   を呼んで build prerender skip を保証する。
  * - layout body は `<Suspense fallback={null}><MypageAuthGate>{children}</MypageAuthGate></Suspense>`
  *   のみで構成し、defense-in-depth でルール完全準拠。
- * - Set-Cookie (cookieStore.delete) / redirect() は MypageAuthGate の `await` チェーンが
- *   完了して return する前に実行されるため、Suspense 境界外への副作用流出は起きない
- *   (await 完了 → return JSX → stream 開始 の順序が Next.js / React の公式契約)。
+ * - **Cookie mutation (set/delete) は Server Component から呼べない**（Next.js 公式: docs/
+ *   01-app/02-guides/data-security.mdx "BAD: Triggering Mutation During Rendering"）。
+ *   signup cookie の消費は SignupTermsConsumer (client) → consumeSignupTermsAction (Server
+ *   Action) のチェーンに切り出し、cookie 削除を Server Action context で実行する。
  *
  * 公式背景: https://nextjs.org/docs/app/api-reference/functions/connection
  * 同 pattern: 公開 root layout (PR #696 / project_public-csp-nonce-static-shell-fix-2026-06-22)
@@ -25,21 +26,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
-import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
-import { TERMS_AGREEMENT_CONTEXT } from "@/shared/lib/validations/terms";
-import {
-  SIGNUP_TERMS_COOKIE_NAME,
-  decodeSignupTermsCookie,
-} from "@/shared/lib/signup-terms-cookie";
-import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory } from "@/shared/lib/errors/server";
-import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
 import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
+import { SignupTermsConsumer } from "./_components/signup-terms-consumer";
 
 export const metadata: Metadata = {
   title: "マイページ",
@@ -49,12 +42,10 @@ export const metadata: Metadata = {
 /**
  * MypageAuthGate
  *
- * 認証 + Customer リンク + signup cookie 消費 + LINE メール未登録時 redirect を行う
- * async SC。`await connection()` 冒頭呼び出しで build prerender を構造的に skip し、
- * 全 await 完了 → return JSX の順序で Set-Cookie / redirect の副作用が確実に Suspense
- * 境界外（response stream 開始前）に flush される。
+ * 認証 + Customer リンク + LINE メール未登録時 redirect を行う async SC。
+ * `await connection()` 冒頭呼び出しで build prerender を構造的に skip する。
  *
- * rule §6 canonical (`<Suspense>` + `await connection()` の async SC で DB 直呼出を隔離) 準拠。
+ * Cookie mutation は禁止のため SignupTermsConsumer に委譲（rule §6 + Next.js 公式 canonical）。
  */
 async function MypageAuthGate({
   children,
@@ -70,36 +61,6 @@ async function MypageAuthGate({
     redirect("/login?error=account_suspended");
   }
 
-  // 新規顧客の場合、signup 同意 cookie を消費して同意記録
-  // Next.js 公式パターン: layout Server Component で cookies() を read/write 可
-  const cookieStore = await cookies();
-  const signupCookie = cookieStore.get(SIGNUP_TERMS_COOKIE_NAME);
-  if (signupCookie) {
-    if (isNew) {
-      const termsIds = decodeSignupTermsCookie(signupCookie.value);
-      if (termsIds.length > 0) {
-        const clientIp = await getClientIpFromHeaders();
-        const headersList = await headers();
-        const userAgent = headersList.get("user-agent");
-        fireAndForget(
-          recordTermsAgreementsCommand({
-            termsIds,
-            context: TERMS_AGREEMENT_CONTEXT.SIGNUP,
-            customerId: customer.id,
-            ipAddress: clientIp,
-            userAgent: userAgent ?? null,
-          }),
-          {
-            operation: "recordSignupTermsAgreements",
-            category: ErrorCategory.DATABASE,
-          },
-        );
-      }
-    }
-    // 既存顧客でも cookie をクリーンアップ（再利用防止）
-    cookieStore.delete(SIGNUP_TERMS_COOKIE_NAME);
-  }
-
   // LINE メール未登録時: settings 以外のページなら settings にリダイレクト（循環防止）
   if (!customer.email) {
     const headerList = await headers();
@@ -113,6 +74,7 @@ async function MypageAuthGate({
     <PageLayout variant="dashboard">
       <MypageNav />
       <IncompleteProfileNotice customer={customer} />
+      <SignupTermsConsumer isNew={isNew} />
       {children}
     </PageLayout>
   );
