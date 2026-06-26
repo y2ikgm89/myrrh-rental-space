@@ -221,7 +221,7 @@ export function StandardHeroSection({
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex items-end overflow-hidden bg-background pb-6 pt-[calc(var(--hero-header-offset)+1rem)] md:pb-10 md:pt-[calc(var(--hero-header-offset)+1.5rem)]"
+        className="relative flex items-end overflow-hidden bg-background pt-[calc(var(--hero-header-offset)+1rem)] md:pt-[calc(var(--hero-header-offset)+1.5rem)]"
       >
         <Container className="relative w-full !max-w-6xl text-center">
           {showSectionLabel && (

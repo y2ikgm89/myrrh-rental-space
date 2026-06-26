@@ -71,7 +71,7 @@ export function PostListSection({
     if (mode.query) preservedQuery["q"] = mode.query;
 
     return (
-      <section className="pt-10 pb-[var(--spacing-fluid-md)] md:pt-14">
+      <section>
         <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)]">
           <BlogLayout>
             <Suspense fallback={null}>
