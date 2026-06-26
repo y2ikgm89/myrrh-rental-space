@@ -114,15 +114,17 @@ function buildTabWhere(tab: EventTabFilter, now: Date): Prisma.EventWhereInput {
 
 /**
  * ソートキーを Prisma の orderBy に変換する。
- * "startTime" → firstSlotStartAt 非正規化列で semantic sort。
- * "endTime" は非正規化列未実装のため createdAt フォールバック維持。
+ * "startTime" / "endTime" は非正規化列 firstSlotStartAt / lastSlotEndAt で semantic sort。
+ * nulls: "last" を明示し、スロット未登録 Event が DESC 時に先頭に来る Postgres 既定挙動を抑止する。
  */
 function buildEventOrderBy(
   sortBy: string,
   sortOrder: "asc" | "desc",
 ): Prisma.EventOrderByWithRelationInput {
-  if (sortBy === "startTime") return { firstSlotStartAt: sortOrder };
-  if (sortBy === "endTime") return { createdAt: sortOrder };
+  if (sortBy === "startTime")
+    return { firstSlotStartAt: { sort: sortOrder, nulls: "last" } };
+  if (sortBy === "endTime")
+    return { lastSlotEndAt: { sort: sortOrder, nulls: "last" } };
   return { [sortBy]: sortOrder };
 }
 

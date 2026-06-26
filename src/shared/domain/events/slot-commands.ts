@@ -92,14 +92,18 @@ export async function syncEventTimeSlotsCommand(
     }
   }
 
-  // firstSlotStartAt 非正規化列を同期（ORDER BY 用）
-  const firstSlot = await tx.eventTimeSlot.findFirst({
+  // firstSlotStartAt / lastSlotEndAt 非正規化列を同期（ORDER BY 用）
+  // MIN + MAX を 1 クエリで取得。スロット 0 件時は集約値が null。
+  const aggregate = await tx.eventTimeSlot.aggregate({
     where: { eventId },
-    orderBy: { startAt: "asc" },
-    select: { startAt: true },
+    _min: { startAt: true },
+    _max: { endAt: true },
   });
   await tx.event.update({
     where: { id: eventId },
-    data: { firstSlotStartAt: firstSlot?.startAt ?? null },
+    data: {
+      firstSlotStartAt: aggregate._min.startAt ?? null,
+      lastSlotEndAt: aggregate._max.endAt ?? null,
+    },
   });
 }

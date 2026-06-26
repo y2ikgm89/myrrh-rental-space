@@ -65,6 +65,9 @@ async function createTestEvent(opts: {
       descriptionPlainText: "test",
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
+      // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
+      firstSlotStartAt: start,
+      lastSlotEndAt: end,
     },
     select: { id: true },
   });

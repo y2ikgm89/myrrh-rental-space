@@ -46,7 +46,7 @@ mock.module("@/shared/db/prisma", () => ({
           id: "e1",
           title: "イベント",
           slug: "event",
-          startTime: new Date("2026-05-01"),
+          slots: [{ startAt: new Date("2026-05-01") }],
         },
       ]),
     },

@@ -1698,6 +1698,9 @@ model Event {
   /// MIN(slots.startAt) の非正規化キャッシュ。スロット変更時に commands 層で同期。
   /// null = スロット未登録。ORDER BY / フィルタ用途に特化。slots.startAt と型を合わせ TIMESTAMPTZ(6)。
   firstSlotStartAt      DateTime?   @db.Timestamptz(6)
+  /// MAX(slots.endAt) の非正規化キャッシュ。firstSlotStartAt と対称。
+  /// 「終了が遅い順」ソート (past タブ既定) を semantic に支える。
+  lastSlotEndAt         DateTime?   @db.Timestamptz(6)
 
   location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
@@ -1711,6 +1714,7 @@ model Event {
   @@index([spaceId])
   @@index([deletedAt])
   @@index([firstSlotStartAt])
+  @@index([lastSlotEndAt])
   @@map("events")
 }
 
