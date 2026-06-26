@@ -484,6 +484,16 @@ export async function upsertEventFromCalendar(data: {
           endAt: data.endTime,
         },
       });
+      // firstSlotStartAt 非正規化列を再計算
+      const firstSlot = await tx.eventTimeSlot.findFirst({
+        where: { eventId: existingSlot.eventId },
+        orderBy: { startAt: "asc" },
+        select: { startAt: true },
+      });
+      await tx.event.update({
+        where: { id: existingSlot.eventId },
+        data: { firstSlotStartAt: firstSlot?.startAt ?? null },
+      });
     });
     return { id: existingSlot.eventId, action: "updated" as const };
   }
@@ -499,6 +509,7 @@ export async function upsertEventFromCalendar(data: {
         descriptionPlainText,
         addressDetail: data.location ?? null,
         status: EventStatus.DRAFT,
+        firstSlotStartAt: data.startTime,
       },
       select: { id: true },
     });

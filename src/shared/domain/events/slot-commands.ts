@@ -91,4 +91,15 @@ export async function syncEventTimeSlotsCommand(
       });
     }
   }
+
+  // firstSlotStartAt 非正規化列を同期（ORDER BY 用）
+  const firstSlot = await tx.eventTimeSlot.findFirst({
+    where: { eventId },
+    orderBy: { startAt: "asc" },
+    select: { startAt: true },
+  });
+  await tx.event.update({
+    where: { id: eventId },
+    data: { firstSlotStartAt: firstSlot?.startAt ?? null },
+  });
 }
