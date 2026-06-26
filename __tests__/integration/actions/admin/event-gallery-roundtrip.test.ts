@@ -95,6 +95,9 @@ mock.module("@/shared/db/prisma", () => ({
           create: mock(() => Promise.resolve({ id: "slot-1" })),
           update: mock(() => Promise.resolve({ id: "slot-1" })),
           delete: mock(() => Promise.resolve({ id: "slot-1" })),
+          aggregate: mock(() =>
+            Promise.resolve({ _min: { startAt: null }, _max: { endAt: null } }),
+          ),
         },
       };
       return fn(tx);

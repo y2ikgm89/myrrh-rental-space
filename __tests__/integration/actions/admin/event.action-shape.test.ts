@@ -54,6 +54,7 @@ mock.module("@/shared/domain/events/admin-queries", () => ({
     id: "evt",
     slug: "slug",
     googleCalendarEventId: null,
+    slots: [],
   })),
 }));
 
