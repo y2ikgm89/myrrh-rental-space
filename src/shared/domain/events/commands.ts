@@ -119,12 +119,6 @@ export async function createEventCommand(data: EventCommandInput) {
         ogpDescription: data.ogpDescription ?? null,
         metaDescription: data.metaDescription ?? null,
         metaKeywords: data.metaKeywords ?? null,
-        // startTime / endTime / capacity は最初のスロットから派生。
-        // DB 列は contract migration まで残るが、ここでは最初のスロット値を格納する
-        // (backfill 後は参照されないが NOT NULL 制約のために必要)。
-        startTime: data.slots[0]?.startAt ?? new Date(),
-        endTime: data.slots[0]?.endAt ?? new Date(),
-        capacity: null,
         registrationDeadline: parseOptionalDeadline(data.registrationDeadline),
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
@@ -164,7 +158,11 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       id: true,
       slug: true,
       status: true,
-      startTime: true,
+      slots: {
+        select: { startAt: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
       locationId: true,
       spaceId: true,
       addressDetail: true,
@@ -180,9 +178,6 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
   const wasPublished =
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
-
-  const firstSlotStart = data.slots[0]?.startAt ?? existing.startTime;
-  const firstSlotEnd = data.slots[0]?.endAt ?? existing.startTime;
 
   await prisma.$transaction(async (tx) => {
     await tx.event.update({
@@ -200,10 +195,6 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         ogpDescription: data.ogpDescription ?? null,
         metaDescription: data.metaDescription ?? null,
         metaKeywords: data.metaKeywords ?? null,
-        // 旧列は contract まで残すが最初のスロット値で同期
-        startTime: firstSlotStart,
-        endTime: firstSlotEnd,
-        capacity: null,
         registrationDeadline: parseOptionalDeadline(data.registrationDeadline),
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
@@ -268,10 +259,16 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     (data.slots.some((s) => !s.id) || venueChanged) &&
     data.status === EventStatus.PUBLISHED
   ) {
-    fireAndForget(sendEventUpdatedToAllParticipants(id, existing.startTime), {
-      operation: "sendEventUpdatedToAllParticipants",
-      category: ErrorCategory.EXTERNAL_API,
-    });
+    fireAndForget(
+      sendEventUpdatedToAllParticipants(
+        id,
+        existing.slots[0]?.startAt ?? new Date(),
+      ),
+      {
+        operation: "sendEventUpdatedToAllParticipants",
+        category: ErrorCategory.EXTERNAL_API,
+      },
+    );
   }
 }
 
@@ -364,8 +361,6 @@ export async function duplicateEventCommand(id: string) {
       ogpDescription: true,
       metaDescription: true,
       metaKeywords: true,
-      startTime: true,
-      endTime: true,
       registrationDeadline: true,
       addressDetail: true,
       locationId: true,
@@ -411,9 +406,6 @@ export async function duplicateEventCommand(id: string) {
         ogpDescription: source.ogpDescription,
         metaDescription: source.metaDescription,
         metaKeywords: source.metaKeywords,
-        startTime: source.startTime,
-        endTime: source.endTime,
-        capacity: null,
         registrationDeadline: source.registrationDeadline,
         addressDetail: source.addressDetail,
         locationId: source.locationId,
@@ -421,7 +413,6 @@ export async function duplicateEventCommand(id: string) {
         status: EventStatus.DRAFT,
         registrationOpen: false,
         publishedAt: null,
-        googleCalendarEventId: null,
       },
       select: { id: true, slug: true },
     });
@@ -469,45 +460,58 @@ export async function upsertEventFromCalendar(data: {
   const descriptionHtml = buildParagraphHtml(plain);
   const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
 
-  const existing = await prisma.event.findFirst({
-    where: {
-      googleCalendarEventId: data.googleCalendarEventId,
-      deletedAt: null,
-    },
-    select: { id: true },
+  const existingSlot = await prisma.eventTimeSlot.findFirst({
+    where: { googleCalendarEventId: data.googleCalendarEventId },
+    select: { id: true, eventId: true },
   });
 
-  if (existing) {
-    await prisma.event.update({
-      where: { id: existing.id, deletedAt: null },
-      data: {
-        title: data.title,
-        descriptionJson,
-        descriptionHtml,
-        descriptionPlainText,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        addressDetail: data.location ?? null,
-      },
+  if (existingSlot) {
+    await prisma.$transaction(async (tx) => {
+      await tx.event.update({
+        where: { id: existingSlot.eventId, deletedAt: null },
+        data: {
+          title: data.title,
+          descriptionJson,
+          descriptionHtml,
+          descriptionPlainText,
+          addressDetail: data.location ?? null,
+        },
+      });
+      await tx.eventTimeSlot.update({
+        where: { id: existingSlot.id },
+        data: {
+          startAt: data.startTime,
+          endAt: data.endTime,
+        },
+      });
     });
-    return { id: existing.id, action: "updated" as const };
+    return { id: existingSlot.eventId, action: "updated" as const };
   }
 
   const slug = await ensureUniqueSlug(generateSlug(data.title, "event"));
-  const event = await prisma.event.create({
-    data: {
-      title: data.title,
-      slug,
-      descriptionJson,
-      descriptionHtml,
-      descriptionPlainText,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      addressDetail: data.location ?? null,
-      status: EventStatus.DRAFT,
-      googleCalendarEventId: data.googleCalendarEventId,
-    },
-    select: { id: true },
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.event.create({
+      data: {
+        title: data.title,
+        slug,
+        descriptionJson,
+        descriptionHtml,
+        descriptionPlainText,
+        addressDetail: data.location ?? null,
+        status: EventStatus.DRAFT,
+      },
+      select: { id: true },
+    });
+    await tx.eventTimeSlot.create({
+      data: {
+        eventId: created.id,
+        startAt: data.startTime,
+        endAt: data.endTime,
+        capacity: 0,
+        googleCalendarEventId: data.googleCalendarEventId,
+      },
+    });
+    return created;
   });
   return { id: event.id, action: "created" as const };
 }

@@ -42,7 +42,6 @@ export async function createEventRegistrationCommand(data: {
           slug: true,
           registrationOpen: true,
           registrationDeadline: true,
-          startTime: true,
         },
       });
 
@@ -65,9 +64,8 @@ export async function createEventRegistrationCommand(data: {
           "NOT_FOUND",
         );
 
-      // 申込締切：未設定なら最初のスロット開始時刻、設定があればその時刻まで受付
-      const deadline =
-        event.registrationDeadline ?? event.startTime ?? slot.startAt;
+      // 申込締切：未設定ならスロット開始時刻、設定があればその時刻まで受付
+      const deadline = event.registrationDeadline ?? slot.startAt;
       if (Date.now() > deadline.getTime())
         throw new DomainError(
           "申込締切を過ぎたため受け付けできません",

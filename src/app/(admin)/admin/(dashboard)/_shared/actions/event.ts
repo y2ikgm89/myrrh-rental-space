@@ -244,7 +244,9 @@ export async function deleteEvent(
       const event = await getEventById(validated.data);
       await deleteEventCommand(validated.data);
       return {
-        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+        googleCalendarEventId:
+          event?.slots.find((s) => s.googleCalendarEventId !== null)
+            ?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
@@ -320,7 +322,9 @@ export async function cancelEvent(
       const event = await getEventById(validated.data);
       await cancelEventCommand(validated.data);
       return {
-        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+        googleCalendarEventId:
+          event?.slots.find((s) => s.googleCalendarEventId !== null)
+            ?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {
@@ -351,7 +355,9 @@ export async function archiveEvent(
       const event = await getEventById(validated.data);
       await archiveEventCommand(validated.data);
       return {
-        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+        googleCalendarEventId:
+          event?.slots.find((s) => s.googleCalendarEventId !== null)
+            ?.googleCalendarEventId ?? null,
       };
     },
     afterSuccess: (data) => {

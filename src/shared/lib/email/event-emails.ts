@@ -335,12 +335,15 @@ export async function sendEventCancelledToAllParticipants(
     where: { id: eventId, deletedAt: null },
     select: {
       title: true,
-      startTime: true,
-      endTime: true,
       updatedAt: true,
       addressDetail: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
+      slots: {
+        select: { startAt: true, endAt: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
@@ -356,13 +359,17 @@ export async function sendEventCancelledToAllParticipants(
 
   if (!event) return;
 
+  const firstSlot = event.slots[0];
+  const startTime = firstSlot?.startAt ?? new Date(0);
+  const endTime = firstSlot?.endAt ?? new Date(0);
+
   const venueDisplay = formatEventVenue({
     location: event.location,
     space: event.space,
     addressDetail: event.addressDetail,
   });
 
-  const eventDate = format(event.startTime, "yyyy年M月d日 (EEEE)", {
+  const eventDate = format(startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
   });
   // event の updatedAt を idempotency key に混ぜることで、24h 内に同一イベントを
@@ -390,8 +397,8 @@ export async function sendEventCancelledToAllParticipants(
             registrationId: registration.id,
             eventTitle: event.title,
             customerName: registration.name,
-            startTime: event.startTime,
-            endTime: event.endTime,
+            startTime,
+            endTime,
             ...(venueDisplay !== null ? { location: venueDisplay } : {}),
             quantity: registration.quantity,
             sequence: registration.icsSequence + 1,
@@ -466,12 +473,15 @@ export async function sendEventUpdatedToAllParticipants(
     where: { id: eventId, deletedAt: null },
     select: {
       title: true,
-      startTime: true,
-      endTime: true,
       updatedAt: true,
       addressDetail: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
+      slots: {
+        select: { startAt: true, endAt: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
@@ -487,6 +497,10 @@ export async function sendEventUpdatedToAllParticipants(
 
   if (!event) return;
 
+  const firstSlot = event.slots[0];
+  const newStartTime = firstSlot?.startAt ?? new Date(0);
+  const newEndTimeDate = firstSlot?.endAt ?? new Date(0);
+
   const venueDisplay = formatEventVenue({
     location: event.location,
     space: event.space,
@@ -496,10 +510,10 @@ export async function sendEventUpdatedToAllParticipants(
   const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
     locale: ja,
   });
-  const newEventDate = format(event.startTime, "yyyy年M月d日 (EEEE) HH:mm", {
+  const newEventDate = format(newStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
     locale: ja,
   });
-  const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
+  const newEndTime = format(newEndTimeDate, "HH:mm", { locale: ja });
   const oldStartTimestamp = oldStartTime.getTime();
   // 同一 oldStartTime のまま他のフィールド (タイトル/場所/etc.) のみ更新されても
   // idempotency key を分離するため event.updatedAt も混ぜる。event-cancelled と対称。
@@ -526,8 +540,8 @@ export async function sendEventUpdatedToAllParticipants(
             registrationId: registration.id,
             eventTitle: event.title,
             customerName: registration.name,
-            startTime: event.startTime,
-            endTime: event.endTime,
+            startTime: newStartTime,
+            endTime: newEndTimeDate,
             ...(venueDisplay !== null ? { location: venueDisplay } : {}),
             quantity: registration.quantity,
             sequence: registration.icsSequence + 1,

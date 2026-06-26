@@ -137,14 +137,23 @@ async function searchEvents(query: string): Promise<SearchResultItem[]> {
       deletedAt: null,
       OR: [{ title: ci(query) }, { slug: ci(query) }],
     },
-    select: { id: true, title: true, slug: true, startTime: true },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      slots: {
+        select: { startAt: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
+    },
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
     id: r.id,
     resource: "event" as const,
     label: r.title,
-    description: r.startTime.toISOString().slice(0, 10),
+    description: r.slots[0]?.startAt?.toISOString().slice(0, 10) ?? "",
     href: `/admin/events/${r.id}`,
   }));
 }

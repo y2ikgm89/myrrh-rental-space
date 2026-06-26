@@ -1635,7 +1635,7 @@ model SpaceReview {
 /// イベントの時間枠（例: 9:00-10:00 定員5名）。
 /// 1 イベント = 複数スロット。スロット単位で申込・定員・GCal を管理する。
 /// startAt / endAt は Timestamptz(6) で UTC 保存、JST 表示は date-format.ts SSoT。
-/// capacity は NOT NULL — スロット単位の定員が SSoT（Event.capacity は contract で DROP）。
+/// capacity は NOT NULL — スロット単位の定員が SSoT。
 /// googleCalendarEventId は Google が返す base32hex ID を保存（こちらの cuid とは別）。
 model EventTimeSlot {
   id                    String    @id @default(cuid(2)) @db.VarChar(30)
@@ -1676,9 +1676,6 @@ model Event {
   ogpDescription        String?
   metaDescription       String?     @db.Text
   metaKeywords          String?
-  startTime             DateTime
-  endTime               DateTime
-  capacity              Int?
   /// 号室・フロア・補足情報または外部会場名。
   /// locationId/spaceId と併用時は補足情報（フロア・入口案内等）、
   /// 両方 null のときは外部会場名として使う。
@@ -1689,9 +1686,8 @@ model Event {
   spaceId               String?     @db.Uuid
   status                EventStatus @default(DRAFT)
   registrationOpen      Boolean     @default(true)
-  /// 申込締切日時（null = 開始時刻まで受付）。startTime <= 必須。
+  /// 申込締切日時（null = 最初のスロット開始時刻まで受付）。スロット startAt 以前必須。
   registrationDeadline  DateTime?
-  googleCalendarEventId String?     @unique
   publishedAt           DateTime?
   deletedAt             DateTime?
   deletedById           String?     @db.Uuid
@@ -1707,7 +1703,6 @@ model Event {
   tickets       EventTicket[]
   slots         EventTimeSlot[]
 
-  @@index([startTime, endTime])
   @@index([status])
   @@index([locationId])
   @@index([spaceId])

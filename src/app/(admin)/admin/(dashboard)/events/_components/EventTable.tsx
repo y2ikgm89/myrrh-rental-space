@@ -86,10 +86,10 @@ export function EventTable({ events }: EventTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDateTimeShort(event.startTime)}
+                    {formatDateTimeShort(event.slots[0]?.startAt ?? null)}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDateTimeShort(event.endTime)}
+                    {formatDateTimeShort(event.slots[0]?.endAt ?? null)}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {formatEventVenue({

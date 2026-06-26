@@ -20,15 +20,17 @@ const publicEventSelect = {
   descriptionPlainText: true,
   thumbnailUrl: true,
   gallery: true,
-  startTime: true,
-  endTime: true,
   registrationDeadline: true,
-  capacity: true,
   addressDetail: true,
   status: true,
   registrationOpen: true,
   location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
+  slots: {
+    select: { startAt: true, endAt: true, capacity: true },
+    orderBy: { startAt: "asc" as const },
+    take: 1,
+  },
   tickets: {
     where: { isAvailable: true },
     select: {
@@ -61,9 +63,13 @@ type PublicEventRow = Awaited<
 >[number];
 
 function mapPublicEvent<T extends PublicEventRow>(event: T) {
+  const firstSlot = event.slots[0];
   return {
     ...event,
     gallery: parseGallery(event.gallery),
+    startTime: firstSlot?.startAt ?? new Date(0),
+    endTime: firstSlot?.endAt ?? new Date(0),
+    capacity: firstSlot?.capacity ?? null,
   };
 }
 
@@ -80,7 +86,7 @@ export async function getPublishedEvents() {
           deletedAt: null,
         },
         select: publicEventSelect,
-        orderBy: { startTime: "asc" },
+        orderBy: { createdAt: "asc" },
       }),
     fallback: [],
     category: ErrorCategory.DATABASE,
@@ -114,11 +120,11 @@ export async function getUpcomingEventsExcluding(params: {
           where: {
             status: EventStatus.PUBLISHED,
             deletedAt: null,
-            startTime: { gte: now },
+            slots: { some: { startAt: { gte: now } } },
             ...where,
           },
           select: publicEventSelect,
-          orderBy: { startTime: "asc" },
+          orderBy: { createdAt: "asc" },
           take,
         }),
       fallback: [],

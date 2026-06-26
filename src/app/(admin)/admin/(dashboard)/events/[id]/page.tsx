@@ -74,7 +74,7 @@ export default async function EventDetailPage({
       title={
         <>
           {event.title}
-          {event.googleCalendarEventId && (
+          {event.slots.some((s) => s.googleCalendarEventId !== null) && (
             <Badge variant="outline" className="ml-2 align-middle">
               GCal 連携
             </Badge>
@@ -133,11 +133,11 @@ export default async function EventDetailPage({
         <div className="grid gap-4 sm:grid-cols-2">
           <DetailField
             label="開始日時"
-            value={formatDateTimeShort(event.startTime)}
+            value={formatDateTimeShort(event.slots[0]?.startAt ?? null)}
           />
           <DetailField
             label="終了日時"
-            value={formatDateTimeShort(event.endTime)}
+            value={formatDateTimeShort(event.slots[0]?.endAt ?? null)}
           />
           <DetailField
             label="会場"
@@ -159,7 +159,11 @@ export default async function EventDetailPage({
         <div className="grid gap-4 sm:grid-cols-2">
           <DetailField
             label="定員"
-            value={event.capacity !== null ? `${event.capacity}人` : "-"}
+            value={
+              (event.slots[0]?.capacity ?? null) !== null
+                ? `${event.slots[0]?.capacity}人`
+                : "-"
+            }
           />
           <DetailField
             label="料金"
