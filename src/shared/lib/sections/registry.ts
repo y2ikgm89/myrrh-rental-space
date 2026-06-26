@@ -47,10 +47,8 @@ import { valuePropsConfigSchema } from "./definitions/value-props/schema";
 import { valuePropsMetadata } from "./definitions/value-props/metadata";
 import { eventCalendarConfigSchema } from "./definitions/event-calendar/schema";
 import { eventCalendarMetadata } from "./definitions/event-calendar/metadata";
-import {
-  pageHeroConfigSchema,
-  pageHeroMetadata,
-} from "./definitions/page-hero";
+import { pageHeroConfigSchema } from "./definitions/page-hero/schema";
+import { pageHeroMetadata } from "./definitions/page-hero";
 
 // ─────────────────────────────────────────────────────────────
 // 定義レコード

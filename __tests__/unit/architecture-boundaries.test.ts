@@ -1473,6 +1473,67 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  // ──────────────────────────────────────────────────────────────
+  // CSP nonce-gap structural prevention helpers
+  // ──────────────────────────────────────────────────────────────
+  //
+  // 背景: Next.js 16 (cacheComponents:true) の static shell `◐` ページは build 時に prerender
+  // されるため、生成 HTML に焼かれる `<script src="/_next/static/chunks/app-client-...js">` には
+  // per-request nonce が付与されない。strict-dynamic CSP 配下では nonce 無し chunk が全て
+  // evaluation block される。trigger は「'use client' file の barrel value-import で Zod-heavy
+  // schema module が client-reference として `entryJSFiles[<page>]` に列挙される」こと。
+  // type-only import / deep import は client-reference を増やさない。
+  //
+  // 防衛: 'use client' を含む public file × Zod-heavy module deny-list の value-import を grep
+  // gate で 0 件強制する。multi-line import (prettier printWidth=80 改行) も逃さないため source
+  // を「import 文の `{...}` 内部改行のみ空白化」してから line 評価する。
+  //
+  // admin scope は対象外: admin layout が PR #604 で `generateViewport + connection() +
+  // <Suspense><html>` により全 71 route を `ƒ` 化済 (詳細は `.claude/rules/public-app.md` の
+  // 「Admin layout の動的化 (CSP nonce gap 予防)」節)。runtime nonce で全 chunk 保護されるため
+  // admin client が zod を value-import しても CSP block は起きない。
+
+  /**
+   * import / export 文の `{...}` 内部改行を畳んで line-based 検査を安全化する。
+   *
+   * line-by-line の正規表現 (`import\s+\{[^}]*\bxxx\b/`) は prettier printWidth=80 で
+   * 改行された多行 import を silently miss する。例:
+   *   import {
+   *     useCallback,
+   *   } from "react";
+   * は 1 行も pattern 全体にマッチせず false-negative になる。
+   *
+   * 対策: source を改行前に「import/export 文の `{...}` 内部改行のみ空白化」してから既存
+   * line-based 評価に渡す。
+   */
+  function collapseMultilineImports(source: string): string {
+    const MULTILINE_BRACE_IMPORT =
+      /^(?<head>(?:import|export)(?:\s+type)?\s*)\{(?<body>[^{}]*)\}(?<tail>\s*from\s*["'][^"']+["'][^\n]*)/gmu;
+    return source.replace(MULTILINE_BRACE_IMPORT, (_m, head, body, tail) => {
+      const oneLineBody = body
+        .replace(/\s*\r?\n\s*/gu, " ")
+        .replace(/\s+/gu, " ")
+        .trim();
+      return `${head}{ ${oneLineBody} }${tail}`;
+    });
+  }
+
+  /**
+   * inline-type 形式 (`import { type X, Y } from "m"`) の binding が全て `type` 接頭辞かを判定。
+   * 全件 type-only なら `verbatimModuleSyntax` で物理 erase されるため value-import 扱いしない。
+   * 1 つでも値 binding (`Y`) があれば value-import (= chunk 化対象)。
+   */
+  function isInlineTypeOnly(importLine: string): boolean {
+    const match = importLine.match(/\{\s*([^}]*)\s*\}/u);
+    if (!match || !match[1]) return false;
+    const bindings = match[1]
+      .split(",")
+      .map((b) => b.trim())
+      .filter(Boolean);
+    if (bindings.length === 0) return false;
+    return bindings.every((b) => /^type\s+\w/u.test(b));
+  }
+
   test("portable-text barrel は schema 値を re-export しない (CSP nonce gap 構造予防)", () => {
     const barrelPath = join(
       SRC_ROOT,
@@ -1481,7 +1542,7 @@ describe("architecture boundaries", () => {
       "portable-text",
       "index.ts",
     );
-    const source = readFileSync(barrelPath, "utf8");
+    const source = collapseMultilineImports(readFileSync(barrelPath, "utf8"));
     const lines = source.split(/\r?\n/u);
     const violations: string[] = [];
     for (const line of lines) {
@@ -1497,7 +1558,83 @@ describe("architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
-  test("src/app/(public)/** は portable-text/schema を value-import しない (CSP nonce gap 構造予防)", () => {
+  test("page-hero barrel は schema 値を re-export しない (CSP nonce gap 構造予防)", () => {
+    // portable-text と同型: section 定義 barrel から `*Schema` 値を撤去し deep-import 強制。
+    // EditorialSplitHero / CompactHero / MinimalHero / MediaHero は 'use client' だが全て
+    // barrel から type のみ import (verbatimModuleSyntax で erase)。PageHero.tsx (Server
+    // Component) のみ schema 値を `./schema` から deep-import する。
+    const barrelPath = join(
+      SRC_ROOT,
+      "shared",
+      "lib",
+      "sections",
+      "definitions",
+      "page-hero",
+      "index.ts",
+    );
+    const source = collapseMultilineImports(readFileSync(barrelPath, "utf8"));
+    const lines = source.split(/\r?\n/u);
+    const violations: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+      if (
+        /^export\s*\{[^}]*\bpageHeroConfigSchema\b[^}]*\}\s*from\s+["']\.\/schema["']/u.test(
+          trimmed,
+        )
+      ) {
+        violations.push(
+          `page-hero/index.ts: pageHeroConfigSchema value re-export found: ${trimmed}`,
+        );
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  test("portable-text/schema.ts は型を re-export しない (barrel SSoT 純化)", () => {
+    // schema.ts は Zod schema 値のみを export する責務に純化。型は `./types` (SSoT) と
+    // barrel `./index` 経由で公開する。schema 経由の type re-export は dead surface area
+    // で、再導入されると future barrel hygiene gate 拡張時の判定簡略化を阻害する。
+    const schemaPath = join(
+      SRC_ROOT,
+      "shared",
+      "lib",
+      "portable-text",
+      "schema.ts",
+    );
+    const source = collapseMultilineImports(readFileSync(schemaPath, "utf8"));
+    const lines = source.split(/\r?\n/u);
+    const violations: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+      if (
+        /^export\s+type\s*\{[^}]*\}\s*from\s+["']\.\/types["']/u.test(trimmed)
+      ) {
+        violations.push(
+          `portable-text/schema.ts: type re-export found: ${trimmed}`,
+        );
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  test("src/app/(public)/ 'use client' は Zod-heavy module を value-import しない (CSP nonce gap 構造予防)", () => {
+    // deny-list は enumerate ベース (scan-based は section.ts 等 server-only 経路を巻き込む)。
+    // 各 module は public 'use client' から value-import 0 件を実測確認済 (DISCOVERY 5)。
+    // 新規 Zod-heavy public-facing module を追加する際は ここに 1 行追加する。
+    //
+    // scope は 'use client' directive を含む public file のみ。Server Component (default)
+    // は client bundle に焼かれないため value-import しても CSP nonce gap を trigger しない。
+    const ZOD_HEAVY_DENY_MODULES: readonly string[] = [
+      "@/shared/lib/portable-text/schema",
+      "@/shared/lib/sections/definitions/page-hero/schema",
+      "@/shared/lib/sections/registry",
+      "@/shared/lib/sections/field-registry",
+      "@/shared/lib/validations/section",
+      "@/shared/lib/validations/section-defaults",
+    ] as const;
+
     function walkPublic(dir: string): string[] {
       const out: string[] = [];
       const stack: string[] = [dir];
@@ -1512,20 +1649,49 @@ describe("architecture boundaries", () => {
       }
       return out;
     }
+
+    /**
+     * `'use client'` directive がファイル冒頭 (shebang/コメント/空行を許容して) に
+     * 配置されているか判定。Next.js 公式仕様で `'use client'` は file の very first
+     * statement (コメント・空行・他の directive は許容) でなければならないため、
+     * 安全策として先頭 30 行のみ検査する (現存 file で 30 行を超える header は無い)。
+     */
+    function hasUseClientDirective(source: string): boolean {
+      const head = source.split(/\r?\n/u).slice(0, 30);
+      for (const raw of head) {
+        const line = raw.trim();
+        if (!line) continue;
+        if (line.startsWith("//") || line.startsWith("/*")) continue;
+        if (line.startsWith("*") || line.startsWith("*/")) continue;
+        // Next.js 公式: `'use client'` または `"use client"` を許容 (;あり/なし両方)
+        if (/^["']use client["']\s*;?\s*$/u.test(line)) return true;
+        // 最初の non-comment / non-blank が directive でなければ Server Component
+        return false;
+      }
+      return false;
+    }
+
+    const denyAlt = ZOD_HEAVY_DENY_MODULES.map((m) =>
+      m.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"),
+    ).join("|");
+    const FROM_DENY = new RegExp(`from\\s+["'](?:${denyAlt})["']`, "u");
+
     const violations: string[] = [];
     for (const path of walkPublic(PUBLIC_APP_ROOT)) {
       const source = readFileSync(path, "utf8");
-      const lines = source.split(/\r?\n/u);
+      if (!hasUseClientDirective(source)) continue;
+      const collapsed = collapseMultilineImports(source);
+      const lines = collapsed.split(/\r?\n/u);
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i] ?? "";
         const trimmed = line.trim();
         if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-        if (
-          !/from\s+["']@\/shared\/lib\/portable-text\/schema["']/u.test(trimmed)
-        )
-          continue;
-        if (/^import\s+type[\s{]/u.test(trimmed)) continue;
-        if (/^export\s+type[\s{]/u.test(trimmed)) continue;
+        if (!/^(?:import|export)\b/u.test(trimmed)) continue;
+        if (!FROM_DENY.test(trimmed)) continue;
+        // top-level type-only (`import type { ... } from "<deny>"`) は erase されるので許可
+        if (/^(?:import|export)\s+type[\s{]/u.test(trimmed)) continue;
+        // inline-type 形式 (`import { type X, type Y } from "<deny>"`) で全件 type なら許可
+        if (isInlineTypeOnly(trimmed)) continue;
         violations.push(`${relative(ROOT, path)}:${i + 1}: ${trimmed}`);
       }
     }

@@ -24,12 +24,12 @@
 import { z } from "zod";
 import type { PortableTextSpan, PortableTextBlock } from "./types";
 
-export type {
-  PortableTextSpan,
-  PortableTextBlock,
-  SpanTextToken,
-  SpanIconToken,
-} from "./types";
+// 型 (`PortableTextSpan` / `PortableTextBlock` / `SpanTextToken` / `SpanIconToken`) は
+// `./types` (zero runtime) が SSoT。public surface は barrel `./index` から re-export 済。
+// この module は Zod schema 値のみを export する責務に純化。consumer は型を barrel から、
+// schema 値を `@/shared/lib/portable-text/schema` から import すること。
+// regression gate: `__tests__/unit/architecture-boundaries.test.ts` の grep gate で
+// この module からの type re-export 復活を 0 件強制する。
 
 const ICON_NAME_PATTERN = /^Icon[A-Z][A-Za-z0-9]*$/;
 const tokenKeySchema = z.string().min(1, { error: "_key は必須です" });
