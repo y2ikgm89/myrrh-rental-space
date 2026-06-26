@@ -108,7 +108,7 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
       )}
       style={customHeightStyle}
     >
-      <div className="mx-auto flex min-h-full max-w-[var(--container-max)] flex-col md:flex-row">
+      <div className="mx-auto flex min-h-full max-w-[var(--container-site)] flex-col md:flex-row">
         {/* Left: Image panel */}
         <div className="relative min-h-[50svh] w-full md:h-full md:w-1/2">
           <div ref={imageRef} className="absolute inset-0">

@@ -173,7 +173,13 @@
 
   --spacing-region: clamp(2.5rem, 5vw, 4rem);
 
-  --container-max: 80rem;
+  /* Site-wide max-width token. NAMED `--container-site` (not `-max`) to avoid
+   * Tailwind v4 built-in collision: `--container-*` auto-generates max-w-{name} /
+   * w-{name} / min-w-{name} utilities, and `--container-max` would shadow the
+   * built-in `w-max` / `max-w-max` (= `max-content`), forcing every `w-max`
+   * element to this width. Memory: project_tailwind-v4-theme-token-collision-2026-06-18.
+   * Public docs: https://tailwindcss.com/docs/theme#default-theme-variable-reference */
+  --container-site: 80rem;
   --container-padding: clamp(1rem, 3vw, 3rem);
   --container-editorial: 50rem;
   --container-padding-start: max(

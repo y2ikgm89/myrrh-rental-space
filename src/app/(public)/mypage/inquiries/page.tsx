@@ -26,11 +26,21 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
 
   return (
     <Stack gap="lg">
-      <Heading level={1}>お問い合わせ一覧</Heading>
+      <header className="space-y-1">
+        <Heading level={1}>お問い合わせ一覧</Heading>
+        {inquiries.length > 0 && (
+          <p className="text-sm text-muted-foreground">{inquiries.length} 件</p>
+        )}
+      </header>
       {inquiries.length === 0 ? (
-        <div className="py-12 md:py-16 text-center space-y-4">
+        <div className="space-y-4 py-12 text-center md:py-16">
           <p className="text-muted-foreground">お問い合わせはありません</p>
-          <Button variant="editorial" size="sm" href="/contact">
+          <Button
+            variant="editorial"
+            size="sm"
+            href="/contact"
+            className="w-full sm:w-auto"
+          >
             お問い合わせする
           </Button>
         </div>

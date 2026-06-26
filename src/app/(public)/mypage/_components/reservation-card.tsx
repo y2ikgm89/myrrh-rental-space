@@ -69,10 +69,15 @@ export function ReservationCard({
   return (
     <div className="border border-border p-4 sm:p-6 transition-colors">
       {/* Header: space name + status */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <Heading level={3}>{space.name}</Heading>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {/* min-w-0 break-words で長 space.name の overflow を防止し
+            Badge の shrink-0 と組合せて header の wrap を安定させる。 */}
+        <Heading level={3} className="min-w-0 break-words">
+          {space.name}
+        </Heading>
         <Badge
           variant={RESERVATION_BADGE_VARIANTS[reservation.status] ?? "default"}
+          className="shrink-0"
         >
           {isValidReservationStatus(reservation.status) ? (
             <CuratedIcon
@@ -85,24 +90,31 @@ export function ReservationCard({
       </div>
 
       {/* Date/time + price + actions */}
-      <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-        <p>
-          {formatSerializedDate(startTime, {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}{" "}
-          〜{" "}
-          {formatSerializedDate(endTime, {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+      <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+        {/* 日時は 〜 の前後で語間 break を制御し、mobile 改行時も
+            「YYYY年M月D日 HH:MM」「HH:MM」のまとまりを保つ。 */}
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="whitespace-nowrap">
+            {formatSerializedDate(startTime, {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <span aria-hidden="true">〜</span>
+          <span className="whitespace-nowrap">
+            {formatSerializedDate(endTime, {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
         </p>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex items-center gap-2">
-            <p className="text-foreground font-medium">
+        {/* mobile: 価格行とアクション行を縦に分離。sm+ で横並びに戻す。 */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium text-foreground">
               {formatTotal(totalPrice, "未定")}
             </p>
             {paymentStatusEnum !== "PAID" && (
@@ -112,11 +124,13 @@ export function ReservationCard({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* アクション群: mobile は w-full sm:w-auto で full-width タップ標的、
+              sm+ で intrinsic に戻す。px-3 で WCAG 2.5.8 Target Spacing を担保。 */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
             {canCancel && (
               <Link
                 href={`/mypage/reservations/${id}`}
-                className="inline-flex min-h-11 items-center whitespace-nowrap px-1 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm text-destructive transition-colors hover:text-destructive/80 sm:w-auto sm:justify-start"
               >
                 キャンセル
               </Link>
@@ -125,7 +139,7 @@ export function ReservationCard({
             {canModify && (
               <Link
                 href={`/mypage/reservations/${id}/edit`}
-                className="inline-flex min-h-11 items-center whitespace-nowrap px-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto sm:justify-start"
               >
                 変更
               </Link>
@@ -133,7 +147,7 @@ export function ReservationCard({
 
             <Link
               href={`/mypage/reservations/${id}`}
-              className="inline-flex min-h-11 items-center whitespace-nowrap px-1 text-sm font-medium text-foreground underline underline-offset-4 hover:text-accent transition-colors"
+              className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
             >
               詳細を見る
             </Link>

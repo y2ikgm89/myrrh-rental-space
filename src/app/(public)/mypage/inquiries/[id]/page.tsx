@@ -59,20 +59,28 @@ export default async function MypageInquiryDetailPage({
       : null;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <Heading level={1}>{inquiry.subject}</Heading>
+        {/* 長 subject の overflow / 英数文字列の伸び両対応。 */}
+        <Heading
+          level={1}
+          className="min-w-0 break-words [overflow-wrap:anywhere]"
+        >
+          {inquiry.subject}
+        </Heading>
         {statusConfig && (
-          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <Badge variant={statusConfig.variant} className="shrink-0">
+            {statusConfig.label}
+          </Badge>
         )}
       </header>
 
       <div className="mt-8 space-y-4">
         <article
           aria-labelledby="customer-message-heading"
-          className="border border-border p-5 sm:p-6"
+          className="border border-border p-4 sm:p-6"
         >
-          <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <header className="mb-4 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4">
             <h2
               id="customer-message-heading"
               className="text-base font-medium text-foreground"
@@ -86,7 +94,9 @@ export default async function MypageInquiryDetailPage({
               {submittedDate}
             </time>
           </header>
-          <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+          {/* UGC message body は break-words + [overflow-wrap:anywhere] で
+              長英数列 / URL / 記号列の container overflow を阻止。 */}
+          <p className="whitespace-pre-wrap break-words leading-relaxed text-foreground [overflow-wrap:anywhere]">
             {inquiry.message}
           </p>
         </article>
@@ -94,9 +104,9 @@ export default async function MypageInquiryDetailPage({
         {inquiry.replyMessage !== null && (
           <article
             aria-labelledby="staff-reply-heading"
-            className="border border-accent/30 bg-accent/5 p-5 sm:p-6"
+            className="border border-accent/30 bg-accent/5 p-4 sm:p-6"
           >
-            <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <header className="mb-4 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4">
               <h2
                 id="staff-reply-heading"
                 className="text-base font-medium text-accent"
@@ -112,7 +122,7 @@ export default async function MypageInquiryDetailPage({
                 </time>
               )}
             </header>
-            <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+            <p className="whitespace-pre-wrap break-words leading-relaxed text-foreground [overflow-wrap:anywhere]">
               {inquiry.replyMessage}
             </p>
           </article>
@@ -120,7 +130,7 @@ export default async function MypageInquiryDetailPage({
       </div>
 
       {inquiry.companyName && (
-        <p className="mt-10 text-sm text-muted-foreground">
+        <p className="mt-10 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">
           会社名: <span className="text-foreground">{inquiry.companyName}</span>
         </p>
       )}
@@ -128,8 +138,9 @@ export default async function MypageInquiryDetailPage({
       <footer className="mt-10 border-t border-border pt-6">
         <Link
           href="/mypage/inquiries"
-          className="inline-flex min-h-11 items-center text-sm text-foreground underline underline-offset-4 hover:text-accent transition-colors"
+          className="inline-flex min-h-11 items-center gap-2 text-base text-foreground underline underline-offset-4 transition-colors hover:text-accent"
         >
+          <span aria-hidden="true">←</span>
           お問い合わせ一覧に戻る
         </Link>
       </footer>

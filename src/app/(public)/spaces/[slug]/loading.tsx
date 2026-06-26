@@ -17,14 +17,14 @@ export default function SpaceDetailLoading() {
       </div>
 
       {/* Hero header (Kinfolk magazine cover: 中央寄せ) */}
-      <header className="mx-auto max-w-[var(--container-max)] px-6 pt-12 text-center md:px-12 md:pt-16">
+      <header className="mx-auto max-w-[var(--container-site)] px-6 pt-12 text-center md:px-12 md:pt-16">
         <Skeleton className="mx-auto h-3 w-16" variant="text" />
         <Skeleton className="mx-auto mt-5 h-12 w-1/2 md:h-14" variant="text" />
         <Skeleton className="mx-auto mt-6 h-px w-12" />
       </header>
 
       {/* Gallery mosaic + sticky widget */}
-      <div className="mx-auto mt-12 grid max-w-[var(--container-max)] gap-6 px-6 md:px-12 lg:grid-cols-[1fr_320px] lg:gap-10">
+      <div className="mx-auto mt-12 grid max-w-[var(--container-site)] gap-6 px-6 md:px-12 lg:grid-cols-[1fr_320px] lg:gap-10">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:grid-rows-2">
           <Skeleton className="aspect-[4/3] w-full md:col-span-2 md:row-span-2 md:aspect-auto md:h-[440px]" />
           <Skeleton className="hidden aspect-[4/3] w-full md:block md:h-[215px]" />

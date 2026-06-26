@@ -111,7 +111,12 @@ export function ProfileForm({
     form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
 
   return (
-    <form {...getFormProps(form)} action={formAction} className="space-y-6">
+    <form
+      {...getFormProps(form)}
+      action={formAction}
+      aria-busy={isPending}
+      className="space-y-6"
+    >
       <input
         type="hidden"
         name={fields.customerType.name}
@@ -179,21 +184,26 @@ export function ProfileForm({
         />
       </div>
 
-      <Input
-        label="メールアドレス"
-        type="email"
-        value={defaultValues.email}
-        disabled
-        autoComplete="email"
-        leadingIcon="IconMail"
-      />
-      <p className="text-xs text-muted-foreground -mt-4">
-        メールアドレスはソーシャルアカウントから取得されます
-      </p>
+      {/* メールアドレス + 補助テキストはひと塊として space-y-1 でまとめ、
+          旧 `-mt-4` の脆弱な negative margin hack を廃止。 */}
+      <div className="space-y-1">
+        <Input
+          label="メールアドレス"
+          type="email"
+          value={defaultValues.email}
+          disabled
+          autoComplete="email"
+          leadingIcon="IconMail"
+        />
+        <p className="text-xs text-muted-foreground">
+          メールアドレスはソーシャルアカウントから取得されます
+        </p>
+      </div>
 
       <Input
         label="電話番号（任意）"
         autoComplete="tel"
+        inputMode="tel"
         leadingIcon="IconPhone"
         {...(fields.phoneNumber.errors?.[0] !== undefined && {
           error: fields.phoneNumber.errors[0],
@@ -209,7 +219,7 @@ export function ProfileForm({
         onExpire={handleTurnstileExpire}
       />
 
-      <Button type="submit" disabled={isPending}>
+      <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
         {isPending ? "保存中..." : "保存"}
       </Button>
     </form>

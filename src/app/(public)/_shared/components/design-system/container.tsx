@@ -4,7 +4,7 @@ import { cn } from "@/shared/lib/cn";
 type ContainerVariant = "default" | "narrow" | "wide" | "editorial";
 
 const variantClasses = {
-  default: "max-w-[var(--container-max)]",
+  default: "max-w-[var(--container-site)]",
   narrow: "max-w-3xl",
   wide: "max-w-screen-2xl",
   editorial: "max-w-[var(--container-measure)]",

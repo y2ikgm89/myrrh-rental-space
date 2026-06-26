@@ -69,9 +69,14 @@ export function EventRegistrationList({
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
-      <div className="py-12 md:py-16 text-center space-y-4">
+      <div className="space-y-4 py-12 text-center md:py-16">
         <p className="text-muted-foreground">イベント申込がありません</p>
-        <Button variant="editorial" size="sm" href="/events">
+        <Button
+          variant="editorial"
+          size="sm"
+          href="/events"
+          className="w-full sm:w-auto"
+        >
           イベントを探す
         </Button>
       </div>
@@ -131,14 +136,18 @@ function EventRegistrationCard({
 
   return (
     <div className="border border-border p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        {/* min-w-0 + break-words で長 title の overflow を防止し、
+            Link 自体に min-h-11 を付けて 44px タップ標的を担保。 */}
         <Link
           href={`/events/${registration.event.slug}`}
-          className="text-foreground hover:text-foreground transition-colors"
+          className="inline-flex min-h-11 min-w-0 items-center break-words text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-accent"
         >
           {registration.event.title}
         </Link>
-        <Badge variant={statusVariant}>{statusLabel}</Badge>
+        <Badge variant={statusVariant} className="shrink-0">
+          {statusLabel}
+        </Badge>
       </div>
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
@@ -208,19 +217,22 @@ function EventRegistrationCard({
           </Button>
 
           <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-            <DialogContent className="max-w-sm">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>申込キャンセルの確認</DialogTitle>
                 <DialogDescription>
                   「{registration.event.title}」の申込をキャンセルしますか？
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="gap-2">
+              {/* JSX 順 = visual 順 (Dialog primitive 修正後)。
+               *  mobile 縦並びで「閉じる」=上、「キャンセル」(destructive) = 下 (thumb-zone)。 */}
+              <DialogFooter>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setCancelDialogOpen(false)}
                   disabled={isPending}
+                  className="w-full sm:w-auto"
                 >
                   閉じる
                 </Button>
@@ -229,7 +241,7 @@ function EventRegistrationCard({
                   size="sm"
                   onClick={handleConfirmCancel}
                   disabled={isPending}
-                  className="bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
+                  className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
                 >
                   {isPending ? "キャンセル中..." : "キャンセルする"}
                 </Button>

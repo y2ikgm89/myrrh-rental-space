@@ -72,7 +72,7 @@ export function PostListSection({
 
     return (
       <section className="pt-10 pb-[var(--spacing-fluid-md)] md:pt-14">
-        <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
+        <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)]">
           <BlogLayout>
             <Suspense fallback={null}>
               <div className="mb-8 max-w-md">

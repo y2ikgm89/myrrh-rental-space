@@ -48,7 +48,7 @@ const GRID_COLS: Record<2 | 3 | 4, string> = {
 const CONTAINER_MAX_WIDTH: Record<LayoutContainerWidth, string> = {
   sm: "max-w-[var(--prose-narrow)]",
   md: "max-w-[var(--prose-medium)]",
-  lg: "max-w-[var(--container-max)]",
+  lg: "max-w-[var(--container-site)]",
   xl: "max-w-[var(--container-editorial)]",
   full: "max-w-none",
 };
