@@ -14,9 +14,9 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_PAGE_HERO,
   HERO_TRANSITIONS,
-  pageHeroConfigSchema,
   pageHeroMetadata,
 } from "@/shared/lib/sections/definitions/page-hero";
+import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
 import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import {
   extractDiscriminatedUnionInfo,

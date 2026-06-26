@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero";
+import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
 import { EditorialSplitHero } from "./EditorialSplitHero";
 import { CompactHero } from "./CompactHero";
 import { MinimalHero } from "./MinimalHero";
