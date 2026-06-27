@@ -1,0 +1,15 @@
+interface:
+  display_name: "Next DB Cache Boundaries"
+  short_description: "Next, Prisma, cache, route safety"
+  default_prompt: "Use $next-db-cache-boundaries when changing routes, Prisma, env, cache, cron, or webhooks."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "context7"
+      description: "Current Next.js, Prisma, and framework documentation"
+      transport: "streamable_http"
+      url: "https://mcp.context7.com/mcp"
+
+policy:
+  allow_implicit_invocation: true

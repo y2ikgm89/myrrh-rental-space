@@ -1,0 +1,7 @@
+interface:
+  display_name: "Type Safety"
+  short_description: "Strict TypeScript, Zod, Prisma JSON"
+  default_prompt: "Use $type-safety when changing schemas, casts, Conform fields, or Prisma JSON."
+
+policy:
+  allow_implicit_invocation: true

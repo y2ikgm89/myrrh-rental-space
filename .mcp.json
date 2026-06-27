@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "codebase-memory-mcp": {
+      "type": "stdio",
+      "command": "codebase-memory-mcp"
+    },
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp",

@@ -1,0 +1,98 @@
+# Project command policy.
+# These rules are evaluated for commands that Codex requests outside the sandbox.
+
+prefix_rule(
+    pattern = ["bun", "run", [
+        "db:generate",
+        "type-check",
+        "lint",
+        "format:check",
+        "validate",
+        "test:unit",
+        "test:integration",
+        "test:all",
+        "build:skip-env",
+        "docs",
+    ]],
+    decision = "allow",
+    justification = "Repository verification and generation commands are safe read/build gates.",
+    match = [
+        "bun run type-check",
+        "bun run lint",
+        "bun run test:unit",
+        "bun run build:skip-env",
+    ],
+    not_match = [
+        "bun run db:reset",
+        "bun run db:push",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "scripts/run-tests.ts"],
+    decision = "allow",
+    justification = "The local test runner isolates Bun tests per file.",
+    match = [
+        "bun scripts/run-tests.ts __tests__/unit/lib/crypto.test.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "test"],
+    decision = "allow",
+    justification = "Focused Bun tests are safe verification commands.",
+    match = [
+        "bun test __tests__/unit/architecture-boundaries.test.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bunx", "--bun", "prisma", "migrate", "reset"],
+    decision = "forbidden",
+    justification = "Destructive database reset is blocked. Ask the user and verify the database target first.",
+    match = [
+        "bunx --bun prisma migrate reset",
+        "bunx --bun prisma migrate reset --force",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bunx", "--bun", "prisma", "db", ["push", "pull"]],
+    decision = "prompt",
+    justification = "Direct schema push/pull can bypass migration review. Prefer migrate dev plus generated migration files.",
+    match = [
+        "bunx --bun prisma db push",
+        "bunx --bun prisma db pull",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["log", "blame", "show"]],
+    decision = "prompt",
+    justification = "Project work is local-first. Use history only when the user explicitly asks.",
+    match = [
+        "git log --oneline",
+        "git blame src/proxy.ts",
+        "git show HEAD",
+    ],
+)
+
+prefix_rule(
+    pattern = ["gh"],
+    decision = "prompt",
+    justification = "GitHub access is external project history. Use only when the user explicitly requests it.",
+    match = [
+        "gh pr view 1",
+        "gh issue list",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["reset", "clean"]],
+    decision = "forbidden",
+    justification = "Do not discard workspace state from automation. Ask the user for an explicit destructive operation.",
+    match = [
+        "git reset --hard",
+        "git clean -fd",
+    ],
+)
