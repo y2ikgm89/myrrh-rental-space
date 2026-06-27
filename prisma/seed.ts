@@ -44,8 +44,10 @@ import {
   buildInitialFeatureModules,
   parseDisabledFeatureModulesEnv,
 } from "../src/shared/lib/features/registry";
-import { deriveLexicalContentHtmlFromJsonCore } from "../src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/preview/derive-lexical-content-html-core";
-import { buildParagraphEditorStateJson } from "../src/shared/lib/lexical/description-defaults";
+import {
+  buildParagraphEditorStateJson,
+  buildParagraphHtml,
+} from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
 
@@ -60,9 +62,7 @@ import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
 function buildSeedDescription(text: string) {
   const collapsed = text.replace(/\s+/g, " ").trim();
   const descriptionJsonString = buildParagraphEditorStateJson(collapsed);
-  const descriptionHtml = deriveLexicalContentHtmlFromJsonCore(
-    descriptionJsonString,
-  );
+  const descriptionHtml = buildParagraphHtml(collapsed);
   return {
     descriptionJson: parsePrismaInputJson(
       descriptionJsonString,
@@ -80,7 +80,8 @@ function buildSeedLexicalContent(plainText: string) {
       contentJsonString,
       "seed Lexical contentJson が不正です",
     ),
-    contentHtml: deriveLexicalContentHtmlFromJsonCore(contentJsonString),
+    // 単段落 seed は buildParagraphHtml（icon なし）。保存時は server derive が正本。
+    contentHtml: buildParagraphHtml(plainText),
   };
 }
 

@@ -91,9 +91,20 @@ function enrichLexicalContentHtmlWithCuratedIconsInDom(html: string): string {
 export function enrichLexicalContentHtmlWithCuratedIcons(html: string): string {
   if (html.trim() === "") return html;
 
-  if (typeof DOMParser !== "undefined") {
+  if (typeof DOMParser !== "undefined" && isFullDomParser()) {
     return enrichLexicalContentHtmlWithCuratedIconsInDom(html);
   }
 
   return withDOM(() => enrichLexicalContentHtmlWithCuratedIconsInDom(html));
+}
+
+/** CI seed 等で不完全な DOMParser が載る場合は withDOM 経路へフォールバック */
+function isFullDomParser(): boolean {
+  try {
+    const doc = new DOMParser().parseFromString("<p></p>", "text/html");
+    doc.querySelector(":scope svg");
+    return true;
+  } catch {
+    return false;
+  }
 }
