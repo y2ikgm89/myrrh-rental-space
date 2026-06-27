@@ -5,27 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    # PR に `visual-regression` ラベルが付与されると visual-regression job が起動
-    types: [opened, synchronize, reopened, labeled]
+    # `codex/full-ci/` で始まる PR branch は heavy jobs を含む full CI を実行する。
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
-      run_e2e:
-        description: "Run E2E tests"
-        type: boolean
-        required: false
-        default: false
-      run_visual:
-        description: "Run visual regression tests (with --update-snapshots to regenerate baseline)"
+      run_full_ci:
+        description: "Run full CI (E2E, visual comparison, Lighthouse)"
         type: boolean
         required: false
         default: false
       update_visual_baseline:
         description: "Regenerate visual baseline (commit to repo after success)"
-        type: boolean
-        required: false
-        default: false
-      run_lighthouse:
-        description: "Run Lighthouse CI"
         type: boolean
         required: false
         default: false
@@ -71,7 +61,7 @@ jobs:
   # changes: PR の変更パスを判定し、後続 job の重い step を gate する。
   # docs / rule / コメント-only の PR では full build × 4 が走るのが旧来の最大コスト。
   # required check は job conclusion=success で満たすため、job 自体は常に走らせ、
-  # 重い step のみ if: needs.changes.outputs.code で gate する pattern (公式推奨)。
+  # 重い step のみ if: needs.changes.outputs.code で gate する。
   # ---------------------------------------------------------------------------
   changes:
     name: Detect Code Changes
@@ -105,7 +95,7 @@ jobs:
   # Cloud Run ローリング切替窓（cloudbuild Step6 migrate → Step7 deploy の間も
   # 旧リビジョンが処理）で旧コードが破壊済み新スキーマを叩く 500 を、後方互換でない
   # migration を merge 前にブロックして構造的に防ぐ。規約は .claude/rules/migrations.md。
-  # job は常に走らせ（required check の安定化、changes job と同じ公式推奨パターン）、
+  # job は常に走らせ（required check の安定化、changes job と同じ gate 方針）、
   # squawk step のみ migration 変更時に gate する。escape hatch は SQL 内の
   # `-- squawk-ignore <rule>`（contract フェーズの意図的 DROP 用）。
   # ---------------------------------------------------------------------------
@@ -170,26 +160,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
+      - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          # package.json#packageManager (bun@X.Y.Z) を SSoT として読み取り、
-          # workflow への version hardcode drift を防止。
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: sh scripts/bun-ci-install.sh
+        uses: ./.github/actions/setup-bun-deps
 
       # high 以上の脆弱性検出時は job 失敗。低 severity の transitive deps は許容
       - name: Run bun audit
@@ -219,24 +192,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
+      - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: sh scripts/bun-ci-install.sh
+        uses: ./.github/actions/setup-bun-deps
 
       # Prettier format check を全ファイル対象で実行（lefthook が pre-commit で
       # auto-fix する前提だが、CI でも最終ゲートとして検証）
@@ -257,24 +215,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
+      - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: sh scripts/bun-ci-install.sh
+        uses: ./.github/actions/setup-bun-deps
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -308,24 +251,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
+      - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: sh scripts/bun-ci-install.sh
+        uses: ./.github/actions/setup-bun-deps
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -352,9 +280,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes]
     # 毎 push 実行する critical path smoke。`chromium-smoke` project
-    # (`e2e/smoke/*.smoke.spec.ts`) のみ実行。10 test / 3 分以内完走を SLA とする。
-    # 業界標準: Stripe / Vercel / Linear / Shopify の "fast PR feedback smoke" pattern。
-    # 広域 E2E (`e2e-tests` job) は label opt-in 維持、本 job のみ
+    # (`e2e/smoke/*.smoke.spec.ts`) のみ実行して PR feedback を短く保つ。
+    # 広域 E2E (`e2e-tests` job) は full CI opt-in 維持、本 job のみ
     # branch protection required status checks に含める。
     services:
       postgres:
@@ -376,46 +303,13 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
+      - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
+        uses: ./.github/actions/setup-bun-deps
 
-      - name: Cache Bun dependencies
+      - name: Setup Playwright Chromium
         if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: sh scripts/bun-ci-install.sh
-
-      - name: Cache Playwright browsers
-        if: needs.changes.outputs.code == 'true'
-        id: playwright-cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
-
-      - name: Remove stale Microsoft apt repo (prevents apt-get 403 on noble runners)
-        if: needs.changes.outputs.code == 'true'
-        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list || true
-
-      - name: Install Playwright browsers
-        if: needs.changes.outputs.code == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
-        run: bunx playwright install chromium --with-deps
-
-      - name: Install Playwright system deps (cache hit path)
-        if: needs.changes.outputs.code == 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
-        run: bunx playwright install-deps chromium
+        uses: ./.github/actions/setup-playwright-chromium
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -467,15 +361,15 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    # 広域 E2E は重く maintenance コストが高いため opt-in 実行（Stripe / Vercel / Linear
-    # 等の業界標準パターン）。critical path は `smoke-e2e` job が毎 push でカバー。
-    # - PR に `e2e` ラベル付与時 (labeled イベント含む)
-    # - workflow_dispatch で手動実行時
+    # 広域 E2E は重く maintenance コストが高いため opt-in 実行。
+    # critical path は `smoke-e2e` job が毎 push でカバー。
+    # - PR head branch が `codex/full-ci/` で始まる場合
+    # - workflow_dispatch で run_full_ci=true 指定
     # main への push では実行しない。本番デプロイ前検証は
     # post-deploy-smoke skill (HTTP smoke) と Cloud Run staging で代替。
     if: |
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e')) ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_e2e == 'true')
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
         image: postgres:16
@@ -495,42 +389,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
+      - name: Setup Bun dependencies
+        uses: ./.github/actions/setup-bun-deps
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: sh scripts/bun-ci-install.sh
-
-      # Playwright browsers は大きい (chromium ~130MB)。hash ベースで cache
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
-
-      - name: Remove stale Microsoft apt repo (prevents apt-get 403 on noble runners)
-        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/azure-cli.list || true
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: bunx playwright install chromium --with-deps
-
-      - name: Install Playwright system deps (cache hit path)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: bunx playwright install-deps chromium
+      - name: Setup Playwright Chromium
+        uses: ./.github/actions/setup-playwright-chromium
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -594,24 +457,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
+      - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: sh scripts/bun-ci-install.sh
+        uses: ./.github/actions/setup-bun-deps
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -655,9 +503,12 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
       # preactjs/compressed-size-action は内部で `bun install --frozen-lockfile`
-      # （= `bun ci` の同義 alias、Bun 公式 docs）を呼ぶため、setup-bun を先に実行
-      # して PATH に bun を通す必要がある
+      # （= `bun ci` の同義 alias、Bun 公式 docs）を呼ぶため、先に Bun を PATH
+      # に通し、Bun package cache を復元する。
       # （未設定だと "Unable to locate executable file: bun" で fail）
+      # compressed-size-action は比較中に worktree を切り替えるため、post step を持つ
+      # local composite action を前段に置かない。local action は action.yml が残っている
+      # checkout 上で post cleanup される必要がある。
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -699,21 +550,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: sh scripts/bun-ci-install.sh
+      - name: Setup Bun dependencies
+        uses: ./.github/actions/setup-bun-deps
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -738,15 +576,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-format, type-check]
     # Lighthouse は重く Cloud Run staging URL での実測の方が本番に近い指標が得られる
-    # ため opt-in 実行に変更（Web.dev / Calibre 等の現代パフォーマンス計測のベスト
-    # プラクティス: 静的 build を runner で測るより staging 環境の RUM ベース計測を
-    # 優先）。
-    # - PR に `lighthouse` ラベル付与時
-    # - workflow_dispatch で手動実行時
+    # ため opt-in 実行にする。
+    # - PR head branch が `codex/full-ci/` で始まる場合
+    # - workflow_dispatch で run_full_ci=true 指定
     if: |
       always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
-      ((github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'lighthouse')) ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_lighthouse == 'true'))
+      ((github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci))
     services:
       postgres:
         image: postgres:16
@@ -765,21 +601,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: sh scripts/bun-ci-install.sh
+      - name: Setup Bun dependencies
+        uses: ./.github/actions/setup-bun-deps
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -809,20 +632,19 @@ jobs:
     name: Visual Regression (opt-in)
     runs-on: ubuntu-latest
     # opt-in 実行条件:
-    # - PR に `visual-regression` ラベルが付与された（labeled イベント含む）
-    # - workflow_dispatch で run_visual=true 指定（baseline 比較）
+    # - PR head branch が `codex/full-ci/` で始まる場合（baseline 比較）
+    # - workflow_dispatch で run_full_ci=true 指定（baseline 比較）
     # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + auto-PR）
     # baseline regeneration は意図的な workflow_dispatch でのみ実行する（main push
     # 自動 regeneration は破壊的変更時に baseline を silent 上書きする risk のため廃止）。
     # 再生成 baseline は main へ直接 push せず別 branch + auto-PR を作成し、
-    # branch protection の required status checks を通過させてから merge する
-    # （Playwright / Chromatic / Percy 業界標準パターン）。
+    # branch protection の required status checks を通過させてから merge する。
     permissions:
       contents: write # auto-PR 用 branch push
       pull-requests: write # auto-PR 作成
     if: |
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'visual-regression')) ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.run_visual == 'true' || github.event.inputs.update_visual_baseline == 'true'))
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
         image: postgres:16
@@ -842,24 +664,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
+      - name: Setup Bun dependencies
+        uses: ./.github/actions/setup-bun-deps
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: sh scripts/bun-ci-install.sh
-
-      - name: Install Playwright browsers
-        run: bunx playwright install chromium --with-deps
+      - name: Setup Playwright Chromium
+        uses: ./.github/actions/setup-playwright-chromium
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -881,7 +690,7 @@ jobs:
       #   （CI Ubuntu runner と本番の font rendering が一致するため CI 上で baseline 生成が canonical）
       - name: Run visual regression tests
         run: |
-          if [ "${{ github.event.inputs.update_visual_baseline }}" = "true" ]; then
+          if [ "${{ inputs.update_visual_baseline }}" = "true" ]; then
             bunx playwright test --project=chromium-visual --update-snapshots
           else
             bunx playwright test --project=chromium-visual
@@ -916,11 +725,10 @@ jobs:
           retention-days: 30
 
       # baseline 再生成成功時、生成された snapshot を別 branch にステージし PR を作成する。
-      # 業界標準パターン（Playwright docs / Chromatic / Percy / peter-evans/create-pull-request
-      # は GitHub Marketplace verified action）。Branch protection の required status checks
-      # を通過させてから main に merge することで「未検証 baseline の silent 上書き」を防ぐ。
+      # Branch protection の required status checks を通過させてから main に merge
+      # することで「未検証 baseline の silent 上書き」を防ぐ。
       - name: Stage regenerated visual baseline
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baseline == 'true' && success()
+        if: github.event_name == 'workflow_dispatch' && inputs.update_visual_baseline && success()
         id: stage-baseline
         shell: bash
         run: |
@@ -932,7 +740,7 @@ jobs:
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # git add 対象を明示。peter-evans/create-pull-request@v6 が diff 検出 + commit + push を担当
+          # git add 対象を明示。peter-evans/create-pull-request が diff 検出 + commit + push を担当
           git add "${baseline_dirs[@]}"
           if git diff --cached --quiet; then
             echo "[visual baseline] no changes to commit"
@@ -971,7 +779,7 @@ jobs:
             この PR は CI が自動生成しました。Playwright `--update-snapshots` で再生成された baseline を
             branch protection の required status checks 経由で merge するため、main に直接 push せず PR 化しています。
 
-            🤖 Generated with [peter-evans/create-pull-request@v6](https://github.com/peter-evans/create-pull-request)
+            Generated with [peter-evans/create-pull-request](https://github.com/peter-evans/create-pull-request).
           labels: |
             visual-baseline
             automated
@@ -990,21 +798,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-deps-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            bun-deps-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: sh scripts/bun-ci-install.sh
+      - name: Setup Bun dependencies
+        uses: ./.github/actions/setup-bun-deps
 
       - name: Generate API documentation
         run: bun run docs

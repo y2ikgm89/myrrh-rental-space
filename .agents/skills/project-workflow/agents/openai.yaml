@@ -1,0 +1,18 @@
+interface:
+  display_name: "Project Workflow"
+  short_description: "Repo workflow and verification guardrails"
+  default_prompt: "Use $project-workflow before changing this repository."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "codebase-memory-mcp"
+      description: "Local repository code graph and impact analysis"
+    - type: "mcp"
+      value: "context7"
+      description: "Current library and framework documentation"
+      transport: "streamable_http"
+      url: "https://mcp.context7.com/mcp"
+
+policy:
+  allow_implicit_invocation: true

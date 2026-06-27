@@ -1,0 +1,7 @@
+interface:
+  display_name: "Admin UI Review"
+  short_description: "Admin UI patterns and token checks"
+  default_prompt: "Use $admin-ui-review when changing or reviewing admin UI."
+
+policy:
+  allow_implicit_invocation: true
