@@ -5,27 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    # PR に `visual-regression` ラベルが付与されると visual-regression job が起動
-    types: [opened, synchronize, reopened, labeled]
+    # `codex/full-ci/` で始まる PR branch は heavy jobs を含む full CI を実行する。
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
-      run_e2e:
-        description: "Run E2E tests"
-        type: boolean
-        required: false
-        default: false
-      run_visual:
-        description: "Run visual regression tests (with --update-snapshots to regenerate baseline)"
+      run_full_ci:
+        description: "Run full CI (E2E, visual comparison, Lighthouse)"
         type: boolean
         required: false
         default: false
       update_visual_baseline:
         description: "Regenerate visual baseline (commit to repo after success)"
-        type: boolean
-        required: false
-        default: false
-      run_lighthouse:
-        description: "Run Lighthouse CI"
         type: boolean
         required: false
         default: false
@@ -291,7 +281,7 @@ jobs:
     needs: [changes]
     # 毎 push 実行する critical path smoke。`chromium-smoke` project
     # (`e2e/smoke/*.smoke.spec.ts`) のみ実行して PR feedback を短く保つ。
-    # 広域 E2E (`e2e-tests` job) は label opt-in 維持、本 job のみ
+    # 広域 E2E (`e2e-tests` job) は full CI opt-in 維持、本 job のみ
     # branch protection required status checks に含める。
     services:
       postgres:
@@ -373,13 +363,13 @@ jobs:
     runs-on: ubuntu-latest
     # 広域 E2E は重く maintenance コストが高いため opt-in 実行。
     # critical path は `smoke-e2e` job が毎 push でカバー。
-    # - PR に `e2e` ラベル付与時 (labeled イベント含む)
-    # - workflow_dispatch で手動実行時
+    # - PR head branch が `codex/full-ci/` で始まる場合
+    # - workflow_dispatch で run_full_ci=true 指定
     # main への push では実行しない。本番デプロイ前検証は
     # post-deploy-smoke skill (HTTP smoke) と Cloud Run staging で代替。
     if: |
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e')) ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_e2e == 'true')
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
     services:
       postgres:
         image: postgres:16
@@ -587,12 +577,12 @@ jobs:
     needs: [lint-format, type-check]
     # Lighthouse は重く Cloud Run staging URL での実測の方が本番に近い指標が得られる
     # ため opt-in 実行にする。
-    # - PR に `lighthouse` ラベル付与時
-    # - workflow_dispatch で手動実行時
+    # - PR head branch が `codex/full-ci/` で始まる場合
+    # - workflow_dispatch で run_full_ci=true 指定
     if: |
       always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
-      ((github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'lighthouse')) ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_lighthouse == 'true'))
+      ((github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci))
     services:
       postgres:
         image: postgres:16
@@ -642,8 +632,8 @@ jobs:
     name: Visual Regression (opt-in)
     runs-on: ubuntu-latest
     # opt-in 実行条件:
-    # - PR に `visual-regression` ラベルが付与された（labeled イベント含む）
-    # - workflow_dispatch で run_visual=true 指定（baseline 比較）
+    # - PR head branch が `codex/full-ci/` で始まる場合（baseline 比較）
+    # - workflow_dispatch で run_full_ci=true 指定（baseline 比較）
     # - workflow_dispatch で update_visual_baseline=true 指定（baseline 再生成 + auto-PR）
     # baseline regeneration は意図的な workflow_dispatch でのみ実行する（main push
     # 自動 regeneration は破壊的変更時に baseline を silent 上書きする risk のため廃止）。
@@ -653,8 +643,8 @@ jobs:
       contents: write # auto-PR 用 branch push
       pull-requests: write # auto-PR 作成
     if: |
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'visual-regression')) ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.run_visual == 'true' || github.event.inputs.update_visual_baseline == 'true'))
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.run_full_ci || inputs.update_visual_baseline))
     services:
       postgres:
         image: postgres:16
@@ -700,7 +690,7 @@ jobs:
       #   （CI Ubuntu runner と本番の font rendering が一致するため CI 上で baseline 生成が canonical）
       - name: Run visual regression tests
         run: |
-          if [ "${{ github.event.inputs.update_visual_baseline }}" = "true" ]; then
+          if [ "${{ inputs.update_visual_baseline }}" = "true" ]; then
             bunx playwright test --project=chromium-visual --update-snapshots
           else
             bunx playwright test --project=chromium-visual
@@ -738,7 +728,7 @@ jobs:
       # Branch protection の required status checks を通過させてから main に merge
       # することで「未検証 baseline の silent 上書き」を防ぐ。
       - name: Stage regenerated visual baseline
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baseline == 'true' && success()
+        if: github.event_name == 'workflow_dispatch' && inputs.update_visual_baseline && success()
         id: stage-baseline
         shell: bash
         run: |
