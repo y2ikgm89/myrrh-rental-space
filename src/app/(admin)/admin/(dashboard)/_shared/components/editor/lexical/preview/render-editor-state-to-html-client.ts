@@ -1,17 +1,36 @@
 /**
- * EditorState JSON → HTML（クライアント専用）
+ * EditorState JSON → HTML（ブラウザ専用）
  *
- * @description
- * `MobileEditorFallback` 等で未保存の `contentJson` を読み取り専用プレビューに反映する。
- * 永続化時の HTML 派生は server 側 `renderEditorStateJsonToHtmlServer` が担当する。
+ * 未保存プレビュー用。headless / withDOM ではなく browser DOM + createEditor。
  */
 
 "use client";
 
-import { renderEditorStateJsonToHtmlCore } from "./render-editor-state-json-to-html-core";
+import { $generateHtmlFromNodes } from "@lexical/html";
+import { createEditor } from "lexical";
+import { EDITOR_NODES } from "../config/nodes";
+import { editorTheme } from "../theme";
 
 export function renderEditorStateJsonToHtmlClient(
   editorStateJson: string,
 ): string {
-  return renderEditorStateJsonToHtmlCore(editorStateJson);
+  const trimmed = editorStateJson.trim();
+  if (trimmed === "") {
+    return "";
+  }
+
+  const editor = createEditor({
+    namespace: "LexicalBrowserHtmlExport",
+    theme: editorTheme,
+    nodes: [...EDITOR_NODES],
+    onError: () => {},
+  });
+
+  const editorState = editor.parseEditorState(trimmed);
+  editor.setEditorState(editorState);
+  let html = "";
+  editor.read(() => {
+    html = $generateHtmlFromNodes(editor, null);
+  });
+  return html;
 }

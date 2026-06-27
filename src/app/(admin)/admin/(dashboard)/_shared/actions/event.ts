@@ -51,32 +51,33 @@ import {
   eventFormSchema,
   type EventFormData,
 } from "../../events/_components/event-form-schema";
+import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("イベント");
 
 /**
- * EventFormData (conform parsed output: Lexical JSON string + 事前 render 済み HTML)
- * → EventCommandInput (Prisma InputJsonValue + HTML cache + plain text)
+ * EventFormData (conform parsed output: Lexical JSON string)
+ * → EventCommandInput (Prisma InputJsonValue + server 派生 HTML + plain text)
  */
 function buildEventCommandInput(data: EventFormData) {
-  const descriptionHtml = data.descriptionHtml;
-  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
   const descriptionJson = parsePrismaInputJson(
     data.descriptionJson,
     "descriptionJson が不正です",
   );
+  const descriptionHtml = deriveLexicalContentHtmlFromJson(
+    data.descriptionJson,
+  );
+  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
 
   const {
     descriptionJson: _dropJson,
-    descriptionHtml: _dropHtml,
     tickets: rawTickets,
     slots: rawSlots,
     ...rest
   } = data;
   void _dropJson;
-  void _dropHtml;
   const tickets = rawTickets.map((t) => omitUndefined(t));
   const slots = rawSlots.map((s) => omitUndefined(s));
   return omitUndefined({

@@ -74,7 +74,6 @@ describe("createNewsSchema", () => {
       slug: "sample-news",
       title: "サンプルニュース",
       contentJson: VALID_LEXICAL_JSON,
-      contentHtml: "<p>サンプルニュース本文</p>",
     };
 
     const result = createNewsSchema.safeParse(validData);
@@ -124,7 +123,6 @@ describe("updateNewsBodySchema", () => {
   test("有効な Lexical JSON でバリデーションに成功する", () => {
     const result = updateNewsBodySchema.safeParse({
       contentJson: VALID_LEXICAL_JSON,
-      contentHtml: "<p>ニュース本文</p>",
     });
     expect(result.success).toBe(true);
   });
@@ -215,26 +213,16 @@ describe("updateNewsSettingsSchema", () => {
 });
 
 describe("newsBodyFormSchema", () => {
-  test("有効な contentJson + contentHtml でバリデーションに成功する", () => {
+  test("有効な contentJson でバリデーションに成功する", () => {
     const result = newsBodyFormSchema.safeParse({
       contentJson: VALID_LEXICAL_JSON,
-      contentHtml: "<p>お知らせ本文</p>",
     });
     expect(result.success).toBe(true);
-  });
-
-  test("contentHtml が空の場合にエラー", () => {
-    const result = newsBodyFormSchema.safeParse({
-      contentJson: VALID_LEXICAL_JSON,
-      contentHtml: "",
-    });
-    expect(result.success).toBe(false);
   });
 
   test("不正な contentJson はエラー", () => {
     const result = newsBodyFormSchema.safeParse({
       contentJson: "<p>not-lexical-json</p>",
-      contentHtml: "<p>お知らせ本文</p>",
     });
     expect(result.success).toBe(false);
   });

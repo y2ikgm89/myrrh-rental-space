@@ -2,18 +2,15 @@
  * Spotify Node
  *
  * @description Spotify の音楽・Podcast 埋め込みを表示する DecoratorNode
+ * server / headless でも import 可能。編集 UI は SpotifyNode.decorator.client。
  */
 
-"use client";
-
 import type { ReactElement } from "react";
-import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
 } from "lexical";
 import {
   $create,
@@ -22,12 +19,8 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { createEnumGuard, parseString } from "../config/type-guards";
-
-// =============================================================================
-// Constants & Types
-// =============================================================================
+import { renderLexicalDecorator } from "./decorator-registry";
 
 export type SpotifyContentType =
   | "track"
@@ -47,10 +40,6 @@ const SPOTIFY_CONTENT_TYPES: readonly SpotifyContentType[] = [
 const isSpotifyContentType = createEnumGuard<SpotifyContentType>(
   SPOTIFY_CONTENT_TYPES,
 );
-
-// =============================================================================
-// URL Converter
-// =============================================================================
 
 export function toSpotifyEmbedUrl(
   url: string,
@@ -74,10 +63,6 @@ export function toSpotifyEmbedUrl(
   }
 }
 
-// =============================================================================
-// State
-// =============================================================================
-
 export const spotifyEmbedUrlState = createState("embedUrl", {
   parse: parseString,
 });
@@ -87,50 +72,7 @@ export const spotifyContentTypeState = createState("contentType", {
     typeof v === "string" && isSpotifyContentType(v) ? v : "track",
 });
 
-// =============================================================================
-// Component
-// =============================================================================
-
-const CONTENT_TYPE_LABELS: Record<SpotifyContentType, string> = {
-  track: "トラック",
-  album: "アルバム",
-  playlist: "プレイリスト",
-  episode: "エピソード",
-  show: "ポッドキャスト",
-};
-
-function SpotifyComponent({
-  embedUrl,
-  contentType,
-  nodeKey,
-}: {
-  embedUrl: string;
-  contentType: SpotifyContentType;
-  nodeKey: NodeKey;
-}) {
-  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
-
-  return (
-    <div
-      className={cn("my-2", isSelected && "ring-2 ring-ring rounded-xl")}
-      onClick={() => setSelected(true)}
-    >
-      <iframe
-        src={embedUrl}
-        allow="encrypted-media"
-        loading="lazy"
-        title={`Spotify ${CONTENT_TYPE_LABELS[contentType]}`}
-        className="h-[352px] w-full border-none rounded-xl"
-      />
-    </div>
-  );
-}
-
-// =============================================================================
-// Node Class
-// =============================================================================
-
-export class SpotifyNode extends DecoratorNode<ReactElement> {
+export class SpotifyNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("spotify", {
       extends: DecoratorNode,
@@ -190,20 +132,14 @@ export class SpotifyNode extends DecoratorNode<ReactElement> {
     return { element: wrapper };
   }
 
-  override decorate(): ReactElement {
-    return (
-      <SpotifyComponent
-        embedUrl={$getState(this, spotifyEmbedUrlState)}
-        contentType={$getState(this, spotifyContentTypeState)}
-        nodeKey={this.getKey()}
-      />
-    );
+  override decorate(): ReactElement | null {
+    return renderLexicalDecorator("spotify", {
+      embedUrl: $getState(this, spotifyEmbedUrlState),
+      contentType: $getState(this, spotifyContentTypeState),
+      nodeKey: this.getKey(),
+    });
   }
 }
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 /**
  * SpotifyNode を作成する

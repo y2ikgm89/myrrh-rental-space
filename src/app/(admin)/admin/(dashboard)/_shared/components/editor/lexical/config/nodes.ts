@@ -1,7 +1,8 @@
 /**
- * Lexical Editor ノード登録配列
+ * Lexical Editor ノード登録配列（SSoT）
  *
- * @description LexicalComposerのinitialConfigに渡すノード一覧
+ * browser / headless / server で同一ノード集合を register する（Lexical 公式）。
+ * DecoratorNode の編集 UI は client で register-decorator-components が注入する。
  */
 
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
@@ -22,7 +23,7 @@ import {
   CustomTableCellNode,
   $createCustomTableCellNode,
 } from "../nodes/CustomTableCellNode";
-import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
+import { HorizontalRuleNode } from "@lexical/extension";
 import type { Klass, LexicalNode, LexicalNodeReplacement } from "lexical";
 
 import { ImageNode } from "../nodes/ImageNode";
@@ -182,3 +183,6 @@ export const EDITOR_NODES: ReadonlyArray<
   CaptionBoxContentNode,
   GroupNode,
 ];
+
+/** headless / server HTML↔JSON 派生 — EDITOR_NODES と同一（公式: 同一 custom nodes） */
+export const HEADLESS_EDITOR_NODES = EDITOR_NODES;

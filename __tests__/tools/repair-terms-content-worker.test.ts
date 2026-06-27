@@ -11,8 +11,7 @@ import { join } from "node:path";
 import { PrismaClient } from "@generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { tryConvertHtmlStringToLexicalJsonCore } from "@/admin/components/editor/lexical/html-to-lexical-json-core";
-import { renderEditorStateJsonToHtmlCore } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-core";
-import { sanitizeLexicalContentHtml } from "@/shared/lib/html/sanitize-content-html-core";
+import { deriveLexicalContentHtmlFromJsonCore } from "@/admin/components/editor/lexical/preview/derive-lexical-content-html-core";
 import { isLegacyFlatLexicalJson } from "@/shared/lib/lexical/is-legacy-flat-lexical-json";
 
 const SHOULD_RUN = process.env["GENERATE_TERMS_REPAIR"] === "1";
@@ -85,9 +84,7 @@ describe("repair terms contentJson worker", () => {
           contentJson = converted.json;
         }
 
-        const contentHtml = sanitizeLexicalContentHtml(
-          renderEditorStateJsonToHtmlCore(contentJson),
-        );
+        const contentHtml = deriveLexicalContentHtmlFromJsonCore(contentJson);
         const tag = repairTagFromId(doc.id);
 
         if (APPLY_LOCAL) {

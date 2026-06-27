@@ -122,7 +122,6 @@ const VALID_CREATE_INPUT = {
   slug: "test-post",
   excerpt: "抜粋",
   contentJson: VALID_LEXICAL_JSON,
-  contentHtml: "<p>本文</p>",
   thumbnailUrl: "https://example.com/thumb.jpg",
   categoryId: VALID_UUID,
   tags: [],

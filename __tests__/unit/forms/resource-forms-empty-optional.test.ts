@@ -261,17 +261,14 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
     );
   });
 
-  // descriptionHtml は client 由来の派生 HTML。render エラー時の catch 等で空文字が
-  // 来うるため `.default("")` で空を許容する（bare z.string() だと conform の空→
-  // undefined 変換で弾かれる）。
-  test("space: descriptionHtml 空欄でも保存できる", () => {
+  // descriptionHtml は server が descriptionJson から派生する。
+  test("space: descriptionJson のみで保存できる", () => {
     expectSuccess(
       spaceFormSchema,
       form({
         slug: "meeting-room",
         name: "会議室A",
         descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
-        descriptionHtml: "",
         addressDetail: "",
         capacity: "10",
         area: "",
@@ -292,14 +289,13 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
     );
   });
 
-  test("event: descriptionHtml 空欄でも保存できる", () => {
+  test("event: descriptionJson のみで保存できる", () => {
     expectSuccess(
       eventFormSchema,
       form({
         title: "イベント",
         slug: "event-1",
         descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
-        descriptionHtml: "",
         thumbnailUrl: "",
         slots: JSON.stringify([
           {

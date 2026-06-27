@@ -18,6 +18,7 @@ import {
   invalidatePostCollectionCaches,
   purgePostCaches,
 } from "./cache-helpers";
+import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("記事");
@@ -43,6 +44,9 @@ export async function createPost(
       const result = await postCommands.createPost(
         omitUndefined({
           ...parsed.data,
+          contentHtml: deriveLexicalContentHtmlFromJson(
+            parsed.data.contentJson,
+          ),
           authorId: user.id,
         }),
       );
@@ -123,7 +127,7 @@ export async function updatePostSettings(
  */
 export async function updatePostBody(
   id: string,
-  input: { contentJson: string; contentHtml: string },
+  input: { contentJson: string },
 ): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
@@ -144,7 +148,7 @@ export async function updatePostBody(
     execute: async () => {
       updatedPost = await postCommands.updatePostBody(validatedId.data, {
         contentJson: parsed.data.contentJson,
-        contentHtml: parsed.data.contentHtml,
+        contentHtml: deriveLexicalContentHtmlFromJson(parsed.data.contentJson),
       });
       return null;
     },

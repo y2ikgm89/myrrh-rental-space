@@ -12,17 +12,27 @@
  * して tab 切替を有効化する（WordPress Gutenberg / Notion 等が採用する canonical な
  * server-render + client-hydrate pattern）。
  *
+ * curation icon は保存時に server enrich + sanitize 済み SVG として contentHtml に含まれる。
+ * JS 無効でも表示可能（装飾 icon は aria-hidden）。
+ *
  * @security XSS 対策済み — DOMPurify による厳格なサニタイズ
  */
 
 import { sanitize } from "isomorphic-dompurify";
 import { useEffect, useRef } from "react";
 import { injectHeadingAnchors } from "@/shared/lib/html/extract-headings";
-import { LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES } from "@/shared/lib/html/lexical-html-sanitize-config";
+import {
+  LEXICAL_CURATED_ICON_SVG_TAGS,
+  LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES,
+  LEXICAL_DOMPURIFY_SVG_ATTRIBUTES,
+} from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export const SANITIZE_OPTIONS = {
-  ADD_TAGS: ["iframe"],
-  ADD_ATTR: [...LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES],
+  ADD_TAGS: ["iframe", ...LEXICAL_CURATED_ICON_SVG_TAGS],
+  ADD_ATTR: [
+    ...LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES,
+    ...LEXICAL_DOMPURIFY_SVG_ATTRIBUTES,
+  ],
   ALLOW_DATA_ATTR: true,
   ALLOWED_URI_REGEXP:
     /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,

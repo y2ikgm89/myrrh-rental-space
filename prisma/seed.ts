@@ -61,14 +61,27 @@ import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
  */
 function buildSeedDescription(text: string) {
   const collapsed = text.replace(/\s+/g, " ").trim();
+  const descriptionJsonString = buildParagraphEditorStateJson(collapsed);
   const descriptionHtml = buildParagraphHtml(collapsed);
   return {
     descriptionJson: parsePrismaInputJson(
-      buildParagraphEditorStateJson(collapsed),
+      descriptionJsonString,
       "seed description JSON が不正です",
     ),
     descriptionHtml,
     descriptionPlainText: stripHtmlToText(descriptionHtml, 200),
+  };
+}
+
+function buildSeedLexicalContent(plainText: string) {
+  const contentJsonString = buildParagraphEditorStateJson(plainText);
+  return {
+    contentJson: parsePrismaInputJson(
+      contentJsonString,
+      "seed Lexical contentJson が不正です",
+    ),
+    // 単段落 seed は buildParagraphHtml（icon なし）。保存時は server derive が正本。
+    contentHtml: buildParagraphHtml(plainText),
   };
 }
 
@@ -2310,16 +2323,13 @@ async function seedNews(overridePublished?: boolean) {
       where: { slug: news.slug },
     });
     if (!existing) {
-      // Lexical JSON 同時保存（CLAUDE.md ハードルール: contentHtml 単独禁止）
+      // contentJson 正本 → server 派生 HTML（保存パイプラインと同一）
       const plainText = stripHtmlToText(news.contentHtml, 4000);
-      const contentJson = parsePrismaInputJson(
-        buildParagraphEditorStateJson(plainText),
-        "seed news contentJson が不正です",
-      );
+      const { contentJson, contentHtml } = buildSeedLexicalContent(plainText);
       await prisma.news.create({
         data: {
           ...news,
-          contentHtml: buildParagraphHtml(plainText),
+          contentHtml,
           contentJson,
         },
       });
@@ -2680,20 +2690,16 @@ async function seedBlog() {
         }),
       );
 
-      // Lexical JSON 同時保存（CLAUDE.md ハードルール: contentHtml 単独禁止）。
-      // Markdown 風の # 見出しは段落テキストに平坦化（seed 簡易版、管理画面で再編集可能）
+      // contentJson 正本 → server 派生 HTML（保存パイプラインと同一）
       const rawContent =
         typeof postData.contentHtml === "string" ? postData.contentHtml : "";
       const plainText = stripHtmlToText(rawContent, 4000);
-      const contentJson = parsePrismaInputJson(
-        buildParagraphEditorStateJson(plainText),
-        "seed post contentJson が不正です",
-      );
+      const { contentJson, contentHtml } = buildSeedLexicalContent(plainText);
 
       await prisma.post.create({
         data: {
           ...postData,
-          contentHtml: buildParagraphHtml(plainText),
+          contentHtml,
           contentJson,
           postTags: {
             create: tagIds.map((tagId) => ({ tagId })),

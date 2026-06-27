@@ -28,7 +28,6 @@ import {
   deleteNews,
   updateNewsPublished,
 } from "@/admin/actions/news";
-import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { getNewsPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
@@ -165,10 +164,8 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     if (!news) return;
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updateNewsBody(news.id, {
           contentJson,
-          contentHtml,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -241,12 +238,10 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     settingsData: NewsSettingsFormData,
   ): Promise<string | null> => {
     try {
-      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
       const result = await createNews({
         slug: settingsData.slug,
         title: settingsData.title,
         contentJson,
-        contentHtml,
       });
       if (isMutationError(result)) {
         toast.error(result.error);
@@ -374,10 +369,8 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const bodyResult = await updateNewsBody(news.id, {
           contentJson,
-          contentHtml,
         });
         if (isMutationError(bodyResult)) {
           toast.error(bodyResult.error);

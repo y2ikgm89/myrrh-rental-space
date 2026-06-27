@@ -7,7 +7,6 @@ describe("eventFormSchema (conform)", () => {
     title: "テストイベント",
     slug: "test-event",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
-    descriptionHtml: "",
     slots: JSON.stringify([
       { startAt: "2026-05-01T10:00", endAt: "2026-05-01T12:00", capacity: 10 },
     ]),

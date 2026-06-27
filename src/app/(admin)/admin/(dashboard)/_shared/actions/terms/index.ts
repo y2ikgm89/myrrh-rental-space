@@ -22,7 +22,7 @@ import {
   type TermsFormInput,
   type TermsMutationInput,
 } from "@/shared/lib/validations/terms";
-import { renderEditorStateJsonToHtmlServer } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-server";
+import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 
 const orderedIdsSchema = z
   .array(z.uuid({ error: "IDが不正です" }))
@@ -59,7 +59,7 @@ function invalidateTermsCaches(slug?: string, previousSlug?: string): void {
 function toTermsFormInput(input: TermsMutationInput): TermsFormInput {
   return {
     ...input,
-    contentHtml: renderEditorStateJsonToHtmlServer(input.contentJson),
+    contentHtml: deriveLexicalContentHtmlFromJson(input.contentJson),
   };
 }
 

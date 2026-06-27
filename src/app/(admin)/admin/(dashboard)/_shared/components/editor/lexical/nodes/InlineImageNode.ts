@@ -3,18 +3,16 @@
  *
  * @description テキストフロー内にインライン配置される画像 DecoratorNode
  * （左/右/全幅フロート対応）
+ * server / headless でも import 可能。編集 UI は InlineImageNode.decorator.client。
  */
 
-"use client";
-
-import { type ReactElement } from "react";
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
 } from "lexical";
 import {
   $create,
@@ -23,27 +21,15 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { parseString, createEnumGuard } from "../config/type-guards";
-
-// =============================================================================
-// Types
-// =============================================================================
+import { renderLexicalDecorator } from "./decorator-registry";
 
 export const INLINE_IMAGE_POSITIONS = ["left", "right", "full"] as const;
 export type InlineImagePosition = (typeof INLINE_IMAGE_POSITIONS)[number];
 
-// =============================================================================
-// Type Guards
-// =============================================================================
-
 const isInlineImagePosition = createEnumGuard<InlineImagePosition>(
   INLINE_IMAGE_POSITIONS,
 );
-
-// =============================================================================
-// State
-// =============================================================================
 
 export const inlineSrcState = createState("src", {
   parse: parseString,
@@ -63,58 +49,6 @@ export const inlineWidthState = createState("width", {
     typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 200,
 });
 
-// =============================================================================
-// Component
-// =============================================================================
-
-function InlineImageComponent({
-  src,
-  altText,
-  position,
-  width,
-  nodeKey,
-}: {
-  src: string;
-  altText: string;
-  position: InlineImagePosition;
-  width: number;
-  nodeKey: NodeKey;
-}) {
-  const [isSelected] = useLexicalNodeSelection(nodeKey);
-
-  const floatStyle: React.CSSProperties =
-    position === "left"
-      ? { float: "left", marginRight: "1rem", marginBottom: "0.5rem" }
-      : position === "right"
-        ? { float: "right", marginLeft: "1rem", marginBottom: "0.5rem" }
-        : {};
-
-  const containerStyle: React.CSSProperties = {
-    display: "inline-block",
-    width: position !== "full" ? width : undefined,
-    ...floatStyle,
-  };
-
-  return (
-    <span
-      data-lexical-node-key={nodeKey}
-      style={containerStyle}
-      className={isSelected ? "ring-2 ring-primary rounded" : ""}
-    >
-      <img
-        src={src}
-        alt={altText}
-        style={{ width: "100%", display: "block" }}
-        draggable={false}
-      />
-    </span>
-  );
-}
-
-// =============================================================================
-// DOM Conversion
-// =============================================================================
-
 function $convertInlineImageElement(
   element: HTMLElement,
 ): null | DOMConversionOutput {
@@ -131,11 +65,7 @@ function $convertInlineImageElement(
   return { node, after: () => [] };
 }
 
-// =============================================================================
-// Node Class
-// =============================================================================
-
-export class InlineImageNode extends DecoratorNode<ReactElement> {
+export class InlineImageNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("inline-image", {
       extends: DecoratorNode,
@@ -203,22 +133,16 @@ export class InlineImageNode extends DecoratorNode<ReactElement> {
     return true;
   }
 
-  override decorate(): ReactElement {
-    return (
-      <InlineImageComponent
-        src={$getState(this, inlineSrcState)}
-        altText={$getState(this, inlineAltTextState)}
-        position={$getState(this, inlinePositionState)}
-        width={$getState(this, inlineWidthState)}
-        nodeKey={this.getKey()}
-      />
-    );
+  override decorate(): ReactElement | null {
+    return renderLexicalDecorator("inline-image", {
+      src: $getState(this, inlineSrcState),
+      altText: $getState(this, inlineAltTextState),
+      position: $getState(this, inlinePositionState),
+      width: $getState(this, inlineWidthState),
+      nodeKey: this.getKey(),
+    });
   }
 }
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 export function $createInlineImageNode({
   src,
