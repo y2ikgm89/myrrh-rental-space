@@ -2,18 +2,15 @@
  * File Node
  *
  * @description ファイル添付ダウンロードリンクを埋め込むDecoratorNode
+ * server / headless でも import 可能。編集 UI は FileNode.decorator.client。
  */
 
-"use client";
-
 import type { ReactElement } from "react";
-import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
 } from "lexical";
 import {
   $create,
@@ -22,12 +19,8 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { parseString } from "../config/type-guards";
-
-// =============================================================================
-// State
-// =============================================================================
+import { renderLexicalDecorator } from "./decorator-registry";
 
 export const fileUrlState = createState("url", {
   parse: parseString,
@@ -45,10 +38,6 @@ export const fileMimeState = createState("mime", {
   parse: parseString,
 });
 
-// =============================================================================
-// Utilities
-// =============================================================================
-
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return "不明";
   const units = ["B", "KB", "MB", "GB"] as const;
@@ -60,76 +49,7 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${unit}`;
 }
 
-function getFileIconEmoji(mime: string): string {
-  if (mime.includes("pdf")) return "📕";
-  if (mime.includes("word") || mime.includes("doc")) return "📘";
-  if (mime.includes("sheet") || mime.includes("xls") || mime.includes("csv"))
-    return "📗";
-  if (
-    mime.includes("zip") ||
-    mime.includes("archive") ||
-    mime.includes("tar") ||
-    mime.includes("gz")
-  )
-    return "📦";
-  if (mime.includes("image")) return "🖼️";
-  if (mime.includes("video")) return "🎬";
-  if (mime.includes("audio")) return "🎵";
-  return "📄";
-}
-
-// =============================================================================
-// Component
-// =============================================================================
-
-function FileComponent({
-  url,
-  fileName,
-  fileSize,
-  mime,
-  nodeKey,
-}: {
-  url: string;
-  fileName: string;
-  fileSize: number;
-  mime: string;
-  nodeKey: NodeKey;
-}) {
-  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
-  const icon = getFileIconEmoji(mime);
-  const sizeText = formatFileSize(fileSize);
-
-  return (
-    <a
-      href={url}
-      download
-      onClick={(e) => {
-        e.preventDefault();
-        setSelected(true);
-      }}
-      className={cn(
-        "flex items-center gap-3 rounded-lg border border-border bg-card p-3 my-2 no-underline hover:bg-accent transition-colors",
-        isSelected && "ring-2 ring-ring",
-      )}
-    >
-      <span className="text-2xl flex-shrink-0">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate text-card-foreground">
-          {fileName || url}
-        </p>
-        {fileSize > 0 && (
-          <p className="text-xs text-muted-foreground">{sizeText}</p>
-        )}
-      </div>
-    </a>
-  );
-}
-
-// =============================================================================
-// Node Class
-// =============================================================================
-
-export class FileNode extends DecoratorNode<ReactElement> {
+export class FileNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("file", {
       extends: DecoratorNode,
@@ -190,22 +110,16 @@ export class FileNode extends DecoratorNode<ReactElement> {
     return { element: a };
   }
 
-  override decorate(): ReactElement {
-    return (
-      <FileComponent
-        url={$getState(this, fileUrlState)}
-        fileName={$getState(this, fileNameState)}
-        fileSize={$getState(this, fileSizeState)}
-        mime={$getState(this, fileMimeState)}
-        nodeKey={this.getKey()}
-      />
-    );
+  override decorate(): ReactElement | null {
+    return renderLexicalDecorator("file", {
+      url: $getState(this, fileUrlState),
+      fileName: $getState(this, fileNameState),
+      fileSize: $getState(this, fileSizeState),
+      mime: $getState(this, fileMimeState),
+      nodeKey: this.getKey(),
+    });
   }
 }
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 /**
  * FileNodeを作成する

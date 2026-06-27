@@ -5,11 +5,8 @@ import { sanitizeLexicalContentHtml } from "@/shared/lib/html/sanitize-content-h
 /**
  * 規約・記事・お知らせ等の保存前 HTML を server-side で sanitize する SSoT。
  *
- * Lexical エディタ → server `renderEditorStateJsonToHtmlServer`（terms）または
- * client `renderEditorStateJsonToHtmlClient`（posts/news 等）で生成された
- * HTML をそのまま DB へ保存すると、エディタ側 XSS フィルタ漏れ / 古い保存値 /
- * 手動 import の汚染で `<script>` / `<iframe srcdoc>` / event handler 属性が
- * `TermsAgreement.contentSnapshot` 等に永続注入される。
+ * Lexical エディタ → server `deriveLexicalContentHtmlFromJson`（terms / posts / news 等）で
+ * contentJson から HTML を派生。client 送信 HTML は使用しない。
  *
  * 公式: https://github.com/apostrophecms/sanitize-html
  *

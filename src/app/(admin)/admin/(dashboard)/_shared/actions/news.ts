@@ -29,6 +29,7 @@ import {
   type UpdateNewsSettingsInput,
 } from "@/admin/lib/validations/news";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
+import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 
 const idSchema = uuidIdSchema("お知らせ");
 
@@ -64,6 +65,7 @@ export async function createNews(
     execute: async () => {
       const result = await createNewsCommand({
         ...parsed.data,
+        contentHtml: deriveLexicalContentHtmlFromJson(parsed.data.contentJson),
       });
       createdNewsSlug = result.slug;
       return { id: result.id };
@@ -102,7 +104,7 @@ export async function updateNewsBody(
     execute: async () => {
       updatedNews = await updateNewsBodyCommand(validatedId.data, {
         contentJson: parsed.data.contentJson,
-        contentHtml: parsed.data.contentHtml,
+        contentHtml: deriveLexicalContentHtmlFromJson(parsed.data.contentJson),
       });
       return null;
     },

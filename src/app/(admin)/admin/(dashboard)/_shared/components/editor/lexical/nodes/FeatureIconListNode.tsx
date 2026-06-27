@@ -3,6 +3,9 @@
  *
  * @description アイコン付きで設備や特徴を一覧表示するコンポジットノード
  * FeatureIconListContainerNode + FeatureIconItemNode の2ノード構成
+ *
+ * exportDOM は `data-icon-name` のみ（SVG は公開時 hydrate）。編集 UI の createDOM /
+ * updateDOM では WYSIWYG のため CuratedIcon を SVG として埋め込む。
  */
 
 "use client";
@@ -297,9 +300,10 @@ export class FeatureIconItemNode extends ElementNode {
   override exportDOM() {
     const li = document.createElement("li");
     li.setAttribute("data-feature-icon-item", "");
-    const iconName = $getState(this, featureIconItemNameState);
-    li.setAttribute("data-icon-name", iconName);
-    renderIconSvgInto(li, iconName);
+    li.setAttribute(
+      "data-icon-name",
+      $getState(this, featureIconItemNameState),
+    );
     return { element: li };
   }
 

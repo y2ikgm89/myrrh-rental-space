@@ -2,18 +2,15 @@
  * Figma Node
  *
  * @description Figma デザインを埋め込む DecoratorNode
+ * server / headless でも import 可能。編集 UI は FigmaNode.decorator.client。
  */
 
-"use client";
-
 import type { ReactElement } from "react";
-import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
 } from "lexical";
 import {
   $create,
@@ -22,12 +19,8 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { parseString } from "../config/type-guards";
-
-// =============================================================================
-// URL 変換
-// =============================================================================
+import { renderLexicalDecorator } from "./decorator-registry";
 
 export function toFigmaEmbedUrl(url: string): string | null {
   try {
@@ -40,10 +33,6 @@ export function toFigmaEmbedUrl(url: string): string | null {
   }
 }
 
-// =============================================================================
-// State
-// =============================================================================
-
 export const figmaEmbedUrlState = createState("embedUrl", {
   parse: parseString,
 });
@@ -52,51 +41,7 @@ export const figmaLabelState = createState("label", {
   parse: parseString,
 });
 
-// =============================================================================
-// Component
-// =============================================================================
-
-function FigmaComponent({
-  embedUrl,
-  label,
-  nodeKey,
-}: {
-  embedUrl: string;
-  label: string;
-  nodeKey: NodeKey;
-}) {
-  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
-
-  return (
-    <div
-      className={cn(
-        "rounded-lg border border-border overflow-hidden my-2",
-        isSelected && "ring-2 ring-ring",
-      )}
-      onClick={() => setSelected(true)}
-    >
-      {label && (
-        <p className="text-sm text-muted-foreground px-3 py-1 border-b border-border bg-muted">
-          {label}
-        </p>
-      )}
-      <iframe
-        src={embedUrl}
-        allow="fullscreen"
-        loading="lazy"
-        title={label || "Figma デザイン"}
-        className="w-full border-none"
-        style={{ height: "450px" }}
-      />
-    </div>
-  );
-}
-
-// =============================================================================
-// Node Class
-// =============================================================================
-
-export class FigmaNode extends DecoratorNode<ReactElement> {
+export class FigmaNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("figma", {
       extends: DecoratorNode,
@@ -152,20 +97,14 @@ export class FigmaNode extends DecoratorNode<ReactElement> {
     return { element: wrapper };
   }
 
-  override decorate(): ReactElement {
-    return (
-      <FigmaComponent
-        embedUrl={$getState(this, figmaEmbedUrlState)}
-        label={$getState(this, figmaLabelState)}
-        nodeKey={this.getKey()}
-      />
-    );
+  override decorate(): ReactElement | null {
+    return renderLexicalDecorator("figma", {
+      embedUrl: $getState(this, figmaEmbedUrlState),
+      label: $getState(this, figmaLabelState),
+      nodeKey: this.getKey(),
+    });
   }
 }
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 /**
  * FigmaNode を作成する

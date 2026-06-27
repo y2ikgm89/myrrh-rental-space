@@ -16,7 +16,6 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import { createEventAction, updateEventAction } from "@/admin/actions/event";
-import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
@@ -117,8 +116,6 @@ export function EventForm({
   const [contentJson, setContentJson] = useState<string>(() =>
     serializeDescriptionJson(event?.descriptionJson),
   );
-  // 派生計算: React Compiler が自動メモ化（flushSync / useMemo 不要、Task 8.3 canonical）
-  const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
 
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
     event?.thumbnailUrl ?? null,
@@ -247,11 +244,6 @@ export function EventForm({
         type="hidden"
         name={fields.descriptionJson.name}
         value={contentJson}
-      />
-      <input
-        type="hidden"
-        name={fields.descriptionHtml.name}
-        value={contentHtml}
       />
       <input
         type="hidden"

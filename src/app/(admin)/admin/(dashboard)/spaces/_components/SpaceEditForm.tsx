@@ -38,7 +38,6 @@ import {
   TooltipTrigger,
 } from "@/admin/components/ui";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
-import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
@@ -246,9 +245,6 @@ export function SpaceEditForm({
     space?.ogpImageUrl ?? "",
   );
 
-  // 派生計算: Lexical contentHtml は React Compiler が自動メモ化
-  const descriptionHtml = renderEditorStateJsonToHtmlClient(descriptionJson);
-
   // Server Action は `(prev, formData) => SubmissionResult` signature。
   // edit mode では id を `bind` で部分適用。
   const boundAction =
@@ -417,11 +413,6 @@ export function SpaceEditForm({
         type="hidden"
         name={fields.descriptionJson.name}
         value={descriptionJson}
-      />
-      <input
-        type="hidden"
-        name={fields.descriptionHtml.name}
-        value={descriptionHtml}
       />
       <input
         type="hidden"

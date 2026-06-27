@@ -1,7 +1,7 @@
 import { $generateNodesFromDOM } from "@lexical/html";
-import { createEditor, $getRoot, $insertNodes } from "lexical";
-import { HEADLESS_EDITOR_NODES } from "./config/headless-nodes";
-import { editorTheme } from "./theme";
+import { withDOM } from "@lexical/headless/dom";
+import { $getRoot, $insertNodes } from "lexical";
+import { createProjectHeadlessEditor } from "./create-headless-lexical-editor";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
   isLexicalComposerReadyEditorStateJson,
@@ -16,7 +16,7 @@ export type ConvertHtmlToLexicalJsonResult =
 /**
  * HTML 文字列 → Lexical EditorState JSON（環境非依存コア）。
  *
- * 公式: `DOMParser` + `$generateNodesFromDOM` + `editor.update()`。
+ * 公式: `createHeadlessEditor` + `withDOM` + `$generateNodesFromDOM`。
  */
 export function tryConvertHtmlStringToLexicalJsonCore(
   html: string,
@@ -26,43 +26,36 @@ export function tryConvertHtmlStringToLexicalJsonCore(
     return { ok: true, json: EMPTY_LEXICAL_EDITOR_STATE_JSON };
   }
 
-  const editor = createEditor({
-    namespace: "LexicalEditor",
-    theme: editorTheme,
-    nodes: [...HEADLESS_EDITOR_NODES],
-    onError: (error: Error) => {
-      logger.error("tryConvertHtmlStringToLexicalJsonCore editor error", {
-        error: error.message,
-      });
-    },
-  });
-
   try {
-    editor.update(
-      () => {
-        const parser = new DOMParser();
-        const dom = parser.parseFromString(trimmed, "text/html");
-        const nodes = $generateNodesFromDOM(editor, dom);
-        const root = $getRoot();
-        root.clear();
-        root.selectStart();
-        $insertNodes(nodes);
-      },
-      { discrete: true },
-    );
+    return withDOM(() => {
+      const editor = createProjectHeadlessEditor();
 
-    const json = JSON.stringify(editor.getEditorState().toJSON());
-    if (!isLexicalComposerReadyEditorStateJson(json)) {
-      logger.error(
-        "tryConvertHtmlStringToLexicalJsonCore: output failed schema check",
+      editor.update(
+        () => {
+          const parser = new DOMParser();
+          const dom = parser.parseFromString(trimmed, "text/html");
+          const nodes = $generateNodesFromDOM(editor, dom);
+          const root = $getRoot();
+          root.clear();
+          root.selectStart();
+          $insertNodes(nodes);
+        },
+        { discrete: true },
       );
-      return {
-        ok: false,
-        error:
-          "HTML の変換結果が有効な Lexical EditorState になりませんでした。テンプレート HTML を確認してください。",
-      };
-    }
-    return { ok: true, json };
+
+      const json = JSON.stringify(editor.getEditorState().toJSON());
+      if (!isLexicalComposerReadyEditorStateJson(json)) {
+        logger.error(
+          "tryConvertHtmlStringToLexicalJsonCore: output failed schema check",
+        );
+        return {
+          ok: false,
+          error:
+            "HTML の変換結果が有効な Lexical EditorState になりませんでした。テンプレート HTML を確認してください。",
+        };
+      }
+      return { ok: true, json };
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     logger.error("tryConvertHtmlStringToLexicalJsonCore failed", {

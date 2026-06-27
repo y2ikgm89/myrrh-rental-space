@@ -19,8 +19,11 @@ OpenAI Codex など [agents.md](https://agents.md) 互換ツールは本 `AGENTS
 
 ## Learned Workspace Facts
 
-- Lexical コンテンツ（posts/news/terms）では `contentJson` が正本、`contentHtml` は SSR・同意記録用の派生キャッシュ
-- terms 永続化は server 側で `contentJson` → HTML 派生（`renderEditorStateJsonToHtmlServer`）→ command 層で sanitize。クライアントから `contentHtml` を送らない
+- Lexical コンテンツ（posts/news/terms/events/spaces）では `contentJson` が正本、`contentHtml` は SSR・同意記録用の派生キャッシュ
+- Lexical 保存時の HTML 派生は server の `deriveLexicalContentHtmlFromJson` のみ。クライアントから `contentHtml` / `descriptionHtml` 等を送らない
+- Lexical ノード登録は `config/nodes.ts` が SSoT（browser/headless/server 同一集合）。DecoratorNode は `.ts` + `.decorator.client.tsx` + `decorator-registry`
+- headless HTML↔JSON は `create-headless-lexical-editor.ts`（`withDOM()`）+ 同一 nodes 登録
+- curation icon は exportDOM を `data-icon-name` のみにし、server の `enrich-lexical-content-html-icons.server.ts` で静的 SVG 注入してから sanitize
 - 既存規約の一括同期は `20260627120000_terms_lexical_content_sync`（legacy JSON 修復 + 全行 HTML 派生）
 - terms 新規作成テンプレートは RSC で HTML → Lexical JSON import（`tryConvertHtmlStringToLexicalJsonServer`）し `initialTemplateJson` を渡す
-- Lexical 由来 HTML の sanitize 許可属性は `lexical-html-sanitize-config.ts` を SSoT とし、sanitize-html 側は `data-*`/`aria-*` glob、DOMPurify 側は `ALLOW_DATA_ATTR`
+- Lexical 由来 HTML の sanitize 許可属性は `lexical-html-sanitize-config.ts` を SSoT とし、sanitize-html 側は `data-*`/`aria-*` glob、DOMPurify 側は `ALLOW_DATA_ATTR`、curated icon SVG は厳格 allowlist

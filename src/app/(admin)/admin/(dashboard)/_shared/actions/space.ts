@@ -26,6 +26,7 @@ import {
   updateSpaceCommand,
   updateSpacePublishedCommand,
 } from "@/shared/domain/spaces/commands";
+import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 import {
   spaceFormSchema,
   type SpaceFormData,
@@ -84,20 +85,17 @@ function revalidateSpaces(targets: ReadonlyArray<SpaceTarget>): void {
 }
 
 function buildSpaceCommandInput(data: SpaceFormData) {
-  const descriptionHtml = data.descriptionHtml;
-  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
   const descriptionJson = parsePrismaInputJson(
     data.descriptionJson,
     "descriptionJson が不正です",
   );
+  const descriptionHtml = deriveLexicalContentHtmlFromJson(
+    data.descriptionJson,
+  );
+  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
 
-  const {
-    descriptionJson: _dropJson,
-    descriptionHtml: _dropHtml,
-    ...rest
-  } = data;
+  const { descriptionJson: _dropJson, ...rest } = data;
   void _dropJson;
-  void _dropHtml;
   return omitUndefined({
     ...rest,
     descriptionJson,

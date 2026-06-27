@@ -5,8 +5,8 @@
  *
  * 消費者:
  * - admin: IconPickerDialog / IconPickerField (`@/admin/components/icon-picker/*`)
- * - admin: Lexical FeatureIconListNode の exportDOM (SSR / headless / mobile fallback)
- * - public: site-header / site-footer / mobile-nav の NavigationItem icon 描画
+ * - admin: Lexical FeatureIconListNode の編集 UI createDOM（WYSIWYG）
+ * - public: SanitizedHtml.hydrateCuratedIcons() / site-header / site-footer
  *
  * `"use client"` は付けない — Lexical Node の exportDOM は SSR で実行されるため。
  * `@tabler/icons-react` 自体は SSR safe で React Server Component から呼び出し可能。

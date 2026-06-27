@@ -12,31 +12,24 @@
  * data-attribute のみで構築し `lexical-content.css` の
  * `[data-button-*]` セレクタで公開 Button Primitive と視覚一致するスタイルを適用。
  *
+ * server / headless でも import 可能。編集 UI は ButtonNode.decorator.client。
  */
 
-"use client";
-
-import { type ReactElement, createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
 } from "lexical";
 import {
   $create,
-  $getNodeByKey,
   $getState,
   $setState,
   createState,
   DecoratorNode,
 } from "lexical";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
-import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
 import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
 import { createSpan, type PortableTextSpan } from "@/shared/lib/portable-text";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
@@ -45,10 +38,7 @@ import {
   parseBoolean,
   parseStringWithDefault,
 } from "../config/type-guards";
-
-// =============================================================================
-// Types
-// =============================================================================
+import { renderLexicalDecorator } from "./decorator-registry";
 
 export type ButtonVariant =
   | "primary"
@@ -73,18 +63,10 @@ export const BUTTON_ALIGNMENTS: readonly ButtonAlignment[] = [
   "right",
 ] as const;
 
-// =============================================================================
-// Type Guards
-// =============================================================================
-
 export const isButtonVariant = createEnumGuard<ButtonVariant>(BUTTON_VARIANTS);
 export const isButtonSize = createEnumGuard<ButtonSize>(BUTTON_SIZES);
 export const isButtonAlignment =
   createEnumGuard<ButtonAlignment>(BUTTON_ALIGNMENTS);
-
-// =============================================================================
-// State
-// =============================================================================
 
 export const buttonLabelState = createState("label", {
   parse: (v: unknown): PortableTextSpan[] => {
@@ -126,82 +108,13 @@ export const buttonOpenInNewTabState = createState("openInNewTab", {
   parse: parseBoolean,
 });
 
-// =============================================================================
-// Icon helpers
-// =============================================================================
-
-/** Icon token を SVG markup として埋め込む (FeatureIconListNode pattern 準拠) */
-function renderIconSvgMarkup(iconName: string): string {
-  const Icon = getCuratedIconComponent(iconName);
-  if (!Icon) return "";
-  return renderToStaticMarkup(
-    createElement(Icon, {
-      "aria-hidden": true,
-    }),
-  );
+function appendButtonIconToken(link: HTMLElement, iconName: string): void {
+  const el = document.createElement("span");
+  el.setAttribute("data-icon-name", iconName);
+  el.setAttribute("data-button-icon", "");
+  el.setAttribute("aria-hidden", "true");
+  link.appendChild(el);
 }
-
-// =============================================================================
-// Component (editor preview)
-// =============================================================================
-
-function ButtonComponent({
-  nodeKey,
-}: {
-  nodeKey: NodeKey;
-}): ReactElement | null {
-  const [editor] = useLexicalComposerContext();
-
-  const state = editor.read(() => {
-    const node = $getNodeByKey(nodeKey);
-    if (!$isButtonNode(node)) return null;
-    return {
-      label: $getState(node, buttonLabelState),
-      href: $getState(node, buttonHrefState),
-      variant: $getState(node, buttonVariantState),
-      size: $getState(node, buttonSizeState),
-      alignment: $getState(node, buttonAlignmentState),
-      color: $getState(node, buttonColorState),
-      openInNewTab: $getState(node, buttonOpenInNewTabState),
-    };
-  });
-
-  if (!state) return null;
-
-  return (
-    <div
-      data-lexical-node-key={nodeKey}
-      data-button="true"
-      data-button-alignment={state.alignment}
-      data-button-variant={state.variant}
-      data-button-size={state.size}
-      {...(state.color !== "default" && { "data-color": state.color })}
-    >
-      <a
-        href={state.href}
-        {...(state.openInNewTab && {
-          target: "_blank",
-          rel: "noreferrer",
-        })}
-        draggable={false}
-        onClick={(e) => e.preventDefault()}
-      >
-        {state.label.map((span) => {
-          if (span._type === "span") {
-            return <span key={span._key}>{span.text}</span>;
-          }
-          return (
-            <CuratedIcon key={span._key} name={span.name} aria-hidden="true" />
-          );
-        })}
-      </a>
-    </div>
-  );
-}
-
-// =============================================================================
-// DOM Conversion (importDOM)
-// =============================================================================
 
 function $convertButtonElement(
   element: HTMLElement,
@@ -239,11 +152,7 @@ function $convertButtonElement(
   return { node };
 }
 
-// =============================================================================
-// Node Class
-// =============================================================================
-
-export class ButtonNode extends DecoratorNode<ReactElement> {
+export class ButtonNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("button", {
       extends: DecoratorNode,
@@ -304,10 +213,7 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
         el.textContent = span.text;
         link.appendChild(el);
       } else {
-        const markup = renderIconSvgMarkup(span.name);
-        if (markup) {
-          link.insertAdjacentHTML("beforeend", markup);
-        }
+        appendButtonIconToken(link, span.name);
       }
     }
 
@@ -329,14 +235,12 @@ export class ButtonNode extends DecoratorNode<ReactElement> {
     return false;
   }
 
-  override decorate(): ReactElement {
-    return <ButtonComponent nodeKey={this.getKey()} />;
+  override decorate(): ReactElement | null {
+    return renderLexicalDecorator("button", {
+      nodeKey: this.getKey(),
+    });
   }
 }
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 export function $createButtonNode({
   label = [],

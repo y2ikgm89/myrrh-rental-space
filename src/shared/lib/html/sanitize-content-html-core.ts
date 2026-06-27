@@ -1,5 +1,9 @@
 import sanitizeHtml from "sanitize-html";
-import { LEXICAL_HTML_GLOBAL_ATTRIBUTES } from "@/shared/lib/html/lexical-html-sanitize-config";
+import {
+  LEXICAL_CURATED_ICON_SVG_ATTRIBUTES,
+  LEXICAL_CURATED_ICON_SVG_TAGS,
+  LEXICAL_HTML_GLOBAL_ATTRIBUTES,
+} from "@/shared/lib/html/lexical-html-sanitize-config";
 
 const LEXICAL_ALLOWED_TAGS = [
   "h1",
@@ -31,6 +35,7 @@ const LEXICAL_ALLOWED_TAGS = [
   "td",
   "div",
   "span",
+  ...LEXICAL_CURATED_ICON_SVG_TAGS,
 ] as const;
 
 const SAFE_URL_SCHEMES = ["http", "https", "mailto", "tel"] as const;
@@ -44,6 +49,7 @@ export function sanitizeLexicalContentHtml(html: string): string {
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
       img: ["src", "alt", "width", "height", "loading"],
+      ...LEXICAL_CURATED_ICON_SVG_ATTRIBUTES,
       "*": [...LEXICAL_HTML_GLOBAL_ATTRIBUTES],
     },
     allowedSchemes: [...SAFE_URL_SCHEMES],

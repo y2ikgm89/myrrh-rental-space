@@ -9,6 +9,8 @@
 
 "use client";
 
+import "./nodes/register-decorator-components.client";
+
 import { useEffect, useEffectEvent, useState } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";

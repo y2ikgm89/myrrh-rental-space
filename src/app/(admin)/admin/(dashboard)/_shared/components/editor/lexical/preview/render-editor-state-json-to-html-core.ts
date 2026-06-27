@@ -1,15 +1,12 @@
-import { createHeadlessEditor } from "@lexical/headless";
 import { withDOM } from "@lexical/headless/dom";
 import { $generateHtmlFromNodes } from "@lexical/html";
-import { HEADLESS_EDITOR_NODES } from "../config/headless-nodes";
-import { editorTheme } from "../theme";
+import { createProjectHeadlessEditor } from "../create-headless-lexical-editor";
 import { logger } from "@/shared/lib/logger";
 
 /**
  * Lexical EditorState JSON → HTML（環境非依存コア）。
  *
- * 公式: `$generateHtmlFromNodes(editor, null)` + headless `withDOM`。
- * 呼び出し元で DOM が利用可能であること（browser または server で JSDOM 済み）。
+ * 公式: `createHeadlessEditor` + `withDOM` + `$generateHtmlFromNodes(editor, null)`。
  */
 export function renderEditorStateJsonToHtmlCore(
   editorStateJson: string,
@@ -21,17 +18,7 @@ export function renderEditorStateJsonToHtmlCore(
 
   try {
     return withDOM(() => {
-      const editor = createHeadlessEditor({
-        namespace: "LexicalHeadlessHtmlExport",
-        theme: editorTheme,
-        nodes: [...HEADLESS_EDITOR_NODES],
-        onError: (error: Error) => {
-          logger.error("Headless Lexical HTML export error", {
-            error: error.message,
-          });
-        },
-      });
-
+      const editor = createProjectHeadlessEditor();
       const editorState = editor.parseEditorState(trimmed);
       editor.setEditorState(editorState);
       let html = "";

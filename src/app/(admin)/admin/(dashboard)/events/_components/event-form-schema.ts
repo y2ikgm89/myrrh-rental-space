@@ -10,7 +10,7 @@ import { gallerySchema } from "@/shared/lib/validations/gallery";
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
  * - `descriptionJson` (Lexical EditorState JSON) は hidden input で transit
- * - `descriptionHtml` は client-side で `renderEditorStateJsonToHtmlClient()` で生成 → hidden input
+ * - `descriptionHtml` は server が descriptionJson から派生
  * - boolean (`registrationOpen`) は Switch + hidden input "on" / "" を `z.preprocess` で coerce
  * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
  * - `slots`  は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
@@ -140,13 +140,6 @@ const eventFormBaseSchema = z.object({
     }),
   /** Lexical EditorState JSON 文字列（hidden input transit） */
   descriptionJson: lexicalJsonSchema,
-  /**
-   * クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML（hidden input transit）。
-   * 空説明（render エラー時の catch 等）で空文字が来うるが、conform は空入力を undefined 化するため
-   * bare `z.string()` だと弾かれる。`.default("")` で空を許容する（descriptionJson が空コンテンツを
-   * 許容するのと整合）。
-   */
-  descriptionHtml: z.string().default(""),
   thumbnailUrl: z.preprocess(
     (value) => (value === "" ? null : value),
     z.string().nullable().optional(),

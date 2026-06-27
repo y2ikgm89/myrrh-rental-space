@@ -61,7 +61,6 @@ export const createNewsSchema = z.object({
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内で入力してください" }),
   contentJson: lexicalJsonSchema,
-  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type CreateNewsInput = z.infer<typeof createNewsSchema>;
@@ -71,7 +70,6 @@ export type CreateNewsInput = z.infer<typeof createNewsSchema>;
  */
 export const updateNewsBodySchema = z.object({
   contentJson: lexicalJsonSchema,
-  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type UpdateNewsBodyInput = z.infer<typeof updateNewsBodySchema>;
@@ -103,13 +101,10 @@ export type UpdateNewsSettingsInput = z.infer<typeof updateNewsSettingsSchema>;
 /**
  * お知らせ 本文フォームスキーマ（クライアント）
  *
- * Lexical contentJson + 派生 contentHtml。本文編集時に hidden input で transit、
- * submit handler 側で `renderEditorStateJsonToHtmlClient(contentJson)` 経由で
- * contentHtml を派生してから Server Action へ送信する。
+ * Lexical contentJson のみ transit。contentHtml は server が JSON から派生する。
  */
 export const newsBodyFormSchema = z.object({
   contentJson: lexicalJsonSchema,
-  contentHtml: z.string().min(1, { error: "本文HTMLは必須です" }),
 });
 
 export type NewsBodyFormData = z.infer<typeof newsBodyFormSchema>;

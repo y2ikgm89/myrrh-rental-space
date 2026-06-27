@@ -6,10 +6,9 @@
  * 本文 (Lexical contentJson) は useState で軽量管理、設定 (メタデータ・分類・SEO 等)
  * は conform `useForm` で管理する。保存はそれぞれ独立した Server Action 呼び出し:
  *
- * - 本文は EditorHeader の保存ボタンで `updatePostBody` を呼ぶ
- *   (派生 contentHtml は `renderEditorStateJsonToHtmlClient` を browser 側で実行)
+ * - 本文は EditorHeader の保存ボタンで `updatePostBody` を呼ぶ（contentJson のみ、HTML は server 派生）
  * - 設定は SettingsDialog の保存ボタンで `updatePostSettings` を呼ぶ
- * - create モードでは保存時に両方を統合して `createPost` を呼ぶ
+ * - create モードでは保存時に `createPost` を呼ぶ
  */
 
 import { useState } from "react";
@@ -34,7 +33,6 @@ import {
   publishPost,
   unpublishPost,
 } from "@/admin/actions/post/mutations";
-import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { getPostPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
@@ -201,10 +199,8 @@ export function usePostEditor({
     if (!post) return;
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updatePostBody(post.id, {
           contentJson,
-          contentHtml,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -277,13 +273,11 @@ export function usePostEditor({
   ): Promise<string | null> => {
     const settingsPayload = toSettingsSubmitPayload(settingsData);
     try {
-      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
       const result = await createPost({
         title: settingsPayload.title,
         slug: settingsPayload.slug,
         excerpt: settingsPayload.excerpt,
         contentJson,
-        contentHtml,
         thumbnailUrl: settingsPayload.thumbnailUrl,
         categoryId: settingsPayload.categoryId,
         tags: settingsPayload.tags,
@@ -418,10 +412,8 @@ export function usePostEditor({
 
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const bodyResult = await updatePostBody(post.id, {
           contentJson,
-          contentHtml,
         });
         if (isMutationError(bodyResult)) {
           toast.error(bodyResult.error);

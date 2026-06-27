@@ -2,18 +2,15 @@
  * Audio Node
  *
  * @description 音声プレイヤーを埋め込むDecoratorNode
+ * server / headless でも import 可能。編集 UI は AudioNode.decorator.client。
  */
 
-"use client";
-
 import type { ReactElement } from "react";
-import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-  NodeKey,
 } from "lexical";
 import {
   $create,
@@ -22,12 +19,8 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { parseString } from "../config/type-guards";
-
-// =============================================================================
-// State
-// =============================================================================
+import { renderLexicalDecorator } from "./decorator-registry";
 
 export const audioUrlState = createState("url", {
   parse: parseString,
@@ -41,52 +34,7 @@ export const audioArtistState = createState("artist", {
   parse: parseString,
 });
 
-// =============================================================================
-// Component
-// =============================================================================
-
-function AudioComponent({
-  url,
-  title,
-  artist,
-  nodeKey,
-}: {
-  url: string;
-  title: string;
-  artist: string;
-  nodeKey: NodeKey;
-}) {
-  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
-
-  return (
-    <div
-      className={cn(
-        "rounded-lg border bg-card p-4 my-2",
-        isSelected && "ring-2 ring-ring",
-      )}
-      onClick={(e) => {
-        if (e.target instanceof HTMLAudioElement) return;
-        setSelected(true);
-      }}
-    >
-      {(title || artist) && (
-        <div className="mb-2">
-          {title && (
-            <p className="text-sm font-medium text-foreground">{title}</p>
-          )}
-          {artist && <p className="text-xs text-muted-foreground">{artist}</p>}
-        </div>
-      )}
-      <audio src={url} controls preload="metadata" className="w-full" />
-    </div>
-  );
-}
-
-// =============================================================================
-// Node Class
-// =============================================================================
-
-export class AudioNode extends DecoratorNode<ReactElement> {
+export class AudioNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("audio", {
       extends: DecoratorNode,
@@ -169,21 +117,15 @@ export class AudioNode extends DecoratorNode<ReactElement> {
     return { element: wrapper };
   }
 
-  override decorate(): ReactElement {
-    return (
-      <AudioComponent
-        url={$getState(this, audioUrlState)}
-        title={$getState(this, audioTitleState)}
-        artist={$getState(this, audioArtistState)}
-        nodeKey={this.getKey()}
-      />
-    );
+  override decorate(): ReactElement | null {
+    return renderLexicalDecorator("audio", {
+      url: $getState(this, audioUrlState),
+      title: $getState(this, audioTitleState),
+      artist: $getState(this, audioArtistState),
+      nodeKey: this.getKey(),
+    });
   }
 }
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 /**
  * AudioNodeを作成する

@@ -16,6 +16,7 @@
     "db:generate": "bunx --bun prisma generate",
     "db:push": "bunx --bun prisma db push",
     "db:migrate": "bunx --bun prisma migrate dev",
+    "db:reset": "bunx --bun prisma migrate reset --force",
     "db:studio": "bunx --bun prisma studio",
     "db:seed": "bun prisma/seed.ts",
     "validate": "bun run type-check && bun run lint",

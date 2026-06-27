@@ -12,7 +12,7 @@ import {
 import {
   $createHorizontalRuleNode,
   $isHorizontalRuleNode,
-} from "@lexical/react/LexicalHorizontalRuleNode";
+} from "@lexical/extension";
 
 import { $getState } from "lexical";
 
