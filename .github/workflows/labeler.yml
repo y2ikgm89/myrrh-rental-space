@@ -19,6 +19,7 @@ jobs:
   label:
     name: Apply path-based labels
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Apply labels from .github/labeler.yml
         # SHA 直 pin（公式 security best practice、tag force-push 攻撃 + codeload

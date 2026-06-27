@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Playwright E2E テスト設定
  *
  * 公式準拠の **storage state + setup project** ＋ **fullyParallel** パターン。
- * 規約 SSoT は `.claude/rules/test-quality/e2e.md`。
+ * 規約 SSoT は `.agents/skills/e2e-test-quality`。
  *
  * Project 構成:
  *   - setup-customer / setup-admin → 認証してストレージ保存

@@ -1,6 +1,6 @@
 # Contributing to Myrrh Rental Space
 
-このドキュメントは開発者向けのクイックスタートです。AI エージェント作業の正本は [`AGENTS.md`](../AGENTS.md)（Codex）と [`CLAUDE.md`](../CLAUDE.md)（Claude Code）です。
+このドキュメントは開発者向けのクイックスタートです。AI エージェント作業の正本は [`AGENTS.md`](../AGENTS.md) と repo skills（[`.agents/skills`](../.agents/skills)）です。
 
 ## 開発環境セットアップ
 
@@ -45,7 +45,7 @@ main                       ← 本番反映（Cloud Run へ自動 deploy）
 feature/*, fix/*, chore/*  ← PR ベースで main にマージ
 ```
 
-- `main` への直接 push は禁止（[`branch-protection.json`](./branch-protection.json) で required status checks 5 種を gate）
+- `main` への直接 push は禁止（[`branch-protection.json`](./branch-protection.json) で required status checks を gate）
 - feature ブランチは `main` 起点で作成
 - **破壊的変更**は PR description に明記し CODEOWNERS レビュー必須
 - 短命 feature branch を意識（large stack を避け、merge 後即削除）
@@ -141,7 +141,7 @@ PR template（[`pull_request_template.md`](./pull_request_template.md)）を埋�
 
 ## 品質ゲート
 
-CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job（E2E / Visual / Lighthouse）は PR label / `workflow_dispatch` で opt-in。
+CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./workflows) が SSoT。重い job（E2E / Visual / Lighthouse）は `codex/full-ci/` で始まる PR branch、または `workflow_dispatch` の `run_full_ci=true` で opt-in。
 
 ## セキュリティ
 
@@ -149,10 +149,10 @@ CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./w
 
 ## ハードルール
 
-ハードルールの SSoT は [`CLAUDE.md`](../CLAUDE.md) です（[`AGENTS.md`](../AGENTS.md) は Codex 等向けのエントリポイントで、内容は CLAUDE.md を参照）。本 CONTRIBUTING には複製しません（drift 防止）。
+ハードルールの SSoT は [`AGENTS.md`](../AGENTS.md) と repo skills（[`.agents/skills`](../.agents/skills)）です。本 CONTRIBUTING には複製しません（drift 防止）。
 
 ## 質問・サポート
 
-- プロジェクト固有の疑問: [`CLAUDE.md`](../CLAUDE.md) + [`.claude/skills/`](../.claude/skills/) を先に読む
-- 実装パターン・設計の「なぜ」: [`CLAUDE.md`](../CLAUDE.md) / [`.claude/rules/`](../.claude/rules/) を参照（過去の判断は git log で辿る）。ライブラリ API は公式 docs を直接参照
+- プロジェクト固有の疑問: [`AGENTS.md`](../AGENTS.md) + [`.agents/skills/`](../.agents/skills/) を先に読む
+- 実装パターン・設計の「なぜ」: [`AGENTS.md`](../AGENTS.md) / [`.agents/skills/`](../.agents/skills/) を参照。ライブラリ API は公式 docs を直接参照
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡

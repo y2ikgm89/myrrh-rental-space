@@ -50,13 +50,13 @@
 /__tests__/unit/architecture-boundaries.test.ts @y2ikgm89
 
 # ===========================================================================
-# Governance: CI / Claude 設定 / ポリシー文書
+# Governance: CI / Codex agent 設定 / ポリシー文書
 # ===========================================================================
 
 /.github/ @y2ikgm89
-/.claude/rules/ @y2ikgm89
-/.claude/agents/ @y2ikgm89
-/CLAUDE.md @y2ikgm89
+/.agents/ @y2ikgm89
+/.codex/ @y2ikgm89
+/AGENTS.md @y2ikgm89
 /SECURITY.md @y2ikgm89
 /cloudbuild.yaml @y2ikgm89
 /next.config.ts @y2ikgm89

@@ -1,6 +1,6 @@
 /**
  * マイグレーション安全ゲート — 変更された Prisma migration SQL を Squawk で lint し、
- * expand / contract 規約（.claude/rules/migrations.md / Risk 1）を CI で強制する。
+ * expand / contract 規約（AGENTS.md / next-db-cache-boundaries skill）を CI で強制する。
  *
  * 目的: Cloud Run のローリング切替窓（migrate 完了〜新リビジョン ready）で
  * 旧コードが破壊済み新スキーマを叩く 500 を、後方互換でない変更を merge 前に

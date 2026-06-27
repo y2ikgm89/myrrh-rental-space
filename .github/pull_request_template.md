@@ -39,10 +39,10 @@
 
 ## チェックリスト
 
-- [ ] `CLAUDE.md` / `.claude/rules/` のハードルールに準拠している
-- [ ] 新しい SSoT 定数を導入した場合、`CLAUDE.md` の SSoT 表を更新した
+- [ ] `AGENTS.md` / `.agents/skills/` のハードルールに準拠している
+- [ ] 新しい SSoT 定数を導入した場合、`AGENTS.md` または該当 repo skill を更新した
 - [ ] 破壊的変更がある場合、`CODEOWNERS` の対象 owner レビューを依頼した
-- [ ] セキュリティに関わる変更（認証 / 決済 / 暗号化 / API route）がある場合、`security-reviewer` subagent でレビュー済み
+- [ ] セキュリティに関わる変更（認証 / 決済 / 暗号化 / API route）がある場合、`security-auditor` subagent でレビュー済み
 - [ ] DB 変更がある場合、migration diff を PR description に貼った
 - [ ] 環境変数を追加した場合、`src/shared/lib/env/*.ts` を更新した
 

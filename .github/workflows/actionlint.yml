@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/**"
-      - ".github/actionlint.yml"
+      - ".github/actions/**"
   pull_request:
     branches: [main]
     paths:
       - ".github/workflows/**"
-      - ".github/actionlint.yml"
+      - ".github/actions/**"
 
 # 最小権限の原則（公式 Security hardening）。読み取りのみで十分。
 # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
@@ -21,6 +21,7 @@ jobs:
   actionlint:
     name: Validate GitHub Actions workflows
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         # SHA 直 pin（公式 security best practice。tag force-push 攻撃 + codeload 404 outage 対策）
