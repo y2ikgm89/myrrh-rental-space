@@ -19,13 +19,11 @@ import {
   updateTermsPublished,
   deleteTerms,
 } from "@/admin/actions/terms";
-import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
-import { tryConvertHtmlStringToLexicalJsonString } from "@/admin/components/editor/lexical/html-to-lexical-json";
-import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { getTermsPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -35,7 +33,7 @@ import { useEditorCore } from "./shared";
 type UseTermsEditorOptions = {
   terms?: AdminTermsDetail | undefined;
   mode: "create" | "edit";
-  initialTemplateHtml?: string | undefined;
+  initialTemplateJson?: string | undefined;
   initialTitle?: string | undefined;
 };
 
@@ -68,31 +66,30 @@ function toSettingsFormData(
 
 function initContentJson(
   terms?: AdminTermsDetail,
-  initialTemplateHtml?: string,
+  initialTemplateJson?: string,
 ): string {
-  if (terms?.contentJson) {
-    return typeof terms.contentJson === "string"
+  if (!terms) {
+    return initialTemplateJson ?? EMPTY_LEXICAL_EDITOR_STATE_JSON;
+  }
+
+  return terms.contentJson
+    ? typeof terms.contentJson === "string"
       ? terms.contentJson
-      : JSON.stringify(terms.contentJson);
-  }
-  if (initialTemplateHtml && typeof window !== "undefined") {
-    const result = tryConvertHtmlStringToLexicalJsonString(initialTemplateHtml);
-    if (result.ok) return result.json;
-  }
-  return EMPTY_LEXICAL_EDITOR_STATE_JSON;
+      : JSON.stringify(terms.contentJson)
+    : EMPTY_LEXICAL_EDITOR_STATE_JSON;
 }
 
 export function useTermsEditor({
   terms,
   mode,
-  initialTemplateHtml,
+  initialTemplateJson,
   initialTitle,
 }: UseTermsEditorOptions) {
   const router = useRouter();
 
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
-  const initialContentJson = initContentJson(terms, initialTemplateHtml);
+  const initialContentJson = initContentJson(terms, initialTemplateJson);
   const [contentJson, setContentJson] = useState(initialContentJson);
   const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
 
@@ -203,15 +200,11 @@ export function useTermsEditor({
   // 規約は本文 + 設定を単一 `updateTerms` で保存する (Post / News のような
   // body / settings 分割を持たない)。edit 系 3 経路 (本文保存 / 設定保存 /
   // プレビュー) が同一 payload を組むため SSoT helper に集約する。
-  const buildUpdateInput = (
-    settingsData: TermsSettingsFormData,
-    contentHtml: string,
-  ) => ({
+  const buildUpdateInput = (settingsData: TermsSettingsFormData) => ({
     type: typeValue,
     slug: settingsData.slug,
     title: settingsData.title,
     contentJson,
-    contentHtml,
     isPublished: Boolean(settingsData.isPublished),
     scopes: [...scopesValue],
     changelog:
@@ -225,10 +218,7 @@ export function useTermsEditor({
     settingsData: TermsSettingsFormData,
   ): Promise<string | null> => {
     try {
-      const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
-      const result = await createTerms(
-        buildUpdateInput(settingsData, contentHtml),
-      );
+      const result = await createTerms(buildUpdateInput(settingsData));
       if (isMutationError(result)) {
         toast.error(result.error);
         // slug 衝突時は設定ダイアログを開いて編集者が修正できる導線を作る。
@@ -270,10 +260,9 @@ export function useTermsEditor({
     if (!settingsData) return;
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updateTerms(
           terms.id,
-          buildUpdateInput(settingsData, contentHtml),
+          buildUpdateInput(settingsData),
         );
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -300,10 +289,9 @@ export function useTermsEditor({
     if (!settingsData) return;
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updateTerms(
           terms.id,
-          buildUpdateInput(settingsData, contentHtml),
+          buildUpdateInput(settingsData),
         );
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -400,10 +388,9 @@ export function useTermsEditor({
 
     core.startTransition(async () => {
       try {
-        const contentHtml = renderEditorStateJsonToHtmlClient(contentJson);
         const result = await updateTerms(
           terms.id,
-          buildUpdateInput(settingsData, contentHtml),
+          buildUpdateInput(settingsData),
         );
         if (isMutationError(result)) {
           toast.error(result.error);

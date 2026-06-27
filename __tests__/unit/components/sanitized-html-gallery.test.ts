@@ -14,6 +14,15 @@ describe("SanitizedHtml allows gallery data attrs", () => {
     expect(clean).toContain("data-src");
   });
 
+  test("preserves aria-* with ALLOW_DATA_ATTR", () => {
+    const dirty =
+      '<div data-tabs-container="true" role="tablist"><button role="tab" aria-selected="true" data-tab-index="0">Tab</button></div>';
+    const clean = DOMPurify.sanitize(dirty, SANITIZE_OPTIONS);
+    expect(clean).toContain("data-tabs-container");
+    expect(clean).toContain('aria-selected="true"');
+    expect(clean).toContain('role="tab"');
+  });
+
   test("preserves all 9 gallery data attributes", () => {
     const dirty = `<div
       data-gallery="items"

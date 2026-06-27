@@ -62,4 +62,13 @@ describe("sanitizeContentHtml", () => {
     expect(result).toContain("<img");
     expect(result).toContain('alt="img"');
   });
+
+  test("Lexical export の data-* / aria-* glob を保持する", () => {
+    const html =
+      '<div data-future-lexical-node="x" aria-hidden="true" role="tabpanel">本文</div>';
+    const result = sanitizeContentHtml(html);
+    expect(result).toContain('data-future-lexical-node="x"');
+    expect(result).toContain('aria-hidden="true"');
+    expect(result).toContain('role="tabpanel"');
+  });
 });

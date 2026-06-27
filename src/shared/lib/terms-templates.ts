@@ -10,8 +10,8 @@
  * テンプレート HTML は見出し階層（h2/h3）・箇条書き・テーブルに加え、
  * `callout()`（`data-callout-type` = Lexical CalloutNode 互換）と `DIVIDER`（`<hr>`）
  * で重要条項の強調とセクション区切りを表現する。公開ページは `lexical-content.css` が
- * これらを装飾付きで描画し、管理画面「規約を追加」時は HTML import で対応する Lexical
- * ノードへ復元される。
+ * これらを装飾付きで描画し、管理画面「規約を追加」時は server 側 HTML import で
+ * 対応する Lexical ノードへ復元される。
  *
  * ## 参考法令・制度
  *
@@ -91,8 +91,8 @@ const PLACEHOLDER = {
  * Lexical CalloutNode 互換の強調ボックス（`data-callout-type`）を生成する。
  *
  * 公開ページでは `lexical-content.css` の `[data-callout-type]` がアイコン付き
- * 左ボーダーボックスとして描画し、管理画面「規約を追加」時は HTML import
- * （`tryConvertHtmlStringToLexicalJsonString` → CalloutNode.importDOM）で
+ * 左ボーダーボックスとして描画し、管理画面「規約を追加」時は server 側 HTML import
+ * （`tryConvertHtmlStringToLexicalJsonServer` → CalloutNode.importDOM）で
  * Lexical の Callout ノードに復元される。重要条項・注意喚起の視認性を高める。
  */
 function callout(

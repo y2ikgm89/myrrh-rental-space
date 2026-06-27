@@ -121,8 +121,6 @@ export const termsFormSchema = z.object({
   slug: slugSchema,
   title: titleSchema,
   contentJson: lexicalJsonSchema,
-  /** クライアント側 `renderEditorStateJsonToHtmlClient` で事前生成した HTML */
-  contentHtml: z.string(),
   isPublished: z.boolean(),
   /** 同意必須にする scope 配列 (空配列なら consent UI に出さない・フッター掲載のみ可) */
   scopes: z.array(termsScopeSchema).default([]),
@@ -131,5 +129,14 @@ export const termsFormSchema = z.object({
   showInFooter: z.boolean(),
 });
 
-export type TermsFormInput = z.infer<typeof termsFormSchema>;
+/** Server Actions 経由の永続化入力（contentHtml は server 側で contentJson から派生） */
+export type TermsMutationInput = z.infer<typeof termsFormSchema>;
+
+/**
+ * domain command 向け（contentHtml は server 派生済み sanitize 前 HTML）
+ * @internal admin actions からのみ組み立てる
+ */
+export type TermsFormInput = TermsMutationInput & {
+  contentHtml: string;
+};
 export type TermsScopeValue = TermsScope;
