@@ -46,6 +46,7 @@ const mockClaimReservationAsPaid = mock<
     startTime: string;
     endTime: string;
     icsSequence: number;
+    guestEmail?: string | null;
     customer: { email: string; lastName: string; firstName: string };
     space: { name: string; location: { name: string } | null };
   } | null>
@@ -216,6 +217,7 @@ const DEFAULT_RESERVATION = {
   notes: null,
   startTime: "2025-01-01T10:00:00.000Z",
   endTime: "2025-01-01T12:00:00.000Z",
+  guestEmail: null,
   customer: {
     email: "test@example.com",
     lastName: "田中",
@@ -447,6 +449,29 @@ describe("POST /api/webhooks/stripe", () => {
 
     // メール送信が fireAndForget で呼ばれた
     expect(mockFireAndForget).toHaveBeenCalled();
+  });
+
+  test("checkout.session.completed (paid) は予約時メールを確認メールに使う", async () => {
+    const event = makeSessionCompletedEvent("paid", "pi-123");
+    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockClaimReservationAsPaid.mockResolvedValueOnce({
+      ...DEFAULT_RESERVATION,
+      guestEmail: "booked-address@example.com",
+      customer: {
+        ...DEFAULT_RESERVATION.customer,
+        email: "current-customer@example.com",
+      },
+      icsSequence: 0,
+    });
+
+    const response = await POST(makeRequest("body"));
+
+    expect(response.status).toBe(200);
+    expect(mockSendReservationConfirmationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerEmail: "booked-address@example.com",
+      }),
+    );
   });
 
   // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { isUrlSafe } from "@/shared/lib/ssrf-guard";
+import { fetchPublicHttpResource } from "@/shared/lib/ssrf-guard";
 import {
   extractTitle,
   extractDescription,
@@ -112,21 +112,23 @@ async function fetchOgpPage(
   let redirectCount = 0;
 
   while (true) {
-    if (!(await isUrlSafe(currentUrl))) {
+    let response: Response;
+    try {
+      response = await fetchPublicHttpResource(currentUrl, {
+        method: "GET",
+        headers: OGP_FETCH_HEADERS,
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch {
       throw new OgpFetchError(
         redirectCount === 0 ? "無効なURLです" : "無効なリダイレクト先です",
         400,
       );
     }
 
-    const response = await fetch(currentUrl, {
-      headers: OGP_FETCH_HEADERS,
-      signal: AbortSignal.timeout(10000),
-      redirect: "manual",
-    });
-
-    if (!isRedirectStatus(response.status)) {
-      return { response, finalUrl: currentUrl };
+    const manualResponse = response;
+    if (!isRedirectStatus(manualResponse.status)) {
+      return { response: manualResponse, finalUrl: currentUrl };
     }
 
     if (redirectCount >= MAX_OGP_REDIRECTS) {
@@ -135,7 +137,7 @@ async function fetchOgpPage(
 
     const redirectUrl = resolveRedirectTarget(
       currentUrl,
-      response.headers.get("location"),
+      manualResponse.headers.get("location"),
     );
     if (!redirectUrl) {
       throw new OgpFetchError("無効なリダイレクトです", 400);

@@ -57,6 +57,7 @@ export async function createCheckoutSessionCommand(reservationId: string) {
       customerId: true,
       totalPrice: true,
       paymentStatus: true,
+      guestEmail: true,
       stripeCheckoutSessionId: true,
       space: { select: { name: true } },
       customer: { select: { email: true, lastName: true, firstName: true } },
@@ -116,7 +117,7 @@ export async function createCheckoutSessionCommand(reservationId: string) {
       metadata: {
         reservationId,
       },
-      customer_email: reservation.customer.email,
+      customer_email: reservation.guestEmail ?? reservation.customer.email,
       success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
       cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
     });
@@ -189,12 +190,21 @@ export async function refundReservationPaymentCommand(reservationId: string) {
   }
 
   try {
-    const refund = await client.refunds.create({
-      payment_intent: reservation.stripePaymentIntentId,
-    });
+    const refund = await client.refunds.create(
+      {
+        payment_intent: reservation.stripePaymentIntentId,
+      },
+      {
+        idempotencyKey: `reservation-refund-${reservation.id}`,
+      },
+    );
 
-    await prisma.reservation.update({
-      where: { id: reservationId, deletedAt: null },
+    await prisma.reservation.updateMany({
+      where: {
+        id: reservationId,
+        deletedAt: null,
+        paymentStatus: PaymentStatus.PAID,
+      },
       data: {
         paymentStatus: PaymentStatus.REFUNDED,
       },

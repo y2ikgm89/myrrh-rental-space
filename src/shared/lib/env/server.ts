@@ -152,6 +152,7 @@ export const serverEnv = createEnv({
       })
       .optional(),
     CLOUDFLARE_API_TOKEN: z.string().min(40).optional(),
+    CLOUDFLARE_ORIGIN_HEADER_SECRET: z.string().min(32).optional(),
 
     // Node environment
     NODE_ENV: z
@@ -191,6 +192,8 @@ export const serverEnv = createEnv({
     R2_PUBLIC_URL: process.env["R2_PUBLIC_URL"],
     CLOUDFLARE_ZONE_ID: process.env["CLOUDFLARE_ZONE_ID"],
     CLOUDFLARE_API_TOKEN: process.env["CLOUDFLARE_API_TOKEN"],
+    CLOUDFLARE_ORIGIN_HEADER_SECRET:
+      process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"],
     NODE_ENV: process.env["NODE_ENV"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）

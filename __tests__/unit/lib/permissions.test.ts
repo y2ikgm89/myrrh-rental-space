@@ -99,7 +99,7 @@ describe("hasPermission", () => {
       expect(hasPermission(Role.EDITOR, "media", "read")).toBe(true);
       expect(hasPermission(Role.EDITOR, "media", "update")).toBe(true);
       expect(hasPermission(Role.EDITOR, "blockTemplate", "read")).toBe(true);
-      expect(hasPermission(Role.EDITOR, "notification", "read")).toBe(true);
+      expect(hasPermission(Role.EDITOR, "notification", "read")).toBe(false);
     });
 
     test("page の create / delete / publish 権限を持たない（ADMIN+ 専管）", () => {
@@ -141,6 +141,7 @@ describe("hasPermission", () => {
       expect(hasPermission(Role.VIEWER, "inquiry", "read")).toBe(true);
       expect(hasPermission(Role.VIEWER, "post", "read")).toBe(true);
       expect(hasPermission(Role.VIEWER, "settings", "read")).toBe(true);
+      expect(hasPermission(Role.VIEWER, "notification", "read")).toBe(false);
     });
 
     test("作成・編集・削除権限を持たない", () => {

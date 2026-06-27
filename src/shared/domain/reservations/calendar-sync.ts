@@ -12,6 +12,7 @@ export type FailedCalendarSyncReservation = {
   endTime: Date;
   notes: string | null;
   totalPrice: number | null;
+  guestEmail: string | null;
   space: {
     name: string;
     lineAddress: string;
@@ -31,6 +32,7 @@ export type CalendarSyncReservationRecord = {
   calendarSyncedAt: Date | null;
   spaceId: string;
   notes: string | null;
+  guestEmail: string | null;
   space: {
     name: string;
   };
@@ -107,6 +109,7 @@ export async function getFailedCalendarSyncReservations(
       endTime: true,
       notes: true,
       totalPrice: true,
+      guestEmail: true,
       space: {
         select: {
           name: true,
@@ -132,6 +135,7 @@ export async function getFailedCalendarSyncReservations(
     endTime: r.endTime,
     notes: r.notes,
     totalPrice: r.totalPrice,
+    guestEmail: r.guestEmail,
     space: {
       name: r.space.name,
       lineAddress: formatSpaceLineAddress(
@@ -206,6 +210,7 @@ export async function getReservationByCalendarEventId(
       calendarSyncedAt: true,
       spaceId: true,
       notes: true,
+      guestEmail: true,
       space: { select: { name: true } },
       customer: {
         select: {

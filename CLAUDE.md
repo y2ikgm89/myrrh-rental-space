@@ -21,7 +21,7 @@
 - Windows + PowerShell。シェルコマンドは PowerShell 構文（`$null`、`$env:VAR`）。
 - tool に渡すパスは常にフォワードスラッシュ `/`。route group の `()` を含むパス（`src/app/(public)/...`）は Bash で展開されるため Glob / Grep / Read tool を使う。
 - 秘密情報は `.env.local`（gitignore）。`.env*` は読まない・コミットしない。
-- infra-managed secrets（env + Secret Manager）: `DATABASE_URL` / `BETTER_AUTH_SECRET` / `ENCRYPTION_KEY` / `CRON_SECRET` / `ADMIN_LOGIN_TOKEN` / `R2_*` / **`CLOUDFLARE_ZONE_ID`** / **`CLOUDFLARE_API_TOKEN`**。env schema は `src/shared/lib/env/server.ts`。Cloudflare の Zone ID / API Token は admin UI 経由ではなく env 専用（rotation = Secret Manager 新 version → Cloud Run 再デプロイ）。
+- infra-managed secrets（env + Secret Manager）: `DATABASE_URL` / `BETTER_AUTH_SECRET` / `ENCRYPTION_KEY` / `CRON_SECRET` / `ADMIN_LOGIN_TOKEN` / `R2_*` / **`CLOUDFLARE_ZONE_ID`** / **`CLOUDFLARE_API_TOKEN`** / **`CLOUDFLARE_ORIGIN_HEADER_SECRET`**。env schema は `src/shared/lib/env/server.ts`。Cloudflare の Zone ID / API Token / origin secret は admin UI 経由ではなく env 専用（rotation = Secret Manager 新 version → Cloud Run 再デプロイ）。
 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` は **env schema 対象外**（`src/shared/lib/env/server.ts` で検証しない）。Next.js framework が `process.env` から直接読むため、Secret Manager → Cloud Run env で注入するが zod 検証経路は通らない。
 
 ## アーキテクチャ

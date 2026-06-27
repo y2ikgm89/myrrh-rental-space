@@ -13,7 +13,7 @@
 import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
-import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { checkPermission } from "@/admin/lib/action-auth";
 import { findCustomerByEmailExcept } from "@/shared/domain/customers/queries";
 import {
   logError,
@@ -35,7 +35,7 @@ const querySchema = z.object({
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    const auth = await checkAdminAuth(request.headers);
+    const auth = await checkPermission("customer", "read", request.headers);
     if (!auth.success) {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }

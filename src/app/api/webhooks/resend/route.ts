@@ -70,10 +70,7 @@ type ResendWebhookEvent = z.infer<typeof ResendWebhookEventSchema>;
 
 export async function POST(request: Request) {
   try {
-    // 1. raw body 取得（署名検証に必須 — JSON.parse は使わない）
-    const payload = await request.text();
-
-    // 2. svix headers の早期チェック
+    // 1. svix headers の早期チェック（body 読み込み前に偽造・無関係リクエストを弾く）
     const svixId = request.headers.get("svix-id");
     const svixTimestamp = request.headers.get("svix-timestamp");
     const svixSignature = request.headers.get("svix-signature");
@@ -81,7 +78,7 @@ export async function POST(request: Request) {
       return jsonError("Missing svix-* headers", 400);
     }
 
-    // 3. Webhook シークレット（env-only — admin UI から設定させない）
+    // 2. Webhook シークレット（env-only — admin UI から設定させない）
     const webhookSecret = serverEnv.RESEND_WEBHOOK_SECRET;
     if (!webhookSecret) {
       logError(new Error("RESEND_WEBHOOK_SECRET not configured"), {
@@ -92,7 +89,7 @@ export async function POST(request: Request) {
       return jsonError("Resend webhook not configured", 503);
     }
 
-    // 4. Resend client（envOR DB の API キーから）
+    // 3. Resend client（envOR DB の API キーから）
     const resend = await getResendClient();
     if (!resend) {
       logError(new Error("Resend client not available"), {
@@ -102,6 +99,9 @@ export async function POST(request: Request) {
       });
       return jsonError("Resend webhook not configured", 503);
     }
+
+    // 4. raw body 取得（署名検証に必須 — JSON.parse は使わない）
+    const payload = await request.text();
 
     // 5. svix 署名検証（throws on invalid）
     let verified: unknown;

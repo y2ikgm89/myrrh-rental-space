@@ -13,6 +13,7 @@ const PAYMENT_EMAIL_SELECT = {
   status: true,
   icsSequence: true,
   userId: true,
+  guestEmail: true,
   customer: {
     select: {
       email: true,
@@ -31,15 +32,17 @@ const PAYMENT_EMAIL_SELECT = {
 } as const;
 
 /**
- * 決済完了の atomic claim: `paymentStatus !== PAID` の予約のみを PAID に遷移させる。
+ * 決済完了の atomic claim: 未払い / 決済待ちの予約のみを PAID に遷移させる。
  *
  * Stripe webhook は `checkout.session.completed` と `async_payment_succeeded` を
  * 並行配信しうる（公式仕様）。`findUnique → update` の 2 ステップでは race window が
- * 残るため、`updateMany({ where: { paymentStatus: { not: PAID } } })` の **WHERE 条件**
- * 自体で claim する（PostgreSQL の単一 UPDATE は atomic）。
+ * 残るため、`updateMany({ where: { paymentStatus: { in: [UNPAID, PENDING] } } })`
+ * の **WHERE 条件** 自体で claim する（PostgreSQL の単一 UPDATE は atomic）。
+ * FAILED / REFUNDED などの終端状態は webhook の順序揺れで PAID に戻さない。
  *
- * @returns claim 成功時のみ予約データを返す。既に PAID（重複配信 / 既処理）または
- *   予約が存在しない場合は `null` を返し、呼び出し元はメール送信や cache invalidate を skip する。
+ * @returns claim 成功時のみ予約データを返す。既に PAID / FAILED / REFUNDED
+ *   （重複配信 / 既処理 / 終端状態）または予約が存在しない場合は `null` を返し、
+ *   呼び出し元はメール送信や cache invalidate を skip する。
  */
 export async function claimReservationAsPaid(
   reservationId: string,
@@ -51,7 +54,7 @@ export async function claimReservationAsPaid(
     where: {
       id: reservationId,
       deletedAt: null,
-      paymentStatus: { not: PaymentStatus.PAID },
+      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.PENDING] },
     },
     data: {
       paymentStatus: PaymentStatus.PAID,

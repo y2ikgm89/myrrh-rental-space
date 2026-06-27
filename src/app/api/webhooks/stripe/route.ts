@@ -222,7 +222,7 @@ async function fulfillPaymentAtomically(
     sendReservationConfirmationEmail(
       omitUndefined({
         reservationId: reservation.id,
-        customerEmail: reservation.customer.email,
+        customerEmail: reservation.guestEmail ?? reservation.customer.email,
         customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
         spaceName: reservation.space.name,
         startTime: reservation.startTime,
