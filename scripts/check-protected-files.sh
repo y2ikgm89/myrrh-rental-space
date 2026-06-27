@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lefthook pre-commit guard for protected files.
-# CLAUDE.md ハードルール:
+# AGENTS.md ハードルール:
 #   - .env* (.example / .sample を除く)     常にブロック（秘密情報）
 #   - prisma/migrations/*.sql               既存ファイルの M (modify) のみブロック
 #                                           A (新規追加、prisma migrate dev 出力) は許可

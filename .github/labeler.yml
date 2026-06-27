@@ -117,18 +117,18 @@ documentation:
       - any-glob-to-any-file:
           - "**/*.md"
           - "docs/**"
-          - "CLAUDE.md"
+          - "AGENTS.md"
           - "README.md"
           - ".github/CONTRIBUTING.md"
           - ".github/SECURITY.md"
           - "CHANGELOG.md"
 
-claude-rules:
+agent-instructions:
   - changed-files:
       - any-glob-to-any-file:
-          - ".claude/rules/**"
-          - ".claude/agents/**"
-          - "CLAUDE.md"
+          - ".agents/**"
+          - ".codex/**"
+          - "AGENTS.md"
 
 # ============================================================================
 # セキュリティ

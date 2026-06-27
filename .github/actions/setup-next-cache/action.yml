@@ -1,0 +1,14 @@
+name: Setup Next.js cache
+description: Restore the Next.js build cache for faster CI rebuilds.
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Next.js build cache
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: .next/cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-${{ hashFiles('next.config.*', 'tsconfig*.json', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.css') }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-
+          nextjs-${{ runner.os }}-

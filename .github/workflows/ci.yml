@@ -66,6 +66,7 @@ jobs:
   changes:
     name: Detect Code Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
@@ -77,16 +78,23 @@ jobs:
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         with:
           # base は PR base / main push 時は前 commit (paths-filter default)。
-          # ! prefix で「これ以外」を意味し、docs-only PR を skip 対象にする。
-          # **/*.md は CLAUDE.md / AGENTS.md / docs/**/*.md / .claude/rules/**/*.md を網羅。
+          # ! prefix で「これ以外」を意味し、docs / agent / config-only PR を skip 対象にする。
+          # Runtime に影響しない project docs / Codex agent config は重い app CI を回さない。
+          # .github/workflows/** と .github/actions/** は意図的に除外しない。
           filters: |
             code:
               - '!**/*.md'
               - '!docs/**'
-              - '!.claude/rules/**'
-              - '!.claude/agents/**'
-              - '!.claude/skills/**'
+              - '!.agents/**'
+              - '!.codex/**'
+              - '!.mcp.json'
               - '!.serena/memories/**'
+              - '!.github/CODEOWNERS'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/branch-protection.json'
+              - '!.github/codecov.yml'
+              - '!.github/labeler.yml'
+              - '!.github/renovate.json5'
               - '!LICENSE'
               - '!.gitignore'
 
@@ -94,7 +102,7 @@ jobs:
   # migration-safety: 破壊的マイグレーションの後方互換ゲート（Risk 1）。
   # Cloud Run ローリング切替窓（cloudbuild Step6 migrate → Step7 deploy の間も
   # 旧リビジョンが処理）で旧コードが破壊済み新スキーマを叩く 500 を、後方互換でない
-  # migration を merge 前にブロックして構造的に防ぐ。規約は .claude/rules/migrations.md。
+  # migration を merge 前にブロックして構造的に防ぐ。規約は AGENTS.md / repo skills。
   # job は常に走らせ（required check の安定化、changes job と同じ gate 方針）、
   # squawk step のみ migration 変更時に gate する。escape hatch は SQL 内の
   # `-- squawk-ignore <rule>`（contract フェーズの意図的 DROP 用）。
@@ -102,6 +110,7 @@ jobs:
   migration-safety:
     name: Migration Safety (squawk)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
@@ -154,6 +163,7 @@ jobs:
   dependency-audit:
     name: Dependency Audit (bun audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [changes]
     steps:
       - name: Checkout
@@ -186,6 +196,7 @@ jobs:
   lint-format:
     name: Lint & Format
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [changes]
     steps:
       - name: Checkout
@@ -209,6 +220,7 @@ jobs:
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [changes]
     steps:
       - name: Checkout
@@ -230,6 +242,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [changes]
     services:
       postgres:
@@ -278,6 +291,7 @@ jobs:
   smoke-e2e:
     name: Smoke E2E (critical path)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [changes]
     # 毎 push 実行する critical path smoke。`chromium-smoke` project
     # (`e2e/smoke/*.smoke.spec.ts`) のみ実行して PR feedback を短く保つ。
@@ -310,6 +324,10 @@ jobs:
       - name: Setup Playwright Chromium
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-playwright-chromium
+
+      - name: Setup Next.js cache
+        if: needs.changes.outputs.code == 'true'
+        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -361,6 +379,7 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     # 広域 E2E は重く maintenance コストが高いため opt-in 実行。
     # critical path は `smoke-e2e` job が毎 push でカバー。
     # - PR head branch が `codex/full-ci/` で始まる場合
@@ -394,6 +413,9 @@ jobs:
 
       - name: Setup Playwright Chromium
         uses: ./.github/actions/setup-playwright-chromium
+
+      - name: Setup Next.js cache
+        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -447,6 +469,7 @@ jobs:
   build:
     name: Build (env validation)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [changes, lint-format, type-check]
     if: |
       always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&
@@ -460,6 +483,10 @@ jobs:
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
+
+      - name: Setup Next.js cache
+        if: needs.changes.outputs.code == 'true'
+        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         if: needs.changes.outputs.code == 'true'
@@ -488,6 +515,7 @@ jobs:
   bundle-size-diff:
     name: Bundle Size Diff (PR comment)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [changes, lint-format, type-check]
     # PR のみ実行（base vs head の gzipped size 差分を sticky comment）。
     # docs/rule-only PR は changes.code=false で skip (bundle 影響なしのため正)。
@@ -522,6 +550,15 @@ jobs:
           restore-keys: |
             bun-deps-${{ runner.os }}-
 
+      - name: Setup Next.js cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-${{ hashFiles('next.config.*', 'tsconfig*.json', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.css') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-
+            nextjs-${{ runner.os }}-
+
       # preactjs/compressed-size-action:
       # base と head で build を実行し、指定 pattern のファイルサイズを gzip で比較
       # 参照: https://github.com/preactjs/compressed-size-action
@@ -539,6 +576,7 @@ jobs:
   bundle-analysis:
     name: Bundle Analysis (Turbopack)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [lint-format, type-check]
     # main push のみ実行（PR は bundle-size-diff で代替、build 重複回避）。
     # PR の bundle 影響可視化は bundle-size-diff の sticky comment で十分、
@@ -552,6 +590,9 @@ jobs:
 
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
+
+      - name: Setup Next.js cache
+        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -574,6 +615,7 @@ jobs:
   lighthouse-ci:
     name: Lighthouse CI (perf / a11y / SEO)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint-format, type-check]
     # Lighthouse は重く Cloud Run staging URL での実測の方が本番に近い指標が得られる
     # ため opt-in 実行にする。
@@ -604,6 +646,9 @@ jobs:
       - name: Setup Bun dependencies
         uses: ./.github/actions/setup-bun-deps
 
+      - name: Setup Next.js cache
+        uses: ./.github/actions/setup-next-cache
+
       - name: Generate Prisma client
         run: bunx --bun prisma generate
 
@@ -631,6 +676,7 @@ jobs:
   visual-regression:
     name: Visual Regression (opt-in)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     # opt-in 実行条件:
     # - PR head branch が `codex/full-ci/` で始まる場合（baseline 比較）
     # - workflow_dispatch で run_full_ci=true 指定（baseline 比較）
@@ -669,6 +715,9 @@ jobs:
 
       - name: Setup Playwright Chromium
         uses: ./.github/actions/setup-playwright-chromium
+
+      - name: Setup Next.js cache
+        uses: ./.github/actions/setup-next-cache
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -790,6 +839,7 @@ jobs:
   docs:
     name: Generate API Docs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [lint-format, type-check]
     if: |
       always() && needs.lint-format.result == 'success' && needs.type-check.result == 'success' &&

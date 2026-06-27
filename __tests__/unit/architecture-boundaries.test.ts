@@ -508,6 +508,12 @@ describe("architecture boundaries", () => {
     expect(source).not.toContain("experimental: { typedRoutes");
   });
 
+  test("next.config.ts は TypeScript build errors を無視しない", () => {
+    const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
+
+    expect(source).not.toMatch(/ignoreBuildErrors\s*:\s*true/u);
+  });
+
   // 全 app route file fs traverse + regex で 5s default timeout を超えるため 30s に延長
   test("cacheComponents 有効時は route segment config export を残さない", () => {
     const nextConfigSource = readFileSync(NEXT_CONFIG_FILE, "utf8");

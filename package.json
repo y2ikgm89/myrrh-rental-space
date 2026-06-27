@@ -5,12 +5,13 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "dev": "bun run db:generate && next dev",
-    "build": "bun run db:generate && next build",
-    "build:skip-env": "bun run db:generate && SKIP_ENV_VALIDATION=true next build",
-    "analyze": "bun run db:generate && next experimental-analyze --output",
+    "build": "bun run toolchain:check && bun run db:generate && next build",
+    "build:skip-env": "bun run toolchain:check && bun run db:generate && SKIP_ENV_VALIDATION=true next build",
+    "analyze": "bun run toolchain:check && bun run db:generate && next experimental-analyze --output",
     "start": "next start",
     "lint": "eslint .",
-    "type-check": "bun run db:generate && next typegen && bun scripts/ensure-next-types.ts && tsc --noEmit --incremental false && tsc --noEmit --incremental false -p tsconfig.test.json",
+    "toolchain:check": "bun scripts/ensure-typescript-toolchain.ts",
+    "type-check": "bun run toolchain:check && bun run db:generate && next typegen && bun scripts/ensure-next-types.ts && tsc --noEmit --incremental false && tsc --noEmit --incremental false -p tsconfig.test.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "bunx --bun prisma generate",
@@ -126,8 +127,8 @@
     "tailwindcss": "^4.3.0",
     "typedoc": "^0.28.19",
     "typedoc-plugin-markdown": "^4.12.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.0"
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.62.0"
   },
   "trustedDependencies": [
     "sharp",

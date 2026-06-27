@@ -7,5 +7,5 @@ contact_links:
     url: https://github.com/y2ikgm89/myrrh-rental-space/security/advisories/new
     about: 脆弱性は公開 issue ではなく GitHub Security Advisory で報告してください（.github/SECURITY.md 参照）
   - name: プロジェクトドキュメント
-    url: https://github.com/y2ikgm89/myrrh-rental-space/blob/main/CLAUDE.md
-    about: セットアップ・開発フロー・ハードルールは CLAUDE.md を参照
+    url: https://github.com/y2ikgm89/myrrh-rental-space/blob/main/AGENTS.md
+    about: セットアップ・開発フロー・ハードルールは AGENTS.md を参照

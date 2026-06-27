@@ -3,6 +3,7 @@
     "strict": false,
     "contexts": [
       "Dependency Audit (bun audit)",
+      "Migration Safety (squawk)",
       "Lint & Format",
       "Type Check",
       "Unit Tests",
