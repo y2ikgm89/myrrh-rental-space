@@ -92,10 +92,26 @@ describe("createRateLimiter", () => {
 });
 
 describe("getClientIp", () => {
-  function createRequest(headers: Record<string, string>): Request {
-    return new Request("http://localhost", {
+  function createRequest(
+    headers: Record<string, string>,
+    url = "http://localhost",
+  ): Request {
+    return new Request(url, {
       headers: new Headers(headers),
     });
+  }
+
+  const mutableEnv = process.env as unknown as Record<
+    string,
+    string | undefined
+  >;
+
+  function restoreEnv(name: string, value: string | undefined): void {
+    if (value === undefined) {
+      delete mutableEnv[name];
+      return;
+    }
+    mutableEnv[name] = value;
   }
 
   test("cf-connecting-ip を優先する", () => {
@@ -119,6 +135,65 @@ describe("getClientIp", () => {
       "x-real-ip": "172.16.0.1",
     });
     expect(getClientIp(req)).toBe("172.16.0.1");
+  });
+
+  test("production の非 localhost では x-forwarded-for / x-real-ip を信頼しない", () => {
+    const originalNodeEnv = mutableEnv["NODE_ENV"];
+    mutableEnv["NODE_ENV"] = "production";
+    try {
+      const req = createRequest(
+        {
+          "x-forwarded-for": "203.0.113.10",
+          "x-real-ip": "203.0.113.11",
+        },
+        "https://example.com/api/auth/sign-in",
+      );
+      expect(getClientIp(req)).toBe("unknown");
+    } finally {
+      restoreEnv("NODE_ENV", originalNodeEnv);
+    }
+  });
+
+  test("production では origin secret がない cf-connecting-ip も信頼しない", () => {
+    const originalNodeEnv = mutableEnv["NODE_ENV"];
+    const originalSecret = mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
+    mutableEnv["NODE_ENV"] = "production";
+    delete mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
+    try {
+      const req = createRequest(
+        {
+          "cf-connecting-ip": "198.51.100.10",
+          "x-forwarded-for": "203.0.113.10",
+        },
+        "https://example.com/api/auth/sign-in",
+      );
+      expect(getClientIp(req)).toBe("unknown");
+    } finally {
+      restoreEnv("NODE_ENV", originalNodeEnv);
+      restoreEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", originalSecret);
+    }
+  });
+
+  test("production では origin secret 一致時だけ cf-connecting-ip を使用する", () => {
+    const originalNodeEnv = mutableEnv["NODE_ENV"];
+    const originalSecret = mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
+    mutableEnv["NODE_ENV"] = "production";
+    mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"] =
+      "0123456789abcdef0123456789abcdef";
+    try {
+      const req = createRequest(
+        {
+          "cf-connecting-ip": "198.51.100.10",
+          "x-cloudflare-origin-secret": "0123456789abcdef0123456789abcdef",
+          "x-forwarded-for": "203.0.113.10",
+        },
+        "https://example.com/api/auth/sign-in",
+      );
+      expect(getClientIp(req)).toBe("198.51.100.10");
+    } finally {
+      restoreEnv("NODE_ENV", originalNodeEnv);
+      restoreEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", originalSecret);
+    }
   });
 
   test("ヘッダーがない場合は 'unknown' を返す", () => {

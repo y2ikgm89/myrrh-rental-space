@@ -85,6 +85,7 @@ interface SideEffectReservation {
   googleCalendarEventId: string | null;
   guestLastName: string | null;
   guestFirstName: string | null;
+  guestEmail: string | null;
   customer: {
     lastName: string;
     firstName: string;
@@ -115,6 +116,7 @@ async function fetchReservationForSideEffects(
       googleCalendarEventId: true,
       guestLastName: true,
       guestFirstName: true,
+      guestEmail: true,
       customer: {
         select: {
           lastName: true,
@@ -152,7 +154,7 @@ function buildEmailPayload(
 
   return {
     reservationId: reservation.id,
-    customerEmail: reservation.customer.email,
+    customerEmail: reservation.guestEmail ?? reservation.customer.email,
     customerName: customerFull || "お客様",
     companyName: reservation.customer.companyName,
     ...(guestNameDiff && { guestName: guestNameDiff }),

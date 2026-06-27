@@ -30,6 +30,7 @@
  */
 
 import { LRUCache } from "lru-cache";
+import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 export interface RateLimitResult {
   success: boolean;
@@ -135,25 +136,60 @@ export function createRateLimiter(
  * ヘッダからクライアント IP を抽出する共通ロジック（getClientIp / getClientIpFromHeaders で共有）。
  *
  * ⚠ セキュリティ前提（重要・infra 依存）:
- * `cf-connecting-ip` / `x-forwarded-for` / `x-real-ip` はいずれも**クライアントが詐称可能**な
- * ヘッダ。本番の ingress が **Cloudflare 限定**（Cloud Run へ直接到達不可）であることを前提に、
- * その場合のみ Cloudflare が `cf-connecting-ip` を実クライアント IP で上書きするため詐称不可になる。
- * origin が Cloudflare をバイパスして直接到達可能だと、攻撃者がこれらのヘッダを回転させて
- * rate limiter のバケット（authMutation 20/15分・public-form 5/分等）や
- * Turnstile remoteip を回避できる。
+ * `cf-connecting-ip` / `x-forwarded-for` / `x-real-ip` はいずれも origin 直到達時に
+ * クライアントが詐称可能なヘッダ。本番では Cloudflare Transform Rule 等で
+ * `x-cloudflare-origin-secret` に `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同じ値を注入し、
+ * timing-safe 比較に成功した場合だけ `cf-connecting-ip` を信頼する。
  *
- * → infra 側で「ingress = Cloudflare 限定」を保証すること（Cloud Run の ingress 制限 +
- * Cloudflare egress IP 許可、または Authenticated Origin Pulls）。マルチ ingress を許す構成に
- * する場合は、Cloudflare Transform Rule で注入する共有シークレットヘッダを timing-safe 比較で
- * 検証してから `cf-connecting-ip` を信頼する方式へ移行する（現状その infra は未配備のため、
- * 検証コードを入れると全リクエストが platform 接続 IP=Cloudflare の IP に集約され rate limiter が
- * 実質グローバル化して壊れるため未実装）。`x-forwarded-for` / `x-real-ip` フォールバックは
- * Cloudflare 不在の環境（ローカル開発・直 proxy）向け。
+ * `x-forwarded-for` / `x-real-ip` は Cloudflare が既存 XFF を保持・追記するため、
+ * 本番では origin secret が一致しても rate-limit token として使わない。これらの
+ * フォールバックはローカル開発・非 production proxy 専用。
  */
-function extractClientIp(getHeader: (name: string) => string | null): string {
-  // Cloudflare（ingress が Cloudflare 限定なら上書き済みで信頼可能）
+const TRUSTED_PROXY_SECRET_HEADER = "x-cloudflare-origin-secret";
+
+function isProductionRuntime(): boolean {
+  return process.env["NODE_ENV"] === "production";
+}
+
+function isLocalhostHost(host: string | null): boolean {
+  if (!host) return false;
+  return (
+    host === "localhost" ||
+    host.startsWith("localhost:") ||
+    host === "127.0.0.1" ||
+    host.startsWith("127.0.0.1:")
+  );
+}
+
+function hasTrustedCloudflareOriginHeader(
+  getHeader: (name: string) => string | null,
+): boolean {
+  if (!isProductionRuntime()) return true;
+
+  const expected = process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
+  if (!expected) return false;
+
+  const actual = getHeader(TRUSTED_PROXY_SECRET_HEADER);
+  return actual !== null && timingSafeEqualStrings(actual, expected);
+}
+
+function canUseDevelopmentProxyFallback(host: string | null): boolean {
+  return !isProductionRuntime() || isLocalhostHost(host);
+}
+
+function extractClientIp(
+  getHeader: (name: string) => string | null,
+  host: string | null,
+): string {
+  // Cloudflare（本番では origin secret 一致時のみ信頼）
   const cfConnectingIp = getHeader("cf-connecting-ip");
-  if (cfConnectingIp) return cfConnectingIp;
+  if (cfConnectingIp && hasTrustedCloudflareOriginHeader(getHeader)) {
+    return cfConnectingIp;
+  }
+
+  if (!canUseDevelopmentProxyFallback(host)) {
+    return "unknown";
+  }
 
   // X-Forwarded-For（Cloudflare 不在のプロキシ環境向けフォールバック）
   const xForwardedFor = getHeader("x-forwarded-for");
@@ -173,7 +209,10 @@ function extractClientIp(getHeader: (name: string) => string | null): string {
  * リクエストからIPアドレスを取得（信頼前提は extractClientIp の docstring 参照）
  */
 export function getClientIp(request: Request): string {
-  return extractClientIp((name) => request.headers.get(name));
+  return extractClientIp(
+    (name) => request.headers.get(name),
+    request.headers.get("host"),
+  );
 }
 
 // デフォルトのAPI用レート制限（100リクエスト/分/IP）
@@ -306,5 +345,5 @@ export async function checkRateLimit(
 export async function getClientIpFromHeaders(): Promise<string> {
   const { headers } = await import("next/headers");
   const hdrs = await headers();
-  return extractClientIp((name) => hdrs.get(name));
+  return extractClientIp((name) => hdrs.get(name), hdrs.get("host"));
 }

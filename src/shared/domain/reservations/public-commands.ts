@@ -155,6 +155,7 @@ export async function createPublicReservationCommand(
         // Guest contact info (予約時の入力を記録)
         guestLastName: input.lastName,
         guestFirstName: input.firstName,
+        guestEmail: input.email,
         guestPhone: input.phoneNumber || null,
         guestCompanyName: input.companyName || null,
         guestCustomerType: input.customerType ?? null,

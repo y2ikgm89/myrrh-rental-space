@@ -193,6 +193,38 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
+  test("Analytics: 公式 ID 形式のみ success（script 注入文字列は error）", () => {
+    expectSuccess(
+      analyticsFormSchema,
+      form({
+        analyticsType: "ga4",
+        googleAnalyticsId: "G-ABC123DEF4",
+        googleTagManagerId: "",
+        gaPropertyId: "123456789",
+        microsoftClarityId: "abcd1234ef",
+      }),
+      "analytics.validIds",
+    );
+
+    for (const [field, value] of [
+      ["googleAnalyticsId", 'G-ABC123";alert(1)//'],
+      ["googleTagManagerId", "GTM-ABC123<script>"],
+      ["microsoftClarityId", 'abcd1234";alert(1)//'],
+    ] as const) {
+      const fd = form({
+        analyticsType: "ga4",
+        googleAnalyticsId: "G-ABC123DEF4",
+        googleTagManagerId: "GTM-ABC123",
+        gaPropertyId: "123456789",
+        microsoftClarityId: "abcd1234ef",
+      });
+      fd.set(field, value);
+      expect(parseWithZod(fd, { schema: analyticsFormSchema }).status).toBe(
+        "error",
+      );
+    }
+  });
+
   test("検索エンジン検証: 全項目空欄でも success", () => {
     expectSuccess(
       searchVerificationFormSchema,

@@ -44,12 +44,12 @@ describe("hasPermission", () => {
   });
 
   describe("EDITOR（page-only 設計）", () => {
-    test("page 編集 + media + blockTemplate read + notification read を許可する", () => {
+    test("page 編集 + media + blockTemplate read を許可する", () => {
       expect(hasPermission("EDITOR", "page", "read")).toBe(true);
       expect(hasPermission("EDITOR", "page", "update")).toBe(true);
       expect(hasPermission("EDITOR", "media", "create")).toBe(true);
       expect(hasPermission("EDITOR", "blockTemplate", "read")).toBe(true);
-      expect(hasPermission("EDITOR", "notification", "read")).toBe(true);
+      expect(hasPermission("EDITOR", "notification", "read")).toBe(false);
     });
 
     test("page の create / delete / publish は拒否する（read/update のみ）", () => {
@@ -71,6 +71,7 @@ describe("hasPermission", () => {
       expect(hasPermission("VIEWER", "space", "read")).toBe(true);
       expect(hasPermission("VIEWER", "reservation", "read")).toBe(true);
       expect(hasPermission("VIEWER", "event", "read")).toBe(true);
+      expect(hasPermission("VIEWER", "notification", "read")).toBe(false);
     });
 
     test("write 系（create/update/delete/publish/manage）は全拒否する", () => {
@@ -119,7 +120,7 @@ describe("ROLE_PERMISSIONS 表の不変条件", () => {
     expect(missing).toHaveLength(0);
   });
 
-  test("EDITOR の権限は 7 件（page-only 契約の固定化）", () => {
-    expect(ROLE_PERMISSIONS.EDITOR).toHaveLength(7);
+  test("EDITOR の権限は 6 件（page-only 契約の固定化）", () => {
+    expect(ROLE_PERMISSIONS.EDITOR).toHaveLength(6);
   });
 });

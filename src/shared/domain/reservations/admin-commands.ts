@@ -157,6 +157,7 @@ export async function createAdminReservationCommand(input: {
         ...(input.customerData && {
           guestLastName: input.customerData.lastName,
           guestFirstName: input.customerData.firstName,
+          guestEmail: input.customerData.email,
           guestPhone: input.customerData.phoneNumber || null,
           guestCompanyName: input.customerData.companyName || null,
           guestCustomerType: input.customerData.customerType ?? null,

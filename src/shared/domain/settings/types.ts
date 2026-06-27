@@ -115,7 +115,6 @@ export type SettingsData = {
   googleCalendarLastTestedAt: Date | null;
   googleCalendarConnectionStatus: string | null;
   googleBusinessProfileEnabled: boolean;
-  googleBusinessProfileAuth: unknown;
   googleCalendarMeetEnabled: boolean;
   googleCalendarReminderMinutes: number | null;
   icalAttachmentEnabled: boolean;

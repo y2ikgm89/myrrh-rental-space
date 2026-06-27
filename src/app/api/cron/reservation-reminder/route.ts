@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     let skipped = 0;
 
     for (const reservation of reservations) {
-      const email = reservation.customer?.email;
+      const email = reservation.guestEmail ?? reservation.customer?.email;
       if (!email) {
         skipped++;
         continue;

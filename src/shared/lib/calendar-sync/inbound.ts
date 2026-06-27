@@ -183,7 +183,7 @@ async function processCalendarChange(
             reservationId: reservation.id,
             spaceName: reservation.space.name,
             customerName,
-            customerEmail: reservation.customer.email,
+            customerEmail: reservation.guestEmail ?? reservation.customer.email,
             attemptedStartTime: change.startTime,
             attemptedEndTime: change.endTime,
             currentStartTime: reservation.startTime,

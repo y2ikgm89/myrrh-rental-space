@@ -300,7 +300,7 @@ export async function getReservationsForCalendarQuery(
     totalPrice: reservation.totalPrice,
     notes: reservation.notes,
     customerName: `${reservation.customer.lastName} ${reservation.customer.firstName}`,
-    customerEmail: reservation.customer.email,
+    customerEmail: reservation.guestEmail ?? reservation.customer.email,
     customerPhone: reservation.customer.phoneNumber,
   }));
 }
@@ -439,6 +439,7 @@ export async function findReservationsForReminderWindow(
       notes: true,
       icsSequence: true,
       userId: true,
+      guestEmail: true,
       customer: {
         select: { firstName: true, lastName: true, email: true },
       },

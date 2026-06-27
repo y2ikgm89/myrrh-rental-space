@@ -265,7 +265,7 @@ export async function retryFailedSyncs(): Promise<{
         reservationId: reservation.id,
         spaceName: reservation.space.name,
         customerName,
-        customerEmail: reservation.customer.email,
+        customerEmail: reservation.guestEmail ?? reservation.customer.email,
         startTime: reservation.startTime,
         endTime: reservation.endTime,
         location: reservation.space.lineAddress,

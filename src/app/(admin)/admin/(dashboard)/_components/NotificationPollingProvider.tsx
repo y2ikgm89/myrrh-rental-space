@@ -28,15 +28,18 @@ const NotificationPollingContext = createContext<
 const POLLING_INTERVAL_MS = 30_000;
 
 export function NotificationPollingProvider({
+  enabled = true,
   initialCount = 0,
   children,
 }: {
+  enabled?: boolean;
   initialCount?: number;
   children: ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(initialCount);
 
   const refresh = () => {
+    if (!enabled) return;
     void readUnreadCount()
       .then(setUnreadCount)
       .catch(() => {
@@ -46,6 +49,8 @@ export function NotificationPollingProvider({
 
   // Polling
   useEffect(() => {
+    if (!enabled) return;
+
     void readUnreadCount()
       .then(setUnreadCount)
       .catch(() => {
@@ -63,17 +68,19 @@ export function NotificationPollingProvider({
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [enabled]);
 
   // Tab title update
   useEffect(() => {
+    if (!enabled) return;
+
     const baseTitle = document.title.replace(/^\(\d+\)\s*/, "");
     document.title =
       unreadCount > 0 ? `(${String(unreadCount)}) ${baseTitle}` : baseTitle;
     return () => {
       document.title = document.title.replace(/^\(\d+\)\s*/, "");
     };
-  }, [unreadCount]);
+  }, [enabled, unreadCount]);
 
   return (
     <NotificationPollingContext value={{ unreadCount, refresh }}>

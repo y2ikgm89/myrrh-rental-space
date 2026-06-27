@@ -572,6 +572,7 @@ model Reservation {
   // Guest contact info (予約時に入力された連絡先 — Customer レコードとは独立に保存)
   guestLastName    String?
   guestFirstName   String?
+  guestEmail       String?
   guestPhone       String?
   guestCompanyName    String?
   guestCustomerType   CustomerType?

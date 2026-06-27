@@ -1,70 +1,206 @@
 import "server-only";
 
 import { lookup } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
+import type { IncomingMessage, RequestOptions } from "node:http";
 
-/**
- * プライベートIPアドレスかどうかをチェック
- * SSRF脆弱性対策として、内部ネットワークへのリクエストを禁止
- */
-export function isPrivateOrReservedHost(hostname: string): boolean {
-  // localhost
+const ALLOWED_PORTS = new Set([80, 443, 8080, 8443]);
+
+type PinnedRequestOptions = RequestOptions & {
+  servername?: string;
+};
+
+export class PublicHttpFetchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PublicHttpFetchError";
+  }
+}
+
+function stripHostBrackets(hostname: string): string {
+  if (hostname.startsWith("[") && hostname.endsWith("]")) {
+    return hostname.slice(1, -1);
+  }
+  return hostname;
+}
+
+function parseIpv4Bytes(
+  address: string,
+): [number, number, number, number] | null {
+  const parts = address.split(".");
+  if (parts.length !== 4) return null;
+
+  const bytes = parts.map((part) => {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const value = Number(part);
+    return Number.isInteger(value) && value >= 0 && value <= 255 ? value : null;
+  });
+
+  if (bytes.some((byte) => byte === null)) return null;
+  const a = bytes[0];
+  const b = bytes[1];
+  const c = bytes[2];
+  const d = bytes[3];
   if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1"
+    a === null ||
+    a === undefined ||
+    b === null ||
+    b === undefined ||
+    c === null ||
+    c === undefined ||
+    d === null ||
+    d === undefined
   ) {
+    return null;
+  }
+  return [a, b, c, d];
+}
+
+function ipv4ToNumber(bytes: [number, number, number, number]): number {
+  const [a, b, c, d] = bytes;
+  return ((a << 24) >>> 0) + (b << 16) + (c << 8) + d;
+}
+
+function isIpv4InRange(
+  value: number,
+  start: [number, number, number, number],
+  end: [number, number, number, number],
+): boolean {
+  const startValue = ipv4ToNumber(start);
+  const endValue = ipv4ToNumber(end);
+  return value >= startValue && value <= endValue;
+}
+
+function isPrivateOrReservedIpv4(address: string): boolean {
+  const bytes = parseIpv4Bytes(address);
+  if (!bytes) return false;
+  const value = ipv4ToNumber(bytes);
+
+  return (
+    isIpv4InRange(value, [0, 0, 0, 0], [0, 255, 255, 255]) ||
+    isIpv4InRange(value, [10, 0, 0, 0], [10, 255, 255, 255]) ||
+    isIpv4InRange(value, [100, 64, 0, 0], [100, 127, 255, 255]) ||
+    isIpv4InRange(value, [127, 0, 0, 0], [127, 255, 255, 255]) ||
+    isIpv4InRange(value, [169, 254, 0, 0], [169, 254, 255, 255]) ||
+    isIpv4InRange(value, [172, 16, 0, 0], [172, 31, 255, 255]) ||
+    isIpv4InRange(value, [192, 0, 0, 0], [192, 0, 0, 255]) ||
+    isIpv4InRange(value, [192, 0, 2, 0], [192, 0, 2, 255]) ||
+    isIpv4InRange(value, [192, 168, 0, 0], [192, 168, 255, 255]) ||
+    isIpv4InRange(value, [198, 18, 0, 0], [198, 19, 255, 255]) ||
+    isIpv4InRange(value, [198, 51, 100, 0], [198, 51, 100, 255]) ||
+    isIpv4InRange(value, [203, 0, 113, 0], [203, 0, 113, 255]) ||
+    isIpv4InRange(value, [224, 0, 0, 0], [255, 255, 255, 255])
+  );
+}
+
+function parseIpv6Bytes(address: string): number[] | null {
+  const withoutZone =
+    stripHostBrackets(address.toLowerCase()).split("%")[0] ?? "";
+  if (!withoutZone.includes(":")) return null;
+
+  let normalized = withoutZone;
+  const lastColon = normalized.lastIndexOf(":");
+  const maybeIpv4 = lastColon >= 0 ? normalized.slice(lastColon + 1) : "";
+  const ipv4Bytes = parseIpv4Bytes(maybeIpv4);
+  if (ipv4Bytes) {
+    const [a, b, c, d] = ipv4Bytes;
+    normalized = `${normalized.slice(0, lastColon)}:${((a << 8) | b).toString(
+      16,
+    )}:${((c << 8) | d).toString(16)}`;
+  }
+
+  const compressionParts = normalized.split("::");
+  if (compressionParts.length > 2) return null;
+
+  const left = compressionParts[0]
+    ? compressionParts[0].split(":").filter(Boolean)
+    : [];
+  const right = compressionParts[1]
+    ? compressionParts[1].split(":").filter(Boolean)
+    : [];
+  const groups = [...left, ...right];
+  if (groups.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) return null;
+  if (groups.length > 8) return null;
+
+  const zeroCount = compressionParts.length === 2 ? 8 - groups.length : 0;
+  if (compressionParts.length === 1 && groups.length !== 8) return null;
+  if (zeroCount < 0) return null;
+
+  const expanded = [...left, ...Array<string>(zeroCount).fill("0"), ...right];
+  if (expanded.length !== 8) return null;
+
+  const bytes: number[] = [];
+  for (const group of expanded) {
+    const value = Number.parseInt(group, 16);
+    bytes.push((value >> 8) & 0xff, value & 0xff);
+  }
+  return bytes;
+}
+
+function isAllZero(bytes: readonly number[]): boolean {
+  return bytes.every((byte) => byte === 0);
+}
+
+function isIpv4MappedIpv6(bytes: readonly number[]): boolean {
+  return (
+    bytes.slice(0, 10).every((byte) => byte === 0) &&
+    bytes[10] === 0xff &&
+    bytes[11] === 0xff
+  );
+}
+
+function isPrivateOrReservedIpv6(address: string): boolean {
+  const bytes = parseIpv6Bytes(address);
+  if (!bytes) return false;
+
+  if (isAllZero(bytes)) return true;
+  if (bytes.slice(0, 15).every((byte) => byte === 0) && bytes[15] === 1) {
     return true;
   }
 
-  // IPv4のプライベートアドレス範囲をチェック
-  const ipv4Match = hostname.match(
-    /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
+  if (isIpv4MappedIpv6(bytes)) {
+    const mapped: [number, number, number, number] = [
+      bytes[12] ?? 0,
+      bytes[13] ?? 0,
+      bytes[14] ?? 0,
+      bytes[15] ?? 0,
+    ];
+    return isPrivateOrReservedIpv4(mapped.join("."));
+  }
+
+  return (
+    (bytes[0] ?? 0) === 0xff ||
+    ((bytes[0] ?? 0) & 0xfe) === 0xfc ||
+    ((bytes[0] ?? 0) === 0xfe && ((bytes[1] ?? 0) & 0xc0) === 0x80) ||
+    ((bytes[0] ?? 0) === 0x20 &&
+      (bytes[1] ?? 0) === 0x01 &&
+      (bytes[2] ?? 0) === 0x0d &&
+      (bytes[3] ?? 0) === 0xb8)
   );
-  if (ipv4Match) {
-    const [, a, b, c, d] = ipv4Match.map(Number);
-    if (
-      a === undefined ||
-      b === undefined ||
-      c === undefined ||
-      d === undefined
-    )
-      return false;
-    // 10.0.0.0/8
-    if (a === 10) return true;
-    // 172.16.0.0/12
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    // 192.168.0.0/16
-    if (a === 192 && b === 168) return true;
-    // 169.254.0.0/16 (link-local)
-    if (a === 169 && b === 254) return true;
-    // 127.0.0.0/8 (loopback)
-    if (a === 127) return true;
-    // 0.0.0.0/8
-    if (a === 0) return true;
-    // 100.64.0.0/10 (carrier-grade NAT)
-    if (a === 100 && b >= 64 && b <= 127) return true;
-    // 198.18.0.0/15 (benchmark testing)
-    if (a === 198 && (b === 18 || b === 19)) return true;
-    // マルチキャスト 224.0.0.0/4
-    if (a >= 224 && a <= 239) return true;
-    // ブロードキャスト
-    if (a === 255 && b === 255 && c === 255 && d === 255) return true;
+}
+
+/**
+ * プライベート/予約済みホストかどうかを判定する。
+ *
+ * URL 文字列の検証だけでは SSRF 対策として不十分なため、DNS 解決結果にも同じ
+ * 判定を適用する。Bun では `net.BlockList` が no-op のため、CIDR 判定はここに
+ * 明示実装する。
+ */
+export function isPrivateOrReservedHost(hostname: string): boolean {
+  const host = stripHostBrackets(hostname.trim()).toLowerCase();
+  if (!host) return true;
+
+  if (host === "localhost") return true;
+
+  if (isIP(host) === 4) {
+    return isPrivateOrReservedIpv4(host);
+  }
+  if (isIP(host) === 6) {
+    return isPrivateOrReservedIpv6(host);
   }
 
-  // IPv6のプライベート/予約アドレス
-  if (hostname.startsWith("[")) {
-    const ipv6 = hostname.slice(1, -1).toLowerCase();
-    // ::1 (loopback)
-    if (ipv6 === "::1") return true;
-    // fc00::/7 (unique local)
-    if (ipv6.startsWith("fc") || ipv6.startsWith("fd")) return true;
-    // fe80::/10 (link-local)
-    if (ipv6.startsWith("fe80")) return true;
-    // :: (unspecified)
-    if (ipv6 === "::") return true;
-  }
-
-  // 一般的な内部ホスト名パターン
   const internalPatterns = [
     /^localhost$/i,
     /^.*\.local$/i,
@@ -72,77 +208,187 @@ export function isPrivateOrReservedHost(hostname: string): boolean {
     /^.*\.localdomain$/i,
     /^.*\.localhost$/i,
     /^kubernetes\.default/i,
-    /^metadata\.google\.internal/i,
-    /^169\.254\.169\.254/, // AWS/GCP metadata
+    /^metadata\.google\.internal$/i,
   ];
 
-  return internalPatterns.some((pattern) => pattern.test(hostname));
+  return internalPatterns.some((pattern) => pattern.test(host));
 }
 
-/**
- * URL の同期的事前検証（protocol / hostname / port のみ）。
- *
- * 単独使用は **不十分** — DNS rebinding 攻撃を防げない（hostname が public IP に
- * 解決されると判定して通過させた後、実 fetch 時に再 DNS lookup で private IP に
- * すり替えられる可能性）。`isUrlSafe()` の前段ガードとして使用する。
- */
-export function isUrlSafeSync(urlString: string): boolean {
+function getUrlPort(url: URL): number {
+  if (url.port) return Number.parseInt(url.port, 10);
+  return url.protocol === "https:" ? 443 : 80;
+}
+
+function assertPublicHttpUrl(urlString: string): URL {
+  const url = new URL(urlString);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new PublicHttpFetchError("unsupported protocol");
+  }
+  if (!ALLOWED_PORTS.has(getUrlPort(url))) {
+    throw new PublicHttpFetchError("unsupported port");
+  }
+  if (isPrivateOrReservedHost(url.hostname)) {
+    throw new PublicHttpFetchError("private or reserved host");
+  }
+  return url;
+}
+
+async function resolvePublicAddresses(hostname: string): Promise<string[]> {
+  const host = stripHostBrackets(hostname);
+  if (isIP(host)) {
+    if (isPrivateOrReservedHost(host)) {
+      throw new PublicHttpFetchError("private or reserved address");
+    }
+    return [host];
+  }
+
+  const records = await lookup(host, { all: true, verbatim: true });
+  if (records.length === 0) {
+    throw new PublicHttpFetchError("host has no addresses");
+  }
+
+  const addresses = records.map((record) => record.address);
+  if (addresses.some(isPrivateOrReservedHost)) {
+    throw new PublicHttpFetchError("host resolves to a private address");
+  }
+  return addresses;
+}
+
+export async function isUrlSafe(urlString: string): Promise<boolean> {
   try {
-    const url = new URL(urlString);
-
-    // HTTPとHTTPSのみ許可
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return false;
-    }
-
-    // プライベート/予約アドレスへのアクセスを禁止（hostname 文字列レベル）
-    if (isPrivateOrReservedHost(url.hostname)) {
-      return false;
-    }
-
-    // ポート番号のチェック（標準ポート以外は警戒）
-    const port = url.port
-      ? parseInt(url.port, 10)
-      : url.protocol === "https:"
-        ? 443
-        : 80;
-    if (port !== 80 && port !== 443 && port !== 8080 && port !== 8443) {
-      return false;
-    }
-
+    const url = assertPublicHttpUrl(urlString);
+    await resolvePublicAddresses(url.hostname);
     return true;
   } catch {
     return false;
   }
 }
 
-/**
- * URL が安全かどうかを検証（DNS rebinding 対策含む完全版）。
- *
- * 検査順序:
- * 1. {@link isUrlSafeSync} で protocol / hostname literal / port を事前判定
- * 2. DNS lookup（`node:dns/promises`）で hostname → IP を解決
- * 3. 解決された IP が private / reserved range に該当しないか再判定
- *
- * これにより `evil.example.com → 169.254.169.254` の DNS rebinding 攻撃を遮断する。
- * DNS lookup 失敗時は fail-closed（不安全とみなす）。
- *
- * **注意**: 完全な DNS rebinding 対策には IP を pin した fetch（`undici` dispatcher
- * 経由）が必要だが、Node native fetch では TLS SNI / certificate validation との
- * 兼ね合いで困難。OGP プレビュー用途では 1) admin 認証必須 2) timeout 10s
- * 3) この pre-check で実運用上のリスクを大幅に低減できる。
- */
-export async function isUrlSafe(urlString: string): Promise<boolean> {
-  if (!isUrlSafeSync(urlString)) {
-    return false;
-  }
+function normalizeHeaders(headersInit: HeadersInit | undefined): Headers {
+  return new Headers(headersInit);
+}
 
-  try {
-    const url = new URL(urlString);
-    // hostname が既に IPv4/IPv6 リテラルなら lookup は冗長だが、family 一貫性のため通す
-    const { address } = await lookup(url.hostname);
-    return !isPrivateOrReservedHost(address);
-  } catch {
-    return false;
+function getRequestHostHeader(url: URL): string {
+  const port = getUrlPort(url);
+  if (
+    (url.protocol === "https:" && port === 443) ||
+    (url.protocol === "http:" && port === 80)
+  ) {
+    return stripHostBrackets(url.hostname);
   }
+  return `${stripHostBrackets(url.hostname)}:${port}`;
+}
+
+function toRequestHeaders(url: URL, headersInit: HeadersInit | undefined) {
+  const headers = normalizeHeaders(headersInit);
+  headers.set("host", getRequestHostHeader(url));
+
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
+}
+
+function toResponseHeaders(message: IncomingMessage): Headers {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(message.headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(name, item);
+    } else if (value !== undefined) {
+      headers.set(name, value);
+    }
+  }
+  return headers;
+}
+
+function toUint8Array(chunk: unknown): Uint8Array {
+  if (typeof chunk === "string") {
+    return new TextEncoder().encode(chunk);
+  }
+  if (chunk instanceof Uint8Array) {
+    return chunk;
+  }
+  throw new TypeError("Unsupported response chunk");
+}
+
+function toWebReadableStream(
+  message: IncomingMessage,
+): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      message.on("data", (chunk: unknown) => {
+        controller.enqueue(toUint8Array(chunk));
+      });
+      message.once("end", () => {
+        controller.close();
+      });
+      message.once("error", (error) => {
+        controller.error(error);
+      });
+    },
+    cancel() {
+      message.destroy();
+    },
+  });
+}
+
+function requestPinned(
+  url: URL,
+  address: string,
+  init: RequestInit,
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const requestOptions: PinnedRequestOptions = {
+      protocol: url.protocol,
+      hostname: address,
+      port: getUrlPort(url),
+      path: `${url.pathname}${url.search}`,
+      method: init.method ?? "GET",
+      headers: toRequestHeaders(url, init.headers),
+    };
+
+    if (init.signal) {
+      requestOptions.signal = init.signal;
+    }
+    if (url.protocol === "https:") {
+      requestOptions.servername = stripHostBrackets(url.hostname);
+    }
+
+    const requestFn = url.protocol === "https:" ? httpsRequest : httpRequest;
+    const request = requestFn(requestOptions, (message) => {
+      const responseInit: ResponseInit = {
+        status: message.statusCode ?? 502,
+        headers: toResponseHeaders(message),
+      };
+      if (message.statusMessage !== undefined) {
+        responseInit.statusText = message.statusMessage;
+      }
+
+      resolve(new Response(toWebReadableStream(message), responseInit));
+    });
+
+    request.once("error", reject);
+    request.end();
+  });
+}
+
+/**
+ * Public HTTP(S) resource fetch with DNS result pinning.
+ *
+ * The hostname is resolved once, every A/AAAA answer is checked against the
+ * same public-address policy, and the TCP/TLS connection is opened to one of
+ * those vetted addresses while preserving the original Host header and SNI.
+ */
+export async function fetchPublicHttpResource(
+  urlString: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const url = assertPublicHttpUrl(urlString);
+  const addresses = await resolvePublicAddresses(url.hostname);
+  const [address] = addresses;
+  if (!address) {
+    throw new PublicHttpFetchError("host has no public addresses");
+  }
+  return requestPinned(url, address, init);
 }

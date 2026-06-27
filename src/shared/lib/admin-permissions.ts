@@ -23,8 +23,8 @@ export type RolePermissions = Record<Role, PermissionKey[]>;
  *
  * SUPER_ADMIN: 全権限
  * ADMIN: コンテンツ管理全般
- * EDITOR: 割り当て page 編集のみ（page / media upload / blockTemplate read /
- *   notification read）。post / news / faq / event / コンテンツ系は ADMIN+ 専管。
+ * EDITOR: 割り当て page 編集のみ（page / media upload / blockTemplate read）。
+ *   post / news / faq / event / グローバル通知など PII を含み得る resource は ADMIN+ 専管。
  *   `userPageAssignment` で page-level access を gate する設計のため、独立 resource
  *   への編集権限は与えない（`userHasResourceAccess` は page UUID 専用判定）
  * VIEWER: 閲覧のみ
@@ -238,7 +238,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "media:read",
     "media:update",
     "blockTemplate:read",
-    "notification:read",
   ],
   VIEWER: [
     "space:read",
@@ -258,7 +257,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "media:read",
     "review:read",
     "event:read",
-    "notification:read",
   ],
   USER: [],
   CUSTOMER: [],

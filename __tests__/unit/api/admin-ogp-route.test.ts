@@ -14,8 +14,8 @@ const mockCheckAdminAuth = mock(() =>
   }),
 );
 
-const mockIsUrlSafe = mock((url: string) =>
-  Promise.resolve(!url.includes("127.0.0.1")),
+const mockFetchPublicHttpResource = mock((url: string, _init?: RequestInit) =>
+  Promise.resolve(new Response(`<title>${url}</title>`, { status: 200 })),
 );
 
 mock.module("@/admin/lib/action-auth", () => ({
@@ -24,7 +24,7 @@ mock.module("@/admin/lib/action-auth", () => ({
 }));
 
 mock.module("@/shared/lib/ssrf-guard", () => ({
-  isUrlSafe: mockIsUrlSafe,
+  fetchPublicHttpResource: mockFetchPublicHttpResource,
 }));
 
 mock.module("@/admin/lib/ogp-parser", () => ({
@@ -47,16 +47,6 @@ function createOgpRequest(url: string): Request {
 }
 
 describe("POST /admin/api/ogp", () => {
-  const originalFetch = globalThis.fetch;
-
-  function createFetchMock(response: Response) {
-    const fetchMock = mock((_input: RequestInfo | URL, _init?: RequestInit) =>
-      Promise.resolve(response),
-    );
-
-    return Object.assign(fetchMock, { preconnect: originalFetch.preconnect });
-  }
-
   beforeEach(() => {
     mockCheckPermission.mockClear();
     mockCheckPermission.mockResolvedValue({
@@ -64,45 +54,43 @@ describe("POST /admin/api/ogp", () => {
       user: { id: "admin-1", role: "ADMIN" },
     });
     mockCheckAdminAuth.mockClear();
-    mockIsUrlSafe.mockClear();
-    mockIsUrlSafe.mockImplementation((url: string) =>
-      Promise.resolve(!url.includes("127.0.0.1")),
+    mockFetchPublicHttpResource.mockClear();
+    mockFetchPublicHttpResource.mockImplementation(
+      (url: string, _init?: RequestInit) =>
+        Promise.resolve(new Response(`<title>${url}</title>`, { status: 200 })),
     );
-    globalThis.fetch = originalFetch;
   });
 
   test("管理者認証を要求する（checkPermission ではなく checkAdminAuth）", async () => {
-    globalThis.fetch = createFetchMock(
-      new Response("<title>ok</title>", { status: 200 }),
-    );
-
     await POST(createOgpRequest("https://example.com/article"));
 
     expect(mockCheckAdminAuth).toHaveBeenCalledWith(expect.any(Headers));
     expect(mockCheckPermission).not.toHaveBeenCalled();
   });
 
-  test("リダイレクト先 URL も SSRF guard で検証する", async () => {
-    const fetchMock = createFetchMock(
-      new Response(null, {
-        status: 302,
-        headers: { Location: "http://127.0.0.1/latest/meta-data/" },
-      }),
-    );
-    globalThis.fetch = fetchMock;
+  test("リダイレクト先 URL も pinned SSRF-safe fetch で検証する", async () => {
+    mockFetchPublicHttpResource
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "http://127.0.0.1/latest/meta-data/" },
+        }),
+      )
+      .mockRejectedValueOnce(new Error("blocked"));
 
     const response = await POST(createOgpRequest("https://example.com/post"));
     const body = (await response.json()) as { error: string };
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("リダイレクト");
-    expect(mockIsUrlSafe).toHaveBeenCalledWith("https://example.com/post");
-    expect(mockIsUrlSafe).toHaveBeenCalledWith(
+    expect(mockFetchPublicHttpResource).toHaveBeenCalledWith(
+      "https://example.com/post",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(mockFetchPublicHttpResource).toHaveBeenCalledWith(
       "http://127.0.0.1/latest/meta-data/",
+      expect.objectContaining({ method: "GET" }),
     );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
-      expect.objectContaining({ redirect: "manual" }),
-    );
+    expect(mockFetchPublicHttpResource).toHaveBeenCalledTimes(2);
   });
 });

@@ -24,6 +24,7 @@
 import { ImageResponse } from "next/og";
 import { connection } from "next/server";
 import { getFaviconUrl } from "@/shared/domain/settings/queries/display";
+import { fetchPublicHttpResource } from "@/shared/lib/ssrf-guard";
 
 const CACHE_HEADERS = {
   "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
@@ -72,7 +73,7 @@ export async function GET(): Promise<Response> {
   }
 
   try {
-    const upstream = await fetch(faviconUrl, { cache: "no-store" });
+    const upstream = await fetchPublicHttpResource(faviconUrl);
     if (!upstream.ok || !upstream.body) {
       return renderFallbackIcon();
     }

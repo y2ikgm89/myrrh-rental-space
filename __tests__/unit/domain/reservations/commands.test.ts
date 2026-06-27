@@ -444,6 +444,26 @@ describe("createAdminReservationCommand", () => {
       expect(mockCustomerCreate).toHaveBeenCalled();
     });
 
+    test("customerData 入力時は予約時点のメールアドレスを guestEmail として保存する", async () => {
+      await createAdminReservationCommand({
+        ...validInput,
+        customerId: undefined,
+        customerData: {
+          lastName: "田中",
+          firstName: "次郎",
+          email: "jiro@example.com",
+        },
+      });
+
+      expect(mockReservationCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            guestEmail: "jiro@example.com",
+          }),
+        }),
+      );
+    });
+
     test("totalPrice 指定時は計算価格を上書き", async () => {
       const result = await createAdminReservationCommand({
         ...validInput,
@@ -1314,6 +1334,18 @@ describe("createPublicReservationCommand", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             notes: "テスト備考",
+          }),
+        }),
+      );
+    });
+
+    test("予約時点のメールアドレスを guestEmail として保存する", async () => {
+      await createPublicReservationCommand(validInput);
+
+      expect(mockReservationCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            guestEmail: "taro@example.com",
           }),
         }),
       );

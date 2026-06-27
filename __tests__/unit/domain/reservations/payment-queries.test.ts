@@ -74,6 +74,7 @@ const FULFILL_DATA = {
   endTime: new Date("2024-03-01T12:00:00Z"),
   totalPrice: 5000,
   notes: null,
+  guestEmail: null,
   paymentStatus: PaymentStatus.PAID,
   status: ReservationStatus.CONFIRMED,
   icsSequence: 0,
@@ -105,7 +106,7 @@ describe("reservations/payment-queries", () => {
 
   describe("claimReservationAsPaid", () => {
     describe("正常系", () => {
-      test("PAID 以外の予約を atomic に PAID に遷移し、relation 込みで返す", async () => {
+      test("未払い/決済待ちの予約を atomic に PAID に遷移し、relation 込みで返す", async () => {
         mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
         mockReservationFindUniqueOrThrow.mockResolvedValueOnce(FULFILL_DATA);
 
@@ -116,7 +117,7 @@ describe("reservations/payment-queries", () => {
         expect(result).toEqual(FULFILL_DATA);
       });
 
-      test("updateMany の where に paymentStatus: { not: PAID } + deletedAt: null", async () => {
+      test("updateMany の where は未払い/決済待ちのみを PAID に claim する", async () => {
         mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
         mockReservationFindUniqueOrThrow.mockResolvedValueOnce(FULFILL_DATA);
 
@@ -129,7 +130,9 @@ describe("reservations/payment-queries", () => {
             where: expect.objectContaining({
               id: RESERVATION_ID,
               deletedAt: null,
-              paymentStatus: { not: PaymentStatus.PAID },
+              paymentStatus: {
+                in: [PaymentStatus.UNPAID, PaymentStatus.PENDING],
+              },
             }),
             data: expect.objectContaining({
               paymentStatus: PaymentStatus.PAID,

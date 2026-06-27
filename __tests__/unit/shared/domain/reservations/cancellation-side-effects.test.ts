@@ -129,6 +129,7 @@ const baseReservation = {
   googleCalendarEventId: null as string | null,
   guestLastName: null as string | null,
   guestFirstName: null as string | null,
+  guestEmail: null as string | null,
   customer: {
     lastName: "山田",
     firstName: "太郎",
@@ -438,5 +439,25 @@ describe("applyCancellationSideEffects", () => {
       unknown
     >;
     expect(payload).not.toHaveProperty("guestName");
+  });
+
+  test("予約時メールが残っている場合は Customer の現在メールより優先する", async () => {
+    mockFindUnique.mockResolvedValue({
+      ...baseReservation,
+      guestEmail: "booked-address@example.com",
+      customer: {
+        ...baseReservation.customer,
+        email: "current-customer@example.com",
+      },
+    });
+
+    await applyCancellationSideEffects(baseInput());
+
+    expect(mockSendCancelledEmail.mock.calls[0]?.[0]).toMatchObject({
+      customerEmail: "booked-address@example.com",
+    });
+    expect(mockSendAdminNotification.mock.calls[0]?.[0]).toMatchObject({
+      customerEmail: "booked-address@example.com",
+    });
   });
 });

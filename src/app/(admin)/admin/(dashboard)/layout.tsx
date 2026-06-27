@@ -56,10 +56,11 @@ export default async function DashboardLayout({
   const navItems = getNavItemsForRole(user.role);
   const quickActions = getQuickActionsForRole(user.role);
   const recents = await getRecentAuditedResources(user.id, user.role, 8);
+  const canReadNotifications = hasPermission(user.role, "notification", "read");
 
   return (
     <AdminLayoutProvider>
-      <NotificationPollingProvider>
+      <NotificationPollingProvider enabled={canReadNotifications}>
         <ConfirmProvider>
           <NuqsAdapter>
             <CommandPaletteProvider
@@ -87,9 +88,11 @@ export default async function DashboardLayout({
                       </Suspense>
                     }
                     notifications={
-                      <Suspense fallback={<NotificationBellFallback />}>
-                        <NotificationBellSlot />
-                      </Suspense>
+                      canReadNotifications ? (
+                        <Suspense fallback={<NotificationBellFallback />}>
+                          <NotificationBellSlot />
+                        </Suspense>
+                      ) : null
                     }
                     searchTrigger={<SearchTriggerSlot />}
                   />

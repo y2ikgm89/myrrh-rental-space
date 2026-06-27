@@ -165,6 +165,7 @@ function makeReservation(overrides: Record<string, unknown> = {}) {
     endTime: new Date("2026-03-29T12:00:00Z"),
     status: "CONFIRMED",
     notes: null,
+    guestEmail: null,
     space: {
       name: "テストスペース",
       location: { name: "テストロケーション" },
@@ -250,6 +251,27 @@ describe("GET /api/cron/reservation-reminder", () => {
     );
     // 成功時は claim を release しない
     expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
+  });
+
+  test("予約時メールが残っている場合は Customer の現在メールより優先する", async () => {
+    const reservation = makeReservation({
+      guestEmail: "booked-address@example.com",
+      customer: {
+        email: "current-customer@example.com",
+        firstName: "太郎",
+        lastName: "山田",
+      },
+    });
+    mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
+
+    const response = await GET(makeRequest("Bearer test-secret"));
+
+    expect(response.status).toBe(200);
+    expect(mockSendReservationReminderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerEmail: "booked-address@example.com",
+      }),
+    );
   });
 
   test("顧客メールなし → skipped=1", async () => {
