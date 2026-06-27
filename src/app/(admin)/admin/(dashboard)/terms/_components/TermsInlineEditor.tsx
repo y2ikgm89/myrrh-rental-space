@@ -40,7 +40,7 @@ const TERMS_EDITOR_CONTENT_WIDTH_PX = resolveContentWidthPx({
 type TermsInlineEditorProps = {
   terms?: AdminTermsDetail;
   mode: "create" | "edit";
-  initialTemplateHtml?: string;
+  initialTemplateJson?: string;
   initialTitle?: string;
 };
 
@@ -51,13 +51,13 @@ type TermsInlineEditorProps = {
 export function TermsInlineEditor({
   terms,
   mode,
-  initialTemplateHtml,
+  initialTemplateJson,
   initialTitle,
 }: TermsInlineEditorProps) {
   const editor = useTermsEditor({
     mode,
     ...(terms && { terms }),
-    ...(initialTemplateHtml && { initialTemplateHtml }),
+    ...(initialTemplateJson && { initialTemplateJson }),
     ...(initialTitle && { initialTitle }),
   });
 

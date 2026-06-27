@@ -9,6 +9,8 @@ import {
   type BusinessInfo,
 } from "@/shared/lib/terms-templates";
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
+import { tryConvertHtmlStringToLexicalJsonServer } from "@/admin/components/editor/lexical/html-to-lexical-json-server";
+import { logger } from "@/shared/lib/logger";
 import { TermsInlineEditor } from "../_components/TermsInlineEditor";
 
 export const metadata: Metadata = {
@@ -35,7 +37,7 @@ export default async function NewTermsPage({
   const templates = getTemplatesForType(typeValue);
   const template = templates[0];
 
-  let initialTemplateHtml: string | undefined;
+  let initialTemplateJson: string | undefined;
   let initialTitle: string | undefined;
 
   if (template) {
@@ -54,7 +56,16 @@ export default async function NewTermsPage({
       streetAddress: settings?.streetAddress ?? null,
       buildingName: settings?.buildingName ?? null,
     };
-    initialTemplateHtml = applyBusinessInfo(template.content, businessInfo);
+    const templateHtml = applyBusinessInfo(template.content, businessInfo);
+    const converted = tryConvertHtmlStringToLexicalJsonServer(templateHtml);
+    if (converted.ok) {
+      initialTemplateJson = converted.json;
+    } else {
+      logger.error("terms template HTML → Lexical JSON conversion failed", {
+        templateId: template.id,
+        error: converted.error,
+      });
+    }
     initialTitle = template.label;
   }
 
@@ -62,7 +73,7 @@ export default async function NewTermsPage({
     <TermsInlineEditor
       key={typeValue}
       mode="create"
-      {...(initialTemplateHtml !== undefined && { initialTemplateHtml })}
+      {...(initialTemplateJson !== undefined && { initialTemplateJson })}
       {...(initialTitle !== undefined && { initialTitle })}
     />
   );

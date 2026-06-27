@@ -28,8 +28,8 @@ async function ensureSlugAvailable(
 }
 
 /**
- * Lexical client が生成した HTML を server-side で sanitize-html により再生成する。
- * TermsAgreement.contentSnapshot に焼かれる前のセキュリティ境界。
+ * Lexical client / server が生成した HTML を server-side で sanitize-html により検証する。
+ * contentHtml は admin action で contentJson から派生済みであること（TermsAgreement 境界）。
  */
 function buildContent(input: TermsFormInput) {
   return {

@@ -20,7 +20,9 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   termsFormSchema,
   type TermsFormInput,
+  type TermsMutationInput,
 } from "@/shared/lib/validations/terms";
+import { renderEditorStateJsonToHtmlServer } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-server";
 
 const orderedIdsSchema = z
   .array(z.uuid({ error: "IDが不正です" }))
@@ -51,6 +53,14 @@ function invalidateTermsCaches(slug?: string, previousSlug?: string): void {
       urls: paths,
     });
   }
+}
+
+/** Lexical 公式: contentJson 正本 → server 派生 HTML（sanitize は command 層） */
+function toTermsFormInput(input: TermsMutationInput): TermsFormInput {
+  return {
+    ...input,
+    contentHtml: renderEditorStateJsonToHtmlServer(input.contentJson),
+  };
 }
 
 export async function deleteTerms(
@@ -129,7 +139,7 @@ export async function restoreTerms(
 }
 
 export async function createTerms(
-  input: TermsFormInput,
+  input: TermsMutationInput,
 ): Promise<MutationResult<{ id: string; slug: string }>> {
   const parsed = termsFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -139,7 +149,7 @@ export async function createTerms(
   return executeAdminMutationResult({
     resource: "terms",
     action: "create",
-    execute: async () => createTermsCommand(parsed.data),
+    execute: async () => createTermsCommand(toTermsFormInput(parsed.data)),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },
@@ -149,7 +159,7 @@ export async function createTerms(
 
 export async function updateTerms(
   id: string,
-  input: TermsFormInput,
+  input: TermsMutationInput,
 ): Promise<MutationResult<{ id: string; slug: string }>> {
   const parsed = termsFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -160,7 +170,7 @@ export async function updateTerms(
     resource: "terms",
     action: "update",
     resourceId: id,
-    execute: async () => updateTermsCommand(id, parsed.data),
+    execute: async () => updateTermsCommand(id, toTermsFormInput(parsed.data)),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug, data.previousSlug);
     },

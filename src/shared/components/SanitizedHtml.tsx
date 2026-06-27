@@ -18,27 +18,12 @@
 import { sanitize } from "isomorphic-dompurify";
 import { useEffect, useRef } from "react";
 import { injectHeadingAnchors } from "@/shared/lib/html/extract-headings";
+import { LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export const SANITIZE_OPTIONS = {
   ADD_TAGS: ["iframe"],
-  ADD_ATTR: [
-    "allow",
-    "allowfullscreen",
-    "frameborder",
-    "scrolling",
-    "target",
-    "rel",
-    "loading",
-    "data-gallery",
-    "data-gallery-columns",
-    "data-gallery-style",
-    "data-gallery-item",
-    "data-src",
-    "data-alt",
-    "data-caption",
-    "data-gallery-img",
-    "data-gallery-placeholder",
-  ],
+  ADD_ATTR: [...LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES],
+  ALLOW_DATA_ATTR: true,
   ALLOWED_URI_REGEXP:
     /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
