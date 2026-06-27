@@ -1,7 +1,7 @@
 import { createHeadlessEditor } from "@lexical/headless";
 import { withDOM } from "@lexical/headless/dom";
 import { $generateHtmlFromNodes } from "@lexical/html";
-import { EDITOR_NODES } from "../config/nodes";
+import { HEADLESS_EDITOR_NODES } from "../config/headless-nodes";
 import { editorTheme } from "../theme";
 import { logger } from "@/shared/lib/logger";
 
@@ -24,7 +24,7 @@ export function renderEditorStateJsonToHtmlCore(
       const editor = createHeadlessEditor({
         namespace: "LexicalHeadlessHtmlExport",
         theme: editorTheme,
-        nodes: [...EDITOR_NODES],
+        nodes: [...HEADLESS_EDITOR_NODES],
         onError: (error: Error) => {
           logger.error("Headless Lexical HTML export error", {
             error: error.message,

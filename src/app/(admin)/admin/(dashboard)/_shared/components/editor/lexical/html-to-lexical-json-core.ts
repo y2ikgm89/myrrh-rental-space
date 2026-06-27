@@ -1,6 +1,6 @@
 import { $generateNodesFromDOM } from "@lexical/html";
 import { createEditor, $getRoot, $insertNodes } from "lexical";
-import { EDITOR_NODES } from "./config/nodes";
+import { HEADLESS_EDITOR_NODES } from "./config/headless-nodes";
 import { editorTheme } from "./theme";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
@@ -29,7 +29,7 @@ export function tryConvertHtmlStringToLexicalJsonCore(
   const editor = createEditor({
     namespace: "LexicalEditor",
     theme: editorTheme,
-    nodes: [...EDITOR_NODES],
+    nodes: [...HEADLESS_EDITOR_NODES],
     onError: (error: Error) => {
       logger.error("tryConvertHtmlStringToLexicalJsonCore editor error", {
         error: error.message,
