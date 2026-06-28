@@ -830,6 +830,26 @@ describe("embedConfigSchema", () => {
     const result = embedConfigSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
+
+  test("embedUrlはCSPで許可した埋め込み元のみ許可", () => {
+    expect(
+      embedConfigSchema.safeParse({
+        embedUrl: "https://www.google.com/maps/embed?pb=test",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      embedConfigSchema.safeParse({
+        embedUrl: "https://example.com/embed/unsafe",
+      }).success,
+    ).toBe(false);
+    expect(
+      embedConfigSchema.safeParse({
+        embedUrl: "http://www.youtube.com/embed/xxxxx",
+      }).success,
+    ).toBe(false);
+    expect(embedConfigSchema.safeParse({ embedUrl: "" }).success).toBe(true);
+  });
 });
 
 // =============================================================================
