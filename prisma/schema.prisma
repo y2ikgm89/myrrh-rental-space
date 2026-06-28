@@ -632,7 +632,10 @@ model Customer {
   companyName        String?        // 会社名・団体名（法人の場合）
   customerType       CustomerType   @default(PERSONAL)
   email              String
-  emailCanonical     String
+  /// Expand phase: nullable in DB so the previous Cloud Run revision can keep
+  /// inserting customers during rollout. New code always writes this value.
+  /// Contract phase should backfill nulls and make it NOT NULL.
+  emailCanonical     String?
   phoneNumber        String?
   postalCode         String?        @db.VarChar(8)   // 郵便番号 "123-4567" 等
   prefecture         String?        @db.VarChar(10)  // 都道府県（PREFECTURES SSoT）

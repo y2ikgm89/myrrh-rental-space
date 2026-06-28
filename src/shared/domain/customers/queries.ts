@@ -380,6 +380,7 @@ export async function getSuppressedEmailSet(
 
   const suppressed = new Set<string>();
   for (const row of rows) {
+    if (row.emailCanonical === null) continue;
     for (const original of canonicalToOriginals.get(row.emailCanonical) ?? []) {
       suppressed.add(original);
     }
