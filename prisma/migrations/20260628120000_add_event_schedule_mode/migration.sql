@@ -8,8 +8,8 @@ ADD COLUMN "scheduleMode" "EventScheduleMode";
 
 -- Slot timestamps are timestamptz, so deadline must use the same instant-based
 -- type before DB-level comparisons are introduced.
--- squawk-ignore changing-column-type
 ALTER TABLE "events"
+-- squawk-ignore changing-column-type
 ALTER COLUMN "registrationDeadline" TYPE TIMESTAMPTZ(6)
 USING "registrationDeadline" AT TIME ZONE 'UTC';
 
@@ -72,8 +72,8 @@ SET "scheduleMode" = CASE
   ELSE 'SINGLE_OCCURRENCE'::"EventScheduleMode"
 END;
 
--- squawk-ignore adding-not-nullable-field
 ALTER TABLE "events"
+-- squawk-ignore adding-not-nullable-field
 ALTER COLUMN "scheduleMode" SET NOT NULL;
 
 ALTER TABLE "event_time_slots"

@@ -3,6 +3,6 @@
 DELETE FROM "event_registrations"
 WHERE "slotId" IS NULL;
 
--- squawk-ignore adding-not-nullable-field
 ALTER TABLE "event_registrations"
+-- squawk-ignore adding-not-nullable-field
 ALTER COLUMN "slotId" SET NOT NULL;
