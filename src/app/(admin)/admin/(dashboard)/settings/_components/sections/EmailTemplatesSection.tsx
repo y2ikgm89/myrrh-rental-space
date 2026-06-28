@@ -48,6 +48,7 @@ import {
 import {
   EMAIL_TEMPLATE_INDEX,
   TEMPLATE_CATEGORY_LABELS,
+  isTemplateKey,
   type EmailTemplateIndexItem,
   type TemplateCategory,
   type TemplateKey,
@@ -198,7 +199,9 @@ export function EmailTemplatesSection({ defaultRecipient }: Props) {
             <Label htmlFor={selectId}>テンプレート種別</Label>
             <Select
               value={selectedKey}
-              onValueChange={(v) => setSelectedKey(v as TemplateKey)}
+              onValueChange={(v) => {
+                if (isTemplateKey(v)) setSelectedKey(v);
+              }}
               disabled={previewPending}
             >
               <SelectTrigger id={selectId} className="w-full">

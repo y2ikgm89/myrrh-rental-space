@@ -42,14 +42,20 @@ export type MockPaymentIntent = Pick<
   "id" | "amount" | "currency" | "status" | "customer" | "metadata"
 >;
 
+export type MockSubscriptionItem = Pick<Stripe.SubscriptionItem, "id"> & {
+  price: Pick<Stripe.Price, "id">;
+};
+
 /**
  * テストで保持する Subscription の最小サブセット。
  * `status` は SDK の literal union（`Stripe.Subscription.Status`）を維持。
  */
 export type MockSubscription = Pick<
   Stripe.Subscription,
-  "id" | "customer" | "status" | "items"
->;
+  "id" | "customer" | "status"
+> & {
+  items: Stripe.ApiList<MockSubscriptionItem>;
+};
 
 // =============================================================================
 // Mock Data Storage
@@ -63,6 +69,22 @@ export const mockSubscriptions: MockSubscription[] = [];
 // Mock Functions — SDK の `Stripe.*Resource.*Params` を採用
 // =============================================================================
 
+function normalizeMetadata(metadata: unknown): Stripe.Metadata {
+  const normalized: Stripe.Metadata = {};
+  if (
+    typeof metadata !== "object" ||
+    metadata === null ||
+    Array.isArray(metadata)
+  ) {
+    return normalized;
+  }
+  for (const [key, value] of Object.entries(metadata ?? {})) {
+    normalized[key] =
+      value === null || value === undefined ? "" : String(value);
+  }
+  return normalized;
+}
+
 /**
  * customers.create のモック
  */
@@ -75,12 +97,7 @@ export const mockCustomersCreate = mock<
     name: params.name ?? null,
     // CustomerCreateParams.metadata は MetadataParam（number/null 許容）。
     // 応答型の Customer.metadata は string-only な map なので明示変換する。
-    metadata: Object.fromEntries(
-      Object.entries(params.metadata ?? {}).map(([k, v]) => [
-        k,
-        v === null || v === undefined ? "" : String(v),
-      ]),
-    ) as Stripe.Customer["metadata"],
+    metadata: normalizeMetadata(params.metadata),
   };
   mockCustomers.push(customer);
   return Promise.resolve(customer);
@@ -110,12 +127,7 @@ export const mockPaymentIntentsCreate = mock<
     customer: params.customer ?? null,
     // PaymentIntentCreateParams.metadata は MetadataParam（number/null 許容）。
     // 応答型の PaymentIntent.metadata は string-only な map に正規化する。
-    metadata: Object.fromEntries(
-      Object.entries(params.metadata ?? {}).map(([k, v]) => [
-        k,
-        v === null || v === undefined ? "" : String(v),
-      ]),
-    ) as Stripe.PaymentIntent["metadata"],
+    metadata: normalizeMetadata(params.metadata),
   };
   mockPaymentIntents.push(paymentIntent);
   return Promise.resolve(paymentIntent);
@@ -143,12 +155,11 @@ export const mockPaymentIntentsConfirm = mock<
 export const mockSubscriptionsCreate = mock<
   (params: Stripe.SubscriptionCreateParams) => Promise<MockSubscription>
 >((params) => {
-  const items = (params.items ?? []).map(
-    (item, index) =>
-      ({
-        id: `si_mock_${Date.now()}_${index}`,
-        price: { id: item.price ?? "price_mock" },
-      }) as unknown as Stripe.SubscriptionItem,
+  const items: MockSubscriptionItem[] = (params.items ?? []).map(
+    (item, index) => ({
+      id: `si_mock_${Date.now()}_${index}`,
+      price: { id: item.price ?? "price_mock" },
+    }),
   );
   const subscription: MockSubscription = {
     id: `sub_mock_${Date.now()}`,
@@ -159,7 +170,7 @@ export const mockSubscriptionsCreate = mock<
       data: items,
       has_more: false,
       url: `/v1/subscription_items?subscription=sub_mock_${Date.now()}`,
-    } as Stripe.ApiList<Stripe.SubscriptionItem>,
+    },
   };
   mockSubscriptions.push(subscription);
   return Promise.resolve(subscription);

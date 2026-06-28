@@ -26,6 +26,8 @@
 
 import "server-only";
 
+import { isRecord } from "@/shared/lib/serialize";
+
 /** 再試行対象の HTTP ステータスコード */
 const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([
   429, 500, 502, 503, 504,
@@ -99,9 +101,9 @@ export function isRetryableInstagramApiError(error: unknown): boolean {
     return false;
   }
 
-  if (!error || typeof error !== "object") return false;
-  const err = error as { code?: string };
-  if (typeof err.code === "string" && RETRYABLE_SYSTEM_ERRORS.has(err.code)) {
+  if (!isRecord(error)) return false;
+  const code = error["code"];
+  if (typeof code === "string" && RETRYABLE_SYSTEM_ERRORS.has(code)) {
     return true;
   }
   return false;

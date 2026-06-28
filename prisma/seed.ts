@@ -2045,12 +2045,16 @@ async function seedDevCustomerAndReservations() {
   }
 
   // 5) Inquiry を 2 件 seed（NEW + RESOLVED、customerId 紐付け）
-  const inquiryFixtures = [
+  const inquiryFixtures: Array<{
+    subject: string;
+    message: string;
+    status: "NEW" | "RESOLVED";
+    replyMessage?: string;
+  }> = [
     {
       subject: "[E2E] dev customer の新規お問い合わせ",
       message: "E2E spec で /mypage/inquiries の一覧表示を検証する用 fixture。",
       status: "NEW" as const,
-      replyMessage: undefined as string | undefined,
     },
     {
       subject: "[E2E] dev customer の解決済お問い合わせ",

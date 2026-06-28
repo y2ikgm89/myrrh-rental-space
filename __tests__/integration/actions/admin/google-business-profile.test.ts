@@ -152,8 +152,9 @@ mock.module("next/cache", () => ({
 
 const mockRedirect = mock<(url: string) => never>((_url: string) => {
   // Next.js redirect throws a special error
-  const error = new Error("NEXT_REDIRECT") as Error & { digest: string };
-  error.digest = `NEXT_REDIRECT;replace;${_url};307;`;
+  const error = Object.assign(new Error("NEXT_REDIRECT"), {
+    digest: `NEXT_REDIRECT;replace;${_url};307;`,
+  });
   throw error;
 });
 
@@ -227,7 +228,10 @@ describe("Google Business Profile Server Actions", () => {
         "https://accounts.google.com/o/oauth2/v2/auth?test=1",
       );
       expect(caught).toBeInstanceOf(Error);
-      expect((caught as Error).message).toBe("NEXT_REDIRECT");
+      if (!(caught instanceof Error)) {
+        throw new Error("redirect must throw an Error");
+      }
+      expect(caught.message).toBe("NEXT_REDIRECT");
     });
 
     test("settings:update 権限がない場合は OAuth state を発行しない", async () => {
@@ -249,7 +253,10 @@ describe("Google Business Profile Server Actions", () => {
         "/admin/settings/integrations?gbp_error=forbidden",
       );
       expect(caught).toBeInstanceOf(Error);
-      expect((caught as Error).message).toBe("NEXT_REDIRECT");
+      if (!(caught instanceof Error)) {
+        throw new Error("redirect must throw an Error");
+      }
+      expect(caught.message).toBe("NEXT_REDIRECT");
     });
   });
 

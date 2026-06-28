@@ -16,7 +16,7 @@
  */
 
 import type { Metadata, Viewport } from "next";
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { connection } from "next/server";
@@ -53,7 +53,6 @@ import {
   FALLBACK_LAYOUT_CONFIG,
 } from "@/shared/domain/settings/queries/site";
 import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
-import type { CSSProperties } from "react";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
@@ -65,6 +64,10 @@ import {
 } from "@/public/contexts/tax-settings";
 import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 import "./_styles/public.css";
+
+type MainShellStyle = CSSProperties & {
+  readonly "--container-site": string;
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   // favicon は静的 URL `/icon` で `<link rel="icon">` を注入し、実体は dynamic icon
@@ -347,9 +350,9 @@ const DEFAULT_TAX_VALUE: PublicTaxDisplay = {
   reducedRate: DEFAULT_TAX_SETTINGS.reducedRate,
   displayMode: DEFAULT_TAX_SETTINGS.displayModePublic,
 };
-const DEFAULT_MAIN_STYLE = {
+const DEFAULT_MAIN_STYLE: MainShellStyle = {
   "--container-site": getContainerSiteCss(FALLBACK_LAYOUT_CONFIG),
-} as CSSProperties;
+};
 
 /**
  * `<main>` の動的 chrome を解決する async Server Component（Suspense 内で resume）。
@@ -382,12 +385,12 @@ async function MainShellResolved({
     reducedRate: taxSettings.reducedRate,
     displayMode: taxSettings.displayModePublic,
   };
-  const style = {
+  const style: MainShellStyle = {
     "--container-site": getContainerSiteCss(layoutSettings),
     ...(isTransparent && {
       marginTop: "calc(var(--header-height, 0px) * -1)",
     }),
-  } as CSSProperties;
+  };
 
   return (
     <MainShellFrame

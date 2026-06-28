@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { expectErrorResult } from "../../helpers/type-assertions";
 
 const mockCheckPermission = mock(() =>
   Promise.resolve({
@@ -79,7 +80,8 @@ describe("POST /admin/api/ogp", () => {
       .mockRejectedValueOnce(new Error("blocked"));
 
     const response = await POST(createOgpRequest("https://example.com/post"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("リダイレクト");

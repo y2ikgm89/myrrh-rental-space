@@ -27,7 +27,7 @@ import { renderLexicalDecorator } from "./decorator-registry";
 export const INLINE_IMAGE_POSITIONS = ["left", "right", "full"] as const;
 export type InlineImagePosition = (typeof INLINE_IMAGE_POSITIONS)[number];
 
-const isInlineImagePosition = createEnumGuard<InlineImagePosition>(
+export const isInlineImagePosition = createEnumGuard<InlineImagePosition>(
   INLINE_IMAGE_POSITIONS,
 );
 

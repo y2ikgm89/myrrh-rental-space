@@ -95,6 +95,15 @@ mock.module("@/shared/lib/cloudflare", () => ({
   isCloudflareTagPurgeEnabled: mock(() => true),
 }));
 
+function getFirstPurgeDetailPaths(): readonly string[] {
+  const firstCall = mockPurgeDetailUrls.mock.calls[0];
+  expect(firstCall).toBeDefined();
+  if (firstCall === undefined) {
+    throw new Error("purgeCloudflareDetailUrls must be called");
+  }
+  return firstCall[0];
+}
+
 // =============================================================================
 // Import target after mocks
 // =============================================================================
@@ -239,7 +248,7 @@ describe("bulkTogglePublishedNews", () => {
       await bulkTogglePublishedNews([VALID_UUID_A, VALID_UUID_B], true);
 
       expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
-      const paths = mockPurgeDetailUrls.mock.calls[0]![0] as readonly string[];
+      const paths = getFirstPurgeDetailPaths();
       expect(paths).toEqual(
         expect.arrayContaining(["/news/news-a", "/news/news-b"]),
       );
@@ -316,7 +325,7 @@ describe("bulkDeleteNews", () => {
       await bulkDeleteNews([VALID_UUID_A, VALID_UUID_B]);
 
       expect(mockPurgeDetailUrls).toHaveBeenCalledTimes(1);
-      const paths = mockPurgeDetailUrls.mock.calls[0]![0] as readonly string[];
+      const paths = getFirstPurgeDetailPaths();
       expect(paths).toEqual(expect.arrayContaining(["/news/news-a"]));
     });
   });

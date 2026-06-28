@@ -55,11 +55,17 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
   getTurnstileConfig: mockGetTurnstileConfig,
 }));
 
-const mockFetch = mock(() => Promise.resolve(new Response()));
-
 const originalFetch = globalThis.fetch;
+const fetchImpl = Object.assign(
+  (_input: Parameters<typeof globalThis.fetch>[0]) =>
+    Promise.resolve(new Response()),
+  { preconnect: originalFetch.preconnect },
+);
+const mockFetch = Object.assign(mock(fetchImpl), {
+  preconnect: originalFetch.preconnect,
+});
 beforeEach(() => {
-  globalThis.fetch = mockFetch as unknown as typeof fetch;
+  globalThis.fetch = mockFetch;
   mockPrismaClient.settings.findUnique.mockClear();
 });
 afterEach(() => {

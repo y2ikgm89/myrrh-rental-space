@@ -11,8 +11,9 @@ import {
 import {
   TERMS_TYPE_LABELS,
   TERMS_SCOPE_LABELS,
+  isTermsScope,
 } from "@/shared/lib/validations/terms";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
 
 /**
@@ -29,9 +30,7 @@ const MAX_EXPORT_ROWS = 10_000;
 
 function parseScope(value: string | null): TermsScope | undefined {
   if (value === null) return undefined;
-  return (Object.values(TermsScope) as string[]).includes(value)
-    ? (value as TermsScope)
-    : undefined;
+  return isTermsScope(value) ? value : undefined;
 }
 
 function nonEmpty(value: string | null): string | undefined {

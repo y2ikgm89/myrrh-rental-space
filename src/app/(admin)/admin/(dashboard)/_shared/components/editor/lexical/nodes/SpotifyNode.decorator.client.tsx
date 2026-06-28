@@ -4,8 +4,11 @@ import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
 import type { NodeKey } from "lexical";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
-import { type SpotifyContentType } from "./SpotifyNode";
-import { registerLexicalDecorator } from "./decorator-registry";
+import { isSpotifyContentType, type SpotifyContentType } from "./SpotifyNode";
+import {
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 const CONTENT_TYPE_LABELS: Record<SpotifyContentType, string> = {
   track: "トラック",
@@ -42,4 +45,25 @@ function SpotifyComponent({
   );
 }
 
-registerLexicalDecorator("spotify", SpotifyComponent as never);
+registerLexicalDecorator("spotify", (props) => {
+  const embedUrl = getDecoratorStringProp(props, "embedUrl");
+  const rawContentType = getDecoratorStringProp(props, "contentType");
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+
+  if (
+    embedUrl === null ||
+    rawContentType === null ||
+    !isSpotifyContentType(rawContentType) ||
+    nodeKey === null
+  ) {
+    return null;
+  }
+
+  return (
+    <SpotifyComponent
+      embedUrl={embedUrl}
+      contentType={rawContentType}
+      nodeKey={nodeKey}
+    />
+  );
+});

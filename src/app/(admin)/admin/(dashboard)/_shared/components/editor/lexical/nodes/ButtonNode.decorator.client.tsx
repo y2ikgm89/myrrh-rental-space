@@ -15,7 +15,10 @@ import {
   buttonSizeState,
   buttonVariantState,
 } from "./ButtonNode";
-import { registerLexicalDecorator } from "./decorator-registry";
+import {
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 function ButtonComponent({
   nodeKey,
@@ -71,4 +74,7 @@ function ButtonComponent({
   );
 }
 
-registerLexicalDecorator("button", ButtonComponent as never);
+registerLexicalDecorator("button", (props) => {
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+  return nodeKey === null ? null : <ButtonComponent nodeKey={nodeKey} />;
+});

@@ -1,10 +1,22 @@
 import "server-only";
 
-import type { AppPrismaClient } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isRecord } from "@/shared/lib/serialize";
 
-/** 拡張済み AppPrismaClient の interactive transaction client 型 */
-type AppTx = Parameters<Parameters<AppPrismaClient["$transaction"]>[0]>[0];
+export interface SyncEventTimeSlotsTx {
+  readonly eventTimeSlot: {
+    findMany(
+      args: object,
+    ): Promise<{ id: string; registrations?: { id: string }[] }[]>;
+    delete(args: object): Promise<unknown>;
+    update(args: object): Promise<unknown>;
+    create(args: object): Promise<unknown>;
+    aggregate(args: object): Promise<object>;
+  };
+  readonly event: {
+    update(args: object): Promise<unknown>;
+  };
+}
 
 export interface SlotInput {
   /** 既存スロットの更新時に指定。新規作成時は undefined。 */
@@ -12,6 +24,18 @@ export interface SlotInput {
   startAt: Date;
   endAt: Date;
   capacity: number;
+}
+
+function getAggregateDate(
+  aggregate: object,
+  groupKey: "_min" | "_max",
+  fieldKey: "startAt" | "endAt",
+): Date | null {
+  if (!isRecord(aggregate)) return null;
+  const group = aggregate[groupKey];
+  if (!isRecord(group)) return null;
+  const value = group[fieldKey];
+  return value instanceof Date ? value : null;
 }
 
 /**
@@ -25,7 +49,7 @@ export interface SlotInput {
  * 重複時刻は DB の @@unique([eventId, startAt]) が最終防衛線。
  */
 export async function syncEventTimeSlotsCommand(
-  tx: AppTx,
+  tx: SyncEventTimeSlotsTx,
   eventId: string,
   inputs: readonly SlotInput[],
 ): Promise<void> {
@@ -60,7 +84,7 @@ export async function syncEventTimeSlotsCommand(
   // 削除対象: 既存スロットのうち incoming に含まれないもの
   for (const existing of existingSlots) {
     if (!incomingIds.has(existing.id)) {
-      if (existing.registrations.length > 0) {
+      if ((existing.registrations?.length ?? 0) > 0) {
         throw new DomainError(
           "申込済みのスロットは削除できません",
           "VALIDATION",
@@ -102,8 +126,8 @@ export async function syncEventTimeSlotsCommand(
   await tx.event.update({
     where: { id: eventId },
     data: {
-      firstSlotStartAt: aggregate._min.startAt ?? null,
-      lastSlotEndAt: aggregate._max.endAt ?? null,
+      firstSlotStartAt: getAggregateDate(aggregate, "_min", "startAt"),
+      lastSlotEndAt: getAggregateDate(aggregate, "_max", "endAt"),
     },
   });
 }

@@ -16,6 +16,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectSubmissionLike } from "../../../helpers/type-assertions";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -164,12 +165,6 @@ function inputToFormData(input: ProfileInputShape): FormData {
   return fd;
 }
 
-type SubmissionLike = {
-  readonly status?: "success" | "error";
-  readonly initialValue?: unknown;
-  readonly error?: Record<string, string[] | null> | null;
-};
-
 // =============================================================================
 // テスト本体
 // =============================================================================
@@ -204,10 +199,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       // resetForm: false 指定で `reply()` は `{ status: "success", initialValue, ... }`
       // を返す (initialValue !== null で submitted values 維持)
@@ -249,13 +245,14 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData({
           lastName: "田中",
           firstName: "花子",
         }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("success");
     });
@@ -289,10 +286,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("認証が必要です");
@@ -322,10 +320,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("リクエストが多すぎます");
@@ -353,10 +352,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData({ ...VALID_INPUT, lastName: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["lastName"]).toBeDefined();
@@ -366,10 +366,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData({ ...VALID_INPUT, firstName: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["firstName"]).toBeDefined();
@@ -379,10 +380,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData({ ...VALID_INPUT, phoneNumber: "0".repeat(21) }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["phoneNumber"]).toBeDefined();
@@ -410,10 +412,11 @@ describe("updateProfileAction", () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
-      const result = (await updateProfileAction(
+      const result = await updateProfileAction(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("プロフィールの更新に失敗しました");

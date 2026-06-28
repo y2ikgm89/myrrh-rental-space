@@ -116,8 +116,8 @@ describe("createPostSchema", () => {
   });
 
   test("tagsフィールドはデフォルトで空配列", () => {
-    const data = { ...validBaseData };
-    delete (data as Record<string, unknown>)["tags"];
+    const data: Record<string, unknown> = { ...validBaseData };
+    delete data["tags"];
     const result = createPostSchema.safeParse(data);
     expect(result.success).toBe(true);
     if (result.success) {
@@ -243,8 +243,8 @@ describe("postSettingsFormSchema", () => {
   });
 
   test("status フィールドは必須", () => {
-    const invalidData = { ...validFormData };
-    delete (invalidData as Record<string, unknown>)["status"];
+    const invalidData: Record<string, unknown> = { ...validFormData };
+    delete invalidData["status"];
     const result = postSettingsFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });

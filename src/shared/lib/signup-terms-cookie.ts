@@ -3,6 +3,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { serverEnv } from "@/shared/lib/env/server";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * Signup terms agreement cookie
@@ -25,10 +26,9 @@ interface SignupTermsCookiePayload {
 function isSignupTermsCookiePayload(
   value: unknown,
 ): value is SignupTermsCookiePayload {
-  if (!value || typeof value !== "object") return false;
-  if (!("termsIds" in value) || !("exp" in value)) return false;
-  const termsIds = (value as { termsIds: unknown }).termsIds;
-  const exp = (value as { exp: unknown }).exp;
+  if (!isRecord(value)) return false;
+  const termsIds = value["termsIds"];
+  const exp = value["exp"];
   return (
     Array.isArray(termsIds) &&
     termsIds.every((t) => typeof t === "string") &&

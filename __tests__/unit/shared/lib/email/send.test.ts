@@ -1,15 +1,41 @@
-import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  mock,
+  beforeEach,
+  afterEach,
+  spyOn,
+} from "bun:test";
 
 // setTimeout をモックして backoff sleep をスキップする
 // send.ts の sleep() は setTimeout を使用するため、グローバルを差し替える
 const originalSetTimeout = globalThis.setTimeout;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- setTimeout の型を保ちつつ即時解決に差し替える
-const mockSetTimeout = mock(
-  (fn: () => void, _ms?: number): ReturnType<typeof setTimeout> => {
-    fn();
-    return 0 as unknown as ReturnType<typeof setTimeout>;
-  },
-);
+function runImmediateSetTimeout<TArgs extends unknown[]>(
+  handler: (...args: TArgs) => void,
+  _timeout?: Parameters<typeof originalSetTimeout>[1],
+  ...args: TArgs
+): ReturnType<typeof originalSetTimeout>;
+function runImmediateSetTimeout(
+  handler: TimerHandler,
+  _timeout?: Parameters<typeof originalSetTimeout>[1],
+  ...args: unknown[]
+): number;
+function runImmediateSetTimeout(
+  handler: TimerHandler,
+  _timeout?: Parameters<typeof originalSetTimeout>[1],
+  ...args: unknown[]
+): number | ReturnType<typeof originalSetTimeout> {
+  if (typeof handler === "function") {
+    Reflect.apply(handler, undefined, args);
+  }
+  return originalSetTimeout(() => {}, 0);
+}
+
+const immediateSetTimeout = Object.assign(runImmediateSetTimeout, {
+  __promisify__: originalSetTimeout.__promisify__,
+});
+let setTimeoutSpy: ReturnType<typeof spyOn<typeof globalThis, "setTimeout">>;
 
 // 1. モック関数を先に定義（TDZ 回避）
 const mockResendSend = mock<
@@ -119,14 +145,15 @@ const BASE_PARAMS = {
 beforeEach(() => {
   // setTimeout をスパイして backoff sleep を即時解決にする
   // これにより retry テストが 5 秒タイムアウトせずに完了する
-  globalThis.setTimeout = mockSetTimeout as unknown as typeof setTimeout;
+  setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(
+    immediateSetTimeout,
+  );
 
   mockResendSend.mockReset();
   mockIsEmailEnabled.mockReset();
   mockGetResendClient.mockReset();
   mockLogError.mockReset();
   mockNormalizeError.mockReset();
-  mockSetTimeout.mockClear();
   // suppression: デフォルトで「全宛先送信許可」（空 Set）にリセット
   mockGetSuppressedEmailSet.mockReset();
   mockGetSuppressedEmailSet.mockResolvedValue(new Set());
@@ -148,7 +175,7 @@ beforeEach(() => {
 
 afterEach(() => {
   // テスト後に setTimeout を元に戻す
-  globalThis.setTimeout = originalSetTimeout;
+  setTimeoutSpy.mockRestore();
 });
 
 // -----------------------------------------------------------------------

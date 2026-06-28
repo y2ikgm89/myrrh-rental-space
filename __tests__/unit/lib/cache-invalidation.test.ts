@@ -13,7 +13,7 @@ const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(
 );
 const mockFireAndForget = mock<(p: Promise<unknown>, opts: unknown) => void>(
   (p) => {
-    void (p as Promise<unknown>).catch(() => {});
+    void p.catch(() => {});
   },
 );
 
@@ -120,10 +120,10 @@ describe("firePurgeAsync body-failure surfacing", () => {
     expect(mockLogError).toHaveBeenCalledTimes(1);
     const callArgs = mockLogError.mock.calls[0];
     expect(callArgs).toBeDefined();
-    const [err, ctx] = callArgs as unknown as [
-      Error,
-      { category: string; severity: string; context: Record<string, unknown> },
-    ];
+    if (callArgs === undefined) {
+      throw new Error("logError must be called");
+    }
+    const [err, ctx] = callArgs;
     expect(err).toBeInstanceOf(Error);
     expect(err.message).toMatch(/test\.op/);
     expect(ctx).toMatchObject({

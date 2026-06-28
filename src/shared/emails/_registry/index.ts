@@ -23,6 +23,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import type { ReactElement } from "react";
 
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import {
@@ -68,13 +69,30 @@ import { sendEmail } from "@/shared/lib/email/send";
 import type { EmailResult } from "@/shared/lib/email/types";
 
 import { EMAIL_TEMPLATE_INDEX, type TemplateKey } from "./data";
-import type { SendTestInput, TemplateEntry } from "./types";
+import type {
+  SendTestInput,
+  TemplateEntry,
+  TemplateFixtureOverride,
+} from "./types";
+import type { EmailFooterData } from "@/shared/emails/_shared/footer-data";
 
 /** 全テスト送信メールの subject 先頭に必ず付与する prefix。 */
 const TEST_SUBJECT_PREFIX = "[TEST]";
 
 /** Resend `tags` キー: テスト送信は production 配信から完全分離して dashboard で抽出可能にする。 */
 const TEST_TAG_CATEGORY = { name: "category", value: "template_test" };
+
+type EmailTemplateProps = {
+  footer: EmailFooterData;
+};
+
+type RegistryTemplateEntry = Omit<
+  TemplateEntry<EmailTemplateProps>,
+  "component" | "fixture"
+> & {
+  component: (props: never) => ReactElement;
+  fixture: EmailTemplateProps;
+};
 
 function buildIdempotencyKey(key: TemplateKey, staffId: string): string {
   const ts = new Date().getTime();
@@ -86,6 +104,14 @@ function buildSubject(label: string): string {
   return `${TEST_SUBJECT_PREFIX} ${label}`;
 }
 
+function mergeFixtureOverride<P extends EmailTemplateProps>(
+  fixture: P,
+  fixtureOverride?: TemplateFixtureOverride,
+): P {
+  if (fixtureOverride === undefined) return fixture;
+  return { ...fixture, ...fixtureOverride };
+}
+
 /**
  * 各 entry の sendTest 共通実装。
  *
@@ -94,20 +120,16 @@ function buildSubject(label: string): string {
  *   `__infra_check` だけ全フィールドを上書きする。
  * - `input.fixtureOverride` は呼び出し側からの追加 override（useRealFooter 等）。
  */
-function makeSendTest<P>(
+function makeSendTest<P extends EmailTemplateProps>(
   key: TemplateKey,
   label: string,
-  component: (props: P) => import("react").ReactElement,
+  component: (props: P) => ReactElement,
   fixture: P,
   mergeRuntime: (fixture: P, input: SendTestInput) => P = (f) => f,
 ): TemplateEntry<P>["sendTest"] {
   return async (input: SendTestInput): Promise<EmailResult> => {
     const merged = mergeRuntime(fixture, input);
-    const withOverride = (
-      input.fixtureOverride
-        ? { ...(merged as Record<string, unknown>), ...input.fixtureOverride }
-        : merged
-    ) as P;
+    const withOverride = mergeFixtureOverride(merged, input.fixtureOverride);
 
     return sendEmail({
       payload: {
@@ -131,10 +153,12 @@ function makeSendTest<P>(
 }
 
 /** `__infra_check` 専用: TestEmail の identity フィールドを送信時値で上書き。 */
-function mergeInfraCheckRuntime<P extends Record<string, unknown>>(
-  fixture: P,
+type TestEmailProps = Parameters<typeof TestEmail>[0];
+
+function mergeInfraCheckRuntime(
+  fixture: TestEmailProps,
   input: SendTestInput,
-): P {
+): TestEmailProps {
   return {
     ...fixture,
     recipientLabel: input.to,
@@ -142,7 +166,7 @@ function mergeInfraCheckRuntime<P extends Record<string, unknown>>(
     triggeredByEmail: input.triggeredByEmail,
     siteName: input.siteName,
     timestamp: new Date(),
-  } as P;
+  };
 }
 
 /** EMAIL_TEMPLATE_INDEX から meta を引いて entry を組み立てる（label/description/category の二重定義を避ける）。 */
@@ -162,9 +186,9 @@ function metaFor(key: TemplateKey): {
   };
 }
 
-function defineEntry<P>(
+function defineEntry<P extends EmailTemplateProps>(
   key: TemplateKey,
-  component: (props: P) => import("react").ReactElement,
+  component: (props: P) => ReactElement,
   fixture: P,
   mergeRuntime?: (fixture: P, input: SendTestInput) => P,
 ): TemplateEntry<P> {
@@ -174,6 +198,8 @@ function defineEntry<P>(
     ...meta,
     component,
     fixture,
+    renderPreview: (fixtureOverride) =>
+      component(mergeFixtureOverride(fixture, fixtureOverride)),
     sendTest: makeSendTest(key, meta.label, component, fixture, mergeRuntime),
   };
 }
@@ -185,121 +211,103 @@ function defineEntry<P>(
 export const EMAIL_TEMPLATE_REGISTRY = {
   "reservation-confirmation": defineEntry(
     "reservation-confirmation",
-    ReservationConfirmationEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    reservationConfirmationFixture as unknown,
+    ReservationConfirmationEmail,
+    reservationConfirmationFixture,
   ),
   "reservation-cancelled": defineEntry(
     "reservation-cancelled",
-    ReservationCancelledEmail as (p: unknown) => import("react").ReactElement,
-    reservationCancelledFixture as unknown,
+    ReservationCancelledEmail,
+    reservationCancelledFixture,
   ),
   "reservation-status-changed": defineEntry(
     "reservation-status-changed",
-    ReservationStatusChangedEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    reservationStatusChangedFixture as unknown,
+    ReservationStatusChangedEmail,
+    reservationStatusChangedFixture,
   ),
   "reservation-reminder": defineEntry(
     "reservation-reminder",
-    ReservationReminderEmail as (p: unknown) => import("react").ReactElement,
-    reservationReminderFixture as unknown,
+    ReservationReminderEmail,
+    reservationReminderFixture,
   ),
   "event-registration-confirmation": defineEntry(
     "event-registration-confirmation",
-    EventRegistrationConfirmationEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    eventRegistrationConfirmationFixture as unknown,
+    EventRegistrationConfirmationEmail,
+    eventRegistrationConfirmationFixture,
   ),
   "event-registration-cancelled": defineEntry(
     "event-registration-cancelled",
-    EventRegistrationCancelledEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    eventRegistrationCancelledFixture as unknown,
+    EventRegistrationCancelledEmail,
+    eventRegistrationCancelledFixture,
   ),
   "event-cancelled-notification": defineEntry(
     "event-cancelled-notification",
-    EventCancelledNotificationEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    eventCancelledNotificationFixture as unknown,
+    EventCancelledNotificationEmail,
+    eventCancelledNotificationFixture,
   ),
   "event-updated-notification": defineEntry(
     "event-updated-notification",
-    EventUpdatedNotificationEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    eventUpdatedNotificationFixture as unknown,
+    EventUpdatedNotificationEmail,
+    eventUpdatedNotificationFixture,
   ),
   "event-admin-notification": defineEntry(
     "event-admin-notification",
-    EventAdminNotificationEmail as (p: unknown) => import("react").ReactElement,
-    eventAdminNotificationFixture as unknown,
+    EventAdminNotificationEmail,
+    eventAdminNotificationFixture,
   ),
   "contact-confirmation": defineEntry(
     "contact-confirmation",
-    ContactConfirmationEmail as (p: unknown) => import("react").ReactElement,
-    contactConfirmationFixture as unknown,
+    ContactConfirmationEmail,
+    contactConfirmationFixture,
   ),
   "inquiry-reply": defineEntry(
     "inquiry-reply",
-    InquiryReplyEmail as (p: unknown) => import("react").ReactElement,
-    inquiryReplyFixture as unknown,
+    InquiryReplyEmail,
+    inquiryReplyFixture,
   ),
   "inquiry-status-notification": defineEntry(
     "inquiry-status-notification",
-    InquiryStatusNotificationEmail as (
-      p: unknown,
-    ) => import("react").ReactElement,
-    inquiryStatusNotificationFixture as unknown,
+    InquiryStatusNotificationEmail,
+    inquiryStatusNotificationFixture,
   ),
   "admin-notification-reservation": defineEntry(
     "admin-notification-reservation",
-    AdminNotificationEmail as (p: unknown) => import("react").ReactElement,
-    adminNotificationReservationFixture as unknown,
+    AdminNotificationEmail,
+    adminNotificationReservationFixture,
   ),
   "admin-notification-inquiry": defineEntry(
     "admin-notification-inquiry",
-    AdminNotificationEmail as (p: unknown) => import("react").ReactElement,
-    adminNotificationInquiryFixture as unknown,
+    AdminNotificationEmail,
+    adminNotificationInquiryFixture,
   ),
-  welcome: defineEntry(
-    "welcome",
-    WelcomeEmail as (p: unknown) => import("react").ReactElement,
-    welcomeFixture as unknown,
-  ),
+  welcome: defineEntry("welcome", WelcomeEmail, welcomeFixture),
   "password-reset": defineEntry(
     "password-reset",
-    PasswordResetEmail as (p: unknown) => import("react").ReactElement,
-    passwordResetFixture as unknown,
+    PasswordResetEmail,
+    passwordResetFixture,
   ),
   "staff-invitation": defineEntry(
     "staff-invitation",
-    StaffInvitationEmail as (p: unknown) => import("react").ReactElement,
-    staffInvitationFixture as unknown,
+    StaffInvitationEmail,
+    staffInvitationFixture,
   ),
   "review-reply": defineEntry(
     "review-reply",
-    ReviewReplyEmail as (p: unknown) => import("react").ReactElement,
-    reviewReplyFixture as unknown,
+    ReviewReplyEmail,
+    reviewReplyFixture,
   ),
   __infra_check: defineEntry(
     "__infra_check",
-    TestEmail as (p: unknown) => import("react").ReactElement,
-    testEmailFixture as unknown,
-    mergeInfraCheckRuntime as (
-      fixture: unknown,
-      input: SendTestInput,
-    ) => unknown,
+    TestEmail,
+    testEmailFixture,
+    mergeInfraCheckRuntime,
   ),
-} as const satisfies Readonly<Record<TemplateKey, TemplateEntry<unknown>>>;
+} as const satisfies Readonly<Record<TemplateKey, RegistryTemplateEntry>>;
+
+export type EmailTemplateRegistryEntry =
+  (typeof EMAIL_TEMPLATE_REGISTRY)[TemplateKey];
 
 /** Unknown key で呼ばれた場合は throw。Server Action で先に Zod 検証する想定。 */
-export function getTemplate(key: TemplateKey): TemplateEntry<unknown> {
+export function getTemplate(key: TemplateKey): EmailTemplateRegistryEntry {
   const entry = EMAIL_TEMPLATE_REGISTRY[key];
   if (!entry) {
     throw new Error(`Unknown email template key: ${key}`);

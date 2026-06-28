@@ -14,6 +14,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
@@ -134,9 +135,10 @@ const GALLERY = [
 const BASE_INPUT = {
   title: "テストイベント",
   slug: "test-event",
-  descriptionJson: {
-    type: "root",
-  } as import("@generated/prisma/client").Prisma.InputJsonValue,
+  descriptionJson: asPrismaInputJsonValue(
+    { type: "root" },
+    "descriptionJson must be valid Prisma JSON",
+  ),
   descriptionHtml: "<p>test</p>",
   descriptionPlainText: "test",
   gallery: GALLERY,
@@ -200,9 +202,11 @@ describe("Event gallery round-trip", () => {
     await createEventCommand(BASE_INPUT);
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    const callArg = mockCreate.mock.calls[0]?.[0] as
-      | { data: Record<string, unknown> }
-      | undefined;
+    const callArg = mockCreate.mock.calls[0]?.[0];
+    expect(callArg).toBeDefined();
+    if (callArg === undefined) {
+      throw new Error("event create must be called");
+    }
 
     // asPrismaInputJsonValue が gallery を InputJsonValue に変換して渡す
     // (runtime では plain array を返す)
@@ -229,9 +233,11 @@ describe("Event gallery round-trip", () => {
 
     // syncEventTimeSlotsCommand も tx.event.update を呼ぶため合計2回
     expect(mockUpdate).toHaveBeenCalledTimes(2);
-    const callArg = mockUpdate.mock.calls[0]?.[0] as
-      | { data: Record<string, unknown> }
-      | undefined;
+    const callArg = mockUpdate.mock.calls[0]?.[0];
+    expect(callArg).toBeDefined();
+    if (callArg === undefined) {
+      throw new Error("event update must be called");
+    }
 
     expect(callArg?.data?.["gallery"]).toEqual(GALLERY);
   });
@@ -246,9 +252,11 @@ describe("Event gallery round-trip", () => {
     await duplicateEventCommand("src-evt-id");
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    const callArg = mockCreate.mock.calls[0]?.[0] as
-      | { data: Record<string, unknown> }
-      | undefined;
+    const callArg = mockCreate.mock.calls[0]?.[0];
+    expect(callArg).toBeDefined();
+    if (callArg === undefined) {
+      throw new Error("event create must be called");
+    }
 
     expect(callArg?.data?.["gallery"]).toEqual(GALLERY);
     // duplicate なので DRAFT / registrationOpen=false

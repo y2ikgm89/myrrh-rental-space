@@ -17,8 +17,9 @@ import { getAdminAgreements } from "@/shared/domain/terms/admin-queries";
 import {
   TERMS_TYPE_LABELS,
   TERMS_SCOPE_LABELS,
+  isTermsScope,
 } from "@/shared/lib/validations/terms";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 export const metadata: Metadata = {
@@ -39,9 +40,7 @@ function parseScope(
   value: string | string[] | undefined,
 ): TermsScope | undefined {
   if (typeof value !== "string") return undefined;
-  return (Object.values(TermsScope) as string[]).includes(value)
-    ? (value as TermsScope)
-    : undefined;
+  return isTermsScope(value) ? value : undefined;
 }
 
 function parseString(value: string | string[] | undefined): string | undefined {

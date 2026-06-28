@@ -4,11 +4,10 @@
  * 投稿エディタ 設定ダイアログ定義
  *
  * SettingsDialog に渡すタブ・セクション構成。conform `FieldMetadata` ベース。
- * フォーム型は `PostSettingsFormData` (本文 contentJson を含まないメタデータ専用)。
+ * フォーム型は `PostSettingsFormState` (本文 contentJson を含まないメタデータ専用)。
  */
 
-import { asTypedField } from "@/shared/lib/conform/typed-input-control";
-import type { PostSettingsFormData } from "@/admin/lib/validations/post";
+import type { PostSettingsFormState } from "../hooks/use-post-editor";
 import { generateSlug } from "@/shared/lib/slug";
 import {
   type PostSidePanelExtra,
@@ -27,7 +26,7 @@ import {
 } from "../side-panel";
 
 export const postSettingsPanel: SidePanelDefinition<
-  PostSettingsFormData,
+  PostSettingsFormState,
   PostSidePanelExtra
 > = {
   title: "記事設定",
@@ -87,7 +86,7 @@ export const postSettingsPanel: SidePanelDefinition<
           title: "タグ",
           render: (ctx) => (
             <PostTagFields
-              tagsField={asTypedField<string[]>(ctx.fields.tags)}
+              tagsField={ctx.fields.tags}
               availableTags={ctx.availableTags}
               {...(ctx.onCreateTag && { onCreateTag: ctx.onCreateTag })}
               {...spreadOptionalDisabled(ctx)}

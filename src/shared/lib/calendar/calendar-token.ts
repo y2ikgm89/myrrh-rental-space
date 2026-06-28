@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import { decrypt, encrypt } from "@/shared/lib/crypto";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * カレンダー (.ics) ダウンロード用 署名付きトークン
@@ -163,15 +164,14 @@ export function verifyCalendarToken(
 }
 
 function isCalendarTokenPayload(value: unknown): value is CalendarTokenPayload {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  const kind = record["k"];
+  if (!isRecord(value)) return false;
+  const kind = value["k"];
   return (
     (kind === "reservation" || kind === "event") &&
-    typeof record["id"] === "string" &&
-    typeof record["exp"] === "number" &&
-    Number.isFinite(record["exp"]) &&
-    typeof record["iat"] === "number" &&
-    Number.isFinite(record["iat"])
+    typeof value["id"] === "string" &&
+    typeof value["exp"] === "number" &&
+    Number.isFinite(value["exp"]) &&
+    typeof value["iat"] === "number" &&
+    Number.isFinite(value["iat"])
   );
 }

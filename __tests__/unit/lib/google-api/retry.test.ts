@@ -15,6 +15,10 @@ import {
   withGoogleApiRetry,
 } from "@/shared/lib/google-api/retry";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 describe("isRetryableGoogleApiError", () => {
   describe("HTTP status ベースの retry 判定", () => {
     test("429 は retry 対象", () => {
@@ -196,10 +200,7 @@ describe("withGoogleApiRetry", () => {
       },
       {
         maxRetries: 2,
-        shouldRetry: (error) =>
-          typeof error === "object" &&
-          error !== null &&
-          (error as { code?: number }).code === 418,
+        shouldRetry: (error) => isRecord(error) && error["code"] === 418,
       },
     );
     expect(result).toBe("ok");

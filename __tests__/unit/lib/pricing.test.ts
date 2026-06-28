@@ -545,10 +545,13 @@ describe("calculateCouponDiscount", () => {
     };
     const coupon = {
       type: "PERCENTAGE" as const,
-      discountValue: decimalLike as unknown as number,
+      discountValue: decimalLike,
       maxDiscountAmount: null,
     };
-    const result = calculateCouponDiscount(10000, coupon);
+    const result = Reflect.apply(calculateCouponDiscount, undefined, [
+      10000,
+      coupon,
+    ]);
     expect(result).toBe(2000);
   });
 });

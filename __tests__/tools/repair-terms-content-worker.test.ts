@@ -88,10 +88,17 @@ describe("repair terms contentJson worker", () => {
         const tag = repairTagFromId(doc.id);
 
         if (APPLY_LOCAL) {
+          const parsedContentJson: unknown = JSON.parse(contentJson);
+          if (
+            typeof parsedContentJson !== "object" ||
+            parsedContentJson === null
+          ) {
+            throw new Error("contentJson must parse to an object");
+          }
           await prisma.termsDocument.update({
             where: { id: doc.id },
             data: {
-              contentJson: JSON.parse(contentJson) as object,
+              contentJson: parsedContentJson,
               contentHtml,
             },
           });

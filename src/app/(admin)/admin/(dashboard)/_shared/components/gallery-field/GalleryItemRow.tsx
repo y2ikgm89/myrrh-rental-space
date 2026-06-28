@@ -10,15 +10,19 @@ import {
   toTranslate3d,
   useSortable,
 } from "@/admin/components/ui";
-import type { FieldMetadata } from "@conform-to/react";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
+
+interface GalleryTextField {
+  readonly name: string;
+  readonly value: unknown;
+  readonly initialValue: unknown;
+}
 
 interface GalleryItemRowProps {
   readonly id: string;
   readonly index: number;
-  readonly urlField: FieldMetadata<GalleryItem["url"]>;
-  readonly altField: FieldMetadata<GalleryItem["alt"]>;
-  readonly captionField: FieldMetadata<GalleryItem["caption"]>;
+  readonly urlField: GalleryTextField;
+  readonly altField: GalleryTextField;
+  readonly captionField: GalleryTextField;
   readonly url: string;
   readonly onRemove: () => void;
   readonly disabled?: boolean;
@@ -68,7 +72,7 @@ export function GalleryItemRow({
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded">
         <Image
           src={url}
-          alt={altField.value ?? ""}
+          alt={typeof altField.value === "string" ? altField.value : ""}
           fill
           sizes="96px"
           className="object-cover"
@@ -85,7 +89,11 @@ export function GalleryItemRow({
           <Input
             id={altId}
             name={altField.name}
-            defaultValue={altField.initialValue ?? ""}
+            defaultValue={
+              typeof altField.initialValue === "string"
+                ? altField.initialValue
+                : ""
+            }
             placeholder="画像の説明 (省略可)"
             maxLength={200}
           />
@@ -97,7 +105,11 @@ export function GalleryItemRow({
           <Input
             id={captionId}
             name={captionField.name}
-            defaultValue={captionField.initialValue ?? ""}
+            defaultValue={
+              typeof captionField.initialValue === "string"
+                ? captionField.initialValue
+                : ""
+            }
             placeholder="画像の補足 (省略可)"
             maxLength={500}
           />

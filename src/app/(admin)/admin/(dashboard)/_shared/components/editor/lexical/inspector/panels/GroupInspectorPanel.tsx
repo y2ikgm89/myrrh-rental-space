@@ -11,7 +11,6 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import {
   $isGroupNode,
   type GroupNode,
-  type GroupStyle,
   GROUP_STYLE_CATEGORIES,
   GROUP_STYLE_LABELS,
   groupStyleState,
@@ -40,6 +39,12 @@ const CATEGORY_LABELS = {
   background: "背景",
   decoration: "装飾",
 } as const;
+
+const GROUP_STYLE_CATEGORY_ENTRIES = [
+  ["border", GROUP_STYLE_CATEGORIES.border],
+  ["background", GROUP_STYLE_CATEGORIES.background],
+  ["decoration", GROUP_STYLE_CATEGORIES.decoration],
+] as const;
 
 // =============================================================================
 // Types
@@ -79,13 +84,10 @@ export function GroupInspectorPanel({
       <InspectorHeader title="グループ" />
 
       <InspectorSection title="スタイル">
-        {(
-          Object.entries(GROUP_STYLE_CATEGORIES) as [
-            keyof typeof GROUP_STYLE_CATEGORIES,
-            readonly GroupStyle[],
-          ][]
-        ).map(([category, styles]) => {
-          const activeInCategory = styles.includes(currentStyle)
+        {GROUP_STYLE_CATEGORY_ENTRIES.map(([category, styles]) => {
+          const activeInCategory = styles.some(
+            (style) => style === currentStyle,
+          )
             ? currentStyle
             : undefined;
           return (

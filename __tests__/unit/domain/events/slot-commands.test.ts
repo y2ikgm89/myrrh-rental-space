@@ -47,7 +47,7 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
     const endAt = new Date("2026-12-01T12:00:00Z");
     const tx = buildTx({ aggregate: { min: startAt, max: endAt } });
 
-    await syncEventTimeSlotsCommand(tx as never, EVENT_ID, [
+    await syncEventTimeSlotsCommand(tx, EVENT_ID, [
       { startAt, endAt, capacity: 30 },
     ]);
 
@@ -68,7 +68,7 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
     // aggregate は DB 側で MIN/MAX を計算するため、mock は集約結果を返す
     const tx = buildTx({ aggregate: { min: earliest, max: latestEnd } });
 
-    await syncEventTimeSlotsCommand(tx as never, EVENT_ID, [
+    await syncEventTimeSlotsCommand(tx, EVENT_ID, [
       { startAt: middle, endAt: middleEnd, capacity: 10 },
       { startAt: latest, endAt: latestEnd, capacity: 10 },
       { startAt: earliest, endAt: earliestEnd, capacity: 10 },
@@ -89,7 +89,7 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
       aggregate: { min: newStart, max: newEnd },
     });
 
-    await syncEventTimeSlotsCommand(tx as never, EVENT_ID, [
+    await syncEventTimeSlotsCommand(tx, EVENT_ID, [
       { id: "slot-1", startAt: newStart, endAt: newEnd, capacity: 20 },
     ]);
 
@@ -114,7 +114,7 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
       aggregate: { min: remainStart, max: remainEnd },
     });
 
-    await syncEventTimeSlotsCommand(tx as never, EVENT_ID, [
+    await syncEventTimeSlotsCommand(tx, EVENT_ID, [
       { id: "slot-2", startAt: remainStart, endAt: remainEnd, capacity: 10 },
     ]);
 
@@ -135,7 +135,7 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
     });
 
     await expect(
-      syncEventTimeSlotsCommand(tx as never, EVENT_ID, [
+      syncEventTimeSlotsCommand(tx, EVENT_ID, [
         {
           startAt: new Date("2026-12-03T10:00:00Z"),
           endAt: new Date("2026-12-03T12:00:00Z"),
@@ -150,9 +150,9 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
   test("inputs が空配列だと DomainError 'VALIDATION' で event.update も呼ばれない", async () => {
     const tx = buildTx({});
 
-    await expect(
-      syncEventTimeSlotsCommand(tx as never, EVENT_ID, []),
-    ).rejects.toThrow(DomainError);
+    await expect(syncEventTimeSlotsCommand(tx, EVENT_ID, [])).rejects.toThrow(
+      DomainError,
+    );
     expect(tx.event.update).not.toHaveBeenCalled();
   });
 
@@ -161,7 +161,7 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
     const t = new Date("2026-12-04T10:00:00Z");
 
     await expect(
-      syncEventTimeSlotsCommand(tx as never, EVENT_ID, [
+      syncEventTimeSlotsCommand(tx, EVENT_ID, [
         { startAt: t, endAt: t, capacity: 1 },
       ]),
     ).rejects.toThrow(DomainError);

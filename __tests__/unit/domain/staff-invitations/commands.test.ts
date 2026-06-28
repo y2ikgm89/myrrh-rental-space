@@ -143,14 +143,14 @@ mock.module("@/shared/lib/constants", () => ({
 }));
 
 mock.module("@/shared/lib/serialize", () => ({
-  omitUndefined: <T extends Record<string, unknown>>(obj: T): Partial<T> => {
+  omitUndefined: (obj: Record<string, unknown>): Record<string, unknown> => {
     const result: Record<string, unknown> = {};
-    for (const key of Object.keys(obj)) {
+    for (const key in obj) {
       if (obj[key] !== undefined) {
         result[key] = obj[key];
       }
     }
-    return result as Partial<T>;
+    return result;
   },
 }));
 

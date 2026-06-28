@@ -4,20 +4,30 @@ import robots from "@/app/robots";
 describe("app/robots.ts", () => {
   const result = robots();
 
+  function getRules() {
+    const { rules } = result;
+    expect(rules).toBeDefined();
+    if (rules === undefined) {
+      throw new Error("robots rules must be defined");
+    }
+    return Array.isArray(rules) ? rules : [rules];
+  }
+
+  function toArray(value: string | string[] | undefined): string[] {
+    if (value === undefined) return [];
+    return Array.isArray(value) ? value : [value];
+  }
+
   test("rules is an array", () => {
     expect(Array.isArray(result.rules)).toBe(true);
   });
 
   test("wildcard rule allows root and blocks expected paths", () => {
-    const rules = result.rules as Array<{
-      userAgent: string | string[];
-      allow?: string | string[];
-      disallow?: string | string[];
-    }>;
+    const rules = getRules();
     const wildcard = rules.find((r) => r.userAgent === "*");
     expect(wildcard).toBeDefined();
     expect(wildcard?.allow).toBe("/");
-    const disallow = wildcard?.disallow as string[];
+    const disallow = toArray(wildcard?.disallow);
     expect(disallow).toContain("/admin/");
     expect(disallow).toContain("/api/");
     expect(disallow).toContain("/mypage/");
@@ -29,10 +39,8 @@ describe("app/robots.ts", () => {
   });
 
   test("does NOT block /_next/static or /_next/image or /static/", () => {
-    const rules = result.rules as Array<{ disallow?: string | string[] }>;
-    const allDisallows = rules.flatMap((r) =>
-      Array.isArray(r.disallow) ? r.disallow : r.disallow ? [r.disallow] : [],
-    );
+    const rules = getRules();
+    const allDisallows = rules.flatMap((r) => toArray(r.disallow));
     expect(allDisallows).not.toContain("/_next/");
     expect(allDisallows).not.toContain("/_next/static/");
     expect(allDisallows).not.toContain("/_next/image/");
@@ -40,15 +48,12 @@ describe("app/robots.ts", () => {
   });
 
   test("blocks AI training crawlers with current official UAs", () => {
-    const rules = result.rules as Array<{
-      userAgent: string | string[];
-      disallow?: string | string[];
-    }>;
+    const rules = getRules();
     const aiRule = rules.find(
       (r) => Array.isArray(r.userAgent) && r.userAgent.includes("GPTBot"),
     );
     expect(aiRule).toBeDefined();
-    const uas = aiRule?.userAgent as string[];
+    const uas = toArray(aiRule?.userAgent);
     expect(uas).toContain("ClaudeBot");
     expect(uas).toContain("Google-Extended");
     expect(uas).toContain("Applebot-Extended");
@@ -61,10 +66,8 @@ describe("app/robots.ts", () => {
   });
 
   test("does NOT include legacy or allow-listed UAs", () => {
-    const rules = result.rules as Array<{ userAgent: string | string[] }>;
-    const allUAs = rules.flatMap((r) =>
-      Array.isArray(r.userAgent) ? r.userAgent : [r.userAgent],
-    );
+    const rules = getRules();
+    const allUAs = rules.flatMap((r) => toArray(r.userAgent));
     expect(allUAs).not.toContain("anthropic-ai");
     expect(allUAs).not.toContain("Claude-Web");
     expect(allUAs).not.toContain("OAI-SearchBot");

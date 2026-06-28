@@ -11,6 +11,7 @@
  */
 
 import type { Instrumentation } from "next";
+import { isRecord } from "@/shared/lib/serialize";
 
 export async function register(): Promise<void> {
   if (process.env["NEXT_RUNTIME"] === "nodejs") {
@@ -72,8 +73,8 @@ export const onRequestError: Instrumentation.onRequestError = async (
     await import("@/shared/lib/errors/server");
 
   const digest =
-    typeof (error as { digest?: unknown }).digest === "string"
-      ? (error as { digest: string }).digest
+    isRecord(error) && typeof error["digest"] === "string"
+      ? error["digest"]
       : undefined;
 
   // proxy (createResponse) で `x-trace-id` / `x-span-id` を転写済み。

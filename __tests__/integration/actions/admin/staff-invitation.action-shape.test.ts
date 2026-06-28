@@ -121,10 +121,12 @@ describe("setupPassword (action shape)", () => {
   });
 
   test("無効な input は validation error (wrapper 経由しない)", async () => {
-    const r = await setupPassword({
-      token: "",
-      password: "x",
-    } as unknown as never);
+    const r = await Reflect.apply(setupPassword, undefined, [
+      {
+        token: "",
+        password: "x",
+      },
+    ]);
     expect(isMutationError(r)).toBe(true);
     expect(mockSetupPassword).not.toHaveBeenCalled();
   });
@@ -135,7 +137,7 @@ describe("setupPassword (action shape)", () => {
       token: "valid-token-token-token-1234567890",
       password,
       confirmPassword: password,
-    } as unknown as never);
+    });
     // setupPassword は wrapper を経由しない (未認証経路のため) — 直接 command 実行
     expect(mockSetupPassword).toHaveBeenCalledTimes(1);
     expect(r).toEqual({ userId: "user-1" });

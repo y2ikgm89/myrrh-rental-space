@@ -83,12 +83,10 @@ export async function previewTemplateAction(
   // 4. render
   try {
     const entry = getTemplate(validKey);
-    const fixture = entry.fixture as Record<string, unknown>;
-    const propsForRender: Record<string, unknown> = { ...fixture };
-    if (options?.useRealFooter) {
-      propsForRender["footer"] = await getEmailFooterData();
-    }
-    const html = await render(entry.component(propsForRender), {
+    const fixtureOverride = options?.useRealFooter
+      ? { footer: await getEmailFooterData() }
+      : undefined;
+    const html = await render(entry.renderPreview(fixtureOverride), {
       pretty: false,
     });
     return { html };

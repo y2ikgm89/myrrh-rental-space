@@ -211,10 +211,12 @@ describe("GalleryGrid", () => {
     });
 
     // hero + items = 2 件 → 2 カラム、2 枚描画
-    const images = container?.querySelectorAll("[data-testid='gallery-image']");
+    const images = container?.querySelectorAll<HTMLImageElement>(
+      "[data-testid='gallery-image']",
+    );
     expect(images?.length).toBe(2);
     // 先頭が hero
-    const first = images?.[0] as HTMLImageElement | undefined;
+    const first = images?.[0];
     expect(first?.src).toContain("hero.jpg");
   });
 

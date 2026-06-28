@@ -15,7 +15,10 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { useEffect, useEffectEvent } from "react";
 import { IconScissors } from "@tabler/icons-react";
-import { registerLexicalDecorator } from "./decorator-registry";
+import {
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }): ReactElement {
   const [editor] = useLexicalComposerContext();
@@ -84,4 +87,7 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }): ReactElement {
   );
 }
 
-registerLexicalDecorator("page-break", PageBreakComponent as never);
+registerLexicalDecorator("page-break", (props) => {
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+  return nodeKey === null ? null : <PageBreakComponent nodeKey={nodeKey} />;
+});

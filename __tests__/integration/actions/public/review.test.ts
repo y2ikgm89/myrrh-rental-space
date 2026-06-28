@@ -19,6 +19,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -168,12 +169,6 @@ function inputToFormData(input: ReviewInputShape): FormData {
   return fd;
 }
 
-type SubmissionLike = {
-  readonly status?: "success" | "error";
-  readonly initialValue?: unknown;
-  readonly error?: Record<string, string[] | null> | null;
-};
-
 // =============================================================================
 // テスト本体
 // =============================================================================
@@ -220,10 +215,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       // conform v1.19: `reply({ resetForm: true })` は `{ initialValue: null }`
       expect(result.initialValue).toBeNull();
@@ -264,14 +260,15 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({
           reservationId: VALID_RESERVATION_ID,
           rating: 5,
           turnstileToken: "test-turnstile-token",
         }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.initialValue).toBeNull();
     });
@@ -280,10 +277,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, rating: 1 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.initialValue).toBeNull();
     });
@@ -292,10 +290,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, rating: 5 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.initialValue).toBeNull();
     });
@@ -313,10 +312,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("リクエストが多すぎます");
@@ -344,10 +344,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, reservationId: "not-a-uuid" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["reservationId"]).toBeDefined();
@@ -357,10 +358,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, rating: 0 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["rating"]).toBeDefined();
@@ -370,10 +372,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, rating: 6 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["rating"]).toBeDefined();
@@ -383,10 +386,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, title: "あ".repeat(101) }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["title"]).toBeDefined();
@@ -396,10 +400,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData({ ...VALID_INPUT, comment: "あ".repeat(1001) }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["comment"]).toBeDefined();
@@ -425,10 +430,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("ログインが必要です");
@@ -451,10 +457,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("顧客情報が見つかりません");
@@ -470,10 +477,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("予約が見つかりません");
@@ -492,10 +500,11 @@ describe("submitReview", () => {
       const { submitReview } =
         await import("@/app/(public)/_shared/actions/review");
 
-      const result = (await submitReview(
+      const result = await submitReview(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe(

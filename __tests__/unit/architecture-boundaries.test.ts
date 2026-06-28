@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import { expectRecord } from "../helpers/type-assertions";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
@@ -29,6 +30,12 @@ const AUTH_ROUTE_FILE = join(
   "[...all]",
   "route.ts",
 );
+
+function expectRecordFieldArray(data: unknown, field: string): void {
+  expectRecord(data);
+  const value = data[field];
+  expect(Array.isArray(value)).toBe(true);
+}
 const CALENDAR_SYNC_CRON_ROUTE_FILE = join(
   SRC_ROOT,
   "app",
@@ -1006,18 +1013,17 @@ describe("architecture boundaries", () => {
   });
 
   test("type-check は clean checkout 前提で増分 build state に依存しない", () => {
-    const packageJson = JSON.parse(readFileSync(PACKAGE_JSON_FILE, "utf8")) as {
-      scripts?: Record<string, string>;
-    };
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
 
-    expect(packageJson.scripts?.["type-check"]).toContain(
-      "--incremental false",
-    );
-    expect(packageJson.scripts?.["type-check"]).toContain(
-      "bun run db:generate",
-    );
-    expect(packageJson.scripts?.["build"]).toContain("bun run db:generate");
-    expect(packageJson.scripts?.["test:unit"]).toContain("bun run db:generate");
+    expect(scripts["type-check"]).toContain("--incremental false");
+    expect(scripts["type-check"]).toContain("bun run db:generate");
+    expect(scripts["build"]).toContain("bun run db:generate");
+    expect(scripts["test:unit"]).toContain("bun run db:generate");
   });
 
   test("Cloud Run deploy は Server Actions encryption key を runtime にも注入する", () => {
@@ -1514,7 +1520,8 @@ describe("architecture boundaries", () => {
       const out: string[] = [];
       const stack = [root];
       while (stack.length > 0) {
-        const dir = stack.pop()!;
+        const dir = stack.pop();
+        if (dir === undefined) break;
         for (const entry of readdirSync(dir, { withFileTypes: true })) {
           const path = join(dir, entry.name);
           if (entry.isDirectory()) {
@@ -1792,8 +1799,7 @@ describe("architecture boundaries", () => {
       const empty = validateSectionConfig(type, {});
       expect(empty.success).toBe(true);
       if (empty.success) {
-        const value = (empty.data as Record<string, unknown>)[field];
-        expect(Array.isArray(value)).toBe(true);
+        expectRecordFieldArray(empty.data, field);
       }
       // string 入力は配列要求で fail
       const stringInput = validateSectionConfig(type, {
@@ -1845,8 +1851,7 @@ describe("architecture boundaries", () => {
       const empty = validateSectionConfig(type, {});
       expect(empty.success).toBe(true);
       if (empty.success) {
-        const value = (empty.data as Record<string, unknown>)[field];
-        expect(Array.isArray(value)).toBe(true);
+        expectRecordFieldArray(empty.data, field);
       }
       // string 入力は配列要求で fail
       const stringInput = validateSectionConfig(type, {
@@ -1905,6 +1910,52 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("unknown object の Record narrowing は isRecord helper 経由（as Record<string, unknown> 直書き 0 件）", () => {
+    // TypeScript 公式の narrowing 方針に合わせ、`typeof value === "object"` 後の
+    // `as Record<string, unknown>` は散らさず type guard に集約する。
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+Record<string,\s*unknown>/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("unknown/error object の structural property cast は isRecord helper 経由（as { ... } 直書き 0 件）", () => {
+    // error / JSON payload など unknown 境界のプロパティ読み取りは
+    // `as { code?: ... }` ではなく isRecord + 段階的 narrowing で行う。
+    const allowedFiles = [
+      join(SRC_ROOT, "shared", "lib", "conform", "typed-input-control.ts"),
+    ];
+    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
+      (file) => !allowedFiles.includes(file),
+    );
+    const offenders = collectNonCommentOffenders(sourceFiles, /\bas\s+\{/u);
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("call-site の as never は残さない（動的 registry 境界は helper に集約）", () => {
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+never\b/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("literal union / enum / CSSProperties の call-site cast は型ガードか明示型で置き換える", () => {
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+(?:TermsScope|TemplateKey|readonly string\[\]|string\[\]|CSSProperties|\(typeof TERMS_TYPE_VALUES\)\[number\])/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("廃止済の型安全 ledger / assertion-bans を再導入しない（方針は .claude/rules/type-safety.md に集約）", () => {
     // 2026-05-18 に旧 .claude/rules/type-safety/{documented-exceptions-ledger,assertion-bans}.md を廃止。
     // SDK / Prisma JSON / Route cast の構造解消 + RHF 完全削除に伴い、型アサーション方針は
@@ -1945,8 +1996,7 @@ describe("architecture boundaries", () => {
       const empty = validateSectionConfig(type, {});
       expect(empty.success).toBe(true);
       if (empty.success) {
-        const value = (empty.data as Record<string, unknown>)[field];
-        expect(Array.isArray(value)).toBe(true);
+        expectRecordFieldArray(empty.data, field);
       }
       const stringInput = validateSectionConfig(type, {
         [field]: "string-not-array",
@@ -1959,8 +2009,7 @@ describe("architecture boundaries", () => {
       const valid = validateSectionConfig("page-hero", { variant });
       expect(valid.success).toBe(true);
       if (valid.success) {
-        const value = (valid.data as Record<string, unknown>)["description"];
-        expect(Array.isArray(value)).toBe(true);
+        expectRecordFieldArray(valid.data, "description");
       }
       const stringInput = validateSectionConfig("page-hero", {
         variant,
@@ -2102,10 +2151,32 @@ type SourceEntry = { source: string; headers: HeaderEntry[] };
 
 async function getHeaders(): Promise<SourceEntry[]> {
   // next.config.ts exports default the config object; headers() is an async fn.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cfg = nextConfig as any;
-  const headers = await (cfg.headers?.() ?? Promise.resolve([]));
-  return headers as SourceEntry[];
+  return (await nextConfig.headers?.()) ?? [];
+}
+
+function expectSourceEntry(
+  headers: SourceEntry[],
+  source: string,
+): SourceEntry {
+  const entry = headers.find((h) => h.source === source);
+  expect(entry, source).toBeDefined();
+  if (entry === undefined) {
+    throw new Error(`${source} header entry must exist`);
+  }
+  return entry;
+}
+
+function expectHeader(
+  entry: SourceEntry,
+  key: string,
+  message?: string,
+): HeaderEntry {
+  const header = entry.headers.find((h) => h.key === key);
+  expect(header, message).toBeDefined();
+  if (header === undefined) {
+    throw new Error(message ?? `${entry.source} must have ${key}`);
+  }
+  return header;
 }
 
 describe("next.config Cache-Tag emission contract", () => {
@@ -2127,11 +2198,13 @@ describe("next.config Cache-Tag emission contract", () => {
       "/terms/:path*",
     ];
     for (const source of publicCollections) {
-      const entry = headers.find((h) => h.source === source);
-      expect(entry, source).toBeDefined();
-      const tagHeader = entry!.headers.find((h) => h.key === "Cache-Tag");
-      expect(tagHeader, `${source} must have Cache-Tag`).toBeDefined();
-      const tags = tagHeader!.value.split(",");
+      const entry = expectSourceEntry(headers, source);
+      const tagHeader = expectHeader(
+        entry,
+        "Cache-Tag",
+        `${source} must have Cache-Tag`,
+      );
+      const tags = tagHeader.value.split(",");
       for (const siteWide of SITE_WIDE_CDN_TAGS) {
         expect(tags, `${source} missing site-wide tag ${siteWide}`).toContain(
           siteWide,
@@ -2143,11 +2216,9 @@ describe("next.config Cache-Tag emission contract", () => {
   test("home (/) and /about emit home-marketing-v1 in their Cache-Tag value", async () => {
     const headers = await getHeaders();
     for (const source of ["/", "/about"]) {
-      const entry = headers.find((h) => h.source === source);
-      expect(entry, source).toBeDefined();
-      const tagHeader = entry!.headers.find((h) => h.key === "Cache-Tag");
-      expect(tagHeader).toBeDefined();
-      expect(tagHeader!.value.split(",")).toContain("home-marketing-v1");
+      const entry = expectSourceEntry(headers, source);
+      const tagHeader = expectHeader(entry, "Cache-Tag");
+      expect(tagHeader.value.split(",")).toContain("home-marketing-v1");
     }
   });
 
@@ -2155,37 +2226,34 @@ describe("next.config Cache-Tag emission contract", () => {
     const headers = await getHeaders();
     for (const prefix of PRIVATE_NO_TAG_PREFIXES) {
       const source = `${prefix}/:path*`;
-      const entry = headers.find((h) => h.source === source);
-      expect(entry, source).toBeDefined();
-      const tagHeader = entry!.headers.find((h) => h.key === "Cache-Tag");
+      const entry = expectSourceEntry(headers, source);
+      const tagHeader = entry.headers.find((h) => h.key === "Cache-Tag");
       expect(
         tagHeader,
         `${source} must NOT have Cache-Tag (PII path)`,
       ).toBeUndefined();
-      const ccHeader = entry!.headers.find((h) => h.key === "Cache-Control");
+      const ccHeader = entry.headers.find((h) => h.key === "Cache-Control");
       expect(ccHeader?.value).toBe("private, no-store");
     }
   });
 
   test("blanket /:path* emits Cache-Control only (no Cache-Tag) so private match-wins inherits no tag", async () => {
     const headers = await getHeaders();
-    const blanket = headers.find((h) => h.source === "/:path*");
-    expect(blanket).toBeDefined();
-    const tag = blanket!.headers.find((h) => h.key === "Cache-Tag");
+    const blanket = expectSourceEntry(headers, "/:path*");
+    const tag = blanket.headers.find((h) => h.key === "Cache-Tag");
     expect(tag).toBeUndefined();
-    const cc = blanket!.headers.find((h) => h.key === "Cache-Control");
+    const cc = blanket.headers.find((h) => h.key === "Cache-Control");
     // canonical: public, max-age=0, must-revalidate, s-maxage=..., stale-while-revalidate=...
     expect(cc?.value).toMatch(/^public, max-age=0, must-revalidate, s-maxage=/);
   });
 
   test("/sitemap.xml emits SITEMAP Cache-Tag only (purge target for site-wide co-purge)", async () => {
     const headers = await getHeaders();
-    const entry = headers.find((h) => h.source === "/sitemap.xml");
-    expect(entry, "/sitemap.xml entry must exist").toBeDefined();
-    const tag = entry!.headers.find((h) => h.key === "Cache-Tag");
+    const entry = expectSourceEntry(headers, "/sitemap.xml");
+    const tag = entry.headers.find((h) => h.key === "Cache-Tag");
     expect(tag?.value).toBe("sitemap-v1");
     // Cache-Control inherited from blanket public (no per-source override).
-    const cc = entry!.headers.find((h) => h.key === "Cache-Control");
+    const cc = entry.headers.find((h) => h.key === "Cache-Control");
     expect(cc).toBeUndefined();
   });
 

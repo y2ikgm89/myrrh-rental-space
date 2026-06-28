@@ -16,6 +16,8 @@ import {
   spyOn,
 } from "bun:test";
 
+const originalSetTimeout = globalThis.setTimeout;
+
 // =============================================================================
 // Mock dependencies (cloudflare.ts が import するモジュール)
 // =============================================================================
@@ -81,11 +83,43 @@ function jsonResponse(
 
 /**
  * `typeof fetch` は `preconnect` メソッドを持つため、`async () => Response` だけでは
- * 型不一致になる。test の mock 実装を `typeof fetch` 互換にする境界キャスト。
+ * 型不一致になる。test の mock 実装にも同じ static property を持たせる。
  */
-function asFetchImpl(impl: () => Promise<Response>): typeof globalThis.fetch {
-  return impl as unknown as typeof globalThis.fetch;
+function createFetchImpl(
+  impl: () => Promise<Response>,
+): typeof globalThis.fetch {
+  return Object.assign(
+    (_input: Parameters<typeof globalThis.fetch>[0]) => impl(),
+    {
+      preconnect: globalThis.fetch.preconnect,
+    },
+  );
 }
+
+function runImmediateSetTimeout<TArgs extends unknown[]>(
+  handler: (...args: TArgs) => void,
+  _timeout?: Parameters<typeof originalSetTimeout>[1],
+  ...args: TArgs
+): ReturnType<typeof originalSetTimeout>;
+function runImmediateSetTimeout(
+  handler: TimerHandler,
+  _timeout?: Parameters<typeof originalSetTimeout>[1],
+  ...args: unknown[]
+): number;
+function runImmediateSetTimeout(
+  handler: TimerHandler,
+  _timeout?: Parameters<typeof originalSetTimeout>[1],
+  ...args: unknown[]
+): number | ReturnType<typeof originalSetTimeout> {
+  if (typeof handler === "function") {
+    Reflect.apply(handler, undefined, args);
+  }
+  return originalSetTimeout(() => {}, 0);
+}
+
+const immediateSetTimeout = Object.assign(runImmediateSetTimeout, {
+  __promisify__: originalSetTimeout.__promisify__,
+});
 
 // =============================================================================
 // Tests
@@ -101,12 +135,9 @@ describe("purgeCloudflareCache - retry", () => {
     mockServerEnv.CLOUDFLARE_API_TOKEN = "test-token";
 
     // backoff の sleep を即時実行（test 高速化）
-    setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
-      fn: () => void,
-    ) => {
-      fn();
-      return 0;
-    }) as unknown as typeof globalThis.setTimeout);
+    setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(
+      immediateSetTimeout,
+    );
 
     fetchSpy = spyOn(globalThis, "fetch");
   });
@@ -126,7 +157,7 @@ describe("purgeCloudflareCache - retry", () => {
   test("429 (rate limit) で retry されて最終的に成功", async () => {
     let calls = 0;
     fetchSpy.mockImplementation(
-      asFetchImpl(async () => {
+      createFetchImpl(async () => {
         calls++;
         if (calls < 2) return jsonResponse({}, { status: 429 });
         return jsonResponse({ success: true });
@@ -140,7 +171,7 @@ describe("purgeCloudflareCache - retry", () => {
   test("503 (service unavailable) で retry されて最終的に成功", async () => {
     let calls = 0;
     fetchSpy.mockImplementation(
-      asFetchImpl(async () => {
+      createFetchImpl(async () => {
         calls++;
         if (calls < 3) return jsonResponse({}, { status: 503 });
         return jsonResponse({ success: true });
@@ -179,7 +210,7 @@ describe("purgeCloudflareCache - retry", () => {
   test("Retry-After ヘッダーがあると setTimeout に retry-after の値が渡される", async () => {
     let calls = 0;
     fetchSpy.mockImplementation(
-      asFetchImpl(async () => {
+      createFetchImpl(async () => {
         calls++;
         if (calls < 2) {
           // Retry-After: 2 seconds
@@ -204,7 +235,7 @@ describe("purgeCloudflareCache - retry", () => {
   test("不正な Retry-After ヘッダーは無視して exponential backoff にフォールバック", async () => {
     let calls = 0;
     fetchSpy.mockImplementation(
-      asFetchImpl(async () => {
+      createFetchImpl(async () => {
         calls++;
         if (calls < 2) {
           // 不正な Retry-After（数値以外）

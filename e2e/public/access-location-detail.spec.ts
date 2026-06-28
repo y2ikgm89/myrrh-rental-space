@@ -7,6 +7,14 @@ import { test, expect } from "@playwright/test";
  * LocalBusiness JSON-LD の存在と 404 フォールバックを検証する。
  */
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 test.describe("/access/[locationSlug] 拠点詳細ページ", () => {
   test("LocalBusiness JSON-LD が出力される", async ({ page }) => {
     await page.goto("/access/honkan");
@@ -31,15 +39,13 @@ test.describe("/access/[locationSlug] 拠点詳細ページ", () => {
       } catch {
         return false;
       }
-      if (typeof parsed !== "object" || parsed === null) return false;
-      const obj = parsed as Record<string, unknown>;
+      if (!isRecord(parsed)) return false;
+      const obj = parsed;
       // @graph 形式の場合
-      if (Array.isArray(obj["@graph"])) {
-        return (obj["@graph"] as unknown[]).some(
-          (item) =>
-            typeof item === "object" &&
-            item !== null &&
-            (item as Record<string, unknown>)["@type"] === "LocalBusiness",
+      const graph = obj["@graph"];
+      if (isUnknownArray(graph)) {
+        return graph.some(
+          (item) => isRecord(item) && item["@type"] === "LocalBusiness",
         );
       }
       // 直接形式の場合

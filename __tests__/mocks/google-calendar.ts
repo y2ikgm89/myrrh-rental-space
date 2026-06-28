@@ -38,6 +38,10 @@ export interface MockCalendarInsertResult {
   data: MockCalendarEvent;
 }
 
+export interface MockCalendarListResult {
+  data: { items: MockCalendarEvent[] };
+}
+
 // =============================================================================
 // Mock Implementation
 // =============================================================================
@@ -121,10 +125,10 @@ export const mockEventsDelete = mock<
 export const mockEventsList = mock<
   (
     params: calendar_v3.Params$Resource$Events$List,
-  ) => Promise<{ data: calendar_v3.Schema$Events }>
+  ) => Promise<MockCalendarListResult>
 >(() => {
   return Promise.resolve({
-    data: { items: [...createdEvents] } as calendar_v3.Schema$Events,
+    data: { items: [...createdEvents] },
   });
 });
 

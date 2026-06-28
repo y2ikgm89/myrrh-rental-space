@@ -3,12 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useEffectEvent, useState } from "react";
-import {
-  getFormProps,
-  useForm,
-  type FieldMetadata,
-  type FormMetadata,
-} from "@conform-to/react";
+import { getFormProps, useForm, type FieldMetadata } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { IconHelpCircle, IconPhotoPlus, IconX } from "@tabler/icons-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
@@ -42,7 +37,6 @@ import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField"
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import { createSpaceAction, updateSpaceAction } from "@/admin/actions/space";
 import { spaceFormSchema } from "@/admin/lib/validations/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
@@ -65,10 +59,6 @@ import { formatCurrency, getTaxRateLabel } from "@/shared/lib/pricing/format";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
-import {
-  asTypedField,
-  asConformFieldset,
-} from "@/shared/lib/conform/typed-input-control";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
 import {
@@ -1012,10 +1002,8 @@ export function SpaceEditForm({
                   並び順をドラッグで変更できます。最初の数枚は一覧カードのカルーセルに表示されます。
                 </p>
                 <GalleryField
-                  field={asTypedField<GalleryItem[]>(fields.gallery)}
-                  form={asConformFieldset<
-                    FormMetadata<Record<string, unknown>>
-                  >(form)}
+                  field={fields.gallery}
+                  form={form}
                   defaultUsage="SPACE"
                   max={20}
                   disabled={isPending}

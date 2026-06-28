@@ -408,9 +408,13 @@ export function extractFirstFromCommaList(
  * ```
  */
 export function keysOf<T extends object>(obj: T): (keyof T)[] {
-  // Object.keys() は string[] を返す（TypeScript の構造的型付けの制約）。
-  // keyof T も実行時には文字列キーのため、この as は型安全。
-  return Object.keys(obj) as (keyof T)[];
+  const keys: (keyof T)[] = [];
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      keys.push(key);
+    }
+  }
+  return keys;
 }
 
 /**
@@ -421,9 +425,11 @@ export function keysOf<T extends object>(obj: T): (keyof T)[] {
  * @returns [key, value] ペアの配列（型安全）
  */
 export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
-  // Object.entries() は [string, T[keyof T]][] を返す（TypeScript の構造的型付けの制約）。
-  // keyof T も実行時には文字列キーのため、この as は型安全。
-  return Object.entries(obj) as [keyof T, T[keyof T]][];
+  const entries: [keyof T, T[keyof T]][] = [];
+  for (const key of keysOf(obj)) {
+    entries.push([key, obj[key]]);
+  }
+  return entries;
 }
 
 /**
@@ -474,6 +480,12 @@ export type OmitUndefined<T> = {
   >;
 };
 
+function hasNoUndefinedPropertyValues<T extends object>(
+  value: Partial<T> | OmitUndefined<T>,
+): value is OmitUndefined<T> {
+  return Object.values(value).every((entry) => entry !== undefined);
+}
+
 /**
  * オブジェクトから `undefined` 値のプロパティを実行時に除去
  *
@@ -495,9 +507,19 @@ export type OmitUndefined<T> = {
  * ```
  */
 export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined),
-  ) as OmitUndefined<T>;
+  const result: Partial<T> = {};
+  for (const key of keysOf(obj)) {
+    const value = obj[key];
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+
+  if (hasNoUndefinedPropertyValues(result)) {
+    return result;
+  }
+
+  throw new Error("omitUndefined produced an invalid object");
 }
 
 // =============================================================================

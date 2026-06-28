@@ -9,7 +9,14 @@ import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 // Types (moved from commands.ts)
 // ---------------------------------------------------------------------------
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export interface ResolveCustomerTx {
+  readonly customer: {
+    findUnique(args: object): Promise<{ id: string } | null>;
+    findFirst(args: object): Promise<{ id: string } | null>;
+    create(args: object): Promise<{ id: string }>;
+    update(args: object): Promise<{ id: string }>;
+  };
+}
 
 export type CustomerData = {
   lastName: string;
@@ -31,7 +38,7 @@ export type CustomerData = {
 
 export async function resolveOrCreateCustomer(
   data: CustomerData,
-  tx?: Tx,
+  tx?: ResolveCustomerTx,
 ): Promise<string> {
   const db = tx ?? prisma;
   const emailCanonical = normalizeEmailForIdentity(data.email);

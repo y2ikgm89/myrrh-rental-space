@@ -31,7 +31,8 @@ mock.module("@/shared/db/json", () => ({
   parsePrismaInputJson: mock((value: string, _errorMessage: string) => {
     if (!value) return undefined;
     try {
-      return JSON.parse(value) as unknown;
+      const parsed: unknown = JSON.parse(value);
+      return parsed;
     } catch {
       throw new Error("本文データが不正です");
     }
@@ -52,11 +53,17 @@ mock.module("@/shared/lib/slug-validation", () => ({
 }));
 
 mock.module("@/shared/lib/serialize", () => ({
-  omitUndefined: mock(<T extends Record<string, unknown>>(obj: T): T => {
-    return Object.fromEntries(
-      Object.entries(obj).filter(([, v]) => v !== undefined),
-    ) as T;
-  }),
+  omitUndefined: mock(
+    (obj: Record<string, unknown>): Record<string, unknown> => {
+      const result: Record<string, unknown> = {};
+      for (const key in obj) {
+        if (obj[key] !== undefined) {
+          result[key] = obj[key];
+        }
+      }
+      return result;
+    },
+  ),
 }));
 
 import {

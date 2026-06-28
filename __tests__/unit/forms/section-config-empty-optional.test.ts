@@ -33,12 +33,13 @@ const PAGE_HERO_VARIANTS = [
   "minimal",
   "media",
 ] as const;
+const PAGE_HERO_TYPE: SectionTypeKey = "page-hero";
 
 const definitions = getAllSectionDefinitions();
 
 describe("section configSchema: 空欄/デフォルト保存（conform 整合）", () => {
   for (const def of definitions) {
-    if (def.type === ("page-hero" as SectionTypeKey)) continue;
+    if (def.type === PAGE_HERO_TYPE) continue;
     test(`${def.type}: 全フィールド空でも保存できる`, () => {
       const submission = parseWithZod(new FormData(), {
         schema: def.configSchema,

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectRecord } from "../../../helpers/type-assertions";
 
 // ---------------------------------------------------------------------------
 // Enums（Prisma import チェーンを避けるために再宣言）
@@ -170,8 +171,11 @@ describe("bulkPublishEventsCommand", () => {
       expect(calls.length).toBe(1);
       const firstCall = calls[0];
       expect(firstCall).toBeDefined();
-      const arg = firstCall?.[0] as { data: { publishedAt: Date | null } };
-      expect(arg.data.publishedAt).toBeInstanceOf(Date);
+      const arg = firstCall?.[0];
+      expectRecord(arg);
+      const data = arg["data"];
+      expectRecord(data);
+      expect(data["publishedAt"]).toBeInstanceOf(Date);
     });
   });
 
@@ -264,10 +268,11 @@ describe("bulkSoftDeleteEventsCommand", () => {
       const calls = mockEventUpdateMany.mock.calls;
       const firstCall = calls[0];
       expect(firstCall).toBeDefined();
-      const arg = firstCall?.[0] as {
-        data: { deletedAt: Date; deletedById: string };
-      };
-      expect(arg.data.deletedAt).toBeInstanceOf(Date);
+      const arg = firstCall?.[0];
+      expectRecord(arg);
+      const data = arg["data"];
+      expectRecord(data);
+      expect(data["deletedAt"]).toBeInstanceOf(Date);
     });
 
     test("既に削除済みのイベントはフィルタされる", async () => {

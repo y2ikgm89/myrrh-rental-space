@@ -90,6 +90,8 @@ export const isMonthlyClosureWeek = createTypeGuard(
 );
 /** businessHours の曜日キー（monthlyClosures を除外した weekday 限定キー） */
 export type WeekdayKey = (typeof WEEKDAY_VALUES)[number];
+/** WeekdayKey の型ガード（URL/Form/Select 由来の string → weekday narrow SSoT）。 */
+export const isWeekdayKey = createTypeGuard(WEEKDAY_VALUES);
 
 /**
  * unknown値をstring[]に安全に変換

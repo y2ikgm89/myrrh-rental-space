@@ -4,7 +4,10 @@ import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
 import type { NodeKey } from "lexical";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
-import { registerLexicalDecorator } from "./decorator-registry";
+import {
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 function FigmaComponent({
   embedUrl,
@@ -42,4 +45,14 @@ function FigmaComponent({
   );
 }
 
-registerLexicalDecorator("figma", FigmaComponent as never);
+registerLexicalDecorator("figma", (props) => {
+  const embedUrl = getDecoratorStringProp(props, "embedUrl");
+  const label = getDecoratorStringProp(props, "label");
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+
+  if (embedUrl === null || label === null || nodeKey === null) {
+    return null;
+  }
+
+  return <FigmaComponent embedUrl={embedUrl} label={label} nodeKey={nodeKey} />;
+});

@@ -11,16 +11,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@conform-to/react";
-import {
-  asConformDefaultValue,
-  asConformSubmissionValue,
-} from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
+import type { z } from "zod";
 import { toast } from "sonner";
-import {
-  newsSettingsFormSchema,
-  type NewsSettingsFormData,
-} from "@/admin/lib/validations/news";
+import { newsSettingsFormSchema } from "@/admin/lib/validations/news";
 import {
   createNews,
   updateNewsBody,
@@ -43,8 +37,6 @@ import {
   toFormContentWidth,
   toFormNumberString,
   toNullableString,
-  toSubmitContentWidth,
-  toSubmitNumber,
 } from "./shared";
 
 type UseNewsEditorOptions = {
@@ -52,15 +44,29 @@ type UseNewsEditorOptions = {
   mode: "create" | "edit";
 };
 
-function toSettingsFormData(data?: NewsData): NewsSettingsFormData {
+export type NewsSettingsFormState = {
+  slug: string;
+  title: string;
+  isPublished: boolean;
+  publishedAt: string;
+  contentWidth: string;
+  contentWidthCustom: string;
+  metaDescription: string;
+  metaKeywords: string;
+  ogpTitle: string;
+  ogpDescription: string;
+  ogpImageUrl: string;
+};
+
+function toSettingsFormData(data?: NewsData): NewsSettingsFormState {
   if (!data) {
     return {
       slug: "",
       title: "",
       isPublished: false,
       publishedAt: "",
-      contentWidth: null,
-      contentWidthCustom: null,
+      contentWidth: "",
+      contentWidthCustom: "",
       metaDescription: "",
       metaKeywords: "",
       ogpTitle: "",
@@ -84,23 +90,15 @@ function toSettingsFormData(data?: NewsData): NewsSettingsFormData {
   };
 }
 
-function toSettingsSubmitPayload(formData: NewsSettingsFormData) {
+type ParsedNewsSettingsFormData = z.output<typeof newsSettingsFormSchema>;
+
+function toSettingsSubmitPayload(formData: ParsedNewsSettingsFormData) {
   return {
     slug: formData.slug,
     title: formData.title,
     isPublished: Boolean(formData.isPublished),
-    contentWidth: toSubmitContentWidth(
-      typeof formData.contentWidth === "string"
-        ? formData.contentWidth
-        : undefined,
-    ),
-    contentWidthCustom: toSubmitNumber(
-      typeof formData.contentWidthCustom === "string"
-        ? formData.contentWidthCustom
-        : formData.contentWidthCustom != null
-          ? String(formData.contentWidthCustom)
-          : undefined,
-    ),
+    contentWidth: formData.contentWidth ?? null,
+    contentWidthCustom: formData.contentWidthCustom ?? null,
     metaDescription: toNullableString(formData.metaDescription),
     metaKeywords: toNullableString(formData.metaKeywords),
     ogpTitle: toNullableString(formData.ogpTitle),
@@ -129,12 +127,13 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
   // 設定 — conform useForm
   // conform generic invariance — typed-input-control SSoT helper 経由（方針: .claude/rules/type-safety.md）
-  const [settingsForm, settingsFields] = useForm<NewsSettingsFormData>({
+  const [settingsForm, settingsFields] = useForm<
+    NewsSettingsFormState,
+    ParsedNewsSettingsFormData
+  >({
     id: "news-settings-form",
     constraint: getZodConstraint(newsSettingsFormSchema),
-    defaultValue: asConformDefaultValue<NewsSettingsFormData>(
-      toSettingsFormData(news),
-    ),
+    defaultValue: toSettingsFormData(news),
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: newsSettingsFormSchema });
     },
@@ -184,7 +183,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     });
   };
 
-  const validateSettings = (): NewsSettingsFormData | null => {
+  const validateSettings = (): ParsedNewsSettingsFormData | null => {
     const formData = new FormData();
     for (const [key, field] of Object.entries(settingsFields)) {
       const fieldValue = field.value;
@@ -203,7 +202,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       toast.error("入力内容に誤りがあります");
       return null;
     }
-    return asConformSubmissionValue<NewsSettingsFormData>(submission.value);
+    return submission.value;
   };
 
   const onSubmitSettings = () => {
@@ -235,7 +234,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
   // 「保存して作成」と「未保存プレビュー (auto-draft)」の両経路が共有する。
   const createDraftNews = async (
-    settingsData: NewsSettingsFormData,
+    settingsData: ParsedNewsSettingsFormData,
   ): Promise<string | null> => {
     try {
       const result = await createNews({

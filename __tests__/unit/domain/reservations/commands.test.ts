@@ -108,10 +108,13 @@ const mockCustomerUpdate = mock<() => Promise<unknown>>(() =>
 const mockTransaction = mock<
   (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
 >((fn: (tx: unknown) => Promise<unknown>) => fn(txClient));
+const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
+  Promise.resolve(null),
+);
 
 const txClient = {
   reservation: {
-    findFirst: mock<() => Promise<null>>(() => Promise.resolve(null)),
+    findFirst: mockTxReservationFindFirst,
     create: mockReservationCreate,
     update: mockReservationUpdate,
   },
@@ -225,7 +228,7 @@ function resetAllMocks() {
   mockTransaction.mockClear();
   mockBlockedDateFindFirst.mockClear();
   mockBlockedDateFindFirst.mockResolvedValue(null);
-  (txClient.reservation.findFirst as ReturnType<typeof mock>).mockClear();
+  mockTxReservationFindFirst.mockClear();
 
   // Reset to default implementations
   mockSettingsFindUnique.mockImplementation(() =>
@@ -279,9 +282,7 @@ function resetAllMocks() {
   mockTransaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) =>
     fn(txClient),
   );
-  (
-    txClient.reservation.findFirst as ReturnType<typeof mock>
-  ).mockImplementation(() => Promise.resolve(null));
+  mockTxReservationFindFirst.mockImplementation(() => Promise.resolve(null));
 }
 
 // ==========================================================================

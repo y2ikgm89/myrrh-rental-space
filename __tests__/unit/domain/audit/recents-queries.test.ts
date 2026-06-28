@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import type { Role } from "@/shared/lib/validations/enums/prisma-types";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Mocks (must precede module under test import — TDZ)
@@ -40,7 +40,7 @@ mock.module("@/shared/lib/admin-permissions", () => ({
 const { getRecentAuditedResources } =
   await import("@/shared/domain/audit/recents-queries");
 
-const ADMIN_ROLE = "ADMIN" as Role;
+const ADMIN_ROLE = Role.ADMIN;
 const USER_ID = "user-1";
 
 function makeLog(

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { isRecord } from "../../../../helpers/type-assertions";
 
 // ---------------------------------------------------------------------------
 // 1. モック関数定義（TDZ 回避のため import より前）
@@ -93,7 +94,7 @@ describe("resolveOrCreateCustomer", () => {
   test("新規メール + ゲスト → 新規作成（userId = null）", async () => {
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("new-customer-id");
@@ -119,7 +120,7 @@ describe("resolveOrCreateCustomer", () => {
   test("新規メール + ログイン → 新規作成（userId = user.id）", async () => {
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA, userId: "user-123" },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("new-customer-id");
@@ -143,7 +144,7 @@ describe("resolveOrCreateCustomer", () => {
 
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("existing-unlinked-id");
@@ -161,8 +162,8 @@ describe("resolveOrCreateCustomer", () => {
   // -----------------------------------------------------------------------
   test("既存メール + 未リンク + ログイン → ゲスト顧客を会員化せずログインユーザー用に新規作成", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
-      const where = args["where"] as Record<string, unknown> | undefined;
-      if (where?.["userId"]) {
+      const where = args["where"];
+      if (isRecord(where) && where["userId"]) {
         return Promise.resolve(null);
       }
       return Promise.resolve(null);
@@ -170,7 +171,7 @@ describe("resolveOrCreateCustomer", () => {
 
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA, userId: "user-456" },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("new-customer-id");
@@ -193,19 +194,19 @@ describe("resolveOrCreateCustomer", () => {
   // -----------------------------------------------------------------------
   test("既存メール + リンク済み + ゲスト → 既存会員には紐づけずゲスト顧客を新規作成", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
-      const where = args["where"] as Record<string, unknown> | undefined;
-      if (where?.["email"]) {
+      const where = args["where"];
+      if (isRecord(where) && where["email"]) {
         return Promise.resolve({
           id: "linked-customer-id",
           userId: "existing-user-999",
-        } as { id: string });
+        });
       }
       return Promise.resolve(null);
     });
 
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("new-customer-id");
@@ -226,19 +227,19 @@ describe("resolveOrCreateCustomer", () => {
   // -----------------------------------------------------------------------
   test("既存メール + リンク済み + 同一ユーザー → Step 1 で解決、変更なし", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
-      const where = args["where"] as Record<string, unknown> | undefined;
-      if (where?.["userId"] === "user-same") {
+      const where = args["where"];
+      if (isRecord(where) && where["userId"] === "user-same") {
         // Step 1: userId で検索 → 見つかる
         return Promise.resolve({
           id: "linked-customer-id",
-        } as { id: string });
+        });
       }
       return Promise.resolve(null);
     });
 
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA, userId: "user-same" },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("linked-customer-id");
@@ -251,24 +252,24 @@ describe("resolveOrCreateCustomer", () => {
   // -----------------------------------------------------------------------
   test("既存メール + リンク済み + 異なるユーザー → メールでは紐づけずログインユーザー用に新規作成", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
-      const where = args["where"] as Record<string, unknown> | undefined;
-      if (where?.["userId"] === "user-different") {
+      const where = args["where"];
+      if (isRecord(where) && where["userId"] === "user-different") {
         // Step 1: userId で検索 → 見つからない（別の顧客にリンクされている）
         return Promise.resolve(null);
       }
-      if (where?.["email"]) {
+      if (isRecord(where) && where["email"]) {
         // Step 2: email で検索 → リンク済み顧客（別ユーザー）
         return Promise.resolve({
           id: "linked-to-other-customer-id",
           userId: "user-other",
-        } as { id: string });
+        });
       }
       return Promise.resolve(null);
     });
 
     const result = await resolveOrCreateCustomer(
       { ...BASE_CUSTOMER_DATA, userId: "user-different" },
-      mockTx as never,
+      mockTx,
     );
 
     expect(result).toBe("new-customer-id");

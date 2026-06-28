@@ -79,6 +79,7 @@ const VALID_BUSINESS_HOURS = {
   },
   sunday: { isOpen: false, slots: [] },
 };
+const VALID_AMENITIES: Record<string, boolean> = { wifi: true, parking: true };
 
 const VALID_FORM_DATA = {
   slug: "shibuya-space",
@@ -87,7 +88,7 @@ const VALID_FORM_DATA = {
   address: "東京都渋谷区1-1-1",
   accessLines: [{ value: "渋谷駅から徒歩5分" }],
   parkingInfo: "近隣コインパーキング",
-  amenities: { wifi: true, parking: true } as Record<string, boolean>,
+  amenities: VALID_AMENITIES,
   imageUrl: "https://example.com/main.jpg",
   imageUrls: [
     { url: "https://example.com/image1.jpg" },

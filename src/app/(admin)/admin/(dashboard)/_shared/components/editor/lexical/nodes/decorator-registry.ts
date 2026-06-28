@@ -6,7 +6,7 @@
  * createElement する。未登録（server / RSC）では null → exportDOM が使われる。
  */
 
-import { createElement, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 export type LexicalDecoratorComponent = (
   props: Record<string, unknown>,
@@ -29,10 +29,26 @@ export function renderLexicalDecorator(
   if (Component === undefined) {
     return null;
   }
-  return createElement(Component, props);
+  return Component(props);
 }
 
 /** テスト用: 登録済み decorator node type 一覧 */
 export function getRegisteredDecoratorTypes(): readonly string[] {
   return [...registry.keys()];
+}
+
+export function getDecoratorStringProp(
+  props: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = props[key];
+  return typeof value === "string" ? value : null;
+}
+
+export function getDecoratorNumberProp(
+  props: Record<string, unknown>,
+  key: string,
+): number | null {
+  const value = props[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

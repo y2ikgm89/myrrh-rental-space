@@ -82,9 +82,15 @@ const EXISTING_INQUIRY = {
   message: "詳しい料金を教えてください。",
 };
 
-const VALID_CREATE_INPUT = {
+const VALID_CREATE_INPUT: {
+  name: string;
+  companyName: string | null;
+  email: string;
+  subject: string;
+  message: string;
+} = {
   name: "田中花子",
-  companyName: "株式会社テスト" as string | null,
+  companyName: "株式会社テスト",
   email: "tanaka@example.com",
   subject: "予約について",
   message: "利用可能な日時を教えてください。",

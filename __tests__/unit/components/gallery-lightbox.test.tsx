@@ -60,6 +60,18 @@ const ITEMS = [
   { url: "https://cdn.example.com/img3.jpg", alt: "img3", caption: "Cap 3" },
 ];
 
+function createSwipeEvent(
+  type: "touchstart" | "touchend",
+  listName: "touches" | "changedTouches",
+  clientX: number,
+): Event {
+  const event = new window.Event(type, { bubbles: true });
+  Object.defineProperty(event, listName, {
+    value: [{ clientX }],
+  });
+  return event;
+}
+
 describe("GalleryLightbox", () => {
   let root: Root | undefined;
   let container: HTMLDivElement | undefined;
@@ -97,9 +109,7 @@ describe("GalleryLightbox", () => {
       );
     });
 
-    const dialog = container?.querySelector(
-      "dialog",
-    ) as HTMLDialogElement | null;
+    const dialog = container?.querySelector<HTMLDialogElement>("dialog");
     expect(dialog).not.toBeNull();
     // showModal は JSDOM 環境で open 属性を付けない場合があるが、
     // open prop false → dialog.open を false にしようとする effect が走る
@@ -177,9 +187,9 @@ describe("GalleryLightbox", () => {
     });
 
     // index が 1 になり img2 の画像が表示される
-    const img = container?.querySelector("[data-testid='lb-image']") as
-      | HTMLImageElement
-      | undefined;
+    const img = container?.querySelector<HTMLImageElement>(
+      "[data-testid='lb-image']",
+    );
     expect(img?.src).toContain("img2.jpg");
   });
 
@@ -210,9 +220,9 @@ describe("GalleryLightbox", () => {
       );
     });
 
-    const img = container?.querySelector("[data-testid='lb-image']") as
-      | HTMLImageElement
-      | undefined;
+    const img = container?.querySelector<HTMLImageElement>(
+      "[data-testid='lb-image']",
+    );
     expect(img?.src).toContain("img1.jpg");
   });
 
@@ -243,9 +253,9 @@ describe("GalleryLightbox", () => {
       );
     });
 
-    const img = container?.querySelector("[data-testid='lb-image']") as
-      | HTMLImageElement
-      | undefined;
+    const img = container?.querySelector<HTMLImageElement>(
+      "[data-testid='lb-image']",
+    );
     expect(img?.src).toContain("img1.jpg");
   });
 
@@ -276,9 +286,9 @@ describe("GalleryLightbox", () => {
       );
     });
 
-    const img = container?.querySelector("[data-testid='lb-image']") as
-      | HTMLImageElement
-      | undefined;
+    const img = container?.querySelector<HTMLImageElement>(
+      "[data-testid='lb-image']",
+    );
     expect(img?.src).toContain("img3.jpg");
   });
 
@@ -300,26 +310,18 @@ describe("GalleryLightbox", () => {
 
     const swipeArea = container?.querySelector(
       "dialog .flex.max-h-\\[80svh\\]",
-    ) as Element | undefined;
+    );
 
     await act(async () => {
+      swipeArea?.dispatchEvent(createSwipeEvent("touchstart", "touches", 200));
       swipeArea?.dispatchEvent(
-        new window.TouchEvent("touchstart", {
-          bubbles: true,
-          touches: [{ clientX: 200 } as Touch],
-        }),
-      );
-      swipeArea?.dispatchEvent(
-        new window.TouchEvent("touchend", {
-          bubbles: true,
-          changedTouches: [{ clientX: 140 } as Touch], // dx = -60 (< -50)
-        }),
+        createSwipeEvent("touchend", "changedTouches", 140), // dx = -60 (< -50)
       );
     });
 
-    const img = container?.querySelector("[data-testid='lb-image']") as
-      | HTMLImageElement
-      | undefined;
+    const img = container?.querySelector<HTMLImageElement>(
+      "[data-testid='lb-image']",
+    );
     expect(img?.src).toContain("img2.jpg");
   });
 
@@ -341,26 +343,18 @@ describe("GalleryLightbox", () => {
 
     const swipeArea = container?.querySelector(
       "dialog .flex.max-h-\\[80svh\\]",
-    ) as Element | undefined;
+    );
 
     await act(async () => {
+      swipeArea?.dispatchEvent(createSwipeEvent("touchstart", "touches", 100));
       swipeArea?.dispatchEvent(
-        new window.TouchEvent("touchstart", {
-          bubbles: true,
-          touches: [{ clientX: 100 } as Touch],
-        }),
-      );
-      swipeArea?.dispatchEvent(
-        new window.TouchEvent("touchend", {
-          bubbles: true,
-          changedTouches: [{ clientX: 160 } as Touch], // dx = +60 (> 50)
-        }),
+        createSwipeEvent("touchend", "changedTouches", 160), // dx = +60 (> 50)
       );
     });
 
-    const img = container?.querySelector("[data-testid='lb-image']") as
-      | HTMLImageElement
-      | undefined;
+    const img = container?.querySelector<HTMLImageElement>(
+      "[data-testid='lb-image']",
+    );
     expect(img?.src).toContain("img1.jpg");
   });
 });

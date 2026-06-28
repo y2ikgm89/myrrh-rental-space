@@ -16,6 +16,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -95,12 +96,12 @@ describe("updateCustomerStatus (action shape)", () => {
   });
 
   test("無効な id は validation error", async () => {
-    const r = await updateCustomerStatus("bad", "NEW" as unknown as never);
+    const r = await updateCustomerStatus("bad", CustomerStatus.NEW);
     expect(isMutationError(r)).toBe(true);
   });
 
   test("正常系: resource=customer, action=update", async () => {
-    await updateCustomerStatus(VALID_UUID, "REGULAR" as unknown as never);
+    await updateCustomerStatus(VALID_UUID, CustomerStatus.REGULAR);
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "customer",
@@ -108,7 +109,10 @@ describe("updateCustomerStatus (action shape)", () => {
         resourceId: VALID_UUID,
       }),
     );
-    expect(mockUpdateStatus).toHaveBeenCalledWith(VALID_UUID, "REGULAR");
+    expect(mockUpdateStatus).toHaveBeenCalledWith(
+      VALID_UUID,
+      CustomerStatus.REGULAR,
+    );
   });
 });
 

@@ -18,6 +18,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
@@ -186,12 +187,6 @@ function inputToFormData(input: InquiryInputShape): FormData {
   return fd;
 }
 
-type SubmissionLike = {
-  readonly status?: "success" | "error";
-  readonly initialValue?: unknown;
-  readonly error?: Record<string, string[] | null> | null;
-};
-
 // =============================================================================
 // テスト本体
 // =============================================================================
@@ -236,10 +231,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       // conform v1.19: `reply({ resetForm: true })` は `{ initialValue: null }`
       // のみ返し status は未設定。success 検出は initialValue === null が canonical
@@ -290,10 +286,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData({ ...VALID_INPUT, lastName: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error).toBeDefined();
@@ -304,10 +301,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData({ ...VALID_INPUT, email: "not-an-email" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["email"]).toBeDefined();
@@ -317,10 +315,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData({ ...VALID_INPUT, subject: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["subject"]).toBeDefined();
@@ -330,10 +329,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData({ ...VALID_INPUT, message: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["message"]).toBeDefined();
@@ -343,10 +343,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData({ ...VALID_INPUT, lastName: "あ".repeat(51) }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["lastName"]).toBeDefined();
@@ -356,10 +357,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData({ ...VALID_INPUT, message: "あ".repeat(5001) }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["message"]).toBeDefined();
@@ -391,10 +393,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       const formErrors = result.error?.[""];
@@ -430,10 +433,11 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = (await submitInquiry(
+      const result = await submitInquiry(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       const formErrors = result.error?.[""];

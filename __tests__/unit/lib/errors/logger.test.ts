@@ -14,6 +14,7 @@ import {
   beforeEach,
 } from "bun:test";
 import { setNodeEnv } from "../../../helpers/env";
+import { expectRecord } from "../../../helpers/type-assertions";
 import { logError, createErrorLogger } from "@/shared/lib/errors/logger-core";
 import {
   normalizeError,
@@ -22,6 +23,13 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/types";
 import type { ErrorLogContext } from "@/shared/lib/errors/types";
+
+function parseLogRecord(rawArg: unknown): Record<string, unknown> {
+  if (typeof rawArg !== "string") throw new Error("expected JSON string");
+  const parsed: unknown = JSON.parse(rawArg);
+  expectRecord(parsed);
+  return parsed;
+}
 
 // =============================================================================
 // normalizeError
@@ -255,9 +263,7 @@ describe("logError", () => {
       const calls = spy.mock.calls;
       const firstCall = calls[0];
       if (!firstCall) throw new Error("spy not called");
-      const rawArg = firstCall[0];
-      if (typeof rawArg !== "string") throw new Error("expected JSON string");
-      const parsed = JSON.parse(rawArg) as Record<string, unknown>;
+      const parsed = parseLogRecord(firstCall[0]);
       expect(parsed["severity"]).toBe("WARNING");
       expect(parsed["stack_trace"]).toBeUndefined();
       expect(parsed["@type"]).toBeUndefined();
@@ -327,9 +333,7 @@ describe("logError", () => {
       const calls = spy.mock.calls;
       const firstCall = calls[0];
       if (!firstCall) throw new Error("spy not called");
-      const rawArg = firstCall[0];
-      if (typeof rawArg !== "string") throw new Error("expected JSON string");
-      const parsed = JSON.parse(rawArg) as Record<string, unknown>;
+      const parsed = parseLogRecord(firstCall[0]);
       expect(typeof parsed["stack_trace"]).toBe("string");
     });
 

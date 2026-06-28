@@ -3,16 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@conform-to/react";
-import {
-  asConformDefaultValue,
-  asConformSubmissionValue,
-} from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
+import type { z } from "zod";
 import { toast } from "sonner";
-import {
-  termsSettingsFormSchema,
-  type TermsSettingsFormData,
-} from "@/admin/lib/validations/terms";
+import { termsSettingsFormSchema } from "@/admin/lib/validations/terms";
 import {
   createTerms,
   updateTerms,
@@ -37,10 +31,20 @@ type UseTermsEditorOptions = {
   initialTitle?: string | undefined;
 };
 
+export type TermsSettingsFormState = {
+  type: string;
+  slug: string;
+  title: string;
+  isPublished: boolean;
+  scopes: TermsScope[];
+  changelog: string;
+  showInFooter: boolean;
+};
+
 function toSettingsFormData(
   terms?: AdminTermsDetail,
   initialTitle?: string,
-): TermsSettingsFormData {
+): TermsSettingsFormState {
   if (!terms) {
     return {
       type: "terms-of-use",
@@ -48,7 +52,7 @@ function toSettingsFormData(
       title: initialTitle ?? "",
       isPublished: false,
       scopes: [],
-      changelog: null,
+      changelog: "",
       showInFooter: true,
     };
   }
@@ -58,11 +62,13 @@ function toSettingsFormData(
     slug: terms.slug,
     title: terms.title,
     isPublished: terms.isPublished,
-    scopes: terms.scopes,
-    changelog: terms.changelog,
+    scopes: [...terms.scopes],
+    changelog: terms.changelog ?? "",
     showInFooter: terms.showInFooter,
   };
 }
+
+type ParsedTermsSettingsFormData = z.output<typeof termsSettingsFormSchema>;
 
 function initContentJson(
   terms?: AdminTermsDetail,
@@ -129,12 +135,13 @@ export function useTermsEditor({
 
   const isBodyDirty = contentJson !== savedContentJson;
 
-  const [settingsForm, settingsFields] = useForm<TermsSettingsFormData>({
+  const [settingsForm, settingsFields] = useForm<
+    TermsSettingsFormState,
+    ParsedTermsSettingsFormData
+  >({
     id: "terms-settings-form",
     constraint: getZodConstraint(termsSettingsFormSchema),
-    defaultValue: asConformDefaultValue<TermsSettingsFormData>(
-      toSettingsFormData(terms, initialTitle),
-    ),
+    defaultValue: toSettingsFormData(terms, initialTitle),
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: termsSettingsFormSchema });
     },
@@ -160,7 +167,7 @@ export function useTermsEditor({
     setContentJson(json);
   };
 
-  const validateSettings = (): TermsSettingsFormData | null => {
+  const validateSettings = (): ParsedTermsSettingsFormData | null => {
     const formData = new FormData();
     for (const [key, field] of Object.entries(settingsFields)) {
       const fieldValue = field.value;
@@ -194,13 +201,13 @@ export function useTermsEditor({
       toast.error("入力内容に誤りがあります");
       return null;
     }
-    return asConformSubmissionValue<TermsSettingsFormData>(submission.value);
+    return submission.value;
   };
 
   // 規約は本文 + 設定を単一 `updateTerms` で保存する (Post / News のような
   // body / settings 分割を持たない)。edit 系 3 経路 (本文保存 / 設定保存 /
   // プレビュー) が同一 payload を組むため SSoT helper に集約する。
-  const buildUpdateInput = (settingsData: TermsSettingsFormData) => ({
+  const buildUpdateInput = (settingsData: ParsedTermsSettingsFormData) => ({
     type: typeValue,
     slug: settingsData.slug,
     title: settingsData.title,
@@ -215,7 +222,7 @@ export function useTermsEditor({
   // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
   // 「保存して作成」と「未保存プレビュー (auto-draft)」の両経路が共有する。
   const createDraftTerms = async (
-    settingsData: TermsSettingsFormData,
+    settingsData: ParsedTermsSettingsFormData,
   ): Promise<string | null> => {
     try {
       const result = await createTerms(buildUpdateInput(settingsData));

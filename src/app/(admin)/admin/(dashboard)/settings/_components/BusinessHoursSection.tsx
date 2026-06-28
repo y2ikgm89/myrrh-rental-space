@@ -32,8 +32,8 @@ import type {
 } from "@/admin/actions/settings";
 import {
   MONTHLY_CLOSURE_WEEK_VALUES,
-  WEEKDAY_VALUES,
   isMonthlyClosureWeek,
+  isWeekdayKey,
   type MonthlyClosure,
   type MonthlyClosureWeek,
   type WeekdayKey,
@@ -105,10 +105,8 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
    */
   const businessHoursWithHolidays = (() => {
     const hours = { ...initialBusinessHours };
-    const isBusinessHoursDay = (d: string): d is WeekdayKey =>
-      (WEEKDAY_VALUES as readonly string[]).includes(d);
     for (const day of initialRegularHolidays) {
-      if (isBusinessHoursDay(day)) {
+      if (isWeekdayKey(day)) {
         hours[day] = {
           ...hours[day],
           isOpen: false,
@@ -568,8 +566,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
             <Select
               value={newClosureWeekday}
               onValueChange={(v) => {
-                const found = DAYS_OF_WEEK.find((d) => d.key === v);
-                if (found) setNewClosureWeekday(found.key);
+                if (isWeekdayKey(v)) setNewClosureWeekday(v);
               }}
               disabled={isPending}
             >

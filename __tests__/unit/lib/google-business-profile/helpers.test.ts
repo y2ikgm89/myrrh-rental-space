@@ -6,6 +6,8 @@ import {
   formatGbpError,
 } from "@/shared/lib/google-business-profile/helpers";
 
+const EMPTY_ADDRESS_LINES: readonly string[] = [];
+
 describe("buildGbpFieldMask", () => {
   test("基本フィールドが常時含まれる（latlng なし）", () => {
     const payload = {
@@ -14,7 +16,7 @@ describe("buildGbpFieldMask", () => {
         postalCode: undefined,
         regionCode: "JP" as const,
         locality: undefined,
-        addressLines: [] as readonly string[],
+        addressLines: EMPTY_ADDRESS_LINES,
       },
       phoneNumbers: { primaryPhone: undefined },
       regularHours: undefined,
@@ -38,7 +40,7 @@ describe("buildGbpFieldMask", () => {
         postalCode: undefined,
         regionCode: "JP" as const,
         locality: undefined,
-        addressLines: [] as readonly string[],
+        addressLines: EMPTY_ADDRESS_LINES,
       },
       phoneNumbers: { primaryPhone: undefined },
       regularHours: undefined,

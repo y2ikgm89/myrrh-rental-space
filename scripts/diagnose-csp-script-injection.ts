@@ -72,18 +72,170 @@ interface BotManagementResponse {
   };
 }
 
-async function cf<T>(path: string): Promise<T> {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseCfErrors(
+  value: unknown,
+): Array<{ code: number; message: string }> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new Error("Invalid CF errors response");
+  return value.map((item) => {
+    if (!isRecord(item)) throw new Error("Invalid CF error item");
+    const code = item["code"];
+    const message = item["message"];
+    if (typeof code !== "number" || typeof message !== "string") {
+      throw new Error("Invalid CF error item fields");
+    }
+    return { code, message };
+  });
+}
+
+function parseZoneSetting(value: unknown): ZoneSetting {
+  if (!isRecord(value)) throw new Error("Invalid zone setting item");
+  const id = value["id"];
+  const settingValue = value["value"];
+  if (typeof id !== "string") {
+    throw new Error("Invalid zone setting id");
+  }
+  if (
+    typeof settingValue !== "string" &&
+    typeof settingValue !== "boolean" &&
+    typeof settingValue !== "number" &&
+    settingValue !== null &&
+    !isRecord(settingValue)
+  ) {
+    throw new Error(`Invalid zone setting value for ${id}`);
+  }
+  const editable = value["editable"];
+  const modifiedOn = value["modified_on"];
+  return {
+    id,
+    value: settingValue,
+    ...(typeof editable === "boolean" && { editable }),
+    ...((typeof modifiedOn === "string" || modifiedOn === null) && {
+      modified_on: modifiedOn,
+    }),
+  };
+}
+
+function parseZoneSettingsResponse(value: unknown): ZoneSettingsResponse {
+  if (!isRecord(value)) throw new Error(`Invalid response: ${String(value)}`);
+  const success = value["success"];
+  if (typeof success !== "boolean") {
+    throw new Error("Invalid zone settings success field");
+  }
+  const errors = parseCfErrors(value["errors"]);
+  const resultValue = value["result"];
+  const result =
+    resultValue === undefined
+      ? undefined
+      : Array.isArray(resultValue)
+        ? resultValue.map(parseZoneSetting)
+        : undefined;
+  if (resultValue !== undefined && result === undefined) {
+    throw new Error("Invalid zone settings result field");
+  }
+  return {
+    success,
+    ...(errors !== undefined && { errors }),
+    ...(result !== undefined && { result }),
+  };
+}
+
+function optionalBoolean(
+  record: Record<string, unknown>,
+  key: string,
+): boolean | undefined {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new Error(`Invalid ${key} field`);
+  return value;
+}
+
+function optionalString(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new Error(`Invalid ${key} field`);
+  return value;
+}
+
+function parseBotManagementResult(
+  value: unknown,
+): BotManagementResponse["result"] {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new Error("Invalid bot management result");
+  const fightMode = optionalBoolean(value, "fight_mode");
+  const definitelyAutomated = optionalString(
+    value,
+    "sbfm_definitely_automated",
+  );
+  const likelyAutomated = optionalString(value, "sbfm_likely_automated");
+  const verifiedBots = optionalString(value, "sbfm_verified_bots");
+  const staticResourceProtection = optionalBoolean(
+    value,
+    "sbfm_static_resource_protection",
+  );
+  const optimizeWordpress = optionalBoolean(value, "optimize_wordpress");
+  const enableJs = optionalBoolean(value, "enable_js");
+  const autoUpdateModel = optionalBoolean(value, "auto_update_model");
+  const usingLatestModel = optionalBoolean(value, "using_latest_model");
+  const suppressSessionScore = optionalBoolean(value, "suppress_session_score");
+  return {
+    ...(fightMode !== undefined && { fight_mode: fightMode }),
+    ...(definitelyAutomated !== undefined && {
+      sbfm_definitely_automated: definitelyAutomated,
+    }),
+    ...(likelyAutomated !== undefined && {
+      sbfm_likely_automated: likelyAutomated,
+    }),
+    ...(verifiedBots !== undefined && { sbfm_verified_bots: verifiedBots }),
+    ...(staticResourceProtection !== undefined && {
+      sbfm_static_resource_protection: staticResourceProtection,
+    }),
+    ...(optimizeWordpress !== undefined && {
+      optimize_wordpress: optimizeWordpress,
+    }),
+    ...(enableJs !== undefined && { enable_js: enableJs }),
+    ...(autoUpdateModel !== undefined && {
+      auto_update_model: autoUpdateModel,
+    }),
+    ...(usingLatestModel !== undefined && {
+      using_latest_model: usingLatestModel,
+    }),
+    ...(suppressSessionScore !== undefined && {
+      suppress_session_score: suppressSessionScore,
+    }),
+  };
+}
+
+function parseBotManagementResponse(value: unknown): BotManagementResponse {
+  if (!isRecord(value)) throw new Error(`Invalid response: ${String(value)}`);
+  const success = value["success"];
+  if (typeof success !== "boolean") {
+    throw new Error("Invalid bot management success field");
+  }
+  const errors = parseCfErrors(value["errors"]);
+  const result = parseBotManagementResult(value["result"]);
+  return {
+    success,
+    ...(errors !== undefined && { errors }),
+    ...(result !== undefined && { result }),
+  };
+}
+
+async function cf(path: string): Promise<unknown> {
   const url = new URL(path, "https://api.cloudflare.com");
   const response = await fetch(url, {
     method: "GET",
     headers: { Authorization: `Bearer ${apiToken}` },
     signal: AbortSignal.timeout(10000),
   });
-  const json: unknown = await response.json();
-  if (typeof json !== "object" || json === null) {
-    throw new Error(`Invalid response: ${String(json)}`);
-  }
-  return json as T;
+  return response.json();
 }
 
 const SUSPECT_SETTING_IDS = new Set([
@@ -151,8 +303,8 @@ async function main(): Promise<void> {
   console.log("🔍 CSP eval ブロック原因診断 (Cloudflare zone 設定スキャン)");
   console.log(`   Zone ID: ${zoneId.slice(0, 8)}…${zoneId.slice(-4)}`);
 
-  const settings = await cf<ZoneSettingsResponse>(
-    `/client/v4/zones/${encodeURIComponent(zoneId)}/settings`,
+  const settings = parseZoneSettingsResponse(
+    await cf(`/client/v4/zones/${encodeURIComponent(zoneId)}/settings`),
   );
 
   if (!settings.success || !settings.result) {
@@ -170,8 +322,8 @@ async function main(): Promise<void> {
   console.table(rows);
 
   console.log("\n=== Bot Management ===");
-  const botMgmt = await cf<BotManagementResponse>(
-    `/client/v4/zones/${encodeURIComponent(zoneId)}/bot_management`,
+  const botMgmt = parseBotManagementResponse(
+    await cf(`/client/v4/zones/${encodeURIComponent(zoneId)}/bot_management`),
   );
   if (!botMgmt.success) {
     console.warn(

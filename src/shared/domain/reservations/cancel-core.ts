@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
 import {
   CANCELLED_BY,
@@ -23,7 +22,14 @@ import { isWithinDeadline } from "./deadline";
  * これにより通知二重発火・クーポン usageCount 二重 decrement を構造的に防ぐ。
  */
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export interface ApplyCancellationTx {
+  readonly reservation: {
+    updateMany(args: object): Promise<{ count: number }>;
+  };
+  readonly coupon: {
+    updateMany(args: object): Promise<{ count: number }>;
+  };
+}
 
 /** キャンセル・変更を受け付ける予約ステータス */
 export const CANCELLABLE_STATUSES: readonly ReservationStatus[] = [
@@ -58,7 +64,7 @@ export interface ApplyCancellationOptions {
 }
 
 export async function applyCancellation(
-  tx: Tx,
+  tx: ApplyCancellationTx,
   reservation: CancellableReservation,
   options: ApplyCancellationOptions,
 ): Promise<CancellationResult> {

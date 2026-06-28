@@ -101,17 +101,25 @@ describe("getClientIp", () => {
     });
   }
 
-  const mutableEnv = process.env as unknown as Record<
-    string,
-    string | undefined
-  >;
-
   function restoreEnv(name: string, value: string | undefined): void {
     if (value === undefined) {
-      delete mutableEnv[name];
+      Reflect.deleteProperty(process.env, name);
       return;
     }
-    mutableEnv[name] = value;
+    Object.defineProperty(process.env, name, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    });
+  }
+
+  function readEnv(name: string): string | undefined {
+    return process.env[name];
+  }
+
+  function setEnv(name: string, value: string | undefined): void {
+    restoreEnv(name, value);
   }
 
   test("cf-connecting-ip を優先する", () => {
@@ -138,8 +146,8 @@ describe("getClientIp", () => {
   });
 
   test("production の非 localhost では x-forwarded-for / x-real-ip を信頼しない", () => {
-    const originalNodeEnv = mutableEnv["NODE_ENV"];
-    mutableEnv["NODE_ENV"] = "production";
+    const originalNodeEnv = readEnv("NODE_ENV");
+    setEnv("NODE_ENV", "production");
     try {
       const req = createRequest(
         {
@@ -155,10 +163,10 @@ describe("getClientIp", () => {
   });
 
   test("production では origin secret がない cf-connecting-ip も信頼しない", () => {
-    const originalNodeEnv = mutableEnv["NODE_ENV"];
-    const originalSecret = mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
-    mutableEnv["NODE_ENV"] = "production";
-    delete mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
+    const originalNodeEnv = readEnv("NODE_ENV");
+    const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    setEnv("NODE_ENV", "production");
+    setEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET", undefined);
     try {
       const req = createRequest(
         {
@@ -175,11 +183,13 @@ describe("getClientIp", () => {
   });
 
   test("production では origin secret 一致時だけ cf-connecting-ip を使用する", () => {
-    const originalNodeEnv = mutableEnv["NODE_ENV"];
-    const originalSecret = mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"];
-    mutableEnv["NODE_ENV"] = "production";
-    mutableEnv["CLOUDFLARE_ORIGIN_HEADER_SECRET"] =
-      "0123456789abcdef0123456789abcdef";
+    const originalNodeEnv = readEnv("NODE_ENV");
+    const originalSecret = readEnv("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    setEnv("NODE_ENV", "production");
+    setEnv(
+      "CLOUDFLARE_ORIGIN_HEADER_SECRET",
+      "0123456789abcdef0123456789abcdef",
+    );
     try {
       const req = createRequest(
         {

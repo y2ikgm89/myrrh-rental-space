@@ -192,7 +192,11 @@ describe("field-registry", () => {
         helpText: "補足説明",
         group: "design",
       });
-      const meta = fieldRegistry.get(schema) as FieldMeta;
+      const meta: FieldMeta | undefined = fieldRegistry.get(schema);
+      expect(meta).toBeDefined();
+      if (meta === undefined) {
+        throw new Error("field metadata must be registered");
+      }
       expect(meta.fieldType).toBe("text");
       expect(meta.label).toBe("見出し");
       expect(meta.helpText).toBe("補足説明");

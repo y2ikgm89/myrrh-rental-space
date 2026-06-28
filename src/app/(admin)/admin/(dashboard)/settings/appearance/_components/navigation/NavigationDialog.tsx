@@ -352,8 +352,8 @@ export function SocialLinkFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(platformLabels).map(([value, label]) => {
-                    const PIcon =
-                      platformIcons[value as keyof typeof platformIcons];
+                    if (!isValidSocialPlatform(value)) return null;
+                    const PIcon = platformIcons[value];
                     return (
                       <SelectItem key={value} value={value}>
                         <span className="flex items-center gap-2">

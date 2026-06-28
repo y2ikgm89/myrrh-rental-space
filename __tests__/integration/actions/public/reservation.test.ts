@@ -20,6 +20,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectSubmissionLike } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -127,17 +128,28 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 mock.module("@/shared/lib/serialize", () => ({
-  omitUndefined: <T extends Record<string, unknown>>(obj: T): Partial<T> => {
-    return Object.fromEntries(
-      Object.entries(obj).filter(([, v]) => v !== undefined),
-    ) as Partial<T>;
+  omitUndefined: (obj: Record<string, unknown>): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        result[key] = obj[key];
+      }
+    }
+    return result;
   },
   toPlainObject: <T>(obj: T): T => JSON.parse(JSON.stringify(obj)),
   toPlainArray: <T>(arr: T[]): T[] => JSON.parse(JSON.stringify(arr)),
   keysOf: <T extends object>(obj: T) => Object.keys(obj),
   entriesOf: <T extends object>(obj: T) => Object.entries(obj),
-  filterTruthy: <T>(arr: readonly (T | false | null | undefined)[]): T[] =>
-    arr.filter(Boolean) as T[],
+  filterTruthy: <T>(arr: readonly (T | false | null | undefined)[]): T[] => {
+    const result: T[] = [];
+    for (const item of arr) {
+      if (item) {
+        result.push(item);
+      }
+    }
+    return result;
+  },
   createTypeGuard:
     <T extends string>(values: readonly T[]) =>
     (value: unknown): value is T =>
@@ -254,12 +266,6 @@ function inputToFormData(input: ReservationInputShape): FormData {
   return fd;
 }
 
-type SubmissionLike = {
-  readonly status?: "success" | "error";
-  readonly initialValue?: unknown;
-  readonly error?: Record<string, string[] | null> | null;
-};
-
 // =============================================================================
 // テスト本体
 // =============================================================================
@@ -313,10 +319,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.initialValue).toBeNull();
       expect(result.status).not.toBe("error");
@@ -373,10 +380,11 @@ describe("submitReservation", () => {
         await import("@/app/(public)/_shared/actions/reservation");
 
       const { phoneNumber: _omit, ...inputWithoutPhone } = VALID_INPUT;
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData(inputWithoutPhone),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.initialValue).toBeNull();
     });
@@ -385,10 +393,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, notes: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.initialValue).toBeNull();
     });
@@ -399,10 +408,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, spaceId: "not-a-uuid" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["spaceId"]).toBeDefined();
@@ -412,10 +422,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, date: "2025/06/01" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["date"]).toBeDefined();
@@ -425,10 +436,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, startTime: "10:00:00" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["startTime"]).toBeDefined();
@@ -438,14 +450,15 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({
           ...VALID_INPUT,
           startTime: "14:00",
           endTime: "10:00",
         }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["endTime"]).toBeDefined();
@@ -455,10 +468,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, numberOfGuests: 0 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["numberOfGuests"]).toBeDefined();
@@ -468,10 +482,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, numberOfGuests: 501 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["numberOfGuests"]).toBeDefined();
@@ -481,10 +496,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, lastName: "" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["lastName"]).toBeDefined();
@@ -494,10 +510,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData({ ...VALID_INPUT, email: "invalid-email" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["email"]).toBeDefined();
@@ -529,10 +546,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       const formErrors = result.error?.[""];
@@ -565,10 +583,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toContain(
@@ -588,10 +607,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe(
@@ -612,10 +632,11 @@ describe("submitReservation", () => {
       const { submitReservation } =
         await import("@/app/(public)/_shared/actions/reservation");
 
-      const result = (await submitReservation(
+      const result = await submitReservation(
         undefined,
         inputToFormData(VALID_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toContain("既に予約されています");

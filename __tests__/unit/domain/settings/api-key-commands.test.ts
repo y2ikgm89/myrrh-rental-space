@@ -10,9 +10,10 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-const mockSettingsUpsert = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "singleton" }),
-);
+type SettingsUpsertArgs = { update?: Record<string, unknown> };
+const mockSettingsUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
 
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
@@ -26,9 +27,7 @@ mock.module("@/shared/lib/crypto", () => ({
 import { updateTurnstileSettings } from "@/shared/domain/settings/api-key-commands";
 
 function lastUpdate(): Record<string, unknown> {
-  const lastCall = mockSettingsUpsert.mock.calls.at(-1) as unknown as
-    | [{ update?: Record<string, unknown> }]
-    | undefined;
+  const lastCall = mockSettingsUpsert.mock.calls.at(-1);
   return lastCall?.[0]?.update ?? {};
 }
 

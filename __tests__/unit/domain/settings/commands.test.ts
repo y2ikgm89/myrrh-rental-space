@@ -1,9 +1,10 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
-const mockSettingsUpsert = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "singleton" }),
-);
+type SettingsUpsertArgs = { update?: Record<string, unknown> };
+const mockSettingsUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
 
 mock.module("server-only", () => ({}));
 
@@ -305,10 +306,12 @@ describe("updateDiscountSettings", () => {
 
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      const calls = mockSettingsUpsert.mock.calls as unknown as Array<
-        [{ update?: { durationDiscountRules?: unknown } }]
-      >;
-      const stored = calls[0]?.[0]?.update?.durationDiscountRules;
+      const firstCall = mockSettingsUpsert.mock.calls[0];
+      expect(firstCall).toBeDefined();
+      if (firstCall === undefined) {
+        throw new Error("settings.upsert must be called");
+      }
+      const stored = firstCall[0].update?.["durationDiscountRules"];
       expect(Array.isArray(stored)).toBe(true);
       // Prisma Json 列に object を渡したときの read 側挙動を模した round-trip
       const roundTripped = parseDurationDiscountRules(stored);

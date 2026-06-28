@@ -3,8 +3,15 @@
 import type { ReactElement } from "react";
 import type { NodeKey } from "lexical";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
-import { type InlineImagePosition } from "./InlineImageNode";
-import { registerLexicalDecorator } from "./decorator-registry";
+import {
+  isInlineImagePosition,
+  type InlineImagePosition,
+} from "./InlineImageNode";
+import {
+  getDecoratorNumberProp,
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 function InlineImageComponent({
   src,
@@ -50,4 +57,31 @@ function InlineImageComponent({
   );
 }
 
-registerLexicalDecorator("inline-image", InlineImageComponent as never);
+registerLexicalDecorator("inline-image", (props) => {
+  const src = getDecoratorStringProp(props, "src");
+  const altText = getDecoratorStringProp(props, "altText");
+  const rawPosition = getDecoratorStringProp(props, "position");
+  const width = getDecoratorNumberProp(props, "width");
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+
+  if (
+    src === null ||
+    altText === null ||
+    rawPosition === null ||
+    !isInlineImagePosition(rawPosition) ||
+    width === null ||
+    nodeKey === null
+  ) {
+    return null;
+  }
+
+  return (
+    <InlineImageComponent
+      src={src}
+      altText={altText}
+      position={rawPosition}
+      width={width}
+      nodeKey={nodeKey}
+    />
+  );
+});

@@ -92,8 +92,8 @@ describe("toPlainObject", () => {
 
   describe("異常系", () => {
     test("循環参照でエラーをスローする", () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const circular: any = { id: 1 };
+      type CircularFixture = { id: number; self?: CircularFixture };
+      const circular: CircularFixture = { id: 1 };
       circular.self = circular;
       expect(() => toPlainObject(circular)).toThrow(
         "[serialize] Failed to convert object to plain object",
@@ -177,8 +177,8 @@ describe("toPlainArray", () => {
 
   describe("異常系", () => {
     test("循環参照でエラーをスローする", () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const circular: any = { id: 1 };
+      type CircularFixture = { id: number; self?: CircularFixture };
+      const circular: CircularFixture = { id: 1 };
       circular.self = circular;
       expect(() => toPlainArray([circular])).toThrow(
         "[serialize] Failed to convert array to plain array",
@@ -775,10 +775,10 @@ describe("createTypeGuard", () => {
     });
 
     test("Set-based O(1) ルックアップで多数の値に対応できる", () => {
-      const values = Array.from(
+      const values: readonly string[] = Array.from(
         { length: 1000 },
         (_, i) => `value_${i}`,
-      ) as readonly string[];
+      );
       const isValue = createTypeGuard(values);
       expect(isValue("value_0")).toBe(true);
       expect(isValue("value_999")).toBe(true);
