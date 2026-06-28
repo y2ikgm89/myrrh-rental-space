@@ -60,47 +60,49 @@ async function createTestEvent(opts: {
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const end = new Date(Date.now() + 26 * 60 * 60 * 1000);
 
-  const event = await prisma.event.create({
-    data: {
-      title: "Overbooking TOCTOU Test",
-      slug: `overbooking-toctou-${suffix}`,
-      descriptionJson: { type: "doc" },
-      descriptionHtml: "<p>test</p>",
-      descriptionPlainText: "test",
-      status: EventStatus.PUBLISHED,
-      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
-      registrationOpen: true,
-      // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
-      firstSlotStartAt: start,
-      lastSlotEndAt: end,
-    },
-    select: { id: true },
-  });
+  return prisma.$transaction(async (tx) => {
+    const event = await tx.event.create({
+      data: {
+        title: "Overbooking TOCTOU Test",
+        slug: `overbooking-toctou-${suffix}`,
+        descriptionJson: { type: "doc" },
+        descriptionHtml: "<p>test</p>",
+        descriptionPlainText: "test",
+        status: EventStatus.PUBLISHED,
+        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+        registrationOpen: true,
+        // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
+        firstSlotStartAt: start,
+        lastSlotEndAt: end,
+      },
+      select: { id: true },
+    });
 
-  // スロット定員: eventCapacity を使う場合はその値、ticketCapacity 専用なら大きな数
-  const slotCapacity = opts.eventCapacity ?? 1000;
-  const slot = await prisma.eventTimeSlot.create({
-    data: {
-      eventId: event.id,
-      startAt: start,
-      endAt: end,
-      capacity: slotCapacity,
-    },
-    select: { id: true },
-  });
+    // スロット定員: eventCapacity を使う場合はその値、ticketCapacity 専用なら大きな数
+    const slotCapacity = opts.eventCapacity ?? 1000;
+    const slot = await tx.eventTimeSlot.create({
+      data: {
+        eventId: event.id,
+        startAt: start,
+        endAt: end,
+        capacity: slotCapacity,
+      },
+      select: { id: true },
+    });
 
-  const ticket = await prisma.eventTicket.create({
-    data: {
-      eventId: event.id,
-      name: "一般",
-      price: 0,
-      capacity: opts.ticketCapacity,
-      isAvailable: true,
-    },
-    select: { id: true },
-  });
+    const ticket = await tx.eventTicket.create({
+      data: {
+        eventId: event.id,
+        name: "一般",
+        price: 0,
+        capacity: opts.ticketCapacity,
+        isAvailable: true,
+      },
+      select: { id: true },
+    });
 
-  return { eventId: event.id, ticketId: ticket.id, slotId: slot.id };
+    return { eventId: event.id, ticketId: ticket.id, slotId: slot.id };
+  });
 }
 
 /** テストイベントとその子レコードを削除する（restrict 回避のため順序固定）。 */
