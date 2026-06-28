@@ -41,7 +41,10 @@ import {
 } from "@/app/(admin)/admin/(dashboard)/events/_components/event-form-schema";
 import { spaceFormSchema } from "@/admin/lib/validations/space";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EventScheduleMode,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { z } from "zod";
 
 const EMPTY_DESC_TICKET = JSON.stringify([
@@ -295,6 +298,7 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
       form({
         title: "イベント",
         slug: "event-1",
+        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
         descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
         thumbnailUrl: "",
         slots: JSON.stringify([

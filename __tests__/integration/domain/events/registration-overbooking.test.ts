@@ -26,7 +26,11 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { EventStatus, RegistrationStatus } from "@generated/prisma/enums";
+import {
+  EventScheduleMode,
+  EventStatus,
+  RegistrationStatus,
+} from "@generated/prisma/enums";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -64,6 +68,7 @@ async function createTestEvent(opts: {
       descriptionHtml: "<p>test</p>",
       descriptionPlainText: "test",
       status: EventStatus.PUBLISHED,
+      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
       registrationOpen: true,
       // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
       firstSlotStartAt: start,

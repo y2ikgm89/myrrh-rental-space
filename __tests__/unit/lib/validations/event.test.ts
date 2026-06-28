@@ -7,6 +7,7 @@ describe("eventFormSchema (conform)", () => {
     title: "テストイベント",
     slug: "test-event",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+    scheduleMode: "SINGLE_OCCURRENCE",
     slots: JSON.stringify([
       { startAt: "2026-05-01T10:00", endAt: "2026-05-01T12:00", capacity: 10 },
     ]),
@@ -43,6 +44,74 @@ describe("eventFormSchema (conform)", () => {
     expect(result.success).toBe(false);
   });
 
+  it("単一開催はスロットを1件だけ受け入れる", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      scheduleMode: "SINGLE_OCCURRENCE",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.scheduleMode).toBe("SINGLE_OCCURRENCE");
+      expect(result.data.slots).toHaveLength(1);
+    }
+  });
+
+  it("単一開催で複数スロットを拒否する", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      scheduleMode: "SINGLE_OCCURRENCE",
+      slots: JSON.stringify([
+        {
+          startAt: "2026-05-01T10:00",
+          endAt: "2026-05-01T12:00",
+          capacity: 10,
+        },
+        {
+          startAt: "2026-05-02T10:00",
+          endAt: "2026-05-02T12:00",
+          capacity: 10,
+        },
+      ]),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("日時選択制は2件以上のスロットを要求する", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      scheduleMode: "TIMED_ENTRY",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("日時選択制で複数スロットを受け入れる", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      scheduleMode: "TIMED_ENTRY",
+      slots: JSON.stringify([
+        {
+          startAt: "2026-05-01T10:00",
+          endAt: "2026-05-01T12:00",
+          capacity: 10,
+        },
+        {
+          startAt: "2026-05-02T10:00",
+          endAt: "2026-05-02T12:00",
+          capacity: 8,
+        },
+      ]),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("無効な開催方式を拒否する", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      scheduleMode: "EVENT_LEVEL",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("スロットの定員が負数の場合エラー", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
@@ -57,14 +126,14 @@ describe("eventFormSchema (conform)", () => {
     expect(result.success).toBe(false);
   });
 
-  it("スロットの定員が 0 は有効（定員制限なし相当）", () => {
+  it("スロットの定員が 0 の場合エラー", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
       slots: JSON.stringify([
         { startAt: "2026-05-01T10:00", endAt: "2026-05-01T12:00", capacity: 0 },
       ]),
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("チケットの料金が負の値はエラー", () => {

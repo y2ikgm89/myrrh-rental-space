@@ -12,7 +12,7 @@ import {
   sendEventRegistrationCancelled,
   sendEventAdminNotification,
 } from "@/shared/lib/email/event-emails";
-import { getEventDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -86,7 +86,9 @@ export async function adminCancelRegistration(
 
       fireAndForget(
         (async () => {
-          const event = await getEventDetailsForEmail(data.eventId);
+          const event = await getEventRegistrationDetailsForEmail(
+            data.registrationId,
+          );
           if (!event) return;
 
           await Promise.all([

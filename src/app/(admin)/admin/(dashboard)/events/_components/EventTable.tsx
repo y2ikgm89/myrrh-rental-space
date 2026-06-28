@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Table, TableBody, TableCell } from "@/admin/components/ui";
+import { Badge, Table, TableBody, TableCell } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import {
   CheckboxCell,
@@ -15,6 +15,7 @@ import { EventBulkActions } from "./EventBulkActions";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { getEvents } from "@/shared/domain/events/admin-queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
+import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 
 type EventListItem = Awaited<ReturnType<typeof getEvents>>["events"][number];
 
@@ -77,8 +78,13 @@ export function EventTable({ events }: EventTableProps) {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="max-w-xs truncate font-medium">
-                        {event.title}
+                      <div className="flex max-w-xs items-center gap-2">
+                        <span className="truncate font-medium">
+                          {event.title}
+                        </span>
+                        <Badge variant="outline" className="shrink-0">
+                          {getEventScheduleModeLabel(event.scheduleMode)}
+                        </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
                         /{event.slug}
@@ -86,10 +92,14 @@ export function EventTable({ events }: EventTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDateTimeShort(event.slots[0]?.startAt ?? null)}
+                    {formatDateTimeShort(
+                      event.firstSlotStartAt ?? event.slots[0]?.startAt ?? null,
+                    )}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDateTimeShort(event.slots[0]?.endAt ?? null)}
+                    {formatDateTimeShort(
+                      event.lastSlotEndAt ?? event.slots[0]?.endAt ?? null,
+                    )}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {formatEventVenue({

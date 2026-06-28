@@ -13,10 +13,13 @@ const eventListSelect = {
   registrationDeadline: true,
   addressDetail: true,
   status: true,
+  scheduleMode: true,
   registrationOpen: true,
   publishedAt: true,
   deletedAt: true,
   createdAt: true,
+  firstSlotStartAt: true,
+  lastSlotEndAt: true,
   location: { select: { id: true, name: true } },
   space: { select: { id: true, name: true } },
   slots: {

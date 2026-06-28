@@ -23,12 +23,10 @@ export async function getEventRegistrationsForExport(eventId: string) {
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
-          slots: {
-            select: { startAt: true, endAt: true },
-            orderBy: { startAt: "asc" as const },
-            take: 1,
-          },
         },
+      },
+      slot: {
+        select: { startAt: true, endAt: true },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -37,8 +35,8 @@ export async function getEventRegistrationsForExport(eventId: string) {
     ...row,
     event: {
       title: row.event.title,
-      startTime: row.event.slots[0]?.startAt ?? new Date(0),
-      endTime: row.event.slots[0]?.endAt ?? new Date(0),
+      startTime: row.slot.startAt,
+      endTime: row.slot.endAt,
       location: formatEventVenue({
         location: row.event.location,
         space: row.event.space,

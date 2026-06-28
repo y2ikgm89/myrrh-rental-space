@@ -1,11 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import Link from "next/link";
-import {
-  IconCalendar,
-  IconCoin,
-  IconMapPin,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconCalendar, IconCoin, IconMapPin } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import {
   formatEventDate,
@@ -13,13 +8,13 @@ import {
 } from "@/public/lib/format-event-date";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import type { EventTicketSummary } from "@/shared/domain/events/ticket-types";
+import type {
+  PublicEventScheduleMode,
+  PublicEventRegistrationState,
+  PublicEventSlotOption,
+} from "@/shared/domain/events/public-slot-options";
+import { shouldExposePublicEventSlotSelector } from "@/shared/domain/events/public-slot-options";
 import { cn } from "@/shared/lib/cn";
-
-type RegistrationState =
-  | { readonly kind: "open"; readonly remainingCapacity: number | null }
-  | { readonly kind: "full" }
-  | { readonly kind: "deadline-passed" }
-  | { readonly kind: "closed" };
 
 export type EventInfoPanelVenue =
   | {
@@ -42,9 +37,10 @@ interface EventInfoPanelProps {
   readonly startTime: string;
   readonly endTime: string;
   readonly venues: readonly EventInfoPanelVenue[];
-  readonly capacity: number | null;
+  readonly scheduleMode: PublicEventScheduleMode;
+  readonly slots: readonly PublicEventSlotOption[];
   readonly tickets: readonly EventTicketSummary[];
-  readonly registration: RegistrationState;
+  readonly registration: PublicEventRegistrationState;
   /** Anchor ID rendered on the registration form section (e.g. "event-register"). */
   readonly registerAnchorId: string;
 }
@@ -70,12 +66,17 @@ export function EventInfoPanel({
   startTime,
   endTime,
   venues,
-  capacity,
+  scheduleMode,
+  slots,
   tickets,
   registration,
   registerAnchorId,
 }: EventInfoPanelProps): ReactElement {
   const isSidebar = variant === "sidebar";
+  const showSlotSelector = shouldExposePublicEventSlotSelector({
+    scheduleMode,
+    slots,
+  });
   const wrapperClassName = cn(
     "border border-accent bg-background",
     isSidebar ? null : "mb-12",
@@ -102,12 +103,16 @@ export function EventInfoPanel({
       <dl className="px-8 sm:px-10">
         <DetailRow
           icon={<IconCalendar className="h-4 w-4" aria-hidden="true" />}
-          label="開催日時"
+          label={showSlotSelector ? "開催枠" : "開催日時"}
         >
-          <span className="flex flex-col gap-0.5">
-            <span>{formatEventDate(startTime)}</span>
-            <span>{formatEventTimeRange(startTime, endTime)}</span>
-          </span>
+          {slots.length > 0 ? (
+            <SlotSummaryList slots={slots} />
+          ) : (
+            <span className="flex flex-col gap-0.5">
+              <span>{formatEventDate(startTime)}</span>
+              <span>{formatEventTimeRange(startTime, endTime)}</span>
+            </span>
+          )}
         </DetailRow>
         {venues.length > 0 ? (
           <DetailRow
@@ -115,14 +120,6 @@ export function EventInfoPanel({
             label="開催場所"
           >
             <VenueList venues={venues} />
-          </DetailRow>
-        ) : null}
-        {capacity !== null ? (
-          <DetailRow
-            icon={<IconUsers className="h-4 w-4" aria-hidden="true" />}
-            label="定員"
-          >
-            <CapacityValue capacity={capacity} registration={registration} />
           </DetailRow>
         ) : null}
       </dl>
@@ -152,7 +149,7 @@ export function EventInfoPanel({
 function RegistrationBadgeRow({
   registration,
 }: {
-  readonly registration: RegistrationState;
+  readonly registration: PublicEventRegistrationState;
 }): ReactElement {
   switch (registration.kind) {
     case "open":
@@ -181,39 +178,6 @@ function OutlineBadge({
       {children}
     </span>
   );
-}
-
-function CapacityValue({
-  capacity,
-  registration,
-}: {
-  readonly capacity: number;
-  readonly registration: RegistrationState;
-}): ReactElement {
-  if (registration.kind === "open" && registration.remainingCapacity !== null) {
-    return (
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="tabular-nums">{capacity} 名</span>
-        <span className="text-xs text-muted-foreground">
-          残り{" "}
-          <span className="font-medium tabular-nums text-accent">
-            {registration.remainingCapacity} 席
-          </span>
-        </span>
-      </span>
-    );
-  }
-
-  if (registration.kind === "full") {
-    return (
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="tabular-nums">{capacity} 名</span>
-        <span className="text-xs text-muted-foreground">満席</span>
-      </span>
-    );
-  }
-
-  return <span className="tabular-nums">{capacity} 名</span>;
 }
 
 /**
@@ -307,6 +271,56 @@ function DetailRow({
       </dd>
     </>
   );
+}
+
+function SlotSummaryList({
+  slots,
+}: {
+  readonly slots: readonly PublicEventSlotOption[];
+}): ReactElement {
+  return (
+    <ul className="space-y-3">
+      {slots.map((slot) => (
+        <li key={slot.id} className="space-y-1">
+          <span className="flex flex-col gap-0.5">
+            <span>{formatEventDate(slot.startTime)}</span>
+            <span>{formatEventTimeRange(slot.startTime, slot.endTime)}</span>
+          </span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span>
+              定員{" "}
+              <span className="tabular-nums text-foreground">
+                {slot.capacity} 名
+              </span>
+            </span>
+            <SlotStatusText slot={slot} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SlotStatusText({
+  slot,
+}: {
+  readonly slot: PublicEventSlotOption;
+}): ReactElement {
+  switch (slot.status) {
+    case "available":
+      return (
+        <span>
+          残り{" "}
+          <span className="font-medium tabular-nums text-accent">
+            {slot.remaining} 席
+          </span>
+        </span>
+      );
+    case "sold-out":
+      return <span>満席</span>;
+    case "deadline-passed":
+      return <span>締切</span>;
+  }
 }
 
 function VenueList({

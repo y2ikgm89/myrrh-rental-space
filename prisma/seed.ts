@@ -29,6 +29,7 @@ import {
   Prisma,
   Role,
   CustomerType,
+  EventScheduleMode,
   EventStatus,
   RegistrationStatus,
 } from "../generated/prisma/client";
@@ -2995,13 +2996,27 @@ async function seedEvents() {
   const honkanId = locationsByName.get("本館") ?? null;
   const bekkanId = locationsByName.get("別館") ?? null;
 
+  const futureJstDate = (daysFromNow: number, hour: number, minute = 0) => {
+    const now = new Date();
+    return new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + daysFromNow,
+        hour - 9,
+        minute,
+        0,
+        0,
+      ),
+    );
+  };
+
   const eventSeedSource: Array<{
     title: string;
     slug: string;
     description: string;
-    startAt: Date;
-    endAt: Date;
-    capacity: number;
+    scheduleMode: EventScheduleMode;
+    slots: Array<{ startAt: Date; endAt: Date; capacity: number }>;
     price: number;
     addressDetail?: string;
     locationId?: string | null;
@@ -3014,9 +3029,14 @@ async function seedEvents() {
       slug: "yoga-mindfulness-workshop",
       description:
         "初心者歓迎のヨガ体験会です。心身のリラクゼーションを体験しましょう。",
-      startAt: new Date("2026-05-15T10:00:00+09:00"),
-      endAt: new Date("2026-05-15T12:00:00+09:00"),
-      capacity: 15,
+      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+      slots: [
+        {
+          startAt: futureJstDate(21, 10),
+          endAt: futureJstDate(21, 12),
+          capacity: 15,
+        },
+      ],
       price: 2000,
       locationId: honkanId,
       addressDetail: "3F スタジオA",
@@ -3029,9 +3049,19 @@ async function seedEvents() {
       slug: "photography-workshop",
       description:
         "プロカメラマンによる撮影テクニック講座。カメラをお持ちください。",
-      startAt: new Date("2026-05-20T14:00:00+09:00"),
-      endAt: new Date("2026-05-20T17:00:00+09:00"),
-      capacity: 10,
+      scheduleMode: EventScheduleMode.TIMED_ENTRY,
+      slots: [
+        {
+          startAt: futureJstDate(28, 10),
+          endAt: futureJstDate(28, 12),
+          capacity: 8,
+        },
+        {
+          startAt: futureJstDate(28, 14),
+          endAt: futureJstDate(28, 16),
+          capacity: 8,
+        },
+      ],
       price: 5000,
       locationId: bekkanId,
       addressDetail: "ギャラリールーム",
@@ -3043,9 +3073,14 @@ async function seedEvents() {
       title: "ビジネスネットワーキングイベント",
       slug: "business-networking",
       description: "地域のビジネスオーナーが集まる交流会。軽食付き。",
-      startAt: new Date("2026-06-01T18:00:00+09:00"),
-      endAt: new Date("2026-06-01T20:00:00+09:00"),
-      capacity: 30,
+      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+      slots: [
+        {
+          startAt: futureJstDate(35, 18),
+          endAt: futureJstDate(35, 20),
+          capacity: 30,
+        },
+      ],
       price: 0,
       locationId: honkanId,
       addressDetail: "1F メインホール",
@@ -3056,9 +3091,14 @@ async function seedEvents() {
       title: "キッズアートスクール",
       slug: "kids-art-school",
       description: "お子様向けのアート教室。絵の具や材料は全てご用意します。",
-      startAt: new Date("2026-04-10T10:00:00+09:00"),
-      endAt: new Date("2026-04-10T12:00:00+09:00"),
-      capacity: 8,
+      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+      slots: [
+        {
+          startAt: futureJstDate(42, 10),
+          endAt: futureJstDate(42, 12),
+          capacity: 8,
+        },
+      ],
       price: 1500,
       // 外部会場（location なし、addressDetail も空）の例
       status: EventStatus.CANCELLED,
@@ -3069,9 +3109,14 @@ async function seedEvents() {
       slug: "spring-calligraphy-archived",
       description:
         "過去に開催した書道教室のアーカイブです。次回開催をお待ちください。",
-      startAt: new Date("2026-03-05T10:00:00+09:00"),
-      endAt: new Date("2026-03-05T12:00:00+09:00"),
-      capacity: 10,
+      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+      slots: [
+        {
+          startAt: new Date("2026-03-05T10:00:00+09:00"),
+          endAt: new Date("2026-03-05T12:00:00+09:00"),
+          capacity: 10,
+        },
+      ],
       price: 3000,
       addressDetail: "渋谷区文化総合センター大和田 和室",
       status: EventStatus.ARCHIVED,
@@ -3080,56 +3125,76 @@ async function seedEvents() {
     },
   ];
 
-  const events = eventSeedSource.map(
-    ({ description, price, startAt, endAt, capacity, ...eventRest }) => ({
-      eventRest,
-      description,
-      seedPrice: price,
-      startAt,
-      endAt,
-      capacity,
-    }),
-  );
-
   let createdCount = 0;
   for (const {
-    eventRest,
     description,
-    seedPrice,
-    startAt,
-    endAt,
-    capacity,
-  } of events) {
-    await prisma.event.upsert({
-      where: { slug: eventRest.slug },
-      update: {},
-      create: {
-        ...eventRest,
-        ...buildSeedDescription(description),
-        firstSlotStartAt: startAt,
-        lastSlotEndAt: endAt,
-        slots: {
-          create: [{ startAt, endAt, capacity }],
+    price,
+    slots,
+    publishedAt,
+    ...eventRest
+  } of eventSeedSource) {
+    const sortedSlots = [...slots].sort(
+      (a, b) => a.startAt.getTime() - b.startAt.getTime(),
+    );
+    const firstSlot = sortedSlots[0];
+    const lastSlot = sortedSlots[sortedSlots.length - 1];
+    if (!firstSlot || !lastSlot) continue;
+
+    await prisma.$transaction(async (tx) => {
+      const event = await tx.event.upsert({
+        where: { slug: eventRest.slug },
+        update: {
+          ...eventRest,
+          ...buildSeedDescription(description),
+          publishedAt: publishedAt ?? null,
+          firstSlotStartAt: firstSlot.startAt,
+          lastSlotEndAt: lastSlot.endAt,
         },
-        tickets: {
-          create: [
-            {
-              name: "一般",
-              price: seedPrice,
-              unitSize: 1,
-              sortOrder: 0,
-              isAvailable: true,
-            },
-          ],
+        create: {
+          ...eventRest,
+          ...buildSeedDescription(description),
+          publishedAt: publishedAt ?? null,
+          firstSlotStartAt: firstSlot.startAt,
+          lastSlotEndAt: lastSlot.endAt,
         },
-      },
+        select: { id: true },
+      });
+
+      // Dev/test seed contract: seeded events are rebuilt so E2E data never drifts.
+      await tx.eventRegistration.deleteMany({ where: { eventId: event.id } });
+      await tx.eventTimeSlot.deleteMany({ where: { eventId: event.id } });
+      await tx.eventTicket.deleteMany({ where: { eventId: event.id } });
+
+      await tx.eventTimeSlot.createMany({
+        data: sortedSlots.map((slot) => ({
+          eventId: event.id,
+          startAt: slot.startAt,
+          endAt: slot.endAt,
+          capacity: slot.capacity,
+        })),
+      });
+
+      await tx.eventTicket.create({
+        data: {
+          eventId: event.id,
+          name: "一般",
+          price,
+          unitSize: 1,
+          sortOrder: 0,
+          isAvailable: true,
+        },
+      });
     });
     createdCount++;
   }
 
   // PUBLISHED イベントにサンプル申込を追加
+  const seedEventSlugs = eventSeedSource.map((event) => event.slug);
   const publishedEvents = await prisma.event.findMany({
-    where: { status: EventStatus.PUBLISHED },
+    where: {
+      status: EventStatus.PUBLISHED,
+      slug: { in: seedEventSlugs },
+    },
     select: {
       id: true,
       slug: true,
@@ -3174,13 +3239,9 @@ async function seedEvents() {
   for (const event of publishedEvents) {
     const firstTicket = event.tickets[0];
     if (!firstTicket) continue;
-    // idempotent: 既存申込がある場合はスキップ（EventRegistration に unique 制約がないため）
-    const existingCount = await prisma.eventRegistration.count({
-      where: { eventId: event.id },
-    });
-    if (existingCount > 0) continue;
 
-    const firstSlotId = event.slots[0]?.id ?? null;
+    const firstSlotId = event.slots[0]?.id;
+    if (!firstSlotId) continue;
     for (const reg of sampleRegistrations) {
       await prisma.eventRegistration.create({
         data: {
@@ -3196,6 +3257,46 @@ async function seedEvents() {
       });
       registrationCount++;
     }
+  }
+
+  const devCustomer = await prisma.customer.findFirst({
+    where: { emailCanonical: normalizeSeedEmail("dev-customer@example.com") },
+    select: { id: true, email: true, lastName: true, firstName: true },
+  });
+  const singleEvent = await prisma.event.findUnique({
+    where: { slug: "yoga-mindfulness-workshop" },
+    select: {
+      id: true,
+      tickets: {
+        select: { id: true },
+        orderBy: { sortOrder: "asc" as const },
+        take: 1,
+      },
+      slots: {
+        select: { id: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
+    },
+  });
+  const devTicketId = singleEvent?.tickets[0]?.id;
+  const devSlotId = singleEvent?.slots[0]?.id;
+  if (devCustomer && singleEvent && devTicketId && devSlotId) {
+    await prisma.eventRegistration.create({
+      data: {
+        eventId: singleEvent.id,
+        ticketId: devTicketId,
+        slotId: devSlotId,
+        customerId: devCustomer.id,
+        name: `${devCustomer.lastName} ${devCustomer.firstName}`,
+        email: devCustomer.email,
+        phone: "090-0000-0000",
+        note: "[E2E] dev customer event registration",
+        quantity: 1,
+        status: RegistrationStatus.CONFIRMED,
+      },
+    });
+    registrationCount++;
   }
 
   console.log(`✅ Upserted ${createdCount.toString()} events`);

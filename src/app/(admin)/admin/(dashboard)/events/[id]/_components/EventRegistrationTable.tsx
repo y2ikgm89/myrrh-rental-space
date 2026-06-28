@@ -31,6 +31,8 @@ type Registration = {
   cancelledAt: string | null;
   attendedAt: string | null;
   createdAt: string;
+  slotStartAt: string;
+  slotEndAt: string;
 };
 
 interface EventRegistrationTableProps {
@@ -82,6 +84,7 @@ export function EventRegistrationTable({
             <TableHeader>
               <TableRow>
                 <TableHead>名前</TableHead>
+                <TableHead className="hidden lg:table-cell">参加枠</TableHead>
                 <TableHead className="hidden md:table-cell">メール</TableHead>
                 <TableHead>参加人数</TableHead>
                 <TableHead>ステータス</TableHead>
@@ -93,6 +96,10 @@ export function EventRegistrationTable({
               {registrations.map((reg) => (
                 <TableRow key={reg.id}>
                   <TableCell className="font-medium">{reg.name}</TableCell>
+                  <TableCell className="hidden lg:table-cell whitespace-nowrap">
+                    {formatDateTimeShort(reg.slotStartAt)} -{" "}
+                    {formatDateTimeShort(reg.slotEndAt)}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {reg.email ?? (
                       <span className="text-muted-foreground italic">

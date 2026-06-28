@@ -15,32 +15,20 @@ export type EventSyncContext = EventSyncData & {
 };
 
 export async function saveEventGoogleCalendarEventId(params: {
-  eventId: string;
+  slotId: string;
   googleCalendarEventId: string;
 }): Promise<void> {
-  const firstSlot = await prisma.eventTimeSlot.findFirst({
-    where: { eventId: params.eventId },
-    orderBy: { startAt: "asc" },
-    select: { id: true },
-  });
-  if (!firstSlot) return;
   await prisma.eventTimeSlot.update({
-    where: { id: firstSlot.id },
+    where: { id: params.slotId },
     data: { googleCalendarEventId: params.googleCalendarEventId },
   });
 }
 
-export async function clearEventGoogleCalendarEventId(
-  eventId: string,
-): Promise<void> {
-  const firstSlot = await prisma.eventTimeSlot.findFirst({
-    where: { eventId },
-    orderBy: { startAt: "asc" },
-    select: { id: true },
-  });
-  if (!firstSlot) return;
-  await prisma.eventTimeSlot.update({
-    where: { id: firstSlot.id },
+export async function clearEventGoogleCalendarEventId(params: {
+  googleCalendarEventId: string;
+}): Promise<void> {
+  await prisma.eventTimeSlot.updateMany({
+    where: { googleCalendarEventId: params.googleCalendarEventId },
     data: { googleCalendarEventId: null },
   });
 }
@@ -57,9 +45,9 @@ export async function markEventCalendarSyncError(params: {
   });
 }
 
-export async function getEventForCalendarSync(
+export async function getEventSlotsForCalendarSync(
   eventId: string,
-): Promise<EventSyncContext | null> {
+): Promise<EventSyncContext[]> {
   const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
     select: {
@@ -71,28 +59,35 @@ export async function getEventForCalendarSync(
       location: { select: { name: true } },
       space: { select: { name: true } },
       slots: {
-        select: { startAt: true, endAt: true, googleCalendarEventId: true },
+        select: {
+          id: true,
+          startAt: true,
+          endAt: true,
+          googleCalendarEventId: true,
+        },
         orderBy: { startAt: "asc" as const },
-        take: 1,
       },
     },
   });
 
-  if (!event) return null;
+  if (!event) return [];
 
-  const firstSlot = event.slots[0];
-  return {
+  const location = formatEventVenue({
+    location: event.location,
+    space: event.space,
+    addressDetail: event.addressDetail,
+  });
+  const publicUrl = `${getAppUrl()}/events/${event.slug}`;
+
+  return event.slots.map((slot) => ({
     eventId: event.id,
+    slotId: slot.id,
     title: event.title,
     descriptionPlainText: event.descriptionPlainText,
-    startTime: firstSlot?.startAt ?? new Date(0),
-    endTime: firstSlot?.endAt ?? new Date(0),
-    location: formatEventVenue({
-      location: event.location,
-      space: event.space,
-      addressDetail: event.addressDetail,
-    }),
-    publicUrl: `${getAppUrl()}/events/${event.slug}`,
-    googleCalendarEventId: firstSlot?.googleCalendarEventId ?? null,
-  };
+    startTime: slot.startAt,
+    endTime: slot.endAt,
+    location,
+    publicUrl,
+    googleCalendarEventId: slot.googleCalendarEventId,
+  }));
 }

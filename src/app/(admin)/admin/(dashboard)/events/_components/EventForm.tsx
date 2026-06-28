@@ -16,7 +16,10 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import { createEventAction, updateEventAction } from "@/admin/actions/event";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EventScheduleMode,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
 import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
@@ -28,6 +31,7 @@ import type {
 } from "@/shared/domain/events/admin-queries";
 import { EventBasicFields } from "./EventBasicFields";
 import { EventScheduleFields, type SlotFormItem } from "./EventScheduleFields";
+import type { EventScheduleModeValue } from "@/shared/domain/events/schedule-mode";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
@@ -121,6 +125,9 @@ export function EventForm({
   const [registrationOpen, setRegistrationOpen] = useState<boolean>(
     event?.registrationOpen ?? false,
   );
+  const [scheduleMode, setScheduleMode] = useState<EventScheduleModeValue>(
+    event?.scheduleMode ?? EventScheduleMode.SINGLE_OCCURRENCE,
+  );
   const [locationId, setLocationId] = useState<string | null>(
     event?.locationId ?? null,
   );
@@ -151,7 +158,7 @@ export function EventForm({
         capacity: s.capacity,
       }));
     }
-    return [{ startAt: "", endAt: "", capacity: 0 }];
+    return [{ startAt: "", endAt: "", capacity: 1 }];
   });
   const boundAction =
     isEdit && event?.id
@@ -174,6 +181,7 @@ export function EventForm({
       ? {
           title: event.title,
           slug: event.slug,
+          scheduleMode: event.scheduleMode,
           registrationDeadline: event.registrationDeadline
             ? formatDateTimeLocalInJst(event.registrationDeadline)
             : "",
@@ -187,6 +195,7 @@ export function EventForm({
       : {
           title: "",
           slug: "",
+          scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
           registrationDeadline: "",
           addressDetail: "",
           ogpTitle: "",
@@ -199,9 +208,12 @@ export function EventForm({
 
   // タブごとのエラー数（バッジ表示用）
   const tabErrorCount: Record<EventEditTabValue, number> = {
-    basic: [fields.title, fields.slug, fields.slots].filter((f) =>
-      fieldHasErrors(f.errors),
-    ).length,
+    basic: [
+      fields.title,
+      fields.slug,
+      fields.scheduleMode,
+      fields.slots,
+    ].filter((f) => fieldHasErrors(f.errors)).length,
     publish: [
       fields.descriptionJson,
       fields.thumbnailUrl,
@@ -243,6 +255,11 @@ export function EventForm({
         value={thumbnailUrl ?? ""}
       />
       <input type="hidden" name={fields.status.name} value={status} />
+      <input
+        type="hidden"
+        name={fields.scheduleMode.name}
+        value={scheduleMode}
+      />
       <input
         type="hidden"
         name={fields.registrationOpen.name}
@@ -304,8 +321,11 @@ export function EventForm({
         >
           <EventBasicFields fields={fields} isPending={isPending} />
           <EventScheduleFields
+            scheduleMode={scheduleMode}
+            onScheduleModeChange={setScheduleMode}
             slots={slots}
             onChange={setSlots}
+            scheduleModeErrors={fields.scheduleMode.errors ?? undefined}
             errors={fields.slots.errors ?? undefined}
             isPending={isPending}
           />

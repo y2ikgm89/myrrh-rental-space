@@ -67,8 +67,8 @@ export async function syncEventTimeSlotsCommand(
         "VALIDATION",
       );
     }
-    if (slot.capacity < 0) {
-      throw new DomainError("定員は0以上です", "VALIDATION");
+    if (slot.capacity < 1) {
+      throw new DomainError("定員は1以上です", "VALIDATION");
     }
   }
 

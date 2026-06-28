@@ -78,7 +78,7 @@ export async function syncEventToCalendar(
 
     if (result.success && result.eventId) {
       await saveEventGoogleCalendarEventId({
-        eventId: data.eventId,
+        slotId: data.slotId,
         googleCalendarEventId: result.eventId,
       });
 
@@ -161,7 +161,9 @@ export async function deleteEventCalendarSync(
     const result = await deleteCalendarEvent(gcalEventId);
 
     if (result.success) {
-      await clearEventGoogleCalendarEventId(eventId);
+      await clearEventGoogleCalendarEventId({
+        googleCalendarEventId: gcalEventId,
+      });
 
       return { success: true };
     }
