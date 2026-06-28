@@ -58,6 +58,7 @@ export type ReservationWithRelations = {
     companyName: string | null;
     email: string;
     phoneNumber: string | null;
+    userId: string | null;
   };
   coupon?: {
     id: string;

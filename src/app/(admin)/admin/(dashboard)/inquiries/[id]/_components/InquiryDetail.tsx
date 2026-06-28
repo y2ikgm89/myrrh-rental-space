@@ -27,7 +27,10 @@ import {
   Textarea,
 } from "@/admin/components/ui";
 import { SubmitButton } from "@/admin/components/ui";
-import { InquiryStatusBadge } from "@/admin/components/status-badges";
+import {
+  CustomerIdentityBadge,
+  InquiryStatusBadge,
+} from "@/admin/components/status-badges";
 import {
   updateInquiryStatus,
   replyToInquiry,
@@ -304,6 +307,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                     >
                       {inquiry.customer.lastName} {inquiry.customer.firstName}
                     </Link>
+                    <CustomerIdentityBadge userId={inquiry.customer.userId} />
                   </div>
                   <div className="flex items-center gap-2">
                     <IconMail className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -354,6 +358,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                             <span className="text-sm font-medium">
                               {customer.lastName} {customer.firstName}
                             </span>
+                            <CustomerIdentityBadge userId={customer.userId} />
                           </div>
                           <div className="flex items-center gap-2 pl-5.5">
                             <IconMail className="h-3 w-3 text-muted-foreground" />

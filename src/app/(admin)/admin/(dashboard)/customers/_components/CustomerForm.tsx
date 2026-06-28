@@ -8,7 +8,12 @@
  * カナ自動入力は `useKanaInput` 互換 (内部 state → 同 name の controlled input)。
  */
 
-import { useActionState, useEffect, type ReactElement } from "react";
+import {
+  useActionState,
+  useEffect,
+  type FocusEvent,
+  type ReactElement,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   getFormProps,
@@ -41,6 +46,7 @@ import { entriesOf } from "@/shared/lib/serialize";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
 import { toast } from "sonner";
+import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
 
 export function CustomerForm(): ReactElement {
   const router = useRouter();
@@ -65,13 +71,31 @@ export function CustomerForm(): ReactElement {
 
   const customerTypeControl = useInputControl(fields.customerType);
   const prefectureControl = useInputControl(fields.prefecture);
+  const emailControl = useInputControl(fields.email);
   const marketingOptInControl = useInputControl(fields.marketingOptIn);
   const phoneContactOptInControl = useInputControl(fields.phoneContactOptIn);
+  const {
+    duplicateCandidate: emailDuplicateCandidate,
+    unlinkedDuplicateCandidate: emailUnlinkedDuplicateCandidate,
+    checkEmail,
+    resetEmailDuplicateCheck,
+  } = useCustomerEmailDuplicateCheck();
 
   const customerType = customerTypeControl.value ?? CustomerType.PERSONAL;
   const prefecture = prefectureControl.value ?? "";
   const marketingOptIn = marketingOptInControl.value === "on";
   const phoneContactOptIn = phoneContactOptInControl.value === "on";
+  const emailBlockedByGuestDuplicate = emailUnlinkedDuplicateCandidate;
+  const emailDuplicateWarningId = `${fields.email.id}-duplicate-candidate`;
+  const emailDuplicateErrorId = `${fields.email.id}-duplicate-error`;
+  const emailDescribedBy = fields.email.errors
+    ? fields.email.errorId
+    : [
+        emailBlockedByGuestDuplicate ? emailDuplicateErrorId : null,
+        emailDuplicateCandidate ? emailDuplicateWarningId : null,
+      ]
+        .filter((id): id is string => id !== null)
+        .join(" ") || undefined;
 
   function handleCustomerTypeChange(value: string) {
     if (!isValidCustomerType(value)) return;
@@ -81,6 +105,16 @@ export function CustomerForm(): ReactElement {
   function handlePrefectureChange(value: string) {
     if (!isPrefecture(value)) return;
     prefectureControl.change(value);
+  }
+
+  async function handleEmailBlur(event: FocusEvent<HTMLInputElement>) {
+    emailControl.blur();
+    const email = event.target.value;
+    if (!email) {
+      resetEmailDuplicateCheck();
+      return;
+    }
+    await checkEmail(email);
   }
 
   // IME 自動カナ入力 — `useKanaInput` 内部 state を kana input の value に bind し、
@@ -278,13 +312,38 @@ export function CustomerForm(): ReactElement {
               {...getInputProps(fields.email, { type: "email" })}
               autoComplete="email"
               placeholder="example@example.com"
+              onBlur={handleEmailBlur}
               disabled={isPending}
+              aria-invalid={
+                fields.email.errors || emailBlockedByGuestDuplicate
+                  ? true
+                  : undefined
+              }
+              aria-describedby={emailDescribedBy}
             />
             {fields.email.errors && (
               <p id={fields.email.errorId} className="text-xs text-destructive">
                 {fields.email.errors.join(", ")}
               </p>
             )}
+            {!fields.email.errors && emailBlockedByGuestDuplicate && (
+              <p
+                id={emailDuplicateErrorId}
+                className="text-xs text-destructive"
+              >
+                同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。
+              </p>
+            )}
+            {!fields.email.errors &&
+              !emailBlockedByGuestDuplicate &&
+              emailDuplicateCandidate && (
+                <p
+                  id={emailDuplicateWarningId}
+                  className="text-xs text-warning-strong"
+                >
+                  同じメールアドレスの顧客候補があります。必要に応じて顧客詳細から確認してください。
+                </p>
+              )}
           </div>
 
           {/* 電話番号 */}
@@ -515,6 +574,7 @@ export function CustomerForm(): ReactElement {
               isPending={isPending}
               label="顧客を作成"
               pendingLabel="作成中..."
+              disabled={emailBlockedByGuestDuplicate}
             />
           </div>
         </div>

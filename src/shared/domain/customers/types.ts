@@ -111,6 +111,7 @@ export type CustomerSearchResult = {
   email: string;
   phoneNumber: string | null;
   status: CustomerStatus;
+  userId: string | null;
 };
 
 export type CustomerAccountInfo = {

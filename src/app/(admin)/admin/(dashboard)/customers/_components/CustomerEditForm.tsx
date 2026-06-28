@@ -14,7 +14,6 @@
 import {
   useActionState,
   useEffect,
-  useState,
   type FocusEvent,
   type ReactElement,
 } from "react";
@@ -27,7 +26,6 @@ import {
   useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { z } from "zod";
 import { toast } from "sonner";
 import { updateCustomer } from "@/admin/actions/customer";
 import { useKanaInput } from "@/admin/hooks";
@@ -52,24 +50,25 @@ import { CUSTOMER_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
+import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
 
 type CustomerEditFormProps = {
   customer: CustomerWithReservations;
 };
 
-const checkEmailResponseSchema = z.object({
-  available: z.literal(true),
-  duplicateCandidate: z.boolean(),
-  unlinkedDuplicateCandidate: z.boolean(),
-});
-
 export function CustomerEditForm({
   customer,
 }: CustomerEditFormProps): ReactElement {
   const router = useRouter();
-  const [emailDuplicateCandidate, setEmailDuplicateCandidate] = useState(false);
-  const [emailUnlinkedDuplicateCandidate, setEmailUnlinkedDuplicateCandidate] =
-    useState(false);
+  const {
+    duplicateCandidate: emailDuplicateCandidate,
+    unlinkedDuplicateCandidate: emailUnlinkedDuplicateCandidate,
+    checkEmail,
+    resetEmailDuplicateCheck,
+  } = useCustomerEmailDuplicateCheck({
+    excludeId: customer.id,
+    originalEmail: customer.email,
+  });
 
   const boundAction = updateCustomer.bind(null, customer.id);
   const [lastResult, action, isPending] = useActionState(
@@ -153,31 +152,10 @@ export function CustomerEditForm({
     emailControl.blur();
     const email = event.target.value;
     if (!email || email === customer.email) {
-      setEmailDuplicateCandidate(false);
-      setEmailUnlinkedDuplicateCandidate(false);
+      resetEmailDuplicateCheck();
       return;
     }
-    try {
-      const response = await fetch(
-        `/api/admin/customers/check-email?email=${encodeURIComponent(email)}&excludeId=${customer.id}`,
-      );
-      if (!response.ok) {
-        setEmailDuplicateCandidate(false);
-        setEmailUnlinkedDuplicateCandidate(false);
-        return;
-      }
-      const parsed = checkEmailResponseSchema.safeParse(await response.json());
-      setEmailDuplicateCandidate(
-        parsed.success && parsed.data.duplicateCandidate,
-      );
-      setEmailUnlinkedDuplicateCandidate(
-        parsed.success && parsed.data.unlinkedDuplicateCandidate,
-      );
-    } catch {
-      // 候補チェック失敗は silent。Customer.email は保存ブロック条件ではない。
-      setEmailDuplicateCandidate(false);
-      setEmailUnlinkedDuplicateCandidate(false);
-    }
+    await checkEmail(email);
   }
 
   // IME 自動カナ入力（既存データで初期化）

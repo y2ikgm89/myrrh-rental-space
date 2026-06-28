@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
+import { CustomerIdentityBadge } from "@/admin/components/status-badges";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -251,8 +252,11 @@ export function CustomerSelector({
                       className="w-full border-b p-4 text-left transition-colors last:border-b-0 hover:bg-accent"
                     >
                       <div className="space-y-1">
-                        <div className="font-medium">
-                          {customer.lastName} {customer.firstName}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {customer.lastName} {customer.firstName}
+                          </span>
+                          <CustomerIdentityBadge userId={customer.userId} />
                         </div>
                         <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">

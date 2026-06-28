@@ -286,6 +286,7 @@ export async function searchCustomers(
       email: true,
       phoneNumber: true,
       status: true,
+      userId: true,
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     take: 10,
